@@ -1,0 +1,13 @@
+{
+  "name": "player-panel",
+  "version": "0.1.0",
+  "dependencies": [
+    "fmt",
+    "spdlog",
+    "directxmath",
+    "rapidcsv",
+    "directxtk",
+    "simpleini"
+  ],
+  "builtin-baseline": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+}

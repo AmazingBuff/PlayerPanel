@@ -1,0 +1,94 @@
+#include "config/config.h"
+#include "input/input.h"
+#include <spdlog/sinks/basic_file_sink.h>
+
+namespace
+{
+    constexpr spdlog::level::level_enum Log_Level = spdlog::level::info;
+    void initialize_log()
+    {
+        std::optional<std::filesystem::path> path = logger::log_directory();
+        if (!path)
+            SKSE::stl::report_and_fail("Failed to find standard logging directory"sv);
+
+        *path /= fmt::format("{}.log"sv, Plugin::Plugin_Name);
+        std::shared_ptr<spdlog::sinks::basic_file_sink_mt> sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
+        std::shared_ptr<spdlog::logger> log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
+
+        log->set_level(Log_Level);
+        log->flush_on(Log_Level);
+
+        spdlog::set_default_logger(std::move(log));
+        spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
+    }
+
+    void message_handler(SKSE::MessagingInterface::Message* message) noexcept
+    {
+        if (!message)
+            return;
+        try
+        {
+            switch (message->type)
+            {
+            case SKSE::MessagingInterface::kDataLoaded:
+                PLUGIN_NAMESPACE::InputManager::install();
+                break;
+            case SKSE::MessagingInterface::kNewGame:
+            case SKSE::MessagingInterface::kPostLoadGame:
+                PLUGIN_NAMESPACE::InputManager::install();
+                break;
+            case SKSE::MessagingInterface::kSaveGame:
+                PLUGIN_NAMESPACE::Setting::instance().save();
+                break;
+            default:
+                break;
+            }
+        }
+        catch (...)
+        {
+            try { logger::error("Feature message handler failed"); } catch (...) {}
+        }
+    }
+}
+
+extern "C" DLLEXPORT bool SKSEPlugin_Load(SKSE::LoadInterface const* a_skse)
+{
+    REL::Module::reset();  // Clib-NG bug workaround
+
+    initialize_log();
+    logger::info("{} v{}"sv, Plugin::Plugin_Name, Plugin::Plugin_Version.string());
+
+    SKSE::Init(a_skse);
+    try
+    {
+        PLUGIN_NAMESPACE::Setting::instance().load();
+    }
+    catch (...)
+    {
+        return false;
+    }
+    auto* messaging = SKSE::GetMessagingInterface();
+    if (!messaging || !messaging->RegisterListener(message_handler))
+        return false;
+
+    logger::info("{} loaded"sv, Plugin::Plugin_Name);
+    return true;
+}
+
+extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = [] {
+    SKSE::PluginVersionData v;
+    v.PluginVersion(Plugin::Plugin_Version);
+    v.PluginName(Plugin::Plugin_Name);
+    v.AuthorName(Plugin::Plugin_Author);
+    v.UsesAddressLibrary();
+    v.UsesNoStructs();
+    return v;
+}();
+
+extern "C" DLLEXPORT bool SKSEPlugin_Query(SKSE::QueryInterface const*, SKSE::PluginInfo* a_info)
+{
+    a_info->infoVersion = SKSE::PluginInfo::kVersion;
+    a_info->name = SKSEPlugin_Version.pluginName;
+    a_info->version = SKSEPlugin_Version.pluginVersion;
+    return true;
+}
