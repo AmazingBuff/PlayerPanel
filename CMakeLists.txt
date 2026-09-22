@@ -19,6 +19,32 @@ include(cmake/packaging.cmake)
 file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 
+# HLSL sources are embedded into a generated header and compiled at runtime by D3DCompile, so no
+# loose shader file has to ship next to the plugin DLL.
+set(RENDER_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/render/shaders)
+set(RENDER_SHADER_EMBED
+	panel_geometry.hlsl:PanelGeometry
+	panel_composite.hlsl:PanelComposite
+)
+set(RENDER_SHADER_FILES "")
+set(GENERATED_SHADER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/render/shader_sources.h)
+foreach(RENDER_SHADER_ENTRY ${RENDER_SHADER_EMBED})
+	string(REPLACE ":" ";" RENDER_SHADER_PAIR ${RENDER_SHADER_ENTRY})
+	list(GET RENDER_SHADER_PAIR 0 RENDER_SHADER_FILE)
+	list(APPEND RENDER_SHADER_FILES ${RENDER_SHADER_DIR}/${RENDER_SHADER_FILE})
+endforeach()
+add_custom_command(
+	OUTPUT ${GENERATED_SHADER_HEADER}
+	COMMAND ${CMAKE_COMMAND}
+		-DSHADER_DIR=${RENDER_SHADER_DIR}
+		-DOUTPUT_HEADER=${GENERATED_SHADER_HEADER}
+		"-DEMBED_ENTRIES=${RENDER_SHADER_EMBED}"
+		-P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_shaders.cmake
+	DEPENDS ${RENDER_SHADER_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_shaders.cmake
+	COMMENT "Embedding HLSL sources (render/shaders)"
+	VERBATIM
+)
+
 set(VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/plugin.h)
 configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/cmake/plugin.h.in
@@ -40,6 +66,7 @@ add_library(
 	SHARED
 	${HEADER_FILES}
 	${SOURCE_FILES}
+	${GENERATED_SHADER_HEADER}
 	${VERSION_HEADER}
 	${CMAKE_CURRENT_BINARY_DIR}/version.rc
 )
@@ -118,6 +145,7 @@ target_link_libraries(
 	user32
 	d3d11
 	dxgi
+	d3dcompiler
 )
 
 target_precompile_headers(

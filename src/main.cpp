@@ -1,5 +1,10 @@
 #include "config/config.h"
 #include "input/input.h"
+#include "preview/preview_actor.h"
+#include "render/frame_hook.h"
+#include "render/panel/panel_menu.h"
+#include "render/panel/panel_renderer.h"
+#include "render/shader_manager.h"
 #include <spdlog/sinks/basic_file_sink.h>
 
 namespace
@@ -22,6 +27,25 @@ namespace
         spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
     }
 
+    // The swap chain may not exist yet when the data is loaded, so every later session message
+    // retries the same idempotent install instead of installing a second hook.
+    void install_frame_hook()
+    {
+        (void)PLUGIN_NAMESPACE::FrameHook::instance().install(&PLUGIN_NAMESPACE::PreviewActor::on_frame);
+        (void)PLUGIN_NAMESPACE::FrameHook::instance().install(&PLUGIN_NAMESPACE::PanelRenderer::on_frame);
+        (void)PLUGIN_NAMESPACE::FrameHook::instance().install_present(&PLUGIN_NAMESPACE::PanelRenderer::on_present);
+    }
+
+    // Gives back everything the panel took from the player-visible state. The panel's menu is hidden
+    // first, which is what returns the engine's cursor and input context, and only then are the panel's
+    // device objects and the preview released.
+    void release_panel_state()
+    {
+        PLUGIN_NAMESPACE::PanelRenderer::instance().set_panel_open(false);
+        PLUGIN_NAMESPACE::PanelRenderer::instance().request_release();
+        PLUGIN_NAMESPACE::PanelMenu::set_open(false);
+    }
+
     void message_handler(SKSE::MessagingInterface::Message* message) noexcept
     {
         if (!message)
@@ -31,11 +55,26 @@ namespace
             switch (message->type)
             {
             case SKSE::MessagingInterface::kDataLoaded:
+                PLUGIN_NAMESPACE::PanelMenu::install();
                 PLUGIN_NAMESPACE::InputManager::install();
+                install_frame_hook();
+                // The D3D11 device may not exist yet, in which case this attempt only reports that it
+                // was skipped; the renderer makes the attempt that counts as soon as it has a device.
+                // Compiling here as well keeps the first panel frame from paying for the compilation,
+                // and a skipped or failed attempt is expected at this point, so it is not fatal.
+                (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
+                break;
+            case SKSE::MessagingInterface::kPreLoadGame:
+                release_panel_state();
+                PLUGIN_NAMESPACE::PreviewActor::instance().destroy();
                 break;
             case SKSE::MessagingInterface::kNewGame:
             case SKSE::MessagingInterface::kPostLoadGame:
+                release_panel_state();
+                PLUGIN_NAMESPACE::PreviewActor::instance().destroy();
+                PLUGIN_NAMESPACE::PanelMenu::install();
                 PLUGIN_NAMESPACE::InputManager::install();
+                install_frame_hook();
                 break;
             case SKSE::MessagingInterface::kSaveGame:
                 PLUGIN_NAMESPACE::Setting::instance().save();
