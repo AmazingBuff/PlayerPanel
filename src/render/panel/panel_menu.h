@@ -35,7 +35,7 @@ public:
     // Queues the engine's own show or hide for the panel's menu. Showing the menu is what puts the
     // engine's cursor and the menu's input context in place, and hiding it is what gives both back, so
     // the plugin never touches the cursor or the control state itself.
-    static void set_open(bool a_open);
+    static void set_open(bool open);
 
     // What the panel may draw this frame. The engine creates the menu when it processes the show
     // message, so this reports `e_pending` until that has happened.
@@ -44,14 +44,14 @@ public:
     // Scales the menu's movie into the panel rectangle, in render pixels. The caller sets its own
     // boundaries and the movie's stage is fitted to them, which is what lets a skin supply art for a
     // frame that fills its own stage and needs no script at all.
-    static void set_viewport(uint32_t a_buffer_width, uint32_t a_buffer_height, uint32_t a_left,
-        uint32_t a_top, uint32_t a_width, uint32_t a_height);
+    static void set_viewport(uint32_t buffer_width, uint32_t buffer_height, uint32_t left,
+        uint32_t top, uint32_t width, uint32_t height);
 
     // The engine's own menu cursor converted into render pixels, which is the unit the panel rectangle
     // is expressed in. Returns false while the engine cursor or its screen extents are unavailable, in
     // which case the caller must not move the panel.
-    [[nodiscard]] static bool read_menu_cursor(uint32_t a_render_width, uint32_t a_render_height,
-        float& a_out_x, float& a_out_y);
+    [[nodiscard]] static bool read_menu_cursor(uint32_t render_width, uint32_t render_height,
+        float& out_x, float& out_y);
 
 private:
     // The engine's creator ABI hands out a raw pointer that carries the reference the engine stores in

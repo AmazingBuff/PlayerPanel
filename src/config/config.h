@@ -64,7 +64,7 @@ public:
     // Stores the panel's normalised position, clamping both axes to `0`..`1` so the value that can
     // reach the INI is always a fraction of the free space. Called by the panel drag on the game
     // thread; the next save() persists it.
-    void set_panel_position(double a_x, double a_y);
+    void set_panel_position(double x, double y);
 private:
     Setting();
     ~Setting() = default;

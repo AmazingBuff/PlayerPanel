@@ -19,30 +19,30 @@ namespace
     constexpr std::string_view Swf_Suffix = ".swf";
     constexpr std::string_view Gfx_Suffix = ".gfx";
 
-    char to_lower(char a_value)
+    char to_lower(char value)
     {
-        return a_value >= 'A' && a_value <= 'Z' ? static_cast<char>(a_value - 'A' + 'a') : a_value;
+        return value >= 'A' && value <= 'Z' ? static_cast<char>(value - 'A' + 'a') : value;
     }
 
-    bool starts_with_ignore_case(std::string_view a_text, std::string_view a_prefix)
+    bool starts_with_ignore_case(std::string_view text, std::string_view prefix)
     {
-        if (a_text.size() < a_prefix.size())
+        if (text.size() < prefix.size())
             return false;
 
-        for (size_t index = 0; index < a_prefix.size(); ++index)
+        for (size_t index = 0; index < prefix.size(); ++index)
         {
-            if (to_lower(a_text[index]) != to_lower(a_prefix[index]))
+            if (to_lower(text[index]) != to_lower(prefix[index]))
                 return false;
         }
         return true;
     }
 
-    bool ends_with_ignore_case(std::string_view a_text, std::string_view a_suffix)
+    bool ends_with_ignore_case(std::string_view text, std::string_view suffix)
     {
-        if (a_text.size() < a_suffix.size())
+        if (text.size() < suffix.size())
             return false;
 
-        return starts_with_ignore_case(a_text.substr(a_text.size() - a_suffix.size()), a_suffix);
+        return starts_with_ignore_case(text.substr(text.size() - suffix.size()), suffix);
     }
 
     // Turns the documented skin path into the argument the engine's movie loader expects. That loader
@@ -50,12 +50,12 @@ namespace
     // (BSScaleformManager::LoadMovie -> BuildFilePath), so "Interface\PlayerPanel\panel.swf" reaches it
     // as "PlayerPanel/panel". Returns false for a path that would name no movie at all, so an unusable
     // configuration falls back instead of being loaded as something unintended.
-    bool to_movie_name(char const* a_path, std::string& a_out)
+    bool to_movie_name(char const* path, std::string& out)
     {
-        if (!a_path || a_path[0] == '\0')
+        if (!path || path[0] == '\0')
             return false;
 
-        std::string_view name{ a_path };
+        std::string_view name{ path };
         if (starts_with_ignore_case(name, Interface_Prefix))
         {
             name.remove_prefix(Interface_Prefix.size());
@@ -73,8 +73,8 @@ namespace
 
         // The loader builds its own path with forward slashes, so the name uses them too and the
         // engine never has to normalize a mixed separator.
-        a_out.assign(name);
-        for (char& character : a_out)
+        out.assign(name);
+        for (char& character : out)
         {
             if (character == '\\')
                 character = '/';
@@ -150,18 +150,18 @@ void PanelMenu::install()
     logger::info("Panel menu '{}' registered", Panel_Menu_Name);
 }
 
-void PanelMenu::set_open(bool a_open)
+void PanelMenu::set_open(bool open)
 {
     RE::UIMessageQueue* const queue = RE::UIMessageQueue::GetSingleton();
     if (!queue)
     {
         logger::warn("Panel: the UI message queue is unavailable, so the panel menu cannot be {}",
-            a_open ? "shown" : "hidden");
+            open ? "shown" : "hidden");
         return;
     }
 
     queue->AddMessage(RE::BSFixedString(Panel_Menu_Name),
-        a_open ? RE::UI_MESSAGE_TYPE::kShow : RE::UI_MESSAGE_TYPE::kHide, nullptr);
+        open ? RE::UI_MESSAGE_TYPE::kShow : RE::UI_MESSAGE_TYPE::kHide, nullptr);
 }
 
 PanelChrome PanelMenu::chrome_mode()
@@ -173,22 +173,22 @@ PanelChrome PanelMenu::chrome_mode()
     return menu->m_movie_loaded ? PanelChrome::e_swf : PanelChrome::e_built_in;
 }
 
-void PanelMenu::set_viewport(uint32_t a_buffer_width, uint32_t a_buffer_height, uint32_t a_left,
-    uint32_t a_top, uint32_t a_width, uint32_t a_height)
+void PanelMenu::set_viewport(uint32_t buffer_width, uint32_t buffer_height, uint32_t left,
+    uint32_t top, uint32_t width, uint32_t height)
 {
     PanelMenu* const menu = current();
     if (!menu || !menu->m_movie_loaded || !menu->uiMovie)
         return;
 
-    menu->uiMovie->SetViewport(static_cast<int32_t>(a_buffer_width), static_cast<int32_t>(a_buffer_height),
-        static_cast<int32_t>(a_left), static_cast<int32_t>(a_top),
-        static_cast<int32_t>(a_width), static_cast<int32_t>(a_height));
+    menu->uiMovie->SetViewport(static_cast<int32_t>(buffer_width), static_cast<int32_t>(buffer_height),
+        static_cast<int32_t>(left), static_cast<int32_t>(top),
+        static_cast<int32_t>(width), static_cast<int32_t>(height));
 }
 
-bool PanelMenu::read_menu_cursor(uint32_t a_render_width, uint32_t a_render_height, float& a_out_x,
-    float& a_out_y)
+bool PanelMenu::read_menu_cursor(uint32_t render_width, uint32_t render_height, float& out_x,
+    float& out_y)
 {
-    if (a_render_width == 0 || a_render_height == 0)
+    if (render_width == 0 || render_height == 0)
         return false;
 
     RE::MenuCursor* const cursor = RE::MenuCursor::GetSingleton();
@@ -202,8 +202,8 @@ bool PanelMenu::read_menu_cursor(uint32_t a_render_width, uint32_t a_render_heig
     if (state.screenWidthX <= 0.0f || state.screenWidthY <= 0.0f)
         return false;
 
-    a_out_x = state.cursorPosX * static_cast<float>(a_render_width) / state.screenWidthX;
-    a_out_y = state.cursorPosY * static_cast<float>(a_render_height) / state.screenWidthY;
+    out_x = state.cursorPosX * static_cast<float>(render_width) / state.screenWidthX;
+    out_y = state.cursorPosY * static_cast<float>(render_height) / state.screenWidthY;
     return true;
 }
 

@@ -341,7 +341,7 @@ Engine and SKSE dependencies used:
 
 - `bool install(Listener)` — game-thread tick listener. `Max_Frame_Listener_Count` is 4 and the plugin
   registers 2 (preview actor, panel); registration order is the invocation order.
-- `bool install_present(PresentListener a_listener)` — registers a render-thread listener that runs
+- `bool install_present(PresentListener listener)` — registers a render-thread listener that runs
   inside the Present callback. The panel draws in it; a listener must return without drawing when it
   has nothing to draw.
 

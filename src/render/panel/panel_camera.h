@@ -32,7 +32,7 @@ public:
     // the larger of the two distances is used, so the body is never clipped at the sides when
     // PanelAspect is below one. When the world bound is unusable a fixed body-height framing is used
     // instead. Returns false only when no finite camera can be derived.
-    [[nodiscard]] static bool build(RE::TESObjectREFR const& a_preview, Config const& a_config, PanelCameraFrame& a_out);
+    [[nodiscard]] static bool build(RE::TESObjectREFR const& preview, Config const& config, PanelCameraFrame& out);
 };
 
 PLUGIN_NAMESPACE_END

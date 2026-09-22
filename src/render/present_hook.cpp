@@ -8,29 +8,29 @@ PresentHook& PresentHook::instance()
     return s_instance;
 }
 
-REX::W32::HRESULT PresentHook::present_thunk(REX::W32::IDXGISwapChain* a_swap_chain,
-    uint32_t a_sync_interval, uint32_t a_flags) noexcept
+REX::W32::HRESULT PresentHook::present_thunk(REX::W32::IDXGISwapChain* swap_chain,
+    uint32_t sync_interval, uint32_t flags) noexcept
 {
     auto& self = instance();
     constexpr uint32_t Present_Test = 1;
-    if ((a_flags & Present_Test) == 0)
+    if ((flags & Present_Test) == 0)
     {
         try
         {
             if (auto callback = self.m_callback.load(std::memory_order_acquire))
-                callback(a_swap_chain);
+                callback(swap_chain);
         }
         catch (...)
         {
             try { logger::error("Present callback failed"); } catch (...) {}
         }
     }
-    return self.m_ref_original_present.load(std::memory_order_acquire)(a_swap_chain, a_sync_interval, a_flags);
+    return self.m_ref_original_present.load(std::memory_order_acquire)(swap_chain, sync_interval, flags);
 }
 
-bool PresentHook::install(Callback a_callback)
+bool PresentHook::install(Callback callback)
 {
-    if (!a_callback)
+    if (!callback)
         return false;
     std::lock_guard lock(m_install_mutex);
     if (m_installed)
@@ -42,7 +42,7 @@ bool PresentHook::install(Callback a_callback)
     auto** table = *reinterpret_cast<void***>(swap_chain);
     constexpr std::size_t Present_Slot = 8;
     m_ref_original_present.store(reinterpret_cast<PresentFunc>(table[Present_Slot]), std::memory_order_release);
-    m_callback.store(a_callback, std::memory_order_release);
+    m_callback.store(callback, std::memory_order_release);
     REL::Relocation<uintptr_t> vtable{ reinterpret_cast<uintptr_t>(table) };
     vtable.write_vfunc(Present_Slot, &PresentHook::present_thunk);
     m_installed = true;

@@ -12,7 +12,7 @@ public:
     static PresentHook& instance();
     PresentHook(PresentHook const&) = delete;
     PresentHook& operator=(PresentHook const&) = delete;
-    bool install(Callback a_callback);
+    bool install(Callback callback);
 private:
     PresentHook() = default;
     using PresentFunc = REX::W32::HRESULT(*)(REX::W32::IDXGISwapChain*, uint32_t, uint32_t);

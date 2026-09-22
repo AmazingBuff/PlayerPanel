@@ -65,66 +65,66 @@ namespace
     // Rounds a fraction of an extent to whole render pixels and never exceeds the extent. Non-finite
     // input yields zero, so the conversion to pixels below can never be undefined even though the
     // configuration is validated at the INI boundary.
-    uint32_t scale_to_pixels(double a_fraction, uint32_t a_extent)
+    uint32_t scale_to_pixels(double fraction, uint32_t extent)
     {
-        if (!std::isfinite(a_fraction) || a_fraction <= 0.0)
+        if (!std::isfinite(fraction) || fraction <= 0.0)
             return 0u;
-        double const scaled = static_cast<double>(a_extent) * a_fraction + 0.5;
-        double const capped = (std::min)(scaled, static_cast<double>(a_extent));
+        double const scaled = static_cast<double>(extent) * fraction + 0.5;
+        double const capped = (std::min)(scaled, static_cast<double>(extent));
         return static_cast<uint32_t>(capped);
     }
 }
 
-bool resolve_panel_layout(Config const& a_config, uint32_t a_screen_width, uint32_t a_screen_height,
-    PanelLayout& a_out)
+bool resolve_panel_layout(Config const& config, uint32_t screen_width, uint32_t screen_height,
+    PanelLayout& out)
 {
-    if (a_screen_width == 0 || a_screen_height == 0)
+    if (screen_width == 0 || screen_height == 0)
         return false;
 
     // Sizing is a function of the render height and the configuration only: the width follows from the
     // height and the configured aspect. The screen width is an upper clamp and nothing else, which is
     // exactly why a wider monitor shows more world rather than a bigger panel.
-    uint32_t const height = (std::max)(scale_to_pixels(a_config.panel_height_fraction, a_screen_height),
-        (std::min)(Min_Panel_Pixels, a_screen_height));
-    uint32_t const width = (std::max)(scale_to_pixels(a_config.panel_aspect * static_cast<double>(height), a_screen_width),
-        (std::min)(Min_Panel_Pixels, a_screen_width));
-    uint32_t const margin = scale_to_pixels(a_config.panel_margin_fraction, a_screen_height);
+    uint32_t const height = (std::max)(scale_to_pixels(config.panel_height_fraction, screen_height),
+        (std::min)(Min_Panel_Pixels, screen_height));
+    uint32_t const width = (std::max)(scale_to_pixels(config.panel_aspect * static_cast<double>(height), screen_width),
+        (std::min)(Min_Panel_Pixels, screen_width));
+    uint32_t const margin = scale_to_pixels(config.panel_margin_fraction, screen_height);
 
-    uint32_t const free_x = a_screen_width - width;
-    uint32_t const free_y = a_screen_height - height;
+    uint32_t const free_x = screen_width - width;
+    uint32_t const free_y = screen_height - height;
 
     // A placed axis is a fraction of that axis' free space, so the same relative spot is reproduced at
     // any resolution. An unplaced axis keeps the default: right-anchored by the margin, vertically
     // centred.
-    uint32_t const x = a_config.panel_position_x >= 0.0
-        ? scale_to_pixels(free_x * (std::min)(a_config.panel_position_x, 1.0), free_x)
-        : (a_screen_width > width + margin ? a_screen_width - width - margin : 0u);
-    uint32_t const y = a_config.panel_position_y >= 0.0
-        ? scale_to_pixels(free_y * (std::min)(a_config.panel_position_y, 1.0), free_y)
+    uint32_t const x = config.panel_position_x >= 0.0
+        ? scale_to_pixels(free_x * (std::min)(config.panel_position_x, 1.0), free_x)
+        : (screen_width > width + margin ? screen_width - width - margin : 0u);
+    uint32_t const y = config.panel_position_y >= 0.0
+        ? scale_to_pixels(free_y * (std::min)(config.panel_position_y, 1.0), free_y)
         : free_y / 2u;
 
-    a_out.x = x;
-    a_out.y = y;
-    a_out.width = width;
-    a_out.height = height;
+    out.x = x;
+    out.y = y;
+    out.width = width;
+    out.height = height;
     return true;
 }
 
-uint32_t resolve_border_thickness(uint32_t a_panel_height)
+uint32_t resolve_border_thickness(uint32_t panel_height)
 {
-    return (std::max)(scale_to_pixels(static_cast<double>(Panel_Border_Thickness_Fraction), a_panel_height),
+    return (std::max)(scale_to_pixels(static_cast<double>(Panel_Border_Thickness_Fraction), panel_height),
         Min_Border_Thickness);
 }
 
-uint32_t resolve_skin_inset_thickness(Config const& a_config, uint32_t a_panel_width, uint32_t a_panel_height)
+uint32_t resolve_skin_inset_thickness(Config const& config, uint32_t panel_width, uint32_t panel_height)
 {
     // The skin inset has its own configuration value; it is never the built-in hairline. The panel
     // height is the basis, so the frame keeps the same apparent thickness at every resolution, and the
     // absolute floor keeps it a frame even on a very short panel.
-    uint32_t const preferred = (std::max)(scale_to_pixels(a_config.panel_skin_inset_fraction, a_panel_height),
+    uint32_t const preferred = (std::max)(scale_to_pixels(config.panel_skin_inset_fraction, panel_height),
         Min_Panel_Skin_Inset_Pixels);
 
-    uint32_t const room = (std::min)(a_panel_width, a_panel_height) / Panel_Skin_Inset_Axis_Divisor;
+    uint32_t const room = (std::min)(panel_width, panel_height) / Panel_Skin_Inset_Axis_Divisor;
     return room > 0 ? (std::min)(preferred, room) : preferred;
 }
 
@@ -179,9 +179,9 @@ void PanelRenderer::on_frame()
     }
 }
 
-void PanelRenderer::on_present(REX::W32::IDXGISwapChain* a_swap_chain)
+void PanelRenderer::on_present(REX::W32::IDXGISwapChain* swap_chain)
 {
-    instance().draw(a_swap_chain);
+    instance().draw(swap_chain);
 }
 
 void PanelRenderer::request_release()
@@ -189,24 +189,24 @@ void PanelRenderer::request_release()
     m_release_requested.store(true, std::memory_order_release);
 }
 
-void PanelRenderer::on_left_button(bool a_down)
+void PanelRenderer::on_left_button(bool down)
 {
     PanelRenderer& self = instance();
 
     // The press edge is only meaningful while the panel is on screen: a button already held down when
     // the panel opens or closes must not turn into a drag of its own.
-    if (a_down && !self.m_left_button_down && self.m_panel_open)
+    if (down && !self.m_left_button_down && self.m_panel_open)
         self.m_press_pending = true;
 
-    self.m_left_button_down = a_down;
+    self.m_left_button_down = down;
 }
 
-void PanelRenderer::set_panel_open(bool a_open)
+void PanelRenderer::set_panel_open(bool open)
 {
-    if (a_open == m_panel_open)
+    if (open == m_panel_open)
         return;
 
-    m_panel_open = a_open;
+    m_panel_open = open;
 
     // Everything the input sink recorded belongs to the side of the transition it happened on, and the
     // physical button state is the one thing that must survive it: a press while the panel was hidden
@@ -219,8 +219,8 @@ void PanelRenderer::set_panel_open(bool a_open)
     // The menu is the panel's whole claim on player input. Showing it is what makes the engine drive
     // its own cursor and push the menu's input context, and hiding it is what takes both back; the
     // plugin therefore freezes no control group and marshals no cursor of its own.
-    PanelMenu::set_open(a_open);
-    if (a_open)
+    PanelMenu::set_open(open);
+    if (open)
         logger::info("Panel open: the game's own menu cursor and input context are in use");
     else
         logger::info("Panel closed: the menu is hidden and the cursor and input context are given back");
@@ -308,22 +308,22 @@ void PanelRenderer::prepare()
     m_frame_ready = true;
 }
 
-void PanelRenderer::apply_panel_input(PanelLayout const& a_layout, uint32_t a_screen_width,
-    uint32_t a_screen_height, float a_cursor_x, float a_cursor_y)
+void PanelRenderer::apply_panel_input(PanelLayout const& layout, uint32_t screen_width,
+    uint32_t screen_height, float cursor_x, float cursor_y)
 {
     if (m_press_pending)
     {
         m_press_pending = false;
         // The whole panel surface is the drag handle: nothing else on the panel consumes mouse input.
-        if (a_cursor_x >= static_cast<float>(a_layout.x) &&
-            a_cursor_x < static_cast<float>(a_layout.x) + static_cast<float>(a_layout.width) &&
-            a_cursor_y >= static_cast<float>(a_layout.y) &&
-            a_cursor_y < static_cast<float>(a_layout.y) + static_cast<float>(a_layout.height))
+        if (cursor_x >= static_cast<float>(layout.x) &&
+            cursor_x < static_cast<float>(layout.x) + static_cast<float>(layout.width) &&
+            cursor_y >= static_cast<float>(layout.y) &&
+            cursor_y < static_cast<float>(layout.y) + static_cast<float>(layout.height))
         {
             m_drag_active = true;
             // The offset inside the panel is kept, so the panel does not jump under the cursor.
-            m_grab_offset_x = a_cursor_x - static_cast<float>(a_layout.x);
-            m_grab_offset_y = a_cursor_y - static_cast<float>(a_layout.y);
+            m_grab_offset_x = cursor_x - static_cast<float>(layout.x);
+            m_grab_offset_y = cursor_y - static_cast<float>(layout.y);
         }
     }
 
@@ -336,19 +336,19 @@ void PanelRenderer::apply_panel_input(PanelLayout const& a_layout, uint32_t a_sc
         return;
     }
 
-    commit_panel_position(a_layout, a_screen_width, a_screen_height, a_cursor_x, a_cursor_y);
+    commit_panel_position(layout, screen_width, screen_height, cursor_x, cursor_y);
 }
 
-void PanelRenderer::commit_panel_position(PanelLayout const& a_layout, uint32_t a_screen_width,
-    uint32_t a_screen_height, float a_cursor_x, float a_cursor_y)
+void PanelRenderer::commit_panel_position(PanelLayout const& layout, uint32_t screen_width,
+    uint32_t screen_height, float cursor_x, float cursor_y)
 {
     // The requested top-left is stored as the fraction of the free space on each axis, so the panel
     // lands at the same relative spot at any resolution. Clamping the fraction is what keeps the panel
     // from leaving the screen, and it happens at the single writer of the stored position.
-    uint32_t const free_x = a_screen_width - a_layout.width;
-    uint32_t const free_y = a_screen_height - a_layout.height;
-    float const requested_x = a_cursor_x - m_grab_offset_x;
-    float const requested_y = a_cursor_y - m_grab_offset_y;
+    uint32_t const free_x = screen_width - layout.width;
+    uint32_t const free_y = screen_height - layout.height;
+    float const requested_x = cursor_x - m_grab_offset_x;
+    float const requested_y = cursor_y - m_grab_offset_y;
     double const normalized_x = free_x > 0
         ? static_cast<double>(requested_x) / static_cast<double>(free_x)
         : 0.0;
@@ -358,7 +358,7 @@ void PanelRenderer::commit_panel_position(PanelLayout const& a_layout, uint32_t 
     Setting::instance().set_panel_position(normalized_x, normalized_y);
 }
 
-void PanelRenderer::draw(REX::W32::IDXGISwapChain* a_swap_chain)
+void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
 {
     // A requested release is serviced here so every D3D call stays on the render thread.
     if (m_release_requested.exchange(false, std::memory_order_acq_rel))
@@ -414,11 +414,11 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* a_swap_chain)
 
     // Report the first failure of a streak and stay quiet afterwards: a persistent failure must not
     // log a line every frame, and nothing here retries or spins.
-    auto const report_failure = [this](REX::W32::HRESULT a_result)
+    auto const report_failure = [this](REX::W32::HRESULT result)
     {
         if (m_back_buffer_error_logged)
             return;
-        logger::error("Panel: the swap-chain back buffer or its view is unavailable ({:X}); the panel is skipped this frame", static_cast<unsigned int>(a_result));
+        logger::error("Panel: the swap-chain back buffer or its view is unavailable ({:X}); the panel is skipped this frame", static_cast<unsigned int>(result));
         m_back_buffer_error_logged = true;
     };
 
@@ -427,7 +427,7 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* a_swap_chain)
     // own ResizeBuffers fail with DXGI_ERROR_INVALID_CALL on a resolution change, so the panel never
     // keeps them (see the header comment on the render-thread members).
     REX::W32::ID3D11Texture2D* back_buffer = nullptr;
-    REX::W32::HRESULT const buffer_hr = a_swap_chain->GetBuffer(0, REX::W32::IID_ID3D11Texture2D, reinterpret_cast<void**>(&back_buffer));
+    REX::W32::HRESULT const buffer_hr = swap_chain->GetBuffer(0, REX::W32::IID_ID3D11Texture2D, reinterpret_cast<void**>(&back_buffer));
     if (!REX::W32::SUCCESS(buffer_hr) || !back_buffer)
     {
         report_failure(buffer_hr);
@@ -483,9 +483,9 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* a_swap_chain)
     back_buffer->Release();
 }
 
-bool PanelRenderer::ensure_device_objects(REX::W32::ID3D11Device* a_device)
+bool PanelRenderer::ensure_device_objects(REX::W32::ID3D11Device* device)
 {
-    if (m_ready && m_ref_device == a_device)
+    if (m_ready && m_ref_device == device)
         return true;
 
     // The panel's shaders are compiled here, on the first frame that has a device, because a pass built
@@ -494,21 +494,21 @@ bool PanelRenderer::ensure_device_objects(REX::W32::ID3D11Device* a_device)
     // remembered for that device: it has already been logged once, and the frame is skipped rather than
     // retried, which is why the latch is checked before the per-frame release() below and not cleared
     // by it. A different device, or an explicit panel release, is a fresh attempt.
-    if (m_ref_shader_failed_device == a_device)
+    if (m_ref_shader_failed_device == device)
         return false;
 
     release();
 
     if (!ShaderManager::instance().compile())
     {
-        m_ref_shader_failed_device = a_device;
+        m_ref_shader_failed_device = device;
         return false;
     }
 
-    if (!m_geometry_pass.init(a_device) || !m_composite_pass.init(a_device))
+    if (!m_geometry_pass.init(device) || !m_composite_pass.init(device))
         return false;
 
-    m_ref_device = a_device;
+    m_ref_device = device;
     m_ready = true;
     return true;
 }

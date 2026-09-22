@@ -31,20 +31,20 @@ public:
     FrameHook& operator=(FrameHook const&) = delete;
 
     // Registers a game-thread listener and ensures the present hook is installed.
-    bool install(Listener a_listener);
+    bool install(Listener listener);
     // Registers a render-thread listener that runs inside the present callback. It must not block
     // and must return without submitting any draw when it has nothing to draw.
-    bool install_present(PresentListener a_listener);
+    bool install_present(PresentListener listener);
 
 private:
     FrameHook();
     ~FrameHook() = default;
 
-    static void on_present(REX::W32::IDXGISwapChain* a_swap_chain);
+    static void on_present(REX::W32::IDXGISwapChain* swap_chain);
     static void dispatch_frame();
     bool ensure_installed();
-    [[nodiscard]] bool has_listener(Listener a_listener) const;
-    [[nodiscard]] bool has_present_listener(PresentListener a_listener) const;
+    [[nodiscard]] bool has_listener(Listener listener) const;
+    [[nodiscard]] bool has_present_listener(PresentListener listener) const;
     void tick();
 
 private:

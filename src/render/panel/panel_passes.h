@@ -30,16 +30,16 @@ public:
     PanelGeometryPass(PanelGeometryPass const&) = delete;
     PanelGeometryPass& operator=(PanelGeometryPass const&) = delete;
 
-    [[nodiscard]] bool init(REX::W32::ID3D11Device* a_device);
+    [[nodiscard]] bool init(REX::W32::ID3D11Device* device);
     void release();
 
     // Sets the target and its views, clears them, binds the panel states and draws every mesh. The
-    // caller wraps the call in a D3D11StateCapture. a_clear_color is the caller's decision: the opaque
+    // caller wraps the call in a D3D11StateCapture. clear_color is the caller's decision: the opaque
     // background for the built-in chrome, and a fully transparent clear for a skin, so a fragment the
     // character does not cover keeps a zero alpha and the composite blends nothing into it.
-    void draw(REX::W32::ID3D11Device* a_device, REX::W32::ID3D11DeviceContext* a_context,
-        PanelTarget const& a_target, PanelCameraFrame const& a_camera, float a_alpha_test,
-        float const a_clear_color[4], std::span<PanelDraw const> a_draws);
+    void draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
+        PanelTarget const& target, PanelCameraFrame const& camera, float alpha_test,
+        float const clear_color[4], std::span<PanelDraw const> draws);
 
 private:
     // Input-layout cache key: the skinning path, whether a UV input is bound, the position format and
@@ -66,8 +66,8 @@ private:
         REX::W32::ID3D11InputLayout* layout;
     };
 
-    [[nodiscard]] static bool same_layout(LayoutKey const& a_lhs, LayoutKey const& a_rhs) noexcept;
-    [[nodiscard]] REX::W32::ID3D11InputLayout* acquire_layout(REX::W32::ID3D11Device* a_device, PanelDraw const& a_draw);
+    [[nodiscard]] static bool same_layout(LayoutKey const& lhs, LayoutKey const& rhs) noexcept;
+    [[nodiscard]] REX::W32::ID3D11InputLayout* acquire_layout(REX::W32::ID3D11Device* device, PanelDraw const& draw);
     void release_layouts();
 
 private:
@@ -101,19 +101,19 @@ public:
     PanelCompositePass(PanelCompositePass const&) = delete;
     PanelCompositePass& operator=(PanelCompositePass const&) = delete;
 
-    [[nodiscard]] bool init(REX::W32::ID3D11Device* a_device);
+    [[nodiscard]] bool init(REX::W32::ID3D11Device* device);
     void release();
 
-    // a_border_thickness is in render pixels and is expressed in the shader's uv space with the
+    // border_thickness is in render pixels and is expressed in the shader's uv space with the
     // rectangle's own size, so the inset keeps its pixel thickness at every resolution. It is also the
     // inset the character is clipped to: with the built-in chrome it is the hairline border's own
     // thickness, and with a skin it is the configured skin inset, which the caller derives separately.
-    // a_built_in_chrome selects between the plugin's own background and border and a skin's movie,
+    // built_in_chrome selects between the plugin's own background and border and a skin's movie,
     // which is already on the target, and between the opaque and the blended character write.
-    void draw(REX::W32::ID3D11DeviceContext* a_context, REX::W32::ID3D11RenderTargetView* a_target,
-        REX::W32::ID3D11ShaderResourceView* a_panel, REX::W32::D3D11_VIEWPORT const& a_rectangle,
-        float const a_background[4], float const a_border[4], uint32_t a_border_thickness,
-        bool a_built_in_chrome) const;
+    void draw(REX::W32::ID3D11DeviceContext* context, REX::W32::ID3D11RenderTargetView* target,
+        REX::W32::ID3D11ShaderResourceView* panel, REX::W32::D3D11_VIEWPORT const& rectangle,
+        float const background[4], float const border[4], uint32_t border_thickness,
+        bool built_in_chrome) const;
 
 private:
     REX::W32::ID3D11VertexShader* m_ref_fullscreen_vs;

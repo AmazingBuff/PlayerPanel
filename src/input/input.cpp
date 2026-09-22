@@ -15,9 +15,9 @@ namespace
     // mouse delta any more: the panel reads the cursor the engine drives for its own menu, so only the
     // button edge has to be observed here. Nothing else on the panel consumes mouse input, so the event
     // is observed and never consumed.
-    void observe_mouse_event(RE::InputEvent* a_event)
+    void observe_mouse_event(RE::InputEvent* event)
     {
-        RE::ButtonEvent* const button = a_event->AsButtonEvent();
+        RE::ButtonEvent* const button = event->AsButtonEvent();
         if (!button || button->device.get() != RE::INPUT_DEVICE::kMouse || button->GetIDCode() != Mouse_Left_Button_Id)
             return;
 
@@ -33,12 +33,12 @@ namespace
             return s_instance;
         }
 
-        RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* a_events,
+        RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* events,
             RE::BSTEventSource<RE::InputEvent*>*) noexcept override
         {
             try
             {
-                if (!a_events)
+                if (!events)
                     return RE::BSEventNotifyControl::kContinue;
 
                 // The panel observes the mouse before the gates below: the button state it tracks must
@@ -54,7 +54,7 @@ namespace
                     scan_code = hotkey_enabled ? MapVirtualKeyA(config.hotkey, MAPVK_VK_TO_VSC) : 0u;
                 }
 
-                for (RE::InputEvent* event = *a_events; event; event = event->next)
+                for (RE::InputEvent* event = *events; event; event = event->next)
                 {
                     observe_mouse_event(event);
                     if (!hotkey_enabled || scan_code == 0)

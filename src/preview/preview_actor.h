@@ -45,7 +45,7 @@ private:
 
     void service_request();
     bool create();
-    void set_state(State a_state, std::string_view a_reason);
+    void set_state(State state, std::string_view reason);
 
 private:
     RE::ObjectRefHandle m_handle;

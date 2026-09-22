@@ -46,9 +46,9 @@ namespace
 
     // The documented skin path is defined once, as Panel_Swf_Path; this is the only place it is copied
     // into the configuration's fixed buffer, for the default and for a value read from the INI.
-    void set_panel_swf_path(Config& a_config, char const* a_path)
+    void set_panel_swf_path(Config& config, char const* path)
     {
-        std::snprintf(a_config.panel_swf_path, Max_Panel_Swf_Path, "%s", a_path);
+        std::snprintf(config.panel_swf_path, Max_Panel_Swf_Path, "%s", path);
     }
 
     // The single authoritative set of defaults; both the constructor and load() start from it.
@@ -74,58 +74,58 @@ namespace
     }
 
     // The INI is an external boundary: one check normalizes every value read from it.
-    bool is_usable_preview_distance(double a_value)
+    bool is_usable_preview_distance(double value)
     {
-        return std::isfinite(a_value) && a_value > 0.0;
+        return std::isfinite(value) && value > 0.0;
     }
 
-    bool is_usable_panel_height_fraction(double a_value)
+    bool is_usable_panel_height_fraction(double value)
     {
-        return std::isfinite(a_value) && a_value >= Min_Panel_Height_Fraction && a_value <= Max_Panel_Height_Fraction;
+        return std::isfinite(value) && value >= Min_Panel_Height_Fraction && value <= Max_Panel_Height_Fraction;
     }
 
-    bool is_usable_panel_aspect(double a_value)
+    bool is_usable_panel_aspect(double value)
     {
-        return std::isfinite(a_value) && a_value >= Min_Panel_Aspect && a_value <= Max_Panel_Aspect;
+        return std::isfinite(value) && value >= Min_Panel_Aspect && value <= Max_Panel_Aspect;
     }
 
-    bool is_usable_panel_margin_fraction(double a_value)
+    bool is_usable_panel_margin_fraction(double value)
     {
-        return std::isfinite(a_value) && a_value >= 0.0 && a_value <= Max_Panel_Margin_Fraction;
+        return std::isfinite(value) && value >= 0.0 && value <= Max_Panel_Margin_Fraction;
     }
 
     // Either the explicit "not placed yet" marker or a fraction of the free space on that axis.
-    bool is_usable_panel_position(double a_value)
+    bool is_usable_panel_position(double value)
     {
-        return std::isfinite(a_value) &&
-            (a_value == Default_Panel_Position || (a_value >= 0.0 && a_value <= 1.0));
+        return std::isfinite(value) &&
+            (value == Default_Panel_Position || (value >= 0.0 && value <= 1.0));
     }
 
     // A skin path that names something and still fits the configuration buffer. A longer value would
     // have to be truncated, which would silently load a different file.
-    bool is_usable_panel_swf_path(char const* a_value)
+    bool is_usable_panel_swf_path(char const* value)
     {
-        return a_value && a_value[0] != '\0' && std::strlen(a_value) < Max_Panel_Swf_Path;
+        return value && value[0] != '\0' && std::strlen(value) < Max_Panel_Swf_Path;
     }
 
-    bool is_usable_panel_skin_inset_fraction(double a_value)
+    bool is_usable_panel_skin_inset_fraction(double value)
     {
-        return std::isfinite(a_value) && a_value >= Min_Panel_Skin_Inset_Fraction && a_value <= Max_Panel_Skin_Inset_Fraction;
+        return std::isfinite(value) && value >= Min_Panel_Skin_Inset_Fraction && value <= Max_Panel_Skin_Inset_Fraction;
     }
 
-    bool is_usable_camera_fov(double a_value)
+    bool is_usable_camera_fov(double value)
     {
-        return std::isfinite(a_value) && a_value >= Min_Camera_Fov && a_value <= Max_Camera_Fov;
+        return std::isfinite(value) && value >= Min_Camera_Fov && value <= Max_Camera_Fov;
     }
 
-    bool is_usable_camera_distance(double a_value)
+    bool is_usable_camera_distance(double value)
     {
-        return std::isfinite(a_value) && a_value >= 0.0 && a_value <= Max_Camera_Distance;
+        return std::isfinite(value) && value >= 0.0 && value <= Max_Camera_Distance;
     }
 
-    bool is_usable_alpha_test_threshold(double a_value)
+    bool is_usable_alpha_test_threshold(double value)
     {
-        return std::isfinite(a_value) && a_value >= 0.0 && a_value <= 1.0;
+        return std::isfinite(value) && value >= 0.0 && value <= 1.0;
     }
 
     std::filesystem::path get_config_path()
@@ -152,11 +152,11 @@ Config Setting::get_config() const
     return m_config;
 }
 
-void Setting::set_panel_position(double a_x, double a_y)
+void Setting::set_panel_position(double x, double y)
 {
     std::lock_guard config_lock(m_config_mutex);
-    m_config.panel_position_x = (std::clamp)(a_x, 0.0, 1.0);
-    m_config.panel_position_y = (std::clamp)(a_y, 0.0, 1.0);
+    m_config.panel_position_x = (std::clamp)(x, 0.0, 1.0);
+    m_config.panel_position_y = (std::clamp)(y, 0.0, 1.0);
 }
 
 void Setting::load()

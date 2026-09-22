@@ -72,8 +72,8 @@ struct PanelDraw
 // Collect this frame's draws from the single reference's 3D along two paths, static (the BSTriShape
 // family) and skinned (NiSkinPartition partitions), including position-format and skin-layout
 // self-calibration and per-mesh validation - meshes with no solution are skipped rather than drawn
-// with a guessed layout. a_draws is cleared first and its capacity is reused, so a steady-state
+// with a guessed layout. draws is cleared first and its capacity is reused, so a steady-state
 // frame allocates nothing.
-void collect_panel_geometry(RE::TESObjectREFR& a_ref, std::vector<PanelDraw>& a_draws);
+void collect_panel_geometry(RE::TESObjectREFR& ref, std::vector<PanelDraw>& draws);
 
 PLUGIN_NAMESPACE_END

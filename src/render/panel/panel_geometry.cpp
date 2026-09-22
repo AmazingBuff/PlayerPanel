@@ -835,26 +835,26 @@ namespace
         bool has_uv;
     };
 
-    PanelMaterial resolve_material(RE::BSShaderProperty* a_property, RE::BSGraphics::VertexDesc const& a_desc)
+    PanelMaterial resolve_material(RE::BSShaderProperty* property, RE::BSGraphics::VertexDesc const& desc)
     {
-        RE::NiSourceTexture* const texture = a_property ? a_property->GetBaseTexture() : nullptr;
+        RE::NiSourceTexture* const texture = property ? property->GetBaseTexture() : nullptr;
         RE::BSGraphics::Texture* const renderer_texture = texture ? texture->rendererTexture : nullptr;
         REX::W32::ID3D11ShaderResourceView* const view = renderer_texture ? renderer_texture->resourceView : nullptr;
 
         return PanelMaterial{
-            .shader_property = a_property,
+            .shader_property = property,
             .diffuse_view = view,
-            .material_alpha = a_property ? a_property->QMaterialAlpha() : 1.0f,
-            .has_uv = view != nullptr && a_desc.HasFlag(RE::BSGraphics::Vertex::VF_UV),
+            .material_alpha = property ? property->QMaterialAlpha() : 1.0f,
+            .has_uv = view != nullptr && desc.HasFlag(RE::BSGraphics::Vertex::VF_UV),
         };
     }
 
-    void apply_material(PanelDraw& a_draw, PanelMaterial const& a_material)
+    void apply_material(PanelDraw& draw, PanelMaterial const& material)
     {
-        a_draw.shader_property = a_material.shader_property;
-        a_draw.diffuse_view = a_material.diffuse_view;
-        a_draw.material_alpha = a_material.material_alpha;
-        a_draw.has_uv = a_material.has_uv;
+        draw.shader_property = material.shader_property;
+        draw.diffuse_view = material.diffuse_view;
+        draw.material_alpha = material.material_alpha;
+        draw.has_uv = material.has_uv;
     }
 
     void collect_static(RE::BSGeometry* geom, RE::BSGeometry::GEOMETRY_RUNTIME_DATA const& geom_rt, PanelWalkContext const& context)
@@ -1232,25 +1232,25 @@ namespace
     }
 }
 
-void collect_panel_geometry(RE::TESObjectREFR& a_ref, std::vector<PanelDraw>& a_draws)
+void collect_panel_geometry(RE::TESObjectREFR& ref, std::vector<PanelDraw>& draws)
 {
-    a_draws.clear();
+    draws.clear();
 
-    RE::NiAVObject* const root = a_ref.GetCurrent3D();
+    RE::NiAVObject* const root = ref.GetCurrent3D();
     if (!root)
         return;
 
     // The walk state lives on the stack and is captured by reference, so the traversal's callable
     // stays small enough not to allocate.
-    PanelWalkContext const context{ .position = a_ref.GetPosition(), .form_id = a_ref.GetFormID(), .draws = &a_draws };
+    PanelWalkContext const context{ .position = ref.GetPosition(), .form_id = ref.GetFormID(), .draws = &draws };
 
-    RE::BSVisit::TraverseScenegraphGeometries(root, [&context](RE::BSGeometry* a_geometry) {
+    RE::BSVisit::TraverseScenegraphGeometries(root, [&context](RE::BSGeometry* geometry) {
         if (context.draws->size() >= Max_Draws_Per_Frame)
         {
             logger::warn("Panel: draw cap {} reached, extra geometry dropped", Max_Draws_Per_Frame);
             return RE::BSVisit::BSVisitControl::kStop;
         }
-        collect_geometry(a_geometry, context);
+        collect_geometry(geometry, context);
         return RE::BSVisit::BSVisitControl::kContinue;
     });
 }

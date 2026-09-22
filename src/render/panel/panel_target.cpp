@@ -33,9 +33,9 @@ PanelTarget::~PanelTarget()
     release();
 }
 
-bool PanelTarget::matches(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint32_t a_height) const
+bool PanelTarget::matches(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height) const
 {
-    return m_ref_device == a_device && m_width == a_width && m_height == a_height && m_rtv && m_dsv && m_srv;
+    return m_ref_device == device && m_width == width && m_height == height && m_rtv && m_dsv && m_srv;
 }
 
 void PanelTarget::release()
@@ -70,17 +70,17 @@ void PanelTarget::release()
     m_ref_device = nullptr;
 }
 
-bool PanelTarget::init(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint32_t a_height)
+bool PanelTarget::init(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height)
 {
-    if (!a_device || a_width == 0 || a_height == 0)
+    if (!device || width == 0 || height == 0)
     {
-        logger::error("Panel target: invalid device or size ({}x{})", a_width, a_height);
+        logger::error("Panel target: invalid device or size ({}x{})", width, height);
         return false;
     }
 
     REX::W32::D3D11_TEXTURE2D_DESC desc{};
-    desc.width = a_width;
-    desc.height = a_height;
+    desc.width = width;
+    desc.height = height;
     desc.mipLevels = 1;
     desc.arraySize = 1;
     desc.format = Panel_Color_Format;
@@ -88,7 +88,7 @@ bool PanelTarget::init(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint3
     desc.usage = REX::W32::D3D11_USAGE_DEFAULT;
     desc.bindFlags = REX::W32::D3D11_BIND_RENDER_TARGET | REX::W32::D3D11_BIND_SHADER_RESOURCE;
 
-    REX::W32::HRESULT const texture_hr = a_device->CreateTexture2D(&desc, nullptr, &m_texture);
+    REX::W32::HRESULT const texture_hr = device->CreateTexture2D(&desc, nullptr, &m_texture);
     if (!REX::W32::SUCCESS(texture_hr) || !m_texture)
     {
         logger::error("Panel target: failed to create the colour texture ({:X})", static_cast<unsigned int>(texture_hr));
@@ -96,8 +96,8 @@ bool PanelTarget::init(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint3
         return false;
     }
 
-    REX::W32::HRESULT const rtv_hr = a_device->CreateRenderTargetView(m_texture, nullptr, &m_rtv);
-    REX::W32::HRESULT const srv_hr = a_device->CreateShaderResourceView(m_texture, nullptr, &m_srv);
+    REX::W32::HRESULT const rtv_hr = device->CreateRenderTargetView(m_texture, nullptr, &m_rtv);
+    REX::W32::HRESULT const srv_hr = device->CreateShaderResourceView(m_texture, nullptr, &m_srv);
     if (!REX::W32::SUCCESS(rtv_hr) || !m_rtv || !REX::W32::SUCCESS(srv_hr) || !m_srv)
     {
         logger::error("Panel target: failed to create the colour views (rtv={:X}, srv={:X})",
@@ -108,7 +108,7 @@ bool PanelTarget::init(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint3
 
     desc.format = Panel_Depth_Format;
     desc.bindFlags = REX::W32::D3D11_BIND_DEPTH_STENCIL;
-    REX::W32::HRESULT const depth_hr = a_device->CreateTexture2D(&desc, nullptr, &m_depth_texture);
+    REX::W32::HRESULT const depth_hr = device->CreateTexture2D(&desc, nullptr, &m_depth_texture);
     if (!REX::W32::SUCCESS(depth_hr) || !m_depth_texture)
     {
         logger::error("Panel target: failed to create the depth texture ({:X})", static_cast<unsigned int>(depth_hr));
@@ -116,7 +116,7 @@ bool PanelTarget::init(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint3
         return false;
     }
 
-    REX::W32::HRESULT const dsv_hr = a_device->CreateDepthStencilView(m_depth_texture, nullptr, &m_dsv);
+    REX::W32::HRESULT const dsv_hr = device->CreateDepthStencilView(m_depth_texture, nullptr, &m_dsv);
     if (!REX::W32::SUCCESS(dsv_hr) || !m_dsv)
     {
         logger::error("Panel target: failed to create the depth view ({:X})", static_cast<unsigned int>(dsv_hr));
@@ -124,9 +124,9 @@ bool PanelTarget::init(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint3
         return false;
     }
 
-    m_ref_device = a_device;
-    m_width = a_width;
-    m_height = a_height;
+    m_ref_device = device;
+    m_width = width;
+    m_height = height;
     return true;
 }
 

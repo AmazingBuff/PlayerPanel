@@ -19,9 +19,9 @@ namespace
     // extern/CommonLibSSE/src/RE/T/TESObjectREFR.cpp, TESObjectREFR::GetHeadingAngle.
     constexpr float Pi = 3.14159265358979323846f;
 
-    constexpr char const* state_name(PreviewActor::State a_state)
+    constexpr char const* state_name(PreviewActor::State state)
     {
-        switch (a_state)
+        switch (state)
         {
         case PreviewActor::State::kIdle:
             return "idle";
@@ -36,26 +36,26 @@ namespace
     // Places the preview PreviewDistance in front of the player and turns it back to face the
     // player. The yaw is read and written in radians and measured from +Y towards +X, so the
     // forward offset is (sin(yaw), cos(yaw)) and the preview's own yaw is yaw + Pi.
-    void place_in_front(RE::TESObjectREFR& a_preview, RE::Actor const& a_player)
+    void place_in_front(RE::TESObjectREFR& preview, RE::Actor const& player)
     {
         double const distance = Setting::instance().get_config().preview_distance;
-        float const yaw = a_player.GetAngleZ();
-        RE::NiPoint3 const player_position = a_player.GetPosition();
+        float const yaw = player.GetAngleZ();
+        RE::NiPoint3 const player_position = player.GetPosition();
         RE::NiPoint3 const target{
             player_position.x + static_cast<float>(std::sin(yaw) * distance),
             player_position.y + static_cast<float>(std::cos(yaw) * distance),
             player_position.z
         };
-        a_preview.SetPosition(target);
-        a_preview.SetAngle(RE::NiPoint3{ 0.0f, 0.0f, yaw + Pi });
+        preview.SetPosition(target);
+        preview.SetAngle(RE::NiPoint3{ 0.0f, 0.0f, yaw + Pi });
     }
 
     // Walks the player's own inventory changes and re-dresses the preview; the player's container is
     // only read, no entry is materialised into a copy and no equip event is sent or replayed.
-    bool sync_worn_equipment(RE::Actor& a_preview, RE::Actor& a_player)
+    bool sync_worn_equipment(RE::Actor& preview, RE::Actor& player)
     {
         // a_noInit avoids creating the player's container changes while only reading them.
-        RE::InventoryChanges* const changes = a_player.GetInventoryChanges(true);
+        RE::InventoryChanges* const changes = player.GetInventoryChanges(true);
         if (!changes)
         {
             logger::warn("Player container changes are unavailable; the preview is not dressed");
@@ -74,7 +74,7 @@ namespace
             RE::TESBoundObject* const object = entry->object;
             if (!object || !entry->IsWorn())
                 continue;
-            if (a_preview.AddWornItem(object, 1, true, 0, 0))
+            if (preview.AddWornItem(object, 1, true, 0, 0))
                 ++added;
             else
                 ++refused;
@@ -229,12 +229,12 @@ bool PreviewActor::create()
     return true;
 }
 
-void PreviewActor::set_state(State a_state, std::string_view a_reason)
+void PreviewActor::set_state(State state, std::string_view reason)
 {
-    if (m_state == a_state)
+    if (m_state == state)
         return;
-    m_state = a_state;
-    logger::info("Preview state {}: {}", state_name(a_state), a_reason);
+    m_state = state;
+    logger::info("Preview state {}: {}", state_name(state), reason);
 }
 
 PLUGIN_NAMESPACE_END

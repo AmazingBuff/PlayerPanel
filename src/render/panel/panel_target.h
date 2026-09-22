@@ -21,11 +21,11 @@ public:
     PanelTarget(PanelTarget const&) = delete;
     PanelTarget& operator=(PanelTarget const&) = delete;
 
-    [[nodiscard]] bool init(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint32_t a_height);
+    [[nodiscard]] bool init(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height);
     void release();
 
     // True when the current views already match this device and size, so no rebuild is needed.
-    [[nodiscard]] bool matches(REX::W32::ID3D11Device* a_device, uint32_t a_width, uint32_t a_height) const;
+    [[nodiscard]] bool matches(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height) const;
     [[nodiscard]] REX::W32::ID3D11RenderTargetView* rtv() const noexcept { return m_rtv; }
     [[nodiscard]] REX::W32::ID3D11DepthStencilView* dsv() const noexcept { return m_dsv; }
     [[nodiscard]] REX::W32::ID3D11ShaderResourceView* srv() const noexcept { return m_srv; }

@@ -46,9 +46,9 @@ namespace
 
     // The look-at point and framing radius: the preview's world bound when it is finite and inside
     // the accepted range, otherwise a fixed body-height framing derived from the reference position.
-    Framing resolve_framing(RE::TESObjectREFR const& a_preview)
+    Framing resolve_framing(RE::TESObjectREFR const& preview)
     {
-        if (RE::NiAVObject const* const root = a_preview.GetCurrent3D())
+        if (RE::NiAVObject const* const root = preview.GetCurrent3D())
         {
             RE::NiBound const& bound = root->worldBound;
             if (std::isfinite(bound.center.x) && std::isfinite(bound.center.y) && std::isfinite(bound.center.z) &&
@@ -58,37 +58,37 @@ namespace
             }
         }
 
-        RE::NiPoint3 const position = a_preview.GetPosition();
+        RE::NiPoint3 const position = preview.GetPosition();
         float const half_height = Fallback_Body_Height * 0.5f;
         return Framing{ DirectX::XMFLOAT3{ position.x, position.y, position.z + half_height }, half_height };
     }
 }
 
-bool PanelCamera::build(RE::TESObjectREFR const& a_preview, Config const& a_config, PanelCameraFrame& a_out)
+bool PanelCamera::build(RE::TESObjectREFR const& preview, Config const& config, PanelCameraFrame& out)
 {
-    Framing const framing = resolve_framing(a_preview);
+    Framing const framing = resolve_framing(preview);
     if (!std::isfinite(framing.radius) || framing.radius <= 0.0f)
         return false;
 
     // Orbit direction: stand in front of the character along its own heading, so the panel shows the
     // face the preview was turned to show.
-    float const heading = a_preview.GetAngleZ();
+    float const heading = preview.GetAngleZ();
     if (!std::isfinite(heading))
         return false;
     DirectX::XMFLOAT3 const orbit{ std::sin(heading), std::cos(heading), 0.0f };
 
-    float const fov_degrees = static_cast<float>(a_config.camera_fov);
+    float const fov_degrees = static_cast<float>(config.camera_fov);
     float const fov_y = fov_degrees * Radians_Per_Degree;
     if (!std::isfinite(fov_y) || fov_y <= 0.0f || fov_y >= 3.14159265358979323846f)
         return false;
 
     // The panel's own aspect, not the screen's: the camera frames the character the same way at every
     // monitor shape.
-    float const aspect = static_cast<float>(a_config.panel_aspect);
+    float const aspect = static_cast<float>(config.panel_aspect);
     if (!std::isfinite(aspect) || aspect <= 0.0f)
         return false;
 
-    float distance = static_cast<float>(a_config.camera_distance);
+    float distance = static_cast<float>(config.camera_distance);
     if (!std::isfinite(distance) || distance <= 0.0f)
     {
         // Fit the body sphere on the vertical axis and on the horizontal one, and keep the larger
@@ -126,8 +126,8 @@ bool PanelCamera::build(RE::TESObjectREFR const& a_preview, Config const& a_conf
         DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
     DirectX::XMMATRIX const projection = DirectX::XMMatrixPerspectiveFovLH(fov_y, aspect, near_plane, far_plane);
 
-    DirectX::XMStoreFloat4x4(&a_out.view_proj, DirectX::XMMatrixMultiply(view, projection));
-    a_out.eye = eye;
+    DirectX::XMStoreFloat4x4(&out.view_proj, DirectX::XMMatrixMultiply(view, projection));
+    out.eye = eye;
     return true;
 }
 

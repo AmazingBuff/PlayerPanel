@@ -153,11 +153,11 @@ Engine and SKSE dependencies used, with the same paths the contract's evidence i
 
 ### `FrameHook`
 
-- `bool install(Listener a_listener)` — registers the game-thread tick listener and installs the
+- `bool install(Listener listener)` — registers the game-thread tick listener and installs the
   present hook once. Returns `false` (with a logged warning) while the swap chain does not exist
   yet; the caller retries on a later game message. Calling it again with another listener registers
   that listener and never writes a second hook.
-- `bool install_present(PresentListener a_listener)` — registers a listener that runs on the render
+- `bool install_present(PresentListener listener)` — registers a listener that runs on the render
   thread inside the present callback, before the game-thread task is queued. It must not block and
   must return without submitting any draw when it has nothing to draw.
 - `FrameHook::Listener` is `void (*)()`, i.e. the game-thread listener runs with no arguments and

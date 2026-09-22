@@ -24,12 +24,12 @@ FrameHook::FrameHook() :
 {
 }
 
-bool FrameHook::install(Listener a_listener)
+bool FrameHook::install(Listener listener)
 {
-    if (a_listener && !has_listener(a_listener))
+    if (listener && !has_listener(listener))
     {
         if (m_listener_count < Max_Frame_Listener_Count)
-            m_listeners[m_listener_count++] = a_listener;
+            m_listeners[m_listener_count++] = listener;
         else
             logger::warn("Frame listener capacity reached; the listener was not registered");
     }
@@ -37,12 +37,12 @@ bool FrameHook::install(Listener a_listener)
     return ensure_installed();
 }
 
-bool FrameHook::install_present(PresentListener a_listener)
+bool FrameHook::install_present(PresentListener listener)
 {
-    if (a_listener && !has_present_listener(a_listener))
+    if (listener && !has_present_listener(listener))
     {
         if (m_present_listener_count < Max_Present_Listener_Count)
-            m_present_listeners[m_present_listener_count++] = a_listener;
+            m_present_listeners[m_present_listener_count++] = listener;
         else
             logger::warn("Present listener capacity reached; the listener was not registered");
     }
@@ -67,7 +67,7 @@ bool FrameHook::ensure_installed()
 }
 
 // Not noexcept: queueing the tick may throw, and PresentHook::present_thunk already guards this call.
-void FrameHook::on_present(REX::W32::IDXGISwapChain* a_swap_chain)
+void FrameHook::on_present(REX::W32::IDXGISwapChain* swap_chain)
 {
     FrameHook& self = instance();
 
@@ -75,7 +75,7 @@ void FrameHook::on_present(REX::W32::IDXGISwapChain* a_swap_chain)
     {
         try
         {
-            self.m_present_listeners[index](a_swap_chain);
+            self.m_present_listeners[index](swap_chain);
         }
         catch (...)
         {
@@ -119,21 +119,21 @@ void FrameHook::tick()
     }
 }
 
-bool FrameHook::has_listener(Listener a_listener) const
+bool FrameHook::has_listener(Listener listener) const
 {
     for (std::uint32_t index = 0; index < m_listener_count; ++index)
     {
-        if (m_listeners[index] == a_listener)
+        if (m_listeners[index] == listener)
             return true;
     }
     return false;
 }
 
-bool FrameHook::has_present_listener(PresentListener a_listener) const
+bool FrameHook::has_present_listener(PresentListener listener) const
 {
     for (std::uint32_t index = 0; index < m_present_listener_count; ++index)
     {
-        if (m_present_listeners[index] == a_listener)
+        if (m_present_listeners[index] == listener)
             return true;
     }
     return false;
