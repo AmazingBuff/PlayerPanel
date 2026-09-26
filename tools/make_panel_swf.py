@@ -210,11 +210,18 @@ def _signed_bit_length(value: int) -> int:
 
 
 def encode_rect(values: tuple[int, int, int, int]) -> bytes:
-    """A RECT: a five-bit width followed by four signed values, byte-aligned."""
+    """A RECT: a five-bit width followed by four signed values, byte-aligned.
+
+    ``values`` is the SWF spec's field order ``(x_min, x_max, y_min, y_max)`` - not
+    the ``(x0, y0, x1, y1)`` corner order a drawing helper would use.  Writing the
+    two pairs the other way round declares a zero-width, displaced stage, which is
+    exactly what a Scaleform player then renders: nothing.
+    """
+    x_min, x_max, y_min, y_max = values
     width = max(_signed_bit_length(value) for value in values)
     writer = _BitWriter()
     writer.write_unsigned(width, 5)
-    for value in values:
+    for value in (x_min, x_max, y_min, y_max):
         writer.write_signed(value, width)
     return writer.to_bytes()
 
@@ -236,15 +243,23 @@ def _encode_shape_records(max_delta: int) -> bytes:
     """The shape records: the opaque stage-filling backdrop, then the frame ring over it."""
     num_fill_bits = _fill_style_bits()
     num_line_bits = 0
+    # The two size fields follow two different spec conventions, established by rendering
+    # every combination with a spec-correct parser (JPEXS ffdec): a style change's MoveBits
+    # carries the raw bit count, while an edge record's NumBits carries "the actual bit
+    # count minus two".  Writing either field the other way shifts the whole record stream:
+    # the first generated skin did exactly that, and the shape parsed into garbage that
+    # painted nothing - the backdrop and the frame band never reached the screen.
     move_bits = _signed_bit_length(max_delta)
     edge_bits = _signed_bit_length(max_delta)
-
+    move_bits_field = move_bits
+    edge_bits_field = edge_bits - 2
     stage_w = STAGE_WIDTH_TWIPS
     stage_h = STAGE_HEIGHT_TWIPS
     band = BORDER_BAND_TWIPS
     # Each rectangle is traced clockwise, so its interior lies on the right of the
-    # directed edge and the single right-side fill carries the colour.  The backdrop
-    # is traced first, so the four frame bands are painted over its outer edge.
+    # directed edge and the single right-side fill (FillStyle1) carries the colour - the
+    # combination the rendered proof picked out.  The backdrop is traced first, so the
+    # four frame bands are painted over its outer edge.
     rectangles = (
         (0, 0, stage_w, stage_h, FILL_STYLE_BACKDROP),
         (0, 0, stage_w, band, FILL_STYLE_FRAME),
@@ -256,6 +271,7 @@ def _encode_shape_records(max_delta: int) -> bytes:
     writer = _BitWriter()
     writer.write_unsigned(num_fill_bits, 4)
     writer.write_unsigned(num_line_bits, 4)
+
     for x0, y0, x1, y1, style in rectangles:
         # STYLECHANGERECORD: move to the corner and select a fill style on the right.
         writer.write_unsigned(0, 1)  # TypeFlag: a style change
@@ -264,7 +280,7 @@ def _encode_shape_records(max_delta: int) -> bytes:
         writer.write_unsigned(1, 1)  # StateFillStyle1
         writer.write_unsigned(0, 1)  # StateFillStyle0
         writer.write_unsigned(1, 1)  # StateMoveTo
-        writer.write_unsigned(move_bits, 5)
+        writer.write_unsigned(move_bits_field, 5)
         writer.write_signed(x0, move_bits)
         writer.write_signed(y0, move_bits)
         writer.write_unsigned(style, num_fill_bits)
@@ -272,7 +288,7 @@ def _encode_shape_records(max_delta: int) -> bytes:
             # STRAIGHTEDGERECORD with the general-line flag.
             writer.write_unsigned(1, 1)  # TypeFlag: an edge
             writer.write_unsigned(1, 1)  # StraightFlag
-            writer.write_unsigned(edge_bits, 4)
+            writer.write_unsigned(edge_bits_field, 4)
             writer.write_unsigned(1, 1)  # GeneralLineFlag
             writer.write_signed(delta_x, edge_bits)
             writer.write_signed(delta_y, edge_bits)
@@ -283,7 +299,7 @@ def _encode_shape_records(max_delta: int) -> bytes:
 def build_define_shape_3() -> bytes:
     body = bytearray()
     body += struct.pack("<H", SHAPE_ID)
-    body += encode_rect((0, 0, STAGE_WIDTH_TWIPS, STAGE_HEIGHT_TWIPS))
+    body += encode_rect((0, STAGE_WIDTH_TWIPS, 0, STAGE_HEIGHT_TWIPS))
     body.append(2)  # FillStyleCount: the backdrop and the frame band
     body.append(FILL_STYLE_SOLID)
     body += bytes(BACKDROP_RGBA)
@@ -313,7 +329,7 @@ def build_place_object_2() -> bytes:
 
 def build_swf() -> bytes:
     """The complete SWF file, byte for byte."""
-    frame_rect = encode_rect((0, 0, STAGE_WIDTH_TWIPS, STAGE_HEIGHT_TWIPS))
+    frame_rect = encode_rect((0, STAGE_WIDTH_TWIPS, 0, STAGE_HEIGHT_TWIPS))
     tags = b"".join(
         (
             encode_tag(TAG_SET_BACKGROUND_COLOR, bytes(BACKGROUND_RGB)),
@@ -341,8 +357,13 @@ def _parse_rect(reader: _Reader) -> tuple[tuple[int, int, int, int], int]:
     values = tuple(reader.read_signed(width) for _ in range(4))
     reader.align()
     x_min, x_max, y_min, y_max = values
+    # A degenerate span (zero width or height) is a spec-order mistake, not a stylistic
+    # choice: a player given such a stage renders nothing.  Reject it rather than merely
+    # reporting it, so the artifact can never carry one again.
     if x_min > x_max or y_min > y_max:
         raise SwfError("RECT has an inverted span")
+    if x_min == x_max or y_min == y_max:
+        raise SwfError("RECT has a degenerate (zero-width or zero-height) span")
     return (x_min, x_max, y_min, y_max), width
 
 
@@ -413,6 +434,8 @@ def _validate_define_shape_3(body: bytes) -> dict:
             if state_new_styles:
                 raise SwfError("a shape that redefines its styles mid-record is not supported here")
             if state_move_to:
+                # MoveBits carries the raw bit count (the "minus two" rule is the edge
+                # records' NumBits convention only).
                 move_bits = reader.read_unsigned(5)
                 reader.read_signed(move_bits)
                 reader.read_signed(move_bits)
@@ -427,9 +450,8 @@ def _validate_define_shape_3(body: bytes) -> dict:
             style_changes += 1
         else:
             straight = reader.read_unsigned(1)
-            edge_bits = reader.read_unsigned(4)
-            if edge_bits == 0:
-                raise SwfError("an edge record declares a zero bit width")
+            # NumBits stores the actual bit count minus two, per the spec.
+            edge_bits = reader.read_unsigned(4) + 2
             if straight:
                 if reader.read_unsigned(1):
                     reader.read_signed(edge_bits)
@@ -584,6 +606,27 @@ def _describe(summary: dict) -> str:
     )
 
 
+def _validate_stage(summary: dict) -> None:
+    """Assert the parsed header and shape bounds declare exactly the intended stage.
+
+    This is the check the original defect slipped past: the stage RECT's field order
+    was wrong, the parser read a zero-width stage, and the structural parse still
+    passed because a zero-width span is not an inverted one.  The generated skin has
+    exactly one legal geometry - a stage-filling backdrop and frame - so the intended
+    dimensions are assertable exactly, in spec field order.
+    """
+    expected = (0, STAGE_WIDTH_TWIPS, 0, STAGE_HEIGHT_TWIPS)
+    if summary["frame_bounds"] != expected:
+        raise SwfError(
+            f"the header stage RECT is {summary['frame_bounds']} (x_min, x_max, y_min, y_max), expected {expected}"
+        )
+    shape = next((tag for tag in summary["tags"] if tag["tag"] == "DefineShape3"), None)
+    if shape is not None and shape["bounds"] != expected:
+        raise SwfError(
+            f"the shape bounds RECT is {shape['bounds']} (x_min, x_max, y_min, y_max), expected {expected}"
+        )
+
+
 def _run_selftest(good: bytes) -> None:
     """Prove the parser rejects structural faults rather than accepting anything."""
 
@@ -612,7 +655,7 @@ def _run_selftest(good: bytes) -> None:
 
     # A file whose tag stream carries a DoAction action tag.
     header = good[:8]
-    frame_rect = encode_rect((0, 0, STAGE_WIDTH_TWIPS, STAGE_HEIGHT_TWIPS))
+    frame_rect = encode_rect((0, STAGE_WIDTH_TWIPS, 0, STAGE_HEIGHT_TWIPS))
     fixed = frame_rect + struct.pack("<H", int(FRAME_RATE * 256)) + struct.pack("<H", FRAME_COUNT)
     with_action = header + fixed + encode_tag(12, b"\x07\x00") + encode_tag(TAG_END, b"")
     corrupted = bytearray(with_action)
@@ -625,10 +668,24 @@ def _run_selftest(good: bytes) -> None:
     struct.pack_into("<I", corrupted, 4, len(without_end))
     expect_rejected("a missing End tag", bytes(corrupted))
 
+    # A header RECT whose Xmin equals Xmax - a degenerate, zero-width stage, which is
+    # what a corner-order RECT mistake produces and what a player then renders as nothing.
+    degenerate_stage = (
+        header
+        + encode_rect((0, 0, 0, STAGE_HEIGHT_TWIPS))
+        + struct.pack("<H", int(FRAME_RATE * 256))
+        + struct.pack("<H", FRAME_COUNT)
+        + encode_tag(TAG_SET_BACKGROUND_COLOR, bytes(BACKGROUND_RGB))
+        + encode_tag(TAG_END, b"")
+    )
+    corrupted = bytearray(degenerate_stage)
+    struct.pack_into("<I", corrupted, 4, len(degenerate_stage))
+    expect_rejected("a degenerate stage RECT", bytes(corrupted))
+
     # A shape whose only fill style is a gradient rather than a solid colour.
     body = bytearray()
     body += struct.pack("<H", SHAPE_ID)
-    body += encode_rect((0, 0, STAGE_WIDTH_TWIPS, STAGE_HEIGHT_TWIPS))
+    body += encode_rect((0, STAGE_WIDTH_TWIPS, 0, STAGE_HEIGHT_TWIPS))
     body.append(1)  # FillStyleCount
     body.append(0x10)  # a linear gradient fill style
     body += bytes(8)
@@ -643,7 +700,7 @@ def _run_selftest(good: bytes) -> None:
     # check rejects it at the fill styles, before the records are even needed.
     body = bytearray()
     body += struct.pack("<H", SHAPE_ID)
-    body += encode_rect((0, 0, STAGE_WIDTH_TWIPS, STAGE_HEIGHT_TWIPS))
+    body += encode_rect((0, STAGE_WIDTH_TWIPS, 0, STAGE_HEIGHT_TWIPS))
     body.append(1)  # FillStyleCount
     body.append(FILL_STYLE_SOLID)
     body += bytes(BACKDROP_RGBA[:3]) + bytes((0x40,))
@@ -667,6 +724,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         data = build_swf()
         summary = parse_swf(data)
+        _validate_stage(summary)
     except SwfError as error:
         print(f"error: the generated SWF is structurally invalid: {error}", file=sys.stderr)
         return 1

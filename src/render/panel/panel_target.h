@@ -9,9 +9,12 @@
 
 PLUGIN_NAMESPACE_BEGIN
 
-// The panel's private offscreen target: an R8G8B8A8_UNORM colour texture plus a D32_FLOAT depth
-// texture, together with the render-target, depth-stencil and shader-resource views the panel passes
-// need. Owned exclusively by the render thread and rebuilt when the device or the size changes.
+// The panel's render targets: the colour texture (R8G8B8A8_UNORM) keeps the skin path's offscreen
+// character, while the depth texture (D32_FLOAT) is sized to the ENGINE'S OWN back buffer, because
+// the built-in chrome's geometry pass draws the character directly onto that back buffer and D3D11
+// silently drops an OMSetRenderTargets whose depth-stencil resource size differs from the render
+// target's. Both are owned exclusively by the render thread and rebuilt when the device or either
+// size changes.
 class PanelTarget
 {
 public:
@@ -21,16 +24,21 @@ public:
     PanelTarget(PanelTarget const&) = delete;
     PanelTarget& operator=(PanelTarget const&) = delete;
 
-    [[nodiscard]] bool init(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height);
+    [[nodiscard]] bool init(REX::W32::ID3D11Device* device, uint32_t colour_width, uint32_t colour_height,
+        uint32_t depth_width, uint32_t depth_height);
     void release();
 
-    // True when the current views already match this device and size, so no rebuild is needed.
-    [[nodiscard]] bool matches(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height) const;
+    // True when the current views already match this device and both sizes, so no rebuild is needed.
+    [[nodiscard]] bool matches(REX::W32::ID3D11Device* device, uint32_t colour_width, uint32_t colour_height,
+        uint32_t depth_width, uint32_t depth_height) const;
     [[nodiscard]] REX::W32::ID3D11RenderTargetView* rtv() const noexcept { return m_rtv; }
     [[nodiscard]] REX::W32::ID3D11DepthStencilView* dsv() const noexcept { return m_dsv; }
     [[nodiscard]] REX::W32::ID3D11ShaderResourceView* srv() const noexcept { return m_srv; }
-    [[nodiscard]] uint32_t width() const noexcept { return m_width; }
-    [[nodiscard]] uint32_t height() const noexcept { return m_height; }
+    [[nodiscard]] REX::W32::ID3D11Texture2D* texture() const noexcept { return m_texture; }
+    [[nodiscard]] uint32_t colour_width() const noexcept { return m_colour_width; }
+    [[nodiscard]] uint32_t colour_height() const noexcept { return m_colour_height; }
+    [[nodiscard]] uint32_t depth_width() const noexcept { return m_depth_width; }
+    [[nodiscard]] uint32_t depth_height() const noexcept { return m_depth_height; }
 
 private:
     REX::W32::ID3D11Device* m_ref_device;
@@ -39,8 +47,10 @@ private:
     REX::W32::ID3D11RenderTargetView* m_rtv;
     REX::W32::ID3D11DepthStencilView* m_dsv;
     REX::W32::ID3D11ShaderResourceView* m_srv;
-    uint32_t m_width;
-    uint32_t m_height;
+    uint32_t m_colour_width;
+    uint32_t m_colour_height;
+    uint32_t m_depth_width;
+    uint32_t m_depth_height;
 };
 
 PLUGIN_NAMESPACE_END

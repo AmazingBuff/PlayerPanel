@@ -15,16 +15,16 @@ namespace
 {
     // The interface folder the documented skin path starts with, and the two extensions the engine's
     // movie loader appends on its own.
-    constexpr std::string_view Interface_Prefix = "Interface";
-    constexpr std::string_view Swf_Suffix = ".swf";
-    constexpr std::string_view Gfx_Suffix = ".gfx";
+    [[maybe_unused]] constexpr std::string_view Interface_Prefix = "Interface";
+    [[maybe_unused]] constexpr std::string_view Swf_Suffix = ".swf";
+    [[maybe_unused]] constexpr std::string_view Gfx_Suffix = ".gfx";
 
-    char to_lower(char value)
+    [[maybe_unused]] char to_lower(char value)
     {
         return value >= 'A' && value <= 'Z' ? static_cast<char>(value - 'A' + 'a') : value;
     }
 
-    bool starts_with_ignore_case(std::string_view text, std::string_view prefix)
+    [[maybe_unused]] bool starts_with_ignore_case(std::string_view text, std::string_view prefix)
     {
         if (text.size() < prefix.size())
             return false;
@@ -37,7 +37,7 @@ namespace
         return true;
     }
 
-    bool ends_with_ignore_case(std::string_view text, std::string_view suffix)
+    [[maybe_unused]] bool ends_with_ignore_case(std::string_view text, std::string_view suffix)
     {
         if (text.size() < suffix.size())
             return false;
@@ -50,7 +50,7 @@ namespace
     // (BSScaleformManager::LoadMovie -> BuildFilePath), so "Interface\PlayerPanel\panel.swf" reaches it
     // as "PlayerPanel/panel". Returns false for a path that would name no movie at all, so an unusable
     // configuration falls back instead of being loaded as something unintended.
-    bool to_movie_name(char const* path, std::string& out)
+    [[maybe_unused]] bool to_movie_name(char const* path, std::string& out)
     {
         if (!path || path[0] == '\0')
             return false;
@@ -106,30 +106,15 @@ PanelMenu::PanelMenu() : m_movie_loaded(false)
     // the game, so kPausesGame is never set, and it is not modal, so gameplay keeps running behind it.
     menuFlags.set(RE::UI_MENU_FLAGS::kUsesCursor);
 
-    RE::BSScaleformManager* const scaleform = RE::BSScaleformManager::GetSingleton();
-    if (!scaleform)
-    {
-        logger::warn("Panel: the Scaleform manager is unavailable; the panel uses its built-in chrome");
-        return;
-    }
-
-    std::string movie_name;
-    if (!to_movie_name(Setting::instance().get_config().panel_swf_path, movie_name))
-    {
-        logger::warn("Panel: the configured skin path is unusable; the panel uses its built-in chrome");
-        return;
-    }
-
-    // kExactFit scales the movie's stage into the viewport the plugin sets, so a skin's stage-filling
-    // frame covers the whole panel rectangle instead of being letterboxed into it. The background alpha
-    // keeps the movie's own declared background opaque, so the window still hides the world behind it.
-    m_movie_loaded = scaleform->LoadMovie(this, uiMovie, movie_name.c_str(),
-        RE::GFxMovieView::ScaleModeType::kExactFit, 1.0f);
-
-    if (m_movie_loaded)
-        logger::info("Panel: skin '{}' loaded; the panel's chrome comes from {}", movie_name, Panel_Swf_Path);
-    else
-        logger::warn("Panel: no usable skin movie at {}; the panel uses its built-in chrome", Panel_Swf_Path);
+    // THE SKIN MOVIE IS SUSPENDED, so the constructor loads none. The engine's UI pass paints a
+    // loaded movie's pixels after the plugin's present-hook composite has run - measured by the
+    // content dump, where the composed panel was absent from the presented buffer while the movie's
+    // chrome was on screen - so a skin's opaque backdrop covered the character every frame, which is
+    // exactly the "empty frame" report. Until the composite can run after the UI pass (a different
+    // hook point, or the chrome painted by the composite itself), loading a movie only buys a frame
+    // that hides the panel's content, and the built-in chrome applies instead.
+    m_movie_loaded = false;
+    logger::warn("Panel: the skin movie is suspended ({}); the engine paints UI after the plugin's composite, so a loaded skin would cover the panel content. The built-in chrome applies", Panel_Swf_Path);
 }
 
 void PanelMenu::install()
@@ -180,15 +165,60 @@ void PanelMenu::set_viewport(uint32_t buffer_width, uint32_t buffer_height, uint
     if (!menu || !menu->m_movie_loaded || !menu->uiMovie)
         return;
 
+    // One-shot diagnostic: whether the viewport we set actually sticks is the open question of the
+    // skin contract (the engine's own menu render may reset it to the full screen). Read it back once
+    // per session so the log answers it, together with the movie's parsed stage rect.
+    static bool s_probe_logged = false;
+    if (!s_probe_logged)
+    {
+        s_probe_logged = true;
+        RE::GViewport before{};
+        menu->uiMovie->GetViewport(&before);
+        logger::info("Panel viewport probe: before set - buffer={}x{} rect=({},{}),{}x{}",
+            before.bufferWidth, before.bufferHeight, before.left, before.top, before.width, before.height);
+    }
+
     menu->uiMovie->SetViewport(static_cast<int32_t>(buffer_width), static_cast<int32_t>(buffer_height),
         static_cast<int32_t>(left), static_cast<int32_t>(top),
         static_cast<int32_t>(width), static_cast<int32_t>(height));
+
+    if (s_probe_logged)
+    {
+        static bool s_after_logged = false;
+        if (!s_after_logged)
+        {
+            s_after_logged = true;
+            RE::GViewport after{};
+            menu->uiMovie->GetViewport(&after);
+            RE::GRectF const frame = menu->uiMovie->GetVisibleFrameRect();
+            logger::info("Panel viewport probe: after set - buffer={}x{} rect=({},{}),{}x{} (requested {},{}),{}x{}; stage frame rect=({},{}),{}x{}",
+                after.bufferWidth, after.bufferHeight, after.left, after.top, after.width, after.height,
+                left, top, width, height,
+                frame.left, frame.top, frame.right - frame.left, frame.bottom - frame.top);
+        }
+    }
+}
+
+void PanelMenu::log_movie_state()
+{
+    PanelMenu* const menu = current();
+    if (!menu || !menu->uiMovie)
+    {
+        logger::info("Panel movie state: no menu or movie");
+        return;
+    }
+
+    RE::GViewport viewport{};
+    menu->uiMovie->GetViewport(&viewport);
+    RE::GRectF const frame = menu->uiMovie->GetVisibleFrameRect();
+    logger::info("Panel movie state: viewport buffer={}x{} rect=({},{}),{}x{}; visible frame rect=({},{}),{}x{}",
+        viewport.bufferWidth, viewport.bufferHeight, viewport.left, viewport.top, viewport.width, viewport.height,
+        frame.left, frame.top, frame.right - frame.left, frame.bottom - frame.top);
 }
 
 bool PanelMenu::read_menu_cursor(uint32_t render_width, uint32_t render_height, float& out_x,
     float& out_y)
-{
-    if (render_width == 0 || render_height == 0)
+{    if (render_width == 0 || render_height == 0)
         return false;
 
     RE::MenuCursor* const cursor = RE::MenuCursor::GetSingleton();

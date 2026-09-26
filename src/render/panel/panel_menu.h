@@ -53,6 +53,11 @@ public:
     [[nodiscard]] static bool read_menu_cursor(uint32_t render_width, uint32_t render_height,
         float& out_x, float& out_y);
 
+    // One-shot diagnostic: dumps the menu movie's current viewport and visible frame rect, so a movie
+    // that loads but displays nothing is diagnosable (a degenerate frame rect means the player shows
+    // no content even though the file parsed).
+    static void log_movie_state();
+
 private:
     // The engine's creator ABI hands out a raw pointer that carries the reference the engine stores in
     // its menu map, so the instance lives for the session and every later show reuses the same movie.

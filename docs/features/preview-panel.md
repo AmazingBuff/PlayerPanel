@@ -48,8 +48,10 @@ backdrop shows the world through the panel; that is the skin's responsibility, n
 
 In scope:
 
-- a private offscreen target (`R8G8B8A8_UNORM` colour plus `D32_FLOAT` depth) sized from the resolved
-  panel rectangle;
+- a private target: an offscreen colour texture (`R8G8B8A8_UNORM`) sized from the resolved panel
+  rectangle, plus a depth texture (`D32_FLOAT`) sized to the engine's back buffer - the geometry pass
+  draws the character directly onto the back-buffer view, and D3D11 drops a whole `OMSetRenderTargets`
+  whose depth resource size differs from the render target's;
 - a panel camera with its own forward-Z perspective projection, its own `LESS` depth state and a
   two-axis automatic framing fit;
 - geometry collection for the preview's static and skinned meshes, extended with the per-mesh
@@ -155,7 +157,8 @@ PanelRenderer::draw()
     ├─ resolve the rectangle, rebuild the target when device or size changed
     ├─ choose the chrome's clear and inset: opaque fill and the built-in hairline, or a fully
     │  transparent clear and the configured skin inset
-    ├─ PanelGeometryPass::draw()   offscreen pass into the private target
+    ├─ PanelGeometryPass::draw()   the character directly onto the back-buffer view, through the panel
+    │                              rectangle as its viewport, with the screen-sized panel depth
     ├─ PanelCompositePass::draw()  the built-in fill and hairline when no skin is loaded, with blending
     │                              disabled; otherwise only the character, alpha-blended over the movie
     │                              the engine already drew and inset by the skin inset, with blending
@@ -322,8 +325,9 @@ Engine and SKSE dependencies used:
 - `bool init(REX::W32::ID3D11Device*)` / `void release()` — device-object lifetime; `init` picks the
   precompiled shaders out of `ShaderManager` and creates only the states and buffers of that pass. The
   composite's two blend states are parts of that pass's own resource set.
-- `void PanelGeometryPass::draw(...)` — binds the private target, clears it with the caller's colour
-  (opaque for the built-in chrome, fully transparent with a skin) and draws every mesh.
+- `void PanelGeometryPass::draw(...)` — binds the caller's colour target (the engine's back-buffer
+  view) with the screen-sized panel depth view, clears the depth and draws every mesh through the
+  panel rectangle as its viewport.
 - `void PanelCompositePass::draw(...)` — with the built-in chrome, fills the panel rectangle with the
   opaque background and then draws the offscreen colour over it with its hairline border, blending
   disabled. With a skin, it draws only the character, keeps its straight alpha, clips the inset band
@@ -361,7 +365,7 @@ INI file: `<game>/Data/SKSE/Plugins/PlayerPanel.ini`, section `General`. Existin
 | `PanelSkinInsetFraction` | double | `0.03` | `0.005`..`0.25` | The character's inset from the panel rectangle while a skin owns the chrome, as a fraction of the panel height. It is its own value and never the built-in hairline, floored at 6 render pixels; a skin must keep its frame at least this thick |
 | `CameraFov` | double | `35.0` | `1`..`179` | Vertical field of view of the panel camera, in degrees |
 | `CameraDistance` | double | `0.0` | `0`..`100000` | Camera distance in game units; `0` means automatic two-axis framing |
-| `AlphaTestThreshold` | double | `0.5` | `0`..`1` | Alpha cutout threshold multiplied by the material alpha |
+| `AlphaTestThreshold` | double | `0.5` | `0`..`1` | The alpha cutout threshold for meshes whose own `NiAlphaProperty` enables alpha testing. A mesh without that property never discards, because SSE's diffuse alpha channel usually stores a specular mask whose near-zero values are not transparency |
 
 Every value outside its range (or non-finite) falls back to the documented default rather than being
 clamped, so a typo stays visible. All this keys round-trip through `Setting::load` and
@@ -420,16 +424,22 @@ configuration is not this module's decision. `PanelHeightFraction = 0.66`, `Pane
 - **Own camera, own depth.** The panel uses `XMMatrixLookAtLH` + `XMMatrixPerspectiveFovLH` with a
   near→0/far→1 forward-Z range and a `D3D11_COMPARISON_LESS` depth state. The engine's reverse-Z
   (GREATER) state is never reused.
-- **Framing fits both axes.** The automatic distance is the larger of the vertical and the horizontal
-  fit for the panel's own aspect, so a portrait panel does not clip arms or weapons at the sides.
+- **Framing fits the vertical axis.** The automatic distance fits the capped framing radius on the
+  vertical axis of the panel's own aspect: the bound sphere of a standing humanoid is loose, and its
+  horizontal fit on a portrait panel pushed the camera back until the character read as a thumbnail.
   `CameraDistance` above zero still overrides the fit entirely.
 - **No `NORMAL` vertex input.** Neither panel shader declares a `NORMAL` semantic; the lighting
   normal is `cross(ddx(world), ddy(world))`, flipped towards the eye, so shading cannot depend on the
   engine's packed vertex normals.
-- **Alpha cutout is one multiplication.** The material alpha (or `1.0` without a shader property)
-  multiplies the sampled texture alpha and is compared against the configured threshold.
+- **Alpha cutout is gated by the mesh's own alpha property.** The material alpha (or `1.0` without a
+  shader property) multiplies the sampled texture alpha and is compared against the configured
+  threshold — but only where the mesh's `NiAlphaProperty` enables alpha testing. A mesh without that
+  property never discards and writes an alpha of one: SSE's diffuse alpha channel usually stores a
+  specular mask, and honouring it as coverage turned every opaque mesh invisible.
 - **One visibility change.** `PanelRenderer::prepare` is the only place in the change set that calls
-  `SetAppCulled`; it culls the preview's 3D root, the engine's own per-object visibility switch.
+  `SetAppCulled`; it culls the preview's 3D root, the engine's own per-object visibility switch. The
+  call is gated on the palette-readiness latch (one collection with skinned draws) or a bounded grace,
+  because a skin's bone-matrix count only latches at its first render submission.
 - **One border, one slot, two blend states.** The composite paints at most one hairline border, and its
   parameters, including the chrome flag that selects skin or built-in mode, ride in the composite
   pass's existing pixel-stage slot 0, so the constant-buffer set the engine state capture restores does
@@ -438,10 +448,13 @@ configuration is not this module's decision. `PanelHeightFraction = 0.66`, `Pane
 - **The skin supplies the panel's backdrop and frame.** In skin mode the composite never fills the
   rectangle and never paints the band: the panel's opacity and its frame are the movie's, drawn by the
   engine in its UI pass. The generated default skin draws an opaque stage-filling backdrop and a frame
-  band on top of it, and the generator re-parses its own output to prove it declares an opaque fill.
-- **Skin mode writes only where the character is.** With a skin the private target is cleared with zero
-  alpha, the geometry pass writes the character's own straight alpha, and the composite binds source
-  alpha over inverse source alpha with the destination alpha preserved. A fragment with no character
+  band on top of it, and the generator re-parses its own output to prove it declares an opaque fill
+  and exactly the intended 320×480 stage — a degenerate or reordered stage RECT is rejected, because
+  a zero-width stage is what a corner-order RECT mistake produces and a player renders such a stage
+  as nothing.
+- **Skin mode writes only where the character is.** With a skin the geometry pass writes the
+  character's own straight alpha straight onto the back buffer, and the composite binds source alpha
+  over inverse source alpha with the destination alpha preserved. A fragment with no character
   coverage therefore contributes nothing and repeated frames cannot accumulate coverage.
 - **The built-in path is unchanged and opaque.** The built-in chrome clears the target with the opaque
   background colour, blends with blending disabled and paints its hairline band; it is the same
@@ -465,11 +478,22 @@ configuration is not this module's decision. `PanelHeightFraction = 0.66`, `Pane
   set covers render targets, depth-stencil view, viewport, scissor rectangle, pixel-shader resource
   views and pixel-shader constant buffers (plus blend, depth, rasterizer, input layout, topology,
   vertex/index buffers, shaders and vertex constant buffers).
-- **No swap-chain reference is held between frames.** `PanelRenderer::draw` acquires the back buffer and
-  creates its render-target view for that single call, and releases both before returning; neither is
-  a member. Holding either would keep a direct or indirect reference to a swap-chain buffer and make
-  the engine's own `ResizeBuffers` fail with `DXGI_ERROR_INVALID_CALL` on a resolution change or a
-  windowed/fullscreen toggle, which surfaces to the player as a black or frozen frame.
+- **No swap-chain reference is held between frames.** `PanelRenderer::draw` composites into the
+  ENGINE'S own back-buffer view (`renderWindows[0].renderView`) — the target the engine's UI pass
+  paints into and the pixels that actually reach the screen — borrowed for that single call and never
+  released or stored; when the engine has no view the plugin falls back to slot 0 of the swap chain
+  for that frame, and creates and releases its own view for it. The swap chain arriving at the
+  present hook is another mod's proxy (a `DXGISwapChainProxy`, per the crash log), so the plugin
+  calls only the base interface on it: querying the proxy for `IDXGISwapChain3` crashed inside a
+  garbage vtable slot, and the content dump caught the composed panel absent from the proxy's slot 0
+  while the movie's chrome was on screen.
+- **The skin movie is suspended; the chrome is the built-in one.** The engine's UI pass paints a
+  loaded movie after the plugin's present-hook composite has run — measured by the content dump, where
+  the composed panel was absent from the presented buffer while the movie's chrome was on screen — so
+  a loaded skin's opaque backdrop covered the panel content every frame. The menu therefore loads no
+  movie (`chrome_mode` reports `e_built_in`, the composite paints the opaque fill, the hairline and
+  the character), the skin path, its loader and the generated SWF stay in the tree, and restoring the
+  skin requires drawing after the UI pass or painting the chrome inside the composite itself.
 - **Device work stays on one thread.** Device objects are created, used and released only on the
   render thread; every call that touches the menu, Scaleform or the engine cursor happens only on the
   game thread.
@@ -515,11 +539,19 @@ configuration is not this module's decision. `PanelHeightFraction = 0.66`, `Pane
 
 Known limitations of this batch:
 
-- **Whether Skyrim's Scaleform player accepts the generated Shape-only SWF is unverified.** The
-  generator proves the file's structure and that it carries no action tag, but no Scaleform player
-  exists on this host to load it. If the file were rejected, the panel would still draw through the
-  built-in fallback — which is exactly why that fallback is required — and the mechanism would still
-  be testable by pointing `PanelSwfPath` at another SWF. This is a runtime checklist item.
+- **The Scaleform player accepts the generated Shape-only SWF — verified against a spec-correct
+  parser and renderer.** The menu loads the movie (`skin 'PlayerPanel/panel' loaded`) and `chrome=swf`
+  selects the skin path. The first in-game tests caught two independent generator defects that left
+  the movie painting nothing: the header RECT was written in corner order instead of the spec's
+  `(x_min, x_max, y_min, y_max)` — a zero-width stage — and the shape edge records' `NumBits` carried
+  the raw bit count instead of the spec's "count minus two", which desynchronised the shape's bit
+  stream so a spec-correct parser read the rectangles into garbage that painted no pixel. Both meant
+  the backdrop and the frame band never reached the screen while the skin counted as loaded and the
+  built-in fallback stayed suppressed. The generator now writes both conventions correctly, its
+  parser reads them back per spec, degenerate stage RECTs are rejected, and the stage, shape bounds
+  and rendered pixels are asserted against the intended 320×480 chrome — proven by rendering the
+  artifact with JPEXS ffdec. The viewport probe logs the movie's visible frame rect, so a recurrence
+  is visible in the log as a zero width.
 - **Whether the engine preserves the plugin's movie viewport is unverified.** `GFxMovieView::SetViewport`
   is engine-implemented, and the pinned headers do not say whether the menu manager re-applies its own
   viewport while the panel's menu is drawn. If the engine overwrote it, the movie would be positioned
@@ -548,10 +580,29 @@ Known limitations of this batch:
   but not whether it is two half-floats or two normalized shorts. `Panel_Uv_Format` defaults to
   `R16G16_FLOAT`; if a character's textures sample wrongly in game, this is the first constant to
   revisit, and the manual checklist has a step for it.
-- **Hiding the world copy may suppress its skinning update.** Whether `SetAppCulled(true)` stops the
-  engine from updating the bone world matrices is unverified. If the panel character freezes, the
-  documented fallback is to move the reference out of view instead of culling it — still in exactly
-  one place — and that change is a contract revision, not a silent edit.
+- **Positionless partitions draw through a rebuilt position stream.** FaceGen/morph dynamic meshes
+  (the head, the RaceMenu-morphed body) carry their positions outside the vertex stream: the
+  partition descriptor lacks `VF_VERTEX`, and model-space positions live in
+  `BSDynamicTriShape::dynamicData`, one float4 per original vertex. Collection rebuilds them through
+  the partition's vertexMap (partition-local -> original; null = identity) into a float4 stream,
+  validating the skin block on the partition's own data and the reachability of every position index;
+  the render thread uploads the stream into a scratch vertex buffer and binds it as stream 1, with
+  the POSITION semantic fetched there and every other attribute staying in the partition buffer on
+  stream 0. Ported from the sibling Highlight-Lootable-Corpses collector.
+- **The framing fills the window.** The loose world bound of a standing humanoid (measured r=129 for
+  a 128-unit body) fitted on both axes of a portrait panel pushed the camera back until the character
+  read as a thumbnail. The camera targets the body's middle above the reference origin and fits a
+  radius capped to 70 units on the vertical axis alone, so the character fills the window;
+  `CameraDistance` still overrides the fit entirely.
+- **Hiding the world copy stops the skin matrix count from ever latching — measured.** The engine
+  latches a skin instance's bone-matrix count at the skin's first render submission. A world copy
+  culled from its first frame is never submitted, so every skin carried `skinNumMatrices=0` (measured
+  in game against a normal `skinBoneCount=46`) and the palette gate rejected the whole body. The cull
+  therefore waits for the first collection that carries skinned draws — one rendered frame after the
+  preview's 3D loads, long enough to be imperceptible — or for a bounded grace, so a preview the
+  player never faces is still hidden. Whether the culled copy keeps updating its bone matrices (the
+  panel's palette reads the skeleton's live transforms) remains the pose question: a frozen pose is
+  acceptable for the static panel, a frozen skeleton is not.
 - **Texture alpha and cutout thresholds are empirical.** Character textures rarely agree on what
   "transparent" means; `AlphaTestThreshold` is the single knob the user can turn, and its default
   `0.5` is a starting point rather than a measured value.
@@ -595,7 +646,7 @@ on the build host because the manifest's `builtin-baseline` commit is absent fro
 clone, so the manifest install is disabled and the sibling project's installed tree is reused):
 
 ```powershell
-python build/lcw_run.py "C:/env/cmake/bin/cmake" -S . -B build -G "Visual Studio 17 2022" -A x64 -T "v143,version=14.44.35207" -DCMAKE_TOOLCHAIN_FILE="C:/env/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DVCPKG_INSTALLED_DIR="D:/code/cpp/skyrim/Highlight-Lootable-Corpses/build/vcpkg_installed" -DVCPKG_MANIFEST_INSTALL=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_FLAGS=/EHsc /MP /W4 /WX"
+python build/lcw_run.py "C:/env/cmake/bin/cmake" -S . -B build -G "Visual Studio 17 2022" -A x64 -T "v143,version=14.44.35207" -DCMAKE_TOOLCHAIN_FILE="C:/env/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DVCPKG_INSTALLED_DIR="E:/SkyrimTools/Proj/HighlightLootableCorpses/build/vcpkg_installed" -DVCPKG_MANIFEST_INSTALL=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_FLAGS=/EHsc /MP /W4 /WX"
 python build/lcw_run.py "C:/env/cmake/bin/cmake" --build build --config Release --parallel 2
 python tools/make_panel_swf.py --verify --selftest
 ```
@@ -826,8 +877,15 @@ Manual in-game checklist (not executed on this host; reported as `UNVERIFIED`):
   is regenerated and re-parsed by the script, and a hand-edited binary would carry no structural proof.
   Keep the emitted tag set inside `ALLOWED_TAGS`, so the no-action-tag property stays checkable rather
   than merely intended, and keep at least one fully opaque fill style — the parser rejects a skin with
-  no opaque fill, because a translucent skin would show the world through the panel. The frame band must
-  stay at least as thick as `Default_Panel_Skin_Inset_Fraction`, which the band's own fraction mirrors.
+  no opaque fill, because a translucent skin would show the world through the panel. Keep every
+  `encode_rect` call in the spec's `(x_min, x_max, y_min, y_max)` field order — the corner order a
+  drawing helper would use declares a zero-width stage. Keep the shape-record size fields in their two
+  different spec conventions: a style change's `MoveBits` carries the raw bit count, an edge record's
+  `NumBits` carries the bit count minus two — the generator once wrote both raw and the desynchronised
+  stream parsed into garbage that painted nothing. Render-proof the artifact with a spec-correct
+  parser (JPEXS ffdec) after changing the emitted bytes; the repository's own parser once agreed with
+  the writer's mistakes, so structural parsing alone proves nothing. The frame band must stay at least
+  as thick as `Default_Panel_Skin_Inset_Fraction`, which the band's own fraction mirrors.
 
 ## Synchronized files
 
@@ -858,7 +916,7 @@ Changes to this module must update these files together:
   FR-01, FR-05, FR-07, M1 acceptance, §9 items 3-5, §10 reference table.
 - [Preview actor](preview-actor.md): the lifecycle module this panel consumes; its world-visibility
   statements were corrected in this batch.
-- Sibling repository `D:/code/cpp/skyrim/Highlight-Lootable-Corpses` at commit `7a7c51e` (GPL-3.0,
+- Sibling repository `E:/SkyrimTools/Proj/HighlightLootableCorpses` at commit `7a7c51e` (GPL-3.0,
   same author): the ported D3D11 substrate (`src/render/dx11/d3d11_util.*`,
   `src/render/shader_manager.*`, `cmake/embed_shaders.cmake`) and the geometry collector
   (`src/render/geometry/render_geometry.*`). Each ported first-party file carries a header comment

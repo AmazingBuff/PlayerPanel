@@ -11,6 +11,7 @@
 #include <DirectXPackedVector.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 #include <string>
@@ -30,6 +31,15 @@ namespace
 
     constexpr size_t Max_Skinned_Layout_Calibrations = 256;  // skinned calibration cache cap (past it, no caching on the degraded path)
     constexpr size_t Max_Skinned_Layout_Candidates = 4;      // at most 2 SKINNING layouts per stride x 2 strides
+
+    // Positionless partitions (FaceGen/morph dynamic meshes - the head and the morphed body): the
+    // partition's SKINNING block is contiguous by construction - weights 4xf16 at the skin offset,
+    // indices 4xu8 right after - and model-space positions come from BSDynamicTriShape::dynamicData,
+    // one float4 per ORIGINAL vertex, rebuilt per partition through its vertexMap. The stride of the
+    // rebuilt stream is Dynamic_Position_Stride (panel_geometry.h).
+    constexpr uint8_t Dynamic_Skin_Layout_Id = 1;
+    constexpr uint32_t Dynamic_Skin_Block_Bytes = 12u;   // weights 4xf16 + indices 4xu8
+    constexpr uint32_t Dynamic_Position_Components = 4u; // float components per rebuilt position
 
     // Weight validation thresholds (SSE vertex weights are expected to sum to 1, so the thresholds
     // are deliberately loose)
@@ -82,6 +92,78 @@ namespace
     REX::W32::DXGI_FORMAT position_format_of(RE::BSGraphics::VertexDesc const& desc)
     {
         return desc.HasFlag(RE::BSGraphics::Vertex::VF_FULLPREC) ? REX::W32::DXGI_FORMAT_R32G32B32_FLOAT : REX::W32::DXGI_FORMAT_R16G16B16A16_FLOAT;
+    }
+
+    // ---------------------------------------------------------------------------
+    // UV format: the descriptor carries a precision bit PER ATTRIBUTE, at bit (54 + attribute) - the
+    // engine-side reconstruction of the descriptor (Community Shaders ShaderCache's AddAttribute) sets
+    // exactly those bits, one per attribute present. So the UV's own bit is 54 + VA_TEXCOORD0 (bit
+    // 55), while the bit CommonLibSSE exposes as VF_FULLPREC (0x400 -> flags bit 10 -> desc bit 54) is
+    // the POSITION's bit, not the mesh's.
+    //
+    // Reading the position's bit as a mesh-wide precision flag is what put R32G32_FLOAT over
+    // half-float UVs on every FaceGen mesh - head, body/CBBE, hair - whose position bit is set even
+    // though their UV slot is 4 bytes wide. The shader then read two vertices' worth of data as one
+    // coordinate pair: the reported digital camouflage, on the skin, head and hair only, while the
+    // clothes, weapons and props (position bit clear) sampled their textures correctly.
+    //
+    // Measured on the head partition (desc 0x0044200010000044, stride 16, dumped beside the log): the
+    // UV slot is 4 bytes at offset 0 and the skinning block starts at 4 - four f16 weights summing to
+    // 1 on all 108 vertices, which is what fixes the block's place. Read as half-float the UVs land in
+    // [0.03,0.49]x[0,1]; read as float32 they are denormals (1e-41). The same descriptor spacing
+    // appears on all four FaceGen descriptors (the attribute after TEXCOORD0 starts 4 bytes later),
+    // which is why it also serves as the ceiling below: a descriptor can never declare more UV bytes
+    // than it has room for.
+    // ---------------------------------------------------------------------------
+    constexpr REX::W32::DXGI_FORMAT Panel_Uv_Format_Half = REX::W32::DXGI_FORMAT_R16G16_FLOAT;
+    constexpr REX::W32::DXGI_FORMAT Panel_Uv_Format_Full = REX::W32::DXGI_FORMAT_R32G32_FLOAT;
+
+    // Byte width of the UV slot as the descriptor itself defines it: the distance from the UV offset
+    // to the closest attribute starting above it, in attribute order. The positionless FaceGen
+    // descriptors carry a stale POSITION offset past their stride, and taking the SMALLEST offset
+    // above the UV ignores it - the UV's real neighbour (normal, colour or the skinning block) starts
+    // closer. Zero means the descriptor offers no neighbour above the UV, which leaves the bit
+    // unclamped.
+    uint32_t uv_slot_bytes(RE::BSGraphics::VertexDesc const& desc)
+    {
+        uint32_t const uv_offset = desc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_TEXCOORD0);
+        uint32_t nearest = 0;
+        for (uint8_t attribute = 0; attribute < RE::BSGraphics::Vertex::VA_COUNT; ++attribute)
+        {
+            auto const flag = static_cast<RE::BSGraphics::Vertex::Flags>(1u << attribute);
+            if (!desc.HasFlag(flag))
+                continue;
+
+            uint32_t const offset = desc.GetAttributeOffset(static_cast<RE::BSGraphics::Vertex::Attribute>(attribute));
+            if (offset > uv_offset && (nearest == 0 || offset < nearest))
+                nearest = offset;
+        }
+        return nearest > uv_offset ? nearest - uv_offset : 0u;
+    }
+
+    REX::W32::DXGI_FORMAT uv_format_of(RE::BSGraphics::VertexDesc const& desc)
+    {
+        static std::vector<std::pair<uint64_t, REX::W32::DXGI_FORMAT>> s_uv_formats;
+        uint64_t desc_raw = 0;
+        std::memcpy(&desc_raw, &desc, sizeof(desc_raw));
+        for (auto const& [cached_raw, cached] : s_uv_formats)
+        {
+            if (cached_raw == desc_raw)
+                return cached;
+        }
+
+        uint32_t const slot_bytes = uv_slot_bytes(desc);
+        bool const uv_full_precision = ((desc_raw >> (54 + RE::BSGraphics::Vertex::VA_TEXCOORD0)) & 1ull) != 0;
+        REX::W32::DXGI_FORMAT const format = (uv_full_precision && slot_bytes >= sizeof(float) * 2u)
+            ? Panel_Uv_Format_Full
+            : Panel_Uv_Format_Half;
+        if (s_uv_formats.size() < Max_Position_Calibrations)
+            s_uv_formats.emplace_back(desc_raw, format);
+        logger::info("Panel: uv layout uv_prec={} slot={}B fmt={:#06x} off={} desc={:#018x}",
+            uv_full_precision ? "full" : "half", slot_bytes,
+            static_cast<unsigned>(format),
+            desc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_TEXCOORD0), desc_raw);
+        return format;
     }
 
     // Column-vector point transform M.p (translation included): XMVector3Transform computes p.M, so
@@ -484,7 +566,9 @@ namespace
 
     // Traverse all vertices under the given position and SKINNING layout, fill in the statistics and
     // return the verdict. Indices are global bone indices with index_bound (the palette length) as
-    // the out-of-range bound; the caller guarantees every read stays within the stride.
+    // the out-of-range bound; the caller guarantees every read stays within the stride. A position
+    // byte width of zero skips position decoding entirely (positionless partitions carry no
+    // positions, so there is nothing to check).
     SkinnedMeshVerdict validate_skinned_mesh(
         uint8_t const* raw, uint32_t stride, uint32_t pos_offset, uint32_t pos_bytes,
         SkinningLayoutSpec const& spec, uint32_t weight_offset, uint32_t index_offset,
@@ -495,9 +579,12 @@ namespace
         bool first_sample = true;
         for (uint32_t v = 0; v < vertex_count; ++v)
         {
-            RE::NiPoint3 p{};
-            if (!decode_position(raw, stride, pos_offset, pos_bytes, v, p))
-                stats.position_finite = false;
+            if (pos_bytes > 0)
+            {
+                RE::NiPoint3 p{};
+                if (!decode_position(raw, stride, pos_offset, pos_bytes, v, p))
+                    stats.position_finite = false;
+            }
 
             uint8_t const* const base = raw + static_cast<size_t>(v) * stride;
             float w[4]{};
@@ -815,37 +902,193 @@ namespace
     // ---------------------------------------------------------------------------
 
     // Context shared by every mesh of one collection pass: the reference position and form id serve
-    // the ownership check and the logs; the draw list is the caller's reused buffer.
+    // the ownership check and the logs; the draw list is the caller's reused buffer. The census
+    // counters feed the one-shot funnel log that pinpoints where skinned meshes are rejected.
     struct PanelWalkContext
     {
         RE::NiPoint3 position;
         RE::FormID form_id;
         std::vector<PanelDraw>* draws;
+        Config const& config;
+        // The preview's NPC base, resolved once per collection: the FaceGen material family shades
+        // its grayscale detail textures with the NPC's own skin tone, which lives on the base.
+        RE::TESNPC const* npc{ nullptr };
+        std::uint32_t visited{ 0 };
+        std::uint32_t skinned_seen{ 0 };
+        std::uint32_t skinned_ok{ 0 };
+        std::uint32_t static_seen{ 0 };
+        std::uint32_t static_ok{ 0 };
+        std::uint32_t sk_incomplete{ 0 };
+        std::uint32_t p0{ 0 };
+        std::uint32_t no_root{ 0 };
+        std::uint32_t wbound{ 0 };
+        std::uint32_t part_gate{ 0 };
+        std::uint32_t strips{ 0 };
+        std::uint32_t palette{ 0 };
+        std::uint32_t calib{ 0 };
+        std::uint32_t vpos{ 0 };
+        std::uint32_t vweights{ 0 };
+        std::uint32_t oob{ 0 };
+        std::uint32_t st_nogpu{ 0 };
+        std::uint32_t st_excl{ 0 };
+        std::uint32_t st_nottri{ 0 };
+        std::uint32_t st_empty{ 0 };
+        std::uint32_t st_bound{ 0 };
+        std::uint32_t st_worldr{ 0 };
+        std::uint32_t st_calib{ 0 };
+        std::uint32_t st_notref{ 0 };
+        // The first palette-gate rejection's raw values: the census counters above say *how many*
+        // partitions the gate turned away, but without the actual bone and matrix counts a
+        // body-less panel cannot be told apart from the log alone - a zero count and an over-budget
+        // count have different causes and different fixes.
+        bool first_palette_captured{ false };
+        std::uint32_t first_palette_bone_count{ 0 };
+        std::uint32_t first_palette_num_matrices{ 0 };
+        std::string first_palette_node;
     };
 
     // The material the panel needs for shading, resolved once per mesh through the engine's own
     // accessors. has_uv is clear when the mesh carries no UV attribute or no diffuse texture, and
     // diffuse_view stays null in both cases: that null is the explicit "no diffuse texture" marker
-    // the pixel shader reads as "shade with the flat albedo".
+    // the pixel shader reads as "shade with the flat albedo". hair_tint carries the engine's own
+    // hair-dye colour when the mesh's material is a hair-tint material, so the panel's pixel shader
+    // can reproduce the player's chosen hair colour instead of the texture's raw grayscale.
+    // skin_tint carries the character's skin tone for the FaceGen material family (kFaceGen and
+    // kFaceGenRGBTint): the shader remaps the texture's own RGB toward it with the engine's
+    // quadratic (Community Shaders GetFacegenRGBTintBaseColor).
     struct PanelMaterial
     {
         RE::BSShaderProperty* shader_property;
         REX::W32::ID3D11ShaderResourceView* diffuse_view;
         float material_alpha;
         bool has_uv;
+        bool hair_tint;
+        RE::NiColor hair_tint_color;
+        bool skin_tint;
+        RE::NiColor skin_tint_color;
+        // The material's own UV remap, applied by the engine's vertex shader before sampling.
+        float uv_offset_u;
+        float uv_offset_v;
+        float uv_scale_u;
+        float uv_scale_v;
+
+        // Diagnosis of what the engine's own material said, so a mesh shaded with the flat albedo
+        // can be told apart from one bound to the wrong texture: the texture set's own diffuse path,
+        // the renderer texture's dimensions, and the material's family (Feature) and shader property.
+        char const* diffuse_path;
+        uint32_t diffuse_width;
+        uint32_t diffuse_height;
+        uint32_t diffuse_mips;
+        uint32_t diffuse_format;
+        char const* property_rtti;
+        uint32_t material_feature;
     };
 
-    PanelMaterial resolve_material(RE::BSShaderProperty* property, RE::BSGraphics::VertexDesc const& desc)
+    PanelMaterial resolve_material(RE::BSShaderProperty* property, RE::BSGraphics::VertexDesc const& desc,
+        RE::TESNPC const* npc)
     {
-        RE::NiSourceTexture* const texture = property ? property->GetBaseTexture() : nullptr;
+        // Take a NiPointer reference to the texture before reading its renderer data: the caller
+        // holds the geometry (and through it the property), but the property's texture member can
+        // be cleared concurrently, and reading rendererTexture of a dying NiSourceTexture returns
+        // freed memory (the 0x8 garbage SRV the AddRef crash faulted on).
+        RE::NiPointer<RE::NiSourceTexture> const texture(property ? property->GetBaseTexture() : nullptr);
         RE::BSGraphics::Texture* const renderer_texture = texture ? texture->rendererTexture : nullptr;
-        REX::W32::ID3D11ShaderResourceView* const view = renderer_texture ? renderer_texture->resourceView : nullptr;
+        REX::W32::ID3D11ShaderResourceView* const view =
+            (renderer_texture && renderer_texture->resourceView) ? renderer_texture->resourceView : nullptr;
+
+        // Hair tint: the engine dyes hair in the lighting shader by multiplying the grayscale
+        // texture against the material's tint colour. The colour is resolved from the placed
+        // actor's own material, so it already reflects the player's chosen hair colour.
+        bool hair_tint = false;
+        RE::NiColor tint_color{};
+        bool skin_tint = false;
+        RE::NiColor skin_tint_color{};
+        float uv_offset_u = 0.0f;
+        float uv_offset_v = 0.0f;
+        float uv_scale_u = 1.0f;
+        float uv_scale_v = 1.0f;
+        char const* diffuse_path = nullptr;
+        char const* property_rtti = nullptr;
+        uint32_t material_feature = 0;
+        if (property)
+        {
+            property_rtti = property->GetRTTI() ? property->GetRTTI()->GetName() : nullptr;
+            RE::BSShaderMaterial* const material = property->GetBaseMaterial();
+            if (material)
+            {
+                // The material itself derives from BSIntrusiveRefCounted and carries no RTTI, so its
+                // family is its Feature (kFaceGen 4, kFaceGenRGBTint 5, kHairTint 6, kEye 16, ...) and
+                // the property's RTTI names the shader it belongs to.
+                material_feature = static_cast<uint32_t>(material->GetFeature());
+                if (material->GetFeature() == RE::BSShaderMaterial::Feature::kHairTint)
+                {
+                    if (RE::BSLightingShaderMaterialHairTint* const hair =
+                            skyrim_cast<RE::BSLightingShaderMaterialHairTint*>(material))
+                    {
+                        hair_tint = true;
+                        tint_color = hair->tintColor;
+                    }
+                }
+                // The FaceGen RGB-tint family (kFaceGenRGBTint - the CBBE body, feet and hands)
+                // keeps its colour texture and remaps it toward the character's skin tone with the
+                // engine's lighting-shader quadratic (Community Shaders GetFacegenRGBTintBaseColor,
+                // PS constant 23 = the NPC's tint). The tone is the NPC's tint layer of type
+                // kSkinTone when present, else the QNAM body tint. The plain kFaceGen family (the
+                // head) takes the same tone; its engine path adds the runtime-generated tint and
+                // detail textures, which this panel approximates with the same quadratic.
+                if ((material->GetFeature() == RE::BSShaderMaterial::Feature::kFaceGen ||
+                     material->GetFeature() == RE::BSShaderMaterial::Feature::kFaceGenRGBTint) && npc)
+                {
+                    RE::Color tone = npc->bodyTintColor;
+                    if (npc->tintLayers)
+                    {
+                        for (RE::TESNPC::Layer* layer : *npc->tintLayers)
+                        {
+                            if (layer && layer->tintIndex == static_cast<std::uint16_t>(RE::TintMask::Type::kSkinTone))
+                            {
+                                tone = layer->tintColor;
+                                break;
+                            }
+                        }
+                    }
+                    skin_tint = true;
+                    skin_tint_color = RE::NiColor{
+                        static_cast<float>(tone.red) / 255.0f,
+                        static_cast<float>(tone.green) / 255.0f,
+                        static_cast<float>(tone.blue) / 255.0f };
+                }
+                // The engine's own UV remap for this material (the VS maps uv*scale+offset before
+                // sampling; atlassed CBBE slots are non-trivial here).
+                if (material->texCoordScale[0].x != 0.0f && material->texCoordScale[0].y != 0.0f)
+                {
+                    uv_offset_u = material->texCoordOffset[0].x;
+                    uv_offset_v = material->texCoordOffset[0].y;
+                    uv_scale_u = material->texCoordScale[0].x;
+                    uv_scale_v = material->texCoordScale[0].y;
+                }
+            }
+        }
 
         return PanelMaterial{
             .shader_property = property,
             .diffuse_view = view,
             .material_alpha = property ? property->QMaterialAlpha() : 1.0f,
             .has_uv = view != nullptr && desc.HasFlag(RE::BSGraphics::Vertex::VF_UV),
+            .hair_tint = hair_tint,
+            .hair_tint_color = tint_color,
+            .skin_tint = skin_tint,
+            .skin_tint_color = skin_tint_color,
+            .uv_offset_u = uv_offset_u,
+            .uv_offset_v = uv_offset_v,
+            .uv_scale_u = uv_scale_u,
+            .uv_scale_v = uv_scale_v,
+            .diffuse_path = diffuse_path,
+            .diffuse_width = renderer_texture ? static_cast<uint32_t>(renderer_texture->width) : 0u,
+            .diffuse_height = renderer_texture ? static_cast<uint32_t>(renderer_texture->height) : 0u,
+            .diffuse_mips = renderer_texture ? static_cast<uint32_t>(renderer_texture->mips) : 0u,
+            .diffuse_format = renderer_texture ? static_cast<uint32_t>(renderer_texture->format) : 0u,
+            .property_rtti = property_rtti,
+            .material_feature = material_feature,
         };
     }
 
@@ -853,16 +1096,92 @@ namespace
     {
         draw.shader_property = material.shader_property;
         draw.diffuse_view = material.diffuse_view;
+        // Hold the SRV from collection to draw: the caller guarantees the texture chain is alive
+        // (NiPointer on the geometry and on the texture), so this reference pins the D3D object.
+        if (draw.diffuse_view)
+            draw.diffuse_view->AddRef();
         draw.material_alpha = material.material_alpha;
         draw.has_uv = material.has_uv;
+        draw.hair_tint = material.hair_tint;
+        draw.hair_tint_color = material.hair_tint_color;
+        draw.skin_tint = material.skin_tint;
+        draw.skin_tint_color = material.skin_tint_color;
+        draw.uv_offset_u = material.uv_offset_u;
+        draw.uv_offset_v = material.uv_offset_v;
+        draw.uv_scale_u = material.uv_scale_u;
+        draw.uv_scale_v = material.uv_scale_v;
     }
 
-    void collect_static(RE::BSGeometry* geom, RE::BSGeometry::GEOMETRY_RUNTIME_DATA const& geom_rt, PanelWalkContext const& context)
+    // ---------------------------------------------------------------------------
+    // Per-mesh census, bounded to the first frames of a session. The collection decides each mesh's
+    // index space, UV slot and material, and none of it is visible above the debug level - which
+    // leaves what the panel renders without a reason: positions, UVs and weights only agree when the
+    // vertices they name are the same ones, and a mesh with no diffuse view is silently shaded with
+    // the flat albedo instead of its texture.
+    // ---------------------------------------------------------------------------
+    void log_mesh_census(char const* node, char const* kind, int32_t partition, uint32_t verts, uint32_t tris,
+        uint32_t tri_max, char const* index_space, bool has_vertex_map, uint32_t dynamic_capacity,
+        uint32_t palette_count, RE::BSGraphics::VertexDesc const& desc, PanelDraw const& draw,
+        PanelMaterial const& material, RE::NiAlphaProperty const* alpha_property)
     {
+        static uint32_t s_budget = 64;
+        if (s_budget == 0)
+            return;
+        --s_budget;
+
+        uint64_t desc_raw = 0;
+        std::memcpy(&desc_raw, &desc, sizeof(desc_raw));
+        logger::info("Panel mesh: {} node=\"{}\" p={} verts={} tris={} tri_max={} space={} map={} dyn={} palette={} desc={:#018x} stride={} uv(flag={},off={},fmt={:#06x},slot={}B) skin(w={:#06x}@{},i={:#06x}@{}) pos(fmt={:#06x},off={},stream={}) alpha={:.2f} cutoff={:.2f} opaque={}",
+            kind, node ? node : "?", partition, verts, tris, tri_max, index_space,
+            has_vertex_map ? "yes" : "no", dynamic_capacity, palette_count, desc_raw, draw.vertex_stride,
+            desc.HasFlag(RE::BSGraphics::Vertex::VF_UV) ? "yes" : "no",
+            desc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_TEXCOORD0),
+            static_cast<unsigned>(draw.uv_format), uv_slot_bytes(desc),
+            static_cast<unsigned>(draw.skin_layout.weight_format), draw.skin_layout.weight_offset,
+            static_cast<unsigned>(draw.skin_layout.index_format), draw.skin_layout.index_offset,
+            static_cast<unsigned>(draw.position_format), draw.position_offset,
+            draw.position_stream ? "yes" : "no", draw.material_alpha, draw.alpha_cutoff,
+            draw.opaque_alpha ? "yes" : "no");
+
+        logger::info("Panel material: node=\"{}\" p={} mat=\"{}\" feature={} diffuse={:X} path=\"{}\" tex={}x{} mips={} fmt={} hair_tint={} skin_tint={} tint=({:.2f},{:.2f},{:.2f}) alpha(test={},blend={})",
+            node ? node : "?", partition, material.property_rtti ? material.property_rtti : "?",
+            material.material_feature, reinterpret_cast<std::uintptr_t>(material.diffuse_view),
+            material.diffuse_path ? material.diffuse_path : "?",
+            material.diffuse_width, material.diffuse_height, material.diffuse_mips, material.diffuse_format,
+            material.hair_tint ? "yes" : "no", material.skin_tint ? "yes" : "no",
+            material.hair_tint ? material.hair_tint_color.red : material.skin_tint_color.red,
+            material.hair_tint ? material.hair_tint_color.green : material.skin_tint_color.green,
+            material.hair_tint ? material.hair_tint_color.blue : material.skin_tint_color.blue,
+            alpha_property && alpha_property->GetAlphaTesting() ? "yes" : "no",
+            alpha_property && alpha_property->GetAlphaBlending() ? "yes" : "no");
+    }
+
+    // The engine's own per-mesh alpha handling, from the geometry's NiAlphaProperty. SSE's diffuse
+    // alpha channel usually stores a specular mask whose near-zero values are not transparency, so a
+    // global alpha cutout would discard every opaque mesh wholesale - the whole panel content once
+    // vanished exactly this way. The cutout applies only where the property enables testing, and the
+    // written alpha follows the texture only where the property actually blends.
+    void resolve_alpha_handling(RE::BSGeometry::GEOMETRY_RUNTIME_DATA const& geom_rt, Config const& config,
+        float& alpha_cutoff, bool& opaque_alpha)
+    {
+        RE::NiAlphaProperty const* const property = geom_rt.alphaProperty.get();
+        bool const testing = property && property->GetAlphaTesting();
+        bool const blending = property && property->GetAlphaBlending();
+        alpha_cutoff = testing ? static_cast<float>(config.alpha_test_threshold) : 0.0f;
+        opaque_alpha = !blending;
+    }
+
+    void collect_static(RE::BSGeometry* geom, RE::BSGeometry::GEOMETRY_RUNTIME_DATA const& geom_rt, PanelWalkContext& context)
+    {
+        // Same hold as the skinned path: the geometry (and through it the property and textures)
+        // must outlive every read in this function.
+        RE::NiPointer<RE::BSGeometry> const keep_alive(geom);
+        ++context.static_seen;
         // ---- Geometry-level GPU buffer check specific to the static path. The skinned path does not
         // pass this gate. ----
         if (!geom_rt.rendererData || !geom_rt.rendererData->vertexBuffer || !geom_rt.rendererData->indexBuffer)
         {
+            ++context.st_nogpu;
             logger::debug("Panel: skip geometry without GPU buffers");
             return;
         }
@@ -890,6 +1209,7 @@ namespace
 
         if (exclusion_reason)
         {
+            ++context.st_excl;
             logger::debug("Panel: skip static geometry ({}) rtti={} node={}", exclusion_reason, rtti_name, node_name ? node_name : "?");
             return;
         }
@@ -897,6 +1217,7 @@ namespace
         RE::BSTriShape* tri = geom->AsTriShape();
         if (!tri)
         {
+            ++context.st_nottri;
             // Regular geometry in an SSE scene is always of the BSTriShape family; other types are not drawn
             logger::debug("Panel: skip non-BSTriShape geometry");
             return;
@@ -905,6 +1226,7 @@ namespace
         RE::BSTriShape::TRISHAPE_RUNTIME_DATA const& tri_rt = tri->GetTrishapeRuntimeData();
         if (tri_rt.vertexCount == 0 || tri_rt.triangleCount == 0)
         {
+            ++context.st_empty;
             logger::debug("Panel: skip empty geometry (vertices={} tris={}) rtti={} node={}",
                     tri_rt.vertexCount, tri_rt.triangleCount, rtti_name, node_name ? node_name : "?");
             return;
@@ -913,6 +1235,7 @@ namespace
         RE::NiBound const& model_bound = geom->GetModelData().modelBound;
         if (model_bound.radius <= 0.0f)
         {
+            ++context.st_bound;
             logger::debug("Panel: skip geometry with invalid model bound rtti={} node={}", rtti_name, node_name ? node_name : "?");
             return;
         }
@@ -943,6 +1266,7 @@ namespace
         float const world_radius = model_bound.radius * scale_max;
         if (world_radius <= 0.0f || world_radius > Max_Part_World_Radius)
         {
+            ++context.st_worldr;
             logger::debug("Panel: skip static draw [world radius out of range] target={:08X} node={} model_bound r={:.1f} world_radius={:.1f} cap={:.1f}",
                     context.form_id, node_name, model_bound.radius, world_radius, Max_Part_World_Radius);
             return;
@@ -956,7 +1280,10 @@ namespace
         PositionCalibration const calibration = calibrate_position_format(
             geom_rt.vertexDesc, geom_rt.rendererData, tri_rt.vertexCount, model_bound, vertex_stride);
         if (calibration.state == PositionCalibrationState::e_unresolved)
+        {
+            ++context.st_calib;
             return;
+        }
 
         // ---- Ownership check: only geometry "at the reference" is drawn (engine world bounding
         // sphere, looser than a box test). The per-mesh model AABB only feeds calibration scoring and
@@ -977,26 +1304,130 @@ namespace
                     world_center.y,
                     world_center.z,
                     world_radius);
+            ++context.st_notref;
             return;
         }
 
         PanelDraw draw{};
+        // Hold the geometry BEFORE anything reads its property/textures: another thread may be
+        // destroying this transient mesh (the blood decals churn constantly), and every read
+        // below - GPU buffers, shader property, diffuse texture - needs the engine-side reference
+        // taken first. The D3D objects themselves are resolved at draw time from renderer_data.
+        draw.node.reset(geom);
         draw.vertex_buffer = geom_rt.rendererData->vertexBuffer;
         draw.index_buffer = geom_rt.rendererData->indexBuffer;
+        if (draw.vertex_buffer)
+            draw.vertex_buffer->AddRef();
+        if (draw.index_buffer)
+            draw.index_buffer->AddRef();
         draw.vertex_desc = geom_rt.vertexDesc;
-        draw.node.reset(geom);  // keep alive: if the geometry is unloaded, node/rendererData/VB/IB stay valid until the end of this frame
         draw.vertex_stride = vertex_stride;
         draw.vertex_count = tri_rt.vertexCount;
         draw.triangle_count = tri_rt.triangleCount;
         draw.index_count = static_cast<uint32_t>(tri_rt.triangleCount) * 3u;
         draw.position_format = calibration.format;
         draw.position_offset = calibration.offset;
-        apply_material(draw, resolve_material(geom_rt.shaderProperty.get(), geom_rt.vertexDesc));
+        draw.uv_format = uv_format_of(geom_rt.vertexDesc);
+        PanelMaterial const material = resolve_material(geom_rt.shaderProperty.get(), geom_rt.vertexDesc, context.npc);
+        apply_material(draw, material);
+        resolve_alpha_handling(geom_rt, context.config, draw.alpha_cutoff, draw.opaque_alpha);
+        // The static meshes are the control group: they are the ones whose texture and index space
+        // the panel gets right, so their census line is what the skinned ones are compared against.
+        log_mesh_census(node_name, "static", -1, draw.vertex_count, draw.triangle_count, 0u, "n/a",
+            false, 0u, 0u, geom_rt.vertexDesc, draw, material, geom_rt.alphaProperty.get());
+        ++context.static_ok;
         context.draws->push_back(std::move(draw));
     }
 
-    void collect_skinned(RE::BSGeometry* geom, RE::BSGeometry::GEOMETRY_RUNTIME_DATA const& geom_rt, PanelWalkContext const& context)
+    // One-shot binary dump of a positionless partition's raw sources, written beside the log the
+    // first time one is collected. Answers from the bytes what inference cannot: whether the
+    // partition's GPU buffer and the dynamic-morph data actually agree with the descriptor's
+    // offsets, what the vertexMap holds, and how the triangle list indexes the vertex space. The
+    // dump is small (first 256 vertices) and bounded to this one diagnostic.
+    void dump_positionless_partition(
+        RE::BSGraphics::TriShape const& buff, RE::NiSkinPartition::Partition const& part,
+        void const* dynamic_positions, uint32_t dynamic_vertex_capacity,
+        uint32_t partition_stride, uint32_t palette_count, char const* node_name, uint32_t p)
     {
+        // Several partitions, not one: the head and the body are the same family of mesh on paper and
+        // they do not render alike, so the bytes have to be comparable across them. The vertices the
+        // triangle list actually reaches are dumped, not the first part.vertices of the buffer, which
+        // is what makes the index space answerable.
+        static uint32_t s_dumps = 0;
+        if (s_dumps >= 6)
+            return;
+        uint32_t const ordinal = s_dumps++;
+
+        std::optional<std::filesystem::path> directory = logger::log_directory();
+        if (!directory)
+            return;
+
+        std::string label = node_name ? node_name : "unknown";
+        for (char& c : label)
+        {
+            if (!std::isalnum(static_cast<unsigned char>(c)))
+                c = '_';
+        }
+        std::filesystem::path const path = *directory /
+            ("PlayerPanel_partition_" + std::to_string(ordinal) + "_" + label + "_p" + std::to_string(p) + ".bin");
+        std::ofstream file(path, std::ios::binary);
+        if (!file)
+            return;
+
+        auto const write_raw = [&file](void const* data, std::size_t bytes) {
+            file.write(static_cast<char const*>(data), static_cast<std::streamsize>(bytes));
+        };
+
+        uint32_t max_index = 0;
+        for (uint32_t t = 0; t < static_cast<uint32_t>(part.triangles) * 3u && part.triList; ++t)
+            max_index = (std::max)(max_index, static_cast<uint32_t>(part.triList[t]));
+
+        uint64_t desc_raw = 0;
+        std::memcpy(&desc_raw, &buff.vertexDesc, sizeof(desc_raw));
+        uint32_t const desc_u32[2] = { partition_stride, part.vertices };
+        uint32_t const vertex_dump_count =
+            (std::min<uint32_t>)((std::max<uint32_t>)(part.vertices, max_index + 1u), 4096u);
+        uint32_t const meta[8] = { part.triangles, part.numBones, palette_count,
+            dynamic_vertex_capacity, static_cast<uint32_t>(buff.rawVertexData != nullptr),
+            static_cast<uint32_t>(part.vertexMap != nullptr), max_index, vertex_dump_count };
+        write_raw(&desc_raw, sizeof(desc_raw));
+        write_raw(desc_u32, sizeof(desc_u32));
+        write_raw(meta, sizeof(meta));
+
+        // The partition's GPU buffer, verbatim, for every vertex the triangle list can reach.
+        if (buff.rawVertexData)
+            write_raw(buff.rawVertexData, static_cast<std::size_t>(partition_stride) * vertex_dump_count);
+
+        // The partition's triangle list, verbatim (up to 4096 indices).
+        uint32_t const tri_dump_count = (std::min<uint32_t>)(static_cast<uint32_t>(part.triangles) * 3u, 4096u);
+        if (part.triList)
+            write_raw(part.triList, static_cast<std::size_t>(tri_dump_count) * sizeof(uint16_t));
+
+        // The vertex map, verbatim.
+        if (part.vertexMap)
+            write_raw(part.vertexMap, static_cast<std::size_t>(part.vertices) * sizeof(uint16_t));
+
+        // The partition's bone list, verbatim (diagnostic only, it takes part in no decision).
+        if (part.bones)
+            write_raw(part.bones, static_cast<std::size_t>(part.numBones) * sizeof(uint16_t));
+
+        // The dynamic morph data for the first 1024 ORIGINAL vertices.
+        uint32_t const dynamic_dump_count = (std::min<uint32_t>)(dynamic_vertex_capacity, 1024u);
+        write_raw(dynamic_positions, static_cast<std::size_t>(dynamic_dump_count) * Dynamic_Position_Stride);
+
+        logger::info("Panel: dumped positionless partition {} p={} (verts={} tris={} stride={} map={} raw={} tri_max={} dumped={} dyn={}) to {}",
+            node_name ? node_name : "?", p, part.vertices, part.triangles, partition_stride,
+            part.vertexMap != nullptr, buff.rawVertexData != nullptr, max_index, vertex_dump_count,
+            dynamic_vertex_capacity, path.string());
+    }
+
+    void collect_skinned(RE::BSGeometry* geom, RE::BSGeometry::GEOMETRY_RUNTIME_DATA const& geom_rt, PanelWalkContext& context)
+    {
+        // Hold the geometry for the whole collection walk of this mesh: another thread may be
+        // destroying it (transient decals, physics-skinned meshes) and every read below - skin
+        // instance, partitions, GPU buffers, shader property, diffuse texture - needs it alive.
+        RE::NiPointer<RE::BSGeometry> const keep_alive(geom);
+        ++context.skinned_seen;
         char const* const node_name = geom->name.c_str();
         char const* const rtti_name = geom->GetRTTI() ? geom->GetRTTI()->GetName() : "?";
 
@@ -1020,6 +1451,7 @@ namespace
             note(skin && skin->skinData && !skin->skinData->GetBoneData(), "skinData->GetBoneData()");
             note(skin && !skin->boneWorldTransforms, "boneWorldTransforms");
             note(skin && !skin->bones, "bones");
+            ++context.sk_incomplete;
             logger::warn("Panel: skip skinned draw [skin instance incomplete] node={} missing=[{}] rtti={}",
                 node_name, missing, rtti_name ? rtti_name : "?");
             return;
@@ -1033,6 +1465,7 @@ namespace
         }
         if (partition_count == 0)
         {
+            ++context.p0;
             logger::debug("Panel: skip skinned draw [no skin partitions] node={} numPartitions={} partitions.size()={}",
                 node_name, skin_partition->numPartitions, skin_partition->partitions.size());
             return;
@@ -1041,6 +1474,7 @@ namespace
         RE::NiAVObject* const root_parent = skin->rootParent;
         if (!root_parent)
         {
+            ++context.no_root;
             logger::warn("Panel: skip skinned draw [skin instance has no rootParent] node={} rtti={} partitions={}",
                 node_name, rtti_name ? rtti_name : "?", partition_count);
             return;
@@ -1052,9 +1486,26 @@ namespace
         RE::NiBound const& world_bound = geom->worldBound;
         if (world_bound.radius > Max_Part_World_Radius)
         {
+            ++context.wbound;
             logger::warn("Panel: skip skinned draw [world bound out of range] node={} world_bound=({:.1f},{:.1f},{:.1f}) r={:.1f} cap={:.1f}",
                 node_name, world_bound.center.x, world_bound.center.y, world_bound.center.z, world_bound.radius, Max_Part_World_Radius);
             return;
+        }
+
+        // ---- Position source for positionless partitions (FaceGen/morph dynamic meshes - the head
+        // and the morphed body): the partition buffers carry no positions; model-space positions live
+        // in BSDynamicTriShape::dynamicData, one float4 per ORIGINAL vertex. Resolved once per
+        // geometry, rebuilt per partition through its vertexMap at collection time. ----
+        void const* dynamic_positions = nullptr;
+        uint32_t dynamic_vertex_capacity = 0;
+        if (RE::BSDynamicTriShape* dyn = geom->AsDynamicTriShape())
+        {
+            RE::BSDynamicTriShape::DYNAMIC_TRISHAPE_RUNTIME_DATA const& dyn_rt = dyn->GetDynamicTrishapeRuntimeData();
+            if (dyn_rt.dynamicData && dyn_rt.dataSize >= Dynamic_Position_Stride)
+            {
+                dynamic_positions = dyn_rt.dynamicData;
+                dynamic_vertex_capacity = dyn_rt.dataSize / Dynamic_Position_Stride;
+            }
         }
 
         for (uint32_t p = 0; p < partition_count; ++p)
@@ -1076,6 +1527,7 @@ namespace
                 reject = "partition triList missing";
             if (reject)
             {
+                ++context.part_gate;
                 logger::debug("Panel: skip skinned draw [{}] node={} partition={} vertices={} triangles={}",
                     reject, node_name, p, part.vertices, part.triangles);
                 continue;
@@ -1084,6 +1536,7 @@ namespace
             if (part.strips != 0)
             {
                 // A strip partition (stripLengths index layout) cannot be drawn as a triangle list - skip to avoid errors
+                ++context.strips;
                 logger::debug("Panel: skip skinned draw [partition is a triangle strip] node={} partition={} strips={} vertices={} triangles={}",
                     node_name, p, part.strips, part.vertices, part.triangles);
                 continue;
@@ -1095,8 +1548,189 @@ namespace
             uint32_t const palette_count = std::min(skin->skinData->GetBoneCount(), skin->numMatrices);
             if (palette_count == 0 || palette_count > Max_Palette_Bones)
             {
+                ++context.palette;
+                if (!context.first_palette_captured)
+                {
+                    context.first_palette_captured = true;
+                    context.first_palette_bone_count = skin->skinData->GetBoneCount();
+                    context.first_palette_num_matrices = skin->numMatrices;
+                    context.first_palette_node = node_name ? node_name : "?";
+                }
                 logger::debug("Panel: skip skinned draw [palette slot count out of range] node={} partition={} palette={} budget={}",
                     node_name, p, palette_count, Max_Palette_Bones);
+                continue;
+            }
+
+            // ---- Positionless partition (partition desc without VF_VERTEX, FaceGen/morph dynamic
+            // meshes: head, body): the partition buffer holds only UV/normal/tangent and the
+            // contiguous SKINNING block (weights f16x4 at the skin offset, indices u8x4 right
+            // after). Positions are rebuilt from dynamicData through the partition's vertexMap
+            // (partition-local -> original index; null = identity) into a CPU float4 stream, which
+            // the render thread uploads as vertex stream 1 - keeping the index space of the position
+            // stream, the partition vertex buffer and the partition index buffer consistent. ----
+            if (!buff->vertexDesc.HasFlag(RE::BSGraphics::Vertex::VF_VERTEX))
+            {
+                if (!dynamic_positions)
+                {
+                    logger::warn("Panel: skip skinned draw [positionless partition but no dynamic position data] node={} partition={} rtti={}",
+                        node_name, p, rtti_name ? rtti_name : "?");
+                    continue;
+                }
+
+                uint32_t const partition_stride = vertex_size_of(buff->vertexDesc);
+                uint32_t const skin_offset = buff->vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_SKINNING);
+                if (partition_stride == 0 || skin_offset + Dynamic_Skin_Block_Bytes > partition_stride)
+                {
+                    logger::warn("Panel: skip skinned draw [skin block does not fit the positionless partition layout] node={} partition={} skin_offset={} stride={}",
+                        node_name, p, skin_offset, partition_stride);
+                    continue;
+                }
+
+                uint8_t const* const raw = buff->rawVertexData;
+                if (!raw)
+                {
+                    logger::warn("Panel: skip skinned draw [raw vertex data missing for positionless partition validation] node={} partition={}",
+                        node_name, p);
+                    continue;
+                }
+
+                // Weights/indices validation on the partition's own data (positions are not in this
+                // buffer); the layout inside the SKINNING block is fixed by construction.
+                SkinningLayoutSpec const& spec = *find_skinning_layout(Dynamic_Skin_Layout_Id);
+                SkinnedMeshStats stats{ .position_finite = true };
+                SkinnedMeshVerdict const verdict = validate_skinned_mesh(
+                    raw, partition_stride, 0u, 0u, spec,
+                    skin_offset + spec.weight_delta, skin_offset + spec.index_delta,
+                    part.vertices, palette_count, stats);
+                if (verdict == SkinnedMeshVerdict::e_weights_bad)
+                {
+                    logger::warn("Panel: skip skinned draw [positionless partition skin validation failed] node={} partition={} vertices={} stride={} skin_offset={} wsum=[{:.3f},{:.3f}] wbad={} imax={}/{}",
+                        node_name, p, part.vertices, partition_stride, skin_offset,
+                        stats.weight_sum_min, stats.weight_sum_max, stats.bad_weight_vertices, stats.index_max, palette_count);
+                    continue;
+                }
+                if (stats.out_of_range_weighted_count > 0)
+                {
+                    logger::warn("Panel: skip skinned draw [bone index exceeds palette bounds with non-zero weight] node={} partition={} palette={} oob_weighted={} first_oob_index={} first_oob_weight={:.4f}",
+                        node_name, p, palette_count, stats.out_of_range_weighted_count,
+                        stats.first_out_of_range_index, stats.first_out_of_range_weight);
+                    continue;
+                }
+
+                // ---- Index space: reverted to the measured heuristic while the binary dump
+                // decides the real rule. The two prior rules are each refuted by one symptom: a
+                // non-null vertexMap followed unconditionally blanked the FACE (face partitions
+                // carry a map but keep whole-mesh indexing, so remapping scrambled them), and the
+                // max_index test ignoring the map left the ARMS/HAIR as camouflage. The dump (one
+                // per session, beside the log) records the partition's raw GPU bytes, triangle
+                // list, vertex map and morph data, so the layout is decided from evidence. ----
+                float const* const positions = static_cast<float const*>(dynamic_positions);
+                uint32_t max_index = 0;
+                for (uint32_t t = 0; t < static_cast<uint32_t>(part.triangles) * 3u; ++t)
+                    max_index = std::max(max_index, static_cast<uint32_t>(part.triList[t]));
+                bool const original_indexing = max_index >= part.vertices;
+
+                uint32_t const reachable_count = original_indexing ? max_index + 1u :
+                    (part.vertexMap ? part.vertices : std::min<uint32_t>(part.vertices, dynamic_vertex_capacity));
+                uint16_t const* const vertex_map = original_indexing ? nullptr : part.vertexMap;
+                if (reachable_count > dynamic_vertex_capacity)
+                {
+                    logger::warn("Panel: skip skinned draw [dynamic position index out of bounds] node={} partition={} reachable={} capacity={} max_index={}",
+                        node_name, p, reachable_count, dynamic_vertex_capacity, max_index);
+                    continue;
+                }
+
+                // Every position this draw can reach must be finite (sampled, not walked: the body
+                // alone is five-digit vertex counts and the check runs per collection).
+                constexpr uint32_t Dynamic_Sample_Limit = 256;
+                uint32_t const sample_step = (reachable_count > Dynamic_Sample_Limit) ?
+                    (reachable_count + Dynamic_Sample_Limit - 1) / Dynamic_Sample_Limit : 1;
+                bool positions_usable = true;
+                for (uint32_t v = 0; v < reachable_count; v += sample_step)
+                {
+                    float const* const src_pos = positions + static_cast<size_t>(v) * Dynamic_Position_Components;
+                    if (!std::isfinite(src_pos[0]) || !std::isfinite(src_pos[1]) || !std::isfinite(src_pos[2]))
+                    {
+                        logger::warn("Panel: skip skinned draw [dynamic positions non-finite] node={} partition={} vertex={}",
+                            node_name, p, v);
+                        positions_usable = false;
+                        break;
+                    }
+                }
+                if (positions_usable && vertex_map)
+                {
+                    for (uint32_t v = 0; v < part.vertices; ++v)
+                    {
+                        if (static_cast<uint32_t>(vertex_map[v]) >= dynamic_vertex_capacity)
+                        {
+                            logger::warn("Panel: skip skinned draw [dynamic position index out of bounds] node={} partition={} vertex={} original={} capacity={}",
+                                node_name, p, v, vertex_map[v], dynamic_vertex_capacity);
+                            positions_usable = false;
+                            break;
+                        }
+                    }
+                }
+                if (!positions_usable)
+                    continue;
+
+                dump_positionless_partition(*buff, part, dynamic_positions, dynamic_vertex_capacity,
+                    partition_stride, palette_count, node_name, p);
+
+                // ---- Bake the float4 stream: identity copy over the reachable range, then the
+                // vertexMap overwrite for packed partitions. The fourth component stays at one (the
+                // float3 POSITION fetch never reads it). ----
+                auto stream = std::make_shared<std::vector<float>>(static_cast<size_t>(reachable_count) * Dynamic_Position_Components);
+                for (uint32_t v = 0; v < reachable_count; ++v)
+                {
+                    float const* const src = positions + static_cast<size_t>(v) * Dynamic_Position_Components;
+                    float* const dst = stream->data() + static_cast<size_t>(v) * Dynamic_Position_Components;
+                    dst[0] = src[0];
+                    dst[1] = src[1];
+                    dst[2] = src[2];
+                    dst[3] = 1.0f;
+                }
+                if (vertex_map)
+                {
+                    for (uint32_t v = 0; v < part.vertices; ++v)
+                    {
+                        float const* const src = positions + static_cast<size_t>(vertex_map[v]) * Dynamic_Position_Components;
+                        float* const dst = stream->data() + static_cast<size_t>(v) * Dynamic_Position_Components;
+                        dst[0] = src[0];
+                        dst[1] = src[1];
+                        dst[2] = src[2];
+                    }
+                }
+
+                PanelDraw draw{};
+                draw.skin = geom_rt.skinInstance;
+                draw.partition = p;
+                draw.node.reset(geom);  // keeps the geometry (and its dynamicData) alive
+                draw.vertex_buffer = buff->vertexBuffer;
+                draw.index_buffer = buff->indexBuffer;
+                if (draw.vertex_buffer)
+                    draw.vertex_buffer->AddRef();
+                if (draw.index_buffer)
+                    draw.index_buffer->AddRef();
+                draw.vertex_desc = buff->vertexDesc;
+                draw.vertex_stride = partition_stride;
+                draw.vertex_count = part.vertices;
+                draw.triangle_count = part.triangles;
+                draw.index_count = static_cast<uint32_t>(part.triangles) * 3u;
+                draw.position_format = REX::W32::DXGI_FORMAT_R32G32B32_FLOAT;
+                draw.position_offset = 0u;
+                draw.uv_format = uv_format_of(buff->vertexDesc);
+                draw.skin_layout = PanelSkinLayout{ spec.weight_format, skin_offset + spec.weight_delta, spec.index_format, skin_offset + spec.index_delta };
+                draw.partition_bones = part.bones;
+                draw.partition_bone_count = part.numBones;
+                draw.position_stream = std::move(stream);
+                PanelMaterial const material = resolve_material(geom_rt.shaderProperty.get(), buff->vertexDesc, context.npc);
+                apply_material(draw, material);
+                resolve_alpha_handling(geom_rt, context.config, draw.alpha_cutoff, draw.opaque_alpha);
+                log_mesh_census(node_name, "skinned", static_cast<int32_t>(p), part.vertices, part.triangles,
+                    max_index, original_indexing ? "whole-mesh" : "packed", part.vertexMap != nullptr,
+                    dynamic_vertex_capacity, palette_count, buff->vertexDesc, draw, material, geom_rt.alphaProperty.get());
+                ++context.skinned_ok;
+                context.draws->push_back(std::move(draw));
                 continue;
             }
 
@@ -1106,7 +1740,10 @@ namespace
             // format or a hard-coded skinning order). ----
             SkinnedVertexLayout calibration = calibrate_skinned_layout(buff->vertexDesc, buff, part.vertices, palette_count);
             if (calibration.state != SkinnedCalibrationState::e_measured)
+            {
+                ++context.calib;
                 continue;
+            }
 
             // ---- Per-mesh validation runs on this mesh (no verdict reused from another mesh, full
             // vertex traversal); indices are global with palette as the bound. Position failure ->
@@ -1125,6 +1762,7 @@ namespace
 
             if (verdict == SkinnedMeshVerdict::e_position_bad)
             {
+                ++context.vpos;
                 logger::warn("Panel: skip skinned draw [mesh positions non-finite] node={} partition={} vertices={} stride={} pos(fmt={:#06x},off={}",
                     node_name, p, part.vertices, calibration.stride, static_cast<unsigned>(calibration.position_format), calibration.position_offset);
                 continue;
@@ -1149,6 +1787,7 @@ namespace
                 }
                 if (switch_to < 0)
                 {
+                    ++context.vweights;
                     logger::warn("Panel: skip skinned draw [no skinned layout fits this mesh] node={} partition={} vertices={} palette={} cached_layout={} candidates:{}",
                         node_name, p, part.vertices, palette_count, static_cast<unsigned>(calibration.layout_id),
                         format_skinned_candidate_table(candidates, candidate_skin, candidate_count, palette_count));
@@ -1174,6 +1813,7 @@ namespace
             // replica fill is a no-op for zero-weight slots, which are only counted in the stats).
             if (stats.out_of_range_weighted_count > 0)
             {
+                ++context.oob;
                 logger::warn("Panel: skip skinned draw [bone index exceeds palette bounds with non-zero weight] node={} partition={} palette={} oob_weighted={} index_max={} first_oob_index={} first_oob_weight={:.4f}",
                     node_name, p, palette_count, stats.out_of_range_weighted_count, stats.index_max,
                     stats.first_out_of_range_index, stats.first_out_of_range_weight);
@@ -1186,6 +1826,10 @@ namespace
             draw.node.reset(geom);  // keep the geometry alive
             draw.vertex_buffer = buff->vertexBuffer;
             draw.index_buffer = buff->indexBuffer;
+            if (draw.vertex_buffer)
+                draw.vertex_buffer->AddRef();
+            if (draw.index_buffer)
+                draw.index_buffer->AddRef();
             draw.vertex_desc = buff->vertexDesc;
             draw.vertex_stride = calibration.stride;
             draw.vertex_count = part.vertices;
@@ -1193,14 +1837,23 @@ namespace
             draw.index_count = static_cast<uint32_t>(part.triangles) * 3u;
             draw.position_format = calibration.position_format;
             draw.position_offset = calibration.position_offset;
+            draw.uv_format = uv_format_of(buff->vertexDesc);
             draw.skin_layout = calibration.skin;
-            apply_material(draw, resolve_material(geom_rt.shaderProperty.get(), buff->vertexDesc));
+            draw.partition_bones = part.bones;
+            draw.partition_bone_count = part.numBones;
+            PanelMaterial const material = resolve_material(geom_rt.shaderProperty.get(), buff->vertexDesc, context.npc);
+            apply_material(draw, material);
+            resolve_alpha_handling(geom_rt, context.config, draw.alpha_cutoff, draw.opaque_alpha);
+            log_mesh_census(node_name, "skinned", static_cast<int32_t>(p), part.vertices, part.triangles,
+                0u, "n/a", part.vertexMap != nullptr, 0u, palette_count, buff->vertexDesc, draw, material, geom_rt.alphaProperty.get());
+            ++context.skinned_ok;
             context.draws->push_back(std::move(draw));
         }
     }
 
-    void collect_geometry(RE::BSGeometry* geom, PanelWalkContext const& context)
+    void collect_geometry(RE::BSGeometry* geom, PanelWalkContext& context)
     {
+        ++context.visited;
         switch (geom->GetType().get())
         {
         case RE::BSGeometry::Type::kParticles:
@@ -1213,6 +1866,20 @@ namespace
             return;
         default:
             break;
+        }
+
+        // Transient weapon decals ("BloodLighting" and friends) are created and destroyed on the
+        // engine's threads without notice; reading their shader property or texture raced with
+        // that destruction three sessions in a row (the AddRef-on-garbage-SRV crashes). They are
+        // additive blood splats on weapons with no place in a static portrait, so they are skipped
+        // wholesale. The name check runs before any property read.
+        {
+            char const* const geom_name = geom->name.c_str();
+            if (geom_name && std::strstr(geom_name, "Blood") != nullptr)
+            {
+                logger::debug("Panel: skip transient blood decal node=\"{}\"", geom_name);
+                return;
+            }
         }
 
         RE::BSGeometry::GEOMETRY_RUNTIME_DATA const& geom_rt = geom->GetGeometryRuntimeData();
@@ -1232,7 +1899,7 @@ namespace
     }
 }
 
-void collect_panel_geometry(RE::TESObjectREFR& ref, std::vector<PanelDraw>& draws)
+void collect_panel_geometry(RE::TESObjectREFR& ref, Config const& config, std::vector<PanelDraw>& draws)
 {
     draws.clear();
 
@@ -1242,7 +1909,9 @@ void collect_panel_geometry(RE::TESObjectREFR& ref, std::vector<PanelDraw>& draw
 
     // The walk state lives on the stack and is captured by reference, so the traversal's callable
     // stays small enough not to allocate.
-    PanelWalkContext const context{ .position = ref.GetPosition(), .form_id = ref.GetFormID(), .draws = &draws };
+    RE::TESNPC* const walk_npc = ref.GetBaseObject() ? ref.GetBaseObject()->As<RE::TESNPC>() : nullptr;
+    PanelWalkContext context{ .position = ref.GetPosition(), .form_id = ref.GetFormID(), .draws = &draws,
+        .config = config, .npc = walk_npc };
 
     RE::BSVisit::TraverseScenegraphGeometries(root, [&context](RE::BSGeometry* geometry) {
         if (context.draws->size() >= Max_Draws_Per_Frame)
@@ -1253,6 +1922,23 @@ void collect_panel_geometry(RE::TESObjectREFR& ref, std::vector<PanelDraw>& draw
         collect_geometry(geometry, context);
         return RE::BSVisit::BSVisitControl::kContinue;
     });
+
+    // One-shot funnel census: the skinned and static paths reject meshes at several debug-logged
+    // gates that are invisible at the info level, so a missing character is otherwise undiagnosable.
+    // Logged once per process, the first time skinned meshes were seen but none survived.
+    static bool s_census_logged = false;
+    if (!s_census_logged && context.skinned_seen > 0 && context.skinned_ok == 0)
+    {
+        s_census_logged = true;
+        logger::warn("Panel skinned census: visited={} skinned={} static={} ok(skinned={} static={}) | skinned reject: incomplete={} p0={} noroot={} wbound={} part={} strips={} palette={} calib={} vpos={} vweights={} oob={} | static reject: nogpu={} excl={} nottri={} empty={} bound={} worldr={} calib={} notref={} | first palette reject: node=\"{}\" skinBoneCount={} skinNumMatrices={} budget={}",
+            context.visited, context.skinned_seen, context.static_seen, context.skinned_ok, context.static_ok,
+            context.sk_incomplete, context.p0, context.no_root, context.wbound, context.part_gate,
+            context.strips, context.palette, context.calib, context.vpos, context.vweights, context.oob,
+            context.st_nogpu, context.st_excl, context.st_nottri, context.st_empty, context.st_bound,
+            context.st_worldr, context.st_calib, context.st_notref,
+            context.first_palette_node, context.first_palette_bone_count, context.first_palette_num_matrices,
+            Max_Palette_Bones);
+    }
 }
 
 PLUGIN_NAMESPACE_END

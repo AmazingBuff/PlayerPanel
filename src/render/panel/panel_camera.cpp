@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -16,9 +17,14 @@ namespace
     // with its own LESS depth state.
     constexpr float Radians_Per_Degree = 0.017453292519943295f;
 
-    // Automatic framing: fit the body sphere into both axes of the panel's own aspect with a small
-    // margin, so a portrait panel does not clip the arms or a weapon at the sides.
-    constexpr float Framing_Margin = 1.15f;
+    // Automatic framing: fit the WHOLE body on the vertical axis of the panel's own aspect, head to
+    // feet (the BG3-style full-body portrait). The bound of a standing humanoid is loose (measured
+    // r=129 for a 128-unit body) and its centre drifts with the stale bound of a culled subtree, so
+    // the camera targets the body's true vertical span - the skinned bones' min/max Z - instead of
+    // any bound sphere. The fit distance takes the panel's tall aspect into account so the feet stay
+    // in frame with a visible margin; CameraDistance still overrides the fit entirely.
+    constexpr float Framing_Margin = 1.1f;
+    constexpr float Min_Body_Framing_Radius = 48.0f;
 
     // Fallback framing when the engine's world bound is unusable: a humanoid is roughly this tall
     // (game units), so half of it is the framing radius.
@@ -43,30 +49,73 @@ namespace
         DirectX::XMFLOAT3 target;
         float radius;
     };
-
-    // The look-at point and framing radius: the preview's world bound when it is finite and inside
-    // the accepted range, otherwise a fixed body-height framing derived from the reference position.
-    Framing resolve_framing(RE::TESObjectREFR const& preview)
-    {
-        if (RE::NiAVObject const* const root = preview.GetCurrent3D())
-        {
-            RE::NiBound const& bound = root->worldBound;
-            if (std::isfinite(bound.center.x) && std::isfinite(bound.center.y) && std::isfinite(bound.center.z) &&
-                std::isfinite(bound.radius) && bound.radius >= Min_Bound_Radius && bound.radius <= Max_Bound_Radius)
-            {
-                return Framing{ DirectX::XMFLOAT3{ bound.center.x, bound.center.y, bound.center.z }, bound.radius };
-            }
-        }
-
-        RE::NiPoint3 const position = preview.GetPosition();
-        float const half_height = Fallback_Body_Height * 0.5f;
-        return Framing{ DirectX::XMFLOAT3{ position.x, position.y, position.z + half_height }, half_height };
-    }
 }
 
-bool PanelCamera::build(RE::TESObjectREFR const& preview, Config const& config, PanelCameraFrame& out)
+bool PanelCamera::resolve_body_aim(std::span<PanelDraw const> draws, PanelAim& out)
 {
-    Framing const framing = resolve_framing(preview);
+    // The first skinned draw's bound bones span the body: their world translates give the true
+    // vertical span and the true position. The reference's cached position drifts from its 3D
+    // (measured: 262 units after placement), so the camera aims at the geometry, never at the
+    // reference. The FULL span, uncapped, is what puts the feet in frame.
+    for (PanelDraw const& draw : draws)
+    {
+        if (!draw.skin)
+            continue;
+
+        RE::NiSkinInstance& skin = *draw.skin;
+        if (!skin.bones || !skin.boneWorldTransforms || !skin.skinData || skin.skinData->GetBoneCount() == 0)
+            continue;
+
+        std::uint32_t const count = (std::min)(skin.skinData->GetBoneCount(), 64u);
+        float min_z = std::numeric_limits<float>::max();
+        float max_z = std::numeric_limits<float>::lowest();
+        double sum_x = 0.0;
+        double sum_y = 0.0;
+        std::uint32_t counted = 0;
+        for (std::uint32_t index = 0; index < count; ++index)
+        {
+            if (!skin.bones[index])
+                continue;
+            RE::NiPoint3 const& translate = skin.bones[index]->world.translate;
+            min_z = (std::min)(min_z, translate.z);
+            max_z = (std::max)(max_z, translate.z);
+            sum_x += translate.x;
+            sum_y += translate.y;
+            ++counted;
+        }
+        if (counted == 0)
+            continue;
+
+        // The framing centre sits slightly below the skeleton's vertical middle: a centre-height
+        // target reads bottom-heavy in a portrait window (the feet crop, the head floats with dead
+        // space above). Biasing the target down pushes the figure up inside the window and evens
+        // the margins around it.
+        out.target = DirectX::XMFLOAT3{ static_cast<float>(sum_x / counted),
+            static_cast<float>(sum_y / counted), min_z + (max_z - min_z) * 0.55f };
+        // The bones' Z span covers the skeleton but not the crown of the head or the soles; a
+        // humanoid's full height reads about a quarter higher than the bone span, so the framing
+        // radius is the half-height with that headroom built in.
+        out.radius = (std::max)((max_z - min_z) * 0.5f * 1.25f, Min_Body_Framing_Radius);
+        return true;
+    }
+
+    // No skinned geometry (before the palette latch): aim at the first static draw's transform, a
+    // body-height above its hip-level origin.
+    for (PanelDraw const& draw : draws)
+    {
+        if (!draw.node)
+            continue;
+        RE::NiPoint3 const& translate = draw.node->world.translate;
+        out.target = DirectX::XMFLOAT3{ translate.x, translate.y, translate.z + Fallback_Body_Height * 0.5f };
+        out.radius = Fallback_Body_Height * 0.5f;
+        return true;
+    }
+    return false;
+}
+
+bool PanelCamera::build(RE::TESObjectREFR const& preview, PanelAim const& aim, Config const& config, PanelCameraFrame& out)
+{
+    Framing const framing{ aim.target, aim.radius };
     if (!std::isfinite(framing.radius) || framing.radius <= 0.0f)
         return false;
 
@@ -91,19 +140,13 @@ bool PanelCamera::build(RE::TESObjectREFR const& preview, Config const& config, 
     float distance = static_cast<float>(config.camera_distance);
     if (!std::isfinite(distance) || distance <= 0.0f)
     {
-        // Fit the body sphere on the vertical axis and on the horizontal one, and keep the larger
-        // distance of the two: whichever axis is tighter decides how far the camera has to stand back.
-        float const half_fov_y = fov_y * 0.5f;
-        float const half_fov_x = std::atan(aspect * std::tan(half_fov_y));
-        float const sin_half_fov_y = std::sin(half_fov_y);
-        float const sin_half_fov_x = std::sin(half_fov_x);
-        float const distance_y = sin_half_fov_y > 0.0f
-            ? framing.radius / sin_half_fov_y
-            : framing.radius * Fallback_Distance_Factor;
-        float const distance_x = sin_half_fov_x > 0.0f
-            ? framing.radius / sin_half_fov_x
-            : framing.radius * Fallback_Distance_Factor;
-        distance = (std::max)(distance_x, distance_y) * Framing_Margin;
+        // The vertical fit against the panel's own tall aspect: the horizontal half-FOV is wider on
+        // a portrait window, so fitting the radius on the vertical axis alone keeps the whole body
+        // (head to feet) in frame instead of pushing the camera back for the empty side margins.
+        float const horizontal_fit = framing.radius / std::tan(fov_y * 0.5f) / std::max(aspect, 0.01f);
+        float const vertical_fit = framing.radius / std::sin(fov_y * 0.5f);
+        distance = std::max(horizontal_fit, vertical_fit);
+        distance *= Framing_Margin;
     }
     distance = std::clamp(distance, Min_Camera_Distance, Max_Camera_Distance);
 
@@ -126,7 +169,13 @@ bool PanelCamera::build(RE::TESObjectREFR const& preview, Config const& config, 
         DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
     DirectX::XMMATRIX const projection = DirectX::XMMatrixPerspectiveFovLH(fov_y, aspect, near_plane, far_plane);
 
-    DirectX::XMStoreFloat4x4(&out.view_proj, DirectX::XMMatrixMultiply(view, projection));
+    // DirectXMath composes and stores row-vector matrices - the translation of XMMatrixLookAtLH ends
+    // up in the fourth row - while the panel shaders read row_major memory as mul(matrix, column
+    // vector), which needs the translation in the fourth column. The transpose is the one conversion
+    // between the two conventions, matching the column-vector layout the static and palette paths
+    // already upload (see the shader's matrix-convention comment).
+    DirectX::XMStoreFloat4x4(&out.view_proj,
+        DirectX::XMMatrixTranspose(DirectX::XMMatrixMultiply(view, projection)));
     out.eye = eye;
     return true;
 }

@@ -116,7 +116,6 @@ private:
     std::vector<PanelDraw> m_draws;
     std::vector<PanelDraw> m_render_draws;
     PanelCameraFrame m_camera;
-    float m_alpha_test;
     bool m_frame_ready;
     // Which chrome this prepared frame belongs to. It travels with the frame because draw() chooses
     // the offscreen clear colour, the inset the character is clipped to and the composite's blend
@@ -139,6 +138,39 @@ private:
     // been reported, so a menu that never appears costs one log line and not one per frame.
     uint32_t m_chrome_pending_frames;
     bool m_chrome_fallback_logged;
+    // One-shot diagnostics per panel-open session: chrome mode, collected draw count and the first
+    // composite, plus one line for each silent-failure branch, so an invisible panel is diagnosable
+    // from the log alone.
+    bool m_session_diagnostics_done;
+    // The draw-side half of the one-shot diagnostics, kept separate from m_session_diagnostics_done:
+    // prepare() sets that flag first, so a shared flag would suppress the composite's own line forever
+    // and leave a silent composite failure unprovable from the log.
+    bool m_first_composite_logged;
+    // One-shot per-session content dump of the offscreen target and of the composed back buffer, as
+    // TGA files beside the log. The panel showed an empty window while every upstream check passed,
+    // so the images answer from the pixels what the log cannot: whether the geometry pass reaches the
+    // target at all, and whether the composite's write survives onto the back buffer. A second dump
+    // at composited frame 90 revisits the target after the palette latch (the head and body only
+    // reach the collection after it).
+    bool m_target_dumped;
+    bool m_second_dumped;
+    // Render-thread frame counter for the second dump.
+    uint32_t m_composited_frames;
+    // Whether the panel is on screen, mirrored for the render thread: the redraw-last fallback (an
+    // empty collection redraws the previous frame's draws) applies only while the panel is open -
+    // after close it would keep painting a window the plugin has already given back.
+    std::atomic<bool> m_chrome_active;
+    // Latches the first per-session shortfall (no 3D yet, or no drawable geometry) so the warning
+    // costs one log line instead of one per frame while the preview's 3D is still loading.
+    bool m_shortfall_logged;
+    // Game-thread only. The world-copy cull waits for the engine to render the preview once: a skin
+    // instance's bone-matrix count is latched at its first render submission, and a world copy culled
+    // from its first frame is never submitted, which leaves the count at zero and the palette gate
+    // rejects every skinned mesh. The latch reports whether that first submission has happened (one
+    // collection with skinned draws), and the grace bounds how long an unrendered preview stays
+    // visible before it is hidden anyway.
+    bool m_world_copy_cull_active;
+    uint32_t m_world_copy_cull_grace_frames;
 
     // Render-thread owned: only draw() and release() touch these.
     //

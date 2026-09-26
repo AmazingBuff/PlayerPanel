@@ -29,18 +29,26 @@ namespace
     {
         DirectX::XMFLOAT4X4 view_proj;
         DirectX::XMFLOAT3 camera_position;
-        float alpha_test;
+        float pad;
     };
 
-    // The per-draw transform, material and skinning palette share one constant buffer so the panel
-    // touches only constant-buffer slots 0 and 1, which is exactly the set the engine state capture
-    // restores.
+    // The per-draw transform, material, alpha handling and skinning palette share one constant buffer
+    // so the panel touches only constant-buffer slots 0 and 1, which is exactly the set the engine
+    // state capture restores. tint_color packs the engine-resolved colour with the tint mode in its
+    // .w (0 = none, 1 = hair dye over grayscale, 2 = FaceGen skin tone over grayscale), so the
+    // shader needs no extra flag slots.
     struct PanelDrawCBData
     {
         DirectX::XMFLOAT4X4 world;
         DirectX::XMFLOAT4 albedo;
         uint32_t has_texture;
-        float pad[3];
+        float alpha_cutoff;
+        float write_alpha_1;
+        float tint_mode;
+        DirectX::XMFLOAT4 tint_color;
+        // The material's own UV remap (offset.xy, scale.zw), applied by the vertex stage before
+        // sampling - atlassed CBBE slots carry non-trivial values, plain materials are identity.
+        DirectX::XMFLOAT4 uv_remap;
         DirectX::XMFLOAT4X4 bones[Max_Palette_Bones];
     };
 
@@ -123,12 +131,18 @@ namespace
 
     bool create_rasterizer_state(REX::W32::ID3D11Device* device, REX::W32::ID3D11RasterizerState** result)
     {
+        // Mirrors the engine's own character rasterizer state (measured in RenderDoc, the O draw of
+        // the same mesh): back-face culling with a CCW front, multisampling off, and the engine's
+        // depth-bias clamp. The panel draws the same geometry with the same vertex data, so the
+        // same rasterizer settings keep the two paths comparable.
         REX::W32::D3D11_RASTERIZER_DESC desc{};
-        desc.cullMode = REX::W32::D3D11_CULL_NONE;
+        desc.cullMode = REX::W32::D3D11_CULL_BACK;
+        desc.frontCounterClockwise = true;
         desc.fillMode = REX::W32::D3D11_FILL_SOLID;
         desc.scissorEnable = false;
         desc.depthClipEnable = true;
-        desc.multisampleEnable = true;
+        desc.multisampleEnable = false;
+        desc.depthBiasClamp = -100.0f;
 
         REX::W32::HRESULT const hr = device->CreateRasterizerState(&desc, result);
         if (!REX::W32::SUCCESS(hr) || !*result)
@@ -141,10 +155,13 @@ namespace
 
     bool create_sampler_state(REX::W32::ID3D11Device* device, REX::W32::ID3D11SamplerState** result)
     {
+        // Mirrors the engine's diffuse sampler (RenderDoc, the O draw of the same mesh): wrap
+        // addressing with 8x anisotropic filtering. Community Shaders also caps engine anisotropy
+        // at exactly 8 (Hooks.cpp ID3D11Device_CreateSamplerState).
         REX::W32::D3D11_SAMPLER_DESC desc{};
-        desc.filter = REX::W32::D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        desc.addressU = desc.addressV = desc.addressW = REX::W32::D3D11_TEXTURE_ADDRESS_CLAMP;
-        desc.maxAnisotropy = device->GetFeatureLevel() > REX::W32::D3D_FEATURE_LEVEL_9_1 ? REX::W32::D3D11_MAX_MAXANISOTROPY : 2u;
+        desc.filter = REX::W32::D3D11_FILTER_ANISOTROPIC;
+        desc.addressU = desc.addressV = desc.addressW = REX::W32::D3D11_TEXTURE_ADDRESS_WRAP;
+        desc.maxAnisotropy = 8u;
         desc.maxLOD = REX::W32::D3D11_FLOAT32_MAX;
         desc.comparisonFunc = REX::W32::D3D11_COMPARISON_NEVER;
 
@@ -189,9 +206,22 @@ namespace
         return matrix;
     }
 
-    // Palette in global bone index space: boneWorld * skinToBone with boneWorld first, so the
-    // product maps model space straight to world space. Unused slots replicate the last valid entry
-    // so no out-of-range read can pick up undefined content.
+    // Palette in global bone index space: slot i is boneWorldTransforms[i] * skinToBone(i), so the
+    // product maps model space straight to world space and a vertex's bone index - a global subscript
+    // into the skin bone array - addresses the palette directly.
+    //
+    // That subscript is global, not partition-local. The engine's own skinning says so: its vertex
+    // shader (reconstructed in Community Shaders' Common/Skinned.hlsli) reads BLENDINDICES and
+    // addresses Bones[g] - a flat 80-bone matrix array - with no per-partition indirection at all.
+    // So does measurement: a mesh whose partition carries numBones=13 nonetheless carries indices up
+    // to 30 against a 31-bone skin (clothes), and one with numBones=1 carries index 1 against a
+    // 2-bone skin (head, hair). Partition bones arrays are legacy/partial in SSE, so
+    // partition_bones/numBones take part in no decision here - they are diagnostics only. Assembling
+    // the palette through them permutes the bones and scrambles the body; bounding the vertex
+    // indices by numBones rejects real meshes every frame (5 partitions per frame, measured).
+    //
+    // Unused slots replicate the last valid entry so no out-of-range read can pick up undefined
+    // content.
     bool build_palette(RE::NiSkinInstance& skin, DirectX::XMFLOAT4X4 (&palette)[Max_Palette_Bones])
     {
         if (!skin.skinData || !skin.boneWorldTransforms || skin.numMatrices == 0)
@@ -217,6 +247,23 @@ namespace
             palette[index] = palette[palette_count - 1];
         return true;
     }
+
+    // Why a collected draw never reached the GPU, bounded to the first frames of a session. A draw
+    // dropped here leaves no other trace: the collection has it, and the panel simply shows less.
+    void log_draw_skip(PanelDraw const& draw, char const* reason)
+    {
+        static uint32_t s_budget = 32;
+        if (s_budget == 0)
+            return;
+        --s_budget;
+
+        char const* name = draw.node ? draw.node->name.c_str() : nullptr;
+        logger::warn("Panel draw skipped [{}]: node=\"{}\" p={} skinned={} verts={} indices={} stride={} uv={} palette_bones={}",
+            reason, name && name[0] != '\0' ? name : "?", draw.partition,
+            draw.skin ? "yes" : "no", draw.vertex_count, draw.index_count, draw.vertex_stride,
+            draw.has_uv ? "yes" : "no",
+            draw.skin ? draw.skin->numMatrices : 0u);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -229,6 +276,8 @@ PanelGeometryPass::PanelGeometryPass() :
     m_ref_pixel_shader(nullptr),
     m_frame_cb(nullptr),
     m_draw_cb(nullptr),
+    m_position_scratch(nullptr),
+    m_position_scratch_vertices(0),
     m_depth(nullptr),
     m_rasterizer(nullptr),
     m_blend(nullptr),
@@ -296,6 +345,12 @@ void PanelGeometryPass::release()
         m_draw_cb->Release();
         m_draw_cb = nullptr;
     }
+    if (m_position_scratch)
+    {
+        m_position_scratch->Release();
+        m_position_scratch = nullptr;
+    }
+    m_position_scratch_vertices = 0;
     if (m_frame_cb)
     {
         m_frame_cb->Release();
@@ -311,10 +366,10 @@ bool PanelGeometryPass::same_layout(LayoutKey const& lhs, LayoutKey const& rhs) 
 {
     return lhs.skinned == rhs.skinned && lhs.has_uv == rhs.has_uv &&
         lhs.position_format == rhs.position_format && lhs.position_offset == rhs.position_offset &&
-        lhs.skinning_offset == rhs.skinning_offset && lhs.uv_offset == rhs.uv_offset &&
-        lhs.stride == rhs.stride && lhs.weight_format == rhs.weight_format &&
-        lhs.weight_offset == rhs.weight_offset && lhs.index_format == rhs.index_format &&
-        lhs.index_offset == rhs.index_offset;
+        lhs.skinning_offset == rhs.skinning_offset && lhs.uv_format == rhs.uv_format &&
+        lhs.uv_offset == rhs.uv_offset && lhs.stride == rhs.stride &&
+        lhs.weight_format == rhs.weight_format && lhs.weight_offset == rhs.weight_offset &&
+        lhs.index_format == rhs.index_format && lhs.index_offset == rhs.index_offset;
 }
 
 void PanelGeometryPass::release_layouts()
@@ -328,8 +383,7 @@ void PanelGeometryPass::release_layouts()
 }
 
 REX::W32::ID3D11InputLayout* PanelGeometryPass::acquire_layout(REX::W32::ID3D11Device* device, PanelDraw const& draw)
-{
-    bool const skinned = draw.skin != nullptr;
+{    bool const skinned = draw.skin != nullptr;
     bool const from_desc = draw.position_format == REX::W32::DXGI_FORMAT_UNKNOWN;
     REX::W32::DXGI_FORMAT const position_format = from_desc
         ? (draw.vertex_desc.HasFlag(RE::BSGraphics::Vertex::VF_FULLPREC) ? REX::W32::DXGI_FORMAT_R32G32B32_FLOAT : REX::W32::DXGI_FORMAT_R16G16B16A16_FLOAT)
@@ -341,9 +395,11 @@ REX::W32::ID3D11InputLayout* PanelGeometryPass::acquire_layout(REX::W32::ID3D11D
     LayoutKey const key{
         skinned,
         draw.has_uv,
+        draw.position_stream != nullptr,
         static_cast<uint32_t>(position_format),
         position_offset,
         draw.vertex_desc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_SKINNING),
+        draw.has_uv ? static_cast<uint32_t>(draw.uv_format) : 0u,
         draw.vertex_desc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_TEXCOORD0),
         draw.vertex_stride,
         static_cast<uint32_t>(draw.skin_layout.weight_format),
@@ -370,8 +426,8 @@ REX::W32::ID3D11InputLayout* PanelGeometryPass::acquire_layout(REX::W32::ID3D11D
         .semanticName = "POSITION",
         .semanticIndex = 0,
         .format = position_format,
-        .inputSlot = 0,
-        .alignedByteOffset = position_offset,
+        .inputSlot = key.position_stream ? 1u : 0u,
+        .alignedByteOffset = key.position_stream ? 0u : position_offset,
         .inputSlotClass = REX::W32::D3D11_INPUT_PER_VERTEX_DATA,
         .instanceDataStepRate = 0
     };
@@ -380,7 +436,7 @@ REX::W32::ID3D11InputLayout* PanelGeometryPass::acquire_layout(REX::W32::ID3D11D
         elements[count++] = {
             .semanticName = "TEXCOORD",
             .semanticIndex = 0,
-            .format = Panel_Uv_Format,
+            .format = draw.uv_format,
             .inputSlot = 0,
             .alignedByteOffset = key.uv_offset,
             .inputSlotClass = REX::W32::D3D11_INPUT_PER_VERTEX_DATA,
@@ -421,40 +477,74 @@ REX::W32::ID3D11InputLayout* PanelGeometryPass::acquire_layout(REX::W32::ID3D11D
     return layout;
 }
 
-void PanelGeometryPass::draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
-    PanelTarget const& target, PanelCameraFrame const& camera, float alpha_test,
-    float const clear_color[4], std::span<PanelDraw const> draws)
+// The scratch vertex stream for positionless (dynamic) draws is created on demand and grown to the
+// largest streamed draw of this frame: it exists only when such a draw is actually queued, so the
+// common skinned/static path never pays for it. A DISCARD map replaces the contents every upload,
+// so the buffer never needs to be filled ahead of binding.
+bool PanelGeometryPass::ensure_position_scratch(REX::W32::ID3D11Device* device, uint32_t vertices)
+{
+    if (m_position_scratch && m_position_scratch_vertices >= vertices)
+        return true;
+
+    if (m_position_scratch)
+    {
+        m_position_scratch->Release();
+        m_position_scratch = nullptr;
+        m_position_scratch_vertices = 0;
+    }
+
+    // Headroom of a quarter over the request absorbs per-frame growth of the morphed body stream
+    // without re-creating the buffer every session; the whole request is honoured even when the
+    // headroom is rejected by the driver (a zero-sized request is guarded by the callers).
+    REX::W32::D3D11_BUFFER_DESC desc{};
+    desc.byteWidth = vertices * Dynamic_Position_Stride + vertices / 4u * Dynamic_Position_Stride;
+    desc.usage = REX::W32::D3D11_USAGE_DYNAMIC;
+    desc.bindFlags = REX::W32::D3D11_BIND_VERTEX_BUFFER;
+    desc.cpuAccessFlags = REX::W32::D3D11_CPU_ACCESS_WRITE;
+
+    REX::W32::HRESULT const hr = device->CreateBuffer(&desc, nullptr, &m_position_scratch);
+    if (!REX::W32::SUCCESS(hr) || !m_position_scratch)
+    {
+        logger::error("Panel geometry pass: failed to create the position scratch buffer ({:X})", static_cast<unsigned int>(hr));
+        return false;
+    }
+
+    m_position_scratch_vertices = vertices;
+    return true;
+}
+
+    void PanelGeometryPass::draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
+        REX::W32::ID3D11RenderTargetView* target, REX::W32::ID3D11DepthStencilView* depth,
+        REX::W32::D3D11_VIEWPORT const& rectangle, PanelCameraFrame const& camera,
+        std::span<PanelDraw const> draws)
 {
     if (!device || !context || !m_ref_static_vs || !m_ref_skinned_vs || !m_ref_pixel_shader ||
-        !m_frame_cb || !m_draw_cb || !m_depth || !m_rasterizer || !m_blend || !m_sampler)
+        !m_frame_cb || !m_draw_cb || !m_depth || !m_rasterizer ||
+        !m_blend || !m_sampler)
         return;
-    if (!target.rtv() || !target.dsv())
+    if (!target || !depth)
         return;
 
-    REX::W32::ID3D11RenderTargetView* const rtv = target.rtv();
-    context->OMSetRenderTargets(1, &rtv, target.dsv());
-    context->ClearRenderTargetView(rtv, clear_color);
-    context->ClearDepthStencilView(target.dsv(), REX::W32::D3D11_CLEAR_DEPTH, 1.0f, 0);
+    // The character draws straight onto the window over the caller's fill; only the depth is cleared,
+    // so the body's own partitions occlude each other correctly.
+    context->OMSetRenderTargets(1, &target, depth);
+    context->ClearDepthStencilView(depth, REX::W32::D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-    REX::W32::D3D11_VIEWPORT const viewport{
-        .topLeftX = 0.0f,
-        .topLeftY = 0.0f,
-        .width = static_cast<float>(target.width()),
-        .height = static_cast<float>(target.height()),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-    context->RSSetViewports(1, &viewport);
+    // The panel's place on the screen: the geometry pass draws through a viewport the size of the
+    // panel rectangle at its own offset, so the character lands inside the window. The depth view is
+    // screen-sized (it must match the back buffer's resource size or D3D11 drops the binding), but a
+    // full-screen viewport would let geometry spill outside the panel over the game world - the
+    // viewport is the panel rectangle, which is what confines the character to the window.
+    context->RSSetViewports(1, &rectangle);
     context->OMSetBlendState(m_blend, nullptr, 0xFFFFFFFF);
     context->OMSetDepthStencilState(m_depth, 0);
     context->RSSetState(m_rasterizer);
     context->PSSetSamplers(0, 1, &m_sampler);
 
-    // The camera and cutoff are uploaded once per frame, into the constant buffer both stages read.
+    // The camera is uploaded once per frame, into the constant buffer both stages read.
     PanelFrameCBData frame{};
     frame.view_proj = camera.view_proj;
     frame.camera_position = camera.eye;
-    frame.alpha_test = alpha_test;
     REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
     if (!REX::W32::SUCCESS(context->Map(m_frame_cb, 0, REX::W32::D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
         return;
@@ -463,15 +553,31 @@ void PanelGeometryPass::draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11Dev
     context->VSSetConstantBuffers(0, 1, &m_frame_cb);
     context->PSSetConstantBuffers(0, 1, &m_frame_cb);
 
+    uint32_t drawn = 0;
     for (PanelDraw const& draw : draws)
     {
-        if (!draw.vertex_buffer || !draw.index_buffer || draw.index_count == 0 || draw.vertex_stride == 0)
+        // The D3D objects were resolved and AddRef'd during the game-thread collection - the one
+        // moment the engine guarantees its renderer data is alive - and these references pin them
+        // through the present-time draw. Released at the end of this iteration.
+        REX::W32::ID3D11Buffer* const vertex_buffer = draw.vertex_buffer;
+        REX::W32::ID3D11Buffer* const index_buffer = draw.index_buffer;
+        if (!vertex_buffer || !index_buffer || draw.index_count == 0 || draw.vertex_stride == 0)
+        {
+            if (vertex_buffer)
+                vertex_buffer->Release();
+            if (index_buffer)
+                index_buffer->Release();
+            log_draw_skip(draw, "geometry incomplete");
             continue;
+        }
 
         bool const skinned = draw.skin != nullptr;
         REX::W32::ID3D11InputLayout* const layout = acquire_layout(device, draw);
         if (!layout)
+        {
+            log_draw_skip(draw, "no input layout");
             continue;
+        }
 
         PanelDrawCBData data{};
         if (!skinned && draw.node)
@@ -481,9 +587,28 @@ void PanelGeometryPass::draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11Dev
 
         data.albedo = DirectX::XMFLOAT4{ Flat_Albedo, Flat_Albedo, Flat_Albedo, draw.material_alpha };
         data.has_texture = draw.has_uv ? 1u : 0u;
+        data.alpha_cutoff = draw.alpha_cutoff;
+        data.write_alpha_1 = draw.opaque_alpha ? 1.0f : 0.0f;
+        // Tint mode: 1 = hair dye (the material's own tint colour over the grayscale texture),
+        // 2 = FaceGen skin tone (the NPC's skin tone over the grayscale detail texture). The skin
+        // tone wins when a material somehow claims both, because the hair dye path never appears on
+        // a FaceGen-family material in practice.
+        float const tint_mode = draw.skin_tint ? 2.0f : (draw.hair_tint ? 1.0f : 0.0f);
+        RE::NiColor const& tint = draw.skin_tint ? draw.skin_tint_color : draw.hair_tint_color;
+        data.tint_mode = tint_mode;
+        data.tint_color = DirectX::XMFLOAT4{ tint.red, tint.green, tint.blue, tint_mode };
+        data.uv_remap = DirectX::XMFLOAT4{
+            draw.uv_offset_u, draw.uv_offset_v, draw.uv_scale_u, draw.uv_scale_v };
 
         if (skinned && !build_palette(*draw.skin, data.bones))
+        {
+            log_draw_skip(draw, "palette unavailable");
+            if (index_buffer)
+                index_buffer->Release();
+            if (vertex_buffer)
+                vertex_buffer->Release();
             continue;
+        }
 
         REX::W32::D3D11_MAPPED_SUBRESOURCE draw_mapped{};
         if (!REX::W32::SUCCESS(context->Map(m_draw_cb, 0, REX::W32::D3D11_MAP_WRITE_DISCARD, 0, &draw_mapped)))
@@ -495,21 +620,78 @@ void PanelGeometryPass::draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11Dev
         context->IASetInputLayout(layout);
         context->IASetPrimitiveTopology(REX::W32::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        uint32_t const stride = draw.vertex_stride;
-        uint32_t const offset = 0;
-        REX::W32::ID3D11Buffer* const vertex_buffer = draw.vertex_buffer;
-        context->IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
+        // Streamed (positionless dynamic) draws bind the rebuilt positions as stream 1: one
+        // DISCARD-mapped upload of the collection-baked float4 stream, with the POSITION semantic
+        // fetched from this slot while every other attribute stays in the partition buffer on
+        // stream 0. The scratch buffer is created (or regrown) for the largest streamed draw here -
+        // the collection's shape decides at draw time, not at init time.
+        if (draw.position_stream)
+        {
+            // The baked stream is float4s, so its vertex count is the byte size over the float4 stride.
+            std::size_t const stream_vertices = draw.position_stream->size() * sizeof(float) / Dynamic_Position_Stride;
+            if (stream_vertices == 0 || !ensure_position_scratch(device, static_cast<uint32_t>(stream_vertices)))
+            {
+                if (index_buffer)
+                    index_buffer->Release();
+                if (vertex_buffer)
+                    vertex_buffer->Release();
+                continue;
+            }
+            std::size_t const stream_bytes = draw.position_stream->size() * sizeof(float);
+            REX::W32::D3D11_MAPPED_SUBRESOURCE stream_mapped{};
+            if (!REX::W32::SUCCESS(context->Map(m_position_scratch, 0, REX::W32::D3D11_MAP_WRITE_DISCARD, 0, &stream_mapped)) || !stream_mapped.data)
+            {
+                if (index_buffer)
+                    index_buffer->Release();
+                if (vertex_buffer)
+                    vertex_buffer->Release();
+                continue;
+            }
+            std::memcpy(stream_mapped.data, draw.position_stream->data(), stream_bytes);
+            context->Unmap(m_position_scratch, 0);
+
+            REX::W32::ID3D11Buffer* const stream_buffers[2] = { vertex_buffer, m_position_scratch };
+            std::uint32_t const stream_strides[2] = { draw.vertex_stride, Dynamic_Position_Stride };
+            std::uint32_t const stream_offsets[2] = { 0, 0 };
+            context->IASetVertexBuffers(0, 2, stream_buffers, stream_strides, stream_offsets);
+        }
+        else
+        {
+            uint32_t const stride = draw.vertex_stride;
+            uint32_t const offset = 0;
+            REX::W32::ID3D11Buffer* const bind_buffers[1] = { vertex_buffer };
+            context->IASetVertexBuffers(0, 1, bind_buffers, &stride, &offset);
+        }
         // BSTriShape::vertexCount and a partition's vertices are both 16-bit, so the indices always are.
-        context->IASetIndexBuffer(draw.index_buffer, REX::W32::DXGI_FORMAT_R16_UINT, 0);
+        context->IASetIndexBuffer(index_buffer, REX::W32::DXGI_FORMAT_R16_UINT, 0);
 
         context->VSSetShader(skinned ? m_ref_skinned_vs : m_ref_static_vs, nullptr, 0);
         context->PSSetShader(m_ref_pixel_shader, nullptr, 0);
 
-        // A draw without the UV flag binds no texture; the pixel shader reads the flat albedo instead.
+        // A draw without a live diffuse texture binds none; the pixel shader reads the flat albedo
+        // instead. The SRV was resolved and AddRef'd at collection like the buffers.
         REX::W32::ID3D11ShaderResourceView* const diffuse = draw.has_uv ? draw.diffuse_view : nullptr;
         context->PSSetShaderResources(0, 1, &diffuse);
 
         context->DrawIndexed(draw.index_count, 0, 0);
+
+        if (diffuse)
+            diffuse->Release();
+        if (index_buffer)
+            index_buffer->Release();
+        if (vertex_buffer)
+            vertex_buffer->Release();
+        ++drawn;
+    }
+
+    // A few frames of the drawn/collected tally: a draw dropped in this pass (not in the collection)
+    // is invisible everywhere else, and the tally is the only check that the panel draws what it
+    // collected.
+    static uint32_t s_tally_frames = 8;
+    if (s_tally_frames > 0)
+    {
+        --s_tally_frames;
+        logger::info("Panel frame: drew {}/{} collected draws", drawn, draws.size());
     }
 }
 
@@ -600,20 +782,21 @@ void PanelCompositePass::release()
 }
 
 void PanelCompositePass::draw(REX::W32::ID3D11DeviceContext* context, REX::W32::ID3D11RenderTargetView* target,
-    REX::W32::ID3D11ShaderResourceView* panel, REX::W32::D3D11_VIEWPORT const& rectangle,
+    REX::W32::D3D11_VIEWPORT const& rectangle, PanelCompositePhase phase,
     float const background[4], float const border[4], uint32_t border_thickness,
     bool built_in_chrome) const
 {
     if (!context || !target || !m_ref_fullscreen_vs || !m_ref_background_ps || !m_ref_copy_ps ||
         !m_background_cb || !m_depth_none || !m_blend || !m_blend_alpha || !m_rasterizer || !m_sampler)
         return;
+    (void)m_blend_alpha;
 
     // The panel never tests against the world depth: the window must be a solid overlay.
     context->OMSetRenderTargets(1, &target, nullptr);
     // The chrome decides how the character reaches the target: opaque over the plugin's own fill, or
     // source-alpha blended over the movie the engine has already drawn underneath. Both states belong
     // to this pass and are bound here, inside the caller's single state-capture pair.
-    context->OMSetBlendState(built_in_chrome ? m_blend : m_blend_alpha, nullptr, 0xFFFFFFFF);
+    context->OMSetBlendState(m_blend, nullptr, 0xFFFFFFFF);
     context->OMSetDepthStencilState(m_depth_none, 0);
     context->RSSetState(m_rasterizer);
     context->RSSetViewports(1, &rectangle);
@@ -641,22 +824,21 @@ void PanelCompositePass::draw(REX::W32::ID3D11DeviceContext* context, REX::W32::
     context->Unmap(m_background_cb, 0);
     context->PSSetConstantBuffers(0, 1, &m_background_cb);
 
-    // 1) The built-in chrome's opaque fill, so no world content shows through the window. A skin owns
-    // that fill, and painting it here would cover the movie the engine drew underneath.
-    if (built_in_chrome)
+    // The fill half: the built-in chrome's opaque fill, so no world content shows through the
+    // window. The character draws over this fill in the geometry pass, straight onto the same target.
+    REX::W32::ID3D11ShaderResourceView* const no_texture = nullptr;
+    context->PSSetShaderResources(0, 1, &no_texture);
+    if (phase == PanelCompositePhase::kFill)
     {
-        REX::W32::ID3D11ShaderResourceView* const no_texture = nullptr;
-        context->PSSetShaderResources(0, 1, &no_texture);
         context->PSSetShader(m_ref_background_ps, nullptr, 0);
         context->Draw(3, 0);
+        return;
     }
 
-    // 2) The offscreen character over the same rectangle. With the built-in chrome it is opaque and
-    // framed by the built-in hairline. With a skin the shader clips the border band away and keeps the
-    // character's alpha, so the blend writes the character over the movie the engine drew and leaves
-    // every fragment the character does not cover exactly as the engine left it.
+    // The band half: the hairline into the rectangle's outer band; the interior discards, leaving
+    // the character pixels the geometry pass wrote. (A skin's movie would be sampled here once the
+    // skin path returns.)
     context->PSSetShader(m_ref_copy_ps, nullptr, 0);
-    context->PSSetShaderResources(0, 1, &panel);
     context->Draw(3, 0);
 }
 

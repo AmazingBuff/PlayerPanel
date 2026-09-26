@@ -6,6 +6,7 @@
 
 #include "config/config.h"
 
+#include <algorithm>
 #include <cmath>
 
 PLUGIN_NAMESPACE_BEGIN
@@ -17,8 +18,6 @@ namespace
     // TESObjectREFR::PlaceObjectAtMe passes GetAngle() to CreateReferenceAtLocation unchanged, so
     // GetAngle() and SetAngle() share one unit. See
     // extern/CommonLibSSE/src/RE/T/TESObjectREFR.cpp, TESObjectREFR::GetHeadingAngle.
-    constexpr float Pi = 3.14159265358979323846f;
-
     constexpr char const* state_name(PreviewActor::State state)
     {
         switch (state)
@@ -33,25 +32,33 @@ namespace
         return "unknown";
     }
 
-    // Places the preview PreviewDistance in front of the player and turns it back to face the
-    // player. The yaw is read and written in radians and measured from +Y towards +X, so the
-    // forward offset is (sin(yaw), cos(yaw)) and the preview's own yaw is yaw + Pi.
+    // Places the preview PreviewDistance BEHIND the player and turns it to face the player's back.
+    // The duplicate is a real reference in the world only because the engine loads and submits its
+    // skinned 3D through the ordinary render path (a never-submitted skin carries a zero bone-matrix
+    // count and the panel would lose the body), so it is kept where the player cannot see it: behind
+    // the view direction, culled by the renderer within ~0.2s of the first submission. The yaw is
+    // read and written in radians and measured from +Y towards +X, so the offset behind the player's
+    // facing is -(sin(yaw), cos(yaw)) and the preview's own yaw is yaw (facing the player's back).
     void place_in_front(RE::TESObjectREFR& preview, RE::Actor const& player)
     {
         double const distance = Setting::instance().get_config().preview_distance;
         float const yaw = player.GetAngleZ();
         RE::NiPoint3 const player_position = player.GetPosition();
         RE::NiPoint3 const target{
-            player_position.x + static_cast<float>(std::sin(yaw) * distance),
-            player_position.y + static_cast<float>(std::cos(yaw) * distance),
+            player_position.x - static_cast<float>(std::sin(yaw) * distance),
+            player_position.y - static_cast<float>(std::cos(yaw) * distance),
             player_position.z
         };
         preview.SetPosition(target);
-        preview.SetAngle(RE::NiPoint3{ 0.0f, 0.0f, yaw + Pi });
+        preview.SetAngle(RE::NiPoint3{ 0.0f, 0.0f, yaw });
     }
 
-    // Walks the player's own inventory changes and re-dresses the preview; the player's container is
-    // only read, no entry is materialised into a copy and no equip event is sent or replayed.
+    // Walks the player's own inventory changes and re-dresses the preview. The player's container is
+    // only read; the preview's copy is added and equipped through the engine's own equip path, so it
+    // carries no enchanted-instance data from the player's worn items (only the base object is worn).
+    // Only what the biped form says is actually worn on the body is mirrored - the inventory's worn
+    // flags also mark weapons, ammo, torches and lights, which must not appear on the preview (the
+    // ghost-weapon report).
     bool sync_worn_equipment(RE::Actor& preview, RE::Actor& player)
     {
         // a_noInit avoids creating the player's container changes while only reading them.
@@ -64,8 +71,38 @@ namespace
         if (!changes->entryList)
             return true;
 
+        // The engine's equip path (the AddWornItem virtual, its true name EquipManager::EquipItem in
+        // the SKSE sources) looks the item's inventory entry and its extra data up in the actor's own
+        // container: equipping a base object that was never added crashes inside
+        // ExtraDataList::GetEnchantment on a garbage extra-list pointer. The fix is the order SKSE's
+        // own EquipItemEx uses: add the object to the container first, then equip through
+        // ActorEquipManager, which resolves the entry and its extra data itself.
+        RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();
+        if (!equip_manager)
+        {
+            logger::warn("Actor equip manager is unavailable; the preview is not dressed");
+            return false;
+        }
+
         std::uint32_t added = 0;
-        std::uint32_t refused = 0;
+        // The biped slots a portrait mirrors: the armour/clothing slots plus hair and circlet. The
+        // weapon-bearing mod slots are deliberately absent: measured in game, the engine equips the
+        // bow on kModBack, one-handed weapons on the pelvis slots and the torch on kModMisc1, so
+        // mirroring those slots is what painted weapons, a shield and a bow onto a preview whose
+        // player carried none. Clothing mods that claim a weapon slot are rarer than every weapon
+        // mod, so the portrait errs toward showing exactly the body.
+        using BipedSlot = RE::BGSBipedObjectForm::BipedObjectSlot;
+        constexpr BipedSlot Mirrored_Slots[] = {
+            BipedSlot::kBody,       BipedSlot::kHead,       BipedSlot::kHands,
+            BipedSlot::kForearms,   BipedSlot::kAmulet,     BipedSlot::kRing,
+            BipedSlot::kFeet,       BipedSlot::kCalves,     BipedSlot::kTail,
+            BipedSlot::kLongHair,   BipedSlot::kCirclet,    BipedSlot::kEars,
+            BipedSlot::kModMouth,   BipedSlot::kModNeck,    BipedSlot::kModChestPrimary,
+            BipedSlot::kModChestSecondary, BipedSlot::kModShoulder, BipedSlot::kModArmLeft,
+            BipedSlot::kModArmRight, BipedSlot::kModLegRight, BipedSlot::kModLegLeft,
+            BipedSlot::kModFaceJewelry,
+        };
+
         for (RE::InventoryEntryData* entry : *changes->entryList)
         {
             if (!entry)
@@ -74,16 +111,28 @@ namespace
             RE::TESBoundObject* const object = entry->object;
             if (!object || !entry->IsWorn())
                 continue;
-            if (preview.AddWornItem(object, 1, true, 0, 0))
-                ++added;
-            else
-                ++refused;
+
+            // Only objects that declare one of the mirrored biped slots are body-worn; a worn flag
+            // on a weapon or a torch does not make it part of the outfit. The check is on the form
+            // itself, so the exact worn variant (left/right hand) does not matter.
+            RE::BGSBipedObjectForm* const biped = object->As<RE::BGSBipedObjectForm>();
+            if (!biped)
+                continue;
+            bool const mirrored = std::any_of(std::begin(Mirrored_Slots), std::end(Mirrored_Slots),
+                [biped](BipedSlot slot) { return biped->HasPartOf(slot); });
+            if (!mirrored)
+                continue;
+
+            preview.AddObjectToContainer(object, nullptr, 1, nullptr);
+            equip_manager->EquipObject(&preview, object, nullptr, 1, nullptr,
+                false,  // a_queueEquip: applied in this call, not queued
+                true,   // a_forceEquip: the preview has no AI to choose
+                false,  // a_playSounds: a silent preview
+                true);  // a_applyNow: dressed before the staged enable
+            ++added;
         }
 
-        if (refused > 0)
-            logger::warn("Preview could not wear {} of {} worn items", refused, added + refused);
-        else
-            logger::info("Preview wears {} worn items", added);
+        logger::info("Preview wears {} worn items", added);
         return true;
     }
 }
@@ -194,6 +243,11 @@ bool PreviewActor::create()
     }
     // FaceGen data and the record's own sub-arrays stay owned by the player's base record.
     duplicate->faceNPC = source;
+    // The duplicate also carries its base's default outfit, which is not the player's equipment: a
+    // placed preview was seen wearing an unrecognised daedric sword and scabbard. Null the outfit
+    // before placement so the only equipment the preview ever wears is what sync_worn_equipment
+    // applies from the player's own worn list.
+    duplicate->defaultOutfit = nullptr;
 
     // a_forcePersist=false keeps the preview out of the save game.
     RE::NiPointer<RE::TESObjectREFR> placed = player->PlaceObjectAtMe(duplicate, false);
@@ -214,8 +268,12 @@ bool PreviewActor::create()
         return false;
     }
 
-    // Staged hide/dress/show so no partially dressed frame ever reaches the renderer.
-    placed->Disable();
+    // The preview stays enabled: the placed reference's initial 3D attach is queued by the placement,
+    // and a disable placed in the same frame cancels it - an enable afterwards does not re-queue it,
+    // so the actor would never load a 3D root and the panel would have nothing to draw. The equips
+    // below complete synchronously, well before the asynchronous 3D build, so the first 3D frame is
+    // already fully dressed and no partially dressed frame reaches the renderer. The world copy is
+    // kept out of sight by the renderer's per-frame cull instead.
     place_in_front(*placed, *player);
     if (!sync_worn_equipment(*preview, *player))
     {
@@ -223,7 +281,6 @@ bool PreviewActor::create()
         set_state(State::kUnavailable, "worn equipment is unavailable for synchronization");
         return false;
     }
-    placed->Enable(false);
 
     set_state(State::kReady, "preview placed, dressed and enabled");
     return true;

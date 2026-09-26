@@ -6,6 +6,7 @@
 #include <fmt/format.h>
 
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <optional>
 #include <string>

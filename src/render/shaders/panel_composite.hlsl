@@ -41,7 +41,7 @@ struct PS_IN
 
 PS_IN vs_main(uint id : SV_VertexID)
 {
-    float2 const uv = float2(float((id << 1u) & 2u), float(id & 2u));
+    const float2 uv = float2(float((id << 1u) & 2u), float(id & 2u));
 
     PS_IN o;
     o.pos = float4(uv.x * 2.0f - 1.0f, 1.0f - uv.y * 2.0f, 0.0f, 1.0f);
@@ -50,21 +50,20 @@ PS_IN vs_main(uint id : SV_VertexID)
 }
 
 // Opaque fill: the alpha is pinned to one so the rectangle always occludes what is behind it.
-float4 ps_background_main(PS_IN) : SV_Target
+float4 ps_background_main(PS_IN ps_in) : SV_Target
 {
     return float4(g_background.rgb, 1.0f);
 }
 
 // The offscreen colour, plus the panel's single built-in decoration. With the built-in chrome the
-// result is opaque, so the panel is a solid window composited over the world. With a skin the band is
-// discarded rather than painted, so the skin's own frame shows through, and the character's own
-// straight alpha is preserved so it is blended over the skin's backdrop instead of covering it: no
-// coverage means no write, which is what keeps the skin visible around and behind the character. The
-// border is the outer band of the rectangle: no rounded corners, no glow and no drop shadow, which is
-// the whole of the deliberately minimal built-in layout.
+// character is drawn by the geometry pass DIRECTLY onto the window before this shader runs, so this
+// pass only paints the hairline band into the rectangle's outer edge and discards its interior -
+// discarding instead of copying keeps the character pixels exactly where the geometry pass left
+// them. (When a skin's movie owned the chrome, the interior kept the character's straight alpha and
+// blended it over that movie; that path returns with the skin.)
 float4 ps_panel_main(PS_IN ps_in) : SV_Target
 {
-    float2 const edge_distance = min(ps_in.uv, 1.0f - ps_in.uv);
+    const float2 edge_distance = min(ps_in.uv, 1.0f - ps_in.uv);
     if (edge_distance.x < g_border_uv.x || edge_distance.y < g_border_uv.y)
     {
         if (g_frame.x < 0.5f)
@@ -73,9 +72,8 @@ float4 ps_panel_main(PS_IN ps_in) : SV_Target
         return float4(g_border.rgb, 1.0f);
     }
 
-    float4 const character = g_panel.Sample(g_sampler, ps_in.uv);
-    if (g_frame.x < 0.5f)
-        return character;
+    if (g_frame.x > 0.5f)
+        discard;
 
-    return float4(character.rgb, 1.0f);
+    return g_panel.Sample(g_sampler, ps_in.uv);
 }

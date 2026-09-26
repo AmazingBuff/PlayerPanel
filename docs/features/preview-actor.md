@@ -257,7 +257,7 @@ vcpkg clone, so the manifest install is disabled and the sibling project's insta
 reused):
 
 ```powershell
-python build/lcw_run.py "C:/env/cmake/bin/cmake" -S . -B build -G "Visual Studio 17 2022" -A x64 -T "v143,version=14.44.35207" -DCMAKE_TOOLCHAIN_FILE="C:/env/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DVCPKG_INSTALLED_DIR="D:/code/cpp/skyrim/Highlight-Lootable-Corpses/build/vcpkg_installed" -DVCPKG_MANIFEST_INSTALL=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_FLAGS=/EHsc /MP /W4 /WX"
+python build/lcw_run.py "C:/env/cmake/bin/cmake" -S . -B build -G "Visual Studio 17 2022" -A x64 -T "v143,version=14.44.35207" -DCMAKE_TOOLCHAIN_FILE="C:/env/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DVCPKG_INSTALLED_DIR="E:/SkyrimTools/Proj/HighlightLootableCorpses/build/vcpkg_installed" -DVCPKG_MANIFEST_INSTALL=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_FLAGS=/EHsc /MP /W4 /WX"
 python build/lcw_run.py "C:/env/cmake/bin/cmake" --build build --config Release --parallel 2
 ```
 

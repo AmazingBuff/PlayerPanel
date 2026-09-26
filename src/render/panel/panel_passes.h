@@ -33,25 +33,35 @@ public:
     [[nodiscard]] bool init(REX::W32::ID3D11Device* device);
     void release();
 
-    // Sets the target and its views, clears them, binds the panel states and draws every mesh. The
-    // caller wraps the call in a D3D11StateCapture. clear_color is the caller's decision: the opaque
-    // background for the built-in chrome, and a fully transparent clear for a skin, so a fragment the
-    // character does not cover keeps a zero alpha and the composite blends nothing into it.
+    // Binds the caller's colour target (the engine's own back-buffer view - the panel draws
+    // directly onto the window, there is no offscreen pass) plus the panel's depth view, clears the
+    // depth, binds the panel states and draws every mesh. The depth view's resource is sized to the
+    // same buffer as the colour target - D3D11 drops the whole OMSetRenderTargets otherwise. The
+    // rectangle is the panel's place on the screen: the geometry is drawn through the screen-sized
+    // viewport at the panel's offset, so the character lands inside the window, not in the screen's
+    // corner. The caller paints the window's fill first and the hairline after, so the character
+    // lands between them. The caller wraps the call in a D3D11StateCapture. Each draw's own alpha
+    // cutout and written alpha travel in the per-draw constants.
     void draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
-        PanelTarget const& target, PanelCameraFrame const& camera, float alpha_test,
-        float const clear_color[4], std::span<PanelDraw const> draws);
+        REX::W32::ID3D11RenderTargetView* target, REX::W32::ID3D11DepthStencilView* depth,
+        REX::W32::D3D11_VIEWPORT const& rectangle, PanelCameraFrame const& camera,
+        std::span<PanelDraw const> draws);
 
 private:
-    // Input-layout cache key: the skinning path, whether a UV input is bound, the position format and
-    // offset (a calibration result), the skinning block offset, the stride and the calibrated
-    // weight/index layout.
+    // Input-layout cache key: the skinning path, whether the positions come from the dedicated
+    // stream (positionless dynamic draws) or the partition buffer, whether a UV input is bound, the
+    // position format and offset (a calibration result), the skinning block offset, the calibrated
+    // UV format (a calibration result of its own - FULLPREC meshes carry float32 UVs where classic
+    // meshes carry half-floats), the UV offset, the stride and the calibrated weight/index layout.
     struct LayoutKey
     {
         bool skinned;
         bool has_uv;
+        bool position_stream;
         uint32_t position_format;
         uint32_t position_offset;
         uint32_t skinning_offset;
+        uint32_t uv_format;
         uint32_t uv_offset;
         uint32_t stride;
         uint32_t weight_format;
@@ -68,6 +78,9 @@ private:
 
     [[nodiscard]] static bool same_layout(LayoutKey const& lhs, LayoutKey const& rhs) noexcept;
     [[nodiscard]] REX::W32::ID3D11InputLayout* acquire_layout(REX::W32::ID3D11Device* device, PanelDraw const& draw);
+    // Creates (or regrows) the dynamic-position scratch vertex buffer so the largest streamed draw
+    // of the frame fits; false on a device failure, which skips only that draw's upload.
+    [[nodiscard]] bool ensure_position_scratch(REX::W32::ID3D11Device* device, uint32_t vertices);
     void release_layouts();
 
 private:
@@ -76,6 +89,12 @@ private:
     REX::W32::ID3D11PixelShader* m_ref_pixel_shader;
     REX::W32::ID3D11Buffer* m_frame_cb;
     REX::W32::ID3D11Buffer* m_draw_cb;
+    // Scratch vertex stream for positionless (dynamic) draws: the render thread maps it with
+    // DISCARD once per streamed draw, copies PanelDraw::position_stream in and binds it as stream 1.
+    // Created on demand, because the collection only knows at draw time whether a streamed draw is
+    // queued; m_position_scratch_vertices is the buffer's vertex capacity.
+    REX::W32::ID3D11Buffer* m_position_scratch;
+    uint32_t m_position_scratch_vertices;
     REX::W32::ID3D11DepthStencilState* m_depth;
     REX::W32::ID3D11RasterizerState* m_rasterizer;
     REX::W32::ID3D11BlendState* m_blend;
@@ -92,6 +111,13 @@ private:
 // the skin's own frame sits. Blending is what makes a fragment with no character coverage leave the
 // skin's backdrop visible instead of covering it with a transparent black. The rectangle is the
 // caller's viewport, so the shared fullscreen triangle always covers exactly it.
+// The two halves of the built-in chrome: the character draws BETWEEN them, straight onto the window.
+enum class PanelCompositePhase
+{
+    kFill,
+    kBand
+};
+
 class PanelCompositePass
 {
 public:
@@ -106,12 +132,11 @@ public:
 
     // border_thickness is in render pixels and is expressed in the shader's uv space with the
     // rectangle's own size, so the inset keeps its pixel thickness at every resolution. It is also the
-    // inset the character is clipped to: with the built-in chrome it is the hairline border's own
-    // thickness, and with a skin it is the configured skin inset, which the caller derives separately.
-    // built_in_chrome selects between the plugin's own background and border and a skin's movie,
-    // which is already on the target, and between the opaque and the blended character write.
+    // band the hairline is painted into. built_in_chrome selects between the plugin's own background
+    // and border (the only mode while the skin movie is suspended) and the skin's movie, which would
+    // already be on the target.
     void draw(REX::W32::ID3D11DeviceContext* context, REX::W32::ID3D11RenderTargetView* target,
-        REX::W32::ID3D11ShaderResourceView* panel, REX::W32::D3D11_VIEWPORT const& rectangle,
+        REX::W32::D3D11_VIEWPORT const& rectangle, PanelCompositePhase phase,
         float const background[4], float const border[4], uint32_t border_thickness,
         bool built_in_chrome) const;
 

@@ -62,6 +62,14 @@ namespace
     // keeps a menu that never appears from leaving the panel invisible.
     constexpr uint32_t Max_Chrome_Pending_Frames = 8;
 
+    // How many frames the world-copy cull waits for the preview to be rendered once before hiding it
+    // anyway. The engine latches a skin instance's bone-matrix count at the skin's first render
+    // submission, so the preview must be submitted at least once for the palette gate to pass; the
+    // grace covers a preview whose 3D exists but that the player never faces. Kept short: the world
+    // copy exists only for the engine to load and submit its 3D once, and every visible frame of it
+    // is a duplicate of the player standing in the world (~0.2s at 60 fps).
+    constexpr uint32_t Max_World_Copy_Grace_Frames = 12;
+
     // Rounds a fraction of an extent to whole render pixels and never exceeds the extent. Non-finite
     // input yields zero, so the conversion to pixels below can never be undefined even though the
     // configuration is validated at the INI boundary.
@@ -73,6 +81,103 @@ namespace
         double const capped = (std::min)(scaled, static_cast<double>(extent));
         return static_cast<uint32_t>(capped);
     }
+
+    // Rounds an already-pixel measure to whole render pixels and never exceeds the cap. The panel width
+    // is the height times the aspect in pixels, not a fraction of some extent, so it does not go
+    // through scale_to_pixels - whose extent is also its cap and would wrongly cap a landscape panel's
+    // width at the panel height.
+    uint32_t round_clamped_to_pixels(double pixels, uint32_t cap)
+    {
+        if (!std::isfinite(pixels) || pixels <= 0.0)
+            return 0u;
+        double const rounded = pixels + 0.5;
+        double const capped = (std::min)(rounded, static_cast<double>(cap));
+        return static_cast<uint32_t>(capped);
+    }
+
+    // Copies one GPU texture into a staging buffer and writes it as an uncompressed 32-bit TGA beside
+    // the plugin log. A diagnostic only: the empty-window report needs the pixels themselves, because
+    // every log-visible step around them already passed.
+    void dump_texture_tga(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
+        REX::W32::ID3D11Texture2D* texture, std::string_view const& name)
+    {
+        REX::W32::D3D11_TEXTURE2D_DESC desc{};
+        texture->GetDesc(&desc);
+        if (desc.sampleDesc.count != 1)
+            return;
+
+        REX::W32::D3D11_TEXTURE2D_DESC staging_desc = desc;
+        staging_desc.usage = REX::W32::D3D11_USAGE_STAGING;
+        staging_desc.bindFlags = 0;
+        staging_desc.cpuAccessFlags = REX::W32::D3D11_CPU_ACCESS_READ;
+        staging_desc.miscFlags = 0;
+        REX::W32::ID3D11Texture2D* staging = nullptr;
+        REX::W32::HRESULT const create_hr = device->CreateTexture2D(&staging_desc, nullptr, &staging);
+        if (!REX::W32::SUCCESS(create_hr) || !staging)
+            return;
+
+        context->CopyResource(staging, texture);
+        REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
+        REX::W32::HRESULT const map_hr = context->Map(staging, 0, REX::W32::D3D11_MAP_READ, 0, &mapped);
+        if (!REX::W32::SUCCESS(map_hr) || !mapped.data)
+        {
+            staging->Release();
+            return;
+        }
+
+        std::optional<std::filesystem::path> directory = logger::log_directory();
+        if (directory)
+        {
+            std::filesystem::path const path = *directory / (std::string(name) + ".tga");
+            std::ofstream file(path, std::ios::binary);
+            if (file)
+            {
+                std::uint8_t header[18]{};
+                header[2] = 2;  // uncompressed truecolour
+                header[12] = static_cast<std::uint8_t>(desc.width & 0xFF);
+                header[13] = static_cast<std::uint8_t>((desc.width >> 8) & 0xFF);
+                header[14] = static_cast<std::uint8_t>(desc.height & 0xFF);
+                header[15] = static_cast<std::uint8_t>((desc.height >> 8) & 0xFF);
+                header[16] = 32;   // bits per pixel
+                header[17] = 0x28; // top-down, 8 alpha bits
+                file.write(reinterpret_cast<char const*>(header), sizeof(header));
+
+                // TGA stores BGRA; DXGI R8G8B8A8 stores RGBA in memory, B8G8R8A8 stores BGRA.
+                bool const rgba_memory = desc.format == REX::W32::DXGI_FORMAT_R8G8B8A8_UNORM ||
+                                         desc.format == REX::W32::DXGI_FORMAT_R8G8B8A8_TYPELESS;
+                for (std::uint32_t row = 0; row < desc.height; ++row)
+                {
+                    std::uint8_t const* row_bytes = static_cast<std::uint8_t const*>(mapped.data) +
+                        static_cast<std::size_t>(row) * mapped.rowPitch;
+                    for (std::uint32_t column = 0; column < desc.width; ++column)
+                    {
+                        std::uint32_t texel = 0;
+                        std::memcpy(&texel, row_bytes + static_cast<std::size_t>(column) * 4u, sizeof(texel));
+                        std::uint8_t bgra[4];
+                        if (rgba_memory)
+                        {
+                            bgra[0] = static_cast<std::uint8_t>((texel >> 16) & 0xFF);
+                            bgra[1] = static_cast<std::uint8_t>((texel >> 8) & 0xFF);
+                            bgra[2] = static_cast<std::uint8_t>(texel & 0xFF);
+                            bgra[3] = static_cast<std::uint8_t>((texel >> 24) & 0xFF);
+                        }
+                        else
+                        {
+                            bgra[0] = static_cast<std::uint8_t>(texel & 0xFF);
+                            bgra[1] = static_cast<std::uint8_t>((texel >> 8) & 0xFF);
+                            bgra[2] = static_cast<std::uint8_t>((texel >> 16) & 0xFF);
+                            bgra[3] = static_cast<std::uint8_t>((texel >> 24) & 0xFF);
+                        }
+                        file.write(reinterpret_cast<char const*>(bgra), sizeof(bgra));
+                    }
+                }
+                logger::info("Panel diagnostics: dumped {} ({}x{}) to {}", name, desc.width, desc.height, path.string());
+            }
+        }
+
+        context->Unmap(staging, 0);
+        staging->Release();
+    }
 }
 
 bool resolve_panel_layout(Config const& config, uint32_t screen_width, uint32_t screen_height,
@@ -81,12 +186,13 @@ bool resolve_panel_layout(Config const& config, uint32_t screen_width, uint32_t 
     if (screen_width == 0 || screen_height == 0)
         return false;
 
-    // Sizing is a function of the render height and the configuration only: the width follows from the
-    // height and the configured aspect. The screen width is an upper clamp and nothing else, which is
-    // exactly why a wider monitor shows more world rather than a bigger panel.
+    // Sizing is a function of the render height and the configuration only: the height is a fraction of
+    // the render height, and the width follows from the height and the configured aspect. The screen
+    // width is an upper clamp and nothing else, which is exactly why a wider monitor shows more world
+    // rather than a bigger panel.
     uint32_t const height = (std::max)(scale_to_pixels(config.panel_height_fraction, screen_height),
         (std::min)(Min_Panel_Pixels, screen_height));
-    uint32_t const width = (std::max)(scale_to_pixels(config.panel_aspect * static_cast<double>(height), screen_width),
+    uint32_t const width = (std::max)(round_clamped_to_pixels(config.panel_aspect * static_cast<double>(height), screen_width),
         (std::min)(Min_Panel_Pixels, screen_width));
     uint32_t const margin = scale_to_pixels(config.panel_margin_fraction, screen_height);
 
@@ -94,13 +200,14 @@ bool resolve_panel_layout(Config const& config, uint32_t screen_width, uint32_t 
     uint32_t const free_y = screen_height - height;
 
     // A placed axis is a fraction of that axis' free space, so the same relative spot is reproduced at
-    // any resolution. An unplaced axis keeps the default: right-anchored by the margin, vertically
-    // centred.
+    // any resolution; the fraction is taken against the free space directly, which is the exact inverse
+    // of commit_panel_position's normalisation. An unplaced axis keeps the default: right-anchored by
+    // the margin, vertically centred.
     uint32_t const x = config.panel_position_x >= 0.0
-        ? scale_to_pixels(free_x * (std::min)(config.panel_position_x, 1.0), free_x)
+        ? scale_to_pixels((std::min)(config.panel_position_x, 1.0), free_x)
         : (screen_width > width + margin ? screen_width - width - margin : 0u);
     uint32_t const y = config.panel_position_y >= 0.0
-        ? scale_to_pixels(free_y * (std::min)(config.panel_position_y, 1.0), free_y)
+        ? scale_to_pixels((std::min)(config.panel_position_y, 1.0), free_y)
         : free_y / 2u;
 
     out.x = x;
@@ -140,7 +247,6 @@ PanelRenderer::PanelRenderer() :
     m_draws(),
     m_render_draws(),
     m_camera{},
-    m_alpha_test(0.0f),
     m_frame_ready(false),
     m_built_in_chrome(true),
     m_release_requested(false),
@@ -152,6 +258,15 @@ PanelRenderer::PanelRenderer() :
     m_panel_open(false),
     m_chrome_pending_frames(0),
     m_chrome_fallback_logged(false),
+    m_session_diagnostics_done(false),
+    m_first_composite_logged(false),
+    m_target_dumped(false),
+    m_second_dumped(false),
+    m_composited_frames(0),
+    m_chrome_active(false),
+    m_shortfall_logged(false),
+    m_world_copy_cull_active(false),
+    m_world_copy_cull_grace_frames(0),
     m_ref_device(nullptr),
     m_ref_shader_failed_device(nullptr),
     m_target(),
@@ -215,6 +330,17 @@ void PanelRenderer::set_panel_open(bool open)
     m_drag_active = false;
     m_chrome_pending_frames = 0;
     m_chrome_fallback_logged = false;
+    m_session_diagnostics_done = false;
+    m_first_composite_logged = false;
+    m_target_dumped = false;
+    m_second_dumped = false;
+    m_composited_frames = 0;
+    m_chrome_active.store(open, std::memory_order_release);
+    m_shortfall_logged = false;
+    // Every open creates a fresh preview whose skins have not been submitted yet, so the
+    // palette-readiness latch and its grace restart with the transition.
+    m_world_copy_cull_active = false;
+    m_world_copy_cull_grace_frames = 0;
 
     // The menu is the panel's whole claim on player input. Showing it is what makes the engine drive
     // its own cursor and push the menu's input context, and hiding it is what takes both back; the
@@ -272,8 +398,27 @@ void PanelRenderer::prepare()
     // The single world-copy visibility change of this change set: the preview is shown in the panel
     // and nowhere else, so the engine's own cull switch hides its in-world 3D root. Reapplied every
     // frame because the engine may rebuild the 3D root.
+    //
+    // The cull waits for one rendered frame: the engine latches a skin instance's bone-matrix count at
+    // the skin's first render submission, and a world copy culled from its first frame is never
+    // submitted - measured as skinBoneCount=46 with skinNumMatrices=0, which the palette gate then
+    // rejects in full and the panel loses the whole body. So the cull applies only once this session's
+    // collection has carried skinned draws (the engine has therefore submitted the preview once), or
+    // once the bounded grace expires, so a preview the player never faces is hidden anyway.
     if (RE::NiAVObject* const root = preview->GetCurrent3D())
-        root->SetAppCulled(true);
+    {
+        if (m_world_copy_cull_active || m_world_copy_cull_grace_frames >= Max_World_Copy_Grace_Frames)
+            root->SetAppCulled(true);
+        else
+            ++m_world_copy_cull_grace_frames;
+    }
+    else if (!m_shortfall_logged)
+    {
+        m_shortfall_logged = true;
+        logger::warn("Panel diagnostics: the preview 3D is not available (3D loaded: {}, disabled: {}, at ({:.0f},{:.0f},{:.0f}))",
+            preview->Is3DLoaded(), preview->IsDisabled(), preview->GetPosition().x,
+            preview->GetPosition().y, preview->GetPosition().z);
+    }
 
     // The drag is applied against this frame's rectangle, with the cursor the engine is driving for
     // the panel's own menu, and the position it commits is the one the next frame's rectangle is
@@ -283,27 +428,111 @@ void PanelRenderer::prepare()
     if (PanelMenu::read_menu_cursor(screen.width, screen.height, cursor_x, cursor_y))
         apply_panel_input(layout, screen.width, screen.height, cursor_x, cursor_y);
 
-    PanelCameraFrame camera{};
-    if (!PanelCamera::build(*preview, config, camera))
+    // Collection runs outside the lock: m_prepare_draws is touched only by this thread - and the
+    // camera is built FROM it, aiming at the geometry's real place (the reference's cached position
+    // drifts from its 3D, measured 262 units after placement).
+    collect_panel_geometry(*preview, config, m_prepare_draws);
+
+    PanelAim aim{};
+    if (!PanelCamera::resolve_body_aim(m_prepare_draws, aim))
     {
+        if (!m_shortfall_logged)
+        {
+            m_shortfall_logged = true;
+            logger::warn("Panel diagnostics: the collection offers no geometry to aim at");
+        }
         std::lock_guard lock(m_mutex);
         m_frame_ready = false;
         return;
     }
 
-    // Collection runs outside the lock: m_prepare_draws is touched only by this thread.
-    collect_panel_geometry(*preview, m_prepare_draws);
+    PanelCameraFrame camera{};
+    if (!PanelCamera::build(*preview, aim, config, camera))
+    {
+        if (!m_session_diagnostics_done)
+            logger::warn("Panel diagnostics: the camera could not be built");
+        std::lock_guard lock(m_mutex);
+        m_frame_ready = false;
+        return;
+    }
+
+    // The palette-readiness latch: a collection that carries skinned draws means the engine has
+    // submitted the preview once and the skin matrix counts are latched, so the world copy can be
+    // culled from the next frame on (see the cull comment above).
+    if (std::any_of(m_prepare_draws.begin(), m_prepare_draws.end(),
+            [](PanelDraw const& draw) { return draw.skin != nullptr; }))
+    {
+        if (!m_world_copy_cull_active)
+        {
+            // One-shot aim diagnosis: where the camera stands versus where the first meshes'
+            // transforms actually place them, so a content-out-of-frame report is checkable.
+            m_world_copy_cull_active = true;
+            std::string places;
+            for (std::size_t i = 0; i < m_prepare_draws.size() && i < 4; ++i)
+            {
+                PanelDraw const& draw = m_prepare_draws[i];
+                if (draw.node)
+                {
+                    RE::NiPoint3 const& t = draw.node->world.translate;
+                    places += fmt::format(" [{} \"{}\" at ({:.0f},{:.0f},{:.0f})]", i,
+                        draw.node->name.c_str() ? draw.node->name.c_str() : "?", t.x, t.y, t.z);
+                }
+            }
+            logger::info("Panel latch: skinned draws ready; camera eye=({:.0f},{:.0f},{:.0f}) draws={} places={}",
+                camera.eye.x, camera.eye.y, camera.eye.z, m_prepare_draws.size(), places);
+        }
+        m_world_copy_cull_active = true;
+    }
 
     std::lock_guard lock(m_mutex);
     m_draws.swap(m_prepare_draws);
     if (m_draws.empty())
     {
+        if (!m_shortfall_logged)
+        {
+            m_shortfall_logged = true;
+            logger::warn("Panel diagnostics: no drawable geometry collected from the preview");
+        }
         m_frame_ready = false;
         return;
     }
 
+    // The collection's first frames carry the weapons before the preview's 3D is ready, so the draw
+    // list is only worth logging once the skinned draws are in it: that is the frame whose list
+    // actually names every mesh the panel renders.
+    bool const has_skinned = std::any_of(m_draws.begin(), m_draws.end(),
+        [](PanelDraw const& draw) { return draw.skin != nullptr; });
+
+    if (!m_session_diagnostics_done && has_skinned)
+    {
+        m_session_diagnostics_done = true;
+        float bound_radius = 0.0f;
+        RE::NiPoint3 bound_center{};
+        if (RE::NiAVObject const* const root = preview->GetCurrent3D())
+        {
+            bound_center = root->worldBound.center;
+            bound_radius = root->worldBound.radius;
+        }
+        logger::info("Panel diagnostics: chrome={} draws={} camera=ok screen={}x{} rect=({},{}),{}x{} bound=({:.0f},{:.0f},{:.0f}) r={:.1f} cull={}",
+            built_in_chrome ? "built-in" : "swf", m_draws.size(), screen.width, screen.height,
+            layout.x, layout.y, layout.width, layout.height,
+            bound_center.x, bound_center.y, bound_center.z, bound_radius,
+            m_world_copy_cull_active ? "active" : "grace");
+        // Name every draw once per session: the panel renders whatever collection passed,
+        // and a weapon-looking object that the player does not recognise is only
+        // identifiable from the node names.
+        for (PanelDraw const& draw : m_draws)
+        {
+            char const* const name = draw.node ? draw.node->name.c_str() : nullptr;
+            logger::info("Panel draw: {} node=\"{}\" vertices={} triangles={} alpha={:.2f} uv={}",
+                draw.skin ? "skinned" : "static", name && name[0] != '\0' ? name : "?",
+                draw.vertex_count, draw.triangle_count, draw.material_alpha,
+                draw.has_uv ? "yes" : "no");
+        }
+        PanelMenu::log_movie_state();
+    }
+
     m_camera = camera;
-    m_alpha_test = static_cast<float>(config.alpha_test_threshold);
     m_built_in_chrome = built_in_chrome;
     m_frame_ready = true;
 }
@@ -367,28 +596,40 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
         return;
     }
 
+    // A frame to draw: either a freshly prepared one, or - when the collection came back empty for
+    // a frame (the engine rebuilding the preview's 3D root does this transiently, and the empty
+    // frame would flicker the whole panel) - the previous frame's draws, which the render thread
+    // still owns and whose borrowed buffers the previous draw's NiPointers keep alive.
     PanelCameraFrame camera{};
-    float alpha_test = 0.0f;
     bool built_in_chrome = true;
     {
         std::lock_guard lock(m_mutex);
-        if (!m_frame_ready)
+        if (m_frame_ready)
+        {
+            // Steal the prepared frame; the buffer stays with the panel and comes back on the next swap.
+            m_draws.swap(m_render_draws);
+            m_frame_ready = false;
+            camera = m_camera;
+            built_in_chrome = m_built_in_chrome;
+        }
+        else if (!m_chrome_active.load(std::memory_order_acquire) || m_render_draws.empty())
+        {
             return;
-
-        // Steal the prepared frame; the buffer stays with the panel and comes back on the next swap.
-        m_draws.swap(m_render_draws);
-        m_frame_ready = false;
-        camera = m_camera;
-        alpha_test = m_alpha_test;
-        built_in_chrome = m_built_in_chrome;
+        }
+        else
+        {
+            camera = m_camera;
+            built_in_chrome = m_built_in_chrome;
+        }
     }
 
     RE::BSGraphics::Renderer* const renderer = RE::BSGraphics::Renderer::GetSingleton();
     if (!renderer)
         return;
 
-    REX::W32::ID3D11Device* const device = renderer->GetRuntimeData().forwarder;
-    REX::W32::ID3D11DeviceContext* const context = renderer->GetRuntimeData().context;
+    auto const& renderer_runtime = renderer->GetRuntimeData();
+    REX::W32::ID3D11Device* const device = renderer_runtime.forwarder;
+    REX::W32::ID3D11DeviceContext* const context = renderer_runtime.context;
     if (!device || !context)
         return;
 
@@ -405,13 +646,6 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
     if (!resolve_panel_layout(config, screen.width, screen.height, layout))
         return;
 
-    if (!m_target.matches(device, layout.width, layout.height))
-    {
-        m_target.release();
-        if (!m_target.init(device, layout.width, layout.height))
-            return;
-    }
-
     // Report the first failure of a streak and stay quiet afterwards: a persistent failure must not
     // log a line every frame, and nothing here retries or spins.
     auto const report_failure = [this](REX::W32::HRESULT result)
@@ -422,27 +656,63 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
         m_back_buffer_error_logged = true;
     };
 
-    // The back buffer and its view are acquired for this frame only and released again before draw()
-    // returns. Caching either across frames would hold a swap-chain reference and make the engine's
-    // own ResizeBuffers fail with DXGI_ERROR_INVALID_CALL on a resolution change, so the panel never
-    // keeps them (see the header comment on the render-thread members).
+    // The composite target is the ENGINE'S OWN back-buffer view - renderWindows[0].renderView, the
+    // target the engine's UI pass paints the panel menu into and the pixels that actually reach the
+    // screen. Reaching it through the engine's renderer sidesteps the present hook's swap chain
+    // entirely: that swap chain is another mod's proxy (the crash log names a DXGISwapChainProxy),
+    // and its buffer slots do not necessarily match what gets presented - the content dump caught the
+    // composed panel absent from slot 0 while the movie's chrome was on screen. The engine's view is
+    // borrowed, never owned; when it is absent (mid-resize) the plugin falls back to slot 0 of the
+    // proxied swap chain for that frame.
+    REX::W32::ID3D11RenderTargetView* back_buffer_rtv = renderer_runtime.renderWindows[0].renderView;
     REX::W32::ID3D11Texture2D* back_buffer = nullptr;
-    REX::W32::HRESULT const buffer_hr = swap_chain->GetBuffer(0, REX::W32::IID_ID3D11Texture2D, reinterpret_cast<void**>(&back_buffer));
-    if (!REX::W32::SUCCESS(buffer_hr) || !back_buffer)
+    if (!back_buffer_rtv)
     {
-        report_failure(buffer_hr);
-        return;
-    }
+        REX::W32::HRESULT const buffer_hr = swap_chain->GetBuffer(0, REX::W32::IID_ID3D11Texture2D, reinterpret_cast<void**>(&back_buffer));
+        if (!REX::W32::SUCCESS(buffer_hr) || !back_buffer)
+        {
+            report_failure(buffer_hr);
+            return;
+        }
 
-    REX::W32::ID3D11RenderTargetView* back_buffer_rtv = nullptr;
-    REX::W32::HRESULT const rtv_hr = device->CreateRenderTargetView(back_buffer, nullptr, &back_buffer_rtv);
-    if (!REX::W32::SUCCESS(rtv_hr) || !back_buffer_rtv)
-    {
-        report_failure(rtv_hr);
-        back_buffer->Release();
-        return;
+        REX::W32::HRESULT const rtv_hr = device->CreateRenderTargetView(back_buffer, nullptr, &back_buffer_rtv);
+        if (!REX::W32::SUCCESS(rtv_hr) || !back_buffer_rtv)
+        {
+            report_failure(rtv_hr);
+            back_buffer->Release();
+            return;
+        }
     }
     m_back_buffer_error_logged = false;
+
+    // The colour target stays panel-sized; the depth buffer is sized to the actual resource behind
+    // the back-buffer view, because the geometry pass binds the two views together and D3D11
+    // silently drops the whole OMSetRenderTargets when their resource sizes differ - the empty
+    // window this once produced. Querying the bound resource (instead of trusting the reported
+    // render size) also rebuilds the depth buffer whenever the engine swaps in a differently sized
+    // back buffer. The queried texture is a temporary reference used for the desc alone; the
+    // function-end cleanup only ever releases the fallback path's own slot-0 view and texture.
+    uint32_t target_width = screen.width;
+    uint32_t target_height = screen.height;
+    if (!back_buffer)
+    {
+        REX::W32::ID3D11Texture2D* bound_texture = nullptr;
+        back_buffer_rtv->GetResource(reinterpret_cast<REX::W32::ID3D11Resource**>(&bound_texture));
+        if (bound_texture)
+        {
+            REX::W32::D3D11_TEXTURE2D_DESC back_desc{};
+            bound_texture->GetDesc(&back_desc);
+            target_width = back_desc.width;
+            target_height = back_desc.height;
+            bound_texture->Release();
+        }
+    }
+    if (!m_target.matches(device, layout.width, layout.height, target_width, target_height))
+    {
+        m_target.release();
+        if (!m_target.init(device, layout.width, layout.height, target_width, target_height))
+            return;
+    }
 
     // Everything the panel overwrites is put back afterwards, so the engine's own draw of the same
     // frame is unaffected.
@@ -453,12 +723,9 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
     // built-in chrome clears opaque and insets by its own hairline, exactly as before. A skin clears
     // fully transparent so the composite only writes where the character actually is, and insets by its
     // own configured value, so the skin's frame and backdrop are both left visible.
-    float const* const clear_color = built_in_chrome ? Panel_Background_Color : Panel_Skin_Clear_Color;
     uint32_t const inset = built_in_chrome
         ? resolve_border_thickness(layout.height)
         : resolve_skin_inset_thickness(config, layout.width, layout.height);
-
-    m_geometry_pass.draw(device, context, m_target, camera, alpha_test, clear_color, m_render_draws);
 
     REX::W32::D3D11_VIEWPORT const rectangle{
         .topLeftX = static_cast<float>(layout.x),
@@ -468,19 +735,55 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
-    // The composite owns the panel's chrome decision: with a loaded skin it draws only the character,
-    // alpha-blended and inset by the skin inset, because the engine has already drawn the skin's
-    // chrome there and this pass runs on top of it. Without one it draws the built-in fill and hairline
-    // as before.
-    m_composite_pass.draw(context, back_buffer_rtv, m_target.srv(), rectangle, Panel_Background_Color,
-        Panel_Border_Color, inset, built_in_chrome);
+    // The chrome draws in two halves with the character between them, ALL onto the engine's own
+    // back-buffer view: the fill (so no world content shows through), the character meshes directly
+    // over the fill with the panel's own depth, and the hairline band last. There is no offscreen
+    // pass - the offscreen target's empty reads are what once turned the window black.
+    m_composite_pass.draw(context, back_buffer_rtv, rectangle, PanelCompositePhase::kFill,
+        Panel_Background_Color, Panel_Border_Color, inset, built_in_chrome);
+
+    m_geometry_pass.draw(device, context, back_buffer_rtv, m_target.dsv(), rectangle,
+        camera, m_render_draws);
+
+    m_composite_pass.draw(context, back_buffer_rtv, rectangle, PanelCompositePhase::kBand,
+        Panel_Background_Color, Panel_Border_Color, inset, built_in_chrome);
+
+    // One-shot per-session content dump: the pixels answer what the log cannot - whether the geometry
+    // pass reaches the target at all, and whether the composite's write survives onto the back buffer.
+    ++m_composited_frames;
+    bool const dump_now = !m_target_dumped || (m_composited_frames == 90 && !m_second_dumped);
+    if (dump_now)
+    {
+        if (m_composited_frames == 90)
+            m_second_dumped = true;
+        m_target_dumped = true;
+        std::string const suffix = m_second_dumped && m_composited_frames == 90 ? "2" : "";
+        REX::W32::ID3D11Resource* presented_resource = nullptr;
+        back_buffer_rtv->GetResource(&presented_resource);
+        if (presented_resource)
+        {
+            dump_texture_tga(device, context, static_cast<REX::W32::ID3D11Texture2D*>(presented_resource), "PlayerPanel_backbuffer" + suffix);
+            presented_resource->Release();
+        }
+    }
 
     capture.restore();
 
-    // Released only after the state capture has restored the engine's own targets, so the engine's
-    // draw of this frame never dangles and the swap chain carries no reference between frames.
-    back_buffer_rtv->Release();
-    back_buffer->Release();
+    if (!m_first_composite_logged)
+    {
+        m_first_composite_logged = true;
+        logger::info("Panel composite: first draw (chrome={} rect=({},{}),{}x{})",
+            built_in_chrome ? "built-in" : "swf", layout.x, layout.y, layout.width, layout.height);
+    }
+
+    // Released only after the state capture has restored the engine's own targets. The engine's own
+    // view is borrowed and never released here; only the fallback path's slot-0 view and texture are
+    // owned by this frame.
+    if (back_buffer)
+    {
+        back_buffer_rtv->Release();
+        back_buffer->Release();
+    }
 }
 
 bool PanelRenderer::ensure_device_objects(REX::W32::ID3D11Device* device)

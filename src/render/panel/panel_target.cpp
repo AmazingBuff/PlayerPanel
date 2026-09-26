@@ -25,17 +25,21 @@ PanelTarget::PanelTarget() :
     m_rtv(nullptr),
     m_dsv(nullptr),
     m_srv(nullptr),
-    m_width(0),
-    m_height(0) {}
+    m_colour_width(0),
+    m_colour_height(0),
+    m_depth_width(0),
+    m_depth_height(0) {}
 
 PanelTarget::~PanelTarget()
 {
     release();
 }
 
-bool PanelTarget::matches(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height) const
+bool PanelTarget::matches(REX::W32::ID3D11Device* device, uint32_t colour_width, uint32_t colour_height,
+    uint32_t depth_width, uint32_t depth_height) const
 {
-    return m_ref_device == device && m_width == width && m_height == height && m_rtv && m_dsv && m_srv;
+    return m_ref_device == device && m_colour_width == colour_width && m_colour_height == colour_height &&
+           m_depth_width == depth_width && m_depth_height == depth_height && m_rtv && m_dsv && m_srv;
 }
 
 void PanelTarget::release()
@@ -65,22 +69,26 @@ void PanelTarget::release()
         m_texture->Release();
         m_texture = nullptr;
     }
-    m_width = 0;
-    m_height = 0;
+    m_colour_width = 0;
+    m_colour_height = 0;
+    m_depth_width = 0;
+    m_depth_height = 0;
     m_ref_device = nullptr;
 }
 
-bool PanelTarget::init(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height)
+bool PanelTarget::init(REX::W32::ID3D11Device* device, uint32_t colour_width, uint32_t colour_height,
+    uint32_t depth_width, uint32_t depth_height)
 {
-    if (!device || width == 0 || height == 0)
+    if (!device || colour_width == 0 || colour_height == 0 || depth_width == 0 || depth_height == 0)
     {
-        logger::error("Panel target: invalid device or size ({}x{})", width, height);
+        logger::error("Panel target: invalid device or sizes (colour {}x{}, depth {}x{})",
+            colour_width, colour_height, depth_width, depth_height);
         return false;
     }
 
     REX::W32::D3D11_TEXTURE2D_DESC desc{};
-    desc.width = width;
-    desc.height = height;
+    desc.width = colour_width;
+    desc.height = colour_height;
     desc.mipLevels = 1;
     desc.arraySize = 1;
     desc.format = Panel_Color_Format;
@@ -106,6 +114,11 @@ bool PanelTarget::init(REX::W32::ID3D11Device* device, uint32_t width, uint32_t 
         return false;
     }
 
+    // The depth texture is bound together with the engine's own back buffer in the built-in chrome's
+    // geometry pass, and D3D11 silently drops an OMSetRenderTargets whose depth-stencil resource size
+    // differs from the render target's - it is therefore sized to the back buffer, not to the panel.
+    desc.width = depth_width;
+    desc.height = depth_height;
     desc.format = Panel_Depth_Format;
     desc.bindFlags = REX::W32::D3D11_BIND_DEPTH_STENCIL;
     REX::W32::HRESULT const depth_hr = device->CreateTexture2D(&desc, nullptr, &m_depth_texture);
@@ -125,8 +138,10 @@ bool PanelTarget::init(REX::W32::ID3D11Device* device, uint32_t width, uint32_t 
     }
 
     m_ref_device = device;
-    m_width = width;
-    m_height = height;
+    m_colour_width = colour_width;
+    m_colour_height = colour_height;
+    m_depth_width = depth_width;
+    m_depth_height = depth_height;
     return true;
 }
 
