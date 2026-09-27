@@ -97,7 +97,10 @@ extern "C" DLLEXPORT bool SKSEPlugin_Load(SKSE::LoadInterface const* skse)
     PLUGIN_NAMESPACE::initialize_log();
     logger::info("{} v{}"sv, Plugin::Plugin_Name, Plugin::Plugin_Version.string());
 
-    SKSE::Init(skse);
+    SKSE::Init(skse, {
+        .trampoline = true,
+        .trampolineSize = 64 * 1024,
+    });
     PLUGIN_NAMESPACE::Setting::instance().load();
     const SKSE::MessagingInterface* messaging = SKSE::GetMessagingInterface();
     if (!messaging || !messaging->RegisterListener(PLUGIN_NAMESPACE::message_handler))
