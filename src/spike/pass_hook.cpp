@@ -418,7 +418,12 @@ namespace spike
         // engine rebinds OM, viewport and depth on the next draw (ours).
         const RE::RENDER_TARGET prev_main_target = shadow_data.renderTargets[0];
         shadow_data.renderTargets[0] = Spike_Target;
-        shadow_data.setRenderTargetMode[0] = RE::BSGraphics::SetRenderTargetMode::SRTM_NO_CLEAR;
+        shadow_data.setRenderTargetMode[0] = RE::BSGraphics::SetRenderTargetMode::SRTM_CLEAR;
+        // Clear the depth bound to the replay as well: with the kMAIN depth
+        // left as-is the world content already in it rejects all but a
+        // handful of the replayed pixels (4 colored pixels survived last
+        // run). A full clear gives the replay a clean depth plane.
+        shadow_data.setDepthStencilMode = RE::BSGraphics::SetRenderTargetMode::SRTM_CLEAR_DEPTH;
         shadow_data.depthStencil = Spike_Depth_Slot;
         shadow_data.stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET,
             RE::BSGraphics::ShaderFlags::DIRTY_DEPTH_MODE, RE::BSGraphics::ShaderFlags::DIRTY_VIEWPORT);
