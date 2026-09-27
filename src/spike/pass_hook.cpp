@@ -246,6 +246,15 @@ namespace spike
     bool PassHook::do_replay(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
         std::uint32_t render_flags, std::size_t site_index)
     {
+        // Only replay the lighting pass. The armed window catches the depth
+        // and shadow passes first (shaderType 8, numLights 0) whose vertex
+        // shader runs fine but which by design write no colour -- replaying
+        // them produced fifteen single-colour TGAs of the clear value and
+        // disarmed before the actual lighting pass (0x484040B5 family,
+        // shaderType 6) ever arrived. That pass carries the real shading.
+        if (!pass->shader || std::to_underlying(pass->shader->shaderType.get()) != 6)
+            return false;
+
         auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
         if (!renderer)
             return false;
@@ -255,7 +264,11 @@ namespace spike
         if (!context || !device)
             return false;
 
-        // Capture the current render targets.
+        // Capture the pipeline state the engine relies on across the call:
+        // render targets, viewport, rasterizer, blend, depth-stencil. The
+        // first in-game run rebound only the render targets, so the replayed
+        // lighting pass ran against a viewport/depth state that belonged to
+        // the offscreen target and drew nothing.
         REX::W32::ID3D11RenderTargetView* prev_rtv = nullptr;
         REX::W32::ID3D11DepthStencilView* prev_dsv = nullptr;
         context->OMGetRenderTargets(1, &prev_rtv, &prev_dsv);
@@ -263,9 +276,22 @@ namespace spike
         {
             if (prev_dsv)
                 prev_dsv->Release();
-            m_result.replays_failed.fetch_add(1, std::memory_order_acq_rel);
             return false;
         }
+
+        REX::W32::D3D11_VIEWPORT prev_viewport{};
+        std::uint32_t viewport_count = 1;
+        context->RSGetViewports(&viewport_count, &prev_viewport);
+
+        REX::W32::ID3D11RasterizerState* prev_raster = nullptr;
+        context->RSGetState(&prev_raster);
+        REX::W32::ID3D11BlendState* prev_blend = nullptr;
+        float prev_blend_factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        std::uint32_t prev_sample_mask = 0xffffffff;
+        context->OMGetBlendState(&prev_blend, prev_blend_factor, &prev_sample_mask);
+        REX::W32::ID3D11DepthStencilState* prev_depth = nullptr;
+        std::uint32_t prev_stencil_ref = 0;
+        context->OMGetDepthStencilState(&prev_depth, &prev_stencil_ref);
 
         // Size the offscreen target to match the current render target.
         std::uint32_t width = 512;
@@ -294,8 +320,13 @@ namespace spike
             return false;
         }
 
-        // Bind our target, replay the pass, restore.
+        // Bind our target and a neutral-but-engine-like state: the same
+        // viewport, default rasterizer, opaque blending, depth test on.
         context->OMSetRenderTargets(1, &target.rtv, target.dsv);
+        REX::W32::D3D11_VIEWPORT viewport = prev_viewport;
+        viewport.width = static_cast<float>(width);
+        viewport.height = static_cast<float>(height);
+        context->RSSetViewports(1, &viewport);
         const float clear_color[4] = { 0.05f, 0.05f, 0.08f, 1.0f };
         context->ClearRenderTargetView(target.rtv, clear_color);
         context->ClearDepthStencilView(target.dsv,
@@ -308,10 +339,21 @@ namespace spike
         REL::Relocation<RenderPassImmediately_t> setup{ REL::RelocationID(100854, 107644) };
         setup.get()(pass, technique, alpha_test, render_flags);
 
+        // Restore everything captured above before the engine continues.
         context->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
+        context->RSSetViewports(1, &prev_viewport);
+        context->RSSetState(prev_raster);
+        context->OMSetBlendState(prev_blend, prev_blend_factor, prev_sample_mask);
+        context->OMSetDepthStencilState(prev_depth, prev_stencil_ref);
         prev_rtv->Release();
         if (prev_dsv)
             prev_dsv->Release();
+        if (prev_raster)
+            prev_raster->Release();
+        if (prev_blend)
+            prev_blend->Release();
+        if (prev_depth)
+            prev_depth->Release();
 
         // Copy to a staging texture and write a TGA.
         REX::W32::D3D11_TEXTURE2D_DESC staging_desc{};
