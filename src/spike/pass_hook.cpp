@@ -142,6 +142,13 @@ namespace spike
         if (!m_installed.compare_exchange_strong(expected, true))
             return true;
 
+        // v9.1.0's SKSE::Init(trampoline=true) draws from skse64's shared
+        // branch pool, which is far too small for a plugin-sized request and
+        // dies on a fatal assert when it overflows. Create a private local
+        // trampoline near the game's .text instead; three call-site hooks
+        // need only a few dozen bytes.
+        SKSE::GetTrampoline().create(64 * 1024);
+
         void (*thunks[3])(RE::BSRenderPass*, std::uint32_t, bool, std::uint32_t) = {
             &PassHook::thunk_rendezvous1,
             &PassHook::thunk_rendezvous2,
