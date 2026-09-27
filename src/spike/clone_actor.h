@@ -58,6 +58,7 @@ namespace spike
         RE::Actor* m_actor{ nullptr };
         std::vector<RE::BSGeometry*> m_geometries;
         bool m_dressed{ false };
+        std::uint32_t m_frames_since_place{ 0 };
     };
 }
 

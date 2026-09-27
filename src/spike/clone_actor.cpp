@@ -11,6 +11,10 @@ namespace spike
     namespace
     {
         constexpr float SpawnDistance = 120.0f; // game units in front of the player
+        // Frames to wait after PlaceObjectAtMe before touching the clone with
+        // virtual calls; the engine finishes its secondary-base construction
+        // and AI-process init asynchronously.
+        constexpr std::uint32_t Grace_Frames = 60;
 
         std::vector<RE::BSGeometry*> collect_geometries(RE::NiAVObject* root)
         {
@@ -97,12 +101,17 @@ namespace spike
                 break;
         }
 
-        // The 3D tree appears a few frames after placement and after the worn
-        // items are equipped; collect geometries once the root exists and at
-        // least one geometry is present.
+        // The engine finishes constructing the clone's secondary bases (AI
+        // process, ActorValueOwner vtables) and character controller a few
+        // frames after PlaceObjectAtMe returns. Calling virtuals earlier blew
+        // up inside SetActorValue (crash: call [rax+0x38] on a garbage
+        // secondary-vtable). Wait out a fixed grace period first.
         if (m_actor && !m_dressed)
         {
-            position_and_dress();
+            if (++m_frames_since_place >= Grace_Frames)
+            {
+                position_and_dress();
+            }
         }
         else if (m_actor && m_dressed && m_geometries.empty())
         {
@@ -147,6 +156,7 @@ namespace spike
 
         m_handle = RE::ObjectRefHandle(clone);
         m_actor = clone;
+        m_frames_since_place = 0;
 
         // Let the engine initialize the clone's AI process at the placement
         // spot first; reposition and dress it next frame when the process
@@ -195,6 +205,7 @@ namespace spike
         m_actor = nullptr;
         m_handle.reset();
         m_geometries.clear();
+        m_frames_since_place = 0;
         logger::info("[spike] clone despawned");
     }
 }
