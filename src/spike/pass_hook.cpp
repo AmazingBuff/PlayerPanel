@@ -7,7 +7,9 @@
 #include <REX/W32/D3D11.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <mutex>
 #include <ranges>
@@ -38,6 +40,32 @@ namespace spike
         };
 
         using RenderPassImmediately_t = void (*)(RE::BSRenderPass*, std::uint32_t, bool, std::uint32_t);
+
+        // R11G11B10_FLOAT component decoders for the HDR readback.
+        constexpr float r11f(std::uint32_t bits)
+        {
+            if (bits == 0)
+                return 0.0f;
+            const std::uint32_t exponent = (bits >> 6) & 0x1F;
+            const std::uint32_t mantissa = bits & 0x3F;
+            if (exponent == 0x1F)
+                return mantissa ? 0.0f : 1e30f;  // no inf handling needed for colours
+            if (exponent == 0)
+                return std::ldexp(static_cast<float>(mantissa), -14 - 6);  // denormal
+            return std::ldexp(static_cast<float>(mantissa | 0x40), static_cast<int>(exponent) - 15 - 6);
+        }
+        constexpr float r10f(std::uint32_t bits)
+        {
+            if (bits == 0)
+                return 0.0f;
+            const std::uint32_t exponent = (bits >> 5) & 0x1F;
+            const std::uint32_t mantissa = bits & 0x1F;
+            if (exponent == 0x1F)
+                return mantissa ? 0.0f : 1e30f;
+            if (exponent == 0)
+                return std::ldexp(static_cast<float>(mantissa), -14 - 5);  // denormal
+            return std::ldexp(static_cast<float>(mantissa | 0x20), static_cast<int>(exponent) - 15 - 5);
+        }
 
         // Engine pool slot the offscreen texture is registered under for the
         // replay (transient hit-feedback buffer, unused during scene draws)
@@ -81,7 +109,11 @@ namespace spike
             REX::W32::ID3D11Texture2D* depth_texture = nullptr;
             REX::W32::ID3D11DepthStencilView* dsv = nullptr;
 
-            bool create(REX::W32::ID3D11Device* device, std::uint32_t width, std::uint32_t height)
+            // The replayed lighting pass writes scene-linear HDR values (the
+            // engine's kMAIN is R11G11B10_FLOAT); an 8-bit UNORM target
+            // quantized everything to near-black. Match the engine format.
+            bool create(REX::W32::ID3D11Device* device, std::uint32_t width, std::uint32_t height,
+                REX::W32::DXGI_FORMAT format)
             {
                 destroy();
                 REX::W32::D3D11_TEXTURE2D_DESC color{};
@@ -89,24 +121,13 @@ namespace spike
                 color.height = height;
                 color.mipLevels = 1;
                 color.arraySize = 1;
-                color.format = REX::W32::DXGI_FORMAT_R8G8B8A8_UNORM;
+                color.format = format;
                 color.sampleDesc.count = 1;
                 color.usage = REX::W32::D3D11_USAGE_DEFAULT;
                 color.bindFlags = REX::W32::D3D11_BIND_RENDER_TARGET;
                 if (device->CreateTexture2D(&color, nullptr, &texture) != 0)
                     return false;
-
-                REX::W32::D3D11_TEXTURE2D_DESC depth = color;
-                depth.format = REX::W32::DXGI_FORMAT_D24_UNORM_S8_UINT;
-                depth.bindFlags = REX::W32::D3D11_BIND_DEPTH_STENCIL;
-                if (device->CreateTexture2D(&depth, nullptr, &depth_texture) != 0)
-                {
-                    destroy();
-                    return false;
-                }
-
-                if (device->CreateRenderTargetView(texture, nullptr, &rtv) != 0 ||
-                    device->CreateDepthStencilView(depth_texture, nullptr, &dsv) != 0)
+                if (device->CreateRenderTargetView(texture, nullptr, &rtv) != 0)
                 {
                     destroy();
                     return false;
@@ -254,6 +275,7 @@ namespace spike
     bool PassHook::do_replay(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
         std::uint32_t render_flags, std::size_t site_index)
     {
+        (void)site_index;
         // Only replay the lighting pass. The armed window catches the depth
         // and shadow passes first (shaderType 8, numLights 0) whose vertex
         // shader runs fine but which by design write no colour -- replaying
@@ -301,9 +323,12 @@ namespace spike
         std::uint32_t prev_stencil_ref = 0;
         context->OMGetDepthStencilState(&prev_depth, &prev_stencil_ref);
 
-        // Size the offscreen target to match the current render target.
+        // Size the offscreen target to match the current render target and
+        // take over its exact format: the replayed lighting pass emits
+        // scene-linear HDR values shaped for the engine's kMAIN format.
         std::uint32_t width = 512;
         std::uint32_t height = 512;
+        REX::W32::DXGI_FORMAT main_format = REX::W32::DXGI_FORMAT_R11G11B10_FLOAT;
         REX::W32::ID3D11Resource* prev_resource = nullptr;
         prev_rtv->GetResource(&prev_resource);
         if (prev_resource)
@@ -313,11 +338,12 @@ namespace spike
             texture->GetDesc(&desc);
             width = desc.width;
             height = desc.height;
+            main_format = desc.format;
             prev_resource->Release();
         }
 
         OffscreenTarget& target = offscreen();
-        if (!target.rtv && !target.create(device, width, height))
+        if (!target.rtv && !target.create(device, width, height, main_format))
         {
             logger::warn("[spike] offscreen target creation failed");
             target.destroy();
@@ -408,13 +434,18 @@ namespace spike
         shadow_data.stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET,
             RE::BSGraphics::ShaderFlags::DIRTY_DEPTH_MODE, RE::BSGraphics::ShaderFlags::DIRTY_VIEWPORT);
 
-        // Copy to a staging texture and write a TGA.
+        // Copy the HDR result to a staging texture and tone-map it into an
+        // 8-bit TGA. CopyResource requires identical formats, so the staging
+        // texture takes the target's format; the mapping below handles both
+        // float HDR (R11G11B10) and plain UNORM content.
+        REX::W32::D3D11_TEXTURE2D_DESC target_desc{};
+        target.texture->GetDesc(&target_desc);
         REX::W32::D3D11_TEXTURE2D_DESC staging_desc{};
         staging_desc.width = width;
         staging_desc.height = height;
         staging_desc.mipLevels = 1;
         staging_desc.arraySize = 1;
-        staging_desc.format = REX::W32::DXGI_FORMAT_R8G8B8A8_UNORM;
+        staging_desc.format = target_desc.format;
         staging_desc.sampleDesc.count = 1;
         staging_desc.usage = REX::W32::D3D11_USAGE_STAGING;
         staging_desc.cpuAccessFlags = REX::W32::D3D11_CPU_ACCESS_READ;
@@ -429,19 +460,53 @@ namespace spike
         REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
         if (context->Map(staging, 0, REX::W32::D3D11_MAP_READ, 0, &mapped) == 0)
         {
-            std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * height * 4);
+            const bool hdr = target_desc.format == REX::W32::DXGI_FORMAT_R11G11B10_FLOAT;
+            // Reinhard tone mapping scaled for the engine's lighting output;
+            // without it the HDR values quantize to near-black on 8 bits.
+            constexpr float exposure = 6.0f;
+            auto tone_map = [](float v) {
+                const float mapped = v <= 0.0f ? 0.0f : (v * exposure) / (1.0f + v * exposure);
+                return static_cast<std::uint8_t>(std::clamp(mapped, 0.0f, 1.0f) * 255.0f + 0.5f);
+            };
+
+            std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * height * 4, 0);
+            const std::uint32_t src_bpp = hdr ? 4 : 4;  // R11G11B10 packs to 4 bytes
             for (std::uint32_t row = 0; row < height; ++row)
             {
                 const std::uint8_t* src = static_cast<const std::uint8_t*>(mapped.data) +
                     static_cast<std::size_t>(row) * mapped.rowPitch;
-                std::ranges::copy(std::span<const std::uint8_t>(src, static_cast<std::size_t>(width) * 4),
-                    pixels.begin() + static_cast<std::size_t>(row) * width * 4);
+                std::uint8_t* dst = pixels.data() + static_cast<std::size_t>(row) * width * 4;
+                for (std::uint32_t x = 0; x < width; ++x)
+                {
+                    const std::uint8_t* s = src + static_cast<std::size_t>(x) * src_bpp;
+                    std::uint8_t* d = dst + static_cast<std::size_t>(x) * 4;
+                    if (hdr)
+                    {
+                        // R11G11B10_FLOAT: R and G have 11 bits (6 mantissa),
+                        // B has 10 (5 mantissa); no sign bits.
+                        std::uint32_t packed = 0;
+                        std::memcpy(&packed, s, 4);
+                        const float r = r11f(packed & 0x7FF);
+                        const float g = r11f((packed >> 11) & 0x7FF);
+                        const float b = r10f((packed >> 22) & 0x3FF);
+                        d[0] = tone_map(b);
+                        d[1] = tone_map(g);
+                        d[2] = tone_map(r);
+                    }
+                    else
+                    {
+                        d[0] = tone_map(s[0] / 255.0f);
+                        d[1] = tone_map(s[1] / 255.0f);
+                        d[2] = tone_map(s[2] / 255.0f);
+                    }
+                    d[3] = 255;
+                }
             }
             context->Unmap(staging, 0);
 
             std::uint32_t index = m_result.replays_done.fetch_add(1, std::memory_order_acq_rel);
             write_tga(spike_log_dir() / fmt::format("replay_{:03}.tga", index), width, height, pixels);
-            logger::info("[spike] dumped replay_{:03}.tga ({}x{}, site {})", index, width, height, site_index);
+            logger::info("[spike] dumped replay_{:03}.tga ({}x{}, {})", index, width, height, hdr ? "HDR" : "UNORM");
         }
         else
         {
