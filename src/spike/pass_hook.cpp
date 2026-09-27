@@ -355,90 +355,34 @@ namespace spike
             return false;
         }
 
-        // The engine does not honour raw OM bindings: it keeps its own shadow
-        // state (BSGraphics::RendererShadowState) mapping each OM slot to a
-        // RENDER_TARGET pool entry and rebinds them itself on every pass. A
-        // bare OMSetRenderTargets was overwritten inside the replayed pass,
-        // which is why the first lighting replay produced a clear-colour TGA
-        // while the world flickered for a frame. Register the offscreen
-        // texture in the engine's pool under a transient slot
-        // (kGETHIT_BUFFER, used only for momentary hit-feedback blits) and
-        // retarget the shadow state, exactly the mechanism Community
-        // Shaders' Deferred uses for its G-buffer takeover.
-        RE::BSGraphics::RendererShadowState* shadow_state =
-            RE::BSGraphics::RendererShadowState::GetSingleton();
-        if (!shadow_state)
-        {
-            logger::warn("[spike] shadow state unavailable");
-            prev_rtv->Release();
-            if (prev_dsv)
-                prev_dsv->Release();
-            return false;
-        }
-        auto& shadow_data = shadow_state->GetRuntimeData();
-        auto& pool = runtime.renderTargets[std::to_underlying(Spike_Target)];
-
-        // Save the transient slot's previous pool entry (spike runs once per
-        // arm; a static save is enough).
-        static RE::BSGraphics::RenderTargetData s_saved_pool{};
-        static bool s_pool_saved = false;
-        if (!s_pool_saved)
-        {
-            s_saved_pool = pool;
-            s_pool_saved = true;
-        }
-
-        // Release whatever the engine previously held in the slot, then
-        // install our texture/views (matches CS SetupRenderTarget pattern).
-        if (pool.texture != target.texture)
-        {
-            if (pool.UAV)
-                pool.UAV->Release();
-            if (pool.RTV)
-                pool.RTV->Release();
-            if (pool.SRVCopy)
-                pool.SRVCopy->Release();
-            if (pool.SRV)
-                pool.SRV->Release();
-            if (pool.textureCopy)
-                pool.textureCopy->Release();
-            if (pool.texture)
-                pool.texture->Release();
-            pool.texture = target.texture;
-            pool.textureCopy = nullptr;
-            pool.RTV = target.rtv;
-            pool.SRV = nullptr;
-            pool.SRVCopy = nullptr;
-            pool.UAV = nullptr;
-            pool.texture->AddRef();
-            pool.RTV->AddRef();
-        }
-
-        // Point the shadow state at the slot and mark everything dirty so the
-        // engine rebinds OM, viewport and depth on the next draw (ours).
-        const RE::RENDER_TARGET prev_main_target = shadow_data.renderTargets[0];
-        shadow_data.renderTargets[0] = Spike_Target;
-        shadow_data.setRenderTargetMode[0] = RE::BSGraphics::SetRenderTargetMode::SRTM_CLEAR;
-        // Clear the depth bound to the replay as well: with the kMAIN depth
-        // left as-is the world content already in it rejects all but a
-        // handful of the replayed pixels (4 colored pixels survived last
-        // run). A full clear gives the replay a clean depth plane.
-        shadow_data.setDepthStencilMode = RE::BSGraphics::SetRenderTargetMode::SRTM_CLEAR_DEPTH;
-        shadow_data.depthStencil = Spike_Depth_Slot;
-        shadow_data.stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET,
-            RE::BSGraphics::ShaderFlags::DIRTY_DEPTH_MODE, RE::BSGraphics::ShaderFlags::DIRTY_VIEWPORT);
+        // Two facts from the in-game runs, reconciled:
+        //  - Round 2 (bare OM bind, 8-bit target): the replay drew a full
+        //    silhouette region into the offscreen texture, so a direct pass
+        //    DOES honour the raw OM binding at draw time.
+        //  - Rounds 4/5 (shadow-state retarget): the dirty flags only apply
+        //    at the engine's own state-application points between pass
+        //    batches, never inside a single direct call, so the shadow route
+        //    changed nothing (4 stray pixels, then zero once the depth clear
+        //    it promised never happened).
+        // Conclusion: bind raw and restore raw, with our own cleared depth.
+        context->OMSetRenderTargets(1, &target.rtv, target.dsv);
+        REX::W32::D3D11_VIEWPORT viewport = prev_viewport;
+        viewport.width = static_cast<float>(width);
+        viewport.height = static_cast<float>(height);
+        context->RSSetViewports(1, &viewport);
+        const float clear_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        context->ClearRenderTargetView(target.rtv, clear_color);
+        context->ClearDepthStencilView(target.dsv,
+            REX::W32::D3D11_CLEAR_DEPTH | REX::W32::D3D11_CLEAR_STENCIL, 1.0f, 0);
 
         // The replay draws through the engine function this call site
-        // originally invoked; the engine itself now binds our offscreen
-        // target from the shadow state.
+        // originally invoked.
         REL::Relocation<RenderPassImmediately_t> setup{ REL::RelocationID(100854, 107644) };
         setup.get()(pass, technique, alpha_test, render_flags);
 
-        // Restore the shadow state and the pool entry so the engine resumes
-        // exactly where it was.
-        shadow_data.renderTargets[0] = prev_main_target;
-        shadow_data.stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET,
-            RE::BSGraphics::ShaderFlags::DIRTY_DEPTH_MODE, RE::BSGraphics::ShaderFlags::DIRTY_VIEWPORT);
+        // Restore the engine's own binding before it continues the frame.
+        context->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
+        context->RSSetViewports(1, &prev_viewport);
 
         // Copy the HDR result to a staging texture and tone-map it into an
         // 8-bit TGA. CopyResource requires identical formats, so the staging
