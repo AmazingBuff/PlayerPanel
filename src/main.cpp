@@ -5,6 +5,7 @@
 #include "render/panel/panel_menu.h"
 #include "render/panel/panel_renderer.h"
 #include "render/shader_manager.h"
+#include "render/spike/engine_pass_spike.h"
 #include <spdlog/sinks/basic_file_sink.h>
 
 namespace
@@ -34,6 +35,16 @@ namespace
         (void)PLUGIN_NAMESPACE::FrameHook::instance().install(&PLUGIN_NAMESPACE::PreviewActor::on_frame);
         (void)PLUGIN_NAMESPACE::FrameHook::instance().install(&PLUGIN_NAMESPACE::PanelRenderer::on_frame);
         (void)PLUGIN_NAMESPACE::FrameHook::instance().install_present(&PLUGIN_NAMESPACE::PanelRenderer::on_present);
+        // Stage 0 spike (docs/plans/panel-render-2b.md): one draw through the engine's own pass into
+        // a private target, to decide whether the engine-pass approach is viable at all. Off unless
+        // SpikeEnginePass is set, because it crashed inside the engine's SetupAndDrawPass on its
+        // first run. Removed with the spike.
+        if (PLUGIN_NAMESPACE::Setting::instance().get_config().spike_engine_pass)
+        {
+            PLUGIN_NAMESPACE::EnginePassSpike::install();
+            (void)PLUGIN_NAMESPACE::FrameHook::instance().install(&PLUGIN_NAMESPACE::EnginePassSpike::on_frame);
+            logger::info("Panel spike: enabled by SpikeEnginePass; one pass of the preview is redirected");
+        }
     }
 
     // Gives back everything the panel took from the player-visible state. The panel's menu is hidden
@@ -97,7 +108,12 @@ extern "C" DLLEXPORT bool SKSEPlugin_Load(SKSE::LoadInterface const* skse)
     initialize_log();
     logger::info("{} v{}"sv, Plugin::Plugin_Name, Plugin::Plugin_Version.string());
 
-    SKSE::Init(skse);
+    // The trampoline is requested here because SKSE only hands one out during Init, and the Stage 0
+    // spike (docs/plans/panel-render-2b.md) needs one branch - otherwise write_branch reports
+    // "failed to allocate trampoline". The config cannot be consulted first: its loader depends on
+    // the logging SKSE::Init sets up. The size covers a handful of branches, and this whole block is
+    // removed with the spike.
+    SKSE::Init(skse, { .trampoline = true, .trampolineSize = 1u << 12 });
     try
     {
         PLUGIN_NAMESPACE::Setting::instance().load();

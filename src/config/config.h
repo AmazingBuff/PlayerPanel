@@ -39,6 +39,11 @@ struct Config
     // path only exercises the same plumbing with a different file.
     char panel_swf_path[Max_Panel_Swf_Path];
 
+    // Whether the panel's chrome comes from the SWF above (true) or from the plugin's built-in
+    // backdrop and border (false). The built-in chrome is the default: the shipped panel.swf is a
+    // placeholder without art, and a movie with no visible content would otherwise own the backdrop.
+    bool skin_swf_enabled;
+
     // The character's inset from the panel rectangle while a skin owns the chrome, as a fraction of
     // the panel height. It is deliberately its own value rather than the built-in hairline: a skin
     // authors its frame to be at least this thick, and the character is composited inside that frame.
@@ -48,6 +53,13 @@ struct Config
     double camera_fov;
     double camera_distance;
     double alpha_test_threshold;
+
+    // Stage 0 spike for docs/plans/panel-render-2b.md, and the reason it is a switch rather than a
+    // constant: the first form of the spike crashed inside the engine's
+    // BSBatchRenderer::SetupAndDrawPass when it called that entry itself, outside the engine's own
+    // accumulation. Off by default so the panel stays usable; turning it on runs one experimental
+    // draw and is expected to be removed with the spike.
+    bool spike_engine_pass;
 };
 
 class Setting

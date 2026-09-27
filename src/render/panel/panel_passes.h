@@ -41,11 +41,12 @@ public:
     // viewport at the panel's offset, so the character lands inside the window, not in the screen's
     // corner. The caller paints the window's fill first and the hairline after, so the character
     // lands between them. The caller wraps the call in a D3D11StateCapture. Each draw's own alpha
-    // cutout and written alpha travel in the per-draw constants.
+    // cutout and written alpha travel in the per-draw constants. alpha_blend selects the skin path's
+    // source-alpha blending (over the movie the engine drew underneath) instead of the opaque write.
     void draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
         REX::W32::ID3D11RenderTargetView* target, REX::W32::ID3D11DepthStencilView* depth,
         REX::W32::D3D11_VIEWPORT const& rectangle, PanelCameraFrame const& camera,
-        std::span<PanelDraw const> draws);
+        std::span<PanelDraw const> draws, bool alpha_blend = false);
 
 private:
     // Input-layout cache key: the skinning path, whether the positions come from the dedicated
@@ -98,6 +99,9 @@ private:
     REX::W32::ID3D11DepthStencilState* m_depth;
     REX::W32::ID3D11RasterizerState* m_rasterizer;
     REX::W32::ID3D11BlendState* m_blend;
+    // The skin path's own blend state: source alpha over inverse source alpha with the destination
+    // alpha preserved, so the character blends over the movie the engine drew underneath.
+    REX::W32::ID3D11BlendState* m_blend_alpha;
     REX::W32::ID3D11SamplerState* m_sampler;
     std::vector<LayoutEntry> m_layouts;
 };

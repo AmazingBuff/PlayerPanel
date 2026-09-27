@@ -17,6 +17,24 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
+    // The geometry pass drops one reference to each draw's pinned D3D objects every time it draws
+    // them, and a collection pins each object exactly once. A reused frame has already spent its
+    // references on an earlier present, so any extra draw over it must re-pin first: without this,
+    // every re-present drains one reference until the engine's buffers and views are freed under a
+    // live draw - the 16:15 dump's DrawIndexed with rax=0, and the renderdoc-injected variant of it.
+    void pin_frame_refs(std::vector<PanelDraw> const& draws)
+    {
+        for (PanelDraw const& draw : draws)
+        {
+            if (draw.vertex_buffer)
+                draw.vertex_buffer->AddRef();
+            if (draw.index_buffer)
+                draw.index_buffer->AddRef();
+            if (draw.diffuse_view)
+                draw.diffuse_view->AddRef();
+        }
+    }
+
     // The built-in chrome's fill: the same colour clears the private target and fills the rectangle on
     // the back buffer, so the window never lets world content through and the unfilled part of the
     // target still reads as panel background around the character. It is the built-in chrome only; a
@@ -262,6 +280,8 @@ PanelRenderer::PanelRenderer() :
     m_first_composite_logged(false),
     m_target_dumped(false),
     m_second_dumped(false),
+    m_ui_target_probe_done(false),
+    m_fill_probe_done(false),
     m_composited_frames(0),
     m_chrome_active(false),
     m_shortfall_logged(false),
@@ -587,7 +607,7 @@ void PanelRenderer::commit_panel_position(PanelLayout const& layout, uint32_t sc
     Setting::instance().set_panel_position(normalized_x, normalized_y);
 }
 
-void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
+void PanelRenderer::draw(REX::W32::IDXGISwapChain* /*swap_chain*/)
 {
     // A requested release is serviced here so every D3D call stays on the render thread.
     if (m_release_requested.exchange(false, std::memory_order_acq_rel))
@@ -596,6 +616,53 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
         return;
     }
 
+    // The panel draws into kFRAMEBUFFER's render target view, the same buffer Community Shaders'
+    // own present-time overlay uses, and for the same reason: the buffer's RTV pointer is where
+    // the frame chain reads the UI layer from. With frame generation active the pointer is
+    // CS-patched to the shared UI buffer (the FFX UI composition and the HDR output both read it);
+    // with plain HDR the patched pointer is the UI texture; without CS's redirection it is the
+    // vanilla framebuffer itself, which the HDR output copies to the screen. A draw into the
+    // wrapped swap-chain buffer or the engine's render window view is overwritten by that same
+    // HDR output copy before anything is presented - the missing-backdrop report.
+    RE::BSGraphics::Renderer* const renderer = RE::BSGraphics::Renderer::GetSingleton();
+    if (!renderer)
+        return;
+
+    auto const& renderer_runtime = renderer->GetRuntimeData();
+    REX::W32::ID3D11Device* const device = renderer_runtime.forwarder;
+    REX::W32::ID3D11DeviceContext* const context = renderer_runtime.context;
+    if (!device || !context)
+        return;
+
+    if (!ensure_device_objects(device))
+        return;
+
+    auto const& framebuffer = renderer_runtime.renderTargets[RE::RENDER_TARGET::kFRAMEBUFFER];
+    REX::W32::ID3D11RenderTargetView* const framebuffer_rtv = framebuffer.RTV;
+    if (!framebuffer_rtv)
+        return;
+
+    uint32_t target_width = 0;
+    uint32_t target_height = 0;
+    REX::W32::ID3D11Texture2D* bound_texture = nullptr;
+    framebuffer_rtv->GetResource(reinterpret_cast<REX::W32::ID3D11Resource**>(&bound_texture));
+    if (bound_texture)
+    {
+        REX::W32::D3D11_TEXTURE2D_DESC desc{};
+        bound_texture->GetDesc(&desc);
+        target_width = desc.width;
+        target_height = desc.height;
+        bound_texture->Release();
+    }
+    if (target_width == 0 || target_height == 0)
+        return;
+
+    draw_frame(device, context, framebuffer_rtv, target_width, target_height);
+}
+
+void PanelRenderer::draw_frame(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
+    REX::W32::ID3D11RenderTargetView* back_buffer_rtv, uint32_t target_width, uint32_t target_height)
+{
     // A frame to draw: either a freshly prepared one, or - when the collection came back empty for
     // a frame (the engine rebuilding the preview's 3D root does this transiently, and the empty
     // frame would flicker the whole panel) - the previous frame's draws, which the render thread
@@ -620,21 +687,11 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
         {
             camera = m_camera;
             built_in_chrome = m_built_in_chrome;
+            // This frame's references were already spent on the previous present; the draw below
+            // releases one reference per draw again, so it must own a fresh one first.
+            pin_frame_refs(m_render_draws);
         }
     }
-
-    RE::BSGraphics::Renderer* const renderer = RE::BSGraphics::Renderer::GetSingleton();
-    if (!renderer)
-        return;
-
-    auto const& renderer_runtime = renderer->GetRuntimeData();
-    REX::W32::ID3D11Device* const device = renderer_runtime.forwarder;
-    REX::W32::ID3D11DeviceContext* const context = renderer_runtime.context;
-    if (!device || !context)
-        return;
-
-    if (!ensure_device_objects(device))
-        return;
 
     Config const config = Setting::instance().get_config();
     RE::BSGraphics::ScreenSize const screen = RE::BSGraphics::Renderer::GetScreenSize();
@@ -646,72 +703,30 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
     if (!resolve_panel_layout(config, screen.width, screen.height, layout))
         return;
 
-    // Report the first failure of a streak and stay quiet afterwards: a persistent failure must not
-    // log a line every frame, and nothing here retries or spins.
-    auto const report_failure = [this](REX::W32::HRESULT result)
-    {
-        if (m_back_buffer_error_logged)
-            return;
-        logger::error("Panel: the swap-chain back buffer or its view is unavailable ({:X}); the panel is skipped this frame", static_cast<unsigned int>(result));
-        m_back_buffer_error_logged = true;
-    };
-
-    // The composite target is the ENGINE'S OWN back-buffer view - renderWindows[0].renderView, the
-    // target the engine's UI pass paints the panel menu into and the pixels that actually reach the
-    // screen. Reaching it through the engine's renderer sidesteps the present hook's swap chain
-    // entirely: that swap chain is another mod's proxy (the crash log names a DXGISwapChainProxy),
-    // and its buffer slots do not necessarily match what gets presented - the content dump caught the
-    // composed panel absent from slot 0 while the movie's chrome was on screen. The engine's view is
-    // borrowed, never owned; when it is absent (mid-resize) the plugin falls back to slot 0 of the
-    // proxied swap chain for that frame.
-    REX::W32::ID3D11RenderTargetView* back_buffer_rtv = renderer_runtime.renderWindows[0].renderView;
-    REX::W32::ID3D11Texture2D* back_buffer = nullptr;
-    if (!back_buffer_rtv)
-    {
-        REX::W32::HRESULT const buffer_hr = swap_chain->GetBuffer(0, REX::W32::IID_ID3D11Texture2D, reinterpret_cast<void**>(&back_buffer));
-        if (!REX::W32::SUCCESS(buffer_hr) || !back_buffer)
-        {
-            report_failure(buffer_hr);
-            return;
-        }
-
-        REX::W32::HRESULT const rtv_hr = device->CreateRenderTargetView(back_buffer, nullptr, &back_buffer_rtv);
-        if (!REX::W32::SUCCESS(rtv_hr) || !back_buffer_rtv)
-        {
-            report_failure(rtv_hr);
-            back_buffer->Release();
-            return;
-        }
-    }
-    m_back_buffer_error_logged = false;
-
-    // The colour target stays panel-sized; the depth buffer is sized to the actual resource behind
-    // the back-buffer view, because the geometry pass binds the two views together and D3D11
-    // silently drops the whole OMSetRenderTargets when their resource sizes differ - the empty
-    // window this once produced. Querying the bound resource (instead of trusting the reported
-    // render size) also rebuilds the depth buffer whenever the engine swaps in a differently sized
-    // back buffer. The queried texture is a temporary reference used for the desc alone; the
-    // function-end cleanup only ever releases the fallback path's own slot-0 view and texture.
-    uint32_t target_width = screen.width;
-    uint32_t target_height = screen.height;
-    if (!back_buffer)
-    {
-        REX::W32::ID3D11Texture2D* bound_texture = nullptr;
-        back_buffer_rtv->GetResource(reinterpret_cast<REX::W32::ID3D11Resource**>(&bound_texture));
-        if (bound_texture)
-        {
-            REX::W32::D3D11_TEXTURE2D_DESC back_desc{};
-            bound_texture->GetDesc(&back_desc);
-            target_width = back_desc.width;
-            target_height = back_desc.height;
-            bound_texture->Release();
-        }
-    }
     if (!m_target.matches(device, layout.width, layout.height, target_width, target_height))
     {
         m_target.release();
         if (!m_target.init(device, layout.width, layout.height, target_width, target_height))
             return;
+    }
+
+    // One-shot identification, taken on the first frame that actually draws: which buffer does the
+    // present-time kFRAMEBUFFER.RTV point at (R8G8B8A8 = CS's UI buffer under frame generation,
+    // R8G8B8A8/B8G8R8A8 otherwise, R10G10B10A2 = the wrapped swap-chain buffer)? Only buffers the
+    // HDR output or the FFX UI composition read can carry the panel to the screen.
+    if (!m_ui_target_probe_done)
+    {
+        m_ui_target_probe_done = true;
+        REX::W32::ID3D11Texture2D* probe_texture = nullptr;
+        back_buffer_rtv->GetResource(reinterpret_cast<REX::W32::ID3D11Resource**>(&probe_texture));
+        if (probe_texture)
+        {
+            REX::W32::D3D11_TEXTURE2D_DESC probe_desc{};
+            probe_texture->GetDesc(&probe_desc);
+            logger::info("Panel probe: the drawing target is a {}x{} texture, format={:#x}",
+                probe_desc.width, probe_desc.height, static_cast<unsigned>(probe_desc.format));
+            probe_texture->Release();
+        }
     }
 
     // Everything the panel overwrites is put back afterwards, so the engine's own draw of the same
@@ -735,36 +750,71 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
-    // The chrome draws in two halves with the character between them, ALL onto the engine's own
-    // back-buffer view: the fill (so no world content shows through), the character meshes directly
-    // over the fill with the panel's own depth, and the hairline band last. There is no offscreen
-    // pass - the offscreen target's empty reads are what once turned the window black.
-    m_composite_pass.draw(context, back_buffer_rtv, rectangle, PanelCompositePhase::kFill,
-        Panel_Background_Color, Panel_Border_Color, inset, built_in_chrome);
+    // Built-in chrome draws in two halves with the character between them: the fill (so no world
+    // content shows through), the character meshes directly over the fill with the panel's own
+    // depth, and the hairline band last. A skin's movie already owns the backdrop - the engine drew
+    // it into this buffer during its UI pass - so both halves are skipped and the character
+    // alpha-blends straight over the movie.
+    if (built_in_chrome)
+    {
+        m_composite_pass.draw(context, back_buffer_rtv, rectangle, PanelCompositePhase::kFill,
+            Panel_Background_Color, Panel_Border_Color, inset, built_in_chrome);
+    }
+
+    // One-shot readback right after the fill: did the fill land in this buffer at all? The
+    // expected texel is the background colour (13,13,15 at 8-bit). A world-coloured or zero
+    // readback means the draw itself is being dropped; a correct readback with nothing on screen
+    // means the buffer is not carried to the display. Read AFTER the whole frame so the character
+    // and band are also in, then decide from the numbers.
+    if (!m_fill_probe_done && built_in_chrome && back_buffer_rtv)
+    {
+        m_fill_probe_done = true;
+        REX::W32::ID3D11Texture2D* probe_target = nullptr;
+        back_buffer_rtv->GetResource(reinterpret_cast<REX::W32::ID3D11Resource**>(&probe_target));
+        if (probe_target)
+        {
+            REX::W32::D3D11_TEXTURE2D_DESC probe_desc{};
+            probe_target->GetDesc(&probe_desc);
+            probe_desc.usage = REX::W32::D3D11_USAGE_STAGING;
+            probe_desc.bindFlags = 0;
+            probe_desc.cpuAccessFlags = REX::W32::D3D11_CPU_ACCESS_READ;
+            probe_desc.miscFlags = 0;
+            probe_desc.mipLevels = 1;
+            probe_desc.arraySize = 1;
+            probe_desc.sampleDesc.count = 1;
+            REX::W32::ID3D11Texture2D* staging = nullptr;
+            if (REX::W32::SUCCESS(device->CreateTexture2D(&probe_desc, nullptr, &staging)) && staging)
+            {
+                context->CopyResource(staging, probe_target);
+                REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
+                if (REX::W32::SUCCESS(context->Map(staging, 0, REX::W32::D3D11_MAP_READ, 0, &mapped)) && mapped.data)
+                {
+                    uint32_t const left = static_cast<uint32_t>(layout.x);
+                    uint32_t const top = static_cast<uint32_t>(layout.y);
+                    auto const texel = [&](uint32_t x, uint32_t y)
+                    {
+                        uint8_t const* p = static_cast<uint8_t const*>(mapped.data) +
+                            static_cast<std::size_t>(y) * mapped.rowPitch + static_cast<std::size_t>(x) * 4u;
+                        return fmt::format("({:d},{:d},{:d},{:d})", p[0], p[1], p[2], p[3]);
+                    };
+                    logger::info("Panel probe: post-frame texels fill(2,2)={} fill(+30,+30)={} centre={}",
+                        texel(left + 2, top + 2), texel(left + 30, top + 30),
+                        texel(left + layout.width / 2, top + layout.height / 2));
+                    context->Unmap(staging, 0);
+                }
+                staging->Release();
+            }
+            probe_target->Release();
+        }
+    }
 
     m_geometry_pass.draw(device, context, back_buffer_rtv, m_target.dsv(), rectangle,
-        camera, m_render_draws);
+        camera, m_render_draws, !built_in_chrome);
 
-    m_composite_pass.draw(context, back_buffer_rtv, rectangle, PanelCompositePhase::kBand,
-        Panel_Background_Color, Panel_Border_Color, inset, built_in_chrome);
-
-    // One-shot per-session content dump: the pixels answer what the log cannot - whether the geometry
-    // pass reaches the target at all, and whether the composite's write survives onto the back buffer.
-    ++m_composited_frames;
-    bool const dump_now = !m_target_dumped || (m_composited_frames == 90 && !m_second_dumped);
-    if (dump_now)
+    if (built_in_chrome)
     {
-        if (m_composited_frames == 90)
-            m_second_dumped = true;
-        m_target_dumped = true;
-        std::string const suffix = m_second_dumped && m_composited_frames == 90 ? "2" : "";
-        REX::W32::ID3D11Resource* presented_resource = nullptr;
-        back_buffer_rtv->GetResource(&presented_resource);
-        if (presented_resource)
-        {
-            dump_texture_tga(device, context, static_cast<REX::W32::ID3D11Texture2D*>(presented_resource), "PlayerPanel_backbuffer" + suffix);
-            presented_resource->Release();
-        }
+        m_composite_pass.draw(context, back_buffer_rtv, rectangle, PanelCompositePhase::kBand,
+            Panel_Background_Color, Panel_Border_Color, inset, built_in_chrome);
     }
 
     capture.restore();
@@ -774,15 +824,6 @@ void PanelRenderer::draw(REX::W32::IDXGISwapChain* swap_chain)
         m_first_composite_logged = true;
         logger::info("Panel composite: first draw (chrome={} rect=({},{}),{}x{})",
             built_in_chrome ? "built-in" : "swf", layout.x, layout.y, layout.width, layout.height);
-    }
-
-    // Released only after the state capture has restored the engine's own targets. The engine's own
-    // view is borrowed and never released here; only the fallback path's slot-0 view and texture are
-    // owned by this frame.
-    if (back_buffer)
-    {
-        back_buffer_rtv->Release();
-        back_buffer->Release();
     }
 }
 

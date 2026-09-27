@@ -136,7 +136,7 @@ namespace
         // depth-bias clamp. The panel draws the same geometry with the same vertex data, so the
         // same rasterizer settings keep the two paths comparable.
         REX::W32::D3D11_RASTERIZER_DESC desc{};
-        desc.cullMode = REX::W32::D3D11_CULL_BACK;
+        desc.cullMode = REX::W32::D3D11_CULL_NONE;
         desc.frontCounterClockwise = true;
         desc.fillMode = REX::W32::D3D11_FILL_SOLID;
         desc.scissorEnable = false;
@@ -281,6 +281,7 @@ PanelGeometryPass::PanelGeometryPass() :
     m_depth(nullptr),
     m_rasterizer(nullptr),
     m_blend(nullptr),
+    m_blend_alpha(nullptr),
     m_sampler(nullptr),
     m_layouts() {}
 
@@ -306,6 +307,7 @@ bool PanelGeometryPass::init(REX::W32::ID3D11Device* device)
         create_depth_state(device, true, REX::W32::D3D11_COMPARISON_LESS, &m_depth) &&
         create_rasterizer_state(device, &m_rasterizer) &&
         create_blend_state(device, &m_blend) &&
+        create_alpha_blend_state(device, &m_blend_alpha) &&
         create_sampler_state(device, &m_sampler);
     if (!ready)
     {
@@ -329,6 +331,11 @@ void PanelGeometryPass::release()
     {
         m_blend->Release();
         m_blend = nullptr;
+    }
+    if (m_blend_alpha)
+    {
+        m_blend_alpha->Release();
+        m_blend_alpha = nullptr;
     }
     if (m_rasterizer)
     {
@@ -516,14 +523,27 @@ bool PanelGeometryPass::ensure_position_scratch(REX::W32::ID3D11Device* device, 
     void PanelGeometryPass::draw(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
         REX::W32::ID3D11RenderTargetView* target, REX::W32::ID3D11DepthStencilView* depth,
         REX::W32::D3D11_VIEWPORT const& rectangle, PanelCameraFrame const& camera,
-        std::span<PanelDraw const> draws)
+        std::span<PanelDraw const> draws, [[maybe_unused]] bool alpha_blend)
 {
     if (!device || !context || !m_ref_static_vs || !m_ref_skinned_vs || !m_ref_pixel_shader ||
         !m_frame_cb || !m_draw_cb || !m_depth || !m_rasterizer ||
-        !m_blend || !m_sampler)
+        !m_blend || !m_blend_alpha || !m_sampler)
         return;
     if (!target || !depth)
         return;
+
+    // Same hazard rule as the composite pass: the engine's leftover SRVs may alias the colour
+    // target, and a hazard draw is silently dropped. Null them before binding the target; the
+    // caller's state capture puts them back. (This pass's own diffuse SRV is set per draw below.)
+    REX::W32::ID3D11ShaderResourceView* const null_srvs[8]{};
+    context->PSSetShaderResources(0, 8, null_srvs);
+    context->VSSetShaderResources(0, 8, null_srvs);
+    context->GSSetShaderResources(0, 8, null_srvs);
+    context->HSSetShaderResources(0, 8, null_srvs);
+    context->DSSetShaderResources(0, 8, null_srvs);
+    context->CSSetShaderResources(0, 8, null_srvs);
+    REX::W32::ID3D11UnorderedAccessView* const null_uav = nullptr;
+    context->CSSetUnorderedAccessViews(0, 1, &null_uav, nullptr);
 
     // The character draws straight onto the window over the caller's fill; only the depth is cleared,
     // so the body's own partitions occlude each other correctly.
@@ -536,7 +556,9 @@ bool PanelGeometryPass::ensure_position_scratch(REX::W32::ID3D11Device* device, 
     // full-screen viewport would let geometry spill outside the panel over the game world - the
     // viewport is the panel rectangle, which is what confines the character to the window.
     context->RSSetViewports(1, &rectangle);
-    context->OMSetBlendState(m_blend, nullptr, 0xFFFFFFFF);
+    // The skin path blends the character over the movie the engine drew underneath; the built-in
+    // chrome's fill is already the backdrop, so the character writes opaque.
+    context->OMSetBlendState(m_blend_alpha, nullptr, 0xFFFFFFFF);
     context->OMSetDepthStencilState(m_depth, 0);
     context->RSSetState(m_rasterizer);
     context->PSSetSamplers(0, 1, &m_sampler);
@@ -791,12 +813,27 @@ void PanelCompositePass::draw(REX::W32::ID3D11DeviceContext* context, REX::W32::
         return;
     (void)m_blend_alpha;
 
+    // The engine's leftover shader-resource bindings alias its own render targets (the last passes
+    // of a frame sample what earlier passes wrote). Drawing into a texture that any stage still has
+    // bound as an SRV is a hazard, and D3D11 answers a hazard by silently dropping the draw - the
+    // all-zero readback this once produced. Null the SRVs of every shader stage we do not drive
+    // before binding the target; the caller's state capture puts them back.
+    REX::W32::ID3D11ShaderResourceView* const null_srvs[8]{};
+    context->PSSetShaderResources(0, 8, null_srvs);
+    context->VSSetShaderResources(0, 8, null_srvs);
+    context->GSSetShaderResources(0, 8, null_srvs);
+    context->HSSetShaderResources(0, 8, null_srvs);
+    context->DSSetShaderResources(0, 8, null_srvs);
+    context->CSSetShaderResources(0, 8, null_srvs);
+    REX::W32::ID3D11UnorderedAccessView* const null_uav = nullptr;
+    context->CSSetUnorderedAccessViews(0, 1, &null_uav, nullptr);
+
     // The panel never tests against the world depth: the window must be a solid overlay.
     context->OMSetRenderTargets(1, &target, nullptr);
     // The chrome decides how the character reaches the target: opaque over the plugin's own fill, or
     // source-alpha blended over the movie the engine has already drawn underneath. Both states belong
     // to this pass and are bound here, inside the caller's single state-capture pair.
-    context->OMSetBlendState(m_blend, nullptr, 0xFFFFFFFF);
+    context->OMSetBlendState(m_blend_alpha, nullptr, 0xFFFFFFFF);
     context->OMSetDepthStencilState(m_depth_none, 0);
     context->RSSetState(m_rasterizer);
     context->RSSetViewports(1, &rectangle);

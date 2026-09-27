@@ -100,6 +100,10 @@ private:
 
     void prepare();
     void draw(REX::W32::IDXGISwapChain* swap_chain);
+    // Shared tail of the draw paths: the frame handoff, the passes and the diagnostics. `rtv` is
+    // borrowed by the caller for the duration of the call.
+    void draw_frame(REX::W32::ID3D11Device* device, REX::W32::ID3D11DeviceContext* context,
+        REX::W32::ID3D11RenderTargetView* rtv, uint32_t target_width, uint32_t target_height);
     void release();
     [[nodiscard]] bool ensure_device_objects(REX::W32::ID3D11Device* device);
     void apply_panel_input(PanelLayout const& layout, uint32_t screen_width, uint32_t screen_height,
@@ -154,6 +158,11 @@ private:
     // reach the collection after it).
     bool m_target_dumped;
     bool m_second_dumped;
+    // One-shot identification of the target the UI pass has bound (see draw_into_current_target).
+    bool m_ui_target_probe_done;
+    // One-shot composite probe: a pixel readback right after the fill draw, so the log carries the
+    // fill's own landing (or non-landing) on the composite target, not just the end-of-frame dump.
+    bool m_fill_probe_done;
     // Render-thread frame counter for the second dump.
     uint32_t m_composited_frames;
     // Whether the panel is on screen, mirrored for the render thread: the redraw-last fallback (an

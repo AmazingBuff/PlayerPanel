@@ -106,15 +106,30 @@ PanelMenu::PanelMenu() : m_movie_loaded(false)
     // the game, so kPausesGame is never set, and it is not modal, so gameplay keeps running behind it.
     menuFlags.set(RE::UI_MENU_FLAGS::kUsesCursor);
 
-    // THE SKIN MOVIE IS SUSPENDED, so the constructor loads none. The engine's UI pass paints a
-    // loaded movie's pixels after the plugin's present-hook composite has run - measured by the
-    // content dump, where the composed panel was absent from the presented buffer while the movie's
-    // chrome was on screen - so a skin's opaque backdrop covered the character every frame, which is
-    // exactly the "empty frame" report. Until the composite can run after the UI pass (a different
-    // hook point, or the chrome painted by the composite itself), loading a movie only buys a frame
-    // that hides the panel's content, and the built-in chrome applies instead.
-    m_movie_loaded = false;
-    logger::warn("Panel: the skin movie is suspended ({}); the engine paints UI after the plugin's composite, so a loaded skin would cover the panel content. The built-in chrome applies", Panel_Swf_Path);
+    // The skin movie loads here, on the engine's own UI pass, when the configuration asks for it.
+    // The engine draws a loaded movie's pixels into its frame buffer, and the frame generator's proxy
+    // copies that buffer to the screen before the plugin's present-hook composite runs over it - so
+    // the movie is the backdrop the character is drawn on, which is exactly the layering the skin
+    // needs. (The earlier suspension measured the composite vanishing; its real cause was the
+    // composite targeting the engine's renderView, an intermediate the render thread's next frame
+    // overwrites, not the movie's layering.) The default configuration keeps the movie off: the
+    // shipped panel.swf is a placeholder, and the built-in chrome owns the backdrop until a real
+    // skin ships.
+    if (!Setting::instance().get_config().skin_swf_enabled)
+        return;
+
+    std::string movie_name;
+    if (!to_movie_name(Panel_Swf_Path, movie_name))
+    {
+        logger::warn("Panel: the skin path is unusable ({}); the built-in chrome applies", Panel_Swf_Path);
+        return;
+    }
+
+    RE::BSScaleformManager* const scaleform = RE::BSScaleformManager::GetSingleton();
+    m_movie_loaded = scaleform && scaleform->LoadMovie(this, uiMovie, movie_name.c_str(),
+        RE::GFxMovieView::ScaleModeType::kShowAll, 1.0f);
+    if (!m_movie_loaded)
+        logger::warn("Panel: the skin movie failed to load ({}); the built-in chrome applies", Panel_Swf_Path);
 }
 
 void PanelMenu::install()

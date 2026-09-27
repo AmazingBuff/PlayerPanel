@@ -26,6 +26,16 @@ namespace
     constexpr double Default_Camera_Distance = 0.0; // zero means automatic framing.
     constexpr double Default_Alpha_Test_Threshold = 0.5;
 
+    // The Stage 0 spike is off by default: it draws through the engine's own pass outside the
+    // engine's accumulation, which crashed on the first run, and it exists only to answer one
+    // question. See docs/plans/panel-render-2b.md.
+    constexpr bool Default_Spike_Engine_Pass = false;
+
+    // The skin movie is off by default: the shipped panel.swf is a placeholder with no art, so the
+    // built-in backdrop and border are what the panel shows until a real skin ships. Setting this to
+    // true loads the movie from PanelSwfPath and lets it own the panel's chrome.
+    constexpr bool Default_Skin_Swf_Enabled = false;
+
     // The character's inset while a skin owns the chrome. It is a fraction of the panel height, like
     // the size keys, so it stays the same apparent frame on every resolution. The default is chosen
     // against the shipped default skin's band: it reads as a frame around the character rather than a
@@ -64,10 +74,12 @@ namespace
             .panel_position_x = Default_Panel_Position,
             .panel_position_y = Default_Panel_Position,
             .panel_swf_path = {},
+            .skin_swf_enabled = Default_Skin_Swf_Enabled,
             .panel_skin_inset_fraction = Default_Panel_Skin_Inset_Fraction,
             .camera_fov = Default_Camera_Fov,
             .camera_distance = Default_Camera_Distance,
             .alpha_test_threshold = Default_Alpha_Test_Threshold,
+            .spike_engine_pass = Default_Spike_Engine_Pass,
         };
         set_panel_swf_path(config, Panel_Swf_Path);
         return config;
@@ -186,6 +198,7 @@ void Setting::load()
     config.panel_position_y = is_usable_panel_position(position_y) ? position_y : Default_Panel_Position;
     char const* const swf_path = ini.GetValue("General", "PanelSwfPath", Panel_Swf_Path);
     set_panel_swf_path(config, is_usable_panel_swf_path(swf_path) ? swf_path : Panel_Swf_Path);
+    config.skin_swf_enabled = ini.GetBoolValue("General", "SkinSwfEnabled", Default_Skin_Swf_Enabled);
     double const skin_inset_fraction = ini.GetDoubleValue("General", "PanelSkinInsetFraction", Default_Panel_Skin_Inset_Fraction);
     config.panel_skin_inset_fraction = is_usable_panel_skin_inset_fraction(skin_inset_fraction) ? skin_inset_fraction : Default_Panel_Skin_Inset_Fraction;
     double const camera_fov = ini.GetDoubleValue("General", "CameraFov", Default_Camera_Fov);
@@ -194,6 +207,7 @@ void Setting::load()
     config.camera_distance = is_usable_camera_distance(camera_distance) ? camera_distance : Default_Camera_Distance;
     double const alpha_test_threshold = ini.GetDoubleValue("General", "AlphaTestThreshold", Default_Alpha_Test_Threshold);
     config.alpha_test_threshold = is_usable_alpha_test_threshold(alpha_test_threshold) ? alpha_test_threshold : Default_Alpha_Test_Threshold;
+    config.spike_engine_pass = ini.GetBoolValue("General", "SpikeEnginePass", Default_Spike_Engine_Pass);
 
     // The three absolute pixel keys this module used before are no longer read. Their presence is
     // reported once so an existing INI's stale values are visible instead of being silently obeyed;
@@ -233,10 +247,12 @@ void Setting::save()
     ini.SetDoubleValue("General", "PanelPositionX", config.panel_position_x);
     ini.SetDoubleValue("General", "PanelPositionY", config.panel_position_y);
     ini.SetValue("General", "PanelSwfPath", config.panel_swf_path);
+    ini.SetBoolValue("General", "SkinSwfEnabled", config.skin_swf_enabled);
     ini.SetDoubleValue("General", "PanelSkinInsetFraction", config.panel_skin_inset_fraction);
     ini.SetDoubleValue("General", "CameraFov", config.camera_fov);
     ini.SetDoubleValue("General", "CameraDistance", config.camera_distance);
     ini.SetDoubleValue("General", "AlphaTestThreshold", config.alpha_test_threshold);
+    ini.SetBoolValue("General", "SpikeEnginePass", config.spike_engine_pass);
     std::filesystem::create_directories(path.parent_path());
     if (ini.SaveFile(path.c_str()) < 0)
         logger::warn("Failed to save INI");
