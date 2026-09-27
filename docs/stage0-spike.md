@@ -1,6 +1,13 @@
 # Stage-0 spike：游戏内验证清单与标定结果
 
-状态：DLL 已构建并部署（2026-09-27，`build/Release/CharacterPanel.dll` → 游戏目录 `Data/SKSE/Plugins/CharacterPanel.dll`），游戏内验证 **未执行**（需要真人跑一次游戏）。
+状态：DLL 已构建并部署（2026-09-27，`build/Release/CharacterPanel.dll` → **`E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\CharacterPanel.dll`**，即 MO2 mod 目录；游戏经 MO2 虚拟化加载，直接放真实 `Data` 会被清理），游戏内验证 **未执行**（需要真人跑一次游戏）。
+
+## 兼容性结论（已核实，不是版本不兼容）
+
+- 本机运行时：skse64 2.2.6 + SkyrimSE 1.6.1170（MO2 profile `AE`）。
+- 工作区内 HighlightLootableCorpses 用**同一个 CommonLibSSE-NG v9.1.0 submodule** 在同一环境跑通过——v9.1.0 与 skse64 2.2.6 无结构性不兼容。
+- 首次游戏内失败（`PluginManager.cpp (1000)` 断言）根因：spike 第一版用 `SKSE::Init` 的 `trampoline=true` 从 skse64 **共享 branch pool** 申请 64KB；skse64 2.2.6 源码确认该池分配失败即 `ASSERT(false)` fatal（`AllocateFromBranchPool`，Pool 仅十几 KB）。修复：改用 `SKSE::GetTrampoline().create(64KB)` 自建**私有本地 trampoline**（不碰共享池）。
+- skse64 2.2.6 的版本数据检查（`versionIndependence`/`compatibleVersions`/`seVersionRequired`）与 v9.1.0 生成的 `PluginVersionData`（`UsesAddressLibrary` + `UsesNoStructs`，`versionIndependenceEx` 默认含 `kVersionIndependentEx_AddressLibraryV5`）兼容：2.2.6 只拒绝 `versionIndependence`（+0x308）上的未知位，Ex 字段（+0x304）的 V5 位不参与该检查。
 
 ## 本 spike 回答的三个问题
 
