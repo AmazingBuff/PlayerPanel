@@ -173,56 +173,62 @@ namespace spike
     void PassHook::thunk_rendezvous1(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
         std::uint32_t render_flags)
     {
-        instance().on_pass(pass, technique, alpha_test, render_flags, 0);
+        // When on_pass reports the pass was consumed by a replay (drawn into
+        // the offscreen target), the original call must NOT run again or the
+        // pass draws twice; otherwise it must always run (CS convention).
+        if (!instance().on_pass(pass, technique, alpha_test, render_flags, 0))
+        {
+            REL::Relocation<RenderPassImmediately_t> setup{ REL::RelocationID(100854, 107644) };
+            setup.get()(pass, technique, alpha_test, render_flags);
+        }
     }
 
     void PassHook::thunk_rendezvous2(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
         std::uint32_t render_flags)
     {
-        instance().on_pass(pass, technique, alpha_test, render_flags, 1);
+        if (!instance().on_pass(pass, technique, alpha_test, render_flags, 1))
+        {
+            REL::Relocation<RenderPassImmediately_t> setup{ REL::RelocationID(100854, 107644) };
+            setup.get()(pass, technique, alpha_test, render_flags);
+        }
     }
 
     void PassHook::thunk_rendezvous3(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
         std::uint32_t render_flags)
     {
-        instance().on_pass(pass, technique, alpha_test, render_flags, 2);
+        if (!instance().on_pass(pass, technique, alpha_test, render_flags, 2))
+        {
+            REL::Relocation<RenderPassImmediately_t> setup{ REL::RelocationID(100854, 107644) };
+            setup.get()(pass, technique, alpha_test, render_flags);
+        }
     }
 
-    void PassHook::on_pass(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test, std::uint32_t render_flags,
+    bool PassHook::on_pass(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test, std::uint32_t render_flags,
         std::size_t site_index)
     {
         if (!pass || !pass->geometry)
-            return;
+            return false;
 
-        // Identity check, once: the call instruction at the call site targets
-        // some function; compare its target with the resolved
-        // BSBatchRenderer::SetupAndDrawPass address.
+        // Identity check, once: log the resolved SetupAndDrawPass address for
+        // offline comparison with the call-site addresses in the log.
         if (!m_identity_logged.exchange(true, std::memory_order_acq_rel))
         {
             REL::Relocation<RenderPassImmediately_t> setup{ REL::RelocationID(100854, 107644) };
-            std::uintptr_t setup_address = reinterpret_cast<std::uintptr_t>(setup.get());
-            // Read the call target out of the hooked instruction stream: the
-            // site now jumps to our thunk, so compare against the trampoline's
-            // underlying original target instead is not directly available.
-            // Instead, compare SetupAndDrawPass's address against the pass
-            // dispatch function each site calls by reading the relocation
-            // table entry recorded at install time is unnecessary: CS
-            // thunk convention is that all three sites call the same
-            // function. We log the address for offline comparison.
-            logger::info("[spike] identity: SetupAndDrawPass resolves to 0x{:X}", setup_address);
+            logger::info("[spike] identity: SetupAndDrawPass resolves to 0x{:X}",
+                reinterpret_cast<std::uintptr_t>(setup.get()));
             m_result.identity_verified.store(true, std::memory_order_release);
         }
 
         if (!m_armed.load(std::memory_order_acquire))
-            return;
+            return false;
 
         // Match against the clone's geometries.
         CloneActor& clone = CloneActor::instance();
         if (!clone.has_actor())
-            return;
+            return false;
         const std::vector<RE::BSGeometry*>& geometries = clone.geometries();
         if (std::ranges::find(geometries, pass->geometry) == geometries.end())
-            return;
+            return false;
 
         m_result.observed_passes.fetch_add(1, std::memory_order_acq_rel);
         logger::info("[spike] clone pass: geometry={} technique=0x{:X} passEnum=0x{:X} alphaTest={} numLights={} "
@@ -231,7 +237,10 @@ namespace spike
             pass->numShadowLights,
             pass->shader ? std::to_underlying(pass->shader->shaderType.get()) : 0u, site_index);
 
-        do_replay(pass, technique, alpha_test, render_flags, site_index);
+        // The replay draws the pass into our own target; returning true tells
+        // the thunk the pass was consumed and must not draw again.
+        bool consumed = do_replay(pass, technique, alpha_test, render_flags, site_index);
+        return consumed;
     }
 
     bool PassHook::do_replay(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,

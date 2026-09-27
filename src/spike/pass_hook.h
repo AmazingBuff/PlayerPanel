@@ -57,7 +57,9 @@ namespace spike
         static void thunk_rendezvous3(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
             std::uint32_t render_flags);
 
-        void on_pass(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test, std::uint32_t render_flags,
+        // Returns true when the pass was consumed by a replay (the thunk must
+        // then skip the original call); false when the original must run.
+        bool on_pass(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test, std::uint32_t render_flags,
             std::size_t site_index);
 
         bool do_replay(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test, std::uint32_t render_flags,

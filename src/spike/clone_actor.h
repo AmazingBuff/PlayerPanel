@@ -43,6 +43,7 @@ namespace spike
         CloneActor() = default;
 
         void spawn();
+        void position_and_dress();
         void despawn();
 
         enum class Request : std::uint8_t
@@ -56,6 +57,7 @@ namespace spike
         RE::ObjectRefHandle m_handle{};
         RE::Actor* m_actor{ nullptr };
         std::vector<RE::BSGeometry*> m_geometries;
+        bool m_dressed{ false };
     };
 }
 

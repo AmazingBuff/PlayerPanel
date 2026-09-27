@@ -24,21 +24,6 @@ namespace spike
             return result;
         }
 
-        void mirror_worn_equipment(RE::Actor* clone, RE::PlayerCharacter* player)
-        {
-            auto* changes = player->GetInventoryChanges();
-            if (!changes || !changes->entryList)
-                return;
-            for (RE::InventoryEntryData* entry : *changes->entryList)
-            {
-                if (!entry || !entry->IsWorn())
-                    continue;
-                RE::TESBoundObject* object = entry->object;  // GetObject is macro-clashed by Windows.h
-                if (object)
-                    clone->AddWornItem(object, 1, true, 0, 0);
-            }
-        }
-
         void make_inert(RE::Actor* clone)
         {
             // Keep the clone alive in the high-priority update radius but stop
@@ -47,6 +32,33 @@ namespace spike
             clone->SetActorValue(RE::ActorValue::kConfidence, 0.0f);
             clone->SetActorValue(RE::ActorValue::kAssistance, 0.0f);
             clone->GetActorRuntimeData().boolFlags.set(RE::Actor::BOOL_FLAGS::kMovementBlocked);
+        }
+
+        // worn/equipped mirroring that cannot throw the game down: skips
+        // weapons (dual-wield slot logic is crash-prone off the equip UI) and
+        // only dresses armor/clothing, which is what the spike needs to see.
+        void mirror_worn_equipment(RE::Actor* clone, RE::PlayerCharacter* player)
+        {
+            auto* changes = player->GetInventoryChanges();
+            if (!changes || !changes->entryList)
+                return;
+            std::uint32_t worn = 0;
+            std::uint32_t failed = 0;
+            for (RE::InventoryEntryData* entry : *changes->entryList)
+            {
+                if (!entry || !entry->IsWorn())
+                    continue;
+                RE::TESBoundObject* object = entry->object;  // GetObject is macro-clashed by Windows.h
+                if (!object)
+                    continue;
+                auto* armor = object->As<RE::TESObjectARMO>();
+                if (!armor)
+                    continue;  // spike scope: armor/clothing only
+                ++worn;
+                if (!clone->AddWornItem(object, 1, true, 0, 0))
+                    ++failed;
+            }
+            logger::info("[spike] worn armor mirrored: {} ok, {} failed", worn - failed, failed);
         }
     }
 
@@ -88,7 +100,11 @@ namespace spike
         // The 3D tree appears a few frames after placement and after the worn
         // items are equipped; collect geometries once the root exists and at
         // least one geometry is present.
-        if (m_actor && m_geometries.empty())
+        if (m_actor && !m_dressed)
+        {
+            position_and_dress();
+        }
+        else if (m_actor && m_dressed && m_geometries.empty())
         {
             if (RE::NiAVObject* root = m_actor->GetCurrent3D())
             {
@@ -105,9 +121,9 @@ namespace spike
     void CloneActor::spawn()
     {
         RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
-        if (!player || !player->GetActorBase())
+        if (!player || !player->GetActorBase() || !player->GetSequencer())
         {
-            logger::warn("[spike] no player character; clone not spawned");
+            logger::warn("[spike] no player character or AI process; clone not spawned");
             return;
         }
 
@@ -132,6 +148,23 @@ namespace spike
         m_handle = RE::ObjectRefHandle(clone);
         m_actor = clone;
 
+        // Let the engine initialize the clone's AI process at the placement
+        // spot first; reposition and dress it next frame when the process
+        // and character controller exist. Touching SetPosition/AddWornItem in
+        // the same tick as placement crashed the game in the first run.
+        logger::info("[spike] clone placed; positioning next frame");
+    }
+
+    void CloneActor::position_and_dress()
+    {
+        RE::Actor* clone = m_actor;
+        RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
+        if (!clone || !player || !clone->GetSequencer())
+        {
+            logger::warn("[spike] clone not ready for positioning; retrying");
+            return;
+        }
+
         // Place in front of the player, facing them. Facing uses the angle
         // convention of GetAngle/SetAngle (degrees, Z = yaw).
         RE::NiPoint3 playerPos = player->GetPosition();
@@ -147,7 +180,9 @@ namespace spike
         make_inert(clone);
         mirror_worn_equipment(clone, player);
 
-        logger::info("[spike] clone spawned at ({:.1f}, {:.1f}, {:.1f})", spawnPos.x, spawnPos.y, spawnPos.z);
+        m_dressed = true;
+        logger::info("[spike] clone positioned at ({:.1f}, {:.1f}, {:.1f}) and dressed", spawnPos.x, spawnPos.y,
+            spawnPos.z);
     }
 
     void CloneActor::despawn()
