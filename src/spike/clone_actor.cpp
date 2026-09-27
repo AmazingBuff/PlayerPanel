@@ -30,39 +30,75 @@ namespace spike
 
         void make_inert(RE::Actor* clone)
         {
-            // Keep the clone alive in the high-priority update radius but stop
-            // it from wandering, combat or dialogue.
-            clone->SetActorValue(RE::ActorValue::kAggression, 0.0f);
-            clone->SetActorValue(RE::ActorValue::kConfidence, 0.0f);
-            clone->SetActorValue(RE::ActorValue::kAssistance, 0.0f);
+            // No SetActorValue here: it dispatches through the ActorValueOwner
+            // secondary base, whose vtable the engine populates long after the
+            // actor's primary vtable and AI process are live (two in-game
+            // crashes at call [rax+0x38], 60 frames apart, proved the
+            // secondary-base window is not bounded by any practical grace
+            // period). The duplicate already inherits the player's calm
+            // values; kMovementBlocked is a plain flag write, no dispatch.
             clone->GetActorRuntimeData().boolFlags.set(RE::Actor::BOOL_FLAGS::kMovementBlocked);
         }
 
-        // worn/equipped mirroring that cannot throw the game down: skips
-        // weapons (dual-wield slot logic is crash-prone off the equip UI) and
-        // only dresses armor/clothing, which is what the spike needs to see.
+        // Body-worn mirroring following the order SKSE's own EquipItemEx uses:
+        // AddObjectToContainer first, then equip through ActorEquipManager.
+        // Calling AddWornItem with a base object that was never in the clone's
+        // container crashes inside ExtraDataList::GetEnchantment on a garbage
+        // extra-list pointer (documented engine behaviour, see the in-game
+        // verified reference implementation). Only biped body slots are
+        // mirrored; the worn flag also marks weapons, ammo and torches.
         void mirror_worn_equipment(RE::Actor* clone, RE::PlayerCharacter* player)
         {
-            auto* changes = player->GetInventoryChanges();
+            RE::InventoryChanges* changes = player->GetInventoryChanges(true);
             if (!changes || !changes->entryList)
+            {
+                logger::warn("[spike] player container changes unavailable; clone not dressed");
                 return;
-            std::uint32_t worn = 0;
-            std::uint32_t failed = 0;
+            }
+            RE::ActorEquipManager* equip_manager = RE::ActorEquipManager::GetSingleton();
+            if (!equip_manager)
+            {
+                logger::warn("[spike] equip manager unavailable; clone not dressed");
+                return;
+            }
+
+            using BipedSlot = RE::BGSBipedObjectForm::BipedObjectSlot;
+            constexpr BipedSlot Body_Slots[] = {
+                BipedSlot::kBody,     BipedSlot::kHead,     BipedSlot::kHands,
+                BipedSlot::kForearms, BipedSlot::kAmulet,   BipedSlot::kRing,
+                BipedSlot::kFeet,     BipedSlot::kCalves,   BipedSlot::kTail,
+                BipedSlot::kLongHair, BipedSlot::kCirclet,  BipedSlot::kEars,
+                BipedSlot::kModMouth, BipedSlot::kModNeck,  BipedSlot::kModChestPrimary,
+                BipedSlot::kModChestSecondary, BipedSlot::kModShoulder, BipedSlot::kModArmLeft,
+                BipedSlot::kModArmRight, BipedSlot::kModLegRight, BipedSlot::kModLegLeft,
+                BipedSlot::kModFaceJewelry,
+            };
+
+            std::uint32_t added = 0;
             for (RE::InventoryEntryData* entry : *changes->entryList)
             {
-                if (!entry || !entry->IsWorn())
+                if (!entry)
                     continue;
                 RE::TESBoundObject* object = entry->object;  // GetObject is macro-clashed by Windows.h
-                if (!object)
+                if (!object || !entry->IsWorn())
                     continue;
-                auto* armor = object->As<RE::TESObjectARMO>();
-                if (!armor)
-                    continue;  // spike scope: armor/clothing only
-                ++worn;
-                if (!clone->AddWornItem(object, 1, true, 0, 0))
-                    ++failed;
+                RE::BGSBipedObjectForm* biped = object->As<RE::BGSBipedObjectForm>();
+                if (!biped)
+                    continue;
+                bool body_worn = std::any_of(std::begin(Body_Slots), std::end(Body_Slots),
+                    [biped](BipedSlot slot) { return biped->HasPartOf(slot); });
+                if (!body_worn)
+                    continue;
+
+                clone->AddObjectToContainer(object, nullptr, 1, nullptr);
+                equip_manager->EquipObject(clone, object, nullptr, 1, nullptr,
+                    false,  // a_queueEquip: applied in this call
+                    true,   // a_forceEquip: the clone has no AI to choose
+                    false,  // a_playSounds: silent
+                    true);  // a_applyNow: dressed immediately
+                ++added;
             }
-            logger::info("[spike] worn armor mirrored: {} ok, {} failed", worn - failed, failed);
+            logger::info("[spike] body-worn items mirrored: {}", added);
         }
     }
 
