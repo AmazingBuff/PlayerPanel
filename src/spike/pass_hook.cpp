@@ -323,23 +323,24 @@ namespace spike
         std::uint32_t prev_stencil_ref = 0;
         context->OMGetDepthStencilState(&prev_depth, &prev_stencil_ref);
 
-        // Size the offscreen target to match the current render target and
-        // take over its exact format: the replayed lighting pass emits
-        // scene-linear HDR values shaped for the engine's kMAIN format.
+        // Size the offscreen target from the engine's kMAIN pool entry: the
+        // lighting pass emits scene-linear HDR shaped for kMAIN's format.
+        // (Cloning whatever OM happens to be bound at the call site picked up
+        // a UNORM intermediate buffer last run, and the HDR output clamped to
+        // black through it.)
         std::uint32_t width = 512;
         std::uint32_t height = 512;
         REX::W32::DXGI_FORMAT main_format = REX::W32::DXGI_FORMAT_R11G11B10_FLOAT;
-        REX::W32::ID3D11Resource* prev_resource = nullptr;
-        prev_rtv->GetResource(&prev_resource);
-        if (prev_resource)
         {
-            auto* texture = static_cast<REX::W32::ID3D11Texture2D*>(prev_resource);
-            REX::W32::D3D11_TEXTURE2D_DESC desc{};
-            texture->GetDesc(&desc);
-            width = desc.width;
-            height = desc.height;
-            main_format = desc.format;
-            prev_resource->Release();
+            auto& main_pool = runtime.renderTargets[std::to_underlying(RE::RENDER_TARGET::kMAIN)];
+            if (main_pool.texture)
+            {
+                REX::W32::D3D11_TEXTURE2D_DESC desc{};
+                main_pool.texture->GetDesc(&desc);
+                width = desc.width;
+                height = desc.height;
+                main_format = desc.format;
+            }
         }
 
         OffscreenTarget& target = offscreen();
