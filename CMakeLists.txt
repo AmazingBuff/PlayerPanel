@@ -12,6 +12,7 @@ set(PROJECT_AUTHOR AmazingBuff)
 option(ENABLE_SKYRIM_SE "Enable support for Skyrim SE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
+option(CHARACTER_PANEL_BUILD_PROBE "Build the opt-in M0 engine evidence probe." ON)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
@@ -125,3 +126,102 @@ target_precompile_headers(
 	PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h
 )
+
+if(CHARACTER_PANEL_BUILD_PROBE)
+	set(PROBE_VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/probe/probe_config.h)
+	configure_file(
+		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_probe/probe_config.h.in
+		${PROBE_VERSION_HEADER}
+		@ONLY
+	)
+
+	set(PROBE_VERSION_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/probe/probe_version.rc)
+	configure_file(
+		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_probe/probe_version.rc.in
+		${PROBE_VERSION_RESOURCE}
+		@ONLY
+	)
+
+	add_library(
+		CharacterPanelProbe
+		SHARED
+		tools/m0_probe/probe.h
+		tools/m0_probe/probe_main.cpp
+		tools/m0_probe/probe_capture.cpp
+		${PROBE_VERSION_HEADER}
+		${PROBE_VERSION_RESOURCE}
+	)
+
+	target_compile_features(
+		CharacterPanelProbe
+		PRIVATE
+		cxx_std_23
+	)
+
+	set_target_properties(
+		CharacterPanelProbe
+		PROPERTIES
+		OUTPUT_NAME CharacterPanelProbe
+		VS_GLOBAL_VCToolsVersion "14.44.35207"
+	)
+
+	if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+		target_compile_options(
+			CharacterPanelProbe
+			PRIVATE
+			/sdl
+			/utf-8
+			/Zi
+			/permissive-
+			/Zc:preprocessor
+			/wd4200
+			$<$<CONFIG:DEBUG>:/ZI>
+			$<$<CONFIG:RELEASE>:/Zi;/Zc:inline;/JMC-;/Ob3>
+		)
+
+		target_compile_definitions(
+			CharacterPanelProbe
+			PRIVATE
+			NOMINMAX
+		)
+
+		target_link_options(
+			CharacterPanelProbe
+			PRIVATE
+			$<$<CONFIG:DEBUG>:/INCREMENTAL;/OPT:NOREF;/OPT:NOICF>
+			$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>
+		)
+	endif()
+
+	target_include_directories(
+		CharacterPanelProbe
+		PRIVATE
+		${CMAKE_CURRENT_BINARY_DIR}/probe
+		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_probe
+	)
+
+	target_link_libraries(
+		CharacterPanelProbe
+		PRIVATE
+		spdlog::spdlog
+		fmt::fmt
+		CommonLibSSE::CommonLibSSE
+		user32
+		ntdll
+	)
+
+	add_custom_target(
+		CharacterPanelProbePackage
+		COMMAND
+		${CMAKE_COMMAND}
+		-DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+		-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
+		-DPROJECT_VERSION=${PROJECT_VERSION}
+		-DDLL_PATH=$<TARGET_FILE:CharacterPanelProbe>
+		-P
+		${CMAKE_CURRENT_SOURCE_DIR}/cmake/probe_packaging.cmake
+		DEPENDS
+		CharacterPanelProbe
+		VERBATIM
+	)
+endif()

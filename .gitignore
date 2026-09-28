@@ -35,3 +35,6 @@ _deps/
 
 # Logs
 *.log
+
+# Local diagnostic packages
+/dist/

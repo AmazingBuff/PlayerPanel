@@ -35,3 +35,9 @@ deployment is performed. See LICENSE and dependency terms before distribution.
 ## Selected features
 
 config, input, present_hook
+
+## Documentation
+
+- [PlayerPanel PRD](docs/player-panel-prd.md): product requirements for an independent character studio rendered alongside the game world, including composition order and acceptance criteria.
+- [Stage-0 spike](docs/stage0-spike.md): historical rendering experiment notes; not validation of the current PRD.
+- [M0 diagnostics](docs/m0-diagnostics.md): opt-in bounded engine-evidence probe; the studio renderer remains blocked pending user-run captures.
