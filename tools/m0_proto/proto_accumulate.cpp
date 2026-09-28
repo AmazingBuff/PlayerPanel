@@ -283,10 +283,18 @@ namespace CharacterPanelProto
             }
             SwapTarget& target = swap_target();
 
-            RE::BSShaderAccumulator* secondary = ui3d->unk18.get();
+            // Run 7 fed 7 geometries into the SECONDARY every frame and got
+            // zero passes. The probe manifests explain it: the secondary's
+            // idle render_mode is 12 (kShadowMask) — FinishAccumulating
+            // dispatches on renderMode, so our geometry went into a shadow
+            // path that drew nothing. Run 8 drives the PRIMARY accumulator
+            // instead (idle render_mode 0 = kNormal, the dispatch arm that
+            // draws), sets the mode explicitly, and logs the accumulator's
+            // batchRenderer/shadow-node state around the ingestion.
+            RE::BSShaderAccumulator* accumulator = ui3d->unk10.get();
             RE::NiCamera* camera = ui3d->camera.get();
             RE::BSCullingProcess* culler = const_cast<RE::BSCullingProcess*>(ui3d->cullingProcess);
-            if (!secondary || !camera || !culler)
+            if (!accumulator || !camera || !culler)
             {
                 logger::warn("Proto UI3D objects unavailable; running unswapped frame");
                 original(a1);
@@ -339,16 +347,17 @@ namespace CharacterPanelProto
 
             g_saved_accumulator = RE::BSShaderAccumulator::GetCurrentAccumulator();
             logger::info(
-                "Proto direct-drive frame #{}: secondary {} camera {} roots {} saved-current {}",
+                "Proto direct-drive frame #{}: accumulator {} camera {} roots {} saved-current {}",
                 g_swap_runs + 1,
-                static_cast<void*>(secondary),
+                static_cast<void*>(accumulator),
                 static_cast<void*>(camera),
                 roots.size(),
                 static_cast<void*>(g_saved_accumulator));
 
             // 1) Engine-sanctioned accumulator startup: batch renderer setup
-            //    plus publishing the secondary as current.
-            RE::BSGraphics::Renderer::StartAccumulating(camera, secondary, 0);
+            //    plus publishing the accumulator as current.
+            accumulator->renderMode = RE::BSShaderAccumulator::RENDER_MODE::kNormal;
+            RE::BSGraphics::Renderer::StartAccumulating(camera, accumulator, 0);
 
             // 2) Cull each menu-object root. Run 5 called UpdateWorldData on
             //    the roots and NO bound changed (radius stayed 0) — either the
@@ -435,8 +444,8 @@ namespace CharacterPanelProto
 
             // 3) Ingest the collected geometries and flush the batches.
             if (visible_set.currentSize > 0)
-                secondary->RegisterObjectArray(visible_set);
-            secondary->FinishAccumulating();
+                accumulator->RegisterObjectArray(visible_set);
+            accumulator->FinishAccumulating();
 
             // 4) Restore the engine's current accumulator and targets before
             //    the real menu draw runs.
@@ -444,12 +453,12 @@ namespace CharacterPanelProto
             runtime.context->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
             runtime.context->RSSetViewports(1, &prev_viewport);
 
-            auto& secondary_data = secondary->GetRuntimeData();
+            auto& acc_data = accumulator->GetRuntimeData();
             logger::info(
                 "Proto direct-drive done: pass={} bucket={} active={} camera_world=({},{},{})",
-                secondary_data.currentPass,
-                secondary_data.currentBucket,
-                secondary_data.currentActive,
+                acc_data.currentPass,
+                acc_data.currentBucket,
+                acc_data.currentActive,
                 camera->world.translate.x,
                 camera->world.translate.y,
                 camera->world.translate.z);

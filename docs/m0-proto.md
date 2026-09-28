@@ -170,3 +170,13 @@ and hands the array to `RegisterObjectArray` → `FinishAccumulating`. This
 isolates stage B+C: if the accumulator ingests and draws geometry it is
 handed, the remaining problem is exactly the culler (whose extension layout
 is the capture report's standing unverified-layout caveat).
+
+## Run 8: drive the primary accumulator (kNormal dispatch arm)
+
+Run 7 fed 7 geometries into the secondary every frame and still got zero
+passes. The probe manifests contain the reason: the secondary's idle
+render_mode is 12 (kShadowMask), and FinishAccumulatingDispatch is a table
+dispatch on renderMode — the geometry went into a shadow path that drew
+nothing. Run 8 switches to the primary accumulator (idle render_mode 0 =
+kNormal), forces `RENDER_MODE::kNormal` explicitly before ingestion, then
+StartAccumulating → RegisterObjectArray → FinishAccumulating as before.
