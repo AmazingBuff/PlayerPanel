@@ -241,8 +241,25 @@ namespace CharacterPanelProto
         // --- swap state (render thread only) ---
 
         RE::BSShaderAccumulator* g_saved_accumulator = nullptr;
-        bool g_swap_active = false;
         std::uint32_t g_swap_runs = 0;
+
+        // Run 1 established that the inventory 3D path never consults the
+        // engine's global current-accumulator slot, so a bare swap draws
+        // nothing. Run 2 drives the secondary accumulator directly, using
+        // only CLib-bound, probe-verified entry points:
+        //
+        //   Renderer::StartAccumulating(camera, secondary, flags)  (99790)
+        //     — sets up the secondary's batch renderer and publishes it as
+        //       current; 130-byte wrapper ending in SetCurrentAccumulator.
+        //   culler->Process2(camera, menuObject, visibleSet)       (vtable 17)
+        //     — the engine's own per-frame menu-scene cull; with
+        //       useVirtualAppend=true each visible geometry lands in the
+        //       secondary via AppendVirtual.
+        //   secondary->FinishAccumulating()                        (vtable 26)
+        //     — flushes the accumulated batches into the bound render target.
+        //
+        // The private D3D11 target is bound around the whole sequence so any
+        // draws land in the readback texture instead of the engine's targets.
 
         void run_swapped_frame(std::int64_t a1, DrawInterfaceStart_t original)
         {
@@ -263,45 +280,111 @@ namespace CharacterPanelProto
                 original(a1);
                 return;
             }
+            SwapTarget& target = swap_target();
 
-            // The UI3D secondary accumulator is the one the inventory menu
-            // scene actually renders through (capture report, finding 2).
             RE::BSShaderAccumulator* secondary = ui3d->unk18.get();
-            if (!secondary)
+            RE::NiCamera* camera = ui3d->camera.get();
+            RE::BSCullingProcess* culler = const_cast<RE::BSCullingProcess*>(ui3d->cullingProcess);
+            if (!secondary || !camera || !culler)
             {
-                logger::warn("Proto secondary accumulator unavailable; running unswapped frame");
+                logger::warn("Proto UI3D objects unavailable; running unswapped frame");
                 original(a1);
                 return;
             }
 
+            // Collect live menu-object roots; the cull walks each one.
+            std::vector<RE::NiAVObject*> roots;
+            for (auto const& menu_object : ui3d->menuObjects)
+            {
+                if (menu_object)
+                    roots.push_back(menu_object.get());
+            }
+            if (roots.empty())
+            {
+                logger::warn("Proto found no menu objects; running unswapped frame");
+                original(a1);
+                return;
+            }
+
+            // Visible-set buffer for the cull. 4096 geometry slots is well
+            // above the menu scene's object count (probe: 8 objects).
+            constexpr std::size_t Visible_Capacity = 4096;
+            static std::vector<RE::BSGeometry*> s_visible_storage(Visible_Capacity, nullptr);
+            RE::NiVisibleArray visible_set;
+            visible_set.array = s_visible_storage.data();
+            visible_set.currentSize = 0;
+            visible_set.allocatedSize = Visible_Capacity;
+            visible_set.growBy = 1024;
+
+            // Bind our color/depth target for the direct-drive draws.
+            REX::W32::ID3D11RenderTargetView* prev_rtv = nullptr;
+            REX::W32::ID3D11DepthStencilView* prev_dsv = nullptr;
+            runtime.context->OMGetRenderTargets(1, &prev_rtv, &prev_dsv);
+            REX::W32::D3D11_VIEWPORT prev_viewport{};
+            std::uint32_t viewport_count = 1;
+            runtime.context->RSGetViewports(&viewport_count, &prev_viewport);
+
+            runtime.context->OMSetRenderTargets(1, &target.rtv, target.dsv);
+            REX::W32::D3D11_VIEWPORT viewport = prev_viewport;
+            viewport.width = static_cast<float>(target.width);
+            viewport.height = static_cast<float>(target.height);
+            viewport.topLeftX = 0.0f;
+            viewport.topLeftY = 0.0f;
+            runtime.context->RSSetViewports(1, &viewport);
+            const float clear_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+            runtime.context->ClearRenderTargetView(target.rtv, clear_color);
+            runtime.context->ClearDepthStencilView(target.dsv,
+                REX::W32::D3D11_CLEAR_DEPTH | REX::W32::D3D11_CLEAR_STENCIL, 1.0f, 0);
+
             g_saved_accumulator = RE::BSShaderAccumulator::GetCurrentAccumulator();
-            RE::BSShaderAccumulator::SetCurrentAccumulator(secondary);
-            g_swap_active = true;
             logger::info(
-                "Proto swap frame #{}: current {} -> secondary {} (camera {})",
+                "Proto direct-drive frame #{}: secondary {} camera {} roots {} saved-current {}",
                 g_swap_runs + 1,
-                static_cast<void*>(g_saved_accumulator),
                 static_cast<void*>(secondary),
-                static_cast<void*>(ui3d->camera.get()));
+                static_cast<void*>(camera),
+                roots.size(),
+                static_cast<void*>(g_saved_accumulator));
 
-            // Run the engine's own menu interface draw. Its inventory 3D path
-            // pulls the UI3D scene, culls it, and submits through the current
-            // accumulator; with the secondary swapped in as current, the
-            // accumulator's own StartAccumulating binds what we prepared.
-            secondary->renderMode = RE::BSShaderAccumulator::RENDER_MODE::kNormal;
-            original(a1);
+            // 1) Engine-sanctioned accumulator startup: batch renderer setup
+            //    plus publishing the secondary as current.
+            RE::BSGraphics::Renderer::StartAccumulating(camera, secondary, 0);
 
-            g_swap_active = false;
+            // 2) Cull each menu-object root into the secondary. The shared
+            //    UI3D culler is taken as-is; the scene manager lock is held by
+            //    DrawInterfaceStart's callers on the render thread already.
+            // useVirtualAppend is `const bool` in CLib but mutable in the
+            // engine layout (base offset 0x08); the cull only reaches the
+            // accumulator's AppendVirtual when it reads true.
+            *const_cast<bool*>(&culler->useVirtualAppend) = true;
+            for (RE::NiAVObject* root : roots)
+                culler->Process2(camera, root, &visible_set);
+
+            // 3) Flush the accumulated batches.
+            secondary->FinishAccumulating();
+
+            // 4) Restore the engine's current accumulator and targets before
+            //    the real menu draw runs.
             RE::BSShaderAccumulator::SetCurrentAccumulator(g_saved_accumulator);
+            runtime.context->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
+            runtime.context->RSSetViewports(1, &prev_viewport);
+
+            auto& secondary_data = secondary->GetRuntimeData();
             logger::info(
-                "Proto swap frame done: restored current={}, pass={} bucket={} active={}",
-                static_cast<void*>(g_saved_accumulator),
-                [&] { auto& d = secondary->GetRuntimeData(); return d.currentPass; }(),
-                [&] { auto& d = secondary->GetRuntimeData(); return d.currentBucket; }(),
-                [&] { auto& d = secondary->GetRuntimeData(); return d.currentActive; }());
+                "Proto direct-drive done: visible={} pass={} bucket={} active={}",
+                visible_set.currentSize,
+                secondary_data.currentPass,
+                secondary_data.currentBucket,
+                secondary_data.currentActive);
+
+            if (prev_rtv)
+                prev_rtv->Release();
+            if (prev_dsv)
+                prev_dsv->Release();
 
             dump_swap_result_to_log_dir();
             ++g_swap_runs;
+
+            original(a1);
         }
     }
 

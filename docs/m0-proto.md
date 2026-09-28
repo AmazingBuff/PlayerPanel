@@ -107,3 +107,16 @@ Next-step options, in cost order:
    accumulator selection; requires new address-library IDs.
 3. Identify the third Render call target `0xD1BF70` (suspected scene/cull
    dispatch) before choosing 1 vs 2.
+
+## Run 2: direct accumulator drive
+
+Run 1's byte-level evidence (inventory path bypasses the global slot) led to
+run 2: the armed frame now drives the secondary accumulator directly —
+`Renderer::StartAccumulating(camera, secondary, 0)`, the shared UI3D culler's
+`Process2` over each live `menuObjects` root with `useVirtualAppend` forced
+on, then `secondary->FinishAccumulating()`. The private color/depth target
+stays bound around the sequence and is restored (with the current
+accumulator) before the real menu draw runs. The log line now reports the
+cull's visible-geometry count alongside the secondary's `pass`/`bucket`/
+`active` state; the TGA readback follows. All entry points are CLib-bound
+and probe-verified.
