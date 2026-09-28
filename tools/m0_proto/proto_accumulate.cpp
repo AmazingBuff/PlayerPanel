@@ -349,17 +349,23 @@ namespace CharacterPanelProto
             //    plus publishing the secondary as current.
             RE::BSGraphics::Renderer::StartAccumulating(camera, secondary, 0);
 
-            // 2) Cull each menu-object root into the secondary. The shared
-            //    UI3D culler is taken as-is; the scene manager lock is held by
-            //    DrawInterfaceStart's callers on the render thread already.
-            // useVirtualAppend is `const bool` in CLib but mutable in the
-            // engine layout (base offset 0x08); the cull only reaches the
-            // accumulator's AppendVirtual when it reads true.
-            *const_cast<bool*>(&culler->useVirtualAppend) = true;
+            // 2) Cull each menu-object root. Run 2 forced useVirtualAppend=true,
+            //    which leaves the visible array empty BY DESIGN and made the
+            //    log's visible=0 uninformative. Run 3 culls with virtual append
+            //    OFF so the array collects the geometries and the count becomes
+            //    a real stage-A measurement; stage B hands the array to the
+            //    accumulator explicitly (classic Ni flow: cull collects,
+            //    RegisterObjectArray ingests, FinishAccumulating draws).
+            //    useVirtualAppend is `const bool` in CLib but mutable in the
+            //    engine layout (base offset 0x08).
+            *const_cast<bool*>(&culler->useVirtualAppend) = false;
             for (RE::NiAVObject* root : roots)
                 culler->Process2(camera, root, &visible_set);
+            logger::info("Proto stage A: culled visible={} of {} roots", visible_set.currentSize, roots.size());
 
-            // 3) Flush the accumulated batches.
+            // 3) Ingest the culled geometries and flush the batches.
+            if (visible_set.currentSize > 0)
+                secondary->RegisterObjectArray(visible_set);
             secondary->FinishAccumulating();
 
             // 4) Restore the engine's current accumulator and targets before
@@ -370,11 +376,13 @@ namespace CharacterPanelProto
 
             auto& secondary_data = secondary->GetRuntimeData();
             logger::info(
-                "Proto direct-drive done: visible={} pass={} bucket={} active={}",
-                visible_set.currentSize,
+                "Proto direct-drive done: pass={} bucket={} active={} camera_world=({},{},{})",
                 secondary_data.currentPass,
                 secondary_data.currentBucket,
-                secondary_data.currentActive);
+                secondary_data.currentActive,
+                camera->world.translate.x,
+                camera->world.translate.y,
+                camera->world.translate.z);
 
             if (prev_rtv)
                 prev_rtv->Release();

@@ -120,3 +120,14 @@ accumulator) before the real menu draw runs. The log line now reports the
 cull's visible-geometry count alongside the secondary's `pass`/`bucket`/
 `active` state; the TGA readback follows. All entry points are CLib-bound
 and probe-verified.
+
+## Run 3: stage-separated measurement
+
+Run 2 forced `useVirtualAppend=true`, which leaves the visible array empty
+by design — the logged `visible=0` said nothing about the cull. Run 3 flips
+to the classic Ni flow so each stage is measurable: cull with virtual append
+OFF (the array collects geometries; the new `stage A` log line reports the
+count), then `RegisterObjectArray` ingests the array into the secondary, then
+`FinishAccumulating` draws. The done-line now also prints the UI3D camera's
+world translate to test the stale-camera hypothesis (the engine updates
+camera world data during its own cull, which runs after ours).
