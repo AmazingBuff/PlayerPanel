@@ -10,3 +10,7 @@
   Shaders and locates the engine's current-accumulator swap path.
 - Change the probe capture hotkeys to F7 (code + menu) and F8 (menu only);
   F9 stays reserved for quick load.
+- Add the opt-in M0 accumulator-swap prototype (CharacterPanelProto): one
+  DrawInterfaceStart call-site hook and an F6-armed single frame that swaps
+  the UI3D secondary accumulator in as the engine's current accumulator,
+  then restores and dumps a tone-mapped TGA readback.

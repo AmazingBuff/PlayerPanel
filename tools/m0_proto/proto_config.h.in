@@ -1,0 +1,10 @@
+#pragma once
+
+#include <string_view>
+
+namespace CharacterPanelProto
+{
+    inline constexpr std::string_view Name = "CharacterPanelProto";
+    inline constexpr std::string_view Version = "@PROJECT_VERSION@";
+    inline constexpr std::string_view Build_Identity = "CharacterPanelProto-m0-v1-2026-09-28";
+}

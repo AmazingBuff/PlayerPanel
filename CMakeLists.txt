@@ -13,6 +13,7 @@ option(ENABLE_SKYRIM_SE "Enable support for Skyrim SE in the dynamic runtime fea
 option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
 option(CHARACTER_PANEL_BUILD_PROBE "Build the opt-in M0 engine evidence probe." ON)
+option(CHARACTER_PANEL_BUILD_PROTO "Build the opt-in M0 accumulator-swap prototype." OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
@@ -223,5 +224,88 @@ if(CHARACTER_PANEL_BUILD_PROBE)
 		DEPENDS
 		CharacterPanelProbe
 		VERBATIM
+	)
+endif()
+
+if(CHARACTER_PANEL_BUILD_PROTO)
+	set(PROTO_VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/proto/proto_config.h)
+	configure_file(
+		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_proto/proto_config.h.in
+		${PROTO_VERSION_HEADER}
+		@ONLY
+	)
+
+	set(PROTO_VERSION_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/proto/proto_version.rc)
+	configure_file(
+		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_proto/proto_version.rc.in
+		${PROTO_VERSION_RESOURCE}
+		@ONLY
+	)
+
+	add_library(
+		CharacterPanelProto
+		SHARED
+		tools/m0_proto/proto.h
+		tools/m0_proto/proto_main.cpp
+		tools/m0_proto/proto_accumulate.cpp
+		${PROTO_VERSION_HEADER}
+		${PROTO_VERSION_RESOURCE}
+	)
+
+	target_compile_features(
+		CharacterPanelProto
+		PRIVATE
+		cxx_std_23
+	)
+
+	set_target_properties(
+		CharacterPanelProto
+		PROPERTIES
+		OUTPUT_NAME CharacterPanelProto
+		VS_GLOBAL_VCToolsVersion "14.44.35207"
+	)
+
+	if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+		target_compile_options(
+			CharacterPanelProto
+			PRIVATE
+			/sdl
+			/utf-8
+			/Zi
+			/permissive-
+			/Zc:preprocessor
+			/wd4200
+			$<$<CONFIG:DEBUG>:/ZI>
+			$<$<CONFIG:RELEASE>:/Zi;/Zc:inline;/JMC-;/Ob3>
+		)
+
+		target_compile_definitions(
+			CharacterPanelProto
+			PRIVATE
+			NOMINMAX
+		)
+
+		target_link_options(
+			CharacterPanelProto
+			PRIVATE
+			$<$<CONFIG:DEBUG>:/INCREMENTAL;/OPT:NOREF;/OPT:NOICF>
+			$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>
+		)
+	endif()
+
+	target_include_directories(
+		CharacterPanelProto
+		PRIVATE
+		${CMAKE_CURRENT_BINARY_DIR}/proto
+		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_proto
+	)
+
+	target_link_libraries(
+		CharacterPanelProto
+		PRIVATE
+		spdlog::spdlog
+		fmt::fmt
+		CommonLibSSE::CommonLibSSE
+		user32
 	)
 endif()

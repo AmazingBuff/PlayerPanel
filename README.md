@@ -42,3 +42,4 @@ config, input, present_hook
 - [Stage-0 spike](docs/stage0-spike.md): historical rendering experiment notes; not validation of the current PRD.
 - [M0 diagnostics](docs/m0-diagnostics.md): opt-in bounded engine-evidence probe; the studio renderer remains blocked pending a safe accumulator/culling contract.
 - [M0 capture report (2026-09-28)](docs/m0-capture-report-2026-09-28.md): analysis of the first user-run probe session (AE 1.6.1170 + Community Shaders); verifies routine offsets and the accumulator swap path.
+- [M0 prototype](docs/m0-proto.md): opt-in one-shot accumulator-swap experiment verifying the report's findings; F6 arms one private menu frame.
