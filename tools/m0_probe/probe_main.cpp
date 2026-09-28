@@ -27,8 +27,8 @@ namespace CharacterPanelProbe
 {
     namespace
     {
+        constexpr std::uint32_t F7_Virtual_Key = VK_F7;
         constexpr std::uint32_t F8_Virtual_Key = VK_F8;
-        constexpr std::uint32_t F9_Virtual_Key = VK_F9;
 
         bool initialize_log() noexcept
         {
@@ -71,17 +71,17 @@ namespace CharacterPanelProbe
                 if (!events)
                     return RE::BSEventNotifyControl::kContinue;
 
+                UINT const f7_scan = MapVirtualKeyA(F7_Virtual_Key, MAPVK_VK_TO_VSC);
                 UINT const f8_scan = MapVirtualKeyA(F8_Virtual_Key, MAPVK_VK_TO_VSC);
-                UINT const f9_scan = MapVirtualKeyA(F9_Virtual_Key, MAPVK_VK_TO_VSC);
                 for (RE::InputEvent* event = *events; event; event = event->next)
                 {
                     RE::ButtonEvent* button = event->AsButtonEvent();
                     if (!button || button->device.get() != RE::INPUT_DEVICE::kKeyboard || !button->IsDown())
                         continue;
 
-                    if (f8_scan != 0 && button->GetIDCode() == f8_scan)
+                    if (f7_scan != 0 && button->GetIDCode() == f7_scan)
                         Probe::instance().capture(CaptureKind::kCodeAndMenu);
-                    else if (f9_scan != 0 && button->GetIDCode() == f9_scan)
+                    else if (f8_scan != 0 && button->GetIDCode() == f8_scan)
                         Probe::instance().capture(CaptureKind::kMenuOnly);
                 }
                 return RE::BSEventNotifyControl::kContinue;
@@ -120,13 +120,13 @@ namespace CharacterPanelProbe
         RE::BSInputDeviceManager* source = RE::BSInputDeviceManager::GetSingleton();
         if (!source)
         {
-            logger::warn("Input device manager unavailable; F8/F9 probe capture is disabled");
+            logger::warn("Input device manager unavailable; F7/F8 probe capture is disabled");
             return;
         }
 
         source->AddEventSink(&InputHandler::instance());
         m_installed = true;
-        logger::info("Read-only probe input installed: F8=code+menu, F9=menu metadata");
+        logger::info("Read-only probe input installed: F7=code+menu, F8=menu metadata");
     }
 
     bool supported_runtime() noexcept

@@ -42,8 +42,8 @@ directory automatically.
 ## Controls and capture data
 
 The probe registers its input sink at `kDataLoaded` only when the runtime is
-exactly AE 1.6.1170. F8 captures the menu snapshot and bounded code evidence;
-F9 captures menu/object metadata only. `ButtonEvent::IsDown()` rejects held and
+exactly AE 1.6.1170. F7 captures the menu snapshot and bounded code evidence;
+F8 captures menu/object metadata only. `ButtonEvent::IsDown()` rejects held and
 repeat events, and the callback remains active while the game is paused by
 `InventoryMenu`.
 
@@ -53,7 +53,7 @@ process launches. Each manifest records the runtime, trigger, menu state,
 window dimensions, UI3D object/camera/light counts, culler and accumulator
 fields, code limits, module-relative addresses, bounds, status, and errors.
 
-F8 resolves only the contract-listed native routines: the culling-context and
+F7 resolves only the contract-listed native routines: the culling-context and
 process entry points, accumulator constructor/current-accumulator entry points,
 renderer accumulator entry points, `Inventory3DManager::Render`,
 `Inventory3DManager::{Begin3D,Render,End3D}`,
@@ -80,12 +80,14 @@ Run both scenarios on the target machine and return the capture folders,
 
 1. Disable the old `CharacterPanel` plugin, run the original renderer, enter a
    save, open SkyUI inventory, highlight an item with a visible 3D model, press
-   F8 after the model appears, close the inventory, press F9, and exit normally.
+   F7 after the model appears, close the inventory, press F8, and exit normally.
 2. Repeat the same sequence with Community Shaders 1.9.1 enabled, recording the
    CS version and any unavailable or redirected function metadata.
 
-Screenshots are optional. These scenarios are user-run and remain unverified in
-this repository.
+Screenshots are optional. The Community-Shaders-enabled scenario was run by
+the user on 2026-09-28 and analyzed in
+[the capture report](m0-capture-report-2026-09-28.md); the
+original-renderer scenario remains unverified in this repository.
 
 ## Safe modification and cleanup
 

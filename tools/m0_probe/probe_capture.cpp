@@ -583,7 +583,7 @@ namespace CharacterPanelProbe
 
             manifest << "method=CharacterPanelProbe bounded read-only evidence\n";
             manifest << "capture_index=" << index << "\n";
-            manifest << "trigger=" << (kind == CaptureKind::kCodeAndMenu ? "F8" : "F9") << "\n";
+            manifest << "trigger=" << (kind == CaptureKind::kCodeAndMenu ? "F7" : "F8") << "\n";
             manifest << "code_per_routine_cap=" << Routine_Byte_Cap << "\n";
             manifest << "code_capture_cap=" << Capture_Byte_Cap << "\n";
             manifest << "leaf_cap=" << Leaf_Byte_Cap << "\n";
