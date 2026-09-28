@@ -349,15 +349,21 @@ namespace CharacterPanelProto
             //    plus publishing the secondary as current.
             RE::BSGraphics::Renderer::StartAccumulating(camera, secondary, 0);
 
-            // 2) Cull each menu-object root. Run 2 forced useVirtualAppend=true,
-            //    which leaves the visible array empty BY DESIGN and made the
-            //    log's visible=0 uninformative. Run 3 culls with virtual append
-            //    OFF so the array collects the geometries and the count becomes
-            //    a real stage-A measurement; stage B hands the array to the
-            //    accumulator explicitly (classic Ni flow: cull collects,
-            //    RegisterObjectArray ingests, FinishAccumulating draws).
-            //    useVirtualAppend is `const bool` in CLib but mutable in the
-            //    engine layout (base offset 0x08).
+            // 2) Cull each menu-object root. Run 3 measured visible=0 with the
+            //    UI3D camera world at origin — the probe's Process2 disassembly
+            //    shows it reads the camera's viewFrustum (camera+0x150) but the
+            //    culler's own test PLANES (base+0x3C) are only filled by
+            //    SetFrustum, which the engine calls in its own per-frame path.
+            //    Run 4 fills them first (CLib ID 69699/71081, probe-verified
+            //    function bounds) and logs the frustum plus the first root's
+            //    world bound as stage-A diagnostics.
+            auto const& camera_data = camera->GetRuntimeData2();
+            auto const& frustum = camera_data.viewFrustum;
+            logger::info(
+                "Proto stage A0: frustum l={} r={} t={} b={} near={} far={} root0_bound_radius={}",
+                frustum.fLeft, frustum.fRight, frustum.fTop, frustum.fBottom, frustum.fNear, frustum.fFar,
+                roots.front()->worldBound.radius);
+            culler->SetFrustum(&frustum);
             *const_cast<bool*>(&culler->useVirtualAppend) = false;
             for (RE::NiAVObject* root : roots)
                 culler->Process2(camera, root, &visible_set);

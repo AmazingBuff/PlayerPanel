@@ -131,3 +131,13 @@ count), then `RegisterObjectArray` ingests the array into the secondary, then
 `FinishAccumulating` draws. The done-line now also prints the UI3D camera's
 world translate to test the stale-camera hypothesis (the engine updates
 camera world data during its own cull, which runs after ours).
+
+## Run 4: frustum-plane initialization
+
+Run 3's `visible=0` with camera world at origin pointed at the culler's test
+planes: the Process2 disassembly reads the camera's `viewFrustum`
+(camera+0x150, matching the captured `add rdx, 0x150`), but the culler's own
+planes (base+0x3C) are only ever filled by `SetFrustum` in the engine's
+per-frame path. Run 4 calls `culler->SetFrustum(&camera->GetRuntimeData2()
+.viewFrustum)` (CLib ID 69699/71081) before the cull and logs the frustum
+values plus the first root's world-bound radius as stage-A0 diagnostics.
