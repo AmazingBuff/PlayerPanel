@@ -76,3 +76,34 @@ state.
   hitch on F6, by design, not a steady-state path.
 - The old CharacterPanel plugin and CharacterPanelProbe must not run in the
   same session.
+
+## Run 1 result (2026-09-28, user session)
+
+The Detours hook ran clean: five armed frames across one session, swap and
+restore both stable, no crash, five TGAs written. The swap itself was
+**inert**: the saved current accumulator (a scene accumulator, distinct from
+both UI3D slots) came back unchanged, and the secondary's `pass`/`bucket`
+counters stayed at zero through every swapped frame — all five TGAs are
+100% black.
+
+Byte-level analysis of the probe's captured code explains why:
+`Inventory3DManager::{Begin3D,Render,End3D}` make **zero** calls into
+`BSShaderAccumulator::{Get,Set}CurrentAccumulator` (Begin3D's six direct
+calls and Render's three helpers all go elsewhere). The inventory 3D path
+drives its accumulators directly and never consults the engine's global
+current-accumulator slot; that global belongs to the world-scene path
+(`Main::RenderWorld` family) outside the menu draw. Capture-report finding 1
+remains correct as a statement about the global slot itself, but swapping it
+cannot redirect the inventory scene.
+
+Next-step options, in cost order:
+
+1. **Drive the secondary accumulator directly** inside the swap frame:
+   `secondary->StartAccumulating(ui3d camera)` → cull the UI3D scene →
+   `FinishAccumulating`, bypassing `Inventory3DManager` entirely. All entry
+   points are CLib-bound and verified by the probe.
+2. Hook the two unbound helpers `Inventory3DManager::Render` calls
+   (module-relative `0x9287B0`, `0x928A60` on 1.6.1170) to interpose the
+   accumulator selection; requires new address-library IDs.
+3. Identify the third Render call target `0xD1BF70` (suspected scene/cull
+   dispatch) before choosing 1 vs 2.
