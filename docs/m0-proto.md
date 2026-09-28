@@ -149,3 +149,12 @@ menu objects' world bounds are empty because the engine updates world
 transforms/bounds in its own update pass, after our cull. Run 5 calls
 `UpdateWorldData` on every root before `SetFrustum`/`Process2` and logs any
 bound-radius change as confirmation.
+
+## Run 6: subtree census + engine downward pass
+
+Run 5's `UpdateWorldData` alone changed nothing (no bound updated, radius
+still 0). Run 6 additionally runs the engine's own `UpdateDownwardPass` on
+each root, then censuses the first three roots' subtrees — node count,
+geometry count by RTTI name (TriShape/Geometry/Particles), max world-bound
+radius, and node names — so the next log shows where the item geometry
+actually lives and whether any bound is populated after the downward pass.

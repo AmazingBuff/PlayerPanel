@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -349,24 +350,59 @@ namespace CharacterPanelProto
             //    plus publishing the secondary as current.
             RE::BSGraphics::Renderer::StartAccumulating(camera, secondary, 0);
 
-            // 2) Cull each menu-object root. Run 4 filled the culler planes and
-            //    the frustum proved sane (l/r/t/b ±0.16/±0.09, near 15, far
-            //    20480) — but root0_bound_radius=0: the menu objects' world
-            //    bounds are EMPTY because the engine updates world transforms
-            //    and bounds only in its own update pass, which runs after our
-            //    cull. Run 5 updates each root's world data first, logging any
-            //    bound-radius change as confirmation.
+            // 2) Cull each menu-object root. Run 5 called UpdateWorldData on
+            //    the roots and NO bound changed (radius stayed 0) — either the
+            //    update needs the engine's downward pass, or the roots are
+            //    container nodes whose geometry lives deeper. Run 6 runs the
+            //    engine's own UpdateDownwardPass on each root, then censuses
+            //    each subtree (node count, geometry count by RTTI name, bound
+            //    radii) so the next log shows where the geometry actually
+            //    lives and whether any bound is populated.
             auto const& camera_data = camera->GetRuntimeData2();
             auto const& frustum = camera_data.viewFrustum;
             RE::NiUpdateData update_data{ .time = 0.0f, .flags = RE::NiUpdateData::Flag::kNone };
+
+            auto census = [](RE::NiAVObject* node, std::uint32_t depth, auto& census_ref,
+                             std::uint32_t& nodes, std::uint32_t& geometries, float& max_radius,
+                             bool& names_logged, std::string& names) -> void {
+                if (!node || depth > 6 || nodes > 512)
+                    return;
+                ++nodes;
+                if (node->worldBound.radius > max_radius)
+                    max_radius = node->worldBound.radius;
+                if (!names_logged && names.size() < 160)
+                {
+                    names += node->name.c_str() ? fmt::format("{} ", node->name.c_str()) : "(null) ";
+                    if (nodes >= 8)
+                        names_logged = true;
+                }
+                char const* rtti_name = node->GetRTTI() ? node->GetRTTI()->GetName() : "";
+                if (std::strstr(rtti_name, "TriShape") || std::strstr(rtti_name, "Geometry") ||
+                    std::strstr(rtti_name, "Particles"))
+                    ++geometries;
+                if (auto* as_node = node->AsNode())
+                {
+                    for (auto const& child : as_node->GetChildren())
+                        census_ref(child.get(), depth + 1, census_ref, nodes, geometries, max_radius, names_logged, names);
+                }
+            };
+
             for (RE::NiAVObject* root : roots)
             {
-                float const before = root->worldBound.radius;
                 root->UpdateWorldData(&update_data);
-                if (root->worldBound.radius != before)
-                    logger::info(
-                        "Proto bound updated: root {} radius {} -> {}",
-                        static_cast<void*>(root), before, root->worldBound.radius);
+                root->UpdateDownwardPass(update_data, 0);
+            }
+            for (std::size_t i = 0; i < roots.size() && i < 3; ++i)
+            {
+                std::uint32_t nodes = 0;
+                std::uint32_t geometries = 0;
+                float max_radius = 0.0f;
+                bool names_logged = false;
+                std::string names;
+                census(roots[i], 0, census, nodes, geometries, max_radius, names_logged, names);
+                logger::info(
+                    "Proto census root[{}] name=[{}] nodes={} geometries={} max_bound_radius={} names: {}",
+                    i, roots[i]->name.c_str() ? roots[i]->name.c_str() : "(null)", nodes, geometries, max_radius, names);
             }
             logger::info(
                 "Proto stage A0: frustum l={} r={} t={} b={} near={} far={} root0_bound_radius={}",
