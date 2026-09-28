@@ -358,8 +358,6 @@ namespace CharacterPanelProto
             //    each subtree (node count, geometry count by RTTI name, bound
             //    radii) so the next log shows where the geometry actually
             //    lives and whether any bound is populated.
-            auto const& camera_data = camera->GetRuntimeData2();
-            auto const& frustum = camera_data.viewFrustum;
             RE::NiUpdateData update_data{ .time = 0.0f, .flags = RE::NiUpdateData::Flag::kNone };
 
             auto census = [](RE::NiAVObject* node, std::uint32_t depth, auto& census_ref,
@@ -404,17 +402,38 @@ namespace CharacterPanelProto
                     "Proto census root[{}] name=[{}] nodes={} geometries={} max_bound_radius={} names: {}",
                     i, roots[i]->name.c_str() ? roots[i]->name.c_str() : "(null)", nodes, geometries, max_radius, names);
             }
-            logger::info(
-                "Proto stage A0: frustum l={} r={} t={} b={} near={} far={} root0_bound_radius={}",
-                frustum.fLeft, frustum.fRight, frustum.fTop, frustum.fBottom, frustum.fNear, frustum.fFar,
-                roots.front()->worldBound.radius);
-            culler->SetFrustum(&frustum);
-            *const_cast<bool*>(&culler->useVirtualAppend) = false;
+            // Run 6 located the geometry: root[1] holds 14 TriShapes with
+            // valid child bounds (max radius 37.4) — yet Process2 culled
+            // everything. Run 7 bypasses the shared culler entirely: collect
+            // the subtree's geometry leaves straight into the visible array
+            // and feed RegisterObjectArray. This isolates stage B+C (does the
+            // accumulator ingest and draw geometry handed to it?) from the
+            // cull, whose unverified extension layout remains the report's
+            // standing caveat.
+            std::uint32_t collected = 0;
+            auto collect_geometry = [&](auto&& collect_ref, RE::NiAVObject* node, std::uint32_t depth) -> void {
+                if (!node || depth > 6 || collected >= Visible_Capacity)
+                    return;
+                char const* rtti_name = node->GetRTTI() ? node->GetRTTI()->GetName() : "";
+                if (std::strstr(rtti_name, "TriShape") || std::strstr(rtti_name, "Geometry") ||
+                    std::strstr(rtti_name, "Particles"))
+                {
+                    auto* geometry = static_cast<RE::BSGeometry*>(node);
+                    if (geometry && !geometry->GetAppCulled() && collected < Visible_Capacity)
+                        s_visible_storage[collected++] = geometry;
+                }
+                if (auto* as_node = node->AsNode())
+                {
+                    for (auto const& child : as_node->GetChildren())
+                        collect_ref(collect_ref, child.get(), depth + 1);
+                }
+            };
             for (RE::NiAVObject* root : roots)
-                culler->Process2(camera, root, &visible_set);
-            logger::info("Proto stage A: culled visible={} of {} roots", visible_set.currentSize, roots.size());
+                collect_geometry(collect_geometry, root, 0);
+            visible_set.currentSize = collected;
+            logger::info("Proto stage A(cull-bypass): collected {} geometries", collected);
 
-            // 3) Ingest the culled geometries and flush the batches.
+            // 3) Ingest the collected geometries and flush the batches.
             if (visible_set.currentSize > 0)
                 secondary->RegisterObjectArray(visible_set);
             secondary->FinishAccumulating();

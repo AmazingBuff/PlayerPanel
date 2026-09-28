@@ -158,3 +158,15 @@ each root, then censuses the first three roots' subtrees — node count,
 geometry count by RTTI name (TriShape/Geometry/Particles), max world-bound
 radius, and node names — so the next log shows where the item geometry
 actually lives and whether any bound is populated after the downward pass.
+
+## Run 7: cull bypass — direct geometry feed
+
+Run 6's census found the geometry: root[1] carries 22 nodes / 14 TriShapes
+with populated child bounds (max radius 37.4), the other roots are empty
+containers — yet Process2 still culled everything. Run 7 drops the shared
+culler entirely: the swap frame walks each root's subtree, collects the
+geometry leaves straight into the visible array (skipping app-culled ones),
+and hands the array to `RegisterObjectArray` → `FinishAccumulating`. This
+isolates stage B+C: if the accumulator ingests and draws geometry it is
+handed, the remaining problem is exactly the culler (whose extension layout
+is the capture report's standing unverified-layout caveat).
