@@ -115,3 +115,24 @@ extents match 2560x1440, world translate at origin — reproducible.
    the `CullingContext` ctor (its true end is already bounded at +112).
 3. Bind `MenuManager::DrawInterfaceStart` in a follow-up probe iteration
    only if menu-draw interception becomes relevant to the design.
+
+## Addendum: BSCullingProcess extension layout cross-check (2026-09-28)
+
+Cross-checked against CommonLibSSE-NG 9.1.0 history and headers:
+
+- The `roomSharedMap` BSTHashMap at 0x30160 replaced six unknown qwords in
+  a Sept-2025 upstream commit (16112def7); the declared table is 0x28
+  bytes (0x18 standard parent + 0x10 heap-allocator storage), making the
+  next member `portalGraphEntry` sit at 0x30190 and `cullMode` at 0x30198
+  — matching the current header.
+- The probe's own build passed the header's
+  `static_assert(sizeof(BSCullingProcess) == 0x301F8)`, so the mismatch is
+  in the runtime class, not the compile-time layout.
+- Conclusion: the culler captured by UI3DSceneManager on 1.6.1170 is
+  either a class larger than 0x301F8 (shifted tail members) or
+  `cullMode` at 0x30198 holds engine-internal data on this runtime. Until
+  a second source (NGX/CGIDB dump or a targeted probe read of the
+  cullModeStack region) confirms it, all BSCullingProcess members beyond
+  the NiCullingProcess base (0x128) must be treated as unverified for
+  1.6.1170. The M0 accumulator-swap path (finding 1) does not depend on
+  any of these offsets.
