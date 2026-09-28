@@ -242,6 +242,11 @@ if(CHARACTER_PANEL_BUILD_PROTO)
 		@ONLY
 	)
 
+	# The vcpkg detours port ships no CMake config; locate the header/lib like
+	# Community Shaders does.
+	find_path(DETOURS_INCLUDE_DIRS "detours/detours.h")
+	find_library(DETOURS_LIBRARY detours REQUIRED)
+
 	add_library(
 		CharacterPanelProto
 		SHARED
@@ -298,6 +303,7 @@ if(CHARACTER_PANEL_BUILD_PROTO)
 		PRIVATE
 		${CMAKE_CURRENT_BINARY_DIR}/proto
 		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_proto
+		${DETOURS_INCLUDE_DIRS}
 	)
 
 	target_link_libraries(
@@ -306,6 +312,7 @@ if(CHARACTER_PANEL_BUILD_PROTO)
 		spdlog::spdlog
 		fmt::fmt
 		CommonLibSSE::CommonLibSSE
+		${DETOURS_LIBRARY}
 		user32
 	)
 endif()

@@ -10,6 +10,7 @@
 #include <REX/W32/D3D11.h>
 
 #include <Windows.h>
+#include <detours/detours.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -306,15 +307,21 @@ namespace CharacterPanelProto
 
     namespace
     {
-        // Render-thread trampoline. DrawInterfaceStart runs once per rendered
+        // Set by install_hook() before any menu frame can run the thunk;
+        // Detours relocates the overwritten prologue into its own trampoline,
+        // so calling this runs the true original function.
+        DrawInterfaceStart_t s_original_draw_interface_start = nullptr;
+
+        // Render-thread detour. DrawInterfaceStart runs once per rendered
         // menu frame; the armed flag decides whether this frame is the swap.
-        // The hook redirects one call instruction inside DrawInterfaceStart;
-        // the original function is the same relocated address, entered after
-        // the patched prologue range via the trampoline slot.
         void draw_interface_start_thunk(std::int64_t a1)
         {
-            static DrawInterfaceStart_t const original =
-                reinterpret_cast<DrawInterfaceStart_t>(REL::RelocationID(79947, 82084).address());
+            DrawInterfaceStart_t const original = s_original_draw_interface_start;
+            if (!original)
+            {
+                // Detour not fully installed; bail out without recursing.
+                return;
+            }
 
             if (!Proto::instance().take_armed())
                 original(a1);
@@ -331,18 +338,29 @@ namespace CharacterPanelProto
 
     bool Proto::install_hook()
     {
-        // A private trampoline near the game's .text; the shared SKSE pool is
-        // too small (same lesson as the stage-0 spike's pass hook).
-        static bool trampoline_ready = false;
-        if (!trampoline_ready)
-        {
-            SKSE::GetTrampoline().create(64 * 1024);
-            trampoline_ready = true;
-        }
+        // Detours-based entry detour (same mechanism as Community Shaders'
+        // stl::detour_thunk): the overwritten prologue bytes are relocated to
+        // a trampoline, so the thunk can call the original function body. A
+        // raw write_call<5> on the entry is NOT viable here — the entry is a
+        // 5-byte jmp whose bytes would be lost and the thunk would recurse
+        // into itself (the main-menu stack overflow seen in the first run).
+        static DrawInterfaceStart_t original =
+            reinterpret_cast<DrawInterfaceStart_t>(REL::RelocationID(79947, 82084).address());
 
-        REL::Relocation<std::uintptr_t> target{ REL::RelocationID(79947, 82084) };
-        target.write_call<5>(draw_interface_start_thunk);
-        logger::info("Proto DrawInterfaceStart call hook installed at 0x{:X}", target.address());
+        DetourRestoreAfterWith();
+        DetourTransactionBegin();
+        DetourUpdateThread(GetCurrentThread());
+        if (DetourAttach(reinterpret_cast<PVOID*>(&original),
+                reinterpret_cast<PVOID>(draw_interface_start_thunk)) != NO_ERROR ||
+            DetourTransactionCommit() != NO_ERROR)
+        {
+            DetourTransactionAbort();
+            logger::warn("Proto DetourAttach failed; F6 arm has no effect");
+            return false;
+        }
+        s_original_draw_interface_start = original;
+        logger::info("Proto DrawInterfaceStart detour installed at 0x{:X}",
+            REL::RelocationID(79947, 82084).address());
         return true;
     }
 }

@@ -9,16 +9,22 @@ private frame can run by swapping the UI3D secondary accumulator in,
 accumulating the menu scene into a private color/depth target, and
 restoring.
 
-The prototype installs one call-site hook on
-`MenuManager::DrawInterfaceStart` (REL::RelocationID(79947, 82084)) — the
-same entry Community Shaders hooks for menu TAA — on a private 64 KiB
-trampoline. F6 arms exactly one frame: on that rendered menu frame the hook
-swaps the current accumulator to the UI3D secondary (the one the inventory
-scene actually renders through, capture report finding 2), forces
-`RENDER_MODE::kNormal`, runs the original menu draw, restores the previous
-current accumulator, and reads the private target back to a tone-mapped
-TGA. No culling-process fields are touched; the capture report flags
-`BSCullingProcess` extension offsets as unverified on 1.6.1170.
+The prototype installs one entry detour on `MenuManager::DrawInterfaceStart`
+(REL::RelocationID(79947, 82084)) via Microsoft Detours — the same mechanism
+as Community Shaders' `stl::detour_thunk` — so the original prologue is
+relocated to a trampoline and the thunk can call the true original body.
+(A first iteration used a raw `write_call<5>` on the entry instead; the
+entry's first five bytes are themselves a `jmp rel32` on 1.6.1170, the raw
+patch destroyed them, and the thunk recursed into itself — a stack-overflow
+crash the moment the main menu first drew, right after the intro animation.
+Detours fixes this by relocating the overwritten bytes.) F6 arms exactly one
+frame: on that rendered menu frame the hook swaps the current accumulator to
+the UI3D secondary (the one the inventory scene actually renders through,
+capture report finding 2), forces `RENDER_MODE::kNormal`, runs the original
+menu draw, restores the previous current accumulator, and reads the private
+target back to a tone-mapped TGA. No culling-process fields are touched; the
+capture report flags `BSCullingProcess` extension offsets as unverified on
+1.6.1170.
 
 Unlike the probe, this DLL does render and does patch one call instruction
 for the lifetime of the session. It registers input only on the exact AE
