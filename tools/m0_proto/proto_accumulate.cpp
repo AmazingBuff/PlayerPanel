@@ -349,16 +349,25 @@ namespace CharacterPanelProto
             //    plus publishing the secondary as current.
             RE::BSGraphics::Renderer::StartAccumulating(camera, secondary, 0);
 
-            // 2) Cull each menu-object root. Run 3 measured visible=0 with the
-            //    UI3D camera world at origin — the probe's Process2 disassembly
-            //    shows it reads the camera's viewFrustum (camera+0x150) but the
-            //    culler's own test PLANES (base+0x3C) are only filled by
-            //    SetFrustum, which the engine calls in its own per-frame path.
-            //    Run 4 fills them first (CLib ID 69699/71081, probe-verified
-            //    function bounds) and logs the frustum plus the first root's
-            //    world bound as stage-A diagnostics.
+            // 2) Cull each menu-object root. Run 4 filled the culler planes and
+            //    the frustum proved sane (l/r/t/b ±0.16/±0.09, near 15, far
+            //    20480) — but root0_bound_radius=0: the menu objects' world
+            //    bounds are EMPTY because the engine updates world transforms
+            //    and bounds only in its own update pass, which runs after our
+            //    cull. Run 5 updates each root's world data first, logging any
+            //    bound-radius change as confirmation.
             auto const& camera_data = camera->GetRuntimeData2();
             auto const& frustum = camera_data.viewFrustum;
+            RE::NiUpdateData update_data{ .time = 0.0f, .flags = RE::NiUpdateData::Flag::kNone };
+            for (RE::NiAVObject* root : roots)
+            {
+                float const before = root->worldBound.radius;
+                root->UpdateWorldData(&update_data);
+                if (root->worldBound.radius != before)
+                    logger::info(
+                        "Proto bound updated: root {} radius {} -> {}",
+                        static_cast<void*>(root), before, root->worldBound.radius);
+            }
             logger::info(
                 "Proto stage A0: frustum l={} r={} t={} b={} near={} far={} root0_bound_radius={}",
                 frustum.fLeft, frustum.fRight, frustum.fTop, frustum.fBottom, frustum.fNear, frustum.fFar,

@@ -141,3 +141,11 @@ planes (base+0x3C) are only ever filled by `SetFrustum` in the engine's
 per-frame path. Run 4 calls `culler->SetFrustum(&camera->GetRuntimeData2()
 .viewFrustum)` (CLib ID 69699/71081) before the cull and logs the frustum
 values plus the first root's world-bound radius as stage-A0 diagnostics.
+
+## Run 5: world-data update before cull
+
+Run 4's A0 diagnostics nailed it: frustum sane, `root0_bound_radius=0` — the
+menu objects' world bounds are empty because the engine updates world
+transforms/bounds in its own update pass, after our cull. Run 5 calls
+`UpdateWorldData` on every root before `SetFrustum`/`Process2` and logs any
+bound-radius change as confirmation.
