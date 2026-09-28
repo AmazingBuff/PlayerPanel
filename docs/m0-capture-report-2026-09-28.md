@@ -136,3 +136,40 @@ Cross-checked against CommonLibSSE-NG 9.1.0 history and headers:
   the NiCullingProcess base (0x128) must be treated as unverified for
   1.6.1170. The M0 accumulator-swap path (finding 1) does not depend on
   any of these offsets.
+
+## Addendum 2: prototype runs falsify the declared culler layout (2026-09-28)
+
+Nine prototype runs (see m0-proto.md) turned the addendum-1 caveat into a
+confirmed falsification:
+
+- Runs 4–6: with sane frustum values and populated child bounds
+  (max radius 37.4 under menuObjects root[1]), the shared UI3D culler's
+  `Process2` culled everything. CLib's declared extension offsets are not
+  the offsets this runtime's culler uses.
+- Run 6's census also fixed the geometry location: root[1] holds 22 nodes /
+  14 TriShapes (the highlighted item plus recently viewed items).
+- Runs 7–8: bypassing the culler and feeding the geometries straight into
+  the UI3D accumulators via `RegisterObjectArray` produced zero passes on
+  both accumulators (the secondary dispatches kShadowMask at idle
+  renderMode 12; the primary, forced to kNormal, was equally inert).
+- Disassembling the captured `BSCullingProcess::AppendVirtual` (culler
+  vtable slot 0x18) explains everything: it reads culler fields at +0x3D5
+  and +0x3F4, appends into a struct at culler+0x250, and enqueues at
+  culler+0x140 — the real 1.6.1170 class is at least 0x3F8 bytes, far
+  beyond CLib's declared `sizeof == 0x301F8`. Geometry ingestion flows
+  through that queue, not through `RegisterObjectArray`.
+
+Consequences for the M0 contract:
+
+1. Finding 1 stands (the current-accumulator slot is a global pointer), but
+   accumulator-driven menu rendering cannot be built on CLib's culler
+   layout, and neither UI3D accumulator accepts foreign geometry through
+   the documented API. The accumulator-swap route is shelved.
+2. The proven in-game mechanism remains pass-level interception: the
+   stage-0 spike already replayed `BSRenderPass`es into a private target
+   through the three `RenderPassImmediately` call sites. The pragmatic M0
+   design is pass redirection scoped to menu frames (DrawInterfaceStart
+   bracket), reusing the spike's mechanism.
+3. The culler layout question (real 1.6.1170 offsets for +0x140 queue,
+   +0x250 append target, +0x3D5/+0x3F4 flags) is now a well-posed target
+   for a follow-up probe iteration.
