@@ -201,6 +201,8 @@ CommonLibSSE-NG 暴露的菜单场景、相机、动画和渲染提交接口可�
 
 以下为设计调查依据，不能替代本插件的实测。外部源码分支会变化，实施时应固定版本并核对许可。
 
+社区案例的具体分工与证据边界见[社区实现参考补充](community-reference-supplement.md)，涵盖 Dragon’s Eye Minimap、Outfit Preview Selector、Apparel Preview 与 SosGui；该补充不改变本 PRD 的产品范围和验收标准。
+
 - [CommonLibSSE-NG 菜单场景接口](../extern/CommonLibSSE/include/RE/U/UI3DSceneManager.h)：摄影棚挂接和相机能力的调查入口。
 - [Community Shaders 的延迟渲染](https://github.com/community-shaders/skyrim-community-shaders/blob/main/src/Deferred.cpp)：材质缓冲、世界上下文与合成依赖。
 - [Community Shaders 的 Hook](https://github.com/community-shaders/skyrim-community-shaders/blob/main/src/Hooks.cpp)：UI 边界和第三方渲染状态管理的参考。
