@@ -4,6 +4,15 @@
 
 ### Changed
 
+- Record the M0 engineering-side acceptance (docs/m0-acceptance.md):
+  7 criteria over runs 17-26 — 6 pass (visible composite with correct
+  content, content tracking across items/zoom, toggle lifecycle without
+  resource accumulation, non-destructive frames, FR-05 input rules,
+  reproducible evidence chain), 1 partial (the save-load force-close
+  MESSAGE trigger is code-ready but not yet game-verified — folded into
+  phase 2's first round along with the formal PRD 5.3 timing). The
+  panel-rect INI is deferred by user decision; phase 2 (the independent
+  display instance P) is now the current phase.
 - Land the visible panel (v4.6 confirmed by run 26): with the blend fix
   from the user's RenderDoc capture, the studio image now appears as the
   M0 opaque rectangle — exactly at 58-88% x 12-68% of the frame, world
