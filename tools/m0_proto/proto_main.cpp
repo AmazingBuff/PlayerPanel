@@ -121,19 +121,24 @@ namespace CharacterPanelProto
 
         source->AddEventSink(&InputHandler::instance());
         m_installed = true;
+        if (!install_pass_hooks())
+        {
+            logger::warn("Proto pass-hook install failed; F6 arm has no redirect effect");
+            return;
+        }
         if (!install_hook())
         {
             logger::warn("Proto DrawInterfaceStart hook failed; F6 arm has no effect");
             return;
         }
-        logger::info("M0 proto input installed: F6 arms one accumulator-swap frame");
+        logger::info("M0 proto v2 input installed: F6 arms one menu pass-redirect frame");
     }
 
     void Proto::arm()
     {
         bool expected = false;
         if (m_armed.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
-            logger::info("Proto armed: next DrawInterfaceStart runs the accumulator swap");
+            logger::info("Proto armed: next DrawInterfaceStart is bracketed for menu pass redirection");
         else
             logger::info("Proto already armed");
     }

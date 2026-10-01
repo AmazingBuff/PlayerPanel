@@ -13,7 +13,7 @@ option(ENABLE_SKYRIM_SE "Enable support for Skyrim SE in the dynamic runtime fea
 option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
 option(CHARACTER_PANEL_BUILD_PROBE "Build the opt-in M0 engine evidence probe." ON)
-option(CHARACTER_PANEL_BUILD_PROTO "Build the opt-in M0 accumulator-swap prototype." ON)
+option(CHARACTER_PANEL_BUILD_PROTO "Build the opt-in M0 pass-redirection prototype." ON)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
@@ -252,7 +252,7 @@ if(CHARACTER_PANEL_BUILD_PROTO)
 		SHARED
 		tools/m0_proto/proto.h
 		tools/m0_proto/proto_main.cpp
-		tools/m0_proto/proto_accumulate.cpp
+		tools/m0_proto/proto_passredirect.cpp
 		${PROTO_VERSION_HEADER}
 		${PROTO_VERSION_RESOURCE}
 	)
