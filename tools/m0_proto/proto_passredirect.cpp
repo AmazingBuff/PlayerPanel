@@ -10,6 +10,7 @@
 #include <REX/W32/D3D11.h>
 
 #include <Windows.h>
+#include <d3dcompiler.h>
 #include <detours/detours.h>
 #include <fmt/format.h>
 
@@ -78,6 +79,15 @@ namespace CharacterPanelProto
         // passthrough and the replay must run the true pre-patch target.
         std::uintptr_t s_original_targets[3]{};
 
+        // v4.1: the render target the visible menu preview draws into (the
+        // format-28 UI composite, runs 11-19) — captured AddRef'd during
+        // replays, because the target bound at DrawInterfaceStart ENTRY
+        // proved to be a different, non-visible intermediate (format 24,
+        // run 20: the composite quad drew there and never showed). The
+        // engine reallocates this pool target on resolution change, which
+        // shows up as a pointer change and triggers a recapture.
+        REX::W32::ID3D11RenderTargetView* s_panel_rtv = nullptr;
+
         void call_site_original(std::size_t site_index, RE::BSRenderPass* pass, std::uint32_t technique,
             bool alpha_test, std::uint32_t render_flags)
         {
@@ -119,6 +129,7 @@ namespace CharacterPanelProto
         {
             REX::W32::ID3D11Texture2D* color = nullptr;
             REX::W32::ID3D11RenderTargetView* rtv = nullptr;
+            REX::W32::ID3D11ShaderResourceView* srv = nullptr;
             REX::W32::ID3D11Texture2D* depth_texture = nullptr;
             REX::W32::ID3D11DepthStencilView* dsv = nullptr;
             REX::W32::ID3D11DepthStencilState* ds_state = nullptr;
@@ -129,6 +140,8 @@ namespace CharacterPanelProto
 
             void destroy()
             {
+                if (srv)
+                    srv->Release();
                 if (rtv)
                     rtv->Release();
                 if (color)
@@ -139,6 +152,7 @@ namespace CharacterPanelProto
                     depth_texture->Release();
                 if (ds_state)
                     ds_state->Release();
+                srv = nullptr;
                 rtv = nullptr;
                 color = nullptr;
                 dsv = nullptr;
@@ -175,6 +189,13 @@ namespace CharacterPanelProto
                 if (device->CreateTexture2D(&color_desc, nullptr, &color) != 0)
                     return false;
                 if (device->CreateRenderTargetView(color, nullptr, &rtv) != 0)
+                {
+                    destroy();
+                    return false;
+                }
+                // v4: the composite quad samples the studio image, so the
+                // color texture needs an SRV alongside the RTV.
+                if (device->CreateShaderResourceView(color, nullptr, &srv) != 0)
                 {
                     destroy();
                     return false;
@@ -447,7 +468,7 @@ namespace CharacterPanelProto
             }
         }
 
-        // --- pass redirector (render thread only) --------------------------
+        // --- shared frame-rate/log constants --------------------------------
 
         // Per-open discovery cap for menu-geometry log lines: each menu
         // geometry is logged once per panel open; afterwards only counters
@@ -458,6 +479,376 @@ namespace CharacterPanelProto
         // (~30 s at 60 fps). Content summaries additionally fire whenever
         // the replay count changes (item switches).
         constexpr std::uint32_t Heartbeat_Frames = 1800;
+
+        // --- composite (v4, work package 3) --------------------------------
+
+        // M0 calibration constants: the panel occupies a fixed screen
+        // fraction (58%..88% horizontally, 12%..68% vertically from the
+        // top) and shows the WHOLE studio target squeezed into it (uv
+        // 0..1). Framing and zoom are studio-camera concerns (M1), not
+        // composite concerns; the rect moves behind a config only if run
+        // 20 shows placement matters for verification.
+        constexpr float Panel_Screen_MinX = 0.58f;
+        constexpr float Panel_Screen_MaxX = 0.88f;
+        constexpr float Panel_Screen_MinY = 0.12f;
+        constexpr float Panel_Screen_MaxY = 0.68f;
+
+        // A fullscreen-triangle-pair quad addressed purely by SV_VertexID
+        // (no vertex buffers, no input layout): the vertex shader places the
+        // corners from a one-float4 constant buffer holding the panel rect
+        // in NDC (x0, yBottom, x1, yTop), the pixel shader samples the
+        // studio target opaquely. Drawn at DrawInterfaceStart entry into
+        // whatever target is bound, BEFORE the original menu draw — the
+        // PRD §2 order (panel under other UI). Only the state the quad
+        // actually sets is saved and restored; the engine rebinds the rest
+        // for its own draws.
+        constexpr std::string_view Composite_VS = R"(
+cbuffer PanelCB : register(b0) { float4 g_ndcRect; }
+struct VSOut { float4 pos : SV_Position; float2 uv : TEXCOORD0; };
+VSOut vs_main(uint id : SV_VertexID) {
+    VSOut o;
+    // v4.4: clockwise in window space (the viewport flips NDC y). The old
+    // order was counter-clockwise on screen — back-facing — and the
+    // engine's CULL_BACK rasterizer state silently culled every quad
+    // since v4.1 (Draw succeeded, zero pixels rasterized).
+    float2 corners[6] = { {-1,-1}, {-1,1}, {1,-1}, {-1,1}, {1,1}, {1,-1} };
+    float2 c = corners[id];
+    float x = lerp(g_ndcRect.x, g_ndcRect.z, c.x * 0.5 + 0.5);
+    float y = lerp(g_ndcRect.y, g_ndcRect.w, c.y * 0.5 + 0.5);
+    o.pos = float4(x, y, 0.0, 1.0);
+    o.uv = float2(c.x * 0.5 + 0.5, 0.5 - c.y * 0.5);
+    return o;
+}
+)";
+        constexpr std::string_view Composite_PS = R"(
+Texture2D g_tex : register(t0);
+SamplerState g_samp : register(s0);
+float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
+    return g_tex.Sample(g_samp, uv);
+}
+)";
+
+        class CompositeRenderer
+        {
+        public:
+            static CompositeRenderer& instance()
+            {
+                static CompositeRenderer s_instance;
+                return s_instance;
+            }
+
+            // One-time setup: compile the shaders (native d3dcompiler, no
+            // blob-type coupling into REX) and create the fixed states.
+            bool ensure(REX::W32::ID3D11Device* device)
+            {
+                if (m_vs || m_failed)
+                    return !m_failed;
+                if (!device)
+                    return false;
+
+                REX::W32::ID3D11VertexShader* vs = nullptr;
+                REX::W32::ID3D11PixelShader* ps = nullptr;
+                ID3DBlob* code = nullptr;
+                ID3DBlob* errors = nullptr;
+                if (FAILED(::D3DCompile(Composite_VS.data(), Composite_VS.size(), nullptr, nullptr, nullptr,
+                        "vs_main", "vs_5_0", 0, 0, &code, &errors)))
+                {
+                    logger::warn("Proto v4 composite VS compile failed: {}",
+                        errors ? static_cast<const char*>(errors->GetBufferPointer()) : "(no message)");
+                    if (errors)
+                        errors->Release();
+                    m_failed = true;
+                    return false;
+                }
+                const HRESULT vs_hr = device->CreateVertexShader(
+                    code->GetBufferPointer(), code->GetBufferSize(), nullptr, &vs);
+                code->Release();
+                if (vs_hr != 0 || !vs)
+                {
+                    logger::warn("Proto v4 composite VS creation failed (hr=0x{:X})",
+                        static_cast<std::uint32_t>(vs_hr));
+                    m_failed = true;
+                    return false;
+                }
+
+                if (FAILED(::D3DCompile(Composite_PS.data(), Composite_PS.size(), nullptr, nullptr, nullptr,
+                        "ps_main", "ps_5_0", 0, 0, &code, &errors)))
+                {
+                    logger::warn("Proto v4 composite PS compile failed: {}",
+                        errors ? static_cast<const char*>(errors->GetBufferPointer()) : "(no message)");
+                    if (errors)
+                        errors->Release();
+                    vs->Release();
+                    m_failed = true;
+                    return false;
+                }
+                const HRESULT ps_hr = device->CreatePixelShader(
+                    code->GetBufferPointer(), code->GetBufferSize(), nullptr, &ps);
+                code->Release();
+                if (ps_hr != 0 || !ps)
+                {
+                    logger::warn("Proto v4 composite PS creation failed (hr=0x{:X})",
+                        static_cast<std::uint32_t>(ps_hr));
+                    vs->Release();
+                    m_failed = true;
+                    return false;
+                }
+
+                REX::W32::D3D11_SAMPLER_DESC sampler_desc{};
+                sampler_desc.filter = REX::W32::D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+                sampler_desc.addressU = REX::W32::D3D11_TEXTURE_ADDRESS_CLAMP;
+                sampler_desc.addressV = REX::W32::D3D11_TEXTURE_ADDRESS_CLAMP;
+                sampler_desc.addressW = REX::W32::D3D11_TEXTURE_ADDRESS_CLAMP;
+                sampler_desc.comparisonFunc = REX::W32::D3D11_COMPARISON_NEVER;
+                sampler_desc.maxLOD = REX::W32::D3D11_FLOAT32_MAX;
+                REX::W32::ID3D11SamplerState* sampler = nullptr;
+                REX::W32::ID3D11BlendState* blend = nullptr;
+                REX::W32::ID3D11DepthStencilState* depth_off = nullptr;
+                REX::W32::ID3D11RasterizerState* rs = nullptr;
+                REX::W32::ID3D11Buffer* cb = nullptr;
+
+                // v4.6 (user RenderDoc finding): this composite target is
+                // consumed through the UI alpha-composition pipeline, so the
+                // quad must be BLENDED over the existing layer content, not
+                // written opaquely — the disabled-blend overwrite broke the
+                // layer's composition semantics. Standard non-premultiplied
+                // over: src alpha scales the studio image, inv-src alpha
+                // keeps the layer underneath.
+                REX::W32::D3D11_BLEND_DESC blend_desc{};
+                {
+                    auto& rt0 = blend_desc.renderTarget[0];
+                    rt0.blendEnable = 1;
+                    rt0.srcBlend = REX::W32::D3D11_BLEND_SRC_ALPHA;
+                    rt0.destBlend = REX::W32::D3D11_BLEND_INV_SRC_ALPHA;
+                    rt0.blendOp = REX::W32::D3D11_BLEND_OP_ADD;
+                    rt0.srcBlendAlpha = REX::W32::D3D11_BLEND_ONE;
+                    rt0.destBlendAlpha = REX::W32::D3D11_BLEND_INV_SRC_ALPHA;
+                    rt0.blendOpAlpha = REX::W32::D3D11_BLEND_OP_ADD;
+                    rt0.renderTargetWriteMask = REX::W32::D3D11_COLOR_WRITE_ENABLE_ALL;
+                }
+                const REX::W32::D3D11_DEPTH_STENCILOP_DESC keep_op{
+                    REX::W32::D3D11_STENCIL_OP_KEEP, REX::W32::D3D11_STENCIL_OP_KEEP,
+                    REX::W32::D3D11_STENCIL_OP_KEEP, REX::W32::D3D11_COMPARISON_ALWAYS
+                };
+                REX::W32::D3D11_DEPTH_STENCIL_DESC depth_desc{};
+                depth_desc.depthEnable = 0;
+                depth_desc.stencilEnable = 0;
+                depth_desc.stencilReadMask = 0xFF;
+                depth_desc.stencilWriteMask = 0xFF;
+                depth_desc.frontFace = keep_op;
+                depth_desc.backFace = keep_op;
+
+                // v4.4: the quad carries its own rasterizer state — culling
+                // off and scissor off — so whatever the engine leaves bound
+                // (CULL_BACK, an active scissor rect) cannot silently drop
+                // it. The corrected winding above is the primary fix; this
+                // is the belt to its braces.
+                REX::W32::D3D11_RASTERIZER_DESC rs_desc{};
+                rs_desc.fillMode = REX::W32::D3D11_FILL_SOLID;
+                rs_desc.cullMode = REX::W32::D3D11_CULL_NONE;
+                rs_desc.frontCounterClockwise = 0;
+                rs_desc.depthClipEnable = 1;
+                rs_desc.scissorEnable = 0;
+
+                // NDC rect derived once from the screen-fraction constants:
+                // x = 2u-1; y_top = 1-2*top, y_bottom = 1-2*bottom.
+                const float cb_data[4] = {
+                    2.0f * Panel_Screen_MinX - 1.0f, 1.0f - 2.0f * Panel_Screen_MaxY,
+                    2.0f * Panel_Screen_MaxX - 1.0f, 1.0f - 2.0f * Panel_Screen_MinY
+                };
+                REX::W32::D3D11_BUFFER_DESC cb_desc{};
+                cb_desc.byteWidth = sizeof(cb_data);
+                cb_desc.usage = REX::W32::D3D11_USAGE_IMMUTABLE;
+                cb_desc.bindFlags = REX::W32::D3D11_BIND_CONSTANT_BUFFER;
+
+                bool ok = device->CreateSamplerState(&sampler_desc, &sampler) == 0 && sampler &&
+                    device->CreateBlendState(&blend_desc, &blend) == 0 && blend &&
+                    device->CreateDepthStencilState(&depth_desc, &depth_off) == 0 && depth_off &&
+                    device->CreateRasterizerState(&rs_desc, &rs) == 0 && rs;
+                REX::W32::D3D11_SUBRESOURCE_DATA init{ cb_data, 0, 0 };
+                ok = ok && device->CreateBuffer(&cb_desc, &init, &cb) == 0 && cb;
+                if (!ok)
+                {
+                    logger::warn("Proto v4 composite state creation failed");
+                    if (sampler)
+                        sampler->Release();
+                    if (blend)
+                        blend->Release();
+                    if (depth_off)
+                        depth_off->Release();
+                    if (rs)
+                        rs->Release();
+                    if (cb)
+                        cb->Release();
+                    vs->Release();
+                    ps->Release();
+                    m_failed = true;
+                    return false;
+                }
+
+                m_vs = vs;
+                m_ps = ps;
+                m_sampler = sampler;
+                m_blend = blend;
+                m_depth_off = depth_off;
+                m_rs = rs;
+                m_cb = cb;
+                logger::info("Proto v4.6 composite ready: panel rect {}%..{}% x {}%..{}% of screen",
+                    static_cast<int>(Panel_Screen_MinX * 100), static_cast<int>(Panel_Screen_MaxX * 100),
+                    static_cast<int>(Panel_Screen_MinY * 100), static_cast<int>(Panel_Screen_MaxY * 100));
+                return true;
+            }
+
+            // v4.1: draw the panel quad into the CAPTURED call-site target
+            // (the format-28 UI composite the visible menu preview uses) —
+            // run 20 proved the target bound at DrawInterfaceStart entry is
+            // a different, non-visible intermediate. Binding another target
+            // means the OM pair and the viewport join the save/restore set.
+            void draw(REX::W32::ID3D11DeviceContext* ctx, REX::W32::ID3D11RenderTargetView* rtv)
+            {
+                OffscreenTarget& target = offscreen_target();
+                if (!ctx || !m_vs || !m_ps || !m_rs || !target.srv || !rtv || rtv == target.rtv)
+                    return;
+
+                // Size the viewport from the target itself: the panel rect
+                // is NDC, so it follows whatever resolution this target has.
+                REX::W32::ID3D11Resource* resource = nullptr;
+                rtv->GetResource(&resource);
+                if (!resource)
+                    return;
+                REX::W32::D3D11_TEXTURE2D_DESC desc{};
+                static_cast<REX::W32::ID3D11Texture2D*>(resource)->GetDesc(&desc);
+                resource->Release();
+
+                REX::W32::ID3D11RenderTargetView* prev_rtv = nullptr;
+                REX::W32::ID3D11DepthStencilView* prev_dsv = nullptr;
+                ctx->OMGetRenderTargets(1, &prev_rtv, &prev_dsv);
+                REX::W32::D3D11_VIEWPORT prev_viewports[16] = {};
+                UINT prev_viewport_count = 16;
+                ctx->RSGetViewports(&prev_viewport_count, prev_viewports);
+
+                REX::W32::ID3D11BlendState* prev_blend = nullptr;
+                FLOAT prev_blend_factor[4] = {};
+                UINT prev_sample_mask = 0;
+                ctx->OMGetBlendState(&prev_blend, prev_blend_factor, &prev_sample_mask);
+                if (prev_blend && !m_blend_logged)
+                {
+                    m_blend_logged = true;
+                    REX::W32::D3D11_BLEND_DESC prev_blend_desc{};
+                    prev_blend->GetDesc(&prev_blend_desc);
+                    const auto& rt0 = prev_blend_desc.renderTarget[0];
+                    logger::info("Proto v4.6 engine blend at composite time: enable={} src={} dest={} "
+                                 "(v4.5 wrote opaquely into an alpha-composited layer)",
+                        rt0.blendEnable, static_cast<int>(rt0.srcBlend), static_cast<int>(rt0.destBlend));
+                }
+                REX::W32::ID3D11DepthStencilState* prev_ds = nullptr;
+                UINT prev_stencil_ref = 0;
+                ctx->OMGetDepthStencilState(&prev_ds, &prev_stencil_ref);
+                REX::W32::ID3D11RasterizerState* prev_rs = nullptr;
+                ctx->RSGetState(&prev_rs);
+                if (prev_rs && !m_rs_logged)
+                {
+                    m_rs_logged = true;
+                    REX::W32::D3D11_RASTERIZER_DESC prev_rs_desc{};
+                    prev_rs->GetDesc(&prev_rs_desc);
+                    logger::info("Proto v4.6 rasterizer bound at composite time: cull={} scissor={} "
+                                 "(the v4.1-4.3 quads were back-facing under this state and culled)",
+                        static_cast<int>(prev_rs_desc.cullMode),
+                        static_cast<int>(prev_rs_desc.scissorEnable));
+                }
+                REX::W32::ID3D11PixelShader* prev_ps = nullptr;
+                ctx->PSGetShader(&prev_ps, nullptr, nullptr);
+                REX::W32::ID3D11ShaderResourceView* prev_srv = nullptr;
+                ctx->PSGetShaderResources(0, 1, &prev_srv);
+                REX::W32::ID3D11SamplerState* prev_sampler = nullptr;
+                ctx->PSGetSamplers(0, 1, &prev_sampler);
+                REX::W32::ID3D11Buffer* prev_ps_cb = nullptr;
+                ctx->PSGetConstantBuffers(0, 1, &prev_ps_cb);
+                REX::W32::ID3D11VertexShader* prev_vs = nullptr;
+                ctx->VSGetShader(&prev_vs, nullptr, nullptr);
+                REX::W32::ID3D11Buffer* prev_vs_cb = nullptr;
+                ctx->VSGetConstantBuffers(0, 1, &prev_vs_cb);
+                REX::W32::D3D11_PRIMITIVE_TOPOLOGY prev_topology{};
+                ctx->IAGetPrimitiveTopology(&prev_topology);
+
+                REX::W32::D3D11_VIEWPORT viewport{ 0.0f, 0.0f,
+                    static_cast<float>(desc.width), static_cast<float>(desc.height), 0.0f, 1.0f };
+                ctx->OMSetRenderTargets(1, &rtv, nullptr);
+                if (prev_viewport_count > 0)
+                    ctx->RSSetViewports(1, &viewport);
+                ctx->OMSetBlendState(m_blend, prev_blend_factor, prev_sample_mask);
+                ctx->OMSetDepthStencilState(m_depth_off, prev_stencil_ref);
+                ctx->RSSetState(m_rs);
+                ctx->PSSetShader(m_ps, nullptr, 0);
+                ctx->PSSetShaderResources(0, 1, &target.srv);
+                ctx->PSSetSamplers(0, 1, &m_sampler);
+                ctx->PSSetConstantBuffers(0, 1, &m_cb);
+                ctx->VSSetShader(m_vs, nullptr, 0);
+                ctx->VSSetConstantBuffers(0, 1, &m_cb);
+                ctx->IASetPrimitiveTopology(REX::W32::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+                ctx->Draw(6, 0);
+                ++m_draws;
+
+                ctx->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
+                if (prev_viewport_count > 0)
+                    ctx->RSSetViewports(prev_viewport_count, prev_viewports);
+                ctx->OMSetBlendState(prev_blend, prev_blend_factor, prev_sample_mask);
+                ctx->OMSetDepthStencilState(prev_ds, prev_stencil_ref);
+                ctx->RSSetState(prev_rs);
+                ctx->PSSetShader(prev_ps, nullptr, 0);
+                ctx->PSSetShaderResources(0, 1, &prev_srv);
+                ctx->PSSetSamplers(0, 1, &prev_sampler);
+                ctx->PSSetConstantBuffers(0, 1, &prev_ps_cb);
+                ctx->VSSetShader(prev_vs, nullptr, 0);
+                ctx->VSSetConstantBuffers(0, 1, &prev_vs_cb);
+                ctx->IASetPrimitiveTopology(prev_topology);
+
+                if (prev_rtv)
+                    prev_rtv->Release();
+                if (prev_dsv)
+                    prev_dsv->Release();
+                if (prev_blend)
+                    prev_blend->Release();
+                if (prev_ds)
+                    prev_ds->Release();
+                if (prev_rs)
+                    prev_rs->Release();
+                if (prev_ps)
+                    prev_ps->Release();
+                if (prev_srv)
+                    prev_srv->Release();
+                if (prev_sampler)
+                    prev_sampler->Release();
+                if (prev_ps_cb)
+                    prev_ps_cb->Release();
+                if (prev_vs)
+                    prev_vs->Release();
+                if (prev_vs_cb)
+                    prev_vs_cb->Release();
+
+                if (m_draws == 1 || m_draws % Heartbeat_Frames == 0)
+                    logger::info("Proto v4.6 composite draw #{} ({}x{} panel rect on screen)", m_draws,
+                        desc.width, desc.height);
+            }
+
+        private:
+            CompositeRenderer() = default;
+
+            REX::W32::ID3D11VertexShader* m_vs = nullptr;
+            REX::W32::ID3D11PixelShader* m_ps = nullptr;
+            REX::W32::ID3D11SamplerState* m_sampler = nullptr;
+            REX::W32::ID3D11BlendState* m_blend = nullptr;
+            REX::W32::ID3D11DepthStencilState* m_depth_off = nullptr;
+            REX::W32::ID3D11RasterizerState* m_rs = nullptr;
+            REX::W32::ID3D11Buffer* m_cb = nullptr;
+            std::uint32_t m_draws = 0;
+            bool m_failed = false;
+            bool m_rs_logged = false;
+            bool m_blend_logged = false;
+        };
+
+        // --- pass redirector (render thread only) --------------------------
+
         // Bound for the parent-chain walk to the menuObjects roots.
         constexpr std::size_t Ancestry_Max_Depth = 32;
 
@@ -563,8 +954,16 @@ namespace CharacterPanelProto
             }
 
             // DrawInterfaceStart return: close the bracket, consume a pending
-            // F7 dump, and summarize — but only on state changes or the slow
-            // throttles, never unconditionally at frame rate.
+            // F7 dump, summarize — and (v4.2) composite the panel into the
+            // composite target captured during THIS frame's replays. Runs
+            // 20/21 proved the entry-time draw lands in the previous
+            // frame's pool instance and never reaches the screen: the
+            // format-28 UI composite rotates instances every menu frame
+            // (recapture lines ~0.35 s apart in run 21). Drawing here —
+            // after the original menu draw, before DrawInterfaceStart
+            // returns — is inside the same frame the engine's merge reads.
+            // Gated on replays having happened this frame, so a stale
+            // capture from an earlier menu frame is never used.
             void end_frame()
             {
                 m_in_frame = false;
@@ -576,6 +975,14 @@ namespace CharacterPanelProto
                     else
                         logger::warn("Proto v3 dump ignored: studio target does not exist");
                 }
+
+                // v4.5: the end_frame composite is REMOVED — runs 23/24
+                // falsified it (the merge happens inside the original call,
+                // before this point; the quad rasterized into an already-
+                // merged instance). The composite now runs inside the
+                // replay hook, at the last placement on the visible side of
+                // that merge. The captured s_panel_rtv stays as evidence
+                // only (it logs the call-site format every session).
 
                 if (m_menu_passes == 0)
                 {
@@ -651,6 +1058,14 @@ namespace CharacterPanelProto
                 {
                     target.destroy();
                     logger::info("Proto v3 studio target released ({})", reason);
+                }
+                // v4.1: the captured composite target belongs to the session
+                // too — release it so a changed resolution is recaptured on
+                // the next open.
+                if (s_panel_rtv)
+                {
+                    s_panel_rtv->Release();
+                    s_panel_rtv = nullptr;
                 }
                 m_target_failed = false;
                 m_session_replays = 0;
@@ -809,6 +1224,22 @@ namespace CharacterPanelProto
                     return;
                 }
 
+                // v4.1: capture the call-site target (AddRef) for the panel
+                // composite — run 20 proved the DrawInterfaceStart-entry
+                // target is a non-visible intermediate (format 24), while
+                // THIS target carries the visible menu preview (format 28,
+                // runs 11-19). A pointer change (resolution change
+                // reallocating the pool) triggers a recapture.
+                if (s_panel_rtv != prev_rtv)
+                {
+                    if (s_panel_rtv)
+                        s_panel_rtv->Release();
+                    s_panel_rtv = prev_rtv;
+                    s_panel_rtv->AddRef();
+                    logger::info("Proto v4.6 panel composite target captured: {}x{} format={}",
+                        template_desc.width, template_desc.height, static_cast<int>(template_desc.format));
+                }
+
                 // The studio target is persistent: created from the call
                 // site's own description, kept across frames, self-recreated
                 // when the description changes (resolution change), and
@@ -896,6 +1327,20 @@ namespace CharacterPanelProto
                 runtime.context->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
                 runtime.context->OMSetDepthStencilState(prev_ds_state, prev_stencil_ref);
                 runtime.context->RSSetViewports(1, &prev_viewport);
+
+                // v4.5: composite HERE — inside the original call, with the
+                // call-site instance still bound. The passthrough wrote the
+                // item's pixels into THIS target microseconds ago and they
+                // ARE visible on screen, so whatever merges this instance
+                // reads it after this point; a quad drawn now rides the same
+                // merge. Runs 23/24 falsified every later placement: at
+                // end_frame the merge has already happened inside the
+                // original call (the run-24 rasterizer line — cull=1,
+                // CullNone — also proves rasterization was never the
+                // blocker, retracting the v4.4 winding diagnosis).
+                if (CompositeRenderer::instance().ensure(runtime.forwarder))
+                    CompositeRenderer::instance().draw(runtime.context, prev_rtv);
+
                 if (prev_ds_state)
                     prev_ds_state->Release();
                 prev_rtv->Release();
@@ -965,9 +1410,11 @@ namespace CharacterPanelProto
                 return;
             }
 
-            // Panel open: bracket the menu draw. While the bracket is open
-            // the pass hooks replay menu lighting passes into the persistent
-            // studio target; the menu frame itself renders normally.
+            // Panel open: bracket the menu draw. The pass hooks replay menu
+            // lighting passes into the persistent studio target while it is
+            // open; the panel composite runs at end_frame into THIS frame's
+            // composite instance (v4.2); the menu frame itself renders
+            // normally.
             PassRedirector::instance().begin_frame();
             original(a1);
             PassRedirector::instance().end_frame();

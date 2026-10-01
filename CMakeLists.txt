@@ -314,5 +314,6 @@ if(CHARACTER_PANEL_BUILD_PROTO)
 		CommonLibSSE::CommonLibSSE
 		${DETOURS_LIBRARY}
 		user32
+		d3dcompiler
 	)
 endif()

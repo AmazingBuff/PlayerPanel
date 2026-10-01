@@ -599,3 +599,310 @@ Observations and residuals:
 studio target, panel lifecycle) are complete and game-verified. The next
 implementation target is work package 3 — compositing the studio target
 onto the world image as an opaque rectangle before other UI (PRD §2).**
+
+## v4: composite (work package 3, built 2026-10-01, awaiting run 20)
+
+The studio output finally lands on screen. The composite runs at the
+`DrawInterfaceStart` detour ENTRY, before the original menu draw —
+whatever the panel draws is under every other UI element, which is the
+PRD §2 order (stage 2 before stage 3). Per-frame sequence with the panel
+open: composite the (previous frame's) studio image → bracket opens →
+menu passes re-render the studio target → bracket closes. One frame of
+content latency at the entry point; irrelevant for a menu preview.
+
+Mechanics:
+
+- **Quad**: an SV_VertexID triangle pair (no vertex buffers, no input
+  layout) placed by a one-float4 constant buffer holding the panel rect
+  in NDC; the pixel shader samples the studio target's new SRV opaquely
+  (blend disabled, depth test off). Shaders are runtime-compiled with
+  the native d3dcompiler (linked via CMake; no blob-type coupling into
+  REX).
+- **Panel rect**: fixed screen fraction 58–88% × 12–68% (top-left
+  origin), the whole studio target squeezed into it. Framing/zooming the
+  item is studio-camera work (M1), not composite scope. Calibration
+  constants, logged at first use.
+- **State footprint**: only what the quad sets is saved and restored —
+  blend, depth-stencil state, PS/VS shaders, PS slot 0 (SRV, sampler,
+  CB), VS CB 0, IA topology. OM render targets are untouched (the quad
+  draws into whatever is bound); the engine rebinds the rest for its own
+  draws.
+- **Guards**: no composite before the studio target exists (first
+  replay); a feedback guard skips the draw if the bound RTV is our own
+  studio RTV; draw counter logs at #1 and every ~1800 draws.
+
+What run 20 answers (PRD §7 question 2 territory):
+
+1. what target is actually bound at DrawInterfaceStart entry (logged
+   once as "composite target at DrawInterfaceStart entry" — run 12 only
+   identified the target DURING the menu pass);
+2. whether the rectangle is visible and sits UNDER SkyUI widgets
+   (tooltips, cursor, item card) as PRD §2 requires;
+3. whether the world and the menu are unharmed (A01's "next frame no
+   pollution" pre-check) and whether closing the panel removes the rect;
+4. how the composite interacts with CS/ENB/ReShade final passes in this
+   load order (the rect should receive those effects with everything
+   else, per PRD §2 stage 4).
+
+Run 20 checklist:
+
+1. Open the panel (F7) in the inventory with an item highlighted: a
+   visible opaque rectangle appears (right side of the screen) showing
+   the item; SkyUI widgets render above it.
+2. Close the panel (F7): the rectangle disappears, the usual evidence
+   TGA is written, world and inventory look normal.
+3. Walk around with the panel open (world visible): the rectangle stays
+   put over the world; the world moves normally behind/around it (A01
+   core behavior, camera part pending the menu-context caveat).
+4. Log check: "composite ready" + target-identity + draw-counter lines;
+   no errors/warnings.
+
+## Run 20 result (2026-10-01): mechanism works, routing wrong — entry target is a non-visible intermediate
+
+One session (18:18–18:20, v4). The composite pipeline ran exactly as
+designed — "composite ready", the identity line, "composite draw #1",
+clean close-as-capture dumps (053–057, with content-free closes
+correctly dumping nothing) and no crash — but **no rectangle appeared on
+screen**. The diagnostic line decided it:
+
+> composite target at DrawInterfaceStart entry: 2560x1440 **format 24**
+> (R10G10B10A2_UNORM)
+
+The target bound at DrawInterfaceStart entry is a different, non-visible
+intermediate — the visible menu preview draws into the format-28 UI
+composite DURING the bracket (runs 11–19), not into whatever is bound at
+entry. The user's screenshot adds a load-bearing observation: the item
+image inside the modded UI's item card sits exactly where the TGA
+bounding boxes place the replayed item (x 56–65%, y 29–45% of the
+frame) — i.e., the format-28 target's content demonstrably reaches the
+screen.
+
+**v4.1 (built 2026-10-01, run 21 pending) reroutes the composite:** at
+each replay the hook captures the call-site RTV (AddRef; recapture on
+pointer change — the pool reallocates on resolution change; released
+with the studio target on panel close), and the entry composite binds
+THAT target (OM + viewport now in the save/restore set), draws the quad,
+restores. The quad still runs before the original menu draw, so the
+panel still lands under other UI *within that target*; the item preview
+and SkyUI widgets draw after it by engine order.
+
+Run 21 checklist (new DLL):
+
+1. Open the panel (F7) in the inventory with an item highlighted: an
+   opaque rectangle (58–88% × 12–68% of the screen) should now appear,
+   showing the studio image, under the item card/tooltip/cursor.
+   Overlap with the item's own 3D preview is expected and fine (both
+   live in the same target; layout is M1+).
+2. Log: "panel composite target captured: 2560x1440 format=28" — if the
+   captured format is not 28, capture the log; the routing assumption is
+   falsified.
+3. If the rectangle is STILL invisible with format 28 captured and
+   draws advancing: the merge of the format-28 composite onto the screen
+   must be region-gated (stencil/scissor in the merge pass) — the next
+   probe records that merge, not another blind reroute.
+4. Everything from v4 unchanged: close removes the rectangle + writes
+   the TGA; world/menu unharmed; F8 mid-session grab works.
+
+## Run 21 result (2026-10-01): format 28 confirmed — and the target is a per-frame rotating instance
+
+One session (18:32–18:33, v4.1). The capture worked exactly as designed:
+`panel composite target captured: 2560x1440 format=28` — the call-site
+target IS the UI composite. Draws ran, close-captures produced TGAs, no
+crash — and the rectangle STILL did not show. The load-bearing new fact
+is in the log: **five capture lines ~0.35 s apart**. The capture fires
+only when the pointer changes, so the format-28 composite is NOT a
+stable pool slot — **the engine rotates composite instances every menu
+frame**. The entry-time draw necessarily painted the PREVIOUS frame's
+instance; the engine's merge reads the current one. Invisible by
+construction.
+
+**v4.2 (built+deployed 2026-10-01, run 22 pending)** moves the composite
+from the DrawInterfaceStart entry to the bracket close (end_frame, right
+after the original menu draw returns — still before the frame's UI
+merge), drawing into the instance captured during THIS frame's replays,
+gated on `lighting_replayed > 0` so a stale cross-frame capture is never
+used. The stale-instance hold shrinks from one frame to microseconds.
+
+Run 22 checklist:
+
+1. Same procedure (F7 open with an item highlighted): the rectangle
+   should now appear during menus, under the item card/tooltip/cursor.
+2. Known M0 scope change: the rectangle shows only on menu frames with
+   replayed content (it draws at bracket close). A zero-replay menu
+   stretch (effects-only) will blank it for those frames; gameplay still
+   shows nothing — gameplay-path compositing is a separate, later
+   evidence step (the gameplay merge path differs from the menu one).
+3. If STILL invisible with v4.2 draws advancing: the merge must be
+   region-gated (stencil/scissor only letting the preview region
+   through) — the next probe records the merge pass state, not another
+   reroute.
+4. Everything else unchanged: close removes it + writes the TGA; world
+   and menu unharmed; log shows `v4.2 ... captured` + `v4.2 composite
+   draw #N`.
+
+## Run 22 result (2026-10-01): INVALID — v4.2 never drew (integration bug)
+
+Session 18:41–18:43 (zoomed-preview state included): captures fired
+(format 28, one per fresh instance), replays ran, close-captures wrote
+TGAs (064–074) — but **not a single "composite draw" line**. Code review
+found why: moving the composite from the entry path to end_frame left
+`ensure()` behind in the deleted function, so `draw()` early-returned on
+null shaders every frame. v4.2 was never a test of the end-frame timing.
+
+**v4.3 (built+deployed 18:59/19:00, MD5-verified against the MO2 copy)
+adds the `ensure()` call in end_frame.** Run 23 re-runs the run-22
+checklist unchanged: with the panel open on a menu frame with replayed
+content, expect `composite draw #N` lines to finally appear and the
+58–88% × 12–68% opaque rectangle on screen; if draws advance and the
+rectangle is still invisible, the merge is region-gated and the next
+probe targets the merge pass.
+
+## Run 23 result (2026-10-01): Draw called, zero pixels — the quad was back-facing and culled
+
+v4.3 ran correctly (session 19:05–19:08): `composite ready`, captures
+(format 28, per fresh instance), exactly one `composite draw #1` line
+(heartbeat not reached), replays and dumps all green — and STILL no
+rectangle. With draws confirmed and nothing rasterized, the remaining
+suspect was rasterization state, and re-deriving the winding exposed a
+day-one bug: **the viewport transform flips NDC y, so the quad's
+`{(-1,-1),(1,-1),(-1,1)}` order is COUNTER-clockwise in window space —
+back-facing — and the engine's CULL_BACK rasterizer state silently
+culled every quad since v4.1** (Draw succeeds, no error, zero pixels —
+consistent with all three failed routing runs; the replay path is
+unaffected because engine passes bind their own state, and the TGA
+readback is a CopyResource, not a rasterized draw).
+
+**v4.4 (built+deployed 19:15, MD5-verified) fixes it with belt and
+braces:**
+
+1. the corner order is corrected to clockwise in window space;
+2. the composite binds its OWN rasterizer state (CullNone,
+   ScissorOff, Solid) with save/restore — immune to whatever cull or
+   scissor state the engine leaves bound;
+3. one diagnostic line logs the previously bound rasterizer's
+   cull/scissor at composite time (confirms the hypothesis per session).
+
+Run 24 checklist: identical to run 23. This is the first run where the
+quad can actually rasterize; if the rectangle now appears, the M0
+composite mechanism is proven and the remaining work is placement/
+lifecycle polish; if draws advance and it is STILL invisible after a
+cull-proof draw, the merge-pass region-gating hypothesis is the only one
+left standing.
+
+## Run 24 result (2026-10-01): culling hypothesis FALSIFIED by its own diagnostic
+
+v4.4 ran (19:18–19:20): install line v4.4, `composite ready`, captures
+(format 28, one per fresh instance), one `composite draw #1`, replays and
+close-dumps green — and no rectangle. But the new diagnostic line
+retracted the v4.4 diagnosis instead of confirming it:
+
+> rasterizer bound at composite time: **cull=1** scissor=0
+
+`cull=1` is `D3D11_CULL_NONE` — the engine binds cull-OFF at composite
+time, so the v4.3 quad was never culled; it rasterized fine, and the
+v4.4 winding "fix" (predicted cull=2/CULL_BACK) was hygiene, not the
+cure. Honest retraction: the back-face culling story is dead.
+
+What survives: pixels rasterize into the last-replayed instance at
+end_frame; the item's pixels in that SAME instance are visible on
+screen; the panel drawn microseconds later into it is not. Two
+explanations remain: **(a)** the merge happens INSIDE the original call
+— before end_frame; **(b)** format-28 is not the visible path at all
+(the on-screen preview would come from an unhooked render; the TGA
+position match proves nothing about target identity — any render of the
+same scene through the same camera lands at the same pixels).
+
+## v4.5 (built+deployed 19:29, MD5-verified): the decisive placement
+
+The composite moved INTO the replay hook: immediately after the replay
+call returns and the engine's OM is restored, the quad is drawn into
+`prev_rtv` — the call-site instance, still bound, containing the item's
+pixels the passthrough wrote microseconds earlier. The logic is
+airtight: nothing engine-side runs between the passthrough's return and
+our draw (it is all our code), so if the visible image is produced from
+this instance, it is produced AFTER our draw — the quad must appear. The
+falsified end_frame composite is removed; the capture stays as evidence
+(it logs the call-site format each session).
+
+Run 25 decision tree:
+
+1. Install line must read `M0 proto v4.5 panel composite installed`.
+2. F7 open on an item: `Proto v4.5 composite draw #N` lines should
+   appear per replay, and the 58–88% × 12–68% rectangle should finally
+   show (under UI drawn later in the same frame — §2-compliant).
+3. **If visible**: the M0 composite mechanism is proven; remaining work
+   is placement polish, lifecycle, and A01.
+4. **If draws advance and it is STILL invisible**: format-28 is not the
+   visible path — the on-screen preview is rendered somewhere we do not
+   hook. Next step (run 26): a Present-hook diagnostic composite (draw
+   the studio image onto the backbuffer at Present — guaranteed
+   visible) to put the content on screen while the engine's real UI
+   merge path is mapped separately.
+
+## Run 25 result (2026-10-01) + v4.6: the user's RenderDoc capture finds the blend bug
+
+v4.5 ran (19:34–19:36): in-replay draws executed (one `composite draw`
+line), the engine's rasterizer at composite time read cull=3 (CullFront
+— varies by point, irrelevant under our own CullNone state) — and still
+no rectangle. Instead of a sixth blind run, the user captured the frame
+with RenderDoc and found the real problem: **the composite target is
+consumed through the UI alpha-composition pipeline, so the quad must be
+BLENDED over the existing layer content — v4.x wrote it with blending
+disabled, an opaque overwrite that breaks the layer's composition
+semantics.**
+
+**v4.6 (built+deployed 20:19, MD5-verified) fixes the blend:** the
+composite quad now uses standard non-premultiplied over (SrcBlend=
+SrcAlpha, DestBlend=InvSrcAlpha, alpha channel One/InvSrcAlpha) instead
+of the disabled blend. A new per-session diagnostic logs the ENGINE's
+own blend state bound at composite time (same pattern as the run-24
+rasterizer line): if the pipeline expects a nonstandard convention (e.g.
+inverted alpha), the next log pins it exactly instead of another guess.
+
+Run 26 checklist:
+
+1. Install line = `M0 proto v4.6 panel composite installed`.
+2. F7 open on an item: the 58–88% × 12–68% rectangle should appear
+   (blended, under later-drawn UI per §2); F7 close removes it + TGA.
+3. If still nothing: compare the logged `engine blend at composite time`
+   values against what RenderDoc shows for the engine's OWN draws onto
+   that target — the correct blend configuration is then copied verbatim
+   rather than inferred.
+
+## Run 26 result (2026-10-01): PANEL VISIBLE — the M0 composite works
+
+The user's screenshot (20:27, v4.6 with RenderDoc attached) shows the
+M0 panel on screen for the first time: a black opaque rectangle exactly
+at 58–88% × 12–68% of the frame, with the studio image inside it (the
+Iron Shield), the world and character rendering normally around it, and
+the UI list untouched on the left. Session log green throughout:
+
+- `engine blend at composite time: enable=0 src=2 dest=1` (ONE/ZERO —
+  the engine's own bound state at that point is an opaque write; the
+  precise layer-alpha semantics that made the over-blend write visible
+  where the opaque write was not are left for later study — the user's
+  RenderDoc finding stands as the empirical fix);
+- `composite draw #1800` and `#3600` heartbeats — the panel drew every
+  bracketed frame across the session (~3600+ draws) with no crash, no
+  stall;
+- 3 close-capture TGAs — the evidence path is intact alongside the
+  visible panel;
+- captures keep confirming the call-site target (format 28).
+
+Known placement facts for the polish pass (M1, not blockers):
+
+- the rectangle currently OVERLAPS the modded item card (it covers the
+  card's right portion) — the card draws before the composite point, so
+  the panel sits above it; PRD §2 wants other UI above the panel, which
+  needs either an earlier composite point for the panel or a layout that
+  avoids the card (M1 placement work);
+- the studio image is squeezed whole into the rect (the item appears at
+  its preview position scaled down) — framing/zoom is the M1 studio
+  camera work.
+
+**Verdict: handoff work package 3 (compositing) is complete. The M0
+panel prototype now renders a persistent, non-destructive, correctly
+shaded studio view as an opaque on-screen rectangle. Remaining M0 work:
+the formal A01 acceptance run (world + panel + camera movement +
+next-frame cleanliness) and the paused-scenario placeholder (package 4,
+fixed pose).**

@@ -158,7 +158,8 @@ namespace CharacterPanelProto
             return;
         }
         m_capture_ready = true;
-        logger::info("M0 proto v3.1 panel prototype installed: F7 toggles the panel, F8 dumps the studio target");
+        logger::info("M0 proto v4.6 panel composite installed: F7 toggles the panel (visible opaque rectangle "
+                     "+ evidence on close), F8 grabs a mid-session frame");
     }
 
     void Proto::toggle_panel()
@@ -282,7 +283,7 @@ extern "C" __declspec(dllexport) bool SKSEPlugin_Load(SKSE::LoadInterface const*
 
 extern "C" __declspec(dllexport) constinit auto SKSEPlugin_Version = [] {
     SKSE::PluginVersionData version;
-    version.PluginVersion(REL::Version(1, 1, 0, 0));
+    version.PluginVersion(REL::Version(1, 2, 0, 0));
     version.PluginName(CharacterPanelProto::Name);
     version.AuthorName("CharacterPanel");
     version.CompatibleVersions({ SKSE::RUNTIME_SSE_1_6_1170 });
