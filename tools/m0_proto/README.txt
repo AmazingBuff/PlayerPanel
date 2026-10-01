@@ -1,26 +1,35 @@
-CharacterPanelProto M0 pass-redirection prototype (v2.5)
+CharacterPanelProto M0 panel prototype (v3.1)
 
-This package is an opt-in, one-shot rendering experiment for the M0 studio
-renderer contract. Run 14 (2026-10-01) passed the M0 gate: the highlighted
-item renders completely and correctly shaded into a private offscreen
-target. The prototype combines two proven mechanisms:
+This package is an opt-in rendering experiment for the M0 studio renderer
+contract. Runs 9-16 (2026-10-01) passed the M0 gate: menu-scene passes are
+identified with zero false positives, hook-shared with Community Shaders,
+and re-drawn 1:1 into a private offscreen target with correct shading and
+intra-item occlusion. v3 turns the F6 one-shot into the persistent panel
+skeleton (handoff work packages 1+2):
 
-- the DrawInterfaceStart entry detour (Microsoft Detours), which brackets
-  exactly one rendered menu frame per F6 press;
-- pass hooks on the three RenderPassImmediately call sites (the stage-0
-  spike's mechanism, hook-shared with Community Shaders by restoring the
-  pre-patch call chain).
+- F7 toggles the panel (v3.1 rebinding: F6 is bound in the user's game).
+  While it is open, EVERY DrawInterfaceStart frame is bracketed, and
+  menu-scene BSLightingShader passes are replayed into the persistent
+  studio target immediately AFTER the original call, so the target stays
+  current every menu frame and the visible frame is untouched.
+- The studio target is persistent: created from the call site's own
+  render-target description, self-recreated on resolution/format change,
+  and released on the render thread when the panel closes or the session
+  invalidates (save loading / new game force-close the panel, FR-06).
+- v3.1: closing the panel with F7 writes ONE evidence TGA of the last
+  studio image on the render thread, before the release destroys the
+  target (both prior sessions pressed the dump key only after closing —
+  the close itself is now the capture). An open with nothing replayed
+  (e.g. an effects-only menu) dumps nothing; force-closes dump nothing.
+- F8 is an optional mid-session grab (panel must be open; otherwise it
+  warns and does nothing).
+- Logging is throttled: each menu geometry logs once per panel open,
+  summaries only on state changes or every ~30 s (heartbeat).
 
-While the bracket is open, every pass flowing through the call sites is
-logged. A pass whose geometry descends from a UI3DSceneManager menuObjects
-root is a menu-scene pass; BSLightingShader (shaderType 6) passes among
-those are re-drawn into a private offscreen target (sized/formatted from
-the call site's own render target) immediately AFTER the original call —
-the original's draw leaves every pipeline slot exactly as the pass needs,
-so the replay is a 1:1 copy with no state capture or restore. The visible
-menu frame is untouched. When the bracket closes, the private target is
-read back to a TGA. It draws no panel, creates no actors, and changes no
-persistent game state.
+No panel quad is drawn yet (compositing is the next work package), no
+actors are created, and no persistent game state changes. Do NOT load
+this together with the old CharacterPanel plugin or CharacterPanelProbe
+(the probe's F7/F8 would collide).
 
 Build (opt-in, off by default):
 
@@ -31,40 +40,31 @@ Build (opt-in, off by default):
     cmake --build build --config Release --target CharacterPanelProto
 
 The DLL is build/Release/CharacterPanelProto.dll. Install it manually (MO2
-or SKSE/Plugins); do not run it together with the old CharacterPanel plugin
-or CharacterPanelProbe.
+or SKSE/Plugins).
 
-In-game procedure (AE 1.6.1170 only):
+In-game procedure (AE 1.6.1170 only) — the capture is the close:
 
-1. Enter a save, open the SkyUI inventory, and highlight an item with a
-   visible 3D model.
-2. Press F6 once: the next rendered menu frame is bracketed. The log
-   records every pass seen during the bracket (geometry pointer, name,
-   menu-match result, shader type, passEnum, technique) and writes
-   proto-pass-NNN.tga (tone-mapped readback of the private target) under
-   Documents/My Games/Skyrim Special Edition/SKSE/CharacterPanelProto.
-3. Close the inventory, confirm the menu and the world look normal, and
-   exit. Return the log and TGA files.
+1. Enter a save, open the SkyUI inventory, highlight an item with a
+   visible 3D model, press F7 (panel opens), give it a second, then press
+   F7 again (panel closes). Expect in the log: the item's geometry line,
+   a replay summary, "Panel closed", "Proto v3 studio dump written",
+   and "studio target released". This produces one proto-pass-NNN.tga
+   under Documents/My Games/Skyrim Special Edition/SKSE/
+   CharacterPanelProto showing the highlighted item, correctly shaded
+   with correct occlusion.
+2. Optional extras:
+   - F8 while the panel is open for an additional mid-session frame.
+   - Highlight several different items while open before closing —
+     the TGA shows the last one.
+   - Leave the panel open during normal gameplay for a few minutes:
+     expect one heartbeat line per ~30 s and no other spam.
+3. Save + load WITH the panel open: expect "Panel force-closed (save
+   loading)" and a release line WITHOUT a dump line (force-close writes
+   no TGA). Repeat open/close a few times; every close with content
+   writes exactly one TGA — no accumulation.
+4. Exit. Return the log and the TGAs from this session.
 
-Expected readings:
-
-- the bracket log shows menu roots with the highlighted item's root among
-  them (run 6 put the item under root[1]);
-- passes with menu=true appear in the per-pass log; menu-scene lighting
-  passes (shader=6) are replayed (lighting_replayed advances past 0);
-- per-frame state lines record the inherited depth/stencil and scissor
-  configuration, the engine target bound at the call site, and whether the
-  replay's raw OM binding survived each call (runs 9-10: black readbacks
-  with depth/stencil disabled — v2.2 re-binds and retries once when the
-  engine re-applies its own targets inside the call);
-- a TGA showing the highlighted item, correctly shaded, proves menu passes
-  flow through the hooked call sites and render correctly into a private
-  target;
-- the inventory item and the world look unchanged after the bracket (the
-  replay is non-destructive by design).
-
-If no menu=true pass appears, the menu scene does not submit through the
-three hooked call sites — the per-pass log is the diagnostic for the next
-iteration. If the TGA is black with replayed>0, capture the log and report
-back; both outcomes are evidence, and a failure isolates to the redirect
-itself.
+Failure isolation: a close with content but no "dump written" line points
+at the readback path; a black/broken TGA isolates to the replay itself;
+any crash over repeated cycles points at the lifecycle path. All outcomes
+are evidence; report the log either way.

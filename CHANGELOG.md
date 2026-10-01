@@ -4,6 +4,32 @@
 
 ### Changed
 
+- Turn the M0 prototype from the F6 one-shot into the v3 persistent panel
+  skeleton (handoff work packages 1+2, built 2026-10-01): F6 toggles the
+  panel and, while open, every DrawInterfaceStart frame is bracketed so
+  menu-scene lighting passes keep the studio target current every menu
+  frame; the offscreen target is persistent (created from the call site
+  description, self-recreated on resolution change, released on the
+  render thread on panel close, and force-closed on save loading / new
+  game per FR-06); the per-frame TGA readback is replaced by an opt-in
+  F7 one-shot dump (PRD 5.3: no steady-state GPU readback);
+  persistent-frame logging is throttled (per-geometry discovery lines,
+  state-change summaries, slow heartbeat). Run 17 verifies the toggle,
+  release, silent-gameplay-bracket, and reopen-replay mechanics; run 18
+  adds a 31-second soak, effect-shader menu-pass discovery, and
+  item-change tracking — but both sessions produced zero TGA because
+  every F7 press came after panel close. v3.1 fixes the interaction
+  instead of the operator: closing the panel with F6 now writes one
+  evidence TGA from the studio target before the render-thread release
+  (force-closes and content-free closes write nothing), the dump key is
+  demoted to an optional mid-session grab, the content-summary cadence is
+  fixed to state changes / ~30 s, and the hotkeys move F6/F7 to F7/F8
+  (F6 is bound in the user's game). Run 19 passes the v3.1 checklist:
+  four close-captures and one mid-session grab produced five TGAs whose
+  readbacks show correct materials and occlusion across seven item
+  geometries and an 8-pass cluster frame, over 28.5 s and 52 s soak
+  stretches — closing handoff work packages 1+2. Compositing (work
+  package 3) is the next build.
 - Retire the falsified accumulator-swap route in the M0 prototype and add
   the v2 pass-redirection frame: F6 now brackets one DrawInterfaceStart
   frame, the three RenderPassImmediately call-site hooks log every pass in

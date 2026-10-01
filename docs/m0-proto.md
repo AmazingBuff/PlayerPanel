@@ -402,3 +402,200 @@ readbacks show the complete Iron Shield with the handle correctly hidden
 behind the shield face — the run-14 artifact is gone. The M0 core
 evidence chain now covers PRD FR-04's intra-item occlusion requirement
 alongside identification, capture, and correct shading.
+
+## v3: persistent panel skeleton (handoff work packages 1+2)
+
+Run 16 closed the evidence chain; v3 (built 2026-10-01, awaiting its game
+session) turns the F6 one-shot into the M0 panel skeleton per the handoff's
+next-work-package list — no new engine mechanisms, only engineering of the
+proven ones:
+
+1. **Panel toggle, persistent bracket.** F6 toggles the panel (FR-05 input
+   rules: the sink still only observes its two keys, rejects held/repeat,
+   and stays active while InventoryMenu pauses the game). While open, EVERY
+   `DrawInterfaceStart` frame is bracketed — the HUD is a menu too, so the
+   bracket also runs during normal gameplay, where zero menu passes flow
+   and the frame budget is one root snapshot plus counters.
+2. **Persistent studio target.** `OffscreenTarget` is held across frames:
+   still created lazily from the call site's own RTV/depth description,
+   self-recreated whenever that description changes (resolution change),
+   and released on the RENDER THREAD at the first non-bracketed
+   `DrawInterfaceStart` after close (D3D11 Release is legal cross-thread,
+   but the render thread is the only place the target is in flight).
+   Session invalidation (FR-06): `kPreLoadGame`/`kNewGame` force-close the
+   panel; there is no kToMain message in SKSE v2 messaging, but the main
+   menu has no menuObjects content, so a panel left open there renders
+   nothing and is closed by the next save load. Creation failures are
+   sticky per configuration signature (w/h/color-format/depth-format):
+   no CreateTexture2D hammering per frame; retry on panel reopen or desc
+   change.
+3. **F7 evidence dump.** The per-frame automatic TGA readback is gone (a
+   synchronous readback every menu frame violates PRD 5.3). F7 requests a
+   one-shot dump, consumed when the current bracket closes. The clear
+   still happens lazily at the first replay of each frame, so on
+   content-free frames the target keeps its last image (the future
+   composite's behavior) at zero GPU cost.
+4. **Throttled logging for the persistent frame.** Menu geometries log
+   once per panel open (discovery set, cap 256), frame summaries only when
+   the replay count changes or every 60 content frames, menu-root
+   snapshots only on change, and one heartbeat line per ~1800 bracketed
+   frames (~30 s) proving the bracket is alive during gameplay.
+
+What success looks like (run 17 checklist):
+
+- repeated F6 open/close cycles show exactly one "Panel opened" /
+  "Panel closed" pair, one target create and one release each — no
+  accumulation (FR-06, PRD 5.3);
+- with the inventory open and the panel on, every F7 dump shows the
+  currently highlighted item, correctly shaded and occluded — the run-16
+  gate result sustained across frames and across item changes;
+- normal gameplay with the panel open produces only heartbeats and an
+  untouched frame;
+- loading a save with the panel open logs "Panel force-closed (save
+  loading)" plus the release line;
+- the world and inventory look normal throughout (the replay remains
+  non-destructive).
+
+Compositing (work package 3 — studio output onto the world image before
+other UI, PRD §2) is deliberately NOT in this build: it is the next
+mechanism to prove, and bundling it would muddy run-17 attribution.
+
+## Run 17 result (2026-10-01): persistent mechanics verified, evidence session incomplete
+
+One session, AE 1.6.1170 + CS installed (site 1 "interposed, chain
+restored" as in runs 11–16). What the log proves:
+
+- Seven F6 open/close cycles (five in normal gameplay, two in the
+  inventory) with zero crashes, zero [W] lines other than the dump guard,
+  and a "studio target released (panel closed)" render-thread line after
+  every close — the FR-06 lifecycle works, repeatedly.
+- The persistent bracket ran silently through all gameplay windows (one
+  root-change line at frame #1: 8 roots, unnamed — correct, they are
+  containers) and needed no per-frame logging. Frame arithmetic across
+  the seven open windows (~7 s, 327 frames ≈ 40 fps) shows no bracket
+  overhead anomaly.
+- With the SkyUI inventory open the studio path reproduced the run-14/16
+  fingerprints exactly: IronShield:0, shader 6, site 1, engine target
+  2560x1440 format 28, post-original SRV set {0,1,5}, `binding survived:
+  true`, lighting_replayed=1 — on BOTH panel opens (frames #328 and
+  #347), i.e. the replay re-arms across a close/reopen cycle including
+  target re-creation.
+- The dump guard behaved as designed: all four F7 presses came after the
+  panel was closed and were rejected with "Dump ignored: panel is
+  closed".
+
+What this session did NOT deliver — run 18 must cover, same DLL, no
+rebuild:
+
+1. **Zero TGA evidence.** No `proto-pass-NNN.tga` newer than the v3
+   build exists; the visual proof of sustained correct replay is missing.
+   Press F7 only while the panel is open (inventory up, item
+   highlighted).
+2. **Sustained soak.** The panel was open for ~0.5 s per inventory
+   stretch; keep it open 1–2 minutes while rotating/highlighting
+   different items, with an F7 dump at the start, middle, and end.
+3. **Gameplay soak / heartbeat.** The longest gameplay open window was
+   ~2.7 s — under the 1800-frame heartbeat threshold. Leave the panel
+   open during normal play for a few minutes.
+4. **Save-load force-close.** No load happened with the panel open; do
+   one save + load with the panel open and expect "Panel force-closed
+   (save loading)" plus the release line.
+
+## Run 18 result (2026-10-01): soak and effect-pass discovery verified — and zero TGA again
+
+One session, 16:16–16:20. New verifications:
+
+- **Sustained soak.** One 31-second continuous panel-open stretch in a
+  menu (frames #253–1633, ≈45 fps) with per-frame bracketing: stable, no
+  crash, no stall. Two more open/close cycles with releases on the
+  render thread. The lifecycle now has 11 clean toggle cycles across two
+  sessions.
+- **Menu-scene effect passes discovered.** The long stretch carried 7
+  menu passes per frame with `shader=7` (BSEffectShader: pFireballCore,
+  pSparks, lightRays, Glow, PArray, Sphere, Cylinder — particle/glow
+  geometry), site 0, numLights=0, alphaTest=true. Identification handles
+  them correctly (menu_passes counted), and v3 correctly does NOT replay
+  them (lighting only). Consequence for the studio later: glows and
+  particles attached to menu objects are effect-shader passes; FR-04's
+  transparency/glow requirements will need them replayed with additive
+  blending — recorded as work-package-3+ input, not a v3 defect.
+- **Replay follows item changes.** Two brief item highlights each
+  replayed on their own open (HelmetGO then TorsoGO, shader 6, site 1,
+  `binding survived: true`), including target re-creation per open.
+
+Not delivered — again — was a single TGA: **all twelve F7 presses came
+after the panel was closed** (twelve "Dump ignored: panel is closed"
+lines). Two sessions in a row with the same sequencing shows this is an
+interaction-design failure, not user error: the natural flow treats
+"close the panel" as "done — capture now", but v3.0 released the target
+on close and only honored F7 while open.
+
+**v3.1 (built 2026-10-01) changes the design to match the flow:**
+
+1. **Panel close now writes the evidence.** A user-initiated close dumps
+   one synchronous TGA of the last studio image on the render thread
+   BEFORE the release destroys the target (`dump_and_release`, gated on
+   replays having happened this open — an effects-only open produces no
+   dump). Force-closes (save loading / new game) release silently.
+   Closing the panel IS the capture button now.
+2. **The dump key is demoted to an optional mid-session grab** (still
+   requires the panel open; still warns otherwise).
+3. **Content-summary cadence fixed**: v3.0 logged a summary every 60
+   content frames (run 18: 27 lines in ~38 s — spammy); now both summary
+   flavors fire on state change or every 1800 frames.
+4. **Hotkeys moved F6/F7 → F7/F8**: F6 is bound in the user's game
+   setup, so F7 toggles the panel and F8 is the mid-session grab. The
+   probe's F7/F8 never co-load with this DLL, so there is no collision.
+
+Run 19 checklist (same install flow, new DLL):
+
+1. Open the panel (F7) in the inventory, browse to an item with a 3D
+   model, close the panel (F7) — expect exactly one `proto-pass-NNN.tga`
+   plus "studio dump written" and the release lines in the log.
+2. Optional: F8 mid-session while open for an extra frame.
+3. Save + load with the panel open — expect "Panel force-closed (save
+   loading)" and a release WITHOUT a dump line.
+4. Leave the panel open during normal play for a few minutes — expect
+   the heartbeat line (~30 s cadence) and no spam.
+
+## Run 19 result (2026-10-01): v3.1 PASSED — the evidence chain is closed
+
+One session, 16:33–16:36, new DLL (v3.1, F7/F8). All core checks green:
+
+- **Close-as-capture works.** Four F7 open/close cycles produced exactly
+  four TGAs (`proto-pass-048..050, 052`), each close logging "studio
+  dump written" followed by the release line — one dump, one release,
+  no accumulation. Zero warnings in the whole session.
+- **F8 mid-session grab works.** One request while open wrote
+  `proto-pass-051` on the next bracket close.
+- **Replay scales and follows items.** IronShield across cycles 1–3;
+  cycle 4 (52 s open) browsed TorsoGO, GlovesGO, BrokenAmuletBottom,
+  BootsGO, HelmetGO, and two 8-geometry cluster frames (Scroll02,
+  SoulGemCommon, BackpackCord, Waterskin, BackpackMain, GemMetal,
+  Potion, GemStone — `lighting_replayed=8`, site 1 throughout).
+- **Visual verdict (readback analysis + cropped PNGs):** 048/049 show
+  the Iron Shield small in the SkyUI preview region; 050 (the 28.5 s
+  soak close) shows it zoomed with crisp wood grain, iron rim, boss and
+  correct speculars; 052 shows a steel cuirass with leather accents.
+  Correct materials, lighting, silhouette — no garbage textures, no
+  missing occlusion.
+- Install fingerprint unchanged: site 1 "interposed, chain restored",
+  engine target format 28, SRV set {0,1,5}, `binding survived: true`.
+
+Observations and residuals:
+
+- Menu fps (from bracketed-frame arithmetic) varied widely: ~11 fps in
+  cycle 3 (1 replay/frame), ~3.4 fps for 46 s of cycle 4, then ~54 fps
+  for its last second — including frames replaying 8 passes. The 54 fps
+  burst rules out replay cost as the bottleneck; the slow stretches are
+  most plausibly game-side (streaming / SkyUI list work). Proper CPU/GPU
+  timing belongs to PRD 5.3's measurement stage, not this prototype.
+- Not exercised this session (same mechanisms are verified elsewhere):
+  the save-load force-close (the release machinery it calls ran four
+  times here, and the CAS guard ran in runs 17/18) and the gameplay
+  heartbeat (log cadence only).
+
+**Verdict: handoff work packages 1+2 (persistent bracket, persistent
+studio target, panel lifecycle) are complete and game-verified. The next
+implementation target is work package 3 — compositing the studio target
+onto the world image as an opaque rectangle before other UI (PRD §2).**

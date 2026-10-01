@@ -20,26 +20,29 @@
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-// M0 prototype v2 (runs 9+): menu-scoped pass redirection. The accumulator-
-// swap route was falsified in runs 1-8 (the menu path bypasses the global
-// slot; CLib's culler layout does not match the runtime; neither UI3D
-// accumulator ingests foreign geometry), so the armed frame no longer swaps
-// anything. Instead the DrawInterfaceStart detour brackets exactly one menu
-// frame, and pass hooks on the three RenderPassImmediately call sites (the
-// stage-0 spike's proven mechanism) observe every pass flowing during the
-// bracket. A pass whose geometry descends from a UI3DSceneManager menuObjects
-// root is a menu-scene pass; BSLightingShader passes among those are replayed
-// into a private offscreen target immediately AFTER the original call (v2.5
-// order: the state left by the original's draw is exactly what the pass needs,
-// and the shadow-state dirty flags are already consumed), so the visible menu
-// frame is untouched. After the bracket the private target is
-// read back to a tone-mapped TGA.
+// M0 panel prototype v3: persistent studio redirection. The pass-level
+// evidence chain is closed (runs 9-16: menu passes are identifiable with zero
+// false positives, hook-shared with Community Shaders, and re-drawn 1:1 into
+// a private target with correct shading and intra-item occlusion), so v3
+// turns the F6 one-shot into the M0 panel skeleton (handoff work packages
+// 1+2): F6 toggles the panel, and while it is open EVERY DrawInterfaceStart
+// frame is bracketed — menu-scene BSLightingShader passes are replayed into
+// the persistent studio target after the original call, keeping the target
+// current every menu frame. The target is created from the call site's own
+// render-target description (self-recreating on resolution/format change),
+// held for the panel's lifetime, and released on the render thread when the
+// panel closes or the session invalidates (FR-06). F7 stays as a one-shot
+// synchronous TGA readback for evidence; the steady-state path does no GPU
+// readback (PRD 5.3). Logging is throttled for the persistent frame: menu
+// passes are logged once per geometry per open, frame summaries only on
+// state changes, plus a slow heartbeat.
 
 namespace CharacterPanelProto
 {
@@ -189,14 +192,14 @@ namespace CharacterPanelProto
                 const HRESULT depth_hr = device->CreateTexture2D(&depth_desc, nullptr, &depth_texture);
                 if (depth_hr != 0)
                 {
-                    logger::warn("Proto v2 depth texture creation failed (format={} hr=0x{:X})",
+                    logger::warn("Proto v3 depth texture creation failed (format={} hr=0x{:X})",
                         static_cast<int>(a_depth_format), static_cast<std::uint32_t>(depth_hr));
                     destroy();
                     return false;
                 }
                 if (device->CreateDepthStencilView(depth_texture, nullptr, &dsv) != 0)
                 {
-                    logger::warn("Proto v2 depth view creation failed");
+                    logger::warn("Proto v3 depth view creation failed");
                     destroy();
                     return false;
                 }
@@ -232,6 +235,24 @@ namespace CharacterPanelProto
             }
         };
 
+        // Configuration identity of a studio target: detects description
+        // changes (resolution change) and makes creation failures sticky per
+        // configuration within one panel open.
+        struct TargetSig
+        {
+            std::uint32_t width = 0;
+            std::uint32_t height = 0;
+            std::uint32_t format = 0;
+            std::uint32_t depth_format = 0;
+            bool operator==(const TargetSig&) const = default;
+        };
+
+        TargetSig target_sig(const OffscreenTarget& target)
+        {
+            return { target.width, target.height, static_cast<std::uint32_t>(target.format),
+                static_cast<std::uint32_t>(target.depth_format) };
+        }
+
         OffscreenTarget& offscreen_target()
         {
             static OffscreenTarget s_target;
@@ -257,9 +278,11 @@ namespace CharacterPanelProto
             std::fclose(out);
         }
 
-        // GPU -> CPU copy of the offscreen color target, decoded from
-        // R11G11B10_FLOAT and tone-mapped to an 8-bit BGRA TGA under the SKSE
-        // log directory, same as the probe captures and the runs 1-8 dumps.
+        // One-shot GPU -> CPU copy of the studio color target (F7 debug
+        // path), tone-mapped to an 8-bit BGRA TGA under the SKSE log
+        // directory when the target is HDR, copied verbatim otherwise (the
+        // call-site composite is R8G8B8A8_UNORM). Synchronous by design —
+        // never called on the steady-state path.
         void dump_offscreen_to_log_dir()
         {
             auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
@@ -351,10 +374,10 @@ namespace CharacterPanelProto
                 if (std::filesystem::exists(file))
                     continue;
                 write_tga(file, desc.width, desc.height, bgra);
-                logger::info("Proto v2 dump written: {}", file.string());
+                logger::info("Proto v3 studio dump written: {}", file.string());
                 return;
             }
-            logger::warn("Proto v2 dump directory is full; TGA not written");
+            logger::warn("Proto v3 dump directory is full; TGA not written");
         }
 
         // Identify an RTV's resource against the engine's render-target pool
@@ -364,7 +387,7 @@ namespace CharacterPanelProto
         {
             if (!rtv)
             {
-                logger::info("Proto v2 {}: <null rtv>", tag);
+                logger::info("Proto v3 {}: <null rtv>", tag);
                 return;
             }
             REX::W32::ID3D11Resource* resource = nullptr;
@@ -372,7 +395,7 @@ namespace CharacterPanelProto
             auto* texture = static_cast<REX::W32::ID3D11Texture2D*>(resource);
             if (!texture)
             {
-                logger::info("Proto v2 {}: rtv={} <no resource>", tag, static_cast<void*>(rtv));
+                logger::info("Proto v3 {}: rtv={} <no resource>", tag, static_cast<void*>(rtv));
                 return;
             }
             REX::W32::D3D11_TEXTURE2D_DESC desc{};
@@ -391,7 +414,7 @@ namespace CharacterPanelProto
                     }
                 }
             }
-            logger::info("Proto v2 {}: rtv={} texture={} pool={} {}x{} format={}", tag, static_cast<void*>(rtv),
+            logger::info("Proto v3 {}: rtv={} texture={} pool={} {}x{} format={}", tag, static_cast<void*>(rtv),
                 static_cast<void*>(texture), pool_index, desc.width, desc.height,
                 static_cast<int>(desc.format));
         }
@@ -411,7 +434,7 @@ namespace CharacterPanelProto
                     reinterpret_cast<std::uintptr_t>(views[i]), static_cast<int>(desc.viewDimension),
                     static_cast<int>(desc.format));
             }
-            logger::info("Proto v2 {}:{}", tag, line.empty() ? " (all unbound)" : line);
+            logger::info("Proto v3 {}:{}", tag, line.empty() ? " (all unbound)" : line);
         }
 
         void release_srvs(REX::W32::ID3D11ShaderResourceView* (&views)[16])
@@ -426,8 +449,15 @@ namespace CharacterPanelProto
 
         // --- pass redirector (render thread only) --------------------------
 
-        // Per-frame pass log cap: every pass beyond this only bumps counters.
-        constexpr std::size_t Pass_Log_Cap = 48;
+        // Per-open discovery cap for menu-geometry log lines: each menu
+        // geometry is logged once per panel open; afterwards only counters
+        // advance (a persistent frame would otherwise spam the log at frame
+        // rate).
+        constexpr std::size_t Menu_Geom_Log_Cap = 256;
+        // Slow log cadence for both summary flavors — one line per N frames
+        // (~30 s at 60 fps). Content summaries additionally fire whenever
+        // the replay count changes (item switches).
+        constexpr std::uint32_t Heartbeat_Frames = 1800;
         // Bound for the parent-chain walk to the menuObjects roots.
         constexpr std::size_t Ancestry_Max_Depth = 32;
 
@@ -469,7 +499,7 @@ namespace CharacterPanelProto
                             address + 5 + *reinterpret_cast<const std::int32_t*>(address + 1);
                     REL::Relocation<std::uintptr_t> hook{ address };
                     hook.write_call<5>(thunks[i]);
-                    logger::info("Proto v2 pass hook {} installed at 0x{:X}; pre-patch target 0x{:X} "
+                    logger::info("Proto v3 pass hook {} installed at 0x{:X}; pre-patch target 0x{:X} "
                                  "(SetupAndDrawPass=0x{:X}, {})",
                         i, address, s_original_targets[i], setup_address,
                         s_original_targets[i] == setup_address ? "unhooked" : "interposed, chain restored");
@@ -478,19 +508,31 @@ namespace CharacterPanelProto
             }
 
             // DrawInterfaceStart entry: open the bracket, snapshot the menu
-            // roots passes will be matched against.
+            // roots passes will be matched against. Logging happens only on
+            // root-set changes — the bracket now runs every frame while the
+            // panel is open.
             void begin_frame()
             {
                 m_in_frame = true;
                 m_passes_seen = 0;
-                m_passes_logged = 0;
+                m_geoms_logged = 0;
                 m_menu_passes = 0;
                 m_menu_lighting_replayed = 0;
                 m_cleared = false;
-                m_target_failed = false;
-                m_state_logged2 = false;
-                m_srv_logged = false;
-                m_binding_logged = false;
+                ++m_frame_index;
+
+                // Fresh panel open: reset per-open throttles and give a
+                // previously failed target creation another chance.
+                const std::uint32_t generation = Proto::instance().panel_generation();
+                if (generation != m_generation)
+                {
+                    m_generation = generation;
+                    m_content_frames = 0;
+                    m_last_logged_replayed = 0;
+                    m_session_replays = 0;
+                    m_target_failed = false;
+                    m_seen_geoms.clear();
+                }
 
                 m_root_count = 0;
                 if (RE::UI3DSceneManager* ui3d = RE::UI3DSceneManager::GetSingleton())
@@ -503,25 +545,58 @@ namespace CharacterPanelProto
                     }
                 }
 
-                logger::info("Proto v2 menu frame #{}: bracket open, menu roots={}{}", ++m_frame_index,
-                    m_root_count, [this] {
-                        std::string names;
-                        for (std::size_t i = 0; i < m_root_count; ++i)
-                            names += fmt::format(" [{}]={}", i,
-                                m_roots[i]->name.c_str() ? m_roots[i]->name.c_str() : "(null)");
-                        return names;
-                    }());
+                const bool roots_changed = m_root_count != m_logged_root_count ||
+                    !std::equal(m_roots, m_roots + m_root_count, m_logged_roots);
+                if (roots_changed)
+                {
+                    std::copy(m_roots, m_roots + m_root_count, m_logged_roots);
+                    m_logged_root_count = m_root_count;
+                    logger::info("Proto v3 panel frame #{}: menu roots changed to {}{}", m_frame_index,
+                        m_root_count, [this] {
+                            std::string names;
+                            for (std::size_t i = 0; i < m_root_count; ++i)
+                                names += fmt::format(" [{}]={}", i,
+                                    m_roots[i]->name.c_str() ? m_roots[i]->name.c_str() : "(null)");
+                            return names;
+                        }());
+                }
             }
 
-            // DrawInterfaceStart return: close the bracket, summarize, dump.
+            // DrawInterfaceStart return: close the bracket, consume a pending
+            // F7 dump, and summarize — but only on state changes or the slow
+            // throttles, never unconditionally at frame rate.
             void end_frame()
             {
                 m_in_frame = false;
-                logger::info("Proto v2 menu frame #{} done: passes_seen={} menu_passes={} lighting_replayed={} "
-                             "logged={}",
-                    m_frame_index, m_passes_seen, m_menu_passes, m_menu_lighting_replayed, m_passes_logged);
-                if (m_menu_lighting_replayed > 0)
-                    dump_offscreen_to_log_dir();
+
+                if (Proto::instance().take_dump())
+                {
+                    if (offscreen_target().color)
+                        dump_offscreen_to_log_dir();
+                    else
+                        logger::warn("Proto v3 dump ignored: studio target does not exist");
+                }
+
+                if (m_menu_passes == 0)
+                {
+                    if (m_frame_index % Heartbeat_Frames == 0)
+                        logger::info("Proto v3 panel frame #{} heartbeat: passes_seen={} menu_passes=0 "
+                                     "(content-free frame, target keeps last studio image)",
+                            m_frame_index, m_passes_seen);
+                    return;
+                }
+
+                ++m_content_frames;
+                m_session_replays += m_menu_lighting_replayed;
+                if (m_menu_lighting_replayed != m_last_logged_replayed ||
+                    m_content_frames % Heartbeat_Frames == 1)
+                {
+                    m_last_logged_replayed = m_menu_lighting_replayed;
+                    logger::info("Proto v3 panel frame #{}: passes_seen={} menu_passes={} "
+                                 "lighting_replayed={} geoms_logged={}",
+                        m_frame_index, m_passes_seen, m_menu_passes, m_menu_lighting_replayed,
+                        m_geoms_logged);
+                }
             }
 
             // Render-thread pass observation. Returns true when the pass is a
@@ -536,18 +611,22 @@ namespace CharacterPanelProto
                 ++m_passes_seen;
                 const bool menu = is_menu_geometry(pass->geometry);
                 if (menu)
-                    ++m_menu_passes;
-
-                if (m_passes_logged < Pass_Log_Cap)
                 {
-                    ++m_passes_logged;
-                    logger::info(
-                        "Proto v2 pass: geom={} name=[{}] menu={} shader={} passEnum=0x{:X} technique=0x{:X} "
-                        "alphaTest={} numLights={} renderFlags=0x{:X} site={}",
-                        static_cast<void*>(pass->geometry),
-                        pass->geometry->name.c_str() ? pass->geometry->name.c_str() : "(null)", menu,
-                        pass->shader ? std::to_underlying(pass->shader->shaderType.get()) : 0u, pass->passEnum,
-                        technique, alpha_test, pass->numLights, render_flags, site_index);
+                    ++m_menu_passes;
+                    // Discovery logging: one line per menu geometry per panel
+                    // open; steady-state frames only advance the counters.
+                    if (m_geoms_logged < Menu_Geom_Log_Cap && m_seen_geoms.insert(pass->geometry).second)
+                    {
+                        ++m_geoms_logged;
+                        logger::info(
+                            "Proto v3 menu pass: geom={} name=[{}] shader={} passEnum=0x{:X} "
+                            "technique=0x{:X} alphaTest={} numLights={} renderFlags=0x{:X} site={}",
+                            static_cast<void*>(pass->geometry),
+                            pass->geometry->name.c_str() ? pass->geometry->name.c_str() : "(null)",
+                            pass->shader ? std::to_underlying(pass->shader->shaderType.get()) : 0u,
+                            pass->passEnum, technique, alpha_test, pass->numLights, render_flags,
+                            site_index);
+                    }
                 }
 
                 if (!menu)
@@ -559,6 +638,36 @@ namespace CharacterPanelProto
                     return false;
 
                 return true;
+            }
+
+            // FR-06 cleanup, running on the render thread at a
+            // non-bracketed DrawInterfaceStart after the panel closed:
+            // destroy the studio resources once, reset sticky failures and
+            // session counters so the next open starts clean.
+            void release_target(std::string_view reason)
+            {
+                OffscreenTarget& target = offscreen_target();
+                if (target.color)
+                {
+                    target.destroy();
+                    logger::info("Proto v3 studio target released ({})", reason);
+                }
+                m_target_failed = false;
+                m_session_replays = 0;
+            }
+
+            // v3.1: user-initiated close (F6). Runs 17/18 both ended with
+            // every F7 pressed AFTER closing the panel — the natural flow
+            // treats close as "done, capture now" — so the close itself
+            // writes the evidence: one synchronous TGA of the last studio
+            // image BEFORE the release destroys the target. Skipped when
+            // nothing was replayed this open (empty target) and on
+            // force-closes (save loading / new game).
+            void dump_and_release(std::string_view reason)
+            {
+                if (offscreen_target().color && m_session_replays > 0)
+                    dump_offscreen_to_log_dir();
+                release_target(reason);
             }
 
         private:
@@ -642,9 +751,9 @@ namespace CharacterPanelProto
                     return;
                 }
 
-                if (!m_state_logged2)
+                if (!m_state_logged)
                 {
-                    m_state_logged2 = true;
+                    m_state_logged = true;
                     log_rtv_identity("engine target at call site", prev_rtv);
                 }
 
@@ -690,20 +799,49 @@ namespace CharacterPanelProto
                         template_ok = true;
                     }
                 }
-
-                OffscreenTarget& target = offscreen_target();
-                const bool needs_create = !template_ok || !target.rtv ||
-                    target.width != template_desc.width || target.height != template_desc.height ||
-                    target.format != template_desc.format || target.depth_format != depth_format;
-                if (needs_create && (m_target_failed || !target.create(runtime.forwarder, template_desc, depth_format)))
+                if (!template_ok)
                 {
-                    if (!m_target_failed)
-                        logger::warn("Proto v2 offscreen target creation failed; replays disabled this frame");
-                    m_target_failed = true;
+                    // Cannot size the studio target from the call site; skip
+                    // silently (never observed in runs 9-16).
                     prev_rtv->Release();
                     if (prev_dsv)
                         prev_dsv->Release();
                     return;
+                }
+
+                // The studio target is persistent: created from the call
+                // site's own description, kept across frames, self-recreated
+                // when the description changes (resolution change), and
+                // released only when the panel closes (FR-06, render thread).
+                // A configuration whose creation failed stays failed for this
+                // panel open — retry on reopen or desc change only, instead
+                // of hammering CreateTexture2D every frame.
+                OffscreenTarget& target = offscreen_target();
+                const TargetSig sig{ template_desc.width, template_desc.height,
+                    static_cast<std::uint32_t>(template_desc.format),
+                    static_cast<std::uint32_t>(depth_format) };
+                if (!target.rtv || sig != target_sig(target))
+                {
+                    if (m_target_failed && sig == m_failed_sig)
+                    {
+                        prev_rtv->Release();
+                        if (prev_dsv)
+                            prev_dsv->Release();
+                        return;
+                    }
+                    if (!target.create(runtime.forwarder, template_desc, depth_format))
+                    {
+                        logger::warn("Proto v3 studio target creation failed ({}x{} format={} depth={}); "
+                                     "replays disabled until the panel reopens or the format changes",
+                            sig.width, sig.height, sig.format, sig.depth_format);
+                        m_target_failed = true;
+                        m_failed_sig = sig;
+                        prev_rtv->Release();
+                        if (prev_dsv)
+                            prev_dsv->Release();
+                        return;
+                    }
+                    m_target_failed = false;
                 }
 
                 // The engine's depth-stencil state at this point is whatever
@@ -746,7 +884,7 @@ namespace CharacterPanelProto
                 if (!m_binding_logged)
                 {
                     m_binding_logged = true;
-                    logger::info("Proto v2 replay (post-original) binding survived: {}", survived);
+                    logger::info("Proto v3 replay (post-original) binding survived: {}", survived);
                     if (!survived)
                         log_rtv_identity("post-replay target", post_rtv);
                 }
@@ -768,15 +906,24 @@ namespace CharacterPanelProto
             }
 
             RE::NiNode* m_roots[8]{};
+            RE::NiNode* m_logged_roots[8]{};
             std::size_t m_root_count = 0;
+            std::size_t m_logged_root_count = 0;
+            // Menu geometries already logged this panel open (discovery cap).
+            std::unordered_set<const RE::BSGeometry*> m_seen_geoms;
+            std::uint32_t m_generation = 0;
             std::uint32_t m_frame_index = 0;
             std::uint32_t m_passes_seen = 0;
-            std::uint32_t m_passes_logged = 0;
+            std::uint32_t m_geoms_logged = 0;
             std::uint32_t m_menu_passes = 0;
             std::uint32_t m_menu_lighting_replayed = 0;
+            std::uint32_t m_last_logged_replayed = 0;
+            std::uint32_t m_content_frames = 0;
+            std::uint32_t m_session_replays = 0;
             bool m_cleared = false;
             bool m_target_failed = false;
-            bool m_state_logged2 = false;
+            TargetSig m_failed_sig{};
+            bool m_state_logged = false;
             bool m_srv_logged = false;
             bool m_binding_logged = false;
             bool m_in_frame = false;
@@ -791,8 +938,8 @@ namespace CharacterPanelProto
         DrawInterfaceStart_t s_original_draw_interface_start = nullptr;
 
         // Render-thread detour. DrawInterfaceStart runs once per rendered
-        // menu frame; the armed flag decides whether this frame is bracketed
-        // for pass redirection.
+        // frame (the HUD is a menu too); the panel state decides whether
+        // this frame is bracketed for studio redirection.
         void draw_interface_start_thunk(std::int64_t a1)
         {
             DrawInterfaceStart_t const original = s_original_draw_interface_start;
@@ -802,26 +949,29 @@ namespace CharacterPanelProto
                 return;
             }
 
-            if (!Proto::instance().take_armed())
+            if (!Proto::instance().panel_frame_active())
             {
+                // Panel closed: run FR-06 cleanup here on the render thread
+                // — a user close writes one evidence TGA first, a
+                // force-close releases silently — then draw untouched.
+                if (Proto::instance().take_release_pending())
+                {
+                    if (Proto::instance().take_dump_on_close())
+                        PassRedirector::instance().dump_and_release("panel closed");
+                    else
+                        PassRedirector::instance().release_target("panel force-closed");
+                }
                 original(a1);
                 return;
             }
 
-            // v2: bracket the original menu draw. While the bracket is open
-            // the pass hooks log every pass and replay menu lighting passes
-            // into the private target; the menu frame itself renders
-            // normally.
+            // Panel open: bracket the menu draw. While the bracket is open
+            // the pass hooks replay menu lighting passes into the persistent
+            // studio target; the menu frame itself renders normally.
             PassRedirector::instance().begin_frame();
             original(a1);
             PassRedirector::instance().end_frame();
         }
-    }
-
-    bool Proto::take_armed()
-    {
-        bool expected = true;
-        return m_armed.compare_exchange_strong(expected, false, std::memory_order_acq_rel);
     }
 
     bool Proto::install_hook()
@@ -843,7 +993,7 @@ namespace CharacterPanelProto
             DetourTransactionCommit() != NO_ERROR)
         {
             DetourTransactionAbort();
-            logger::warn("Proto DetourAttach failed; F6 arm has no effect");
+            logger::warn("Proto DetourAttach failed; the panel has no effect");
             return false;
         }
         s_original_draw_interface_start = original;

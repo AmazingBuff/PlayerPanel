@@ -1,6 +1,6 @@
 # M0 handoff — state, verified facts, and the next work package
 
-- 日期:2026-10-01(run 16 收官)
+- 日期:2026-10-01(run 19 收官:工作包 1+2 完成并经游戏验证)
 - 读者:下一个会话的 Agent / 开发者。本文是"从这里继续"的入口;运行级细节在
   [m0-proto.md](m0-proto.md),探针证据在
   [m0-capture-report-2026-09-28.md](m0-capture-report-2026-09-28.md),
@@ -15,6 +15,16 @@ accumulator 交换路线(旧路线)已在 run 1–8 被证伪并搁置,勿再回
 
 下一阶段目标是 **M0 面板原型**:把 F6 单帧证据工程化为常驻的摄影棚渲染,
 按 PRD 第 2 节合成顺序接入,首个验收场景是 **A01**。
+
+**v3.1 已实现并经 run 19 验证通过**(2026-10-01,见 m0-proto.md 的 v3 /
+run 17 / run 18 / run 19 段):F7 面板开关 + 常驻括号 + 常驻
+OffscreenTarget(FR-06 生命周期)+ 关面板自动取证 + F8 可选中途抓帧 +
+日志节流。run 19 证据:4 次关面板各出一张 TGA(proto-pass-048–050、052),
+F8 中途抓帧出 051,28.5 秒 + 52 秒持续浸泡稳定,单帧 8 几何 cluster 重放
+正常(lighting_replayed=8),换 6 种物品重放跟随;目视判读 048(铁盾)/
+050(放大盾面)/052(钢甲胸甲)材质、光照、轮廓全部正确;热键已从
+F6/F7 移到 F7/F8(F6 与用户游戏内绑定冲突)。**工作包 1+2 就此关闭,
+当前目标 = 工作包 3(合成)**。
 
 ## 已验证事实(动手前必读,都是实测结论,不是推测)
 
@@ -50,21 +60,23 @@ accumulator 交换路线(旧路线)已在 run 1–8 被证伪并搁置,勿再回
 
 | 文件 | 内容 |
 | --- | --- |
-| `tools/m0_proto/proto_passredirect.cpp` | 全部核心:PassRedirector(install 三调用点钩子 + begin/end_frame 括号 + on_pass 识别 + `replay_after_original` 重放)、OffscreenTarget(私有 color+depth+depth-on 状态)、DrawInterfaceStart Detours detour、TGA 读回 |
-| `tools/m0_proto/proto_main.cpp` | SKSE 导出、运行时门禁、F6 输入 sink、kDataLoaded 安装 |
-| `tools/m0_proto/proto.h` | Proto 类接口 |
+| `tools/m0_proto/proto_passredirect.cpp` | 全部核心(v3.1):PassRedirector(install 三调用点钩子 + 常驻 begin/end_frame 括号 + on_pass 识别[每面板一次发现式日志] + `replay_after_original` 重放)、OffscreenTarget(私有 color+depth+depth-on 状态,常驻、desc 变化重建、FR-06 渲染线程释放)、DrawInterfaceStart Detours detour、关面板取证/F8 一次性 TGA 读回 |
+| `tools/m0_proto/proto_main.cpp` | SKSE 导出、运行时门禁、输入 sink(F7 开关面板 / F8 一次性导出)、消息处理(kDataLoaded 安装;kPreLoadGame/kNewGame 强制关面板) |
+| `tools/m0_proto/proto.h` | Proto 类接口(面板开关/导出/失效/代数) |
 | `tools/m0_probe/` | 探针(F7/F8 抓取),已完成使命,保留作证据工具 |
 | `src/` | 旧 spike(pass_hook/clone_actor),pass 钩子机制的出处 |
 
-## 下一工作包:M0 面板原型(建议拆分)
+## 下一工作包:M0 面板原型(拆分与进度)
 
-1. **常驻括号**:从"F6 武装一帧"改为面板开启期间每菜单帧都跑
-   begin_frame/original/end_frame;面板开关热键 + FR-05 输入消费规则。
-2. **常驻摄影棚目标**:OffscreenTarget 已验证,改为面板生命周期持有;
-   处理分辨率变化、菜单关闭、读档/主菜单(FR-06:失效请求取消、安全重建)。
-3. **合成**:把摄影棚结果作为不透明矩形合成到世界画面上、其他 UI 之前
-   (PRD §2)。候选接入点:世界后处理之后 / `DrawInterfaceStart` 之前
-   (该 detour 已验证可靠);需要调查与已有 hook 链(CS/ENB/ReShade)的
+1. ~~**常驻括号**~~ **完成(run 19 验证)**:F7 面板开关 + 面板开启期间每
+   菜单帧跑 begin_frame/original/end_frame;FR-05 输入消费规则保持(只观察
+   F7/F8,拒绝按住/重复)。
+2. ~~**常驻摄影棚目标**~~ **完成(run 19 验证)**:OffscreenTarget 面板生命
+   周期持有;desc 变化自动重建(分辨率变化)、关闭/读档/新游戏渲染线程释放
+   (FR-06);创建失败按配置签名粘性化,不逐帧重试。
+3. **合成**(当前目标):把摄影棚结果作为不透明矩形合成到世界画面上、
+   其他 UI 之前(PRD §2)。候选接入点:世界后处理之后 / `DrawInterfaceStart`
+   之前(该 detour 已验证可靠);需要调查与已有 hook 链(CS/ENB/ReShade)的
    相对顺序,这是 §7 问题 2 的正题。
 4. **暂停场景**:背包暂停世界时 P 的更新路径(§7 问题 4),M0 先固定姿态。
 5. **验收**:先过 A01(世界正常 + 不透明面板 + 下一帧无污染),再 A02/A03。
@@ -83,7 +95,11 @@ cmake --build build --config Release --target CharacterPanelProto --parallel 4
 
 - 产物 `build/Release/CharacterPanelProto.dll`,**手动**装入 MO2
   (本机 `E:\SkyrimAE\mods\...`,MO2 profile `AE`;直接放真实 Data 会被清)。
-- 游戏内:进存档 → SkyUI 背包 → 高亮有 3D 模型的物品 → F6(一帧)。
+- 游戏内(v3.1 面板流程,详见 tools/m0_proto/README.txt):**取证动作就是
+  关面板**——进存档 → 背包高亮有 3D 模型的物品 → F7 开面板 → 停一两秒 →
+  F7 关面板,渲染线程自动写一张 `proto-pass-NNN.tga`(先导出后释放)。
+  可选:F8 在面板开着时中途抓帧(关着按无效并告警);普通画面开面板几分钟
+  等心跳行(约 30 秒一条);开面板状态下存档/读档确认强制关闭(无 dump 行)。
 - 采集:`Documents/My Games/Skyrim Special Edition/SKSE/CharacterPanelProto.log`
   + `...\SKSE\CharacterPanelProto\proto-pass-NNN.tga`(2560x1440 RGBA TGA)。
 - 判读:用 python 解 TGA 头(18 字节,type 2,32bpp,top-down)转 PNG + 统计

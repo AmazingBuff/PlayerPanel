@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <string_view>
 
 namespace CharacterPanelProto
 {
@@ -19,17 +20,43 @@ namespace CharacterPanelProto
         // kDataLoaded, gated on the exact AE 1.6.1170 runtime.
         void install();
 
-        // F6 one-shot: the next DrawInterfaceStart call is bracketed for pass
-        // redirection. While the bracket is open, the three
-        // RenderPassImmediately call-site hooks log every pass and replay
-        // menu-scene BSLightingShader passes into a private offscreen target;
-        // the original calls still run, so the visible menu frame is
-        // untouched. The target is read back to a TGA when the bracket
-        // closes.
-        void arm();
+        // F7 (F6 is bound in the user's game): toggle the panel. While open,
+        // EVERY DrawInterfaceStart frame is bracketed — menu-scene
+        // BSLightingShader passes are replayed into the persistent studio
+        // target AFTER the original call (v2.5 order), so the visible frame
+        // is untouched and the target stays current every menu frame.
+        void toggle_panel();
 
-        // Render thread; consumes the armed flag for exactly one frame.
-        bool take_armed();
+        // F8: one-shot debug readback of the studio target to a TGA
+        // (synchronous GPU readback — one frame hitch, not part of the
+        // steady-state path). Only honored while the panel is open; consumed
+        // by the render thread when the current bracket closes.
+        void request_dump();
+
+        // Session invalidation (FR-06): loading a save or starting a new game
+        // closes the panel. The render thread releases the studio target at
+        // its next non-bracketed DrawInterfaceStart.
+        void close_panel(std::string_view reason);
+
+        // Render thread: whether this DrawInterfaceStart frame is bracketed.
+        bool panel_frame_active();
+
+        // Render thread: consume a pending F8 dump request.
+        bool take_dump();
+
+        // Render thread: consume a pending studio-target release request.
+        bool take_release_pending();
+
+        // Render thread: consume a pending dump-at-close request (v3.1: one
+        // evidence TGA is written from the studio target just before the
+        // release destroys it — runs 17/18 showed the dump key is naturally
+        // pressed AFTER closing, so closing itself must produce the
+        // evidence).
+        bool take_dump_on_close();
+
+        // Monotonic per-open counter; lets the render thread detect a fresh
+        // panel open (counter/throttle reset, failed-creation retry).
+        std::uint32_t panel_generation();
 
         // Installs the DrawInterfaceStart call-site hook (private trampoline).
         bool install_hook();
@@ -42,6 +69,11 @@ namespace CharacterPanelProto
         Proto() = default;
 
         bool m_installed{ false };
-        std::atomic<bool> m_armed{ false };
+        bool m_capture_ready{ false };
+        std::atomic<bool> m_panel_open{ false };
+        std::atomic<bool> m_release_pending{ false };
+        std::atomic<bool> m_dump_requested{ false };
+        std::atomic<bool> m_dump_on_close{ false };
+        std::atomic<std::uint32_t> m_panel_generation{ 0 };
     };
 }
