@@ -38,9 +38,10 @@ config, input, present_hook
 
 ## Documentation
 
+- [M0 handoff](docs/m0-handoff.md): **start here for the next session** — current state (M0 gate passed), verified engine facts, the next work package, and the test runbook.
 - [PlayerPanel PRD](docs/player-panel-prd.md): product requirements for an independent character studio rendered alongside the game world, including composition order and acceptance criteria.
 - [Community implementation references](docs/community-reference-supplement.md): evidence and limits from Dragon's Eye Minimap, Outfit Preview Selector, Apparel Preview, and SosGui, mapped to PlayerPanel milestones.
 - [Stage-0 spike](docs/stage0-spike.md): historical rendering experiment notes; not validation of the current PRD.
 - [M0 diagnostics](docs/m0-diagnostics.md): opt-in bounded engine-evidence probe; the studio renderer remains blocked pending a safe accumulator/culling contract.
 - [M0 capture report (2026-09-28)](docs/m0-capture-report-2026-09-28.md): analysis of the first user-run probe session (AE 1.6.1170 + Community Shaders); verifies routine offsets and the accumulator swap path.
-- [M0 prototype](docs/m0-proto.md): opt-in one-shot accumulator-swap experiment verifying the report's findings; F6 arms one private menu frame.
+- [M0 prototype](docs/m0-proto.md): opt-in rendering experiment; the accumulator-swap route (runs 1–8) was falsified, and F6 now arms one menu frame of pass redirection (v2).

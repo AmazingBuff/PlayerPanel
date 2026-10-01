@@ -180,3 +180,225 @@ dispatch on renderMode — the geometry went into a shadow path that drew
 nothing. Run 8 switches to the primary accumulator (idle render_mode 0 =
 kNormal), forces `RENDER_MODE::kNormal` explicitly before ingestion, then
 StartAccumulating → RegisterObjectArray → FinishAccumulating as before.
+
+## v2: menu-scoped pass redirection (runs 9+)
+
+Run 8 was equally inert (capture report addendum 2), closing the
+accumulator-swap route: the menu path bypasses the global slot, CLib's
+culler layout does not match the 1.6.1170 runtime, and neither UI3D
+accumulator ingests foreign geometry through the documented API. The v2
+prototype retires the swap frame entirely and combines the two mechanisms
+the investigation proved in-game:
+
+1. The `DrawInterfaceStart` Detours detour (unchanged) brackets exactly one
+   rendered menu frame per F6 press.
+2. Pass hooks on the three `RenderPassImmediately` call sites (the stage-0
+   spike's mechanism, the same sites Community Shaders hooks; private
+   64 KiB trampoline) observe every pass flowing while the bracket is
+   open. The v2 hooks are **non-destructive**: after the observation or
+   replay, the original `SetupAndDrawPass` call still runs, so the visible
+   menu frame is untouched — the M0 requirement this round is only that
+   menu passes *can* be captured into a private target, not that they are
+   diverted yet.
+
+Menu-pass identification: a pass whose `geometry` descends from one of the
+eight `UI3DSceneManager::menuObjects` roots (run 6 located the highlighted
+item under root[1]) is a menu-scene pass. The parent chain walk is bounded
+at 32 levels; root pointers are snapshotted when the bracket opens.
+v2 replays only BSLightingShader passes (shaderType 6 — the spike showed
+depth/shadow passes write no colour); every other pass is counted and
+logged for the next iteration.
+
+Replay mechanics: the spike's reconciled raw-bind approach — save the
+current OM targets and viewport, bind a private kMAIN-sized target
+(R11G11B10_FLOAT color + own D24S8 depth), clear once per frame, call
+`SetupAndDrawPass` on the pass with its original arguments, restore. Later
+passes depth-test against earlier ones, so occlusion inside the item is
+preserved. When the bracket closes, the target is read back to a
+tone-mapped TGA (`proto-pass-NNN.tga`, previously `proto-swap-NNN.tga`).
+
+What success looks like:
+
+- the bracket log lists the menu roots and per-pass lines with
+  `menu=true` for the highlighted item's geometry;
+- `lighting_replayed` advances past 0 and the TGA shows the item,
+  correctly shaded;
+- the inventory item and the world look unchanged after the bracket.
+
+If no `menu=true` pass appears while the bracket is open, the menu scene
+does not submit through the three hooked call sites — the per-pass log is
+the diagnostic that decides the next move. A black TGA with
+`lighting_replayed>0` isolates the problem to replay shading (constant
+buffers / technique stack), the spike's round-2 territory.
+
+## Run 9 result (2026-10-01): identification proven, replay landed zero pixels
+
+Six F6 arms in one session (user run, AE 1.6.1170). Every bracket caught
+exactly one pass: `IronShield:0`, `menu=true` (ancestry match against the
+menuObjects roots works), shader=6 (BSLightingShader), passEnum 0x48000035,
+numLights=2, flowing through **call site 1** — so menu-item passes do
+submit through the hooked call sites, and the v2 identification rule
+produced zero false positives across the whole frame. All six replays ran
+and all six readbacks (`proto-pass-000..005.tga`) were **100% pure black** —
+not dim, not clear-color noise: the draw landed zero pixels.
+
+Root cause investigation, updated 2026-10-01: v2.1 first attributed the
+black readbacks to the inventory pane's stencil mask (v2 bound a private
+D24S8 depth target; the spike's proven replay config binds none), so v2.1
+returned to the no-DSV configuration and logged the inherited
+depth-stencil state. The follow-up session (run 10) **falsified that
+hypothesis**: the replays were still 100% black, and the logged state
+showed `depthEnable=0, stencilEnable=0` at the call site — no depth or
+stencil rejection can be the cause. Leading theory now: on the menu path
+the shadow state carries dirty flags into the direct call, and
+`SetupAndDrawPass` re-applies the engine's own render targets inside it,
+so the draw lands on the engine's target (the on-screen shield is then
+drawn twice with identical opaque pixels — invisible), while the private
+target keeps its clear color. The spike's world-path state was clean at
+its call sites, which is why its raw bind survived.
+
+v2.2 tests this in the same session: the replay calls once, queries
+`OMGetRenderTargets` to see whether the raw bind survived (logging the
+survivor's pool identity and dimensions when it did not), and — when the
+engine took the targets back — re-binds ours and calls a second time: the
+first call consumed the dirty flags, so the second should honor the raw
+bind and land in the private target. Per-frame diagnostics also log the
+call site's engine target identity and scissor/rasterizer state. If the
+second call still cannot land pixels, the log identifies which pool target
+the engine insists on and the routing moves to the engine's own
+`Renderer`/shadow-state path instead of raw binds.
+
+## Run 11 result (2026-10-01): shadow-state re-application confirmed, shield geometry lands, textures garbage
+
+The theory was confirmed line-by-line. `scissorEnable=0` ruled out the last
+raster rejection; the engine target at the call site is 2560x1440 format 28
+(R11G11B10 — the main HDR); **the raw bind did not survive the first call
+and did survive the second** — the consume-and-retry works. The readback
+(`proto-pass-012..017.tga`) shows the Iron Shield with correct silhouette,
+position (the SkyUI preview region, right side of the frame) and lighting
+shape — but its surface is tiled magenta/blue noise instead of the iron
+texture, the classic signature of wrong texture bindings / garbage UV
+coordinates.
+
+Leading cause: **hook-chain collision with Community Shaders**. CS is
+installed (with LightLimitFix 3.1.0, the feature that patches exactly these
+three call sites), and our `write_call<5>` overwrote its patch — so both
+the thunk's passthrough and the replay called vanilla `SetupAndDrawPass`
+directly, bypassing CS's interposer; CS-replaced shaders then draw with
+stale constant buffers (garbage UV/texture indices) while engine-side
+state keeps geometry correct.
+
+v2.3 fixes the chain and adds the texture-level evidence: at install time
+each site's E8 rel32 is parsed BEFORE patching and the pre-patch target is
+stored (logged against SetupAndDrawPass — "interposed, chain restored"
+means CS had hooked it); the passthrough and both replay calls now run
+that true original. Per-frame PS SRV snapshots (slots 0–9: pointer,
+dimension, format) before the replay and before the second call make any
+remaining texture garbage attributable. If the chain restoration fixes the
+textures, the M0 core evidence is complete: menu passes can be captured
+into a private target with correct shading.
+
+## Run 12 result (2026-10-01): chain collision confirmed and fixed; SRV snapshots expose the last stomper
+
+The install log confirmed the collision exactly where it matters: **call
+site 1 — the only site the menu pass uses — had been interposed by
+Community Shaders before us** (`pre-patch target ... interposed, chain
+restored`; sites 0 and 2 were unhooked), and v2.3 restored that chain.
+The textures were still garbage, but the SRV snapshots caught the
+remaining culprit red-handed:
+
+- before the replay (the caller's set for THIS pass): slots {4,5,6};
+- after the first call: slots {0,1,5} — completely different resources.
+
+So the same shadow-state re-application that reclaims the OM also stomps
+the pixel-shader texture slots with a stale set; the retry then draws the
+correct geometry with the wrong textures — the tiled noise. The snapshots
+also corrected a format assumption: the call site's target is format 28
+(R8G8B8A8_UNORM, the UI composite), not kMAIN's R11G11B10.
+
+v2.4 closes the loop: the caller's 16 PS SRV slots are captured (AddRef)
+before the first call, restored before the retry, and left in place for
+the thunk's passthrough (which runs next with the dirty flags spent);
+the snapshot set the engine left is logged and released. The private
+target is now sized/formatted from the call site's own RTV description.
+If the retry now draws the shield with its own textures, the M0 core
+evidence is complete.
+
+## Run 13 result (2026-10-01): SRV restore worked — and exposed the whack-a-mole; order inverted for v2.5
+
+The v2.4 readback no longer shows noise (smooth surface — the restored
+texture set is the right one), but only a thin dim arc of the shield lands
+(0.23% coverage, max value 41/255): the pre-call replay order is a losing
+race against the shadow-state re-application, one slot family at a time —
+OM was reclaimed in run 11, the SRV set in run 12, and the constant-buffer
+state is evidently next. Restoring every family around a pre-call replay
+reproduces the shadow state by hand; the structure is wrong, not the
+details.
+
+v2.5 inverts the order: the replay now runs **after** the original call
+(the thunk's passthrough draws first — consuming the dirty flags and
+leaving every pipeline slot exactly as the pass was drawn with — and only
+then does the hook bind the private target and call again). A post-
+original replay needs no state capture or restore at all: the second call
+re-draws 1:1 with the original's own state, our render target being the
+only difference. The whole capture/restore machinery (caller SRV set,
+post-call snapshots, survive-check/retry ladder) is deleted; the armed
+frame's only footprint is one extra draw into the private target.
+
+## Run 14 result (2026-10-01): gate PASSED — the shield renders correctly into the private target
+
+Six F6 arms, six clean captures. The post-original replay's raw bind
+survived every frame (`binding survived: true` — no dirty flags left to
+consume), the replay inherited exactly the texture set the original drew
+with ({0,1,5}, logged per frame), and the readbacks
+(`proto-pass-032..041.tga`) show the **complete Iron Shield with correct
+materials**: wood-grain shield face, iron rim, boss and rivets, correct
+lighting and silhouette, full brightness range, at the item-preview
+position. The menu frame itself rendered normally (non-destructive by
+design) and the session ended without errors.
+
+This closes the M0 core evidence chain for the pass-redirection route:
+
+1. menu-scene passes are identifiable (geometry ancestry vs menuObjects
+   roots) with zero false positives across whole frames;
+2. they flow through the three RenderPassImmediately call sites, which can
+   be hook-shared with Community Shaders by restoring the pre-patch chain;
+3. a menu pass can be re-drawn into a private offscreen target with
+   correct shading by calling the original again after the engine's own
+   draw — one extra draw, no state ownership fights.
+
+The next stage (M0 panel prototype) builds on this: consume/duplicate the
+menu-scene passes into a studio target composited as an opaque rectangle
+before other UI, per the PRD's composition order (section 2). The run-12
+position discrepancy is also resolved: the pre-call order's stale
+constants had misplaced the shield; the post-original order lands it where
+the item preview actually sits.
+
+## v2.6: private depth buffer (user-reported handle occlusion artifact)
+
+The user reviewing the run-14 readback spotted the one known v2.5
+limitation made visible: the handle appeared clamped onto the front boss.
+The replay bound no DSV, so the pass's depth test was bypassed entirely
+and triangles landed in draw order — the back-mounted handle overwrote
+the boss it sits behind. v2.6 adds a private depth buffer (format matched
+to the engine's bound depth view), clears it once per armed frame, binds
+an explicit depth-on state (LESS_EQUAL, write-all — the call site's own
+state has depth testing disabled per run 10, and the post-original state
+is not guaranteed to have it on), and restores the engine's state after
+the replay.
+
+Run 15 (first v2.6 build) failed to create the target on every armed
+frame: the engine's depth resource reports a TYPELESS format
+(e.g. R24G8_TYPELESS), and a new texture created with that format cannot
+back a default-desc depth view. The fix normalizes the extracted format
+to its typed depth counterpart (R24G8_TYPELESS → D24_UNORM_S8_UINT,
+R32G8X24_TYPELESS → D32_FLOAT_S8X24_UINT, R32/R16_TYPELESS likewise,
+typed depth formats kept, anything else falling back to D24S8) and logs
+the failing step with its HRESULT.
+
+Run 16 (2026-10-01): depth occlusion verified. Six arms, six clean
+replays (`binding survived: true`, no creation failures), and the
+readbacks show the complete Iron Shield with the handle correctly hidden
+behind the shield face — the run-14 artifact is gone. The M0 core
+evidence chain now covers PRD FR-04's intra-item occlusion requirement
+alongside identification, capture, and correct shading.
