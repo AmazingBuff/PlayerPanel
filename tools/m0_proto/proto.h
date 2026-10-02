@@ -38,6 +38,10 @@ namespace CharacterPanelProto
         // its next non-bracketed DrawInterfaceStart.
         void close_panel(std::string_view reason);
 
+        // Stage-2 toggle hook: the panel toggle path also drives the
+        // independent display instance P (spawn on open, despawn on close).
+        void toggle_p_instance();
+
         // Render thread: whether this DrawInterfaceStart frame is bracketed.
         bool panel_frame_active();
 

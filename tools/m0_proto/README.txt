@@ -1,29 +1,37 @@
-CharacterPanelProto M0 panel prototype (v4, composite)
+CharacterPanelProto M0 panel prototype (v5.4, stage-2 display instance P,
+live world-actor route)
 
 This package is an opt-in rendering experiment for the M0 studio renderer
 contract. Runs 9-16 (2026-10-01) passed the M0 gate: menu-scene passes are
 identified with zero false positives, hook-shared with Community Shaders,
 and re-drawn 1:1 into a private offscreen target with correct shading and
 intra-item occlusion. v3 made the pipeline persistent (handoff packages
-1+2); v4 (package 3) puts the studio output ON SCREEN:
+1+2); v4 (package 3) put the studio output ON SCREEN; v5.x are stage 2
+of the handoff plan — the panel content becomes the INDEPENDENT DISPLAY
+INSTANCE P (docs/stage2-p-instance-plan.md):
 
-- F7 toggles the panel (F6 is bound in the user's game). While open,
-  every DrawInterfaceStart frame draws the studio image as an OPAQUE
-  RECTANGLE (fixed 58-88% x 12-68% of the screen) into the bound target,
-  BEFORE the original menu draw — the panel sits under every other UI
-  element, per PRD section 2. The studio target itself is still
-  re-rendered every menu frame by the pass replay.
-- The rectangle persists while the panel is open, including normal
-  gameplay (showing the last menu item) — it is drawn every frame into
-  the UI target and removed when the panel closes.
-- Closing the panel with F7 still writes ONE evidence TGA of the studio
-  image before the release destroys the target; F8 is the optional
-  mid-session grab; logging is throttled (discovery lines per geometry,
-  state-change summaries, ~30 s heartbeat, composite draw counter).
+- Falsification chain: v5 deep copy returned no node (run 27); v5.1/5.2
+  built and dressed a clone actor but the menu scene never collected its
+  graph (runs 29/30: attach succeeded, ZERO passes — the menu culler
+  works from its own private queue, not scene-graph attachment); a
+  graph detached from the world belongs to no culler at all (run 30,
+  zero P passes with the whitelist live).
+- v5.4 (route 3): P stays a LIVE WORLD ACTOR — dressed clone parked
+  ~8000 units below the player, inside the camera far plane (20480) so
+  the WORLD culler keeps emitting its passes, far below any gameplay
+  pitch so no camera sees it. The replay whitelist (root ancestry +
+  panel-open gate) catches those world-stream passes, SUPPRESSES their
+  world-side draw (passthrough skipped — the world view shows no double,
+  PRD 0.5), and replays them into the studio target instead.
+- Expected per open (a few real seconds): "clone placed" -> "dressed;
+  waiting for the biped 3D (park follows)" -> "Proto P whitelist armed"
+  -> "Proto v5 P pass: ... [piece name] ..." lines -> a HUMAN FIGURE in
+  the rectangle. Closing disarms the whitelist and kills the shell
+  ("Proto P whitelist disarmed", "clone actor killed").
 
-No actors are created and no persistent game state changes. Do NOT load
-this together with the old CharacterPanel plugin or CharacterPanelProbe
-(the probe's F7/F8 would collide).
+No persistent game state changes beyond a transient parked clone. Do NOT
+load this together with the old CharacterPanel plugin or
+CharacterPanelProbe (the probe's F7/F8 would collide).
 
 Build (opt-in, off by default):
 
@@ -36,32 +44,23 @@ Build (opt-in, off by default):
 The DLL is build/Release/CharacterPanelProto.dll. Install it manually (MO2
 or SKSE/Plugins).
 
-In-game procedure (AE 1.6.1170 only) — the panel is VISIBLE now:
+In-game procedure (AE 1.6.1170 only) — v5.4 round:
 
 1. Enter a save, open the SkyUI inventory, highlight an item with a
-   visible 3D model, press F7 (panel opens). EXPECT: an opaque rectangle
-   on the right side of the screen showing the studio image, with SkyUI
-   widgets (item card, tooltip, cursor) rendering ABOVE it. Press F7
-   again: the rectangle disappears and the evidence TGA is written as
-   before ("studio dump written" + release lines in the log).
-2. Walk around in the world with the panel open: the rectangle stays
-   put while the world renders normally behind and around it. Note any
-   one-frame flicker or state pollution — that is the A01 evidence.
-3. Optional extras: F8 while open for a mid-session TGA; highlight
-   several items (the rectangle follows the studio content); leave the
-   panel open during normal play for a few minutes (one heartbeat line
-   per ~30 s).
-4. Save + load WITH the panel open: expect "Panel force-closed (save
-   loading)", a release line WITHOUT a dump line, and the rectangle
-   gone.
-5. Exit. Return the log and the TGAs from this session, plus a note on
-   what the rectangle looked like (visible? under the widgets? correct
-   item?) — the composite is judged on screen, not only by TGA.
+   visible 3D model, press F7 (panel opens). Wait a few REAL seconds.
+   EXPECT the "P pass" discovery lines and a HUMAN FIGURE in the
+   rectangle (the parked double's armor and pose matter this round —
+   note both).
+2. Look around the world with the panel open: the parked double must
+   NOT appear anywhere (passthrough suppression). Note any sighting.
+3. Toggle the panel >=5 times, F8 grabs as you like; save + load WITH
+   the panel open (expect force-close, disarm + kill lines, no dump).
+4. Exit. Return the log and the TGAs, plus what the panel showed.
 
-Failure isolation: no rectangle but "composite ready" in the log means
-the bound target at DrawInterfaceStart entry is not the visible
-composite — the "composite target at DrawInterfaceStart entry" identity
-line decides the next hookup point. A misplaced/wrong-aspect rectangle
-points at the panel-rect constants. Any crash over repeated cycles
-points at the lifecycle path. All outcomes are evidence; report the log
-either way.
+Failure isolation: no "P pass" lines after "whitelist armed" means the
+parked actor is being culled anyway (park depth vs. far plane — the log
+line names the root; the fix is a park-depth calibration); a figure in
+the panel but garbled points at the skin replay; a world sighting of
+the double points at passthrough suppression. See
+docs/stage2-p-instance-plan.md section 3 for signatures and fallbacks.
+Report the log either way; every outcome is evidence.

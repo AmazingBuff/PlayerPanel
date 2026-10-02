@@ -3,10 +3,12 @@
 //
 
 #include "proto.h"
+#include "proto_pinstance.h"
 
 #include <RE/Skyrim.h>
 #include <REL/Relocation.h>
 #include <SKSE/SKSE.h>
+#include <RE/B/BSLight.h>
 #include <REX/W32/D3D11.h>
 
 #include <Windows.h>
@@ -520,11 +522,22 @@ VSOut vs_main(uint id : SV_VertexID) {
     return o;
 }
 )";
+        // Run 31: the studio target follows the call site's format. In the
+        // menu stream that is the LDR UI composite (R8G8B8A8, format 28);
+        // in the world stream (route 3 P replays) it is the HDR main
+        // target (R11G11B10_FLOAT, format 10) — sampling and writing it
+        // verbatim produced the washed noise in the first P image. The
+        // composite now Reinhard-maps when the studio target is HDR; LDR
+        // targets pass through unchanged.
         constexpr std::string_view Composite_PS = R"(
 Texture2D g_tex : register(t0);
 SamplerState g_samp : register(s0);
+cbuffer PanelCB : register(b0) { float4 g_ndcRect; }  // x unused here, y = 1 when HDR
 float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
-    return g_tex.Sample(g_samp, uv);
+    float3 c = g_tex.Sample(g_samp, uv).rgb;
+    if (g_ndcRect.y > 0.5)
+        c = c / (1.0 + c);
+    return float4(c, 1.0);
 }
 )";
 
@@ -603,6 +616,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 sampler_desc.maxLOD = REX::W32::D3D11_FLOAT32_MAX;
                 REX::W32::ID3D11SamplerState* sampler = nullptr;
                 REX::W32::ID3D11BlendState* blend = nullptr;
+                REX::W32::ID3D11BlendState* opaque = nullptr;
                 REX::W32::ID3D11DepthStencilState* depth_off = nullptr;
                 REX::W32::ID3D11RasterizerState* rs = nullptr;
                 REX::W32::ID3D11Buffer* cb = nullptr;
@@ -624,6 +638,18 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     rt0.srcBlendAlpha = REX::W32::D3D11_BLEND_ONE;
                     rt0.destBlendAlpha = REX::W32::D3D11_BLEND_INV_SRC_ALPHA;
                     rt0.blendOpAlpha = REX::W32::D3D11_BLEND_OP_ADD;
+                    rt0.renderTargetWriteMask = REX::W32::D3D11_COLOR_WRITE_ENABLE_ALL;
+                }
+                // Run 41: OPAQUE overwrite for the proactive P draw — the
+                // engine's blend state at that point is the item pass's
+                // leftover; with unknown factors the studio pixels could be
+                // multiplied to black. Opaque (blend disabled) writes the
+                // raw shader output with alpha forced to 1 by the guard's
+                // semantics (write-all).
+                REX::W32::D3D11_BLEND_DESC opaque_desc{};
+                {
+                    auto& rt0 = opaque_desc.renderTarget[0];
+                    rt0.blendEnable = 0;
                     rt0.renderTargetWriteMask = REX::W32::D3D11_COLOR_WRITE_ENABLE_ALL;
                 }
                 const REX::W32::D3D11_DEPTH_STENCILOP_DESC keep_op{
@@ -658,11 +684,15 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 };
                 REX::W32::D3D11_BUFFER_DESC cb_desc{};
                 cb_desc.byteWidth = sizeof(cb_data);
-                cb_desc.usage = REX::W32::D3D11_USAGE_IMMUTABLE;
+                // Run 31: DYNAMIC — the draw path rewrites the HDR flag per
+                // draw (y), the VS still reads the NDC rect (x, z, w).
+                cb_desc.usage = REX::W32::D3D11_USAGE_DYNAMIC;
+                cb_desc.cpuAccessFlags = REX::W32::D3D11_CPU_ACCESS_WRITE;
                 cb_desc.bindFlags = REX::W32::D3D11_BIND_CONSTANT_BUFFER;
 
                 bool ok = device->CreateSamplerState(&sampler_desc, &sampler) == 0 && sampler &&
                     device->CreateBlendState(&blend_desc, &blend) == 0 && blend &&
+                    device->CreateBlendState(&opaque_desc, &opaque) == 0 && opaque &&
                     device->CreateDepthStencilState(&depth_desc, &depth_off) == 0 && depth_off &&
                     device->CreateRasterizerState(&rs_desc, &rs) == 0 && rs;
                 REX::W32::D3D11_SUBRESOURCE_DATA init{ cb_data, 0, 0 };
@@ -674,6 +704,8 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                         sampler->Release();
                     if (blend)
                         blend->Release();
+                    if (opaque)
+                        opaque->Release();
                     if (depth_off)
                         depth_off->Release();
                     if (rs)
@@ -690,6 +722,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 m_ps = ps;
                 m_sampler = sampler;
                 m_blend = blend;
+                m_opaque = opaque;
                 m_depth_off = depth_off;
                 m_rs = rs;
                 m_cb = cb;
@@ -773,6 +806,23 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
 
                 REX::W32::D3D11_VIEWPORT viewport{ 0.0f, 0.0f,
                     static_cast<float>(desc.width), static_cast<float>(desc.height), 0.0f, 1.0f };
+                // Run 31: y carries the HDR flag — the PS Reinhard-maps HDR
+                // studio targets (world main target, format 10) and passes
+                // LDR ones (UI composite, format 28) through. Dynamic CB
+                // updated per draw; format flips are resolution-change rare.
+                const float hdr = desc.format == REX::W32::DXGI_FORMAT_R11G11B10_FLOAT ? 1.0f : 0.0f;
+                {
+                    REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
+                    if (ctx->Map(m_cb, 0, REX::W32::D3D11_MAP_WRITE_DISCARD, 0, &mapped) == 0)
+                    {
+                        auto* out = static_cast<float*>(mapped.data);
+                        out[0] = 2.0f * Panel_Screen_MinX - 1.0f;
+                        out[1] = hdr;
+                        out[2] = 2.0f * Panel_Screen_MaxX - 1.0f;
+                        out[3] = 1.0f - 2.0f * Panel_Screen_MinY;
+                        ctx->Unmap(m_cb, 0);
+                    }
+                }
                 ctx->OMSetRenderTargets(1, &rtv, nullptr);
                 if (prev_viewport_count > 0)
                     ctx->RSSetViewports(1, &viewport);
@@ -831,6 +881,18 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                         desc.width, desc.height);
             }
 
+            // Run 41: the OPAQUE blend used by the proactive P draw guard —
+            // blend disabled, all channels written (the studio target is
+            // ours alone; unknown engine blend factors were the second
+            // black-out suspect).
+            [[nodiscard]] REX::W32::ID3D11BlendState* opaque_blend() const { return m_opaque; }
+
+            // Run 42: the CLEAN rasterizer for the proactive P draw — no
+            // depth bias (the item call site leaves depthBiasClamp=-100
+            // bound, which shoves far-plane-adjacent skinned depth out of
+            // range), no scissor, cull off.
+            [[nodiscard]] REX::W32::ID3D11RasterizerState* clean_rasterizer() const { return m_rs; }
+
         private:
             CompositeRenderer() = default;
 
@@ -838,6 +900,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             REX::W32::ID3D11PixelShader* m_ps = nullptr;
             REX::W32::ID3D11SamplerState* m_sampler = nullptr;
             REX::W32::ID3D11BlendState* m_blend = nullptr;
+            REX::W32::ID3D11BlendState* m_opaque = nullptr;
             REX::W32::ID3D11DepthStencilState* m_depth_off = nullptr;
             REX::W32::ID3D11RasterizerState* m_rs = nullptr;
             REX::W32::ID3D11Buffer* m_cb = nullptr;
@@ -905,12 +968,23 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             void begin_frame()
             {
                 m_in_frame = true;
-                m_passes_seen = 0;
-                m_geoms_logged = 0;
-                m_menu_passes = 0;
-                m_menu_lighting_replayed = 0;
-                m_cleared = false;
                 ++m_frame_index;
+                // Run 36: the proactive P draw fires once per studio frame
+                // (latch reset with the clear).
+                m_p_drawn_this_frame = false;
+                // Run 56: the studio-light reference goes stale with the
+                // frame — only an item lighting pass seen THIS frame may
+                // rebind P's passes.
+                m_studio_lights_fresh = false;
+                // Run 32 (ghosting fix): clear once per menu frame. The
+                // studio target follows the call-site format, and the menu
+                // stream (UI composite, format 28) is a DIFFERENT resource
+                // from the world main target the P world-stream replays
+                // used (format 10) — clearing here cannot wipe world-phase
+                // pixels, while NOT clearing let every menu frame stack the
+                // item replay and the P snapshot over the previous frame
+                // (the user's RenderDoc finding).
+                m_cleared = false;
 
                 // Fresh panel open: reset per-open throttles and give a
                 // previously failed target creation another chance.
@@ -923,6 +997,8 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     m_session_replays = 0;
                     m_target_failed = false;
                     m_seen_geoms.clear();
+                    m_seen_p_geoms.clear();
+                    m_p_geoms_logged = 0;
                 }
 
                 m_root_count = 0;
@@ -968,6 +1044,14 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             {
                 m_in_frame = false;
 
+                // Run 30 pacing: the world stream (P's passes) runs BEFORE
+                // the menu bracket each rendered frame, so the studio target
+                // is cleared by the first P replay of that world phase and
+                // the menu-phase item replays draw ON TOP of P without
+                // clearing. The reset moves here — after everything a frame
+                // will draw — instead of begin_frame, which would wipe the
+                // already-drawn P every menu frame.
+
                 if (Proto::instance().take_dump())
                 {
                     if (offscreen_target().color)
@@ -984,64 +1068,167 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 // that merge. The captured s_panel_rtv stays as evidence
                 // only (it logs the call-site format every session).
 
-                if (m_menu_passes == 0)
+                if (m_menu_passes == 0 && m_p_passes == 0)
                 {
                     if (m_frame_index % Heartbeat_Frames == 0)
                         logger::info("Proto v3 panel frame #{} heartbeat: passes_seen={} menu_passes=0 "
                                      "(content-free frame, target keeps last studio image)",
                             m_frame_index, m_passes_seen);
-                    return;
                 }
 
-                ++m_content_frames;
-                m_session_replays += m_menu_lighting_replayed;
-                if (m_menu_lighting_replayed != m_last_logged_replayed ||
-                    m_content_frames % Heartbeat_Frames == 1)
+                // Run 43 (v6.8): the paused inventory does NOT re-draw the
+                // same item — no item pass, no OM window from
+                // replay_after_original, so P was drawn only on the arm
+                // frame (74 bracketed frames, zero draws after). end_frame
+                // now DRIVES the proactive draw directly, every bracketed
+                // frame: it binds its own studio OM window, clears once per
+                // frame, poses, and draws — zero dependence on engine
+                // passes. The item-pass window path stays as a redundant
+                // trigger (the frame latch prevents double draws).
+                if (auto* ui3d = RE::UI3DSceneManager::GetSingleton())
+                    draw_p_proactively(ui3d->unk10.get());
+
+                if (m_menu_passes != 0 || m_p_passes != 0)
                 {
-                    m_last_logged_replayed = m_menu_lighting_replayed;
-                    logger::info("Proto v3 panel frame #{}: passes_seen={} menu_passes={} "
-                                 "lighting_replayed={} geoms_logged={}",
-                        m_frame_index, m_passes_seen, m_menu_passes, m_menu_lighting_replayed,
-                        m_geoms_logged);
+                    ++m_content_frames;
+                    m_session_replays += m_p_total_replays;
+                    m_p_total_replays = 0;
+                    if (m_p_total_replays != m_last_logged_replayed ||
+                        m_content_frames % Heartbeat_Frames == 1)
+                    {
+                        m_last_logged_replayed = m_p_total_replays;
+                        logger::info("Proto v3 panel frame #{}: passes_seen={} menu_passes={} p_passes={} "
+                                     "geoms_logged={}",
+                            m_frame_index, m_passes_seen, m_menu_passes, m_p_passes, m_geoms_logged);
+                    }
                 }
+                m_passes_seen = 0;
+                m_menu_passes = 0;
+                m_p_passes = 0;
+                m_menu_lighting_replayed = 0;
             }
 
-            // Render-thread pass observation. Returns true when the pass is a
-            // menu-scene BSLightingShader pass and should be replayed into
-            // the private target AFTER the original call has run.
+            // Render-thread pass observation. Returns true when the pass
+            // should be replayed into the private target AFTER the original
+            // call has run.
+            //
+            // Two acceptance paths (run 29 finding): menu-scene passes (the
+            // item preview, inside the DrawInterfaceStart bracket) and — new
+            // in stage 2 — the display instance P. P's graph does NOT flow
+            // through the menu culler (the menu scene collects geometry via
+            // the culler's private queue, not scene-graph attachment —
+            // capture-report addendum 2), so its passes run in the WORLD
+            // pass stream outside the bracket. The world stream hits the
+            // same three RenderPassImmediately call sites, so the thunk
+            // sees those passes anyway; P is matched by root ancestry and
+            // gated on the panel being open, which is what makes the world
+            // stream safe to touch (panel closed -> P absent -> zero extra
+            // replays; normal world passes never match the P root).
             bool on_pass(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test, std::uint32_t render_flags,
                 std::size_t site_index)
             {
-                if (!m_in_frame || !pass || !pass->geometry)
+                if (!pass || !pass->geometry)
+                    return false;
+
+                const bool panel_open = Proto::instance().panel_frame_active();
+                const bool p_geom = panel_open && PInstance::instance().is_p_geometry(pass->geometry);
+                // Run 54: the thunk reads this right after on_pass returns
+                // (same render-thread call) to decide the passthrough.
+                m_last_pass_p_geom = p_geom;
+
+                // Outside the menu bracket only P passes are accepted — the
+                // studio target must never accumulate world scenery.
+                if (!m_in_frame && !p_geom)
                     return false;
 
                 ++m_passes_seen;
-                const bool menu = is_menu_geometry(pass->geometry);
+                const bool menu = m_in_frame && is_menu_geometry(pass->geometry);
                 if (menu)
                 {
                     ++m_menu_passes;
+                    // Run 53/56: record the item preview's own lights —
+                    // they ARE the studio lighting. P's passes carry
+                    // dungeon/world lights that are thousands of units from
+                    // the menu-space fragments the studio pose produces, so
+                    // the PS collapses to ambient-only (run 52: figure fully
+                    // formed in the depth buffer, near-black in the RT).
+                    // Run 56: reference THIS pass's own sceneLights array —
+                    // the exact storage the engine (and CS's light hooks)
+                    // use for the item's own draw that frame — instead of
+                    // copying pointers into a member array (run 55: copied
+                    // pointers outlived the light objects after an item
+                    // change and CS's GeometrySetupConstantPointLights
+                    // crashed on them).
+                    if (pass->shader && std::to_underlying(pass->shader->shaderType.get()) == 6 &&
+                        pass->sceneLights && pass->numLights > 0)
+                    {
+                        m_studio_light_array = pass->sceneLights;
+                        m_studio_light_count = pass->numLights;
+                        m_studio_lights_fresh = true;
+                        if (!m_p_studio_lights_logged)
+                        {
+                            m_p_studio_lights_logged = true;
+                            logger::info("Proto v6.21 studio lights armed from the item preview: {} menu "
+                                         "lights",
+                                pass->numLights);
+                        }
+                    }
                     // Discovery logging: one line per menu geometry per panel
                     // open; steady-state frames only advance the counters.
+                    // p=1 marks stage-2 display-instance P geometry (skinned
+                    // content the skin-replay round watches for).
                     if (m_geoms_logged < Menu_Geom_Log_Cap && m_seen_geoms.insert(pass->geometry).second)
                     {
                         ++m_geoms_logged;
                         logger::info(
                             "Proto v3 menu pass: geom={} name=[{}] shader={} passEnum=0x{:X} "
-                            "technique=0x{:X} alphaTest={} numLights={} renderFlags=0x{:X} site={}",
+                            "technique=0x{:X} alphaTest={} numLights={} renderFlags=0x{:X} site={} p={}",
                             static_cast<void*>(pass->geometry),
                             pass->geometry->name.c_str() ? pass->geometry->name.c_str() : "(null)",
                             pass->shader ? std::to_underlying(pass->shader->shaderType.get()) : 0u,
                             pass->passEnum, technique, alpha_test, pass->numLights, render_flags,
-                            site_index);
+                            site_index, p_geom ? 1 : 0);
+                    }
+                }
+                else if (p_geom)
+                {
+                    ++m_p_passes;
+                    // Discovery per P geometry per panel open: the skinned
+                    // set (body/armor/hair) is exactly what this round must
+                    // show.
+                    if (m_p_geoms_logged < Menu_Geom_Log_Cap && m_seen_p_geoms.insert(pass->geometry).second)
+                    {
+                        ++m_p_geoms_logged;
+                        logger::info(
+                            "Proto v5 P pass: geom={} name=[{}] shader={} passEnum=0x{:X} "
+                            "technique=0x{:X} alphaTest={} numLights={} renderFlags=0x{:X} site={} in_menu_frame={}",
+                            static_cast<void*>(pass->geometry),
+                            pass->geometry->name.c_str() ? pass->geometry->name.c_str() : "(null)",
+                            pass->shader ? std::to_underlying(pass->shader->shaderType.get()) : 0u,
+                            pass->passEnum, technique, alpha_test, pass->numLights, render_flags,
+                            site_index, m_in_frame ? 1 : 0);
                     }
                 }
 
-                if (!menu)
+                if (!menu && !p_geom)
                     return false;
-                // v2 replays lighting passes only: they carry the shading
-                // (spike: depth/shadow passes write no colour). Other menu
-                // passes are counted and logged for the next iteration.
-                if (!pass->shader || std::to_underlying(pass->shader->shaderType.get()) != 6)
+                // v2 replays lighting passes only for the MENU stream (they
+                // carry the shading; depth/shadow passes write no colour).
+                // Run 32: P keeps ALL shader types — its type-6 set is hair
+                // only (0Anto92/HAIRLINE/Brows), while the skinned body
+                // (CBBE/clothes/shoes/face) renders through BSShader effects
+                // (type 8); the run-31 blob props are already excluded by
+                // the skinned-only whitelist in is_p_geometry.
+                // Run 35: P passes are no longer snapshotted here — they are
+                // generated proactively from the geometry's shader property
+                // inside the studio OM window (draw_p_proactively). The
+                // world-stream passthrough suppression stays: a live P pass
+                // must not show the double in the world view.
+                if (!pass->shader)
+                    return false;
+                if (p_geom)
+                    return true;
+                if (std::to_underlying(pass->shader->shaderType.get()) != 6)
                     return false;
 
                 return true;
@@ -1069,6 +1256,15 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 }
                 m_target_failed = false;
                 m_session_replays = 0;
+                m_p_draw_logged = false;
+                m_p_recipe_logged = false;
+                m_p_empty_live_logged = false;
+                m_p_no_root_logged = false;
+                m_studio_light_array = nullptr;
+                m_studio_light_count = 0;
+                m_studio_lights_fresh = false;
+                m_p_studio_lights_logged = false;
+                m_pass_recipes.clear();
             }
 
             // v3.1: user-initiated close (F6). Runs 17/18 both ended with
@@ -1088,11 +1284,32 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
         private:
             PassRedirector() = default;
 
+            // Run 31 (route 3): a whitelist P pass in the WORLD stream is
+            // SUPPRESSED from the passthrough — the world must not show the
+            // parked double (PRD 0.5: no panel/P in the world view) — and
+            // exists only as the studio replay. Menu passes keep the normal
+            // passthrough + replay order (runs 9-26 contract).
+            //
+            // Run 54: P passes are now suppressed in MENU frames too. The
+            // proactive GetRenderPasses calls ENROLL P's passes into the
+            // UI3D accumulator's persistent pass lists, and the engine then
+            // draws them itself at the call sites — including the menu
+            // teardown on inventory exit, where run 53's session CRASHED
+            // inside BSLightingShader::SetupGeometry on the
+            // studio-light-mutated pass (crash-2026-10-02-22-00-30: P's
+            // armor BSTriShape, null light deref). Only the studio draw
+            // renders P; the engine never touches these passes again.
+            static bool should_suppress_passthrough(bool replay, bool p_geom, bool in_menu_frame)
+            {
+                return replay && (p_geom || !in_menu_frame);
+            }
+
             static void thunk_site0(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
                 std::uint32_t render_flags)
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 0);
-                call_site_original(0, pass, technique, alpha_test, render_flags);
+                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom, instance().m_in_frame))
+                    call_site_original(0, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 0);
             }
@@ -1100,7 +1317,8 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 std::uint32_t render_flags)
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 1);
-                call_site_original(1, pass, technique, alpha_test, render_flags);
+                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom, instance().m_in_frame))
+                    call_site_original(1, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 1);
             }
@@ -1108,7 +1326,8 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 std::uint32_t render_flags)
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 2);
-                call_site_original(2, pass, technique, alpha_test, render_flags);
+                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom, instance().m_in_frame))
+                    call_site_original(2, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 2);
             }
@@ -1133,6 +1352,353 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 return false;
             }
 
+            // Run 35 (v5.8): PROACTIVE pass construction. Runs 32-34 proved
+            // the P pass supply can never be relied on — the world stream
+            // dies exactly when the inventory opens (game paused), so the
+            // snapshot is empty in the one state that matters. But the
+            // engine generates passes through a VIRTUAL on the shader
+            // property — BSShaderProperty::GetRenderPasses(geometry,
+            // renderMode, accumulator) — which we can call directly for any
+            // geometry: it picks the technique and lights and EmplacePasses
+            // through BSShader::MakeRenderPass (ID 107497), the same path
+            // every live draw uses. The menu scene's own accumulator
+            // (UI3DSceneManager::unk10, the one the item preview renders
+            // with) supplies the light state; the studio OM window supplies
+            // the target. The returned RenderPassArray chains BSRenderPass
+            // objects via ->next; each is drawn with BSBatchRenderer::
+            // SetupAndDrawPass — the same call_site_original we already
+            // invoke. The passes are one-frame objects owned by the
+            // property's RenderPassArray (freed by DoClearRenderPasses on
+            // the next accumulator run), so we must NOT free them here.
+            //
+            // Run 43 (v6.8): the draw OWNS ITS OM WINDOW now. Runs up to
+            // v6.7 triggered it from replay_after_original — i.e. from an
+            // ITEM pass — but the paused inventory never re-draws the same
+            // item (the manager keeps loadedModels and just skips drawing),
+            // so after the arm frame the window never opened again (run-43
+            // log: 74 bracketed frames, zero P draws). end_frame now drives
+            // the draw every bracketed frame; this function binds the
+            // studio OM, clears once per frame, draws, and restores — no
+            // dependency on any engine pass arriving.
+            void draw_p_proactively(RE::BSShaderAccumulator* accumulator)
+            {
+                RE::NiAVObject* p_root = PInstance::instance().root();
+                if (!p_root || !accumulator)
+                {
+                    // Run 54: once-per-open visibility for the silent
+                    // swallow — run 53's steady-state frames stopped
+                    // drawing with ZERO log lines because the whitelist
+                    // root vanished (PInstance back to kNone, cause still
+                    // unidentified); this line makes it visible.
+                    if (!p_root && !m_p_no_root_logged)
+                    {
+                        m_p_no_root_logged = true;
+                        logger::warn("Proto P draw skipped: whitelist root is null (PInstance state lost?)");
+                    }
+                    return;
+                }
+                // Run 36: one P draw per studio frame (replay_after_original
+                // may call this for every item pass in a frame).
+                if (m_p_drawn_this_frame)
+                    return;
+                m_p_drawn_this_frame = true;
+
+                auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
+                auto& runtime = renderer->GetRuntimeData();
+                if (!runtime.context || !runtime.forwarder)
+                    return;
+
+                // Save the ambient OM pair + viewport + depth state.
+                REX::W32::ID3D11RenderTargetView* prev_rtv = nullptr;
+                REX::W32::ID3D11DepthStencilView* prev_dsv = nullptr;
+                runtime.context->OMGetRenderTargets(1, &prev_rtv, &prev_dsv);
+                REX::W32::ID3D11DepthStencilState* prev_ds = nullptr;
+                std::uint32_t prev_stencil_ref = 0;
+                runtime.context->OMGetDepthStencilState(&prev_ds, &prev_stencil_ref);
+                REX::W32::D3D11_VIEWPORT prev_viewport{};
+                std::uint32_t prev_viewport_count = 1;
+                runtime.context->RSGetViewports(&prev_viewport_count, &prev_viewport);
+
+                // Studio target: persistent, sized from the captured
+                // call-site description (recreated on desc change).
+                REX::W32::D3D11_TEXTURE2D_DESC desc{};
+                if (s_panel_rtv)
+                {
+                    REX::W32::ID3D11Resource* resource = nullptr;
+                    s_panel_rtv->GetResource(&resource);
+                    if (resource)
+                    {
+                        static_cast<REX::W32::ID3D11Texture2D*>(resource)->GetDesc(&desc);
+                        resource->Release();
+                    }
+                }
+                OffscreenTarget& target = offscreen_target();
+                if (!target.rtv)
+                {
+                    // No template this frame (first draw may precede any
+                    // capture); skip — the item-pass path will create it.
+                    if (prev_rtv)
+                        prev_rtv->Release();
+                    if (prev_dsv)
+                        prev_dsv->Release();
+                    return;
+                }
+
+                PInstance::instance().pose_for_studio();
+
+                runtime.context->OMSetRenderTargets(1, &target.rtv, target.dsv);
+                runtime.context->OMSetDepthStencilState(target.ds_state, 0);
+                REX::W32::D3D11_VIEWPORT viewport{ 0.0f, 0.0f,
+                    static_cast<float>(target.width), static_cast<float>(target.height), 0.0f, 1.0f };
+                runtime.context->RSSetViewports(1, &viewport);
+                if (!m_cleared)
+                {
+                    const float clear_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+                    runtime.context->ClearRenderTargetView(target.rtv, clear_color);
+                    runtime.context->ClearDepthStencilView(target.dsv,
+                        REX::W32::D3D11_CLEAR_DEPTH | REX::W32::D3D11_CLEAR_STENCIL, 1.0f, 0);
+                    m_cleared = true;
+                }
+
+                // Run 41: opaque blend; run 42: clean rasterizer (the
+                // engine's leftovers at the item call site — unknown blend
+                // factors, depthBiasClamp=-100 — both black out the pixels).
+                struct BlendGuard
+                {
+                    BlendGuard(REX::W32::ID3D11DeviceContext* a_ctx, REX::W32::ID3D11BlendState* a_opaque) :
+                        ctx(a_ctx), opaque(a_opaque)
+                    {
+                        ctx->OMGetBlendState(&prev_blend, prev_factor, &prev_mask);
+                        ctx->OMSetBlendState(opaque, prev_factor, prev_mask);
+                    }
+                    ~BlendGuard()
+                    {
+                        ctx->OMSetBlendState(prev_blend, prev_factor, prev_mask);
+                        if (prev_blend)
+                            prev_blend->Release();
+                    }
+                    REX::W32::ID3D11DeviceContext* ctx;
+                    REX::W32::ID3D11BlendState* opaque;
+                    REX::W32::ID3D11BlendState* prev_blend = nullptr;
+                    FLOAT prev_factor[4]{};
+                    UINT prev_mask = 0;
+                } blend_guard(runtime.context, CompositeRenderer::instance().opaque_blend());
+
+                struct RasterGuard
+                {
+                    RasterGuard(REX::W32::ID3D11DeviceContext* a_ctx, REX::W32::ID3D11RasterizerState* a_clean) :
+                        ctx(a_ctx), clean(a_clean)
+                    {
+                        ctx->RSGetState(&prev_rs);
+                        ctx->RSSetState(clean);
+                    }
+                    ~RasterGuard()
+                    {
+                        ctx->RSSetState(prev_rs);
+                        if (prev_rs)
+                            prev_rs->Release();
+                    }
+                    REX::W32::ID3D11DeviceContext* ctx;
+                    REX::W32::ID3D11RasterizerState* clean;
+                    REX::W32::ID3D11RasterizerState* prev_rs = nullptr;
+                } raster_guard(runtime.context, CompositeRenderer::instance().clean_rasterizer());
+
+                std::vector<RE::BSRenderPass*> passes;
+                RE::BSVisit::TraverseScenegraphGeometries(p_root, [&](RE::BSGeometry* geometry) {
+                    if (!PInstance::instance().is_p_geometry(geometry))
+                        return RE::BSVisit::BSVisitControl::kContinue;
+                    auto& geom_rt = geometry->GetGeometryRuntimeData();
+                    auto* property = geom_rt.shaderProperty.get();
+                    if (!property)
+                        return RE::BSVisit::BSVisitControl::kContinue;
+                    // renderMode kNormal (0) — the menu accumulator's normal
+                    // path, same as the item preview's passes.
+                    auto* pass_array = property->GetRenderPasses(geometry,
+                        std::to_underlying(RE::BSShaderAccumulator::RENDER_MODE::kNormal), accumulator);
+                    if (pass_array)
+                    {
+                        for (RE::BSRenderPass* pass = pass_array->head; pass; pass = pass->next)
+                        {
+                            if (pass->geometry == geometry && pass->shader)
+                            {
+                                passes.push_back(pass);
+                                // Run 46: remember the PASS RECIPE — the
+                                // paused inventory stops regenerating passes
+                                // (run 43), so later frames must rebuild
+                                // them from the recorded parameters. All
+                                // referenced objects live for the panel
+                                // open (actor graph, singleton shaders,
+                                // UI3D menu lights). Dedup by full key.
+                                const bool known = std::any_of(m_pass_recipes.begin(), m_pass_recipes.end(),
+                                    [&](const PPassRecipe& r) {
+                                        return r.shader == pass->shader && r.geometry == geometry &&
+                                            r.technique == pass->passEnum;
+                                    });
+                                if (!known)
+                                {
+                                    m_pass_recipes.push_back(
+                                        { pass->shader, property, geometry, pass->passEnum,
+                                            static_cast<std::uint8_t>(pass->numLights),
+                                            { pass->sceneLights ? pass->sceneLights[0] : nullptr,
+                                                pass->sceneLights ? pass->sceneLights[1] : nullptr,
+                                                pass->sceneLights ? pass->sceneLights[2] : nullptr,
+                                                pass->sceneLights ? pass->sceneLights[3] : nullptr } });
+                                }
+                            }
+                        }
+                    }
+                    // Run 46 fallback: the generator came up empty for this
+                    // geometry (paused-inventory state) — rebuild from a
+                    // previously recorded recipe instead.
+                    return RE::BSVisit::BSVisitControl::kContinue;
+                });
+
+                // Run 46: rebuild passes from recipes when the live
+                // generator produced nothing (or too few). Deduplicate the
+                // recipes accumulated over the session per panel open.
+                if (passes.empty())
+                {
+                    // Run 46: nothing live — try rebuilding from recorded
+                    // recipes. Also LOG the empty live generation once per
+                    // session: silent empty runs were the run-46 blind spot.
+                    if (!m_p_empty_live_logged)
+                    {
+                        m_p_empty_live_logged = true;
+                        logger::info("Proto v6.11 live GetRenderPasses produced nothing ({} recipes "
+                                     "recorded); rebuilding",
+                            m_pass_recipes.size());
+                    }
+                    for (const auto& recipe : m_pass_recipes)
+                    {
+                        if (!PInstance::instance().is_p_geometry(recipe.geometry))
+                            continue;
+                        RE::BSLight* lights[4] = { recipe.lights[0], recipe.lights[1], recipe.lights[2],
+                            recipe.lights[3] };
+                        if (RE::BSRenderPass* rebuilt =
+                                recipe.shader->MakeRenderPass(recipe.property, recipe.geometry,
+                                    recipe.technique, recipe.num_lights, lights))
+                        {
+                            if (rebuilt->geometry == recipe.geometry)
+                                passes.push_back(rebuilt);
+                        }
+                    }
+                }
+                else if (!m_pass_recipes.empty())
+                {
+                    m_pass_recipes.clear();  // live generation works; recipes stale
+                }
+
+                // Run 47: per-frame draw summary (replaces the draw-once
+                // log) — the user's RenderDoc report contradicted the
+                // single-line log, which was latched forever. This line
+                // states EXACTLY what each studio frame drew and from where.
+                logger::info("Proto v6.11 P draw: source={} passes={}", passes.empty() && !m_pass_recipes.empty()
+                                                                                 ? "recipes-failed"
+                                                                                 : (passes.empty() ? "empty"
+                                                                                                   : "live/recipes"),
+                    passes.size());
+
+                // Run 52 (v6.17): BACK TO THE RUN-35 CONFIGURATION (user
+                // direction — "runs 35-42 actually drew the character, it
+                // was just out of the frustum"). The v6.13-16 manual draw is
+                // falsified: its rd gate blocked every pass on
+                // rendererData=null (runs 49-51) — and if the engine's
+                // SetupAndDrawPass is what lazily creates those device
+                // buffers, the manual path removed the ONLY caller that
+                // could ever initialize the geometry. Restore the proven
+                // chain, exactly as runs 35-42 drew it: per pass, rebind the
+                // studio OM pair (the v6.4 fix — SetupAndDrawPass's internal
+                // shadow-state reapplication steals the binding), then call
+                // the call-site original — the ENGINE's own SetupAndDrawPass
+                // with the pass's own technique encoding (alphaTest =
+                // passEnum bit 6, run-31 observation; renderFlags 0x200 =
+                // the menu-stream value). The engine then handles technique
+                // setup, geometry/device-buffer init, batch dispatch and
+                // state; the guards added since (opaque blend, clean
+                // rasterizer, forced cascade, near-plane pose) all stay.
+                // Site 1's original = the CS-interposed chain the item
+                // preview itself flows through, so the menu context matches.
+                std::uint32_t drawn = 0;
+                for (RE::BSRenderPass* pass : passes)
+                {
+                    runtime.context->OMSetRenderTargets(1, &target.rtv, target.dsv);
+                    runtime.context->OMSetDepthStencilState(target.ds_state, 0);
+                    // Run 53/56: studio lighting — point the pass at the
+                    // item preview's own light array (recorded THIS frame;
+                    // the freshness gate skips frames without a menu
+                    // lighting pass, falling back to the pass's own lights),
+                    // then zero the shadow-light count (menu lights cast
+                    // none). Restored after the draw — these passes live in
+                    // the UI3D accumulator's enrolled lists and the engine
+                    // must never see our rebind afterwards.
+                    RE::BSLight** saved_scene_lights = nullptr;
+                    std::uint8_t saved_num_lights = 0;
+                    std::uint8_t saved_shadow_lights = 0;
+                    const bool override_lights = m_studio_lights_fresh && m_studio_light_array;
+                    if (override_lights)
+                    {
+                        saved_scene_lights = pass->sceneLights;
+                        saved_num_lights = pass->numLights;
+                        saved_shadow_lights = pass->numShadowLights;
+                        pass->numLights = m_studio_light_count;
+                        pass->numShadowLights = 0;
+                        pass->sceneLights = m_studio_light_array;
+                        if (!m_p_studio_lights_logged)
+                        {
+                            m_p_studio_lights_logged = true;
+                            logger::info("Proto v6.21 studio lights applied to P passes: {} menu lights",
+                                m_studio_light_count);
+                        }
+                    }
+                    call_site_original(1, pass, pass->passEnum, (pass->passEnum & 0x40) != 0, 0x200);
+                    if (override_lights)
+                    {
+                        pass->sceneLights = saved_scene_lights;
+                        pass->numLights = saved_num_lights;
+                        pass->numShadowLights = saved_shadow_lights;
+                    }
+                    ++drawn;
+                }
+
+                // Run 47/52: per-frame draw summary — how many passes were
+                // handed to the engine's SetupAndDrawPass this frame. Pixel
+                // truth is RenderDoc / the close-dump TGA; the renderer-init
+                // heartbeat (PInstance) shows whether the device buffers
+                // appear once SetupAndDrawPass processes the geometries.
+                logger::info("Proto v6.17 P draw (SetupAndDrawPass): submitted={} of {} passes (source={})",
+                    drawn, passes.size(),
+                    passes.empty() && !m_pass_recipes.empty() ? "recipes-failed" : "live/recipes");
+                runtime.context->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
+                runtime.context->OMSetDepthStencilState(prev_ds, prev_stencil_ref);
+                runtime.context->RSSetViewports(prev_viewport_count, &prev_viewport);
+
+                if (prev_ds)
+                    prev_ds->Release();
+                if (prev_rtv)
+                    prev_rtv->Release();
+                if (prev_dsv)
+                    prev_dsv->Release();
+
+                ++m_p_total_replays;  // feeds the close-dump gate too
+                if (!m_p_draw_logged)
+                {
+                    m_p_draw_logged = true;
+                    logger::info("Proto v6.8 P drawn proactively: {} passes via GetRenderPasses", passes.size());
+                }
+            }
+
+            // SetupAndDrawPass with the pass's own recorded state. Run-31
+            // logs show technique == passEnum on every observed pass, and
+            // the alpha-test flag correlates with passEnum bit 6 (0x40):
+            // 0x140C9/0x14049 -> alphaTest, 0x14045/0x14031 -> no. The
+            // renderFlags observed on menu-stream passes are 0x200; the
+            // kNormal menu path uses the same batch renderer entry, whose
+            // CS interposer (when present) the pass hooks restored.
+            static void call_site_original_from_pass(RE::BSRenderPass* pass)
+            {
+                call_site_original(1, pass, pass->passEnum, (pass->passEnum & 0x40) != 0, 0x200);
+            }
+
             // v2.5 order: the replay runs AFTER the original call. The
             // original's internal shadow-state application consumed the dirty
             // flags and left every pipeline slot (OM, textures, constants,
@@ -1142,8 +1708,10 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // had to consume the dirty flags itself and then fight the
             // re-application slot family by slot family (OM in run 11, then
             // the SRV set in run 12).
-            void replay_after_original(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
-                std::uint32_t render_flags, std::size_t site_index)
+            // Run 37 (v6.0): the pass arguments are now only the WINDOW
+            // trigger — the pass itself is not replayed (the panel shows
+            // only P), so the parameters go unnamed.
+            void replay_after_original(RE::BSRenderPass*, std::uint32_t, bool, std::uint32_t, std::size_t)
             {
                 auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
                 if (!renderer)
@@ -1304,7 +1872,17 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     m_cleared = true;
                 }
 
-                call_site_original(site_index, pass, technique, alpha_test, render_flags);
+                // Run 37 (v6.0): the item pass itself is NO LONGER replayed
+                // into the studio — the user's acceptance is a character
+                // panel that shows ONLY P (the highlighted item keeps its
+                // normal preview; the passthrough above already drew it
+                // there). The studio OM window is kept open for exactly one
+                // thing: the proactive P draw, once per studio frame.
+                if (Proto::instance().panel_frame_active())
+                {
+                    if (auto* ui3d = RE::UI3DSceneManager::GetSingleton())
+                        draw_p_proactively(ui3d->unk10.get());
+                }
 
                 // No dirty flags are left, so nothing re-applies and our bind
                 // is expected to survive; verify once per frame.
@@ -1347,7 +1925,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 if (prev_dsv)
                     prev_dsv->Release();
 
-                ++m_menu_lighting_replayed;
+                ++m_p_total_replays;
             }
 
             RE::NiNode* m_roots[8]{};
@@ -1356,12 +1934,21 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             std::size_t m_logged_root_count = 0;
             // Menu geometries already logged this panel open (discovery cap).
             std::unordered_set<const RE::BSGeometry*> m_seen_geoms;
+            // P geometries already logged this panel open (run 29: P passes
+            // arrive in the WORLD stream, outside the menu bracket).
+            std::unordered_set<const RE::BSGeometry*> m_seen_p_geoms;
             std::uint32_t m_generation = 0;
             std::uint32_t m_frame_index = 0;
             std::uint32_t m_passes_seen = 0;
             std::uint32_t m_geoms_logged = 0;
+            std::uint32_t m_p_geoms_logged = 0;
             std::uint32_t m_menu_passes = 0;
+            std::uint32_t m_p_passes = 0;
             std::uint32_t m_menu_lighting_replayed = 0;
+            // Replays accumulated since the last end_frame summary; the
+            // close-dump gate (m_session_replays) consumes them so a P-only
+            // session still writes its evidence TGA.
+            std::uint32_t m_p_total_replays = 0;
             std::uint32_t m_last_logged_replayed = 0;
             std::uint32_t m_content_frames = 0;
             std::uint32_t m_session_replays = 0;
@@ -1372,6 +1959,51 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             bool m_srv_logged = false;
             bool m_binding_logged = false;
             bool m_in_frame = false;
+            bool m_p_draw_logged = false;
+            bool m_p_binding_logged = false;
+            bool m_p_drawn_this_frame = false;
+            bool m_p_recipe_logged = false;
+            bool m_p_empty_live_logged = false;
+            // Run 54: the pass just classified by on_pass — the thunks read
+            // it (same render-thread call) to keep the engine from ever
+            // drawing P's passes (world double + menu teardown crash).
+            bool m_last_pass_p_geom = false;
+            // Run 54: once-per-open marker for the no-root early return in
+            // draw_p_proactively — a silent kNone here is what swallowed
+            // run 53's steady-state draws without a single log line.
+            bool m_p_no_root_logged = false;
+            // Run 53/56: the item preview's menu lights — the studio
+            // lighting for P's passes (whose own lights are dungeon/world
+            // lights, thousands of units from the menu-space fragments the
+            // pose produces). Run 56: we now reference the ITEM PASS'S OWN
+            // sceneLights ARRAY (the exact storage the engine — and CS's
+            // light hooks — use for the item's own draw that frame)
+            // instead of copying BSLight pointers into a member array:
+            // run 55's session CRASHED in CS's
+            // GeometrySetupConstantPointLights after the copied pointers
+            // outlived the light objects (item selection changed mid
+            // session). The freshness flag gates the override to frames
+            // where a menu lighting pass actually arrived.
+            RE::BSLight** m_studio_light_array = nullptr;
+            std::uint8_t m_studio_light_count = 0;
+            bool m_studio_lights_fresh = false;
+            bool m_p_studio_lights_logged = false;
+
+            // Run 46: pass recipes recorded on successful live generation —
+            // the paused inventory stops regenerating passes, so later
+            // frames rebuild them via BSShader::MakeRenderPass (ID 107497).
+            // All referenced objects live for the panel open; cleared on
+            // release_target.
+            struct PPassRecipe
+            {
+                RE::BSShader* shader;
+                RE::BSShaderProperty* property;
+                RE::BSGeometry* geometry;
+                std::uint32_t technique;
+                std::uint8_t num_lights;
+                RE::BSLight* lights[4];
+            };
+            std::vector<PPassRecipe> m_pass_recipes;
         };
     }
 
@@ -1394,11 +2026,20 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 return;
             }
 
+            // The P build state machine is paced by REAL rendered frames:
+            // each DrawInterfaceStart queues at most one game-thread step
+            // (run-28 finding — a self-rescheduling task drains within one
+            // game frame and never lets the engine load anything).
+            PInstance::instance().pump();
+
             if (!Proto::instance().panel_frame_active())
             {
                 // Panel closed: run FR-06 cleanup here on the render thread
                 // — a user close writes one evidence TGA first, a
-                // force-close releases silently — then draw untouched.
+                // force-close releases silently — then draw untouched. The
+                // retired P graphs (stage 2) also drain here: this frame
+                // provably runs no pass hooks, so no in-flight pass can
+                // still read the detached scene graph.
                 if (Proto::instance().take_release_pending())
                 {
                     if (Proto::instance().take_dump_on_close())
@@ -1406,6 +2047,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     else
                         PassRedirector::instance().release_target("panel force-closed");
                 }
+                PInstance::instance().drain_retired();
                 original(a1);
                 return;
             }

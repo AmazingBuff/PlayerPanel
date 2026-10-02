@@ -3,6 +3,7 @@
 //
 
 #include "proto.h"
+#include "proto_pinstance.h"
 
 #include <RE/Skyrim.h>
 #include <REL/Relocation.h>
@@ -105,15 +106,32 @@ namespace CharacterPanelProto
             {
                 case SKSE::MessagingInterface::kDataLoaded:
                     Proto::instance().install();
+                    // Run 49 (v6.15): from here on, idle frames auto-spawn P
+                    // on the first unpaused world frame so the engine
+                    // renderer-initializes its geometries (device buffers).
+                    PInstance::instance().set_world_ready(true);
+                    break;
+                // Run 49 (v6.15): each completed save load also re-arms the
+                // auto-spawn (kDataLoaded fires once per app session only).
+                case SKSE::MessagingInterface::kPostLoadGame:
+                    PInstance::instance().set_world_ready(true);
                     break;
                 // FR-06: a loading screen or a fresh game is no valid preview
                 // context; drop the panel so it cannot carry stale studio
-                // content across a session change.
+                // content across a session change. Run-37 crash defense:
+                // the loading screen also tears down HUD/menu state the
+                // parked clone and the accumulator state depend on — a
+                // force-close here is followed by a hard P kill so no
+                // stale actor/graph survives the load either.
                 case SKSE::MessagingInterface::kPreLoadGame:
+                    PInstance::instance().set_world_ready(false);
                     Proto::instance().close_panel("save loading");
+                    PInstance::instance().despawn();
                     break;
                 case SKSE::MessagingInterface::kNewGame:
+                    PInstance::instance().set_world_ready(false);
                     Proto::instance().close_panel("new game");
+                    PInstance::instance().despawn();
                     break;
                 default:
                     break;
@@ -158,8 +176,8 @@ namespace CharacterPanelProto
             return;
         }
         m_capture_ready = true;
-        logger::info("M0 proto v4.6 panel composite installed: F7 toggles the panel (visible opaque rectangle "
-                     "+ evidence on close), F8 grabs a mid-session frame");
+        logger::info("M0 proto v6.21 installed: dynamic figure centering (bound-based) + by-reference studio "
+                     "lights with per-frame freshness; F7 toggles the P panel");
     }
 
     void Proto::toggle_panel()
@@ -180,6 +198,9 @@ namespace CharacterPanelProto
             m_release_pending.store(false, std::memory_order_relaxed);
             m_dump_on_close.store(false, std::memory_order_relaxed);
             m_panel_generation.fetch_add(1, std::memory_order_release);
+            // Stage 2: the panel's content is the independent display
+            // instance P — spawn it with the panel, despawn with the close.
+            toggle_p_instance();
             logger::info("Panel opened: every menu frame is now bracketed for studio redirection "
                          "(F7 closes, F8 dumps)");
             return;
@@ -188,6 +209,7 @@ namespace CharacterPanelProto
         m_dump_requested.store(false, std::memory_order_release);
         m_dump_on_close.store(true, std::memory_order_release);
         m_release_pending.store(true, std::memory_order_release);
+        toggle_p_instance();
         logger::info("Panel closed: studio redirection stops, one studio dump is written before the target "
                      "is released on the render thread");
     }
@@ -215,8 +237,22 @@ namespace CharacterPanelProto
         {
             m_dump_requested.store(false, std::memory_order_release);
             m_release_pending.store(true, std::memory_order_release);
+            toggle_p_instance();
             logger::info("Panel force-closed ({})", reason);
         }
+    }
+
+    void Proto::toggle_p_instance()
+    {
+        // Game thread: P's lifecycle is no longer bound to the panel
+        // (run 49). P auto-spawns on the first unpaused world frame after a
+        // load and parks disabled once renderer-initialized; a build that
+        // ran inside the paused inventory can never be initialized (the
+        // rd=9 failure), so F7-open only tops up a missing instance and
+        // close keeps the built instance for the whole session. despawn()
+        // stays bound to load/new-game teardown.
+        if (m_panel_open.load(std::memory_order_acquire))
+            PInstance::instance().spawn();
     }
 
     bool Proto::panel_frame_active()

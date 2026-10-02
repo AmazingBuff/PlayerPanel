@@ -253,6 +253,8 @@ if(CHARACTER_PANEL_BUILD_PROTO)
 		tools/m0_proto/proto.h
 		tools/m0_proto/proto_main.cpp
 		tools/m0_proto/proto_passredirect.cpp
+		tools/m0_proto/proto_pinstance.h
+		tools/m0_proto/proto_pinstance.cpp
 		${PROTO_VERSION_HEADER}
 		${PROTO_VERSION_RESOURCE}
 	)
