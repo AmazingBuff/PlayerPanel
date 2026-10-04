@@ -245,10 +245,10 @@ namespace CharacterPanelProto
             return;
         }
         m_capture_ready = true;
-        logger::info("M0 proto v6.68 installed: run-102 fix — pointer caches cannot catch the transition "
-                     "cutting the light rig out of the host (0/3 with everything matching); a stalled "
-                     "wrapper fetch now re-creates the rig under the current scene. F7 = fallback, "
-                     "F8 = dump");
+        logger::info("M0 proto v6.70 installed: born-at-depth FALSIFIED (run 104 — the engine picks "
+                     "character LOD by reference distance at load; the depth-spawned graph had zero "
+                     "bind matrices and rendered scattered) — placement reverted to PlaceObjectAtMe, "
+                     "the flash is fixed by the grace fade guard instead. F7 = fallback, F8 = dump");
     }
 
     void Proto::open_panel(std::string_view reason)

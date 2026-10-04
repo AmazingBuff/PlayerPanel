@@ -596,6 +596,20 @@ namespace CharacterPanelProto
         // (legacy saves without the marker fall back to the player's name).
         clone_base->fullName = RE::BSFixedString(Clone_Base_Name);
 
+        // v6.70 (run 104): born-at-depth is FALSIFIED — CreateReferenceAt
+        // Location at the park depth assembled a DEGRADED graph (the engine
+        // picks character LOD by reference distance at load time): skin
+        // instances with zero bind matrices ("0 bind bones" vs the 74 of
+        // the v6.23 era), parts rendered at raw model space, mirrored items
+        // invisible, per-cycle nondeterminism. The pre-2b evidence (place
+        // at the player, then park deep) stays authoritative: the reference
+        // must sit near the player while the graph assembles; parking deep
+        // AFTER assembly never downgrades it. The v6.68 flash is therefore
+        // fixed at the VISIBILITY layer, not the placement layer: the
+        // grace node park (v6.38) plus the grace fade guard (v6.69, below)
+        // make every ordering-losing frame render fully transparent, and a
+        // transparent, displaced graph gives the activation raycast nothing
+        // to hit.
         RE::NiPointer<RE::TESObjectREFR> placed = player->PlaceObjectAtMe(clone_base, false);
         auto* clone = placed ? placed->As<RE::Actor>() : nullptr;
         if (!clone)
@@ -613,8 +627,8 @@ namespace CharacterPanelProto
         m_home_graph = nullptr;
         m_home_node = nullptr;
         m_state.store(State::kWaitingGrace, std::memory_order_release);
-        logger::info("Proto P clone placed (world-render init route: the build only advances unpaused "
-                     "so the engine creates the device buffers); building toward the whitelist");
+        logger::info("Proto P clone placed at the player (PlaceObjectAtMe; high-model assembly), "
+                     "grace node park + fade guard hold it invisible");
     }
 
     void PInstance::tick()
@@ -738,9 +752,39 @@ namespace CharacterPanelProto
                     RE::NiUpdateData early_update{ 0.0f, RE::NiUpdateData::Flag::kDirty };
                     early->UpdateDownwardPass(early_update, 0);
                 }
+                // v6.69/70: fade guard — the PRIMARY flash fix. A freshly
+                // placed character ramps in through its BSFadeNode, and an
+                // ordering-losing frame renders the graph before the shift
+                // above lands (the user's transparent, interactive double).
+                // Pin the fade trio (target/rate/current) to zero each grace
+                // tick: plain floats, and AsFadeNode dispatches on the
+                // fully-constructed node (UpdateDownwardPass above is the
+                // same safety class). Whatever frames the node park loses,
+                // this pin still renders them fully transparent, and the
+                // ramp cannot climb while the target sits at zero. Restored
+                // at grace end, before the dress adds new geometry.
+                if (auto* fade = early->AsFadeNode())
+                {
+                    auto& fade_rt = fade->GetRuntimeData();
+                    fade_rt.unk128 = 0.0f;
+                    fade_rt.unk12C = 0.0f;
+                    fade_rt.currentFade = 0.0f;
+                }
             }
             if (m_frames_since_place < Grace_Frames)
                 return;  // the next pump queues the next step
+            // v6.69: restore the fade the grace guard pinned to zero —
+            // target=1, rate=0, current=1: fully opaque and no further ramp.
+            // The world never draws the parked graph visibly, but the studio
+            // must see it opaque; dress geometry attaches after this point.
+            if (auto* loaded = clone->loadedData; loaded && loaded->data3D)
+                if (auto* fade = loaded->data3D.get()->AsFadeNode())
+                {
+                    auto& fade_rt = fade->GetRuntimeData();
+                    fade_rt.unk128 = 1.0f;
+                    fade_rt.unk12C = 0.0f;
+                    fade_rt.currentFade = 1.0f;
+                }
             // Grace over (spike order): dress from the player's worn set and
             // park IN FRONT OF the camera, just outside its typical pitch.
             // Route 3 (run 31 correction): the graph is NEVER detached from
