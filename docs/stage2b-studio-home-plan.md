@@ -9,6 +9,28 @@
 - 前置基线:v6.59(run 93 已验证:面板光照正确、世界无泄漏、高亮/无
   高亮一致;DLL MD5 5ad6742d,提交 743454b)
 
+## H10. Run 102 结果(v6.67:重置未触发——指针比对路线全部证伪)+ v6.68 自愈
+
+**用户实测**:切角色流程零崩溃,但灯光仍失(v6.67 无效)。日志判读:
+**零条 "rig reset"**——宿主指针、ShadowSceneNode 指针、NiLight 存活状
+态全部与缓存一致;而 v6.67 新加的 warn 抓到真相:
+`wrappers not in the ledger yet (0/3 matched)`(账本本身 250+ 引擎灯正
+常)。**三个指针假设(host 变/节点变/灯死)全部证伪**——转换把 rig 从
+宿主 children 里剥离(或等价效果),而我们持有的所有指针原样不动。
+
+**结论:指针比对不是地面真相,fetch 停滞才是**——rig 没进账本这件事
+本身可观测,成因不可观测且不必关心。
+
+**v6.68(2026-10-04,待游戏验证)= 停滞自愈**:incomplete fetch 连续
+`Fetch_Stall_Reset_Windows=30` 窗(约 0.5 s)→ 整套重置 rig(抽出的
+`reset_light_rig`,v6.67 的指针变更检查也改走它)→ Phase 1 在当前场景
+重建 → 新 rig 按构造重进 host children 与账本 → fetch 恢复。若环境仍
+不收集,每 30 窗重试一次(warn + reset 各一条/轮,有界)。
+
+**判读(run 103)**:①切角色后 ~1 秒内日志出现 `wrapper fetch stalled`
+→ `rig reset` → `studio lights created` → `fetched and PATCHED`,面板
+光照恢复;②零崩溃;③普通单存档流程零 reset 零回归。
+
 ## H9. Run 101 结果(v6.66:崩溃修复成立;灯光仍失——宿主重建孤儿化 rig)+ v6.67 修复
 
 **用户实测**(A 存档 → 回主菜单 → 载 B 存档 → 开背包):**零崩溃**

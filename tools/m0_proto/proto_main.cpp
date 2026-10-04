@@ -245,9 +245,9 @@ namespace CharacterPanelProto
             return;
         }
         m_capture_ready = true;
-        logger::info("M0 proto v6.67 installed: run-101 fix — a main-menu transition also rebuilds the "
-                     "UI3D host, orphaning the light rig (fetch failed silently, dark figure); the rig "
-                     "is now re-created whenever the host or the ShadowSceneNode changed. F7 = fallback, "
+        logger::info("M0 proto v6.68 installed: run-102 fix — pointer caches cannot catch the transition "
+                     "cutting the light rig out of the host (0/3 with everything matching); a stalled "
+                     "wrapper fetch now re-creates the rig under the current scene. F7 = fallback, "
                      "F8 = dump");
     }
 

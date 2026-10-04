@@ -492,6 +492,12 @@ namespace CharacterPanelProto
         // (engine convention: point lights start at sceneLights[1]), slots
         // 1/2 = key/fill point lights.
         constexpr std::size_t Studio_Light_Count = 3;
+        // v6.68: how many consecutive draw windows an incomplete wrapper
+        // fetch may stall before the whole light rig is discarded and
+        // re-created (run 102: the transition cut the rig out of the host's
+        // children with every pointer cache matching — the stall is the
+        // only observable). ~0.5 s of dark figure per recovery attempt.
+        constexpr std::uint32_t Fetch_Stall_Reset_Windows = 30;
 
         // --- composite (v4, work package 3) --------------------------------
 
@@ -1619,6 +1625,30 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 return nullptr;
             }
 
+            // v6.68: discard the whole self-built light rig so Phase 1
+            // re-creates it under the CURRENT host/node. Triggered by a
+            // pointer change (v6.67) or by a stalled wrapper fetch — the
+            // transition can cut the rig out of the host's children (or
+            // out of the ledger) while every pointer we hold stays
+            // identical (run 102: 0/3 matched with all caches matching),
+            // so the fetch stall is the authoritative signal.
+            void reset_light_rig(const char* a_reason)
+            {
+                logger::info(
+                    "Proto v6.68 studio light rig reset: {} — re-creating under the current scene",
+                    a_reason);
+                for (auto*& shell : m_studio_lights)
+                    shell = nullptr;
+                for (auto& ni : m_studio_light_ni)
+                    ni = nullptr;
+                m_studio_rig_node = nullptr;
+                m_studio_light_count = 0;
+                m_studio_light_array = nullptr;
+                m_studio_lights_failed = false;
+                m_fetch_warned = false;
+                m_fetch_stall_windows = 0;
+            }
+
             void ensure_studio_lights()
             {
                 auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
@@ -1631,9 +1661,9 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 if (!host || !world_node)
                     return;
 
-                // v6.66/v6.67: NEITHER the world's ShadowSceneNode NOR the
-                // UI3D host survives a main-menu transition, and they fail
-                // DIFFERENTLY (run 100/101):
+                // v6.66/v6.67/v6.68: NEITHER the world's ShadowSceneNode NOR
+                // the UI3D host survives a main-menu transition intact, and
+                // they fail in DIFFERENT ways (runs 100-102):
                 // - run 100: the node is destroyed — the engine FREES the
                 //   BSLight wrappers our NiLights were registered with; the
                 //   first P draw patched freed shells (lum read as 1.08e21
@@ -1644,25 +1674,23 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 //   collection no longer reaches it, so the ledger holds no
                 //   wrappers for our lights: the fetch fails SILENTLY and
                 //   the figure renders dark.
-                // The NiLights/rig are cheap — whenever the host or the node
-                // changed, discard the whole rig and re-create under the
-                // CURRENT scene (Phase 1 below). Re-creating sidesteps every
-                // dangling-parent question an orphaned rig raises.
+                // - run 102: EVERY pointer cache matches (host, node,
+                //   NiLights alive) and the fetch still reports 0/3 — the
+                //   transition stripped the rig from the host's children
+                //   (or equivalent) without changing any pointer we hold.
+                // Pointer comparisons are therefore NOT the ground truth;
+                // they stay as cheap fast-path checks, and the stalled
+                // fetch itself (Phase 2 below) is the authoritative trigger:
+                // a rig that has not reached the ledger for a while is
+                // discarded and re-created under the CURRENT scene, which
+                // re-enters the host's children and the ledger by
+                // construction.
                 if ((m_studio_light_ni[0] || m_studio_rig_node) &&
                     (host != m_studio_lights_host || world_node != m_studio_lights_node))
                 {
-                    logger::info("Proto v6.67 studio light rig reset: {} changed across a menu/load "
-                                 "transition — re-creating under the current scene",
-                        host != m_studio_lights_host ? "the UI3D host" : "the ShadowSceneNode");
-                    for (auto*& shell : m_studio_lights)
-                        shell = nullptr;
-                    for (auto& ni : m_studio_light_ni)
-                        ni = nullptr;
-                    m_studio_rig_node = nullptr;
-                    m_studio_light_count = 0;
-                    m_studio_light_array = nullptr;
-                    m_studio_lights_failed = false;
-                    m_fetch_warned = false;
+                    reset_light_rig(host != m_studio_lights_host
+                            ? "the UI3D host changed across a menu/load transition"
+                            : "the ShadowSceneNode changed across a menu/load transition");
                 }
 
                 // Phase 1: create once (no sticky failure — a same-frame
@@ -1795,9 +1823,20 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                                     [](const RE::BSLight* s) { return s != nullptr; }),
                                 Studio_Light_Count);
                         }
+                        // v6.68: the pointers can all look unchanged while
+                        // the transition cut the rig out of the host's
+                        // children anyway (run 102: 0/3 with every cache
+                        // matching) — a sustained stall IS the ground
+                        // truth. Re-create and let the fresh rig re-enter
+                        // the host's children and the ledger by
+                        // construction.
+                        if (++m_fetch_stall_windows >= Fetch_Stall_Reset_Windows)
+                            reset_light_rig(
+                                "wrapper fetch stalled — the rig no longer reaches the ledger");
                         return;
                     }
                     m_fetch_warned = false;
+                    m_fetch_stall_windows = 0;
                     // v6.53/v6.54: FIX THE SHELL FIELDS the engine left
                     // stale — and RE-PATCH ON EVERY FETCH. The engine
                     // REBUILDS its wrappers whenever the ledger is
@@ -2728,6 +2767,9 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             RE::NiNode* m_studio_lights_host = nullptr;
             // v6.67: the incomplete-fetch warn latch (cleared on success).
             bool m_fetch_warned = false;
+            // v6.68: consecutive incomplete-fetch windows — at
+            // Fetch_Stall_Reset_Windows the whole rig is re-created.
+            std::uint32_t m_fetch_stall_windows = 0;
             RE::NiPointer<RE::NiLight> m_studio_light_ni[Studio_Light_Count];
             // v6.51: the private rig node the lights hang from — fresh,
             // flag-free, so forced cascades actually move them.
