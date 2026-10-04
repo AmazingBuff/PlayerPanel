@@ -513,10 +513,12 @@ DLL 已部署 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`
   ✓,面板光变暗)= 灯光 rig 泊位制**:rig 默认泊位 Z+100000,仅绘制窗
   口拉回锚点,所有出口泊回。run 92:世界场景光斑消失;但面板光变暗 =
   拉回后 per-pass 摆位仍写满锚点系目标 → 锚点双重计入,灯距翻倍。
-- **v6.59(2026-10-04 DLL,MD5 5ad6742d…,待游戏验证)= 拉回坐标系修
-  正**:per-pass 摆位改为锚点相对偏移(spread/up/forward,不含 anchor
-  项)——rig 停锚点 + 节点偏移 = 灯落 light_target。判读见
-  [stage2-p-instance-plan.md](stage2-p-instance-plan.md) §0bq。
+- **v6.59(2026-10-04 DLL,MD5 5ad6742d…,run 93 已验证——全部成立)=
+  拉回坐标系修正**:per-pass 摆位改为锚点相对偏移(spread/up/forward,
+  不含 anchor 项)——rig 停锚点 + 节点偏移 = 灯落 light_target。
+  **run 93 用户确认:面板光照正确(双点光正面)、世界无泄漏、高亮/无
+  高亮一致。摄影棚灯光命题完整闭环**。当前 DLL MD5 5ad6742d,已提交
+  aeba6da(v6.47–v6.59,runs 81–93)。
 - 方案与证据链:[stage2-p-instance-plan.md](stage2-p-instance-plan.md)
   (§0–§0ad 三十一轮留档、§2 路线、§3 失败模式)。
 
