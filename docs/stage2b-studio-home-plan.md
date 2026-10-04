@@ -1,14 +1,55 @@
 # 阶段 2b 验证轮方案:摄影棚即居所(统一之家,route 2 复活)
 
-- 日期:2026-10-04;状态:**轮 1 首验(run 94)零回归成立;迁移被证伪的
-  census 探针挡住,v6.61 门控换 ghost 预热窗信号,待游戏验证**
-  (2026-10-04 DLL;代码提交随轮 1 验证通过一并落库)
+- 日期:2026-10-04;状态:**轮 1 二验(run 95)零回归成立;两个门控传感器
+  相继证伪,U1 被 run 95 正面回答——v6.62 删门控直迁 + 恢复关面板取证,
+  待游戏验证**(代码提交随轮 1 验证通过一并落库)
 - 上游:[m0-handoff.md](m0-handoff.md) 阶段 2 + [stage2-p-instance-plan.md](stage2-p-instance-plan.md)
   §0ai(用户 2026-10-03 提议,决策记录:"先验证 v6.25 泊位形态;通过后
   把'摄影棚即家'立项为下一个工作包"——v6.25 已于 run 59 验证通过)
 - 读者:实现与验证此轮的 Agent / 开发者
 - 前置基线:v6.59(run 93 已验证:面板光照正确、世界无泄漏、高亮/无
   高亮一致;DLL MD5 5ad6742d,提交 743454b)
+
+## H2. Run 95 结果(v6.61:零回归再证;ghost 门控零武装;U1 被正面回答)+ v6.62 方案
+
+run 95 会话(2026-10-04 18:55,单会话,v6.61,MD5 1430be37…):
+
+- **零回归再证**:16 轮开/关面板,411 帧 `submitted=14 of 14
+  (source=live)`,零 crash,全场唯一 [W] 仍是迁移放弃行。
+- **ghost 门控零武装**:`relocation gave up after 600 frames (ghost
+  warmup never armed)`——整场**零条** ghost 行(run 94 里 0.2 s 即武装)。
+  世界流 P pass 的到达依赖玩家视角对泊位的剔除收录:run 94 的菜单帧恰
+  好收,run 95 全场没收。**世界 pass 流是视角依赖信号,不可作门控**。
+- **决定性交叉证据(U1 正面回答)**:ghost 零计数 = 世界整场从未画过
+  克隆体;而摄影棚对同一张图成功绘制 411 帧(引擎 SetupAndDrawPass 链,
+  人物像正常——用户两轮实测无异常报告)。**结论:引擎
+  SetupAndDrawPass(即摄影棚的 call_site_original)自己惰性初始化设备
+  缓冲,"世界必须先渲染一遍"的前提死亡**。此前支持该前提的 run 50 判
+  读依赖的正是已证伪的 census 仪器 + 手绘路径自身的 rd 门(v6.13 时代,
+  与 SetupAndDrawPass 无关)。
+- **附 Bug:关面板取证 TGA 自 v6.39 失效**:close_panel 从不设
+  m_dump_on_close(F7 路径才有),MenuSink 的用户关闭走静默释放——今
+  天两场零 TGA 即此因(F8 手动抓帧不受影响)。
+
+**v6.62(2026-10-04,待游戏验证)= 删门控直迁 + 取证恢复**:
+
+1. **迁移门控整个删除**:`try_relocate` 在 kAttached 后第一个未暂停
+   tick 直接迁移(白名单已武装、根非空即足够)。保留的 fail-open:宿主
+   不可用/节点创建失败 → kStuckParked。重试计数器与 Relocate_Retry_
+   Frames 一并退役。
+2. **close_panel 增 a_dump_evidence 参数**:MenuSink 用户关闭传 true
+   (恢复 v3.1"关面板=取证"契约);强关(读档/主菜单/世界丢失)保持
+   静默——与渲染端既有语义(user close writes one evidence TGA, a
+   force-close releases silently)对齐。
+
+**判读(run 96)**:①进存档等自动出生,**不依赖面板**,attach 后约一
+两秒内出现 `Proto P home: graph relocated…` 且 `home_world=
+(0.00,0.00,0.00) scale=1.000`(U5 判定);②第一次开背包面板:人物像
+与 v6.59/run 94 基线一致,`P home parent ok (per-open check)` 出现;
+③关背包后日志出现 `dump_and_release`/TGA 写出行(取证恢复验证);
+④第三人称:替身不可见;⑤开关面板 ×5 + 容器/地图/技能菜单回归;⑥
+零 crash。TGA 判读:人物居中、T-pose、non-black bbox 与 run 95 时代
+量级一致。
 
 ## H1. Run 94 结果(v6.60 首验:零回归成立;迁移被证伪的 census 探针挡住)+ v6.61 方案
 
