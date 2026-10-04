@@ -1445,6 +1445,12 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 m_p_no_root_logged = false;
                 m_studio_light_array = nullptr;
                 m_studio_light_count = 0;
+                // v6.66: the raw wrappers must be re-matched every open —
+                // the engine rebuilds its ledger on panel cycles (run 87)
+                // and a menu transition FREES them outright (run 100
+                // crash); holding them across closes held freed memory.
+                for (auto*& shell : m_studio_lights)
+                    shell = nullptr;
                 m_studio_lights_fresh = false;
                 m_p_studio_lights_logged = false;
                 m_pass_recipes.clear();
@@ -1625,6 +1631,30 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 if (!host || !world_node)
                     return;
 
+                // v6.66: the world's ShadowSceneNode does NOT survive a
+                // main-menu transition — quitting to the menu destroys it
+                // and FREES the engine-built BSLight wrappers our NiLights
+                // were registered with (run 100 crash: save A → main menu →
+                // save B, the first P draw dumped and patched freed shells —
+                // lum read as 1.08e21 garbage, then the rig placement wrote
+                // through a freed NiLight pointer, r15=0x6). The NiLights
+                // themselves survive (they are scene-graph objects hosted on
+                // our rig node, not owned by the ledger) — so whenever the
+                // node changed, hand them to the NEW node's ledger and
+                // force a fresh wrapper fetch below.
+                if (m_studio_light_ni[0] && world_node != m_studio_lights_node)
+                {
+                    for (std::size_t i = 0; i < Studio_Light_Count; ++i)
+                        if (m_studio_light_ni[i])
+                            world_node->AddLight(m_studio_light_ni[i].get());
+                    m_studio_lights_node = world_node;
+                    m_studio_light_count = 0;
+                    for (auto*& shell : m_studio_lights)
+                        shell = nullptr;
+                    logger::info("Proto v6.66 studio lights re-registered into a new ShadowSceneNode "
+                                 "(world rebuild across a menu/load transition)");
+                }
+
                 // Phase 1: create once (no sticky failure — a same-frame
                 // queue miss must not kill the lights for the session).
                 if (!m_studio_light_ni[0] && !m_studio_lights_failed)
@@ -1718,6 +1748,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                         world_node->AddLight(ni);
                         m_studio_light_ni[i].reset(ni);
                     }
+                    m_studio_lights_node = world_node;
                     logger::info("Proto v6.50 studio lights created and handed to ShadowSceneNode::AddLight "
                                  "(activeLights.size={} lightQueueAdd.size={})",
                         world_node->GetRuntimeData().activeLights.size(),
@@ -2660,6 +2691,10 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // need both cleared; despawn scope is session end, where leak-
             // on-exit is acceptable for the proto).
             RE::BSLight* m_studio_lights[Studio_Light_Count] = {};
+            // v6.66: the ShadowSceneNode the lights were last registered
+            // with — a changed pointer means the world was rebuilt (menu
+            // transition / load) and the old wrappers are gone.
+            RE::ShadowSceneNode* m_studio_lights_node = nullptr;
             RE::NiPointer<RE::NiLight> m_studio_light_ni[Studio_Light_Count];
             // v6.51: the private rig node the lights hang from — fresh,
             // flag-free, so forced cascades actually move them.

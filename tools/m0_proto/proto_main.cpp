@@ -245,9 +245,9 @@ namespace CharacterPanelProto
             return;
         }
         m_capture_ready = true;
-        logger::info("M0 proto v6.65 installed: stage-2b round 2 verified (run 98: shell deleted, graph "
-                     "kept drawing 13 opens) — the residue sweep now skips already-deleted/disabled "
-                     "refs so the purging shell is not re-swept. F7 = fallback, F8 = dump");
+        logger::info("M0 proto v6.66 installed: crash fix (run 100) — a main-menu transition destroys the "
+                     "world ShadowSceneNode and frees the studio light wrappers; they are now "
+                     "re-registered into the new node and re-fetched per open. F7 = fallback, F8 = dump");
     }
 
     void Proto::open_panel(std::string_view reason)

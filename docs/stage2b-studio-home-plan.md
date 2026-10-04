@@ -9,6 +9,43 @@
 - 前置基线:v6.59(run 93 已验证:面板光照正确、世界无泄漏、高亮/无
   高亮一致;DLL MD5 5ad6742d,提交 743454b)
 
+## H8. Run 100:切角色崩溃判读(主菜单转换 free 灯壳 → use-after-free)+ v6.66 修复
+
+**崩溃场景**(用户报告:角色 A 存档退出 → 进角色 B 存档 → 开背包即崩):
+
+日志时间线(20:17):A 会话正常开关面板 → 20:17:42.802 回主菜单
+teardown 三段干净 → 20:17:52 存档 B 重出生 → 20:17:54.377 迁移+杀壳 →
+20:17:55.462 开面板 → 首帧 P 绘制:自建离屏目标 + live passes=14 →
+**灯光壳 raw dump 读出垃圾**(lum=1.08e21,float 上限 3.4e38,freed 内存
+特征)→ 日志止于 "studio lights applied",游戏崩溃。
+
+**崩溃栈**(crash-2026-10-04-20-17-55.log,CrashLoggerSSE):
+`EXCEPTION_ACCESS_VIOLATION` `movsd [r15+0x6C], xmm0`,
+r15=0x6(纯垃圾)——帧 0 = proto_passredirect.cpp:2232(灯光 rig 的
+per-pass 节点摆位写),帧 1 = end_frame 的 draw 调用点(1238),帧 2 =
+DrawInterfaceStart thunk(2771)。符号就近误标为 std::filesystem,行号
+可信。
+
+**机制**:`m_studio_lights[3]` 裸指针在 fetch 后**从未被清空**(引擎
+重建账本时复用壳对象,面板开关周期侥幸存活);回主菜单销毁旧世界
+ShadowSceneNode 时**壳对象被 free**;存档 B 首帧:Phase 2 的
+`if (!m_studio_lights[i])` 门因悬垂指针非空而跳过重取 → 补丁写 freed
+内存(未崩)→ rig 摆位经 `shell->light->parent` 写穿 → AV。**教训:
+主菜单转换不只是面板生命周期事件,它销毁整个世界灯光账本——任何跨
+菜单转换持有引擎账本内对象裸指针的机制都必须挂节点变更检测。**
+
+**v6.66(2026-10-04,待游戏验证)**:
+1. `ensure_studio_lights` 入口检测 `shadowSceneNode[0] != 
+   m_studio_lights_node`(创建时缓存)→ 变更即把存活 NiLight 重新
+   `AddLight` 进新节点账本(lightQueueAdd 同帧可取,v6.50 双队列 fetch
+   兜底)、清空壳指针、count 归零强制重取;
+2. `release_target` 每次关闭清空 `m_studio_lights[]`——壳身份随账本重
+   建而变,跨关闭持有本就错误。
+
+**判读(run 101)**:①A 存档 → 回主菜单 → 载 B 存档 → 开背包,零崩溃;
+②日志出现 `v6.66 studio lights re-registered into a new ShadowSceneNode`
+且其后面板光照正常(双点光正面);③普通单存档流程零回归。
+
 ## H7. Run 99 结果(v6.65:teardown 首演两次全过——工作包收官)
 
 run 99 会话(2026-10-04 20:01,单会话,v6.65,MD5 40eeb15a…):
