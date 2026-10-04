@@ -75,11 +75,6 @@ namespace CharacterPanelProto
         // fails and the panel stays on the item preview (sticky until the
         // next open). ~20 s at 60 fps.
         constexpr std::uint32_t Build_Timeout_Frames = 1200;
-        // Run 51: renderer-init heartbeat cadence and cap (live frames /
-        // probes) — how long we wait for the world renderer to create the
-        // device buffers before giving up with a warning.
-        constexpr std::uint32_t Init_Heartbeat_Frames = 60;
-        constexpr std::uint32_t Init_Heartbeat_Max_Beats = 20;
         // Run 36: how far along the UI3D camera's view direction P stands
         // from the camera position (game units). The item preview lives in
         // the same space; round 1 calibrates so the whole body fits.
@@ -113,6 +108,10 @@ namespace CharacterPanelProto
         // never reads the park; the ghost warmup only needs the world to
         // keep rendering the clone, which it does from there.
         constexpr float Park_Depth_Below_Player = 8000.0f;
+        // Stage-2b: the dedicated home node under menuObjects[0] — the light
+        // rig's host, which has kept our foreign subtree alive across every
+        // menu open/close since v6.47 (runs 81-93, U2's optimistic evidence).
+        constexpr std::string_view Home_Node_Name = "CP_StudioHome";
 
         // v6.25: re-applied every live frame (the engine's update chain
         // re-derives a live actor's transform, so a one-shot park does not
@@ -517,19 +516,23 @@ namespace CharacterPanelProto
                         logger::info("Proto P panel closed: main menu open");
                     }
                 }
-                // v6.32: quit/menu-transition liveness check. The world can
-                // unload (quit to the main menu) before any SKSE message
-                // disarms us — the whitelisted root dangles and the RENDER
-                // thread's studio draw traverses freed memory (run 65
-                // crash: TraverseScenegraphGeometries on the stale root
-                // with MistMenu/MainMenu already up). The pump runs on the
-                // game thread at DrawInterfaceStart — BEFORE this frame's
-                // render work — so this check disarms the whitelist a frame
-                // ahead of the studio draw.
+                // v6.32: quit/menu-transition liveness check. Pre-relocation
+                // the graph is engine-owned: a lost 3D means the world
+                // unloaded and the whitelisted root dangles — disarm before
+                // the render pass (run 65 crash: TraverseScenegraphGeometries
+                // on the stale root). Stage-2b: once the graph is relocated
+                // it is owned by this instance (NiPointer + holder slot), so
+                // it CANNOT dangle when the world unloads — the Get3D probe
+                // is retired for that case and the menu-home hosting is
+                // verified instead (U2). The pump runs on the game thread at
+                // DrawInterfaceStart — BEFORE this frame's render work — so
+                // any disarm here leads the studio draw by a frame.
                 if (m_state.load(std::memory_order_acquire) == State::kAttached)
                 {
                     auto* live = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr;
-                    if (!live || !live->Get3D(false))
+                    const bool homed =
+                        m_home.load(std::memory_order_acquire) == HomeState::kMenuHome;
+                    if (!live || (!homed && !live->Get3D(false)))
                     {
                         logger::warn(
                             "Proto P clone graph lost (world unloaded?); disarming before the render pass");
@@ -542,6 +545,10 @@ namespace CharacterPanelProto
                         // path and the release consumes this same frame.
                         PInstance::instance().despawn();
                         CharacterPanelProto::Proto::instance().close_panel("world unloaded");
+                    }
+                    else if (homed)
+                    {
+                        verify_home();
                     }
                 }
                 // Run 49 (v6.15): with no P alive, every idle frame retries
@@ -601,6 +608,11 @@ namespace CharacterPanelProto
         m_frames_since_place = 0;
         m_dressed_frames = 0;
         m_total_frames = 0;
+        // Stage-2b: a fresh instance starts parked again — any previous
+        // home went away with its despawn.
+        m_home.store(HomeState::kWorldParked, std::memory_order_release);
+        m_home_graph = nullptr;
+        m_home_node = nullptr;
         // v6.22: a fresh clone is a fresh graph — the ghost warmup (the
         // device-buffer init window) must run again for its geometries.
         m_ghost_warm.store(false, std::memory_order_release);
@@ -645,9 +657,13 @@ namespace CharacterPanelProto
                 // buffers; the studio never reads the park.
                 if (auto* parked = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr)
                     park_below_player(parked);
-                // Run 51: the graph is alive and whitelisted; probe until
-                // the world renderer has created the device buffers.
-                init_heartbeat();
+                // Stage-2b round 1: once the ghost warmup proves the world
+                // has really drawn the clone (run 50 semantics — the only
+                // trustworthy device-buffer signal; the rendererData census
+                // was falsified in run 54 and again by run 94), move the
+                // graph to its menu-scene home (the shell stays parked and
+                // pinned exactly as before — round 2 kills it).
+                try_relocate();
                 return;
             default:
                 return;  // kNone: nothing to walk
@@ -786,58 +802,12 @@ namespace CharacterPanelProto
     // time despite unpaused world rendering — and the v6.15 attempt to
     // Disable() the clone crashed the next draw (RIP=0: disabling an actor
     // destroys its 3D graph, the whitelisted root dangled). The graph now
-    // stays alive; this heartbeat probes every Init_Heartbeat_Frames live
-    // frames whether the world renderer has created the device buffers yet,
-    // with the player's own graph as the control group (the player renders
-    // every frame, so its skinned geoms must eventually report initialized —
-    // otherwise the check itself is measuring the wrong thing). The manual
-    // draw needs no change: the rd gate starts passing the moment the
-    // buffers appear.
-    void PInstance::init_heartbeat()
-    {
-        if (m_init_done)
-            return;
-        if (++m_frames_since_attach < Init_Heartbeat_Frames)
-            return;
-        m_frames_since_attach = 0;
-        if (++m_init_beats > Init_Heartbeat_Max_Beats)
-        {
-            m_init_done = true;
-            logger::warn("Proto P renderer init never completed after {} probes; device buffers did not "
-                         "appear (see stage2 plan §0y)",
-                Init_Heartbeat_Max_Beats);
-            return;
-        }
-
-        const auto count = [](RE::NiAVObject* a_root) {
-            std::size_t skinned = 0;
-            std::size_t initialized = 0;
-            if (!a_root)
-                return std::pair<std::size_t, std::size_t>{ initialized, skinned };
-            RE::BSVisit::TraverseScenegraphGeometries(a_root, [&](RE::BSGeometry* geometry) {
-                auto& geom_rt = geometry->GetGeometryRuntimeData();
-                if (!geom_rt.skinInstance)
-                    return RE::BSVisit::BSVisitControl::kContinue;
-                ++skinned;
-                if (geom_rt.rendererData && geom_rt.rendererData->vertexBuffer)
-                    ++initialized;
-                return RE::BSVisit::BSVisitControl::kContinue;
-            });
-            return std::pair<std::size_t, std::size_t>{ initialized, skinned };
-        };
-
-        auto* clone = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr;
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        const auto p = count(clone ? clone->Get3D(false) : nullptr);
-        const auto pl = count(player ? player->Get3D(false) : nullptr);
-        logger::info("Proto P init heartbeat: P={}/{} player={}/{} skinned geoms with device buffers",
-            p.first, p.second, pl.first, pl.second);
-        if (p.second > 0 && p.first == p.second)
-        {
-            m_init_done = true;
-            logger::info("Proto P fully renderer-initialized; the manual draw can now rasterize");
-        }
-    }
+    // stays alive and enabled.
+    //
+    // The renderer-init heartbeat that used to live here was RETIRED after
+    // run 94: the rendererData/vertexBuffer census reports 0 even for the
+    // player's own graph (run 54's falsification, repeated verbatim) — the
+    // trustworthy init signal is the ghost warmup (see try_relocate).
 
     // Route 3 (run 31): P stays a WORLD actor. The menu culler ignored the
     // attached graph (runs 29/30) and a detached graph has no culler at all;
@@ -886,8 +856,12 @@ namespace CharacterPanelProto
         // (crash-2026-10-02-20-59-23: pose_for_studio line 169, RIP=0 null
         // vtable — disabling an actor DESTROYS its 3D graph, so the
         // whitelisted root dangled). The clone now stays alive and enabled;
-        // init_heartbeat() (tick, kAttached) keeps probing until the
-        // buffers appear.
+        // the ghost warmup (see try_relocate) is the init signal.
+        //
+        // Informational reading only: this census is the falsified run-54
+        // instrument — it reads 0 even for a fully initialized graph (run
+        // 94: P=0/14 player=0/23 while the studio submitted 14/14 every
+        // frame). Kept as a reference line, never as a gate.
         std::size_t skinned = 0;
         std::size_t initialized = 0;
         RE::BSVisit::TraverseScenegraphGeometries(graph, [&](RE::BSGeometry* geometry) {
@@ -902,6 +876,178 @@ namespace CharacterPanelProto
         logger::info("Proto P renderer init check: {}/{} skinned geometries have device buffers "
                      "(heartbeat keeps probing until full)",
             initialized, skinned);
+    }
+
+    // Stage-2b round 1: move the whitelisted graph out of the world into a
+    // private home under the menu scene, on the FIRST unpaused kAttached
+    // tick — no init gate at all (U1 answered by run 95): the v6.60 census
+    // gate was the falsified run-54 instrument (never fired), and the
+    // v6.61 ghost-warm gate never armed because world-pass flow is
+    // view/culling dependent (run 95: zero world P passes arrived ALL
+    // session). Yet the studio drew that same never-world-rendered graph
+    // 411 times (submitted=14/14, figure on screen): the engine's
+    // SetupAndDrawPass — which is exactly what call_site_original invokes —
+    // initializes the device buffers itself. There is nothing to wait for.
+    // The shell stays parked and pinned exactly as before, and the graph
+    // object address is unchanged, so the whitelist, the discovery logs and
+    // the pass recipes all survive untouched.
+    void PInstance::try_relocate()
+    {
+        if (m_home.load(std::memory_order_acquire) != HomeState::kWorldParked)
+            return;
+        if (m_state.load(std::memory_order_acquire) != State::kAttached)
+            return;
+        RE::NiAVObject* graph = root();
+        if (!graph)
+            return;
+        relocate_home(graph);
+    }
+
+    void PInstance::relocate_home(RE::NiAVObject* a_graph)
+    {
+        RE::NiNode* old_parent = a_graph->parent;
+        auto* ui3d = RE::UI3DSceneManager::GetSingleton();
+        RE::NiNode* host = ui3d ? ui3d->menuObjects[0].get() : nullptr;
+        if (!old_parent || !host)
+        {
+            logger::warn("Proto P relocation unavailable (old_parent={} host={}): the graph stays parked",
+                static_cast<void*>(old_parent), static_cast<void*>(host));
+            m_home.store(HomeState::kStuckParked, std::memory_order_release);
+            return;
+        }
+
+        // Render-thread latch: the studio draw skips frames inside this
+        // window (stage-2b plan §3-6).
+        m_relocating.store(true, std::memory_order_release);
+
+        auto* home = RE::NiNode::Create();
+        if (!home)
+        {
+            m_relocating.store(false, std::memory_order_release);
+            m_home.store(HomeState::kStuckParked, std::memory_order_release);
+            logger::warn("Proto P home node creation failed; the graph stays parked");
+            return;
+        }
+        home->name = Home_Node_Name;
+
+        // v6.63: SEVER the engine's claim on the graph first. Run 96: with
+        // the shell still alive, its 3D bookkeeping (fed by the per-tick
+        // warp park) re-parented the graph back into the world EVERY frame
+        // — 707 verify_home/re-home rounds in one session, a per-frame
+        // scene-graph tug-of-war. Nulling data3D (plain data at the same
+        // offset the v6.38 grace code already touches, no virtuals) removes
+        // the graph from that bookkeeping: the engine holds no reference to
+        // fight over, and the shell becomes a normal far-away 3D-less actor
+        // (a state the engine maintains natively for unloaded NPCs). It
+        // also makes the round-2 shell kill safe by construction — Disable
+        // has no 3D left to destroy (the run-51 mechanism).
+        if (auto* clone = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr)
+            if (auto* loaded = clone->loadedData)
+                loaded->data3D = nullptr;
+
+        // The surgery is three pointer moves — the graph object and
+        // everything inside it (skeleton, skins, properties, device
+        // buffers) stays identical:
+        // 1. host our holder under the menu scene (the rig's proven host);
+        host->AttachChild(home);
+        // 2. detach from the world cell — the world culler loses the
+        //    subtree right here (engine-native: the same move a 3D unload
+        //    runs), then
+        old_parent->DetachChild(a_graph);
+        // 3. re-home under the holder.
+        home->AttachChild(a_graph);
+        // Strong ownership: from here the engine holds no parent link to
+        // the graph; this NiPointer plus the holder's child slot keep it
+        // alive — the run-51 dangling-whitelist crash class is structurally
+        // gone, and kill_actor (Disable) can no longer free the graph.
+        m_home_graph.reset(a_graph);
+        m_home_node.reset(home);
+
+        // Forced cascade: the graph carries selective-update flags that
+        // short-circuit plain Update (run 41) — UpdateDownwardPass is what
+        // pose_for_studio uses every draw anyway.
+        RE::NiUpdateData update_data{ 0.0f, RE::NiUpdateData::Flag::kDirty };
+        home->UpdateDownwardPass(update_data, 0);
+
+        m_home.store(HomeState::kMenuHome, std::memory_order_release);
+        m_relocating.store(false, std::memory_order_release);
+
+        // U5 probe: the pose math writes the root LOCAL in accumulator
+        // space assuming an identity parent chain — the same assumption the
+        // run-93-verified light rig makes about this host. If home->world
+        // is not identity the figure will shift; plan §5-H5 has the
+        // parentWorld⁻¹ fix.
+        const auto& hw = home->world;
+        logger::info(
+            "Proto P home: graph relocated under CP_StudioHome — root=0x{:X} (unchanged) "
+            "old_parent=[{}] host=menuObjects[0] home_world=({:.2f},{:.2f},{:.2f}) scale={:.3f}",
+            reinterpret_cast<std::uintptr_t>(a_graph),
+            old_parent->name.c_str() ? old_parent->name.c_str() : "(null)",
+            hw.translate.x, hw.translate.y, hw.translate.z, hw.scale);
+    }
+
+    void PInstance::release_home()
+    {
+        // Called with the whitelist already disarmed (despawn order), so no
+        // render-thread traversal can be in flight on this graph — the
+        // relocating latch is not needed here.
+        if (m_home.exchange(HomeState::kWorldParked, std::memory_order_acq_rel) != HomeState::kMenuHome)
+            return;
+        RE::NiAVObject* graph = m_home_graph.get();
+        RE::NiNode* home = m_home_node.get();
+        if (graph && home && graph->parent == home)
+            home->DetachChild(graph);  // releases the holder's ref
+        m_home_graph = nullptr;        // releases our ref — the last one
+        m_home_node = nullptr;         // the holder frees with it
+        logger::info("Proto P home released: graph detached from CP_StudioHome and freed");
+    }
+
+    // Stage-2b (U2, game thread): the menu scene must keep hosting the
+    // relocated graph. loadedModels persistence and the light rig's 13-run
+    // tenancy (runs 81-93) say it does; if the engine ever strips the
+    // attachment, re-home from our NiPointer — the graph object survives.
+    void PInstance::verify_home()
+    {
+        RE::NiAVObject* graph = m_home_graph.get();
+        RE::NiNode* home = m_home_node.get();
+        if (!graph || !home)
+            return;
+        if (graph->parent == home)
+            return;
+        // v6.63: name where the graph went — the re-parenting fight (run
+        // 96) should be gone with the data3D sever; if this fires, the
+        // parent identity says who took it (null = stripped, a node = the
+        // engine re-attached it somewhere).
+        logger::warn(
+            "Proto P home parent was detached (parent={} name=[{}]); re-homed under CP_StudioHome",
+            static_cast<void*>(graph->parent),
+            graph->parent && graph->parent->name.c_str() ? graph->parent->name.c_str() : "(null)");
+        home->AttachChild(graph);
+        RE::NiUpdateData update_data{ 0.0f, RE::NiUpdateData::Flag::kDirty };
+        home->UpdateDownwardPass(update_data, 0);
+        logger::warn(
+            "Proto P home parent was detached (engine stripped the host slot?); re-homed under "
+            "CP_StudioHome");
+    }
+
+    // Stage-2b (U2, plan §3-7): the per-open hosting check with its verdict
+    // log — called from the panel-open paths on the game thread.
+    void PInstance::note_panel_open()
+    {
+        if (m_state.load(std::memory_order_acquire) != State::kAttached)
+            return;
+        if (m_home.load(std::memory_order_acquire) != HomeState::kMenuHome)
+            return;
+        RE::NiAVObject* graph = m_home_graph.get();
+        RE::NiNode* home = m_home_node.get();
+        if (!graph || !home)
+            return;
+        if (graph->parent == home)
+        {
+            logger::info("Proto P home parent ok (per-open check)");
+            return;
+        }
+        verify_home();  // logs the re-home warning
     }
 
     void PInstance::kill_actor()
@@ -934,8 +1080,15 @@ namespace CharacterPanelProto
         if (state == State::kAttached || state == State::kWaiting3D)
         {
             // Either long past its grace window or safely parked without a
-            // graph to dress: the shell kill is safe now.
+            // graph to dress: the shell kill is safe now. Stage-2b order:
+            // kill FIRST (the engine releases its refs — loadedData->data3D
+            // etc.), THEN drop the home; our NiPointer and the holder's
+            // child slot kept the graph alive across the kill (refcounts,
+            // not raw addresses — the run-51 lesson applied in the safe
+            // direction), and the last release frees it here on the game
+            // thread with the whitelist already disarmed.
             kill_actor();
+            release_home();
         }
         else
         {

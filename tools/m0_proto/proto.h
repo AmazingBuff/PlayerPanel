@@ -42,8 +42,11 @@ namespace CharacterPanelProto
 
         // Session invalidation (FR-06): loading a save or starting a new game
         // closes the panel. The render thread releases the studio target at
-        // its next non-bracketed DrawInterfaceStart.
-        void close_panel(std::string_view reason);
+        // its next non-bracketed DrawInterfaceStart. a_dump_evidence: user
+        // closes (the MenuSink inventory close) write one evidence TGA of
+        // the studio target before the release — the v3.1 "close = capture"
+        // contract; force-closes (load/menu-teardown) stay silent.
+        void close_panel(std::string_view reason, bool a_dump_evidence = false);
 
         // Stage-2 toggle hook: the panel toggle path also drives the
         // independent display instance P (spawn on open, despawn on close).

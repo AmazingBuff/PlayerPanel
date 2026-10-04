@@ -12,6 +12,17 @@
 // whitelist (root ancestry + panel-open gate) picks them out and replays
 // them into the studio target.
 //
+// Stage-2b (docs/stage2b-studio-home-plan.md, round 1): once the world
+// renderer has initialized the device buffers, the graph is DETACHED from
+// the world cell and re-homed under a private CP_StudioHome node attached
+// to UI3DSceneManager::menuObjects[0] (the light rig's proven host), held
+// by a strong NiPointer. The graph object address is unchanged — the
+// whitelist, discovery logs and pass recipes survive untouched; the pose
+// math carries over because menuObjects[0]'s world is the menu-space
+// identity cascade (the same assumption the run-93-verified light rig
+// makes). The shell actor stays parked 8k below the player with every
+// defense in place until round 2 kills it.
+//
 // The generic deep-copy route is falsified: NiObject::CreateDeepCopy
 // returns a non-node for the player's dynamic graph classes.
 //
@@ -65,6 +76,20 @@ namespace CharacterPanelProto
         // self-rescheduling task drains within one game frame and never
         // lets the engine load anything).
         void pump();
+
+        // Game thread (panel opened): the U2 probe — verify the relocated
+        // graph is still hosted under CP_StudioHome and re-home it if the
+        // engine ever stripped the attachment. Logs the verdict every open
+        // (stage-2b plan §3-7).
+        void note_panel_open();
+
+        // Render thread (draw entry): true while the game thread is inside
+        // the relocation window (world detach -> menu-home attach); the
+        // studio draw skips such frames.
+        [[nodiscard]] bool relocating() const
+        {
+            return m_relocating.load(std::memory_order_acquire);
+        }
 
         // Render thread: no-op on route 3 (no scene-graph surgery, no
         // retire list); kept for call-site symmetry with the redirector.
@@ -128,17 +153,34 @@ namespace CharacterPanelProto
             kKillPending,   // despawned before grace; kill when graced
         };
 
+        // Stage-2b: where the P graph currently lives (game-thread state).
+        enum class HomeState : std::uint8_t
+        {
+            kWorldParked,  // route 3 as before: graph in the world cell (grace/settle)
+            kMenuHome,     // relocated: world-detached, hosted under menuObjects[0]
+            kStuckParked,  // relocation gated off for this instance (fail-open, §5-H4)
+        };
+
         // Game-thread frame step of the build/kill state machine (queued by
         // pump(), one per rendered frame).
         void tick();
         void attach_graph();
         void kill_actor();
 
-        // Game thread, kAttached only (run 51): periodic probe until the
-        // world renderer has created the clone's device-side buffers —
-        // P=clone vs player=own graph as control group. The manual draw's
-        // rd gate starts passing the moment the buffers appear.
-        void init_heartbeat();
+        // Stage-2b (game thread): perform the graph relocation on the first
+        // unpaused kAttached tick — no init gate (U1 answered by run 95:
+        // the engine SetupAndDrawPass lazy-initializes the device buffers,
+        // the world never needs to draw the clone first). Failure paths
+        // inside relocate_home fail open to the parked architecture.
+        void try_relocate();
+        void relocate_home(RE::NiAVObject* a_graph);
+        // Stage-2b teardown (game thread, despawn only, whitelist already
+        // disarmed): detach the graph from CP_StudioHome and drop our
+        // NiPointer — the last release frees the graph.
+        void release_home();
+        // Stage-2b (game thread, U2): the menu scene must keep hosting the
+        // relocated graph; re-home from our NiPointer if stripped.
+        void verify_home();
 
         std::atomic<State> m_state{ State::kNone };
         std::atomic<bool> m_step_queued{ false };
@@ -153,10 +195,6 @@ namespace CharacterPanelProto
         std::uint32_t m_frames_since_place{ 0 };
         std::uint32_t m_dressed_frames{ 0 };
         std::uint32_t m_total_frames{ 0 };
-        // Run 51: renderer-init heartbeat state (game thread only).
-        std::uint32_t m_frames_since_attach{ 0 };
-        std::uint32_t m_init_beats{ 0 };
-        bool m_init_done{ false };
         // v6.22 ghost layer (render-thread state, mutated from the pass
         // thunks; spawn resets on the game thread — benign race, worst case
         // a slightly longer warmup on a fresh clone).
@@ -165,6 +203,16 @@ namespace CharacterPanelProto
         std::atomic<bool> m_ghost_first_drop{ false };
         // v6.24 residue sweep cadence (game thread only).
         std::uint32_t m_frames_until_residue_scan{ 0 };
+        // Stage-2b home state (game thread only, except the atomic latch the
+        // render thread polls at draw entry).
+        std::atomic<HomeState> m_home{ HomeState::kWorldParked };
+        std::atomic<bool> m_relocating{ false };
+        // Strong ownership once relocated — the engine holds no parent link
+        // to the graph anymore, so this NiPointer plus the holder's child
+        // slot are what keep it alive (the run-51 dangling-whitelist crash
+        // class is structurally gone).
+        RE::NiPointer<RE::NiAVObject> m_home_graph;
+        RE::NiPointer<RE::NiNode> m_home_node;
         // v6.32: the last studio anchor pose_for_studio computed (render
         // thread only — the frontal light rig reads it).
         RE::NiPoint3 m_studio_anchor{ 0.0f, 0.0f, 0.0f };

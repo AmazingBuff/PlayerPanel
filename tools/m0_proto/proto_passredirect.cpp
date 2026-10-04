@@ -1447,6 +1447,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 // check + recapture, never by a dangling Release here).
                 m_target_failed = false;
                 m_session_replays = 0;
+                m_p_drew_this_open = false;
                 m_p_draw_logged = false;
                 m_p_recipe_logged = false;
                 m_p_empty_live_logged = false;
@@ -1467,7 +1468,11 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // force-closes (save loading / new game).
             void dump_and_release(std::string_view reason)
             {
-                if (offscreen_target().color && m_session_replays > 0)
+                // v6.63: a P-only open replays nothing (no highlighted item
+                // → zero menu passes), but the proactive draw filled the
+                // target — that is evidence too (run 96: every close
+                // skipped the dump under the replay-only gate).
+                if (offscreen_target().color && (m_session_replays > 0 || m_p_drew_this_open))
                     dump_offscreen_to_log_dir();
                 release_target(reason);
             }
@@ -1809,6 +1814,11 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
 
             void draw_p_proactively(RE::BSShaderAccumulator* accumulator)
             {
+                // Stage-2b: the game thread may be inside the relocation
+                // window (world detach -> menu-home attach). Skip this
+                // frame; the next one draws from the home.
+                if (PInstance::instance().relocating())
+                    return;
                 RE::NiAVObject* p_root = PInstance::instance().root();
                 if (!p_root || !accumulator)
                 {
@@ -2333,6 +2343,10 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 logger::info("Proto v6.17 P draw (SetupAndDrawPass): submitted={} of {} passes (source={})",
                     drawn, passes.size(),
                     passes.empty() && !m_pass_recipes.empty() ? "recipes-failed" : "live/recipes");
+                // v6.63: the close-dump gate counts a successful proactive
+                // draw as studio content (P-only opens must dump too).
+                if (drawn > 0)
+                    m_p_drew_this_open = true;
                 runtime.context->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
                 runtime.context->OMSetDepthStencilState(prev_ds, prev_stencil_ref);
                 runtime.context->RSSetViewports(prev_viewport_count, &prev_viewport);
@@ -2627,6 +2641,9 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             std::uint32_t m_last_logged_replayed = 0;
             std::uint32_t m_content_frames = 0;
             std::uint32_t m_session_replays = 0;
+            // v6.63: the proactive P draw submitted at least one pass this
+            // open — the close-dump gate counts it as studio content.
+            bool m_p_drew_this_open = false;
             bool m_cleared = false;
             bool m_target_failed = false;
             TargetSig m_failed_sig{};

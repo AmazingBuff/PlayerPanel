@@ -127,7 +127,11 @@ namespace CharacterPanelProto
                     if (event->opening)
                         Proto::instance().open_panel("inventory opened");
                     else
-                        Proto::instance().close_panel("inventory closed");
+                        // A USER close: write the evidence TGA first (v3.1
+                        // "close = capture" — silently dropped when the
+                        // MenuSink lifecycle landed in v6.39; restored in
+                        // v6.62). Force-closes (load/teardown) stay silent.
+                        Proto::instance().close_panel("inventory closed", true);
                 }
                 return RE::BSEventNotifyControl::kContinue;
             }
@@ -241,11 +245,10 @@ namespace CharacterPanelProto
             return;
         }
         m_capture_ready = true;
-        logger::info("M0 proto v6.59 installed: rig-pullin coordinate fix — with the rig parked AT the "
-                     "anchor (v6.58), the per-pass placement wrote the FULL accumulator-space target "
-                     "into the node local, double-counting the anchor and pushing the lights twice as "
-                     "far away (the run-92 dim look). The node local is now the anchor-relative offset "
-                     "only. F7 = fallback, F8 = dump");
+        logger::info("M0 proto v6.63 installed: stage-2b round 1 — relocation works (run 96: home "
+                     "identity confirmed) but the shell's 3D bookkeeping re-parented the graph every "
+                     "frame (707 re-homes); data3D is now severed at relocation. Close-dump also fires "
+                     "for P-only opens. F7 = fallback, F8 = dump");
     }
 
     void Proto::open_panel(std::string_view reason)
@@ -269,6 +272,9 @@ namespace CharacterPanelProto
         // Stage 2: the panel's content is the independent display instance
         // P — spawn it with the panel.
         PInstance::instance().spawn();
+        // Stage-2b: the per-open home-hosting check (U2) — logs the verdict
+        // for a relocated graph, no-op otherwise.
+        PInstance::instance().note_panel_open();
         logger::info("Panel opened ({}): every menu frame is now bracketed for studio redirection", reason);
     }
 
@@ -317,12 +323,14 @@ namespace CharacterPanelProto
         logger::info("Studio target dump requested (written when the current bracket closes)");
     }
 
-    void Proto::close_panel(std::string_view reason)
+    void Proto::close_panel(std::string_view reason, bool a_dump_evidence)
     {
         bool expected = true;
         if (m_panel_open.compare_exchange_strong(expected, false, std::memory_order_acq_rel))
         {
             m_dump_requested.store(false, std::memory_order_release);
+            if (a_dump_evidence)
+                m_dump_on_close.store(true, std::memory_order_release);
             m_release_pending.store(true, std::memory_order_release);
             toggle_p_instance();
             logger::info("Panel force-closed ({})", reason);
@@ -339,7 +347,11 @@ namespace CharacterPanelProto
         // close keeps the built instance for the whole session. despawn()
         // stays bound to load/new-game teardown.
         if (m_panel_open.load(std::memory_order_acquire))
+        {
             PInstance::instance().spawn();
+            // Stage-2b: same per-open home-hosting check as open_panel (U2).
+            PInstance::instance().note_panel_open();
+        }
     }
 
     bool Proto::panel_frame_active()
