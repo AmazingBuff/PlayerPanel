@@ -1,14 +1,65 @@
 # 阶段 2b 验证轮方案:摄影棚即居所(统一之家,route 2 复活)
 
-- 日期:2026-10-04;状态:**轮 1 三验(run 96)迁移成功、U5 恒等成立、绘制
-  全通;暴露"壳簿记每帧抢图"乒乓,已斩断 + TGA 双门修正,v6.63 待游戏
-  验证**(代码提交随轮 1 验证通过一并落库)
+- 日期:2026-10-04;状态:**轮 1 验证通过(run 97 全判据过,代码已提交
+  2412891);轮 2 v6.64(杀壳 + ghost 退役)已构建部署,待游戏验证**
 - 上游:[m0-handoff.md](m0-handoff.md) 阶段 2 + [stage2-p-instance-plan.md](stage2-p-instance-plan.md)
   §0ai(用户 2026-10-03 提议,决策记录:"先验证 v6.25 泊位形态;通过后
   把'摄影棚即家'立项为下一个工作包"——v6.25 已于 run 59 验证通过)
 - 读者:实现与验证此轮的 Agent / 开发者
 - 前置基线:v6.59(run 93 已验证:面板光照正确、世界无泄漏、高亮/无
   高亮一致;DLL MD5 5ad6742d,提交 743454b)
+
+## H5. 轮 2:v6.64 = 杀壳 + ghost 层退役(含对 §3 轮 2 清单的范围修正)
+
+**前提变化(run 96/97 教训)**:原 §3 轮 2 清单写"退役泊位全家 + AI 钉
+桩 + grace 期早期泊位"。但 run 96 证明构建窗口(place → grace → dress
+→ relocate ≈ 1.5 s)内壳 actor 必然活着且其 3D 在世界——早期节点泊位
+(718-731)正是 v6.38 修"读档/出生闪现"的手段,泊位与钉桩是该窗口内
+防交互/防推挤的唯一杠杆。**修正后清单**:退役 = ghost 层全家;保留 =
+泊位、钉桩、早期泊位(它们只服务构建窗口,壳死后自然失活)、清扫、
+菜单帧抑制、白名单。
+
+**v6.64(2026-10-04,待游戏验证)落地内容**:
+
+1. **迁移同 tick 杀壳**:`relocate_home` 末尾(data3D 已斩、图已安家、
+   `m_home=kMenuHome` 已发布)调 `kill_actor()`(Disable+SetDelete)。
+   安全性构造性成立:Disable 无 3D 可毁(run 51 机制失效),图由
+   NiPointer + holder 槽位持活。
+2. **pump 存活检查再分流**:homed 状态下壳已死(m_clone 空句柄),旧判
+   据 `!live → despawn` 会每帧误触发——homed 分支完全跳过 ref/Get3D 探
+   针,只做 verify_home;构建窗口(未 homed)判据原样。
+3. **ghost 层全家退役**:`ghost_should_suppress`、`m_ghost_warm/
+   warmup/first_drop`、`Ghost_Warmup_Passes`、`m_last_pass_ghost`、
+   `should_suppress_passthrough` 的 `|| ghost` 子句、on_pass 的 ghost
+   分支、spawn 重置块。`is_p_descendant` 保留(is_p_geometry 的祖先链
+   半边)。菜单帧 p_geom 抑制(v6.19,run 53 崩溃防线)不动。
+4. 轮 1 提交切点:2412891(v6.60–v6.63,runs 94–97)。
+
+**判读(run 98)**:①日志出现 `Proto P round 2: shell actor deleted at
+relocation; the world holds no clone` 且其后人物照常绘制(核心命题:
+壳死图活);②第三人称全程零替身、E 键无交互、无推挤(泊位退役前的
+构建窗口也只发生在读档后 ~1.5 s);③面板/TGA/parent ok 全不回归;④
+**读档回归**(despawn teardown 首演):载入存档 → 强制关面板 → 重
+spawn → 迁移 → 再开面板,零崩溃——这是 homed 图 teardown 路径的首场
+验证;⑤退出游戏零崩溃(kShutdown/kExitGame 路径同样走 despawn)。
+
+## H4. Run 97 结果(v6.63:轮 1 全部判据通过——图迁入菜单场景,验证闭环)
+
+run 97 会话(2026-10-04 19:32,单会话,v6.63,MD5 a394fe14…):
+
+- **乒乓归零**:`re-homed` 警告 0 条(run 96 为 707 条)——data3D 斩断
+  生效,壳簿记不再争抢父级;全场 [W]/[E] 零条;
+- **迁移照旧成立**:白名单武装后 19 ms 内 home 迁移,
+  `home_world=(0.00,0.00,0.00) scale=1.000`(U5 复确认);
+- **U2 复确认**:10/10 次开面板 `P home parent ok (per-open check)`;
+- **绘制从 home 图**:10 轮开关,378 帧 `submitted=14 of 14`(passes
+  回到 14——run 96 的 15 是乒乓期状态污染);
+- **取证恢复**:10 次关面板 10 张 TGA(273–282);判读:人物居中
+  T-pose,bbox=(1068,311)-(1470,1125) 与 run 95/96 基线像素级一致
+  ——**首批从 home 图渲染的面板内容成立**;
+- 零 crash。轮 1 判据全过,代码提交 2412891。
+- 遗留:despawn(读档/退出)对 homed 图的 teardown 路径本场未演练
+  (用户暂缓存档项)——与轮 2 验证/存档回归并验。
 
 ## H3. Run 96 结果(v6.62:迁移成功 + U5 恒等成立;壳簿记每帧抢图乒乓;TGA 被既有门跳过)+ v6.63 方案
 
