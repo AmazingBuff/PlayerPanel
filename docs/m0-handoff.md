@@ -626,6 +626,31 @@ aa58ac99…)**。下一阶段 = 3(M1:装
   (§0–§0ad 三十一轮留档、§2 路线、§3 失败模式)、
   [stage2b-studio-home-plan.md](stage2b-studio-home-plan.md)(§H1–§H7)。
 
+**源码结构迁移(2026-10-05,零行为改动,游戏内首验通过)**:proto 的三个
+大文件(passredirect 2916 行 / pinstance 1236 行 / main 435 行)按职责
+拆为 `src/` 下 23 个小文件,采用 skse-plugin-template
+布局(main/panel/hooks + pinstance/ + render/),用按行范围断言的抽取脚本
+字节级迁移。主构建目标 `CharacterPanelProto` 现从 `src/` 构建;`src/` 旧
+spike 代码已清除,`tools/m0_proto` 目标退役(目录保留作档案参考)。**运行
+时身份不变**:DLL 名、日志 `CharacterPanelProto.log`、TGA 目录、F7/F8 全
+部照旧;Release 构建通过,导出表(SKSEPlugin_Load/Query/Version)与部署中
+的 v6.70 完全一致。用户游戏内确认读档 → 面板照常。代码地图见下文更新后
+的表格。
+
+**skee64 脸部变形崩溃判读(2026-10-05,迁移后首测,非迁移引入)**:换用拆分
+版 DLL 后首次读档即崩(crash-2026-10-05-00-45-29):崩点
+`skee64.dll+00BF79D`(`and rdx,[rcx+0x20]`,rcx=0),经 skse64 任务调度的
+RaceMenu `SKSETaskApplyMorphs` 在克隆 facegen 的发型 HeadPart
+(BSDynamicTriShape "N16",Dint999 BDOr)上空指针;CharacterPanelProto.dll
+不在任何栈上(仅模块列表)。**同签名两次见于迁移前**(crash-2026-10-02-22-45-20
+/ crash-2026-10-03-13-01-22,v6.20/v6.30 时代,同为玩家 NPC formID 0x7 +
+BSFaceGenNiNodeSkinned + BGSHeadPart BSDynamicTriShape +
+BSFaceGenModelMap::Entry)。判读:**既有间歇性竞态**——克隆 faceNPC=玩家,
+PlaceObjectAtMe 触发 facegen 异步装配,skee64 对新装配的脸部网格沿 faceNPC
+链应用变形时 per-model morph map 尚未挂上;105+ 次放置输 3 次(两次在旧代
+码时代)。重试即恢复(用户确认可进)。复发频繁时的候选缓解:自动出生推迟
+2-3 s 避开读档爆发期;结构性消除需先立 skee64 morph 挂接侦察轮。
+
 ## 已验证事实(动手前必读,都是实测结论,不是推测)
 
 1. **菜单 3D pass 走三个 `RenderPassImmediately` 调用点**。物品预览只走
@@ -656,17 +681,28 @@ aa58ac99…)**。下一阶段 = 3(M1:装
 8. 运行时门禁:仅 AE 1.6.1170 + skse64 2.2.6(`supported_runtime()`);
    一次游戏会话**绝不**同时加载 CharacterPanel(spike)+ Probe + Proto。
 
-## 代码地图
+## 代码地图(2026-10-05 拆分迁移后)
 
 | 文件 | 内容 |
 | --- | --- |
-| `tools/m0_proto/proto_passredirect.cpp` | 全部核心(v3.1):PassRedirector(install 三调用点钩子 + 常驻 begin/end_frame 括号 + on_pass 识别[每面板一次发现式日志,含 `p=` P 标记] + `replay_after_original` 重放)、OffscreenTarget(私有 color+depth+depth-on 状态,常驻、desc 变化重建、FR-06 渲染线程释放)、DrawInterfaceStart Detours detour、关面板取证/F8 一次性 TGA 读回 |
-| `tools/m0_proto/proto_pinstance.cpp` | 阶段 2 独立展示实例 P(v5.1,route 2):clone-actor 装配(CreateDuplicateForm→PlaceObjectAtMe→60 帧宽限→穿着镜像→Disable→整图摘挂 menuObjects[kInventory]);状态机 tick(kWaitingGrace/kWaiting3D/kAttached/kKillPending)+1200 帧超时;退役列表(游戏线程只摘除,渲染线程非括号帧释放,F4);is_p_geometry 供重放日志标记 |
-| `tools/m0_proto/proto_main.cpp` | SKSE 导出、运行时门禁、输入 sink(F7 开关面板 / F8 一次性导出)、消息处理(kDataLoaded 安装;kPreLoadGame/kNewGame 强制关面板);F7 开关路径同步驱动 P 的 spawn/despawn |
-| `tools/m0_proto/proto.h` | Proto 类接口(面板开关/导出/失效/代数/P 开关) |
-| `docs/stage2-p-instance-plan.md` | 阶段 2 验证轮方案:技术路线、失败模式 F1–F5 与回退阶梯 R1–R3、验证步骤 |
+| `src/main.cpp` | SKSE 导出(Load/Version/Query)、消息处理(kDataLoaded/kPostLoadGame/kPreLoadGame/kNewGame/退出 10-12)、日志初始化、运行时门禁 supported_runtime |
+| `src/panel.h/.cpp` | Proto 面板生命周期单例(open/toggle/close/dump/代数)+ InputHandler(F7/F8 输入 sink)+ MenuSink(面板随背包开关,v6.39) |
+| `src/hooks.cpp` | DrawInterfaceStart Detours detour(帧括号驱动器:非括号帧消费 release/dump,括号帧 begin/end)+ 两个安装入口 |
+| `src/pinstance/pinstance.h/.cpp` | 独立展示实例 P:状态机(spawn→grace(节点泊位+fade 守卫)→穿着→attach)、pump 节奏、despawn/kill、残留清扫、is_p_* 白名单匹配 |
+| `src/pinstance/pinstance_home.cpp` | 阶段 2b 的家:白名单武装、CP_StudioHome 迁移(data3D 先斩 + 杀壳)、release/verify/note_panel_open(U2) |
+| `src/pinstance/pose.cpp` | 摄影棚摆姿:固定视轴锚点、蒙皮 T-pose 重推导、强制级联、蒙皮包围盒居中 |
+| `src/pinstance/dress.cpp` | 构建窗口穿着镜像(身体槽位,EquipItemEx 顺序) |
+| `src/render/pass_redirector.h/.cpp` | 三调用点钩子安装(E8 rel32 解析取 pre-patch 目标)、begin/end_frame 括号(目标自建 + kFRAMEBUFFER 兜底合成)、on_pass 分类、目标生命周期、透传抑制 thunk |
+| `src/render/p_draw.cpp` | draw_p_proactively:主动 pass 生成(GetRenderPasses) + 配方缓存兜底 + 每 pass 灯光改写 + call_site_original(1) 绘制 + 脏位守卫 |
+| `src/render/replay.cpp` | 重放窗口(post-original OM 捕获、目标 sizing、绑定存活校验;v6.57 起不再绘制/合成)+ 深度格式归一化 + 状态取证日志 |
+| `src/render/studio_lights.cpp` | 自建摄影棚灯光 rig(环境+key/fill 双点光、ShadowSceneNode 入册、壳补丁、泊位制、fetch 停滞自愈) |
+| `src/render/composite.h/.cpp` | 屏幕合成:SV_VertexID 全屏四边形 + HLSL(内嵌) + 固定管线状态 + 面板矩形常量 |
+| `src/render/offscreen_target.h/.cpp` | 私有离屏摄影棚目标(color+depth+depth-on 状态)、TargetSig、s_panel_rtv 捕获指针 |
+| `src/render/evidence.h/.cpp` | 取证:同步 TGA 导出(F8 与关面板取证契约) |
+| `src/render/render_internal.h` | 渲染层共享内部件:typedef、pre-patch 目标表、call_site_original、心跳/灯数常量 |
+| `tools/m0_proto/` | 迁移前的原型源码(构建目标已退役,保留作档案;运行史见 m0-proto.md) |
 | `tools/m0_probe/` | 探针(F7/F8 抓取),已完成使命,保留作证据工具 |
-| `src/` | 旧 spike(pass_hook/clone_actor),pass 钩子机制的出处 |
+| `docs/stage2-p-instance-plan.md` | 阶段 2 验证轮方案:技术路线、失败模式 F1–F5 与回退阶梯 R1–R3、验证步骤 |
 
 ## 下一步规划(2026-10-01 范围修正后,用户决定)
 
@@ -729,9 +765,10 @@ aa58ac99…)**。下一阶段 = 3(M1:装
 ## 测试 runbook(每轮流程,已跑熟)
 
 ```powershell
-# 构建(vcpkg 锁被占会卡在 "Running vcpkg install",先清掉残留 vcpkg 进程)
+# 构建(vcpkg 锁被占会卡在 "Running vcpkg install",先清掉残留 vcpkg 进程;
+# 2026-10-05 起代码主体在 src/,无需 CHARACTER_PANEL_BUILD_PROTO)
 cmake -S . -B build `
-  -DCHARACTER_PANEL_BUILD_PROBE=ON -DCHARACTER_PANEL_BUILD_PROTO=ON `
+  -DCHARACTER_PANEL_BUILD_PROBE=ON `
   -DCMAKE_TOOLCHAIN_FILE="D:/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake" `
   -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
 cmake --build build --config Release --target CharacterPanelProto --parallel 4

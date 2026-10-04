@@ -13,13 +13,41 @@ option(ENABLE_SKYRIM_SE "Enable support for Skyrim SE in the dynamic runtime fea
 option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
 option(CHARACTER_PANEL_BUILD_PROBE "Build the opt-in M0 engine evidence probe." ON)
-option(CHARACTER_PANEL_BUILD_PROTO "Build the opt-in M0 pass-redirection prototype." ON)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
 
-file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-file(GLOB_RECURSE HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
+# The plugin body: the former tools/m0_proto M0 prototype, split by
+# responsibility into src/ (2026-10-05 migration). The target keeps the
+# CharacterPanelProto identity — the deployed DLL name, log file and
+# evidence TGA directory are all keyed on it.
+set(PLUGIN_SOURCES
+	src/main.cpp
+	src/panel.cpp
+	src/hooks.cpp
+	src/pinstance/pinstance.cpp
+	src/pinstance/pinstance_home.cpp
+	src/pinstance/pose.cpp
+	src/pinstance/dress.cpp
+	src/render/offscreen_target.cpp
+	src/render/composite.cpp
+	src/render/evidence.cpp
+	src/render/pass_redirector.cpp
+	src/render/p_draw.cpp
+	src/render/studio_lights.cpp
+	src/render/replay.cpp
+)
+set(PLUGIN_HEADERS
+	src/pch.h
+	src/panel.h
+	src/pinstance/pinstance.h
+	src/pinstance/pinstance_detail.h
+	src/render/render_internal.h
+	src/render/offscreen_target.h
+	src/render/composite.h
+	src/render/evidence.h
+	src/render/pass_redirector.h
+)
 
 set(VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/plugin.h)
 configure_file(
@@ -34,20 +62,25 @@ configure_file(
 	@ONLY
 )
 
-source_group(Source FILES ${SOURCE_FILES})
-source_group(Header FILES ${HEADER_FILES} ${VERSION_HEADER})
+source_group(Source FILES ${PLUGIN_SOURCES})
+source_group(Header FILES ${PLUGIN_HEADERS} ${VERSION_HEADER})
+
+# The vcpkg detours port ships no CMake config; locate the header/lib like
+# Community Shaders does.
+find_path(DETOURS_INCLUDE_DIRS "detours/detours.h")
+find_library(DETOURS_LIBRARY detours REQUIRED)
 
 add_library(
-	${PROJECT_NAME}
+	CharacterPanelProto
 	SHARED
-	${HEADER_FILES}
-	${SOURCE_FILES}
+	${PLUGIN_SOURCES}
+	${PLUGIN_HEADERS}
 	${VERSION_HEADER}
 	${CMAKE_CURRENT_BINARY_DIR}/version.rc
 )
 
 target_compile_features(
-	${PROJECT_NAME}
+	CharacterPanelProto
 	PRIVATE
 	cxx_std_23
 )
@@ -60,14 +93,15 @@ target_compile_features(
 # on __std_find_*_trivial_pos_1. Pin the toolset per-target so every generated
 # .vcxproj uses 14.44 regardless of the generator toolset clause.
 set_target_properties(
-	${PROJECT_NAME}
+	CharacterPanelProto
 	PROPERTIES
+	OUTPUT_NAME CharacterPanelProto
 	VS_GLOBAL_VCToolsVersion "14.44.35207"
 )
 
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 	target_compile_options(
-		${PROJECT_NAME}
+		CharacterPanelProto
 		PRIVATE
 		/sdl	# Enable Additional Security Checks
 		/utf-8	# Set Source and Executable character sets to UTF-8
@@ -83,13 +117,13 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 	)
 
 	target_compile_definitions(
-		${PROJECT_NAME}
+		CharacterPanelProto
 		PRIVATE
 		NOMINMAX
 	)
 
 	target_link_options(
-		${PROJECT_NAME}
+		CharacterPanelProto
 		PRIVATE
 		$<$<CONFIG:DEBUG>:/INCREMENTAL;/OPT:NOREF;/OPT:NOICF>
 		$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>
@@ -97,10 +131,11 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 endif()
 
 target_include_directories(
-	${PROJECT_NAME}
+	CharacterPanelProto
 	PRIVATE
 	${CMAKE_CURRENT_BINARY_DIR}/src
 	${CMAKE_CURRENT_SOURCE_DIR}/src
+	${DETOURS_INCLUDE_DIRS}
 )
 
 set(BUILD_TESTS OFF)
@@ -108,22 +143,20 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extern/CommonLibSSE)
 
 find_package(spdlog CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
-find_package(simpleini CONFIG REQUIRED)
 
 target_link_libraries(
-	${PROJECT_NAME}
+	CharacterPanelProto
 	PRIVATE
 	spdlog::spdlog
 	fmt::fmt
 	CommonLibSSE::CommonLibSSE
-	SimpleIni::SimpleIni
+	${DETOURS_LIBRARY}
 	user32
-	d3d11
-	dxgi
+	d3dcompiler
 )
 
 target_precompile_headers(
-	${PROJECT_NAME}
+	CharacterPanelProto
 	PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h
 )
@@ -224,98 +257,5 @@ if(CHARACTER_PANEL_BUILD_PROBE)
 		DEPENDS
 		CharacterPanelProbe
 		VERBATIM
-	)
-endif()
-
-if(CHARACTER_PANEL_BUILD_PROTO)
-	set(PROTO_VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/proto/proto_config.h)
-	configure_file(
-		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_proto/proto_config.h.in
-		${PROTO_VERSION_HEADER}
-		@ONLY
-	)
-
-	set(PROTO_VERSION_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/proto/proto_version.rc)
-	configure_file(
-		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_proto/proto_version.rc.in
-		${PROTO_VERSION_RESOURCE}
-		@ONLY
-	)
-
-	# The vcpkg detours port ships no CMake config; locate the header/lib like
-	# Community Shaders does.
-	find_path(DETOURS_INCLUDE_DIRS "detours/detours.h")
-	find_library(DETOURS_LIBRARY detours REQUIRED)
-
-	add_library(
-		CharacterPanelProto
-		SHARED
-		tools/m0_proto/proto.h
-		tools/m0_proto/proto_main.cpp
-		tools/m0_proto/proto_passredirect.cpp
-		tools/m0_proto/proto_pinstance.h
-		tools/m0_proto/proto_pinstance.cpp
-		${PROTO_VERSION_HEADER}
-		${PROTO_VERSION_RESOURCE}
-	)
-
-	target_compile_features(
-		CharacterPanelProto
-		PRIVATE
-		cxx_std_23
-	)
-
-	set_target_properties(
-		CharacterPanelProto
-		PROPERTIES
-		OUTPUT_NAME CharacterPanelProto
-		VS_GLOBAL_VCToolsVersion "14.44.35207"
-	)
-
-	if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
-		target_compile_options(
-			CharacterPanelProto
-			PRIVATE
-			/sdl
-			/utf-8
-			/Zi
-			/permissive-
-			/Zc:preprocessor
-			/wd4200
-			$<$<CONFIG:DEBUG>:/ZI>
-			$<$<CONFIG:RELEASE>:/Zi;/Zc:inline;/JMC-;/Ob3>
-		)
-
-		target_compile_definitions(
-			CharacterPanelProto
-			PRIVATE
-			NOMINMAX
-		)
-
-		target_link_options(
-			CharacterPanelProto
-			PRIVATE
-			$<$<CONFIG:DEBUG>:/INCREMENTAL;/OPT:NOREF;/OPT:NOICF>
-			$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>
-		)
-	endif()
-
-	target_include_directories(
-		CharacterPanelProto
-		PRIVATE
-		${CMAKE_CURRENT_BINARY_DIR}/proto
-		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_proto
-		${DETOURS_INCLUDE_DIRS}
-	)
-
-	target_link_libraries(
-		CharacterPanelProto
-		PRIVATE
-		spdlog::spdlog
-		fmt::fmt
-		CommonLibSSE::CommonLibSSE
-		${DETOURS_LIBRARY}
-		user32
-		d3dcompiler
 	)
 endif()

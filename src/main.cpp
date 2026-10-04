@@ -1,123 +1,166 @@
-#include "config/config.h"
-#include "input/input.h"
-#include "render/present_hook.h"
-#include "spike/clone_actor.h"
-#include "spike/pass_hook.h"
+//
+// Created by AmazingBuff on 2026/09/28.
+//
+// Entry TU: SKSE exports, session message handling, logging, and the AE
+// 1.6.1170 runtime gate. (2026-10-05 src migration: split out of tools/m0_proto, behavior byte-identical)
+//
+
+#include "panel.h"
+#include "pinstance/pinstance.h"
+
+#include <RE/Skyrim.h>
+#include <REL/Relocation.h>
+#include <SKSE/SKSE.h>
+#include <SKSE/Version.h>
+#include <Windows.h>
+#include <fmt/format.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-PLUGIN_NAMESPACE_BEGIN
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
 
-namespace
+using namespace std::literals;
+namespace logger = SKSE::log;
+
+namespace CharacterPanelProto
 {
-    constexpr spdlog::level::level_enum Log_Level = spdlog::level::info;
-    void initialize_log()
+    namespace
     {
-        std::optional<std::filesystem::path> path = logger::log_directory();
-        if (!path)
-            SKSE::stl::report_and_fail("Failed to find standard logging directory"sv);
+        bool initialize_log() noexcept
+        {
+            try
+            {
+                std::optional<std::filesystem::path> path = SKSE::log::log_directory();
+                if (!path)
+                    return false;
 
-        *path /= fmt::format("{}.log"sv, Plugin::Plugin_Name);
-        std::shared_ptr<spdlog::sinks::basic_file_sink_mt> sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
-        std::shared_ptr<spdlog::logger> log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
+                *path /= fmt::format("{}.log"sv, Name);
+                std::shared_ptr<spdlog::sinks::basic_file_sink_mt> sink =
+                    std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
+                std::shared_ptr<spdlog::logger> log =
+                    std::make_shared<spdlog::logger>("CharacterPanelProto"s, std::move(sink));
+                log->set_level(spdlog::level::info);
+                log->flush_on(spdlog::level::info);
+                spdlog::set_default_logger(std::move(log));
+                spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
+                return true;
+            }
+            catch (...)
+            {
+                return false;
+            }
+        }
 
-        log->set_level(Log_Level);
-        log->flush_on(Log_Level);
-
-        spdlog::set_default_logger(std::move(log));
-        spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
+        void message_handler(SKSE::MessagingInterface::Message* message) noexcept
+        {
+            if (!message)
+                return;
+            switch (message->type)
+            {
+                case SKSE::MessagingInterface::kDataLoaded:
+                    Proto::instance().install();
+                    // Run 49 (v6.15): from here on, idle frames auto-spawn P
+                    // on the first unpaused world frame so the engine
+                    // renderer-initializes its geometries (device buffers).
+                    PInstance::instance().set_world_ready(true);
+                    break;
+                // Run 49 (v6.15): each completed save load also re-arms the
+                // auto-spawn (kDataLoaded fires once per app session only).
+                case SKSE::MessagingInterface::kPostLoadGame:
+                    PInstance::instance().set_world_ready(true);
+                    break;
+                // FR-06: a loading screen or a fresh game is no valid preview
+                // context; drop the panel so it cannot carry stale studio
+                // content across a session change. Run-37 crash defense:
+                // the loading screen also tears down HUD/menu state the
+                // parked clone and the accumulator state depend on — a
+                // force-close here is followed by a hard P kill so no
+                // stale actor/graph survives the load either.
+                case SKSE::MessagingInterface::kPreLoadGame:
+                    PInstance::instance().set_world_ready(false);
+                    Proto::instance().close_panel("save loading");
+                    PInstance::instance().despawn();
+                    break;
+                case SKSE::MessagingInterface::kNewGame:
+                    PInstance::instance().set_world_ready(false);
+                    Proto::instance().close_panel("new game");
+                    PInstance::instance().despawn();
+                    break;
+                // v6.31 (run 64): quitting with the panel open crashed — the
+                // studio draw and composite kept running into the tearing-
+                // down renderer, and the parked clone's graph unloads with
+                // the world on quit-to-menu. CLib's MessagingInterface enum
+                // stops at kDataLoaded; the SKSE API's continued values are
+                // kShutdown=10, kExitGame=11, kQuitGame=12. Force-close and
+                // kill P before the teardown proceeds (same defense as the
+                // load path above).
+                case 10:  // SKSE kShutdown
+                case 11:  // SKSE kExitGame
+                case 12:  // SKSE kQuitGame
+                    PInstance::instance().set_world_ready(false);
+                    Proto::instance().close_panel("game exit");
+                    PInstance::instance().despawn();
+                    break;
+                default:
+                    // v6.33: bounded diagnostics — the quit-path message
+                    // values (expected 10/11/12) have not been observed
+                    // firing; log the neighborhood to calibrate the values
+                    // this SKSE build actually dispatches.
+                    if (message->type >= 9 && message->type <= 15)
+                        logger::info("SKSE message type={} sender={}", message->type,
+                            message->sender ? message->sender : "(null)");
+                    break;
+            }
+        }
     }
 
-    // SPIKE CODE - game-thread frame tick for the clone actor. The present
-    // hook marks each frame; one queued task per frame services the clone's
-    // spawn/despawn requests and delayed 3D collection on the game thread.
-    class FrameTick
+    bool supported_runtime() noexcept
     {
-    public:
-        static FrameTick& instance()
+        try
         {
-            static FrameTick s_instance;
-            return s_instance;
+            REL::Module& module = REL::Module::get();
+            return REL::Module::IsAE() && module.version() == SKSE::RUNTIME_SSE_1_6_1170;
         }
-
-        void on_present(REX::W32::IDXGISwapChain* /*swap_chain*/)
+        catch (...)
         {
-            if (!m_frame.exchange(true, std::memory_order_acq_rel))
-                SKSE::GetTaskInterface()->AddTask([this]() { tick(); });
-        }
-
-    private:
-        void tick()
-        {
-            m_frame.store(false, std::memory_order_release);
-            spike::CloneActor::instance().on_frame();
-        }
-
-        std::atomic<bool> m_frame{ false };
-    };
-
-    void message_handler(SKSE::MessagingInterface::Message* message) noexcept
-    {
-        if (!message)
-            return;
-        switch (message->type)
-        {
-            case SKSE::MessagingInterface::kDataLoaded:
-                PLUGIN_NAMESPACE::InputManager::install();
-                if (!PLUGIN_NAMESPACE::PresentHook::instance().install(
-                        [](REX::W32::IDXGISwapChain* chain) { FrameTick::instance().on_present(chain); }))
-                    logger::warn("Present hook not ready; retrying on next message");
-                if (!spike::PassHook::instance().install())
-                    logger::warn("Spike pass hook install failed");
-                break;
-            case SKSE::MessagingInterface::kNewGame:
-            case SKSE::MessagingInterface::kPostLoadGame:
-                PLUGIN_NAMESPACE::InputManager::install();
-                PLUGIN_NAMESPACE::PresentHook::instance().install(
-                    [](REX::W32::IDXGISwapChain* chain) { FrameTick::instance().on_present(chain); });
-                spike::PassHook::instance().install();
-                break;
-            case SKSE::MessagingInterface::kSaveGame:
-                PLUGIN_NAMESPACE::Setting::instance().save();
-                break;
-            case SKSE::MessagingInterface::kPreLoadGame:
-                spike::CloneActor::instance().request_despawn();
-                break;
-            default:
-                break;
+            return false;
         }
     }
 }
 
-PLUGIN_NAMESPACE_END
-
-extern "C" DLLEXPORT bool SKSEPlugin_Load(SKSE::LoadInterface const* skse)
+extern "C" __declspec(dllexport) bool SKSEPlugin_Load(SKSE::LoadInterface const* skse)
 {
-    REL::Module::reset();  // Clib-NG bug workaround
-
-    PLUGIN_NAMESPACE::initialize_log();
-    logger::info("{} v{}"sv, Plugin::Plugin_Name, Plugin::Plugin_Version.string());
+    REL::Module::reset();
+    if (!CharacterPanelProto::initialize_log())
+        return false;
+    logger::info("{} v{} build={} loaded", CharacterPanelProto::Name, CharacterPanelProto::Version,
+        CharacterPanelProto::Build_Identity);
 
     SKSE::Init(skse);
-    PLUGIN_NAMESPACE::Setting::instance().load();
-    const SKSE::MessagingInterface* messaging = SKSE::GetMessagingInterface();
-    if (!messaging || !messaging->RegisterListener(PLUGIN_NAMESPACE::message_handler))
+    if (!CharacterPanelProto::supported_runtime())
+    {
+        logger::warn("Unsupported runtime; expected Skyrim AE 1.6.1170, proto will not register input");
+        return true;
+    }
+    SKSE::MessagingInterface const* messaging = SKSE::GetMessagingInterface();
+    if (!messaging || !messaging->RegisterListener(CharacterPanelProto::message_handler))
         return false;
-
-    logger::info("{} loaded"sv, Plugin::Plugin_Name);
     return true;
 }
 
-extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = [] {
-    SKSE::PluginVersionData v;
-    v.PluginVersion(Plugin::Plugin_Version);
-    v.PluginName(Plugin::Plugin_Name);
-    v.AuthorName(Plugin::Plugin_Author);
-    v.UsesAddressLibrary();
-    v.UsesNoStructs();
-    return v;
+extern "C" __declspec(dllexport) constinit auto SKSEPlugin_Version = [] {
+    SKSE::PluginVersionData version;
+    version.PluginVersion(REL::Version(1, 2, 0, 0));
+    version.PluginName(CharacterPanelProto::Name);
+    version.AuthorName("CharacterPanel");
+    version.CompatibleVersions({ SKSE::RUNTIME_SSE_1_6_1170 });
+    version.MinimumRequiredXSEVersion(REL::Version(2, 2, 6, 0));
+    return version;
 }();
 
-extern "C" DLLEXPORT bool SKSEPlugin_Query(SKSE::QueryInterface const*, SKSE::PluginInfo* info)
+extern "C" __declspec(dllexport) bool SKSEPlugin_Query(SKSE::QueryInterface const*, SKSE::PluginInfo* info)
 {
     info->infoVersion = SKSE::PluginInfo::kVersion;
     info->name = SKSEPlugin_Version.pluginName;
