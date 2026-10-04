@@ -28,18 +28,23 @@ accumulator 交换路线(旧路线)已在 run 1–8 被证伪并搁置,勿再回
 对照推迟——"下一步 = A01"作废,新规划见下方"下一步规划"三阶段。
 **阶段 1 工程面验收通过**(逐项证据见 [m0-acceptance.md](m0-acceptance.md):
 7 项中 6 项通过、1 项部分通过,开放项并入阶段 2 首轮;INI 配置用户决定
-推迟);**当前阶段 = 2(独立展示实例 P)**。
+推迟);**当前阶段 = 3(M1)待启动;阶段 2/2b 均收官**。
 DLL 已部署 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`
 (v4.6,MD5 6f00f395…)。热键 F7/F8。v3.1 已提交(770e618);v4 系列
 已提交(f15fb1a)。
 
-**阶段 2b 进行中(2026-10-04,"摄影棚即居所")**:轮 1 已验证通过(图
-驻菜单场景 CP_StudioHome、壳仍在泊位);轮 2 v6.64 已部署待游戏验证
-(迁移同 tick 杀壳 + ghost 退役)——**当前 DLL MD5 44cd4135…,判读要
-点见 stage2b-studio-home-plan.md §H5**。当前阶段 = 2b(杀壳轮)。
-DLL 已部署 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。热键
-F7/F8。v3.1 已提交(770e618);v4 系列(f15fb1a);阶段 2(v5–v6.59)
-提交 db3bb1e/aeba6da/743454b;阶段 2b 轮 1 提交 2412891。
+**阶段 2b 完成(2026-10-04,"摄影棚即居所"工作包收官,run 94–99,
+v6.60–v6.65)**:P 的 3D 图常驻菜单场景私有节点 CP_StudioHome
+(menuObjects[0] 下、NiPointer 强持有),壳 actor 迁移同 tick 删除
+(data3D 先斩,run 51 崩溃机制构造性失效),ghost 层/泊位争霸/簿记
+争抢全部退役,世界侧结构性零克隆,FR-06 成立。teardown(读档/主菜
+单)双路径验证干净。过程中证伪:census 仪器(run 54/94)、世界流门控
+(run 95)、"世界先渲染"前提(U1,run 95)。**当前无待验证代码,最新
+DLL v6.65(MD5 40eeb15a…),全部已提交**。下一阶段 = 3(M1:装备同
+步 FR-01、污染过滤 FR-02、待机动画 FR-03、面板布局定稿——布局需用
+户输入);遗留:正式性能测量、灯光一致性微调。判读全史见
+stage2b-studio-home-plan.md §H1–§H7。DLL 已部署
+`E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。热键 F7/F8。
 
 **阶段 2 运行史(2026-10-02,run 27–33 + v5.7 build 起)**:
 - 证伪/修复链:run 27 深拷贝(F5)→ run 28 假帧 bug(SKSE 任务队列同
@@ -527,24 +532,25 @@ F7/F8。v3.1 已提交(770e618);v4 系列(f15fb1a);阶段 2(v5–v6.59)
   **run 93 用户确认:面板光照正确(双点光正面)、世界无泄漏、高亮/无
   高亮一致。摄影棚灯光命题完整闭环**。当前 DLL MD5 5ad6742d,已提交
   aeba6da(v6.47–v6.59,runs 81–93)。
-- **阶段 2b(2026-10-04,run 94–98,"摄影棚即居所"工作包,方案见
-  stage2b-studio-home-plan.md)**:
-  - **轮 1 验证通过(run 94–97,提交 2412891)**:3D 图在世界渲染初
-    始化后(实际证明无需等——run 95 实锤引擎 SetupAndDrawPass 惰性建
-    缓冲,U1 关闭)从世界摘出、挂 menuObjects[0] 下私有节点
-    CP_StudioHome、NiPointer 强持有(v6.60–v6.63)。U5 恒等成立
-    (home_world=0,pose 数学不变);U2 十轮 parent ok;乒乓(data3D
-    未斩前壳簿记每帧抢图 707 次)v6.63 斩断归零;TGA 取证恢复
-    (v6.39 起 close_panel 丢 dump 标志 + m_session_replays 门,均
-    修)。全防线下壳保留泊位钉桩,面板/世界零回归。
-  - **轮 2 v6.64(run 98,待游戏验证)**:迁移同 tick 杀壳(data3D
-    先斩,Disable 无 3D 可毁,run 51 机制构造性失效)+ ghost 层全家
-    退役 + pump 存活检查 homed 分流。世界侧从迁移 tick 起零克隆;泊
-    位/钉桩/早期泊位保留(只服务 ~1.5 s 构建窗口,对原 §3 清单的范
-    围修正见 §H5)。**run 98 必验:读档/退出 teardown 首演**。
+- **阶段 2b 完成(2026-10-04,run 94–99,"摄影棚即居所"工作包收官,
+  方案与判读全史见 stage2b-studio-home-plan.md §H1–§H7)**:
+  - **轮 1 验证通过(run 94–97,提交 2412891)**:3D 图从世界摘出、
+    挂 menuObjects[0] 下私有节点 CP_StudioHome、NiPointer 强持有
+    (v6.60–v6.63)。U1 关闭(run 95 实锤引擎 SetupAndDrawPass 惰性建
+    缓冲,无需等世界渲染);U5 恒等成立(home_world=0,pose 数学不
+    变);U2 十轮 parent ok;乒乓(data3D 未斩前壳簿记每帧抢图 707
+    次)v6.63 斩断归零;TGA 取证恢复(v6.39 起 close_panel 丢 dump
+    标志 + m_session_replays 门,均修)。
+  - **轮 2 验证通过(run 98–99,提交 ce0f654)**:迁移同 tick 杀壳
+    (data3D 先斩,Disable 无 3D 可毁,run 51 机制构造性失效)+ ghost
+    层全家退役 + pump 存活检查 homed 分流。壳死图活(run 98:杀壳后
+    13 轮面板 338 帧照常);teardown 双路径首演干净(run 99:读档与
+    回主菜单的 disarmed→killed→released 链零崩溃);清扫噪音 v6.65
+    修(跳过已删/已禁用 ref)。泊位/钉桩/早期泊位保留(只服务 ~1.5 s
+    构建窗口,对原 §3 清单的范围修正见 §H5)。
 - 方案与证据链:[stage2-p-instance-plan.md](stage2-p-instance-plan.md)
   (§0–§0ad 三十一轮留档、§2 路线、§3 失败模式)、
-  [stage2b-studio-home-plan.md](stage2b-studio-home-plan.md)(§H1–§H5)。
+  [stage2b-studio-home-plan.md](stage2b-studio-home-plan.md)(§H1–§H7)。
 
 ## 已验证事实(动手前必读,都是实测结论,不是推测)
 
