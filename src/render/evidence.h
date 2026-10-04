@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <filesystem>
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     void dump_offscreen_to_log_dir();
-}
+PLUGIN_NAMESPACE_END

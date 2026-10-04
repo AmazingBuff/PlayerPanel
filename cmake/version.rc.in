@@ -17,11 +17,11 @@ BEGIN
 	BEGIN
 		BLOCK "040904b0"
 		BEGIN
-			VALUE "FileDescription", "CharacterPanel M0 panel prototype"
+			VALUE "FileDescription", "CharacterPanel"
 			VALUE "FileVersion", "@PROJECT_VERSION@.0"
-			VALUE "InternalName", "CharacterPanelProto"
+			VALUE "InternalName", "CharacterPanel"
 			VALUE "LegalCopyright", "Copyright (C) @PROJECT_AUTHOR@; GPL-3.0-or-later"
-			VALUE "ProductName", "CharacterPanelProto"
+			VALUE "ProductName", "CharacterPanel"
 			VALUE "ProductVersion", "@PROJECT_VERSION@.0"
 		END
 	END

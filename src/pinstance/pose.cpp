@@ -16,8 +16,7 @@
 
 using namespace std::literals;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     namespace logger = SKSE::log;
 
     namespace
@@ -325,4 +324,4 @@ namespace CharacterPanelProto
                 centered.center.z);
         }
     }
-}
+PLUGIN_NAMESPACE_END

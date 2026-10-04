@@ -41,8 +41,7 @@
 #include <atomic>
 #include <cstdint>
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     class PInstance
     {
     public:
@@ -201,4 +200,4 @@ namespace CharacterPanelProto
         // thread only — the frontal light rig reads it).
         RE::NiPoint3 m_studio_anchor{ 0.0f, 0.0f, 0.0f };
     };
-}
+PLUGIN_NAMESPACE_END

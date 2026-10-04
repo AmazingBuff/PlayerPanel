@@ -17,8 +17,7 @@
 #include "render/offscreen_target.h"
 #include "render/render_internal.h"
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     class PassRedirector
     {
     public:
@@ -238,4 +237,4 @@ namespace CharacterPanelProto
         };
         std::vector<PPassRecipe> m_pass_recipes;
     };
-}
+PLUGIN_NAMESPACE_END

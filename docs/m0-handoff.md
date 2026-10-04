@@ -651,6 +651,29 @@ PlaceObjectAtMe 触发 facegen 异步装配,skee64 对新装配的脸部网格�
 码时代)。重试即恢复(用户确认可进)。复发频繁时的候选缓解:自动出生推迟
 2-3 s 避开读档爆发期;结构性消除需先立 skee64 morph 挂接侦察轮。
 
+**身份转正(2026-10-05,用户决定:原型已验证可行)**:插件身份由
+CharacterPanelProto 更名为 **CharacterPanel**(C++ 命名空间、CMake 目标、
+DLL 名、版本资源、SKSE 插件名一并改)。随之变化的证据路径:日志
+`Documents/My Games/Skyrim Special Edition/SKSE/CharacterPanel.log`、
+TGA 目录 `...\SKSE\CharacterPanel\`、构建命令 `--target CharacterPanel`。
+**部署注意:MO2 里必须删除旧的 CharacterPanelProto.dll,只装
+CharacterPanel.dll——两个 DLL 的 SKSE 导出同名,同时加载 = 钩子双装。**
+更早 run 记录里引用的旧路径按历史留档对待;日志文本前缀("Proto v3…" 等)
+未随身份改名,历史判读行不受影响。
+
+**模板规范归一(2026-10-05)**:代码与构建全面对齐 skse-plugin-template——
+①全部源码命名空间迁入 `PLUGIN_NAMESPACE` 宏(展开为
+`MyPlugins::CharacterPanel`,由根 CMake `PROJECT_NAMESPACE` 生成,
+`PLUGIN_NAMESPACE_BEGIN/END` 包裹);
+②SKSE 导出与横幅改从模板元数据取值:`Plugin::Plugin_Name / Plugin_Author /
+Plugin_Version`(含 `Plugin_Build_Identity` 扩展项),均由根 CMake
+`PROJECT_NAME/AUTHOR/VERSION` 生成,代码不再硬编码身份字符串;
+③`PROJECT_VERSION` 1.0.0 → 1.2.0(SKSE PluginVersionData、版本资源、横幅
+随之 1.2.0.0,与 v6.70 时代 SKSE 版本保持连续);AuthorName 由误写的
+"CharacterPanel" 修正为 "AmazingBuff"。运行时身份(DLL 名/日志/TGA 路径)
+不变。已有代码的 east-const 化按 small-project-cpp-rules 的"绿地默认值"
+原则不回溯。
+
 ## 已验证事实(动手前必读,都是实测结论,不是推测)
 
 1. **菜单 3D pass 走三个 `RenderPassImmediately` 调用点**。物品预览只走
@@ -771,18 +794,20 @@ cmake -S . -B build `
   -DCHARACTER_PANEL_BUILD_PROBE=ON `
   -DCMAKE_TOOLCHAIN_FILE="D:/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake" `
   -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
-cmake --build build --config Release --target CharacterPanelProto --parallel 4
+cmake --build build --config Release --target CharacterPanel --parallel 4
 ```
 
-- 产物 `build/Release/CharacterPanelProto.dll`,**手动**装入 MO2
+- 产物 `build/Release/CharacterPanel.dll`,**手动**装入 MO2
   (本机 `E:\SkyrimAE\mods\...`,MO2 profile `AE`;直接放真实 Data 会被清)。
+  **2026-10-05 身份转正:同目录下旧的 CharacterPanelProto.dll 必须删除,
+  只装 CharacterPanel.dll(两个 DLL 的 SKSE 导出同名,同时加载 = 钩子双装)。**
 - 游戏内(v3.1 面板流程,详见 tools/m0_proto/README.txt):**取证动作就是
   关面板**——进存档 → 背包高亮有 3D 模型的物品 → F7 开面板 → 停一两秒 →
   F7 关面板,渲染线程自动写一张 `proto-pass-NNN.tga`(先导出后释放)。
   可选:F8 在面板开着时中途抓帧(关着按无效并告警);普通画面开面板几分钟
   等心跳行(约 30 秒一条);开面板状态下存档/读档确认强制关闭(无 dump 行)。
-- 采集:`Documents/My Games/Skyrim Special Edition/SKSE/CharacterPanelProto.log`
-  + `...\SKSE\CharacterPanelProto\proto-pass-NNN.tga`(2560x1440 RGBA TGA)。
+- 采集:`Documents/My Games/Skyrim Special Edition/SKSE/CharacterPanel.log`
+  + `...\SKSE\CharacterPanel\proto-pass-NNN.tga`(2560x1440 RGBA TGA)。
 - 判读:用 python 解 TGA 头(18 字节,type 2,32bpp,top-down)转 PNG + 统计
   非黑像素/包围盒/最亮值,裁剪后直接看图;判据见 m0-proto.md 各 run 段落。
 - 回报物:log 全文 + TGA 序号;异常先查 `[W]` 行。

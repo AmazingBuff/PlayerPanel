@@ -7,8 +7,6 @@
 #include <fmt/format.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-#include <Windows.h>
-
 #include <algorithm>
 #include <atomic>
 #include <cstdint>

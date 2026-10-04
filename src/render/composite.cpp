@@ -18,8 +18,7 @@
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     namespace
     {
         // --- composite (v4, work package 3) --------------------------------
@@ -432,4 +431,4 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             logger::info("Proto v4.6 composite draw #{} ({}x{} panel rect on screen)", m_draws,
                 desc.width, desc.height);
     }
-}
+PLUGIN_NAMESPACE_END

@@ -24,8 +24,7 @@
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     void PassRedirector::draw_p_proactively(RE::BSShaderAccumulator* accumulator)
     {
         // Stage-2b: the game thread may be inside the relocation
@@ -606,4 +605,4 @@ namespace CharacterPanelProto
     {
         call_site_original(1, pass, pass->passEnum, (pass->passEnum & 0x40) != 0, 0x200);
     }
-}
+PLUGIN_NAMESPACE_END

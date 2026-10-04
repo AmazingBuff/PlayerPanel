@@ -5,8 +5,7 @@
 #include <cstdint>
 #include <REX/W32/D3D11.h>
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     // v4.1: the render target the visible menu preview draws into (the
     // format-28 UI composite, runs 11-19) — captured AddRef'd during
     // replays, because the target bound at DrawInterfaceStart ENTRY
@@ -48,4 +47,4 @@ namespace CharacterPanelProto
     };
 
     OffscreenTarget& offscreen_target();
-}
+PLUGIN_NAMESPACE_END

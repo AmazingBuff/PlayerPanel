@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(
 	CharacterPanel
-	VERSION 1.0.0
+	VERSION 1.2.0
 	LANGUAGES CXX
 )
 
@@ -17,37 +17,8 @@ option(CHARACTER_PANEL_BUILD_PROBE "Build the opt-in M0 engine evidence probe." 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
 
-# The plugin body: the former tools/m0_proto M0 prototype, split by
-# responsibility into src/ (2026-10-05 migration). The target keeps the
-# CharacterPanelProto identity — the deployed DLL name, log file and
-# evidence TGA directory are all keyed on it.
-set(PLUGIN_SOURCES
-	src/main.cpp
-	src/panel.cpp
-	src/hooks.cpp
-	src/pinstance/pinstance.cpp
-	src/pinstance/pinstance_home.cpp
-	src/pinstance/pose.cpp
-	src/pinstance/dress.cpp
-	src/render/offscreen_target.cpp
-	src/render/composite.cpp
-	src/render/evidence.cpp
-	src/render/pass_redirector.cpp
-	src/render/p_draw.cpp
-	src/render/studio_lights.cpp
-	src/render/replay.cpp
-)
-set(PLUGIN_HEADERS
-	src/pch.h
-	src/panel.h
-	src/pinstance/pinstance.h
-	src/pinstance/pinstance_detail.h
-	src/render/render_internal.h
-	src/render/offscreen_target.h
-	src/render/composite.h
-	src/render/evidence.h
-	src/render/pass_redirector.h
-)
+file(GLOB_RECURSE PLUGIN_SOURCES src/*.cpp)
+file(GLOB_RECURSE PLUGIN_HEADERS src/*.h)
 
 set(VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/plugin.h)
 configure_file(
@@ -71,7 +42,7 @@ find_path(DETOURS_INCLUDE_DIRS "detours/detours.h")
 find_library(DETOURS_LIBRARY detours REQUIRED)
 
 add_library(
-	CharacterPanelProto
+	CharacterPanel
 	SHARED
 	${PLUGIN_SOURCES}
 	${PLUGIN_HEADERS}
@@ -80,7 +51,7 @@ add_library(
 )
 
 target_compile_features(
-	CharacterPanelProto
+	CharacterPanel
 	PRIVATE
 	cxx_std_23
 )
@@ -93,15 +64,15 @@ target_compile_features(
 # on __std_find_*_trivial_pos_1. Pin the toolset per-target so every generated
 # .vcxproj uses 14.44 regardless of the generator toolset clause.
 set_target_properties(
-	CharacterPanelProto
+	CharacterPanel
 	PROPERTIES
-	OUTPUT_NAME CharacterPanelProto
+	OUTPUT_NAME CharacterPanel
 	VS_GLOBAL_VCToolsVersion "14.44.35207"
 )
 
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 	target_compile_options(
-		CharacterPanelProto
+		CharacterPanel
 		PRIVATE
 		/sdl	# Enable Additional Security Checks
 		/utf-8	# Set Source and Executable character sets to UTF-8
@@ -117,13 +88,13 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 	)
 
 	target_compile_definitions(
-		CharacterPanelProto
+		CharacterPanel
 		PRIVATE
 		NOMINMAX
 	)
 
 	target_link_options(
-		CharacterPanelProto
+		CharacterPanel
 		PRIVATE
 		$<$<CONFIG:DEBUG>:/INCREMENTAL;/OPT:NOREF;/OPT:NOICF>
 		$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>
@@ -131,7 +102,7 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 endif()
 
 target_include_directories(
-	CharacterPanelProto
+	CharacterPanel
 	PRIVATE
 	${CMAKE_CURRENT_BINARY_DIR}/src
 	${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -145,7 +116,7 @@ find_package(spdlog CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
 target_link_libraries(
-	CharacterPanelProto
+	CharacterPanel
 	PRIVATE
 	spdlog::spdlog
 	fmt::fmt
@@ -156,7 +127,7 @@ target_link_libraries(
 )
 
 target_precompile_headers(
-	CharacterPanelProto
+	CharacterPanel
 	PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h
 )

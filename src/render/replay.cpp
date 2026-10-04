@@ -19,8 +19,7 @@
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     namespace
     {
         // The engine's depth resources are usually created with a TYPELESS
@@ -347,4 +346,4 @@ namespace CharacterPanelProto
 
         ++m_p_total_replays;
     }
-}
+PLUGIN_NAMESPACE_END

@@ -12,15 +12,13 @@
 #include <RE/Skyrim.h>
 #include <REL/Relocation.h>
 #include <SKSE/SKSE.h>
-#include <Windows.h>
 #include <detours/detours.h>
 #include <fmt/format.h>
 
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     namespace
     {
         // Set by install_hook() before any menu frame can run the thunk;
@@ -109,4 +107,4 @@ namespace CharacterPanelProto
     {
         return PassRedirector::instance().install();
     }
-}
+PLUGIN_NAMESPACE_END

@@ -5,7 +5,6 @@
 
 #include <RE/Skyrim.h>
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     void mirror_worn_equipment(RE::Actor* clone, RE::PlayerCharacter* player);
-}
+PLUGIN_NAMESPACE_END

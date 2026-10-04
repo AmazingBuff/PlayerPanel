@@ -21,8 +21,7 @@
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     // v6.50: shell fetch scans BOTH queues. Run 83: GetPointLight
     // scans activeLights only, but the engine's AddLight files new
     // lights into lightQueueAdd first (the per-frame light update
@@ -303,4 +302,4 @@ namespace CharacterPanelProto
             m_studio_rig_node->UpdateDownwardPass(data, 0);
         }
     }
-}
+PLUGIN_NAMESPACE_END

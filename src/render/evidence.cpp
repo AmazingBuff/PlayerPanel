@@ -18,8 +18,7 @@
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     namespace
     {
         void write_tga(const std::filesystem::path& file, std::uint32_t width, std::uint32_t height,
@@ -129,7 +128,7 @@ namespace CharacterPanelProto
         staging->Release();
 
         std::filesystem::path dir =
-            SKSE::log::log_directory().value_or(std::filesystem::path(".")) / "CharacterPanelProto";
+            SKSE::log::log_directory().value_or(std::filesystem::path(".")) / "CharacterPanel";
         std::error_code ec;
         std::filesystem::create_directories(dir, ec);
         for (std::uint32_t index = 0; index < 1000; ++index)
@@ -143,4 +142,4 @@ namespace CharacterPanelProto
         }
         logger::warn("Proto v3 dump directory is full; TGA not written");
     }
-}
+PLUGIN_NAMESPACE_END

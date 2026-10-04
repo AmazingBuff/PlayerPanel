@@ -6,8 +6,7 @@
 #include <cstdint>
 #include <REX/W32/D3D11.h>
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     class CompositeRenderer
     {
     public:
@@ -48,4 +47,4 @@ namespace CharacterPanelProto
         bool m_rs_logged = false;
         bool m_blend_logged = false;
     };
-}
+PLUGIN_NAMESPACE_END

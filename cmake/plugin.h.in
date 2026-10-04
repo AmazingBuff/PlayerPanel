@@ -2,13 +2,30 @@
 
 #include <string_view>
 
+#include <REL/Relocation.h>
+
 // Project metadata consumed through src/pch.h (generated at build time).
-// The runtime identity stays "CharacterPanelProto": the SKSE plugin name,
-// log file, evidence TGA directory and MO2 deployment path are all keyed
-// on it (docs/m0-handoff.md runbook).
-namespace CharacterPanelProto
+// Identity: "CharacterPanel" (mainline since 2026-10-05, promoted from the
+// validated CharacterPanelProto prototype). The SKSE plugin name, log file,
+// evidence TGA directory and MO2 deployment path are all keyed on it
+// (docs/m0-handoff.md runbook).
+#define PLUGIN_NAMESPACE @PROJECT_NAMESPACE@
+#define PLUGIN_NAMESPACE_BEGIN namespace PLUGIN_NAMESPACE {
+#define PLUGIN_NAMESPACE_END }
+
+namespace Plugin
 {
-    inline constexpr std::string_view Name = "CharacterPanelProto";
-    inline constexpr std::string_view Version = "@PROJECT_VERSION@";
-    inline constexpr std::string_view Build_Identity = "CharacterPanelProto-m0-v6_70-src-split-2026-10-05";
+    inline constexpr REL::Version Plugin_Version{
+        @PROJECT_VERSION_MAJOR@u,
+        @PROJECT_VERSION_MINOR@u,
+        @PROJECT_VERSION_PATCH@u,
+    };
+
+    inline constexpr std::string_view Plugin_Name = "@PROJECT_NAME@";
+    inline constexpr std::string_view Plugin_Author = "@PROJECT_AUTHOR@";
+
+    // One-line build provenance for the load banner (our extension to the
+    // template metadata; not consumed by SKSE).
+    inline constexpr std::string_view Plugin_Build_Identity =
+        "CharacterPanel-m0-v6_70-mainline-2026-10-05";
 }

@@ -43,8 +43,7 @@
 
 using namespace std::literals;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     namespace logger = SKSE::log;
 
     namespace
@@ -145,7 +144,7 @@ namespace CharacterPanelProto
                     if (ui && ui->IsMenuOpen(RE::MainMenu::MENU_NAME))
                     {
                         PInstance::instance().despawn();
-                        CharacterPanelProto::Proto::instance().close_panel("main menu");
+                        Proto::instance().close_panel("main menu");
                         logger::info("Proto P panel closed: main menu open");
                     }
                 }
@@ -181,7 +180,7 @@ namespace CharacterPanelProto
                             // panel_frame_active() read takes the non-bracketed
                             // path and the release consumes this same frame.
                             PInstance::instance().despawn();
-                            CharacterPanelProto::Proto::instance().close_panel("world unloaded");
+                            Proto::instance().close_panel("world unloaded");
                         }
                     }
                     else
@@ -605,4 +604,4 @@ namespace CharacterPanelProto
             return false;
         return is_p_descendant(geometry);
     }
-}
+PLUGIN_NAMESPACE_END

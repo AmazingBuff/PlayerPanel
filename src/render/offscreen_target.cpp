@@ -10,8 +10,7 @@
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     void OffscreenTarget::destroy()
     {
         if (srv)
@@ -140,4 +139,4 @@ namespace CharacterPanelProto
         static OffscreenTarget s_target;
         return s_target;
     }
-}
+PLUGIN_NAMESPACE_END

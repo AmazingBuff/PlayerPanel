@@ -29,8 +29,7 @@
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     namespace
     {
         // The three RenderPassImmediately call sites Community Shaders and the
@@ -609,4 +608,4 @@ namespace CharacterPanelProto
         }
         return false;
     }
-}
+PLUGIN_NAMESPACE_END

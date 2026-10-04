@@ -13,8 +13,7 @@
 using namespace std::literals;
 namespace logger = SKSE::log;
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     // Body-worn mirroring in the order SKSE's EquipItemEx uses (spike
     // verified: AddObjectToContainer first, then ActorEquipManager;
     // AddWornItem without container membership crashed in
@@ -68,4 +67,4 @@ namespace CharacterPanelProto
         }
         logger::info("Proto P body-worn items mirrored: {}", added);
     }
-}
+PLUGIN_NAMESPACE_END

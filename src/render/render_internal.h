@@ -6,8 +6,7 @@
 #include <cstdint>
 #include <RE/B/BSRenderPass.h>
 
-namespace CharacterPanelProto
-{
+PLUGIN_NAMESPACE_BEGIN
     using DrawInterfaceStart_t = void (*)(std::int64_t);
     using RenderPassImmediately_t = void (*)(RE::BSRenderPass*, std::uint32_t, bool, std::uint32_t);
 
@@ -40,4 +39,4 @@ namespace CharacterPanelProto
     // children with every pointer cache matching — the stall is the
     // only observable). ~0.5 s of dark figure per recovery attempt.
     constexpr std::uint32_t Fetch_Stall_Reset_Windows = 30;
-}
+PLUGIN_NAMESPACE_END
