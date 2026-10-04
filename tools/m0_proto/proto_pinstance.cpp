@@ -79,14 +79,6 @@ namespace CharacterPanelProto
         // from the camera position (game units). The item preview lives in
         // the same space; round 1 calibrates so the whole body fits.
         constexpr float Studio_Standoff = 40.0f;
-        // v6.23 ghost layer: how many world-stream P passes must ARRIVE
-        // before the panel-closed suppression arms. Each arrival proves the
-        // world renderer just processed the clone (the only device-buffer
-        // initializer — run 50), so arming earlier would re-create the rd=9
-        // wall. World frames carry 60–75 P passes (runs 31/32/54), so 128
-        // ≈ two rendered frames on top of the build's own grace+settle
-        // window.
-        constexpr std::uint32_t Ghost_Warmup_Passes = 128;
         // v6.24 residue sweep: the clone is a placed reference and SAVES
         // with the game — a save made while it existed reloads it next
         // session as an unmanaged, un-pinned, VISIBLE player duplicate
@@ -101,12 +93,14 @@ namespace CharacterPanelProto
         // still activated and talked to OUR pinned clone. Distance is the
         // lever that cannot fail: interaction/dialogue/collision reach is
         // a few hundred units, so parking P 8000 units below the player
-        // (the run-31 route-3 configuration — the world still culled it in
-        // and generated passes from exactly this spot) makes it
-        // unreachable while every perceptible channel stays dead. The
-        // studio path re-poses the root's LOCAL transform at draw time and
-        // never reads the park; the ghost warmup only needs the world to
-        // keep rendering the clone, which it does from there.
+        // (the run-31 route-3 configuration) makes it unreachable while
+        // every perceptible channel stays dead. Stage-2b: the park's
+        // remaining job is the BUILD WINDOW only (place → grace → dress →
+        // relocate, ~1.5 s) — at relocation the shell is deleted, so the
+        // world holds no clone afterwards (v6.64; the ghost layer that used
+        // to hide the parked double is retired with it). The studio path
+        // re-poses the root's LOCAL transform at draw time and never reads
+        // the park.
         constexpr float Park_Depth_Below_Player = 8000.0f;
         // Stage-2b: the dedicated home node under menuObjects[0] — the light
         // rig's host, which has kept our foreign subtree alive across every
@@ -521,32 +515,37 @@ namespace CharacterPanelProto
                 // unloaded and the whitelisted root dangles — disarm before
                 // the render pass (run 65 crash: TraverseScenegraphGeometries
                 // on the stale root). Stage-2b: once the graph is relocated
-                // it is owned by this instance (NiPointer + holder slot), so
-                // it CANNOT dangle when the world unloads — the Get3D probe
-                // is retired for that case and the menu-home hosting is
-                // verified instead (U2). The pump runs on the game thread at
-                // DrawInterfaceStart — BEFORE this frame's render work — so
-                // any disarm here leads the studio draw by a frame.
+                // it is owned by this instance (NiPointer + holder slot) and
+                // the shell is already DELETED (v6.64) — the clone ref's
+                // fate is irrelevant there, so the Get3D/ref probe runs only
+                // in the pre-relocation build window, and the menu-home
+                // hosting is verified instead (U2). The pump runs on the
+                // game thread at DrawInterfaceStart — BEFORE this frame's
+                // render work — so any disarm here leads the studio draw by
+                // a frame.
                 if (m_state.load(std::memory_order_acquire) == State::kAttached)
                 {
-                    auto* live = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr;
                     const bool homed =
                         m_home.load(std::memory_order_acquire) == HomeState::kMenuHome;
-                    if (!live || (!homed && !live->Get3D(false)))
+                    if (!homed)
                     {
-                        logger::warn(
-                            "Proto P clone graph lost (world unloaded?); disarming before the render pass");
-                        // v6.33: the world is gone — that is ALSO no valid
-                        // preview context (FR-06): close the panel itself,
-                        // otherwise the main menu keeps compositing the last
-                        // studio image (run 65 screenshot). The pump runs at
-                        // DrawInterfaceStart entry, so the very next
-                        // panel_frame_active() read takes the non-bracketed
-                        // path and the release consumes this same frame.
-                        PInstance::instance().despawn();
-                        CharacterPanelProto::Proto::instance().close_panel("world unloaded");
+                        auto* live = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr;
+                        if (!live || !live->Get3D(false))
+                        {
+                            logger::warn("Proto P clone graph lost (world unloaded?); disarming before "
+                                         "the render pass");
+                            // v6.33: the world is gone — that is ALSO no valid
+                            // preview context (FR-06): close the panel itself,
+                            // otherwise the main menu keeps compositing the last
+                            // studio image (run 65 screenshot). The pump runs at
+                            // DrawInterfaceStart entry, so the very next
+                            // panel_frame_active() read takes the non-bracketed
+                            // path and the release consumes this same frame.
+                            PInstance::instance().despawn();
+                            CharacterPanelProto::Proto::instance().close_panel("world unloaded");
+                        }
                     }
-                    else if (homed)
+                    else
                     {
                         verify_home();
                     }
@@ -613,11 +612,6 @@ namespace CharacterPanelProto
         m_home.store(HomeState::kWorldParked, std::memory_order_release);
         m_home_graph = nullptr;
         m_home_node = nullptr;
-        // v6.22: a fresh clone is a fresh graph — the ghost warmup (the
-        // device-buffer init window) must run again for its geometries.
-        m_ghost_warm.store(false, std::memory_order_release);
-        m_ghost_warmup_passes.store(0, std::memory_order_relaxed);
-        m_ghost_first_drop.store(false, std::memory_order_relaxed);
         m_state.store(State::kWaitingGrace, std::memory_order_release);
         logger::info("Proto P clone placed (world-render init route: the build only advances unpaused "
                      "so the engine creates the device buffers); building toward the whitelist");
@@ -652,17 +646,17 @@ namespace CharacterPanelProto
             case State::kAttached:
                 // v6.25: keep P parked 8k below the player every live frame
                 // (run-31 configuration) — unreachable beats behavior flags
-                // (run 58: the flags didn't hold). The world still renders
-                // it from there, feeding the ghost warmup and device
-                // buffers; the studio never reads the park.
+                // (run 58: the flags didn't hold). The studio never reads
+                // the park. Stage-2b: this branch runs at most once — the
+                // FIRST kAttached tick relocates the graph AND deletes the
+                // shell (v6.64); the park only matters for the fail-open
+                // path (stuck-parked shells keep needing the re-park).
                 if (auto* parked = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr)
                     park_below_player(parked);
-                // Stage-2b round 1: once the ghost warmup proves the world
-                // has really drawn the clone (run 50 semantics — the only
-                // trustworthy device-buffer signal; the rendererData census
-                // was falsified in run 54 and again by run 94), move the
-                // graph to its menu-scene home (the shell stays parked and
-                // pinned exactly as before — round 2 kills it).
+                // Stage-2b: move the graph to its menu-scene home. No init
+                // gate — run 95 proved the engine's SetupAndDrawPass
+                // (call_site_original) lazy-initializes the device buffers,
+                // so there is nothing to wait for.
                 try_relocate();
                 return;
             default:
@@ -806,8 +800,10 @@ namespace CharacterPanelProto
     //
     // The renderer-init heartbeat that used to live here was RETIRED after
     // run 94: the rendererData/vertexBuffer census reports 0 even for the
-    // player's own graph (run 54's falsification, repeated verbatim) — the
-    // trustworthy init signal is the ghost warmup (see try_relocate).
+    // player's own graph (run 54's falsification, repeated verbatim) — and
+    // run 95 then answered U1 outright: the engine's SetupAndDrawPass
+    // lazy-initializes the device buffers, so no init probing is needed at
+    // all.
 
     // Route 3 (run 31): P stays a WORLD actor. The menu culler ignored the
     // attached graph (runs 29/30) and a detached graph has no culler at all;
@@ -855,8 +851,10 @@ namespace CharacterPanelProto
         // Run 51 (v6.16): the v6.15 Disable() here CRASHED the next draw
         // (crash-2026-10-02-20-59-23: pose_for_studio line 169, RIP=0 null
         // vtable — disabling an actor DESTROYS its 3D graph, so the
-        // whitelisted root dangled). The clone now stays alive and enabled;
-        // the ghost warmup (see try_relocate) is the init signal.
+        // whitelisted root dangled). Stage-2b resolves it structurally: the
+        // graph is re-homed under CP_StudioHome with a strong NiPointer and
+        // data3D is severed BEFORE the shell is ever disabled (v6.63/64),
+        // so there is nothing left for Disable to destroy.
         //
         // Informational reading only: this census is the falsified run-54
         // instrument — it reads 0 even for a fully initialized graph (run
@@ -984,6 +982,17 @@ namespace CharacterPanelProto
             reinterpret_cast<std::uintptr_t>(a_graph),
             old_parent->name.c_str() ? old_parent->name.c_str() : "(null)",
             hw.translate.x, hw.translate.y, hw.translate.z, hw.scale);
+
+        // v6.64 (round 2): the shell dies NOW. data3D was severed above, so
+        // Disable has no 3D to destroy (the run-51 mechanism is gone) and
+        // the graph survives on our NiPointer + the holder slot. From this
+        // tick on the world holds no clone — the v6.22 ghost layer that hid
+        // the parked double is retired with it (build-window residual: the
+        // parked, node-level-shifted double is world-rendered during the
+        // ~1.5 s grace+settle and only reachable to a camera pitched steeply
+        // down; FR-06 becomes structural the moment the shell dies).
+        kill_actor();
+        logger::info("Proto P round 2: shell actor deleted at relocation; the world holds no clone");
     }
 
     void PInstance::release_home()
@@ -1126,6 +1135,14 @@ namespace CharacterPanelProto
                 continue;
             if (self && actor == self.get())
                 continue;  // our live, pinned clone
+            // v6.65: refs already deleted/disabled are inert — our own
+            // killed shell lingers in the cell's reference list until the
+            // engine purges it (SetDelete does not remove it immediately),
+            // and re-sweeping it every cadence was pure log noise (run 98:
+            // 4 deletions of the same ref 0xFF0063BD). Legacy stale clones
+            // load ENABLED, so they are still matched.
+            if (actor->IsDisabled() || actor->IsDeleted())
+                continue;
             auto* base = actor->GetActorBase();
             if (!base || base->GetFormID() < 0xFF000000)
                 continue;  // runtime-created bases only — mod content is untouchable
@@ -1171,42 +1188,5 @@ namespace CharacterPanelProto
         if (!geometry || !geometry->GetGeometryRuntimeData().skinInstance)
             return false;
         return is_p_descendant(geometry);
-    }
-
-    bool PInstance::ghost_should_suppress(const RE::BSGeometry* geometry)
-    {
-        // Fail open: only a fully armed instance ghosts, and only after the
-        // warmup proved the engine initialized the device buffers.
-        if (m_state.load(std::memory_order_acquire) != State::kAttached)
-            return false;
-        if (m_ghost_warm.load(std::memory_order_acquire))
-        {
-            if (!is_p_descendant(geometry))
-                return false;
-            if (!m_ghost_first_drop.exchange(true, std::memory_order_acq_rel))
-                logger::info("Proto P ghost: first world-stream pass dropped (geom=[{}])",
-                    geometry->name.c_str() ? geometry->name.c_str() : "(null)");
-            return true;
-        }
-        // Warmup: the engine must keep drawing the clone for a while — real
-        // draws are the only creator of rendererData/VB/IB (run 50), and
-        // suppressing from frame zero would re-create the rd=9 wall. Every
-        // arriving P pass proves the world renderer just processed the
-        // clone; after enough of them the double is never drawn again.
-        if (is_p_descendant(geometry))
-        {
-            const std::uint32_t seen =
-                m_ghost_warmup_passes.fetch_add(1, std::memory_order_relaxed) + 1;
-            if (seen >= Ghost_Warmup_Passes)
-            {
-                bool expected = false;
-                if (m_ghost_warm.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
-                    logger::info(
-                        "Proto P ghost armed: world draws of the clone suppressed outside the "
-                        "studio (warmup {} passes)",
-                        seen);
-            }
-        }
-        return false;
     }
 }

@@ -9,6 +9,28 @@
 - 前置基线:v6.59(run 93 已验证:面板光照正确、世界无泄漏、高亮/无
   高亮一致;DLL MD5 5ad6742d,提交 743454b)
 
+## H6. Run 98 结果(v6.64:轮 2 核心命题闭环——壳死图活;遗留 teardown 首演 + 清扫噪音)+ v6.65
+
+run 98 会话(2026-10-04 19:53,单会话,v6.64,MD5 44cd4135…):
+
+- **壳死图活成立**:迁移 + 杀壳同一 tick(19:53:52.428,三条日志:home
+  迁移 / clone actor killed / round 2 shell deleted),其后 **13 轮开
+  面板、338 帧 submitted=14/14、13 张 TGA** 全部正常(至 19:54:11)——
+  图在壳死后 20 秒仍在渲染,TGA 与基线像素级一致。**U4(杀壳安全性)
+  关闭:Disable 无 3D 可毁,refcount 持活成立**;
+- re-homed 零条;零 crash;**teardown 未演练**(本场无读档/无回主菜
+  单,despawn 路径零执行)——用户暂缓,仍是开放项;
+- **清扫噪音**:SetDelete 后引擎不立即把 ref 移出 cell 引用表,而
+  m_clone 已清空 → 清扫每 300 帧重复"删除"同一壳 ref(0xFF0063BD,全
+  场 4 次,唯一 [W] 来源)。无害但须修。
+
+**v6.65(2026-10-04,待游戏验证)**:sweep_stale_clones 跳过
+`IsDisabled()/IsDeleted()` 的引用(自家被杀壳体与已扫克隆都是 inert;
+遗留存档克隆加载时是 enabled,不受影响)。
+
+**轮 2 验证余项(run 99)**:读档/回主菜单/退出 → despawn teardown
+首演(`whitelist disarmed` → `home released` → 图释放;零崩溃)。
+
 ## H5. 轮 2:v6.64 = 杀壳 + ghost 层退役(含对 §3 轮 2 清单的范围修正)
 
 **前提变化(run 96/97 教训)**:原 §3 轮 2 清单写"退役泊位全家 + AI 钉

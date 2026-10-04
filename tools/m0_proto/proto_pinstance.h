@@ -12,16 +12,21 @@
 // whitelist (root ancestry + panel-open gate) picks them out and replays
 // them into the studio target.
 //
-// Stage-2b (docs/stage2b-studio-home-plan.md, round 1): once the world
-// renderer has initialized the device buffers, the graph is DETACHED from
-// the world cell and re-homed under a private CP_StudioHome node attached
-// to UI3DSceneManager::menuObjects[0] (the light rig's proven host), held
-// by a strong NiPointer. The graph object address is unchanged — the
-// whitelist, discovery logs and pass recipes survive untouched; the pose
-// math carries over because menuObjects[0]'s world is the menu-space
-// identity cascade (the same assumption the run-93-verified light rig
-// makes). The shell actor stays parked 8k below the player with every
-// defense in place until round 2 kills it.
+// Stage-2b (docs/stage2b-studio-home-plan.md, v6.64 = both rounds landed):
+// once the whitelist arms, the graph is DETACHED from the world cell,
+// re-homed under a private CP_StudioHome node attached to
+// UI3DSceneManager::menuObjects[0] (the light rig's proven host), held by a
+// strong NiPointer, and the shell actor is DELETED in the same tick — its
+// data3D is severed first, so Disable has no 3D to destroy (the run-51
+// mechanism is gone) and the engine's per-frame 3D bookkeeping has nothing
+// to fight over (run 96's re-parent tug-of-war). The graph object address
+// is unchanged — the whitelist, discovery logs and pass recipes survive
+// untouched; the pose math carries over because menuObjects[0]'s world is
+// the menu-space identity cascade (U5, runs 96/97 confirmed). The world
+// holds no clone from the relocation tick on — FR-06 is structural. What
+// remains is the ~1.5 s build window (place → grace → dress → relocate):
+// the node-level early park keeps the 3D off the player, the actor-level
+// park keeps it unreachable, and the AI pinning keeps it inert.
 //
 // The generic deep-copy route is falsified: NiObject::CreateDeepCopy
 // returns a non-node for the player's dynamic graph classes.
@@ -104,23 +109,8 @@ namespace CharacterPanelProto
         [[nodiscard]] bool is_p_geometry(const RE::BSGeometry* geometry) const;
 
         // Render thread: whether the geometry descends from the whitelisted
-        // P root, WITHOUT the skinned-only gate. The skin filter is a studio
-        // content choice (props would blob the studio frame); hiding wants
-        // the whole graph — body, armor AND the props riding it.
+        // P root (ancestor-chain match, no skinned-only gate).
         [[nodiscard]] bool is_p_descendant(const RE::BSGeometry* geometry) const;
-
-        // Render thread (thunks, WORLD frames only): the v6.22 layer-1 ghost
-        // gate. True when this pass belongs to the P graph and must be
-        // dropped from the engine's own draw, so the clone never reaches
-        // pixels in normal play — the v6.19 clause covers panel-open frames,
-        // this extends the same silence to panel-closed ones. Fails open:
-        // it arms only after Ghost_Warmup_Passes world-stream P passes have
-        // ARRIVED (an arrival proves the engine just drew the clone — real
-        // draws are the only creator of rendererData/VB/IB, run 50), and
-        // only while the whitelist is armed (kAttached). M1 contract: a
-        // re-dress must reset the warm window (new geometries need a fresh
-        // init window) via spawn-time reset semantics.
-        [[nodiscard]] bool ghost_should_suppress(const RE::BSGeometry* geometry);
 
         // Render thread: the studio anchor pose_for_studio last computed —
         // the fixed view-axis point the frontal light rig is built around.
@@ -195,12 +185,6 @@ namespace CharacterPanelProto
         std::uint32_t m_frames_since_place{ 0 };
         std::uint32_t m_dressed_frames{ 0 };
         std::uint32_t m_total_frames{ 0 };
-        // v6.22 ghost layer (render-thread state, mutated from the pass
-        // thunks; spawn resets on the game thread — benign race, worst case
-        // a slightly longer warmup on a fresh clone).
-        std::atomic<bool> m_ghost_warm{ false };
-        std::atomic<std::uint32_t> m_ghost_warmup_passes{ 0 };
-        std::atomic<bool> m_ghost_first_drop{ false };
         // v6.24 residue sweep cadence (game thread only).
         std::uint32_t m_frames_until_residue_scan{ 0 };
         // Stage-2b home state (game thread only, except the atomic latch the

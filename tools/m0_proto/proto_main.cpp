@@ -245,10 +245,9 @@ namespace CharacterPanelProto
             return;
         }
         m_capture_ready = true;
-        logger::info("M0 proto v6.63 installed: stage-2b round 1 — relocation works (run 96: home "
-                     "identity confirmed) but the shell's 3D bookkeeping re-parented the graph every "
-                     "frame (707 re-homes); data3D is now severed at relocation. Close-dump also fires "
-                     "for P-only opens. F7 = fallback, F8 = dump");
+        logger::info("M0 proto v6.65 installed: stage-2b round 2 verified (run 98: shell deleted, graph "
+                     "kept drawing 13 opens) — the residue sweep now skips already-deleted/disabled "
+                     "refs so the purging shell is not re-swept. F7 = fallback, F8 = dump");
     }
 
     void Proto::open_panel(std::string_view reason)

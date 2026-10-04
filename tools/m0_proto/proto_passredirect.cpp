@@ -1302,24 +1302,15 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 // Run 54: the thunk reads this right after on_pass returns
                 // (same render-thread call) to decide the passthrough.
                 m_last_pass_p_geom = p_geom;
-                // v6.22 ghost layer: world-frame passes are checked against
-                // the P graph even with the panel closed, so the thunk can
-                // drop them — the double must not reach pixels in normal
-                // play. Skipped in menu frames (P has no menu-stream passes
-                // — runs 29/30) and when the panel-open whitelist already
-                // claimed the pass (the v6.19 clause suppresses those
-                // anyway; saves a second ancestry walk).
-                m_last_pass_ghost = !m_in_frame && !p_geom &&
-                                    PInstance::instance().ghost_should_suppress(pass->geometry);
+                // v6.22's ghost layer RETIRED in v6.64 (stage-2b round 2):
+                // the graph lives in CP_StudioHome and the shell dies at
+                // relocation, so the world stream no longer contains P
+                // passes outside the ~1.5 s build window — which the
+                // node-level park keeps out of sight anyway.
 
                 // Outside the menu bracket only P passes are accepted — the
-                // studio target must never accumulate world scenery. Ghost
-                // passes bail here too: they are neither panel content nor
-                // replay candidates — the thunk drops them via
-                // m_last_pass_ghost.
-                if (!m_in_frame && !p_geom && !m_last_pass_ghost)
-                    return false;
-                if (m_last_pass_ghost)
+                // studio target must never accumulate world scenery.
+                if (!m_in_frame && !p_geom)
                     return false;
 
                 ++m_passes_seen;
@@ -1495,17 +1486,16 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // studio-light-mutated pass (crash-2026-10-02-22-00-30: P's
             // armor BSTriShape, null light deref). Only the studio draw
             // renders P; the engine never touches these passes again.
-            static bool should_suppress_passthrough(bool replay, bool p_geom, bool ghost,
-                bool in_menu_frame)
+            static bool should_suppress_passthrough(bool replay, bool p_geom, bool in_menu_frame)
             {
                 // v6.19: while the panel is open the studio is P's only
                 // renderer — the engine must not draw its passes anywhere
                 // (world frames would show the double; menu frames include
                 // the accumulator-cleanup draws that crashed run 53's
-                // session). v6.22: the same silence now covers panel-closed
-                // world frames — the ghost layer arms only after its warmup
-                // proved the engine initialized the clone's device buffers.
-                return (replay && (p_geom || !in_menu_frame)) || ghost;
+                // session). v6.64: the ghost clause is retired with the
+                // ghost layer — post-relocation the world stream holds no P
+                // passes outside the build window.
+                return replay && (p_geom || !in_menu_frame);
             }
 
             static void thunk_site0(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
@@ -1513,7 +1503,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 0);
                 if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom,
-                        instance().m_last_pass_ghost, instance().m_in_frame))
+                        instance().m_in_frame))
                     call_site_original(0, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 0);
@@ -1523,7 +1513,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 1);
                 if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom,
-                        instance().m_last_pass_ghost, instance().m_in_frame))
+                        instance().m_in_frame))
                     call_site_original(1, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 1);
@@ -1533,7 +1523,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 2);
                 if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom,
-                        instance().m_last_pass_ghost, instance().m_in_frame))
+                        instance().m_in_frame))
                     call_site_original(2, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 2);
@@ -2576,7 +2566,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 // user's architecture call: with menu-light arming retired
                 // (v6.53), item replay retired (v6.0), and the end_frame
                 // kFRAMEBUFFER composite proven (v6.42+), thunk_site has
-                // exactly ONE remaining duty — P/ghost passthrough
+                // exactly ONE remaining duty — P passthrough
                 // suppression — and the panel draws/composites ONLY in
                 // end_frame. One path, one context, no cross-contamination.
                 // No dirty flags are left, so nothing re-applies and our bind
@@ -2684,11 +2674,6 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // it (same render-thread call) to keep the engine from ever
             // drawing P's passes (world double + menu teardown crash).
             bool m_last_pass_p_geom = false;
-            // v6.22 ghost layer: the pass just classified against the P
-            // graph in a WORLD frame with the panel closed — the thunk
-            // drops it (the warmup-guarded read lives in
-            // PInstance::ghost_should_suppress).
-            bool m_last_pass_ghost = false;
             // Run 54: once-per-open marker for the no-root early return in
             // draw_p_proactively — a silent kNone here is what swallowed
             // run 53's steady-state draws without a single log line.
