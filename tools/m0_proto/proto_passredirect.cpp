@@ -1631,28 +1631,38 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 if (!host || !world_node)
                     return;
 
-                // v6.66: the world's ShadowSceneNode does NOT survive a
-                // main-menu transition — quitting to the menu destroys it
-                // and FREES the engine-built BSLight wrappers our NiLights
-                // were registered with (run 100 crash: save A → main menu →
-                // save B, the first P draw dumped and patched freed shells —
-                // lum read as 1.08e21 garbage, then the rig placement wrote
-                // through a freed NiLight pointer, r15=0x6). The NiLights
-                // themselves survive (they are scene-graph objects hosted on
-                // our rig node, not owned by the ledger) — so whenever the
-                // node changed, hand them to the NEW node's ledger and
-                // force a fresh wrapper fetch below.
-                if (m_studio_light_ni[0] && world_node != m_studio_lights_node)
+                // v6.66/v6.67: NEITHER the world's ShadowSceneNode NOR the
+                // UI3D host survives a main-menu transition, and they fail
+                // DIFFERENTLY (run 100/101):
+                // - run 100: the node is destroyed — the engine FREES the
+                //   BSLight wrappers our NiLights were registered with; the
+                //   first P draw patched freed shells (lum read as 1.08e21
+                //   garbage) and crashed writing through a freed NiLight.
+                // - run 101: the node pointer SURVIVES, but the UI3D host
+                //   (menuObjects[0]) is rebuilt — our rig node is orphaned
+                //   under the dead root, the engine's per-frame light
+                //   collection no longer reaches it, so the ledger holds no
+                //   wrappers for our lights: the fetch fails SILENTLY and
+                //   the figure renders dark.
+                // The NiLights/rig are cheap — whenever the host or the node
+                // changed, discard the whole rig and re-create under the
+                // CURRENT scene (Phase 1 below). Re-creating sidesteps every
+                // dangling-parent question an orphaned rig raises.
+                if ((m_studio_light_ni[0] || m_studio_rig_node) &&
+                    (host != m_studio_lights_host || world_node != m_studio_lights_node))
                 {
-                    for (std::size_t i = 0; i < Studio_Light_Count; ++i)
-                        if (m_studio_light_ni[i])
-                            world_node->AddLight(m_studio_light_ni[i].get());
-                    m_studio_lights_node = world_node;
-                    m_studio_light_count = 0;
+                    logger::info("Proto v6.67 studio light rig reset: {} changed across a menu/load "
+                                 "transition — re-creating under the current scene",
+                        host != m_studio_lights_host ? "the UI3D host" : "the ShadowSceneNode");
                     for (auto*& shell : m_studio_lights)
                         shell = nullptr;
-                    logger::info("Proto v6.66 studio lights re-registered into a new ShadowSceneNode "
-                                 "(world rebuild across a menu/load transition)");
+                    for (auto& ni : m_studio_light_ni)
+                        ni = nullptr;
+                    m_studio_rig_node = nullptr;
+                    m_studio_light_count = 0;
+                    m_studio_light_array = nullptr;
+                    m_studio_lights_failed = false;
+                    m_fetch_warned = false;
                 }
 
                 // Phase 1: create once (no sticky failure — a same-frame
@@ -1749,6 +1759,7 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                         m_studio_light_ni[i].reset(ni);
                     }
                     m_studio_lights_node = world_node;
+                    m_studio_lights_host = host;
                     logger::info("Proto v6.50 studio lights created and handed to ShadowSceneNode::AddLight "
                                  "(activeLights.size={} lightQueueAdd.size={})",
                         world_node->GetRuntimeData().activeLights.size(),
@@ -1768,45 +1779,61 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     for (std::size_t i = 0; i < Studio_Light_Count; ++i)
                         if (!m_studio_lights[i])
                             all = false;
-                    if (all)
+                    // v6.67: an incomplete fetch used to be SILENT — run
+                    // 101's dark figure had zero log lines to explain it.
+                    // Warn once per stall; the reset above or the engine's
+                    // next ledger rebuild clears it.
+                    if (!all)
                     {
-                        // v6.53/v6.54: FIX THE SHELL FIELDS the engine left
-                        // stale — and RE-PATCH ON EVERY FETCH. The engine
-                        // REBUILDS its wrappers whenever the ledger is
-                        // repopulated (panel open/close cycles: activeLights
-                        // 97→99 in run 87), and every rebuilt shell starts
-                        // with lodDimmer=0 again — the run-87 log shows the
-                        // patch working on fetch 1 and the panel dark again
-                        // on fetch 2. Both light consumers multiply by
-                        // lodDimmer (LLF: light.fade *= lodDimmer; native
-                        // LOD fade), so 0 = a light that exists but
-                        // contributes exactly nothing.
-                        bool any_patched = false;
-                        for (std::size_t i = 0; i < Studio_Light_Count; ++i)
+                        if (!m_fetch_warned)
                         {
-                            auto* shell = m_studio_lights[i];
-                            if (shell->lodDimmer != 1.0f || shell->luminance != 1.0f)
-                            {
-                                any_patched = true;
-                                logger::info(
-                                    "Proto v6.54 shell[{}] raw: lodDimmer={:.3f} lum={:.3f} portalStrict={} "
-                                    "dynamic={} pointLight={} frustrumCull=0x{:X} worldTranslate=({:.1f},{:.1f},{:.1f})",
-                                    i, shell->lodDimmer, shell->luminance, shell->portalStrict, shell->dynamic,
-                                    shell->pointLight, shell->frustrumCull, shell->worldTranslate.x,
-                                    shell->worldTranslate.y, shell->worldTranslate.z);
-                                shell->lodDimmer = 1.0f;
-                                shell->luminance = 1.0f;
-                                shell->frustrumCull = 0;
-                            }
+                            m_fetch_warned = true;
+                            logger::warn("Proto v6.67 studio light wrappers not in the ledger yet "
+                                         "({}/{} matched) — the figure renders without studio lights "
+                                         "until they appear",
+                                std::count_if(std::begin(m_studio_lights), std::end(m_studio_lights),
+                                    [](const RE::BSLight* s) { return s != nullptr; }),
+                                Studio_Light_Count);
                         }
-                        m_studio_light_count = Studio_Light_Count;
-                        m_studio_light_array = m_studio_lights;
-                        logger::info("Proto v6.54 studio light wrappers fetched{} "
-                                     "(activeLights.size={} lightQueueAdd.size={})",
-                            any_patched ? " and PATCHED (lodDimmer=1, lum=1, no cull)" : " (fields already good)",
-                            world_node->GetRuntimeData().activeLights.size(),
-                            world_node->GetRuntimeData().lightQueueAdd.size());
+                        return;
                     }
+                    m_fetch_warned = false;
+                    // v6.53/v6.54: FIX THE SHELL FIELDS the engine left
+                    // stale — and RE-PATCH ON EVERY FETCH. The engine
+                    // REBUILDS its wrappers whenever the ledger is
+                    // repopulated (panel open/close cycles: activeLights
+                    // 97→99 in run 87), and every rebuilt shell starts
+                    // with lodDimmer=0 again — the run-87 log shows the
+                    // patch working on fetch 1 and the panel dark again
+                    // on fetch 2. Both light consumers multiply by
+                    // lodDimmer (LLF: light.fade *= lodDimmer; native
+                    // LOD fade), so 0 = a light that exists but
+                    // contributes exactly nothing.
+                    bool any_patched = false;
+                    for (std::size_t i = 0; i < Studio_Light_Count; ++i)
+                    {
+                        auto* shell = m_studio_lights[i];
+                        if (shell->lodDimmer != 1.0f || shell->luminance != 1.0f)
+                        {
+                            any_patched = true;
+                            logger::info(
+                                "Proto v6.54 shell[{}] raw: lodDimmer={:.3f} lum={:.3f} portalStrict={} "
+                                "dynamic={} pointLight={} frustrumCull=0x{:X} worldTranslate=({:.1f},{:.1f},{:.1f})",
+                                i, shell->lodDimmer, shell->luminance, shell->portalStrict, shell->dynamic,
+                                shell->pointLight, shell->frustrumCull, shell->worldTranslate.x,
+                                shell->worldTranslate.y, shell->worldTranslate.z);
+                            shell->lodDimmer = 1.0f;
+                            shell->luminance = 1.0f;
+                            shell->frustrumCull = 0;
+                        }
+                    }
+                    m_studio_light_count = Studio_Light_Count;
+                    m_studio_light_array = m_studio_lights;
+                    logger::info("Proto v6.54 studio light wrappers fetched{} "
+                                 "(activeLights.size={} lightQueueAdd.size={})",
+                        any_patched ? " and PATCHED (lodDimmer=1, lum=1, no cull)" : " (fields already good)",
+                        world_node->GetRuntimeData().activeLights.size(),
+                        world_node->GetRuntimeData().lightQueueAdd.size());
                 }
             }
 
@@ -2695,6 +2722,12 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // with — a changed pointer means the world was rebuilt (menu
             // transition / load) and the old wrappers are gone.
             RE::ShadowSceneNode* m_studio_lights_node = nullptr;
+            // v6.67: the UI3D host the rig was last created under — a
+            // changed pointer means the menu scene was rebuilt and the old
+            // rig is orphaned (its lights no longer reach the ledger).
+            RE::NiNode* m_studio_lights_host = nullptr;
+            // v6.67: the incomplete-fetch warn latch (cleared on success).
+            bool m_fetch_warned = false;
             RE::NiPointer<RE::NiLight> m_studio_light_ni[Studio_Light_Count];
             // v6.51: the private rig node the lights hang from — fresh,
             // flag-free, so forced cascades actually move them.
