@@ -9,6 +9,11 @@
 #include <REL/Relocation.h>
 #include <SKSE/SKSE.h>
 #include <RE/B/BSLight.h>
+#include <RE/B/BSShaderManager.h>
+#include <RE/N/NiDirectionalLight.h>
+#include <RE/N/NiPointLight.h>
+#include <RE/R/RendererShadowState.h>
+#include <RE/S/ShadowSceneNode.h>
 #include <REX/W32/D3D11.h>
 
 #include <Windows.h>
@@ -482,18 +487,24 @@ namespace CharacterPanelProto
         // the replay count changes (item switches).
         constexpr std::uint32_t Heartbeat_Frames = 1800;
 
+        // v6.47: self-built studio lights — the panel's lighting no longer
+        // depends on menu-item lights at all. v6.56: slot 0 = ambient base
+        // (engine convention: point lights start at sceneLights[1]), slots
+        // 1/2 = key/fill point lights.
+        constexpr std::size_t Studio_Light_Count = 3;
+
         // --- composite (v4, work package 3) --------------------------------
 
         // M0 calibration constants: the panel occupies a fixed screen
-        // fraction (58%..88% horizontally, 12%..68% vertically from the
-        // top) and shows the WHOLE studio target squeezed into it (uv
-        // 0..1). Framing and zoom are studio-camera concerns (M1), not
-        // composite concerns; the rect moves behind a config only if run
-        // 20 shows placement matters for verification.
-        constexpr float Panel_Screen_MinX = 0.58f;
-        constexpr float Panel_Screen_MaxX = 0.88f;
-        constexpr float Panel_Screen_MinY = 0.12f;
-        constexpr float Panel_Screen_MaxY = 0.68f;
+        // fraction — v6.30 (user red-box, run 63): a tall strip on the
+        // right (73%..99% horizontally, 5%..96% vertically from the top) —
+        // and shows the WHOLE studio target squeezed into it (uv 0..1).
+        // The anisotropic squeeze of the 16:9 target into this narrow rect
+        // is inherent to the mapping; framing/zoom are studio concerns.
+        constexpr float Panel_Screen_MinX = 0.73f;
+        constexpr float Panel_Screen_MaxX = 0.99f;
+        constexpr float Panel_Screen_MinY = 0.05f;
+        constexpr float Panel_Screen_MaxY = 0.96f;
 
         // A fullscreen-triangle-pair quad addressed purely by SV_VertexID
         // (no vertex buffers, no input layout): the vertex shader places the
@@ -505,7 +516,7 @@ namespace CharacterPanelProto
         // actually sets is saved and restored; the engine rebinds the rest
         // for its own draws.
         constexpr std::string_view Composite_VS = R"(
-cbuffer PanelCB : register(b0) { float4 g_ndcRect; }
+cbuffer PanelCB : register(b0) { float4 g_ndcRect; float4 g_flags; }
 struct VSOut { float4 pos : SV_Position; float2 uv : TEXCOORD0; };
 VSOut vs_main(uint id : SV_VertexID) {
     VSOut o;
@@ -532,10 +543,15 @@ VSOut vs_main(uint id : SV_VertexID) {
         constexpr std::string_view Composite_PS = R"(
 Texture2D g_tex : register(t0);
 SamplerState g_samp : register(s0);
-cbuffer PanelCB : register(b0) { float4 g_ndcRect; }  // x unused here, y = 1 when HDR
+cbuffer PanelCB : register(b0) { float4 g_ndcRect; float4 g_flags; }  // g_flags.x = 1 when HDR; g_flags.y = sampled x-span (aspect-correct window)
 float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
+    // v6.32: sample an aspect-correct horizontal slice of the target —
+    // squeezing the full 16:9 target into the narrow panel stretched the
+    // figure (run 65). The window spans (panel aspect / target aspect) of
+    // the target width, centered — the figure keeps its world proportions.
+    uv.x = 0.5 + (uv.x - 0.5) * g_flags.y;
     float3 c = g_tex.Sample(g_samp, uv).rgb;
-    if (g_ndcRect.y > 0.5)
+    if (g_flags.x > 0.5)
         c = c / (1.0 + c);
     return float4(c, 1.0);
 }
@@ -677,10 +693,20 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 rs_desc.scissorEnable = 0;
 
                 // NDC rect derived once from the screen-fraction constants:
-                // x = 2u-1; y_top = 1-2*top, y_bottom = 1-2*bottom.
-                const float cb_data[4] = {
+                // x = 2u-1; y_top = 1-2*top, y_bottom = 1-2*bottom. v6.31:
+                // the CB carries a SECOND float4 — the per-draw HDR flag
+                // lives in g_flags.x, NOT in g_ndcRect.y. Run 64: the flag
+                // used to overwrite the rect's yBottom (both lived in
+                // g_ndcRect.y), so LDR targets drew the quad from NDC 0 up
+                // — exactly the upper half of the screen. That is why the
+                // panel had always been shorter than its constants and the
+                // new taller rect exposed it as "half a panel".
+                const float cb_data[8] = {
                     2.0f * Panel_Screen_MinX - 1.0f, 1.0f - 2.0f * Panel_Screen_MaxY,
-                    2.0f * Panel_Screen_MaxX - 1.0f, 1.0f - 2.0f * Panel_Screen_MinY
+                    2.0f * Panel_Screen_MaxX - 1.0f, 1.0f - 2.0f * Panel_Screen_MinY,
+                    0.0f,
+                    (Panel_Screen_MaxX - Panel_Screen_MinX) / (Panel_Screen_MaxY - Panel_Screen_MinY),
+                    0.0f, 0.0f
                 };
                 REX::W32::D3D11_BUFFER_DESC cb_desc{};
                 cb_desc.byteWidth = sizeof(cb_data);
@@ -806,10 +832,12 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
 
                 REX::W32::D3D11_VIEWPORT viewport{ 0.0f, 0.0f,
                     static_cast<float>(desc.width), static_cast<float>(desc.height), 0.0f, 1.0f };
-                // Run 31: y carries the HDR flag — the PS Reinhard-maps HDR
-                // studio targets (world main target, format 10) and passes
-                // LDR ones (UI composite, format 28) through. Dynamic CB
-                // updated per draw; format flips are resolution-change rare.
+                // Run 31: the studio target's format decides the Reinhard
+                // map (HDR world main target, format 10) vs pass-through
+                // (LDR UI composite, format 28). v6.31: the flag lives in
+                // g_flags.x — the FULL panel rect is written every draw
+                // (run 64: the flag used to overwrite g_ndcRect.y = the
+                // quad's yBottom, halving the panel).
                 const float hdr = desc.format == REX::W32::DXGI_FORMAT_R11G11B10_FLOAT ? 1.0f : 0.0f;
                 {
                     REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
@@ -817,9 +845,12 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     {
                         auto* out = static_cast<float*>(mapped.data);
                         out[0] = 2.0f * Panel_Screen_MinX - 1.0f;
-                        out[1] = hdr;
+                        out[1] = 1.0f - 2.0f * Panel_Screen_MaxY;
                         out[2] = 2.0f * Panel_Screen_MaxX - 1.0f;
                         out[3] = 1.0f - 2.0f * Panel_Screen_MinY;
+                        out[4] = hdr;
+                        out[5] = (Panel_Screen_MaxX - Panel_Screen_MinX) /
+                                 (Panel_Screen_MaxY - Panel_Screen_MinY);
                         ctx->Unmap(m_cb, 0);
                     }
                 }
@@ -972,6 +1003,9 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 // Run 36: the proactive P draw fires once per studio frame
                 // (latch reset with the clear).
                 m_p_drawn_this_frame = false;
+                // v6.38: the per-frame composite latch — replay-phase draws
+                // set it; end_frame's no-menu-pass fallback consumes it.
+                m_composited_this_frame = false;
                 // Run 56: the studio-light reference goes stale with the
                 // frame — only an item lighting pass seen THIS frame may
                 // rebind P's passes.
@@ -1076,6 +1110,96 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                             m_frame_index, m_passes_seen);
                 }
 
+                // v6.43: STUDIO TARGET SELF-CREATION — the INPUT side of the
+                // decoupling. Run 76 (user RenderDoc + log): draw() exits at
+                // its !target.srv guard, and draw_p_proactively exits at its
+                // !target.rtv guard — the studio offscreen target was only
+                // ever created inside replay_after_original (from the call
+                // site's desc), and with ZERO passes there is no template
+                // and no target: no P draw, no composite, black panel. The
+                // target is now created HERE (BEFORE the proactive draw, so
+                // the same frame's P lands in it) from the engine's
+                // persistent kFRAMEBUFFER desc when absent: same screen
+                // resolution; color format pinned to R8G8B8A8_UNORM (28) —
+                // the exact representation the item-call-site target used
+                // all along, so replays and the composite sampler see the
+                // same format; depth normalized to D24_UNORM_S8_UINT
+                // (normalize_depth_format's fallback). The replay path's
+                // sig-based recreate still runs when a real call-site
+                // template shows up with a different desc (e.g. resolution
+                // change) — both paths share target_sig, so no thrash.
+                {
+                    auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
+                    auto* rt = renderer ? &renderer->GetRuntimeData() : nullptr;
+                    OffscreenTarget& target = offscreen_target();
+                    // v6.44: run 77 showed ZERO self-created lines AND zero
+                    // failure warns — the block was skipped on a silent
+                    // path. Every skip branch now leaves a one-shot trace.
+                    if (!m_selfcreate_trace_logged)
+                    {
+                        m_selfcreate_trace_logged = true;
+                        logger::info(
+                            "Proto v6.44 self-create trace: renderer={} rt={} context={} forwarder={} "
+                            "target.rtv={} targetFailed={} fb.texture={} fb.RTV={}",
+                            static_cast<const void*>(renderer), static_cast<const void*>(rt),
+                            rt ? static_cast<const void*>(rt->context) : nullptr,
+                            rt ? static_cast<const void*>(rt->forwarder) : nullptr,
+                            static_cast<const void*>(target.rtv), m_target_failed,
+                            (rt && rt->context) ? static_cast<const void*>(rt->renderTargets[RE::RENDER_TARGET::kFRAMEBUFFER].texture) : nullptr,
+                            (rt && rt->context) ? static_cast<const void*>(rt->renderTargets[RE::RENDER_TARGET::kFRAMEBUFFER].RTV) : nullptr);
+                    }
+                    if (rt && rt->context && !target.rtv && !m_target_failed)
+                    {
+                        auto& fb = rt->renderTargets[RE::RENDER_TARGET::kFRAMEBUFFER];
+                        // v6.45: run 78 trace settled it — fb.texture is NULL
+                        // while fb.RTV is live (CLib's RenderTargetData
+                        // texture/textureCopy pointers are simply not
+                        // populated at runtime; the engine only touches these
+                        // targets through its views). Read the template desc
+                        // from the RTV instead — the same GetResource/GetDesc
+                        // walk the replay path has used on the format-28
+                        // instances since v4.1.
+                        REX::W32::ID3D11Resource* fb_res = nullptr;
+                        if (fb.RTV)
+                            fb.RTV->GetResource(&fb_res);
+                        if (fb_res)
+                        {
+                            REX::W32::D3D11_TEXTURE2D_DESC fb_desc{};
+                            static_cast<REX::W32::ID3D11Texture2D*>(fb_res)->GetDesc(&fb_desc);
+                            fb_res->Release();
+                            REX::W32::D3D11_TEXTURE2D_DESC template_desc = fb_desc;
+                            template_desc.format = REX::W32::DXGI_FORMAT_R8G8B8A8_UNORM;
+                            constexpr auto kStudioDepth = REX::W32::DXGI_FORMAT_D24_UNORM_S8_UINT;
+                            const TargetSig sig{ template_desc.width, template_desc.height,
+                                static_cast<std::uint32_t>(template_desc.format),
+                                static_cast<std::uint32_t>(kStudioDepth) };
+                            if (!(m_target_failed && sig == m_failed_sig))
+                            {
+                                if (target.create(rt->forwarder, template_desc, kStudioDepth))
+                                {
+                                    m_cleared = false;  // fresh surface, needs the first clear
+                                    logger::info("Proto v6.43 studio target self-created from kFRAMEBUFFER: "
+                                                 "{}x{} format=28 (no pass needed)",
+                                        template_desc.width, template_desc.height);
+                                }
+                                else
+                                {
+                                    m_target_failed = true;
+                                    m_failed_sig = sig;
+                                    logger::warn("Proto v6.43 studio target self-creation failed; sticky "
+                                                 "for this configuration");
+                                }
+                            }
+                        }
+                        else if (!m_fb_texture_null_logged)
+                        {
+                            m_fb_texture_null_logged = true;
+                            logger::warn("Proto v6.44 self-create skipped: kFRAMEBUFFER.RTV is null "
+                                         "(no template source at bracket exit)");
+                        }
+                    }
+                }
+
                 // Run 43 (v6.8): the paused inventory does NOT re-draw the
                 // same item — no item pass, no OM window from
                 // replay_after_original, so P was drawn only on the arm
@@ -1087,6 +1211,49 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 // trigger (the frame latch prevents double draws).
                 if (auto* ui3d = RE::UI3DSceneManager::GetSingleton())
                     draw_p_proactively(ui3d->unk10.get());
+
+                // v6.38: PANEL-VISIBILITY DECOUPLING (user report: the panel
+                // only appeared after highlighting a 3D item first). The
+                // in-replay composite runs only when a pass reaches the
+                // thunk — and the user's run-75 finding settles it: opening
+                // the inventory does NOT enter thunk_site at ALL (entering
+                // requires highlighting a 3D item), so before the first
+                // highlight there is no capture AND no composite. The panel
+                // display must bypass the pass path entirely.
+                //
+                // v6.42: the fallback composite targets the engine's
+                // PERSISTENT kFRAMEBUFFER entry —
+                // Renderer::GetRuntimeData().renderTargets[kFRAMEBUFFER].RTV
+                // — the same engine-ledger slot CS's SetUIBuffer reads.
+                // Pure memory read: no OM probing at exit (the v6.40 crash
+                // lesson), no captured-pointer lifecycle, never
+                // uninitialized while the renderer lives. At bracket exit
+                // the menu draw has finished and the menu path renders INTO
+                // this framebuffer (vanilla UI composites to kFRAMEBUFFER —
+                // CS's SetUIBuffer comment), so a quad drawn now is on the
+                // presented frame. CompositeRenderer::draw saves/restores
+                // the full OM/state set around our quad (proven in every
+                // session since v4.6) — the exit state the engine/CS chain
+                // expects is restored before we return.
+                if (!m_composited_this_frame)
+                {
+                    auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
+                    auto* rt = renderer ? &renderer->GetRuntimeData() : nullptr;
+                    if (rt && rt->context && CompositeRenderer::instance().ensure(rt->forwarder))
+                    {
+                        auto& fb = rt->renderTargets[RE::RENDER_TARGET::kFRAMEBUFFER];
+                        if (fb.RTV)
+                        {
+                            CompositeRenderer::instance().draw(rt->context, fb.RTV);
+                            ++m_end_frame_composites;
+                            if (m_end_frame_composites == 1 ||
+                                m_end_frame_composites % Heartbeat_Frames == 0)
+                                logger::info("Proto v6.42 end_frame composite #{} (kFRAMEBUFFER; zero "
+                                             "pass dependence — the panel follows the inventory only)",
+                                    m_end_frame_composites);
+                        }
+                    }
+                }
 
                 if (m_menu_passes != 0 || m_p_passes != 0)
                 {
@@ -1135,10 +1302,24 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 // Run 54: the thunk reads this right after on_pass returns
                 // (same render-thread call) to decide the passthrough.
                 m_last_pass_p_geom = p_geom;
+                // v6.22 ghost layer: world-frame passes are checked against
+                // the P graph even with the panel closed, so the thunk can
+                // drop them — the double must not reach pixels in normal
+                // play. Skipped in menu frames (P has no menu-stream passes
+                // — runs 29/30) and when the panel-open whitelist already
+                // claimed the pass (the v6.19 clause suppresses those
+                // anyway; saves a second ancestry walk).
+                m_last_pass_ghost = !m_in_frame && !p_geom &&
+                                    PInstance::instance().ghost_should_suppress(pass->geometry);
 
                 // Outside the menu bracket only P passes are accepted — the
-                // studio target must never accumulate world scenery.
-                if (!m_in_frame && !p_geom)
+                // studio target must never accumulate world scenery. Ghost
+                // passes bail here too: they are neither panel content nor
+                // replay candidates — the thunk drops them via
+                // m_last_pass_ghost.
+                if (!m_in_frame && !p_geom && !m_last_pass_ghost)
+                    return false;
+                if (m_last_pass_ghost)
                     return false;
 
                 ++m_passes_seen;
@@ -1159,19 +1340,25 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     // pointers outlived the light objects after an item
                     // change and CS's GeometrySetupConstantPointLights
                     // crashed on them).
+                    // v6.53: MENU-LIGHT ARMING RETIRED. Highlighting an item
+                    // used to overwrite m_studio_light_array with the item's
+                    // own light array — which means every "highlight = lit"
+                    // observation was the MENU lights drawing the figure
+                    // (v6.18), and the self-built lights were never actually
+                    // exercised while the menu lights existed. With the
+                    // override now unconditional (v6.47), leaving this armed
+                    // made the two sources fight: highlight frames drew with
+                    // menu lights, no-highlight frames with our lights.
+                    // Removed so the self-built lights get a clean test.
                     if (pass->shader && std::to_underlying(pass->shader->shaderType.get()) == 6 &&
-                        pass->sceneLights && pass->numLights > 0)
+                        pass->sceneLights && pass->numLights > 0 && !m_studio_light_array)
                     {
                         m_studio_light_array = pass->sceneLights;
                         m_studio_light_count = pass->numLights;
                         m_studio_lights_fresh = true;
-                        if (!m_p_studio_lights_logged)
-                        {
-                            m_p_studio_lights_logged = true;
-                            logger::info("Proto v6.21 studio lights armed from the item preview: {} menu "
-                                         "lights",
-                                pass->numLights);
-                        }
+                        logger::info("Proto v6.53 legacy menu-light arming SKIPPED (self-built lights "
+                                     "active; {} menu lights seen)",
+                            pass->numLights);
                     }
                     // Discovery logging: one line per menu geometry per panel
                     // open; steady-state frames only advance the counters.
@@ -1246,14 +1433,18 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     target.destroy();
                     logger::info("Proto v3 studio target released ({})", reason);
                 }
-                // v4.1: the captured composite target belongs to the session
-                // too — release it so a changed resolution is recaptured on
-                // the next open.
-                if (s_panel_rtv)
-                {
-                    s_panel_rtv->Release();
-                    s_panel_rtv = nullptr;
-                }
+                // v6.41: the captured composite target now PERSISTS across
+                // panel open/close — the highlight-decoupling lever that
+                // replaced the crashed v6.40 exit-OM capture. The format-28
+                // instance pool only reallocates on resolution changes; the
+                // replay path already re-captures on any pointer change
+                // (v4.1), so a stale pointer self-heals on the first pass —
+                // and releasing it here was what forced every panel open to
+                // wait for a fresh item-highlight burst before the fallback
+                // composite could run. Only an actual resolution change
+                // invalidates the texture (the crash guard: the pool frees
+                // its textures then — handled by the replay-path pointer
+                // check + recapture, never by a dangling Release here).
                 m_target_failed = false;
                 m_session_replays = 0;
                 m_p_draw_logged = false;
@@ -1299,16 +1490,25 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // studio-light-mutated pass (crash-2026-10-02-22-00-30: P's
             // armor BSTriShape, null light deref). Only the studio draw
             // renders P; the engine never touches these passes again.
-            static bool should_suppress_passthrough(bool replay, bool p_geom, bool in_menu_frame)
+            static bool should_suppress_passthrough(bool replay, bool p_geom, bool ghost,
+                bool in_menu_frame)
             {
-                return replay && (p_geom || !in_menu_frame);
+                // v6.19: while the panel is open the studio is P's only
+                // renderer — the engine must not draw its passes anywhere
+                // (world frames would show the double; menu frames include
+                // the accumulator-cleanup draws that crashed run 53's
+                // session). v6.22: the same silence now covers panel-closed
+                // world frames — the ghost layer arms only after its warmup
+                // proved the engine initialized the clone's device buffers.
+                return (replay && (p_geom || !in_menu_frame)) || ghost;
             }
 
             static void thunk_site0(RE::BSRenderPass* pass, std::uint32_t technique, bool alpha_test,
                 std::uint32_t render_flags)
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 0);
-                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom, instance().m_in_frame))
+                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom,
+                        instance().m_last_pass_ghost, instance().m_in_frame))
                     call_site_original(0, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 0);
@@ -1317,7 +1517,8 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 std::uint32_t render_flags)
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 1);
-                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom, instance().m_in_frame))
+                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom,
+                        instance().m_last_pass_ghost, instance().m_in_frame))
                     call_site_original(1, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 1);
@@ -1326,7 +1527,8 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 std::uint32_t render_flags)
             {
                 const bool replay = instance().on_pass(pass, technique, alpha_test, render_flags, 2);
-                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom, instance().m_in_frame))
+                if (!should_suppress_passthrough(replay, instance().m_last_pass_p_geom,
+                        instance().m_last_pass_ghost, instance().m_in_frame))
                     call_site_original(2, pass, technique, alpha_test, render_flags);
                 if (replay)
                     instance().replay_after_original(pass, technique, alpha_test, render_flags, 2);
@@ -1380,6 +1582,231 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // the draw every bracketed frame; this function binds the
             // studio OM, clears once per frame, draws, and restores — no
             // dependency on any engine pass arriving.
+            // v6.49: the self-built studio lights, REGISTERED WITH THE
+            // ENGINE. Run 82 falsified the radius theory (4096 changed
+            // nothing): CS's LightLimitFix feeds its shader light buffer
+            // from ShadowSceneNode::activeLights (LightLimitFix.cpp:492) —
+            // the world's light ledger — NOT from pass->sceneLights, and
+            // the v6.47 shells were never in it. That is also why
+            // highlighting works: the item's own lights ride the native
+            // pass-array path, ours rode nothing. Fix: create the two
+            // NiPointLights exactly as before, then hand them to the
+            // ENGINE's own registry — ShadowSceneNode::AddLight(NiLight*)
+            // (CLib REL 99691/106325, the non-shadow/never-fade overload) —
+            // which builds the BSLight wrapper, fills every field, and
+            // files it in activeLights. Both channels now carry our
+            // lights: LLF's buffer AND the native pass-assignment path.
+            // The manual shells are retired; the wrapper comes back from
+            // GetPointLight for the pass-array override.
+            // v6.50: shell fetch scans BOTH queues. Run 83: GetPointLight
+            // scans activeLights only, but the engine's AddLight files new
+            // lights into lightQueueAdd first (the per-frame light update
+            // promotes them) — same-frame fetch always missed, the sticky
+            // failure then killed the lights for the whole session (run 83
+            // log: one warn, rig fell back to the dungeon directional).
+            static RE::BSLight* fetch_light_wrapper(RE::ShadowSceneNode* a_node, RE::NiLight* a_light)
+            {
+                if (!a_node)
+                    return nullptr;
+                auto& rt = a_node->GetRuntimeData();
+                for (auto& e : rt.activeLights)
+                    if (e && e->light.get() == a_light)
+                        return e.get();
+                for (auto& e : rt.lightQueueAdd)
+                    if (e && e->light.get() == a_light)
+                        return e.get();
+                return nullptr;
+            }
+
+            void ensure_studio_lights()
+            {
+                auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
+                if (!renderer)
+                    return;
+                auto* ui3d = RE::UI3DSceneManager::GetSingleton();
+                RE::NiNode* host = ui3d ? ui3d->menuObjects[0].get() : nullptr;
+                RE::ShadowSceneNode* world_node =
+                    RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0];
+                if (!host || !world_node)
+                    return;
+
+                // Phase 1: create once (no sticky failure — a same-frame
+                // queue miss must not kill the lights for the session).
+                if (!m_studio_light_ni[0] && !m_studio_lights_failed)
+                {
+                    // v6.51: a PRIVATE rig node. menuObjects[0] is an
+                    // engine root with selective-update flags — v6.50's
+                    // parent->Update() cascade was short-circuited by them
+                    // (the run-41 lesson, again): the lights' world
+                    // transforms never left the origin, so nothing lit.
+                    // The rig node is ours, fresh, no flags — and the rig
+                    // cascade below now uses UpdateDownwardPass (forced).
+                    auto* rig = RE::NiNode::Create();
+                    if (!rig)
+                    {
+                        m_studio_lights_failed = true;
+                        logger::warn("Proto v6.51 studio rig node creation failed");
+                        return;
+                    }
+                    rig->name = "CP_StudioLightRig";
+                    host->AttachChild(rig);
+                    m_studio_rig_node.reset(rig);
+                    for (std::size_t i = 0; i < Studio_Light_Count; ++i)
+                    {
+                        // v6.54: BOTH point lights. Run 87 verdict: the LEFT
+                        // screenshot (the user's chosen reference look) was
+                        // lit while shell[0] was still the queued POINT-light
+                        // wrapper (the v6.52 directional shell had not been
+                        // promoted yet) — the point lights + rig placement
+                        // ARE the proven-good configuration. The RIGHT (dark)
+                        // case appeared exactly when re-fetch picked the
+                        // promoted directional shell: its worldDirection
+                        // (Rz(-90°) guess) faces away, and lum=10081 made it
+                        // dominant — one wrong-facing ultra-bright light
+                        // beats two correct point lights to black.
+                        // Directional experiment retired; both point again.
+                        // v6.56: ENGINE SLOT CONVENTION — sceneLights[0] is
+                        // the AMBIENT slot; point lights start at index 1
+                        // (LLF: strict lights iterate sceneLights[i+1],
+                        // LightLimitFix.cpp:248; the engine SetupGeometry
+                        // treats slot 0 the same way). The v6.47-55 layouts
+                        // put the KEY at slot 0, where it was silently
+                        // treated as ambient — only the slot-1 fill light
+                        // ever contributed (the run-71+ 'lit but odd' look).
+                        // New arrangement: slot 0 = ambient fill (soft base
+                        // light, no position math), slots 1/2 = key/fill
+                        // point lights.
+                        RE::NiLight* ni = nullptr;
+                        if (i == 0)
+                        {
+                            // Slot 0: ambient base. A point light flagged
+                            // ambient — the engine reads its ambient term.
+                            auto* amb = RE::NiPointLight::Create();
+                            if (!amb)
+                            {
+                                m_studio_lights_failed = true;
+                                logger::warn("Proto v6.56 ambient light create failed");
+                                return;
+                            }
+                            amb->name = "CP_StudioAmbient";
+                            auto& ard = amb->GetLightRuntimeData();
+                            ard.diffuse = RE::NiColor(0.25f, 0.25f, 0.28f);
+                            ard.radius = { 4096.0f, 4096.0f, 4096.0f };
+                            ard.fade = 1.0f;
+                            amb->SetLightAttenuation(4096.0f);
+                            ni = amb;
+                        }
+                        else
+                        {
+                            auto* pt = RE::NiPointLight::Create();
+                            if (!pt)
+                            {
+                                m_studio_lights_failed = true;
+                                logger::warn("Proto v6.56 point light create failed");
+                                return;
+                            }
+                            pt->name = i == 1 ? "CP_StudioKey" : "CP_StudioFill";
+                            // Warm-white key, cool fill; radius covers any
+                            // rig placement, fade 2.0 for headroom (v6.48).
+                            auto& rd = pt->GetLightRuntimeData();
+                            rd.diffuse = i == 1 ? RE::NiColor(1.0f, 0.96f, 0.90f) : RE::NiColor(0.70f, 0.80f, 1.0f);
+                            rd.radius = { 4096.0f, 4096.0f, 4096.0f };
+                            rd.fade = 2.0f;
+                            pt->SetLightAttenuation(4096.0f);
+                            ni = pt;
+                        }
+                        ni->local.translate = { 0.0f, 0.0f, 0.0f };
+                        rig->AttachChild(ni);
+                        // Engine registration: the wrapper is BUILT here
+                        // (filed in lightQueueAdd, promoted to activeLights
+                        // by the next light update).
+                        world_node->AddLight(ni);
+                        m_studio_light_ni[i].reset(ni);
+                    }
+                    logger::info("Proto v6.50 studio lights created and handed to ShadowSceneNode::AddLight "
+                                 "(activeLights.size={} lightQueueAdd.size={})",
+                        world_node->GetRuntimeData().activeLights.size(),
+                        world_node->GetRuntimeData().lightQueueAdd.size());
+                }
+
+                // Phase 2: fetch the ENGINE-built wrappers — retried every
+                // window until both are found (the queue promotion happens
+                // on the engine's light-update tick, at most a frame later).
+                if (m_studio_light_count == 0)
+                {
+                    bool all = true;
+                    for (std::size_t i = 0; i < Studio_Light_Count; ++i)
+                        if (!m_studio_lights[i])
+                            m_studio_lights[i] =
+                                fetch_light_wrapper(world_node, m_studio_light_ni[i].get());
+                    for (std::size_t i = 0; i < Studio_Light_Count; ++i)
+                        if (!m_studio_lights[i])
+                            all = false;
+                    if (all)
+                    {
+                        // v6.53/v6.54: FIX THE SHELL FIELDS the engine left
+                        // stale — and RE-PATCH ON EVERY FETCH. The engine
+                        // REBUILDS its wrappers whenever the ledger is
+                        // repopulated (panel open/close cycles: activeLights
+                        // 97→99 in run 87), and every rebuilt shell starts
+                        // with lodDimmer=0 again — the run-87 log shows the
+                        // patch working on fetch 1 and the panel dark again
+                        // on fetch 2. Both light consumers multiply by
+                        // lodDimmer (LLF: light.fade *= lodDimmer; native
+                        // LOD fade), so 0 = a light that exists but
+                        // contributes exactly nothing.
+                        bool any_patched = false;
+                        for (std::size_t i = 0; i < Studio_Light_Count; ++i)
+                        {
+                            auto* shell = m_studio_lights[i];
+                            if (shell->lodDimmer != 1.0f || shell->luminance != 1.0f)
+                            {
+                                any_patched = true;
+                                logger::info(
+                                    "Proto v6.54 shell[{}] raw: lodDimmer={:.3f} lum={:.3f} portalStrict={} "
+                                    "dynamic={} pointLight={} frustrumCull=0x{:X} worldTranslate=({:.1f},{:.1f},{:.1f})",
+                                    i, shell->lodDimmer, shell->luminance, shell->portalStrict, shell->dynamic,
+                                    shell->pointLight, shell->frustrumCull, shell->worldTranslate.x,
+                                    shell->worldTranslate.y, shell->worldTranslate.z);
+                                shell->lodDimmer = 1.0f;
+                                shell->luminance = 1.0f;
+                                shell->frustrumCull = 0;
+                            }
+                        }
+                        m_studio_light_count = Studio_Light_Count;
+                        m_studio_light_array = m_studio_lights;
+                        logger::info("Proto v6.54 studio light wrappers fetched{} "
+                                     "(activeLights.size={} lightQueueAdd.size={})",
+                            any_patched ? " and PATCHED (lodDimmer=1, lum=1, no cull)" : " (fields already good)",
+                            world_node->GetRuntimeData().activeLights.size(),
+                            world_node->GetRuntimeData().lightQueueAdd.size());
+                    }
+                }
+            }
+
+            // v6.58: the studio lights are REGISTERED in the world's light
+            // ledger (v6.49, required for LLF), so the engine renders them
+            // into the WORLD whenever they sit anywhere near gameplay
+            // space — the user's run-91 report: dungeon walls lit with the
+            // panel's warm key light while the inventory was open, the
+            // patch moving as the rig moved. The rig node therefore lives
+            // FAR OUT of the world by default (parked), and only returns
+            // to the studio anchor for the duration of the P draw window —
+            // the one interval our mutate/draw/restore owns. Outside that
+            // window (panel-open non-bracket frames, panel closed, world
+            // frames) the lights are 100k units away and light nothing.
+            static constexpr float Rig_Park_Z = 100000.0f;
+
+            void park_studio_rig()
+            {
+                if (m_studio_rig_node)
+                {
+                    m_studio_rig_node->local.translate = { 0.0f, 0.0f, Rig_Park_Z };
+                    RE::NiUpdateData data{ 0.0f, RE::NiUpdateData::Flag::kDirty };
+                    m_studio_rig_node->UpdateDownwardPass(data, 0);
+                }
+            }
+
             void draw_p_proactively(RE::BSShaderAccumulator* accumulator)
             {
                 RE::NiAVObject* p_root = PInstance::instance().root();
@@ -1403,10 +1830,27 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     return;
                 m_p_drawn_this_frame = true;
 
+                // v6.58: bring the light rig back INTO the studio anchor
+                // neighborhood for the draw window (the lights are world-
+                // registered; parked they sit 100k away and light nothing —
+                // see park_studio_rig). The rig's parent is menuObjects[0],
+                // whose world is the menu-space identity cascade, so the
+                // local translate IS the accumulator-space position.
+                if (m_studio_rig_node)
+                {
+                    const RE::NiPoint3 anchor = PInstance::instance().studio_anchor();
+                    m_studio_rig_node->local.translate = anchor;
+                    RE::NiUpdateData data{ 0.0f, RE::NiUpdateData::Flag::kDirty };
+                    m_studio_rig_node->UpdateDownwardPass(data, 0);
+                }
+
                 auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
                 auto& runtime = renderer->GetRuntimeData();
                 if (!runtime.context || !runtime.forwarder)
+                {
+                    park_studio_rig();  // v6.58: pulled in above; park back out
                     return;
+                }
 
                 // Save the ambient OM pair + viewport + depth state.
                 REX::W32::ID3D11RenderTargetView* prev_rtv = nullptr;
@@ -1436,7 +1880,9 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 if (!target.rtv)
                 {
                     // No template this frame (first draw may precede any
-                    // capture); skip — the item-pass path will create it.
+                    // capture); skip — but the rig was pulled in at the top,
+                    // so park it back out before leaving (v6.58).
+                    park_studio_rig();
                     if (prev_rtv)
                         prev_rtv->Release();
                     if (prev_dsv)
@@ -1448,6 +1894,28 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
 
                 runtime.context->OMSetRenderTargets(1, &target.rtv, target.dsv);
                 runtime.context->OMSetDepthStencilState(target.ds_state, 0);
+                // v6.46: ENGINE DIRTY-BIT GUARD. Run 79 (user screenshots +
+                // log): with the self-created target and no menu-item pass
+                // context, P's bow prop and garbage-skinned geometry landed
+                // ON SCREEN outside the panel — the engine's
+                // SetupAndDrawPass re-applies the LEDGER's render target
+                // whenever ShaderFlags::DIRTY_RENDERTARGET is set (CS
+                // Deferred.cpp drives the same machinery), and with nothing
+                // having bound our private target through engine state that
+                // frame, the ledger still said kFRAMEBUFFER. The highlight
+                // window was clean precisely because the item call-site had
+                // just bound the format-28 instance through engine state.
+                // Fix: after our raw bind, CLEAR the dirty bit so the pass
+                // internals treat the OM as current (our bind stays); after
+                // the window's restore, SET it back so the engine rebuilds
+                // its own bindings next time it applies state (CS coexists
+                // with this exact handshake every frame).
+                {
+                    auto* shadow_state = RE::BSGraphics::RendererShadowState::GetSingleton();
+                    shadow_state->GetRuntimeData().stateUpdateFlags.reset(
+                        RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
+                    m_rt_dirty_guard_used = true;
+                }
                 REX::W32::D3D11_VIEWPORT viewport{ 0.0f, 0.0f,
                     static_cast<float>(target.width), static_cast<float>(target.height), 0.0f, 1.0f };
                 runtime.context->RSSetViewports(1, &viewport);
@@ -1634,7 +2102,21 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     RE::BSLight** saved_scene_lights = nullptr;
                     std::uint8_t saved_num_lights = 0;
                     std::uint8_t saved_shadow_lights = 0;
-                    const bool override_lights = m_studio_lights_fresh && m_studio_light_array;
+                    // v6.47: SELF-BUILT STUDIO LIGHTS (user direction: drop
+                    // the menu-light dependence entirely). Two persistent
+                    // NiPointLights (key + fill) created on the engine heap
+                    // via CLib's NiPointLight::Create factory, attached under
+                    // a UI3D menuObjects root so their world transforms are
+                    // live scene-graph members; each wrapped in a minimal
+                    // BSLight shell (engine-heap 0x140 bytes + the real
+                    // VTABLE_BSLight — the engine only reads fields and
+                    // IsShadowLight inside our window). The per-pass override
+                    // now points P's passes at THIS array unconditionally —
+                    // no freshness gate, no dungeon-light fallback. The rig
+                    // below then moves the lights' NODES (the v6.37 verified
+                    // path — point lights carry a parent now).
+                    ensure_studio_lights();
+                    const bool override_lights = m_studio_light_count > 0 && m_studio_light_array;
                     if (override_lights)
                     {
                         saved_scene_lights = pass->sceneLights;
@@ -1643,14 +2125,197 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                         pass->numLights = m_studio_light_count;
                         pass->numShadowLights = 0;
                         pass->sceneLights = m_studio_light_array;
+                        // v6.55: PER-PASS shell patch. Run 88: the engine's
+                        // light-update tick keeps rewriting lodDimmer back to
+                        // 0 on our shells (they are foreign to its LOD fade
+                        // bookkeeping), so a fetch-time patch is always one
+                        // tick behind. The pass window is OURS — re-assert
+                        // the fields right here, after any engine tick and
+                        // before the draw, every pass.
+                        for (std::uint32_t i = 0; i < pass->numLights && i < 4; ++i)
+                        {
+                            if (auto* shell = pass->sceneLights ? pass->sceneLights[i] : nullptr)
+                            {
+                                shell->lodDimmer = 1.0f;
+                                shell->luminance = 1.0f;
+                                shell->frustrumCull = 0;
+                            }
+                        }
                         if (!m_p_studio_lights_logged)
                         {
                             m_p_studio_lights_logged = true;
-                            logger::info("Proto v6.21 studio lights applied to P passes: {} menu lights",
+                            logger::info("Proto v6.47 studio lights applied to P passes: {} SELF-BUILT "
+                                         "point light(s) (menu-light dependence removed)",
                                 m_studio_light_count);
                         }
                     }
+                    // v6.33: frontal light rig on the ACTIVE lights — menu
+                    // lights when the freshness gate arms, the pass's own
+                    // (dungeon) lights otherwise. The v6.32 pre-loop rig
+                    // shared the freshness gate and never fired in steady
+                    // state (the item preview does not re-render every menu
+                    // frame — run 43), leaving the figure on its dungeon
+                    // lights: dim and side-lit (run 65 screenshot). Per-pass
+                    // save/mutate/restore: the world's own draws happen
+                    // outside this window and never see the repositioning.
+                    //
+                    // v6.37: WHERE the shader reads light positions from.
+                    // CS source (LightLimitFix.cpp:275 + InverseSquare
+                    // BSLight_GetLuminance) reads NiLight::world.translate —
+                    // the NiAVObject node transform; CS LightEditor moves
+                    // lights via parent->local.translate + parent->Update.
+                    // BSLight::worldTranslate (v6.33-6.36's target) is the
+                    // CULLER's copy: run 70 proved writing it does nothing
+                    // to the shading (rig landed exactly, pixels unchanged).
+                    // So the rig now mutates the NiLight node itself:
+                    // set local.translate relative to its parent and cascade
+                    // the update, exactly the LightEditor-verified path.
+                    RE::NiPoint3 saved_light_pos[4] = {};
+                    RE::NiPoint3 saved_node_pos[4] = {};
+                    RE::NiNode* saved_node_parent[4] = {};
+                    bool node_mutated[4] = {};
+                    const std::uint32_t rig_count = pass->numLights < 4 ? pass->numLights : 4;
+                    {
+                        if (auto* ui3d = RE::UI3DSceneManager::GetSingleton(); ui3d && ui3d->camera)
+                        {
+                            const auto& w2c = ui3d->camera->GetRuntimeData().worldToCam;
+                            // v6.36: the w2c ROWS are NOT unit vectors (run 69
+                            // arithmetic: |row0|=6.27, |row1|=11.15 — they carry
+                            // the menu-camera's zoom scale). Normalize; the
+                            // PLANE directions were always right (+X right, +Z
+                            // up, -Y into the screen).
+                            RE::NiPoint3 right{ w2c[0][0], w2c[0][1], w2c[0][2] };
+                            RE::NiPoint3 up{ w2c[1][0], w2c[1][1], w2c[1][2] };
+                            RE::NiPoint3 forward{ w2c[2][0], w2c[2][1], w2c[2][2] };
+                            const float right_len = right.Length();
+                            const float up_len = up.Length();
+                            const float forward_len = forward.Length();
+                            if (right_len > 1e-6f)
+                                right *= 1.0f / right_len;
+                            if (up_len > 1e-6f)
+                                up *= 1.0f / up_len;
+                            if (forward_len > 1e-6f)
+                                forward *= 1.0f / forward_len;
+                            const RE::NiPoint3 anchor = PInstance::instance().studio_anchor();
+                            RE::NiUpdateData update_data{ 0.0f, RE::NiUpdateData::Flag::kDirty };
+                            for (std::uint32_t i = 0; i < rig_count; ++i)
+                            {
+                                auto* light = pass->sceneLights ? pass->sceneLights[i] : nullptr;
+                                if (!light)
+                                    continue;
+                                saved_light_pos[i] = light->worldTranslate;
+                                const float spread =
+                                    (static_cast<float>(i) - (rig_count - 1) * 0.5f) * 45.0f;
+                                const RE::NiPoint3 light_target =
+                                    anchor - forward * 70.0f + up * 50.0f + right * spread;
+                                light->worldTranslate = light_target;  // culler copy — kept for free
+                                // v6.37/v6.55: the node path the shaders
+                                // actually read. v6.55: write the LIGHT
+                                // NODE's own local (not the shared rig
+                                // parent's) — the v6.51 shared-parent writes
+                                // overwrote each other (both shells ended at
+                                // light[1]'s position). Each light node now
+                                // owns its placement; the rig parent stays at
+                                // identity and only carries the cascade.
+                                if (auto* ni_light = light->light.get(); ni_light)
+                                {
+                                    // v6.59: the rig parent sits AT the
+                                    // anchor (v6.58 pull-in), so the node's
+                                    // local must be the OFFSET from the
+                                    // anchor (spread/up/forward only) —
+                                    // writing the full accumulator-space
+                                    // target here double-counted the anchor
+                                    // and pushed the lights twice as far
+                                    // away (the run-92 dim look).
+                                    const RE::NiPoint3 local_offset{ right * spread + up * 50.0f -
+                                                                     forward * 70.0f };
+                                    ni_light->local.translate = local_offset;
+                                    if (ni_light->parent)
+                                    {
+                                        saved_node_pos[i] = ni_light->local.translate;
+                                        saved_node_parent[i] = ni_light->parent;
+                                        ni_light->parent->UpdateDownwardPass(update_data, 0);
+                                        node_mutated[i] = true;
+                                    }
+                                }
+                            }
+                            if (!m_p_frontal_logged)
+                            {
+                                m_p_frontal_logged = true;
+                                logger::info(
+                                    "Proto v6.37 frontal light rig: {} light(s) repositioned "
+                                    "(menu-lights={}); anchor=({:.1f},{:.1f},{:.1f}) "
+                                    "row_lengths=({:.2f},{:.2f},{:.2f})",
+                                    rig_count, override_lights ? 1 : 0, anchor.x, anchor.y, anchor.z,
+                                    right_len, up_len, forward_len);
+                                for (std::uint32_t i = 0; i < rig_count; ++i)
+                                {
+                                    auto* light = pass->sceneLights ? pass->sceneLights[i] : nullptr;
+                                    if (!light)
+                                        continue;
+                                    // v6.37 light census: type (NiRTTI chain tells
+                                    // NiDirectionalLight vs NiPointLight), radius,
+                                    // fade, parent chain — the facts needed to
+                                    // decide between "reposition" and "own light".
+                                    const char* rtti_name = "<null>";
+                                    const char* rtti_base = "<null>";
+                                    float radius_x = 0.0f, fade = 0.0f;
+                                    const char* parent_name = "<no node>";
+                                    RE::NiPoint3 ni_world{ 0.0f, 0.0f, 0.0f };
+                                    if (auto* ni_light = light->light.get()) {
+                                        if (const auto* rtti = ni_light->GetRTTI()) {
+                                            rtti_name = rtti->name;
+                                            rtti_base = rtti->baseRTTI ? rtti->baseRTTI->name : "-";
+                                        }
+                                        const auto& rd = ni_light->GetLightRuntimeData();
+                                        radius_x = rd.radius.x;
+                                        fade = rd.fade;
+                                        parent_name = ni_light->parent ? ni_light->parent->name.c_str()
+                                                                       : "<no parent>";
+                                        // v6.51: the ACTUAL shader-side position.
+                                        // If this stays at/near the origin while
+                                        // bs_new moved, the cascade is still
+                                        // being short-circuited.
+                                        ni_world = ni_light->world.translate;
+                                    }
+                                    logger::info(
+                                        "  light[{}]: point={} ambient={} dynamic={} lum={:.3f} "
+                                        "lodDimmer={:.3f} rtti={} base={} radius.x={:.1f} fade={:.3f} "
+                                        "parent='{}' bs_old=({:.1f},{:.1f},{:.1f}) "
+                                        "bs_new=({:.1f},{:.1f},{:.1f}) ni_world=({:.1f},{:.1f},{:.1f}) "
+                                        "node_moved={}",
+                                        i, light->pointLight, light->ambientLight, light->dynamic,
+                                        light->luminance, light->lodDimmer, rtti_name, rtti_base, radius_x, fade,
+                                        parent_name, saved_light_pos[i].x, saved_light_pos[i].y,
+                                        saved_light_pos[i].z, light->worldTranslate.x,
+                                        light->worldTranslate.y, light->worldTranslate.z,
+                                        ni_world.x, ni_world.y, ni_world.z,
+                                        node_mutated[i] ? 1 : 0);
+                                }
+                            }
+                        }
+                    }
                     call_site_original(1, pass, pass->passEnum, (pass->passEnum & 0x40) != 0, 0x200);
+                    // v6.33: restore the positions FIRST (the same array the
+                    // next pass may reuse), then the array swap. v6.37: the
+                    // node path restores local.translate + re-cascades too.
+                    RE::NiUpdateData restore_data{ 0.0f, RE::NiUpdateData::Flag::kDirty };
+                    for (std::uint32_t i = 0; i < rig_count; ++i)
+                    {
+                        auto* light = pass->sceneLights ? pass->sceneLights[i] : nullptr;
+                        if (!light)
+                            continue;
+                        light->worldTranslate = saved_light_pos[i];
+                        // v6.55: restore the LIGHT NODE's own local (matches
+                        // the new per-node placement above). For the
+                        // self-built lights the saved value IS the fresh one
+                        // (each node owns its placement), so the cascade
+                        // simply re-affirms it.
+                        if (node_mutated[i] && saved_node_parent[i])
+                        {
+                            saved_node_parent[i]->UpdateDownwardPass(restore_data, 0);
+                        }
+                    }
                     if (override_lights)
                     {
                         pass->sceneLights = saved_scene_lights;
@@ -1671,6 +2336,21 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 runtime.context->OMSetRenderTargets(1, &prev_rtv, prev_dsv);
                 runtime.context->OMSetDepthStencilState(prev_ds, prev_stencil_ref);
                 runtime.context->RSSetViewports(prev_viewport_count, &prev_viewport);
+                // v6.46: hand the ledger back — let the engine rebuild its
+                // own render-target bindings the next time it applies state
+                // (the same handshake CS's Deferred uses every frame).
+                if (m_rt_dirty_guard_used)
+                {
+                    m_rt_dirty_guard_used = false;
+                    RE::BSGraphics::RendererShadowState::GetSingleton()
+                        ->GetRuntimeData()
+                        .stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
+                }
+                // v6.58: the draw window is over — park the light rig back
+                // OUT of the world (100k units up) so the engine's light
+                // ticks can never render the studio lights into the world
+                // scene (the run-91 dungeon-wall report).
+                park_studio_rig();
 
                 if (prev_ds)
                     prev_ds->Release();
@@ -1872,18 +2552,19 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                     m_cleared = true;
                 }
 
-                // Run 37 (v6.0): the item pass itself is NO LONGER replayed
-                // into the studio — the user's acceptance is a character
-                // panel that shows ONLY P (the highlighted item keeps its
-                // normal preview; the passthrough above already drew it
-                // there). The studio OM window is kept open for exactly one
-                // thing: the proactive P draw, once per studio frame.
-                if (Proto::instance().panel_frame_active())
-                {
-                    if (auto* ui3d = RE::UI3DSceneManager::GetSingleton())
-                        draw_p_proactively(ui3d->unk10.get());
-                }
-
+                // Run 37 (v6.0) / v6.57: the item pass itself is NOT replayed
+                // into the studio, and the REPLAY WINDOW NO LONGER DRAWS OR
+                // COMPOSITES. Run 90 verdict (user comparison): the replay
+                // window's P draw ran in the item pass's post-original
+                // context (its light constants / strict buffer freshly
+                // active), producing the dark highlight-window panel — while
+                // the no-highlight window (end_frame only) was correct. The
+                // user's architecture call: with menu-light arming retired
+                // (v6.53), item replay retired (v6.0), and the end_frame
+                // kFRAMEBUFFER composite proven (v6.42+), thunk_site has
+                // exactly ONE remaining duty — P/ghost passthrough
+                // suppression — and the panel draws/composites ONLY in
+                // end_frame. One path, one context, no cross-contamination.
                 // No dirty flags are left, so nothing re-applies and our bind
                 // is expected to survive; verify once per frame.
                 REX::W32::ID3D11RenderTargetView* post_rtv = nullptr;
@@ -1906,19 +2587,13 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
                 runtime.context->OMSetDepthStencilState(prev_ds_state, prev_stencil_ref);
                 runtime.context->RSSetViewports(1, &prev_viewport);
 
-                // v4.5: composite HERE — inside the original call, with the
-                // call-site instance still bound. The passthrough wrote the
-                // item's pixels into THIS target microseconds ago and they
-                // ARE visible on screen, so whatever merges this instance
-                // reads it after this point; a quad drawn now rides the same
-                // merge. Runs 23/24 falsified every later placement: at
-                // end_frame the merge has already happened inside the
-                // original call (the run-24 rasterizer line — cull=1,
-                // CullNone — also proves rasterization was never the
-                // blocker, retracting the v4.4 winding diagnosis).
-                if (CompositeRenderer::instance().ensure(runtime.forwarder))
-                    CompositeRenderer::instance().draw(runtime.context, prev_rtv);
-
+                // v4.5/v6.57: the IN-REPLAY COMPOSITE IS RETIRED. The panel
+                // composites ONLY at end_frame into kFRAMEBUFFER (v6.42,
+                // proven) — keeping a second composite source here meant
+                // highlight windows drew the quad into a replay-window
+                // context the run-90 comparison showed dark. Menu-only gate
+                // retained in comment for history; world frames never
+                // composite here anymore at all.
                 if (prev_ds_state)
                     prev_ds_state->Release();
                 prev_rtv->Release();
@@ -1959,6 +2634,30 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             bool m_srv_logged = false;
             bool m_binding_logged = false;
             bool m_in_frame = false;
+            // v6.38: set by the in-replay composite, consumed by end_frame's
+            // no-menu-pass fallback — one composite per studio frame.
+            bool m_composited_this_frame = false;
+            std::uint32_t m_end_frame_composites = 0;
+            // v6.44: one-shot traces for the self-create block's skip paths
+            // (run 77: the block skipped with zero log lines — silence made
+            // the skip path unidentifiable).
+            bool m_selfcreate_trace_logged = false;
+            bool m_fb_texture_null_logged = false;
+            // v6.46: the dirty-bit guard fired this studio window (paired
+            // set-back at the restore).
+            bool m_rt_dirty_guard_used = false;
+            // v6.47: the self-built studio lights. Shells live for the
+            // session (render thread only); the NiLights are owned by the
+            // scene graph (menuObjects[0]) AND these pointers (the shell's
+            // NiPointer holds one ref, these hold another — detach would
+            // need both cleared; despawn scope is session end, where leak-
+            // on-exit is acceptable for the proto).
+            RE::BSLight* m_studio_lights[Studio_Light_Count] = {};
+            RE::NiPointer<RE::NiLight> m_studio_light_ni[Studio_Light_Count];
+            // v6.51: the private rig node the lights hang from — fresh,
+            // flag-free, so forced cascades actually move them.
+            RE::NiPointer<RE::NiNode> m_studio_rig_node;
+            bool m_studio_lights_failed = false;
             bool m_p_draw_logged = false;
             bool m_p_binding_logged = false;
             bool m_p_drawn_this_frame = false;
@@ -1968,10 +2667,17 @@ float4 ps_main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target {
             // it (same render-thread call) to keep the engine from ever
             // drawing P's passes (world double + menu teardown crash).
             bool m_last_pass_p_geom = false;
+            // v6.22 ghost layer: the pass just classified against the P
+            // graph in a WORLD frame with the panel closed — the thunk
+            // drops it (the warmup-guarded read lives in
+            // PInstance::ghost_should_suppress).
+            bool m_last_pass_ghost = false;
             // Run 54: once-per-open marker for the no-root early return in
             // draw_p_proactively — a silent kNone here is what swallowed
             // run 53's steady-state draws without a single log line.
             bool m_p_no_root_logged = false;
+            // v6.33: once-per-session marker for the frontal light rig log.
+            bool m_p_frontal_logged = false;
             // Run 53/56: the item preview's menu lights — the studio
             // lighting for P's passes (whose own lights are dungeon/world
             // lights, thousands of units from the menu-space fragments the

@@ -25,7 +25,14 @@ namespace CharacterPanelProto
         // BSLightingShader passes are replayed into the persistent studio
         // target AFTER the original call (v2.5 order), so the visible frame
         // is untouched and the target stays current every menu frame.
+        // v6.39: manual fallback only — the panel's primary lifecycle is
+        // the inventory menu (open with it, close with it, MenuSink).
         void toggle_panel();
+
+        // v6.39: the panel's primary entry — the inventory menu opened.
+        // Idempotent: an already-open panel is left alone (F7 may have
+        // opened it first). Game thread (UI event sink).
+        void open_panel(std::string_view reason);
 
         // F8: one-shot debug readback of the studio target to a TGA
         // (synchronous GPU readback — one frame hitch, not part of the

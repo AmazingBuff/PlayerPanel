@@ -287,6 +287,236 @@ DLL 已部署 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`
   体 + 当帧新鲜度门;②级联后按 bound 中心把根平移 `anchor − center`
   居中,再级联供蒙皮读取。判读见
   [stage2-p-instance-plan.md](stage2-p-instance-plan.md) §0ad。
+- **v6.22(2026-10-02 晚 DLL,MD5 b38bc09a…,run 57 已验证——替身消失)=
+  幽灵化第一层(用户插入优先项)**:克隆体世界像素全抑制——透传抑制从"面
+  板开着"扩展到全会话:新 `is_p_descendant`(纯祖先链,无 skin 门,连背上
+  武器/箭袋挂件一起隐藏)+ 预热窗(世界流 P pass 攒满 128 个才武装,
+  每个到达都证明引擎刚画过它、缓冲在初始化,run 50 教训)+ 仅
+  kAttached 参与(fail-open:预热不达标则替身保持可见但摄影棚供给无损);
+  v6.19 面板内条款不动;spawn 重置预热,面板关闭的菜单帧不参与。
+- **v6.23(2026-10-02 晚 DLL,MD5 3cc24da1…,run 57 验证——钉桩执行但
+  世界侧仍可交互,T-pose 折叠)= AI 钉桩 + 摄影棚 T-pose**:钉桩
+  (kMovementBlocked/kAttackingDisabled/kCastingDisabled +
+  SetActivationBlocked + StopCombat)在宽限转换点执行(日志为证)但用户
+  仍遇到可交互克隆;SetCollision 证伪(只改 formFlags 记录标志,零运行
+  时效果);T-pose 头在地面(74 骨骼 / 3 skin root 暴露跨参照系污染 +
+  root 覆写两个错误)。**主嫌疑:存档残留克隆**——PlaceObjectAtMe 的引
+  用随存档持久化,旧会话存档把未钉桩的旧克隆体带回(可见、可交互、自
+  由行动)。
+- **v6.24(2026-10-03 凌晨 DLL,MD5 5ebe188a…,run 58 验证——T-pose 姿
+  势修复成功但朝向背对;交互目标是现役克隆,标志位实证无效)= 残留清扫
+  + T-pose 修复**:①T-pose 按 skin root 分组重置生效(人物直立);②交
+  互目标名字 = 标记名 "CharacterPanel_Clone" = 现役克隆体本体,
+  SetActivationBlocked/BOOL_FLAGS 在该 actor 上无效;幽灵化正常(不可
+  见);清扫零删除(旧残留不在到访 cell),保留;③面板开关零
+  despawn——面板状态不控制克隆体世界存在。
+- **v6.25(2026-10-03 DLL,MD5 3b25cbbb…,run 59 验证通过——世界中不再
+  遇见克隆体)= 几何隔离**:AI 标志压不住,换距离杠杆——每帧把克隆体
+  泊到玩家正下方 8000 单位(run-31 已验证配置:该深度世界仍收它、pass
+  照发、缓冲照常初始化),交互/对话/碰撞(数百单位射程)天然不可达;
+  kAttached 每 tick 重泊(引擎更新链会覆盖一次性 SetPosition,run 38);
+  摄影棚绘制时重摆根,与泊位解耦;幽灵化/标志/标记名/清扫保留为次要防
+  线。另:用户实测 + 代码链路证实"面板打开时克隆体完全消失"的机制 =
+  pose_for_studio 的根 local 写入(锚点)对静止 actor 持续存在,世界侧
+  交互/碰撞读到的 3D 边界被整体拖离(非透明)。
+- **v6.26(2026-10-03 DLL,MD5 c78b2028…,run 60 验证——取景失败:人物
+  出画面板全黑)= T-pose 朝向 + 取景解算**:朝向 Rz(180°)→0°(T-pose
+  授权朝向与图驱动相反);取景按 目标占比 × 相机深度 × 视锥 tanHalfY ÷
+  body_r 解算——但深度用了 camera 节点 world.translate,与真实视变换脱
+  节(run 36:矩阵平移在原点),深度失真 → 出画;标定转储随游戏重启被
+  日志截断吞掉。
+- **v6.27(2026-10-03 DLL,MD5 f3efed14…,run 61 验证——人物入画、朝向
+  成立,但位置随物品移动 + 面板泄漏到世界)= 取景深度换源**:深度 = 锚
+  点在 worldToCam 第 3 行上的投影取模长(矩阵平移在原点 → 无平移项约
+  定可错、符号免疫,与引擎投影同源)。
+- **v6.28(2026-10-03 DLL,MD5 3854fcbf…,run 62 验证——固定锚点/菜单限
+  定合成生效,但 viewFrustum 读数崩掉尺寸)= 固定视轴锚点 + 菜单限定合
+  成**:①锚点 = 视轴上 Studio_Depth=485 处(眼在原点 + worldToCam 第 3
+  行为视线;合成四边形把整幅 studio 目标挤压进面板矩形 → 视轴点
+  NDC(0,0) = 面板正中)——人物位置/尺寸与所选物品彻底解耦,物品扫描
+  从 pose 退役;②合成加 `m_in_frame` 门控(世界帧被抑制的 P pass 曾把
+  面板画到世界 HDR 目标上);用户确认两项均解决。
+- **v6.29(2026-10-03 DLL,MD5 f640ba0c…,run 63 验证——物品解耦/菜单限
+  定/不可达全部成立,唯人物过大偏低只见腿)= 视锥半角标定**:
+  `Studio_TanHalfY=0.605` 渲染证据标定;有效标定入档:body_r=138.4
+  (T-pose scale=1 含武器)、w2c_t=-15(眼在原点后方 15)。
+- **v6.30(2026-10-03 DLL,MD5 4dd619fc…,run 64 验证——面板位置正确但只
+  有一半高度;开面板退出游戏崩溃)= 面板右移 + 蒙皮对齐(用户红框决
+  策)**:①面板矩形 58-88% × 12-68% → **73-99% × 5-96%**(右侧竖条);
+  ②对齐基准改为**仅蒙皮网格包围盒**(`measure_skinned_bound`,武器/箭
+  袋不再拖偏中心);③尺寸改直接标定常量 `Studio_Figure_Scale = 0.70`
+  (run 63 渲染证据:1.80 时视野只装下 45% 身体),公式链退役。
+- **v6.31(2026-10-03 DLL,MD5 c0eaf4cb…,run 65 验证——半面板修复成立;
+  人物拉长 + 灯光偏侧 + 回主菜单仍崩)= CB 分离 + 退出生命周期**:①合
+  成 CB 的 y 分量身兼两职(VS 的矩形底边 / PS 的 HDR 标志),每帧被
+  `out[1]=hdr` 覆盖 → LDR 面板从屏幕中线画起(半面板;此 bug 自 v4.6 存
+  在)——CB 扩为 8 浮点,`g_flags.x` 载 HDR 标志;②消息处理器新增 case
+  10/11/12(SKSE kShutdown/kExitGame/kQuitGame)→ 强制关面板 + despawn。
+- **v6.32(2026-10-03 DLL,MD5 58b98262…,run 66 验证——比例/崩溃修复成
+  立;灯光仍偏 + 主菜单残留面板)= 纵横比窗口 + 正面灯光 + 存活检查**:
+  ①合成 PS 采样 x 范围缩至 (MaxX-MinX)/(MaxY-MinY)(g_flags.y)——消各
+  向异性拉长;②scale 重标定 0.35(T-pose 臂展在窄窗的宽度约束);③正
+  面灯光 rig(与新鲜度门共闸——run 66 证实该闸稳态常闭,rig 不生效);
+  ④pump 游戏线程存活检查(kAttached 时克隆 ref/3D 丢失即 disarm)——
+  run 65 crash 的渲染侧防线,生效。
+- **v6.33(2026-10-03 DLL,MD5 b03c0319…,run 67 验证——rig 触发(2 灯移
+  位,menu-lights=1 新鲜度门竟 armed)但人物背光;主菜单残留一帧;SKSE
+  消息 9-15 零条 = 退出消息值不可靠)= 每 pass 灯光 rig + 世界丢失关面
+  板**:灯光位置突变作用于 pass 实际灯光,同索引保存/恢复。
+- **v6.34(2026-10-03 DLL,MD5 8995f508…,run 68 验证——正面受光成立、主
+  菜单零帧成立;人物背对玩家)= 朝向翻回 π + 主菜单即关 + 灯光诊断**:
+  ①灯光 rig 位置已验证(日志),人物仍背光 ⇒ **bind pose 面朝 away**
+  (该判断后经 run 68 截图证伪:Rz π 时发辫+背弓可见 = 面朝 away,朝向
+  应为 Rz 0,见 v6.35);②pump 增加主菜单检查:
+  `IsMenuOpen(MainMenu::MENU_NAME="Main Menu")` 即 despawn +
+  close_panel——主菜单出现的当帧关面板(克隆 3D 检查晚一帧,run 67 残
+  留的那一帧由此消除);③灯光诊断:rig 一次性记录每盏灯的
+  point/ambient 标志、luminance、新旧位置。
+- **v6.35(2026-10-03 DLL,MD5 274e5a8b…,run 69 已验证——朝向已对,
+  真缺陷是顶光)= 朝向定稿 Rz(0)**:run 68 截图(发辫+背弓可见)证实
+  Rz(π) 面朝 away;综合两轮观察(Rz 0 时用户看到的正面当时灯尚在背后,
+  Rz π 灯已修正到玩家侧),**正确朝向 = Rz(0)**——`Studio_Facing_Z_Rad`
+  翻回 0,与已验证的正面灯光 rig 配合。判读见
+  [stage2-p-instance-plan.md](stage2-p-instance-plan.md) §0as。
+- **v6.36(2026-10-03 DLL,MD5 a7d86888…,run 70 已验证——灯位精确到位
+  画面零变化)= rig 基向量归一化**:run 69 增强截图判读**朝向已对**
+  (五官可见,正面朝相机)——"方向不对"的观感实为正面近黑;rig 日志
+  算术反解实锤根因:**worldToCam 三行非单位长**(|row0|=6.27、
+  |row1|=11.15,携带菜单相机缩放),`up×50` 实落 +557 Z、`right×±22.5`
+  实落 ±141 X → 两盏灯 74° 仰角头顶上方 = 顶光(头发/肩亮、脸黑)。
+  修复:rig 块读 w2c 三行先归一化再进偏移乘积,朝向保持 Rz(0),日志
+  追加 row_lengths 监测。判读见
+  [stage2-p-instance-plan.md](stage2-p-instance-plan.md) §0at。
+- **v6.37(2026-10-03 DLL,MD5 56b86c98…,run 71 已验证——灯光成立)=
+  rig 改走 NiLight 节点 + 灯光普查(用户方法论:先定类型→再定可调字
+  段→最后处理)**:run 70 归一化生效、灯位落点精确到设计意图,**但画
+  面零变化 = 决定性证据:着色器不消费 BSLight::worldTranslate(剔除器
+  副本)**。源码调研(CS 仓库):灯光进着色的唯一位置来源 =
+  `NiLight::world.translate`(LLF :275、GetLuminance :109);CS
+  LightEditor 移灯唯一写法 = `niLight->parent->local.translate = pos`
+  + `parent->Update`。v6.37:rig mutate 改 NiLight 节点(parent local
+  += R^T·delta + Update 级联,恢复同路);一次性灯光普查。**run 71 用
+  户确认正面受光成立**;遗留:摄影棚光照与世界内效果有差异(用户明示
+  暂不考虑,后续重点)。判读见
+  [stage2-p-instance-plan.md](stage2-p-instance-plan.md) §0au。
+- **v6.38(2026-10-03 DLL,MD5 82bb9648…,被 v6.39 取代未单独验证)=
+  面板-高亮解耦 + 读档闪现消除(用户两新 bug)**:日志定量实锤合成断
+  供——整段会话 `composite draw` 仅 1 次(开面板瞬间的物品爆发 pass),
+  稳态菜单帧 `in_menu_frame=1` 的 P pass = 0 条:合成挂在
+  replay_after_original,暂停背包 UI3D 不逐帧重画(run 43),无高亮 =
+  零 pass = 面板零合成。修复:①end_frame 括号关闭前补合成
+  (`m_composited_this_frame` 闩 + 画进持久捕获的 format-28 实例,日志
+  `end_frame composite #N`);②宽限期内经 `clone->loadedData->data3D`
+  (纯数据,0x68,虚函数禁区外)一建图就把 3D 根平移到玩家下方 8k,
+  玩家位零可见窗口。判读见
+  [stage2-p-instance-plan.md](stage2-p-instance-plan.md) §0av。
+- **v6.39(2026-10-03 DLL,MD5 7e7fac4e…,待游戏验证)= 面板生命周期
+  绑定背包菜单(用户重申:面板只依赖背包开启,随背包开而渲染、随背包
+  关而关闭)**:新增 MenuSink(BSTEventSink<MenuOpenCloseEvent>)——
+  InventoryMenu opening → open_panel("inventory opened"),closing →
+  close_panel("inventory closed");open_panel 幂等(F7 先开不重复),
+  **F7 降级为手动备用**。v6.38 的 end_frame 补合成(无高亮帧可见性)与
+  读档闪现修复(data3D 非虚提前泊位)原样保留。注意:P 构建只在未暂
+  停帧推进(run 49),首会话第一次开背包 P 可能未建成(黑矩形),关背
+  包后 pump 自动出生,第二次开背包即有人物——既有全会话存活设计的预
+  期行为。判读见
+  [stage2-p-instance-plan.md](stage2-p-instance-plan.md) §0aw。
+- **v6.40(2026-10-03 DLL,MD5 c9db5882…,run 74 已证伪并撤回——两次同
+  签名 crash)= 合成目标括号出口自捕获**:run 73 日志证明 MenuSink 生
+  命周期与 end_frame 补合成都已工作,残余绑定 = s_panel_rtv 只能在
+  replay 内捕获。v6.40 尝试在括号出口读/绑 OM 自捕获(format==28 门
+  控),**crash ×2**(crash-2026-10-03-20-31-41/20-33-27):CS
+  `HDRDisplay::SetUIBuffer` 读空指针(cmp [rsi+0x16D], rsi=0),调用链
+  经 CS 的 MenuManagerDrawInterfaceStartHook(与我们共享 DrawInterface-
+  Start 入口)。机制 = 括号出口 OM 属于引擎+CS 的 UI 合成状态机,零
+  pass 帧第一次被我们碰就踩进 CS 自建版的未初始化分支。**教训:括号
+  出口的 OM 是禁区;OM 相邻操作只做在 replay 窗口内**。
+- **v6.41(2026-10-03 DLL,MD5 48d3bb6f…,run 75 部分验证——零 crash
+  成立,但解耦未达成)= 目标持久化 + 出口 OM 禁区**:撤回出口自捕获;
+  s_panel_rtv 跨面板开关持久。**用户 run-75 决定性实证:背包打开根本
+  不进 thunk_site(进入需要高亮物品)——pass 路径在无高亮下整体不存
+  在,解耦必须绕开 thunk_site(用户拍板)**。
+- **v6.42(2026-10-03 DLL,MD5 fe802ae0…,run 76 部分验证——输出端通,
+  输入端仍断)= kFRAMEBUFFER 直绘**:兜底合成目标改引擎常驻表
+  kFRAMEBUFFER.RTV(纯内存读,零 OM 探测)。**run 76 用户 RenderDoc:
+  draw 在 !target.srv 守卫早退**——摄影棚离屏目标只在 replay 内创建,
+  零 pass = 无模板无目标,P 直驱也在 !target.rtv 早退:输出端通了,
+  输入端(画布)仍绑 pass 路径。
+- **v6.43(2026-10-03 DLL,MD5 1e45279d…,run 77 验证——自建块静默跳
+  过)= 摄影棚目标自建(输入端解耦)**:end_frame 里、P 直驱之前,目
+  标不存在时从 kFRAMEBUFFER desc 自建。**run 77:自建块零执行零告警**
+  (self-created 0 条/失败 0 条,面板窗口内 P draw 0 条),跳过路径静
+  默不可辨。
+- **v6.44(2026-10-03 DLL,MD5 ac874fe9…,run 78 验证——trace 一轮定
+  因)= 诊断轮**:自建块入口一次性 trace。**run 78 实锤:`fb.texture=
+  0x0 而 fb.RTV 非空`**——CLib `RenderTargetData.texture/textureCopy`
+  裸指针在 1.6.1170 运行时引擎不填充,模板源恒空;管线其余(高亮后
+  capture→P draw→composite)无恙。
+- **v6.45(2026-10-03 DLL,MD5 6320edbf…,run 79 部分验证——面板立现
+  ✓,弓箭上屏 + 无光照)= 模板换 RTV 来源**:自建 desc 改从 fb.RTV 走
+  GetResource/GetDesc。run 79:零高亮面板立现;两缺陷——①P 的弓+蒙皮
+  垃圾几何画上屏幕(引擎 SetupAndDrawPass 在 DIRTY_RENDERTARGET 置位时
+  重应用账本目标 kFRAMEBUFFER;高亮窗口干净因物品 call-site 刚用引擎
+  状态绑过 format-28);②无光照(地牢方向光无 parent,节点 rig 移不
+  动,defer)。
+- **v6.46(2026-10-03 DLL,MD5 43d114ce…,run 80 已验证——弓箭修复成
+  立)= 引擎脏位守卫**:直驱窗口裸绑后 reset DIRTY_RENDERTARGET、恢复
+  后 set 回(CS Deferred 同款握手)。run 80 用户确认屏幕无泄漏。
+- **v6.47(2026-10-03 DLL,MD5 b655294f…,run 81 验证——灯链全通但亮
+  度近零)= 自建摄影棚灯光**:NiPointLight::Create ×2 挂 menuObjects[0]
+  + BSLight 壳(引擎堆+真虚表)+ 窗口内无条件换入,新鲜度门退役。
+  run 81 普查:创建/换入/rig 移动(node_moved=1)全活,画面仍极暗。
+- **v6.48(2026-10-04 DLL,MD5 cce11909…,run 82 验证——半径假设证
+  伪)= 半径/亮度标定**:radius 4096/fade 2.0 生效但画面零变化。
+- **v6.49(2026-10-04 DLL,MD5 583f6ba8…,run 83 验证——同帧取壳扑空
+  粘性报废)= 引擎正册注册**:AddLight 入册方向正确,但引擎 AddLight
+  把新灯**先入 lightQueueAdd 队列、下次灯光更新才转正 activeLights**,
+  同帧 GetPointLight 必扑空;sticky 失败让两盏灯全会话报废(rig 掉回
+  地牢方向光)。
+- **v6.50(2026-10-04 DLL,MD5 059cf22b…,run 84 验证——入册/取壳全通
+  仍无光)= 双队列取壳 + 非粘性重试**:activeLights 97→99 确认入册、
+  壳取回、override 在跑,但无光 → 剩余解释 = 灯的世界位置没动。
+- **v6.51(2026-10-04 DLL,MD5 0082d329…,run 85 验证——级联已修但点
+  光仍无光)= 私有 rig 节点 + 强制级联**:普查 `ni_world` 随 rig 动
+  (级联修复成立),但发现共享父摆位互相覆盖(两灯叠一点)+ 点光位置
+  数学在 LLF/引擎路径的坐标空间歧义,三轮不收敛。
+- **v6.52(2026-10-04 DLL,MD5 5fd0cb29…,run 86 无变化)= 主光改方向
+  光**:方向光也无效——但判读揪出贯穿性缺陷:v6.18 的 menu light
+  arming 每个高亮帧覆盖自建灯数组,**run 79-86 的"高亮=亮"全部是菜
+  单灯的光,自建灯从未被真测**。
+- **v6.53(2026-10-04 DLL,MD5 859ddbec…,run 87 部分验证——左图自建
+  灯首次生效✓)= 覆盖退役 + 壳修正**:①menu light arming 退役;②壳
+  lodDimmer/lum/frustrumCull 补丁。run 87 左图(无高亮)人物均匀受光
+  ——**点光 + rig 摆位 = 被验证的正确配置**;右图(高亮)黑的根因 =
+  面板开关后引擎重建账本(activeLights 97→99),重取的壳里混入引擎重
+  建的方向光壳(lum=10081、方向背对、lodDimmer 重置 0),补丁只打过
+  一次。
+- **v6.54(2026-10-04 DLL,MD5 7be5d085…,run 88 双窗口全黑)= 回归双
+  点光 + 每次 fetch 重补丁**:判读实锤两个机制——①引擎灯光 tick **每
+  帧**把外来壳的 lodDimmer 重写回 0(每帧 raw: lodDimmer=0.000),fetch
+  时补丁永远追不上;②两灯共享 rig 父、摆位互相覆盖(双灯
+  worldTranslate 同值)。run 87 左图亮 = 时序运气,点光配置本身有效。
+- **v6.55(2026-10-04 DLL,MD5 0de1d262…,run 89 无变化)= 补丁进窗口 +
+  每灯独立摆位**:现象不变,但确认了两条合成路径并存(无高亮 =
+  kFRAMEBUFFER 兜底,高亮 = replay 实例)。
+- **v6.56(2026-10-04 DLL,MD5 e45e3990…,run 90 部分验证——无高亮完
+  美,高亮仍黑)= 引擎槽位约定修正**:**sceneLights[0] 是环境光槽,
+  点光从 [1] 起**(LLF cpp:248 `sceneLights[i+1]` 实锤)——主光自
+  v6.47 起一直坐在环境槽被无视。新布局:槽 0 环境底光 + 槽 1/2
+  key/fill 双点光(numLights=3)。run 90 左图(无高亮)完美 = 主光首
+  次生效;右图(高亮)黑 = replay 窗口绘制上下文污染(物品 pass 的
+  post-original 状态)。
+- **v6.57(2026-10-04 DLL,MD5 153358b7…,run 91/92 验证——面板光照正
+  确)= 单绘制路径**:replay 窗口 draw/合成退役;end_frame 唯一绘制
+  合成点。run 91/92:面板内光照正确且高亮/无高亮一致。
+- **v6.58(2026-10-04 DLL,MD5 e5acc3ef…,run 92 验证——世界泄漏修复
+  ✓,面板光变暗)= 灯光 rig 泊位制**:rig 默认泊位 Z+100000,仅绘制窗
+  口拉回锚点,所有出口泊回。run 92:世界场景光斑消失;但面板光变暗 =
+  拉回后 per-pass 摆位仍写满锚点系目标 → 锚点双重计入,灯距翻倍。
+- **v6.59(2026-10-04 DLL,MD5 5ad6742d…,待游戏验证)= 拉回坐标系修
+  正**:per-pass 摆位改为锚点相对偏移(spread/up/forward,不含 anchor
+  项)——rig 停锚点 + 节点偏移 = 灯落 light_target。判读见
+  [stage2-p-instance-plan.md](stage2-p-instance-plan.md) §0bq。
 - 方案与证据链:[stage2-p-instance-plan.md](stage2-p-instance-plan.md)
   (§0–§0ad 三十一轮留档、§2 路线、§3 失败模式)。
 

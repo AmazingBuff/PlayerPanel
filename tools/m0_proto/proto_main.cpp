@@ -98,6 +98,44 @@ namespace CharacterPanelProto
             InputHandler() = default;
         };
 
+        // v6.39: the panel's lifecycle IS the inventory menu's (user
+        // decision — the panel depends on nothing but the inventory being
+        // open). Opening the inventory opens the panel, closing it closes
+        // the panel; F7 remains as a manual fallback. MenuOpenCloseEvent
+        // fires on the game thread while the menu system is consistent, so
+        // the panel state flips before the first menu frame renders — the
+        // very first inventory frame is already bracketed.
+        class MenuSink final : public RE::BSTEventSink<RE::MenuOpenCloseEvent>
+        {
+        public:
+            static MenuSink& instance()
+            {
+                static MenuSink s_instance;
+                return s_instance;
+            }
+
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::MenuOpenCloseEvent* event,
+                RE::BSTEventSource<RE::MenuOpenCloseEvent>*) noexcept override
+            {
+                if (!event)
+                    return RE::BSEventNotifyControl::kContinue;
+                // Only the inventory drives the panel; other menus (map,
+                // skills, containers, ...) keep their own behavior.
+                if (event->menuName == RE::InventoryMenu::MENU_NAME)
+                {
+                    if (event->opening)
+                        Proto::instance().open_panel("inventory opened");
+                    else
+                        Proto::instance().close_panel("inventory closed");
+                }
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+        private:
+            MenuSink() = default;
+        };
+
         void message_handler(SKSE::MessagingInterface::Message* message) noexcept
         {
             if (!message)
@@ -133,7 +171,29 @@ namespace CharacterPanelProto
                     Proto::instance().close_panel("new game");
                     PInstance::instance().despawn();
                     break;
+                // v6.31 (run 64): quitting with the panel open crashed — the
+                // studio draw and composite kept running into the tearing-
+                // down renderer, and the parked clone's graph unloads with
+                // the world on quit-to-menu. CLib's MessagingInterface enum
+                // stops at kDataLoaded; the SKSE API's continued values are
+                // kShutdown=10, kExitGame=11, kQuitGame=12. Force-close and
+                // kill P before the teardown proceeds (same defense as the
+                // load path above).
+                case 10:  // SKSE kShutdown
+                case 11:  // SKSE kExitGame
+                case 12:  // SKSE kQuitGame
+                    PInstance::instance().set_world_ready(false);
+                    Proto::instance().close_panel("game exit");
+                    PInstance::instance().despawn();
+                    break;
                 default:
+                    // v6.33: bounded diagnostics — the quit-path message
+                    // values (expected 10/11/12) have not been observed
+                    // firing; log the neighborhood to calibrate the values
+                    // this SKSE build actually dispatches.
+                    if (message->type >= 9 && message->type <= 15)
+                        logger::info("SKSE message type={} sender={}", message->type,
+                            message->sender ? message->sender : "(null)");
                     break;
             }
         }
@@ -164,6 +224,11 @@ namespace CharacterPanelProto
         }
 
         source->AddEventSink(&InputHandler::instance());
+        // v6.39: the panel follows the inventory menu (open/close with it).
+        if (auto* ui = RE::UI::GetSingleton())
+            ui->AddEventSink(&MenuSink::instance());
+        else
+            logger::warn("UI singleton unavailable; the panel will not follow the inventory menu");
         m_installed = true;
         if (!install_pass_hooks())
         {
@@ -176,8 +241,35 @@ namespace CharacterPanelProto
             return;
         }
         m_capture_ready = true;
-        logger::info("M0 proto v6.21 installed: dynamic figure centering (bound-based) + by-reference studio "
-                     "lights with per-frame freshness; F7 toggles the P panel");
+        logger::info("M0 proto v6.59 installed: rig-pullin coordinate fix — with the rig parked AT the "
+                     "anchor (v6.58), the per-pass placement wrote the FULL accumulator-space target "
+                     "into the node local, double-counting the anchor and pushing the lights twice as "
+                     "far away (the run-92 dim look). The node local is now the anchor-relative offset "
+                     "only. F7 = fallback, F8 = dump");
+    }
+
+    void Proto::open_panel(std::string_view reason)
+    {
+        if (!m_capture_ready)
+        {
+            logger::warn("Panel open ignored ({}): capture pipeline not installed", reason);
+            return;
+        }
+        bool expected = false;
+        if (!m_panel_open.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
+            return;  // already open (F7 may have opened it first) — idempotent
+        // Clear release/dump requests that have not reached the render
+        // thread yet, then bump the generation so the bracket resets its
+        // per-open counters. Store order matters for the bracket: the
+        // generation must be visible by the time panel_frame_active()
+        // returns true.
+        m_release_pending.store(false, std::memory_order_relaxed);
+        m_dump_on_close.store(false, std::memory_order_relaxed);
+        m_panel_generation.fetch_add(1, std::memory_order_release);
+        // Stage 2: the panel's content is the independent display instance
+        // P — spawn it with the panel.
+        PInstance::instance().spawn();
+        logger::info("Panel opened ({}): every menu frame is now bracketed for studio redirection", reason);
     }
 
     void Proto::toggle_panel()
@@ -190,19 +282,14 @@ namespace CharacterPanelProto
         bool expected = false;
         if (m_panel_open.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
         {
-            // Clear release/dump requests that have not reached the render
-            // thread yet, then bump the generation so the bracket resets its
-            // per-open counters. Store order matters for the bracket: the
-            // generation must be visible by the time panel_frame_active()
-            // returns true.
             m_release_pending.store(false, std::memory_order_relaxed);
             m_dump_on_close.store(false, std::memory_order_relaxed);
             m_panel_generation.fetch_add(1, std::memory_order_release);
             // Stage 2: the panel's content is the independent display
             // instance P — spawn it with the panel, despawn with the close.
             toggle_p_instance();
-            logger::info("Panel opened: every menu frame is now bracketed for studio redirection "
-                         "(F7 closes, F8 dumps)");
+            logger::info("Panel opened (F7 fallback): every menu frame is now bracketed for studio "
+                         "redirection (F7 closes, F8 dumps)");
             return;
         }
         m_panel_open.store(false, std::memory_order_release);

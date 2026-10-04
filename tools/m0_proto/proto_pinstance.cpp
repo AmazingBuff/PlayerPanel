@@ -30,6 +30,7 @@
 //   retire-list machinery is gone.
 
 #include "proto_pinstance.h"
+#include "proto.h"
 
 #include <RE/Skyrim.h>
 #include <SKSE/SKSE.h>
@@ -38,6 +39,9 @@
 #include <cmath>
 #include <numbers>
 #include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
 namespace CharacterPanelProto
 {
@@ -52,13 +56,21 @@ namespace CharacterPanelProto
         // After dressing, wait for the biped 3D to appear, then hold the
         // arm for this many more frames (skeleton settle).
         constexpr std::uint32_t Settle_Frames = 15;
-        // Run 55 (v6.20): figure framing. The run-53/54 figure rendered
-        // correctly but tiny — the body sat at the item anchor (camera
-        // depth ~485, SV w≈500) with the round-1 guess scale item×0.1.
-        // The multiplier is the framing knob: 1.0 puts the figure at the
-        // item preview's own scale; one calibration round against the
-        // logged anchor/scale/bound values nails the final number.
-        constexpr float Studio_Figure_Scale = 1.0f;
+        // Run 65 (v6.32): recalibrated for the ASPECT-CORRECT composite
+        // window (the panel's aspect 0.51 vs the target's 1.78 — the
+        // sampled horizontal slice is (MaxX-MinX)/(MaxY-MinY) = 0.286 of
+        // the target width). At the previous 0.70 the T-pose arm span
+        // (≈ the body height) overflowed that slice ~2×; 0.35 fits the
+        // whole body with correct world proportions (~50% of the panel
+        // height — the T-pose's 1:1 silhouette in a 0.51-aspect panel is
+        // width-limited; M1 poses with arms down will fill taller).
+        constexpr float Studio_Figure_Scale = 0.35f;
+        // Run 68 (v6.35): the facing flips BACK to 0. Run 67's back-lighting
+        // at Rz(0) was the LIGHT rig's doing (the v6.33 rig positions did
+        // not reach the shader); with the rig verified working (run 68:
+        // front-lit), the Rz(π) figure presented its back to the player —
+        // so Rz(0) is the facing-the-camera orientation.
+        constexpr float Studio_Facing_Z_Rad = 0.0f;
         // Hard cap on the whole build in REAL frames; past it the attempt
         // fails and the panel stays on the item preview (sticky until the
         // next open). ~20 s at 60 fps.
@@ -72,6 +84,183 @@ namespace CharacterPanelProto
         // from the camera position (game units). The item preview lives in
         // the same space; round 1 calibrates so the whole body fits.
         constexpr float Studio_Standoff = 40.0f;
+        // v6.23 ghost layer: how many world-stream P passes must ARRIVE
+        // before the panel-closed suppression arms. Each arrival proves the
+        // world renderer just processed the clone (the only device-buffer
+        // initializer — run 50), so arming earlier would re-create the rd=9
+        // wall. World frames carry 60–75 P passes (runs 31/32/54), so 128
+        // ≈ two rendered frames on top of the build's own grace+settle
+        // window.
+        constexpr std::uint32_t Ghost_Warmup_Passes = 128;
+        // v6.24 residue sweep: the clone is a placed reference and SAVES
+        // with the game — a save made while it existed reloads it next
+        // session as an unmanaged, un-pinned, VISIBLE player duplicate
+        // (run 57: the "3BA" actor the user talked to). Cadence of the
+        // player-cell sweep on the game-thread pump.
+        constexpr std::uint32_t Residue_Scan_Interval_Frames = 300;
+        // v6.24: marker base name for clones this plugin places — saved
+        // clones match it precisely; legacy saves match the player's name.
+        constexpr std::string_view Clone_Base_Name = "CharacterPanel_Clone";
+        // v6.25: geometric isolation. Run 58 proved the AI-side levers
+        // (activation flag, bool flags) don't hold on this actor — the user
+        // still activated and talked to OUR pinned clone. Distance is the
+        // lever that cannot fail: interaction/dialogue/collision reach is
+        // a few hundred units, so parking P 8000 units below the player
+        // (the run-31 route-3 configuration — the world still culled it in
+        // and generated passes from exactly this spot) makes it
+        // unreachable while every perceptible channel stays dead. The
+        // studio path re-poses the root's LOCAL transform at draw time and
+        // never reads the park; the ghost warmup only needs the world to
+        // keep rendering the clone, which it does from there.
+        constexpr float Park_Depth_Below_Player = 8000.0f;
+
+        // v6.25: re-applied every live frame (the engine's update chain
+        // re-derives a live actor's transform, so a one-shot park does not
+        // stick — the same reason route 3 re-parked per tick, run 31).
+        void park_below_player(RE::Actor* a_clone)
+        {
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!a_clone || !player)
+                return;
+            const RE::NiPoint3 pos = player->GetPosition();
+            // Actor's override carries the character-controller update flag
+            // (true = warp the controller with the ref).
+            a_clone->SetPosition(RE::NiPoint3{ pos.x, pos.y, pos.z - Park_Depth_Below_Player }, true);
+        }
+
+        // v6.30: alignment reference = the SKINNED body only. The root's
+        // world bound includes attached props (bows/quivers), whose offset
+        // dragged the center up/back and left only the legs in frame
+        // (run 63). Union the skinned geometries' world bounds instead —
+        // that is the visual body the user wants framed.
+        struct SkinnedBound
+        {
+            RE::NiPoint3 center{ 0.0f, 0.0f, 0.0f };
+            float radius{ 0.0f };
+            bool valid{ false };
+        };
+
+        void union_sphere(SkinnedBound& a_out, const RE::NiPoint3& a_center, float a_radius)
+        {
+            if (!a_out.valid)
+            {
+                a_out.center = a_center;
+                a_out.radius = a_radius;
+                a_out.valid = true;
+                return;
+            }
+            const RE::NiPoint3 d = a_center - a_out.center;
+            const float dist = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
+            if (a_out.radius >= a_radius + dist)
+                return;  // fully contained
+            if (a_radius >= a_out.radius + dist)
+            {
+                a_out.center = a_center;
+                a_out.radius = a_radius;
+                return;
+            }
+            const float merged = (dist + a_out.radius + a_radius) * 0.5f;
+            const float t = dist > 1e-6f ? (merged - a_out.radius) / dist : 0.0f;
+            a_out.center = a_out.center + d * t;
+            a_out.radius = merged;
+        }
+
+        SkinnedBound measure_skinned_bound(RE::NiAVObject* a_root)
+        {
+            SkinnedBound out;
+            RE::BSVisit::TraverseScenegraphGeometries(a_root, [&](RE::BSGeometry* a_geometry) {
+                if (!a_geometry->GetGeometryRuntimeData().skinInstance)
+                    return RE::BSVisit::BSVisitControl::kContinue;
+                const auto& wb = a_geometry->worldBound;
+                union_sphere(out, wb.center, wb.radius);
+                return RE::BSVisit::BSVisitControl::kContinue;
+            });
+            return out;
+        }
+
+        // v6.23: studio T-pose. Each bone's BIND world in the skin-root
+        // (rootParent) space is the inverse of the skin data's skinToBone
+        // transform; a top-down walk can set every bone's LOCAL to
+        // reproduce the bind worlds (local = parentWorld⁻¹ ∘ bindWorld).
+        // Non-bone nodes keep their locals and recompose accordingly. The
+        // anim graph may re-drive the bones between frames (invisible in
+        // the world since v6.22); the studio re-applies the reset every
+        // frame it draws, so the skin matrices (frameID recompute) always
+        // read the bind pose.
+        //
+        // Run 57 corrections: bind worlds are relative to THEIR OWN skin
+        // root — a single shared map across several rootParents reset
+        // bones in the wrong frame (the log's "74 bind bones over 3 skin
+        // root(s)" — the skeleton folded, head at the ground). Group by
+        // root; walk each group only in its own frame. The skin root
+        // itself is the reference frame: never reset its own local
+        // (clobbering it wiped the rig's base transform) and start
+        // accumulating at identity from its children.
+        struct SkinBindGroup
+        {
+            RE::NiAVObject* root{ nullptr };
+            std::unordered_map<const RE::NiAVObject*, RE::NiTransform> bones;
+        };
+
+        void reset_bind_downward(RE::NiAVObject* a_node, const RE::NiTransform& a_parent_world,
+            const SkinBindGroup& a_group)
+        {
+            RE::NiTransform world = a_parent_world * a_node->local;
+            if (auto it = a_group.bones.find(a_node); it != a_group.bones.end())
+            {
+                world = it->second;
+                a_node->local = a_parent_world.Invert() * world;
+            }
+            if (auto* node = a_node->AsNode())
+                for (auto& child : node->children)
+                    if (child)
+                        reset_bind_downward(child.get(), world, a_group);
+        }
+
+        void reset_root_to_bind_pose(RE::NiAVObject* a_root)
+        {            std::vector<SkinBindGroup> groups;
+            RE::BSVisit::TraverseScenegraphGeometries(a_root, [&](RE::BSGeometry* a_geometry) {
+                const auto& rd = a_geometry->GetGeometryRuntimeData();
+                const RE::NiSkinInstance* skin = rd.skinInstance.get();
+                if (!skin || !skin->bones || !skin->skinData || !skin->rootParent)
+                    return RE::BSVisit::BSVisitControl::kContinue;
+                RE::NiAVObject* root = skin->rootParent;
+                auto group = std::find_if(groups.begin(), groups.end(),
+                    [root](const SkinBindGroup& g) { return g.root == root; });
+                if (group == groups.end())
+                {
+                    groups.push_back({ root, {} });
+                    group = groups.end() - 1;
+                }
+                const auto* data = skin->skinData.get();
+                const std::uint32_t count = std::min(skin->numMatrices, data->GetBoneCount());
+                for (std::uint32_t i = 0; i < count; ++i)
+                {
+                    RE::NiAVObject* bone = skin->bones[i];
+                    if (bone)
+                        group->bones.insert_or_assign(bone, data->GetBoneDataSkinToBone(i).Invert());
+                }
+                return RE::BSVisit::BSVisitControl::kContinue;
+            });
+            for (const auto& group : groups)
+            {
+                RE::NiTransform identity;
+                if (auto* node = group.root->AsNode())
+                    for (auto& child : node->children)
+                        if (child)
+                            reset_bind_downward(child.get(), identity, group);
+            }
+            static bool logged = false;
+            if (!logged)
+            {
+                logged = true;
+                std::size_t total = 0;
+                for (const auto& group : groups)
+                    total += group.bones.size();
+                logger::info("Proto P studio T-pose: {} bind bones over {} skin root(s)", total,
+                    groups.size());
+            }
+        }
     }
 
     void PInstance::pose_for_studio()
@@ -102,25 +291,31 @@ namespace CharacterPanelProto
         if (!root)
             return;
 
+        // v6.28: FIXED studio anchor. The v6.3-v6.27 anchor was the
+        // selected item's world translate — the manager re-poses each item
+        // model, so the FIGURE moved whenever the selection changed (run
+        // 61). The studio is its own place now: the eye sits at the world
+        // origin (run 36: worldToCam translation ~0, re-confirmed by the
+        // w2c_t dump field) and the view direction is worldToCam row 3, so
+        // the anchor is simply Studio_Depth along the view axis. Its NDC
+        // is (0,0), and the composite squeezes the WHOLE studio target
+        // into the panel rect — the view-axis point lands exactly at the
+        // PANEL CENTER, independent of any item. Depth 485 is the
+        // run-55-proven in-bounds distance (the item preview's own depth).
+        constexpr float Studio_Depth = 485.0f;
         RE::NiPoint3 anchor{ 0.0f, 0.0f, 0.0f };
-        float scale = 1.0f;
+        float w2c_translation = 0.0f;
         if (auto* ui3d = RE::UI3DSceneManager::GetSingleton())
         {
-            if (RE::NiNode* item_root = ui3d->menuObjects[1].get())
+            if (auto* cam = ui3d->camera.get())
             {
-                RE::BSGeometry* item_geom = nullptr;
-                RE::BSVisit::TraverseScenegraphGeometries(item_root, [&](RE::BSGeometry* geometry) {
-                    if (!item_geom)
-                        item_geom = geometry;
-                    return RE::BSVisit::BSVisitControl::kContinue;
-                });
-                if (item_geom)
-                {
-                    anchor = item_geom->world.translate;
-                    scale = item_geom->world.scale;
-                }
+                const auto& w2c = cam->GetRuntimeData().worldToCam;
+                anchor = RE::NiPoint3{ w2c[2][0] * Studio_Depth, w2c[2][1] * Studio_Depth,
+                    w2c[2][2] * Studio_Depth };
+                w2c_translation = w2c[2][3];
             }
         }
+        m_studio_anchor = anchor;
         // The item preview hangs at the anchor with its local +Y pointing
         // at the studio camera (the manager's convention).
         //
@@ -142,8 +337,21 @@ namespace CharacterPanelProto
         //    the pass lights with the menu lights in v6.18).
         RE::NiPoint3 target = anchor;
         root->local.translate = target;
-        root->local.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, 3.14159265f);
-        root->local.scale = scale * Studio_Figure_Scale;  // run 55: framing knob (was 0.1)
+        // Run 59 (v6.26): facing. The old Rz(180°) was calibrated for the
+        // GRAPH-driven pose (run 55), whose body orientation came from the
+        // animation state; the T-pose skeleton's AUTHORED facing is the
+        // opposite — with 180° the figure presented its back (run 58
+        // screenshot). Identity faces the studio camera.
+        root->local.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, Studio_Facing_Z_Rad);
+        // v6.26 framing, measure pass: body radius at scale 1 (the T-pose
+        // is deterministic, so this is a stable input for the size solve).
+        root->local.scale = 1.0f;
+        // v6.23: T-pose. The anim graph's last-driven pose is neither
+        // deterministic nor non-spontaneous; the skeleton's bind pose is
+        // both. Re-derived from the skin data and re-applied every draw so
+        // the skin matrices always read it — and the v6.21 bound centering
+        // now measures a fixed, predictable silhouette.
+        reset_root_to_bind_pose(root);
         // Run 41: Update(kDirty) alone is NOT enough — the selective-update
         // flags (the clone carries animation controllers) short-circuit the
         // cascade, so the BONE world transforms stayed at the engine's
@@ -156,33 +364,50 @@ namespace CharacterPanelProto
         RE::NiUpdateData update_data{ 0.0f, RE::NiUpdateData::Flag::kDirty };
         root->UpdateDownwardPass(update_data, 0);
         root->UpdateWorldBound();
+        // v6.30: alignment reference = the SKINNED body only. The root's
+        // world bound includes attached props (bows/quivers), whose offset
+        // dragged the center up/back and left only the legs in frame
+        // (run 63).
+        const SkinnedBound measure_pass = measure_skinned_bound(root);
+        const float body_radius = measure_pass.radius;
+
+        // v6.30 framing: the scale is the DIRECTLY calibrated constant
+        // Studio_Figure_Scale (0.70 — see its comment); the formula chain
+        // (v6.26-v6.29) is retired after two of its three inputs (the
+        // camera-node transform, the viewFrustum) proved unreliable.
+        const float figure_scale = Studio_Figure_Scale;
+        root->local.scale = figure_scale;
+        root->UpdateDownwardPass(update_data, 0);
+        root->UpdateWorldBound();
         // Run 56: DYNAMIC CENTERING. The run-55 render showed the figure
         // rising from the anchor (feet) — scaled up, the head left the
-        // frame. The world bound (measured right above) gives the body's
-        // actual center; shifting the root by (anchor − center) lands the
-        // body center exactly on the anchor — the one position whose
-        // projection is proven in-frame (runs 40/53/55). No camera
-        // convention assumptions anywhere: pure vector arithmetic on the
-        // measured bound. Then re-cascade so the skin matrices read the
+        // frame. v6.30: the center is the SKINNED body's bound (props
+        // excluded — see measure_skinned_bound); shifting the root by
+        // (anchor − center) lands the body center exactly on the anchor —
+        // the one position whose projection is proven in-frame
+        // (runs 40/53/55). Then re-cascade so the skin matrices read the
         // final pose.
-        const RE::NiPoint3 center_shift{ anchor.x - root->worldBound.center.x,
-            anchor.y - root->worldBound.center.y, anchor.z - root->worldBound.center.z };
+        const SkinnedBound centered = measure_skinned_bound(root);
+        const RE::NiPoint3 center_shift{ anchor.x - centered.center.x,
+            anchor.y - centered.center.y, anchor.z - centered.center.z };
         root->local.translate.x += center_shift.x;
         root->local.translate.y += center_shift.y;
         root->local.translate.z += center_shift.z;
         root->UpdateDownwardPass(update_data, 0);
         root->UpdateWorldBound();
-        // Run 55/56: per-open calibration dump — anchor/scale/bound before
-        // and after centering.
+        // Run 55/56: per-open calibration dump — fixed anchor, skinned
+        // body bound and the scale, before and after centering. w2c_t is
+        // the eye-at-origin guard (run 36/62: expected ~-15; if it drifts
+        // the fixed-anchor depth needs revisiting).
         static thread_local std::uint32_t s_pose_logs = 0;
-        if (s_pose_logs++ < 3)
+        if (s_pose_logs++ < 6)
         {
-            const auto& bound = root->worldBound;
             logger::info(
-                "Proto v6.21 studio pose: anchor=({:.1f},{:.1f},{:.1f}) item_scale={:.3f} root_scale={:.3f} "
-                "centered bound r={:.1f} c=({:.1f},{:.1f},{:.1f})",
-                anchor.x, anchor.y, anchor.z, scale, root->local.scale, bound.radius, bound.center.x,
-                bound.center.y, bound.center.z);
+                "Proto v6.30 studio pose: anchor=({:.1f},{:.1f},{:.1f}) depth={:.1f} w2c_t={:.1f} "
+                "skinned_body_r={:.1f} figure_scale={:.3f} centered r={:.1f} c=({:.1f},{:.1f},{:.1f})",
+                anchor.x, anchor.y, anchor.z, Studio_Depth, w2c_translation, body_radius,
+                root->local.scale, centered.radius, centered.center.x, centered.center.y,
+                centered.center.z);
         }
     }
 
@@ -271,6 +496,54 @@ namespace CharacterPanelProto
         {
             SKSE::GetTaskInterface()->AddTask([this]() {
                 m_step_queued.store(false, std::memory_order_release);
+                // v6.24: residue sweep first — a stale clone from a previous
+                // session's save may sit exactly where the new one spawns.
+                sweep_stale_clones();
+                // v6.34: the MAIN MENU is not a preview context — close the
+                // panel the moment it opens. The clone-3D liveness check
+                // below fires a frame LATE (the world unload trails the menu
+                // load), and run 67 showed exactly one menu frame still
+                // compositing the panel. IsMenuOpen is checked while the
+                // instance is alive; after the close the pump early-outs
+                // (kNone + world not ready) and never queues again until
+                // the next session arms it.
+                if (m_state.load(std::memory_order_acquire) != State::kNone)
+                {
+                    auto* ui = RE::UI::GetSingleton();
+                    if (ui && ui->IsMenuOpen(RE::MainMenu::MENU_NAME))
+                    {
+                        PInstance::instance().despawn();
+                        CharacterPanelProto::Proto::instance().close_panel("main menu");
+                        logger::info("Proto P panel closed: main menu open");
+                    }
+                }
+                // v6.32: quit/menu-transition liveness check. The world can
+                // unload (quit to the main menu) before any SKSE message
+                // disarms us — the whitelisted root dangles and the RENDER
+                // thread's studio draw traverses freed memory (run 65
+                // crash: TraverseScenegraphGeometries on the stale root
+                // with MistMenu/MainMenu already up). The pump runs on the
+                // game thread at DrawInterfaceStart — BEFORE this frame's
+                // render work — so this check disarms the whitelist a frame
+                // ahead of the studio draw.
+                if (m_state.load(std::memory_order_acquire) == State::kAttached)
+                {
+                    auto* live = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr;
+                    if (!live || !live->Get3D(false))
+                    {
+                        logger::warn(
+                            "Proto P clone graph lost (world unloaded?); disarming before the render pass");
+                        // v6.33: the world is gone — that is ALSO no valid
+                        // preview context (FR-06): close the panel itself,
+                        // otherwise the main menu keeps compositing the last
+                        // studio image (run 65 screenshot). The pump runs at
+                        // DrawInterfaceStart entry, so the very next
+                        // panel_frame_active() read takes the non-bracketed
+                        // path and the release consumes this same frame.
+                        PInstance::instance().despawn();
+                        CharacterPanelProto::Proto::instance().close_panel("world unloaded");
+                    }
+                }
                 // Run 49 (v6.15): with no P alive, every idle frame retries
                 // the auto-spawn ONCE the world is unpaused and actually
                 // rendering a player — the clone's geometries only get their
@@ -311,6 +584,11 @@ namespace CharacterPanelProto
             return;
         }
         clone_base->faceNPC = player_base;
+        // v6.24: marker name — the base is runtime-created and dies with
+        // the session unless saved; a saved clone carries this name into
+        // the next session, where the residue sweep matches it precisely
+        // (legacy saves without the marker fall back to the player's name).
+        clone_base->fullName = RE::BSFixedString(Clone_Base_Name);
 
         RE::NiPointer<RE::TESObjectREFR> placed = player->PlaceObjectAtMe(clone_base, false);
         auto* clone = placed ? placed->As<RE::Actor>() : nullptr;
@@ -323,6 +601,11 @@ namespace CharacterPanelProto
         m_frames_since_place = 0;
         m_dressed_frames = 0;
         m_total_frames = 0;
+        // v6.22: a fresh clone is a fresh graph — the ghost warmup (the
+        // device-buffer init window) must run again for its geometries.
+        m_ghost_warm.store(false, std::memory_order_release);
+        m_ghost_warmup_passes.store(0, std::memory_order_relaxed);
+        m_ghost_first_drop.store(false, std::memory_order_relaxed);
         m_state.store(State::kWaitingGrace, std::memory_order_release);
         logger::info("Proto P clone placed (world-render init route: the build only advances unpaused "
                      "so the engine creates the device buffers); building toward the whitelist");
@@ -355,6 +638,13 @@ namespace CharacterPanelProto
             case State::kKillPending:
                 break;
             case State::kAttached:
+                // v6.25: keep P parked 8k below the player every live frame
+                // (run-31 configuration) — unreachable beats behavior flags
+                // (run 58: the flags didn't hold). The world still renders
+                // it from there, feeding the ghost warmup and device
+                // buffers; the studio never reads the park.
+                if (auto* parked = m_clone.get().get() ? m_clone.get()->As<RE::Actor>() : nullptr)
+                    park_below_player(parked);
                 // Run 51: the graph is alive and whitelisted; probe until
                 // the world renderer has created the device buffers.
                 init_heartbeat();
@@ -400,6 +690,45 @@ namespace CharacterPanelProto
         if (state == State::kWaitingGrace)
         {
             ++m_frames_since_place;
+            // v6.38 (user report: the clone flashed at the player for a few
+            // frames after a save load). During the grace window the actor
+            // must not be touched via virtuals (the spike's [rax+0x38]
+            // crashes — secondary bases/AI process are still async), but
+            // the 3D GRAPH is plain NiAVObject data: as soon as it exists,
+            // shifting its root node's LOCAL translate needs no virtual
+            // dispatch and is a frame-accurate fix — the clone never shows
+            // at the player at all. park_below_player (actor SetPosition)
+            // still runs at grace end as the engine-authoritative park; the
+            // engine's update chain re-derives a live actor's transform,
+            // which is exactly why this node-level shift is re-applied
+            // every grace tick.
+            // v6.38 (user report: the clone flashed at the player for a few
+            // frames after a save load). During the grace window the actor
+            // must not be touched via virtuals (the spike's [rax+0x38]
+            // crashes — secondary bases/AI process are still async), so
+            // Get3D() (virtual Get3D2) is off-limits too. The 3D graph
+            // pointer is plain data though: LOADED_REF_DATA::data3D (0x68).
+            // As soon as the graph exists, shifting its root's LOCAL
+            // translate needs no virtual dispatch and is frame-accurate —
+            // the clone never shows at the player at all.
+            // park_below_player (actor SetPosition) still runs at grace end
+            // as the engine-authoritative park; the engine's update chain
+            // re-derives a live actor's transform, which is exactly why
+            // this node-level shift is re-applied every grace tick.
+            if (auto* loaded = clone->loadedData; loaded && loaded->data3D)
+            {
+                auto* early = loaded->data3D.get();
+                auto* player_refr = RE::PlayerCharacter::GetSingleton();
+                auto* player_loaded = player_refr ? player_refr->loadedData : nullptr;
+                if (early && player_loaded && player_loaded->data3D)
+                {
+                    const RE::NiPoint3 down = player_loaded->data3D.get()->world.translate;
+                    early->local.translate = RE::NiPoint3{ down.x, down.y,
+                        down.z - Park_Depth_Below_Player };
+                    RE::NiUpdateData early_update{ 0.0f, RE::NiUpdateData::Flag::kDirty };
+                    early->UpdateDownwardPass(early_update, 0);
+                }
+            }
             if (m_frames_since_place < Grace_Frames)
                 return;  // the next pump queues the next step
             // Grace over (spike order): dress from the player's worn set and
@@ -415,6 +744,27 @@ namespace CharacterPanelProto
             // no gameplay camera pitched less than ~60 degrees down, and
             // its geometry cost is one character.
             clone->GetActorRuntimeData().boolFlags.set(RE::Actor::BOOL_FLAGS::kMovementBlocked);
+            // v6.23 behavior pinning (plan §0af), v6.24 correction: the
+            // clone must be behavior-inert in the world — no interaction or
+            // dialogue (the E prompt), no hostile acts. SetCollision is
+            // RETIRED: TESObjectREFR::SetCollision only edits the record
+            // flags (load-time), zero runtime effect — run 57 proved it.
+            // Runtime collision/ghost handling is re-evaluated after the
+            // residue sweep (§0ag): the actor the user met was most likely
+            // a stale clone loaded from a previous session's save, not this
+            // pinned one — the sweep log names every deletion.
+            clone->GetActorRuntimeData().boolFlags.set(RE::Actor::BOOL_FLAGS::kAttackingDisabled);
+            clone->GetActorRuntimeData().boolFlags.set(RE::Actor::BOOL_FLAGS::kCastingDisabled);
+            clone->SetActivationBlocked(true);
+            clone->StopCombat();
+            // v6.25: the primary imperceptibility lever is GEOMETRIC — out
+            // of reach, out of dialogue, out of collision (see
+            // Park_Depth_Below_Player). The flags above stay as secondary
+            // cover; run 58 proved they don't hold on their own.
+            park_below_player(clone);
+            logger::info("Proto P pinned (ref=0x{:X}): no-move/attack/cast flags, activation blocked, "
+                         "parked 8k below the player",
+                clone->GetFormID());
             mirror_worn_equipment(clone, RE::PlayerCharacter::GetSingleton());
             m_dressed_frames = 0;
             m_state.store(State::kWaiting3D, std::memory_order_release);
@@ -598,18 +948,54 @@ namespace CharacterPanelProto
 
     void PInstance::drain_retired() {}
 
-    bool PInstance::is_p_geometry(const RE::BSGeometry* geometry) const
+    void PInstance::sweep_stale_clones()
+    {
+        if (++m_frames_until_residue_scan < Residue_Scan_Interval_Frames)
+            return;
+        m_frames_until_residue_scan = 0;
+
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        auto* cell = player ? player->GetParentCell() : nullptr;
+        const RE::TESNPC* player_base = player ? player->GetActorBase() : nullptr;
+        // Only touch references while the world is live (same gate as the
+        // spawn path) — mid-load cell contents are transient.
+        if (!cell || !player_base || !player->Get3D(false))
+            return;
+
+        const RE::NiPointer<RE::TESObjectREFR> self = m_clone.get();
+        const char* player_name_c = player_base->GetFullName();
+        const std::string_view player_name = player_name_c ? player_name_c : "";
+        std::uint32_t deleted = 0;
+        for (const auto& ref : cell->GetRuntimeData().references)
+        {
+            auto* actor = ref ? ref->As<RE::Actor>() : nullptr;
+            if (!actor || actor->IsPlayerRef())
+                continue;
+            if (self && actor == self.get())
+                continue;  // our live, pinned clone
+            auto* base = actor->GetActorBase();
+            if (!base || base->GetFormID() < 0xFF000000)
+                continue;  // runtime-created bases only — mod content is untouchable
+            const char* name = base->GetFullName();
+            const bool marked = name && Clone_Base_Name == name;
+            const bool legacy = name && !player_name.empty() && player_name == name;
+            if (!marked && !legacy)
+                continue;
+            actor->Disable();
+            actor->SetDelete(true);
+            ++deleted;
+            logger::warn("Proto P residue sweep: deleted stale clone ref=0x{:X} base=0x{:X} name=[{}]",
+                actor->GetFormID(), base->GetFormID(), name ? name : "");
+        }
+        if (deleted > 0)
+            logger::info("Proto P residue sweep: {} stale clone(s) removed from the player cell",
+                deleted);
+    }
+
+    bool PInstance::is_p_descendant(const RE::BSGeometry* geometry) const
     {
         const std::uintptr_t root = m_active_root.load(std::memory_order_acquire);
         if (!root || !geometry)
-            return false;
-        // Run 31: skinned pieces only. Handheld props (Scb quiver, Torch,
-        // bows, weapons — run 31 log) are static meshes on bone attach
-        // nodes; their draws use the node's world transform, which in the
-        // studio replay filled the frame with giant blobs. Skinned
-        // geometries (body, armor, hair, face) deform through the skeleton
-        // and are exactly the character the panel must show.
-        if (!geometry->GetGeometryRuntimeData().skinInstance)
             return false;
         const RE::NiAVObject* node = geometry;
         for (std::size_t depth = 0; node && depth < 32; ++depth)
@@ -617,6 +1003,56 @@ namespace CharacterPanelProto
             if (reinterpret_cast<std::uintptr_t>(node) == root)
                 return true;
             node = node->parent;
+        }
+        return false;
+    }
+
+    bool PInstance::is_p_geometry(const RE::BSGeometry* geometry) const
+    {
+        // Run 31: skinned pieces only. Handheld props (Scb quiver, Torch,
+        // bows, weapons — run 31 log) are static meshes on bone attach
+        // nodes; their draws use the node's world transform, which in the
+        // studio replay filled the frame with giant blobs. Skinned
+        // geometries (body, armor, hair, face) deform through the skeleton
+        // and are exactly the character the panel must show.
+        if (!geometry || !geometry->GetGeometryRuntimeData().skinInstance)
+            return false;
+        return is_p_descendant(geometry);
+    }
+
+    bool PInstance::ghost_should_suppress(const RE::BSGeometry* geometry)
+    {
+        // Fail open: only a fully armed instance ghosts, and only after the
+        // warmup proved the engine initialized the device buffers.
+        if (m_state.load(std::memory_order_acquire) != State::kAttached)
+            return false;
+        if (m_ghost_warm.load(std::memory_order_acquire))
+        {
+            if (!is_p_descendant(geometry))
+                return false;
+            if (!m_ghost_first_drop.exchange(true, std::memory_order_acq_rel))
+                logger::info("Proto P ghost: first world-stream pass dropped (geom=[{}])",
+                    geometry->name.c_str() ? geometry->name.c_str() : "(null)");
+            return true;
+        }
+        // Warmup: the engine must keep drawing the clone for a while — real
+        // draws are the only creator of rendererData/VB/IB (run 50), and
+        // suppressing from frame zero would re-create the rd=9 wall. Every
+        // arriving P pass proves the world renderer just processed the
+        // clone; after enough of them the double is never drawn again.
+        if (is_p_descendant(geometry))
+        {
+            const std::uint32_t seen =
+                m_ghost_warmup_passes.fetch_add(1, std::memory_order_relaxed) + 1;
+            if (seen >= Ghost_Warmup_Passes)
+            {
+                bool expected = false;
+                if (m_ghost_warm.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
+                    logger::info(
+                        "Proto P ghost armed: world draws of the clone suppressed outside the "
+                        "studio (warmup {} passes)",
+                        seen);
+            }
         }
         return false;
     }
