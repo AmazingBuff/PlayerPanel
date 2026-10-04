@@ -1,13 +1,46 @@
 # 阶段 2b 验证轮方案:摄影棚即居所(统一之家,route 2 复活)
 
-- 日期:2026-10-04;状态:**轮 1 已构建部署,待游戏验证**(2026-10-04
-  16:10 DLL,MD5 4d7a427a…;代码提交随轮 1 验证通过一并落库)
+- 日期:2026-10-04;状态:**轮 1 首验(run 94)零回归成立;迁移被证伪的
+  census 探针挡住,v6.61 门控换 ghost 预热窗信号,待游戏验证**
+  (2026-10-04 DLL;代码提交随轮 1 验证通过一并落库)
 - 上游:[m0-handoff.md](m0-handoff.md) 阶段 2 + [stage2-p-instance-plan.md](stage2-p-instance-plan.md)
   §0ai(用户 2026-10-03 提议,决策记录:"先验证 v6.25 泊位形态;通过后
   把'摄影棚即家'立项为下一个工作包"——v6.25 已于 run 59 验证通过)
 - 读者:实现与验证此轮的 Agent / 开发者
 - 前置基线:v6.59(run 93 已验证:面板光照正确、世界无泄漏、高亮/无
   高亮一致;DLL MD5 5ad6742d,提交 743454b)
+
+## H1. Run 94 结果(v6.60 首验:零回归成立;迁移被证伪的 census 探针挡住)+ v6.61 方案
+
+run 94 会话(2026-10-04 16:26,单会话,v6.60,MD5 4d7a427a…):
+
+- **零回归成立**:spawn→attach 正常;背包面板开/关 8 轮,387 帧
+  `submitted=14 of 14(source=live)`、composite 正常、ghost 预热武装
+  (128 passes)、关面板干净释放;全场唯一 [W] 是迁移放弃行,零 crash。
+- **迁移未发生**:`relocation gave up after 600 frames (device buffers
+  0/14)`——census 门控整场不满足,fail-open 按设计兜住(面板全程从
+  泊位图绘制,与 v6.59 行为一致)。
+- **根因 = census 是坏仪器**:心跳 `P=0/14 player=0/23`——玩家图显然
+  每帧在渲染也是 0,run 54 的证伪结论原样复现(rendererData/
+  vertexBuffer 普查不反映真实初始化);而 `submitted=14/14` 每帧成功证
+  明绘制链全通。门控逻辑正确,传感器错了。
+
+**v6.61(2026-10-04,待游戏验证)= 门控换信号**:迁移门控从 census
+换成 **ghost 预热窗武装(`m_ghost_warm`)**——run 50 语义:每个到达的
+世界流 pass = 一次完成的引擎真实绘制,真实绘制是 rendererData/VB/IB
+唯一创建者;武装 = ≥128 次真实绘制 = 缓冲就绪的项目自证信号(run 94
+实测:面板打开后 0.2 s 内武装)。census 降级为 give-up 时的诊断行,
+attach 时的 `renderer init check` 保留为参考行;**init_heartbeat(同
+一坏仪器)顺带退役**(方案 §2 表格既定项)。注意:tick 暂停不推进,
+所以迁移落在武装后的**第一个未暂停 kAttached tick**——预期流程 =
+开面板(照常,泊位图)→ 关面板 → 迁移发生 → 再开面板(从 home 绘
+制)。
+
+**判读(run 95)**:①首个面板关闭后日志出现 `Proto P home: graph
+relocated…` 且 `home_world=(0.00,0.00,0.00) scale=1.000`(U5);②第二
+次开面板出现 `P home parent ok (per-open check)`,人物像与 run 93/94
+基线一致;③`source=live` 保持;④关面板/读档/退出零崩溃;⑤迁移帧
+`relocating` 闩跳过绘制无可见异常。
 
 ## 0. 一句话目标
 
