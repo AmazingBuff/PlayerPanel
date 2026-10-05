@@ -5,7 +5,7 @@
 // 1.6.1170 runtime gate. (2026-10-05 src migration: split out of tools/m0_proto, behavior byte-identical)
 //
 
-#include "panel.h"
+#include "panel/panel.h"
 #include "pinstance/pinstance.h"
 
 namespace

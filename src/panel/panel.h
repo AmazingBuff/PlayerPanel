@@ -4,12 +4,7 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstdint>
-#include <string_view>
-
 PLUGIN_NAMESPACE_BEGIN
-
 
 class Proto final
 {
@@ -70,13 +65,6 @@ public:
     // Monotonic per-open counter; lets the render thread detect a fresh
     // panel open (counter/throttle reset, failed-creation retry).
     std::uint32_t panel_generation();
-
-    // Installs the DrawInterfaceStart call-site hook (private trampoline).
-    bool install_hook();
-
-    // Installs the three RenderPassImmediately call-site hooks (private
-    // trampoline).
-    bool install_pass_hooks();
 
 private:
     Proto() = default;

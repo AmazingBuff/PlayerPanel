@@ -709,8 +709,9 @@ Plugin_Version`(含 `Plugin_Build_Identity` 扩展项),均由根 CMake
 | 文件 | 内容 |
 | --- | --- |
 | `src/main.cpp` | SKSE 导出(Load/Version/Query)、消息处理(kDataLoaded/kPostLoadGame/kPreLoadGame/kNewGame/退出 10-12)、日志初始化、运行时门禁 supported_runtime |
-| `src/panel.h/.cpp` | Proto 面板生命周期单例(open/toggle/close/dump/代数)+ InputHandler(F7/F8 输入 sink)+ MenuSink(面板随背包开关,v6.39) |
-| `src/hooks.cpp` | DrawInterfaceStart Detours detour(帧括号驱动器:非括号帧消费 release/dump,括号帧 begin/end)+ 两个安装入口 |
+| `src/panel/panel.h/.cpp` | Proto 面板生命周期单例(open/toggle/close/dump/代数)+ MenuSink(面板随背包开关,v6.39) |
+| `src/input/input.h/.cpp` | InputManager:F7/F8 热键 sink(FR-05,只观察/拒绝按住重复);InputHandler 匿名 sink,HLC 模式 |
+| `src/render/ui_render_hook.h/.cpp` | DrawInterfaceStart Detours detour(帧括号驱动器)+ `install_ui_render_hooks()`(三调用点钩子 + 帧括号,顺序保持) |
 | `src/pinstance/pinstance.h/.cpp` | 独立展示实例 P:状态机(spawn→grace(节点泊位+fade 守卫)→穿着→attach)、pump 节奏、despawn/kill、残留清扫、is_p_* 白名单匹配 |
 | `src/pinstance/pinstance_home.cpp` | 阶段 2b 的家:白名单武装、CP_StudioHome 迁移(data3D 先斩 + 杀壳)、release/verify/note_panel_open(U2) |
 | `src/pinstance/pose.cpp` | 摄影棚摆姿:固定视轴锚点、蒙皮 T-pose 重推导、强制级联、蒙皮包围盒居中 |
@@ -719,7 +720,8 @@ Plugin_Version`(含 `Plugin_Build_Identity` 扩展项),均由根 CMake
 | `src/render/p_draw.cpp` | draw_p_proactively:主动 pass 生成(GetRenderPasses) + 配方缓存兜底 + 每 pass 灯光改写 + call_site_original(1) 绘制 + 脏位守卫 |
 | `src/render/replay.cpp` | 重放窗口(post-original OM 捕获、目标 sizing、绑定存活校验;v6.57 起不再绘制/合成)+ 深度格式归一化 + 状态取证日志 |
 | `src/render/studio_lights.cpp` | 自建摄影棚灯光 rig(环境+key/fill 双点光、ShadowSceneNode 入册、壳补丁、泊位制、fetch 停滞自愈) |
-| `src/render/composite.h/.cpp` | 屏幕合成:SV_VertexID 全屏四边形 + HLSL(内嵌) + 固定管线状态 + 面板矩形常量 |
+| `src/render/composite.h/.cpp` | 屏幕合成:SV_VertexID 全屏四边形 + 固定管线状态 + 面板矩形常量;HLSL 从 `shaders/` 嵌入消费 |
+| `src/render/shaders/composite_vs.hlsl` `composite_ps.hlsl` | 合成四边形 HLSL 源文件;构建期经 `cmake/embed_shaders.cmake` 生成 `shader_sources.h`(`render_shaders::CompositeVS/CompositePS`)——HLC 参考项目同款机制 |
 | `src/render/offscreen_target.h/.cpp` | 私有离屏摄影棚目标(color+depth+depth-on 状态)、TargetSig、s_panel_rtv 捕获指针 |
 | `src/render/evidence.h/.cpp` | 取证:同步 TGA 导出(F8 与关面板取证契约) |
 | `src/render/render_internal.h` | 渲染层共享内部件:typedef、pre-patch 目标表、call_site_original、心跳/灯数常量 |
@@ -789,10 +791,11 @@ Plugin_Version`(含 `Plugin_Build_Identity` 扩展项),均由根 CMake
 
 ```powershell
 # 构建(vcpkg 锁被占会卡在 "Running vcpkg install",先清掉残留 vcpkg 进程;
+# 工具链走 VCPKG_ROOT 环境变量——vcpkg 已迁至 C:\env\vcpkg,旧 D: 路径作废;
 # 2026-10-05 起代码主体在 src/,无需 CHARACTER_PANEL_BUILD_PROTO)
 cmake -S . -B build `
   -DCHARACTER_PANEL_BUILD_PROBE=ON `
-  -DCMAKE_TOOLCHAIN_FILE="D:/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+  -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
   -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
 cmake --build build --config Release --target CharacterPanel --parallel 4
 ```

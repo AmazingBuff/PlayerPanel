@@ -1,72 +1,20 @@
 //
 // Created by AmazingBuff on 2026/09/28.
 //
-// Panel controller TU: the Proto lifecycle singleton and the input/menu
-// event sinks that drive it. (2026-10-05 src migration: split out of tools/m0_proto, behavior byte-identical)
+// Panel controller TU: the Proto lifecycle singleton and the menu event
+// sink that drives it (hotkeys live in input/input.cpp). (2026-10-05 src
+// migration: split out of tools/m0_proto, behavior byte-identical)
 //
 
-#include "panel.h"
+#include "input/input.h"
+#include "panel/panel.h"
 #include "pinstance/pinstance.h"
-
-#include <RE/Skyrim.h>
-#include <Windows.h>
-#include <fmt/format.h>
-
-#include <string_view>
-
-using namespace std::literals;
-namespace logger = SKSE::log;
+#include "render/ui_render_hook.h"
 
 PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
-    // F6 is bound in the user's game setup, so the panel lives on F7/F8
-    // (the probe's F7/F8 never co-load with this DLL).
-    constexpr std::uint32_t Panel_Toggle_Virtual_Key = VK_F7;
-    constexpr std::uint32_t Dump_Virtual_Key = VK_F8;
-
-    // FR-05: the sink only observes the two panel keys; every other event
-    // passes through untouched, and held/repeat events are rejected so a
-    // single press toggles exactly once. The callback stays active while
-    // InventoryMenu pauses the game, so the panel is operable exactly
-    // where its content exists.
-    class InputHandler final : public RE::BSTEventSink<RE::InputEvent*>
-    {
-    public:
-        static InputHandler& instance()
-        {
-            static InputHandler s_instance;
-            return s_instance;
-        }
-
-        RE::BSEventNotifyControl ProcessEvent(
-            RE::InputEvent* const* events,
-            RE::BSTEventSource<RE::InputEvent*>*) noexcept override
-        {
-            if (!events)
-                return RE::BSEventNotifyControl::kContinue;
-
-            UINT const panel_scan = MapVirtualKeyA(Panel_Toggle_Virtual_Key, MAPVK_VK_TO_VSC);
-            UINT const dump_scan = MapVirtualKeyA(Dump_Virtual_Key, MAPVK_VK_TO_VSC);
-            for (RE::InputEvent* event = *events; event; event = event->next)
-            {
-                RE::ButtonEvent* button = event->AsButtonEvent();
-                if (!button || button->device.get() != RE::INPUT_DEVICE::kKeyboard || !button->IsDown())
-                    continue;
-
-                if (panel_scan != 0 && button->GetIDCode() == panel_scan)
-                    Proto::instance().toggle_panel();
-                else if (dump_scan != 0 && button->GetIDCode() == dump_scan)
-                    Proto::instance().request_dump();
-            }
-            return RE::BSEventNotifyControl::kContinue;
-        }
-
-    private:
-        InputHandler() = default;
-    };
-
     // v6.39: the panel's lifecycle IS the inventory menu's (user
     // decision — the panel depends on nothing but the inventory being
     // open). Opening the inventory opens the panel, closing it closes
@@ -121,30 +69,17 @@ void Proto::install()
     if (m_installed)
         return;
 
-    RE::BSInputDeviceManager* source = RE::BSInputDeviceManager::GetSingleton();
-    if (!source)
-    {
-        logger::warn("Input device manager unavailable; panel hotkeys are disabled");
+    if (!InputManager::install())
         return;
-    }
 
-    source->AddEventSink(&InputHandler::instance());
     // v6.39: the panel follows the inventory menu (open/close with it).
     if (auto* ui = RE::UI::GetSingleton())
         ui->AddEventSink(&MenuSink::instance());
     else
         logger::warn("UI singleton unavailable; the panel will not follow the inventory menu");
     m_installed = true;
-    if (!install_pass_hooks())
-    {
-        logger::warn("Proto pass-hook install failed; the panel has no redirect effect");
+    if (!install_ui_render_hooks())
         return;
-    }
-    if (!install_hook())
-    {
-        logger::warn("Proto DrawInterfaceStart hook failed; the panel has no effect");
-        return;
-    }
     m_capture_ready = true;
     logger::info("M0 proto v6.70 installed: born-at-depth FALSIFIED (run 104 — the engine picks "
                  "character LOD by reference distance at load; the depth-spawned graph had zero "

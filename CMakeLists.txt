@@ -20,6 +20,32 @@ include(cmake/packaging.cmake)
 file(GLOB_RECURSE PLUGIN_SOURCES src/*.cpp)
 file(GLOB_RECURSE PLUGIN_HEADERS src/*.h)
 
+# HLSL sources live as real files under src/render/shaders and are embedded
+# into a generated header at build time (the HLC reference-project pattern).
+set(RENDER_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/render/shaders)
+set(RENDER_SHADER_EMBED
+	composite_vs.hlsl:CompositeVS
+	composite_ps.hlsl:CompositePS
+)
+set(RENDER_SHADER_FILES "")
+foreach(RENDER_SHADER_ENTRY ${RENDER_SHADER_EMBED})
+	string(REPLACE ":" ";" RENDER_SHADER_PAIR ${RENDER_SHADER_ENTRY})
+	list(GET RENDER_SHADER_PAIR 0 RENDER_SHADER_FILE)
+	list(APPEND RENDER_SHADER_FILES ${RENDER_SHADER_DIR}/${RENDER_SHADER_FILE})
+endforeach()
+set(GENERATED_SHADER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/render/shader_sources.h)
+add_custom_command(
+	OUTPUT ${GENERATED_SHADER_HEADER}
+	COMMAND ${CMAKE_COMMAND}
+		-DSHADER_DIR=${RENDER_SHADER_DIR}
+		-DOUTPUT_HEADER=${GENERATED_SHADER_HEADER}
+		"-DEMBED_ENTRIES=${RENDER_SHADER_EMBED}"
+		-P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_shaders.cmake
+	DEPENDS ${RENDER_SHADER_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_shaders.cmake
+	COMMENT "Embedding HLSL sources (render/shaders)"
+	VERBATIM
+)
+
 set(VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/plugin.h)
 configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/cmake/plugin.h.in
@@ -46,6 +72,7 @@ add_library(
 	SHARED
 	${PLUGIN_SOURCES}
 	${PLUGIN_HEADERS}
+	${GENERATED_SHADER_HEADER}
 	${VERSION_HEADER}
 	${CMAKE_CURRENT_BINARY_DIR}/version.rc
 )
