@@ -126,7 +126,7 @@ public:
     }
 
 private:
-    PInstance() = default;
+    PInstance();
 
     enum class State : std::uint8_t
     {
@@ -166,25 +166,25 @@ private:
     // relocated graph; re-home from our NiPointer if stripped.
     void verify_home();
 
-    std::atomic<State> m_state{ State::kNone };
-    std::atomic<bool> m_step_queued{ false };
+    std::atomic<State> m_state;
+    std::atomic<bool> m_step_queued;
     // Run 49 (v6.15): set by the SKSE message handler; the auto-spawn
     // fires on the first UNPAUSED world frame with a rendered player so
     // the engine renderer-initializes P's geometries.
-    std::atomic<bool> m_world_ready{ false };
+    std::atomic<bool> m_world_ready;
     // The whitelisted P graph root (the parked actor's 3D) as a plain
     // address; written by the game thread, read by the render thread.
-    std::atomic<std::uintptr_t> m_active_root{ 0 };
-    RE::ObjectRefHandle m_clone{};
-    std::uint32_t m_frames_since_place{ 0 };
-    std::uint32_t m_dressed_frames{ 0 };
-    std::uint32_t m_total_frames{ 0 };
+    std::atomic<std::uintptr_t> m_active_root;
+    RE::ObjectRefHandle m_clone;
+    std::uint32_t m_frames_since_place;
+    std::uint32_t m_dressed_frames;
+    std::uint32_t m_total_frames;
     // v6.24 residue sweep cadence (game thread only).
-    std::uint32_t m_frames_until_residue_scan{ 0 };
+    std::uint32_t m_frames_until_residue_scan;
     // Stage-2b home state (game thread only, except the atomic latch the
     // render thread polls at draw entry).
-    std::atomic<HomeState> m_home{ HomeState::kWorldParked };
-    std::atomic<bool> m_relocating{ false };
+    std::atomic<HomeState> m_home;
+    std::atomic<bool> m_relocating;
     // Strong ownership once relocated — the engine holds no parent link
     // to the graph anymore, so this NiPointer plus the holder's child
     // slot are what keep it alive (the run-51 dangling-whitelist crash
@@ -193,6 +193,6 @@ private:
     RE::NiPointer<RE::NiNode> m_home_node;
     // v6.32: the last studio anchor pose_for_studio computed (render
     // thread only — the frontal light rig reads it).
-    RE::NiPoint3 m_studio_anchor{ 0.0f, 0.0f, 0.0f };
+    RE::NiPoint3 m_studio_anchor;
 };
 PLUGIN_NAMESPACE_END

@@ -5,6 +5,24 @@
 #include "render/offscreen_target.h"
 
 PLUGIN_NAMESPACE_BEGIN
+OffscreenTarget::OffscreenTarget() :
+    color(nullptr), rtv(nullptr), srv(nullptr), depth_texture(nullptr),
+    dsv(nullptr), ds_state(nullptr), width(0), height(0),
+    format(REX::W32::DXGI_FORMAT_UNKNOWN), depth_format(REX::W32::DXGI_FORMAT_UNKNOWN)
+{
+}
+
+TargetSig::TargetSig() :
+    width(0), height(0), format(0), depth_format(0)
+{
+}
+
+TargetSig::TargetSig(std::uint32_t a_width, std::uint32_t a_height, std::uint32_t a_format,
+    std::uint32_t a_depth_format) :
+    width(a_width), height(a_height), format(a_format), depth_format(a_depth_format)
+{
+}
+
 void OffscreenTarget::destroy()
 {
     if (srv)

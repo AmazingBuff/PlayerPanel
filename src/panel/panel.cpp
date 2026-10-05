@@ -58,6 +58,13 @@ namespace
     };
 }
 
+Proto::Proto() :
+    m_installed(false), m_capture_ready(false), m_panel_open(false),
+    m_release_pending(false), m_dump_requested(false), m_dump_on_close(false),
+    m_panel_generation(0)
+{
+}
+
 Proto& Proto::instance()
 {
     static Proto s_instance;

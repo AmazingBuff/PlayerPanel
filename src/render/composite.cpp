@@ -37,6 +37,13 @@ namespace
 
 // One-time setup: compile the shaders (native d3dcompiler, no
 // blob-type coupling into REX) and create the fixed states.
+CompositeRenderer::CompositeRenderer() :
+    m_vs(nullptr), m_ps(nullptr), m_sampler(nullptr), m_blend(nullptr),
+    m_opaque(nullptr), m_depth_off(nullptr), m_rs(nullptr), m_cb(nullptr),
+    m_draws(0), m_failed(false), m_rs_logged(false), m_blend_logged(false)
+{
+}
+
 bool CompositeRenderer::ensure(REX::W32::ID3D11Device* device)
 {
     if (m_vs || m_failed)

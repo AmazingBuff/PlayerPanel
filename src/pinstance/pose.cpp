@@ -40,9 +40,14 @@ namespace
     // that is the visual body the user wants framed.
     struct SkinnedBound
     {
-        RE::NiPoint3 center{ 0.0f, 0.0f, 0.0f };
-        float radius{ 0.0f };
-        bool valid{ false };
+        SkinnedBound() :
+            center(), radius(0.0f), valid(false)
+        {
+        }
+
+        RE::NiPoint3 center;
+        float radius;
+        bool valid;
     };
 
     void union_sphere(SkinnedBound& a_out, const RE::NiPoint3& a_center, float a_radius)
@@ -103,7 +108,12 @@ namespace
     // accumulating at identity from its children.
     struct SkinBindGroup
     {
-        RE::NiAVObject* root{ nullptr };
+        explicit SkinBindGroup(RE::NiAVObject* a_root) :
+            root(a_root)
+        {
+        }
+
+        RE::NiAVObject* root;
         std::unordered_map<const RE::NiAVObject*, RE::NiTransform> bones;
     };
 
@@ -134,7 +144,7 @@ namespace
                 [root](const SkinBindGroup& g) { return g.root == root; });
             if (group == groups.end())
             {
-                groups.push_back({ root, {} });
+                groups.emplace_back(root);
                 group = groups.end() - 1;
             }
             const auto* data = skin->skinData.get();

@@ -55,6 +55,27 @@ void call_site_original(std::size_t site_index, RE::BSRenderPass* pass, std::uin
         reinterpret_cast<RenderPassImmediately_t>(target)(pass, technique, alpha_test, render_flags);
 }
 
+PassRedirector::PassRedirector() :
+    m_roots(), m_logged_roots(), m_root_count(0), m_logged_root_count(0),
+    m_seen_geoms(), m_seen_p_geoms(), m_generation(0), m_frame_index(0),
+    m_passes_seen(0), m_geoms_logged(0), m_p_geoms_logged(0), m_menu_passes(0),
+    m_p_passes(0), m_menu_lighting_replayed(0), m_p_total_replays(0),
+    m_last_logged_replayed(0), m_content_frames(0), m_session_replays(0),
+    m_p_drew_this_open(false), m_cleared(false), m_target_failed(false),
+    m_failed_sig(), m_state_logged(false), m_srv_logged(false),
+    m_binding_logged(false), m_in_frame(false), m_composited_this_frame(false),
+    m_end_frame_composites(0), m_selfcreate_trace_logged(false),
+    m_fb_texture_null_logged(false), m_rt_dirty_guard_used(false),
+    m_studio_lights(), m_studio_lights_node(nullptr), m_studio_lights_host(nullptr),
+    m_fetch_warned(false), m_fetch_stall_windows(0), m_studio_light_ni(),
+    m_studio_rig_node(), m_studio_lights_failed(false), m_p_draw_logged(false),
+    m_p_binding_logged(false), m_p_drawn_this_frame(false), m_p_recipe_logged(false),
+    m_p_empty_live_logged(false), m_last_pass_p_geom(false), m_p_no_root_logged(false),
+    m_p_frontal_logged(false), m_studio_light_array(nullptr), m_studio_light_count(0),
+    m_studio_lights_fresh(false), m_p_studio_lights_logged(false), m_pass_recipes()
+{
+}
+
 bool PassRedirector::install()
 {
     // The three call-site hooks go through a private local

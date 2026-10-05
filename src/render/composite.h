@@ -29,19 +29,19 @@ public:
     [[nodiscard]] REX::W32::ID3D11RasterizerState* clean_rasterizer() const { return m_rs; }
 
 private:
-    CompositeRenderer() = default;
+    CompositeRenderer();
 
-    REX::W32::ID3D11VertexShader* m_vs = nullptr;
-    REX::W32::ID3D11PixelShader* m_ps = nullptr;
-    REX::W32::ID3D11SamplerState* m_sampler = nullptr;
-    REX::W32::ID3D11BlendState* m_blend = nullptr;
-    REX::W32::ID3D11BlendState* m_opaque = nullptr;
-    REX::W32::ID3D11DepthStencilState* m_depth_off = nullptr;
-    REX::W32::ID3D11RasterizerState* m_rs = nullptr;
-    REX::W32::ID3D11Buffer* m_cb = nullptr;
-    std::uint32_t m_draws = 0;
-    bool m_failed = false;
-    bool m_rs_logged = false;
-    bool m_blend_logged = false;
+    REX::W32::ID3D11VertexShader* m_vs;
+    REX::W32::ID3D11PixelShader* m_ps;
+    REX::W32::ID3D11SamplerState* m_sampler;
+    REX::W32::ID3D11BlendState* m_blend;
+    REX::W32::ID3D11BlendState* m_opaque;
+    REX::W32::ID3D11DepthStencilState* m_depth_off;
+    REX::W32::ID3D11RasterizerState* m_rs;
+    REX::W32::ID3D11Buffer* m_cb;
+    std::uint32_t m_draws;
+    bool m_failed;
+    bool m_rs_logged;
+    bool m_blend_logged;
 };
 PLUGIN_NAMESPACE_END

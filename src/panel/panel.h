@@ -67,15 +67,15 @@ public:
     std::uint32_t panel_generation();
 
 private:
-    Proto() = default;
+    Proto();
 
-    bool m_installed{ false };
-    bool m_capture_ready{ false };
-    std::atomic<bool> m_panel_open{ false };
-    std::atomic<bool> m_release_pending{ false };
-    std::atomic<bool> m_dump_requested{ false };
-    std::atomic<bool> m_dump_on_close{ false };
-    std::atomic<std::uint32_t> m_panel_generation{ 0 };
+    bool m_installed;
+    bool m_capture_ready;
+    std::atomic<bool> m_panel_open;
+    std::atomic<bool> m_release_pending;
+    std::atomic<bool> m_dump_requested;
+    std::atomic<bool> m_dump_on_close;
+    std::atomic<std::uint32_t> m_panel_generation;
 };
 
 PLUGIN_NAMESPACE_END

@@ -32,7 +32,7 @@ public:
     void dump_and_release(std::string_view reason);
 
 private:
-    PassRedirector() = default;
+    PassRedirector();
 
     // Run 31 (route 3): a whitelist P pass in the WORLD stream is
     // SUPPRESSED from the passthrough — the world must not show the
@@ -114,92 +114,92 @@ private:
     // frames) the lights are 100k units away and light nothing.
     static constexpr float Rig_Park_Z = 100000.0f;
 
-    RE::NiNode* m_roots[8]{};
-    RE::NiNode* m_logged_roots[8]{};
-    std::size_t m_root_count = 0;
-    std::size_t m_logged_root_count = 0;
+    RE::NiNode* m_roots[8];
+    RE::NiNode* m_logged_roots[8];
+    std::size_t m_root_count;
+    std::size_t m_logged_root_count;
     // Menu geometries already logged this panel open (discovery cap).
     std::unordered_set<const RE::BSGeometry*> m_seen_geoms;
     // P geometries already logged this panel open (run 29: P passes
     // arrive in the WORLD stream, outside the menu bracket).
     std::unordered_set<const RE::BSGeometry*> m_seen_p_geoms;
-    std::uint32_t m_generation = 0;
-    std::uint32_t m_frame_index = 0;
-    std::uint32_t m_passes_seen = 0;
-    std::uint32_t m_geoms_logged = 0;
-    std::uint32_t m_p_geoms_logged = 0;
-    std::uint32_t m_menu_passes = 0;
-    std::uint32_t m_p_passes = 0;
-    std::uint32_t m_menu_lighting_replayed = 0;
+    std::uint32_t m_generation;
+    std::uint32_t m_frame_index;
+    std::uint32_t m_passes_seen;
+    std::uint32_t m_geoms_logged;
+    std::uint32_t m_p_geoms_logged;
+    std::uint32_t m_menu_passes;
+    std::uint32_t m_p_passes;
+    std::uint32_t m_menu_lighting_replayed;
     // Replays accumulated since the last end_frame summary; the
     // close-dump gate (m_session_replays) consumes them so a P-only
     // session still writes its evidence TGA.
-    std::uint32_t m_p_total_replays = 0;
-    std::uint32_t m_last_logged_replayed = 0;
-    std::uint32_t m_content_frames = 0;
-    std::uint32_t m_session_replays = 0;
+    std::uint32_t m_p_total_replays;
+    std::uint32_t m_last_logged_replayed;
+    std::uint32_t m_content_frames;
+    std::uint32_t m_session_replays;
     // v6.63: the proactive P draw submitted at least one pass this
     // open — the close-dump gate counts it as studio content.
-    bool m_p_drew_this_open = false;
-    bool m_cleared = false;
-    bool m_target_failed = false;
-    TargetSig m_failed_sig{};
-    bool m_state_logged = false;
-    bool m_srv_logged = false;
-    bool m_binding_logged = false;
-    bool m_in_frame = false;
+    bool m_p_drew_this_open;
+    bool m_cleared;
+    bool m_target_failed;
+    TargetSig m_failed_sig;
+    bool m_state_logged;
+    bool m_srv_logged;
+    bool m_binding_logged;
+    bool m_in_frame;
     // v6.38: set by the in-replay composite, consumed by end_frame's
     // no-menu-pass fallback — one composite per studio frame.
-    bool m_composited_this_frame = false;
-    std::uint32_t m_end_frame_composites = 0;
+    bool m_composited_this_frame;
+    std::uint32_t m_end_frame_composites;
     // v6.44: one-shot traces for the self-create block's skip paths
     // (run 77: the block skipped with zero log lines — silence made
     // the skip path unidentifiable).
-    bool m_selfcreate_trace_logged = false;
-    bool m_fb_texture_null_logged = false;
+    bool m_selfcreate_trace_logged;
+    bool m_fb_texture_null_logged;
     // v6.46: the dirty-bit guard fired this studio window (paired
     // set-back at the restore).
-    bool m_rt_dirty_guard_used = false;
+    bool m_rt_dirty_guard_used;
     // v6.47: the self-built studio lights. Shells live for the
     // session (render thread only); the NiLights are owned by the
     // scene graph (menuObjects[0]) AND these pointers (the shell's
     // NiPointer holds one ref, these hold another — detach would
     // need both cleared; despawn scope is session end, where leak-
     // on-exit is acceptable for the proto).
-    RE::BSLight* m_studio_lights[Studio_Light_Count] = {};
+    RE::BSLight* m_studio_lights[Studio_Light_Count];
     // v6.66: the ShadowSceneNode the lights were last registered
     // with — a changed pointer means the world was rebuilt (menu
     // transition / load) and the old wrappers are gone.
-    RE::ShadowSceneNode* m_studio_lights_node = nullptr;
+    RE::ShadowSceneNode* m_studio_lights_node;
     // v6.67: the UI3D host the rig was last created under — a
     // changed pointer means the menu scene was rebuilt and the old
     // rig is orphaned (its lights no longer reach the ledger).
-    RE::NiNode* m_studio_lights_host = nullptr;
+    RE::NiNode* m_studio_lights_host;
     // v6.67: the incomplete-fetch warn latch (cleared on success).
-    bool m_fetch_warned = false;
+    bool m_fetch_warned;
     // v6.68: consecutive incomplete-fetch windows — at
     // Fetch_Stall_Reset_Windows the whole rig is re-created.
-    std::uint32_t m_fetch_stall_windows = 0;
+    std::uint32_t m_fetch_stall_windows;
     RE::NiPointer<RE::NiLight> m_studio_light_ni[Studio_Light_Count];
     // v6.51: the private rig node the lights hang from — fresh,
     // flag-free, so forced cascades actually move them.
     RE::NiPointer<RE::NiNode> m_studio_rig_node;
-    bool m_studio_lights_failed = false;
-    bool m_p_draw_logged = false;
-    bool m_p_binding_logged = false;
-    bool m_p_drawn_this_frame = false;
-    bool m_p_recipe_logged = false;
-    bool m_p_empty_live_logged = false;
+    bool m_studio_lights_failed;
+    bool m_p_draw_logged;
+    bool m_p_binding_logged;
+    bool m_p_drawn_this_frame;
+    bool m_p_recipe_logged;
+    bool m_p_empty_live_logged;
     // Run 54: the pass just classified by on_pass — the thunks read
     // it (same render-thread call) to keep the engine from ever
     // drawing P's passes (world double + menu teardown crash).
-    bool m_last_pass_p_geom = false;
+    bool m_last_pass_p_geom;
     // Run 54: once-per-open marker for the no-root early return in
     // draw_p_proactively — a silent kNone here is what swallowed
     // run 53's steady-state draws without a single log line.
-    bool m_p_no_root_logged = false;
+    bool m_p_no_root_logged;
     // v6.33: once-per-session marker for the frontal light rig log.
-    bool m_p_frontal_logged = false;
+    bool m_p_frontal_logged;
     // Run 53/56: the item preview's menu lights — the studio
     // lighting for P's passes (whose own lights are dungeon/world
     // lights, thousands of units from the menu-space fragments the
@@ -212,10 +212,10 @@ private:
     // outlived the light objects (item selection changed mid
     // session). The freshness flag gates the override to frames
     // where a menu lighting pass actually arrived.
-    RE::BSLight** m_studio_light_array = nullptr;
-    std::uint8_t m_studio_light_count = 0;
-    bool m_studio_lights_fresh = false;
-    bool m_p_studio_lights_logged = false;
+    RE::BSLight** m_studio_light_array;
+    std::uint8_t m_studio_light_count;
+    bool m_studio_lights_fresh;
+    bool m_p_studio_lights_logged;
 
     // Run 46: pass recipes recorded on successful live generation —
     // the paused inventory stops regenerating passes, so later

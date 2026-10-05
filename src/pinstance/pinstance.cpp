@@ -90,6 +90,15 @@ namespace
     }
 }
 
+PInstance::PInstance() :
+    m_state(State::kNone), m_step_queued(false), m_world_ready(false),
+    m_active_root(0), m_clone(), m_frames_since_place(0), m_dressed_frames(0),
+    m_total_frames(0), m_frames_until_residue_scan(0),
+    m_home(HomeState::kWorldParked), m_relocating(false), m_home_graph(),
+    m_home_node(), m_studio_anchor()
+{
+}
+
 PInstance& PInstance::instance()
 {
     static PInstance s_instance;

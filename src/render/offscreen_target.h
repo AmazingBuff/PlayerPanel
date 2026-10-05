@@ -14,16 +14,18 @@ inline REX::W32::ID3D11RenderTargetView* s_panel_rtv = nullptr;
 
 struct OffscreenTarget
 {
-    REX::W32::ID3D11Texture2D* color = nullptr;
-    REX::W32::ID3D11RenderTargetView* rtv = nullptr;
-    REX::W32::ID3D11ShaderResourceView* srv = nullptr;
-    REX::W32::ID3D11Texture2D* depth_texture = nullptr;
-    REX::W32::ID3D11DepthStencilView* dsv = nullptr;
-    REX::W32::ID3D11DepthStencilState* ds_state = nullptr;
-    std::uint32_t width = 0;
-    std::uint32_t height = 0;
-    REX::W32::DXGI_FORMAT format = REX::W32::DXGI_FORMAT_UNKNOWN;
-    REX::W32::DXGI_FORMAT depth_format = REX::W32::DXGI_FORMAT_UNKNOWN;
+    OffscreenTarget();
+
+    REX::W32::ID3D11Texture2D* color;
+    REX::W32::ID3D11RenderTargetView* rtv;
+    REX::W32::ID3D11ShaderResourceView* srv;
+    REX::W32::ID3D11Texture2D* depth_texture;
+    REX::W32::ID3D11DepthStencilView* dsv;
+    REX::W32::ID3D11DepthStencilState* ds_state;
+    std::uint32_t width;
+    std::uint32_t height;
+    REX::W32::DXGI_FORMAT format;
+    REX::W32::DXGI_FORMAT depth_format;
 
     void destroy();
 
@@ -36,10 +38,14 @@ struct OffscreenTarget
 // configuration within one panel open.
 struct TargetSig
 {
-    std::uint32_t width = 0;
-    std::uint32_t height = 0;
-    std::uint32_t format = 0;
-    std::uint32_t depth_format = 0;
+    TargetSig();
+    TargetSig(std::uint32_t a_width, std::uint32_t a_height, std::uint32_t a_format,
+        std::uint32_t a_depth_format);
+
+    std::uint32_t width;
+    std::uint32_t height;
+    std::uint32_t format;
+    std::uint32_t depth_format;
     bool operator==(const TargetSig&) const = default;
 };
 
