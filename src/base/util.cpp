@@ -1,0 +1,245 @@
+//
+// Created by AmazingBuff on 2026/9/10.
+//
+
+#include "util.h"
+
+namespace
+{
+    constexpr std::string_view Skyrim_Plugin = std::string_view{ "Skyrim.esm" };
+    constexpr std::string_view Dawnguard_Plugin = std::string_view{ "Dawnguard.esm" };
+    constexpr std::string_view Dragonborn_Plugin = std::string_view{ "Dragonborn.esm" };
+
+    struct LocalFromID
+    {
+        uint32_t local_id;
+        std::string_view plugin_name;
+    };
+
+    std::vector<LocalFromID> const Ash_Piles =
+    {
+        { .local_id = 0x0000001B, .plugin_name = Skyrim_Plugin }, // DefaultAshPile1 = 0x1B
+        { .local_id = 0x00000022, .plugin_name = Skyrim_Plugin }, // DefaultAshPile2 = 0x22
+        { .local_id = 0x00101048, .plugin_name = Skyrim_Plugin }, // Ghost = 0x101048
+        { .local_id = 0x001069E4, .plugin_name = Skyrim_Plugin }, // Ice = 0x1069E4
+        { .local_id = 0x0010C649, .plugin_name = Skyrim_Plugin }, // DarkGhost = 0x10C649
+        { .local_id = 0x0010D6EF, .plugin_name = Skyrim_Plugin }, // GhostBlack = 0x10D6EF
+        { .local_id = 0x0000A905, .plugin_name = Dawnguard_Plugin },  // DLC01DefaultAshPileSoul = 0xA905
+        { .local_id = 0x0000BDCE, .plugin_name = Dawnguard_Plugin },  // DLC01DefaultAshPileEnemies = 0xBDCE
+        { .local_id = 0x0000FC74, .plugin_name = Dawnguard_Plugin },  // DLC1dunHarkonAshPile = 0xFC74
+        { .local_id = 0x00003522, .plugin_name = Dawnguard_Plugin },  // DLC1_WESC08AshPile = 0x3522
+        { .local_id = 0x0003280A, .plugin_name = Dragonborn_Plugin }, // DLC2AshSpawnAshPile = 0x3280A
+        { .local_id = 0x00023F83, .plugin_name = Dragonborn_Plugin }, // DLC2HMDaedraAshPile = 0x23F83
+   };
+
+    std::vector<LocalFromID> const Static_Corpses =
+    {
+        { .local_id = 0x00023969, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpse01
+        { .local_id = 0x0008008D, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpseWrapped01
+        { .local_id = 0x0008008E, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpseWrapped02
+        { .local_id = 0x0008008F, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpse02
+        { .local_id = 0x00080090, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpse03
+        { .local_id = 0x00080091, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpse04
+        { .local_id = 0x00080092, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpse05
+        { .local_id = 0x00080093, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpse06
+        { .local_id = 0x00080094, .plugin_name = Skyrim_Plugin },  // TreasDraugrAmbushCorpse07
+        { .local_id = 0x00042745, .plugin_name = Skyrim_Plugin },  // TreasBurntCorpse01
+        { .local_id = 0x00042746, .plugin_name = Skyrim_Plugin },  // TreasBurntCorpse02
+        { .local_id = 0x00042747, .plugin_name = Skyrim_Plugin },  // TreasBurntCorpse03
+        { .local_id = 0x00042748, .plugin_name = Skyrim_Plugin },  // TreasBurntCorpse04
+        { .local_id = 0x00042749, .plugin_name = Skyrim_Plugin },  // TreasBurntCorpse05
+        { .local_id = 0x000DD060, .plugin_name = Skyrim_Plugin },  // MQ104BurntCorpse03
+        { .local_id = 0x000DD061, .plugin_name = Skyrim_Plugin },  // MQ104BurntCorpse04
+        { .local_id = 0x000BAD05, .plugin_name = Skyrim_Plugin },  // TreasCorpseMammoth
+        { .local_id = 0x000D4FFD, .plugin_name = Skyrim_Plugin },  // POICorpseFrozenMammoth
+        { .local_id = 0x00020668, .plugin_name = Skyrim_Plugin },  // TreasSpiderWebCorpseHuman
+        { .local_id = 0x000C674B, .plugin_name = Skyrim_Plugin },  // defaultGhostCorpse
+        { .local_id = 0x000E7A36, .plugin_name = Skyrim_Plugin },  // dunGeirmundCorpse
+        { .local_id = 0x00018E73, .plugin_name = Skyrim_Plugin },  // MS05_SvaknirsCorpse
+        { .local_id = 0x0010EB29, .plugin_name = Skyrim_Plugin },  // wispCorpseContainer
+        { .local_id = 0x00023968, .plugin_name = Skyrim_Plugin },  // DraugrBodyLaying0000 (STAT)
+        // DLC
+        { .local_id = 0x0000A904, .plugin_name = Dawnguard_Plugin },   // DLC01defaultSoulCorpse
+        { .local_id = 0x00018C3B, .plugin_name = Dragonborn_Plugin },  // DLC2TreasDraugrAmbushCorpseWrapped01EMPTY
+    };
+
+
+    [[nodiscard]] std::vector<RE::FormID> resolve_form_ids(std::vector<LocalFromID> const& forms)
+    {
+        std::vector<RE::FormID> results;
+        if (RE::TESDataHandler* data_handler = RE::TESDataHandler::GetSingleton())
+        {
+            results.reserve(forms.size());
+            for (auto const& [local_id, plugin_name] : forms)
+            {
+                if (RE::FormID const id = data_handler->LookupFormID(local_id, plugin_name))
+                    results.push_back(id);
+            }
+        }
+
+        if (results.empty())
+            logger::warn("Resolved 0 of {} static form IDs, related corpse detection is disabled", forms.size());
+
+        return results;
+    }
+
+    [[nodiscard]] bool is_ref_form_in(RE::TESObjectREFR const* ref, std::vector<RE::FormID> const& ids)
+    {
+        if (!ref || ids.empty())
+            return false;
+
+        RE::TESBoundObject const* base = ref->GetBaseObject();
+        if (!base)
+            return false;
+
+        RE::FormID const id = base->GetFormID();
+        return std::ranges::any_of(ids, [id](RE::FormID const& form) { return id == form; });
+    }
+}
+
+
+PLUGIN_NAMESPACE_BEGIN
+
+namespace Util
+{
+    // fork from QuickLoot IE
+    RE::TESObjectREFR* get_container_object(RE::TESObjectREFR* ref)
+    {
+        if (ref)
+        {
+            RE::TESBoundObject const* object = ref->GetObjectReference();
+
+            // For enemies that leave behind an ash pile on death
+            if (object->Is(RE::FormType::Activator))
+            {
+                RE::ObjectRefHandle ref_handle = ref->extraList.GetAshPileRef();
+                if (RE::TESObjectREFRPtr const ptr = ref_handle.get())
+                    return get_container_object(ptr.get());
+            }
+
+            if (ref->HasContainer())
+                return ref;
+        }
+
+        return nullptr;
+    }
+
+    bool is_corpse_actor(RE::Actor* actor)
+    {
+        return actor->AsActorState()->GetLifeState() == RE::ACTOR_LIFE_STATE::kDead;
+    }
+
+    bool is_ash_pile(RE::TESObjectREFR const* ref)
+    {
+        static std::vector<RE::FormID> const s_ash_pile_ids = resolve_form_ids(Ash_Piles);
+        return is_ref_form_in(ref, s_ash_pile_ids);
+    }
+
+    bool is_corpse_object(RE::TESObjectREFR const* ref)
+    {
+        static std::vector<RE::FormID> const s_static_corpses_ids = resolve_form_ids(Static_Corpses);
+        return is_ref_form_in(ref, s_static_corpses_ids);
+    }
+
+    bool is_corpse(RE::TESObjectREFR* ref)
+    {
+        if (RE::Actor* const actor = ref->As<RE::Actor>())
+            return is_corpse_actor(actor);
+        return is_ash_pile(ref) || is_corpse_object(ref);
+    }
+
+    uint32_t macro_key_code(RE::ButtonEvent const& event, uint32_t& out)
+    {
+        switch (event.device.get())
+        {
+        case RE::INPUT_DEVICE::kKeyboard:
+            out = event.idCode;
+            return true;
+        case RE::INPUT_DEVICE::kMouse:
+            out = SKSE::InputMap::kMacro_MouseButtonOffset + event.idCode;
+            return true;
+        case RE::INPUT_DEVICE::kGamepad:
+            out = SKSE::InputMap::kMacro_GamepadOffset + SKSE::InputMap::GamepadMaskToKeycode(event.idCode);
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    RE::BSTArray<RE::InventoryEntryData> fetch_inventory_items(RE::TESObjectREFR* ref, std::function<bool(RE::TESBoundObject&)> const& filter)
+    {
+        RE::InventoryChanges* const changes = ref->GetInventoryChanges();
+
+        std::unordered_map<RE::TESBoundObject*, RE::InventoryEntryData> lookup;
+
+        // Changed items
+        if (changes && changes->entryList)
+        {
+            for (RE::InventoryEntryData const* entry : *changes->entryList)
+            {
+                if (entry && entry->object && filter(*entry->object))
+                {
+                    lookup.emplace(entry->object, *entry);
+                }
+            }
+        }
+
+        // Base container items
+        if (RE::TESContainer const* const container = ref->GetContainer())
+        {
+            container->ForEachContainerObject([&](RE::ContainerObject& entry)
+            {
+                RE::TESBoundObject* const object = entry.obj;
+                if (object && filter(*object) && object->GetFormType() != RE::FormType::LeveledItem)
+                {
+                    if (auto const it = lookup.find(object); it == lookup.end())
+                        lookup.emplace(object, RE::InventoryEntryData{object, entry.count});
+                    else
+                    {
+                        RE::InventoryEntryData& inventory_entry = it->second;
+                        if (!inventory_entry.IsLeveled())
+                            inventory_entry.countDelta += entry.count;
+                    }
+                }
+                return RE::BSContainer::ForEachResult::kContinue;
+            });
+        }
+
+        // Dropped items always appear as separate item stacks because we need to attach the drop ref to them.
+        if (RE::ExtraDroppedItemList* const extra_drops = ref->extraList.GetByType<RE::ExtraDroppedItemList>())
+        {
+            for (RE::ObjectRefHandle const& drop_ref_handle : extra_drops->droppedItemList)
+            {
+                RE::NiPointer<RE::TESObjectREFR> const reference = drop_ref_handle.get();
+
+                if (reference && !reference->IsDeleted() && !reference->IsDisabled())
+                {
+                    RE::TESBoundObject* const object = reference->GetObjectReference();
+                    if (object && filter(*object))
+                    {
+                        int32_t const count = reference->extraList.GetCount();
+                        if (auto const it = lookup.find(object); it == lookup.end())
+                            lookup.emplace(object, RE::InventoryEntryData{object, count});
+                        else
+                        {
+                            RE::InventoryEntryData& inventory_entry = it->second;
+                            if (!inventory_entry.IsLeveled())
+                                inventory_entry.countDelta += count;
+                        }
+                    }
+                }
+            }
+        }
+
+        RE::BSTArray<RE::InventoryEntryData> inventory;
+        for (auto const& entry : lookup | std::views::values)
+        {
+            if (entry.countDelta > 0)
+                inventory.emplace_back(entry);
+        }
+
+        return inventory;
+    }
+}
+
+PLUGIN_NAMESPACE_END

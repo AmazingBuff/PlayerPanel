@@ -24,8 +24,7 @@ file(GLOB_RECURSE PLUGIN_HEADERS src/*.h)
 # into a generated header at build time (the HLC reference-project pattern).
 set(RENDER_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/render/shaders)
 set(RENDER_SHADER_EMBED
-	composite_vs.hlsl:CompositeVS
-	composite_ps.hlsl:CompositePS
+	composite.hlsl:Composite
 )
 set(RENDER_SHADER_FILES "")
 foreach(RENDER_SHADER_ENTRY ${RENDER_SHADER_EMBED})

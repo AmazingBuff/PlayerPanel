@@ -1,12 +1,12 @@
 //
 // Created by AmazingBuff on 2026/09/28.
 //
-// Entry TU: SKSE exports, session message handling, logging, and the AE
-// 1.6.1170 runtime gate. (2026-10-05 src migration: split out of tools/m0_proto, behavior byte-identical)
-//
 
+#include "character/character_manager.h"
 #include "panel/panel.h"
-#include "pinstance/pinstance.h"
+#include "render/renderer.h"
+#include "render/shader_manager.h"
+#include "render/studio/light.h"
 
 namespace
 {
@@ -30,62 +30,19 @@ namespace
 
     void message_handler(SKSE::MessagingInterface::Message* message) noexcept
     {
-        if (!message)
-            return;
         switch (message->type)
         {
         case SKSE::MessagingInterface::kDataLoaded:
-            PLUGIN_NAMESPACE::Proto::instance().install();
-            // Run 49 (v6.15): from here on, idle frames auto-spawn P
-            // on the first unpaused world frame so the engine
-            // renderer-initializes its geometries (device buffers).
-            PLUGIN_NAMESPACE::PInstance::instance().set_world_ready(true);
+            (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
+            PLUGIN_NAMESPACE::Renderer::install();
+            PLUGIN_NAMESPACE::PanelMonitor::instance().install();
             break;
-            // Run 49 (v6.15): each completed save load also re-arms the
-            // auto-spawn (kDataLoaded fires once per app session only).
-        case SKSE::MessagingInterface::kPostLoadGame:
-            PLUGIN_NAMESPACE::PInstance::instance().set_world_ready(true);
-            break;
-            // FR-06: a loading screen or a fresh game is no valid preview
-            // context; drop the panel so it cannot carry stale studio
-            // content across a session change. Run-37 crash defense:
-            // the loading screen also tears down HUD/menu state the
-            // parked clone and the accumulator state depend on — a
-            // force-close here is followed by a hard P kill so no
-            // stale actor/graph survives the load either.
         case SKSE::MessagingInterface::kPreLoadGame:
-            PLUGIN_NAMESPACE::PInstance::instance().set_world_ready(false);
-            PLUGIN_NAMESPACE::Proto::instance().close_panel("save loading");
-            PLUGIN_NAMESPACE::PInstance::instance().despawn();
-            break;
         case SKSE::MessagingInterface::kNewGame:
-            PLUGIN_NAMESPACE::PInstance::instance().set_world_ready(false);
-            PLUGIN_NAMESPACE::Proto::instance().close_panel("new game");
-            PLUGIN_NAMESPACE::PInstance::instance().despawn();
-            break;
-            // v6.31 (run 64): quitting with the panel open crashed — the
-            // studio draw and composite kept running into the tearing-
-            // down renderer, and the parked clone's graph unloads with
-            // the world on quit-to-menu. CLib's MessagingInterface enum
-            // stops at kDataLoaded; the SKSE API's continued values are
-            // kShutdown=10, kExitGame=11, kQuitGame=12. Force-close and
-            // kill P before the teardown proceeds (same defense as the
-            // load path above).
-        case 10:  // SKSE kShutdown
-        case 11:  // SKSE kExitGame
-        case 12:  // SKSE kQuitGame
-            PLUGIN_NAMESPACE::PInstance::instance().set_world_ready(false);
-            PLUGIN_NAMESPACE::Proto::instance().close_panel("game exit");
-            PLUGIN_NAMESPACE::PInstance::instance().despawn();
+            PLUGIN_NAMESPACE::CharacterManager::instance().clear_clones();
+            PLUGIN_NAMESPACE::StudioLight::instance().clear_lights();
             break;
         default:
-            // v6.33: bounded diagnostics — the quit-path message
-            // values (expected 10/11/12) have not been observed
-            // firing; log the neighborhood to calibrate the values
-            // this SKSE build actually dispatches.
-            if (message->type >= 9 && message->type <= 15)
-                logger::info("SKSE message type={} sender={}", message->type,
-                    message->sender ? message->sender : "(null)");
             break;
         }
     }

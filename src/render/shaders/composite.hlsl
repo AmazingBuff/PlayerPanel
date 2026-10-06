@@ -15,10 +15,21 @@
 // actually sets is saved and restored; the engine rebinds the rest
 // for its own draws.
 
-cbuffer PanelCB : register(b0) { float4 g_ndcRect; float4 g_flags; }
-struct VSOut { float4 pos : SV_Position; float2 uv : TEXCOORD0; };
-VSOut vs_main(uint id : SV_VertexID) {
-    VSOut o;
+cbuffer PanelCB : register(b0)
+{
+    float4 g_ndcRect;
+    float4 g_flags;
+}
+
+struct PS_IN
+{
+    float4 pos : SV_Position;
+    float2 uv : TEXCOORD0;
+};
+
+PS_IN vs_main(uint id : SV_VertexID)
+{
+    PS_IN o;
     // v4.4: clockwise in window space (the viewport flips NDC y). The old
     // order was counter-clockwise on screen — back-facing — and the
     // engine's CULL_BACK rasterizer state silently culled every quad
@@ -30,4 +41,21 @@ VSOut vs_main(uint id : SV_VertexID) {
     o.pos = float4(x, y, 0.0, 1.0);
     o.uv = float2(c.x * 0.5 + 0.5, 0.5 - c.y * 0.5);
     return o;
+}
+
+
+Texture2D g_tex : register(t0);
+SamplerState g_samp : register(s0);
+
+float4 ps_main(PS_IN ps_in) : SV_Target
+{
+    // v6.32: sample an aspect-correct horizontal slice of the target —
+    // squeezing the full 16:9 target into the narrow panel stretched the
+    // figure (run 65). The window spans (panel aspect / target aspect) of
+    // the target width, centered — the figure keeps its world proportions.
+    ps_in.uv.x = 0.5 + (ps_in.uv.x - 0.5) * g_flags.y;
+    float3 c = g_tex.Sample(g_samp, ps_in.uv).rgb;
+    if (g_flags.x > 0.5)
+        c = c / (1.0 + c);
+    return float4(c, 1.0);
 }

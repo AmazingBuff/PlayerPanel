@@ -40,19 +40,19 @@ namespace
             if (!events)
                 return RE::BSEventNotifyControl::kContinue;
 
-            UINT const panel_scan = MapVirtualKeyA(Panel_Toggle_Virtual_Key, MAPVK_VK_TO_VSC);
-            UINT const dump_scan = MapVirtualKeyA(Dump_Virtual_Key, MAPVK_VK_TO_VSC);
-            for (RE::InputEvent* event = *events; event; event = event->next)
-            {
-                RE::ButtonEvent* button = event->AsButtonEvent();
-                if (!button || button->device.get() != RE::INPUT_DEVICE::kKeyboard || !button->IsDown())
-                    continue;
-
-                if (panel_scan != 0 && button->GetIDCode() == panel_scan)
-                    Proto::instance().toggle_panel();
-                else if (dump_scan != 0 && button->GetIDCode() == dump_scan)
-                    Proto::instance().request_dump();
-            }
+            // UINT const panel_scan = MapVirtualKeyA(Panel_Toggle_Virtual_Key, MAPVK_VK_TO_VSC);
+            // UINT const dump_scan = MapVirtualKeyA(Dump_Virtual_Key, MAPVK_VK_TO_VSC);
+            // for (RE::InputEvent* event = *events; event; event = event->next)
+            // {
+            //     RE::ButtonEvent* button = event->AsButtonEvent();
+            //     if (!button || button->device.get() != RE::INPUT_DEVICE::kKeyboard || !button->IsDown())
+            //         continue;
+            //
+            //     if (panel_scan != 0 && button->GetIDCode() == panel_scan)
+            //         Proto::instance().toggle_panel();
+            //     else if (dump_scan != 0 && button->GetIDCode() == dump_scan)
+            //         Proto::instance().request_dump();
+            // }
             return RE::BSEventNotifyControl::kContinue;
         }
 

@@ -17,6 +17,8 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
 
 using namespace std::literals;
 namespace logger = SKSE::log;
