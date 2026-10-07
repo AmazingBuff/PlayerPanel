@@ -66,7 +66,7 @@ bool CompositePass::init(REX::W32::ID3D11Device* device)
 
     if (!m_sampler || !m_cb)
     {
-        logger::warn("Proto v4 composite state creation failed");
+        logger::error("Panel composite state creation failed");
         if (m_sampler)
             m_sampler->Release();
         if (m_cb)
@@ -77,7 +77,7 @@ bool CompositePass::init(REX::W32::ID3D11Device* device)
     return true;
 }
 
-void CompositePass::draw(REX::W32::ID3D11DeviceContext* context, REX::W32::ID3D11RenderTargetView* rtv, const CommonStates& states, RenderTarget& render_target) const
+void CompositePass::draw(REX::W32::ID3D11DeviceContext* context, REX::W32::ID3D11RenderTargetView* rtv, const CommonStates& states, const RenderTarget& render_target) const
 {
     REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
     if (context->Map(m_cb, 0, REX::W32::D3D11_MAP_WRITE_DISCARD, 0, &mapped) == 0)

@@ -62,30 +62,38 @@ namespace
 
             if (const RE::UI3DSceneManager* ui3d = RE::UI3DSceneManager::GetSingleton())
             {
-                CharacterManager::instance().create_clones({RE::PlayerCharacter::GetSingleton()}, ui3d->menuObjects[0]);
+                RE::UI* ui = RE::UI::GetSingleton();
+                const bool paused = !ui || ui->GameIsPaused();
+                if (!paused)
+                    CharacterManager::instance().create_clones({RE::PlayerCharacter::GetSingleton()}, ui3d->menuObjects[0]);
+
                 StudioLight::instance().init(ui3d->menuObjects[0], RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0]);
+                StudioLight::instance().refresh();
 
                 if (PanelMonitor::instance().is_menu_open())
                 {
-                    D3D11StateCapture capture(context);
-
                     if (const std::shared_ptr<CharacterClone> clone = CharacterManager::instance().get_clone(RE::PlayerCharacter::GetSingleton()))
                     {
-                        clone->draw(ui3d->unk10.get(), *m_common_states, m_render_target);
-                        logger::info("Clone draw");
+                        D3D11StateCapture capture(context);
+
+                        clone->draw(ui3d, *m_common_states, m_render_target);
                     }
 
-                    REX::W32::D3D11_VIEWPORT viewport{
-                        .topLeftX = 0.0f,
-                        .topLeftY = 0.0f,
-                        .width = static_cast<float>(width),
-                        .height = static_cast<float>(height),
-                        .minDepth = 0.0f,
-                        .maxDepth = 1.0f
-                    };
+                    {
+                        D3D11StateCapture capture(context);
 
-                    context->RSSetViewports(1, &viewport);
-                    m_composite_pass.draw(context, output_target, *m_common_states, m_render_target);
+                        REX::W32::D3D11_VIEWPORT viewport{
+                            .topLeftX = 0.0f,
+                            .topLeftY = 0.0f,
+                            .width = static_cast<float>(width),
+                            .height = static_cast<float>(height),
+                            .minDepth = 0.0f,
+                            .maxDepth = 1.0f
+                        };
+
+                        context->RSSetViewports(1, &viewport);
+                        m_composite_pass.draw(context, output_target, *m_common_states, m_render_target);
+                    }
                 }
             }
         }

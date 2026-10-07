@@ -14,7 +14,7 @@ CharacterManager& CharacterManager::instance()
 
 void CharacterManager::create_clones(const std::vector<RE::Actor*>& actors, const RE::NiPointer<RE::NiNode>& node)
 {
-    if (!actors.empty())
+    if (!actors.empty() || !m_generated_clones.empty())
     {
         bool expected = false;
         if (m_step_queue.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
@@ -25,7 +25,14 @@ void CharacterManager::create_clones(const std::vector<RE::Actor*>& actors, cons
                 erased_actors.reserve(m_generated_clones.size());
                 for (RE::Actor* actor : m_generated_clones)
                 {
-                    if (actor && actor->Get3D() && m_character_clones[actor]->attach_graph(node))
+                    const auto clone = m_character_clones.find(actor);
+                    if (clone == m_character_clones.end())
+                    {
+                        erased_actors.push_back(actor);
+                        continue;
+                    }
+
+                    if (actor && actor->Get3D() && clone->second->attach_graph(node))
                         erased_actors.push_back(actor);
                 }
                 

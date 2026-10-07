@@ -17,11 +17,9 @@ public:
 
     bool attach_graph(const RE::NiPointer<RE::NiNode>& host);
 
-    bool is_character_geometry(const RE::BSGeometry* geometry) const;
-
     void pose();
 
-    void draw(RE::BSShaderAccumulator* accumulator, const CommonStates& states, RenderTarget& render_target);
+    void draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target);
 private:
     enum class CloneState : uint8_t
     {
@@ -31,6 +29,9 @@ private:
     };
 
 private:
+    std::uint32_t m_wait_frames;
+    bool m_light_warned;
+
     RE::NiPointer<RE::TESObjectREFR> m_clone;
     std::atomic<CloneState> m_clone_state;
 

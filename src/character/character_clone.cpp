@@ -181,16 +181,34 @@ namespace
             }
         }
     }
+
+    void submit_pass(RE::BSRenderPass* pass)
+    {
+        // save for restore
+        RE::BSLight** const saved_scene_lights = pass->sceneLights;
+        const std::uint8_t saved_num_lights = pass->numLights;
+        const std::uint8_t saved_shadow_lights = pass->numShadowLights;
+
+        pass->numLights = Studio_Light_Count;
+        pass->numShadowLights = 0;
+        pass->sceneLights = StudioLight::instance().lights();
+
+        RE::BSBatchRenderer::SetupAndDrawPass(pass, pass->passEnum, (pass->passEnum & 0x40) != 0, 0x200);
+
+        pass->sceneLights = saved_scene_lights;
+        pass->numLights = saved_num_lights;
+        pass->numShadowLights = saved_shadow_lights;
+    }
 }
 
-CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_state(CloneState::e_none)
+CharacterClone::CharacterClone(RE::Actor* actor) : m_wait_frames(0), m_light_warned(false), m_clone(nullptr), m_clone_state(CloneState::e_none)
 {
     RE::TESNPC* source_base = actor ? actor->GetActorBase() : nullptr;
     RE::TESForm* duplicate = source_base ? source_base->CreateDuplicateForm(false, nullptr) : nullptr;
     RE::TESNPC* clone_base = duplicate ? duplicate->As<RE::TESNPC>() : nullptr;
     if (!clone_base)
     {
-        logger::warn("Clone spawn failed: {} ({:08x})", actor->GetDisplayFullName(), actor->GetFormID());
+        logger::warn("Clone spawn failed: {} ({:08x})", actor ? actor->GetDisplayFullName() : nullptr, actor ? actor->GetFormID() : 0);
         return;
     }
     std::string name(actor->GetDisplayFullName());
@@ -223,7 +241,7 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_sta
 
     m_clone = placed;
     m_clone_state.store(CloneState::e_generated, std::memory_order_release);
-    logger::info("Clone has been created, from {} ({:08x})", actor->GetDisplayFullName(), actor->GetFormID());
+    logger::info("Clone has been created at the player, from {} ({:08x})", actor->GetDisplayFullName(), actor->GetFormID());
 }
 
 CharacterClone::~CharacterClone()
@@ -268,7 +286,7 @@ bool CharacterClone::attach_graph(const RE::NiPointer<RE::NiNode>& host)
     RE::NiNode* character_node = RE::NiNode::Create();
     if (!character_node)
     {
-        logger::warn("Proto P home node creation failed; the graph stays parked");
+        logger::warn("Clone home node creation failed; the graph stays parked");
         m_clone_state.store(CloneState::e_generated, std::memory_order_release);
         return false;
     }
@@ -291,7 +309,7 @@ bool CharacterClone::attach_graph(const RE::NiPointer<RE::NiNode>& host)
     m_graph_object.reset(graph);
     m_clone_state.store(CloneState::e_graph, std::memory_order_release);
 
-    logger::info("Clone has been attached to graph, from {} ({:08x})", clone->GetDisplayFullName(), clone->GetFormID());
+    logger::info("Clone {} ({:08x}) has been attached to graph", clone->GetDisplayFullName(), clone->GetFormID());
 
     // kill actor
     clone->Disable();
@@ -300,21 +318,6 @@ bool CharacterClone::attach_graph(const RE::NiPointer<RE::NiNode>& host)
     m_clone = nullptr;
 
     return true;
-}
-
-bool CharacterClone::is_character_geometry(const RE::BSGeometry* geometry) const
-{
-    if (!geometry || !geometry->GetGeometryRuntimeData().skinInstance)
-        return false;
-
-    const RE::NiAVObject* node = geometry;
-    while (node)
-    {
-        if (node == m_graph_object.get())
-            return true;
-        node = node->parent;
-    }
-    return false;
 }
 
 void CharacterClone::pose()
@@ -357,10 +360,11 @@ void CharacterClone::pose()
     m_graph_object->UpdateWorldBound();
 }
 
-void CharacterClone::draw(RE::BSShaderAccumulator* accumulator, const CommonStates& states, RenderTarget& render_target)
+void CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target)
 {
     RE::NiAVObject* p_root = m_graph_object.get();
-    if (!p_root || !accumulator)
+    const RE::NiPointer<RE::BSShaderAccumulator>& accumulator = ui3d->unk10;
+    if (!p_root || !ui3d || !ui3d->camera || !accumulator)
         return;
 
     RE::NiUpdateData update_data{
@@ -369,21 +373,64 @@ void CharacterClone::draw(RE::BSShaderAccumulator* accumulator, const CommonStat
     };
 
     const RE::NiPointer<RE::NiNode> studio_light_node = StudioLight::instance().light_node();
+    RE::BSLight** lights = StudioLight::instance().lights();
 
     // move to studio position
     studio_light_node->local.translate = m_anchor;
     studio_light_node->UpdateDownwardPass(update_data, 0);
 
+    RE::NiPoint3 saved_light_pos[Studio_Light_Count] = {};
+    RE::NiNode* saved_node_parent[Studio_Light_Count] = {};
+    bool node_mutated[Studio_Light_Count] = {};
+
+
+    const auto& w2c = ui3d->camera->GetRuntimeData().worldToCam;
+
+    RE::NiPoint3 right{ w2c[0][0], w2c[0][1], w2c[0][2] };
+    RE::NiPoint3 up{ w2c[1][0], w2c[1][1], w2c[1][2] };
+    RE::NiPoint3 forward{ w2c[2][0], w2c[2][1], w2c[2][2] };
+
+    const float right_len = right.Length();
+    const float up_len = up.Length();
+    const float forward_len = forward.Length();
+    if (right_len > 1e-6f)
+        right *= 1.0f / right_len;
+    if (up_len > 1e-6f)
+        up *= 1.0f / up_len;
+    if (forward_len > 1e-6f)
+        forward *= 1.0f / forward_len;
+
+    for (std::uint32_t i = 0; i < Studio_Light_Count; ++i)
+    {
+        RE::BSLight* light = lights[i];
+        saved_light_pos[i] = light->worldTranslate;
+
+        const float spread = (static_cast<float>(i) - (Studio_Light_Count - 1) * 0.5f) * 45.0f;
+        const RE::NiPoint3 light_target = m_anchor - forward * 70.0f + up * 50.0f + right * spread;
+        light->worldTranslate = light_target;  // culler copy — kept for free
+
+        if (const RE::NiPointer<RE::NiLight>& ni_light = light->light; ni_light)
+        {
+            const RE::NiPoint3 local_offset{ right * spread + up * 50.0f - forward * 70.0f };
+            ni_light->local.translate = local_offset;
+            if (ni_light->parent)
+            {
+                saved_node_parent[i] = ni_light->parent;
+                ni_light->parent->UpdateDownwardPass(update_data, 0);
+                node_mutated[i] = true;
+            }
+        }
+    }
 
     RE::BSGraphics::Renderer* renderer = RE::BSGraphics::Renderer::GetSingleton();
     const RE::BSGraphics::RendererData& runtime = renderer->GetRuntimeData();
     if (!runtime.context || !runtime.forwarder)
         return;
 
+    //RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
+
+
     pose();
-
-
-    RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
     REX::W32::D3D11_VIEWPORT viewport{
         .topLeftX = 0.0f,
@@ -408,133 +455,47 @@ void CharacterClone::draw(RE::BSShaderAccumulator* accumulator, const CommonStat
     runtime.context->OMSetBlendState(states.opaque(), nullptr, 0xFFFFFFFF);
     runtime.context->RSSetState(states.cull_none());
 
-    std::vector<RE::BSRenderPass*> passes;
+    RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
+
+    std::uint32_t drawn = 0;
     RE::BSVisit::TraverseScenegraphGeometries(p_root, [&](RE::BSGeometry* geometry)
     {
         const RE::BSGeometry::GEOMETRY_RUNTIME_DATA& geom_rt = geometry->GetGeometryRuntimeData();
         if (!geom_rt.shaderProperty)
             return RE::BSVisit::BSVisitControl::kContinue;
 
-        const RE::BSShaderProperty::RenderPassArray* pass_array = geom_rt.shaderProperty->GetRenderPasses(geometry, std::to_underlying(RE::BSShaderAccumulator::RENDER_MODE::kNormal), accumulator);
-        if (pass_array)
+        if (const RE::BSShaderProperty::RenderPassArray* pass_array = geom_rt.shaderProperty->GetRenderPasses(geometry, std::to_underlying(RE::BSShaderAccumulator::RENDER_MODE::kNormal), accumulator.get()))
         {
             for (RE::BSRenderPass* pass = pass_array->head; pass; pass = pass->next)
             {
-                if (pass->geometry == geometry && pass->shader)
-                    passes.push_back(pass);
+                if (pass->geometry != geometry || !pass->shader)
+                    continue;
+                submit_pass(pass);
+                ++drawn;
             }
         }
         return RE::BSVisit::BSVisitControl::kContinue;
     });
 
-    if (passes.empty())
+    if (drawn == 0)
     {
         logger::warn("Clone draw: no render pass to draw");
         return;
     }
 
-    std::uint32_t drawn = 0;
-    for (RE::BSRenderPass* pass : passes)
-    {
-        runtime.context->OMSetRenderTargets(1, &rtv, render_target.dsv());
-        runtime.context->OMSetDepthStencilState(states.depth_default(), 0);
-
-        RE::BSLight** saved_scene_lights = nullptr;
-        std::uint8_t saved_num_lights = 0;
-        std::uint8_t saved_shadow_lights = 0;
-        {
-            saved_scene_lights = pass->sceneLights;
-            saved_num_lights = pass->numLights;
-            saved_shadow_lights = pass->numShadowLights;
-            pass->numLights = Studio_Light_Count;
-            pass->numShadowLights = 0;
-            pass->sceneLights = StudioLight::instance().lights();
-            for (uint8_t i = 0; i < pass->numLights; ++i)
-            {
-                if (RE::BSLight* light = pass->sceneLights[i])
-                {
-                    light->lodDimmer = 1.0f;
-                    light->luminance = 1.0f;
-                    light->frustrumCull = 0;
-                }
-            }
-        }
-
-        RE::NiPoint3 saved_light_pos[Studio_Light_Count] = {};
-        RE::NiPoint3 saved_node_pos[Studio_Light_Count] = {};
-        RE::NiNode* saved_node_parent[Studio_Light_Count] = {};
-        bool node_mutated[Studio_Light_Count] = {};
-        {
-            if (RE::UI3DSceneManager* ui3d = RE::UI3DSceneManager::GetSingleton(); ui3d && ui3d->camera)
-            {
-                const auto& w2c = ui3d->camera->GetRuntimeData().worldToCam;
-
-                RE::NiPoint3 right{ w2c[0][0], w2c[0][1], w2c[0][2] };
-                RE::NiPoint3 up{ w2c[1][0], w2c[1][1], w2c[1][2] };
-                RE::NiPoint3 forward{ w2c[2][0], w2c[2][1], w2c[2][2] };
-
-                const float right_len = right.Length();
-                const float up_len = up.Length();
-                const float forward_len = forward.Length();
-                if (right_len > 1e-6f)
-                    right *= 1.0f / right_len;
-                if (up_len > 1e-6f)
-                    up *= 1.0f / up_len;
-                if (forward_len > 1e-6f)
-                    forward *= 1.0f / forward_len;
-
-                for (std::uint32_t i = 0; i < Studio_Light_Count; ++i)
-                {
-                    RE::BSLight* light = pass->sceneLights[i];
-                    saved_light_pos[i] = light->worldTranslate;
-                    const float spread = (static_cast<float>(i) - (Studio_Light_Count - 1) * 0.5f) * 45.0f;
-                    const RE::NiPoint3 light_target = m_anchor - forward * 70.0f + up * 50.0f + right * spread;
-                    light->worldTranslate = light_target;  // culler copy — kept for free
-
-                    if (const RE::NiPointer<RE::NiLight> ni_light = light->light; ni_light)
-                    {
-                        const RE::NiPoint3 local_offset{ right * spread + up * 50.0f - forward * 70.0f };
-                        ni_light->local.translate = local_offset;
-                        if (ni_light->parent)
-                        {
-                            saved_node_pos[i] = ni_light->local.translate;
-                            saved_node_parent[i] = ni_light->parent;
-                            ni_light->parent->UpdateDownwardPass(update_data, 0);
-                            node_mutated[i] = true;
-                        }
-                    }
-                }
-            }
-        }
-        RE::BSBatchRenderer::SetupAndDrawPass(pass, pass->passEnum, (pass->passEnum & 0x40) != 0, 0x200);
-
-        for (std::uint32_t i = 0; i < Studio_Light_Count; ++i)
-        {
-            auto* light = pass->sceneLights ? pass->sceneLights[i] : nullptr;
-            if (!light)
-                continue;
-            light->worldTranslate = saved_light_pos[i];
-
-            if (node_mutated[i] && saved_node_parent[i])
-            {
-                saved_node_parent[i]->UpdateDownwardPass(update_data, 0);
-            }
-        }
-        {
-            pass->sceneLights = saved_scene_lights;
-            pass->numLights = saved_num_lights;
-            pass->numShadowLights = saved_shadow_lights;
-        }
-        ++drawn;
-    }
-
+    // move back to unreachable position
     RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
-    // move back to unreachable position
-    studio_light_node->local.translate = {0.0f, 0.0f, 100000.0f};
-    studio_light_node->UpdateDownwardPass(update_data, 0);
+    for (std::uint32_t i = 0; i < Studio_Light_Count; ++i)
+    {
+        lights[i]->worldTranslate = saved_light_pos[i];
 
-    logger::info("Clone draw finished");
+        if (node_mutated[i] && saved_node_parent[i])
+            saved_node_parent[i]->UpdateDownwardPass(update_data, 0);
+    }
+
+    studio_light_node->local.translate = {0.0f, 0.0f, Studio_Light_Pos_Z};
+    studio_light_node->UpdateDownwardPass(update_data, 0);
 }
 
 PLUGIN_NAMESPACE_END
