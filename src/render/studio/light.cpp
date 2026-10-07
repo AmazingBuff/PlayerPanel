@@ -29,74 +29,136 @@ RE::BSLight** StudioLight::lights()
 
 bool StudioLight::refresh()
 {
-    RE::ShadowSceneNode* scene_node = m_scene_node;
-    if (!scene_node)
-        return false;
+    // A paused game (main menu, savegame load, inventory) never runs light
+    // updates, so anything registered during a pause is dead weight piling up
+    // in lightQueueAdd: freeze the miss counters and wait for an unpause.
+    RE::UI* ui = RE::UI::GetSingleton();
+    const bool paused = !ui || ui->GameIsPaused();
 
-    // REPAIR ONLY -- never discard a slot that is already correct.
-    //
-    // AddLight above returns a shell that is bound on the spot, so a slot
-    // holding a shell bound to our NiLight is good and must be kept. An earlier
-    // version re-looked-up every slot each frame and cleared any lookup miss:
-    // GetPointLight only scans activeLights, and a freshly registered light
-    // reaches activeLights on the next light update, so that version wiped the
-    // shells AddLight had just handed us ("3/3 shells bound immediately"
-    // followed 20 s later by "bound=0"). A miss here means "not visible in the
-    // ledger yet", not "dead".
-    // Re-registering is expensive and repeated failures would file duplicates,
-    // so attempt a repair at most once per this many frames.
-    constexpr std::uint32_t Refresh_Retry_Interval = 30;
-    ++m_refresh_ticks;
+    const RE::ShadowSceneNode::RUNTIME_DATA& rt = m_scene_node->GetRuntimeData();
 
-    bool all_ours = true;
+    bool all_fetched = true;
     for (std::size_t i = 0; i < Studio_Light_Count; ++i)
     {
         RE::NiLight* const ni_light = m_ni_lights[i].get();
         if (!ni_light)
             continue;
 
-        RE::BSLight* shell = m_lights[i];
-        if (shell && shell->light.get() == ni_light)
-            continue;  // already ours: keep it
-
-        // The slot is empty, or holds a shell the engine recycled, or holds one
-        // whose light pointer is null (allocated but unbound). All three are
-        // unusable and cannot be repaired in place, so RE-REGISTER: the
-        // returning AddLight overload binds a fresh shell on the spot. This is
-        // the only recovery for "shells=3/3 but bound=0".
-        if (m_refresh_ticks % Refresh_Retry_Interval == 0)
+        // Scan BOTH queues: the rig is detached, so the engine never runs
+        // its scene tick over our NiLights and never promotes the shells
+        // from lightQueueAdd to activeLights. But the AddLight-overload
+        // shell is fully built and bound the moment it is filed (v6.50,
+        // run 84) — fetching straight from the queue is the m0
+        // double-queue fetch, validated through runs 84-93.
+        RE::BSLight* ledger_shell = nullptr;
+        for (const RE::NiPointer<RE::BSLight>& entry : rt.activeLights)
         {
-            RE::BSLight* found = scene_node->GetPointLight(ni_light);
-            if (!found || found->light.get() != ni_light)
+            if (entry && entry->light.get() == ni_light)
             {
-                found = scene_node->AddLight(ni_light, m_create_params);
-                found->lodDimmer = 1.0f;
-                found->luminance = 1.0f;
-                found->frustrumCull = 0;
+                ledger_shell = entry.get();
+                break;
             }
-            shell = found;
+        }
+        if (!ledger_shell)
+        {
+            for (const RE::NiPointer<RE::BSLight>& entry : rt.lightQueueAdd)
+            {
+                if (entry && entry->light.get() == ni_light)
+                {
+                    ledger_shell = entry.get();
+                    break;
+                }
+            }
         }
 
-        m_lights[i] = (shell && shell->light.get() == ni_light) ? shell : nullptr;
-        if (!m_lights[i])
-            all_ours = false;
+        if (ledger_shell)
+        {
+            if (m_tracked_shells[i] != ledger_shell)
+            {
+                if (m_tracked_shells[i])
+                    logger::info(
+                        "CP-LIGHT slot {}: ledger shell replaced {} -> {}",
+                        i,
+                        static_cast<const void*>(m_tracked_shells[i]),
+                        static_cast<const void*>(ledger_shell));
+                else
+                    logger::info(
+                        "CP-LIGHT slot {}: ledger shell fetched {} (after {} miss frames)",
+                        i,
+                        static_cast<const void*>(ledger_shell),
+                        m_miss_frames[i]);
+            }
+
+            // The engine tick keeps resetting these on foreign shells (v6.54):
+            // re-apply the freshness patches every frame.
+            ledger_shell->lodDimmer = 1.0f;
+            ledger_shell->luminance = 1.0f;
+            ledger_shell->frustrumCull = 0;
+
+            m_tracked_shells[i] = ledger_shell;
+            m_lights[i] = ledger_shell;
+            m_miss_frames[i] = 0;
+        }
+        else
+        {
+            if (m_tracked_shells[i])
+                logger::info("CP-LIGHT slot {}: ledger shell dropped", i);
+
+            m_tracked_shells[i] = nullptr;
+            m_lights[i] = nullptr;
+            if (!paused)
+                ++m_miss_frames[i];
+            all_fetched = false;
+
+            if (!paused && m_miss_frames[i])
+            {
+                if (RE::BSLight* shell = m_scene_node->AddLight(ni_light, m_create_params))
+                {
+                    shell->lodDimmer = 1.0f;
+                    shell->luminance = 1.0f;
+                    shell->frustrumCull = 0;
+                    logger::info(
+                        "CP-LIGHT slot {}: fallback re-registered after {} miss frames (shell {} filed to lightQueueAdd)",
+                        i,
+                        m_miss_frames[i],
+                        static_cast<const void*>(shell));
+                }
+            }
+        }
     }
 
-    return all_ours;
+    return all_fetched;
 }
 
-bool StudioLight::init(const RE::NiPointer<RE::NiNode>& menu, RE::ShadowSceneNode* scene_node)
+void StudioLight::park()
 {
-    if (m_menu_node == menu && m_scene_node == scene_node)
+    if (!m_light_node)
+        return;
+
+    m_light_node->local.translate = { 0.0f, 0.0f, Studio_Light_Pos_Z };
+
+    RE::NiUpdateData update_data{
+        .time = 0.0f,
+        .flags = RE::NiUpdateData::Flag::kDirty
+    };
+    m_light_node->UpdateDownwardPass(update_data, 0);
+}
+
+bool StudioLight::init(RE::ShadowSceneNode* scene_node)
+{
+    if (m_scene_node == scene_node)
         return true;
 
-    if (!menu || !scene_node || !m_light_node)
+    if (!scene_node || !m_light_node)
     {
-        logger::warn("Studio lights not attached (menu={} scene={} rig={})", static_cast<void*>(menu.get()), static_cast<void*>(scene_node), static_cast<void*>(m_light_node.get()));
+        logger::warn("Studio lights not registered (scene={} rig={})", static_cast<void*>(scene_node), static_cast<void*>(m_light_node.get()));
         return false;
     }
 
-    menu->AttachChild(m_light_node.get());
+    // The rig stays DETACHED: no menu-root hosting. The shader reads
+    // NiLight::world.translate (v6.37) and place() cascades the rig inside
+    // the draw window, so an engine scene parent would buy nothing while
+    // exposing the rig to the menu-root rebuilds (runs 100-102).
 
     // Use the AddLight overload that RETURNS the BSLight it builds. The
     // convenience overload (void AddLight(NiLight*)) files the shell in
@@ -119,54 +181,68 @@ bool StudioLight::init(const RE::NiPointer<RE::NiNode>& menu, RE::ShadowSceneNod
         if (!ni_light)
             continue;
 
-        m_lights[i] = scene_node->AddLight(ni_light, m_create_params);
-        if (m_lights[i] && m_lights[i]->light.get() != ni_light)
+        // Register the NiLight so the engine learns about it promptly. The
+        // returned shell is NOT renderer-facing: it is filed into
+        // lightQueueAdd and may never reach the ledger (probe 2026-10-07).
+        // refresh() fetches whatever the ledger actually serves -- an
+        // engine-gathered shell or this one once (if ever) promoted.
+        if (RE::BSLight* shell = scene_node->AddLight(ni_light, m_create_params))
         {
-            // The engine returned a shell bound to something else: never hand
-            // that to the shader. Drop it and let refresh() retry.
-            logger::warn("Studio light {}: AddLight returned a foreign shell; ignoring it", i);
-            m_lights[i] = nullptr;
-        }
-    }
-
-    uint32_t bound = 0;
-    for (RE::BSLight* shell : m_lights)
-    {
-        if (shell && shell->light)
-        {
-            bound++;
             shell->lodDimmer = 1.0f;
             shell->luminance = 1.0f;
             shell->frustrumCull = 0;
+            logger::info(
+                "CP-LIGHT slot {}: registered, shell {} queued (ledger stays the authority)",
+                i,
+                static_cast<const void*>(shell));
         }
+
+        m_lights[i] = nullptr;
+        m_tracked_shells[i] = nullptr;
+        m_miss_frames[i] = 0;
     }
 
-    m_menu_node = menu;
     m_scene_node = scene_node;
 
-    logger::info("Studio lights has been added to menu ({}/{} shells bound immediately)", bound, static_cast<std::uint32_t>(Studio_Light_Count));
+    // The pointer values are logged so ledger-probe runs can confirm the
+    // ShadowSceneNode identity stays constant across menu/save transitions.
+    logger::info(
+        "Studio lights registered on the ledger (scene={} -- ledger fetch will populate the slots)",
+        static_cast<void*>(scene_node));
 
     return true;
 }
 
-void StudioLight::clear_lights()
+void StudioLight::place(const RE::NiPoint3& anchor)
 {
-    for (RE::BSLight*& light : m_lights)
-        light = nullptr;
+    if (!m_light_node)
+        return;
 
-    for (RE::NiPointer<RE::NiLight>& light : m_ni_lights)
-    {
-        if (light && m_scene_node)
-            m_scene_node->RemoveLight(light.get());
-    }
+    // Detached rig: no engine tick touches it, so the draw window is the
+    // only place the cascade runs. Key/fill offsets are fixed locals under
+    // the rig (menu camera world is identity, v6.28) — pending in-game
+    // calibration, same as the m0 per-pass spread/up/forward values.
+    m_light_node->local.translate = anchor;
 
-    m_menu_node = nullptr;
-    m_scene_node = nullptr;
-
-    logger::info("Studio lights has been cleared");
+    RE::NiUpdateData update_data{
+        .time = 0.0f,
+        .flags = RE::NiUpdateData::Flag::kDirty
+    };
+    m_light_node->UpdateDownwardPass(update_data, 0);
 }
 
-StudioLight::StudioLight() : m_lights{}, m_create_params{}, m_refresh_ticks(0), m_menu_node(nullptr), m_scene_node(nullptr)
+StudioLight::StudioLight() :
+    m_lights{},
+    m_tracked_shells{},
+    m_miss_frames{},
+    m_fallback_counts{},
+    m_create_params{},
+    m_refresh_ticks(0),
+    m_stable_frames(0),
+    m_window_start_tick(0),
+    m_window_open(false),
+    m_last_ui3d_node(nullptr),
+    m_scene_node(nullptr)
 {
     RE::NiNode* light_node = RE::NiNode::Create();
     light_node->name = Studio_Light_Node_Name;
@@ -202,7 +278,15 @@ StudioLight::StudioLight() : m_lights{}, m_create_params{}, m_refresh_ticks(0), 
             pt->SetLightAttenuation(4096.0f);
             light = pt;
         }
-        light->local.translate = { 0.0f, 0.0f, 0.0f };
+        // Fixed rig-local offsets: the menu camera world is identity (v6.28)
+        // and looks down -Y (run 44), so +Y = toward the camera, +Z = up.
+        // Key/fill flank the figure above camera side; pending calibration.
+        switch (i)
+        {
+            case 1: light->local.translate = { 40.0f, 55.0f, 60.0f }; break;   // key
+            case 2: light->local.translate = { -40.0f, 55.0f, 60.0f }; break;  // fill
+            default: light->local.translate = { 0.0f, 0.0f, 30.0f }; break;    // ambient base
+        }
         light_node->AttachChild(light);
 
         m_ni_lights[i].reset(light);
@@ -222,7 +306,10 @@ StudioLight::StudioLight() : m_lights{}, m_create_params{}, m_refresh_ticks(0), 
 
 StudioLight::~StudioLight()
 {
-
+    // The rig is detached (no engine scene host) — releasing the NiPointers
+    // frees the node tree; the ledger shells die with the scene node.
+    m_scene_node = nullptr;
+    m_light_node = nullptr;
 }
 
 PLUGIN_NAMESPACE_END

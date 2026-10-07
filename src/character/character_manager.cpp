@@ -4,6 +4,8 @@
 
 #include "character_manager.h"
 
+#include "REX/W32/KERNEL32.h"
+
 PLUGIN_NAMESPACE_BEGIN
 
 CharacterManager& CharacterManager::instance()
@@ -12,52 +14,38 @@ CharacterManager& CharacterManager::instance()
     return s_instance;
 }
 
-void CharacterManager::create_clones(const std::vector<RE::Actor*>& actors, const RE::NiPointer<RE::NiNode>& node)
+void CharacterManager::create_clones(const std::vector<RE::Actor*>& actors)
 {
-    if (!actors.empty() || !m_generated_clones.empty())
+    // Spawning runs synchronously in the render bracket (the call site):
+    // the SKSE task queue was proven to flush on a BSJobs worker thread
+    // (log 2026-10-07 21:05: task thread 18840 vs render bracket 20412 vs
+    // main 7676), and reference creation on a worker thread is the race the
+    // 2026-10-07 18:01 crash grew from. Spawn+dress in the render bracket
+    // went through 100+ m0 rounds unharmed.
+    static bool s_thread_probed = false;
+    if (!s_thread_probed)
     {
-        bool expected = false;
-        if (m_step_queue.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
+        s_thread_probed = true;
+        logger::info("Clone spawn runs on render-bracket thread {}", REX::W32::GetCurrentThreadId());
+    }
+
+    for (RE::Actor* actor : actors)
+    {
+        if (actor && actor->Get3D())
         {
-            SKSE::GetTaskInterface()->AddTask([this, actors, node]()
+            std::lock_guard<std::mutex> lock(m_clones_mutex);
+            if (!m_character_clones.contains(actor))
             {
-                std::vector<RE::Actor*> erased_actors;
-                erased_actors.reserve(m_generated_clones.size());
-                for (RE::Actor* actor : m_generated_clones)
-                {
-                    const auto clone = m_character_clones.find(actor);
-                    if (clone == m_character_clones.end())
-                    {
-                        erased_actors.push_back(actor);
-                        continue;
-                    }
-
-                    if (actor && actor->Get3D() && clone->second->attach_graph(node))
-                        erased_actors.push_back(actor);
-                }
-                
-                for (RE::Actor* actor : erased_actors)
-                    m_generated_clones.erase(actor);
-
-                // for next frame
-                for (RE::Actor* actor : actors)
-                {
-                    if (actor && actor->Get3D() && !m_character_clones.contains(actor))
-                    {
-                        std::shared_ptr<CharacterClone> clone = std::make_shared<CharacterClone>(actor);
-                        m_generated_clones.emplace(actor);
-                        m_character_clones.emplace(actor, clone);
-                    }
-                }
-
-                m_step_queue.store(false, std::memory_order_release);
-            });
+                std::shared_ptr<CharacterClone> clone = std::make_shared<CharacterClone>(actor);
+                m_character_clones.emplace(actor, clone);
+            }
         }
     }
 }
 
 std::shared_ptr<CharacterClone> CharacterManager::get_clone(RE::Actor* actor)
 {
+    std::lock_guard<std::mutex> lock(m_clones_mutex);
     auto it = m_character_clones.find(actor);
     if (it != m_character_clones.end())
         return it->second;
@@ -66,14 +54,14 @@ std::shared_ptr<CharacterClone> CharacterManager::get_clone(RE::Actor* actor)
 
 void CharacterManager::clear_clones()
 {
-    SKSE::GetTaskInterface()->AddTask([this]()
-    {
-        m_character_clones.clear();
-        m_generated_clones.clear();
-    });
+    // Called from the SKSE message handler (main thread): synchronous clear.
+    // A detached graph is solely owned by its CharacterClone and freed here;
+    // a not-yet-detached shell is engine-managed and reclaimed by the load.
+    std::lock_guard<std::mutex> lock(m_clones_mutex);
+    m_character_clones.clear();
 }
 
-CharacterManager::CharacterManager() : m_step_queue(false)
+CharacterManager::CharacterManager()
 {
 
 }
@@ -82,6 +70,7 @@ CharacterManager::~CharacterManager()
 {
 
 }
+
 
 
 

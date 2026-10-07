@@ -11,8 +11,26 @@ PLUGIN_NAMESPACE_BEGIN
 namespace
 {
     constexpr char Clone_Postfix[] = "_Clone";
-    constexpr float Park_Depth_Below_Player = 8000.0f;
-    constexpr char Character_Node_Name[] = "Clone Node";
+    // Assembly pacing, not engine timing: the detach gate is the bind-bone
+    // count, the frame counters only debounce and expire.
+    constexpr uint32_t Clone_Assemble_Wait_Frames = 3;
+    // 20 s: the render gate waits for the player to look somewhere that
+    // culls the clone IN — its timing depends on where the camera points
+    // after a load, so it needs more headroom than the attach signals.
+    constexpr uint32_t Clone_Assemble_Limit_Frames = 1200;
+    constexpr uint32_t Clone_Assemble_Warn_Frames = 120;
+    // Settle window after dressing: equipping REMOVES the replaced body-part
+    // geometries immediately while the armor nifs attach ASYNCHRONOUSLY over
+    // the next frames (2026-10-07 23:56 log: detached 14 ms after dressed,
+    // geoms 12→8 — the four replaced body pieces gone, armor never mounted
+    // because data3D was already severed). Detaching on the frame where all
+    // CURRENT geometries are bound therefore races the armor load and loses
+    // almost every time. Require the geometry census to hold steady across
+    // this window before the detach — new armor pieces change it.
+    constexpr uint32_t Clone_Settle_Wait_Frames = 30;
+    constexpr uint32_t Clone_Settle_Stable_Frames = 20;
+    constexpr uint32_t Clone_Settle_Limit_Frames = 600;
+    constexpr uint32_t Clone_Settle_Warn_Frames = 120;
     
     constexpr RE::BGSBipedObjectForm::BipedObjectSlot Body_Slots[] =
     {
@@ -76,6 +94,114 @@ namespace
         float radius;
         bool valid;
     };
+
+    // Flash guard: while the shell waits at the player its fade node is
+    // pinned to a near-invisible alpha — NOT zero. A zeroed BSFadeNode is
+    // skipped by the engine's renderer entirely, which would starve the
+    // rendered gate (numMatrices never written) and stall the detach on
+    // some loads. 0.05 keeps the draw alive (numMatrices written) while
+    // staying practically invisible next to the player body. 0x130
+    // currentFade is the CLib-named field; 0x128/0x12C are handled as
+    // target/rate per the v6.70 read.
+    void suppress_fade(RE::NiAVObject* graph)
+    {
+        if (RE::BSFadeNode* fade = graph->AsFadeNode())
+        {
+            fade->unk128 = 0.05f;
+            fade->unk12C = 0.0f;
+            fade->currentFade = 0.05f;
+        }
+    }
+
+    void restore_fade(RE::NiAVObject* graph)
+    {
+        if (RE::BSFadeNode* fade = graph->AsFadeNode())
+        {
+            fade->unk128 = 1.0f;
+            fade->unk12C = 0.0f;
+            fade->currentFade = 1.0f;
+        }
+    }
+
+    struct AssemblyStats
+    {
+        std::uint32_t geometries;
+        std::uint32_t skinned;
+        std::uint32_t roots;
+        std::uint32_t num_matrices;
+        std::uint32_t bone_count;
+        std::uint32_t alloc_slots;
+        std::uint32_t bound;
+        std::uint32_t bound_nodes;
+        std::uint32_t skin_data_null;
+        std::uint32_t bones_array_null;
+    };
+
+    // Bind-bone census over skin roots. Three different layers live here:
+    // numMatrices = per-frame render activity (SetupGeometry writes it);
+    // bone_count = NiSkinData capacity (nif data, static); bound_nodes =
+    // skin->bones[i] pointers actually filled — the skin-to-skeleton
+    // BINDING state. Armor attach is async (a first-load head part can
+    // outwait any fixed frame window), and an unbound skin renders its
+    // vertices at model-space origin — "at the feet".
+    AssemblyStats measure_assembly(RE::NiAVObject* root)
+    {
+        AssemblyStats out{ .geometries = 0, .skinned = 0, .roots = 0, .num_matrices = 0, .bone_count = 0, .bound = 0, .bound_nodes = 0, .skin_data_null = 0, .bones_array_null = 0 };
+        std::unordered_set<const RE::NiAVObject*> seen_roots;
+        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
+        {
+            ++out.geometries;
+            const RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
+            if (!skin || !skin->rootParent)
+                return RE::BSVisit::BSVisitControl::kContinue;
+            ++out.skinned;
+            if (seen_roots.insert(skin->rootParent).second)
+                ++out.roots;
+            if (!skin->skinData)
+            {
+                ++out.skin_data_null;
+                return RE::BSVisit::BSVisitControl::kContinue;
+            }
+            out.num_matrices += skin->numMatrices;
+            const std::uint32_t cap = skin->skinData->GetBoneCount();
+            out.bone_count += cap;
+            // The engine allocates the instance bone-pointer array on demand;
+            // "fully bound" is measured against the ALLOCATED slots, not the
+            // declared capacity (a 3BA skin measured 47 slots vs 131 declared,
+            // bound and rendering fine — waiting for 131 cost 600 frames).
+            const std::uint32_t n = std::min(cap, skin->allocatedSize);
+            out.alloc_slots += n;
+            out.bound += std::min(skin->numMatrices, cap);
+            if (!skin->bones)
+            {
+                ++out.bones_array_null;
+                return RE::BSVisit::BSVisitControl::kContinue;
+            }
+            for (std::uint32_t i = 0; i < n; ++i)
+                if (skin->bones[i])
+                    ++out.bound_nodes;
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+        return out;
+    }
+
+    // Geom name census for the detach-time forensics log: the settle gate
+    // above needs its one-shot evidence line to be decidable from the log
+    // alone (which 8 of 12 survived, which armor mounted).
+    void log_geometry_names(RE::NiAVObject* root)
+    {
+        std::uint32_t count = 0;
+        std::string names;
+        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
+        {
+            const char* n = geometry->name.c_str();
+            names.append("  ");
+            names.append(n && *n ? n : "(null)");
+            ++count;
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+        logger::info("Clone geometry census ({}):{}", count, names);
+    }
 
     void union_sphere(SkinnedBound& out, const RE::NiPoint3& center, float radius)
     {
@@ -141,7 +267,7 @@ namespace
 
     }
 
-    void reset_root_to_bind_pose(RE::NiAVObject* object)
+    void reset_root_to_bind_pose(RE::NiAVObject* object, bool& map_logged, std::uint32_t& map_stall)
     {
         std::vector<SkinBindGroup> groups;
         RE::BSVisit::TraverseScenegraphGeometries(object, [&](RE::BSGeometry* geometry)
@@ -162,14 +288,39 @@ namespace
             for (std::uint32_t i = 0; i < count; ++i)
             {
                 RE::NiAVObject* bone = skin->bones[i];
-                if (bone)
-                    group->bones.insert_or_assign(bone, data->GetBoneDataSkinToBone(i).Invert());
+                if (!bone)
+                    continue;
+                // Head/neck bones stay at their engine-driven pose. The
+                // facegen tree is parented to the HEAD BONE on CBBE (follows
+                // the T-pose reset) but to the SKELETON ROOT on UBE (bind
+                // data in absolute skeleton coordinates) — resetting the
+                // head bones moves them without moving the UBE facegen tree,
+                // tearing the head off the body. The head pose freezes at
+                // whatever the engine last drove; that is an FR-03 concern.
+                if (const char* bone_name = bone->name.c_str(); bone_name && (std::strstr(bone_name, "[Head]") != nullptr || std::strstr(bone_name, "Neck") != nullptr))
+                    continue;
+                group->bones.insert_or_assign(bone, data->GetBoneDataSkinToBone(i).Invert());
             }
             return RE::BSVisit::BSVisitControl::kContinue;
         });
 
         for (const auto& group : groups)
         {
+            // SKIP the facegen group. Its root (BSFaceGenNiNodeSkinned) hosts
+            // the hair-physics bones (hdtSSE) and its bind data references
+            // skeleton bones living OUTSIDE its subtree (Spine2, Head — CBBE
+            // measures exactly 2, both unreachable from the facegen walk, so
+            // this reset was always a no-op there). On UBE, ~207 hair-physics
+            // bones DO live in the subtree and were reset against a frame
+            // their bind data doesn't match, fighting the SMP simulation —
+            // the head-body separation. The head model itself follows the
+            // skeleton bones (Head/Spine2 are reset by the skeleton group),
+            // so skipping changes nothing on CBBE and hands the physics bones
+            // back to SMP on UBE.
+            const RE::NiRTTI* root_rtti = group.root->GetRTTI();
+            if (root_rtti && std::strstr(root_rtti->GetName(), "BSFaceGenNiNode") != nullptr)
+                continue;
+
             RE::NiTransform identity;
             if (RE::NiNode* node = group.root->AsNode())
             {
@@ -180,29 +331,119 @@ namespace
                 }
             }
         }
+
+        // One-shot PER-CLONE map dump: the skin binding is suspected of
+        // index-order divergence on runtime-built skins (UBE facegen — head
+        // vertices sampled a low-body bone's matrix). The first poses run
+        // BEFORE SetupGeometry writes numMatrices, when these maps are
+        // legitimately empty — dump only once populated (or after a bounded
+        // stall). State lives on the clone (per-instance, not static): a
+        // CBBE session must not consume the UBE session's dump.
+        if (!map_logged)
+        {
+            std::size_t total = 0;
+            for (const auto& group : groups)
+                total += group.bones.size();
+            const bool stalled = ++map_stall > 600;
+            if (total > 0 || stalled)
+            {
+                map_logged = true;
+                if (stalled && total == 0)
+                    logger::warn("T-pose maps stayed empty for 600 frames; dumping anyway");
+                for (const auto& group : groups)
+                {
+                    logger::info(
+                        "T-pose group root='{}' bones={}",
+                        group.root->name.c_str() ? group.root->name.c_str() : "(null)",
+                        group.bones.size());
+                    std::uint32_t k = 0;
+                    for (const auto& [bone, world] : group.bones)
+                    {
+                        if (k >= 10)
+                            break;
+                        logger::info(
+                            "  bind[{}] bone='{}' world=({:.1f},{:.1f},{:.1f})",
+                            k,
+                            bone->name.c_str() ? bone->name.c_str() : "(null)",
+                            world.translate.x, world.translate.y, world.translate.z);
+                        ++k;
+                    }
+                }
+            }
+        }
     }
 
-    void submit_pass(RE::BSRenderPass* pass)
+    // Per-pass studio lighting (v6.56 slot convention: sceneLights[0] is the
+    // engine's ambient slot, point lights start at [1]). The light array is
+    // re-fetched from the ShadowSceneNode ledger by StudioLight::refresh()
+    // every frame, so the pointers handed to the pass are ledger-fresh for
+    // the whole window — the run 55/56 copied-pointer crash class. The
+    // engine's light tick keeps rewriting foreign shells (run 88 pinned
+    // lodDimmer back to 0 every frame), so the shells are re-patched inside
+    // the window, right before their pass draws.
+    // The facegen head (BSFaceGenNiNode skinned tree) is attached to the
+    // skeleton ASYNCHRONOUSLY by the engine — detaching before it lands
+    // means the engine never finishes the job and the panel figure has no
+    // head. Wait for it (bounded); it is an attach-layer signal, so no
+    // deadlock risk.
+    bool facegen_attached(RE::NiAVObject* root)
     {
-        // save for restore
-        RE::BSLight** const saved_scene_lights = pass->sceneLights;
-        const std::uint8_t saved_num_lights = pass->numLights;
-        const std::uint8_t saved_shadow_lights = pass->numShadowLights;
+        bool found = false;
+        RE::BSVisit::TraverseScenegraphObjects(root, [&](RE::NiAVObject* object)
+        {
+            if (const RE::NiRTTI* rtti = object->GetRTTI(); rtti && std::strstr(rtti->GetName(), "BSFaceGenNiNode") != nullptr)
+            {
+                found = true;
+                return RE::BSVisit::BSVisitControl::kStop;
+            }
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+        return found;
+    }
 
-        pass->numLights = Studio_Light_Count;
-        pass->numShadowLights = 0;
-        pass->sceneLights = StudioLight::instance().lights();
+    void submit_pass(RE::BSRenderPass* pass, bool inject_lights, RE::BSLight** studio_lights)
+    {
+        RE::BSLight** saved_scene_lights = nullptr;
+        std::uint8_t saved_num_lights = 0;
+        std::uint8_t saved_shadow_lights = 0;
+        if (inject_lights)
+        {
+            saved_scene_lights = pass->sceneLights;
+            saved_num_lights = pass->numLights;
+            saved_shadow_lights = pass->numShadowLights;
+
+            pass->numLights = static_cast<std::uint8_t>(Studio_Light_Count);
+            pass->numShadowLights = 0;
+            pass->sceneLights = studio_lights;
+
+            for (std::size_t i = 0; i < Studio_Light_Count; ++i)
+            {
+                if (RE::BSLight* shell = studio_lights[i])
+                {
+                    shell->lodDimmer = 1.0f;
+                    shell->luminance = 1.0f;
+                    shell->frustrumCull = 0;
+                }
+            }
+        }
 
         RE::BSBatchRenderer::SetupAndDrawPass(pass, pass->passEnum, (pass->passEnum & 0x40) != 0, 0x200);
 
-        pass->sceneLights = saved_scene_lights;
-        pass->numLights = saved_num_lights;
-        pass->numShadowLights = saved_shadow_lights;
+        if (inject_lights)
+        {
+            pass->sceneLights = saved_scene_lights;
+            pass->numLights = saved_num_lights;
+            pass->numShadowLights = saved_shadow_lights;
+        }
     }
 }
 
-CharacterClone::CharacterClone(RE::Actor* actor) : m_wait_frames(0), m_light_warned(false), m_clone(nullptr), m_clone_state(CloneState::e_none)
+CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_state(CloneState::e_none), m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0)
 {
+    m_settle_last_geoms = 0;
+    m_settle_last_skinned = 0;
+    m_settle_stable = 0;
+    m_geom_names_logged = false;
     RE::TESNPC* source_base = actor ? actor->GetActorBase() : nullptr;
     RE::TESForm* duplicate = source_base ? source_base->CreateDuplicateForm(false, nullptr) : nullptr;
     RE::TESNPC* clone_base = duplicate ? duplicate->As<RE::TESNPC>() : nullptr;
@@ -220,9 +461,16 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_wait_frames(0), m_light_war
     static_cast<RE::TESContainer*>(clone_base)->ClearDataComponent();
 
     RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
-    RE::NiPoint3 position = player->GetPosition();
-    position.z -= Park_Depth_Below_Player;
-    const RE::TESObjectREFRPtr placed = RE::TESDataHandler::GetSingleton()->CreateReferenceAtLocation(clone_base, position, player->GetAngle(), player->GetParentCell(), player->GetWorldspace(), nullptr, nullptr, RE::ObjectRefHandle(), false, true).get();
+
+    // PlaceObjectAtMe at the player, and STAY there while assembling — this
+    // is the exact v6.70 recipe (run 105: 74 bind bones, no visible clone).
+    // The bind-bone census taught us why: NiSkinInstance::bones is filled by
+    // the engine's first actual render of the geometry, and fade=0 does not
+    // opt out of the culler. Hiding the clone underground or far away (both
+    // tried) skips the cull entirely, the skin never binds, and the graph
+    // stays boneless forever. Transparent-at-the-player is the only spot
+    // that is both invisible and rendered.
+    const RE::NiPointer<RE::TESObjectREFR> placed = player->PlaceObjectAtMe(clone_base, false);
 
     RE::Actor* clone = placed ? placed->As<RE::Actor>() : nullptr;
     if (!clone)
@@ -237,85 +485,200 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_wait_frames(0), m_light_war
     clone->SetActivationBlocked(true);
     clone->StopCombat();
 
-    mirror_worn_equipment(clone, player);
+    // NO dressing here: equipping in the birth frame races the skeleton
+    // assembly (armor attach vs skin bind) and the skin never binds — the
+    // m0 order (spawn → grace → dressing, runs 23-105) dresses only after
+    // the bare skeleton has bound. detach_graph runs the phases.
 
     m_clone = placed;
     m_clone_state.store(CloneState::e_generated, std::memory_order_release);
+    m_wait_frames = 0;
     logger::info("Clone has been created at the player, from {} ({:08x})", actor->GetDisplayFullName(), actor->GetFormID());
 }
 
 CharacterClone::~CharacterClone()
 {
-    RE::NiAVObject* graph = m_graph_object.get();
-    RE::NiNode* character_node = m_character_node.get();
-    if (graph && character_node && graph->parent == character_node)
-        character_node->DetachChild(graph);
-    m_character_node = nullptr;
+    // A detached graph is solely owned here; releasing the pointer frees it.
+    // A not-yet-detached graph is still engine-managed through the shell, and
+    // m_clone releases the plugin's reference only.
     m_graph_object = nullptr;
     m_clone_state.store(CloneState::e_none, std::memory_order_release);
 }
 
-bool CharacterClone::attach_graph(const RE::NiPointer<RE::NiNode>& host)
+bool CharacterClone::detach_graph()
 {
-    if (m_clone_state.load(std::memory_order_acquire) == CloneState::e_graph)
+    if (m_clone_state.load(std::memory_order_acquire) == CloneState::e_ready)
         return true;
+    if (m_clone_state.load(std::memory_order_acquire) == CloneState::e_discarded)
+        return false;
 
     RE::Actor* clone = m_clone ? m_clone->As<RE::Actor>() : nullptr;
     if (!clone)
     {
-        logger::warn("Clone attach lost its subject (clone=null)");
+        logger::warn("Clone detach lost its subject (clone=null)");
         m_clone_state.store(CloneState::e_none, std::memory_order_release);
         return false;
     }
-    RE::NiAVObject* graph = clone->Get3D(false);
+
+    // Take the graph straight from loadedData: it exists as soon as the
+    // skeleton is built, so the fade guard engages on the very first frame
+    // instead of waiting for a readiness gate. The clone stays AT the player
+    // and transparent while assembling — the culler must keep rendering it
+    // or the skin never binds (see the ctor comment).
+    RE::LOADED_REF_DATA* loaded = clone->loadedData;
+    RE::NiAVObject* graph = loaded ? loaded->data3D.get() : nullptr;
     if (!graph)
+        return false;  // skeleton still building — quiet retry next frame
+
+    // born-invisible for the whole assembling window
+    suppress_fade(graph);
+
+    ++m_wait_frames;
+
+    const AssemblyStats stats = measure_assembly(graph);
+
+    if (!m_dressed)
     {
-        logger::warn("Clone attach: biped 3D vanished");
-        m_clone_state.store(CloneState::e_generated, std::memory_order_release);
+        // The skin binding happens through the engine's own SetupGeometry
+        // inside the studio's SetupAndDrawPass — i.e. AFTER the detach (the
+        // m0 "74 bind bones" were always measured post-detach). Gating the
+        // detach on `bound` deadlocks the binding behind the very pipeline
+        // that performs it. The census below is an observation log only.
+        //
+        // The facegen head, however, is attached to the skeleton
+        // ASYNCHRONOUSLY — detaching before it lands means the engine never
+        // finishes the job and the figure is headless. Wait for it
+        // (bounded); it is an attach-layer signal, no deadlock risk.
+        const bool facegen = facegen_attached(graph);
+        // numMatrices > 0 = the engine has rendered this clone at least once
+        // (SetupGeometry writes it) — the boneMatrices buffer is initialized.
+        // Detaching before that leaves the body rendering from an
+        // uninitialized matrix buffer on the next loads (invisible body).
+        // The clone sits at the player and is culled-in, so this is a
+        // guaranteed event — but its timing depends on where the player
+        // looks after a load, hence the bounded fallback.
+        const bool rendered = stats.num_matrices > 0;
+        if (m_wait_frames % Clone_Assemble_Warn_Frames == 1)
+            logger::info(
+                "Clone graph census: geoms={} skinned={} roots={} num-matrices={} bone-count={} bound={} skin-data-null={} facegen={} rendered={}",
+                stats.geometries, stats.skinned, stats.roots, stats.num_matrices, stats.bone_count, stats.bound, stats.skin_data_null, facegen, rendered);
+        const bool ready = facegen && rendered;
+        if (!ready && m_wait_frames > Clone_Assemble_Limit_Frames)
+            logger::warn(
+                "Clone detach: assembly incomplete after {} frames (facegen={} rendered={}); detaching anyway",
+                m_wait_frames, facegen, rendered);
+        else if (!ready)
+            return false;
+        if (m_wait_frames < Clone_Assemble_Wait_Frames)
+            return false;
+
+        // Phase 2: dress while the shell is still alive (the m0 order:
+        // spawn → grace → dressing). Equipping in the birth frame raced the
+        // skeleton assembly.
+        mirror_worn_equipment(clone, RE::PlayerCharacter::GetSingleton());
+        m_dressed = true;
+        m_wait_frames = 0;
+        logger::info(
+            "Clone dressed pre-detach: geoms={} skinned={} roots={} num-matrices={} bone-count={} bound={}",
+            stats.geometries, stats.skinned, stats.roots, stats.num_matrices, stats.bone_count, stats.bound);
         return false;
+    }
+
+    // Phase 3: wait until every skinned piece is actually BOUND to the
+    // skeleton AND the geometry set has SETTLED. Equipping removes the
+    // replaced body-part geometries immediately while the armor nifs mount
+    // asynchronously over the following frames (2026-10-07 23:56: every
+    // detach ran 14 ms after dressing, geoms 12→8 — the four replaced
+    // pieces were gone and the armor never arrived because data3D was
+    // severed right away). "All current geometries bound" is trivially
+    // true on the naked subset during that race, so the bind census alone
+    // cannot gate the detach — the settle window holds the geometry census
+    // steady across it instead. Bounded fallback detaches anyway.
+    const bool fully_bound = stats.skin_data_null == 0 && stats.bones_array_null == 0 && stats.alloc_slots > 0 && stats.bound_nodes >= stats.alloc_slots;
+    if (stats.geometries != m_settle_last_geoms || stats.skinned != m_settle_last_skinned)
+    {
+        if (m_settle_last_geoms != 0 || m_settle_last_skinned != 0)
+            logger::info(
+                "Clone dressing geometry change: geoms={}→{} skinned={}→{} (settle counter reset)",
+                m_settle_last_geoms, stats.geometries, m_settle_last_skinned, stats.skinned);
+        m_settle_last_geoms = stats.geometries;
+        m_settle_last_skinned = stats.skinned;
+        m_settle_stable = 0;
+    }
+    else
+        ++m_settle_stable;
+
+    const bool settled = m_wait_frames >= Clone_Settle_Wait_Frames && m_settle_stable >= Clone_Settle_Stable_Frames;
+    if ((!fully_bound || !settled) && m_wait_frames <= Clone_Settle_Limit_Frames)
+    {
+        if (m_wait_frames % Clone_Settle_Warn_Frames == 1)
+            logger::info(
+                "Clone dressing census: geoms={} skinned={} roots={} num-matrices={} bone-count={} bound-nodes={} skin-data-null={} bones-array-null={} stable={} (waiting for full bind + settle)",
+                stats.geometries, stats.skinned, stats.roots, stats.num_matrices, stats.bone_count, stats.bound_nodes, stats.skin_data_null, stats.bones_array_null, m_settle_stable);
+        return false;
+    }
+    if (!fully_bound)
+        logger::warn(
+            "Clone detach: dressing never fully bound after {} frames (bound {}/{} bone slots); detaching anyway",
+            m_wait_frames, stats.bound_nodes, stats.bone_count);
+    else if (!settled)
+        logger::warn(
+            "Clone detach: geometry set never settled after {} frames (stable={}); detaching anyway",
+            m_wait_frames, m_settle_stable);
+
+    // One-shot forensics: the final geometry set at detach time, so a bad
+    // round is decidable from the log alone (which pieces survived, which
+    // armor mounted).
+    if (!m_geom_names_logged)
+    {
+        m_geom_names_logged = true;
+        log_geometry_names(graph);
     }
 
     RE::NiNode* old_parent = graph->parent;
-    if (!old_parent || !host)
+    if (!old_parent)
     {
-        logger::warn("Clone relocation unavailable (old_parent={} host={}): the graph stays parked", static_cast<void*>(old_parent), static_cast<void*>(host.get()));
+        logger::warn("Clone detach: graph has no world parent to detach from");
         m_clone_state.store(CloneState::e_generated, std::memory_order_release);
         return false;
     }
 
-    RE::NiNode* character_node = RE::NiNode::Create();
-    if (!character_node)
-    {
-        logger::warn("Clone home node creation failed; the graph stays parked");
-        m_clone_state.store(CloneState::e_generated, std::memory_order_release);
-        return false;
-    }
-    character_node->name = Character_Node_Name;
+    // Sever the engine's claim BEFORE the detach: with data3D live the
+    // shell's 3D bookkeeping re-parents the graph back into the world every
+    // tick (run 96: 707 re-home rounds per session); nulled, the engine
+    // holds no reference to fight over, and the shell kill below loses the
+    // run-51 "Disable destroys the 3D" mechanism constructively.
+    loaded->data3D = nullptr;
 
-    host->AttachChild(character_node);
+    // Three pointer moves in the m0 relocate order, minus the re-home: the
+    // graph is never hosted under a menu scene root — it becomes solely
+    // owned by this object (see class comment for why hosting is fatal).
     old_parent->DetachChild(graph);
-    character_node->AttachChild(graph);
 
-    if (RE::LOADED_REF_DATA* loaded = clone->loadedData)
-        loaded->data3D = nullptr;
+    restore_fade(graph);  // plugin-owned now; the studio needs it visible
 
     RE::NiUpdateData update_data{
         .time = 0.0f,
         .flags = RE::NiUpdateData::Flag::kDirty
     };
-    character_node->UpdateDownwardPass(update_data, 0);
+    graph->UpdateDownwardPass(update_data, 0);
 
-    m_character_node.reset(character_node);
     m_graph_object.reset(graph);
-    m_clone_state.store(CloneState::e_graph, std::memory_order_release);
+    m_clone_state.store(CloneState::e_ready, std::memory_order_release);
 
-    logger::info("Clone {} ({:08x}) has been attached to graph", clone->GetDisplayFullName(), clone->GetFormID());
+    logger::info(
+        "Clone {} ({:08x}) detached from the world graph: geoms={} skinned={} roots={} num-matrices={} bone-count={} bound={}",
+        clone->GetDisplayFullName(), clone->GetFormID(), stats.geometries, stats.skinned, stats.roots, stats.num_matrices, stats.bone_count, stats.bound);
 
-    // kill actor
+    // Park the shell DISABLED but ALIVE — SetDelete is the killer: its actor
+    // teardown (biped dismantle) strips the worn-armor skins out of the
+    // detached graph, leaving head+hands on some loads (2026-10-07 23:48-50,
+    // four geometries dropped at the detach). A disabled actor with data3D
+    // severed is a state the engine maintains natively: no 3D re-assembly,
+    // no tick, invisible (m0 kept live shells through 100+ rounds). The
+    // shell reference is released at the next save-load boundary together
+    // with the clone.
     clone->Disable();
-    clone->SetDelete(true);
-
-    m_clone = nullptr;
 
     return true;
 }
@@ -337,7 +700,7 @@ void CharacterClone::pose()
     m_graph_object->local.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, Studio_Facing_Z_Rad);
     m_graph_object->local.scale = 1.0f;
 
-    reset_root_to_bind_pose(m_graph_object.get());
+    reset_root_to_bind_pose(m_graph_object.get(), m_bind_map_logged, m_bind_map_stall);
 
     RE::NiUpdateData update_data{
         0.0f, 
@@ -362,75 +725,28 @@ void CharacterClone::pose()
 
 void CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target)
 {
+    if (!detach_graph())
+        return;  // still assembling in the world (or discarded) — nothing to draw
+
     RE::NiAVObject* p_root = m_graph_object.get();
     const RE::NiPointer<RE::BSShaderAccumulator>& accumulator = ui3d->unk10;
     if (!p_root || !ui3d || !ui3d->camera || !accumulator)
         return;
-
-    RE::NiUpdateData update_data{
-        .time = 0.0f,
-        .flags = RE::NiUpdateData::Flag::kDirty
-    };
-
-    const RE::NiPointer<RE::NiNode> studio_light_node = StudioLight::instance().light_node();
-    RE::BSLight** lights = StudioLight::instance().lights();
-
-    // move to studio position
-    studio_light_node->local.translate = m_anchor;
-    studio_light_node->UpdateDownwardPass(update_data, 0);
-
-    RE::NiPoint3 saved_light_pos[Studio_Light_Count] = {};
-    RE::NiNode* saved_node_parent[Studio_Light_Count] = {};
-    bool node_mutated[Studio_Light_Count] = {};
-
-
-    const auto& w2c = ui3d->camera->GetRuntimeData().worldToCam;
-
-    RE::NiPoint3 right{ w2c[0][0], w2c[0][1], w2c[0][2] };
-    RE::NiPoint3 up{ w2c[1][0], w2c[1][1], w2c[1][2] };
-    RE::NiPoint3 forward{ w2c[2][0], w2c[2][1], w2c[2][2] };
-
-    const float right_len = right.Length();
-    const float up_len = up.Length();
-    const float forward_len = forward.Length();
-    if (right_len > 1e-6f)
-        right *= 1.0f / right_len;
-    if (up_len > 1e-6f)
-        up *= 1.0f / up_len;
-    if (forward_len > 1e-6f)
-        forward *= 1.0f / forward_len;
-
-    for (std::uint32_t i = 0; i < Studio_Light_Count; ++i)
-    {
-        RE::BSLight* light = lights[i];
-        saved_light_pos[i] = light->worldTranslate;
-
-        const float spread = (static_cast<float>(i) - (Studio_Light_Count - 1) * 0.5f) * 45.0f;
-        const RE::NiPoint3 light_target = m_anchor - forward * 70.0f + up * 50.0f + right * spread;
-        light->worldTranslate = light_target;  // culler copy — kept for free
-
-        if (const RE::NiPointer<RE::NiLight>& ni_light = light->light; ni_light)
-        {
-            const RE::NiPoint3 local_offset{ right * spread + up * 50.0f - forward * 70.0f };
-            ni_light->local.translate = local_offset;
-            if (ni_light->parent)
-            {
-                saved_node_parent[i] = ni_light->parent;
-                ni_light->parent->UpdateDownwardPass(update_data, 0);
-                node_mutated[i] = true;
-            }
-        }
-    }
 
     RE::BSGraphics::Renderer* renderer = RE::BSGraphics::Renderer::GetSingleton();
     const RE::BSGraphics::RendererData& runtime = renderer->GetRuntimeData();
     if (!runtime.context || !runtime.forwarder)
         return;
 
-    //RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
+    RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
 
     pose();
+
+    // Pull the detached light rig to the anchor and cascade it: the shader
+    // reads NiLight::world.translate (v6.37) and this window is the only
+    // place the cascade runs. Must precede the pass generation.
+    StudioLight::instance().place(m_anchor);
 
     REX::W32::D3D11_VIEWPORT viewport{
         .topLeftX = 0.0f,
@@ -455,9 +771,14 @@ void CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     runtime.context->OMSetBlendState(states.opaque(), nullptr, 0xFFFFFFFF);
     runtime.context->RSSetState(states.cull_none());
 
-    RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
+
+    // Per-pass injection engages only when every studio slot is ledger-served;
+    // otherwise the passes draw with whatever the accumulator carries.
+    RE::BSLight** studio_lights = StudioLight::instance().lights();
+    const bool inject_lights = studio_lights && studio_lights[0] && studio_lights[1] && studio_lights[2];
 
     std::uint32_t drawn = 0;
+    std::uint32_t renderer_data_null = 0;
     RE::BSVisit::TraverseScenegraphGeometries(p_root, [&](RE::BSGeometry* geometry)
     {
         const RE::BSGeometry::GEOMETRY_RUNTIME_DATA& geom_rt = geometry->GetGeometryRuntimeData();
@@ -470,32 +791,42 @@ void CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
             {
                 if (pass->geometry != geometry || !pass->shader)
                     continue;
-                submit_pass(pass);
+                // Diagnostics only — never gate the draw on rendererData: the
+                // engine's SetupAndDrawPass lazily creates the device buffers
+                // (run 95), and a gate here would remove the only caller that
+                // could ever initialize them (run 52).
+                if (!geom_rt.rendererData)
+                    ++renderer_data_null;
+                submit_pass(pass, inject_lights, studio_lights);
                 ++drawn;
             }
         }
         return RE::BSVisit::BSVisitControl::kContinue;
     });
 
+    // Per-frame summary plus the skin census: after the detach, the engine's
+    // SetupGeometry writes numMatrices/boneMatrices every drawn frame — the
+    // census watching `bound` climb (0 → ~74) is the binding-has-run proof.
+    const AssemblyStats census = measure_assembly(p_root);
+    logger::info(
+        "Clone draw: passes={} rd-null={} lights={} | geoms={} skinned={} roots={} num-mat={} bone-count={} bound={}",
+        drawn, renderer_data_null, inject_lights ? Studio_Light_Count : 0,
+        census.geometries, census.skinned, census.roots, census.num_matrices, census.bone_count, census.bound);
+
     if (drawn == 0)
     {
         logger::warn("Clone draw: no render pass to draw");
+        StudioLight::instance().park();
         return;
     }
 
     // move back to unreachable position
     RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
-    for (std::uint32_t i = 0; i < Studio_Light_Count; ++i)
-    {
-        lights[i]->worldTranslate = saved_light_pos[i];
-
-        if (node_mutated[i] && saved_node_parent[i])
-            saved_node_parent[i]->UpdateDownwardPass(update_data, 0);
-    }
-
-    studio_light_node->local.translate = {0.0f, 0.0f, Studio_Light_Pos_Z};
-    studio_light_node->UpdateDownwardPass(update_data, 0);
+    // Every draw-window exit parks the rig far out of gameplay space — the
+    // ledger shells would otherwise keep lighting the world from the anchor
+    // (the 2026-10-07 21:38 light-leak screenshot).
+    StudioLight::instance().park();
 }
 
 PLUGIN_NAMESPACE_END

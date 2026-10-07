@@ -40,7 +40,6 @@ namespace
         case SKSE::MessagingInterface::kPreLoadGame:
         case SKSE::MessagingInterface::kNewGame:
             PLUGIN_NAMESPACE::CharacterManager::instance().clear_clones();
-            PLUGIN_NAMESPACE::StudioLight::instance().clear_lights();
             break;
         default:
             break;

@@ -6,7 +6,150 @@
   [m0-capture-report-2026-09-28.md](m0-capture-report-2026-09-28.md),
   需求基线在 [player-panel-prd.md](player-panel-prd.md)。
 
-## 当前状态:M0 gate 已通过
+## 当前状态：游离图架构验证轮（2026-10-07 晚间会话，历史留档，最新状态见上节）
+
+**架构已换代**：pass-redirect 管线（run 1–105 的重放/合成路线）已退役，提交
+`172984a "Replace pass-redirect pipeline with direct clone drawing"` 起，
+克隆的 3D 图改为**游离图**——摘出世界场景后**不挂任何引擎场景**（重点：
+不再挂 `menuObjects[0]`），由 `CharacterClone` 的 NiPointer 独占持有，
+每帧在渲染括号内手动 `GetRenderPasses` + `SetupAndDrawPass` 直绘进私有
+离屏目标，合成管线照旧。**三次崩溃（17:20/17:37/18:01）的根因——
+`menuObjects[0]` 的引擎重建窗口——在架构上已不存在**；插件对
+`menuObjects[0]` 现在只剩审计读取（`Studio host changed` 日志）。
+
+### 游离图架构要点（动手前必读）
+
+- **线程模型**：克隆出生（`CharacterClone` ctor：PlaceObjectAtMe + 镜像
+  装备）与摘图/直绘都在**渲染括号**（`RenderHook` 的 DrawInterface 钩子，
+  与世界渲染 job 序列化）。**SKSE 任务队列已退役**——实测它 flush 在
+  独立 worker 线程（日志线程号 18840，非主线程/渲染括号），引用创建在
+  worker 线程是 18:01 崩溃的土壤。`clear_clones` 同步跑在主线程消息里。
+- **摘图判据**（`detach_graph` 阶段机，全部是"必然事件"或附加层信号，
+  不可逆序）：
+  1. `facegen_attached`：BSFaceGenNiNode 树附加完成（引擎异步）；
+  2. `rendered=true`：`numMatrices>0`——引擎至少渲染过克隆一次
+     （SetupGeometry 写入，boneMatrices 缓冲已初始化）。**fade=0 会被
+     引擎渲染器跳过 → numMatrices 永远 0**，故 fade 守卫压 **0.05**
+     （近隐形但被渲染）；两者都有 1200 帧超时兜底（warn 后照摘）。
+  3. 穿衣（mirror_worn_equipment）在摘图**前**（壳存活期，m0 顺序）；
+  4. **全绑定判据**：`bound_nodes ≥ alloc_slots`——注意基准是
+     `min(bone_count, allocatedSize)`（引擎按需分配骨骼指针数组，3BA 实测
+     47 槽 vs skinData 声明 131），不是声明容量；
+  5. 摘图三步：`data3D=null` 先斩（run 96 拉锯机制）→
+     `old_parent->DetachChild`（world cell room，壳活着时必活）→ **不挂宿主**。
+- **活壳**：摘图后壳 **Disable 但不 SetDelete**——`SetDelete` 触发
+  biped 拆解，会把 worn-armor 蒙皮从骨架树摘走（23:48–50 的
+  "只剩头+手"：geoms 12→8）。Disabled + data3D 斩 = 引擎原生维护状态
+  （无重装配、无 tick、不可见）。壳引用随克隆持有到下次读档边界。
+- **灯光 rig 也游离**：`StudioLight` 的 NiLight 树不挂任何场景
+  （`init` 只 AddLight 入 ShadowSceneNode 账本），`place(anchor)` 在
+  绘制窗口内手动级联（着色读 `NiLight::world.translate`，v6.37），
+  `park()` 在**每个** draw 出口把 rig 泊回 Z+100000（账本壳在游戏空间
+  附近会被引擎画进世界 = 漏光，v6.58 机制）。**壳 fetch 扫双队列**
+  （activeLights + lightQueueAdd）——游离 rig 无场景 tick，壳永不晋升，
+  直接从 lightQueueAdd 取（v6.50 实证）。
+- **灯光注入**：per-pass mutate→draw→restore（`submit_pass`），
+  槽 0=环境、1/2=key/fill（v6.56 约定），窗口内每 pass 补壳
+  （lodDimmer/luminance/frustrumCull）。注入仅在三槽都被账本/队列
+  服务时启用。`SetupAndDrawPass` 直调 CLib 绑定（CS 共存待观察，
+  run-11 症状预案 = pre-patch 目标解析）。
+
+### 本会话崩溃/缺陷判读链（全部留档）
+
+1. crash-17-20-42 / 17-37-26：`menuObjects[0]` 悬空 root，303 行
+   `host->AttachChild` 虚调用跳 0x000100000000（反汇编+CLib 布局确认）。
+2. crash-18-01-37：AddTask 版死在任务对象析构——lambda 按值捕获的
+   NiPointer 副本对死对象 Release→DeleteThis 虚调用读垃圾（RIP=0）。
+   同根：死指针上 IncRef 无效。→ 游离图 + 撤 AddTask 双修。
+3. "0 bind bones"四轮排除（深度/原语/地下遮挡/渲染绑定）→ 真因：
+   **T-pose 重推导门自己死锁**（绑定发生在摘图后的 SetupAndDrawPass，
+   门把图挡在管线外）+ **numMatrices 语义误读**（它是渲染活动指标，
+   摘图前恒 0 是正常的）→ 门降级为观测。
+4. UBE 头身分离：**facegen 树挂接差异**——CBBE facegen 树挂 Head 骨骼下
+   （跟随 T-pose），UBE 挂骨架 root（bind 是骨架绝对坐标，facegen 组
+   209 骨骼含 ~207 根 hdtSSE 头发物理骨骼）——T-pose 重推导错误重置
+   物理骨骼与 SMP 拉锯 → 修法 = **facegen 组跳过** + **头/颈骨骼豁免**
+   （`[Head]`/`Neck` 名字过滤）。
+5. "只剩头+手"（跨读档随机）：`SetDelete` 的 biped 拆解摘走 worn-armor
+   蒙皮（geoms 12→8 实锤）→ **活壳修法**（撤 SetDelete 保 Disable）。
+6. 漏光：park 缺失（place 后不泊回）→ 每 draw 出口 `park()`。
+7. 第一次进存档无人像：fade=0 饿死渲染门 → fade 0.05。
+
+## 当前状态：游离图架构验证收官（2026-10-08 会话，落定门全判据通过）
+
+**活壳 + 落定门验证全部通过（用户确认"以上所有问题都没问题了"）**：
+落定门（v1.2.1，MD5 28303210）后连续读档验证——面板人物完整着装、
+`detached` 行 geoms 与 dressed 一致不再掉、UBE 头身分离消失（此前判读
+确被 armor 摘除污染）、漏光保持已修、零崩溃零回归。**"只剩头+手"问题
+正式关闭**（根因链：穿衣摘旧几何 + 护甲异步装载 vs 摘图过早 → 落定门
+解决；SetDelete 判读为同窗误判，活壳 Disable 本身无罪）。
+
+**forwarder 待修项关闭（误报）**：CLib `RE/R/Renderer.h:95` 中
+`forwarder` 就声明为 `ID3D11Device*`（offset 0x50），CS 仓库同款用法
+（`Globals.cpp:228` reinterpret_cast）；昨晚日志 `All shaders compiled`
++ 合成全程正常证明运行时成立。撤下该"已知待修"。
+
+**当前无待验证代码。** 下一阶段 = 阶段 3（M1，PRD FR-01/02/03）：
+①装备与外观同步（出生时一次性镜像 → 持续同步，Apparel Preview 装配
+逻辑为参考，community-reference-supplement.md §4）；②临时污染过滤
+（FR-02）；③待机动画与展示动作（FR-03，含头部姿态冻结的取舍——头/颈
+骨骼豁免已落，头姿态=出生瞬间引擎驱动的姿态）；④面板布局定稿
+（**需要用户输入**：P 的位置/大小/与物品卡及后续网格背包的关系）。
+遗留：正式性能测量（PRD §5.3）、灯光与世界光照一致性微调。
+
+## 上一轮：几何掉落根因改判（2026-10-08 会话，已关闭，历史留档）
+
+**"只剩头+手"根因改判：不是 SetDelete，是穿衣本身**。活壳修法
+（MD5 972263fa）下的验证轮（23:54–57，日志已存档
+`log-archive/CharacterPanel-20261007-2357.log`）：三轮克隆**全部**
+`dressed`(geoms=12, num-matrices=118, bound=118) 后 **14 ms 内**
+`detached`(geoms=8, num-matrices=49)——裸体图当时已 118/118 全绑定，
+阶段 3 门立即放行；掉的是被替换的 4 个裸体部位几何（biped 换装在
+EquipObject 当帧即刻摘除旧几何），而护甲 nif 是**异步**装载、几帧后
+才挂上——data3D 已斩、图已摘出世界，护甲永远进不了图。23:48 截图
+（脸+手发光、身体全黑）= 幸存的 8 个几何里脸/手无护甲覆盖 + 无绑定
+部位退化为恒等蒙皮。22:22 那轮全链路正常只是竞态赢了（护甲恰好先
+挂上）。**SetDelete 判读的修正**：23:48–50 的 geoms 12→8 与 SetDelete
+时间上同窗，但机制是穿衣摘旧几何；活壳 Disable 本身无罪（本轮 Disable
+后 geoms 保持 8 不再掉）。
+
+**修复（v1.2.1，MD5 28303210，已验证通过）**：阶段 3
+门升级为"全绑定 + 落定"双门——①几何 census（geoms/skinned）连续
+`Clone_Settle_Stable_Frames`(20) 帧不变才允许摘图，任何几何变化
+（护甲挂上）重置稳定计数并打 `Clone dressing geometry change` 行；
+②穿衣后最短等待 `Clone_Settle_Wait_Frames`(30) 帧；③600 帧上限兜底
+（超限 warn 后照摘）；④摘图时一次性打 `Clone geometry census (N):`
+几何名清单（判读一锤定音：幸存了哪些 12、挂上了哪些护甲）。
+
+### 已验证 / 待验证
+
+- **已验证（全绿，无待验证项）**：落定门全判据（完整着装/geoms 不掉/
+  UBE 分离消失/漏光已修/零崩溃）；活壳修法（Disable 后 geoms 稳定）；
+  CBBE 裸体全链路（118/118 全绑定）；facegen 门；灯光双队列 fetch
+  自愈；宿主审计日志（读档不重建 root，主菜单转换重建——runs
+  100-102 补充数据）。
+- **FR-03 范畴**：头部姿态冻结（头/颈豁免的取舍——头姿态=出生瞬间
+  引擎驱动的姿态）。
+- **流程**：`CharacterPanel.log` 非追加模式，**每次测试后立刻复制**
+  （已建立 `log-archive/` 惯例，本会话已存档一份）。
+
+### 部署与构建
+
+- 当前 DLL：MD5 `28303210`（v1.2.1，`build/Release/CharacterPanel.dll` →
+  `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，PDB 同步部署）。
+- 构建：`cmake --build build --config Release --target CharacterPanel`。
+- 出生原语：**PlaceObjectAtMe**（玩家处出生；CreateReferenceAtLocation
+  产出无绑定蒙皮——run 104 的"深度选 LOD"判读已修正为"原语差异"）。
+
+- 反汇编记录：crash 17-20-42 的 303 行虚调用（vfunc 0x35=AttachChild）、
+  18-01-37 的 `_Delete_this`（析构捕获的 NiPointer）、skse64+0x189E8 的
+  Run/Dispose 循环。
+- m0 档案参考：`tools/m0_proto/proto_passredirect.cpp`（per-pass 灯光注入
+  :2199-2248、双队列 fetch :1608-1626、泊位 :1879-1900）、
+  `proto_pinstance.cpp`（relocate 顺序 :936-1040、facegen 组结构）。
+- 本会话对话记录含每次判读的完整证据链（census 数字表、反汇编片段）。
+
+## 当前状态：M0 gate 已通过（历史，2026-10-01）
 
 pass 重定向路线的核心命题已由 16 轮运行证实:**菜单场景的 pass 可以被识别、
 拦截,并在原调用之后 1:1 重放进私有离屏目标,着色正确、物品内部遮挡正确、

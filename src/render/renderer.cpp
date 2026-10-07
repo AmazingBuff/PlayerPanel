@@ -64,18 +64,44 @@ namespace
             {
                 RE::UI* ui = RE::UI::GetSingleton();
                 const bool paused = !ui || ui->GameIsPaused();
-                if (!paused)
-                    CharacterManager::instance().create_clones({RE::PlayerCharacter::GetSingleton()}, ui3d->menuObjects[0]);
 
-                StudioLight::instance().init(ui3d->menuObjects[0], RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0]);
-                StudioLight::instance().refresh();
+                // Host audit: menuObjects[0] is engine-managed and rebuilt
+                // across menu/load transitions (runs 100-102). Nothing hangs
+                // under it anymore — the clone graph and the light rig are
+                // both detached — so this only maps the rebuild triggers.
+                static RE::NiNode* s_last_host = nullptr;
+                RE::NiNode* const host = ui3d->menuObjects[0].get();
+                if (host != s_last_host)
+                {
+                    logger::info("Studio host changed: {} -> {} (paused={})", static_cast<void*>(s_last_host), static_cast<void*>(host), paused);
+                    s_last_host = host;
+                }
+
+                StudioLight::instance().init(RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0]);
+                static std::uint32_t s_warn_tick = 0;
+                if (!StudioLight::instance().refresh() && ++s_warn_tick % 120 == 1)
+                    logger::warn("Studio lights not fully served by the ledger yet");
+
+                if (!paused)
+                {
+                    CharacterManager::instance().create_clones({RE::PlayerCharacter::GetSingleton()});
+
+                    // Advance the assembly gate on every unpaused frame: the
+                    // detach runs in this render bracket (serialized with the
+                    // world renderer job), so the figure is ready long before
+                    // the first panel open.
+                    if (const std::shared_ptr<CharacterClone> clone = CharacterManager::instance().get_clone(RE::PlayerCharacter::GetSingleton()))
+                        clone->detach_graph();
+                }
 
                 if (PanelMonitor::instance().is_menu_open())
                 {
+                    // Draw even while the lights are still converging — the
+                    // per-pass injection engages only once every slot is
+                    // ledger-served (submit_pass checks the slots itself).
                     if (const std::shared_ptr<CharacterClone> clone = CharacterManager::instance().get_clone(RE::PlayerCharacter::GetSingleton()))
                     {
                         D3D11StateCapture capture(context);
-
                         clone->draw(ui3d, *m_common_states, m_render_target);
                     }
 
