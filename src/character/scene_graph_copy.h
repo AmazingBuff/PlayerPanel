@@ -72,6 +72,7 @@ private:
     uint32_t m_probe_rebuilt_skins;
     uint32_t m_probe_rebuilt_slots;
     float m_probe_slot_value_after_draw;
+    float m_probe_last_written[12];
     uint32_t m_probe_corrupt_slot;
     std::string m_probe_slot_geometry;
     uint32_t m_probe_frame_report;

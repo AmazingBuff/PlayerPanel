@@ -278,7 +278,7 @@ SceneGraphCopy& SceneGraphCopy::instance()
     return s_instance;
 }
 
-SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_child_cache(nullptr), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_samples(0), m_probe_invalid_logged(false), m_probe_frame_report(0) {}
+SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_child_cache(nullptr), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_samples(0), m_probe_invalid_logged(false), m_probe_rebuilt_skins(0), m_probe_rebuilt_slots(0), m_probe_slot_value_after_draw(0.0f), m_probe_last_written{}, m_probe_corrupt_slot(0), m_probe_frame_report(0) {}
 SceneGraphCopy::~SceneGraphCopy()
 {
     // Never destroy a parked graph, not even at unload.
@@ -512,10 +512,10 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
     // the bones it belongs to were being moved, so nothing on screen followed until now.
     uint32_t rebuilt_skins = 0;
     uint32_t rebuilt_slots = 0;
-    // Experiment switch: with the rebuild skipped, the meshes keep whatever matrices they were
-    // cloned with. If the figure still renders normally, these matrices were never what the mesh
-    // used and this whole investigation has been reading dead data; if the figure breaks, the write
-    // is load-bearing and only its target is wrong.
+    // Experiment: with the rebuild OFF, the layout check below classifies the buffer's ORIGINAL
+    // clone-time contents — reading it while the rebuild runs would only report what we just wrote.
+    // Measured with the rebuild off: the figure renders unchanged, so these matrices never drove
+    // the mesh.
     constexpr bool Rebuild_Skinning_Matrices = false;
     if constexpr (Rebuild_Skinning_Matrices)
     {
@@ -533,21 +533,15 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
             if (!skin->bones[i])
                 continue;
             write_skinning_matrix(skin->boneMatrices, i, root_to_skin, skin->bones[i]->world, skin->skinData->GetBoneDataSkinToBone(i));
-            // Corrupt test: one skin's copy of the probe bone gets its whole slot destroyed after
-            // the rebuild, so the destruction cannot accumulate and does not depend on the slot's
-            // internal layout. If any part of the shader samples these matrices this deforms a
-            // large patch of the mesh; if the figure is untouched, the buffer never reaches the GPU.
             if (m_probe_slot_geometry.empty() && skin->bones[i] == m_probe_bone_cache)
             {
-                float* const slot = static_cast<float*>(skin->boneMatrices) + static_cast<size_t>(i) * 12;
-                // Corrupt the WHOLE slot, not just one component: this makes the test independent of
-                // whether the layout is 3x4 or 4x3 and of where the translation lives inside it. If
-                // any part of the shader samples these matrices, this deforms a large patch of the
-                // mesh; if the figure is untouched, the buffer does not reach the GPU at all.
-                for (int component = 0; component < 12; ++component)
-                    slot[component] = 1000.0f + static_cast<float>(component);
-                m_probe_slot_geometry = geometry->name.c_str() ? geometry->name.c_str() : "?";
                 m_probe_corrupt_slot = i;
+                m_probe_slot_geometry = geometry->name.c_str() ? geometry->name.c_str() : "?";
+                // Record what the rebuild produced for the probe bone so the report can compare it
+                // against what the buffer holds at draw time.
+                const float* const written = static_cast<const float*>(skin->boneMatrices) + static_cast<size_t>(i) * 12;
+                for (int component = 0; component < 12; ++component)
+                    m_probe_last_written[component] = written[component];
             }
             ++rebuilt_slots;
         }
@@ -621,14 +615,31 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
             if (probe_slot < count)
             {
                 const float* const probe_values = values + static_cast<size_t>(probe_slot) * 12;
-                // Dump the slot's own rotation and translation so the reading is unambiguous: with
-                // rotation ~identity and translation ~(0,0,0) the array holds BIND-POSE matrices, not
-                // world-space skinning matrices, which would explain why writing it changes nothing.
-                logger::info("SCOPY ANIM slot-dump R=(%.3f %.3f %.3f | %.3f %.3f %.3f | %.3f %.3f %.3f) t=(%.2f,%.2f,%.2f)",
-                    probe_values[0], probe_values[1], probe_values[2], probe_values[4], probe_values[5], probe_values[6],
+                // Classify the buffer's contents: compare the slot against what the rebuild writes,
+                // against the bone's raw world transform, and against the bind pose's inverse. Whichever
+                // it matches says which quantity the shader is actually fed.
+                const RE::NiTransform& world = m_probe_bone_cache->world;
+                const RE::NiTransform& bind_inverse = skin->skinData->GetBoneDataSkinToBone(probe_slot);
+                const float world_row0[4] = { world.rotate.entry[0][0], world.rotate.entry[0][1], world.rotate.entry[0][2], world.translate.x };
+                float closest_to_written = 0.0f;
+                float closest_to_world = 0.0f;
+                float closest_to_bind_inverse = 0.0f;
+                for (int component = 0; component < 12; ++component)
+                {
+                    closest_to_written += std::abs(probe_values[component] - m_probe_last_written[component]);
+                    closest_to_bind_inverse += std::abs(probe_values[component] - reinterpret_cast<const float*>(&bind_inverse)[component]);
+                }
+                closest_to_world += std::abs(probe_values[0] - world_row0[0]) + std::abs(probe_values[1] - world_row0[1]) + std::abs(probe_values[2] - world_row0[2]) + std::abs(probe_values[3] - world_row0[3]);
+                logger::info("SCOPY ANIM buffer slot={} R=(%.3f %.3f %.3f | %.3f %.3f %.3f | %.3f %.3f %.3f) t=(%.2f,%.2f,%.2f)",
+                    probe_slot, probe_values[0], probe_values[1], probe_values[2], probe_values[4], probe_values[5], probe_values[6],
                     probe_values[8], probe_values[9], probe_values[10], probe_values[3], probe_values[7], probe_values[11]);
-                logger::info("SCOPY ANIM corrupt-test geometry='{}' slot={} tx-in-buffer={:.1f}",
-                    geometry->name.c_str() ? geometry->name.c_str() : "?", probe_slot, probe_values[3]);
+                logger::info("SCOPY ANIM written R=(%.3f %.3f %.3f | %.3f %.3f %.3f | %.3f %.3f %.3f) t=(%.2f,%.2f,%.2f)",
+                    m_probe_last_written[0], m_probe_last_written[1], m_probe_last_written[2], m_probe_last_written[4], m_probe_last_written[5], m_probe_last_written[6],
+                    m_probe_last_written[8], m_probe_last_written[9], m_probe_last_written[10], m_probe_last_written[3], m_probe_last_written[7], m_probe_last_written[11]);
+                logger::info("SCOPY ANIM compare vs-written={:.2f} vs-world-row0={:.2f} vs-bind-inverse={:.2f} (smaller = matches)",
+                    closest_to_written, closest_to_world, closest_to_bind_inverse);
+                logger::info("SCOPY ANIM slot0-raw=(%.3f %.3f %.3f %.3f) slot1-raw=(%.3f %.3f %.3f %.3f)",
+                    values[0], values[1], values[2], values[3], values[12], values[13], values[14], values[15]);
             }
             return RE::BSVisit::BSVisitControl::kContinue;
         });
