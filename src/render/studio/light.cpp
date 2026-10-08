@@ -146,7 +146,7 @@ void StudioLight::park()
 
 bool StudioLight::init(RE::ShadowSceneNode* scene_node)
 {
-    if (m_scene_node == scene_node)
+    if (scene_node && m_scene_node == scene_node)
         return true;
 
     if (!scene_node || !m_light_node)

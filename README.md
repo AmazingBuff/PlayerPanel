@@ -38,6 +38,8 @@ config, input, present_hook
 
 ## Documentation
 
+- [Scene-graph copy validation](docs/scene-graph-copy-validation.md): opt-in S0 experiment, F7-F10 controls, remote game runbook and twelve evidence questions; [result template](docs/scene-graph-copy-results-template.md). Independent animation/CBPC/FSMP drivers are later gates.
+
 - [M0 handoff](docs/m0-handoff.md): **start here for the next session** — current state (M0 gate passed), verified engine facts, the next work package, and the test runbook.
 - [PlayerPanel PRD](docs/player-panel-prd.md): product requirements for an independent character studio rendered alongside the game world, including composition order and acceptance criteria.
 - [Community implementation references](docs/community-reference-supplement.md): evidence and limits from Dragon's Eye Minimap, Outfit Preview Selector, Apparel Preview, and SosGui, mapped to PlayerPanel milestones.

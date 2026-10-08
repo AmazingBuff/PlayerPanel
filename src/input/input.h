@@ -2,10 +2,7 @@
 
 PLUGIN_NAMESPACE_BEGIN
 
-// F7/F8 hotkey observation (FR-05: observe-only; held/repeat events are
-// rejected so a single press toggles exactly once). The panel's primary
-// lifecycle is the inventory menu (panel/panel.cpp MenuSink); F7 remains
-// the manual fallback.
+// Experimental F7-F10 commands are queued for the render bracket.
 class InputManager
 {
 public:
@@ -16,10 +13,7 @@ public:
     InputManager operator=(InputManager&) = delete;
     InputManager operator=(InputManager&&) = delete;
 
-    // Registers the input sink on the game's input device manager. False =
-    // the manager is unavailable and the panel hotkeys are disabled
-    // (logged); the caller aborts the install, exactly as before the
-    // module split.
+    // Returns false when the input device manager is unavailable.
     static bool install();
 };
 

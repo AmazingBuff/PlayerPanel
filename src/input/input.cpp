@@ -1,12 +1,10 @@
 //
-// Input hotkey module (HLC-style: InputManager shell + anonymous sink).
-// Split out of the former panel.cpp (2026-10-05 file-organization pass);
-// behavior byte-identical.
+// Experimental scene-copy commands.
 //
 
 #include "input/input.h"
 
-#include "panel/panel.h"
+#include "character/scene_graph_copy.h"
 
 #include <Windows.h>
 
@@ -14,16 +12,6 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
-    // F6 is bound in the user's game setup, so the panel lives on F7/F8
-    // (the probe's F7/F8 never co-load with this DLL).
-    constexpr std::uint32_t Panel_Toggle_Virtual_Key = VK_F7;
-    constexpr std::uint32_t Dump_Virtual_Key = VK_F8;
-
-    // FR-05: the sink only observes the two panel keys; every other event
-    // passes through untouched, and held/repeat events are rejected so a
-    // single press toggles exactly once. The callback stays active while
-    // InventoryMenu pauses the game, so the panel is operable exactly
-    // where its content exists.
     class InputHandler final : public RE::BSTEventSink<RE::InputEvent*>
     {
     public:
@@ -40,19 +28,25 @@ namespace
             if (!events)
                 return RE::BSEventNotifyControl::kContinue;
 
-            // UINT const panel_scan = MapVirtualKeyA(Panel_Toggle_Virtual_Key, MAPVK_VK_TO_VSC);
-            // UINT const dump_scan = MapVirtualKeyA(Dump_Virtual_Key, MAPVK_VK_TO_VSC);
-            // for (RE::InputEvent* event = *events; event; event = event->next)
-            // {
-            //     RE::ButtonEvent* button = event->AsButtonEvent();
-            //     if (!button || button->device.get() != RE::INPUT_DEVICE::kKeyboard || !button->IsDown())
-            //         continue;
-            //
-            //     if (panel_scan != 0 && button->GetIDCode() == panel_scan)
-            //         Proto::instance().toggle_panel();
-            //     else if (dump_scan != 0 && button->GetIDCode() == dump_scan)
-            //         Proto::instance().request_dump();
-            // }
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+            for (RE::InputEvent* event = *events; event; event = event->next)
+            {
+                RE::ButtonEvent* button = event->AsButtonEvent();
+                if (!button || button->device.get() != RE::INPUT_DEVICE::kKeyboard || !button->IsDown())
+                    continue;
+                using Command = SceneGraphCopy::Command;
+                const uint32_t scan = button->GetIDCode();
+                if (scan == MapVirtualKeyA(VK_F7, MAPVK_VK_TO_VSC))
+                    SceneGraphCopy::instance().request(Command::e_capture);
+                else if (scan == MapVirtualKeyA(VK_F8, MAPVK_VK_TO_VSC))
+                    SceneGraphCopy::instance().request(Command::e_toggle_draw);
+                else if (scan == MapVirtualKeyA(VK_F9, MAPVK_VK_TO_VSC))
+                    SceneGraphCopy::instance().request(Command::e_rotate);
+                else if (scan == MapVirtualKeyA(VK_F10, MAPVK_VK_TO_VSC))
+                    SceneGraphCopy::instance().request(Command::e_release);
+            }
+#endif
+
             return RE::BSEventNotifyControl::kContinue;
         }
 

@@ -7,6 +7,8 @@
 #include "render/renderer.h"
 #include "render/shader_manager.h"
 #include "render/studio/light.h"
+#include "character/scene_graph_copy.h"
+#include "input/input.h"
 
 namespace
 {
@@ -25,7 +27,11 @@ namespace
         log->flush_on(Log_Level);
 
         spdlog::set_default_logger(std::move(log));
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [thread %t] %g(%#): [%^%l%$] %v"s);
+#else
         spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
+#endif
     }
 
     void message_handler(SKSE::MessagingInterface::Message* message) noexcept
@@ -36,10 +42,17 @@ namespace
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
             PLUGIN_NAMESPACE::Renderer::install();
             PLUGIN_NAMESPACE::PanelMonitor::instance().install();
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+            PLUGIN_NAMESPACE::InputManager::install();
+            logger::info("SCOPY BUILD {} runtime={} mode=manual-scene-copy legacy-actor-route=disabled animation=not-implemented cbpc=not-registered smp=not-registered", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
+#endif
             break;
         case SKSE::MessagingInterface::kPreLoadGame:
         case SKSE::MessagingInterface::kNewGame:
             PLUGIN_NAMESPACE::CharacterManager::instance().clear_clones();
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+            PLUGIN_NAMESPACE::SceneGraphCopy::instance().reset_for_load();
+#endif
             break;
         default:
             break;

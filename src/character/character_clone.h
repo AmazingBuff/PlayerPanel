@@ -11,34 +11,28 @@
 
 PLUGIN_NAMESPACE_BEGIN
 
-// Photostudio figure: a duplicated actor whose biped graph is detached from
-// the world scene graph and solely owned by this object. The graph is never
-// hosted under any engine scene: the menu-scene roots are engine-managed and
-// rebuilt across menu/load transitions while clones hosted under them dangle
-// (runs 100-102; crash-2026-10-07-17-20-42 / -18-01-37). The studio draws
-// the detached graph manually every frame instead.
+// Owns a studio graph from Actor assembly or an audited, controller-free snapshot.
+// Neither graph is hosted under engine-managed menu roots.
 class CharacterClone
 {
 public:
     explicit CharacterClone(RE::Actor* actor);
+    explicit CharacterClone(RE::NiPointer<RE::NiAVObject> graph);
     ~CharacterClone();
 
-    // Detach the biped graph from the world cell and kill the shell actor.
-    // Idempotent and self-paced: returns false while the clone is still
-    // assembling in the world; true once the graph is solely owned and the
-    // shell is gone. Runs inside the render bracket, serialized with the
-    // world renderer job on the same thread.
+    // Actor mode advances assembly and detaches once; snapshots are already ready.
     bool detach_graph();
 
     void pose();
 
-    void draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target);
+    bool draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target);
+    void rotate_snapshot();
 private:
     enum class CloneState : uint8_t
     {
         e_none,
         e_generated,   // shell actor placed; biped graph still assembling in the world
-        e_ready,       // graph detached, solely owned here; shell actor dead
+        e_ready,       // studio graph ready; Actor mode retains a disabled shell
         e_discarded    // assembly stalled (boneless low-LOD graph, run 104); unusable
     };
 
@@ -61,6 +55,20 @@ private:
     uint32_t m_settle_last_skinned = 0;
     uint32_t m_settle_stable = 0;
     bool m_geom_names_logged = false;
+
+    struct SnapshotNode
+    {
+        RE::NiAVObject* object;
+        RE::NiTransform world;
+        RE::NiBound bound;
+    };
+
+    bool m_is_snapshot;
+    float m_snapshot_angle;
+    uint32_t m_draw_frames;
+    RE::NiTransform m_snapshot_root_world;
+    RE::NiPoint3 m_snapshot_center;
+    std::vector<SnapshotNode> m_snapshot_nodes;
 };
 
 PLUGIN_NAMESPACE_END

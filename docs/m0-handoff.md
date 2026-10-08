@@ -1,5 +1,13 @@
 # M0 handoff — state, verified facts, and the next work package
 
+## 新增：场景图复制 S0 实验（2026-10-08，待另一台电脑游戏验证）
+
+用户授权在现有直绘框架上重新验证直接复制已装配的第三人称角色图。
+默认构建仍为 Actor 装配；`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON` 的测试构建关闭旧 Actor 路线，
+通过 F7 复制／审计、F8 绘制、F9 旋转、F10 释放。没有 HKX／CBPC／SMP 独立驱动，不能将 S0 当作这些需求通过。
+先读 [设计与验证问题](scene-graph-copy-validation.md)，使用 [回传模板](scene-graph-copy-results-template.md)。
+下文历史验证结论仍仅对应原 Actor／游离图路线。
+
 - 日期:2026-10-01(run 19 收官:工作包 1+2 完成并经游戏验证)
 - 读者:下一个会话的 Agent / 开发者。本文是"从这里继续"的入口;运行级细节在
   [m0-proto.md](m0-proto.md),探针证据在

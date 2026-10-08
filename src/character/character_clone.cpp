@@ -3,6 +3,7 @@
 //
 
 #include "character_clone.h"
+#include "character/snapshot_transform.h"
 
 #include "render/studio/light.h"
 
@@ -438,7 +439,7 @@ namespace
     }
 }
 
-CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_state(CloneState::e_none), m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0)
+CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_state(CloneState::e_none), m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0), m_is_snapshot(false), m_snapshot_angle(0.0f), m_draw_frames(0)
 {
     m_settle_last_geoms = 0;
     m_settle_last_skinned = 0;
@@ -494,6 +495,31 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_sta
     m_clone_state.store(CloneState::e_generated, std::memory_order_release);
     m_wait_frames = 0;
     logger::info("Clone has been created at the player, from {} ({:08x})", actor->GetDisplayFullName(), actor->GetFormID());
+}
+
+CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph) :
+    m_clone(nullptr), m_clone_state(CloneState::e_ready), m_graph_object(std::move(graph)),
+    m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0),
+    m_is_snapshot(true), m_snapshot_angle(0.0f), m_draw_frames(0)
+{
+    restore_fade(m_graph_object.get());
+    m_snapshot_root_world = m_graph_object->world;
+    const SkinnedBound bound = measure_skinned_bound(m_graph_object.get());
+    m_snapshot_center = bound.valid ? bound.center : m_graph_object->worldBound.center;
+    RE::BSVisit::TraverseScenegraphObjects(m_graph_object.get(), [&](RE::NiAVObject* object)
+    {
+        m_snapshot_nodes.push_back({ object, object->world, object->worldBound });
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+}
+
+void CharacterClone::rotate_snapshot()
+{
+    if (m_is_snapshot)
+    {
+        m_snapshot_angle += 1.57079632679f;
+        logger::info("SCOPY ROTATE angle-deg={:.0f}", m_snapshot_angle * 57.2957795131f);
+    }
 }
 
 CharacterClone::~CharacterClone()
@@ -696,6 +722,26 @@ void CharacterClone::pose()
     }
     m_anchor = anchor;
 
+    if (m_is_snapshot)
+    {
+        RE::NiTransform placement;
+        placement.translate = anchor;
+        placement.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, m_snapshot_angle);
+        placement.scale = Studio_Figure_Scale;
+        const RE::NiTransform delta = snapshot_delta(m_snapshot_root_world, placement, m_snapshot_center, anchor);
+        m_graph_object->local = delta * m_snapshot_root_world;
+
+        // Preserve captured SMP world poses; do not run copied controllers or Actor callbacks.
+        for (const SnapshotNode& node : m_snapshot_nodes)
+        {
+            node.object->world = delta * node.world;
+            node.object->previousWorld = node.object->world;
+            node.object->worldBound.center = delta * node.bound.center;
+            node.object->worldBound.radius = std::abs(delta.scale) * node.bound.radius;
+        }
+        return;
+    }
+
     m_graph_object->local.translate = anchor;
     m_graph_object->local.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, Studio_Facing_Z_Rad);
     m_graph_object->local.scale = 1.0f;
@@ -723,20 +769,20 @@ void CharacterClone::pose()
     m_graph_object->UpdateWorldBound();
 }
 
-void CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target)
+bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target)
 {
     if (!detach_graph())
-        return;  // still assembling in the world (or discarded) — nothing to draw
+        return false;
 
     RE::NiAVObject* p_root = m_graph_object.get();
+    if (!p_root || !ui3d || !ui3d->camera || !ui3d->unk10)
+        return false;
     const RE::NiPointer<RE::BSShaderAccumulator>& accumulator = ui3d->unk10;
-    if (!p_root || !ui3d || !ui3d->camera || !accumulator)
-        return;
 
     RE::BSGraphics::Renderer* renderer = RE::BSGraphics::Renderer::GetSingleton();
     const RE::BSGraphics::RendererData& runtime = renderer->GetRuntimeData();
     if (!runtime.context || !runtime.forwarder)
-        return;
+        return false;
 
     RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
@@ -807,26 +853,31 @@ void CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     // Per-frame summary plus the skin census: after the detach, the engine's
     // SetupGeometry writes numMatrices/boneMatrices every drawn frame — the
     // census watching `bound` climb (0 → ~74) is the binding-has-run proof.
-    const AssemblyStats census = measure_assembly(p_root);
-    logger::info(
-        "Clone draw: passes={} rd-null={} lights={} | geoms={} skinned={} roots={} num-mat={} bone-count={} bound={}",
-        drawn, renderer_data_null, inject_lights ? Studio_Light_Count : 0,
-        census.geometries, census.skinned, census.roots, census.num_matrices, census.bone_count, census.bound);
+    if (!m_is_snapshot || ++m_draw_frames % 120 == 1)
+    {
+        const AssemblyStats census = measure_assembly(p_root);
+        logger::info(
+            "Clone draw: passes={} rd-null={} lights={} | geoms={} skinned={} roots={} num-mat={} bone-count={} bound={}",
+            drawn, renderer_data_null, inject_lights ? Studio_Light_Count : 0,
+            census.geometries, census.skinned, census.roots, census.num_matrices, census.bone_count, census.bound);
+        if (m_is_snapshot)
+            logger::info("SCOPY DRAW frame={} passes={} lights={} animation-driver=none physics-driver=none", m_draw_frames, drawn, inject_lights);
+    }
+
+    RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
     if (drawn == 0)
     {
         logger::warn("Clone draw: no render pass to draw");
         StudioLight::instance().park();
-        return;
+        return false;
     }
-
-    // move back to unreachable position
-    RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
     // Every draw-window exit parks the rig far out of gameplay space — the
     // ledger shells would otherwise keep lighting the world from the anchor
     // (the 2026-10-07 21:38 light-leak screenshot).
     StudioLight::instance().park();
+    return true;
 }
 
 PLUGIN_NAMESPACE_END

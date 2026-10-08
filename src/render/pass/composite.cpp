@@ -28,6 +28,10 @@ CompositePass::~CompositePass()
 
 bool CompositePass::init(REX::W32::ID3D11Device* device)
 {
+    m_ref_vertex_shader = ShaderManager::instance().composite_vs();
+    m_ref_pixel_shader = ShaderManager::instance().composite_ps();
+    if (!m_ref_vertex_shader || !m_ref_pixel_shader)
+        return false;
     if (m_sampler && m_cb)
         return true;
 

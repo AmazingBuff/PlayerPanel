@@ -13,6 +13,7 @@ option(ENABLE_SKYRIM_SE "Enable support for Skyrim SE in the dynamic runtime fea
 option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
 option(CHARACTER_PANEL_BUILD_PROBE "Build the opt-in M0 engine evidence probe." ON)
+option(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT "Use the manual, paused scene-graph-copy validation path." OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
@@ -80,6 +81,10 @@ target_compile_features(
 	CharacterPanel
 	PRIVATE
 	cxx_std_23
+)
+
+target_compile_definitions(CharacterPanel PRIVATE
+	CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=$<BOOL:${CHARACTER_PANEL_SCENE_COPY_EXPERIMENT}>
 )
 
 # Align the MSVC toolset with the one vcpkg uses for dependencies (spdlog).
@@ -157,6 +162,18 @@ target_precompile_headers(
 	PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h
 )
+
+if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
+	enable_testing()
+	add_executable(CharacterPanelCopyMathTest tests/snapshot_transform_test.cpp)
+	target_compile_features(CharacterPanelCopyMathTest PRIVATE cxx_std_23)
+	target_compile_definitions(CharacterPanelCopyMathTest PRIVATE CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=1 NOMINMAX)
+	target_include_directories(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src)
+	target_link_libraries(CharacterPanelCopyMathTest PRIVATE CommonLibSSE::CommonLibSSE fmt::fmt spdlog::spdlog)
+	target_precompile_headers(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h)
+	set_target_properties(CharacterPanelCopyMathTest PROPERTIES VS_GLOBAL_VCToolsVersion "14.44.35207")
+	add_test(NAME snapshot_transform COMMAND CharacterPanelCopyMathTest)
+endif()
 
 if(CHARACTER_PANEL_BUILD_PROBE)
 	set(PROBE_VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/probe/probe_config.h)
