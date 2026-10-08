@@ -176,7 +176,8 @@ if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 
 	# The runbook ships a test package instead of a bare DLL, so the manifest can
 	# carry the SHA-256 of both binaries and the exact baselines they came from.
-	# The packaging script reads both baselines at package time.
+	# The packaging script reads both baselines at package time. The configuration
+	# resolves per build, because $<TARGET_FILE> follows --config.
 	add_custom_target(
 		CharacterPanelSceneCopyPackage
 		COMMAND
@@ -184,6 +185,7 @@ if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 		-DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
 		-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
 		-DPROJECT_VERSION=${PROJECT_VERSION}
+		-DCONFIGURATION=$<CONFIG>
 		-DDLL_PATH=$<TARGET_FILE:CharacterPanel>
 		-DPDB_PATH=$<TARGET_PDB_FILE:CharacterPanel>
 		-P

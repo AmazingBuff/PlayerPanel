@@ -144,7 +144,7 @@ S0 的可执行回传表使用 Q01–Q12。后续轮次另回答以下问题；�
 
 ## 研究依据与限制
 
-- 当前本地 CommonLib checkout：`94faaed0c60eddd8347767f2d4d29a97c93bde8c`；实际测试包另记录哈希。
+- 当前本地 CommonLib checkout 与仓库子模块指针已对齐（`a898f46…`，此前文档记的 `94faaed…` 是已对齐前的旧值）；测试包的 `build-manifest.json` 每次都记录实际 checkout 与工作区是否 dirty，以它为准。
 - [CommonLib 节点克隆声明](https://ng.commonlib.dev/class_r_e_1_1_ni_node.html)、[蒙皮实例布局](https://ng.commonlib.dev/_ni_skin_instance_8h_source.html)。声明和结构只能支持实验入口，不能替代运行时 ABI／整体人物复制验证。
 - [旧 run 27 记录](stage2-p-instance-plan.md)：CreateDeepCopy 未得到可用根；不能推导所有克隆入口均不可行。
 - [FSMP 活动与注册管理](https://github.com/DaymareOn/hdtSMP64/blob/dev/src/ActorManager.cpp)：复制图不自动建立独立模拟。

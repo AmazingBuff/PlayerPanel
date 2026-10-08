@@ -16,7 +16,9 @@ pose is expected, not a failure.
 
 Keys (pressed events only; no game input is consumed):
 
-  F7   release the old copy, then copy and audit the current third-person graph
+  F7   with the inventory open and the game paused: release the old copy, then
+       copy and audit the current third-person graph. The load and main menus
+       refuse the copy, and so does the world with no inventory open.
   F8   start or stop drawing the copy that passed the audit
   F9   rotate the copy 90 degrees
   F10  release the copy
