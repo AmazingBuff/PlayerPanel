@@ -107,6 +107,7 @@ namespace
                     if (CharacterClone* clone = SceneGraphCopy::instance().drawable())
                     {
                         D3D11StateCapture capture(context);
+                        SceneGraphCopy::instance().apply_animation_probe(*clone);
                         image_ready = clone->draw(ui3d, *m_common_states, m_render_target);
                     }
 #else

@@ -36,6 +36,24 @@ namespace
         size_t dynamic_geometries;
     };
 
+    // Recompute a subtree's world transforms from a parent world and each node's local, with
+    // no dependency on the engine's dirty-update cascade. The census proved that cascade does
+    // not run inside this draw window: a rotated bone left its child's world untouched.
+    void cascade_world_downward(RE::NiAVObject* object, const RE::NiTransform& parent_world, uint32_t depth)
+    {
+        if (!object || depth > 64)
+            return;
+        const RE::NiTransform world = parent_world * object->local;
+        object->world = world;
+        object->previousWorld = world;
+        RE::NiNode* node = object->AsNode();
+        if (!node)
+            return;
+        for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
+            if (child)
+                cascade_world_downward(child.get(), world, depth + 1);
+    }
+
     bool transform_drifted(const RE::NiTransform& lhs, const RE::NiTransform& rhs, float epsilon)
     {
         if (std::abs(lhs.scale - rhs.scale) > epsilon)
@@ -258,7 +276,7 @@ SceneGraphCopy& SceneGraphCopy::instance()
     return s_instance;
 }
 
-SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_frame(0), m_cap_logged(false) {}
+SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_child_cache(nullptr), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_frame_report(0) {}
 SceneGraphCopy::~SceneGraphCopy()
 {
     // Never destroy a parked graph, not even at unload.
@@ -350,8 +368,157 @@ void SceneGraphCopy::process_requests()
         if (m_snapshot)
             m_snapshot->rotate_snapshot();
         break;
+    case Command::e_anim_probe:
+        toggle_animation_probe();
+        break;
     default:
         break;
+    }
+}
+
+void SceneGraphCopy::toggle_animation_probe()
+{
+    if (!m_snapshot || !m_snapshot->graph())
+    {
+        logger::warn("SCOPY ANIM probe rejected: capture a copy first (F7)");
+        return;
+    }
+    m_anim_probe_enabled = !m_anim_probe_enabled;
+    m_probe_bone_cache = nullptr;
+    m_probe_child_cache = nullptr;
+    m_probe_move_min = -1.0f;
+    m_probe_move_max = 0.0f;
+    if (m_anim_probe_enabled)
+        logger::info("SCOPY ANIM probe enabled — watch the figure; if nothing moves, the copy does not read its own node tree");
+    else
+        logger::info("SCOPY ANIM probe disabled; the copy keeps its captured pose");
+}
+
+void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
+{
+    if (!m_anim_probe_enabled)
+        return;
+    RE::NiAVObject* root = clone.graph();
+    if (!root)
+        return;
+    if (!m_probe_bone_cache)
+    {
+        // The bone whose subtree covers the most nodes is a major joint (spine, thigh,
+        // upper arm), so a rotation on it is unambiguous on screen. Chosen from the copy's
+        // own skins, so it cannot name a bone the copy does not own.
+        std::unordered_set<RE::NiAVObject*> bones;
+        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
+        {
+            RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
+            if (!skin || !skin->skinData || !skin->bones)
+                return RE::BSVisit::BSVisitControl::kContinue;
+            const uint32_t count = std::min(skin->allocatedSize, skin->skinData->GetBoneCount());
+            for (uint32_t i = 0; i < count; ++i)
+                if (skin->bones[i])
+                    bones.insert(skin->bones[i]);
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+        size_t best_reach = 0;
+        for (RE::NiAVObject* bone : bones)
+        {
+            size_t reach = 0;
+            RE::BSVisit::TraverseScenegraphObjects(bone, [&](RE::NiAVObject*)
+            {
+                ++reach;
+                return RE::BSVisit::BSVisitControl::kContinue;
+            });
+            if (reach > best_reach)
+            {
+                best_reach = reach;
+                m_probe_bone_cache = bone;
+            }
+        }
+        // Skinning reads boneWorldTransforms[i], not bones[i]->world. If that pointer array
+        // still names the SOURCE actor's transforms, writing the copy's bones can never move
+        // the copy — the mesh would read the world actor's pose instead, which also explains a
+        // figure that stays frozen while the copy's own bones change.
+        m_probe_skin_report.clear();
+        uint32_t skins_reported = 0;
+        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
+        {
+            RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
+            if (!skin || !skin->bones || !skin->boneWorldTransforms || !skin->skinData || skins_reported >= 4)
+                return RE::BSVisit::BSVisitControl::kContinue;
+            const uint32_t count = std::min(skin->allocatedSize, skin->skinData->GetBoneCount());
+            uint32_t direct = 0;
+            for (uint32_t i = 0; i < count; ++i)
+                if (skin->boneWorldTransforms[i] == &skin->bones[i]->world)
+                    ++direct;
+            ++skins_reported;
+            m_probe_skin_report += fmt::format(" [{}: {}/{} direct]", geometry->name.c_str() ? geometry->name.c_str() : "?", direct, count);
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+        logger::info("SCOPY ANIM probe bone='{}' candidates={} subtree-nodes={} child='{}'", m_probe_bone_cache ? m_probe_bone_cache->name.c_str() : "<none>", bones.size(), best_reach,
+            m_probe_child_cache ? m_probe_child_cache->name.c_str() : "<none>");
+        if (m_probe_bone_cache)
+        {
+            m_probe_bone_origin = m_probe_bone_cache->world.translate;
+            m_probe_bone_local_pose = m_probe_bone_cache->local;
+            m_probe_bone_world_pose = m_probe_bone_cache->world;            // A bone rotating in place barely moves its own origin, but its children swing
+            // through an arc, so a child is the honest witness that the pose reached the tree.
+            if (RE::NiNode* node = m_probe_bone_cache->AsNode())
+                for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
+                    if (child && child->AsNode())
+                    {
+                        m_probe_child_cache = child.get();
+                        break;
+                    }
+        }
+        if (m_probe_child_cache)
+            m_probe_child_origin = m_probe_child_cache->world.translate;
+    }
+    if (!m_probe_bone_cache)
+        return;
+    // Rotate about the bone's local X, which is perpendicular to a spine or limb bone's own
+    // axis: a rotation there visibly swings the subtree. Every frame recomputes from the pose
+    // captured when the probe was enabled, so the swing does not accumulate.
+    const float phase = static_cast<float>(m_frame % 320) / 320.0f * 6.2831853f;
+    const float swing = std::sin(phase) * 1.0f;
+
+    RE::NiPoint3 local_angles{};
+    m_probe_bone_local_pose.rotate.ToEulerAnglesXYZ(local_angles);
+    m_probe_bone_cache->local.rotate.SetEulerAnglesXYZ(local_angles.x + swing, local_angles.y, local_angles.z);
+
+    // Cascade the subtree by hand (world = parent_world * local) instead of asking
+    // UpdateDownwardPass to do it: the census showed the bone rotating with its child's world
+    // position unchanged, so the engine's own cascade did not run in this draw window. The
+    // snapshot path never relied on it either — CharacterClone::pose writes world transforms
+    // directly, and skinning reads the world transform.
+    RE::NiTransform parent_world = m_probe_bone_world_pose;
+    if (const RE::NiNode* parent = m_probe_bone_cache->parent)
+        parent_world = parent->world;
+    const RE::NiTransform world = parent_world * m_probe_bone_cache->local;
+    m_probe_bone_cache->world = world;
+    m_probe_bone_cache->previousWorld = world;
+    cascade_world_downward(m_probe_bone_cache, world, 0);
+    root->UpdateWorldBound();
+
+    // A few frames in, report whether the write moved the bone in WORLD space (the shader
+    // input) and whether the copy carries a userData back to the source reference, which
+    // would hand out the ORIGINAL actor's animation graph.
+    if (m_probe_frame_report == 0)
+        m_probe_frame_report = m_frame + 8;
+    else if (static_cast<int32_t>(m_frame - m_probe_frame_report) >= 0)
+    {
+        const RE::NiPoint3& tracked_origin = m_probe_child_cache ? m_probe_child_cache->world.translate : m_probe_bone_cache->world.translate;
+        const RE::NiPoint3& reference_origin = m_probe_child_cache ? m_probe_child_origin : m_probe_bone_origin;
+        // Sample the tracked node over many frames: a CONSTANT distance means the child never
+        // followed the parent's rotation at all, which a single frame cannot distinguish from a
+        // small swing. Min and max settle it.
+        const float moved = tracked_origin.GetDistance(reference_origin);
+        m_probe_move_min = m_probe_move_min < 0.0f ? moved : std::min(m_probe_move_min, moved);
+        m_probe_move_max = std::max(m_probe_move_max, moved);
+        const RE::TESObjectREFR* source_ref = static_cast<const RE::TESObjectREFR*>(root->GetUserData());
+        logger::info("SCOPY ANIM report bone='{}' written-swing={:.3f} tracked='{}' moved={:.2f} moved-range=[{:.2f},{:.2f}] controllers={} verdict={} skins:{}",
+            m_probe_bone_cache->name.c_str(), swing, m_probe_child_cache ? m_probe_child_cache->name.c_str() : "<self>", moved, m_probe_move_min, m_probe_move_max,
+            root->GetControllers() ? "present" : "none",
+            source_ref ? "copy-carries-userData-to-source" : "copy-is-graph-invisible", m_probe_skin_report);
+        m_probe_frame_report = 0;
     }
 }
 

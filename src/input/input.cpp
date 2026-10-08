@@ -55,6 +55,8 @@ namespace
                 }
                 else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_release);
+                else if (scan == MapVirtualKeyA(VK_F2, MAPVK_VK_TO_VSC))
+                    SceneGraphCopy::instance().request(Command::e_anim_probe);
             }
 #endif
 

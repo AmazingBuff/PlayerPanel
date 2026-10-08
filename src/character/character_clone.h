@@ -27,6 +27,8 @@ public:
 
     bool draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target);
     void rotate_snapshot();
+    // The owned studio graph; the S2 animation probe poses a bone of it directly.
+    [[nodiscard]] RE::NiAVObject* graph() const { return m_graph_object.get(); }
 private:
     enum class CloneState : uint8_t
     {
