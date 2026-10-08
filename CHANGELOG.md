@@ -7,8 +7,12 @@
 - Land the S0 scene-graph-copy route (CHARACTER_PANEL_SCENE_COPY_EXPERIMENT),
   game-validated on 2026-10-08: F7 copies and audits the player's third-person
   graph through native NiObject::Clone, F8 draws it into the studio, F3 rotates
-  the copy without touching the world actor, F4 releases it. Validation record
-  and per-question results: docs/scene-graph-copy-results-2026-10-08.md.
+  the copy without touching the world actor, F4 releases it. Both the copy/draw
+  lifecycle test and the re-equip/appearance/physics test pass on CBBE and UBE
+  bodies with no crash across capture, release, recapture, load and main-menu
+  transitions; frozen hair and cloth in the copy is the documented S0 scope, not
+  a failure. Validation record and per-question results:
+  docs/scene-graph-copy-results-2026-10-08.md.
 - Park every replaced or released snapshot for the process lifetime instead of
   destroying it. Freeing a native clone's graph crashed at every point tried
   (crashes 2026-10-08 23-01-11 in capture(), 23-07-35 at a clean frame boundary

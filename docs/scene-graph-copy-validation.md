@@ -60,9 +60,9 @@ one binary.
 仓库子模块指针尚未提交更新，另一台电脑从旧 HEAD 构建时不能忽略这个差异；直接使用测试包可避免不同 DLL 混淆。
 
 本机已验证（2026-10-08）：实验配置 Release 构建通过，`snapshot_transform` 单测 1/1 通过，
-测试包生成后 DLL／PDB 的 SHA-256 与 manifest 自证一致。**测试 A 已在游戏内完成，CBBE 与 UBE
-两种身形各一轮、零崩溃**，逐条结果见[回传记录](scene-graph-copy-results-2026-10-08.md)；
-测试 B（换装／外观／物理）尚未跑。
+测试包生成后 DLL／PDB 的 SHA-256 与 manifest 自证一致。**测试 A 与测试 B 均已在游戏内完成，
+CBBE 与 UBE 两种身形各一轮、零崩溃**，逐条结果见[回传记录](scene-graph-copy-results-2026-10-08.md)。
+物理头发／衣物在副本内不继续模拟属于 S0 的预期行为，不作为失败。
 
 将包内 `SKSE/Plugins/CharacterPanel.dll` 和对应 PDB 安装到一个单独的 MO2 测试 mod，替换原 CharacterPanel。
 不要同时加载旧 CharacterPanel、CharacterPanelProbe 或 CharacterPanelProto；Probe 的 F7/F8 与本实验冲突。

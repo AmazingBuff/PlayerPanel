@@ -10,7 +10,9 @@
 下文历史验证结论仍仅对应原 Actor／游离图路线。
 
 **S0 状态（2026-10-08 会话收官）**：CBBE 与 UBE 两种身形各一轮实机验证，
-测试 A 全部功能通过、**零崩溃**（含读档与回主菜单），Q01–Q12 见回传记录。
+**测试 A（复制／绘制／生命周期）与测试 B（换装／源图变化／外观与物理）全部通过、
+零崩溃**（含读档与回主菜单），Q01–Q12 见回传记录；副本内物理头发／衣物不继续模拟
+属 S0 既定范围（无独立驱动），不作为失败。
 配置走 `cmake --preset Release-scopy`（`CMakePresets.json`），构建 `--target CharacterPanelSceneCopyPackage`
 产出 `dist/CharacterPanel-scopy-S0-1.2.1.zip`。本机 `E:\SkyrimAE\mods\CharacterPanel`
 的现役 DLL 在验证期间已被换成实验 DLL。
@@ -29,6 +31,13 @@
    能正常显示的 CBBE 图同样是 23/23 全 `rd-null`。
 3. **源图比较不能用精确浮点相等**。`NiTransform` 含 3×3 旋转矩阵，暂停帧内几个 ULP 的漂移
    会让 CBBE 永远 `BLOCKED`。`SOURCE-DIFF` 只把对象集合变化当失败，变换漂移仅作观测。
+
+**下一阶段 = S1（阻塞点已定位）**：把"有意泄漏"换成干净销毁。需要查清引擎为何在
+`BSFadeNode` 析构里踩空指针——三次崩溃现场 `RSP` 上都留着 `BSFlattenedBoneTree "NPC Root [Root]"`、
+`NiNode "NPC"`、`NiNode "skeleton_female.nif"`，指向引擎对克隆骨架的全局注册（很可能与
+`BSFlattenedBoneTree`／骨骼树更新链有关）。在此之前不要尝试释放：停放图累计上限 12，
+超出只丢记账条目。S2–S4（HKX 驱动、CBPC／FSMP 独立注册、持续换装同步）见
+[后续关卡表](scene-graph-copy-validation.md#后续关卡本轮未实现不作为-s0-已通过项)。
 
 - 日期:2026-10-01(run 19 收官:工作包 1+2 完成并经游戏验证)
 - 读者:下一个会话的 Agent / 开发者。本文是"从这里继续"的入口;运行级细节在
