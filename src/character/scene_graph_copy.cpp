@@ -512,8 +512,15 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
     // the bones it belongs to were being moved, so nothing on screen followed until now.
     uint32_t rebuilt_skins = 0;
     uint32_t rebuilt_slots = 0;
-    RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
+    // Experiment switch: with the rebuild skipped, the meshes keep whatever matrices they were
+    // cloned with. If the figure still renders normally, these matrices were never what the mesh
+    // used and this whole investigation has been reading dead data; if the figure breaks, the write
+    // is load-bearing and only its target is wrong.
+    constexpr bool Rebuild_Skinning_Matrices = false;
+    if constexpr (Rebuild_Skinning_Matrices)
     {
+        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
+        {
         RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
         if (!skin || !skin->skinData || !skin->bones || !skin->boneWorldTransforms || !skin->boneMatrices)
             return RE::BSVisit::BSVisitControl::kContinue;
@@ -526,12 +533,19 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
             if (!skin->bones[i])
                 continue;
             write_skinning_matrix(skin->boneMatrices, i, root_to_skin, skin->bones[i]->world, skin->skinData->GetBoneDataSkinToBone(i));
-            // Corrupt test: one skin's copy of the probe bone is displaced by 500 units after the
-            // rebuild, so it does not accumulate. If the shader samples these matrices a chunk of the
-            // figure flies away; if nothing happens, this buffer is not what reaches the mesh.
+            // Corrupt test: one skin's copy of the probe bone gets its whole slot destroyed after
+            // the rebuild, so the destruction cannot accumulate and does not depend on the slot's
+            // internal layout. If any part of the shader samples these matrices this deforms a
+            // large patch of the mesh; if the figure is untouched, the buffer never reaches the GPU.
             if (m_probe_slot_geometry.empty() && skin->bones[i] == m_probe_bone_cache)
             {
-                static_cast<float*>(skin->boneMatrices)[static_cast<size_t>(i) * 12 + 3] += 500.0f;
+                float* const slot = static_cast<float*>(skin->boneMatrices) + static_cast<size_t>(i) * 12;
+                // Corrupt the WHOLE slot, not just one component: this makes the test independent of
+                // whether the layout is 3x4 or 4x3 and of where the translation lives inside it. If
+                // any part of the shader samples these matrices, this deforms a large patch of the
+                // mesh; if the figure is untouched, the buffer does not reach the GPU at all.
+                for (int component = 0; component < 12; ++component)
+                    slot[component] = 1000.0f + static_cast<float>(component);
                 m_probe_slot_geometry = geometry->name.c_str() ? geometry->name.c_str() : "?";
                 m_probe_corrupt_slot = i;
             }
@@ -539,10 +553,10 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
         }
         ++rebuilt_skins;
         return RE::BSVisit::BSVisitControl::kContinue;
-    });
+        });
+    }
     m_probe_rebuilt_skins = rebuilt_skins;
     m_probe_rebuilt_slots = rebuilt_slots;
-    (void)m_probe_slot_value_after_draw;
 
     // A few frames in, report whether the write moved the bone in WORLD space (the shader
     // input) and whether the copy carries a userData back to the source reference, which
@@ -607,8 +621,14 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
             if (probe_slot < count)
             {
                 const float* const probe_values = values + static_cast<size_t>(probe_slot) * 12;
-                logger::info("SCOPY ANIM corrupt-test geometry='{}' slot={} tx-expected={:.1f} tx-in-buffer={:.1f}",
-                    geometry->name.c_str() ? geometry->name.c_str() : "?", probe_slot, m_probe_slot_value_after_draw, probe_values[3]);
+                // Dump the slot's own rotation and translation so the reading is unambiguous: with
+                // rotation ~identity and translation ~(0,0,0) the array holds BIND-POSE matrices, not
+                // world-space skinning matrices, which would explain why writing it changes nothing.
+                logger::info("SCOPY ANIM slot-dump R=(%.3f %.3f %.3f | %.3f %.3f %.3f | %.3f %.3f %.3f) t=(%.2f,%.2f,%.2f)",
+                    probe_values[0], probe_values[1], probe_values[2], probe_values[4], probe_values[5], probe_values[6],
+                    probe_values[8], probe_values[9], probe_values[10], probe_values[3], probe_values[7], probe_values[11]);
+                logger::info("SCOPY ANIM corrupt-test geometry='{}' slot={} tx-in-buffer={:.1f}",
+                    geometry->name.c_str() ? geometry->name.c_str() : "?", probe_slot, probe_values[3]);
             }
             return RE::BSVisit::BSVisitControl::kContinue;
         });
