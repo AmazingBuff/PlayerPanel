@@ -1,0 +1,411 @@
+[01:29:49.981] [3956 ] [I] CharacterPanel v1-2-1-0
+[01:29:49.981] [3956 ] [I] CharacterPanel loaded
+[01:30:42.421] [34428] [I] All shaders compiled
+[01:30:42.421] [34428] [I] Installed pre-UI renderer hook
+[01:30:42.421] [34428] [I] Menu sink installed
+[01:30:42.421] [34428] [I] SCOPY BUILD CharacterPanel-scopy-S0-2026-10-08 runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=not-implemented cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-anim-probe
+[01:30:42.436] [41216] [I] Studio host changed: 0x0 -> 0x20508ce6980 (paused=true)
+[01:30:42.436] [41216] [I] Studio light node has been created
+[01:30:42.436] [41216] [I] CP-LIGHT slot 0: registered, shell 0x2068dd77880 queued (ledger stays the authority)
+[01:30:42.436] [41216] [I] CP-LIGHT slot 1: registered, shell 0x2068dd77740 queued (ledger stays the authority)
+[01:30:42.436] [41216] [I] CP-LIGHT slot 2: registered, shell 0x2068dd77600 queued (ledger stays the authority)
+[01:30:42.436] [41216] [I] Studio lights registered on the ledger (scene=0x1fb75646e80 -- ledger fetch will populate the slots)
+[01:30:42.436] [41216] [I] CP-LIGHT slot 0: ledger shell fetched 0x2068dd77880 (after 0 miss frames)
+[01:30:42.436] [41216] [I] CP-LIGHT slot 1: ledger shell fetched 0x2068dd77740 (after 0 miss frames)
+[01:30:42.436] [41216] [I] CP-LIGHT slot 2: ledger shell fetched 0x2068dd77600 (after 0 miss frames)
+[01:31:00.819] [41216] [I] CP-LIGHT slot 0: ledger shell dropped
+[01:31:00.819] [41216] [I] CP-LIGHT slot 1: ledger shell dropped
+[01:31:00.819] [41216] [I] CP-LIGHT slot 2: ledger shell dropped
+[01:31:00.819] [41216] [W] Studio lights not fully served by the ledger yet
+[01:31:04.440] [41216] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x2068dd77c40 filed to lightQueueAdd)
+[01:31:04.440] [41216] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x2068dd77240 filed to lightQueueAdd)
+[01:31:04.440] [41216] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x2068dd77100 filed to lightQueueAdd)
+[01:31:04.509] [41216] [I] CP-LIGHT slot 0: ledger shell fetched 0x2068dd77c40 (after 1 miss frames)
+[01:31:04.509] [41216] [I] CP-LIGHT slot 1: ledger shell fetched 0x2068dd77240 (after 1 miss frames)
+[01:31:04.509] [41216] [I] CP-LIGHT slot 2: ledger shell fetched 0x2068dd77100 (after 1 miss frames)
+[01:31:11.159] [3956 ] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x20814c1ab00 parent=0x20814911ec0 nodes=470 geoms=23 api=NiObject::Clone id=68835/70187
+[01:31:11.159] [3956 ] [I] SCOPY CLONE-RETURN capture=1 copy=0x2081d22f280
+[01:31:11.159] [3956 ] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=470 skin-bones=131
+[01:31:11.159] [3956 ] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[01:31:11.159] [3956 ] [I] SCOPY CENSUS source-nodes=470 copy-nodes=470 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[01:31:11.159] [3956 ] [I] SCOPY FRAME skinned-bound valid=true radius=73.6 center=(6363.6,1446.8,256.7) graph-bound radius=73.9 scale=0.35 pruned-nodes=0
+[01:31:11.159] [3956 ] [I] SCOPY READY capture=1 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='FemaleBrowsHuman01' type='BSDynamicTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='00CVEO_00VAN_AA_ALDDEyes_Blue_FEMALE' type='BSDynamicTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='0_HAIRLINE_Female_Human_Straight' type='BSDynamicTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='0Anto92HL' type='BSDynamicTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='0Anto92' type='BSDynamicTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='FemaleMouthHumanoidDefault' type='BSDynamicTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='FemaleHeadNord' type='BSDynamicTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='shoes' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name=' (00000D6C)[1]/ (FE04CB10) [80%]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='clothes_underwear' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='clothes' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='CBBE' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Feet [SOvl0]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl2]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl1]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl0]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Hands [SOvl0]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl1]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl0]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Body [SOvl0]' type='BSTriShape'
+[01:31:11.159] [3956 ] [I] SCOPY GEOMETRY capture=1 name='Body [Ovl0]' type='BSTriShape'
+[01:31:12.430] [3956 ] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[01:31:12.433] [3956 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[01:31:12.433] [3956 ] [I] SCOPY DRAW frame=1 passes=23 lights=true animation-driver=none physics-driver=none
+[01:31:12.850] [3956 ] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[01:31:12.852] [3956 ] [I] SCOPY ROTATE angle-deg=90
+[01:31:13.081] [3956 ] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[01:31:13.084] [3956 ] [I] SCOPY ROTATE angle-deg=180
+[01:31:13.282] [3956 ] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[01:31:13.285] [3956 ] [I] SCOPY ROTATE angle-deg=270
+[01:31:13.584] [3956 ] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[01:31:13.587] [3956 ] [I] SCOPY ROTATE angle-deg=360
+[01:31:14.258] [3956 ] [I] SCOPY ANIM probe enabled 鈥?watch the figure; if nothing moves, the copy does not read its own node tree
+[01:31:14.258] [3956 ] [I] SCOPY ANIM probe bone='NPC Pelvis [Pelv]' candidates=30 subtree-nodes=219 child='CME Pelvis [Pelv]' bone-row0-original=(0.996,-0.080,0.038) bone-translate-original=(1.0,-485.9,2.4)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.938 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:14.459] [3956 ] [I] SCOPY ANIM bone-pose now=(0.651,0.754,0.087) original=(0.996,-0.080,0.038)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.651 bone-now=0.651 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:14.459] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.651 0.754 0.087 | -0.758 0.652 0.017 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM compare vs-written=0.19 vs-world-row0=0.00 vs-bind-inverse=563.96 (smaller = matches)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.592 0.774 -0.224 1.154) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.651 bone-now=0.651 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:14.459] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.651 0.754 0.087 | -0.758 0.652 0.017 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM compare vs-written=0.19 vs-world-row0=0.00 vs-bind-inverse=563.96 (smaller = matches)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.592 0.774 -0.224 1.154) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:14.459] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.651 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:14.685] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.984 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:14.685] [3956 ] [I] SCOPY ANIM bone-pose now=(0.615,0.783,0.088) original=(0.996,-0.080,0.038)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.615 bone-now=0.615 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:14.685] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.615 0.783 0.088 | -0.787 0.617 0.012 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM compare vs-written=0.33 vs-world-row0=0.00 vs-bind-inverse=564.01 (smaller = matches)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.554 0.799 -0.233 1.271) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.615 bone-now=0.615 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:14.685] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.615 0.783 0.088 | -0.787 0.617 0.012 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM compare vs-written=0.33 vs-world-row0=0.00 vs-bind-inverse=564.01 (smaller = matches)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.554 0.799 -0.233 1.271) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:14.685] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.615 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:14.910] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=1.000 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:14.910] [3956 ] [I] SCOPY ANIM bone-pose now=(0.603,0.793,0.088) original=(0.996,-0.080,0.038)
+[01:31:14.910] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.603 bone-now=0.603 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:14.911] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.603 0.793 0.088 | -0.796 0.605 0.011 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.911] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.911] [3956 ] [I] SCOPY ANIM compare vs-written=0.37 vs-world-row0=0.00 vs-bind-inverse=564.03 (smaller = matches)
+[01:31:14.911] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.541 0.807 -0.236 1.310) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:14.911] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.603 bone-now=0.603 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:14.911] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.603 0.793 0.088 | -0.796 0.605 0.011 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.911] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:14.911] [3956 ] [I] SCOPY ANIM compare vs-written=0.37 vs-world-row0=0.00 vs-bind-inverse=564.03 (smaller = matches)
+[01:31:14.911] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.541 0.807 -0.236 1.310) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:14.911] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.603 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.138] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.984 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:15.138] [3956 ] [I] SCOPY ANIM bone-pose now=(0.615,0.783,0.088) original=(0.996,-0.080,0.038)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.615 bone-now=0.615 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.138] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.615 0.783 0.088 | -0.787 0.617 0.012 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM compare vs-written=0.33 vs-world-row0=0.00 vs-bind-inverse=564.01 (smaller = matches)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.554 0.799 -0.233 1.271) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.615 bone-now=0.615 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.138] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.615 0.783 0.088 | -0.787 0.617 0.012 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM compare vs-written=0.33 vs-world-row0=0.00 vs-bind-inverse=564.01 (smaller = matches)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.554 0.799 -0.233 1.271) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:15.138] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.615 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.363] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.938 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:15.363] [3956 ] [I] SCOPY ANIM bone-pose now=(0.651,0.754,0.087) original=(0.996,-0.080,0.038)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.651 bone-now=0.651 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.363] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.651 0.754 0.087 | -0.758 0.652 0.017 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM compare vs-written=0.19 vs-world-row0=0.00 vs-bind-inverse=563.96 (smaller = matches)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.592 0.774 -0.224 1.154) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.651 bone-now=0.651 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.363] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.651 0.754 0.087 | -0.758 0.652 0.017 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM compare vs-written=0.19 vs-world-row0=0.00 vs-bind-inverse=563.96 (smaller = matches)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.592 0.774 -0.224 1.154) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:15.363] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.651 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.438] [3956 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[01:31:15.438] [3956 ] [I] SCOPY DRAW frame=121 passes=23 lights=true animation-driver=none physics-driver=none
+[01:31:15.590] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.863 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:15.590] [3956 ] [I] SCOPY ANIM bone-pose now=(0.706,0.703,0.085) original=(0.996,-0.080,0.038)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.706 bone-now=0.706 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.590] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.706 0.703 0.085 | -0.706 0.707 0.023 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM compare vs-written=0.03 vs-world-row0=0.00 vs-bind-inverse=563.86 (smaller = matches)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.651 0.730 -0.208 0.963) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.706 bone-now=0.706 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.590] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.706 0.703 0.085 | -0.706 0.707 0.023 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM compare vs-written=0.03 vs-world-row0=0.00 vs-bind-inverse=563.86 (smaller = matches)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.651 0.730 -0.208 0.963) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:15.590] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.706 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.815] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.760 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:15.815] [3956 ] [I] SCOPY ANIM bone-pose now=(0.775,0.627,0.083) original=(0.996,-0.080,0.038)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.775 bone-now=0.775 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.815] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.775 0.627 0.083 | -0.631 0.775 0.032 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM compare vs-written=0.33 vs-world-row0=0.00 vs-bind-inverse=563.71 (smaller = matches)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.725 0.663 -0.185 0.705) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.775 bone-now=0.775 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:15.815] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.775 0.627 0.083 | -0.631 0.775 0.032 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM compare vs-written=0.33 vs-world-row0=0.00 vs-bind-inverse=563.71 (smaller = matches)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.725 0.663 -0.185 0.705) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:15.815] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.775 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.039] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.634 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:16.039] [3956 ] [I] SCOPY ANIM bone-pose now=(0.848,0.524,0.078) original=(0.996,-0.080,0.038)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.848 bone-now=0.848 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.039] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.848 0.524 0.078 | -0.528 0.848 0.042 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM compare vs-written=0.69 vs-world-row0=0.00 vs-bind-inverse=563.52 (smaller = matches)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.806 0.572 -0.154 0.391) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.848 bone-now=0.848 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.039] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.848 0.524 0.078 | -0.528 0.848 0.042 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM compare vs-written=0.69 vs-world-row0=0.00 vs-bind-inverse=563.52 (smaller = matches)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.806 0.572 -0.154 0.391) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.039] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.848 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.265] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.489 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:16.265] [3956 ] [I] SCOPY ANIM bone-pose now=(0.916,0.396,0.071) original=(0.996,-0.080,0.038)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.916 bone-now=0.916 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.265] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.916 0.396 0.071 | -0.399 0.915 0.053 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM compare vs-written=1.10 vs-world-row0=0.00 vs-bind-inverse=563.26 (smaller = matches)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.883 0.454 -0.115 0.041) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.916 bone-now=0.916 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.265] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.916 0.396 0.071 | -0.399 0.915 0.053 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM compare vs-written=1.10 vs-world-row0=0.00 vs-bind-inverse=563.26 (smaller = matches)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.883 0.454 -0.115 0.041) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.265] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.916 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.489] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.328 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:16.489] [3956 ] [I] SCOPY ANIM bone-pose now=(0.968,0.244,0.062) original=(0.996,-0.080,0.038)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.968 bone-now=0.968 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.489] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.968 0.244 0.062 | -0.248 0.967 0.063 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM compare vs-written=1.53 vs-world-row0=0.00 vs-bind-inverse=562.96 (smaller = matches)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.947 0.314 -0.069 -0.322) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.968 bone-now=0.968 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.489] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.968 0.244 0.062 | -0.248 0.967 0.063 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM compare vs-written=1.53 vs-world-row0=0.00 vs-bind-inverse=562.96 (smaller = matches)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.947 0.314 -0.069 -0.322) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.489] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.968 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.711] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=0.156 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:16.711] [3956 ] [I] SCOPY ANIM bone-pose now=(0.996,0.076,0.050) original=(0.996,-0.080,0.038)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.996 bone-now=0.996 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.711] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.996 0.076 0.050 | -0.079 0.994 0.073 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM compare vs-written=1.94 vs-world-row0=0.00 vs-bind-inverse=562.62 (smaller = matches)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.988 0.156 -0.018 -0.669) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.996 bone-now=0.996 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.711] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.996 0.076 0.050 | -0.079 0.994 0.073 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM compare vs-written=1.94 vs-world-row0=0.00 vs-bind-inverse=562.62 (smaller = matches)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.988 0.156 -0.018 -0.669) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.711] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.996 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.942] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.020 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:16.942] [3956 ] [I] SCOPY ANIM bone-pose now=(0.994,-0.100,0.036) original=(0.996,-0.080,0.038)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.994 bone-now=0.994 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.942] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.994 -0.100 0.036 | 0.097 0.992 0.081 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM compare vs-written=2.31 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.999 -0.011 0.035 -0.975) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.994 bone-now=0.994 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:16.942] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.994 -0.100 0.036 | 0.097 0.992 0.081 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM compare vs-written=2.31 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.999 -0.011 0.035 -0.975) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:16.942] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.994 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.165] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.195 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:17.165] [3956 ] [I] SCOPY ANIM bone-pose now=(0.962,-0.271,0.022) original=(0.996,-0.080,0.038)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.962 bone-now=0.962 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.165] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.962 -0.271 0.022 | 0.269 0.959 0.086 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM compare vs-written=2.61 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.980 -0.178 0.086 -1.220) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.962 bone-now=0.962 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.165] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.962 -0.271 0.022 | 0.269 0.959 0.086 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM compare vs-written=2.61 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.980 -0.178 0.086 -1.220) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:17.165] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.962 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.388] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.364 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:17.388] [3956 ] [I] SCOPY ANIM bone-pose now=(0.903,-0.429,0.007) original=(0.996,-0.080,0.038)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.903 bone-now=0.903 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.388] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.903 -0.429 0.007 | 0.427 0.900 0.088 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM compare vs-written=2.83 vs-world-row0=0.00 vs-bind-inverse=562.44 (smaller = matches)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.933 -0.333 0.133 -1.390) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.903 bone-now=0.903 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.388] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.903 -0.429 0.007 | 0.427 0.900 0.088 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM compare vs-written=2.83 vs-world-row0=0.00 vs-bind-inverse=562.44 (smaller = matches)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.933 -0.333 0.133 -1.390) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:17.388] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.903 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.611] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.522 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:17.611] [3956 ] [I] SCOPY ANIM bone-pose now=(0.825,-0.566,-0.007) original=(0.996,-0.080,0.038)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.825 bone-now=0.825 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.611] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.825 -0.566 -0.007 | 0.564 0.821 0.088 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM compare vs-written=2.96 vs-world-row0=0.00 vs-bind-inverse=562.44 (smaller = matches)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.865 -0.470 0.174 -1.488) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.825 bone-now=0.825 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.611] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.825 -0.566 -0.007 | 0.564 0.821 0.088 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM compare vs-written=2.96 vs-world-row0=0.00 vs-bind-inverse=562.44 (smaller = matches)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.865 -0.470 0.174 -1.488) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:17.611] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.825 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.836] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.664 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:17.836] [3956 ] [I] SCOPY ANIM bone-pose now=(0.737,-0.676,-0.019) original=(0.996,-0.080,0.038)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.737 bone-now=0.737 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.836] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.737 -0.676 -0.019 | 0.675 0.733 0.086 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM compare vs-written=3.01 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.786 -0.583 0.207 -1.522) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.737 bone-now=0.737 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:17.836] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.737 -0.676 -0.019 | 0.675 0.733 0.086 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM compare vs-written=3.01 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.786 -0.583 0.207 -1.522) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:17.836] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.737 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.059] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.785 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:18.059] [3956 ] [I] SCOPY ANIM bone-pose now=(0.650,-0.759,-0.030) original=(0.996,-0.080,0.038)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.650 bone-now=0.650 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.059] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.650 -0.759 -0.030 | 0.759 0.646 0.083 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM compare vs-written=3.22 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.706 -0.670 0.232 -1.512) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.650 bone-now=0.650 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.059] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.650 -0.759 -0.030 | 0.759 0.646 0.083 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM compare vs-written=3.22 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.706 -0.670 0.232 -1.512) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.059] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.650 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.287] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.882 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:18.287] [3956 ] [I] SCOPY ANIM bone-pose now=(0.574,-0.818,-0.037) original=(0.996,-0.080,0.038)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.574 bone-now=0.574 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.287] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.574 -0.818 -0.037 | 0.818 0.570 0.080 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM compare vs-written=3.50 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.634 -0.732 0.249 -1.477) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.574 bone-now=0.574 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.287] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.574 -0.818 -0.037 | 0.818 0.570 0.080 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM compare vs-written=3.50 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.634 -0.732 0.249 -1.477) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.287] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.574 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.442] [3956 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[01:31:18.442] [3956 ] [I] SCOPY DRAW frame=241 passes=23 lights=true animation-driver=none physics-driver=none
+[01:31:18.520] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.951 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:18.520] [3956 ] [I] SCOPY ANIM bone-pose now=(0.516,-0.856,-0.043) original=(0.996,-0.080,0.038)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.516 bone-now=0.516 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.520] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.516 -0.856 -0.043 | 0.856 0.512 0.077 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM compare vs-written=3.69 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.579 -0.773 0.260 -1.438) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.516 bone-now=0.516 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.520] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.516 -0.856 -0.043 | 0.856 0.512 0.077 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM compare vs-written=3.69 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.579 -0.773 0.260 -1.438) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.520] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.516 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.745] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.991 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:18.745] [3956 ] [I] SCOPY ANIM bone-pose now=(0.482,-0.875,-0.046) original=(0.996,-0.080,0.038)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.482 bone-now=0.482 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.745] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.482 -0.875 -0.046 | 0.875 0.478 0.076 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM compare vs-written=3.80 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.547 -0.794 0.266 -1.410) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.482 bone-now=0.482 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.745] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.482 -0.875 -0.046 | 0.875 0.478 0.076 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM compare vs-written=3.80 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.547 -0.794 0.266 -1.410) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.745] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.482 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.974] [3956 ] [E] SCOPY ANIM probe INVALID: the swing never reached the node tree (moved-range stayed 0), so the matrix verdict in this run is not evidence
+[01:31:18.974] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.999 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:31:18.974] [3956 ] [I] SCOPY ANIM bone-pose now=(0.474,-0.879,-0.047) original=(0.996,-0.080,0.038)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.474 bone-now=0.474 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.975] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.474 -0.879 -0.047 | 0.879 0.470 0.075 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM compare vs-written=3.82 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.539 -0.799 0.267 -1.403) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.474 bone-now=0.474 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:31:18.975] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.474 -0.879 -0.047 | 0.879 0.470 0.075 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM compare vs-written=3.82 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.539 -0.799 0.267 -1.403) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:31:18.975] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.474 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:32:59.809] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.977 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:32:59.809] [3956 ] [I] SCOPY ANIM bone-pose now=(0.494,-0.869,-0.045) original=(0.996,-0.080,0.038)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.494 bone-now=0.494 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:32:59.809] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.494 -0.869 -0.045 | 0.869 0.490 0.076 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM compare vs-written=3.76 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.558 -0.787 0.264 -1.420) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.494 bone-now=0.494 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:32:59.809] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.494 -0.869 -0.045 | 0.869 0.490 0.076 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM compare vs-written=3.76 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.558 -0.787 0.264 -1.420) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:32:59.809] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.494 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.035] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.924 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:33:00.035] [3956 ] [I] SCOPY ANIM bone-pose now=(0.539,-0.841,-0.041) original=(0.996,-0.080,0.038)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.539 bone-now=0.539 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.035] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.539 -0.841 -0.041 | 0.841 0.535 0.078 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM compare vs-written=3.61 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.601 -0.757 0.256 -1.454) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.539 bone-now=0.539 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.035] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.539 -0.841 -0.041 | 0.841 0.535 0.078 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM compare vs-written=3.61 vs-world-row0=0.00 vs-bind-inverse=562.46 (smaller = matches)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.601 -0.757 0.256 -1.454) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:33:00.035] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.539 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.261] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.842 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:33:00.261] [3956 ] [I] SCOPY ANIM bone-pose now=(0.606,-0.795,-0.034) original=(0.996,-0.080,0.038)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.606 bone-now=0.606 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.261] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.606 -0.795 -0.034 | 0.794 0.602 0.082 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM compare vs-written=3.38 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.664 -0.707 0.242 -1.494) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.606 bone-now=0.606 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.261] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.606 -0.795 -0.034 | 0.794 0.602 0.082 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM compare vs-written=3.38 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.664 -0.707 0.242 -1.494) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:33:00.261] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.606 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.497] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.734 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:33:00.497] [3956 ] [I] SCOPY ANIM bone-pose now=(0.688,-0.726,-0.025) original=(0.996,-0.080,0.038)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.688 bone-now=0.688 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.497] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.688 -0.726 -0.025 | 0.725 0.684 0.085 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM compare vs-written=3.07 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.741 -0.634 0.222 -1.521) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.688 bone-now=0.688 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.497] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.688 -0.726 -0.025 | 0.725 0.684 0.085 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM compare vs-written=3.07 vs-world-row0=0.00 vs-bind-inverse=562.45 (smaller = matches)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.741 -0.634 0.222 -1.521) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:33:00.497] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.688 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.724] [3956 ] [I] SCOPY ANIM report bone='NPC Pelvis [Pelv]' written-swing=-0.604 probe-effective=false tracked='CME Pelvis [Pelv]' moved=0.00 moved-range=[0.00,0.00] controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[01:33:00.724] [3956 ] [I] SCOPY ANIM bone-pose now=(0.776,-0.630,-0.014) original=(0.996,-0.080,0.038)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM matrices skin='Body [Ovl0]' slots=30 probe-slot=9 slot-row0=0.776 bone-now=0.776 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.724] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.776 -0.630 -0.014 | 0.629 0.773 0.087 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM compare vs-written=3.00 vs-world-row0=0.00 vs-bind-inverse=562.44 (smaller = matches)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.822 -0.536 0.193 -1.514) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM matrices skin='Body [SOvl0]' slots=30 probe-slot=9 slot-row0=0.776 bone-now=0.776 bone-original=0.996 follows-swing=true rebuilt-skins=23 rebuilt-slots=331
+[01:33:00.724] [3956 ] [I] SCOPY ANIM buffer slot=9 R=(0.776 -0.630 -0.014 | 0.629 0.773 0.087 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM written R=(0.699 0.710 0.086 | -0.713 0.700 0.022 | -0.044 -0.077 0.996) t=(1.01,-485.90,2.41)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM compare vs-written=3.00 vs-world-row0=0.00 vs-bind-inverse=562.44 (smaller = matches)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM slot0-raw=(-0.822 -0.536 0.193 -1.514) slot1-raw=(-0.415 -0.342 -0.844 0.908)
+[01:33:00.724] [3956 ] [I] SCOPY ANIM matrices skin='Hands [Ovl0]' slots=38 probe-slot=38 slot-row0=0.000 bone-now=0.776 bone-original=0.996 follows-swing=false rebuilt-skins=23 rebuilt-slots=331

@@ -37,6 +37,8 @@ _deps/
 
 # Logs
 *.log
+# Except archived diagnostic evidence, which is what the analysis documents cite
+!docs/diagnostics/*.log
 
 # Local diagnostic packages
 /dist/
