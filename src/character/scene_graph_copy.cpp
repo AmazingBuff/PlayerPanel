@@ -528,17 +528,18 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
     const float phase = static_cast<float>(m_frame % 320) / 320.0f * 6.2831853f;
     const float swing = std::sin(phase) * 1.0f;
 
-    // Build the swing as a rotation about the bone's own world origin and apply it through the
-    // function the offline test covers. The pivot must be the bone's origin: pivoting about the
-    // parent's origin moves the bone instead of turning it, which is exactly what made every
-    // earlier probe report "nothing moved".
-    RE::NiPoint3 swing_angles{};
-    m_probe_bone_world_pose.rotate.ToEulerAnglesXYZ(swing_angles);
+    // The swing delta is rotation D about the bone's own origin, where D rotates by `swing` about
+    // the world Z axis: the node's world rotation becomes R' = R * D, so the delta between the old
+    // and new world is D itself and no transform needs to be divided back out. That matters:
+    // deriving it as swung * original.Invert() involves a three-factor product whose result did not
+    // match the two-factor composition the node actually receives.
     RE::NiMatrix3 swing_rotation;
-    swing_rotation.SetEulerAnglesXYZ(swing_angles.x, swing_angles.y, swing_angles.z + swing);
+    swing_rotation.MakeZRotation(swing);
 
-    const RE::NiTransform swung = swing_about_pivot(m_probe_bone_world_pose, swing_rotation, m_probe_bone_world_pose.translate);
-    const RE::NiTransform delta = swung * m_probe_bone_world_pose.Invert();
+    RE::NiTransform delta;
+    delta.rotate = swing_rotation;
+    delta.translate = m_probe_bone_world_pose.translate - swing_rotation * m_probe_bone_world_pose.translate;
+    delta.scale = 1.0f;
     apply_world_delta_downward(m_probe_bone_cache, delta, 0);
     root->UpdateWorldBound();
 
