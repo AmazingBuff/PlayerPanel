@@ -173,6 +173,41 @@ if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 	target_precompile_headers(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h)
 	set_target_properties(CharacterPanelCopyMathTest PROPERTIES VS_GLOBAL_VCToolsVersion "14.44.35207")
 	add_test(NAME snapshot_transform COMMAND CharacterPanelCopyMathTest)
+
+	# The runbook ships a test package instead of a bare DLL, so the manifest can
+	# carry the SHA-256 of both binaries and the exact baselines they came from.
+	set(SCENE_COPY_SOURCE_BASELINE "unrecorded")
+	execute_process(
+		COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-parse HEAD
+		OUTPUT_VARIABLE SCENE_COPY_SOURCE_BASELINE
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		ERROR_QUIET
+	)
+	set(SCENE_COPY_COMMONLIB_COMMIT "unrecorded")
+	execute_process(
+		COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR}/extern/CommonLibSSE rev-parse HEAD
+		OUTPUT_VARIABLE SCENE_COPY_COMMONLIB_COMMIT
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		ERROR_QUIET
+	)
+
+	add_custom_target(
+		CharacterPanelSceneCopyPackage
+		COMMAND
+		${CMAKE_COMMAND}
+		-DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+		-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
+		-DPROJECT_VERSION=${PROJECT_VERSION}
+		-DSOURCE_BASELINE=${SCENE_COPY_SOURCE_BASELINE}
+		-DCOMMONLIB_COMMIT=${SCENE_COPY_COMMONLIB_COMMIT}
+		-DDLL_PATH=$<TARGET_FILE:CharacterPanel>
+		-DPDB_PATH=$<TARGET_PDB_FILE:CharacterPanel>
+		-P
+		${CMAKE_CURRENT_SOURCE_DIR}/cmake/scene_copy_packaging.cmake
+		DEPENDS
+		CharacterPanel
+		VERBATIM
+	)
 endif()
 
 if(CHARACTER_PANEL_BUILD_PROBE)

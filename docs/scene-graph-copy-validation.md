@@ -40,15 +40,28 @@ HKX 动作驱动、CBPC 和 SMP 的独立注册与模拟没有实现。安装物
 ## 构建和传输
 
 ```powershell
-cmake -S . -B build -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_BUILD_PROBE=OFF
-cmake --build build --config Release --target CharacterPanel
-cmake --build build --config Release --target CharacterPanelCopyMathTest
-ctest --test-dir build -C Release --output-on-failure
+cmake -S . -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_BUILD_PROBE=OFF
+cmake --build build-scopy --config Release --target CharacterPanel CharacterPanelCopyMathTest
+ctest --test-dir build-scopy -C Release --output-on-failure
+cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPackage
 ```
 
+The package target writes `dist/CharacterPanel-scopy-S0-<version>.zip` containing
+`SKSE/Plugins/CharacterPanel.dll`, its matching PDB, `CharacterPanel-scopy-README.txt`
+(the in-game controls and install rules), and `build-manifest.json`. The manifest
+records the SHA-256 of both binaries, the repository HEAD, and the actual
+`extern/CommonLibSSE` checkout, because the submodule pointer in history can lag
+the checkout the compiler read; a package built here also prints all three to the
+build log. Use the package instead of a bare DLL when a result has to be tied to
+one binary.
+
 默认 CMake 开关为 OFF，保留 Actor 装配路线。开启实验后，此构建不调用旧 Actor 出生／摘图路线。
-实际测试包的 `manifest.json` 记录 DLL、PDB 的 SHA-256、插件源码基线和实际 CommonLib checkout。
+实际测试包的 `build-manifest.json` 记录 DLL、PDB 的 SHA-256、插件源码基线和实际 CommonLib checkout。
 仓库子模块指针尚未提交更新，另一台电脑从旧 HEAD 构建时不能忽略这个差异；直接使用测试包可避免不同 DLL 混淆。
+
+本机已验证（2026-10-08）：实验配置 Release 构建通过（`scene_graph_copy.cpp` 零错误），
+`snapshot_transform` 单测 1/1 通过，测试包生成后 DLL／PDB 的 SHA-256 与 manifest 自证一致。
+游戏验证仍未开始。
 
 将包内 `SKSE/Plugins/CharacterPanel.dll` 和对应 PDB 安装到一个单独的 MO2 测试 mod，替换原 CharacterPanel。
 不要同时加载旧 CharacterPanel、CharacterPanelProbe 或 CharacterPanelProto；Probe 的 F7/F8 与本实验冲突。

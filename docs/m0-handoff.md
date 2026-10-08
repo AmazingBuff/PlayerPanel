@@ -1,12 +1,20 @@
 # M0 handoff — state, verified facts, and the next work package
 
-## 新增：场景图复制 S0 实验（2026-10-08，待另一台电脑游戏验证）
+## 新增：场景图复制 S0 实验（2026-10-08，测试包已就绪，待游戏验证）
 
 用户授权在现有直绘框架上重新验证直接复制已装配的第三人称角色图。
 默认构建仍为 Actor 装配；`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON` 的测试构建关闭旧 Actor 路线，
 通过 F7 复制／审计、F8 绘制、F9 旋转、F10 释放。没有 HKX／CBPC／SMP 独立驱动，不能将 S0 当作这些需求通过。
 先读 [设计与验证问题](scene-graph-copy-validation.md)，使用 [回传模板](scene-graph-copy-results-template.md)。
 下文历史验证结论仍仅对应原 Actor／游离图路线。
+
+**交付状态（2026-10-08 会话）**：实验树 `build-scopy/` 配置与 Release 构建通过，
+`snapshot_transform` 单测 1/1 通过，测试包 `dist/CharacterPanel-scopy-S0-1.2.1.zip`
+（DLL + PDB + README + `build-manifest.json`，内含两枚 SHA-256 与源码／CommonLib 基线，
+包内哈希自证一致）已生成。**下一步只剩另一台电脑的游戏验证**：装包内 DLL/PDB 到独立
+MO2 测试 mod，跑测试 A（复制／绘制／生命周期）→ 测试 B（换装／外观／物理），
+回填 Q01–Q12。本机 `E:\SkyrimAE\mods\CharacterPanel` 的现役 DLL 仍是主线 v1.2.1
+（MD5 `28303210`，Actor 路线），未被本轮触碰。
 
 - 日期:2026-10-01(run 19 收官:工作包 1+2 完成并经游戏验证)
 - 读者:下一个会话的 Agent / 开发者。本文是"从这里继续"的入口;运行级细节在

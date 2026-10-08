@@ -1,5 +1,7 @@
 # Build output
 /build
+# The opt-in scene-copy experiment configures its own tree beside the default one
+/build-scopy
 
 # Agent
 .dsh/

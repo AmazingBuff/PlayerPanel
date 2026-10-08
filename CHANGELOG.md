@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- Add the scene-graph-copy test package target (CharacterPanelSceneCopyPackage,
+  opt-in with CHARACTER_PANEL_SCENE_COPY_EXPERIMENT): it stages the DLL with its
+  PDB, the S0 install/test README, and a JSON build manifest carrying both
+  binaries' SHA-256, the repository HEAD, and the actual extern/CommonLibSSE
+  checkout, so a result returned from the validating machine can be tied to the
+  artifact that produced it. The experiment configuration is configured, built
+  and unit-tested locally (checksum self-check on the packaged DLL and PDB);
+  game validation of the S0 copy route itself is still pending.
+
 ### Changed
 
 - Record the M0 engineering-side acceptance (docs/m0-acceptance.md):
