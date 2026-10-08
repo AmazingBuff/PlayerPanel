@@ -63,11 +63,12 @@ private:
     RE::NiAVObject* m_probe_child_cache;
     RE::NiPoint3 m_probe_bone_origin;
     RE::NiPoint3 m_probe_child_origin;
-    RE::NiTransform m_probe_bone_local_pose;
     RE::NiTransform m_probe_bone_world_pose;
     std::string m_probe_skin_report;
     float m_probe_move_min;
     float m_probe_move_max;
+    uint32_t m_probe_samples;
+    bool m_probe_invalid_logged;
     uint32_t m_probe_frame_report;
     std::unique_ptr<CharacterClone> m_snapshot;
     // Raw on purpose: these snapshots own graphs that must outlive every boundary.
