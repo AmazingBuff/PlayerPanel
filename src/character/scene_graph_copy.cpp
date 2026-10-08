@@ -512,11 +512,11 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
     // the bones it belongs to were being moved, so nothing on screen followed until now.
     uint32_t rebuilt_skins = 0;
     uint32_t rebuilt_slots = 0;
-    // Experiment: with the rebuild OFF, the layout check below classifies the buffer's ORIGINAL
-    // clone-time contents — reading it while the rebuild runs would only report what we just wrote.
-    // Measured with the rebuild off: the figure renders unchanged, so these matrices never drove
-    // the mesh.
-    constexpr bool Rebuild_Skinning_Matrices = false;
+    // Experiment switch. MEASURED both ways: with the rebuild off the figure renders unchanged
+    // (so the clone-time buffer was already correct and a stale buffer was never the problem), and
+    // the buffer's contents classified as the bone's raw world matrix. Rebuilding is therefore the
+    // right action; writing the WORLD matrix into it is the part that was wrong before.
+    constexpr bool Rebuild_Skinning_Matrices = true;
     if constexpr (Rebuild_Skinning_Matrices)
     {
         RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
@@ -527,12 +527,11 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
         // allocatedSize is a byte size here, so the slot count must come from the skin data; the
         // byte size only serves as an upper bound.
         const uint32_t count = std::min({ skin->skinData->GetBoneCount(), skin->numMatrices, skin->allocatedSize / 48u });
-        const RE::NiTransform& root_to_skin = skin->skinData->rootParentToSkin;
         for (uint32_t i = 0; i < count; ++i)
         {
             if (!skin->bones[i])
                 continue;
-            write_skinning_matrix(skin->boneMatrices, i, root_to_skin, skin->bones[i]->world, skin->skinData->GetBoneDataSkinToBone(i));
+            write_bone_matrix(skin->boneMatrices, i, skin->bones[i]->world);
             if (m_probe_slot_geometry.empty() && skin->bones[i] == m_probe_bone_cache)
             {
                 m_probe_corrupt_slot = i;
@@ -630,15 +629,15 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
                     closest_to_bind_inverse += std::abs(probe_values[component] - reinterpret_cast<const float*>(&bind_inverse)[component]);
                 }
                 closest_to_world += std::abs(probe_values[0] - world_row0[0]) + std::abs(probe_values[1] - world_row0[1]) + std::abs(probe_values[2] - world_row0[2]) + std::abs(probe_values[3] - world_row0[3]);
-                logger::info("SCOPY ANIM buffer slot={} R=(%.3f %.3f %.3f | %.3f %.3f %.3f | %.3f %.3f %.3f) t=(%.2f,%.2f,%.2f)",
+                logger::info("SCOPY ANIM buffer slot={} R=({:.3f} {:.3f} {:.3f} | {:.3f} {:.3f} {:.3f} | {:.3f} {:.3f} {:.3f}) t=({:.2f},{:.2f},{:.2f})",
                     probe_slot, probe_values[0], probe_values[1], probe_values[2], probe_values[4], probe_values[5], probe_values[6],
                     probe_values[8], probe_values[9], probe_values[10], probe_values[3], probe_values[7], probe_values[11]);
-                logger::info("SCOPY ANIM written R=(%.3f %.3f %.3f | %.3f %.3f %.3f | %.3f %.3f %.3f) t=(%.2f,%.2f,%.2f)",
+                logger::info("SCOPY ANIM written R=({:.3f} {:.3f} {:.3f} | {:.3f} {:.3f} {:.3f} | {:.3f} {:.3f} {:.3f}) t=({:.2f},{:.2f},{:.2f})",
                     m_probe_last_written[0], m_probe_last_written[1], m_probe_last_written[2], m_probe_last_written[4], m_probe_last_written[5], m_probe_last_written[6],
                     m_probe_last_written[8], m_probe_last_written[9], m_probe_last_written[10], m_probe_last_written[3], m_probe_last_written[7], m_probe_last_written[11]);
                 logger::info("SCOPY ANIM compare vs-written={:.2f} vs-world-row0={:.2f} vs-bind-inverse={:.2f} (smaller = matches)",
                     closest_to_written, closest_to_world, closest_to_bind_inverse);
-                logger::info("SCOPY ANIM slot0-raw=(%.3f %.3f %.3f %.3f) slot1-raw=(%.3f %.3f %.3f %.3f)",
+                logger::info("SCOPY ANIM slot0-raw=({:.3f} {:.3f} {:.3f} {:.3f}) slot1-raw=({:.3f} {:.3f} {:.3f} {:.3f})",
                     values[0], values[1], values[2], values[3], values[12], values[13], values[14], values[15]);
             }
             return RE::BSVisit::BSVisitControl::kContinue;

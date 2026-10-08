@@ -32,30 +32,30 @@ inline RE::NiTransform swing_about_pivot(RE::NiTransform const& original, RE::Ni
     return delta * original;
 }
 
-// Write one bone's skinning matrix into a skin's matrix buffer. The shader samples THIS array,
-// not the bone's node transform: the buffer was measured to stay frozen at its clone-time values
-// while the node it belongs to was being swung, which is why rotating the copy's bones moved
-// nothing on screen. Layout is a 3x4 row-major float matrix per slot, 48 bytes apart.
+// Write one bone's matrix into a skin's matrix buffer, which is what the shader samples. MEASURED:
+// the buffer holds the bone's RAW WORLD matrix, not a combined skinning matrix. Classifying its
+// clone-time contents against three candidates gave vs-world-row0 = 1.45 against 507.73 for the
+// combined form and 538.08 for the bind pose's inverse, so composing rootParentToSkin and
+// skinToBone into it replaces the correct data with something the shader cannot use — which is
+// exactly why rebuilding the buffer never moved the mesh.
 //
-// The stored skinToBone maps a bind-pose vertex into the bone's own space, so it is INVERTED here
-// to return to bind space: skinning * (skinToBone * v) = rootParentToSkin * boneWorld * v, which
-// puts a bind-space origin exactly on rootParentToSkin * bone.translate.
-inline void write_skinning_matrix(void* buffer, uint32_t slot, RE::NiTransform const& root_parent_to_skin, RE::NiTransform const& bone_world, RE::NiTransform const& skin_to_bone)
+// Layout is a 3x4 row-major float matrix per slot, 48 bytes apart, with the translation in the
+// w components (indices 3, 7, 11).
+inline void write_bone_matrix(void* buffer, uint32_t slot, RE::NiTransform const& bone_world)
 {
-    const RE::NiTransform skinning = root_parent_to_skin * bone_world * skin_to_bone.Invert();
     float* const values = static_cast<float*>(buffer) + static_cast<size_t>(slot) * 12;
-    values[0] = skinning.rotate.entry[0][0];
-    values[1] = skinning.rotate.entry[0][1];
-    values[2] = skinning.rotate.entry[0][2];
-    values[3] = skinning.translate.x;
-    values[4] = skinning.rotate.entry[1][0];
-    values[5] = skinning.rotate.entry[1][1];
-    values[6] = skinning.rotate.entry[1][2];
-    values[7] = skinning.translate.y;
-    values[8] = skinning.rotate.entry[2][0];
-    values[9] = skinning.rotate.entry[2][1];
-    values[10] = skinning.rotate.entry[2][2];
-    values[11] = skinning.translate.z;
+    values[0] = bone_world.rotate.entry[0][0];
+    values[1] = bone_world.rotate.entry[0][1];
+    values[2] = bone_world.rotate.entry[0][2];
+    values[3] = bone_world.translate.x;
+    values[4] = bone_world.rotate.entry[1][0];
+    values[5] = bone_world.rotate.entry[1][1];
+    values[6] = bone_world.rotate.entry[1][2];
+    values[7] = bone_world.translate.y;
+    values[8] = bone_world.rotate.entry[2][0];
+    values[9] = bone_world.rotate.entry[2][1];
+    values[10] = bone_world.rotate.entry[2][2];
+    values[11] = bone_world.translate.z;
 }
 
 PLUGIN_NAMESPACE_END
