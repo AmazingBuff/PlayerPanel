@@ -176,21 +176,7 @@ if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 
 	# The runbook ships a test package instead of a bare DLL, so the manifest can
 	# carry the SHA-256 of both binaries and the exact baselines they came from.
-	set(SCENE_COPY_SOURCE_BASELINE "unrecorded")
-	execute_process(
-		COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-parse HEAD
-		OUTPUT_VARIABLE SCENE_COPY_SOURCE_BASELINE
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-		ERROR_QUIET
-	)
-	set(SCENE_COPY_COMMONLIB_COMMIT "unrecorded")
-	execute_process(
-		COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR}/extern/CommonLibSSE rev-parse HEAD
-		OUTPUT_VARIABLE SCENE_COPY_COMMONLIB_COMMIT
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-		ERROR_QUIET
-	)
-
+	# The packaging script reads both baselines at package time.
 	add_custom_target(
 		CharacterPanelSceneCopyPackage
 		COMMAND
@@ -198,8 +184,6 @@ if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 		-DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
 		-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
 		-DPROJECT_VERSION=${PROJECT_VERSION}
-		-DSOURCE_BASELINE=${SCENE_COPY_SOURCE_BASELINE}
-		-DCOMMONLIB_COMMIT=${SCENE_COPY_COMMONLIB_COMMIT}
 		-DDLL_PATH=$<TARGET_FILE:CharacterPanel>
 		-DPDB_PATH=$<TARGET_PDB_FILE:CharacterPanel>
 		-P

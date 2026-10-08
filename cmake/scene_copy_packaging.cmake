@@ -13,11 +13,25 @@ if(NOT DEFINED PROJECT_ROOT OR NOT DEFINED OUTPUT_DIR)
     message(FATAL_ERROR "Scene-copy packaging requires PROJECT_ROOT and OUTPUT_DIR")
 endif()
 
-if(NOT DEFINED SOURCE_BASELINE OR SOURCE_BASELINE STREQUAL "")
+# Read the baselines at package time: a configure-time capture goes stale as soon
+# as the tree moves, and the manifest has to name what the DLL was built from.
+execute_process(
+    COMMAND git -C ${PROJECT_ROOT} rev-parse HEAD
+    OUTPUT_VARIABLE SOURCE_BASELINE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+execute_process(
+    COMMAND git -C ${PROJECT_ROOT}/extern/CommonLibSSE rev-parse HEAD
+    OUTPUT_VARIABLE COMMONLIB_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT SOURCE_BASELINE OR SOURCE_BASELINE STREQUAL "")
     set(SOURCE_BASELINE "unrecorded")
 endif()
 
-if(NOT DEFINED COMMONLIB_COMMIT OR COMMONLIB_COMMIT STREQUAL "")
+if(NOT COMMONLIB_COMMIT OR COMMONLIB_COMMIT STREQUAL "")
     set(COMMONLIB_COMMIT "unrecorded")
 endif()
 
