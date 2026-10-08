@@ -388,6 +388,8 @@ void SceneGraphCopy::toggle_animation_probe()
     m_anim_probe_enabled = !m_anim_probe_enabled;
     m_probe_bone_cache = nullptr;
     m_probe_child_cache = nullptr;
+    m_probe_slot_geometry.clear();
+    m_probe_corrupt_slot = 0;
     m_probe_move_min = -1.0f;
     m_probe_move_max = 0.0f;
     m_probe_samples = 0;
@@ -505,6 +507,43 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
     apply_world_delta_downward(m_probe_bone_cache, delta, 0);
     root->UpdateWorldBound();
 
+    // Rebuild every skin's matrix buffer from the bone transforms we just wrote. The buffer is
+    // what the shader samples, and it was measured to stay frozen at its clone-time values while
+    // the bones it belongs to were being moved, so nothing on screen followed until now.
+    uint32_t rebuilt_skins = 0;
+    uint32_t rebuilt_slots = 0;
+    RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
+    {
+        RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
+        if (!skin || !skin->skinData || !skin->bones || !skin->boneWorldTransforms || !skin->boneMatrices)
+            return RE::BSVisit::BSVisitControl::kContinue;
+        // allocatedSize is a byte size here, so the slot count must come from the skin data; the
+        // byte size only serves as an upper bound.
+        const uint32_t count = std::min({ skin->skinData->GetBoneCount(), skin->numMatrices, skin->allocatedSize / 48u });
+        const RE::NiTransform& root_to_skin = skin->skinData->rootParentToSkin;
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            if (!skin->bones[i])
+                continue;
+            write_skinning_matrix(skin->boneMatrices, i, root_to_skin, skin->bones[i]->world, skin->skinData->GetBoneDataSkinToBone(i));
+            // Corrupt test: one skin's copy of the probe bone is displaced by 500 units after the
+            // rebuild, so it does not accumulate. If the shader samples these matrices a chunk of the
+            // figure flies away; if nothing happens, this buffer is not what reaches the mesh.
+            if (m_probe_slot_geometry.empty() && skin->bones[i] == m_probe_bone_cache)
+            {
+                static_cast<float*>(skin->boneMatrices)[static_cast<size_t>(i) * 12 + 3] += 500.0f;
+                m_probe_slot_geometry = geometry->name.c_str() ? geometry->name.c_str() : "?";
+                m_probe_corrupt_slot = i;
+            }
+            ++rebuilt_slots;
+        }
+        ++rebuilt_skins;
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+    m_probe_rebuilt_skins = rebuilt_skins;
+    m_probe_rebuilt_slots = rebuilt_slots;
+    (void)m_probe_slot_value_after_draw;
+
     // A few frames in, report whether the write moved the bone in WORLD space (the shader
     // input) and whether the copy carries a userData back to the source reference, which
     // would hand out the ORIGINAL actor's animation graph.
@@ -561,9 +600,16 @@ void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
             const bool follows_swing = probe_slot < count &&
                 std::abs(slot_value - m_probe_bone_cache->world.rotate.entry[0][0]) < std::abs(slot_value - m_probe_bone_world_pose.rotate.entry[0][0]);
             ++matrix_skins;
-            logger::info("SCOPY ANIM matrices skin='{}' slots={} probe-slot={} slot-row0={:.3f} bone-now={:.3f} bone-original={:.3f} follows-swing={}",
+            logger::info("SCOPY ANIM matrices skin='{}' slots={} probe-slot={} slot-row0={:.3f} bone-now={:.3f} bone-original={:.3f} follows-swing={} rebuilt-skins={} rebuilt-slots={}",
                 geometry->name.c_str() ? geometry->name.c_str() : "?", count, probe_slot, slot_value,
-                m_probe_bone_cache->world.rotate.entry[0][0], m_probe_bone_world_pose.rotate.entry[0][0], follows_swing);
+                m_probe_bone_cache->world.rotate.entry[0][0], m_probe_bone_world_pose.rotate.entry[0][0], follows_swing,
+                m_probe_rebuilt_skins, m_probe_rebuilt_slots);
+            if (probe_slot < count)
+            {
+                const float* const probe_values = values + static_cast<size_t>(probe_slot) * 12;
+                logger::info("SCOPY ANIM corrupt-test geometry='{}' slot={} tx-expected={:.1f} tx-in-buffer={:.1f}",
+                    geometry->name.c_str() ? geometry->name.c_str() : "?", probe_slot, m_probe_slot_value_after_draw, probe_values[3]);
+            }
             return RE::BSVisit::BSVisitControl::kContinue;
         });
         m_probe_frame_report = 0;

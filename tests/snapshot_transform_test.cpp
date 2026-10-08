@@ -172,6 +172,46 @@ int main()
         }
     }
 
+    // 7. The skinning matrix the probe writes into the skin's buffer: what the shader samples. A
+    //    vertex at its bind position must land where the bone's world transform puts it, which is
+    //    the defining property of rootParentToSkin * boneWorld * skinToBone^-1.
+    {
+        float buffer[12] = {};
+        const RE::NiTransform root_to_skin = make_transform({ 5.0f, -2.0f, 1.0f }, 0.4f, 1.0f);
+        const RE::NiTransform skin_to_bone = make_transform({ 0.0f, 3.0f, 0.0f }, 0.9f, 1.0f);
+        const RE::NiTransform bone = bone_world;
+
+        PLUGIN_NAMESPACE::write_skinning_matrix(buffer, 0, root_to_skin, bone, skin_to_bone);
+
+        RE::NiTransform written;
+        written.rotate.entry[0][0] = buffer[0];
+        written.rotate.entry[0][1] = buffer[1];
+        written.rotate.entry[0][2] = buffer[2];
+        written.translate.x = buffer[3];
+        written.rotate.entry[1][0] = buffer[4];
+        written.rotate.entry[1][1] = buffer[5];
+        written.rotate.entry[1][2] = buffer[6];
+        written.translate.y = buffer[7];
+        written.rotate.entry[2][0] = buffer[8];
+        written.rotate.entry[2][1] = buffer[9];
+        written.rotate.entry[2][2] = buffer[10];
+        written.translate.z = buffer[11];
+        written.scale = 1.0f;
+
+        // A point sitting at the bind pose (i.e. at the origin of the bone's own space) must land
+        // exactly on the bone's world position, transformed by rootParentToSkin. This is what makes
+        // the mesh follow: the sampled matrix is applied to vertices expressed in bind space.
+        const RE::NiPoint3 bind_origin = skin_to_bone * RE::NiPoint3{ 0.0f, 0.0f, 0.0f };
+        const RE::NiPoint3 skinned_origin = written * bind_origin;
+        const RE::NiPoint3 expected_origin = root_to_skin * bone.translate;
+        check((skinned_origin - expected_origin).Length() < 0.01f, "a bind-space origin must land on the bone's world position under rootParentToSkin");
+
+        // A second slot must land at its own offset, not overwrite the first.
+        float two_slots[24] = {};
+        PLUGIN_NAMESPACE::write_skinning_matrix(two_slots, 1, root_to_skin, bone, skin_to_bone);
+        check(close(two_slots[0], 0.0f, 0.001f) && close(two_slots[12], buffer[0], 0.001f), "slot 1 must be written at a 48-byte stride");
+    }
+
     if (failures != 0)
     {
         std::printf("FAILED: %d assertion(s)\n", failures);

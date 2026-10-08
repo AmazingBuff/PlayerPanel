@@ -69,6 +69,11 @@ private:
     float m_probe_move_max;
     uint32_t m_probe_samples;
     bool m_probe_invalid_logged;
+    uint32_t m_probe_rebuilt_skins;
+    uint32_t m_probe_rebuilt_slots;
+    float m_probe_slot_value_after_draw;
+    uint32_t m_probe_corrupt_slot;
+    std::string m_probe_slot_geometry;
     uint32_t m_probe_frame_report;
     std::unique_ptr<CharacterClone> m_snapshot;
     // Raw on purpose: these snapshots own graphs that must outlive every boundary.
