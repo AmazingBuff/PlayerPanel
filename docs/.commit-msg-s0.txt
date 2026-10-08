@@ -1,0 +1,46 @@
+Make the S0 copy survive capture, release and scene transitions
+
+Game validation found three defects that only appear once a real player graph
+is copied, drawn and replaced.
+
+Freeing a captured graph is never safe. Destroying it in capture(), four
+frames later from a retired queue, and at the load and main-menu boundaries
+crashed with one signature: the clone destructor entering BSFadeNode's
+destructor and the tbb allocator dereferencing null (crashes 2026-10-08
+23-01-11, 23-07-35, 23-12-02). A replaced or released snapshot is now parked
+for the process lifetime, and the experiment build's destructor no longer
+drops the graph reference, so no path can free one. This matches why the
+retired Actor route kept its shell alive; the parked graphs are a deliberate
+leak for the test build, bounded by a cap that discards bookkeeping only.
+
+A player graph is not only the character. A heavily modded graph carried 123
+geometries and 106 passes — spell and ability visuals, skeleton-driven
+collision helpers, script markers and the spell's own light — of which only
+the weapon reached the screen, because the world renderer never drew the rest.
+Capture now prunes particles, collision helpers, markers, blood and flash
+visuals and spill lights, keeping the body, its gear and equipped weapons:
+123 geometries become 51 and 106 passes become 47, and the figure renders
+complete. rendererData being null is not a defect signal — the engine creates
+those device buffers lazily inside SetupAndDrawPass, so even the CBBE graph
+that always displayed reported 23 of 23 null.
+
+The framing bound now ignores skeleton-driven collision helpers, which share
+the body's skeleton and sit far enough from it to drag the bound and the
+centering off the figure; that mis-framing is what pushed the UBE body out of
+view while the weapon stayed visible.
+
+Comparing the source graph with exact float equality also rejected sound
+captures: NiTransform carries a 3x3 rotation matrix, and a few ULPs of drift
+across the paused frame marked the source as modified, which blocked the CBBE
+body every time. SCOPY SOURCE-DIFF now separates a changed object set from
+per-node transform drift, and only a changed object set blocks a capture.
+
+Also remap rotate and release from F9/F10, which other mods hold, to F3/F4,
+log the first few rotate presses and the build's hotkey map so a stale
+deployment is distinguishable from a dropped key, and record the packaged
+configuration and each worktree's dirty state in the package manifest.
+
+Validation: Release build clean under /W4 /WX through the Release-scopy
+preset, snapshot_transform passes, and test A passes on both CBBE and UBE
+bodies with no crash across capture, release, recapture, load and main-menu
+transitions. Per-question results: docs/scene-graph-copy-results-2026-10-08.md.

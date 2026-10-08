@@ -12,6 +12,10 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
+    // Rotate and release are quiet commands, so a press that never reaches them is
+    // otherwise indistinguishable from a dropped key; log the first few presses only.
+    uint32_t Rotate_Key_Log_Remaining = 5;
+
     class InputHandler final : public RE::BSTEventSink<RE::InputEvent*>
     {
     public:
@@ -40,9 +44,16 @@ namespace
                     SceneGraphCopy::instance().request(Command::e_capture);
                 else if (scan == MapVirtualKeyA(VK_F8, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_toggle_draw);
-                else if (scan == MapVirtualKeyA(VK_F9, MAPVK_VK_TO_VSC))
+                else if (scan == MapVirtualKeyA(VK_F3, MAPVK_VK_TO_VSC))
+                {
+                    if (Rotate_Key_Log_Remaining != 0)
+                    {
+                        logger::info("SCOPY KEY rotate pressed (VK_F3 -> scan {})", scan);
+                        --Rotate_Key_Log_Remaining;
+                    }
                     SceneGraphCopy::instance().request(Command::e_rotate);
-                else if (scan == MapVirtualKeyA(VK_F10, MAPVK_VK_TO_VSC))
+                }
+                else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_release);
             }
 #endif

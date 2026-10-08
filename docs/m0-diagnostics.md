@@ -25,8 +25,8 @@ cmake -S . -B build `
   -DCHARACTER_PANEL_BUILD_PROBE=ON `
   -DCMAKE_TOOLCHAIN_FILE="D:/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake" `
   -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
-cmake --build build --config Release --target CharacterPanelProbe --parallel 4
-cmake --build build --config Release --target CharacterPanelProbePackage --parallel 4
+cmake --build build --config Release --target CharacterPanelProbe
+cmake --build build --config Release --target CharacterPanelProbePackage
 ```
 
 The DLL is `build/Release/CharacterPanelProbe.dll`. The local package is

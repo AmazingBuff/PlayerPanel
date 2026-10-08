@@ -204,6 +204,73 @@ namespace
         logger::info("Clone geometry census ({}):{}", count, names);
     }
 
+    // Body and physics mods name their skeleton-driven collision helpers after these
+    // tokens; they carry a skinInstance but are not part of the visible figure.
+    bool is_collision_helper(const char* name)
+    {
+        if (!name || !name[0])
+            return false;
+        constexpr std::string_view tokens[] = { "Collision", "VirtualGround", "3BCA_", "Stopper" };
+        const std::string_view view{ name };
+        for (const std::string_view token : tokens)
+            if (view.find(token) != std::string_view::npos)
+                return true;
+        return false;
+    }
+
+    // A captured player graph carries more than the character: spell and ability visuals,
+    // blood decals, script-spawned markers and the effect's own light are parented into it
+    // and were never drawn by the world renderer, so their device buffers stay null and
+    // they cannot be drawn in the studio either. Keep the body, its gear and equipped
+    // weapons, and drop the rest (the user asked for exactly this scope).
+    bool is_effect_object(RE::NiAVObject* object)
+    {
+        if (object->AsParticlesGeom())
+            return true;
+        if (const char* name = object->name.c_str(); name && name[0] && is_collision_helper(name))
+            return true;
+        constexpr std::string_view tokens[] = { "Blood", "Flash", "Wisps", "SuperSpray", "pSmallFlare", "Scb", "Diamond", "ParticleSystem" };
+        const std::string_view view{ object->name.c_str() ? object->name.c_str() : "" };
+        for (const std::string_view token : tokens)
+            if (view.find(token) != std::string_view::npos)
+                return true;
+        // A duplicated spell light would keep lighting the world from the copy. NiAVObject
+        // exposes no AsLight(), so the runtime type name is the available discriminator.
+        const char* const rtti = object->GetRTTI() ? object->GetRTTI()->GetName() : nullptr;
+        return rtti && std::strstr(rtti, "Light") != nullptr;
+    }
+
+    size_t prune_effect_objects(RE::NiAVObject* root)
+    {
+        std::vector<RE::NiNode*> stack{ root->AsNode() };
+        std::vector<RE::NiAVObject*> dropped;
+        while (!stack.empty())
+        {
+            RE::NiNode* node = stack.back();
+            stack.pop_back();
+            if (!node)
+                continue;
+            for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
+            {
+                if (!child)
+                    continue;
+                if (is_effect_object(child.get()))
+                {
+                    dropped.push_back(child.get());
+                    continue;
+                }
+                if (RE::NiNode* child_node = child->AsNode())
+                    stack.push_back(child_node);
+            }
+        }
+        for (RE::NiAVObject* object : dropped)
+        {
+            if (RE::NiNode* parent = object->parent)
+                parent->DetachChild(object);
+        }
+        return dropped.size();
+    }
+
     void union_sphere(SkinnedBound& out, const RE::NiPoint3& center, float radius)
     {
         if (!out.valid)
@@ -235,6 +302,12 @@ namespace
         RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
         {
             if (!geometry->GetGeometryRuntimeData().skinInstance)
+                return RE::BSVisit::BSVisitControl::kContinue;
+            // Framing must follow the visible figure. Body mods skin their collision helpers
+            // (3BA/UBE 3BCA_* parts, VirtualGround, CollisionStopper) with the same skeleton,
+            // and those sit far enough from the body to drag the bound and the centering off
+            // it — which is what pushed the UBE figure out of frame.
+            if (is_collision_helper(geometry->name.c_str()))
                 return RE::BSVisit::BSVisitControl::kContinue;
             const auto& wb = geometry->worldBound;
             union_sphere(out, wb.center, wb.radius);
@@ -503,9 +576,12 @@ CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph) :
     m_is_snapshot(true), m_snapshot_angle(0.0f), m_draw_frames(0)
 {
     restore_fade(m_graph_object.get());
+    const size_t pruned = prune_effect_objects(m_graph_object.get());
     m_snapshot_root_world = m_graph_object->world;
     const SkinnedBound bound = measure_skinned_bound(m_graph_object.get());
     m_snapshot_center = bound.valid ? bound.center : m_graph_object->worldBound.center;
+    logger::info("SCOPY FRAME skinned-bound valid={} radius={:.1f} center=({:.1f},{:.1f},{:.1f}) graph-bound radius={:.1f} scale={:.2f} pruned-nodes={}",
+        bound.valid, bound.radius, m_snapshot_center.x, m_snapshot_center.y, m_snapshot_center.z, m_graph_object->worldBound.radius, Studio_Figure_Scale, pruned);
     RE::BSVisit::TraverseScenegraphObjects(m_graph_object.get(), [&](RE::NiAVObject* object)
     {
         m_snapshot_nodes.push_back({ object, object->world, object->worldBound });
@@ -524,10 +600,20 @@ void CharacterClone::rotate_snapshot()
 
 CharacterClone::~CharacterClone()
 {
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+    // The experiment's snapshot graph is a native NiObject::Clone that no engine teardown
+    // path survives: releasing it crashed in capture(), at a clean frame boundary and at
+    // the main-menu boundary (crashes 2026-10-08 23-01-11, 23-07-35, 23-12-02), always in
+    // BSFadeNode's destructor through the tbb allocator. This class holds the graph's only
+    // reference, so leaving m_graph_object untouched keeps it alive and the process
+    // reclaims it at exit.
+    (void)m_graph_object.get();
+#else
     // A detached graph is solely owned here; releasing the pointer frees it.
     // A not-yet-detached graph is still engine-managed through the shell, and
     // m_clone releases the plugin's reference only.
     m_graph_object = nullptr;
+#endif
     m_clone_state.store(CloneState::e_none, std::memory_order_release);
 }
 

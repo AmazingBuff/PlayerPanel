@@ -15,6 +15,13 @@ namespace
 {
     constexpr size_t Max_Graph_Objects = 16384;
 
+    // The source graph can be re-driven between the copy and the re-read (the paused
+    // world still runs animation and physics), so per-node transforms are compared with
+    // a tolerance and only the object set decides the outcome. Exact float equality
+    // reported drifts of a few ULPs as a changed source graph.
+    constexpr float Source_Drift_Epsilon = 0.001f;
+    constexpr float Source_Drift_Tight_Epsilon = 0.000001f;
+
     struct GraphInventory
     {
         std::vector<RE::NiAVObject*> objects;
@@ -28,6 +35,22 @@ namespace
         size_t geometries;
         size_t dynamic_geometries;
     };
+
+    bool transform_drifted(const RE::NiTransform& lhs, const RE::NiTransform& rhs, float epsilon)
+    {
+        if (std::abs(lhs.scale - rhs.scale) > epsilon)
+            return true;
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < 3; ++column)
+                if (std::abs(lhs.rotate.entry[row][column] - rhs.rotate.entry[row][column]) > epsilon)
+                    return true;
+        return lhs.translate.GetDistance(rhs.translate) > epsilon;
+    }
+
+    bool bound_drifted(const RE::NiBound& lhs, const RE::NiBound& rhs, float epsilon)
+    {
+        return lhs.center.GetDistance(rhs.center) > epsilon || std::abs(lhs.radius - rhs.radius) > epsilon;
+    }
 
     void record_passes(GraphInventory& inventory, RE::BSShaderProperty* property)
     {
@@ -100,6 +123,58 @@ namespace
             }
         }
         return true;
+    }
+
+    struct SourceDiff
+    {
+        bool root_same;
+        bool parent_same;
+        bool same_object_set;
+        bool local_drift;
+        size_t world_tight;
+        size_t world_loose;
+        size_t bound_loose;
+        size_t skin_bones;
+    };
+
+    SourceDiff diff_source_graph(RE::NiAVObject* root, const GraphInventory& before, const std::vector<RE::NiTransform>& worlds, const std::vector<RE::NiTransform>& locals,
+        const std::vector<RE::NiBound>& bounds, RE::NiNode* parent, bool root_still_current)
+    {
+        SourceDiff diff{ root_still_current, root->parent == parent, true, false, 0, 0, 0, 0 };
+        GraphInventory after{};
+        if (!inventory_graph(root, after) || after.objects.size() != before.objects.size() || after.geometries != before.geometries)
+            diff.same_object_set = false;
+        else
+            for (size_t i = 0; i < before.objects.size(); ++i)
+                if (before.objects[i] != after.objects[i])
+                {
+                    diff.same_object_set = false;
+                    break;
+                }
+        for (size_t i = 0; i < before.objects.size(); ++i)
+        {
+            RE::NiAVObject* object = before.objects[i];
+            if (transform_drifted(object->local, locals[i], Source_Drift_Tight_Epsilon))
+                diff.local_drift = true;
+            if (transform_drifted(object->world, worlds[i], Source_Drift_Tight_Epsilon))
+                ++diff.world_tight;
+            if (transform_drifted(object->world, worlds[i], Source_Drift_Epsilon))
+                ++diff.world_loose;
+            if (bound_drifted(object->worldBound, bounds[i], Source_Drift_Epsilon))
+                ++diff.bound_loose;
+        }
+        for (RE::NiSkinInstance* skin : before.skins)
+        {
+            if (!skin->skinData)
+                continue;
+            const uint32_t count = std::min(skin->allocatedSize, skin->skinData->GetBoneCount());
+            for (uint32_t i = 0; i < count; ++i)
+                if (skin->bones && skin->bones[i] && before.bone_transforms.contains(&skin->bones[i]->world))
+                    ++diff.skin_bones;
+        }
+        logger::info("SCOPY SOURCE-DIFF capture-diff root-same={} parent-same={} object-set-same={} local-drift={} world-tight={} world-loose={} bound-loose={} objects={} skin-bones={}",
+            diff.root_same, diff.parent_same, diff.same_object_set, diff.local_drift, diff.world_tight, diff.world_loose, diff.bound_loose, before.objects.size(), diff.skin_bones);
+        return diff;
     }
 
     bool audit_copy(const GraphInventory& source, const GraphInventory& copy)
@@ -183,8 +258,38 @@ SceneGraphCopy& SceneGraphCopy::instance()
     return s_instance;
 }
 
-SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false) {}
-SceneGraphCopy::~SceneGraphCopy() = default;
+SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_frame(0), m_cap_logged(false) {}
+SceneGraphCopy::~SceneGraphCopy()
+{
+    // Never destroy a parked graph, not even at unload.
+    m_parked.clear();
+}
+
+void SceneGraphCopy::retire(std::unique_ptr<CharacterClone> snapshot)
+{
+    if (!snapshot)
+        return;
+    // The allocation is intentionally not owned by anything that can destroy it: the
+    // snapshot itself and the graph it holds stay alive for the rest of the process.
+    m_parked.push_back(snapshot.release());
+    log_parked();
+    if (m_parked.size() <= Parked_Graph_Cap)
+        return;
+    if (!m_cap_logged)
+    {
+        logger::warn("SCOPY PARK cap {} reached; the oldest graph stays parked (no destruction attempted)", Parked_Graph_Cap);
+        m_cap_logged = true;
+    }
+    // Erasing the oldest pointer drops only the bookkeeping entry; its graph stays
+    // allocated on purpose, because no teardown path has proved safe.
+    m_parked.erase(m_parked.begin());
+    log_parked();
+}
+
+void SceneGraphCopy::log_parked() const
+{
+    logger::info("SCOPY PARK snapshots held alive for the process lifetime: {}", m_parked.size());
+}
 
 void SceneGraphCopy::request(Command command)
 {
@@ -199,13 +304,14 @@ void SceneGraphCopy::reset_for_load()
 
 void SceneGraphCopy::process_requests()
 {
+    ++m_frame;
     const uint32_t generation = m_generation.load(std::memory_order_acquire);
     RE::UI* ui = RE::UI::GetSingleton();
     if (generation != m_seen_generation || (ui && ui->IsMenuOpen(RE::MainMenu::MENU_NAME)))
     {
         if (m_snapshot)
             logger::info("SCOPY RELEASE reason=session-boundary capture={}", m_capture_id);
-        m_snapshot.reset();
+        retire(std::move(m_snapshot));
         m_draw_enabled = false;
         m_seen_generation = generation;
         m_command.store(Command::e_none, std::memory_order_release);
@@ -216,9 +322,9 @@ void SceneGraphCopy::process_requests()
         return;
     if (command == Command::e_release)
     {
-        m_snapshot.reset();
+        retire(std::move(m_snapshot));
         m_draw_enabled = false;
-        logger::info("SCOPY RELEASE reason=F10 capture={}", m_capture_id);
+        logger::info("SCOPY RELEASE reason=F4 capture={}", m_capture_id);
         return;
     }
     if (!ui || !ui->GameIsPaused() || !PanelMonitor::instance().is_menu_open() || ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
@@ -257,7 +363,7 @@ CharacterClone* SceneGraphCopy::drawable() const
 void SceneGraphCopy::capture()
 {
     m_draw_enabled = false;
-    m_snapshot.reset();
+    retire(std::move(m_snapshot));
     ++m_capture_id;
     RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
     RE::NiPointer<RE::NiAVObject> source(player ? player->Get3D(false) : nullptr);
@@ -299,14 +405,14 @@ void SceneGraphCopy::capture()
         logger::error("SCOPY FAILED capture={} reason=copy-cycle-or-object-limit", m_capture_id);
         return;
     }
-    bool unchanged = player->Get3D(false) == source.get() && source->parent == source_parent;
-    for (size_t i = 0; i < source_inventory.objects.size(); ++i)
-        unchanged = unchanged && source_inventory.objects[i]->world == source_worlds[i] && source_inventory.objects[i]->local == source_locals[i];
-    GraphInventory after_inventory{};
-    unchanged = inventory_graph(source.get(), after_inventory) && unchanged && after_inventory.nodes == source_inventory.nodes && after_inventory.geometries == source_inventory.geometries;
-    logger::info("SCOPY SOURCE-UNCHANGED capture={} unchanged={}", m_capture_id, unchanged);
+    const SourceDiff diff = diff_source_graph(source.get(), source_inventory, source_worlds, source_locals, source_bounds, source_parent, player->Get3D(false) == source.get());
+    if (!diff.same_object_set)
+    {
+        logger::error("SCOPY BLOCKED capture={} reason=source-object-set-differs (no pose or draw was performed)", m_capture_id);
+        return;
+    }
     const bool accepted = audit_copy(source_inventory, copy_inventory);
-    if (!accepted || !unchanged)
+    if (!accepted)
     {
         logger::error("SCOPY BLOCKED capture={} reason=isolation-audit (no pose or draw was performed)", m_capture_id);
         return;
@@ -342,7 +448,7 @@ void SceneGraphCopy::capture()
     }
     // Snapshot the native clone's captured worlds without re-running facegen, Havok or SMP.
     m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root));
-    logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F9=rotate F10=release", m_capture_id, removed_controllers, removed_collisions);
+    logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F3=rotate F4=release", m_capture_id, removed_controllers, removed_collisions);
     for (RE::NiAVObject* object : copy_inventory.objects)
         if (object->AsGeometry())
             logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());

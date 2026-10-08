@@ -1,20 +1,34 @@
 # M0 handoff — state, verified facts, and the next work package
 
-## 新增：场景图复制 S0 实验（2026-10-08，测试包已就绪，待游戏验证）
+## 新增：场景图复制 S0 实验（2026-10-08，**游戏验证通过**）
 
 用户授权在现有直绘框架上重新验证直接复制已装配的第三人称角色图。
 默认构建仍为 Actor 装配；`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON` 的测试构建关闭旧 Actor 路线，
-通过 F7 复制／审计、F8 绘制、F9 旋转、F10 释放。没有 HKX／CBPC／SMP 独立驱动，不能将 S0 当作这些需求通过。
-先读 [设计与验证问题](scene-graph-copy-validation.md)，使用 [回传模板](scene-graph-copy-results-template.md)。
+通过 F7 复制／审计、F8 绘制、F3 旋转、F4 释放（F9/F10 已被其他 mod 占用）。没有 HKX／CBPC／SMP 独立驱动，不能将 S0 当作这些需求通过。
+先读 [设计与验证问题](scene-graph-copy-validation.md)，逐条结果见
+[2026-10-08 回传记录](scene-graph-copy-results-2026-10-08.md)。
 下文历史验证结论仍仅对应原 Actor／游离图路线。
 
-**交付状态（2026-10-08 会话）**：实验树 `build-scopy/` 配置与 Release 构建通过，
-`snapshot_transform` 单测 1/1 通过，测试包 `dist/CharacterPanel-scopy-S0-1.2.1.zip`
-（DLL + PDB + README + `build-manifest.json`，内含两枚 SHA-256 与源码／CommonLib 基线，
-包内哈希自证一致）已生成。**下一步只剩另一台电脑的游戏验证**：装包内 DLL/PDB 到独立
-MO2 测试 mod，跑测试 A（复制／绘制／生命周期）→ 测试 B（换装／外观／物理），
-回填 Q01–Q12。本机 `E:\SkyrimAE\mods\CharacterPanel` 的现役 DLL 仍是主线 v1.2.1
-（MD5 `28303210`，Actor 路线），未被本轮触碰。
+**S0 状态（2026-10-08 会话收官）**：CBBE 与 UBE 两种身形各一轮实机验证，
+测试 A 全部功能通过、**零崩溃**（含读档与回主菜单），Q01–Q12 见回传记录。
+配置走 `cmake --preset Release-scopy`（`CMakePresets.json`），构建 `--target CharacterPanelSceneCopyPackage`
+产出 `dist/CharacterPanel-scopy-S0-1.2.1.zip`。本机 `E:\SkyrimAE\mods\CharacterPanel`
+的现役 DLL 在验证期间已被换成实验 DLL。
+
+**动手前必读的三条结论**（都是这轮拿崩溃换来的）：
+
+1. **原生克隆图在会话内不可销毁**。`capture()` 内就地析构、延迟 4 帧的退役队列、
+   读档／主菜单边界释放——三条路全崩，签名一致：`~CharacterClone` → `BSFadeNode` 析构 →
+   tbbmalloc `rsi=0`（crashes 23-01-11 / 23-07-35 / 23-12-02）。现行做法 = 停放不销毁
+   （`SceneGraphCopy::m_parked`，cap 12 只丢记账条目），实验构建下 `~CharacterClone` 也不掉图引用。
+   与 Actor 路线"留活壳不删图"同源，别再试图省这份内存。
+2. **玩家 3D 图不等于人物**。重度 mod 环境下它挂着法术特效、骨骼驱动的碰撞体
+   （3BCA_*/VirtualGround/CollisionStopper）、脚本标记与法术光源，`passes=106` 而身体几何
+   从未被世界渲染器画过。`prune_effect_objects()` 剪枝后 `geoms 123→51`、`passes 106→47`，
+   人物才完整显示。**判据不是 `rd-null`**：引擎在 `SetupAndDrawPass` 内部惰性建缓冲，
+   能正常显示的 CBBE 图同样是 23/23 全 `rd-null`。
+3. **源图比较不能用精确浮点相等**。`NiTransform` 含 3×3 旋转矩阵，暂停帧内几个 ULP 的漂移
+   会让 CBBE 永远 `BLOCKED`。`SOURCE-DIFF` 只把对象集合变化当失败，变换漂移仅作观测。
 
 - 日期:2026-10-01(run 19 收官:工作包 1+2 完成并经游戏验证)
 - 读者:下一个会话的 Agent / 开发者。本文是"从这里继续"的入口;运行级细节在
@@ -956,8 +970,12 @@ cmake -S . -B build `
   -DCHARACTER_PANEL_BUILD_PROBE=ON `
   -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
   -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
-cmake --build build --config Release --target CharacterPanel --parallel 4
+cmake --build build --config Release --target CharacterPanel
 ```
+
+- **并行度**:不要写 `--parallel 4` 之类的固定值——不传该选项时 MSBuild 会用全部
+  逻辑核(本机 32),而 `CMakePresets.json` 的 `/MP` 已经让 MSVC 自己也多进程编译;
+  写死小数字会把构建卡在 4 核。
 
 - 产物 `build/Release/CharacterPanel.dll`,**手动**装入 MO2
   (本机 `E:\SkyrimAE\mods\...`,MO2 profile `AE`;直接放真实 Data 会被清)。

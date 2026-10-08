@@ -2,7 +2,7 @@
 
 PLUGIN_NAMESPACE_BEGIN
 
-// Experimental F7-F10 commands are queued for the render bracket.
+// Experimental copy commands (F7/F8/F3/F4) are queued for the render bracket.
 class InputManager
 {
 public:

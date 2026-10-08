@@ -8,7 +8,7 @@
 - Skyrim／SKSE／Community Shaders／ReShade 版本：
 - 身体、骨架、脸部、体型／覆盖纹理模组：
 - CBPC／FSMP 版本和物理头发／衣物：
-- 是否有其他占用 F7-F10 的 mod：
+- 是否有其他占用 F7／F8／F3／F4 的 mod：
 - 首个测试存档、地点及第一／第三人称：
 
 ## 结果

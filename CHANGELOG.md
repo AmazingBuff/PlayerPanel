@@ -4,14 +4,40 @@
 
 ### Added
 
+- Land the S0 scene-graph-copy route (CHARACTER_PANEL_SCENE_COPY_EXPERIMENT),
+  game-validated on 2026-10-08: F7 copies and audits the player's third-person
+  graph through native NiObject::Clone, F8 draws it into the studio, F3 rotates
+  the copy without touching the world actor, F4 releases it. Validation record
+  and per-question results: docs/scene-graph-copy-results-2026-10-08.md.
+- Park every replaced or released snapshot for the process lifetime instead of
+  destroying it. Freeing a native clone's graph crashed at every point tried
+  (crashes 2026-10-08 23-01-11 in capture(), 23-07-35 at a clean frame boundary
+  from the retired queue, 23-12-02 at the main-menu boundary), each time inside
+  BSFadeNode's destructor through the tbb allocator; the copy path therefore
+  holds its graphs open the way the retired Actor route held its shell alive.
+- Prune non-character objects from a captured graph before framing or drawing:
+  particle geometries, skeleton-driven collision helpers (3BCA_* parts,
+  VirtualGround, CollisionStopper), script-spawned markers, blood and flash
+  visuals, and the captured spill lights. A heavily modded player graph carried
+  123 geometries and 106 passes, of which only the weapon ever reached the
+  screen; after pruning it is 51 and 47 and the figure renders complete.
+- Exclude skeleton-driven collision helpers from the studio framing bound: they
+  share the body's skeleton and sit far enough from it to drag the bound and the
+  centering off the figure, which is what pushed the UBE body out of frame.
 - Add the scene-graph-copy test package target (CharacterPanelSceneCopyPackage,
   opt-in with CHARACTER_PANEL_SCENE_COPY_EXPERIMENT): it stages the DLL with its
   PDB, the S0 install/test README, and a JSON build manifest carrying both
-  binaries' SHA-256, the repository HEAD, and the actual extern/CommonLibSSE
-  checkout, so a result returned from the validating machine can be tied to the
-  artifact that produced it. The experiment configuration is configured, built
-  and unit-tested locally (checksum self-check on the packaged DLL and PDB);
-  game validation of the S0 copy route itself is still pending.
+  binaries' SHA-256, the repository HEAD, the actual extern/CommonLibSSE checkout
+  and each worktree's dirty state, so a result returned from the validating
+  machine can be tied to the artifact that produced it. The preset Release-scopy
+  configures the experiment tree; the manifest takes its configuration from
+  $<CONFIG> rather than assuming Release.
+- Add a source-graph drift report (SCOPY SOURCE-DIFF) that separates a changed
+  object set from per-node transform drift. The previous exact float comparison
+  rejected captures whose nodes had moved by a few ULPs, which blocked the CBBE
+  body across the pause; only a changed object set blocks a capture now.
+- Log the first few F3 presses and the build's hotkey map in the SCOPY BUILD
+  banner, so a stale deployment is distinguishable from a dropped key.
 
 ### Changed
 
