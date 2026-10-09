@@ -99,9 +99,9 @@ C 只在 A/B 无法满足需求时再考虑。
 
 目标产物：`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON` 的测试包，新增 `SCOPY ANIM …` 系列日志。
 
-1. **骨架对齐（先做，失败即停）**：从 `BShkbAnimationGraph::characterInstance → setup->animationSkeleton`
-   取骨名表，与副本节点名逐条比对，打印 `SCOPY ANIM skeleton bones=N matched=M/N missing='…'`。
-   映射不成立 → 不进入下一步（并打印差集）。
+1. **骨架对齐（先做，失败即停；已实现，见下"实施状态"）**：从 `BShkbAnimationGraph::characterInstance → setup->animationSkeleton`
+   取骨名表，与副本节点名**精确**逐条比对，打印 `SCOPY ANIM skeleton …` 与 `SCOPY ANIM gate verdict=…`。
+   映射不成立 → 不进入下一步（差集与计数在同一行里）。
 2. **取动画**，按优先级并各自打印证据：
    ① `hkbClipGenerator`：在行为图里按 `animationName` 找（优先 Idle）；打印 `source=clip:'…' duration=… tracks=… mode=…`；
    ② `hkaAnimationControl`：直接用其 `localTime`＋`SampleTracks`；
@@ -170,9 +170,11 @@ SCOPY ANIM gate verdict=… graph=i matched=N/N ambiguous=N
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物：`dist/CharacterPanel-scopy-HKX1-1.2.1.zip`（身份与 DLL SHA-256 见同目录 `build-manifest.json`，
-  操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)）；此前 IDLE1–IDLE3、S2P1–S2P4 的包、
-  日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
+- 当前产物：`dist/CharacterPanel-scopy-HKX1-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX1-cd646aefae-cl94faaed0c6-20261009T155444Z`（`source_baseline_dirty=false`，
+  基线提交 `cd646aefae`），DLL SHA-256 `356c71f4…`；操作说明见
+  [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与
+  分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
 - 提交状态：四轮探针 + 程序化待机 + 方向修正文档落在 `d9ad6b0`；HKX1 的实现、单测与文档随本轮提交，
   之后工作区应是干净的（`extern/CommonLibSSE` 的历史 dirty 状态照旧排除在提交之外）。
 - 热键现状（HKX1 产品构建）：`F7` 捕获（审计通过后打印上面那组 `SCOPY ANIM`）、`F8` 绘制、`F3` 旋转、
