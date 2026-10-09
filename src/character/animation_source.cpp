@@ -95,6 +95,10 @@ namespace
     // How many of the file manager's loaded animations are printed, and how wide a raw dump a rejected
     // one gets.
     constexpr size_t Max_Loaded_Printed = 16;
+    // The engine's own index-to-animation resolver is followed by a short walk over the loaded
+    // resource: this many objects at most, and this many validated animations recorded from one.
+    constexpr size_t Max_Hashed_Visited = 96;
+    constexpr size_t Max_Hashed_Anims = 8;
     constexpr size_t Progress_Every = 32;
     constexpr double Max_Clip_Step_Seconds = 0.1;
 
@@ -703,6 +707,33 @@ namespace
         if (tracks <= 0 || tracks > Max_Tracks_Read)
             return { false, "tracks", type, duration, tracks };
         return { true, "valid", type, duration, tracks };
+    }
+
+    // A short walk from a rooted pointer over the loaded resource's own references: every object that
+    // passes the raw-animation validation is recorded. Visits and finds are bounded, nothing virtual is
+    // called, and a wrong step costs an unvalidated candidate rather than a wrong animation.
+    void collect_raw_animations(void const* root, std::vector<const RE::hkaAnimation*>& out)
+    {
+        std::unordered_set<void const*> seen{ root };
+        std::vector<const void*> pending{ root };
+        size_t visited = 0;
+        while (!pending.empty() && visited < Max_Hashed_Visited && out.size() < Max_Hashed_Anims)
+        {
+            const void* const object = pending.back();
+            pending.pop_back();
+            ++visited;
+            if (const RawAnimationReading reading = read_raw_animation(object); reading.valid)
+                out.push_back(static_cast<const RE::hkaAnimation*>(object));
+            for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
+            {
+                const auto* const word_address = static_cast<const std::uint8_t*>(object) + offset;
+                if (!readable(word_address, sizeof(void*)))
+                    break;
+                const void* const word = *reinterpret_cast<void* const*>(word_address);
+                if (word && readable(word, sizeof(void*)) && looks_like_object(word) && seen.insert(word).second)
+                    pending.push_back(word);
+            }
+        }
     }
 
     // A clip generator is fully typed, so a pointer to one is believed only when everything that makes
@@ -1583,6 +1614,67 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
         }
     }
 
+    // The engine's own index-to-animation resolver, named by OAR's patch (GetHashedAnimFromAnimIndex
+    // walks the project DB off the graph): whatever it returns for the standing idle's binding index is
+    // the entry the engine itself uses, so the loaded contents behind it are that animation - no CRC
+    // matching required. The return is logged raw and then walked: a record shaped like the hashed
+    // entries carries the loaded data one hop further, and every pointer in reach is validated before
+    // it is believed.
+    const RE::hkaAnimation* hashed_animation = nullptr;
+    std::string hashed_name;
+    std::int32_t hashed_index = -1;
+    for (const ClipSeen& record : search.met)
+    {
+        if (is_base_idle(base_name_of(record.name)))
+        {
+            hashed_index = static_cast<std::int32_t>(record.binding_index);
+            break;
+        }
+    }
+    if (hashed_index < 0 && !search.met.empty())
+        hashed_index = static_cast<std::int32_t>(search.met.front().binding_index);
+
+    if (hashed_index < 0)
+    {
+        logger::info("SCOPY ANIM hashed UNAVAILABLE reason=no-binding-index");
+    }
+    else
+    {
+        using GetHashedAnim_t = void* (*)(RE::BShkbAnimationGraph*, std::int32_t);
+        static REL::Relocation<GetHashedAnim_t> get_hashed_anim{ REL::VariantID(62655, 63600, 0xB2BAA0) };
+        void* const hashed = get_hashed_anim(selected.graph, hashed_index);
+        logger::info("SCOPY ANIM hashed index={} at=0x{:x}", hashed_index, reinterpret_cast<std::uintptr_t>(hashed));
+
+        const void* walked_root = hashed;
+        if (hashed && readable(hashed, 0x30) &&
+            std::string_view(reinterpret_cast<const char*>(hashed) + 4, 3) == "hkx")
+        {
+            const void* const db_data = *reinterpret_cast<void* const*>(static_cast<const std::uint8_t*>(hashed) + 0x28);
+            logger::info("SCOPY ANIM hashed record db-data=0x{:x}", reinterpret_cast<std::uintptr_t>(db_data));
+            if (db_data && looks_like_object(db_data))
+                walked_root = db_data;
+        }
+
+        std::vector<const RE::hkaAnimation*> found;
+        collect_raw_animations(walked_root, found);
+        if (!found.empty())
+        {
+            hashed_animation = found.front();
+            for (size_t i = 0; i < found.size(); ++i)
+            {
+                const RawAnimationReading reading = read_raw_animation(found[i]);
+                logger::info("SCOPY ANIM hashed anim i={} at=0x{:x} type={} duration={:.2f}s tracks={}",
+                    i, reinterpret_cast<std::uintptr_t>(found[i]), animation_type_name(reading.type),
+                    reading.duration, reading.tracks);
+            }
+            hashed_name = fmt::format("hashed:{}", hashed_index);
+        }
+        else
+        {
+            logger::info("SCOPY ANIM hashed anims found=0");
+        }
+    }
+
     const NameIndex copy_by_name = index_by_name(copy_nodes);
 
     // The engine's own pose is indexed like its bone table, not like the animation skeleton (measured
@@ -1640,34 +1732,45 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
     }
     else
     {
-        // The file manager's own storage: an animation the engine loaded for this graph. The binding's
-        // track table is not available here, so the animation is assumed to be authored on this very
-        // skeleton - track i drives bone i - and the ground-truth sweep below is what verifies it.
-        const LoadedRecord* best = nullptr;
-        for (const LoadedRecord& record : loaded_records)
+        // Two engine storages, one assumption: the animation shares the rig's skeleton, so track i
+        // drives bone i - the ground-truth sweep below is what verifies it. The engine's own resolution
+        // of the standing idle's binding index comes first; a validated entry of the file manager's
+        // loaded table is the fallback.
+        const RE::hkaAnimation* candidate = hashed_animation;
+        std::string candidate_name = hashed_name;
+        if (!candidate)
         {
-            if (!record.reading.valid || !record.animation)
-                continue;
-            if (is_base_idle(base_name_of(record.name)))
-            {
-                best = &record;
-                break;
-            }
-            if (!best && mentions_idle(base_name_of(record.name)))
-                best = &record;
-        }
-        if (!best)
-        {
+            const LoadedRecord* best = nullptr;
             for (const LoadedRecord& record : loaded_records)
             {
-                if (record.reading.valid && record.animation)
+                if (!record.reading.valid || !record.animation)
+                    continue;
+                if (is_base_idle(base_name_of(record.name)))
                 {
                     best = &record;
                     break;
                 }
+                if (!best && mentions_idle(base_name_of(record.name)))
+                    best = &record;
+            }
+            if (!best)
+            {
+                for (const LoadedRecord& record : loaded_records)
+                {
+                    if (record.reading.valid && record.animation)
+                    {
+                        best = &record;
+                        break;
+                    }
+                }
+            }
+            if (best)
+            {
+                candidate = best->animation;
+                candidate_name = best->name == "-" ? fmt::format("crc:{:08x}", best->crc_name) : best->name;
             }
         }
-        if (!best)
+        if (!candidate)
         {
             logger::info("SCOPY ANIM play UNAVAILABLE reason=no-clip-generator");
             return false;
@@ -1675,10 +1778,10 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
 
         // Sampling reads through the pointer but writes nothing; the const is dropped only here, at
         // the single hand-off into the playback structure.
-        playback.animation = const_cast<RE::hkaAnimation*>(best->animation);
-        playback.name = best->name == "-" ? fmt::format("crc:{:08x}", best->crc_name) : best->name;
-        playback.duration = best->reading.duration;
-        total_tracks = std::min(best->reading.tracks, bone_count);
+        playback.animation = const_cast<RE::hkaAnimation*>(candidate);
+        playback.name = candidate_name;
+        playback.duration = candidate->duration;
+        total_tracks = std::min(read_raw_animation(candidate).tracks, bone_count);
         for (std::int32_t track = 0; track < total_tracks; ++track)
         {
             const char* const bone_name = selected.skeleton->bones[track].name.c_str();
