@@ -1,0 +1,306 @@
+[23:57:35.999] [38608] [I] CharacterPanel v1-2-1-0
+[23:57:35.999] [38608] [I] CharacterPanel loaded
+[23:58:24.926] [34608] [I] All shaders compiled
+[23:58:24.926] [34608] [I] Installed pre-UI renderer hook
+[23:58:24.926] [34608] [I] Menu sink installed
+[23:58:24.926] [34608] [I] SCOPY BUILD CharacterPanel-scopy-HKX1-cd646aefae-cl94faaed0c6-20261009T155444Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle
+[23:58:24.934] [29440] [I] Studio host changed: 0x0 -> 0x1f588d16980 (paused=true)
+[23:58:24.934] [29440] [I] Studio light node has been created
+[23:58:24.934] [29440] [I] CP-LIGHT slot 0: registered, shell 0x1f71401f880 queued (ledger stays the authority)
+[23:58:24.934] [29440] [I] CP-LIGHT slot 1: registered, shell 0x1f71401f740 queued (ledger stays the authority)
+[23:58:24.934] [29440] [I] CP-LIGHT slot 2: registered, shell 0x1f71401f600 queued (ledger stays the authority)
+[23:58:24.934] [29440] [I] Studio lights registered on the ledger (scene=0x1ebf3f16e80 -- ledger fetch will populate the slots)
+[23:58:24.934] [29440] [I] CP-LIGHT slot 0: ledger shell fetched 0x1f71401f880 (after 0 miss frames)
+[23:58:24.934] [29440] [I] CP-LIGHT slot 1: ledger shell fetched 0x1f71401f740 (after 0 miss frames)
+[23:58:24.934] [29440] [I] CP-LIGHT slot 2: ledger shell fetched 0x1f71401f600 (after 0 miss frames)
+[23:58:44.090] [29440] [I] CP-LIGHT slot 0: ledger shell dropped
+[23:58:44.090] [29440] [I] CP-LIGHT slot 1: ledger shell dropped
+[23:58:44.090] [29440] [I] CP-LIGHT slot 2: ledger shell dropped
+[23:58:44.090] [29440] [W] Studio lights not fully served by the ledger yet
+[23:58:47.972] [29440] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1f71401fc40 filed to lightQueueAdd)
+[23:58:47.972] [29440] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1f71401f240 filed to lightQueueAdd)
+[23:58:47.972] [29440] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1f71401f100 filed to lightQueueAdd)
+[23:58:48.033] [29440] [I] CP-LIGHT slot 0: ledger shell fetched 0x1f71401fc40 (after 1 miss frames)
+[23:58:48.033] [29440] [I] CP-LIGHT slot 1: ledger shell fetched 0x1f71401f240 (after 1 miss frames)
+[23:58:48.033] [29440] [I] CP-LIGHT slot 2: ledger shell fetched 0x1f71401f100 (after 1 miss frames)
+[23:59:12.719] [38608] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x1f7ba50a980 parent=0x1f7969d1ec0 nodes=470 geoms=23 api=NiObject::Clone id=68835/70187
+[23:59:12.719] [38608] [I] SCOPY CLONE-RETURN capture=1 copy=0x1f930e4b100
+[23:59:12.719] [38608] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=470 skin-bones=131
+[23:59:12.719] [38608] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[23:59:12.719] [38608] [I] SCOPY CENSUS source-nodes=470 copy-nodes=470 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[23:59:12.719] [38608] [I] SCOPY FRAME skinned-bound valid=true radius=74.4 center=(6365.9,1447.9,257.4) graph-bound radius=74.7 scale=0.35 pruned-nodes=0
+[23:59:12.719] [38608] [I] SCOPY READY capture=1 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[23:59:12.719] [38608] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=470
+[23:59:12.719] [38608] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[23:59:12.719] [38608] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=90 ambiguous=0 duplicate-nodes=0 parent-ancestors=90 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], SkirtLBone03, Shield, Weapon, MagicEffectsNode, NPC Head MagicNode [Hmag]' wrong-parent='-'
+[23:59:12.720] [38608] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[23:59:12.720] [38608] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=78 ambiguous=0 duplicate-nodes=0 parent-ancestors=78 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[23:59:12.720] [38608] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=90/116 ambiguous=0
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='FemaleBrowsHuman01' type='BSDynamicTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='00CVEO_00VAN_AA_ALDDEyes_Blue_FEMALE' type='BSDynamicTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='0_HAIRLINE_Female_Human_Straight' type='BSDynamicTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='0Anto92HL' type='BSDynamicTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='0Anto92' type='BSDynamicTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='FemaleMouthHumanoidDefault' type='BSDynamicTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='FemaleHeadNord' type='BSDynamicTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='shoes' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name=' (00000D6C)[1]/ (FE04CB10) [80%]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='clothes_underwear' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='clothes' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='CBBE' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Feet [SOvl0]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl2]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl1]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl0]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Hands [SOvl0]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl1]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl0]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Body [SOvl0]' type='BSTriShape'
+[23:59:12.720] [38608] [I] SCOPY GEOMETRY capture=1 name='Body [Ovl0]' type='BSTriShape'
+[23:59:15.714] [38608] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[23:59:15.714] [38608] [I] SCOPY IDLE bound 8/8 channels
+[23:59:15.717] [38608] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[23:59:15.717] [38608] [I] SCOPY DRAW frame=1 passes=23 lights=true animation-driver=none physics-driver=none
+[23:59:17.615] [38608] [I] SCOPY IDLE t=2.0s 'NPC Pelvis [Pelv]' moved=(0.78,0.00,0.00) rot=3.35deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=-2.41deg | 'NPC Spine2 [Spn2]' moved=(0.09,-0.05,-0.01) rot=-0.96deg | 'NPC Head [Head]' moved=(0.37,-0.37,0.03) rot=2.79deg
+[23:59:19.015] [38608] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[23:59:19.015] [38608] [I] SCOPY DRAW frame=121 passes=23 lights=true animation-driver=none physics-driver=none
+[23:59:19.615] [38608] [I] SCOPY IDLE t=4.0s 'NPC Pelvis [Pelv]' moved=(-0.78,0.00,0.00) rot=-2.87deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=2.76deg | 'NPC Spine2 [Spn2]' moved=(-0.09,0.07,0.01) rot=0.88deg | 'NPC Head [Head]' moved=(-0.37,0.44,-0.05) rot=-1.35deg
+[23:59:19.989] [38608] [I] SCOPY DRAW-TOGGLE enabled=false capture=1
+[00:00:45.105] [29440] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:00:45.105] [29440] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:00:45.105] [29440] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:00:45.872] [29440] [I] SCOPY RELEASE reason=session-boundary capture=1
+[00:00:45.872] [29440] [I] SCOPY PARK snapshots held alive for the process lifetime: 1
+[00:00:47.178] [38608] [W] Studio lights not fully served by the ledger yet
+[00:00:51.862] [38608] [W] Studio lights not fully served by the ledger yet
+[00:00:57.295] [29440] [W] Studio lights not fully served by the ledger yet
+[00:01:02.123] [29440] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1f71401e480 filed to lightQueueAdd)
+[00:01:02.123] [29440] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1f71401e200 filed to lightQueueAdd)
+[00:01:02.123] [29440] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1f71401e0c0 filed to lightQueueAdd)
+[00:01:02.177] [29440] [I] CP-LIGHT slot 0: ledger shell fetched 0x1f71401e480 (after 1 miss frames)
+[00:01:02.177] [29440] [I] CP-LIGHT slot 1: ledger shell fetched 0x1f71401e200 (after 1 miss frames)
+[00:01:02.177] [29440] [I] CP-LIGHT slot 2: ledger shell fetched 0x1f71401e0c0 (after 1 miss frames)
+[00:01:27.661] [38608] [I] SCOPY BEGIN capture=2 actor=00000014 source=0x1f7b15c7280 parent=0x1f965df6b00 nodes=1584 geoms=63 api=NiObject::Clone id=68835/70187
+[00:01:27.662] [38608] [I] SCOPY CLONE-RETURN capture=2 copy=0x1fadbae7e80
+[00:01:27.663] [38608] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=1584 skin-bones=891
+[00:01:27.663] [38608] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[00:01:27.663] [38608] [I] SCOPY CENSUS source-nodes=1584 copy-nodes=1584 source-geoms=63 copy-geoms=63 source-skins=62 copy-skins=62 source-dynamic=10 copy-dynamic=10
+[00:01:27.663] [38608] [I] SCOPY FRAME skinned-bound valid=true radius=80.4 center=(1069.5,-886.6,-1402.1) graph-bound radius=128.4 scale=0.35 pruned-nodes=14
+[00:01:27.663] [38608] [I] SCOPY READY capture=2 controllers-removed=11 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[00:01:27.663] [38608] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=1570
+[00:01:27.663] [38608] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[00:01:27.664] [38608] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=109 ambiguous=0 duplicate-nodes=0 parent-ancestors=109 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], Shield, Weapon, Quiver, Belly' wrong-parent='-'
+[00:01:27.664] [38608] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[00:01:27.664] [38608] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=80 ambiguous=0 duplicate-nodes=0 parent-ancestors=80 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[00:01:27.664] [38608] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=109/116 ambiguous=0
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7EFD)[1]/ (FE2E7EFC) [100%]' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7EFF)[1]/ (FE2E7EFE) [100%]' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='ChestCollision' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Necklace' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_EyeLashesZoe' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='T118' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='T117' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='T116' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='T112' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='T111' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='T110' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E118' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E117' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E116' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E115' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E114' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E113' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E112' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E111' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E110' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E19' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E18' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E17' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E16' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E15' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E14' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E13' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='E12' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='N15' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='N16' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='AE11' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_LDDLevisChoice13be_Female' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHuman_outer' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHuman_shadows' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleLensLeft_Dummy' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleLensRight_Dummy' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHumanLightGrey' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleMouth' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleHead' type='BSDynamicTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7807)[1]/ (FE2E7801) [100%]' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Feet' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Leg' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Butt' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Anus' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Belly' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Hand' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Arm' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Breast' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='3BCA_Head' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='VirtualGround' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Feet' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Heels' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Hands' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Bracelet' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='CollisionStopper' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='LowerBodyCollision' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='VirtualGround' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='BaseShape' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Thighstrap' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Armband' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Dress_Inner' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Dress' type='BSTriShape'
+[00:01:27.664] [38608] [I] SCOPY GEOMETRY capture=2 name='Face [Ovl0]' type='BSDynamicTriShape'
+[00:01:42.613] [38608] [I] SCOPY DRAW-TOGGLE enabled=true capture=2
+[00:01:42.613] [38608] [I] SCOPY IDLE bound 8/8 channels
+[00:01:42.615] [38608] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[00:01:42.615] [38608] [I] SCOPY DRAW frame=1 passes=45 lights=true animation-driver=none physics-driver=none
+[00:01:44.795] [38608] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[00:01:44.795] [38608] [I] SCOPY DRAW frame=121 passes=45 lights=true animation-driver=none physics-driver=none
+[00:01:46.976] [38608] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[00:01:46.976] [38608] [I] SCOPY DRAW frame=241 passes=45 lights=true animation-driver=none physics-driver=none
+[00:01:48.523] [38608] [I] SCOPY IDLE t=6.0s 'NPC Pelvis [Pelv]' moved=(0.01,0.00,0.00) rot=-1.40deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=-0.85deg | 'NPC Spine2 [Spn2]' moved=(0.00,-0.05,-0.01) rot=-0.27deg | 'NPC Head [Head]' moved=(0.00,-0.24,0.00) rot=-1.50deg
+[00:01:48.924] [38608] [I] SCOPY DRAW-TOGGLE enabled=false capture=2
+[00:02:17.687] [38608] [I] SCOPY PARK snapshots held alive for the process lifetime: 2
+[00:02:17.687] [38608] [I] SCOPY BEGIN capture=3 actor=00000014 source=0x1f7b15c7280 parent=0x1f965df6b00 nodes=1842 geoms=117 api=NiObject::Clone id=68835/70187
+[00:02:17.690] [38608] [I] SCOPY CLONE-RETURN capture=3 copy=0x1fadba76380
+[00:02:17.690] [38608] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1842 skin-bones=891
+[00:02:17.690] [38608] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[00:02:17.690] [38608] [I] SCOPY CENSUS source-nodes=1842 copy-nodes=1842 source-geoms=117 copy-geoms=117 source-skins=62 copy-skins=62 source-dynamic=10 copy-dynamic=10
+[00:02:17.691] [38608] [I] SCOPY FRAME skinned-bound valid=true radius=78.7 center=(1155.9,-950.7,-1403.4) graph-bound radius=274.6 scale=0.35 pruned-nodes=67
+[00:02:17.691] [38608] [I] SCOPY READY capture=3 controllers-removed=116 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[00:02:17.691] [38608] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=1721
+[00:02:17.691] [38608] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[00:02:17.691] [38608] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=109 ambiguous=0 duplicate-nodes=147 parent-ancestors=109 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], Shield, Weapon, Quiver, Belly' wrong-parent='-'
+[00:02:17.691] [38608] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[00:02:17.691] [38608] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=80 ambiguous=0 duplicate-nodes=147 parent-ancestors=80 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[00:02:17.691] [38608] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=109/116 ambiguous=0
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name=' (FE2E7EFD)[1]/ (FE2E7EFC) [100%]' type='BSTriShape'
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name=' (FE2E7EFF)[1]/ (FE2E7EFE) [100%]' type='BSTriShape'
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name='ChestCollision' type='BSTriShape'
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name='Necklace' type='BSTriShape'
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_EyeLashesZoe' type='BSDynamicTriShape'
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name='T118' type='BSTriShape'
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name='T117' type='BSTriShape'
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name='T116' type='BSTriShape'
+[00:02:17.691] [38608] [I] SCOPY GEOMETRY capture=3 name='T112' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='T111' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='T110' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E118' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E117' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E116' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E115' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E114' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E113' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E112' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E111' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E110' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E19' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E18' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E17' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E16' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E15' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E14' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E13' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='E12' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='N15' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='N16' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='AE11' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_LDDLevisChoice13be_Female' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_FemaleEyesHuman_outer' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_FemaleEyesHuman_shadows' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_FemaleLensLeft_Dummy' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_FemaleLensRight_Dummy' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_FemaleEyesHumanLightGrey' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_FemaleMouth' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='00UBE_FemaleHead' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name=' (FE2E7807)[1]/ (FE2E7801) [100%]' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Feet' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Leg' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Butt' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Anus' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Belly' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Hand' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Arm' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Breast' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='3BCA_Head' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='VirtualGround' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Feet' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Heels' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Hands' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Bracelet' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='CollisionStopper' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='LowerBodyCollision' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='VirtualGround' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='BaseShape' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Thighstrap' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Armband' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Dress_Inner' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Dress' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Face [Ovl0]' type='BSDynamicTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='pSmallFlare' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSpray04' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Wisps:0' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Circle02' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='Flash' type='BSTriShape'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:17.692] [38608] [I] SCOPY GEOMETRY capture=3 name='SuperSprayBreath' type='NiParticleSystem'
+[00:02:20.200] [38608] [I] SCOPY DRAW-TOGGLE enabled=true capture=3
+[00:02:20.200] [38608] [I] SCOPY IDLE bound 8/8 channels
+[00:02:20.202] [38608] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[00:02:20.202] [38608] [I] SCOPY DRAW frame=1 passes=45 lights=true animation-driver=none physics-driver=none
+[00:02:21.195] [38608] [I] SCOPY DRAW-TOGGLE enabled=false capture=3

@@ -6,10 +6,12 @@
 
 依据：[PRD 0.6 §6.2–6.3](player-panel-prd.md)。目标是确认骨骼修改是否到达真实 draw，并把静态显示、生命周期、动作与物理分开判定。
 
-## 本轮（HKX1）待测项：骨架对齐（只读，一次 F7）
+## HKX1 轮（2026-10-10 已测）：骨架对齐
 
-前置：把 `dist/CharacterPanel-scopy-HKX1-1.2.1.zip` 里的 DLL **和同一个包的 PDB** 装进测试 mod（不要与旧 DLL 同装；
-两个 DLL 的 SKSE 导出同名）。本项与绘制无关，F8 可选。
+**结果**：`verdict=INCOMPLETE`，但**核心 109/116 精确命中、零歧义**，缺的 7 个全是 Havok 帮手骨（`x_` 前缀）
+与装备附着骨（`Shield`/`Weapon`/`Quiver`/`Belly`）；骨架父子关系与 NIF 层级一致。**负结果**：`boneNodes` 与
+动画骨架**不同序**（同名率 37/116），指针对应作废。逐条证据与日志见
+[HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)。下面的准备与判据保留为记录（已执行）。
 
 1. 测试存档 → 打开暂停的背包 → **F7** 捕获并审计。
 2. 回传日志里 `SCOPY ANIM` 那一组**原文**（`source` / `graph[i]` / `skeleton` / `gate` 四类行），外加 `SCOPY BUILD` 首行；
@@ -22,7 +24,9 @@
    一个骨骼字节都不写。
 5. CBBE 与 UBE 各一次：两套骨架的骨名与重名情况不同，`matched` / `ambiguous` / `duplicate-nodes` 会体现。
 
-**本项没有 PASS／PASS-AMBIGUOUS 之前不要进入采样与写入**（[S2 动画 handoff](s2-animation-handoff.md) §5 的第 2–4 步）。
+**判据修正（2026-10-10 实测后）**：`verdict` 的"全部骨都要有节点"过严——改为**核心骨缺一根才算失败**，
+`x_` 帮手骨与装备附着骨的缺失只计入跳过清单。核心骨齐全即可进入 HKX2（用引擎自己的 `poseLocal` 做带对照的
+数值 A/B，方案见 [S2 动画 handoff](s2-animation-handoff.md) §5 末）；采样与写入仍要等那一轮的数字。
 
 ## 当前状态与执行前置
 

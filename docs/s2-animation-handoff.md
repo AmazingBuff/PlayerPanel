@@ -11,9 +11,12 @@
 用户已明确要求改为**用真实动画数据（HKX）驱动并可对比验证**。本工作包 = 用引擎自己的采样器播放
 真实动画并驱动副本，附**数值 A/B 对比协议**；程序化待机降级为"没有可用动画时的兜底"，**不再调参**。
 
-**进展（2026-10-09）**：HKX1 的**第 1 步（骨架对齐）已实现并打包**（`dist/CharacterPanel-scopy-HKX1-1.2.1.zip`）：
-F7 捕获并审计通过后，只读地打印源角色动画图与副本节点的对齐结果（`SCOPY ANIM …`，格式与判读见 §5 实施状态）。
-第 2–4 步（取动画／采样写入／数值 A/B）等这一轮的日志判定后开工；本轮没有写任何骨骼。
+**进展（2026-10-10）**：HKX1 的**第 1 步（骨架对齐）已实测通过**——引擎的动画数据能叫出副本的节点：第三人称图
+`DefaultFemale`（`root=true`）的骨架 **109/116 精确命中、零歧义**，缺的 7 个全是 Havok 帮手骨（`x_` 前缀）与装备
+附着骨（`Shield`/`Weapon`/`Quiver`/`Belly`）；骨架父子关系与 NIF 层级一致，写 local 由层级合成成立。**负结果**：
+`boneNodes` 的次序 ≠ 动画骨架的次序（同名率 37/116），"用 `boneNodes[i]` 指针对应"因此作废，按名匹配是必需的。
+逐条证据（含日志与逐条判读）见 [HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)。下一步 **HKX2**：
+把引擎自己的 `poseLocal` 写进副本做**带对照**的数值 A/B（全类型、不碰任何未定型布局），方案见 §5 末。
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -57,6 +60,15 @@ idle 完全没法测试。
 | 取图路径 | `BShkbAnimationGraph::characterInstance`（0xC0，`hkbCharacter`）；`hkbCharacter::{setup(0x50), animationBindingSet(0x68), behaviorGraph(0x58)}` — [hkbCharacter.h:45-48](extern/CommonLibSSE/include/RE/H/hkbCharacter.h#L45) |
 | 手动推进动画图（可选） | `IAnimationGraphManagerHolder::UpdateAnimationGraphManager(const BSAnimationUpdateData&)` — [IAnimationGraphManagerHolder.h:55](extern/CommonLibSSE/include/RE/I/IAnimationGraphManagerHolder.h#L55) |
 
+### 已实测（2026-10-10，逐条证据见 [HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)）
+
+- 取图路径在 AE 1.6.1170 上成立：`TESObjectREFR::GetAnimationGraphManager` → 两个图（`DefaultFemale` root=true /
+  `FirstPerson` root=false，`holder`/`root` 判据可用），女性工程已加载 **15203** 条 binding，`poseLocal` 116 项。
+- 骨架 ↔ 副本节点：**109/116** 精确命中、`ambiguous=0`；缺的是 `x_` 帮手骨与装备附着骨（`Shield`/`Weapon`/`Quiver`/`Belly`），
+  CBBE 极简体型 90/116。
+- **`boneNodes[i]` 与 `bones[i]` 不同序**（同名率 37/116、78/99）→ 指针对应作废；**`poseLocal[i]` 的对应次序也必须实测**，不能假设。
+- 骨架父子关系与 NIF 层级一致（`parent-ancestors=matched`、`wrong-parent` 空）→ 写 local、由节点层级合成成立。
+
 ### 在 AE 上不可用的两条现成 API（2026-10-09 复核，规划时排除）
 
 - `BSAnimationGraphManager::QueryAnimations`（两个重载）与 `RE::AnimationSystemUtils` 的**全部函数**在这个
@@ -99,7 +111,7 @@ C 只在 A/B 无法满足需求时再考虑。
 
 目标产物：`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON` 的测试包，新增 `SCOPY ANIM …` 系列日志。
 
-1. **骨架对齐（先做，失败即停；已实现，见下"实施状态"）**：从 `BShkbAnimationGraph::characterInstance → setup->animationSkeleton`
+1. **骨架对齐（先做，失败即停；已实现并实测，见下"实施与实测结果"）**：从 `BShkbAnimationGraph::characterInstance → setup->animationSkeleton`
    取骨名表，与副本节点名**精确**逐条比对，打印 `SCOPY ANIM skeleton …` 与 `SCOPY ANIM gate verdict=…`。
    映射不成立 → 不进入下一步（差集与计数在同一行里）。
 2. **取动画**，按优先级并各自打印证据：
@@ -137,10 +149,31 @@ SCOPY ANIM gate verdict=… graph=i matched=N/N ambiguous=N
   `verdict=PASS`（全部命中且无重名歧义）／`PASS-AMBIGUOUS`（全部命中，但有骨名对应多个节点——改装头发/衣物的
   链常常重名）／`INCOMPLETE`（有骨找不到节点）／`UNAVAILABLE`（点名缺的是哪个指针）。
   `bone-node-names-agree` 量的是"引擎自己的 `boneNodes` 是否与动画骨架同序"——将来用**指针对应**替代按名匹配
-  就靠它。`parent-ancestors`／`wrong-parent` **只作观测、不参与 gate**：本骨架的脊柱挂 `CME UBody`、骨盆挂
-  `CME LBody`，两套层级本来就不一致，写 local 变换由 NIF 层级合成，不需要骨架的父子关系。
-- 这一轮的日志决定下一步：`PASS`／`PASS-AMBIGUOUS` → 进第 2 步取动画（先按 §3 做布局核对：generator 树还是
-  binding set）；`INCOMPLETE` → 先看差集是哪些骨（是无轨道的边角骨还是主关节）；`UNAVAILABLE` → 按点名的指针查取图路径。
+  就靠它。`parent-ancestors`／`wrong-parent` **只作观测、不参与 gate**。实现时曾推测"脊柱挂 `CME UBody`、骨盆挂
+  `CME LBody`，所以骨架与节点两套层级必然不一致"——**实测推翻了这个推测**：`wrong-parent` 为空，动画骨架的父子
+  关系与 NIF 层级一致（每个骨的骨架父骨都是该节点的祖先），所以写 local 变换、由节点层级合成成立。
+
+### 实施与实测结果（2026-10-09 实现，2026-10-10 实测）
+
+`verdict=INCOMPLETE`，但差集全是 `x_` 帮手骨与装备附着骨——**核心 109/116 全中、零歧义**，说明这个门槛定得过严
+（它要求"每根骨都有节点"）。下一轮的判据改为按类计数（`x_` 帮手骨 / 附着骨 / 核心骨）：**核心骨缺一根才算失败**，
+其余打印跳过清单。`bone-node-names-agree=37/116` 这条负结果已记入 §3。
+
+### HKX2（下一步）：用引擎自己的 `poseLocal` 做带对照的数值 A/B
+
+引擎已经把当前姿态放在 `hkbCharacter::poseLocal`（116 项 `hkQsTransform`，实测非空），这是**全类型**的输入，
+不必碰任何未定型布局。做法（一次 F7 完成，日志三行，面板会话不受影响）：
+
+1. **对照（先证明测量灵敏）**：把副本扰动到明显不同的姿态（现成的程序化待机即可），量一次"副本 vs 源角色"的
+   逐骨世界差 → 打印 `SCOPY ANIM replay control max-pos-delta=… max-rot-delta=…`。这个差如果很小，后面的 0 什么也不证明。
+2. **两次次序假设**：按"骨架次序"与"`boneNodes` 次序"各写一次 `poseLocal`（四元数→`NiMatrix3` 由新加的纯函数
+   完成，离线单测锁定约定），各量一次同样的差 → 打印
+   `SCOPY ANIM replay order=skeleton|bone-nodes max-pos-delta=… max-rot-delta=…`。**小的那个就是引擎的映射**，
+   同时验证按名映射、转换与写路径。
+3. **恢复**捕获姿态（`CharacterClone::pose()` 已在做这件事），面板显示与 F2 待机照旧。
+
+通过后 HKX3 才进"取一段 clip、用我们自己的时钟采样"；那时的真值就是同一个 `poseLocal`——暂停相位下
+`SampleTracks(t_frozen)` 应当与它相等。
 
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
@@ -172,9 +205,11 @@ SCOPY ANIM gate verdict=… graph=i matched=N/N ambiguous=N
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
 - 当前产物：`dist/CharacterPanel-scopy-HKX1-1.2.1.zip`，身份
   `CharacterPanel-scopy-HKX1-cd646aefae-cl94faaed0c6-20261009T155444Z`（`source_baseline_dirty=false`，
-  基线提交 `cd646aefae`），DLL SHA-256 `356c71f4…`；操作说明见
-  [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与
-  分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
+  基线提交 `cd646aefae`），DLL SHA-256 `356c71f4…`；**该轮已实测**，逐条证据见
+  [HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)，归档日志
+  [CharacterPanel-hkx1-align-20261010-0001.log](diagnostics/CharacterPanel-hkx1-align-20261010-0001.log)。
+  操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、
+  日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
 - 提交状态：四轮探针 + 程序化待机 + 方向修正文档落在 `d9ad6b0`；HKX1 的实现、单测与文档随本轮提交，
   之后工作区应是干净的（`extern/CommonLibSSE` 的历史 dirty 状态照旧排除在提交之外）。
 - 热键现状（HKX1 产品构建）：`F7` 捕获（审计通过后打印上面那组 `SCOPY ANIM`）、`F8` 绘制、`F3` 旋转、
