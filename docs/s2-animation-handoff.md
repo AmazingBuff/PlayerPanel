@@ -451,10 +451,9 @@ SCOPY ANIM play clip='…' type=… duration=… tracks=… copy-resolved=…/�
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物：`dist/CharacterPanel-scopy-HKX10-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX10-d3c847a3b9-cl94faaed0c6-20261009T180211Z`（`source_baseline_dirty=false`，基线
-  `d3c847a3b9`），DLL SHA-256 `f432b76a…`——**已实测**（判读见 §5 HKX10 节）。下一包（HKX11）待
-  路线拍板后开工。**已实测的十轮**：HKX10（`…-HKX10-d3c847a3b9-…`，
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX11-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX11-f00041f8b5-cl94faaed0c6-20261009T183138Z`（`source_baseline_dirty=false`，基线
+  `f00041f8b5`），DLL SHA-256 `e4df4170…`；animmgr 探针 + 条件驱动，方案见 §5 HKX11 节。**已实测的十轮**：HKX10（`…-HKX10-d3c847a3b9-…`，
   [证据](s2-hkx10-control-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx10-control-20261010.log)）、
   HKX9（`…-HKX9-746ffacf13-…`，[证据](s2-hkx9-vtable-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx9-vtable-20261010.log)）、HKX8（`…-HKX8-7656223071-…`，
