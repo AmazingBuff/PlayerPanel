@@ -1045,6 +1045,10 @@ void SceneGraphCopy::capture()
     // source, and put the captured pose back. The pose comes from hkbCharacter::poseLocal, so this
     // exercises the whole write path the sampling route will use without touching any clip.
     verify_pose_replay(*player, *source, *root);
+    // S2/HKX3: what the character's animation list says (typed names) and which of the two candidate
+    // binding-set layouts survives a structural check, so the round after this can name the clip it
+    // samples instead of guessing an index.
+    report_animation_catalogue(*player, *source, *root);
     for (RE::NiAVObject* object : copy_inventory.objects)
         if (object->AsGeometry())
             logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());

@@ -181,8 +181,27 @@ SCOPY ANIM replay verdict match=skeleton/direct control=…u best=…u
   个来自 HKX1 的负结果，四元数那两个覆盖 Havok→NIF 的约定），其余三个应当很大。`best/control < 1%` 才算命中
   （相对判据，不发明绝对容差）。`restored` 证明这次验证把面板复原了。`helper-unresolved`/`other-unresolved`
   按类计数（`x_` 帮手骨 vs 其他），`scale-off-from-one` 统计姿态里非 1 的缩放（NIF 只能存一个缩放）。
-- 通过后 HKX3 才进"取一段 clip、用我们自己的时钟采样"；那时的真值就是同一个 `poseLocal`——暂停相位下
-  `SampleTracks(t_frozen)` 应当与它相等。
+### HKX3（已实现并打包，待游戏内一轮）：动画目录与绑定集布局核对
+
+`SCOPY ANIM catalogue …` 一组（每次 F7）：
+
+```
+SCOPY ANIM catalogue character='DefaultFemale' rig='…' behavior='…' names=15203 bindings=15203
+SCOPY ANIM catalogue idle-names=37/15203 first='Idle@0, …'
+SCOPY ANIM catalogue layout candidate=element-as-binding valid=8/8 duration=(0.90..9.42)s
+SCOPY ANIM catalogue layout candidate=element-holds-binding-pointer valid=0/8
+SCOPY ANIM catalogue idle index=0 name='Idle' element-as-binding=true duration=4.03s tracks=116/116 element-holds-binding=false duration=0.00s
+```
+
+- **判读**：`names`／`bindings` 两个计数相等 → "名字表与绑定集同序"这一假设成立；`idle-names` 直接给出可采样的索引。
+  两个 `layout candidate` 里 **`valid` 满的那个就是元素布局**（`element-as-binding` = 元素本身即 `hkaAnimationBinding`；
+  `element-holds-binding-pointer` = 元素首字段是指向它的指针）。依据是结构化三重校验：动画指针像活对象（vtable 落在游戏镜像的
+  rdata/data 段）、`duration` 在合理区间、`transformTrackToBoneIndices` 每一项都 ≤ 骨架骨数。
+- **安全**：所有读取先过"页已提交且可读"，且**不对候选调用任何虚函数**——读错只给出荒谬数字，不会崩游戏。
+  `idle index=…` 那几行把名字、时长与轨道表并排放置，是"名字表与绑定集确实同序"的最终确认。
+- **HKX4 据此落地**：挑 `Idle`（或用户指定的动作）→ `binding->animation->SampleTracks(t, out, nullptr, cache)`
+  （**带显式时间、const**，不碰源角色的 control）→ 用 HKX2 已验证的写路径写进副本；真值是同一相位下的 `poseLocal`，
+  但注意 **`poseLocal` 按 `boneNodes` 次序索引**（HKX2 实测），而轨道的骨索引是**动画骨架**索引，两者要用**骨名**桥接。
 
 ## 6. 验收与对比协议（这是"可测试"的核心）
 

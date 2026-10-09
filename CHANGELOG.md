@@ -4,6 +4,23 @@
 
 ### Added
 
+- Read the character's animation list and validate how its bindings can be read
+  (S2 animation handoff, HKX3). The names are typed
+  (`hkbCharacterStringData::animationNames`), so a binding index can be named
+  without guessing, and the round reports how many names mention an idle and
+  where they sit. The binding elements are not typed in this checkout, so both
+  candidate layouts - the element being the binding, and the element starting
+  with a pointer to one - are judged structurally on a spread of indices instead
+  of being believed: the candidate's animation pointer has to look like a live
+  engine object (its vtable inside the game's own image), its duration has to be
+  a plausible clip length, and every one of its tracks has to name a bone the
+  skeleton has. Every read goes through a committed-and-readable page check and
+  nothing virtual is called on a candidate, so a misread pointer reports
+  nonsense instead of crashing the game. The idle indices get a line of their
+  own, where a name, a duration and a full track table can be read side by side.
+
+### Changed
+
 - Replay the source character's own pose into the copy and measure how far it
   lands from it (S2 animation handoff, HKX2). The engine already holds that pose
   in `hkbCharacter::poseLocal`, so the write path the sampling route will use

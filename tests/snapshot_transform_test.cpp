@@ -516,6 +516,20 @@ int main()
             "a pose sample must become a local transform carrying its own rotation, translation and scale");
     }
 
+    // The rule that tells a real track table from a misread pointer: every track names a bone of this
+    // skeleton, or -1 for a track that drives none. A candidate binding is believed on this and on
+    // nothing else, because the element layout it is read through is not typed.
+    {
+        const std::vector<std::int16_t> good{ 0, 1, 2, 115, -1 };
+        check(PLUGIN_NAMESPACE::track_indices_are_valid(good, 116), "a track table that names only real bones must validate");
+        const std::vector<std::int16_t> too_high{ 0, 1, 116, 3 };
+        check(!PLUGIN_NAMESPACE::track_indices_are_valid(too_high, 116), "a track index outside the skeleton must invalidate the table");
+        const std::vector<std::int16_t> below_range{ 0, -2, 3 };
+        check(!PLUGIN_NAMESPACE::track_indices_are_valid(below_range, 116), "an index below -1 must invalidate the table");
+        check(!PLUGIN_NAMESPACE::track_indices_are_valid({}, 116), "an empty track table cannot validate");
+        check(!PLUGIN_NAMESPACE::track_indices_are_valid(good, 0), "a skeleton without bones cannot validate a track table");
+    }
+
     if (failures != 0)
     {
         std::printf("FAILED: %d assertion(s)\n", failures);

@@ -223,6 +223,22 @@ struct SkeletonAlignment
     return alignment.bones != 0 && alignment.matched == alignment.bones;
 }
 
+// Whether a candidate track-to-bone table is structurally valid for a skeleton of `bone_count`
+// bones: at least one track, and every entry either names a bone of this skeleton or is -1 for a
+// track without one. This is what tells a real animation binding from a misread pointer without
+// calling anything on the candidate.
+[[nodiscard]] inline bool track_indices_are_valid(std::span<std::int16_t const> track_to_bone, std::int32_t bone_count)
+{
+    if (track_to_bone.empty() || bone_count <= 0)
+        return false;
+    for (std::int16_t index : track_to_bone)
+    {
+        if (index < -1 || index >= bone_count)
+            return false;
+    }
+    return true;
+}
+
 // Read-only reconnaissance of the source character's animation graphs: which graphs exist, which of
 // them holds the graph that was captured, what each one's animation skeleton is, and how that
 // skeleton resolves against the copy. Runs at capture, while the game is paused; it writes nothing,
@@ -242,5 +258,14 @@ void report_animation_source(RE::TESObjectREFR& source, RE::NiAVObject& source_r
 // the two quaternion conventions (direct and transposed) - the verdict names the one that reproduces
 // the source.
 void verify_pose_replay(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
+
+// Reads what the character's own animation list says and validates the two candidate layouts of the
+// binding set, without believing either: the engine's animation *names* are typed
+// (hkbCharacterStringData::animationNames), the binding elements are not, so each candidate is
+// checked structurally - its animation pointer has to look like a live object, its duration has to
+// be a plausible clip length, and its track-to-bone table has to name only bones this skeleton has -
+// before anything is read through it. Nothing virtual is called on a candidate and nothing is
+// written, so a misread pointer reports nonsense instead of crashing.
+void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
 
 PLUGIN_NAMESPACE_END

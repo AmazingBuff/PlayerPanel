@@ -41,6 +41,19 @@ CBBE 与 UBE 各一次更好。
    - `match=none` 是**有效结论**（四个候选都不对），要连同四个数字一起回传，不要只写"没通过"。
 3. 顺手确认独立性（FR-03/FR-05 红线）：源角色的姿态、位置、物理无变化；本轮只读源角色、只写副本、结束即复原。
 
+## HKX3 轮（待测）：动画目录与绑定集布局
+
+前置：`dist/CharacterPanel-scopy-HKX3-1.2.1.zip` 的 DLL + 同包 PDB。**一次 F7** 即可（CBBE 与 UBE 各一次更好）。
+
+1. 打开暂停的背包 → **F7** → 回传 `SCOPY ANIM catalogue …` 全部行、上一轮的 `SCOPY ANIM replay …` 行、`SCOPY BUILD` 首行。
+2. 判据：
+   - `names` 与 `bindings` 是否相等（相等 = 名字表与绑定集同序，索引可直接用）；
+   - 两个 `layout candidate` 哪个 `valid` 是满的——**这是下一轮读取动画的唯一依据**，不是猜的；
+   - `idle index=… name='Idle'` 那几行的 `duration`／`tracks` 是否与名字对得上（例如 Idle 几秒、轨道数 ≈ 骨数）。
+3. 若出现 `catalogue UNAVAILABLE reason=character-string-data …`：这是**有效结论**——CommonLibSSE 对
+   `hkbCharacterData::stringData` 的注释里本来就标着"该偏移的归属未定"，回传那一行即可，下一轮先核对它。
+4. 独立性同 HKX2：只读源角色与引擎的图，不写任何引擎状态。
+
 ## 当前状态与执行前置
 
 2026-10-09 **IDLE1 已构建待测：程序化待机（FR-03 的第一个驱动器）**。

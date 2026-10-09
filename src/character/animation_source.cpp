@@ -11,20 +11,33 @@
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/B/BSVisit.h"
 #include "RE/H/hkClass.h"
+#include "RE/H/hkaAnimation.h"
+#include "RE/H/hkaAnimationBinding.h"
 #include "RE/H/hkaBone.h"
 #include "RE/H/hkaSkeleton.h"
 #include "RE/H/hkbAnimationBindingSet.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbCharacter.h"
+#include "RE/H/hkbCharacterData.h"
 #include "RE/H/hkbCharacterSetup.h"
+#include "RE/H/hkbCharacterStringData.h"
 #include "RE/H/hkbGenerator.h"
 #include "RE/T/TESObjectREFR.h"
+#include "REL/Module.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <limits>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
+
+// winnt.h defines macros of these names, which would rewrite the REX constants used below as
+// `REX::W32::0x1000`; every Windows header this file needs is already parsed at this point.
+#undef MEM_COMMIT
+#undef PAGE_NOACCESS
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -42,6 +55,16 @@ namespace
     // control's worst bone. A relative bar, so no absolute tolerance has to be invented for a rig
     // whose units and scale are the game's.
     constexpr float Match_Fraction_Of_Control = 0.01f;
+
+    // Bounds a candidate animation has to stay inside to be believed: no clip the game ships runs for
+    // longer than this or animates more tracks than this, so leaving the range means the layout is
+    // wrong rather than that a strange clip was found.
+    constexpr float Max_Clip_Seconds = 600.0f;
+    constexpr std::int32_t Max_Tracks_Read = 4096;
+
+    // How many of the binding set's entries the catalogue samples, and how many names it prints.
+    constexpr size_t Catalogue_Sample_Count = 8;
+    constexpr size_t Max_Catalogue_Names = 8;
 
     struct NodeTable
     {
@@ -87,9 +110,10 @@ namespace
         size_t index;
     };
 
-    // One behaviour graph's evidence and its alignment. A graph with no usable skeleton comes back
-    // with bones == 0, having said which pointer was missing.
-    SkeletonAlignment report_graph(RE::BShkbAnimationGraph& graph, size_t index, RE::TESObjectREFR& source, RE::NiAVObject& source_root, NodeTable const& copy_nodes, const RE::hkaSkeleton*& skeleton_out)
+    // One behaviour graph's alignment, with its evidence printed when `verbose` asks for it: the
+    // report prints every graph, while the later stages select the best one silently. A graph with no
+    // usable skeleton comes back with bones == 0.
+    SkeletonAlignment report_graph(RE::BShkbAnimationGraph& graph, size_t index, RE::TESObjectREFR& source, RE::NiAVObject& source_root, NodeTable const& copy_nodes, const RE::hkaSkeleton*& skeleton_out, bool verbose)
     {
         RE::hkbCharacter& character = graph.characterInstance;
         RE::hkbCharacterSetup* const setup = character.setup.get();
@@ -111,33 +135,39 @@ namespace
         // `holder` and `rootNode` name the character and the graph this behaviour graph drives: the
         // captured third-person graph is one of the graphs a character holds, and knowing which one
         // keeps a first-person or weapon graph from being aligned by accident.
-        logger::info("SCOPY ANIM graph[{}] project='{}' holder={} root={} bone-nodes={} anim-bones={} behavior-graph={} root-generator='{}' binding-set={} bindings={} pose-local={}",
-            index,
-            graph.projectName.c_str() ? graph.projectName.c_str() : "",
-            graph.holder && static_cast<RE::TESObjectREFR*>(graph.holder) == &source,
-            graph.rootNode && static_cast<RE::NiAVObject*>(graph.rootNode) == &source_root,
-            graph.boneNodes.size(),
-            graph.numAnimBones,
-            behavior != nullptr,
-            generator_class,
-            bindings != nullptr,
-            bindings ? bindings->bindings.size() : 0,
-            character.numPoseLocal);
+        if (verbose)
+        {
+            logger::info("SCOPY ANIM graph[{}] project='{}' holder={} root={} bone-nodes={} anim-bones={} behavior-graph={} root-generator='{}' binding-set={} bindings={} pose-local={}",
+                index,
+                graph.projectName.c_str() ? graph.projectName.c_str() : "",
+                graph.holder && static_cast<RE::TESObjectREFR*>(graph.holder) == &source,
+                graph.rootNode && static_cast<RE::NiAVObject*>(graph.rootNode) == &source_root,
+                graph.boneNodes.size(),
+                graph.numAnimBones,
+                behavior != nullptr,
+                generator_class,
+                bindings != nullptr,
+                bindings ? bindings->bindings.size() : 0,
+                character.numPoseLocal);
+        }
 
         if (!setup)
         {
-            logger::info("SCOPY ANIM graph[{}] skeleton=UNAVAILABLE reason=null-character-setup", index);
+            if (verbose)
+                logger::info("SCOPY ANIM graph[{}] skeleton=UNAVAILABLE reason=null-character-setup", index);
             return SkeletonAlignment{};
         }
         const RE::hkaSkeleton* const skeleton = setup->animationSkeleton.get();
         if (!skeleton)
         {
-            logger::info("SCOPY ANIM graph[{}] skeleton=UNAVAILABLE reason=null-animation-skeleton", index);
+            if (verbose)
+                logger::info("SCOPY ANIM graph[{}] skeleton=UNAVAILABLE reason=null-animation-skeleton", index);
             return SkeletonAlignment{};
         }
         if (skeleton->bones.empty())
         {
-            logger::info("SCOPY ANIM graph[{}] skeleton=UNAVAILABLE reason=empty-animation-skeleton", index);
+            if (verbose)
+                logger::info("SCOPY ANIM graph[{}] skeleton=UNAVAILABLE reason=empty-animation-skeleton", index);
             return SkeletonAlignment{};
         }
 
@@ -164,27 +194,30 @@ namespace
                 ++agree;
         }
 
-        logger::info("SCOPY ANIM skeleton graph={} name='{}' bones={} bone-nodes={} bone-node-names-agree={}/{} matched={} ambiguous={} duplicate-nodes={} parent-ancestors={} missing='{}' wrong-parent='{}'",
-            index,
-            skeleton->name.c_str() ? skeleton->name.c_str() : "",
-            alignment.bones,
-            graph.boneNodes.size(),
-            agree,
-            comparable,
-            alignment.matched,
-            alignment.ambiguous,
-            alignment.duplicate_nodes,
-            alignment.parent_ancestors,
-            alignment.missing.empty() ? "-" : alignment.missing.c_str(),
-            alignment.wrong_parent.empty() ? "-" : alignment.wrong_parent.c_str());
+        if (verbose)
+        {
+            logger::info("SCOPY ANIM skeleton graph={} name='{}' bones={} bone-nodes={} bone-node-names-agree={}/{} matched={} ambiguous={} duplicate-nodes={} parent-ancestors={} missing='{}' wrong-parent='{}'",
+                index,
+                skeleton->name.c_str() ? skeleton->name.c_str() : "",
+                alignment.bones,
+                graph.boneNodes.size(),
+                agree,
+                comparable,
+                alignment.matched,
+                alignment.ambiguous,
+                alignment.duplicate_nodes,
+                alignment.parent_ancestors,
+                alignment.missing.empty() ? "-" : alignment.missing.c_str(),
+                alignment.wrong_parent.empty() ? "-" : alignment.wrong_parent.c_str());
+        }
 
         skeleton_out = skeleton;
         return alignment;
     }
 
     // The graph whose skeleton resolves the most bones: the report prints every candidate, and the
-    // replay works on the winner.
-    bool select_graph(RE::BSAnimationGraphManager& manager, RE::TESObjectREFR& source, RE::NiAVObject& source_root, NodeTable const& copy_nodes, SelectedGraph& out)
+    // later stages work on the winner.
+    bool select_graph(RE::BSAnimationGraphManager& manager, RE::TESObjectREFR& source, RE::NiAVObject& source_root, NodeTable const& copy_nodes, SelectedGraph& out, bool verbose)
     {
         bool found = false;
         const uint32_t graph_count = manager.graphs.size();
@@ -193,11 +226,12 @@ namespace
             RE::BShkbAnimationGraph* const graph = manager.graphs[i].get();
             if (!graph)
             {
-                logger::info("SCOPY ANIM graph[{}] UNAVAILABLE reason=null-graph", i);
+                if (verbose)
+                    logger::info("SCOPY ANIM graph[{}] UNAVAILABLE reason=null-graph", i);
                 continue;
             }
             const RE::hkaSkeleton* skeleton = nullptr;
-            const SkeletonAlignment alignment = report_graph(*graph, i, source, source_root, copy_nodes, skeleton);
+            const SkeletonAlignment alignment = report_graph(*graph, i, source, source_root, copy_nodes, skeleton, verbose);
             if (alignment.bones == 0 || !skeleton)
                 continue;
             if (!found || alignment.matched > out.alignment.matched)
@@ -386,6 +420,90 @@ namespace
         return fmt::format("SCOPY ANIM replay order={} quat={} written={} max-pos-delta={:.3f} max-rot-delta={:.2f}deg bones={}",
             order, transposed ? "transposed" : "direct", written, delta.max_position, delta.max_rotation_degrees, delta.compared);
     }
+
+    // A read is only attempted when the pages are committed and readable, and an object is only
+    // believed when its first word looks like a vtable of the game's own image. Nothing here calls a
+    // virtual function or trusts a layout, so a misread pointer reports nonsense instead of crashing.
+    bool readable(void const* address, size_t bytes)
+    {
+        if (!address || bytes == 0)
+            return false;
+        REX::W32::MEMORY_BASIC_INFORMATION info{};
+        if (REX::W32::VirtualQuery(address, &info, sizeof(info)) == 0)
+            return false;
+        if (info.state != REX::W32::MEM_COMMIT || info.protect == REX::W32::PAGE_NOACCESS)
+            return false;
+        const auto* const begin = static_cast<const std::uint8_t*>(address);
+        const auto* const end = static_cast<const std::uint8_t*>(info.baseAddress) + info.regionSize;
+        return begin + bytes <= end;
+    }
+
+    bool looks_like_object(void const* object)
+    {
+        if (!readable(object, sizeof(void*)))
+            return false;
+        const void* const vtable = *static_cast<void* const*>(object);
+        if (!vtable)
+            return false;
+        const std::uintptr_t value = reinterpret_cast<std::uintptr_t>(vtable);
+        for (const REL::Segment::Name name : { REL::Segment::rdata, REL::Segment::data })
+        {
+            const REL::Segment segment = REL::Module::get().segment(name);
+            if (value >= segment.address() && value < segment.address() + segment.size())
+                return true;
+        }
+        return false;
+    }
+
+    // What one candidate binding says, or that it is not worth believing.
+    struct BindingReading
+    {
+        bool valid;
+        float duration;
+        size_t tracks;
+        size_t tracks_in_range;
+    };
+
+    // The validation the two candidate layouts are judged by: the animation pointer has to look like
+    // a live object with a plausible clip length, and its track-to-bone table has to name only bones
+    // this skeleton has. A pointer into the wrong object fails on all three.
+    BindingReading read_binding(RE::hkaAnimationBinding const* binding, std::int32_t bone_count)
+    {
+        if (!binding || !readable(binding, sizeof(RE::hkaAnimationBinding)))
+            return { false, 0.0f, 0, 0 };
+        const RE::hkaAnimation* const animation = binding->animation.get();
+        if (!animation || !readable(animation, sizeof(RE::hkaAnimation)) || !looks_like_object(animation))
+            return { false, 0.0f, 0, 0 };
+
+        const std::int32_t track_count = binding->transformTrackToBoneIndices.size();
+        const std::int16_t* const indices = binding->transformTrackToBoneIndices.data();
+        if (track_count <= 0 || track_count > Max_Tracks_Read || !readable(indices, sizeof(std::int16_t) * static_cast<size_t>(track_count)))
+            return { false, 0.0f, 0, 0 };
+
+        const float duration = animation->duration;
+        const bool plausible = std::isfinite(duration) && duration > 0.05f && duration < Max_Clip_Seconds;
+        const size_t tracks = static_cast<size_t>(track_count);
+        const bool in_range = track_indices_are_valid({ indices, tracks }, bone_count);
+        return { plausible && in_range, duration, tracks, in_range ? tracks : 0 };
+    }
+
+    // Case-insensitive "idle": the animation list is where the game spells out what a binding index
+    // means, and an idle is the first animation the panel needs.
+    bool mentions_idle(std::string_view name)
+    {
+        constexpr std::string_view Idle = "idle";
+        if (name.size() < Idle.size())
+            return false;
+        for (size_t start = 0; start + Idle.size() <= name.size(); ++start)
+        {
+            size_t matched = 0;
+            while (matched < Idle.size() && std::tolower(static_cast<unsigned char>(name[start + matched])) == Idle[matched])
+                ++matched;
+            if (matched == Idle.size())
+                return true;
+        }
+        return false;
+    }
 }
 
 void report_animation_source(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root)
@@ -413,7 +531,7 @@ void report_animation_source(RE::TESObjectREFR& source, RE::NiAVObject& source_r
     }
 
     SelectedGraph selected{};
-    if (!select_graph(*manager, source, source_root, copy_nodes, selected))
+    if (!select_graph(*manager, source, source_root, copy_nodes, selected, true))
     {
         logger::info("SCOPY ANIM gate verdict=UNAVAILABLE reason=no-animation-skeleton");
         return;
@@ -439,7 +557,7 @@ void verify_pose_replay(RE::TESObjectREFR& source, RE::NiAVObject& source_root, 
     }
 
     SelectedGraph selected{};
-    if (!select_graph(*manager, source, source_root, copy_nodes, selected))
+    if (!select_graph(*manager, source, source_root, copy_nodes, selected, false))
     {
         logger::info("SCOPY ANIM replay UNAVAILABLE reason=no-animation-skeleton");
         return;
@@ -530,6 +648,125 @@ void verify_pose_replay(RE::TESObjectREFR& source, RE::NiAVObject& source_root, 
     logger::info("SCOPY ANIM replay verdict match={} control={:.3f}u best={:.4f}u",
         matched ? fmt::format("{}/{}", best.order, best.transposed ? "transposed" : "direct") : std::string("none"),
         control.max_position, best.delta.max_position);
+}
+
+void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root)
+{
+    const NodeTable copy_nodes = collect_nodes(copy_root);
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+    if (copy_nodes.names.empty() || !source.GetAnimationGraphManager(manager) || !manager)
+    {
+        logger::info("SCOPY ANIM catalogue UNAVAILABLE reason=no-animation-graph-manager");
+        return;
+    }
+
+    SelectedGraph selected{};
+    if (!select_graph(*manager, source, source_root, copy_nodes, selected, false))
+    {
+        logger::info("SCOPY ANIM catalogue UNAVAILABLE reason=no-animation-skeleton");
+        return;
+    }
+
+    RE::hkbCharacter& character = selected.graph->characterInstance;
+    RE::hkbAnimationBindingSet* const set = character.animationBindingSet.get();
+    RE::hkbCharacterSetup* const setup = character.setup.get();
+    RE::hkbCharacterData* const data = setup ? setup->data.get() : nullptr;
+    RE::hkbCharacterStringData* const strings = data ? data->stringData.get() : nullptr;
+
+    const std::int32_t binding_count = (set && looks_like_object(set)) ? set->bindings.size() : 0;
+    if (!strings || !looks_like_object(strings))
+    {
+        logger::info("SCOPY ANIM catalogue UNAVAILABLE reason=character-string-data data={} string-data={} bindings={}",
+            data != nullptr, strings != nullptr, binding_count);
+        return;
+    }
+
+    logger::info("SCOPY ANIM catalogue character='{}' rig='{}' behavior='{}' names={} bindings={}",
+        strings->name.c_str() ? strings->name.c_str() : "",
+        strings->rigName.c_str() ? strings->rigName.c_str() : "",
+        strings->behaviorFilename.c_str() ? strings->behaviorFilename.c_str() : "",
+        strings->animationNames.size(), binding_count);
+
+    // The names are the only place the game spells out what a binding index means, so the idle hunt is
+    // what turns an index into "the animation the panel wants". Their indices are kept to be checked
+    // against the binding set below.
+    std::vector<std::pair<std::int32_t, std::string>> idle_names;
+    std::int32_t idle_count = 0;
+    for (std::int32_t i = 0; i < strings->animationNames.size(); ++i)
+    {
+        const char* const name = strings->animationNames[i].c_str();
+        if (!name || !mentions_idle(name))
+            continue;
+        ++idle_count;
+        if (idle_names.size() < Max_Catalogue_Names)
+            idle_names.emplace_back(i, name);
+    }
+
+    std::string idle_list;
+    for (const auto& [index, name] : idle_names)
+    {
+        if (!idle_list.empty())
+            idle_list += ", ";
+        idle_list += fmt::format("{}@{}", name, index);
+    }
+    logger::info("SCOPY ANIM catalogue idle-names={}/{} first='{}'", idle_count, strings->animationNames.size(), idle_list.empty() ? "-" : idle_list);
+
+    if (!set || !looks_like_object(set) || binding_count <= 0)
+    {
+        logger::info("SCOPY ANIM catalogue layout UNAVAILABLE reason=binding-set");
+        return;
+    }
+
+    // Neither candidate layout is typed in this checkout, so both are judged structurally on a spread
+    // of indices: a real binding's animation looks like a live object with a plausible clip length,
+    // and every one of its tracks names a bone this skeleton has.
+    const std::int32_t bone_count = selected.skeleton->bones.size();
+    size_t tried = 0;
+    size_t as_binding = 0;
+    size_t holds_binding = 0;
+    float min_duration = std::numeric_limits<float>::max();
+    float max_duration = 0.0f;
+    for (size_t step = 0; step < Catalogue_Sample_Count; ++step)
+    {
+        const std::int32_t index = static_cast<std::int32_t>(static_cast<size_t>(binding_count) * step / Catalogue_Sample_Count);
+        if (index >= binding_count)
+            continue;
+        const void* const element = set->bindings[index];
+        if (!element || !readable(element, sizeof(void*)))
+            continue;
+        ++tried;
+
+        const BindingReading direct = read_binding(static_cast<const RE::hkaAnimationBinding*>(element), bone_count);
+        if (direct.valid)
+        {
+            ++as_binding;
+            min_duration = std::min(min_duration, direct.duration);
+            max_duration = std::max(max_duration, direct.duration);
+        }
+        const auto* const pointed = *static_cast<RE::hkaAnimationBinding* const*>(element);
+        if (read_binding(pointed, bone_count).valid)
+            ++holds_binding;
+    }
+
+    logger::info("SCOPY ANIM catalogue layout candidate=element-as-binding valid={}/{} duration=({:.2f}..{:.2f})s",
+        as_binding, tried, as_binding ? min_duration : 0.0f, max_duration);
+    logger::info("SCOPY ANIM catalogue layout candidate=element-holds-binding-pointer valid={}/{}", holds_binding, tried);
+
+    // The idle indices are where a name and a duration can be read side by side: "Idle" with a few
+    // seconds and a full track table says the name list and the binding set really are the same order.
+    for (const auto& [index, name] : idle_names)
+    {
+        if (index >= binding_count)
+            continue;
+        const void* const element = set->bindings[index];
+        if (!element || !readable(element, sizeof(void*)))
+            continue;
+        const BindingReading direct = read_binding(static_cast<const RE::hkaAnimationBinding*>(element), bone_count);
+        const auto* const pointed = *static_cast<RE::hkaAnimationBinding* const*>(element);
+        const BindingReading indirect = read_binding(pointed, bone_count);
+        logger::info("SCOPY ANIM catalogue idle index={} name='{}' element-as-binding={} duration={:.2f}s tracks={}/{} element-holds-binding={} duration={:.2f}s",
+            index, name, direct.valid, direct.duration, direct.tracks_in_range, direct.tracks, indirect.valid, indirect.duration);
+    }
 }
 
 PLUGIN_NAMESPACE_END
