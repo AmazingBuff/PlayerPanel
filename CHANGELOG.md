@@ -2,8 +2,187 @@
 
 ## Unreleased
 
+### Changed
+
+- Record the S2 animation direction change: the procedural idle proved that
+  continuously writing the copy's bones drives it, but it has no ground truth,
+  so "does it look right" was unfalsifiable and the pelvis feedback could only
+  be answered by tuning numbers. The next work package drives the copy from
+  real animation data instead - the engine's own Havok sampling pipeline
+  (hkaAnimation::SampleTracks, hkaAnimationBinding's track-to-bone map,
+  hkbClipGenerator, the character's animation skeleton, BShkbAnimationGraph's
+  bone-node table) - compared numerically against the source character at the
+  same phase rather than by eye. The idle stays as a fallback for bodies with
+  no usable animation and is not to be tuned further. Plan, evidence pointers,
+  failure surfaces and the A/B protocol: docs/s2-animation-handoff.md.
+
+### Fixed
+
+- Give the hips a translation channel and report each driven joint's travel.
+  The first in-game look at the idle found the waist apparently motionless
+  while everything else moved, and that reading was correct twice over: in
+  this skeleton the pelvis hangs under CME LBody while the spine hangs under
+  CME UBody, so the two are siblings and a pelvis rotation cannot carry the
+  torso; and a rotation about a joint's own origin does not move that joint at
+  all, which is all the hips had. The hips now shift sideways (+-0.9 studio
+  units), tilt a little further, and every two seconds the log reports how far
+  each driven joint has travelled from the captured pose next to the rotation
+  its channels ask of it, so "does the waist move" is answered with numbers
+  instead of an impression. A unit test now requires at least one translation
+  channel, because a rotation-only table is exactly how this regressed.
+
+### Changed
+
+- Move the procedural idle to F2 and retire the S2 measurement probe from the
+  product build. F6 is bound by another plugin in the target setup, and the
+  probe had already answered its questions over four recorded rounds, so F2
+  now toggles the idle while the probe becomes a diagnostic build behind
+  -DCHARACTER_PANEL_S2_PROBE=ON (which puts it on F6 and leaves F2 to the
+  idle there too). With the option off, the probe's hotkey and its per-frame
+  measurement stages are compiled out, and the load banner lists only the keys
+  the build actually binds.
+
 ### Added
 
+- Give the copy a procedural idle (PRD FR-03's first driver): hips roll
+  and turn, the spine counter-rolls and breathes, and the head looks
+  around on its own slower cycle, driven from a steady clock we own because
+  the engine's timer does not advance while the panel is paused. Channels
+  are resolved by exact joint name against the copy's own skeleton and
+  reported as `SCOPY IDLE bound N/M channels`, so a body whose skeleton
+  differs says so instead of silently animating nothing. Every frame
+  recomputes from the captured pose (CharacterClone::pose restores it
+  first), so nothing accumulates and F6 off returns the figure to the
+  captured pose on the next frame. It runs only while the panel is drawn,
+  only writes the copy's nodes, and yields while the F2 probe is armed.
+  Amplitudes and periods live in src/character/idle_driver.h and the axis
+  convention (X lean, Y screen roll, Z turn; Z is up) is stated there.
+- Share apply_world_delta_downward and add rotate_about_own_origin in
+  snapshot_transform.h: the idle driver and the probe drive joints the same
+  way, and the subtree recomputation (which the engine's dirty-update
+  cascade does not perform inside the draw window) should exist once.
+- Fourth in-game probe round (2026-10-09, S2P4) and the two answers it
+  produced. The skin matrix buffer's 3x3 is the bone's world rotation times
+  the graph's 0.35 scale - a skinning matrix with the scale baked in - which
+  is why the previous round's ten unit-norm candidates all missed by ~2.0;
+  the layout itself (3x4 row-major, translation at 3/7/11) was right all
+  along. For the bone the probe swings, the slot matches that bone's CURRENT
+  world transform, not the captured pose (residual 0.0002), so the engine
+  rebuilds the skinning data from the nodes we write during the draw: the
+  CPU half of R05 holds, and with the round's paired off/on observation
+  (swings when armed, resets and stays still when not) the chain from node
+  write to screen is closed. The same dump found the boundary that matters
+  for any future write: slot i is NOT bones[i] in general (5/31 and 4/71
+  self-matches; one skin's 71 slots hold only 16 distinct matrices), which is
+  why writing bones[i]->world into slot i never moved anything in the
+  earlier rounds. Analysis scripts and log:
+  docs/diagnostics/analyze_tslot_*.py, docs/s2-anim-probe-evidence-2026-10-09.md.
+- Dump the target skin's slots raw, once per F2 arm: every slot's twelve
+  floats next to its bone's name and that bone's own world transform, for both
+  matrix buffers. The third round compared ten engine-side candidates and
+  every one of 1132 samples missed by 1.97-2.64, with the "nearest" rotating
+  at random among eight of them - so the candidate set was never the problem
+  and the reading layout (or the slot's indexing) is. Two columns of raw
+  numbers settle what distances could not.
+- Third in-game probe round (2026-10-09, S2P3): 566 measurement sets over one
+  CBBE and one UBE capture, no crash. The operator's paired observation closes
+  R06: with F2 on the figure swings, with F2 off it resets and stays still. The
+  two matrix buffers classify identically, so a shader reading the other buffer
+  is not what made the relation labels split 50/50; the slot's contents remain
+  unidentified, which is what S2P4's raw dump is for.
+- Sample both skin matrix buffers and classify the slot against ten
+  engine-side candidates (bone world, captured pose, previous frame's swing,
+  each transposed, the bind transform, and the world/bind products), printing
+  the nearest two with their distances. The first two rounds compared a single
+  candidate pair, so a slot holding some third quantity looked exactly like a
+  coin flip: at maximum swing amplitude the labels split 50/50, which rules out
+  the simple reading and leaves the buffer's contents unidentified. Reading the
+  engine's second buffer covers the remaining cheap explanation, a shader that
+  samples the other one on some frames. Measurement stays read-only; unit tests
+  now assert a rotation and its transpose stay distinguishable.
+- Second in-game probe round (2026-10-09, S2P2): 241 measurement sets over
+  one CBBE and two UBE captures, no INVALID reading, no crash, every capture
+  parked on F4. The swing now reads back as the designed amplitude
+  (1.3-34.4 degrees against a 0.6 rad design), the witness moves in all 241
+  sets, and the engine rewrites the sampled skin matrix slot during the draw
+  in all 241 - so the engine-side rebuild is active on the drawn copy. The
+  slot's contents still cannot be identified: at maximum swing amplitude the
+  relation labels split 50/50, which rules out the simple "the slot follows
+  the node write" reading, so the CPU half of R05 stays open. Log and
+  analysis: docs/s2-anim-probe-evidence-2026-10-09.md.
+- Measure where the probe joint sits in the skeleton and how much of the
+  figure it can move. The parent chains prove the CBBE/UBE difference seen in
+  the first round: the pelvis hangs under CME LBody while the spine hangs
+  under CME UBody, both branching from CME Body, so the two branches are
+  siblings and a pelvis swing cannot carry the torso. affected-geoms
+  quantifies it per body (10/23 for the pelvis, 43/46 for the spine).
+
+### Fixed
+
+- Read the probe's orientation from the relative rotation's trace and its
+  slot relation from the whole 3x3 rotation block. The first measurement
+  build compared matrix row 0, which is exactly the row a world-X swing
+  leaves untouched, so it reported orientation-delta=0 and "neither" for a
+  swing the game visibly applied and left the CPU-buffer question
+  unreadable. Unit tests now assert the X/Y/Z reading and that row 0 is
+  invariant under an X swing.
+- Drop the probe target when a capture replaces the drawn graph. It used to
+  survive the re-capture, so after loading another save the probe kept
+  swinging (and reporting numbers for) the parked copy while the panel drew
+  the new one: 136 of 564 measurement lines in the 2026-10-09 session
+  described a graph that was not on screen. The T2 line no longer reuses a
+  stale pass name: it prints not-submitted when the target geometry's pass
+  did not arrive.
+- Pick the probe joint across every skin instead of the first one found, and
+  report the chosen joint's parent chain and how many geometries the swing
+  touches (affected-geoms). In the 2026-10-09 session the CBBE run picked
+  the body skin's pelvis while the UBE run picked the face skin's spine, so
+  the two bodies visibly swung different halves of the figure — a target
+  selection artifact, not an anchor or per-body difference.
+
+### Added
+
+- Land the S2 probe's first in-game result (2026-10-09): with the probe
+  armed, the copy's figure visibly follows the bone write on both CBBE and
+  UBE bodies. The archived log has 141 of 141 measurement sets reporting
+  probe-effective, witness displacements up to 14.1 units, and the engine
+  rewriting the skin matrix slot during the draw in every one of them. What
+  remains unproven is whether that slot follows our write and what the GPU
+  binds; the HKX driver is not started. Log and analysis:
+  docs/s2-anim-probe-evidence-2026-10-09.md.
+- Add the T0-T3 measurement chain the S2 probe needed to be judgeable
+  (PRD 0.6 §6.3): each frame records the baseline after the studio's base
+  placement, the swing applied to one bone, the pass that submits the
+  target geometry, and the state after the draw, then prints the four
+  stages together with the frame number, the bone's world matrix and the
+  skin matrix slot read BEFORE the swing. The slot is sampled read-only
+  and compared against this frame's two candidate node rotations, so no
+  verdict rests on a value the same code wrote. A witness on the swing
+  axis is reported as INVALID instead of being read as "nothing moved".
+- Give every probe round its own build identity: CMake now generates
+  Plugin_Build_Identity from CHARACTER_PANEL_PROBE_REVISION plus both
+  source baselines and the configure time, the manifest carries the same
+  string, and the package step rejects a DLL that does not contain it.
+  The archived S0 rounds all logged one hardcoded identity, so a stale
+  deployment could not be told from a fresh build.
+
+### Changed
+
+- Run the S2 probe inside the draw window, after pose() and before pass
+  generation. It used to run before draw(), whose first act is pose()
+  restoring every captured node world, so the write was undone before the
+  engine prepared anything and the probe's own logs predated the
+  overwrite — the archived runs could not show whether the write ever
+  reached the draw. The stage calls now live in CharacterClone::draw(),
+  which is the only place that owns the order.
+- Change node transforms only in this probe round: the skin matrix buffer
+  rebuild is gone, because the read-back that once classified that buffer
+  compared the slot against the value the same code had just written into
+  it. write_bone_matrix stays for the later, evidence-gated step.
+- Swing about world X and pick the witness furthest from that axis: Z is
+  the bone's own long axis, so the old swing spun the witness in place and
+  a flat displacement reading could not distinguish a failed write from a
+  witness sitting on the rotation axis.
 - Land the S0 scene-graph-copy route (CHARACTER_PANEL_SCENE_COPY_EXPERIMENT),
   game-validated on 2026-10-08: F7 copies and audits the player's third-person
   graph through native NiObject::Clone, F8 draws it into the studio, F3 rotates
@@ -33,8 +212,9 @@
   PDB, the S0 install/test README, and a JSON build manifest carrying both
   binaries' SHA-256, the repository HEAD, the actual extern/CommonLibSSE checkout
   and each worktree's dirty state, so a result returned from the validating
-  machine can be tied to the artifact that produced it. The preset Release-scopy
-  configures the experiment tree; the manifest takes its configuration from
+  machine can be tied to the artifact that produced it. The
+  CHARACTER_PANEL_SCENE_COPY_EXPERIMENT option configures the experiment
+  tree (there is no Release-scopy preset); the manifest takes its configuration from
   $<CONFIG> rather than assuming Release.
 - Add a source-graph drift report (SCOPY SOURCE-DIFF) that separates a changed
   object set from per-node transform drift. The previous exact float comparison

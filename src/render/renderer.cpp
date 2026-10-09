@@ -107,7 +107,8 @@ namespace
                     if (CharacterClone* clone = SceneGraphCopy::instance().drawable())
                     {
                         D3D11StateCapture capture(context);
-                        SceneGraphCopy::instance().apply_animation_probe(*clone);
+                        // The S2 probe stages run inside draw(), between pose() and pass generation
+                        // (PRD 0.6 §6.3); calling it here would run before pose() and be overwritten.
                         image_ready = clone->draw(ui3d, *m_common_states, m_render_target);
                     }
 #else

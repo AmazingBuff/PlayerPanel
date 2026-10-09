@@ -1,0 +1,779 @@
+[22:09:37.080] [31372] [I] CharacterPanel v1-2-1-0
+[22:09:37.080] [31372] [I] CharacterPanel loaded
+[22:11:03.493] [6828 ] [I] All shaders compiled
+[22:11:03.493] [6828 ] [I] Installed pre-UI renderer hook
+[22:11:03.493] [6828 ] [I] Menu sink installed
+[22:11:03.493] [6828 ] [I] SCOPY BUILD CharacterPanel-scopy-S2P1-a7073d58b8+dirty-cl94faaed0c6-20261009T140032Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=not-implemented cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-anim-probe
+[22:11:03.531] [29740] [I] Studio host changed: 0x0 -> 0x1c688d86980 (paused=true)
+[22:11:03.531] [29740] [I] Studio light node has been created
+[22:11:03.531] [29740] [I] CP-LIGHT slot 0: registered, shell 0x1c82629f880 queued (ledger stays the authority)
+[22:11:03.531] [29740] [I] CP-LIGHT slot 1: registered, shell 0x1c82629f740 queued (ledger stays the authority)
+[22:11:03.531] [29740] [I] CP-LIGHT slot 2: registered, shell 0x1c82629f600 queued (ledger stays the authority)
+[22:11:03.531] [29740] [I] Studio lights registered on the ledger (scene=0x1bce6896e80 -- ledger fetch will populate the slots)
+[22:11:03.531] [29740] [I] CP-LIGHT slot 0: ledger shell fetched 0x1c82629f880 (after 0 miss frames)
+[22:11:03.531] [29740] [I] CP-LIGHT slot 1: ledger shell fetched 0x1c82629f740 (after 0 miss frames)
+[22:11:03.531] [29740] [I] CP-LIGHT slot 2: ledger shell fetched 0x1c82629f600 (after 0 miss frames)
+[22:11:35.803] [29740] [I] CP-LIGHT slot 0: ledger shell dropped
+[22:11:35.803] [29740] [I] CP-LIGHT slot 1: ledger shell dropped
+[22:11:35.803] [29740] [I] CP-LIGHT slot 2: ledger shell dropped
+[22:11:35.803] [29740] [W] Studio lights not fully served by the ledger yet
+[22:11:41.052] [29740] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1c82629fc40 filed to lightQueueAdd)
+[22:11:41.052] [29740] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1c82629f240 filed to lightQueueAdd)
+[22:11:41.052] [29740] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1c82629f100 filed to lightQueueAdd)
+[22:11:41.116] [29740] [I] CP-LIGHT slot 0: ledger shell fetched 0x1c82629fc40 (after 1 miss frames)
+[22:11:41.116] [29740] [I] CP-LIGHT slot 1: ledger shell fetched 0x1c82629f240 (after 1 miss frames)
+[22:11:41.116] [29740] [I] CP-LIGHT slot 2: ledger shell fetched 0x1c82629f100 (after 1 miss frames)
+[22:11:48.378] [31372] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x1c8f5106380 parent=0x1c8f2221ec0 nodes=470 geoms=23 api=NiObject::Clone id=68835/70187
+[22:11:48.378] [31372] [I] SCOPY CLONE-RETURN capture=1 copy=0x1cac2471000
+[22:11:48.378] [31372] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=470 skin-bones=131
+[22:11:48.378] [31372] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[22:11:48.378] [31372] [I] SCOPY CENSUS source-nodes=470 copy-nodes=470 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[22:11:48.379] [31372] [I] SCOPY FRAME skinned-bound valid=true radius=74.3 center=(6366.8,1449.0,257.4) graph-bound radius=74.6 scale=0.35 pruned-nodes=0
+[22:11:48.379] [31372] [I] SCOPY READY capture=1 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='FemaleBrowsHuman01' type='BSDynamicTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='00CVEO_00VAN_AA_ALDDEyes_Blue_FEMALE' type='BSDynamicTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='0_HAIRLINE_Female_Human_Straight' type='BSDynamicTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='0Anto92HL' type='BSDynamicTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='0Anto92' type='BSDynamicTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='FemaleMouthHumanoidDefault' type='BSDynamicTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='FemaleHeadNord' type='BSDynamicTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='shoes' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name=' (00000D6C)[1]/ (FE04CB10) [80%]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='clothes_underwear' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='clothes' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='CBBE' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Feet [SOvl0]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl2]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl1]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl0]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Hands [SOvl0]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl1]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl0]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Body [SOvl0]' type='BSTriShape'
+[22:11:48.379] [31372] [I] SCOPY GEOMETRY capture=1 name='Body [Ovl0]' type='BSTriShape'
+[22:11:50.795] [31372] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[22:11:50.797] [31372] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[22:11:50.797] [31372] [I] SCOPY DRAW frame=1 passes=23 lights=true animation-driver=none physics-driver=none
+[22:11:51.693] [31372] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[22:11:51.697] [31372] [I] SCOPY ROTATE angle-deg=90
+[22:11:51.891] [31372] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[22:11:51.896] [31372] [I] SCOPY ROTATE angle-deg=180
+[22:11:52.083] [31372] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[22:11:52.087] [31372] [I] SCOPY ROTATE angle-deg=270
+[22:11:52.277] [31372] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[22:11:52.282] [31372] [I] SCOPY ROTATE angle-deg=360
+[22:11:52.841] [31372] [I] SCOPY ANIM probe enabled: node transforms only, applied after the studio's base placement and before pass preparation; the skin matrix buffer is read-only
+[22:11:52.841] [31372] [I] SCOPY ANIM target bone='NPC Pelvis [Pelv]' candidates=30 subtree-nodes=219 skin='Body [Ovl0]' root='skeleton_female.nif' witness='NPC R Toe0 [RToe]' witness-radius=23.93 swing=world-X 0.600rad period=320f controllers=none verdict=copy-is-graph-invisible skins: [Body [Ovl0]: 30/30 direct] [Body [SOvl0]: 30/30 direct] [Hands [Ovl0]: 38/38 direct] [Hands [Ovl1]: 38/38 direct]
+[22:11:53.037] [31372] [I] SCOPY T0 frame=3908 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:53.037] [31372] [I] SCOPY T1 frame=3908 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[13.77,13.77] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:53.037] [31372] [I] SCOPY T2 frame=3908 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4185 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:53.037] [31372] [I] SCOPY T3 frame=3908 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:53.236] [31372] [I] SCOPY T0 frame=3916 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:53.236] [31372] [I] SCOPY T1 frame=3916 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[13.77,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:53.236] [31372] [I] SCOPY T2 frame=3916 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4193 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:53.236] [31372] [I] SCOPY T3 frame=3916 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:53.432] [31372] [I] SCOPY T0 frame=3924 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:53.432] [31372] [I] SCOPY T1 frame=3924 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[13.77,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:53.432] [31372] [I] SCOPY T2 frame=3924 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4201 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:53.432] [31372] [I] SCOPY T3 frame=3924 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:53.623] [31372] [I] SCOPY T0 frame=3932 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:53.623] [31372] [I] SCOPY T1 frame=3932 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[13.77,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:53.623] [31372] [I] SCOPY T2 frame=3932 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4209 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:53.623] [31372] [I] SCOPY T3 frame=3932 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:53.721] [31372] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[22:11:53.721] [31372] [I] SCOPY DRAW frame=121 passes=23 lights=true animation-driver=none physics-driver=none
+[22:11:53.818] [31372] [I] SCOPY T0 frame=3940 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:53.818] [31372] [I] SCOPY T1 frame=3940 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.10 moved-range=[13.10,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:53.818] [31372] [I] SCOPY T2 frame=3940 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4217 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:53.818] [31372] [I] SCOPY T3 frame=3940 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:54.013] [31372] [I] SCOPY T0 frame=3948 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:54.013] [31372] [I] SCOPY T1 frame=3948 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=12.11 moved-range=[12.11,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:54.013] [31372] [I] SCOPY T2 frame=3948 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4225 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:54.013] [31372] [I] SCOPY T3 frame=3948 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:54.206] [31372] [I] SCOPY T0 frame=3956 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:54.206] [31372] [I] SCOPY T1 frame=3956 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=10.83 moved-range=[10.83,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:54.206] [31372] [I] SCOPY T2 frame=3956 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4233 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:54.206] [31372] [I] SCOPY T3 frame=3956 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:54.398] [31372] [I] SCOPY T0 frame=3964 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:54.398] [31372] [I] SCOPY T1 frame=3964 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=9.27 moved-range=[9.27,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:54.398] [31372] [I] SCOPY T2 frame=3964 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4241 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:54.398] [31372] [I] SCOPY T3 frame=3964 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:54.593] [31372] [I] SCOPY T0 frame=3972 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:54.593] [31372] [I] SCOPY T1 frame=3972 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[7.47,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:54.593] [31372] [I] SCOPY T2 frame=3972 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4249 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:54.593] [31372] [I] SCOPY T3 frame=3972 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:54.783] [31372] [I] SCOPY T0 frame=3980 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:54.783] [31372] [I] SCOPY T1 frame=3980 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=5.48 moved-range=[5.48,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:54.783] [31372] [I] SCOPY T2 frame=3980 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4257 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:54.783] [31372] [I] SCOPY T3 frame=3980 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:54.981] [31372] [I] SCOPY T0 frame=3988 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:54.981] [31372] [I] SCOPY T1 frame=3988 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=3.35 moved-range=[3.35,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:54.981] [31372] [I] SCOPY T2 frame=3988 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4265 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:54.981] [31372] [I] SCOPY T3 frame=3988 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:55.173] [31372] [I] SCOPY T0 frame=3996 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:55.173] [31372] [I] SCOPY T1 frame=3996 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:55.173] [31372] [I] SCOPY T2 frame=3996 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4273 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:55.174] [31372] [I] SCOPY T3 frame=3996 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:55.373] [31372] [I] SCOPY T0 frame=4004 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:55.373] [31372] [I] SCOPY T1 frame=4004 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:55.373] [31372] [I] SCOPY T2 frame=4004 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4281 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:55.373] [31372] [I] SCOPY T3 frame=4004 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:55.568] [31372] [I] SCOPY T0 frame=4012 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:55.568] [31372] [I] SCOPY T1 frame=4012 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=3.35 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:55.568] [31372] [I] SCOPY T2 frame=4012 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4289 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:55.569] [31372] [I] SCOPY T3 frame=4012 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:55.761] [31372] [I] SCOPY T0 frame=4020 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:55.761] [31372] [I] SCOPY T1 frame=4020 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=5.48 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:55.761] [31372] [I] SCOPY T2 frame=4020 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4297 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:55.761] [31372] [I] SCOPY T3 frame=4020 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:55.954] [31372] [I] SCOPY T0 frame=4028 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:55.954] [31372] [I] SCOPY T1 frame=4028 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:55.954] [31372] [I] SCOPY T2 frame=4028 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4305 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:55.954] [31372] [I] SCOPY T3 frame=4028 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:56.149] [31372] [I] SCOPY T0 frame=4036 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:56.149] [31372] [I] SCOPY T1 frame=4036 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=9.27 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:56.149] [31372] [I] SCOPY T2 frame=4036 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4313 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:56.149] [31372] [I] SCOPY T3 frame=4036 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:56.344] [31372] [I] SCOPY T0 frame=4044 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:56.344] [31372] [I] SCOPY T1 frame=4044 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=10.83 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:56.344] [31372] [I] SCOPY T2 frame=4044 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4321 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:56.344] [31372] [I] SCOPY T3 frame=4044 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:56.536] [31372] [I] SCOPY T0 frame=4052 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:56.537] [31372] [I] SCOPY T1 frame=4052 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=12.11 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:56.537] [31372] [I] SCOPY T2 frame=4052 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4329 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:56.537] [31372] [I] SCOPY T3 frame=4052 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:56.632] [31372] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[22:11:56.632] [31372] [I] SCOPY DRAW frame=241 passes=23 lights=true animation-driver=none physics-driver=none
+[22:11:56.727] [31372] [I] SCOPY T0 frame=4060 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:56.727] [31372] [I] SCOPY T1 frame=4060 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:56.727] [31372] [I] SCOPY T2 frame=4060 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4337 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:56.727] [31372] [I] SCOPY T3 frame=4060 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:56.923] [31372] [I] SCOPY T0 frame=4068 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:56.923] [31372] [I] SCOPY T1 frame=4068 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:56.923] [31372] [I] SCOPY T2 frame=4068 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4345 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:56.923] [31372] [I] SCOPY T3 frame=4068 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:57.114] [31372] [I] SCOPY T0 frame=4076 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:57.114] [31372] [I] SCOPY T1 frame=4076 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:57.114] [31372] [I] SCOPY T2 frame=4076 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4353 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:57.114] [31372] [I] SCOPY T3 frame=4076 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:57.306] [31372] [I] SCOPY T0 frame=4084 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:57.306] [31372] [I] SCOPY T1 frame=4084 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:57.306] [31372] [I] SCOPY T2 frame=4084 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4361 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:57.306] [31372] [I] SCOPY T3 frame=4084 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:57.497] [31372] [I] SCOPY T0 frame=4092 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:57.497] [31372] [I] SCOPY T1 frame=4092 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:57.497] [31372] [I] SCOPY T2 frame=4092 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4369 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:57.497] [31372] [I] SCOPY T3 frame=4092 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:57.691] [31372] [I] SCOPY T0 frame=4100 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:57.691] [31372] [I] SCOPY T1 frame=4100 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:57.691] [31372] [I] SCOPY T2 frame=4100 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4377 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:57.691] [31372] [I] SCOPY T3 frame=4100 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:57.883] [31372] [I] SCOPY T0 frame=4108 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:57.883] [31372] [I] SCOPY T1 frame=4108 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=12.11 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:57.883] [31372] [I] SCOPY T2 frame=4108 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4385 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:57.883] [31372] [I] SCOPY T3 frame=4108 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:58.077] [31372] [I] SCOPY T0 frame=4116 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:58.077] [31372] [I] SCOPY T1 frame=4116 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=10.83 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:58.077] [31372] [I] SCOPY T2 frame=4116 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4393 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:58.077] [31372] [I] SCOPY T3 frame=4116 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:59.160] [31372] [I] SCOPY T0 frame=4124 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:59.160] [31372] [I] SCOPY T1 frame=4124 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=9.27 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:59.160] [31372] [I] SCOPY T2 frame=4124 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4401 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:59.160] [31372] [I] SCOPY T3 frame=4124 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:59.434] [31372] [I] SCOPY T0 frame=4132 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:59.434] [31372] [I] SCOPY T1 frame=4132 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:59.434] [31372] [I] SCOPY T2 frame=4132 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4409 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:59.434] [31372] [I] SCOPY T3 frame=4132 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:59.642] [31372] [I] SCOPY T0 frame=4140 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:59.642] [31372] [I] SCOPY T1 frame=4140 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=5.48 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:59.642] [31372] [I] SCOPY T2 frame=4140 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4417 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:59.642] [31372] [I] SCOPY T3 frame=4140 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:11:59.833] [31372] [I] SCOPY T0 frame=4148 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:11:59.833] [31372] [I] SCOPY T1 frame=4148 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=3.35 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:11:59.833] [31372] [I] SCOPY T2 frame=4148 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4425 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:11:59.833] [31372] [I] SCOPY T3 frame=4148 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:00.032] [31372] [I] SCOPY T0 frame=4156 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:00.032] [31372] [I] SCOPY T1 frame=4156 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:00.032] [31372] [I] SCOPY T2 frame=4156 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4433 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:00.032] [31372] [I] SCOPY T3 frame=4156 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:00.224] [31372] [I] SCOPY T0 frame=4164 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:00.224] [31372] [I] SCOPY T1 frame=4164 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:00.224] [31372] [I] SCOPY T2 frame=4164 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4441 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:00.224] [31372] [I] SCOPY T3 frame=4164 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:00.419] [31372] [I] SCOPY T0 frame=4172 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:00.419] [31372] [I] SCOPY T1 frame=4172 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=3.35 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:00.419] [31372] [I] SCOPY T2 frame=4172 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4449 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:00.419] [31372] [I] SCOPY T3 frame=4172 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:00.515] [31372] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[22:12:00.515] [31372] [I] SCOPY DRAW frame=361 passes=23 lights=true animation-driver=none physics-driver=none
+[22:12:00.609] [31372] [I] SCOPY T0 frame=4180 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:00.609] [31372] [I] SCOPY T1 frame=4180 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=5.48 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:00.609] [31372] [I] SCOPY T2 frame=4180 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4457 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:00.609] [31372] [I] SCOPY T3 frame=4180 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:00.802] [31372] [I] SCOPY T0 frame=4188 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:00.802] [31372] [I] SCOPY T1 frame=4188 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:00.802] [31372] [I] SCOPY T2 frame=4188 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4465 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:00.802] [31372] [I] SCOPY T3 frame=4188 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:00.994] [31372] [I] SCOPY T0 frame=4196 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:00.994] [31372] [I] SCOPY T1 frame=4196 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=9.27 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:00.994] [31372] [I] SCOPY T2 frame=4196 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4473 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:00.994] [31372] [I] SCOPY T3 frame=4196 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:01.186] [31372] [I] SCOPY T0 frame=4204 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:01.186] [31372] [I] SCOPY T1 frame=4204 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=10.83 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:01.186] [31372] [I] SCOPY T2 frame=4204 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4481 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:01.186] [31372] [I] SCOPY T3 frame=4204 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:01.382] [31372] [I] SCOPY T0 frame=4212 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:01.382] [31372] [I] SCOPY T1 frame=4212 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=12.11 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:01.382] [31372] [I] SCOPY T2 frame=4212 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4489 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:01.382] [31372] [I] SCOPY T3 frame=4212 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:01.579] [31372] [I] SCOPY T0 frame=4220 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:01.579] [31372] [I] SCOPY T1 frame=4220 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:01.579] [31372] [I] SCOPY T2 frame=4220 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4497 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:01.579] [31372] [I] SCOPY T3 frame=4220 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:01.778] [31372] [I] SCOPY T0 frame=4228 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:01.778] [31372] [I] SCOPY T1 frame=4228 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:01.778] [31372] [I] SCOPY T2 frame=4228 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4505 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:01.778] [31372] [I] SCOPY T3 frame=4228 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:01.966] [31372] [I] SCOPY T0 frame=4236 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:01.966] [31372] [I] SCOPY T1 frame=4236 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:01.966] [31372] [I] SCOPY T2 frame=4236 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4513 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:01.966] [31372] [I] SCOPY T3 frame=4236 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:02.162] [31372] [I] SCOPY T0 frame=4244 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:02.162] [31372] [I] SCOPY T1 frame=4244 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:02.162] [31372] [I] SCOPY T2 frame=4244 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4521 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:02.162] [31372] [I] SCOPY T3 frame=4244 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:02.355] [31372] [I] SCOPY T0 frame=4252 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:02.355] [31372] [I] SCOPY T1 frame=4252 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:02.355] [31372] [I] SCOPY T2 frame=4252 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4529 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:02.355] [31372] [I] SCOPY T3 frame=4252 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:02.546] [31372] [I] SCOPY T0 frame=4260 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:02.547] [31372] [I] SCOPY T1 frame=4260 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:02.547] [31372] [I] SCOPY T2 frame=4260 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4537 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:02.547] [31372] [I] SCOPY T3 frame=4260 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:02.739] [31372] [I] SCOPY T0 frame=4268 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:02.739] [31372] [I] SCOPY T1 frame=4268 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=12.11 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:02.739] [31372] [I] SCOPY T2 frame=4268 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4545 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:02.739] [31372] [I] SCOPY T3 frame=4268 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:02.936] [31372] [I] SCOPY T0 frame=4276 capture=1 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:02.936] [31372] [I] SCOPY T1 frame=4276 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=10.83 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:02.936] [31372] [I] SCOPY T2 frame=4276 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4553 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:12:02.936] [31372] [I] SCOPY T3 frame=4276 drawn=23 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:03.059] [31372] [I] SCOPY PARK snapshots held alive for the process lifetime: 1
+[22:12:03.059] [31372] [I] SCOPY RELEASE reason=F4 capture=1
+[22:12:08.663] [29740] [I] CP-LIGHT slot 0: ledger shell dropped
+[22:12:08.663] [29740] [I] CP-LIGHT slot 1: ledger shell dropped
+[22:12:08.663] [29740] [I] CP-LIGHT slot 2: ledger shell dropped
+[22:12:09.625] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:11.487] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:12.154] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:12.821] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:13.487] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:14.154] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:14.821] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:15.487] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:16.159] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:16.826] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:17.493] [31372] [W] Studio lights not fully served by the ledger yet
+[22:12:21.828] [29740] [W] Studio lights not fully served by the ledger yet
+[22:12:29.129] [29740] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1c82629e480 filed to lightQueueAdd)
+[22:12:29.129] [29740] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1c82629e200 filed to lightQueueAdd)
+[22:12:29.129] [29740] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1c82629e0c0 filed to lightQueueAdd)
+[22:12:29.191] [29740] [I] CP-LIGHT slot 0: ledger shell fetched 0x1c82629e480 (after 1 miss frames)
+[22:12:29.191] [29740] [I] CP-LIGHT slot 1: ledger shell fetched 0x1c82629e200 (after 1 miss frames)
+[22:12:29.191] [29740] [I] CP-LIGHT slot 2: ledger shell fetched 0x1c82629e0c0 (after 1 miss frames)
+[22:12:48.046] [31372] [I] SCOPY BEGIN capture=2 actor=00000014 source=0x1c85c678b80 parent=0x1c8c4432b00 nodes=1584 geoms=63 api=NiObject::Clone id=68835/70187
+[22:12:48.047] [31372] [I] SCOPY CLONE-RETURN capture=2 copy=0x1ce14be9600
+[22:12:48.048] [31372] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=1584 skin-bones=891
+[22:12:48.048] [31372] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[22:12:48.048] [31372] [I] SCOPY CENSUS source-nodes=1584 copy-nodes=1584 source-geoms=63 copy-geoms=63 source-skins=62 copy-skins=62 source-dynamic=10 copy-dynamic=10
+[22:12:48.048] [31372] [I] SCOPY FRAME skinned-bound valid=true radius=80.1 center=(1045.8,-871.1,-1403.9) graph-bound radius=127.2 scale=0.35 pruned-nodes=14
+[22:12:48.048] [31372] [I] SCOPY READY capture=2 controllers-removed=11 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7EFD)[1]/ (FE2E7EFC) [100%]' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7EFF)[1]/ (FE2E7EFE) [100%]' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='ChestCollision' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='Necklace' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_EyeLashesZoe' type='BSDynamicTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='T118' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='T117' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='T116' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='T112' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='T111' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='T110' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='E118' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='E117' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='E116' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='E115' type='BSTriShape'
+[22:12:48.048] [31372] [I] SCOPY GEOMETRY capture=2 name='E114' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E113' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E112' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E111' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E110' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E19' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E18' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E17' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E16' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E15' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E14' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E13' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='E12' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='N15' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='N16' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='AE11' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_LDDLevisChoice13be_Female' type='BSDynamicTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHuman_outer' type='BSDynamicTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHuman_shadows' type='BSDynamicTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleLensLeft_Dummy' type='BSDynamicTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleLensRight_Dummy' type='BSDynamicTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHumanLightGrey' type='BSDynamicTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleMouth' type='BSDynamicTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleHead' type='BSDynamicTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7807)[1]/ (FE2E7801) [100%]' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Feet' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Leg' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Butt' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Anus' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Belly' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Hand' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Arm' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Breast' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='3BCA_Head' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='VirtualGround' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Feet' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Heels' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Hands' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Bracelet' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='CollisionStopper' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='LowerBodyCollision' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='VirtualGround' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='BaseShape' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Thighstrap' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Armband' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Dress_Inner' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Dress' type='BSTriShape'
+[22:12:48.049] [31372] [I] SCOPY GEOMETRY capture=2 name='Face [Ovl0]' type='BSDynamicTriShape'
+[22:12:50.853] [31372] [I] SCOPY DRAW-TOGGLE enabled=true capture=2
+[22:12:50.855] [31372] [I] SCOPY T0 frame=7652 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:50.855] [31372] [I] SCOPY T1 frame=7652 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:50.855] [31372] [I] SCOPY T2 frame=7652 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:50.855] [31372] [I] SCOPY T3 frame=7652 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:50.855] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:12:50.855] [31372] [I] SCOPY DRAW frame=1 passes=45 lights=true animation-driver=none physics-driver=none
+[22:12:50.971] [31372] [I] SCOPY T0 frame=7660 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:50.971] [31372] [I] SCOPY T1 frame=7660 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=5.48 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:50.971] [31372] [I] SCOPY T2 frame=7660 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:50.971] [31372] [I] SCOPY T3 frame=7660 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:51.087] [31372] [I] SCOPY T0 frame=7668 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:51.087] [31372] [I] SCOPY T1 frame=7668 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=3.35 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:51.087] [31372] [I] SCOPY T2 frame=7668 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:51.087] [31372] [I] SCOPY T3 frame=7668 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:51.204] [31372] [I] SCOPY T0 frame=7676 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:51.204] [31372] [I] SCOPY T1 frame=7676 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:51.204] [31372] [I] SCOPY T2 frame=7676 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:51.204] [31372] [I] SCOPY T3 frame=7676 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:51.322] [31372] [I] SCOPY T0 frame=7684 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:51.322] [31372] [I] SCOPY T1 frame=7684 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:51.322] [31372] [I] SCOPY T2 frame=7684 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:51.322] [31372] [I] SCOPY T3 frame=7684 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:51.438] [31372] [I] SCOPY T0 frame=7692 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:51.438] [31372] [I] SCOPY T1 frame=7692 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=3.35 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:51.438] [31372] [I] SCOPY T2 frame=7692 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:51.438] [31372] [I] SCOPY T3 frame=7692 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:51.556] [31372] [I] SCOPY T0 frame=7700 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:51.556] [31372] [I] SCOPY T1 frame=7700 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=5.48 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:51.556] [31372] [I] SCOPY T2 frame=7700 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:51.556] [31372] [I] SCOPY T3 frame=7700 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:51.673] [31372] [I] SCOPY T0 frame=7708 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:51.673] [31372] [I] SCOPY T1 frame=7708 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:51.673] [31372] [I] SCOPY T2 frame=7708 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:51.673] [31372] [I] SCOPY T3 frame=7708 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:51.791] [31372] [I] SCOPY T0 frame=7716 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:51.791] [31372] [I] SCOPY T1 frame=7716 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=9.27 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:51.791] [31372] [I] SCOPY T2 frame=7716 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:51.791] [31372] [I] SCOPY T3 frame=7716 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:51.909] [31372] [I] SCOPY T0 frame=7724 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:51.909] [31372] [I] SCOPY T1 frame=7724 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=10.83 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:51.909] [31372] [I] SCOPY T2 frame=7724 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:51.909] [31372] [I] SCOPY T3 frame=7724 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.025] [31372] [I] SCOPY T0 frame=7732 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.025] [31372] [I] SCOPY T1 frame=7732 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=12.11 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.025] [31372] [I] SCOPY T2 frame=7732 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.025] [31372] [I] SCOPY T3 frame=7732 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.142] [31372] [I] SCOPY T0 frame=7740 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.142] [31372] [I] SCOPY T1 frame=7740 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.142] [31372] [I] SCOPY T2 frame=7740 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.142] [31372] [I] SCOPY T3 frame=7740 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.260] [31372] [I] SCOPY T0 frame=7748 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.261] [31372] [I] SCOPY T1 frame=7748 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.261] [31372] [I] SCOPY T2 frame=7748 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.261] [31372] [I] SCOPY T3 frame=7748 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.378] [31372] [I] SCOPY T0 frame=7756 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.378] [31372] [I] SCOPY T1 frame=7756 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.378] [31372] [I] SCOPY T2 frame=7756 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.378] [31372] [I] SCOPY T3 frame=7756 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.495] [31372] [I] SCOPY T0 frame=7764 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.495] [31372] [I] SCOPY T1 frame=7764 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.495] [31372] [I] SCOPY T2 frame=7764 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.495] [31372] [I] SCOPY T3 frame=7764 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.612] [31372] [I] SCOPY T0 frame=7772 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.612] [31372] [I] SCOPY T1 frame=7772 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.612] [31372] [I] SCOPY T2 frame=7772 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.612] [31372] [I] SCOPY T3 frame=7772 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.612] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:12:52.612] [31372] [I] SCOPY DRAW frame=121 passes=45 lights=true animation-driver=none physics-driver=none
+[22:12:52.666] [31372] [I] SCOPY KEY rotate pressed (VK_F3 -> scan 61)
+[22:12:52.671] [31372] [I] SCOPY ROTATE angle-deg=90
+[22:12:52.729] [31372] [I] SCOPY T0 frame=7780 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.729] [31372] [I] SCOPY T1 frame=7780 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.729] [31372] [I] SCOPY T2 frame=7780 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.729] [31372] [I] SCOPY T3 frame=7780 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.848] [31372] [I] SCOPY T0 frame=7788 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.848] [31372] [I] SCOPY T1 frame=7788 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=12.11 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.848] [31372] [I] SCOPY T2 frame=7788 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.848] [31372] [I] SCOPY T3 frame=7788 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:52.935] [31372] [I] SCOPY ROTATE angle-deg=180
+[22:12:52.965] [31372] [I] SCOPY T0 frame=7796 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:52.965] [31372] [I] SCOPY T1 frame=7796 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=10.83 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:52.965] [31372] [I] SCOPY T2 frame=7796 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:52.965] [31372] [I] SCOPY T3 frame=7796 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:53.083] [31372] [I] SCOPY T0 frame=7804 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:53.083] [31372] [I] SCOPY T1 frame=7804 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=9.27 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:53.083] [31372] [I] SCOPY T2 frame=7804 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:53.083] [31372] [I] SCOPY T3 frame=7804 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:53.170] [31372] [I] SCOPY ROTATE angle-deg=270
+[22:12:53.200] [31372] [I] SCOPY T0 frame=7812 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:53.200] [31372] [I] SCOPY T1 frame=7812 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:53.200] [31372] [I] SCOPY T2 frame=7812 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:53.200] [31372] [I] SCOPY T3 frame=7812 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:53.318] [31372] [I] SCOPY T0 frame=7820 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:53.318] [31372] [I] SCOPY T1 frame=7820 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=5.48 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:53.318] [31372] [I] SCOPY T2 frame=7820 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:53.318] [31372] [I] SCOPY T3 frame=7820 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:53.406] [31372] [I] SCOPY ROTATE angle-deg=360
+[22:12:53.435] [31372] [I] SCOPY T0 frame=7828 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:53.435] [31372] [I] SCOPY T1 frame=7828 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=3.35 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:53.435] [31372] [I] SCOPY T2 frame=7828 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:53.435] [31372] [I] SCOPY T3 frame=7828 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:53.553] [31372] [I] SCOPY T0 frame=7836 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:53.553] [31372] [I] SCOPY T1 frame=7836 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:53.553] [31372] [I] SCOPY T2 frame=7836 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:53.553] [31372] [I] SCOPY T3 frame=7836 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:53.670] [31372] [I] SCOPY T0 frame=7844 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:53.670] [31372] [I] SCOPY T1 frame=7844 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:53.670] [31372] [I] SCOPY T2 frame=7844 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:53.670] [31372] [I] SCOPY T3 frame=7844 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:53.790] [31372] [I] SCOPY T0 frame=7852 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:53.790] [31372] [I] SCOPY T1 frame=7852 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=3.35 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:53.790] [31372] [I] SCOPY T2 frame=7852 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:53.790] [31372] [I] SCOPY T3 frame=7852 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:53.908] [31372] [I] SCOPY T0 frame=7860 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:53.908] [31372] [I] SCOPY T1 frame=7860 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=5.48 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:53.908] [31372] [I] SCOPY T2 frame=7860 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:53.908] [31372] [I] SCOPY T3 frame=7860 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:54.025] [31372] [I] SCOPY T0 frame=7868 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:54.025] [31372] [I] SCOPY T1 frame=7868 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:54.025] [31372] [I] SCOPY T2 frame=7868 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:54.025] [31372] [I] SCOPY T3 frame=7868 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:54.144] [31372] [I] SCOPY T0 frame=7876 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:54.145] [31372] [I] SCOPY T1 frame=7876 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=9.27 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:54.145] [31372] [I] SCOPY T2 frame=7876 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:54.145] [31372] [I] SCOPY T3 frame=7876 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:54.263] [31372] [I] SCOPY T0 frame=7884 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:54.263] [31372] [I] SCOPY T1 frame=7884 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=10.83 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:54.263] [31372] [I] SCOPY T2 frame=7884 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:54.263] [31372] [I] SCOPY T3 frame=7884 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:54.384] [31372] [I] SCOPY T0 frame=7892 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:54.384] [31372] [I] SCOPY T1 frame=7892 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=12.11 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:54.384] [31372] [I] SCOPY T2 frame=7892 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:54.384] [31372] [I] SCOPY T3 frame=7892 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:54.384] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:12:54.384] [31372] [I] SCOPY DRAW frame=241 passes=45 lights=true animation-driver=none physics-driver=none
+[22:12:54.503] [31372] [I] SCOPY T0 frame=7900 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:54.503] [31372] [I] SCOPY T1 frame=7900 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:54.503] [31372] [I] SCOPY T2 frame=7900 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:54.503] [31372] [I] SCOPY T3 frame=7900 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:54.621] [31372] [I] SCOPY T0 frame=7908 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:54.621] [31372] [I] SCOPY T1 frame=7908 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=13.77 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:54.621] [31372] [I] SCOPY T2 frame=7908 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:54.621] [31372] [I] SCOPY T3 frame=7908 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:54.741] [31372] [I] SCOPY T0 frame=7916 capture=2 bone='NPC Pelvis [Pelv]' skin='Body [Ovl0]' root='skeleton_female.nif' bone-origin=(2.3,-484.9,2.8) bone-row0=(0.993,-0.024,-0.115) witness='NPC R Toe0 [RToe]' witness-radius=23.93 subtree-nodes=219
+[22:12:54.741] [31372] [I] SCOPY T1 frame=7916 bone-row0=(0.993,-0.024,-0.115) orientation-delta-deg=0.0 witness-moved=14.10 moved-range=[1.13,14.10] slot=9 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:12:54.741] [31372] [I] SCOPY T2 frame=7916 pass-geometry='Body [Ovl0]' numMatrices=30 frameID=4557 buffer-submit=sampled changed-since-T1=true submit-rel=neither
+[22:12:54.741] [31372] [I] SCOPY T3 frame=7916 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(0.993,-0.024,-0.115)
+[22:12:54.816] [31372] [I] SCOPY ANIM probe disabled; the copy keeps its captured pose
+[22:12:56.162] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:12:56.162] [31372] [I] SCOPY DRAW frame=361 passes=45 lights=true animation-driver=none physics-driver=none
+[22:12:57.928] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:12:57.928] [31372] [I] SCOPY DRAW frame=481 passes=45 lights=true animation-driver=none physics-driver=none
+[22:12:59.692] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:12:59.692] [31372] [I] SCOPY DRAW frame=601 passes=45 lights=true animation-driver=none physics-driver=none
+[22:13:00.543] [31372] [I] SCOPY ROTATE angle-deg=450
+[22:13:00.793] [31372] [I] SCOPY ROTATE angle-deg=540
+[22:13:01.029] [31372] [I] SCOPY ROTATE angle-deg=630
+[22:13:01.382] [31372] [I] SCOPY ROTATE angle-deg=720
+[22:13:01.455] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:13:01.455] [31372] [I] SCOPY DRAW frame=721 passes=45 lights=true animation-driver=none physics-driver=none
+[22:13:03.133] [31372] [I] SCOPY ANIM probe enabled: node transforms only, applied after the studio's base placement and before pass preparation; the skin matrix buffer is read-only
+[22:13:03.134] [31372] [I] SCOPY ANIM target bone='NPC Spine2 [Spn2]' candidates=17 subtree-nodes=906 skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' witness='RightWing5' witness-radius=16.01 swing=world-X 0.600rad period=320f controllers=none verdict=copy-is-graph-invisible skins: [Face [Ovl0]: 17/17 direct] [Dress: 71/71 direct] [Dress_Inner: 70/70 direct] [Armband: 7/7 direct]
+[22:13:03.220] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:13:03.220] [31372] [I] SCOPY DRAW frame=841 passes=45 lights=true animation-driver=none physics-driver=none
+[22:13:03.250] [31372] [I] SCOPY T0 frame=8494 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:03.251] [31372] [I] SCOPY T1 frame=8494 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=2.60 moved-range=[2.60,2.60] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:03.251] [31372] [I] SCOPY T2 frame=8494 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8771 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:03.251] [31372] [I] SCOPY T3 frame=8494 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:03.368] [31372] [I] SCOPY T0 frame=8502 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:03.368] [31372] [I] SCOPY T1 frame=8502 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=4.01 moved-range=[2.60,4.01] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:03.368] [31372] [I] SCOPY T2 frame=8502 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8779 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:03.368] [31372] [I] SCOPY T3 frame=8502 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:03.484] [31372] [I] SCOPY T0 frame=8510 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:03.484] [31372] [I] SCOPY T1 frame=8510 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=5.31 moved-range=[2.60,5.31] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:03.484] [31372] [I] SCOPY T2 frame=8510 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8787 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:03.484] [31372] [I] SCOPY T3 frame=8510 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:03.602] [31372] [I] SCOPY T0 frame=8518 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:03.602] [31372] [I] SCOPY T1 frame=8518 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=6.47 moved-range=[2.60,6.47] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:03.602] [31372] [I] SCOPY T2 frame=8518 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8795 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:03.602] [31372] [I] SCOPY T3 frame=8518 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:03.719] [31372] [I] SCOPY T0 frame=8526 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:03.719] [31372] [I] SCOPY T1 frame=8526 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[2.60,7.47] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:03.719] [31372] [I] SCOPY T2 frame=8526 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8803 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:03.719] [31372] [I] SCOPY T3 frame=8526 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:03.836] [31372] [I] SCOPY T0 frame=8534 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:03.836] [31372] [I] SCOPY T1 frame=8534 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.28 moved-range=[2.60,8.28] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:03.836] [31372] [I] SCOPY T2 frame=8534 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8811 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:03.836] [31372] [I] SCOPY T3 frame=8534 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:03.953] [31372] [I] SCOPY T0 frame=8542 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:03.953] [31372] [I] SCOPY T1 frame=8542 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.89 moved-range=[2.60,8.89] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:03.953] [31372] [I] SCOPY T2 frame=8542 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8819 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:03.953] [31372] [I] SCOPY T3 frame=8542 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.069] [31372] [I] SCOPY T0 frame=8550 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:04.069] [31372] [I] SCOPY T1 frame=8550 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.28 moved-range=[2.60,9.28] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:04.069] [31372] [I] SCOPY T2 frame=8550 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8827 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:04.069] [31372] [I] SCOPY T3 frame=8550 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.186] [31372] [I] SCOPY T0 frame=8558 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:04.186] [31372] [I] SCOPY T1 frame=8558 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.45 moved-range=[2.60,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:04.186] [31372] [I] SCOPY T2 frame=8558 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8835 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:04.186] [31372] [I] SCOPY T3 frame=8558 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.303] [31372] [I] SCOPY T0 frame=8566 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:04.303] [31372] [I] SCOPY T1 frame=8566 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.40 moved-range=[2.60,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:04.303] [31372] [I] SCOPY T2 frame=8566 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8843 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:04.303] [31372] [I] SCOPY T3 frame=8566 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.419] [31372] [I] SCOPY T0 frame=8574 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:04.419] [31372] [I] SCOPY T1 frame=8574 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.12 moved-range=[2.60,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:04.419] [31372] [I] SCOPY T2 frame=8574 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8851 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:04.419] [31372] [I] SCOPY T3 frame=8574 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.538] [31372] [I] SCOPY T0 frame=8582 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:04.538] [31372] [I] SCOPY T1 frame=8582 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.61 moved-range=[2.60,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:04.538] [31372] [I] SCOPY T2 frame=8582 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8859 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:04.538] [31372] [I] SCOPY T3 frame=8582 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.658] [31372] [I] SCOPY T0 frame=8590 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:04.658] [31372] [I] SCOPY T1 frame=8590 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.90 moved-range=[2.60,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:04.658] [31372] [I] SCOPY T2 frame=8590 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8867 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:04.658] [31372] [I] SCOPY T3 frame=8590 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.775] [31372] [I] SCOPY T0 frame=8598 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:04.775] [31372] [I] SCOPY T1 frame=8598 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.00 moved-range=[2.60,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:04.775] [31372] [I] SCOPY T2 frame=8598 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8875 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:04.775] [31372] [I] SCOPY T3 frame=8598 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.893] [31372] [I] SCOPY T0 frame=8606 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:04.893] [31372] [I] SCOPY T1 frame=8606 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=5.91 moved-range=[2.60,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:04.893] [31372] [I] SCOPY T2 frame=8606 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8883 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:04.893] [31372] [I] SCOPY T3 frame=8606 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:04.983] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:13:04.983] [31372] [I] SCOPY DRAW frame=961 passes=45 lights=true animation-driver=none physics-driver=none
+[22:13:05.012] [31372] [I] SCOPY T0 frame=8614 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:05.013] [31372] [I] SCOPY T1 frame=8614 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=4.68 moved-range=[2.60,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:05.013] [31372] [I] SCOPY T2 frame=8614 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8891 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:05.013] [31372] [I] SCOPY T3 frame=8614 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:05.131] [31372] [I] SCOPY ANIM probe disabled; the copy keeps its captured pose
+[22:13:05.742] [31372] [I] SCOPY ANIM probe enabled: node transforms only, applied after the studio's base placement and before pass preparation; the skin matrix buffer is read-only
+[22:13:05.743] [31372] [I] SCOPY ANIM target bone='NPC Spine2 [Spn2]' candidates=17 subtree-nodes=906 skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' witness='RightWing5' witness-radius=16.01 swing=world-X 0.600rad period=320f controllers=none verdict=copy-is-graph-invisible skins: [Face [Ovl0]: 17/17 direct] [Dress: 71/71 direct] [Dress_Inner: 70/70 direct] [Armband: 7/7 direct]
+[22:13:05.863] [31372] [I] SCOPY T0 frame=8671 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:05.863] [31372] [I] SCOPY T1 frame=8671 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=5.46 moved-range=[5.46,5.46] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:05.863] [31372] [I] SCOPY T2 frame=8671 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8948 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:05.863] [31372] [I] SCOPY T3 frame=8671 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:05.981] [31372] [I] SCOPY T0 frame=8679 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:05.981] [31372] [I] SCOPY T1 frame=8679 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=6.61 moved-range=[5.46,6.61] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:05.981] [31372] [I] SCOPY T2 frame=8679 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8956 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:05.981] [31372] [I] SCOPY T3 frame=8679 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:06.101] [31372] [I] SCOPY T0 frame=8687 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:06.101] [31372] [I] SCOPY T1 frame=8687 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.58 moved-range=[5.46,7.58] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:06.101] [31372] [I] SCOPY T2 frame=8687 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8964 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:06.101] [31372] [I] SCOPY T3 frame=8687 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:06.220] [31372] [I] SCOPY T0 frame=8695 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:06.220] [31372] [I] SCOPY T1 frame=8695 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.37 moved-range=[5.46,8.37] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:06.220] [31372] [I] SCOPY T2 frame=8695 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8972 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:06.220] [31372] [I] SCOPY T3 frame=8695 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:06.339] [31372] [I] SCOPY T0 frame=8703 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:06.340] [31372] [I] SCOPY T1 frame=8703 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.95 moved-range=[5.46,8.95] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:06.340] [31372] [I] SCOPY T2 frame=8703 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8980 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:06.340] [31372] [I] SCOPY T3 frame=8703 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:06.461] [31372] [I] SCOPY T0 frame=8711 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:06.461] [31372] [I] SCOPY T1 frame=8711 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.32 moved-range=[5.46,9.32] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:06.461] [31372] [I] SCOPY T2 frame=8711 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8988 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:06.461] [31372] [I] SCOPY T3 frame=8711 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:06.577] [31372] [I] SCOPY T0 frame=8719 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:06.577] [31372] [I] SCOPY T1 frame=8719 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.46 moved-range=[5.46,9.46] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:06.578] [31372] [I] SCOPY T2 frame=8719 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=8996 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:06.578] [31372] [I] SCOPY T3 frame=8719 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:06.696] [31372] [I] SCOPY T0 frame=8727 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:06.696] [31372] [I] SCOPY T1 frame=8727 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.37 moved-range=[5.46,9.46] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:06.696] [31372] [I] SCOPY T2 frame=8727 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9004 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:06.696] [31372] [I] SCOPY T3 frame=8727 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:06.770] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:13:06.770] [31372] [I] SCOPY DRAW frame=1081 passes=45 lights=true animation-driver=none physics-driver=none
+[22:13:06.815] [31372] [I] SCOPY T0 frame=8735 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:06.815] [31372] [I] SCOPY T1 frame=8735 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.06 moved-range=[5.46,9.46] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:06.815] [31372] [I] SCOPY T2 frame=8735 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9012 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:06.815] [31372] [I] SCOPY T3 frame=8735 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:06.932] [31372] [I] SCOPY T0 frame=8743 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:06.932] [31372] [I] SCOPY T1 frame=8743 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.54 moved-range=[5.46,9.46] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:06.932] [31372] [I] SCOPY T2 frame=8743 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9020 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:06.932] [31372] [I] SCOPY T3 frame=8743 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:07.052] [31372] [I] SCOPY T0 frame=8751 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:07.052] [31372] [I] SCOPY T1 frame=8751 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.80 moved-range=[5.46,9.46] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:07.052] [31372] [I] SCOPY T2 frame=8751 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9028 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:07.052] [31372] [I] SCOPY T3 frame=8751 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:07.171] [31372] [I] SCOPY T0 frame=8759 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:07.171] [31372] [I] SCOPY T1 frame=8759 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=6.87 moved-range=[5.46,9.46] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:07.171] [31372] [I] SCOPY T2 frame=8759 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9036 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:07.171] [31372] [I] SCOPY T3 frame=8759 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:07.293] [31372] [I] SCOPY T0 frame=8767 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:07.293] [31372] [I] SCOPY T1 frame=8767 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=5.76 moved-range=[5.46,9.46] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:07.293] [31372] [I] SCOPY T2 frame=8767 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9044 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:07.293] [31372] [I] SCOPY T3 frame=8767 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:07.396] [31372] [I] SCOPY ANIM probe disabled; the copy keeps its captured pose
+[22:13:07.810] [31372] [I] SCOPY ANIM probe enabled: node transforms only, applied after the studio's base placement and before pass preparation; the skin matrix buffer is read-only
+[22:13:07.810] [31372] [I] SCOPY ANIM target bone='NPC Spine2 [Spn2]' candidates=17 subtree-nodes=906 skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' witness='RightWing5' witness-radius=16.01 swing=world-X 0.600rad period=320f controllers=none verdict=copy-is-graph-invisible skins: [Face [Ovl0]: 17/17 direct] [Dress: 71/71 direct] [Dress_Inner: 70/70 direct] [Armband: 7/7 direct]
+[22:13:07.927] [31372] [I] SCOPY T0 frame=8810 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:07.927] [31372] [I] SCOPY T1 frame=8810 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=1.87 moved-range=[1.87,1.87] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:07.927] [31372] [I] SCOPY T2 frame=8810 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9087 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:07.927] [31372] [I] SCOPY T3 frame=8810 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.045] [31372] [I] SCOPY T0 frame=8818 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.045] [31372] [I] SCOPY T1 frame=8818 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=3.32 moved-range=[1.87,3.32] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.045] [31372] [I] SCOPY T2 frame=8818 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9095 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.045] [31372] [I] SCOPY T3 frame=8818 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.162] [31372] [I] SCOPY T0 frame=8826 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.162] [31372] [I] SCOPY T1 frame=8826 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=4.68 moved-range=[1.87,4.68] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.162] [31372] [I] SCOPY T2 frame=8826 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9103 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.162] [31372] [I] SCOPY T3 frame=8826 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.280] [31372] [I] SCOPY T0 frame=8834 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.280] [31372] [I] SCOPY T1 frame=8834 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=5.91 moved-range=[1.87,5.91] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.280] [31372] [I] SCOPY T2 frame=8834 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9111 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.280] [31372] [I] SCOPY T3 frame=8834 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.397] [31372] [I] SCOPY T0 frame=8842 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.397] [31372] [I] SCOPY T1 frame=8842 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.00 moved-range=[1.87,7.00] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.397] [31372] [I] SCOPY T2 frame=8842 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9119 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.397] [31372] [I] SCOPY T3 frame=8842 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.513] [31372] [I] SCOPY T0 frame=8850 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.514] [31372] [I] SCOPY T1 frame=8850 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.90 moved-range=[1.87,7.90] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.514] [31372] [I] SCOPY T2 frame=8850 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9127 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.514] [31372] [I] SCOPY T3 frame=8850 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.543] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:13:08.544] [31372] [I] SCOPY DRAW frame=1201 passes=45 lights=true animation-driver=none physics-driver=none
+[22:13:08.630] [31372] [I] SCOPY T0 frame=8858 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.630] [31372] [I] SCOPY T1 frame=8858 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.61 moved-range=[1.87,8.61] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.630] [31372] [I] SCOPY T2 frame=8858 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9135 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.630] [31372] [I] SCOPY T3 frame=8858 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.747] [31372] [I] SCOPY T0 frame=8866 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.747] [31372] [I] SCOPY T1 frame=8866 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.12 moved-range=[1.87,9.12] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.747] [31372] [I] SCOPY T2 frame=8866 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9143 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.747] [31372] [I] SCOPY T3 frame=8866 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.865] [31372] [I] SCOPY T0 frame=8874 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.865] [31372] [I] SCOPY T1 frame=8874 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.40 moved-range=[1.87,9.40] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.865] [31372] [I] SCOPY T2 frame=8874 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9151 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.865] [31372] [I] SCOPY T3 frame=8874 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:08.980] [31372] [I] SCOPY T0 frame=8882 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:08.980] [31372] [I] SCOPY T1 frame=8882 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.45 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:08.980] [31372] [I] SCOPY T2 frame=8882 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9159 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:08.980] [31372] [I] SCOPY T3 frame=8882 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:09.097] [31372] [I] SCOPY T0 frame=8890 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:09.097] [31372] [I] SCOPY T1 frame=8890 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.28 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:09.097] [31372] [I] SCOPY T2 frame=8890 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9167 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:09.097] [31372] [I] SCOPY T3 frame=8890 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:09.215] [31372] [I] SCOPY T0 frame=8898 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:09.215] [31372] [I] SCOPY T1 frame=8898 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.89 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:09.215] [31372] [I] SCOPY T2 frame=8898 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9175 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:09.215] [31372] [I] SCOPY T3 frame=8898 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:09.331] [31372] [I] SCOPY T0 frame=8906 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:09.331] [31372] [I] SCOPY T1 frame=8906 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.28 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:09.331] [31372] [I] SCOPY T2 frame=8906 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9183 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:09.331] [31372] [I] SCOPY T3 frame=8906 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:09.447] [31372] [I] SCOPY T0 frame=8914 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:09.447] [31372] [I] SCOPY T1 frame=8914 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.47 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:09.447] [31372] [I] SCOPY T2 frame=8914 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9191 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:09.447] [31372] [I] SCOPY T3 frame=8914 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:09.564] [31372] [I] SCOPY T0 frame=8922 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:09.564] [31372] [I] SCOPY T1 frame=8922 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=6.47 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:09.564] [31372] [I] SCOPY T2 frame=8922 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9199 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:09.564] [31372] [I] SCOPY T3 frame=8922 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:09.681] [31372] [I] SCOPY T0 frame=8930 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:09.681] [31372] [I] SCOPY T1 frame=8930 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=5.31 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:09.681] [31372] [I] SCOPY T2 frame=8930 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9207 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:09.681] [31372] [I] SCOPY T3 frame=8930 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:09.799] [31372] [I] SCOPY T0 frame=8938 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:09.799] [31372] [I] SCOPY T1 frame=8938 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=4.01 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:09.799] [31372] [I] SCOPY T2 frame=8938 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9215 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:09.799] [31372] [I] SCOPY T3 frame=8938 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:09.918] [31372] [I] SCOPY T0 frame=8946 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:09.918] [31372] [I] SCOPY T1 frame=8946 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=2.60 moved-range=[1.87,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:09.918] [31372] [I] SCOPY T2 frame=8946 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9223 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:09.918] [31372] [I] SCOPY T3 frame=8946 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:10.034] [31372] [I] SCOPY T0 frame=8954 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:10.034] [31372] [I] SCOPY T1 frame=8954 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=1.13 moved-range=[1.13,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:10.034] [31372] [I] SCOPY T2 frame=8954 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9231 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:10.034] [31372] [I] SCOPY T3 frame=8954 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:10.151] [31372] [I] SCOPY T0 frame=8962 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:10.151] [31372] [I] SCOPY T1 frame=8962 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=0.38 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:10.151] [31372] [I] SCOPY T2 frame=8962 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9239 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:10.151] [31372] [I] SCOPY T3 frame=8962 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:10.270] [31372] [I] SCOPY T0 frame=8970 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:10.270] [31372] [I] SCOPY T1 frame=8970 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=1.87 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:10.270] [31372] [I] SCOPY T2 frame=8970 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9247 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:10.270] [31372] [I] SCOPY T3 frame=8970 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:10.300] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:13:10.300] [31372] [I] SCOPY DRAW frame=1321 passes=45 lights=true animation-driver=none physics-driver=none
+[22:13:10.389] [31372] [I] SCOPY T0 frame=8978 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:10.389] [31372] [I] SCOPY T1 frame=8978 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=3.32 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:10.389] [31372] [I] SCOPY T2 frame=8978 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9255 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:10.389] [31372] [I] SCOPY T3 frame=8978 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:10.508] [31372] [I] SCOPY T0 frame=8986 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:10.508] [31372] [I] SCOPY T1 frame=8986 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=4.68 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:10.508] [31372] [I] SCOPY T2 frame=8986 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9263 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:10.508] [31372] [I] SCOPY T3 frame=8986 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:10.627] [31372] [I] SCOPY T0 frame=8994 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:10.627] [31372] [I] SCOPY T1 frame=8994 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=5.91 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:10.627] [31372] [I] SCOPY T2 frame=8994 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9271 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:10.627] [31372] [I] SCOPY T3 frame=8994 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:10.747] [31372] [I] SCOPY T0 frame=9002 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:10.747] [31372] [I] SCOPY T1 frame=9002 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.00 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:10.747] [31372] [I] SCOPY T2 frame=9002 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9279 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:10.747] [31372] [I] SCOPY T3 frame=9002 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:12.009] [31372] [I] SCOPY T0 frame=9010 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:12.009] [31372] [I] SCOPY T1 frame=9010 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=7.90 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:12.009] [31372] [I] SCOPY T2 frame=9010 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9287 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:12.009] [31372] [I] SCOPY T3 frame=9010 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:12.132] [31372] [I] SCOPY T0 frame=9018 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:12.132] [31372] [I] SCOPY T1 frame=9018 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=8.61 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:12.132] [31372] [I] SCOPY T2 frame=9018 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9295 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:12.132] [31372] [I] SCOPY T3 frame=9018 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:12.250] [31372] [I] SCOPY T0 frame=9026 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:12.250] [31372] [I] SCOPY T1 frame=9026 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.12 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:12.250] [31372] [I] SCOPY T2 frame=9026 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9303 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:12.250] [31372] [I] SCOPY T3 frame=9026 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:12.369] [31372] [I] SCOPY T0 frame=9034 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:12.369] [31372] [I] SCOPY T1 frame=9034 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.40 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:12.369] [31372] [I] SCOPY T2 frame=9034 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9311 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:12.369] [31372] [I] SCOPY T3 frame=9034 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:12.487] [31372] [I] SCOPY T0 frame=9042 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:12.487] [31372] [I] SCOPY T1 frame=9042 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.45 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:12.487] [31372] [I] SCOPY T2 frame=9042 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9319 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:12.487] [31372] [I] SCOPY T3 frame=9042 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:12.605] [31372] [I] SCOPY T0 frame=9050 capture=2 bone='NPC Spine2 [Spn2]' skin='Face [Ovl0]' root='BSFaceGenNiNodeSkinned' bone-origin=(1.1,-488.3,10.6) bone-row0=(1.000,0.004,-0.004) witness='RightWing5' witness-radius=16.01 subtree-nodes=906
+[22:13:12.605] [31372] [I] SCOPY T1 frame=9050 bone-row0=(1.000,0.004,-0.004) orientation-delta-deg=0.0 witness-moved=9.28 moved-range=[0.38,9.45] slot=0 buffer-pre=sampled pre-rel=neither probe-effective=true
+[22:13:12.605] [31372] [I] SCOPY T2 frame=9050 pass-geometry='Face [Ovl0]' numMatrices=17 frameID=9327 buffer-submit=sampled changed-since-T1=false submit-rel=neither
+[22:13:12.605] [31372] [I] SCOPY T3 frame=9050 drawn=45 buffer-after-draw=sampled changed-since-T2=true final-rel=neither node-row0=(1.000,0.004,-0.004)
+[22:13:12.649] [31372] [I] SCOPY ANIM probe disabled; the copy keeps its captured pose
+[22:13:13.225] [31372] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[22:13:13.226] [31372] [I] SCOPY DRAW frame=1441 passes=45 lights=true animation-driver=none physics-driver=none
+[22:13:14.226] [31372] [I] SCOPY PARK snapshots held alive for the process lifetime: 2
+[22:13:14.227] [31372] [I] SCOPY RELEASE reason=F4 capture=2

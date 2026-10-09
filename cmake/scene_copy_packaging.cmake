@@ -21,6 +21,16 @@ if(NOT DEFINED CONFIGURATION OR CONFIGURATION STREQUAL "")
     message(FATAL_ERROR "Scene-copy packaging requires CONFIGURATION; the DLL and PDB come from $<CONFIG>, so a guessed configuration would misdescribe the shipped binaries")
 endif()
 
+# Without these the package would carry an identity that describes nothing, which is exactly the
+# state a multi-round probe file must not be in (test sheet 2026-10-09, R01).
+if(NOT DEFINED BUILD_IDENTITY OR BUILD_IDENTITY STREQUAL "")
+    message(FATAL_ERROR "Scene-copy packaging requires BUILD_IDENTITY (CharacterPanel's configured banner identity)")
+endif()
+
+if(NOT DEFINED PROBE_REVISION OR PROBE_REVISION STREQUAL "")
+    message(FATAL_ERROR "Scene-copy packaging requires PROBE_REVISION; the package name and manifest are keyed on it")
+endif()
+
 # Read the baselines at package time: a configure-time capture goes stale as soon
 # as the tree moves, and the manifest has to name what the DLL was built from.
 execute_process(
@@ -69,7 +79,7 @@ else()
     set(COMMONLIB_DIRTY "true")
 endif()
 
-set(stage_name "CharacterPanel-scopy-S0")
+set(stage_name "CharacterPanel-scopy-${PROBE_REVISION}")
 set(stage_dir "${OUTPUT_DIR}/${stage_name}")
 set(package_path "${OUTPUT_DIR}/${stage_name}-${PROJECT_VERSION}.zip")
 
@@ -81,10 +91,24 @@ file(COPY_FILE "${PROJECT_ROOT}/tools/scene_copy/README.txt" "${stage_dir}/Chara
 file(SHA256 "${stage_dir}/SKSE/Plugins/CharacterPanel.dll" dll_hash)
 file(SHA256 "${stage_dir}/SKSE/Plugins/CharacterPanel.pdb" pdb_hash)
 
+# A returned log identifies its build by the banner's identity string, so the packaged DLL must
+# actually contain the one the manifest names; otherwise the manifest would describe an artifact
+# the log cannot be matched against.
+file(READ "${stage_dir}/SKSE/Plugins/CharacterPanel.dll" dll_contents HEX)
+string(TOUPPER "${dll_contents}" dll_contents)
+string(HEX "${BUILD_IDENTITY}" identity_hex)
+string(TOUPPER "${identity_hex}" identity_hex)
+string(FIND "${dll_contents}" "${identity_hex}" identity_offset)
+if(identity_offset EQUAL -1)
+    message(FATAL_ERROR "The packaged DLL does not contain the build identity '${BUILD_IDENTITY}'; the banner would not identify this artifact")
+endif()
+
 string(TIMESTAMP build_timestamp "%Y-%m-%dT%H:%M:%SZ" UTC)
 # Each JSON SET call takes exactly one name/value pair and rewrites the variable.
 set(manifest "{}")
-string(JSON manifest SET "${manifest}" "experiment" "\"CharacterPanel-scopy-S0-2026-10-08\"")
+string(JSON manifest SET "${manifest}" "experiment" "\"CharacterPanel-scopy\"")
+string(JSON manifest SET "${manifest}" "probe_revision" "\"${PROBE_REVISION}\"")
+string(JSON manifest SET "${manifest}" "build_identity" "\"${BUILD_IDENTITY}\"")
 string(JSON manifest SET "${manifest}" "artifact" "\"CharacterPanel.dll\"")
 string(JSON manifest SET "${manifest}" "project_version" "\"${PROJECT_VERSION}\"")
 string(JSON manifest SET "${manifest}" "configuration" "\"${CONFIGURATION}\"")
@@ -112,6 +136,7 @@ if(NOT archive_result EQUAL 0)
 endif()
 
 message(STATUS "Scene-copy package: ${package_path}")
+message(STATUS "  build identity: ${BUILD_IDENTITY} (probe revision ${PROBE_REVISION}, verified present in the DLL)")
 message(STATUS "  dll sha256: ${dll_hash}")
 message(STATUS "  source baseline: ${SOURCE_BASELINE}")
 message(STATUS "  CommonLibSSE: ${COMMONLIB_COMMIT}")

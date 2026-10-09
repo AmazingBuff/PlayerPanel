@@ -1,5 +1,13 @@
 # S2 / S3 方案：副本的独立动作与物理
 
+> **2026-10-09 方向修正（以 [S2 动画 handoff](s2-animation-handoff.md) 为准）**：程序化待机虽然证明了
+> "持续写骨骼能驱动副本"，但它**没有真值、无法判定对错**，用户已要求改用**真实动画数据（HKX）**驱动
+> 并做**数值对比验证**。侦察已确认引擎侧的 Havok 采样管线在 CommonLibSSE 里可用
+> （`hkaAnimation::SampleTracks`、`hkaAnimationBinding::transformTrackToBoneIndices`、
+> `hkbClipGenerator`、`hkbCharacterSetup::animationSkeleton`、`BShkbAnimationGraph::boneNodes` 等），
+> **不需要自研 HKX 解析器**。下一工作包（HKX1）的步骤、失败面、对比协议与三条取数路线见该文；
+> 本文以下内容保留为历史方案与接口调研记录，其中"自驱式"一节已被上述方向取代。
+
 日期：2026-10-09 复核。前置：S0 静态显示初步成立，安全回收阻塞（测试 A + B，见
 [回传记录](scene-graph-copy-results-2026-10-08.md)）。范围对应 PRD 的 FR-03 与
 [后续关卡表](scene-graph-copy-validation.md#后续关卡本轮未实现不作为-s0-已通过项) 的 S2（动作）、
@@ -7,9 +15,10 @@ S3（CBPC／FSMP 独立注册）。
 
 > **当前状态：S2 未判定；S3 公开接口接入受限，独立模拟未验证。等待下一轮有效实验。**
 >
-> 当前代码先 `apply_animation_probe()`，再 `draw()` 内的 `pose()`；后者恢复所有捕获的节点世界变换。
-> 写入后的日志不能证明修改持续到实际 draw，不能据画面不动否定骨骼驱动或断言 CPU 数组不参与 GPU 数据生成。
-> 本次只修订文档，旧探针顺序没有改变。下一轮必须先满足新构建的准备条件。
+> 旧代码先 `apply_animation_probe()`、再 `draw()` 内的 `pose()`；后者恢复所有捕获的节点世界变换，
+> 因此写入后的日志不能证明修改持续到实际 draw。**2026-10-09 实施后该顺序已按 PRD §6.3 修正**
+> （探针移入绘制窗口的 `pose()` 之后、pass 生成之前），并加入 T0–T3 测量点与只读的缓冲采样；
+> 本机编译与单测通过，尚无游戏内数据，S2 判定不变。
 
 ## 2026-10-09 复核与下一轮依据
 
@@ -177,7 +186,25 @@ PRD FR-05 所禁止的。顺序因此固定：**先证明"能给副本摆姿"，
 对外接口的可用性由并行调研确认（FSMP 是否提供 SKSE 插件 API、CBPC 是否只认 Papyrus／装备配置），
 结论落表后本节补写。
 
-## 第一工作包：摆姿探针（S2-P0，已实现）
+## 第一工作包：摆姿探针（S2-P0，已实现并经四轮游戏内验证）
+
+> **2026-10-09 结果**：四个问题都已回答——①摆姿成立（CBBE 与 UBE 都随写入变化，F2 开关配对确认
+> 开＝摆动、关＝复位静止）；②执行顺序按 PRD §6.3 固定在绘制窗口内；③蒙皮矩阵缓冲的 3×3 是
+> **节点世界旋转 × 0.35 图形缩放**，且匹配的是**摆动后**的当前姿态（残差 0.0002），即引擎在绘制中
+> 按我们写的节点重算；④槽位下标**不等于** `bones[]` 下标（自匹配 5/31、4/71），将来要写缓冲必须先
+> 解析映射。逐轮证据见 [探针证据](s2-anim-probe-evidence-2026-10-09.md)。
+>
+> **S2 的第一个驱动器已落地**：程序化待机 `IdleDriver`（见下），机制正是本探针证明的"每帧写副本
+> 自己的骨骼"；HKX 播放仍是未实现的后续关卡。
+
+### 自驱式（`IdleDriver`，IDLE1 构建）
+
+按精确关节名解析副本骨架的 `NPC Pelvis [Pelv]`／`NPC Spine1 [Spn1]`／`NPC Spine2 [Spn2]`／
+`NPC Head [Head]`，以自有 `steady_clock` 驱动正弦通道（胯滚转／转身、脊柱反向滚转与呼吸、
+头部缓慢环视），**每帧从捕获姿态重算**（不累积），**F2 开关**、默认开启（探针退役后 F2 交还待机；
+探针改为 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建），只在面板绘制期间运行，
+探针 armed 时让位。只写副本节点，不碰源角色、世界模拟与行为图。振幅／周期表在
+[src/character/idle_driver.h](src/character/idle_driver.h)。
 
 一个**最小写入**的探针，回答一个决定性问题，不做任何"正式实现"：
 
@@ -197,21 +224,34 @@ S2 不是数据问题而是不可行，应回到架构选择；而如果摆姿�
 
 ### 探针用法（F2 开关）
 
+2026-10-09 实施后本节已更新（旧文写的是"局部 Z 轴 ±34°"与一条 `SCOPY ANIM report`；那版探针
+在 `pose()` 之前运行、摆动轴即骨骼自身长轴，且判读依赖写回自比较，均已退役）。现行探针：
+
 F5 是游戏内置的快速保存键，故探针热键定为 **F2**（F9/F10 亦已被其他 mod 占用）。
 副本用 F7 捕获、F8 绘制之后，按 **F2** 开关探针。实现要点：
 
 - 目标骨骼从**副本自己的 skin** 里选（子树覆盖节点最多者 = 主关节），不猜名字；
-- 每帧对它的局部 Z 轴施加 `sin` 摆动（约 ±34°、周期 320 帧），随后 `UpdateDownwardPass` 级联；
-- 开启后约 8 帧会打一条自报告：
+- 每帧对**世界 X 轴**施加 `sin` 摆动（±0.6 rad、周期 320 帧），绕骨骼自身原点，
+  用单测覆盖的 `swing_delta_about_pivot()` 生成增量并向下级联——X 轴与竖直骨架垂直，
+  而绕骨骼自身长轴（Z）只会让见证点原地打转，位移读不出信息；
+- 见证点 = 该骨骼子树中**离摆动轴最远**的后代，半径一并记录；半径≈0 时报告
+  `probe INVALID`，不把"不动"当作写入失败的证据；
+- 探针在**绘制窗口内、`pose()` 之后、pass 生成之前**执行（PRD §6.3 固定顺序），
+  因此日志反映的是真实绘制路径上的数据；
+- 本轮**只改节点变换**，蒙皮矩阵缓存只读采样；每 8 帧打印四个测量点：
 
 ```
-SCOPY ANIM report bone='…' written-swing=… world-z-row=(…) controllers=…
-                    copy-userData=… source-actor=0x… verdict=…
+SCOPY T0 frame=… bone='…' skin='…' root='…' bone-origin=(…) bone-row0=(…) witness='…' witness-radius=…
+SCOPY T1 frame=… bone-row0=(…) orientation-delta-deg=… witness-moved=… moved-range=[…] slot=… buffer-pre=… pre-rel=… probe-effective=…
+SCOPY T2 frame=… pass-geometry='…' numMatrices=… frameID=… buffer-submit=… changed-since-T1=… submit-rel=…
+SCOPY T3 frame=… drawn=… buffer-after-draw=… changed-since-T2=… final-rel=… node-row0=(…)
 ```
 
-`verdict` 两个取值分别对应：`copy-is-graph-invisible`（副本没带 userData，安全，符合预期）
-或 `copy-carries-userData-to-source`（副本带着指回原角色的 userData —— **任何基于 userData
-取图的方案都会驱动世界角色，直接排除**）。`controllers=present/none` 则是 KF 路径是否存在的线索。
+捕获时另有一条 `SCOPY ANIM target …`，含骨名、皮肤几何、skin root、见证点、控制器与
+`verdict`。`verdict` 两个取值分别对应：`copy-is-graph-invisible`（副本没带 userData，安全，
+符合预期）或 `copy-carries-userData-to-source`（副本带着指回原角色的 userData ——
+**任何基于 userData 取图的方案都会驱动世界角色，直接排除**）。`controllers=present/none`
+则是 KF 路径是否存在的线索。
 
 ### 为什么先做这个而不是直接上 HKX
 

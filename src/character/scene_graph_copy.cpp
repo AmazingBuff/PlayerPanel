@@ -23,6 +23,64 @@ namespace
     constexpr float Source_Drift_Epsilon = 0.001f;
     constexpr float Source_Drift_Tight_Epsilon = 0.000001f;
 
+    // S2 probe geometry (PRD 0.6 §6.3). The swing is a world-X rotation: X is perpendicular to
+    // the vertical skeleton, so swinging the pelvis carries the torso through an arc, while a
+    // rotation about the bone's own long axis (Z, used by the archived rounds) spins a witness in
+    // place and cannot be judged from a position sample.
+    constexpr float Probe_Swing_Radians = 0.6f;
+    constexpr uint32_t Probe_Swing_Period_Frames = 320;
+    constexpr uint32_t Probe_Report_Interval_Frames = 8;
+    // A witness closer than this to the swing axis cannot move whatever the amplitude, so its
+    // displacement carries no information about the write (test sheet 2026-10-09, R03).
+    constexpr float Probe_Witness_Min_Radius = 0.5f;
+    constexpr float Probe_Sample_Epsilon = 1e-6f;
+    constexpr uint32_t Probe_Slot_Bytes = 48;
+    // How many slots the one-shot raw dump prints. The target skins seen so far hold 31-71 slots and
+    // the probe slot can sit anywhere in that range, so the cap is set above the largest skin seen
+    // rather than close to it: a dump that omits the slot being sampled answers nothing.
+    constexpr uint32_t Probe_Dump_Slot_Limit = 96;
+
+    std::string describe_rows(const float* values)
+    {
+        return fmt::format("{:.4f} {:.4f} {:.4f} {:.4f} | {:.4f} {:.4f} {:.4f} {:.4f} | {:.4f} {:.4f} {:.4f} {:.4f}",
+            values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7],
+            values[8], values[9], values[10], values[11]);
+    }
+
+    std::string describe_world(const RE::NiTransform& transform)
+    {
+        const float values[12] = {
+            transform.rotate.entry[0][0], transform.rotate.entry[0][1], transform.rotate.entry[0][2], transform.translate.x,
+            transform.rotate.entry[1][0], transform.rotate.entry[1][1], transform.rotate.entry[1][2], transform.translate.y,
+            transform.rotate.entry[2][0], transform.rotate.entry[2][1], transform.rotate.entry[2][2], transform.translate.z
+        };
+        return describe_rows(values);
+    }
+
+    // allocatedSize is a byte size in this engine, so a skin's slot count comes from its skin data;
+    // the byte size only serves as an upper bound.
+    uint32_t skin_bone_count(const RE::NiSkinInstance& skin)
+    {
+        return std::min({ skin.skinData->GetBoneCount(), skin.numMatrices, skin.allocatedSize / Probe_Slot_Bytes });
+    }
+
+    bool skin_owns_bone(const RE::NiSkinInstance& skin, const RE::NiAVObject* bone)
+    {
+        const uint32_t count = skin_bone_count(skin);
+        for (uint32_t i = 0; i < count; ++i)
+            if (skin.bones[i] == bone)
+                return true;
+        return false;
+    }
+
+    bool slot_values_changed(const float* lhs, const float* rhs)
+    {
+        for (int component = 0; component < 12; ++component)
+            if (std::abs(lhs[component] - rhs[component]) > Probe_Sample_Epsilon)
+                return true;
+        return false;
+    }
+
     struct GraphInventory
     {
         std::vector<RE::NiAVObject*> objects;
@@ -38,23 +96,7 @@ namespace
     };
 
     // Recompute a subtree's world transforms by composing a world-space delta onto the captured
-    // worlds, with no dependency on the engine's dirty-update cascade. The census proved that
-    // cascade does not run inside this draw window: a rotated bone left its child's world
-    // untouched.
-    void apply_world_delta_downward(RE::NiAVObject* object, const RE::NiTransform& delta, uint32_t depth)
-    {
-        if (!object || depth > 64)
-            return;
-        const RE::NiTransform world = delta * object->world;
-        object->world = world;
-        object->previousWorld = world;
-        RE::NiNode* node = object->AsNode();
-        if (!node)
-            return;
-        for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
-            if (child)
-                apply_world_delta_downward(child.get(), delta, depth + 1);
-    }
+    // worlds: apply_world_delta_downward lives in snapshot_transform.h, shared with the idle driver.
 
     bool transform_drifted(const RE::NiTransform& lhs, const RE::NiTransform& rhs, float epsilon)
     {
@@ -278,7 +320,7 @@ SceneGraphCopy& SceneGraphCopy::instance()
     return s_instance;
 }
 
-SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_child_cache(nullptr), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_samples(0), m_probe_invalid_logged(false), m_probe_rebuilt_skins(0), m_probe_rebuilt_slots(0), m_probe_slot_value_after_draw(0.0f), m_probe_last_written{}, m_probe_corrupt_slot(0), m_probe_frame_report(0) {}
+SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_target_geometry(nullptr), m_probe_witness(nullptr), m_probe_witness_radius(0.0f), m_probe_subtree_nodes(0), m_probe_affected_geometries(0), m_probe_skinned_geometries(0), m_probe_geometry_bones(0), m_probe_bone_world_pose{}, m_probe_bind_rotate{}, m_probe_bind_valid(false), m_previous_bone_rotate{}, m_previous_bone_valid(false), m_probe_dump_done(false), m_trace_frame(0), m_trace_capture(0), m_trace_bone_before{}, m_trace_bone_after{}, m_trace_witness_before{}, m_trace_witness_after{}, m_trace_slot_pre{}, m_trace_slot_submit{}, m_trace_slot_final{}, m_trace_drawn(0), m_trace_submit_sampled(false), m_trace_complete(false), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_samples(0), m_probe_invalid_logged(false), m_probe_frame_report(0) {}
 SceneGraphCopy::~SceneGraphCopy()
 {
     // Never destroy a parked graph, not even at unload.
@@ -332,6 +374,8 @@ void SceneGraphCopy::process_requests()
         if (m_snapshot)
             logger::info("SCOPY RELEASE reason=session-boundary capture={}", m_capture_id);
         retire(std::move(m_snapshot));
+        reset_probe_target();
+        m_idle.reset();
         m_draw_enabled = false;
         m_seen_generation = generation;
         m_command.store(Command::e_none, std::memory_order_release);
@@ -343,6 +387,8 @@ void SceneGraphCopy::process_requests()
     if (command == Command::e_release)
     {
         retire(std::move(m_snapshot));
+        reset_probe_target();
+        m_idle.reset();
         m_draw_enabled = false;
         logger::info("SCOPY RELEASE reason=F4 capture={}", m_capture_id);
         return;
@@ -373,6 +419,9 @@ void SceneGraphCopy::process_requests()
     case Command::e_anim_probe:
         toggle_animation_probe();
         break;
+    case Command::e_idle_toggle:
+        toggle_idle();
+        break;
     default:
         break;
     }
@@ -386,264 +435,507 @@ void SceneGraphCopy::toggle_animation_probe()
         return;
     }
     m_anim_probe_enabled = !m_anim_probe_enabled;
-    m_probe_bone_cache = nullptr;
-    m_probe_child_cache = nullptr;
-    m_probe_slot_geometry.clear();
-    m_probe_corrupt_slot = 0;
+    reset_probe_target();
     m_probe_move_min = -1.0f;
     m_probe_move_max = 0.0f;
     m_probe_samples = 0;
     m_probe_invalid_logged = false;
+    m_probe_frame_report = 0;
     if (m_anim_probe_enabled)
-        logger::info("SCOPY ANIM probe enabled 鈥?watch the figure; if nothing moves, the copy does not read its own node tree");
+        logger::info("SCOPY ANIM probe enabled: node transforms only, applied after the studio's base placement and before pass preparation; the skin matrix buffer is read-only");
     else
         logger::info("SCOPY ANIM probe disabled; the copy keeps its captured pose");
 }
 
-void SceneGraphCopy::apply_animation_probe(CharacterClone& clone)
+void SceneGraphCopy::reset_probe_target()
 {
-    if (!m_anim_probe_enabled)
+    m_probe_bone_cache = nullptr;
+    m_probe_target_geometry = nullptr;
+    m_probe_witness = nullptr;
+    m_probe_witness_radius = 0.0f;
+    m_probe_subtree_nodes = 0;
+    m_probe_affected_geometries = 0;
+    m_probe_skinned_geometries = 0;
+    m_probe_geometry_bones = 0;
+    m_probe_geometry.clear();
+    m_probe_root.clear();
+    m_probe_parent_chain.clear();
+    m_probe_skin_report.clear();
+    m_probe_bind_rotate = RE::NiMatrix3{};
+    m_probe_bind_valid = false;
+    m_previous_bone_rotate = RE::NiMatrix3{};
+    m_previous_bone_valid = false;
+    m_probe_dump_done = false;
+    m_trace_pass_geometry.clear();
+    m_trace_complete = false;
+    m_trace_submit_sampled = false;
+}
+
+void SceneGraphCopy::toggle_idle()
+{
+    m_idle.set_enabled(!m_idle.enabled());
+    logger::info("SCOPY IDLE {} (F6); the next frame's base placement restores the captured pose first, so nothing accumulates",
+        m_idle.enabled() ? "enabled" : "disabled");
+}
+
+void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
+{
+    if (m_snapshot.get() != &clone)
+        return;
+    RE::NiAVObject* const root = clone.graph();
+    if (!root || !m_idle.enabled())
+        return;
+    // While F2 is armed the probe is the figure's owner: it rebuilds its bone from the captured pose
+    // every frame, so an idle underneath it would only fight the measurement.
+    if (m_anim_probe_enabled)
+        return;
+    m_idle.advance(*root);
+}
+
+void SceneGraphCopy::select_probe_target(RE::NiAVObject& root)
+{
+    // Candidate bones come from EVERY skin's bones[] array: a bone picked by walking the node tree
+    // can belong to the copy's other skeleton, and taking only the first skin found makes the
+    // target depend on traversal order — the CBBE run picked the body skin's pelvis while the UBE
+    // run picked the face skin's spine, so the two rounds swung different joints.
+    std::unordered_set<RE::NiAVObject*> skin_bones;
+    std::vector<std::pair<RE::BSGeometry*, RE::NiSkinInstance*>> skinned_geometries;
+    RE::BSVisit::TraverseScenegraphGeometries(&root, [&](RE::BSGeometry* geometry)
+    {
+        RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
+        if (!skin || !skin->skinData || !skin->bones || !skin->numMatrices)
+            return RE::BSVisit::BSVisitControl::kContinue;
+        skinned_geometries.emplace_back(geometry, skin);
+        const uint32_t count = skin_bone_count(*skin);
+        for (uint32_t i = 0; i < count; ++i)
+            if (skin->bones[i])
+                skin_bones.insert(skin->bones[i]);
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+    // The joint whose subtree covers the most nodes, so the swing is visible on screen.
+    size_t best_reach = 0;
+    for (RE::NiAVObject* bone : skin_bones)
+    {
+        size_t reach = 0;
+        RE::BSVisit::TraverseScenegraphObjects(bone, [&](RE::NiAVObject*)
+        {
+            ++reach;
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+        if (reach > best_reach)
+        {
+            best_reach = reach;
+            m_probe_bone_cache = bone;
+        }
+    }
+    if (!m_probe_bone_cache)
+        return;
+
+    // The target geometry is the skin with the most bones that samples the chosen joint, so the
+    // slot read at T1-T3 comes from a body-sized draw rather than a 17-bone face skin.
+    RE::NiSkinInstance* chosen_skin = nullptr;
+    uint32_t chosen_bones = 0;
+    m_probe_target_geometry = nullptr;
+    for (const auto& [geometry, skin] : skinned_geometries)
+    {
+        const uint32_t count = skin_bone_count(*skin);
+        if (count <= chosen_bones || !skin_owns_bone(*skin, m_probe_bone_cache))
+            continue;
+        chosen_bones = count;
+        chosen_skin = skin;
+        m_probe_target_geometry = geometry;
+    }
+    if (!m_probe_target_geometry || !chosen_skin)
+    {
+        logger::warn("SCOPY ANIM probe target bone='{}' is in no skin: no slot to sample and no pass to match", m_probe_bone_cache->name.c_str());
+        return;
+    }
+    m_probe_geometry_bones = chosen_bones;
+    m_probe_subtree_nodes = static_cast<uint32_t>(best_reach);
+    m_probe_bone_world_pose = m_probe_bone_cache->world;
+    m_probe_geometry = m_probe_target_geometry->name.c_str() ? m_probe_target_geometry->name.c_str() : "?";
+    m_probe_root = chosen_skin->rootParent && chosen_skin->rootParent->name.c_str() ? chosen_skin->rootParent->name.c_str() : "?";
+
+    // The slot's bind transform is static skin data and one of the quantities the sampled buffer may
+    // hold, so it is captured here for the classifier.
+    m_probe_bind_valid = false;
+    for (uint32_t i = 0; i < chosen_bones; ++i)
+    {
+        if (chosen_skin->bones[i] != m_probe_bone_cache)
+            continue;
+        m_probe_bind_rotate = chosen_skin->skinData->GetBoneDataSkinToBone(i).rotate;
+        m_probe_bind_valid = true;
+        break;
+    }
+
+    // How much of the figure the swing moves at all: the geometries whose skin samples a bone
+    // inside the swung subtree. This separates "the write reached the node tree" from "the write
+    // reached the drawn surface", which is what the two-body difference turned on.
+    std::unordered_set<RE::NiAVObject*> subtree;
+    RE::BSVisit::TraverseScenegraphObjects(m_probe_bone_cache, [&](RE::NiAVObject* object)
+    {
+        subtree.insert(object);
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+    uint32_t affected = 0;
+    for (const auto& [geometry, skin] : skinned_geometries)
+    {
+        const uint32_t count = skin_bone_count(*skin);
+        for (uint32_t i = 0; i < count; ++i)
+            if (skin->bones[i] && subtree.contains(skin->bones[i]))
+            {
+                ++affected;
+                break;
+            }
+    }
+    m_probe_affected_geometries = affected;
+    m_probe_skinned_geometries = static_cast<uint32_t>(skinned_geometries.size());
+
+    // The joint's ancestry names the pivot the swing turns about; two bodies that pick different
+    // joints cannot otherwise be told apart from two bodies that behave differently.
+    std::string chain;
+    for (RE::NiAVObject* node = m_probe_bone_cache->parent; node; node = node->parent)
+    {
+        if (chain.size() > 256)
+        {
+            chain += "…";
+            break;
+        }
+        chain += node->name.c_str() ? node->name.c_str() : "?";
+        if (node->parent)
+            chain += " < ";
+    }
+    m_probe_parent_chain = std::move(chain);
+
+    // Witness: the descendant furthest from the world-X swing axis through the bone origin. A
+    // witness on the axis cannot move however large the swing is, so its displacement cannot
+    // judge the write (test sheet 2026-10-09, R03); an off-axis one travels 2 r sin(theta/2).
+    const RE::NiPoint3 pivot = m_probe_bone_world_pose.translate;
+    float best_radius = -1.0f;
+    RE::BSVisit::TraverseScenegraphObjects(m_probe_bone_cache, [&](RE::NiAVObject* object)
+    {
+        if (object == m_probe_bone_cache)
+            return RE::BSVisit::BSVisitControl::kContinue;
+        const float radius = swing_radius_about_x(object->world.translate, pivot);
+        if (radius > best_radius)
+        {
+            best_radius = radius;
+            m_probe_witness = object;
+            m_probe_witness_radius = radius;
+        }
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+
+    // Skinning reads boneWorldTransforms[i], not bones[i]->world. If that pointer array still
+    // names the SOURCE actor's transforms, writing the copy's bones can never move the copy: the
+    // mesh would read the world actor's pose instead, which also explains a figure that stays
+    // frozen while the copy's own bones change.
+    m_probe_skin_report.clear();
+    uint32_t skins_reported = 0;
+    RE::BSVisit::TraverseScenegraphGeometries(&root, [&](RE::BSGeometry* geometry)
+    {
+        RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
+        if (!skin || !skin->bones || !skin->boneWorldTransforms || !skin->skinData || skins_reported >= 4)
+            return RE::BSVisit::BSVisitControl::kContinue;
+        const uint32_t count = std::min(skin->allocatedSize, skin->skinData->GetBoneCount());
+        uint32_t direct = 0;
+        for (uint32_t i = 0; i < count; ++i)
+            if (skin->boneWorldTransforms[i] == &skin->bones[i]->world)
+                ++direct;
+        ++skins_reported;
+        m_probe_skin_report += fmt::format(" [{}: {}/{} direct]", geometry->name.c_str() ? geometry->name.c_str() : "?", direct, count);
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+
+    const RE::TESObjectREFR* source_ref = static_cast<const RE::TESObjectREFR*>(root.GetUserData());
+    logger::info("SCOPY ANIM target bone='{}' parent-chain='{}' candidates={} subtree-nodes={} skin='{}' bones={} root='{}' affected-geoms={}/{} witness='{}' witness-radius={:.2f} swing=world-X {:.3f}rad period={}f controllers={} verdict={} skins:{}",
+        m_probe_bone_cache->name.c_str(), m_probe_parent_chain.c_str(), skin_bones.size(), m_probe_subtree_nodes,
+        m_probe_geometry, m_probe_geometry_bones, m_probe_root,
+        m_probe_affected_geometries, m_probe_skinned_geometries,
+        m_probe_witness && m_probe_witness->name.c_str() ? m_probe_witness->name.c_str() : "<none>", m_probe_witness_radius,
+        Probe_Swing_Radians, Probe_Swing_Period_Frames,
+        root.GetControllers() ? "present" : "none",
+        source_ref ? "copy-carries-userData-to-source" : "copy-is-graph-invisible", m_probe_skin_report);
+}
+
+void SceneGraphCopy::probe_at_base_pose(CharacterClone& clone)
+{
+    m_trace_submit_sampled = false;
+    m_trace_complete = false;
+    if (!m_anim_probe_enabled || m_snapshot.get() != &clone)
         return;
     RE::NiAVObject* root = clone.graph();
     if (!root)
         return;
     if (!m_probe_bone_cache)
     {
-        // The probe bone MUST come from one skin's own bones[] array: a bone picked by walking the
-        // node tree can belong to the copy's other skeleton (it has two skin roots) and then nothing
-        // sampled ever moves. Within the chosen skin, take the bone whose subtree covers the most
-        // nodes, so the swing is visible on screen.
-        std::unordered_set<RE::NiAVObject*> skin_bones;
-        RE::NiSkinInstance* chosen_skin = nullptr;
-        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
-        {
-            RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
-            if (!skin || !skin->skinData || !skin->bones || chosen_skin)
-                return RE::BSVisit::BSVisitControl::kContinue;
-            chosen_skin = skin;
-            const uint32_t count = std::min(skin->allocatedSize, skin->skinData->GetBoneCount());
-            for (uint32_t i = 0; i < count; ++i)
-                if (skin->bones[i])
-                    skin_bones.insert(skin->bones[i]);
-            return RE::BSVisit::BSVisitControl::kContinue;
-        });
-        size_t best_reach = 0;
-        for (RE::NiAVObject* bone : skin_bones)
-        {
-            size_t reach = 0;
-            RE::BSVisit::TraverseScenegraphObjects(bone, [&](RE::NiAVObject*)
-            {
-                ++reach;
-                return RE::BSVisit::BSVisitControl::kContinue;
-            });
-            if (reach > best_reach)
-            {
-                best_reach = reach;
-                m_probe_bone_cache = bone;
-            }
-        }
-        // Freeze the bone's captured pose and pick the child that will witness whether the write
-        // reaches the tree: a bone rotating in place barely moves its own origin, but its children
-        // swing through an arc.
-        if (m_probe_bone_cache)
-        {
-            m_probe_bone_origin = m_probe_bone_cache->world.translate;
-            m_probe_bone_world_pose = m_probe_bone_cache->world;
-            if (RE::NiNode* node = m_probe_bone_cache->AsNode())
-                for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
-                    if (child && child->AsNode())
-                    {
-                        m_probe_child_cache = child.get();
-                        break;
-                    }
-        }
-        if (m_probe_child_cache)
-            m_probe_child_origin = m_probe_child_cache->world.translate;
-        // Skinning reads boneWorldTransforms[i], not bones[i]->world. If that pointer array
-        // still names the SOURCE actor's transforms, writing the copy's bones can never move
-        // the copy: the mesh would read the world actor's pose instead, which also explains a
-        // figure that stays frozen while the copy's own bones change.
-        m_probe_skin_report.clear();
-        uint32_t skins_reported = 0;
-        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
-        {
-            RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
-            if (!skin || !skin->bones || !skin->boneWorldTransforms || !skin->skinData || skins_reported >= 4)
-                return RE::BSVisit::BSVisitControl::kContinue;
-            const uint32_t count = std::min(skin->allocatedSize, skin->skinData->GetBoneCount());
-            uint32_t direct = 0;
-            for (uint32_t i = 0; i < count; ++i)
-                if (skin->boneWorldTransforms[i] == &skin->bones[i]->world)
-                    ++direct;
-            ++skins_reported;
-            m_probe_skin_report += fmt::format(" [{}: {}/{} direct]", geometry->name.c_str() ? geometry->name.c_str() : "?", direct, count);
-            return RE::BSVisit::BSVisitControl::kContinue;
-        });
-        logger::info("SCOPY ANIM probe bone='{}' candidates={} subtree-nodes={} child='{}' bone-row0-original=({:.3f},{:.3f},{:.3f}) bone-translate-original=({:.1f},{:.1f},{:.1f})",
-            m_probe_bone_cache ? m_probe_bone_cache->name.c_str() : "<none>", skin_bones.size(), best_reach,
-            m_probe_child_cache ? m_probe_child_cache->name.c_str() : "<none>",
-            m_probe_bone_world_pose.rotate.entry[0][0], m_probe_bone_world_pose.rotate.entry[0][1], m_probe_bone_world_pose.rotate.entry[0][2],
-            m_probe_bone_origin.x, m_probe_bone_origin.y, m_probe_bone_origin.z);
+        select_probe_target(*root);
+        if (!m_probe_bone_cache)
+            return;
     }
-    if (!m_probe_bone_cache)
-        return;
-    // Every frame recomputes from the pose captured when the probe was enabled, so the swing
-    // does not accumulate frame over frame.
-    const float phase = static_cast<float>(m_frame % 320) / 320.0f * 6.2831853f;
-    const float swing = std::sin(phase) * 1.0f;
 
-    // The swing delta is rotation D about the bone's own origin, where D rotates by `swing` about
-    // the world Z axis: the node's world rotation becomes R' = R * D, so the delta between the old
-    // and new world is D itself and no transform needs to be divided back out. That matters:
-    // deriving it as swung * original.Invert() involves a three-factor product whose result did not
-    // match the two-factor composition the node actually receives.
+    // T0: this frame's baseline, recorded after the studio's base placement and before any write,
+    // so the reader can tell a write that never happened from one an engine stage overwrote.
+    m_trace_frame = m_frame;
+    m_trace_capture = m_capture_id;
+    m_trace_pass_geometry.clear();
+    m_trace_bone_before = m_probe_bone_cache->world;
+    m_trace_witness_before = m_probe_witness ? m_probe_witness->world.translate : m_trace_bone_before.translate;
+    m_trace_slot_pre = ProbeSlotSample{};
+    sample_probe_slot(m_trace_slot_pre);
+    // T1: the controlled transform. It is rebuilt every frame from the pose captured at arm time,
+    // so repeated frames cannot accumulate, and it runs after pose() restored the captured worlds
+    // — the order the archived rounds lacked (PRD 0.6 §6.3).
+    const float phase = static_cast<float>(m_frame % Probe_Swing_Period_Frames) / static_cast<float>(Probe_Swing_Period_Frames) * 6.2831853f;
+    const float swing = std::sin(phase) * Probe_Swing_Radians;
     RE::NiMatrix3 swing_rotation;
-    swing_rotation.MakeZRotation(swing);
-
-    RE::NiTransform delta;
-    delta.rotate = swing_rotation;
-    delta.translate = m_probe_bone_world_pose.translate - swing_rotation * m_probe_bone_world_pose.translate;
-    delta.scale = 1.0f;
-    apply_world_delta_downward(m_probe_bone_cache, delta, 0);
+    swing_rotation.MakeXRotation(swing);
+    apply_world_delta_downward(m_probe_bone_cache, swing_delta_about_pivot(swing_rotation, m_probe_bone_world_pose.translate), 0);
     root->UpdateWorldBound();
 
-    // Rebuild every skin's matrix buffer from the bone transforms we just wrote. The buffer is
-    // what the shader samples, and it was measured to stay frozen at its clone-time values while
-    // the bones it belongs to were being moved, so nothing on screen followed until now.
-    uint32_t rebuilt_skins = 0;
-    uint32_t rebuilt_slots = 0;
-    // Experiment switch. MEASURED both ways: with the rebuild off the figure renders unchanged
-    // (so the clone-time buffer was already correct and a stale buffer was never the problem), and
-    // the buffer's contents classified as the bone's raw world matrix. Rebuilding is therefore the
-    // right action; writing the WORLD matrix into it is the part that was wrong before.
-    constexpr bool Rebuild_Skinning_Matrices = true;
-    if constexpr (Rebuild_Skinning_Matrices)
-    {
-        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
-        {
-        RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
-        if (!skin || !skin->skinData || !skin->bones || !skin->boneWorldTransforms || !skin->boneMatrices)
-            return RE::BSVisit::BSVisitControl::kContinue;
-        // allocatedSize is a byte size here, so the slot count must come from the skin data; the
-        // byte size only serves as an upper bound.
-        const uint32_t count = std::min({ skin->skinData->GetBoneCount(), skin->numMatrices, skin->allocatedSize / 48u });
-        for (uint32_t i = 0; i < count; ++i)
-        {
-            if (!skin->bones[i])
-                continue;
-            write_bone_matrix(skin->boneMatrices, i, skin->bones[i]->world);
-            if (m_probe_slot_geometry.empty() && skin->bones[i] == m_probe_bone_cache)
-            {
-                m_probe_corrupt_slot = i;
-                m_probe_slot_geometry = geometry->name.c_str() ? geometry->name.c_str() : "?";
-                // Record what the rebuild produced for the probe bone so the report can compare it
-                // against what the buffer holds at draw time.
-                const float* const written = static_cast<const float*>(skin->boneMatrices) + static_cast<size_t>(i) * 12;
-                for (int component = 0; component < 12; ++component)
-                    m_probe_last_written[component] = written[component];
-            }
-            ++rebuilt_slots;
-        }
-        ++rebuilt_skins;
-        return RE::BSVisit::BSVisitControl::kContinue;
-        });
-    }
-    m_probe_rebuilt_skins = rebuilt_skins;
-    m_probe_rebuilt_slots = rebuilt_slots;
+    m_trace_bone_after = m_probe_bone_cache->world;
+    m_trace_witness_after = m_probe_witness ? m_probe_witness->world.translate : m_trace_bone_after.translate;
 
-    // A few frames in, report whether the write moved the bone in WORLD space (the shader
-    // input) and whether the copy carries a userData back to the source reference, which
-    // would hand out the ORIGINAL actor's animation graph.
+    // Node transforms only: the skin matrix buffer is sampled read-only at T1-T3 and never written
+    // in this round. Writing it needs the layout, the coordinate space and the upload path
+    // established first, and the read-back that once "classified" it compared the slot against the
+    // value the same code had just written into it. write_bone_matrix keeps that gated step.
+}
+
+void SceneGraphCopy::probe_at_pass_submit(CharacterClone& clone, RE::BSRenderPass* pass)
+{
+    // T2: the pass that submits the target geometry, sampled immediately before it is drawn —
+    // the last CPU-side view of the slot before the GPU work, and the point where a base
+    // placement or an engine preparation step would show up as an overwritten transform.
+    if (!m_anim_probe_enabled || m_trace_submit_sampled || m_snapshot.get() != &clone)
+        return;
+    if (!pass || !m_probe_target_geometry || pass->geometry != m_probe_target_geometry)
+        return;
+    m_trace_submit_sampled = true;
+    m_trace_pass_geometry = pass->geometry->name.c_str() ? pass->geometry->name.c_str() : "?";
+    m_trace_slot_submit = ProbeSlotSample{};
+    sample_probe_slot(m_trace_slot_submit);
+}
+
+void SceneGraphCopy::probe_at_draw_done(CharacterClone& clone, uint32_t drawn)
+{
+    // T3: what the engine's own buffer update left behind once the draw ran.
+    if (!m_anim_probe_enabled || m_snapshot.get() != &clone)
+        return;
+    m_trace_drawn = drawn;
+    m_trace_slot_final = ProbeSlotSample{};
+    sample_probe_slot(m_trace_slot_final);
+    m_trace_complete = true;
+
+    // Once per F2 arm, while the copy is up and its buffers are live.
+    if (!m_probe_dump_done)
+    {
+        dump_probe_skin();
+        m_probe_dump_done = true;
+    }
+
     if (m_probe_frame_report == 0)
-        m_probe_frame_report = m_frame + 8;
+        m_probe_frame_report = m_frame + Probe_Report_Interval_Frames;
     else if (static_cast<int32_t>(m_frame - m_probe_frame_report) >= 0)
     {
-        const RE::NiPoint3& tracked_origin = m_probe_child_cache ? m_probe_child_cache->world.translate : m_probe_bone_cache->world.translate;
-        const RE::NiPoint3& reference_origin = m_probe_child_cache ? m_probe_child_origin : m_probe_bone_origin;
-        // Sample the tracked node over many frames: a CONSTANT distance means the child never
-        // followed the parent's rotation at all, which a single frame cannot distinguish from a
-        // small swing. Min and max settle it.
-        const float moved = tracked_origin.GetDistance(reference_origin);
-        m_probe_move_min = m_probe_move_min < 0.0f ? moved : std::min(m_probe_move_min, moved);
-        m_probe_move_max = std::max(m_probe_move_max, moved);
-        // Self-check: while the swing is running the tracked node must move. A flat range means
-        // this run measured nothing, so the matrix verdict printed alongside it must be ignored
-        // rather than read as evidence about the copy.
-        const bool probe_effective = m_probe_move_max > 0.01f;
-        if (++m_probe_samples > 20 && !probe_effective && !m_probe_invalid_logged)
-        {
-            logger::error("SCOPY ANIM probe INVALID: the swing never reached the node tree (moved-range stayed 0), so the matrix verdict in this run is not evidence");
-            m_probe_invalid_logged = true;
-        }
-        const RE::TESObjectREFR* source_ref = static_cast<const RE::TESObjectREFR*>(root->GetUserData());
-        logger::info("SCOPY ANIM report bone='{}' written-swing={:.3f} probe-effective={} tracked='{}' moved={:.2f} moved-range=[{:.2f},{:.2f}] controllers={} verdict={} skins:{}",
-            m_probe_bone_cache->name.c_str(), swing, probe_effective, m_probe_child_cache ? m_probe_child_cache->name.c_str() : "<self>", moved, m_probe_move_min, m_probe_move_max,
-            root->GetControllers() ? "present" : "none",
-            source_ref ? "copy-carries-userData-to-source" : "copy-is-graph-invisible", m_probe_skin_report);
-
-        // Criterion 1, sampled HERE: after the swing was applied this frame. Reading it before the
-        // swing made slot0-follows-swing false by construction and told us nothing.
-        logger::info("SCOPY ANIM bone-pose now=({:.3f},{:.3f},{:.3f}) original=({:.3f},{:.3f},{:.3f})",
-            m_probe_bone_cache->world.rotate.entry[0][0], m_probe_bone_cache->world.rotate.entry[0][1], m_probe_bone_cache->world.rotate.entry[0][2],
-            m_probe_bone_world_pose.rotate.entry[0][0], m_probe_bone_world_pose.rotate.entry[0][1], m_probe_bone_world_pose.rotate.entry[0][2]);
-        uint32_t matrix_skins = 0;
-        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
-        {
-            RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
-            if (!skin || !skin->boneMatrices || !skin->bones || !skin->skinData || matrix_skins >= 3)
-                return RE::BSVisit::BSVisitControl::kContinue;
-            const uint32_t count = std::min(skin->allocatedSize, skin->skinData->GetBoneCount());
-            const float* const values = static_cast<const float*>(skin->boneMatrices);
-            // Is the probe bone even in THIS skin? Slot 0 was assumed to be the probe bone and was
-            // not, so the index has to be found rather than assumed.
-            uint32_t probe_slot = count;
-            for (uint32_t i = 0; i < count; ++i)
-                if (skin->bones[i] == m_probe_bone_cache)
-                {
-                    probe_slot = i;
-                    break;
-                }
-            const float slot_value = probe_slot < count ? values[probe_slot * 12] : 0.0f;
-            const bool follows_swing = probe_slot < count &&
-                std::abs(slot_value - m_probe_bone_cache->world.rotate.entry[0][0]) < std::abs(slot_value - m_probe_bone_world_pose.rotate.entry[0][0]);
-            ++matrix_skins;
-            logger::info("SCOPY ANIM matrices skin='{}' slots={} probe-slot={} slot-row0={:.3f} bone-now={:.3f} bone-original={:.3f} follows-swing={} rebuilt-skins={} rebuilt-slots={}",
-                geometry->name.c_str() ? geometry->name.c_str() : "?", count, probe_slot, slot_value,
-                m_probe_bone_cache->world.rotate.entry[0][0], m_probe_bone_world_pose.rotate.entry[0][0], follows_swing,
-                m_probe_rebuilt_skins, m_probe_rebuilt_slots);
-            if (probe_slot < count)
-            {
-                const float* const probe_values = values + static_cast<size_t>(probe_slot) * 12;
-                // Classify the buffer's contents: compare the slot against what the rebuild writes,
-                // against the bone's raw world transform, and against the bind pose's inverse. Whichever
-                // it matches says which quantity the shader is actually fed.
-                const RE::NiTransform& world = m_probe_bone_cache->world;
-                const RE::NiTransform& bind_inverse = skin->skinData->GetBoneDataSkinToBone(probe_slot);
-                const float world_row0[4] = { world.rotate.entry[0][0], world.rotate.entry[0][1], world.rotate.entry[0][2], world.translate.x };
-                float closest_to_written = 0.0f;
-                float closest_to_world = 0.0f;
-                float closest_to_bind_inverse = 0.0f;
-                for (int component = 0; component < 12; ++component)
-                {
-                    closest_to_written += std::abs(probe_values[component] - m_probe_last_written[component]);
-                    closest_to_bind_inverse += std::abs(probe_values[component] - reinterpret_cast<const float*>(&bind_inverse)[component]);
-                }
-                closest_to_world += std::abs(probe_values[0] - world_row0[0]) + std::abs(probe_values[1] - world_row0[1]) + std::abs(probe_values[2] - world_row0[2]) + std::abs(probe_values[3] - world_row0[3]);
-                logger::info("SCOPY ANIM buffer slot={} R=({:.3f} {:.3f} {:.3f} | {:.3f} {:.3f} {:.3f} | {:.3f} {:.3f} {:.3f}) t=({:.2f},{:.2f},{:.2f})",
-                    probe_slot, probe_values[0], probe_values[1], probe_values[2], probe_values[4], probe_values[5], probe_values[6],
-                    probe_values[8], probe_values[9], probe_values[10], probe_values[3], probe_values[7], probe_values[11]);
-                logger::info("SCOPY ANIM written R=({:.3f} {:.3f} {:.3f} | {:.3f} {:.3f} {:.3f} | {:.3f} {:.3f} {:.3f}) t=({:.2f},{:.2f},{:.2f})",
-                    m_probe_last_written[0], m_probe_last_written[1], m_probe_last_written[2], m_probe_last_written[4], m_probe_last_written[5], m_probe_last_written[6],
-                    m_probe_last_written[8], m_probe_last_written[9], m_probe_last_written[10], m_probe_last_written[3], m_probe_last_written[7], m_probe_last_written[11]);
-                logger::info("SCOPY ANIM compare vs-written={:.2f} vs-world-row0={:.2f} vs-bind-inverse={:.2f} (smaller = matches)",
-                    closest_to_written, closest_to_world, closest_to_bind_inverse);
-                logger::info("SCOPY ANIM slot0-raw=({:.3f} {:.3f} {:.3f} {:.3f}) slot1-raw=({:.3f} {:.3f} {:.3f} {:.3f})",
-                    values[0], values[1], values[2], values[3], values[12], values[13], values[14], values[15]);
-            }
-            return RE::BSVisit::BSVisitControl::kContinue;
-        });
-        m_probe_frame_report = 0;
+        report_probe_trace();
+        m_probe_frame_report = m_frame + Probe_Report_Interval_Frames;
     }
+
+    // After the report, so this frame's swing is the NEXT frame's "previous" candidate rather than
+    // a duplicate of the current one: a slot holding last frame's value is what a lagged engine
+    // update would look like, and the classifier has to be able to see it.
+    m_previous_bone_rotate = m_trace_bone_after.rotate;
+    m_previous_bone_valid = true;
+}
+
+bool SceneGraphCopy::sample_probe_slot(ProbeSlotSample& sample) const
+{
+    if (!m_probe_bone_cache || !m_probe_target_geometry)
+        return false;
+    RE::NiSkinInstance* skin = m_probe_target_geometry->GetGeometryRuntimeData().skinInstance.get();
+    if (!skin || !skin->skinData || !skin->bones || !skin->boneMatrices)
+        return false;
+    const uint32_t count = skin_bone_count(*skin);
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        if (skin->bones[i] != m_probe_bone_cache)
+            continue;
+        // The slot index is found rather than assumed: slot 0 was assumed to be the probe bone in
+        // an earlier round and was not.
+        sample.sampled = true;
+        sample.slot = i;
+        sample.num_matrices = skin->numMatrices;
+        sample.frame_id = skin->frameID;
+        sample.buffer = skin->boneMatrices;
+        const float* const values = static_cast<const float*>(skin->boneMatrices) + static_cast<size_t>(i) * 12;
+        for (int component = 0; component < 12; ++component)
+            sample.values[component] = values[component];
+        if (skin->prevBoneMatrices)
+        {
+            sample.previous_sampled = true;
+            sample.previous_buffer = skin->prevBoneMatrices;
+            const float* const previous_values = static_cast<const float*>(skin->prevBoneMatrices) + static_cast<size_t>(i) * 12;
+            for (int component = 0; component < 12; ++component)
+                sample.previous_values[component] = previous_values[component];
+        }
+        return true;
+    }
+    return false;
+}
+
+void SceneGraphCopy::dump_probe_skin()
+{
+    if (!m_probe_target_geometry)
+        return;
+    RE::NiSkinInstance* skin = m_probe_target_geometry->GetGeometryRuntimeData().skinInstance.get();
+    if (!skin || !skin->skinData || !skin->bones || !skin->boneMatrices)
+        return;
+    const uint32_t slots = skin_bone_count(*skin);
+    const uint32_t count = std::min(slots, Probe_Dump_Slot_Limit);
+    logger::info("SCOPY TDUMP geometry='{}' root='{}' slots={} printed={}", m_probe_geometry, m_probe_root, slots, count);
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        RE::NiAVObject* const bone = skin->bones[i];
+        const float* const matrix = static_cast<const float*>(skin->boneMatrices) + static_cast<size_t>(i) * 12;
+        const float* const previous = skin->prevBoneMatrices
+            ? static_cast<const float*>(skin->prevBoneMatrices) + static_cast<size_t>(i) * 12
+            : nullptr;
+        // The bone's own world transform sits next to the buffer's raw contents on the same line:
+        // the layout, and whether slot i is bones[i] at all, can then be read off directly instead
+        // of being inferred from distances that all missed by about 2.0.
+        logger::info("SCOPY TSLOT i={} bone='{}' world=({}) matrix=({}) previous=({})",
+            i,
+            bone && bone->name.c_str() ? bone->name.c_str() : "<none>",
+            bone ? describe_world(bone->world) : std::string("unavailable"),
+            describe_rows(matrix),
+            previous ? describe_rows(previous) : std::string("unavailable"));
+    }
+}
+
+std::string SceneGraphCopy::classify_probe_slot(const float* values) const
+{
+    // Candidates come from engine-side node and bind data only — never from a value this code wrote,
+    // which is what made the earlier classifications circular.
+    struct Candidate
+    {
+        const char* name;
+        RE::NiMatrix3 rotate;
+    };
+    std::vector<Candidate> candidates;
+    candidates.push_back({ "bone-world", m_trace_bone_after.rotate });
+    candidates.push_back({ "bone-captured", m_trace_bone_before.rotate });
+    candidates.push_back({ "bone-world-T", m_trace_bone_after.rotate.Transpose() });
+    candidates.push_back({ "bone-captured-T", m_trace_bone_before.rotate.Transpose() });
+    if (m_previous_bone_valid)
+        candidates.push_back({ "bone-prev-frame", m_previous_bone_rotate });
+    if (m_probe_bind_valid)
+    {
+        candidates.push_back({ "bind", m_probe_bind_rotate });
+        candidates.push_back({ "bind-T", m_probe_bind_rotate.Transpose() });
+        candidates.push_back({ "world-x-bind", m_trace_bone_after.rotate * m_probe_bind_rotate });
+        candidates.push_back({ "bind-x-world", m_probe_bind_rotate * m_trace_bone_after.rotate });
+        candidates.push_back({ "captured-x-bind", m_trace_bone_before.rotate * m_probe_bind_rotate });
+    }
+
+    const char* best = "none";
+    const char* second = "none";
+    float best_distance = 1.0e30f;
+    float second_distance = 1.0e30f;
+    for (const Candidate& candidate : candidates)
+    {
+        const float distance = rotation_distance(values, candidate.rotate);
+        if (distance < best_distance)
+        {
+            second_distance = best_distance;
+            second = best;
+            best_distance = distance;
+            best = candidate.name;
+        }
+        else if (distance < second_distance)
+        {
+            second_distance = distance;
+            second = candidate.name;
+        }
+    }
+    return fmt::format("{}({:.2f}) next={}({:.2f})", best, best_distance, second, second_distance);
+}
+
+void SceneGraphCopy::report_probe_trace()
+{
+    if (!m_trace_complete || !m_probe_bone_cache)
+        return;
+
+    // Sampled over many frames: a constant range means the witness never followed the swing, which
+    // one frame cannot distinguish from a small amplitude.
+    const float moved = (m_trace_witness_after - m_trace_witness_before).Length();
+    m_probe_move_min = m_probe_move_min < 0.0f ? moved : std::min(m_probe_move_min, moved);
+    m_probe_move_max = std::max(m_probe_move_max, moved);
+    ++m_probe_samples;
+
+    // A witness on the swing axis cannot move whatever the amplitude, so this run's displacement
+    // says nothing about the write; only the orientation change remains judgeable (test sheet
+    // 2026-10-09, R03).
+    const bool witness_usable = m_probe_witness_radius >= Probe_Witness_Min_Radius;
+    const bool probe_effective = witness_usable && m_probe_move_max > 0.01f;
+    if (m_probe_samples > 20 && !probe_effective && !m_probe_invalid_logged)
+    {
+        logger::error("SCOPY ANIM probe INVALID: witness='{}' radius={:.2f} moved-range=[{:.2f},{:.2f}]; without radius about the swing axis the displacement cannot judge the write",
+            m_probe_witness && m_probe_witness->name.c_str() ? m_probe_witness->name.c_str() : "<none>", m_probe_witness_radius, m_probe_move_min, m_probe_move_max);
+        m_probe_invalid_logged = true;
+    }
+
+    const RE::NiTransform& before = m_trace_bone_before;
+    const RE::NiTransform& after = m_trace_bone_after;
+    const float orientation_delta = rotation_angle_degrees(before.rotate, after.rotate);
+
+    // Which of this frame's two node rotations the slot's rotation block is closer to. Observation
+    // only: it cannot identify what the buffer stores, and it never compares the slot against a
+    // value this code wrote.
+    const auto relation = [&before, &after](const ProbeSlotSample& sample) -> const char*
+    {
+        if (!sample.sampled)
+            return "unavailable";
+        const float to_captured = rotation_distance(sample.values, before.rotate);
+        const float to_swung = rotation_distance(sample.values, after.rotate);
+        if (std::abs(to_captured - to_swung) <= 0.01f)
+            return "neither";
+        return to_swung < to_captured ? "swung" : "captured";
+    };
+    const bool submit_changed = m_trace_slot_pre.sampled && m_trace_slot_submit.sampled &&
+        slot_values_changed(m_trace_slot_pre.values, m_trace_slot_submit.values);
+    const bool final_changed = m_trace_slot_submit.sampled && m_trace_slot_final.sampled &&
+        slot_values_changed(m_trace_slot_submit.values, m_trace_slot_final.values);
+
+    logger::info("SCOPY T0 frame={} capture={} bone='{}' skin='{}' root='{}' bone-origin=({:.1f},{:.1f},{:.1f}) bone-row1=({:.3f},{:.3f},{:.3f}) witness='{}' witness-radius={:.2f} subtree-nodes={}",
+        m_trace_frame, m_trace_capture, m_probe_bone_cache->name.c_str(), m_probe_geometry, m_probe_root,
+        before.translate.x, before.translate.y, before.translate.z,
+        before.rotate.entry[1][0], before.rotate.entry[1][1], before.rotate.entry[1][2],
+        m_probe_witness && m_probe_witness->name.c_str() ? m_probe_witness->name.c_str() : "<none>", m_probe_witness_radius, m_probe_subtree_nodes);
+    logger::info("SCOPY T1 frame={} bone-row1=({:.3f},{:.3f},{:.3f}) orientation-delta-deg={:.1f} witness-moved={:.2f} moved-range=[{:.2f},{:.2f}] slot={} buffer-pre={} pre-rel={} probe-effective={}",
+        m_trace_frame, after.rotate.entry[1][0], after.rotate.entry[1][1], after.rotate.entry[1][2],
+        orientation_delta, moved, m_probe_move_min, m_probe_move_max,
+        m_trace_slot_pre.sampled ? m_trace_slot_pre.slot : 0u,
+        m_trace_slot_pre.sampled ? "sampled" : "unavailable", relation(m_trace_slot_pre), probe_effective);
+    logger::info("SCOPY T2 frame={} pass-geometry='{}' numMatrices={} frameID={} buffer-submit={} changed-since-T1={} submit-rel={}",
+        m_trace_frame, m_trace_submit_sampled ? m_trace_pass_geometry.c_str() : "not-submitted", m_trace_slot_submit.num_matrices, m_trace_slot_submit.frame_id,
+        m_trace_slot_submit.sampled ? "sampled" : "unavailable", submit_changed, relation(m_trace_slot_submit));
+    logger::info("SCOPY T3 frame={} drawn={} buffer-after-draw={} changed-since-T2={} final-rel={} node-row1=({:.3f},{:.3f},{:.3f})",
+        m_trace_frame, m_trace_drawn, m_trace_slot_final.sampled ? "sampled" : "unavailable", final_changed, relation(m_trace_slot_final),
+        m_probe_bone_cache->world.rotate.entry[1][0], m_probe_bone_cache->world.rotate.entry[1][1], m_probe_bone_cache->world.rotate.entry[1][2]);
+
+    // What the sampled slot actually resembles, against engine-side candidates. The pair labels
+    // above can only say "closer to one of my two guesses"; this says which of ten quantities the
+    // content is nearest to, and how near, so "the buffer holds something else" stops looking like
+    // "the buffer holds nothing".
+    if (m_trace_slot_pre.sampled)
+        logger::info("SCOPY T1c frame={} buffer=current slot={} closest={} | buffer=previous slot={} closest={}",
+            m_trace_frame, m_trace_slot_pre.slot, classify_probe_slot(m_trace_slot_pre.values),
+            m_trace_slot_pre.slot, m_trace_slot_pre.previous_sampled ? classify_probe_slot(m_trace_slot_pre.previous_values) : std::string("unsampled"));
+    if (m_trace_slot_final.sampled)
+        logger::info("SCOPY T3c frame={} buffer=current slot={} closest={} | buffer=previous slot={} closest={}",
+            m_trace_frame, m_trace_slot_final.slot, classify_probe_slot(m_trace_slot_final.values),
+            m_trace_slot_final.slot, m_trace_slot_final.previous_sampled ? classify_probe_slot(m_trace_slot_final.previous_values) : std::string("unsampled"));
 }
 
 CharacterClone* SceneGraphCopy::drawable() const
@@ -655,6 +947,10 @@ void SceneGraphCopy::capture()
 {
     m_draw_enabled = false;
     retire(std::move(m_snapshot));
+    // Re-select the target on the graph this capture produces: the cached one now points into the
+    // parked copy the panel no longer draws. The idle's joints are the same kind of per-graph state.
+    reset_probe_target();
+    m_idle.reset();
     ++m_capture_id;
     RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
     RE::NiPointer<RE::NiAVObject> source(player ? player->Get3D(false) : nullptr);

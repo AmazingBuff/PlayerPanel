@@ -44,7 +44,11 @@ namespace
             PLUGIN_NAMESPACE::PanelMonitor::instance().install();
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             PLUGIN_NAMESPACE::InputManager::install();
-            logger::info("SCOPY BUILD {} runtime={} mode=manual-scene-copy legacy-actor-route=disabled animation=not-implemented cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-anim-probe", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
+#if CHARACTER_PANEL_S2_PROBE
+            logger::info("SCOPY BUILD {} runtime={} mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle F6-anim-probe(opt-in)", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
+#else
+            logger::info("SCOPY BUILD {} runtime={} mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
+#endif
 #endif
             break;
         case SKSE::MessagingInterface::kPreLoadGame:

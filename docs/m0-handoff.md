@@ -1,9 +1,26 @@
 # M0 handoff — state, verified facts, and the next work package
 
+> **S2（动作／FR-03）的下一工作包入口：[S2 动画：HKX／引擎动画路线侦察与下一工作包](s2-animation-handoff.md)。**
+> 2026-10-09 方向修正：程序化待机无真值、不可判定，用户要求改用真实动画（HKX）驱动并做数值对比；
+> 该文记录了引擎侧可取用的 Havok 对象（含头文件行号）、三条取数路线、HKX1 构建步骤与对比协议，
+> 以及"不要继续调 idle 参数"等红线。**下一个会话先读它。**
+
 ## 场景图复制实验（2026-10-09 复核：静态显示初步成立，资源回收阻塞）
 
 当前需求与验收依据是 [PRD 0.6 §6.2–6.3](player-panel-prd.md)；下一轮使用 [测试单](scene-graph-copy-next-test-2026-10-09.md)。
-S2 未判定，S3 公开接口接入受限、独立模拟未验证。本次仅修改文档，当前 F2 的“探针后再 pose”顺序仍需实施者修正；等待新构建与游戏回传。
+S3 公开接口接入受限、独立模拟未验证。
+**2026-10-09 当前阶段：S2 的程序化待机已实现（IDLE1 构建），待游戏验证。**
+四轮探针（S2P1–S2P4）已确证驱动机制：写副本节点 → 引擎在绘制中重算蒙皮矩阵（缓冲 3×3 = 节点世界
+旋转 × 0.35 图形缩放，匹配摆动后姿态，残差 0.0002）→ 着色器消费 → 画面随动；F2 开关配对确认
+开＝摆动、关＝复位静止（R06）；朝向变化与设计 ±34.4° 相符。
+`IdleDriver`（[src/character/idle_driver.h](src/character/idle_driver.h)）按精确关节名驱动胯／脊柱／
+头部，自有 `steady_clock`（暂停时引擎计时器不推进），每帧从捕获姿态重算，**F2 开关、默认开启**
+（探针退役后 F2 交还待机；探针改为 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建、占用 F6），
+只写副本节点、不碰源角色与行为图。产物 `dist/CharacterPanel-scopy-IDLE2-1.2.1.zip`。
+待验证：动作是否看得出来且自然、F2 关是否立刻复位、退出背包后源角色无变化、CBBE／UBE 各一次
+（`SCOPY IDLE bound N/M channels` 会体现两套骨架的关节名差异）。
+**新边界**：蒙皮缓冲槽位下标**不等于** `bones[]` 下标（自匹配 5/31、4/71），将来要写缓冲必须先解析
+真实映射；GPU 侧绑定/内容未测；HKX 播放与可切换展示动作未实现。
 
 用户授权在现有直绘框架上重新验证直接复制已装配的第三人称角色图。
 默认构建仍为 Actor 装配；`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON` 的测试构建关闭旧 Actor 路线，
@@ -16,9 +33,12 @@ S2 未判定，S3 公开接口接入受限、独立模拟未验证。本次仅�
 停放构建的有限会话没有再触发已知析构崩溃，但安全释放与资源回收没有通过；Q09／Q10 必须区分显示切换与生命周期。
 Q01–Q12 见回传记录；副本内物理头发／衣物不继续模拟
 属 S0 既定范围（无独立驱动），不作为失败。
-配置走 `cmake --preset Release-scopy`（`CMakePresets.json`），构建 `--target CharacterPanelSceneCopyPackage`
-产出 `dist/CharacterPanel-scopy-S0-1.2.1.zip`。本机 `E:\SkyrimAE\mods\CharacterPanel`
-的现役 DLL 在验证期间已被换成实验 DLL。
+配置**没有** `Release-scopy` 预设（`CMakePresets.json` 只有 `Release`），实际命令是
+`cmake -S . -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_BUILD_PROBE=OFF`
+（见 [验证文档](scene-graph-copy-validation.md#构建和传输)）；再构建 `--target CharacterPanelSceneCopyPackage`，
+产出 `dist/CharacterPanel-scopy-<轮次>-1.2.1.zip`（示例 `CharacterPanel-scopy-S2P1-1.2.1.zip`）。
+本机 `E:\SkyrimAE\mods\CharacterPanel` 的现役 DLL 在验证期间已被换成实验 DLL；
+**PDB 也要换成同一个包里的**，否则崩溃日志无法符号化（当前部署目录里的 PDB 早于 DLL）。
 
 **动手前必读的三条结论**（都是这轮拿崩溃换来的）：
 

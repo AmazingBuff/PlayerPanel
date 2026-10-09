@@ -7,6 +7,10 @@
 
 #include "render/studio/light.h"
 
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+#include "character/scene_graph_copy.h"
+#endif
+
 PLUGIN_NAMESPACE_BEGIN
 
 namespace
@@ -875,6 +879,17 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
 
     pose();
 
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+    // PRD 0.6 §6.3 fixes this order inside the draw window: base placement (pose, above) -> the
+    // figure's own motion -> the probe's controlled transform -> engine pass preparation -> draw.
+    // Running the probe before pose() let the captured worlds be restored over it, which is why the
+    // archived S2 rounds could not show whether the write ever reached the draw.
+    SceneGraphCopy::instance().animate_at_base_pose(*this);
+#if CHARACTER_PANEL_S2_PROBE
+    SceneGraphCopy::instance().probe_at_base_pose(*this);
+#endif
+#endif
+
     // Pull the detached light rig to the anchor and cascade it: the shader
     // reads NiLight::world.translate (v6.37) and this window is the only
     // place the cascade runs. Must precede the pass generation.
@@ -929,12 +944,19 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
                 // could ever initialize them (run 52).
                 if (!geom_rt.rendererData)
                     ++renderer_data_null;
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT && CHARACTER_PANEL_S2_PROBE
+                SceneGraphCopy::instance().probe_at_pass_submit(*this, pass);
+#endif
                 submit_pass(pass, inject_lights, studio_lights);
                 ++drawn;
             }
         }
         return RE::BSVisit::BSVisitControl::kContinue;
     });
+
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT && CHARACTER_PANEL_S2_PROBE
+    SceneGraphCopy::instance().probe_at_draw_done(*this, drawn);
+#endif
 
     // Per-frame summary plus the skin census: after the detach, the engine's
     // SetupGeometry writes numMatrices/boneMatrices every drawn frame — the

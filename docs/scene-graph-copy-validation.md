@@ -6,6 +6,12 @@
 现行状态以 [PRD 0.6 §6.2–6.3](player-panel-prd.md) 为准；新增 [下一轮测试单](scene-graph-copy-next-test-2026-10-09.md)。
 当前 F2 代码仍有执行顺序问题；本次文档修订没有修复代码，也没有生成新 DLL。
 
+2026-10-09 实施状态（取代上一段关于 F2 代码的说法）：探针已改到绘制窗口内、按 PRD §6.3 的
+顺序执行（基础摆位 → 探针 → pass 准备 → draw），新增 T0–T3 测量点，本轮只改节点变换、不再写
+蒙皮矩阵缓存，并生成了带独立身份的构建
+（`dist/CharacterPanel-scopy-S2P1-1.2.1.zip`）。**这些是本机编译与单测结果，尚未进入游戏；
+S2 仍是未判定。** 逐项前置条件见[测试单](scene-graph-copy-next-test-2026-10-09.md)的开头状态段。
+
 ## 目标与当前边界
 
 从玩家已经装配完成的第三人称 3D 图取得独立副本，复用现有摄影棚直绘和合成框架。
@@ -44,13 +50,13 @@ HKX 动作驱动、CBPC 和 SMP 的独立注册与模拟没有实现。安装物
 ## 构建和传输
 
 ```powershell
-cmake -S . -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_BUILD_PROBE=OFF
+cmake -S . -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_BUILD_PROBE=OFF -DCHARACTER_PANEL_PROBE_REVISION=<round>
 cmake --build build-scopy --config Release --target CharacterPanel CharacterPanelCopyMathTest
 ctest --test-dir build-scopy -C Release --output-on-failure
 cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPackage
 ```
 
-The package target writes `dist/CharacterPanel-scopy-S0-<version>.zip` containing
+The package target writes `dist/CharacterPanel-scopy-<probe revision>-<version>.zip` containing
 `SKSE/Plugins/CharacterPanel.dll`, its matching PDB, `CharacterPanel-scopy-README.txt`
 (the in-game controls and install rules), and `build-manifest.json`. The manifest
 records the SHA-256 of both binaries, the repository HEAD, and the actual
@@ -58,6 +64,14 @@ records the SHA-256 of both binaries, the repository HEAD, and the actual
 the checkout the compiler read; a package built here also prints all three to the
 build log. Use the package instead of a bare DLL when a result has to be tied to
 one binary.
+
+2026-10-09 复核后补充：`CHARACTER_PANEL_PROBE_REVISION` 每次探针轮次都要改，它和仓库提交、
+CommonLib checkout、configure 时间一起生成 `Plugin_Build_Identity`，也就是日志首行
+`SCOPY BUILD …` 里的那串身份；manifest 记录同一串字符串，打包步骤会检查包内 DLL 确实包含它。
+旧写法里所有轮次共用一个 S0 横幅字符串，无法区分部署的是哪一轮（测试单 R01 要求的正是这个）。
+本机已生成的示例：`dist/CharacterPanel-scopy-S2P1-1.2.1.zip`，
+身份 `CharacterPanel-scopy-S2P1-a7073d58b8+dirty-cl94faaed0c6-20261009T140032Z`，
+DLL SHA-256 `1a2beb5e…`；`snapshot_transform` 单测通过（含既有断言与新增的摆动轴／见证点断言）。
 
 默认 CMake 开关为 OFF，保留 Actor 装配路线。开启实验后，此构建不调用旧 Actor 出生／摘图路线。
 实际测试包的 `build-manifest.json` 记录 DLL、PDB 的 SHA-256、插件源码基线和实际 CommonLib checkout。
@@ -69,6 +83,7 @@ CBBE 与 UBE 两种身形各一轮、零崩溃**，逐条结果见[回传记录]
 物理头发／衣物在副本内不继续模拟属于 S0 的预期行为，不作为失败。
 
 将包内 `SKSE/Plugins/CharacterPanel.dll` 和对应 PDB 安装到一个单独的 MO2 测试 mod，替换原 CharacterPanel。
+PDB 必须来自同一个包：其他轮次的 PDB 无法符号化本 DLL 的崩溃日志。
 不要同时加载旧 CharacterPanel、CharacterPanelProbe 或 CharacterPanelProto；Probe 的 F7/F8 与本实验冲突。
 本插件元数据仍声明 Skyrim AE 1.6.1170 / SKSE 2.2.6。其他版本不属于本轮通过范围。
 使用测试存档，原始 DLL 保留用于撤销。本实验没有部署到本机游戏目录，也不要求覆盖原存档。
@@ -84,6 +99,7 @@ CBBE 与 UBE 两种身形各一轮、零崩溃**，逐条结果见[回传记录]
 | F8 | 开始／停止绘制已通过审计的副本 | `DRAW-TOGGLE`，首次和之后低频 `SCOPY DRAW` |
 | F3 | 旋转副本 90 度 | `ROTATE angle-deg=...`；世界人物不应旋转 |
 | F4 | 停放副本，不回收 | RELEASE + PARK；摄影棚隐藏，不能据此判断资源已释放 |
+| F2 | 开关 S2 骨骼探针（需先 F7 捕获） | `ANIM probe enabled/disabled`、`ANIM target`，之后每 8 帧 `T0`–`T3` 四行 |
 
 按键只观察按下事件，不消费游戏输入。若其他 mod 也绑定这些键，应在测试前避开冲突。
 
@@ -149,7 +165,7 @@ S0 的可执行回传表使用 Q01–Q12。后续轮次另回答以下问题；�
 
 ## 研究依据与限制
 
-- 当前本地 CommonLib checkout 与仓库子模块指针已对齐（`a898f46…`，此前文档记的 `94faaed…` 是已对齐前的旧值）；测试包的 `build-manifest.json` 每次都记录实际 checkout 与工作区是否 dirty，以它为准。
+- 当前本地 CommonLib checkout 与仓库子模块指针已对齐；核对值以测试包 `build-manifest.json` 记录的 `commonlibsse_commit` 为准（2026-10-09 打包时为 `94faaed0c6…`，工作区干净，即当前 HEAD 的 submodule 指针一致；此前文档写的 `a898f46…` 与本次实测不符，已更正）。manifest 每次都记录实际 checkout 与两处工作区是否 dirty。
 - [CommonLib 节点克隆声明](https://ng.commonlib.dev/class_r_e_1_1_ni_node.html)、[蒙皮实例布局](https://ng.commonlib.dev/_ni_skin_instance_8h_source.html)。声明和结构只能支持实验入口，不能替代运行时 ABI／整体人物复制验证。
 - [旧 run 27 记录](stage2-p-instance-plan.md)：CreateDeepCopy 未得到可用根；不能推导所有克隆入口均不可行。
 - [FSMP 活动与注册管理](https://github.com/DaymareOn/hdtSMP64/blob/dev/src/ActorManager.cpp)：复制图不自动建立独立模拟。

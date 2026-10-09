@@ -25,9 +25,12 @@ namespace Plugin
     inline constexpr std::string_view Plugin_Author = "@PROJECT_AUTHOR@";
 
     // One-line build provenance for the load banner (our extension to the
-    // template metadata; not consumed by SKSE).
+    // template metadata; not consumed by SKSE). The experiment branch is
+    // generated per configure from the probe revision and both source
+    // baselines, so two probe rounds cannot share a banner; the package
+    // manifest carries the same string and the packaging step checks the DLL.
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-    inline constexpr std::string_view Plugin_Build_Identity = "CharacterPanel-scopy-S0-2026-10-08";
+    inline constexpr std::string_view Plugin_Build_Identity = "@CHARACTER_PANEL_BUILD_IDENTITY@";
 #else
     inline constexpr std::string_view Plugin_Build_Identity = "CharacterPanel-m0-v6_70-mainline-2026-10-05";
 #endif

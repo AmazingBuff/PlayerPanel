@@ -56,7 +56,13 @@ namespace
                 else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_release);
                 else if (scan == MapVirtualKeyA(VK_F2, MAPVK_VK_TO_VSC))
+                    SceneGraphCopy::instance().request(Command::e_idle_toggle);
+#if CHARACTER_PANEL_S2_PROBE
+                // Diagnostic build only: F6 is taken by another plugin in the usual setup, so the
+                // retired probe lives on an opt-in build rather than on the product's own key.
+                else if (scan == MapVirtualKeyA(VK_F6, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_anim_probe);
+#endif
             }
 #endif
 

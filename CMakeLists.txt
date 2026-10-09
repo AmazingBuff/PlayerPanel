@@ -14,6 +14,10 @@ option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime fea
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
 option(CHARACTER_PANEL_BUILD_PROBE "Build the opt-in M0 engine evidence probe." ON)
 option(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT "Use the manual, paused scene-graph-copy validation path." OFF)
+# The S2 measurement probe answered its questions (four recorded rounds); F2 now belongs to the
+# procedural idle, so the probe is off unless a build explicitly asks for it. It is read-only and
+# costs nothing when disabled: its hotkey and its per-frame measurement stages are compiled out.
+option(CHARACTER_PANEL_S2_PROBE "Bind the retired S2 measurement probe to F6 instead of leaving F2 to the idle." OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
@@ -47,6 +51,59 @@ add_custom_command(
 )
 
 set(VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/plugin.h)
+
+# Per-round experiment identity. A new probe build has to be distinguishable from the previous one
+# by its banner alone: every archived S0 round logged the same string, so a stale deployment could
+# not be told apart from a fresh build (test sheet 2026-10-09, R01). The baselines are captured
+# here at configure time; the package manifest records the same identity and the packaging step
+# verifies the shipped DLL contains it.
+set(CHARACTER_PANEL_PROBE_REVISION "S2P1" CACHE STRING "Scene-copy probe round identifier (bump it every round)")
+
+execute_process(
+	COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-parse --short=10 HEAD
+	OUTPUT_VARIABLE CHARACTER_PANEL_SOURCE_REVISION
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+	ERROR_QUIET
+)
+execute_process(
+	COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} status --porcelain
+	OUTPUT_VARIABLE CHARACTER_PANEL_SOURCE_STATUS
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+	ERROR_QUIET
+)
+execute_process(
+	COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR}/extern/CommonLibSSE rev-parse --short=10 HEAD
+	OUTPUT_VARIABLE CHARACTER_PANEL_COMMONLIB_REVISION
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+	ERROR_QUIET
+)
+execute_process(
+	COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR}/extern/CommonLibSSE status --porcelain
+	OUTPUT_VARIABLE CHARACTER_PANEL_COMMONLIB_STATUS
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+	ERROR_QUIET
+)
+if(NOT CHARACTER_PANEL_SOURCE_REVISION)
+	set(CHARACTER_PANEL_SOURCE_REVISION "unrecorded")
+endif()
+if(NOT CHARACTER_PANEL_COMMONLIB_REVISION)
+	set(CHARACTER_PANEL_COMMONLIB_REVISION "unrecorded")
+endif()
+if(CHARACTER_PANEL_SOURCE_STATUS STREQUAL "")
+	set(CHARACTER_PANEL_SOURCE_SUFFIX "")
+else()
+	set(CHARACTER_PANEL_SOURCE_SUFFIX "+dirty")
+endif()
+if(CHARACTER_PANEL_COMMONLIB_STATUS STREQUAL "")
+	set(CHARACTER_PANEL_COMMONLIB_SUFFIX "")
+else()
+	set(CHARACTER_PANEL_COMMONLIB_SUFFIX "+dirty")
+endif()
+string(TIMESTAMP CHARACTER_PANEL_CONFIGURE_STAMP "%Y%m%dT%H%M%SZ" UTC)
+set(CHARACTER_PANEL_BUILD_IDENTITY
+	"CharacterPanel-scopy-${CHARACTER_PANEL_PROBE_REVISION}-${CHARACTER_PANEL_SOURCE_REVISION}${CHARACTER_PANEL_SOURCE_SUFFIX}-cl${CHARACTER_PANEL_COMMONLIB_REVISION}${CHARACTER_PANEL_COMMONLIB_SUFFIX}-${CHARACTER_PANEL_CONFIGURE_STAMP}"
+)
+
 configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/cmake/plugin.h.in
 	${VERSION_HEADER}
@@ -85,6 +142,7 @@ target_compile_features(
 
 target_compile_definitions(CharacterPanel PRIVATE
 	CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=$<BOOL:${CHARACTER_PANEL_SCENE_COPY_EXPERIMENT}>
+	CHARACTER_PANEL_S2_PROBE=$<BOOL:${CHARACTER_PANEL_S2_PROBE}>
 )
 
 # Align the MSVC toolset with the one vcpkg uses for dependencies (spdlog).
@@ -186,6 +244,8 @@ if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 		-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
 		-DPROJECT_VERSION=${PROJECT_VERSION}
 		-DCONFIGURATION=$<CONFIG>
+		-DBUILD_IDENTITY=${CHARACTER_PANEL_BUILD_IDENTITY}
+		-DPROBE_REVISION=${CHARACTER_PANEL_PROBE_REVISION}
 		-DDLL_PATH=$<TARGET_FILE:CharacterPanel>
 		-DPDB_PATH=$<TARGET_PDB_FILE:CharacterPanel>
 		-P
