@@ -1,0 +1,57 @@
+[01:01:26.774] [32292] [I] CharacterPanel v1-2-1-0
+[01:01:26.774] [32292] [I] CharacterPanel loaded
+[01:02:13.472] [27464] [I] All shaders compiled
+[01:02:13.472] [27464] [I] Installed pre-UI renderer hook
+[01:02:13.472] [27464] [I] Menu sink installed
+[01:02:13.472] [27464] [I] SCOPY BUILD CharacterPanel-scopy-HKX7-7984bbda89-cl94faaed0c6-20261009T165916Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle
+[01:02:13.487] [7032 ] [I] Studio host changed: 0x0 -> 0x1ba08626980 (paused=true)
+[01:02:13.487] [7032 ] [I] Studio light node has been created
+[01:02:13.487] [7032 ] [I] CP-LIGHT slot 0: registered, shell 0x1bb92527880 queued (ledger stays the authority)
+[01:02:13.487] [7032 ] [I] CP-LIGHT slot 1: registered, shell 0x1bb92527740 queued (ledger stays the authority)
+[01:02:13.487] [7032 ] [I] CP-LIGHT slot 2: registered, shell 0x1bb92527600 queued (ledger stays the authority)
+[01:02:13.487] [7032 ] [I] Studio lights registered on the ledger (scene=0x1b064026e80 -- ledger fetch will populate the slots)
+[01:02:13.487] [7032 ] [I] CP-LIGHT slot 0: ledger shell fetched 0x1bb92527880 (after 0 miss frames)
+[01:02:13.487] [7032 ] [I] CP-LIGHT slot 1: ledger shell fetched 0x1bb92527740 (after 0 miss frames)
+[01:02:13.487] [7032 ] [I] CP-LIGHT slot 2: ledger shell fetched 0x1bb92527600 (after 0 miss frames)
+[01:02:52.467] [7032 ] [I] CP-LIGHT slot 0: ledger shell dropped
+[01:02:52.467] [7032 ] [I] CP-LIGHT slot 1: ledger shell dropped
+[01:02:52.467] [7032 ] [I] CP-LIGHT slot 2: ledger shell dropped
+[01:02:52.467] [7032 ] [W] Studio lights not fully served by the ledger yet
+[01:02:56.289] [7032 ] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1bb92527c40 filed to lightQueueAdd)
+[01:02:56.289] [7032 ] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1bb92527240 filed to lightQueueAdd)
+[01:02:56.289] [7032 ] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1bb92527100 filed to lightQueueAdd)
+[01:02:56.358] [7032 ] [I] CP-LIGHT slot 0: ledger shell fetched 0x1bb92527c40 (after 1 miss frames)
+[01:02:56.358] [7032 ] [I] CP-LIGHT slot 1: ledger shell fetched 0x1bb92527240 (after 1 miss frames)
+[01:02:56.358] [7032 ] [I] CP-LIGHT slot 2: ledger shell fetched 0x1bb92527100 (after 1 miss frames)
+[01:03:01.831] [32292] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x1bd163b6b00 parent=0x1bd160bdec0 nodes=470 geoms=23 api=NiObject::Clone id=68835/70187
+[01:03:01.831] [32292] [I] SCOPY CLONE-RETURN capture=1 copy=0x1bd1bf5ee00
+[01:03:01.831] [32292] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=470 skin-bones=131
+[01:03:01.831] [32292] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[01:03:01.831] [32292] [I] SCOPY CENSUS source-nodes=470 copy-nodes=470 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[01:03:01.832] [32292] [I] SCOPY FRAME skinned-bound valid=true radius=74.0 center=(6366.9,1449.4,256.8) graph-bound radius=74.4 scale=0.35 pruned-nodes=0
+[01:03:01.832] [32292] [I] SCOPY READY capture=1 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[01:03:01.832] [32292] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=470
+[01:03:01.832] [32292] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[01:03:01.832] [32292] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=90 ambiguous=0 duplicate-nodes=0 parent-ancestors=90 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], SkirtLBone03, Shield, Weapon, MagicEffectsNode, NPC Head MagicNode [Hmag]' wrong-parent='-'
+[01:03:01.832] [32292] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[01:03:01.832] [32292] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=78 ambiguous=0 duplicate-nodes=0 parent-ancestors=78 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[01:03:01.832] [32292] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=90/116 ambiguous=0
+[01:03:01.832] [32292] [I] SCOPY ANIM map graph=0 bones=116 matched=90 helper-unresolved=3 other-unresolved=23
+[01:03:01.832] [32292] [I] SCOPY ANIM replay pose entries=116 scale-off-from-one=10
+[01:03:01.832] [32292] [I] SCOPY ANIM replay control max-pos-delta=125.097 max-rot-delta=171.68deg bones=90
+[01:03:01.832] [32292] [I] SCOPY ANIM replay order=skeleton quat=direct written=90 max-pos-delta=3.743 max-rot-delta=0.09deg bones=90
+[01:03:01.832] [32292] [I] SCOPY ANIM replay order=skeleton quat=transposed written=90 max-pos-delta=69.712 max-rot-delta=179.84deg bones=90
+[01:03:01.832] [32292] [I] SCOPY ANIM replay order=bone-nodes quat=direct written=106 max-pos-delta=1.611 max-rot-delta=0.00deg bones=106
+[01:03:01.832] [32292] [I] SCOPY ANIM replay order=bone-nodes quat=transposed written=106 max-pos-delta=62.777 max-rot-delta=157.95deg bones=106
+[01:03:01.832] [32292] [I] SCOPY ANIM replay restored max-pos-delta=0.000 max-rot-delta=0.00deg bones=90
+[01:03:01.832] [32292] [I] SCOPY ANIM replay verdict match=none control=125.097u best=1.6108u
+[01:03:01.835] [32292] [I] SCOPY ANIM catalogue character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx' names=15203 bindings=15203
+[01:03:01.839] [32292] [I] SCOPY ANIM catalogue idle-names=1526/15203 first='Animations\1hm_blockidle.hkx@20, Animations\1hm_idle.hkx@23, Animations\2hm_blockidle.hkx@123, Animations\2hm_idle.hkx@124, Animations\2hw_blockidle.hkx@204, Animations\2hw_idle.hkx@206, Animations\altar_leftidle.hkx@234, Animations\female\animobjectchairdrinkingidlebase.hkx@235'
+[01:03:01.839] [32292] [I] SCOPY ANIM catalogue idle-plain first='Animations\horse_rider\idle.hkx@705, Animations\horse_rider\idle_pet.hkx@706, Animations\horse_rider\idle_rearup.hkx@707, Animations\DLC01\idleactivatecoffinpuzzle.hkx@708, Animations\idleblessingkneel_enter.hkx@709, Animations\idleblessingkneel_exit.hkx@710, Animations\idleblessingkneel_loop.hkx@711, Animations\female\idlebloodportalactivate.hkx@712'
+[01:03:01.839] [32292] [I] SCOPY ANIM catalogue idle-base first='Animations\horse_rider\idle.hkx@705, Animations\female\mt_idle.hkx@1022, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Cold_FBreath\female\_variants_mt_idle\mt_idle.hkx@11914, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Fbite_Hands\female\mt_idle.hkx@11918, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued\female\_variants_mt_idle\mt_idle.hkx@11920, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Light\female\_variants_mt_idle\mt_idle.hkx@11921, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Fbite_Body\female\mt_idle.hkx@11922, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Mid\female\_variants_mt_idle\mt_idle.hkx@11932'
+[01:03:01.839] [32292] [I] SCOPY ANIM catalogue elements=8 object-like=8/8 scan=0x80
+[01:03:01.840] [32292] [I] SCOPY ANIM catalogue candidate offset=0x00 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[01:03:01.840] [32292] [I] SCOPY ANIM catalogue candidate offset=0x30 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[01:03:01.840] [32292] [I] SCOPY ANIM catalogue raw index=0 qwords='00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649d8 000000000001ffff 0000000000000000 8000000000000000 0000000000000000 0000000000000000 00007ff6ef2927c8 000000000001ffff 000001b9c4f0df00 00002cb000002cb0'
+[01:03:01.840] [32292] [I] SCOPY ANIM catalogue raw index=7601 qwords='00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000'
+[01:03:01.840] [32292] [I] SCOPY ANIM catalogue layout UNAVAILABLE reason=no-candidate (read the raw dump)

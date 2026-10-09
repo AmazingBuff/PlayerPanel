@@ -81,6 +81,7 @@ namespace
     constexpr std::int32_t Container_Scan_Bytes = 0x200;
     constexpr size_t Sweep_Steps = 24;
     constexpr size_t Max_Clips_Reported = 6;
+    constexpr size_t Progress_Every = 32;
     constexpr double Max_Clip_Step_Seconds = 0.1;
 
     // How long a string read is allowed to run, how many bone names a probe prints, and which file
@@ -655,20 +656,23 @@ namespace
         return type && type->name ? type->name : nullptr;
     }
 
-    ClipReading read_clip_generator(void const* candidate, std::int32_t bone_count)
+    ClipReading read_clip_generator(void const* candidate, std::int32_t bone_count, bool typed)
     {
         if (!candidate || !readable(candidate, sizeof(RE::hkbClipGenerator)) || !looks_like_object(candidate))
             return { false, "not-object", {}, nullptr };
         const auto* const generator = static_cast<const RE::hkbClipGenerator*>(candidate);
         const std::string name = guarded_string(generator->animationName);
 
-        // The class name is the typed answer to "is this a clip generator"; the animation name only
-        // falls back to deciding when the engine does not name the class.
-        const char* const class_name = class_name_of(candidate);
-        if (class_name && std::string_view(class_name) != "hkbClipGenerator")
-            return { false, "other-class", {}, nullptr };
-        if (!class_name && !mentions_hkx(name))
-            return { false, "not-a-clip", {}, nullptr };
+        // The class name is the typed answer to "is this a clip generator", but asking for it is a
+        // virtual call, so it is only asked of an object the graph reached through a typed edge. A
+        // shape-discovered pointer is judged by its data alone: a word that looks like a vtable is not
+        // proof that the object behind it implements the slot this call would jump through.
+        if (typed)
+        {
+            const char* const class_name = class_name_of(candidate);
+            if (class_name && std::string_view(class_name) != "hkbClipGenerator")
+                return { false, "other-class", {}, nullptr };
+        }
         if (!mentions_hkx(name))
             return { false, "no-animation-name", {}, nullptr };
 
@@ -685,7 +689,14 @@ namespace
 
     struct ClipSearch
     {
-        std::vector<std::pair<void const*, int>> pending;
+        struct Step
+        {
+            void const* object;
+            int depth;
+            bool typed;
+        };
+
+        std::vector<Step> pending;
         std::unordered_set<void const*> seen;
         std::vector<ClipReading> clips;
         std::unordered_map<std::string, size_t> classes;
@@ -701,7 +712,7 @@ namespace
     // a wrong step costs a rejection reason rather than a wrong clip.
     void scan_for_clips(void const* root, std::int32_t bone_count, ClipSearch& search)
     {
-        search.pending.emplace_back(root, 0);
+        search.pending.push_back({ root, 0, true });
         while (!search.pending.empty())
         {
             if (search.visited >= Max_Clip_Objects)
@@ -709,37 +720,45 @@ namespace
                 search.capped = true;
                 break;
             }
-            const auto [object, depth] = search.pending.back();
+            const ClipSearch::Step step = search.pending.back();
             search.pending.pop_back();
-            if (!object || depth > Max_Clip_Depth)
+            if (!step.object || step.depth > Max_Clip_Depth)
                 continue;
-            if (!search.seen.insert(object).second || !looks_like_object(object))
+            if (!search.seen.insert(step.object).second || !looks_like_object(step.object))
                 continue;
             ++search.visited;
 
-            if (const char* const class_name = class_name_of(object))
-                ++search.classes[class_name];
+            // A breadcrumb every so many objects: if a build ever dies in here again, the log says how
+            // far the walk got instead of leaving nothing behind.
+            if (search.visited % Progress_Every == 0)
+                logger::info("SCOPY ANIM play progress objects={} pending={} clips={}", search.visited, search.pending.size(), search.clips.size());
 
-            const ClipReading clip = read_clip_generator(object, bone_count);
+            if (step.typed)
+            {
+                if (const char* const class_name = class_name_of(step.object))
+                    ++search.classes[class_name];
+            }
+
+            const ClipReading clip = read_clip_generator(step.object, bone_count, step.typed);
             if (clip.valid)
             {
                 search.clips.push_back(clip);
                 continue;
             }
             ++search.reasons[clip.reason];
-            if (depth == Max_Clip_Depth)
+            if (step.depth == Max_Clip_Depth)
                 continue;
 
-            if (readable(object, sizeof(RE::hkbStateMachine)))
+            if (readable(step.object, sizeof(RE::hkbStateMachine)))
             {
-                const auto* const machine = static_cast<const RE::hkbStateMachine*>(object);
+                const auto* const machine = static_cast<const RE::hkbStateMachine*>(step.object);
                 const std::int32_t states = machine->states.size();
                 if (states > 0 && states <= Max_States && readable(machine->states.data(), sizeof(void*) * static_cast<size_t>(states)))
                 {
                     for (std::int32_t i = 0; i < states; ++i)
                     {
                         if (void const* const state = machine->states[i])
-                            search.pending.emplace_back(state, depth + 1);
+                            search.pending.push_back({ state, step.depth + 1, true });
                     }
                 }
             }
@@ -749,12 +768,12 @@ namespace
             // exactly the node the clips hang from.
             for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
             {
-                const auto* const base = static_cast<const std::uint8_t*>(object) + offset;
+                const auto* const base = static_cast<const std::uint8_t*>(step.object) + offset;
                 if (!readable(base, sizeof(void*)))
                     break;
                 const void* const word = *reinterpret_cast<void* const*>(base);
                 if (word && readable(word, sizeof(void*)) && looks_like_object(word))
-                    search.pending.emplace_back(word, depth + 1);
+                    search.pending.push_back({ word, step.depth + 1, false });
             }
         }
     }
