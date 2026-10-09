@@ -256,17 +256,18 @@ SCOPY ANIM catalogue idle index=… name='…' valid=… reason=… duration=…
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX3-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX3-e32eafc31c-cl94faaed0c6-20261009T162129Z`（`source_baseline_dirty=false`，基线
-  `e32eafc31c`），DLL SHA-256 `f0adfc6a…`。**已实测的两轮**：HKX2（`…-HKX2-a0eaef50cd-…`，DLL `506e21f7…`，
-  [证据](s2-hkx2-replay-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx2-replay-20261010-0016.log)）与
-  HKX1（`…-HKX1-cd646aefae-…`，DLL `356c71f4…`，[证据](s2-hkx1-alignment-evidence-2026-10-10.md)、
-  [日志](diagnostics/CharacterPanel-hkx1-align-20261010-0001.log)）。操作说明见
-  [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与分析脚本
-  都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
-- 提交状态：`d9ad6b0`（归档四轮探针与程序化待机）→ `cd646ae`/`66758ca`（HKX1 实现与身份）→ `1abe07d`（HKX1 实测记录）
-  → `a0eaef5`（HKX2 实现与测量）→ `1aa167d`（HKX2 身份）→ `e32eafc`（HKX3 目录与布局核对）；都在本地 `master`，
-  `extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX4-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX4-215cea8805-cl94faaed0c6-20261009T162845Z`（`source_baseline_dirty=false`，基线
+  `215cea8805`），DLL SHA-256 `06cf6690…`。**已实测的三轮**：HKX3（`…-HKX3-e32eafc31c-…`，DLL `f0adfc6a…`，
+  [证据](s2-hkx3-catalogue-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx3-catalogue-20261010-0026.log)）、
+  HKX2（`…-HKX2-a0eaef50cd-…`，DLL `506e21f7…`，[证据](s2-hkx2-replay-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx2-replay-20261010-0016.log)）与 HKX1（`…-HKX1-cd646aefae-…`，DLL `356c71f4…`，
+  [证据](s2-hkx1-alignment-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx1-align-20261010-0001.log)）。
+  操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与
+  分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
+- 提交状态：`d9ad6b0`（归档四轮探针与程序化待机）→ `cd646ae`/`66758ca`（HKX1）→ `1abe07d`（HKX1 实测）→ `a0eaef5`
+  （HKX2 实现与测量）→ `1aa167d`（HKX2 身份）→ `e32eafc`（HKX3 目录与布局核对）→ `f65930a`（HKX2 实测记录）→
+  `215cea8`（HKX4 偏移表与原始转储）；都在本地 `master`，`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
 - 热键现状（HKX3 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量 + 动画目录）、`F8` 绘制、`F3` 旋转、
   `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。
 
