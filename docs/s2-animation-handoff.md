@@ -387,8 +387,9 @@ SCOPY ANIM play element binding-at-0x10 at=0x… valid=true reason=valid
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX10-1.2.1.zip`（身份以包内 manifest 为准；
-  clip 明细 + control 路线 + 定点元素转储，方案见 §5 HKX10 节）。**已实测的九轮**：HKX9
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX10-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX10-d3c847a3b9-cl94faaed0c6-20261009T180211Z`（`source_baseline_dirty=false`，基线
+  `d3c847a3b9`），DLL SHA-256 `f432b76a…`；clip 明细 + control 路线 + 定点元素转储，方案见 §5 HKX10 节。**已实测的九轮**：HKX9
   （`…-HKX9-746ffacf13-…`，[证据](s2-hkx9-vtable-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx9-vtable-20261010.log)）、HKX8（`…-HKX8-7656223071-…`，
   [证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)、
