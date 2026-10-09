@@ -11,6 +11,10 @@
 用户已明确要求改为**用真实动画数据（HKX）驱动并可对比验证**。本工作包 = 用引擎自己的采样器播放
 真实动画并驱动副本，附**数值 A/B 对比协议**；程序化待机降级为"没有可用动画时的兜底"，**不再调参**。
 
+**进展（2026-10-09）**：HKX1 的**第 1 步（骨架对齐）已实现并打包**（`dist/CharacterPanel-scopy-HKX1-1.2.1.zip`）：
+F7 捕获并审计通过后，只读地打印源角色动画图与副本节点的对齐结果（`SCOPY ANIM …`，格式与判读见 §5 实施状态）。
+第 2–4 步（取动画／采样写入／数值 A/B）等这一轮的日志判定后开工；本轮没有写任何骨骼。
+
 ## 1. 方向修正（用户批评，已接受）
 
 用户原话要点：既然已经知道骨骼能移动，为什么不直接用简单的 HKX 测试？HKX 还能对比；硬编码的
@@ -52,6 +56,18 @@ idle 完全没法测试。
 | 角色的当前 local 姿态 | `hkbCharacter::poseLocal`／`numPoseLocal` — [hkbCharacter.h:53-54](extern/CommonLibSSE/include/RE/H/hkbCharacter.h#L53) |
 | 取图路径 | `BShkbAnimationGraph::characterInstance`（0xC0，`hkbCharacter`）；`hkbCharacter::{setup(0x50), animationBindingSet(0x68), behaviorGraph(0x58)}` — [hkbCharacter.h:45-48](extern/CommonLibSSE/include/RE/H/hkbCharacter.h#L45) |
 | 手动推进动画图（可选） | `IAnimationGraphManagerHolder::UpdateAnimationGraphManager(const BSAnimationUpdateData&)` — [IAnimationGraphManagerHolder.h:55](extern/CommonLibSSE/include/RE/I/IAnimationGraphManagerHolder.h#L55) |
+
+### 在 AE 上不可用的两条现成 API（2026-10-09 复核，规划时排除）
+
+- `BSAnimationGraphManager::QueryAnimations`（两个重载）与 `RE::AnimationSystemUtils` 的**全部函数**在这个
+  CommonLibSSE checkout 里 AE 地址都是 `0`（`RELOCATION_ID(62432, 0)`、`RELOCATION_ID(31942, 0)` …）。
+  `REL::RelocationID` 在 AE 构建下取 `_aeID`，为 0 时 `address()` 返回 0（[REL/ID.h:71-81](extern/CommonLibSSE/include/REL/ID.h#L71)），
+  **调用即跳到 0**。本项目只有 AE 1.6.1170，所以"用引擎现成 API 列出 clip 名／clip 信息"这条路不可规划。
+- `hkbStateMachine::StateInfo` 的成员全是 `unk30…unk70`，`hkbAnimationBindingWithTriggers` 只有前向声明：
+  遍历 generator 树找 `hkbClipGenerator`、或读 `animationBindingSet::bindings` 的元素，**都要先做运行时布局核对**。
+  有类型的只有 `hkbBehaviorGraph::rootGenerator`／`hkbStateMachine::states`／`hkbClipGenerator` 的字段／
+  `hkaAnimationBinding` 的字段／`hkaAnimationControl`／`hkaSkeleton`／`BShkbAnimationGraph::{characterInstance,boneNodes}`／
+  `BSAnimationGraphManager::graphs`。
 
 ### 必须验证的未知项（不要当成已知）
 
@@ -100,6 +116,32 @@ C 只在 A/B 无法满足需求时再考虑。
 5. **失败面必须可读**：任何一环失败都要打印**具体**原因（哪个指针为空、布局核对结果、匹配率、缺哪些骨），
    不允许静默跳过——下一轮的依据必须是数据而不是猜测。
 
+### 实施状态：第 1 步已落地（2026-10-09，待游戏内一轮）
+
+`src/character/animation_source.{h,cpp}`，由 `SceneGraphCopy::capture()` 在审计通过后调用一次（只在暂停的背包里发生）：
+
+- **只读**：不写源角色、不写副本、不写引擎的图。特别地**不碰** `hkbClipGenerator::animationControl`——那是
+  **源角色**的对象，写它的 `localTime` 等于写世界角色的引擎状态（FR-05）；将来采样要走
+  `binding->animation->SampleTracks(t, …)` 这种**带显式时间**的 const 调用（`hkaAnimationControl::SampleTracks`
+  没有时间参数、按自身 `localTime` 采样，两者得到的结果在全身单 clip 上一致，但后者要先改源对象的状态）。
+- 日志（每次 F7 打印一组）：
+
+```
+SCOPY ANIM source form=<id> graphs=N copy-nodes=N
+SCOPY ANIM graph[i] project='…' holder=… root=… bone-nodes=N anim-bones=N behavior-graph=… root-generator='…' binding-set=… bindings=N pose-local=N
+SCOPY ANIM skeleton graph=i name='…' bones=N bone-nodes=N bone-node-names-agree=K/N matched=N ambiguous=N duplicate-nodes=N parent-ancestors=N missing='…' wrong-parent='…'
+SCOPY ANIM gate verdict=… graph=i matched=N/N ambiguous=N
+```
+
+- 判读：`matched` = 动画骨架里**精确**命中副本节点名的骨数；`missing` 是差集样本（最多 8 个名字，计数才是全量）。
+  `verdict=PASS`（全部命中且无重名歧义）／`PASS-AMBIGUOUS`（全部命中，但有骨名对应多个节点——改装头发/衣物的
+  链常常重名）／`INCOMPLETE`（有骨找不到节点）／`UNAVAILABLE`（点名缺的是哪个指针）。
+  `bone-node-names-agree` 量的是"引擎自己的 `boneNodes` 是否与动画骨架同序"——将来用**指针对应**替代按名匹配
+  就靠它。`parent-ancestors`／`wrong-parent` **只作观测、不参与 gate**：本骨架的脊柱挂 `CME UBody`、骨盆挂
+  `CME LBody`，两套层级本来就不一致，写 local 变换由 NIF 层级合成，不需要骨架的父子关系。
+- 这一轮的日志决定下一步：`PASS`／`PASS-AMBIGUOUS` → 进第 2 步取动画（先按 §3 做布局核对：generator 树还是
+  binding set）；`INCOMPLETE` → 先看差集是哪些骨（是无轨道的边角骨还是主关节）；`UNAVAILABLE` → 按点名的指针查取图路径。
+
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
 1. **数值 A/B（主判据）**：同一动画、同一相位下，逐骨比较**副本的 local 变换**与**源角色的 local 变换**，
@@ -128,13 +170,13 @@ C 只在 A/B 无法满足需求时再考虑。
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物：`dist/CharacterPanel-scopy-IDLE3-1.2.1.zip`（身份 `…-IDLE3-…-20261009T152323Z`，
-  DLL SHA-256 `b01eee73…`）；此前 S2P1–S2P4 四个探针包与日志、分析脚本都在 `dist/` 与
-  [docs/diagnostics](diagnostics/)。
-- **未提交**：工作区仍是 dirty（本轮全部改动 + 四轮日志 + 三个分析脚本都未提交）；
-  `build-manifest.json` 里 `source_baseline_dirty: true`。建议先把现状提交，再开 HKX 工作。
-- 热键现状（IDLE3 产品构建）：`F7` 捕获、`F8` 绘制、`F3` 旋转、`F4` 释放、`F2` 待机开关（默认开）；
-  探针已退出产品构建。
+- 当前产物：`dist/CharacterPanel-scopy-HKX1-1.2.1.zip`（身份与 DLL SHA-256 见同目录 `build-manifest.json`，
+  操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)）；此前 IDLE1–IDLE3、S2P1–S2P4 的包、
+  日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
+- 提交状态：四轮探针 + 程序化待机 + 方向修正文档落在 `d9ad6b0`；HKX1 的实现、单测与文档随本轮提交，
+  之后工作区应是干净的（`extern/CommonLibSSE` 的历史 dirty 状态照旧排除在提交之外）。
+- 热键现状（HKX1 产品构建）：`F7` 捕获（审计通过后打印上面那组 `SCOPY ANIM`）、`F8` 绘制、`F3` 旋转、
+  `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。
 
 ## 9. 明确不要做的事
 

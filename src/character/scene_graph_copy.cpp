@@ -4,6 +4,7 @@
 
 #include "character/scene_graph_copy.h"
 
+#include "character/animation_source.h"
 #include "character/character_clone.h"
 #include "character/snapshot_transform.h"
 #include "panel/panel.h"
@@ -1036,6 +1037,10 @@ void SceneGraphCopy::capture()
     // Snapshot the native clone's captured worlds without re-running facegen, Havok or SMP.
     m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root));
     logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F3=rotate F4=release", m_capture_id, removed_controllers, removed_collisions);
+    // S2/HKX1 step 1: the engine's animation skeleton against the copy just captured from the same
+    // character. Read-only, and it answers "can the engine's animation data name these nodes at all"
+    // before anything samples a clip into them.
+    report_animation_source(*player, *source, *root);
     for (RE::NiAVObject* object : copy_inventory.objects)
         if (object->AsGeometry())
             logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());

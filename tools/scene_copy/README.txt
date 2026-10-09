@@ -68,6 +68,38 @@ bound in this build: a probe build asks for it with
 -DCHARACTER_PANEL_S2_PROBE=ON and then presses F6, which is free only in that
 opt-in build.
 
+This build also runs the first step of the S2 animation work (HKX1): right after
+F7 captures and audits a copy, it reads the source character's animation graphs
+and reports how the engine's animation skeleton maps onto the copy's nodes. It
+is read-only — nothing in the source character, the copy, or the engine's graphs
+is written — and it prints:
+
+  SCOPY ANIM source form=<id> graphs=N copy-nodes=N
+  SCOPY ANIM graph[i] project='...' holder=... root=... bone-nodes=N
+        anim-bones=N behavior-graph=... root-generator='...' binding-set=...
+        bindings=N pose-local=N
+  SCOPY ANIM skeleton graph=i name='...' bones=N bone-nodes=N
+        bone-node-names-agree=K/N matched=N ambiguous=N duplicate-nodes=N
+        parent-ancestors=N missing='...' wrong-parent='...'
+  SCOPY ANIM gate verdict=PASS|PASS-AMBIGUOUS|INCOMPLETE|UNAVAILABLE graph=i
+        matched=N/N ambiguous=N
+
+`matched` counts the bones of the engine's animation skeleton that name a node
+of the copy exactly; `missing` samples the difference (up to eight names — the
+counts beside it say how many there are). PASS means every bone resolved,
+PASS-AMBIGUOUS means it did but at least one bone name is shared by several
+nodes (modded hair and cloth chains repeat skeleton names), INCOMPLETE means
+some bone has no node, and UNAVAILABLE names the pointer that was missing
+instead of reporting numbers. `parent-ancestors`/`wrong-parent` compare the
+skeleton's own parent relation against the node hierarchy: this rig's spine
+hangs under CME UBody while its pelvis hangs under CME LBody, so a disagreement
+there is expected and does not fail the gate. `holder`/`root` say which of the
+character's graphs is the one that was captured (the third-person graph);
+`bindings=N` is how many animations that character has loaded.
+
+Return the whole block with a result: the next round picks how to sample an
+animation from it.
+
 The package build is otherwise unchanged: F7/F8/F3/F4 plus the idle on F2.
 
 The F2 probe swings one bone of the copy and measures whether that change

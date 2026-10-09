@@ -6,6 +6,24 @@
 
 依据：[PRD 0.6 §6.2–6.3](player-panel-prd.md)。目标是确认骨骼修改是否到达真实 draw，并把静态显示、生命周期、动作与物理分开判定。
 
+## 本轮（HKX1）待测项：骨架对齐（只读，一次 F7）
+
+前置：把 `dist/CharacterPanel-scopy-HKX1-1.2.1.zip` 里的 DLL **和同一个包的 PDB** 装进测试 mod（不要与旧 DLL 同装；
+两个 DLL 的 SKSE 导出同名）。本项与绘制无关，F8 可选。
+
+1. 测试存档 → 打开暂停的背包 → **F7** 捕获并审计。
+2. 回传日志里 `SCOPY ANIM` 那一组**原文**（`source` / `graph[i]` / `skeleton` / `gate` 四类行），外加 `SCOPY BUILD` 首行；
+   需要的话附 `SCOPY READY` 与文件名完整的 CharacterPanel.log。
+3. 判据：`gate verdict=PASS` 或 `PASS-AMBIGUOUS` = 引擎动画骨架与副本节点对齐成立，下一轮据此取动画；
+   `INCOMPLETE` = 看打印出来的 `missing` 差集（哪些骨没有节点，是无轨道的边角骨还是主关节）；
+   `UNAVAILABLE` = 那条行已点名具体指针（`no-animation-graph-manager` / `null-character-setup` /
+   `null-animation-skeleton` …），按它继续查，不要用猜测替代。
+4. 顺手确认独立性（FR-03/FR-05 红线）：退出背包后源角色的姿态、位置、物理没有任何变化；本轮代码只读引擎数据，
+   一个骨骼字节都不写。
+5. CBBE 与 UBE 各一次：两套骨架的骨名与重名情况不同，`matched` / `ambiguous` / `duplicate-nodes` 会体现。
+
+**本项没有 PASS／PASS-AMBIGUOUS 之前不要进入采样与写入**（[S2 动画 handoff](s2-animation-handoff.md) §5 的第 2–4 步）。
+
 ## 当前状态与执行前置
 
 2026-10-09 **IDLE1 已构建待测：程序化待机（FR-03 的第一个驱动器）**。

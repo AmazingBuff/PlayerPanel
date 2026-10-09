@@ -2,6 +2,7 @@
 // Created by AmazingBuff on 2026/10/08.
 //
 
+#include "character/animation_source.h"
 #include "character/idle_driver.h"
 #include "character/snapshot_transform.h"
 
@@ -404,6 +405,63 @@ int main()
             check(close(shifted.rotate.entry[0][0], bone_world.rotate.entry[0][0], 0.0001f) && close(shifted.rotate.entry[2][2], bone_world.rotate.entry[2][2], 0.0001f),
                 "a translation channel must not turn the joint");
         }
+    }
+
+    // The engine animation skeleton against the copy's nodes: the names the sampling route will
+    // resolve bones through. A copy carries modded hair chains whose names contain a bone's name, so
+    // the match must be exact, and this rig's spine hangs under a different parent than its pelvis,
+    // so a skeleton hierarchy that disagrees with the node hierarchy is reported and not treated as
+    // a failed name.
+    {
+        const std::vector<std::string_view> node_names{
+            "NPC", "NPC Root [Root]", "CME LBody", "NPC Pelvis [Pelv]", "CME UBody", "NPC Spine1 [Spn1]", "NPC Spine2 [Spn2]", "hdt NPC Head [Head]"
+        };
+        const std::vector<std::int32_t> node_parents{ -1, 0, 1, 2, 1, 4, 5, 6 };
+        const std::vector<std::string_view> bone_names{ "NPC Root [Root]", "NPC Pelvis [Pelv]", "NPC Spine1 [Spn1]", "NPC Spine2 [Spn2]", "NPC Head [Head]" };
+        const std::vector<std::int16_t> bone_parents{ -1, 0, 1, 2, 3 };
+
+        const PLUGIN_NAMESPACE::SkeletonAlignment alignment =
+            PLUGIN_NAMESPACE::align_skeleton(bone_names, bone_parents, node_names, node_parents, 8);
+        check(alignment.bones == 5 && alignment.matched == 4, "four of these five bones name a node of the copy");
+        check(alignment.missing == "NPC Head [Head]", "a node whose name only contains a bone's name must not resolve it");
+        check(alignment.ambiguous == 0 && alignment.duplicate_nodes == 0, "this fixture has no repeated node name");
+        check(alignment.parent_ancestors == 3, "roots and ancestors count as consistent parents");
+        check(alignment.wrong_parent == "NPC Spine1 [Spn1]", "the skeleton's spine parent, which the node hierarchy contradicts, is reported by name");
+        check(!PLUGIN_NAMESPACE::alignment_resolves_all_bones(alignment), "an unresolved bone must fail the mapping gate");
+
+        const std::vector<std::string_view> resolved_bones{ "NPC Root [Root]", "NPC Pelvis [Pelv]", "NPC Spine1 [Spn1]", "NPC Spine2 [Spn2]" };
+        const std::vector<std::int16_t> resolved_parents{ -1, 0, 1, 2 };
+        const PLUGIN_NAMESPACE::SkeletonAlignment resolved =
+            PLUGIN_NAMESPACE::align_skeleton(resolved_bones, resolved_parents, node_names, node_parents, 8);
+        check(PLUGIN_NAMESPACE::alignment_resolves_all_bones(resolved), "a skeleton whose every bone names a node passes the gate");
+        check(resolved.missing.empty(), "a skeleton whose every bone names a node reports nothing missing");
+        check(resolved.wrong_parent == "NPC Spine1 [Spn1]",
+            "the hierarchy disagreement this two-branch skeleton always has is reported without failing the name mapping");
+
+        // One node name used twice: the first in traversal order is taken and the ambiguity is
+        // counted, because naming a bone that several nodes share is how the S2 probe drove the wrong
+        // skeleton.
+        const std::vector<std::string_view> duplicated_nodes{ "NPC", "NPC Spine1 [Spn1]", "NPC Spine1 [Spn1]" };
+        const std::vector<std::int32_t> duplicated_parents{ -1, 0, 1 };
+        const PLUGIN_NAMESPACE::SkeletonAlignment ambiguous =
+            PLUGIN_NAMESPACE::align_skeleton(resolved_bones, resolved_parents, duplicated_nodes, duplicated_parents, 8);
+        check(ambiguous.matched == 1 && ambiguous.ambiguous == 1 && ambiguous.duplicate_nodes == 2,
+            "a duplicated node name resolves once, is flagged, and both of its nodes are counted");
+
+        // The difference list is a sample: the counts decide whether the mapping holds.
+        const std::vector<std::string_view> cap_nodes{ "NPC Root [Root]" };
+        const std::vector<std::int32_t> cap_parents{ -1 };
+        const std::vector<std::string_view> cap_bones{ "Missing A", "Missing B", "NPC Root [Root]" };
+        const std::vector<std::int16_t> cap_bone_parents{ -1, -1, -1 };
+        const PLUGIN_NAMESPACE::SkeletonAlignment capped =
+            PLUGIN_NAMESPACE::align_skeleton(cap_bones, cap_bone_parents, cap_nodes, cap_parents, 1);
+        check(capped.bones == 3 && capped.matched == 1 && capped.missing == "Missing A", "the difference list stops at the report cap");
+
+        check(PLUGIN_NAMESPACE::node_has_ancestor(node_parents, 3, 1), "an ancestor several levels up must be found");
+        check(!PLUGIN_NAMESPACE::node_has_ancestor(node_parents, 3, 3), "a node is not its own ancestor");
+        check(!PLUGIN_NAMESPACE::node_has_ancestor(node_parents, 5, 3), "the pelvis must not count as an ancestor of a spine node it does not contain");
+        const std::vector<std::int32_t> cyclic_parents{ 1, 0 };
+        check(!PLUGIN_NAMESPACE::node_has_ancestor(cyclic_parents, 0, 2), "a cyclic parent table must terminate");
     }
 
     if (failures != 0)

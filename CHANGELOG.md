@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Added
+
+- Report how the engine's animation skeleton maps onto the copy, at capture
+  (S2 animation handoff, step 1 of the HKX1 work package). F7 now also reads
+  the source character's animation graphs read-only and prints what each one
+  holds - whether it drives the captured third-person root, its bone-node table
+  against the animation skeleton, `poseLocal`, the size of its binding set and
+  the class of its root generator - then resolves every bone of the animation
+  skeleton against the copy's nodes by exact name and prints
+  `SCOPY ANIM gate verdict=PASS|PASS-AMBIGUOUS|INCOMPLETE|UNAVAILABLE` with the
+  matched and ambiguous counts plus a sample of what did not resolve. The
+  skeleton's own parent relation is reported but does not gate the mapping:
+  this rig's spine hangs under CME UBody while its pelvis hangs under CME
+  LBody, so those two hierarchies disagree by design, and bones resolve to
+  nodes by exact name because loose matching is what drove the wrong skeleton
+  in the S2 probe. The rules are pure functions with their own unit test
+  (exact match only, a duplicated node name resolved once and flagged, the
+  report list capped while the counts stay complete, a cyclic parent table
+  terminating). Nothing is written to the source character, to the copy, or to
+  the engine's graphs; sampling an animation into the copy is the next step.
+
 ### Changed
 
 - Record the S2 animation direction change: the procedural idle proved that
