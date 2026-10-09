@@ -352,8 +352,9 @@ SCOPY ANIM play clip='…' …（选中后与 HKX6 协议相同）
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX9-1.2.1.zip`（身份以包内 manifest 为准；
-  判类改虚表精确比对 + root-sm 转储，方案见 §5 HKX9 节）。**已实测的八轮**：HKX8
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX9-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX9-746ffacf13-cl94faaed0c6-20261009T174357Z`（`source_baseline_dirty=false`，基线
+  `746ffacf13`），DLL SHA-256 `57df5e72…`；判类改虚表精确比对 + root-sm 转储，方案见 §5 HKX9 节。**已实测的八轮**：HKX8
   （`…-HKX8-7656223071-…`，[证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx8-clipsearch2-20261010-0107.log)）、HKX7 崩溃轮
   （[崩溃日志](diagnostics/CharacterPanel-hkx7-crash-20261010-0103.log)）、HKX6（`…-HKX6-733dfd5f17-…`，
