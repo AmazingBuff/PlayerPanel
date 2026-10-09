@@ -124,31 +124,33 @@ the conversion rather than a silent failure. `restored` proves the figure was pu
 back. Nothing is written to the source character or the engine's graphs, and the
 copy is left exactly as captured.
 
-This build also locates the animation binding inside a binding-set element
-(HKX4). The previous round proved the element is neither a binding nor a pointer
-to one, and that the names are typed and in the binding set's own order, so this
-round tries a table of offsets with both readings and judges every row
-structurally - the animation has to look like a live engine object with a
-plausible clip length, and its tracks have to name bones this skeleton has:
+This build picks the animation binding's offset from the element's own shape
+(HKX5). The raw dump of the previous round showed a binding-set element carries an
+hkReferencedObject header, an empty array, and then a second header of the same
+shape at +0x30 - a by-value hkaAnimationBinding - so the candidates now come from
+what the bytes look like (a vtable means an object begins there, a readable heap
+pointer means one is pointed at) instead of from a fixed list, and each one is
+judged by the animation's own fields:
 
-  SCOPY ANIM catalogue character='...' rig='...' behavior='...' names=N bindings=N
+  SCOPY ANIM catalogue character='...' names=N bindings=N
   SCOPY ANIM catalogue idle-names=K/N first='...'
   SCOPY ANIM catalogue idle-plain first='...'
-  SCOPY ANIM catalogue elements=K object-like=K/N
-  SCOPY ANIM catalogue layout offset=0xNN as=value|pointer valid=K/N reasons='...'
-        (ten rows: offsets 0x00 0x08 0x10 0x18 0x20, each by value and by pointer)
-  SCOPY ANIM catalogue raw index=K qwords='...'     (two elements, first 0x40 bytes)
+  SCOPY ANIM catalogue idle-base first='...'
+  SCOPY ANIM catalogue elements=K object-like=K/N scan=0x80
+  SCOPY ANIM catalogue candidate offset=0xNN as=value|pointer valid=K/N reasons='...'
+  SCOPY ANIM catalogue raw index=K qwords='...'     (two elements, first 0x80 bytes)
   SCOPY ANIM catalogue layout best=offset=0xNN/value valid=K/N
-  SCOPY ANIM catalogue idle index=K name='...' valid=... reason=... duration=...s
-        tracks=K/N
+  SCOPY ANIM catalogue probe index=K name='...' type=spline|interleaved|... duration=...s
+        frames=K tracks=K animation-tracks=K skeleton-name='...' bones='...' copy-resolved=K/N
 
-The row whose valid count is full is the layout; the rejected rows say which
-check they failed (unreadable, no-animation, tracks-unreadable, duration,
-track-bones), and object-like says whether the element's first word looks like a
-vtable, which is what decides whether the binding can be the element at all. If
-no row matches, the two raw lines carry the bytes needed to read the layout by
-hand. Every read goes through a committed-page check and nothing virtual is
-called on a candidate, so a wrong offset reports nonsense rather than crashing.
+The candidate whose valid count is full is the layout; a rejected one says which
+check it failed, and the animation's type, clip length and its own transform-track
+count (which has to equal the binding's track table) are what a wrapper object
+cannot fake. The probe line matters most for what comes next: type says whether
+sampling will need a chunk cache, and copy-resolved is how many of that
+animation's tracks land on nodes of the copy - the write coverage, measured
+without sampling anything. Every read goes through a committed-page check;
+sampling and any virtual call on a candidate are not part of this build.
 
 The package build is otherwise unchanged: F7/F8/F3/F4 plus the idle on F2.
 

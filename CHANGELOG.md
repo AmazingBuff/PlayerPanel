@@ -4,6 +4,27 @@
 
 ### Added
 
+- Pick the binding's offset from the element's own shape and confirm it with the
+  animation's own fields (S2 animation handoff, HKX5). The raw dump settled what
+  the fixed candidate table could not: a binding-set element starts with an
+  `hkReferencedObject` header (vtable, `memSizeAndFlags = 0xffff`, reference
+  count 1), then an empty array, then a second header of the same shape at +0x30
+  - a by-value `hkaAnimationBinding` - which the previous round's table missed by
+  exactly one slot. Candidates are therefore derived from what the bytes look
+  like (a vtable means an object begins there, a readable heap pointer means one
+  is pointed at) and judged harder: the animation's type has to be one the engine
+  names, its clip length has to be plausible, and its own
+  `numberOfTransformTracks` has to equal the binding's track table, which a
+  wrapper object cannot pass. Each probe line names the animation type (spline or
+  interleaved decides whether sampling needs a chunk cache), its duration and
+  original frame count, its skeleton name, the first bones its tracks drive, and
+  how many of those tracks resolve to nodes of the copy - the write coverage,
+  measured without sampling anything. The character's own standing idle gets its
+  own group, because the path-sorted list buries `idle.hkx` under weapon and
+  object idles whose file names also start with "idle".
+
+### Changed
+
 - Locate the binding inside a binding-set element instead of guessing it (S2
   animation handoff, HKX4). The round before proved the element is neither an
   `hkaAnimationBinding` nor a pointer to one, and that the character's animation

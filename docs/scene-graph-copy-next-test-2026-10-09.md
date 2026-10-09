@@ -52,7 +52,25 @@ CBBE 与 UBE 各一次更好。
    - `idle index=… name='Idle'` 那几行的 `duration`／`tracks` 是否与名字对得上（例如 Idle 几秒、轨道数 ≈ 骨数）。
 3. 若出现 `catalogue UNAVAILABLE reason=character-string-data …`：这是**有效结论**——CommonLibSSE 对
    `hkbCharacterData::stringData` 的注释里本来就标着"该偏移的归属未定"，回传那一行即可，下一轮先核对它。
-4. 独立性同 HKX2：只读源角色与引擎的图，不写任何引擎状态。
+4. 独立性同前：只读，不写引擎状态。
+
+**HKX4 实测结果（2026-10-10）**：原始转储说明元素是**包装对象**（+0x00 是 `hkReferencedObject` 头），
+**`hkaAnimationBinding` 按值放在 +0x30**——候选表差一格。逐条见
+[HKX4 实测证据](s2-hkx4-layout-evidence-2026-10-10.md)。
+
+## HKX5 轮（待测）：用元素形态选候选 + 用动画自身字段确认
+
+前置：`dist/CharacterPanel-scopy-HKX5-1.2.1.zip` 的 DLL + 同包 PDB。**一次 F7**。
+
+1. 打开暂停的背包 → **F7** → 回传 `SCOPY ANIM catalogue …` 全部行 + `SCOPY BUILD` 首行。
+2. 判据：
+   - **`layout best=`** 那一行（偏移 + 取值方式 + `valid`）就是布局依据；候选现在按元素形态自动生成，不再固定列表；
+   - `candidate … reasons=` 的每行说明失败在哪一步（`no-animation` / `animation-type` / `duration` /
+     `track-count-mismatch` / `track-bones`…）；
+   - `probe … type=… copy-resolved=K/N` 是**关键一行**：`type` 决定采样时是否需要 chunk cache，
+     `copy-resolved` 是这段动画在副本上的**写入覆盖率**（HKX6 的预期上限）；
+   - `idle-base` 给出角色自己的站立待机索引（`Idle.hkx` 之类），这是 HKX6 要播的那一段。
+3. 若 `layout UNAVAILABLE reason=no-object-in-element`：连两行 `raw … qwords='…'` 一起回传（0x80 字节，足够人工读布局）。
 
 **HKX3 实测结果（2026-10-10）**：名字表成立且与绑定集**同序**（`names == bindings == 15203`，
 `character='DefaultFemale'`、`rig=…skeleton_female.hkx`）；两个候选布局**都被否定**（`valid=0/8`），

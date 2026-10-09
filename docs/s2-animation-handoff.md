@@ -207,26 +207,36 @@ SCOPY ANIM replay verdict match=skeleton/direct control=…u best=…u
   上一版 `read_binding` 失败时只返回全零、看不出卡在哪一步（仪器缺陷，已修）。逐条见
   [HKX3 实测证据](s2-hkx3-catalogue-evidence-2026-10-10.md)。
 
-### HKX4（已实现并打包，待游戏内一轮）：偏移表定位 binding + 原始转储
-
-不用一个猜测赌布局，而是**偏移表 × 两种取值方式**逐行结构化校验，并打印每行**失败的原因**：
+### HKX4（已实测，2026-10-10）：原始转储说明元素形态，binding 落在 +0x30
 
 ```
-SCOPY ANIM catalogue elements=8 object-like=8/8
-SCOPY ANIM catalogue layout offset=0x00 as=value valid=0/8 reasons='unreadable,…'
-SCOPY ANIM catalogue layout offset=0x00 as=pointer valid=0/8 reasons='…'
-… （0x08 / 0x10 / 0x18 / 0x20 各两行）
-SCOPY ANIM catalogue raw index=0 qwords='…'      （两个元素的前 0x40 字节原始转储）
-SCOPY ANIM catalogue layout best=offset=0x10/value valid=8/8
-SCOPY ANIM catalogue idle-plain first='Animations\Idle.hkx@…, …'
-SCOPY ANIM catalogue idle index=… name='…' valid=… reason=… duration=…s tracks=N/N
+SCOPY ANIM catalogue raw index=0 qwords='00007ff6ef2649b8 000000000001ffff 0 0 8000000000000000 0 00007ff6ef2649d8 000000000001ffff'
 ```
 
-- **判读**：`valid` 满的那一行就是布局；`reasons` 说明每个失败候选卡在哪一步（`unreadable`／`no-animation`／
-  `tracks-unreadable`／`duration`／`track-bones`）；`object-like=K/N` 说明元素首字是不是 vtable（是的话 binding 必为成员）。
-  `raw` 两行是"所有候选都不中"时的兜底证据：照着 qword 就能把布局读出来，`idle-plain` 给出裸 idle 的索引。
-- 通过后 HKX5：`binding->animation->SampleTracks(t, out, nullptr, cache)`（带显式时间、const，不碰源 control）
-  → 用 HKX2 已验证的写路径写进副本；真值取同相位 `poseLocal`（**按 `boneNodes` 索引**）。
+按 qword 读：+0x00 = vtable、+0x08 = `memSizeAndFlags=0xffff`+`refCount=1`（`hkReferencedObject` 头）、+0x10/+0x18 = 一个空数组、
+**+0x30 = 第二个 vtable、+0x38 = 它自己的引用计数** —— 即"元素是包装对象，`hkaAnimationBinding` **按值**放在 +0x30"。
+HKX4 的候选表只走到 +0x20，**差一格**；`as=value` 全部 `no-animation`、`as=pointer` 全部 `unreadable`，与转储完全一致。
+逐条见 [HKX4 实测证据](s2-hkx4-layout-evidence-2026-10-10.md)。
+
+### HKX5（已实现并打包，待游戏内一轮）：候选由元素形态生成 + 用动画自身字段确认
+
+```
+SCOPY ANIM catalogue elements=8 object-like=8/8 scan=0x80
+SCOPY ANIM catalogue candidate offset=0x30 as=value valid=8/8 reasons='-'
+SCOPY ANIM catalogue raw index=0 qwords='…'（0x80 字节）
+SCOPY ANIM catalogue layout best=offset=0x30/value valid=8/8
+SCOPY ANIM catalogue idle-base first='Animations\Idle.hkx@…'
+SCOPY ANIM catalogue probe index=… name='Animations\Idle.hkx' type=spline duration=…s frames=… tracks=116 animation-tracks=116 skeleton-name='…' bones='NPC Pelvis [Pelv], …' copy-resolved=109/116
+```
+
+- **候选不再猜**：由一个元素的形态决定——某处 qword 像 vtable ⇒ 按值对象从这里开始；某处 qword 是可读堆指针且目标像对象 ⇒ 指针成员。
+- **校验更强且全静态**：`hkaAnimation::type` ∈ 引擎命名类型、`duration` 合理、**`numberOfTransformTracks` == binding 轨道表长度**、
+  每条轨道索引 ≤ 骨数。包装对象过不了"轨道数一致"这一条。
+- **判读**：`best=` 那一行给出布局；`type=spline` 说明 HKX6 采样时**可能需要 chunk cache**（`interleaved` 则不需要）；
+  `frames`/`duration` 给出采样率；`bones=` 是轨道指向的真实骨名（顺便验证轨道→骨映射）；
+  **`copy-resolved=K/N` 是这段动画在副本上的写入覆盖率**——不需要采样就能算出来，HKX6 的预期上限就是它。
+- 通过后 HKX6：`SampleTracks(t, out, nullptr, cache)`（带显式时间、const，不碰源 control）→ 写副本（HKX2 已验证的路径）
+  → 用自己的时钟循环播放，并按 `poseLocal`（`boneNodes` 次序）做同相位 A/B。
 
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
