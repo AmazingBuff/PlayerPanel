@@ -21,15 +21,20 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜）**：HKX10 已实测——`clip-seen` 明细全中（66 个 clip 名字/索引全可读，
-`MT_Idle.HKX`↔索引 1022 对上名字表），但**连正在播放的 mt_idle 也是 `binding=0x0 control=0x0`**，
-其 binding set 条目（定点 dump 索引 1022）也是空桩——**"未激活所以为空"的解释被排除，标准 Havok
-binding/control 层在 Skyrim 运行时是死的，路线 A 收束为死路正式关闭**（证据见
-[HKX10 实测证据](s2-hkx10-control-evidence-2026-10-10.md)）。
-**路线重排**：A 关闭；B 被连带否定（装载后仍要过同一条采样链），"让源播任意动画"由已装的 OAR 替代；
-**推荐新路线 D = poseLocal 录制-回放**（未暂停时环形录制引擎自己采样出的姿态，暂停面板内用自己的
-时钟回放驱动副本——HKX2 已证明 poseLocal 全类型可读，真值与 A/B 协议照旧）；C（自研 HKX 解析器）
-留作 D 证明驱动链之后的选择。**待用户拍板 D/C。**
+**最新（2026-10-10 深夜）**：**路线拍板 = A″（借 OAR 的解析逻辑当"逆向地图"，只读引擎自己的结构，
+不与 OAR 运行时交互）**。OAR 开源源码（ersh1/OpenAnimationReplacer）提供了决定性的引擎事实：
+①`hkbAnimationBindingWithTriggers` 全布局——`binding`（`hkaAnimationBinding*`）在 **+0x10**（HKX10
+探针的位置猜对了，空 = 动画未装载到该条目）；②引擎的动画注册表 = `BShkbAnimationGraph::projectDBData`
+（+0x200）→ `BShkbHkxDB::ProjectDBData`（0x180，OAR 布局带 static_assert：`hashedAnimations`、事件/
+变量 map、`bindings`@0x150）；③**引擎自己的解析函数被点名**：`GetHashedAnimFromAnimIndex`（AE ID
+63600，内部读 graph+0x200）；④**`AnimationFileManagerSingleton` 在 CLib 全类型**——`Queue/Load/Unload`
+在 clip 的 Activate/Update/Deactivate 期调用，**`loadedAnimations[]` 的 `LoadedAnimation{void* 数据;
+AnimationFileInfo{crc32文件名, 扩展名, crc32路径}; counter}` 就是已装载动画的存放处**，单例可达，
+CRC = 小写文件名去扩展名的标准 CRC32 → **可以用名字表自己反查每个已装载条目是哪个动画，零猜测、
+零 OAR 交互**。
+**HKX11（已实现并打包，待游戏内一轮）**：探针 `SCOPY ANIM animmgr`（已装载表逐条 CRC 反查名字 +
+裸动画校验）+ **条件驱动**（若 base-idle 名字的已装载动画校验通过 → 按"轨道 i = 骨骼 i"假设建
+playback → 共享 ground-truth 扫描验证该假设并交 F2 驱动），方案见 §5 末。
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -382,6 +387,41 @@ SCOPY ANIM play element binding-at-0x10 at=0x… valid=true reason=valid
   同相位逐骨对比应到浮点量级。代价小，直接覆盖 S2 当前验收目标（待机）。
 - **C（自研 HKX 解析器）**：自由度最强（可播源没在播的动画，"展示动作切换"终局方案），代价
   packfile + spline 解码自研；留作 D 证明驱动链之后的选择。
+
+### 拍板与 HKX11（已实现并打包，待游戏内一轮）：借 OAR 的地图，直接读引擎的动画文件管理器
+
+**用户拍板（2026-10-10）**：只借用 OAR 的解析逻辑（它开源、已把引擎路径标好），从引擎拿动画，
+**不与 OAR 运行时交互**。OAR 源码给出的决定性事实：
+
+- `hkbAnimationBindingWithTriggers` 全布局（OAR Havok.h，带 static_assert）：`binding`
+  （`hkaAnimationBinding*`）在 **+0x10**——HKX10 探针位置正确，空 = 未装载；
+- 引擎动画注册表：`BShkbAnimationGraph::projectDBData`（+0x200）→ `BShkbHkxDB::ProjectDBData`
+  （`hashedBehaviors`/`hashedAnimations`/事件 map/`bindings`@0x150）；
+- 引擎解析函数被 OAR 点名：`GetHashedAnimFromAnimIndex`（AE ID 63600，内部读 graph+0x200）；
+- **`AnimationFileManagerSingleton` 在 CLib 全类型**：`Queue/Load/Unload` 在 clip 的
+  Activate/Update/Deactivate 期调用；**`loadedAnimations[]` = `LoadedAnimation{void* 已载数据;
+  AnimationFileInfo{crc32文件名, 扩展名, crc32路径}; counter}`**；单例可达；CRC = 小写文件名去
+  扩展名的标准 CRC32。
+
+**HKX11 内容**（`SCOPY ANIM animmgr` 系列）：
+
+```
+SCOPY ANIM animmgr queued=N loaded=M
+SCOPY ANIM animmgr loaded i=… idle=yes file='Animations\female\mt_idle.hkx' crc=0x… counter=… data=0x… probe=valid type=spline duration=3.40s tracks=116
+SCOPY ANIM animmgr rejected-dump i=… at=0x… qwords='…'   （首个被拒指针的原始转储）
+SCOPY ANIM play clip='…' type=… duration=… tracks=… copy-resolved=…/… truth-bones=…   （两条取数路共用）
+```
+
+- 探针：`AnimationFileManagerSingleton::GetSingleton()` → `loadedAnimations[]` 逐条 CRC 反查名字表
+  （CRC32("mt_idle") 等自算）→ 每条 data 指针按裸动画校验（引擎命名 type / 时长合理 / 轨道数在界内
+  ——与 binding 校验同门，零虚调用）；
+- **条件驱动**：若存在校验通过且文件名匹配 base-idle 的条目 → 按"**轨道 i = 骨骼 i**"假设（动画与
+  骨架同源 skeleton_female.hkx，binding 的轨道表缺位时的替代）建 playback → **共享 ground-truth
+  扫描验证该假设**（verdict=match ⇔ 轨道映射与采样都正确）→ 交 F2 驱动；binding 路仍优先，两路共用
+  同一段真值扫描代码。
+- **判读**：`animmgr loaded` 出现 `probe=valid` 且 file=base-idle → 引擎动画到手，看 `ground-truth
+  verdict`；全部 `probe=not-object` 且 `rejected-dump` 显示包装结构 → 按 dump 定下一层；CRC 反查
+  全 `-` → CRC 变体与标准不同，dump 的原始 CRC 留作人工对表。
 
 ## 6. 验收与对比协议（这是"可测试"的核心）
 

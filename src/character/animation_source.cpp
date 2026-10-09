@@ -6,6 +6,7 @@
 
 #include "character/snapshot_transform.h"
 
+#include "RE/A/AnimationFileManagerSingleton.h"
 #include "RE/B/BSAnimationGraphManager.h"
 #include "RE/B/BSFadeNode.h"
 #include "RE/B/BShkbAnimationGraph.h"
@@ -91,6 +92,9 @@ namespace
     constexpr size_t Max_Clips_Printed = 12;
     // How much of one binding-set element is dumped when the dump is aimed by a clip's own index.
     constexpr size_t Element_Dump_Bytes = 0x40;
+    // How many of the file manager's loaded animations are printed, and how wide a raw dump a rejected
+    // one gets.
+    constexpr size_t Max_Loaded_Printed = 16;
     constexpr size_t Progress_Every = 32;
     constexpr double Max_Clip_Step_Seconds = 0.1;
 
@@ -641,6 +645,64 @@ namespace
     {
         constexpr std::string_view Suffix = ".hkx";
         return name.size() >= Suffix.size() && equals_ignore_case(name.substr(name.size() - Suffix.size()), Suffix);
+    }
+
+    // The file manager keys a loaded animation by the game's own CRC of the lowercased file name
+    // without its extension, so the name table can name what the manager only numbers.
+    std::uint32_t bscrc32(std::string_view text)
+    {
+        std::uint32_t crc = 0xFFFFFFFFu;
+        for (const char character : text)
+        {
+            crc ^= static_cast<std::uint8_t>(character);
+            for (int bit = 0; bit < 8; ++bit)
+                crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
+        }
+        return ~crc;
+    }
+
+    std::string lowercased(std::string_view text)
+    {
+        std::string out;
+        out.reserve(text.size());
+        for (const char character : text)
+            out += static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
+        return out;
+    }
+
+    std::string_view strip_extension(std::string_view name)
+    {
+        const size_t dot = name.find_last_of('.');
+        return dot == std::string_view::npos ? name : name.substr(0, dot);
+    }
+
+    // A raw animation pointer from the file manager is believed only when everything that makes it an
+    // animation reads plausibly - the same validation a binding's animation must pass, minus the
+    // binding: an engine-named type, a plausible length, a track count inside bounds.
+    struct RawAnimationReading
+    {
+        bool valid;
+        const char* reason;
+        std::uint32_t type;
+        float duration;
+        std::int32_t tracks;
+    };
+
+    RawAnimationReading read_raw_animation(void const* candidate)
+    {
+        if (!candidate || !readable(candidate, sizeof(RE::hkaAnimation)) || !looks_like_object(candidate))
+            return { false, "not-object", 0, 0.0f, 0 };
+        const auto* const animation = static_cast<const RE::hkaAnimation*>(candidate);
+        const std::uint32_t type = static_cast<std::uint32_t>(animation->type.get());
+        if (type == 0 || type > static_cast<std::uint32_t>(RE::hkaAnimation::AnimationType::kQuantizedCompressedAnimation))
+            return { false, "animation-type", type, 0.0f, 0 };
+        const float duration = animation->duration;
+        if (!std::isfinite(duration) || duration <= 0.05f || duration >= Max_Clip_Seconds)
+            return { false, "duration", type, duration, 0 };
+        const std::int32_t tracks = animation->numberOfTransformTracks;
+        if (tracks <= 0 || tracks > Max_Tracks_Read)
+            return { false, "tracks", type, duration, tracks };
+        return { true, "valid", type, duration, tracks };
     }
 
     // A clip generator is fully typed, so a pointer to one is believed only when everything that makes
@@ -1432,88 +1494,95 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
             record.speed, record.mode);
     }
 
-    // One binding-set element, aimed by a clip's own index instead of sampled blind: if the standing
-    // idle is playing as we capture, its entry is the loaded kind, and the dump says what a loaded
-    // entry holds - HKX3-5 dug at this set blind and met only empty stubs.
-    RE::hkbAnimationBindingSet* const set = selected.graph->characterInstance.animationBindingSet.get();
-    const std::int32_t binding_count = (set && looks_like_object(set)) ? set->bindings.size() : 0;
-    std::int32_t target_index = -1;
-    for (const ClipSeen& record : search.met)
+    // The engine lazy-loads animation files: a clip's activation queues its file and the manager keeps
+    // what it loaded, keyed by the game's own CRC of the lowercased file name. OAR's source pointed
+    // here after the binding set proved to be a registry of empty stubs; every step is CLib-typed, and
+    // a candidate is believed only after the validation any binding's animation must pass.
+    struct LoadedRecord
     {
-        if (is_base_idle(base_name_of(record.name)) && record.binding_index < binding_count)
-        {
-            target_index = record.binding_index;
-            break;
-        }
-    }
-    if (target_index < 0)
+        size_t index;
+        std::uint32_t crc_name;
+        std::uint32_t crc_path;
+        std::uint16_t counter;
+        const void* data;
+        const RE::hkaAnimation* animation;
+        RawAnimationReading reading;
+        std::string name;
+    };
+    std::vector<LoadedRecord> loaded_records;
+
+    RE::AnimationFileManagerSingleton* const file_manager = RE::AnimationFileManagerSingleton::GetSingleton();
+    if (!file_manager)
     {
-        for (const ClipSeen& record : search.met)
-        {
-            if (record.control && record.binding_index < binding_count)
-            {
-                target_index = record.binding_index;
-                break;
-            }
-        }
-    }
-    if (target_index < 0)
-    {
-        for (const ClipSeen& record : search.met)
-        {
-            if (record.binding_index < binding_count)
-            {
-                target_index = record.binding_index;
-                break;
-            }
-        }
-    }
-    if (target_index < 0)
-    {
-        logger::info("SCOPY ANIM play element UNAVAILABLE reason=no-index-in-range bindings={}", binding_count);
+        logger::info("SCOPY ANIM animmgr UNAVAILABLE reason=no-manager");
     }
     else
     {
-        const void* const element = set->bindings[target_index];
-        const bool dumpable = element && readable(element, Element_Dump_Bytes);
-        logger::info("SCOPY ANIM play element index={} at=0x{:x} readable-0x40={}", target_index,
-            reinterpret_cast<std::uintptr_t>(element), dumpable);
-        if (dumpable)
-        {
-            const auto* const words = static_cast<const std::uint64_t*>(element);
-            std::string bytes;
-            for (size_t word = 0; word < Element_Dump_Bytes / sizeof(std::uint64_t); ++word)
-                bytes += fmt::format("{}{:016x}", word ? " " : "", words[word]);
-            logger::info("SCOPY ANIM play element qwords='{}'", bytes);
+        logger::info("SCOPY ANIM animmgr queued={} loaded={}", file_manager->queuedAnimations.size(), file_manager->loadedAnimations.size());
 
-            // The loaded kind of stub carries a pointer at +0x10 (HKX4's dump); judge it by the same
-            // validation every binding candidate passes, so the layout claim is never taken on faith.
-            const auto* const stub = static_cast<const std::uint8_t*>(element);
-            const RE::hkaAnimationBinding* const candidate =
-                *reinterpret_cast<RE::hkaAnimationBinding* const*>(stub + 0x10);
-            const BindingReading reading = read_binding(candidate, bone_count);
-            logger::info("SCOPY ANIM play element binding-at-0x10 at=0x{:x} valid={} reason={}",
-                reinterpret_cast<std::uintptr_t>(candidate), reading.valid, reading.reason);
+        // What each CRC would be called: the name table spells out every animation the project knows,
+        // so a matching CRC names a loaded entry without any guessing.
+        std::unordered_map<std::uint32_t, std::string> name_by_crc;
+        if (const auto setup = selected.graph->characterInstance.setup.get())
+            if (const auto data = setup->data.get())
+                if (const auto strings = data->stringData.get())
+                {
+                    for (const RE::hkStringPtr& animation_name : strings->animationNames)
+                    {
+                        const char* const text = animation_name.c_str();
+                        if (!text)
+                            continue;
+                        const std::string_view view(text);
+                        const size_t slash = view.find_last_of("\\/");
+                        const std::string_view file = slash == std::string_view::npos ? view : view.substr(slash + 1);
+                        name_by_crc.emplace(bscrc32(lowercased(strip_extension(file))), std::string(view));
+                    }
+                }
+
+        bool dumped_rejected = false;
+        for (std::uint32_t i = 0; i < file_manager->loadedAnimations.size(); ++i)
+        {
+            const RE::AnimationFileManagerSingleton::LoadedAnimation& loaded = file_manager->loadedAnimations[i];
+            LoadedRecord record;
+            record.index = i;
+            record.crc_name = loaded.fileInfo.crc32Filename;
+            record.crc_path = loaded.fileInfo.crc32Path;
+            record.counter = loaded.counter;
+            record.data = loaded.unk00;
+            record.reading = read_raw_animation(loaded.unk00);
+            record.animation = record.reading.valid ? static_cast<const RE::hkaAnimation*>(loaded.unk00) : nullptr;
+            const auto named = name_by_crc.find(record.crc_name);
+            record.name = named != name_by_crc.end() ? named->second : "-";
+            loaded_records.push_back(std::move(record));
+
+            // The first rejected pointer is dumped raw: if the manager stores a wrapper rather than
+            // the animation itself, the dump says so without a second round.
+            if (!record.reading.valid && !dumped_rejected && record.data && readable(record.data, Element_Dump_Bytes))
+            {
+                dumped_rejected = true;
+                const auto* const words = static_cast<const std::uint64_t*>(record.data);
+                std::string bytes;
+                for (size_t word = 0; word < Element_Dump_Bytes / sizeof(std::uint64_t); ++word)
+                    bytes += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+                logger::info("SCOPY ANIM animmgr rejected-dump i={} at=0x{:x} qwords='{}'",
+                    record.index, reinterpret_cast<std::uintptr_t>(record.data), bytes);
+            }
+        }
+
+        size_t printed = 0;
+        for (const LoadedRecord& record : loaded_records)
+        {
+            const bool idle = is_base_idle(base_name_of(record.name));
+            if (printed >= Max_Loaded_Printed && !record.reading.valid && !idle)
+                continue;
+            logger::info("SCOPY ANIM animmgr loaded i={} idle={} file='{}' crc=0x{:08x} counter={} data=0x{:x} probe={} type={} duration={:.2f}s tracks={}",
+                record.index, idle ? "yes" : "no", record.name, record.crc_name, record.counter,
+                reinterpret_cast<std::uintptr_t>(record.data), record.reading.reason,
+                animation_type_name(record.reading.type), record.reading.duration, record.reading.tracks);
+            ++printed;
         }
     }
 
-    if (search.clips.empty())
-    {
-        logger::info("SCOPY ANIM play UNAVAILABLE reason=no-clip-generator");
-        return false;
-    }
-
-    const ClipReading* chosen = &search.clips.front();
-    for (const ClipReading& clip : search.clips)
-    {
-        if (clip_preference(clip.name) < clip_preference(chosen->name))
-            chosen = &clip;
-    }
-
-    const RE::hkaAnimationBinding* const binding = chosen->binding;
-    RE::hkaAnimation* const animation = binding->animation.get();
-    const std::int16_t* const track_to_bone = binding->transformTrackToBoneIndices.data();
-    const std::int32_t track_count = binding->transformTrackToBoneIndices.size();
     const NameIndex copy_by_name = index_by_name(copy_nodes);
 
     // The engine's own pose is indexed like its bone table, not like the animation skeleton (measured
@@ -1533,30 +1602,101 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
     }
 
     ClipPlayback playback;
-    playback.animation = animation;
-    playback.name = chosen->name;
-    playback.duration = animation->duration;
     std::vector<const RE::hkQsTransform*> truth;
-    for (std::int32_t track = 0; track < track_count; ++track)
+    std::int32_t total_tracks = 0;
+
+    if (!search.clips.empty())
     {
-        const std::int16_t bone = track_to_bone[track];
-        if (bone < 0 || bone >= bone_count)
-            continue;
-        const char* const bone_name = selected.skeleton->bones[bone].name.c_str();
-        if (!bone_name)
-            continue;
-        const auto node = copy_by_name.find(bone_name);
-        if (node == copy_by_name.end())
-            continue;
-        playback.tracks.push_back(static_cast<std::uint16_t>(track));
-        playback.nodes.push_back(node->second);
-        const auto entry = pose_by_bone.find(bone_name);
-        truth.push_back(entry != pose_by_bone.end() ? entry->second : nullptr);
+        // The graph's own link: a validated clip binding carries the authoritative track-to-bone table.
+        const ClipReading* chosen = &search.clips.front();
+        for (const ClipReading& clip : search.clips)
+        {
+            if (clip_preference(clip.name) < clip_preference(chosen->name))
+                chosen = &clip;
+        }
+
+        const RE::hkaAnimationBinding* const binding = chosen->binding;
+        playback.animation = binding->animation.get();
+        playback.name = chosen->name;
+        playback.duration = playback.animation->duration;
+        total_tracks = binding->transformTrackToBoneIndices.size();
+        const std::int16_t* const track_to_bone = binding->transformTrackToBoneIndices.data();
+        for (std::int32_t track = 0; track < total_tracks; ++track)
+        {
+            const std::int16_t bone = track_to_bone[track];
+            if (bone < 0 || bone >= bone_count)
+                continue;
+            const char* const bone_name = selected.skeleton->bones[bone].name.c_str();
+            if (!bone_name)
+                continue;
+            const auto node = copy_by_name.find(bone_name);
+            if (node == copy_by_name.end())
+                continue;
+            playback.tracks.push_back(static_cast<std::uint16_t>(track));
+            playback.nodes.push_back(node->second);
+            const auto entry = pose_by_bone.find(bone_name);
+            truth.push_back(entry != pose_by_bone.end() ? entry->second : nullptr);
+        }
+    }
+    else
+    {
+        // The file manager's own storage: an animation the engine loaded for this graph. The binding's
+        // track table is not available here, so the animation is assumed to be authored on this very
+        // skeleton - track i drives bone i - and the ground-truth sweep below is what verifies it.
+        const LoadedRecord* best = nullptr;
+        for (const LoadedRecord& record : loaded_records)
+        {
+            if (!record.reading.valid || !record.animation)
+                continue;
+            if (is_base_idle(base_name_of(record.name)))
+            {
+                best = &record;
+                break;
+            }
+            if (!best && mentions_idle(base_name_of(record.name)))
+                best = &record;
+        }
+        if (!best)
+        {
+            for (const LoadedRecord& record : loaded_records)
+            {
+                if (record.reading.valid && record.animation)
+                {
+                    best = &record;
+                    break;
+                }
+            }
+        }
+        if (!best)
+        {
+            logger::info("SCOPY ANIM play UNAVAILABLE reason=no-clip-generator");
+            return false;
+        }
+
+        // Sampling reads through the pointer but writes nothing; the const is dropped only here, at
+        // the single hand-off into the playback structure.
+        playback.animation = const_cast<RE::hkaAnimation*>(best->animation);
+        playback.name = best->name == "-" ? fmt::format("crc:{:08x}", best->crc_name) : best->name;
+        playback.duration = best->reading.duration;
+        total_tracks = std::min(best->reading.tracks, bone_count);
+        for (std::int32_t track = 0; track < total_tracks; ++track)
+        {
+            const char* const bone_name = selected.skeleton->bones[track].name.c_str();
+            if (!bone_name)
+                continue;
+            const auto node = copy_by_name.find(bone_name);
+            if (node == copy_by_name.end())
+                continue;
+            playback.tracks.push_back(static_cast<std::uint16_t>(track));
+            playback.nodes.push_back(node->second);
+            const auto entry = pose_by_bone.find(bone_name);
+            truth.push_back(entry != pose_by_bone.end() ? entry->second : nullptr);
+        }
     }
 
     logger::info("SCOPY ANIM play clip='{}' type={} duration={:.2f}s tracks={} copy-resolved={}/{} truth-bones={}",
-        playback.name, animation_type_name(static_cast<std::uint32_t>(animation->type.get())), playback.duration,
-        track_count, playback.tracks.size(), track_count, pose_by_bone.size());
+        playback.name, animation_type_name(static_cast<std::uint32_t>(playback.animation->type.get())), playback.duration,
+        total_tracks, playback.tracks.size(), total_tracks, pose_by_bone.size());
     if (!playback.valid())
     {
         logger::info("SCOPY ANIM play UNAVAILABLE reason=no-track-resolves-to-the-copy");
@@ -1575,7 +1715,7 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
     for (size_t step = 0; step < Sweep_Steps; ++step)
     {
         const float time = playback.duration * static_cast<float>(step) / static_cast<float>(Sweep_Steps);
-        animation->SampleIndividualTransformTracks(time, playback.tracks.data(), static_cast<std::uint32_t>(playback.tracks.size()), sampled.data());
+        playback.animation->SampleIndividualTransformTracks(time, playback.tracks.data(), static_cast<std::uint32_t>(playback.tracks.size()), sampled.data());
         float position = 0.0f;
         float rotation = 0.0f;
         size_t bones = 0;
