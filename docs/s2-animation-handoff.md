@@ -159,21 +159,30 @@ SCOPY ANIM gate verdict=… graph=i matched=N/N ambiguous=N
 （它要求"每根骨都有节点"）。下一轮的判据改为按类计数（`x_` 帮手骨 / 附着骨 / 核心骨）：**核心骨缺一根才算失败**，
 其余打印跳过清单。`bone-node-names-agree=37/116` 这条负结果已记入 §3。
 
-### HKX2（下一步）：用引擎自己的 `poseLocal` 做带对照的数值 A/B
+### HKX2（已实现并打包，待游戏内一轮）：用引擎自己的 `poseLocal` 做带对照的数值 A/B
 
 引擎已经把当前姿态放在 `hkbCharacter::poseLocal`（116 项 `hkQsTransform`，实测非空），这是**全类型**的输入，
-不必碰任何未定型布局。做法（一次 F7 完成，日志三行，面板会话不受影响）：
+不必碰任何未定型布局。每次 F7 在 HKX1 的对齐报告之后多打印一组：
 
-1. **对照（先证明测量灵敏）**：把副本扰动到明显不同的姿态（现成的程序化待机即可），量一次"副本 vs 源角色"的
-   逐骨世界差 → 打印 `SCOPY ANIM replay control max-pos-delta=… max-rot-delta=…`。这个差如果很小，后面的 0 什么也不证明。
-2. **两次次序假设**：按"骨架次序"与"`boneNodes` 次序"各写一次 `poseLocal`（四元数→`NiMatrix3` 由新加的纯函数
-   完成，离线单测锁定约定），各量一次同样的差 → 打印
-   `SCOPY ANIM replay order=skeleton|bone-nodes max-pos-delta=… max-rot-delta=…`。**小的那个就是引擎的映射**，
-   同时验证按名映射、转换与写路径。
-3. **恢复**捕获姿态（`CharacterClone::pose()` 已在做这件事），面板显示与 F2 待机照旧。
+```
+SCOPY ANIM map graph=0 bones=116 matched=109 helper-unresolved=3 other-unresolved=4
+SCOPY ANIM replay pose entries=116 scale-off-from-one=N
+SCOPY ANIM replay control max-pos-delta=… max-rot-delta=…deg bones=109
+SCOPY ANIM replay order=skeleton quat=direct written=109 max-pos-delta=… max-rot-delta=…deg bones=109
+SCOPY ANIM replay order=skeleton quat=transposed written=109 max-pos-delta=… max-rot-delta=…deg bones=109
+SCOPY ANIM replay order=bone-nodes quat=direct written=109 max-pos-delta=… max-rot-delta=…deg bones=109
+SCOPY ANIM replay order=bone-nodes quat=transposed written=109 max-pos-delta=… max-rot-delta=…deg bones=109
+SCOPY ANIM replay restored max-pos-delta=… max-rot-delta=…deg bones=109
+SCOPY ANIM replay verdict match=skeleton/direct control=…u best=…u
+```
 
-通过后 HKX3 才进"取一段 clip、用我们自己的时钟采样"；那时的真值就是同一个 `poseLocal`——暂停相位下
-`SampleTracks(t_frozen)` 应当与它相等。
+- **判读**：`control` 是先把副本摆偏 0.5 rad 之后的"副本 vs 源"最差骨距离，它**必须明显大**——否则说明这套测量
+  不灵敏，后面的 0 什么也不证明。四个候选里 **`match=` 命名的那个就是引擎的映射**（次序 × 四元数约定；次序那两
+  个来自 HKX1 的负结果，四元数那两个覆盖 Havok→NIF 的约定），其余三个应当很大。`best/control < 1%` 才算命中
+  （相对判据，不发明绝对容差）。`restored` 证明这次验证把面板复原了。`helper-unresolved`/`other-unresolved`
+  按类计数（`x_` 帮手骨 vs 其他），`scale-off-from-one` 统计姿态里非 1 的缩放（NIF 只能存一个缩放）。
+- 通过后 HKX3 才进"取一段 clip、用我们自己的时钟采样"；那时的真值就是同一个 `poseLocal`——暂停相位下
+  `SampleTracks(t_frozen)` 应当与它相等。
 
 ## 6. 验收与对比协议（这是"可测试"的核心）
 

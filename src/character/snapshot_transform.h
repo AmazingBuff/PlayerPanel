@@ -100,6 +100,28 @@ inline void apply_world_delta_downward(RE::NiAVObject* object, RE::NiTransform c
             apply_world_delta_downward(child.get(), delta, depth + 1);
 }
 
+// Recompute a subtree's world transforms from its locals, top down, starting below `object`.
+// A single-node change uses apply_world_delta_downward; a pass that writes many nodes' locals at
+// once has no single delta, and recomputing downward is order-free (the skeleton's parent indices
+// are not guaranteed to come before their children).
+inline void recompute_subtree_worlds(RE::NiAVObject& object, uint32_t depth)
+{
+    if (depth > 64)
+        return;
+    RE::NiNode* const node = object.AsNode();
+    if (!node)
+        return;
+    for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
+    {
+        if (!child)
+            continue;
+        const RE::NiTransform world = object.world * child->local;
+        child->world = world;
+        child->previousWorld = world;
+        recompute_subtree_worlds(*child, depth + 1);
+    }
+}
+
 // Rotate a node and its descendants about the node's own origin by `angle` radians around the given
 // world axis. Parents must be driven before their children: each call pivots on the node's CURRENT
 // world position, so a child inherits whatever its parent has already been given.

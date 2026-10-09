@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include "RE/H/hkQsTransform.h"
 #include "RE/N/NiAVObject.h"
+#include "RE/N/NiMatrix3.h"
+#include "RE/N/NiTransform.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -14,12 +17,86 @@
 #include <unordered_map>
 #include <vector>
 
+#include <xmmintrin.h>
+
 namespace RE
 {
     class TESObjectREFR;
 }
 
 PLUGIN_NAMESPACE_BEGIN
+
+// One pose sample as plain numbers: Havok stores its vectors as SSE quads with no element accessor,
+// and keeping the conversion in plain floats is what lets it be unit-tested without a game.
+struct PoseSample
+{
+    float position[3];
+    float quaternion[4];  // x, y, z, w
+    float scale;
+};
+
+[[nodiscard]] inline PoseSample read_pose(RE::hkQsTransform const& pose)
+{
+    alignas(16) float translation[4];
+    alignas(16) float rotation[4];
+    alignas(16) float scale[4];
+    _mm_store_ps(translation, pose.translation.quad);
+    _mm_store_ps(rotation, pose.rotation.vec.quad);
+    _mm_store_ps(scale, pose.scale.quad);
+
+    PoseSample sample{};
+    sample.position[0] = translation[0];
+    sample.position[1] = translation[1];
+    sample.position[2] = translation[2];
+    sample.quaternion[0] = rotation[0];
+    sample.quaternion[1] = rotation[1];
+    sample.quaternion[2] = rotation[2];
+    sample.quaternion[3] = rotation[3];
+    sample.scale = scale[0];
+    return sample;
+}
+
+// The rotation a unit quaternion (x, y, z, w) describes, in the convention this codebase measured
+// rather than assumed: A * B applies B first, so a rotation multiplies a column vector and
+// entry[row][col] is that row and column.
+[[nodiscard]] inline RE::NiMatrix3 ni_matrix_from_quaternion(float x, float y, float z, float w)
+{
+    const float xx = x * x;
+    const float yy = y * y;
+    const float zz = z * z;
+    const float xy = x * y;
+    const float xz = x * z;
+    const float yz = y * z;
+    const float xw = x * w;
+    const float yw = y * w;
+    const float zw = z * w;
+
+    RE::NiMatrix3 matrix;
+    matrix.entry[0][0] = 1.0f - 2.0f * (yy + zz);
+    matrix.entry[0][1] = 2.0f * (xy - zw);
+    matrix.entry[0][2] = 2.0f * (xz + yw);
+    matrix.entry[1][0] = 2.0f * (xy + zw);
+    matrix.entry[1][1] = 1.0f - 2.0f * (xx + zz);
+    matrix.entry[1][2] = 2.0f * (yz - xw);
+    matrix.entry[2][0] = 2.0f * (xz - yw);
+    matrix.entry[2][1] = 2.0f * (yz + xw);
+    matrix.entry[2][2] = 1.0f - 2.0f * (xx + yy);
+    return matrix;
+}
+
+// A pose sample as the local transform of the node it drives. `transposed` builds the inverse
+// rotation instead: the replay writes both candidates and reports which one lands the copy on the
+// source, so the engine's quaternion convention is measured at capture rather than assumed here.
+[[nodiscard]] inline RE::NiTransform ni_local_from_pose(PoseSample const& sample, bool transposed)
+{
+    RE::NiTransform local;
+    local.rotate = ni_matrix_from_quaternion(sample.quaternion[0], sample.quaternion[1], sample.quaternion[2], sample.quaternion[3]);
+    if (transposed)
+        local.rotate = local.rotate.Transpose();
+    local.translate = RE::NiPoint3{ sample.position[0], sample.position[1], sample.position[2] };
+    local.scale = sample.scale;
+    return local;
+}
 
 // The engine's animation skeleton lined up against the copy's node tree: the mapping the S2
 // engine-animation route (docs/s2-animation-handoff.md) has to establish before anything samples a
@@ -61,14 +138,20 @@ struct SkeletonAlignment
 // Pure mapping rules, unit-tested without a running game. Both tables are indexed like their names
 // and hold -1 at a root; an out-of-range parent reads as a root. An unnamed bone cannot resolve and
 // is not printed, so `bones - matched` is the number of unresolved bones including those.
+// `bone_node_out` receives the node index each bone resolved to (-1 when it did not) and may be
+// empty when only the counts are wanted.
 [[nodiscard]] inline SkeletonAlignment align_skeleton(
     std::span<std::string_view const> bone_names,
     std::span<std::int16_t const> bone_parents,
     std::span<std::string_view const> node_names,
     std::span<std::int32_t const> node_parents,
+    std::span<std::int32_t> bone_node_out,
     size_t max_names_reported)
 {
     SkeletonAlignment alignment{};
+
+    for (std::int32_t& slot : bone_node_out)
+        slot = -1;
 
     std::unordered_map<std::string_view, std::vector<std::int32_t>> nodes_by_name;
     nodes_by_name.reserve(node_names.size());
@@ -100,6 +183,8 @@ struct SkeletonAlignment
         if (found->second.size() > 1)
             ++alignment.ambiguous;
         bone_node[i] = found->second.front();
+        if (i < bone_node_out.size())
+            bone_node_out[i] = bone_node[i];
         ++alignment.matched;
     }
 
@@ -143,5 +228,19 @@ struct SkeletonAlignment
 // skeleton resolves against the copy. Runs at capture, while the game is paused; it writes nothing,
 // neither into the source character nor into the engine's graphs.
 void report_animation_source(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
+
+// Writes the source character's own current pose into the copy and measures how far the copy lands
+// from the source, then puts the captured pose back. The engine holds that pose in
+// hkbCharacter::poseLocal, so this needs no clip, no binding set and no untyped layout, and it
+// exercises the whole write path the sampling route will use: bone → node by name, quaternion →
+// NiMatrix3, local write, one downward world recompute.
+//
+// Every candidate is compared with one instrument, including a control posed away from the source by
+// a known amount: without it a zero delta would only say the measurement is insensitive. The
+// candidates are the two orders the pose could be indexed in (the animation skeleton's, and the
+// engine's own boneNodes table, which the alignment round proved is NOT the skeleton's order) times
+// the two quaternion conventions (direct and transposed) - the verdict names the one that reproduces
+// the source.
+void verify_pose_replay(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
 
 PLUGIN_NAMESPACE_END

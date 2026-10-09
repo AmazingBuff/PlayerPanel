@@ -1041,6 +1041,10 @@ void SceneGraphCopy::capture()
     // character. Read-only, and it answers "can the engine's animation data name these nodes at all"
     // before anything samples a clip into them.
     report_animation_source(*player, *source, *root);
+    // S2/HKX2: write the engine's own current pose into the copy, measure how far it lands from the
+    // source, and put the captured pose back. The pose comes from hkbCharacter::poseLocal, so this
+    // exercises the whole write path the sampling route will use without touching any clip.
+    verify_pose_replay(*player, *source, *root);
     for (RE::NiAVObject* object : copy_inventory.objects)
         if (object->AsGeometry())
             logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());

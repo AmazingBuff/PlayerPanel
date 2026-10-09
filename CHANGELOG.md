@@ -4,6 +4,28 @@
 
 ### Added
 
+- Replay the source character's own pose into the copy and measure how far it
+  lands from it (S2 animation handoff, HKX2). The engine already holds that pose
+  in `hkbCharacter::poseLocal`, so the write path the sampling route will use
+  can be verified without a clip, a binding set, or any structure whose order is
+  unknown: bone to node by exact name, Havok's quaternion to `NiMatrix3`, the
+  local write, and one downward world recompute shared with the studio's other
+  drivers. Every capture poses the copy four ways - the pose indexed by the
+  animation skeleton and by the engine's `boneNodes` table, each with the
+  rotation and with its transpose - and prints the worst bone-to-source distance
+  for each, next to a control that first poses the copy half a radian away from
+  the source: without that control, a zero distance would only say the
+  measurement is insensitive. The verdict names the candidate that reproduces
+  the source, so the engine's own indexing and quaternion conventions are
+  measured rather than assumed, and the captured pose is put back afterwards,
+  with its own measurement as proof that the panel is as it was found. The
+  conversion itself is unit-tested (a quarter turn about Z taking +X to +Y, a
+  half turn about X taking +Y to -Y, the inverse undoing the rotation, and a
+  pose sample read out of Havok's SSE quads with position, all four quaternion
+  components and its scale).
+
+### Changed
+
 - Report how the engine's animation skeleton maps onto the copy, at capture
   (S2 animation handoff, step 1 of the HKX1 work package). F7 now also reads
   the source character's animation graphs read-only and prints what each one

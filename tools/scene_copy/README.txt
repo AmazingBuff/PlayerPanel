@@ -100,6 +100,30 @@ character's graphs is the one that was captured (the third-person graph);
 Return the whole block with a result: the next round picks how to sample an
 animation from it.
 
+This build also replays the source character's own current pose into the copy and
+measures how far the copy lands from it (HKX2). The engine holds that pose in
+hkbCharacter::poseLocal, so the write path the animation sampling will use is
+verified without any clip: bone to node by exact name, Havok's quaternion to
+NiMatrix3, the local write, one downward world recompute. It poses the copy four
+ways and prints the worst bone-to-source distance for each, next to a control
+(pose the copy half a radian off the source first) that says whether the
+measurement is sensitive at all:
+
+  SCOPY ANIM map graph=i bones=N matched=N helper-unresolved=N other-unresolved=N
+  SCOPY ANIM replay pose entries=N scale-off-from-one=N
+  SCOPY ANIM replay control max-pos-delta=X max-rot-delta=Ydeg bones=N
+  SCOPY ANIM replay order=skeleton|bone-nodes quat=direct|transposed
+        written=N max-pos-delta=X max-rot-delta=Ydeg bones=N   (four lines)
+  SCOPY ANIM replay restored max-pos-delta=X max-rot-delta=Ydeg bones=N
+  SCOPY ANIM replay verdict match=<order>/<quat> control=Xu best=Yu
+
+`control` must be clearly large; the candidate the verdict names is the engine's
+own indexing and quaternion convention, and the other three should be far off.
+`match=none` means no candidate reproduced the source, which is a real answer about
+the conversion rather than a silent failure. `restored` proves the figure was put
+back. Nothing is written to the source character or the engine's graphs, and the
+copy is left exactly as captured.
+
 The package build is otherwise unchanged: F7/F8/F3/F4 plus the idle on F2.
 
 The F2 probe swings one bone of the copy and measures whether that change

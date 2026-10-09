@@ -407,11 +407,11 @@ int main()
         }
     }
 
-    // The engine animation skeleton against the copy's nodes: the names the sampling route will
-    // resolve bones through. A copy carries modded hair chains whose names contain a bone's name, so
-    // the match must be exact, and this rig's spine hangs under a different parent than its pelvis,
-    // so a skeleton hierarchy that disagrees with the node hierarchy is reported and not treated as
-    // a failed name.
+    // The engine animation skeleton against the copy's nodes: the names the sampling route resolves
+    // bones through. A copy carries modded hair chains whose names contain a bone's name, so the
+    // match must be exact, and the mapping it produces has to come back with the node each bone
+    // landed on. (In the game the skeleton's parent relation turned out to match the node hierarchy;
+    // the fixture still poses the disagreement, because that is the case the report has to survive.)
     {
         const std::vector<std::string_view> node_names{
             "NPC", "NPC Root [Root]", "CME LBody", "NPC Pelvis [Pelv]", "CME UBody", "NPC Spine1 [Spn1]", "NPC Spine2 [Spn2]", "hdt NPC Head [Head]"
@@ -420,19 +420,22 @@ int main()
         const std::vector<std::string_view> bone_names{ "NPC Root [Root]", "NPC Pelvis [Pelv]", "NPC Spine1 [Spn1]", "NPC Spine2 [Spn2]", "NPC Head [Head]" };
         const std::vector<std::int16_t> bone_parents{ -1, 0, 1, 2, 3 };
 
+        std::vector<std::int32_t> mapping(bone_names.size(), -2);
         const PLUGIN_NAMESPACE::SkeletonAlignment alignment =
-            PLUGIN_NAMESPACE::align_skeleton(bone_names, bone_parents, node_names, node_parents, 8);
+            PLUGIN_NAMESPACE::align_skeleton(bone_names, bone_parents, node_names, node_parents, mapping, 8);
         check(alignment.bones == 5 && alignment.matched == 4, "four of these five bones name a node of the copy");
         check(alignment.missing == "NPC Head [Head]", "a node whose name only contains a bone's name must not resolve it");
         check(alignment.ambiguous == 0 && alignment.duplicate_nodes == 0, "this fixture has no repeated node name");
         check(alignment.parent_ancestors == 3, "roots and ancestors count as consistent parents");
         check(alignment.wrong_parent == "NPC Spine1 [Spn1]", "the skeleton's spine parent, which the node hierarchy contradicts, is reported by name");
         check(!PLUGIN_NAMESPACE::alignment_resolves_all_bones(alignment), "an unresolved bone must fail the mapping gate");
+        check(mapping[0] == 1 && mapping[1] == 3 && mapping[2] == 5 && mapping[3] == 6 && mapping[4] == -1,
+            "the mapping must name the node every bone resolved to, and -1 for the bone that did not");
 
         const std::vector<std::string_view> resolved_bones{ "NPC Root [Root]", "NPC Pelvis [Pelv]", "NPC Spine1 [Spn1]", "NPC Spine2 [Spn2]" };
         const std::vector<std::int16_t> resolved_parents{ -1, 0, 1, 2 };
         const PLUGIN_NAMESPACE::SkeletonAlignment resolved =
-            PLUGIN_NAMESPACE::align_skeleton(resolved_bones, resolved_parents, node_names, node_parents, 8);
+            PLUGIN_NAMESPACE::align_skeleton(resolved_bones, resolved_parents, node_names, node_parents, {}, 8);
         check(PLUGIN_NAMESPACE::alignment_resolves_all_bones(resolved), "a skeleton whose every bone names a node passes the gate");
         check(resolved.missing.empty(), "a skeleton whose every bone names a node reports nothing missing");
         check(resolved.wrong_parent == "NPC Spine1 [Spn1]",
@@ -444,7 +447,7 @@ int main()
         const std::vector<std::string_view> duplicated_nodes{ "NPC", "NPC Spine1 [Spn1]", "NPC Spine1 [Spn1]" };
         const std::vector<std::int32_t> duplicated_parents{ -1, 0, 1 };
         const PLUGIN_NAMESPACE::SkeletonAlignment ambiguous =
-            PLUGIN_NAMESPACE::align_skeleton(resolved_bones, resolved_parents, duplicated_nodes, duplicated_parents, 8);
+            PLUGIN_NAMESPACE::align_skeleton(resolved_bones, resolved_parents, duplicated_nodes, duplicated_parents, {}, 8);
         check(ambiguous.matched == 1 && ambiguous.ambiguous == 1 && ambiguous.duplicate_nodes == 2,
             "a duplicated node name resolves once, is flagged, and both of its nodes are counted");
 
@@ -454,7 +457,7 @@ int main()
         const std::vector<std::string_view> cap_bones{ "Missing A", "Missing B", "NPC Root [Root]" };
         const std::vector<std::int16_t> cap_bone_parents{ -1, -1, -1 };
         const PLUGIN_NAMESPACE::SkeletonAlignment capped =
-            PLUGIN_NAMESPACE::align_skeleton(cap_bones, cap_bone_parents, cap_nodes, cap_parents, 1);
+            PLUGIN_NAMESPACE::align_skeleton(cap_bones, cap_bone_parents, cap_nodes, cap_parents, {}, 1);
         check(capped.bones == 3 && capped.matched == 1 && capped.missing == "Missing A", "the difference list stops at the report cap");
 
         check(PLUGIN_NAMESPACE::node_has_ancestor(node_parents, 3, 1), "an ancestor several levels up must be found");
@@ -462,6 +465,55 @@ int main()
         check(!PLUGIN_NAMESPACE::node_has_ancestor(node_parents, 5, 3), "the pelvis must not count as an ancestor of a spine node it does not contain");
         const std::vector<std::int32_t> cyclic_parents{ 1, 0 };
         check(!PLUGIN_NAMESPACE::node_has_ancestor(cyclic_parents, 0, 2), "a cyclic parent table must terminate");
+    }
+
+    // The pose conversion: the engine's own pose sample, read out of Havok's SSE quads, as the local
+    // transform of the node it drives. The quaternion convention is pinned here, because a wrong sign
+    // would reach the game as a figure posed inside out with nothing in the log to say so.
+    {
+        const float half_sqrt_two = 0.707106781f;
+
+        // A quarter turn about Z takes +X to +Y: the convention this codebase measured (a rotation
+        // multiplies a column vector, A * B applies B first).
+        const RE::NiMatrix3 quarter = PLUGIN_NAMESPACE::ni_matrix_from_quaternion(0.0f, 0.0f, half_sqrt_two, half_sqrt_two);
+        const RE::NiPoint3 quarter_x = quarter * RE::NiPoint3{ 1.0f, 0.0f, 0.0f };
+        check(close(quarter_x.x, 0.0f, 1e-4f) && close(quarter_x.y, 1.0f, 1e-4f) && close(quarter_x.z, 0.0f, 1e-4f),
+            "a quarter turn about Z must take +X to +Y");
+
+        // A half turn about X takes +Y to -Y: the case that tells a direct rotation from its inverse.
+        const RE::NiMatrix3 half = PLUGIN_NAMESPACE::ni_matrix_from_quaternion(1.0f, 0.0f, 0.0f, 0.0f);
+        const RE::NiPoint3 half_y = half * RE::NiPoint3{ 0.0f, 1.0f, 0.0f };
+        check(close(half_y.y, -1.0f, 1e-4f), "a half turn about X must take +Y to -Y");
+
+        const RE::NiMatrix3 identity = PLUGIN_NAMESPACE::ni_matrix_from_quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+        check(close(identity.entry[0][0], 1.0f, 1e-5f) && close(identity.entry[1][1], 1.0f, 1e-5f) && close(identity.entry[2][2], 1.0f, 1e-5f) &&
+                close(identity.entry[0][1], 0.0f, 1e-5f),
+            "the identity quaternion must produce the identity rotation");
+
+        // The transposed candidate is the inverse rotation, which is what makes the replay's two
+        // candidates opposites rather than two spellings of the same thing.
+        RE::NiMatrix3 inverse;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                inverse.entry[i][j] = quarter.entry[j][i];
+        const RE::NiMatrix3 round_trip = inverse * quarter;
+        check(close(round_trip.entry[0][0], 1.0f, 1e-4f) && close(round_trip.entry[1][1], 1.0f, 1e-4f) && close(round_trip.entry[0][1], 0.0f, 1e-4f),
+            "the inverse must undo the rotation");
+
+        RE::hkQsTransform pose;
+        pose.translation = RE::hkVector4(1.0f, 2.0f, 3.0f, 0.0f);
+        pose.rotation.vec = RE::hkVector4(0.0f, 0.0f, half_sqrt_two, half_sqrt_two);
+        pose.scale = RE::hkVector4(0.5f, 0.5f, 0.5f, 0.0f);
+
+        const PLUGIN_NAMESPACE::PoseSample sample = PLUGIN_NAMESPACE::read_pose(pose);
+        check(close(sample.position[0], 1.0f, 1e-5f) && close(sample.position[1], 2.0f, 1e-5f) && close(sample.position[2], 3.0f, 1e-5f) &&
+                close(sample.quaternion[2], half_sqrt_two, 1e-5f) && close(sample.quaternion[3], half_sqrt_two, 1e-5f) && close(sample.scale, 0.5f, 1e-5f),
+            "a pose sample must read position, all four quaternion components and its scale out of the SSE quads");
+
+        const RE::NiTransform local = PLUGIN_NAMESPACE::ni_local_from_pose(sample, false);
+        const RE::NiPoint3 local_x = local.rotate * RE::NiPoint3{ 1.0f, 0.0f, 0.0f };
+        check(close(local.translate.z, 3.0f, 1e-5f) && close(local.scale, 0.5f, 1e-5f) && close(local_x.y, 1.0f, 1e-4f),
+            "a pose sample must become a local transform carrying its own rotation, translation and scale");
     }
 
     if (failures != 0)
