@@ -212,16 +212,17 @@ SCOPY ANIM replay verdict match=skeleton/direct control=…u best=…u
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物：`dist/CharacterPanel-scopy-HKX1-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX1-cd646aefae-cl94faaed0c6-20261009T155444Z`（`source_baseline_dirty=false`，
-  基线提交 `cd646aefae`），DLL SHA-256 `356c71f4…`；**该轮已实测**，逐条证据见
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX2-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX2-a0eaef50cd-cl94faaed0c6-20261009T161113Z`（`source_baseline_dirty=false`，
+  基线提交 `a0eaef50cd`），DLL SHA-256 `506e21f7…`。上一轮 HKX1 的包
+  （`…-HKX1-cd646aefae-…`，DLL `356c71f4…`）**已实测**，逐条证据见
   [HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)，归档日志
   [CharacterPanel-hkx1-align-20261010-0001.log](diagnostics/CharacterPanel-hkx1-align-20261010-0001.log)。
   操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、
   日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
-- 提交状态：四轮探针 + 程序化待机 + 方向修正文档落在 `d9ad6b0`；HKX1 的实现、单测与文档随本轮提交，
-  之后工作区应是干净的（`extern/CommonLibSSE` 的历史 dirty 状态照旧排除在提交之外）。
-- 热键现状（HKX1 产品构建）：`F7` 捕获（审计通过后打印上面那组 `SCOPY ANIM`）、`F8` 绘制、`F3` 旋转、
+- 提交状态：`d9ad6b0`（归档四轮探针与程序化待机）、`cd646ae`/`66758ca`（HKX1 实现与身份）、`1abe07d`（HKX1 实测记录）、
+  `a0eaef5`（HKX2 实现与测量）与最后一笔身份记录都在本地 `master`；`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
+- 热键现状（HKX2 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量）、`F8` 绘制、`F3` 旋转、
   `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。
 
 ## 9. 明确不要做的事
