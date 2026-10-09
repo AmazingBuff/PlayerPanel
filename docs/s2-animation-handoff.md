@@ -21,14 +21,15 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜）**：HKX9 已实测——虚表精确判类成功、states 边生效、根状态机转储实锤
-**CLib 的 `hkbStateMachine::states`@0x90 布局正确**（`Master_Behavior`，size=11，教科书 hkArray），
-遍历进入真实生成器树并**虚表识别出 66 个 `hkbClipGenerator`**；但 66 个 clip 全部死在运行期
-`binding` 指针为空——**binding 是惰性链接**（静态链接 = `animationBindingIndex`），暂停菜单里未激活
-的 clip 就是空指针（证据见 [HKX9 实测证据](s2-hkx9-vtable-evidence-2026-10-10.md)）。
-下一步 **HKX10（已打包待测）**：66 个 clip 逐个打明细（`clip-seen`）+ **control 路线**（激活中的
-clip 的 `animationControl->binding` 应当是活的，`hkaAnimationControl` 全类型）+ binding set
-**定点转储**（用 clip 自带的索引瞄准一个元素），方案见 §5 末。
+**最新（2026-10-10 深夜）**：HKX10 已实测——`clip-seen` 明细全中（66 个 clip 名字/索引全可读，
+`MT_Idle.HKX`↔索引 1022 对上名字表），但**连正在播放的 mt_idle 也是 `binding=0x0 control=0x0`**，
+其 binding set 条目（定点 dump 索引 1022）也是空桩——**"未激活所以为空"的解释被排除，标准 Havok
+binding/control 层在 Skyrim 运行时是死的，路线 A 收束为死路正式关闭**（证据见
+[HKX10 实测证据](s2-hkx10-control-evidence-2026-10-10.md)）。
+**路线重排**：A 关闭；B 被连带否定（装载后仍要过同一条采样链），"让源播任意动画"由已装的 OAR 替代；
+**推荐新路线 D = poseLocal 录制-回放**（未暂停时环形录制引擎自己采样出的姿态，暂停面板内用自己的
+时钟回放驱动副本——HKX2 已证明 poseLocal 全类型可读，真值与 A/B 协议照旧）；C（自研 HKX 解析器）
+留作 D 证明驱动链之后的选择。**待用户拍板 D/C。**
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -359,6 +360,29 @@ SCOPY ANIM play element binding-at-0x10 at=0x… valid=true reason=valid
   valid=true` → 采样链的入场券到手，下一轮直接接 ground-truth 与 F2 驱动；若全空 → 转储指认
   "已加载条目"的真实形态，布局从活样本上学。
 
+### HKX10（已实测，2026-10-10）：control 也全空、正在播放的条目也是空桩——路线 A 正式关闭
+
+- `clip-seen` 全中：66 个 clip 名字/索引全可读（`MT_Idle.HKX`↔1022↔名字表对上），**虚表判类 +
+  名字/索引读取这套仪器跨会话稳定**（root-sm 转储复现 `Master_Behavior`/states=11）。
+- 但连正在播放的 mt_idle 也 `binding=0x0 control=0x0`，其 binding set 条目（定点 dump 索引 1022）
+  也是空桩——**"未激活所以为空"被排除；标准 Havok binding/control 层在 Skyrim 运行时是死的**，
+  HKX4 的"27c8 已加载变体"确认为堆邻居噪音。路线 A 收束为死路关闭；`BShkbAnimationGraph` 仅剩的
+  `unk190/unk1A8/unk1C0` 无类型数组不再挖（§9 红线）。逐条见
+  [HKX10 实测证据](s2-hkx10-control-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx10-control-20261010.log)。
+
+### 路线重排（HKX10 之后，待用户拍板 D/C）
+
+- **A（引擎已加载动画）**：死路，关闭（HKX3–10 的定点证据链）。
+- **B（用户提供 HKX 经引擎装载）**：被 A 连带否定（装载后仍要过同一条采样链）；"让源播任意动画"
+  由本机已装的 OAR 替代实现。
+- **D（新，推荐）：poseLocal 录制-回放**——未暂停时环形录制引擎每帧自己采样出的 `poseLocal`
+  （全类型、按 `boneNodes` 次序，HKX2 已证明可读），暂停面板内用自己的时钟回放驱动副本（HKX2 的
+  写入路径 + F2 开关都是已验证机制）。真值 = 录制本身（引擎真实输出），A/B 协议照旧：副本对录制
+  同相位逐骨对比应到浮点量级。代价小，直接覆盖 S2 当前验收目标（待机）。
+- **C（自研 HKX 解析器）**：自由度最强（可播源没在播的动画，"展示动作切换"终局方案），代价
+  packfile + spline 解码自研；留作 D 证明驱动链之后的选择。
+
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
 1. **数值 A/B（主判据）**：同一动画、同一相位下，逐骨比较**副本的 local 变换**与**源角色的 local 变换**，
@@ -387,10 +411,12 @@ SCOPY ANIM play element binding-at-0x10 at=0x… valid=true reason=valid
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX10-1.2.1.zip`，身份
+- 当前产物：`dist/CharacterPanel-scopy-HKX10-1.2.1.zip`，身份
   `CharacterPanel-scopy-HKX10-d3c847a3b9-cl94faaed0c6-20261009T180211Z`（`source_baseline_dirty=false`，基线
-  `d3c847a3b9`），DLL SHA-256 `f432b76a…`；clip 明细 + control 路线 + 定点元素转储，方案见 §5 HKX10 节。**已实测的九轮**：HKX9
-  （`…-HKX9-746ffacf13-…`，[证据](s2-hkx9-vtable-evidence-2026-10-10.md)、
+  `d3c847a3b9`），DLL SHA-256 `f432b76a…`——**已实测**（判读见 §5 HKX10 节）。下一包（HKX11）待
+  路线拍板后开工。**已实测的十轮**：HKX10（`…-HKX10-d3c847a3b9-…`，
+  [证据](s2-hkx10-control-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx10-control-20261010.log)）、
+  HKX9（`…-HKX9-746ffacf13-…`，[证据](s2-hkx9-vtable-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx9-vtable-20261010.log)）、HKX8（`…-HKX8-7656223071-…`，
   [证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx8-clipsearch2-20261010-0107.log)）、HKX7 崩溃轮
@@ -401,8 +427,8 @@ SCOPY ANIM play element binding-at-0x10 at=0x… valid=true reason=valid
   [docs/diagnostics](diagnostics/)）。操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。
   此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
 - 提交状态：`d9ad6b0`（归档探针与待机）→ HKX1–HKX6 每轮实现 + 实测 + 身份 → `7984bbda89`/`7656223`/
-  `746ffac`（HKX7 崩溃修复、HKX8 判读收窄、HKX9 虚表判类）→ HKX10（clip 明细 + control 路线 + 定点转储）；
-  都在本地 `master`，`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
+  `746ffac`/`d3c847a`（HKX7 崩溃修复、HKX8 判读收窄、HKX9 虚表判类、HKX10 clip 明细与 control 路线）
+  → 路线重排待拍板；都在本地 `master`，`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
 - 热键现状（HKX3 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量 + 动画目录）、`F8` 绘制、`F3` 旋转、
   `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。
 
