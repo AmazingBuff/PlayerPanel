@@ -75,8 +75,8 @@ namespace
     constexpr size_t Raw_Dump_Bytes = 0x80;
     // How far the clip search walks, how much of each object it scans, and how the ground-truth sweep
     // is sampled.
-    constexpr int Max_Clip_Depth = 4;
-    constexpr size_t Max_Clip_Objects = 96;
+    constexpr int Max_Clip_Depth = 8;
+    constexpr size_t Max_Clip_Objects = 512;
     constexpr std::int32_t Max_States = 64;
     constexpr std::int32_t Container_Scan_Bytes = 0x200;
     constexpr size_t Sweep_Steps = 24;
@@ -643,14 +643,35 @@ namespace
         const RE::hkaAnimationBinding* binding;
     };
 
+    // The engine names every object's class, which is what tells a clip generator from the rest of the
+    // graph. It is a virtual call, so it is only made on an object whose first word already looks like a
+    // vtable of the game's own image.
+    const char* class_name_of(void const* object)
+    {
+        if (!looks_like_object(object))
+            return nullptr;
+        const auto* const referenced = static_cast<const RE::hkReferencedObject*>(object);
+        const RE::hkClass* const type = referenced->GetClassType();
+        return type && type->name ? type->name : nullptr;
+    }
+
     ClipReading read_clip_generator(void const* candidate, std::int32_t bone_count)
     {
         if (!candidate || !readable(candidate, sizeof(RE::hkbClipGenerator)) || !looks_like_object(candidate))
             return { false, "not-object", {}, nullptr };
         const auto* const generator = static_cast<const RE::hkbClipGenerator*>(candidate);
         const std::string name = guarded_string(generator->animationName);
-        if (!mentions_hkx(name))
+
+        // The class name is the typed answer to "is this a clip generator"; the animation name only
+        // falls back to deciding when the engine does not name the class.
+        const char* const class_name = class_name_of(candidate);
+        if (class_name && std::string_view(class_name) != "hkbClipGenerator")
+            return { false, "other-class", {}, nullptr };
+        if (!class_name && !mentions_hkx(name))
             return { false, "not-a-clip", {}, nullptr };
+        if (!mentions_hkx(name))
+            return { false, "no-animation-name", {}, nullptr };
+
         const BindingReading binding = read_binding(generator->binding, bone_count);
         if (!binding.valid)
             return { false, binding.reason, {}, nullptr };
@@ -667,7 +688,10 @@ namespace
         std::vector<std::pair<void const*, int>> pending;
         std::unordered_set<void const*> seen;
         std::vector<ClipReading> clips;
+        std::unordered_map<std::string, size_t> classes;
+        std::unordered_map<std::string, size_t> reasons;
         size_t visited = 0;
+        bool capped = false;
     };
 
     // The graph is a tree of only partly typed nodes, so the search follows only what is worth
@@ -678,8 +702,13 @@ namespace
     void scan_for_clips(void const* root, std::int32_t bone_count, ClipSearch& search)
     {
         search.pending.emplace_back(root, 0);
-        while (!search.pending.empty() && search.visited < Max_Clip_Objects)
+        while (!search.pending.empty())
         {
+            if (search.visited >= Max_Clip_Objects)
+            {
+                search.capped = true;
+                break;
+            }
             const auto [object, depth] = search.pending.back();
             search.pending.pop_back();
             if (!object || depth > Max_Clip_Depth)
@@ -688,12 +717,16 @@ namespace
                 continue;
             ++search.visited;
 
+            if (const char* const class_name = class_name_of(object))
+                ++search.classes[class_name];
+
             const ClipReading clip = read_clip_generator(object, bone_count);
             if (clip.valid)
             {
                 search.clips.push_back(clip);
                 continue;
             }
+            ++search.reasons[clip.reason];
             if (depth == Max_Clip_Depth)
                 continue;
 
@@ -711,11 +744,15 @@ namespace
                 }
             }
 
-            if (!readable(object, Container_Scan_Bytes))
-                continue;
+            // Scan as far as this object is readable rather than demanding the whole window: a state
+            // info is 0x78 bytes and holds the generator of its state, so requiring 0x200 skipped
+            // exactly the node the clips hang from.
             for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
             {
-                const void* const word = *reinterpret_cast<void* const*>(static_cast<const std::uint8_t*>(object) + offset);
+                const auto* const base = static_cast<const std::uint8_t*>(object) + offset;
+                if (!readable(base, sizeof(void*)))
+                    break;
+                const void* const word = *reinterpret_cast<void* const*>(base);
                 if (word && readable(word, sizeof(void*)) && looks_like_object(word))
                     search.pending.emplace_back(word, depth + 1);
             }
@@ -729,6 +766,23 @@ namespace
         if (is_base_idle(base_name_of(name)))
             return name.starts_with("data\\") || name.starts_with("data/") ? 1 : 0;
         return mentions_idle(base_name_of(name)) ? 2 : 3;
+    }
+
+    // A histogram as one log field: the classes a walk met, or the reasons it rejected candidates, most
+    // frequent first. Which of the two is empty is what says whether the walk got lost or the clips are
+    // somewhere else entirely.
+    std::string summarise(std::unordered_map<std::string, size_t> const& counts)
+    {
+        std::vector<std::pair<std::string, size_t>> ordered(counts.begin(), counts.end());
+        std::sort(ordered.begin(), ordered.end(), [](auto const& lhs, auto const& rhs) { return lhs.second > rhs.second; });
+        std::string out;
+        for (size_t i = 0; i < ordered.size() && i < Max_Clips_Reported; ++i)
+        {
+            if (!out.empty())
+                out += ", ";
+            out += fmt::format("{}:{}", ordered[i].first, ordered[i].second);
+        }
+        return out.empty() ? "-" : out;
     }
 }
 
@@ -1195,7 +1249,9 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
             clip_list += ", ";
         clip_list += fmt::format("{}@{:.2f}s", search.clips[i].name, search.clips[i].binding->animation->duration);
     }
-    logger::info("SCOPY ANIM play search objects={} clips={} first='{}'", search.visited, search.clips.size(), clip_list.empty() ? "-" : clip_list);
+    logger::info("SCOPY ANIM play search objects={} clips={} capped={} first='{}'", search.visited, search.clips.size(), search.capped, clip_list.empty() ? "-" : clip_list);
+    logger::info("SCOPY ANIM play classes='{}'", summarise(search.classes));
+    logger::info("SCOPY ANIM play rejections='{}'", summarise(search.reasons));
     if (search.clips.empty())
     {
         logger::info("SCOPY ANIM play UNAVAILABLE reason=no-clip-generator");

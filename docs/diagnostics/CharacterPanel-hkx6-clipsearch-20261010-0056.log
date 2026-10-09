@@ -1,0 +1,172 @@
+[00:55:20.139] [8020 ] [I] CharacterPanel v1-2-1-0
+[00:55:20.139] [8020 ] [I] CharacterPanel loaded
+[00:56:07.192] [ 740 ] [I] All shaders compiled
+[00:56:07.192] [ 740 ] [I] Installed pre-UI renderer hook
+[00:56:07.192] [ 740 ] [I] Menu sink installed
+[00:56:07.192] [ 740 ] [I] SCOPY BUILD CharacterPanel-scopy-HKX6-733dfd5f17-cl94faaed0c6-20261009T165300Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle
+[00:56:07.246] [37152] [I] Studio host changed: 0x0 -> 0x23408d16980 (paused=true)
+[00:56:07.246] [37152] [I] Studio light node has been created
+[00:56:07.246] [37152] [I] CP-LIGHT slot 0: registered, shell 0x23593467880 queued (ledger stays the authority)
+[00:56:07.246] [37152] [I] CP-LIGHT slot 1: registered, shell 0x23593467740 queued (ledger stays the authority)
+[00:56:07.246] [37152] [I] CP-LIGHT slot 2: registered, shell 0x23593467600 queued (ledger stays the authority)
+[00:56:07.246] [37152] [I] Studio lights registered on the ledger (scene=0x22a7c076e80 -- ledger fetch will populate the slots)
+[00:56:07.246] [37152] [I] CP-LIGHT slot 0: ledger shell fetched 0x23593467880 (after 0 miss frames)
+[00:56:07.246] [37152] [I] CP-LIGHT slot 1: ledger shell fetched 0x23593467740 (after 0 miss frames)
+[00:56:07.246] [37152] [I] CP-LIGHT slot 2: ledger shell fetched 0x23593467600 (after 0 miss frames)
+[00:56:22.803] [37152] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:56:22.803] [37152] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:56:22.803] [37152] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:56:22.803] [37152] [W] Studio lights not fully served by the ledger yet
+[00:56:26.529] [37152] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x23593467c40 filed to lightQueueAdd)
+[00:56:26.529] [37152] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x23593467240 filed to lightQueueAdd)
+[00:56:26.529] [37152] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x23593467100 filed to lightQueueAdd)
+[00:56:26.591] [37152] [I] CP-LIGHT slot 0: ledger shell fetched 0x23593467c40 (after 1 miss frames)
+[00:56:26.591] [37152] [I] CP-LIGHT slot 1: ledger shell fetched 0x23593467240 (after 1 miss frames)
+[00:56:26.591] [37152] [I] CP-LIGHT slot 2: ledger shell fetched 0x23593467100 (after 1 miss frames)
+[00:56:35.767] [8020 ] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x237140d6e00 parent=0x23713de9ec0 nodes=471 geoms=23 api=NiObject::Clone id=68835/70187
+[00:56:35.767] [8020 ] [I] SCOPY CLONE-RETURN capture=1 copy=0x2371c178a00
+[00:56:35.768] [8020 ] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=471 skin-bones=131
+[00:56:35.768] [8020 ] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[00:56:35.768] [8020 ] [I] SCOPY CENSUS source-nodes=471 copy-nodes=471 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[00:56:35.769] [8020 ] [I] SCOPY FRAME skinned-bound valid=true radius=74.0 center=(6364.9,1473.4,256.3) graph-bound radius=74.3 scale=0.35 pruned-nodes=0
+[00:56:35.769] [8020 ] [I] SCOPY READY capture=1 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[00:56:35.770] [8020 ] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=471
+[00:56:35.770] [8020 ] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[00:56:35.770] [8020 ] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=91 ambiguous=0 duplicate-nodes=0 parent-ancestors=91 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], SkirtLBone03, Shield, Weapon, MagicEffectsNode, Quiver' wrong-parent='-'
+[00:56:35.770] [8020 ] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[00:56:35.770] [8020 ] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=79 ambiguous=0 duplicate-nodes=0 parent-ancestors=79 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[00:56:35.770] [8020 ] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=91/116 ambiguous=0
+[00:56:35.770] [8020 ] [I] SCOPY ANIM map graph=0 bones=116 matched=91 helper-unresolved=3 other-unresolved=22
+[00:56:35.770] [8020 ] [I] SCOPY ANIM replay pose entries=116 scale-off-from-one=5
+[00:56:35.770] [8020 ] [I] SCOPY ANIM replay control max-pos-delta=127.029 max-rot-delta=171.79deg bones=91
+[00:56:35.770] [8020 ] [I] SCOPY ANIM replay order=skeleton quat=direct written=91 max-pos-delta=3.743 max-rot-delta=0.07deg bones=91
+[00:56:35.770] [8020 ] [I] SCOPY ANIM replay order=skeleton quat=transposed written=91 max-pos-delta=61.038 max-rot-delta=179.47deg bones=91
+[00:56:35.770] [8020 ] [I] SCOPY ANIM replay order=bone-nodes quat=direct written=106 max-pos-delta=1.638 max-rot-delta=0.06deg bones=106
+[00:56:35.770] [8020 ] [I] SCOPY ANIM replay order=bone-nodes quat=transposed written=106 max-pos-delta=61.039 max-rot-delta=176.46deg bones=106
+[00:56:35.770] [8020 ] [I] SCOPY ANIM replay restored max-pos-delta=0.000 max-rot-delta=0.03deg bones=91
+[00:56:35.770] [8020 ] [I] SCOPY ANIM replay verdict match=none control=127.029u best=1.6382u
+[00:56:35.772] [8020 ] [I] SCOPY ANIM catalogue character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx' names=15203 bindings=15203
+[00:56:35.776] [8020 ] [I] SCOPY ANIM catalogue idle-names=1526/15203 first='Animations\1hm_blockidle.hkx@20, Animations\1hm_idle.hkx@23, Animations\2hm_blockidle.hkx@123, Animations\2hm_idle.hkx@124, Animations\2hw_blockidle.hkx@204, Animations\2hw_idle.hkx@206, Animations\altar_leftidle.hkx@234, Animations\female\animobjectchairdrinkingidlebase.hkx@235'
+[00:56:35.776] [8020 ] [I] SCOPY ANIM catalogue idle-plain first='Animations\horse_rider\idle.hkx@705, Animations\horse_rider\idle_pet.hkx@706, Animations\horse_rider\idle_rearup.hkx@707, Animations\DLC01\idleactivatecoffinpuzzle.hkx@708, Animations\idleblessingkneel_enter.hkx@709, Animations\idleblessingkneel_exit.hkx@710, Animations\idleblessingkneel_loop.hkx@711, Animations\female\idlebloodportalactivate.hkx@712'
+[00:56:35.776] [8020 ] [I] SCOPY ANIM catalogue idle-base first='Animations\horse_rider\idle.hkx@705, Animations\female\mt_idle.hkx@1022, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued\female\_variants_mt_idle\mt_idle.hkx@11909, data\meshes\actors\character\animations\OpenAnimationReplacer\SDB DFWI\Snow Idle\female\mt_idle.hkx@11910, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Light\female\_variants_mt_idle\mt_idle.hkx@11911, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheFireandBlood\001DialogueAnimations\female\mt_idle.hkx@11912, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Cold_FBreath_Light\female\_variants_mt_idle\mt_idle.hkx@11916, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Mid\female\_variants_mt_idle\mt_idle.hkx@11926'
+[00:56:35.776] [8020 ] [I] SCOPY ANIM catalogue elements=8 object-like=8/8 scan=0x80
+[00:56:35.777] [8020 ] [I] SCOPY ANIM catalogue candidate offset=0x00 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[00:56:35.777] [8020 ] [I] SCOPY ANIM catalogue candidate offset=0x30 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[00:56:35.777] [8020 ] [I] SCOPY ANIM catalogue raw index=0 qwords='00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649d8 000000000001ffff 0000000000000000 8000000000000000 0000000000000000 0000000000000000 00007ff6ef2927c8 000000000001ffff 00000233c4dc7f30 00002cb000002cb0'
+[00:56:35.777] [8020 ] [I] SCOPY ANIM catalogue raw index=7601 qwords='00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000'
+[00:56:35.777] [8020 ] [I] SCOPY ANIM catalogue layout UNAVAILABLE reason=no-candidate (read the raw dump)
+[00:56:36.431] [8020 ] [I] SCOPY ANIM play search objects=96 clips=0 first='-'
+[00:56:36.431] [8020 ] [I] SCOPY ANIM play UNAVAILABLE reason=no-clip-generator
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='FemaleBrowsHuman01' type='BSDynamicTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='00CVEO_00VAN_AA_ALDDEyes_Blue_FEMALE' type='BSDynamicTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='0_HAIRLINE_Female_Human_Straight' type='BSDynamicTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='0Anto92HL' type='BSDynamicTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='0Anto92' type='BSDynamicTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='FemaleMouthHumanoidDefault' type='BSDynamicTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='FemaleHeadNord' type='BSDynamicTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='shoes' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name=' (00000D6C)[1]/ (FE04CB10) [80%]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='clothes_underwear' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='clothes' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='CBBE' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Feet [SOvl0]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl2]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl1]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl0]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Hands [SOvl0]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl1]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl0]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Body [SOvl0]' type='BSTriShape'
+[00:56:36.431] [8020 ] [I] SCOPY GEOMETRY capture=1 name='Body [Ovl0]' type='BSTriShape'
+[00:56:36.987] [8020 ] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[00:56:36.987] [8020 ] [I] SCOPY IDLE bound 8/8 channels
+[00:56:36.990] [8020 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[00:56:36.990] [8020 ] [I] SCOPY DRAW frame=1 passes=23 lights=true animation-driver=none physics-driver=none
+[00:56:38.889] [8020 ] [I] SCOPY IDLE t=2.0s 'NPC Pelvis [Pelv]' moved=(0.78,0.00,0.00) rot=3.34deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=-2.41deg | 'NPC Spine2 [Spn2]' moved=(0.09,-0.05,-0.01) rot=-0.96deg | 'NPC Head [Head]' moved=(0.37,-0.37,0.02) rot=2.79deg
+[00:56:39.885] [8020 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[00:56:39.885] [8020 ] [I] SCOPY DRAW frame=121 passes=23 lights=true animation-driver=none physics-driver=none
+[00:56:40.893] [8020 ] [I] SCOPY IDLE t=4.0s 'NPC Pelvis [Pelv]' moved=(-0.78,0.00,0.00) rot=-2.88deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=2.76deg | 'NPC Spine2 [Spn2]' moved=(-0.09,0.07,0.01) rot=0.88deg | 'NPC Head [Head]' moved=(-0.37,0.44,-0.05) rot=-1.35deg
+[00:56:42.774] [8020 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[00:56:42.774] [8020 ] [I] SCOPY DRAW frame=241 passes=23 lights=true animation-driver=none physics-driver=none
+[00:56:42.916] [8020 ] [I] SCOPY IDLE t=6.0s 'NPC Pelvis [Pelv]' moved=(0.03,0.00,0.00) rot=-1.34deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=-0.85deg | 'NPC Spine2 [Spn2]' moved=(0.00,-0.05,-0.01) rot=-0.24deg | 'NPC Head [Head]' moved=(0.01,-0.23,0.01) rot=-1.50deg
+[00:56:43.251] [8020 ] [I] SCOPY DRAW-TOGGLE enabled=false capture=1
+[00:56:43.711] [8020 ] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[00:56:45.312] [8020 ] [I] SCOPY IDLE t=8.0s 'NPC Pelvis [Pelv]' moved=(0.76,0.00,0.00) rot=2.36deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=-1.62deg | 'NPC Spine2 [Spn2]' moved=(0.09,-0.01,-0.00) rot=-0.54deg | 'NPC Head [Head]' moved=(0.36,-0.12,0.01) rot=-0.17deg
+[00:56:46.106] [8020 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[00:56:46.106] [8020 ] [I] SCOPY DRAW frame=361 passes=23 lights=true animation-driver=none physics-driver=none
+[00:56:46.372] [8020 ] [I] SCOPY IDLE disabled (F2); driver=procedural-idle; the next frame's base placement restores the captured pose first, so nothing accumulates
+[00:56:47.701] [8020 ] [I] SCOPY IDLE enabled (F2); driver=procedural-idle; the next frame's base placement restores the captured pose first, so nothing accumulates
+[00:56:48.326] [8020 ] [I] SCOPY IDLE disabled (F2); driver=procedural-idle; the next frame's base placement restores the captured pose first, so nothing accumulates
+[00:56:48.997] [8020 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[00:56:48.997] [8020 ] [I] SCOPY DRAW frame=481 passes=23 lights=true animation-driver=none physics-driver=none
+[00:56:49.044] [8020 ] [I] SCOPY IDLE enabled (F2); driver=procedural-idle; the next frame's base placement restores the captured pose first, so nothing accumulates
+[00:56:49.427] [8020 ] [I] SCOPY IDLE t=10.1s 'NPC Pelvis [Pelv]' moved=(-0.81,0.00,0.00) rot=-0.74deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=2.55deg | 'NPC Spine2 [Spn2]' moved=(-0.10,0.06,0.00) rot=0.98deg | 'NPC Head [Head]' moved=(-0.38,0.40,-0.05) rot=3.63deg
+[00:56:50.665] [8020 ] [I] SCOPY IDLE disabled (F2); driver=procedural-idle; the next frame's base placement restores the captured pose first, so nothing accumulates
+[00:56:51.907] [8020 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[00:56:51.907] [8020 ] [I] SCOPY DRAW frame=601 passes=23 lights=true animation-driver=none physics-driver=none
+[00:56:52.101] [8020 ] [I] SCOPY PARK snapshots held alive for the process lifetime: 1
+[00:56:52.101] [8020 ] [I] SCOPY BEGIN capture=2 actor=00000014 source=0x237140d6e00 parent=0x23713de9ec0 nodes=471 geoms=23 api=NiObject::Clone id=68835/70187
+[00:56:52.101] [8020 ] [I] SCOPY CLONE-RETURN capture=2 copy=0x2371cfcd600
+[00:56:52.102] [8020 ] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=471 skin-bones=131
+[00:56:52.102] [8020 ] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[00:56:52.102] [8020 ] [I] SCOPY CENSUS source-nodes=471 copy-nodes=471 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[00:56:52.102] [8020 ] [I] SCOPY FRAME skinned-bound valid=true radius=74.0 center=(6364.9,1473.4,256.3) graph-bound radius=74.3 scale=0.35 pruned-nodes=0
+[00:56:52.102] [8020 ] [I] SCOPY READY capture=2 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[00:56:52.102] [8020 ] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=471
+[00:56:52.102] [8020 ] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[00:56:52.102] [8020 ] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=91 ambiguous=0 duplicate-nodes=0 parent-ancestors=91 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], SkirtLBone03, Shield, Weapon, MagicEffectsNode, Quiver' wrong-parent='-'
+[00:56:52.102] [8020 ] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[00:56:52.102] [8020 ] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=79 ambiguous=0 duplicate-nodes=0 parent-ancestors=79 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[00:56:52.102] [8020 ] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=91/116 ambiguous=0
+[00:56:52.102] [8020 ] [I] SCOPY ANIM map graph=0 bones=116 matched=91 helper-unresolved=3 other-unresolved=22
+[00:56:52.102] [8020 ] [I] SCOPY ANIM replay pose entries=116 scale-off-from-one=5
+[00:56:52.102] [8020 ] [I] SCOPY ANIM replay control max-pos-delta=127.029 max-rot-delta=171.79deg bones=91
+[00:56:52.102] [8020 ] [I] SCOPY ANIM replay order=skeleton quat=direct written=91 max-pos-delta=3.743 max-rot-delta=0.07deg bones=91
+[00:56:52.102] [8020 ] [I] SCOPY ANIM replay order=skeleton quat=transposed written=91 max-pos-delta=61.038 max-rot-delta=179.47deg bones=91
+[00:56:52.102] [8020 ] [I] SCOPY ANIM replay order=bone-nodes quat=direct written=106 max-pos-delta=1.638 max-rot-delta=0.06deg bones=106
+[00:56:52.102] [8020 ] [I] SCOPY ANIM replay order=bone-nodes quat=transposed written=106 max-pos-delta=61.039 max-rot-delta=176.46deg bones=106
+[00:56:52.102] [8020 ] [I] SCOPY ANIM replay restored max-pos-delta=0.000 max-rot-delta=0.03deg bones=91
+[00:56:52.102] [8020 ] [I] SCOPY ANIM replay verdict match=none control=127.029u best=1.6382u
+[00:56:52.104] [8020 ] [I] SCOPY ANIM catalogue character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx' names=15203 bindings=15203
+[00:56:52.108] [8020 ] [I] SCOPY ANIM catalogue idle-names=1526/15203 first='Animations\1hm_blockidle.hkx@20, Animations\1hm_idle.hkx@23, Animations\2hm_blockidle.hkx@123, Animations\2hm_idle.hkx@124, Animations\2hw_blockidle.hkx@204, Animations\2hw_idle.hkx@206, Animations\altar_leftidle.hkx@234, Animations\female\animobjectchairdrinkingidlebase.hkx@235'
+[00:56:52.108] [8020 ] [I] SCOPY ANIM catalogue idle-plain first='Animations\horse_rider\idle.hkx@705, Animations\horse_rider\idle_pet.hkx@706, Animations\horse_rider\idle_rearup.hkx@707, Animations\DLC01\idleactivatecoffinpuzzle.hkx@708, Animations\idleblessingkneel_enter.hkx@709, Animations\idleblessingkneel_exit.hkx@710, Animations\idleblessingkneel_loop.hkx@711, Animations\female\idlebloodportalactivate.hkx@712'
+[00:56:52.108] [8020 ] [I] SCOPY ANIM catalogue idle-base first='Animations\horse_rider\idle.hkx@705, Animations\female\mt_idle.hkx@1022, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued\female\_variants_mt_idle\mt_idle.hkx@11909, data\meshes\actors\character\animations\OpenAnimationReplacer\SDB DFWI\Snow Idle\female\mt_idle.hkx@11910, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Light\female\_variants_mt_idle\mt_idle.hkx@11911, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheFireandBlood\001DialogueAnimations\female\mt_idle.hkx@11912, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Cold_FBreath_Light\female\_variants_mt_idle\mt_idle.hkx@11916, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Mid\female\_variants_mt_idle\mt_idle.hkx@11926'
+[00:56:52.108] [8020 ] [I] SCOPY ANIM catalogue elements=8 object-like=8/8 scan=0x80
+[00:56:52.109] [8020 ] [I] SCOPY ANIM catalogue candidate offset=0x00 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[00:56:52.109] [8020 ] [I] SCOPY ANIM catalogue candidate offset=0x30 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[00:56:52.109] [8020 ] [I] SCOPY ANIM catalogue raw index=0 qwords='00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649d8 000000000001ffff 0000000000000000 8000000000000000 0000000000000000 0000000000000000 00007ff6ef2927c8 000000000001ffff 00000233c4dc7f30 00002cb000002cb0'
+[00:56:52.109] [8020 ] [I] SCOPY ANIM catalogue raw index=7601 qwords='00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000'
+[00:56:52.109] [8020 ] [I] SCOPY ANIM catalogue layout UNAVAILABLE reason=no-candidate (read the raw dump)
+[00:56:52.761] [8020 ] [I] SCOPY ANIM play search objects=96 clips=0 first='-'
+[00:56:52.761] [8020 ] [I] SCOPY ANIM play UNAVAILABLE reason=no-clip-generator
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='FemaleBrowsHuman01' type='BSDynamicTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='00CVEO_00VAN_AA_ALDDEyes_Blue_FEMALE' type='BSDynamicTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='0_HAIRLINE_Female_Human_Straight' type='BSDynamicTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='0Anto92HL' type='BSDynamicTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='0Anto92' type='BSDynamicTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='FemaleMouthHumanoidDefault' type='BSDynamicTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='FemaleHeadNord' type='BSDynamicTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='shoes' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Feet' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name=' (00000D6C)[1]/ (FE04CB10) [80%]' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='clothes_underwear' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='clothes' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='CBBE' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Face [Ovl0]' type='BSDynamicTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Feet [SOvl0]' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Feet [Ovl2]' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Feet [Ovl1]' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Feet [Ovl0]' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Hands [SOvl0]' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Hands [Ovl1]' type='BSTriShape'
+[00:56:52.761] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Hands [Ovl0]' type='BSTriShape'
+[00:56:52.762] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Body [SOvl0]' type='BSTriShape'
+[00:56:52.762] [8020 ] [I] SCOPY GEOMETRY capture=2 name='Body [Ovl0]' type='BSTriShape'
+[00:56:54.039] [8020 ] [I] SCOPY IDLE enabled (F2); driver=procedural-idle; the next frame's base placement restores the captured pose first, so nothing accumulates
+[00:56:55.070] [8020 ] [I] SCOPY DRAW-TOGGLE enabled=true capture=2
+[00:56:55.070] [8020 ] [I] SCOPY IDLE bound 8/8 channels
+[00:56:55.073] [8020 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[00:56:55.073] [8020 ] [I] SCOPY DRAW frame=1 passes=23 lights=true animation-driver=none physics-driver=none
+[00:56:55.786] [8020 ] [I] SCOPY IDLE disabled (F2); driver=procedural-idle; the next frame's base placement restores the captured pose first, so nothing accumulates

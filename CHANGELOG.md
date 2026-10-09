@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Fixed
+
+- Follow the clip search's own rules when scanning a node: an object is scanned as far as it is
+  readable instead of only when a whole 0x200-byte window is, which is what had been skipping every
+  0x78-byte `StateInfo` - the node a state's generator hangs from - so the walk burned its object
+  budget on the state machine's incidental pointers and reported no clip at all. The walk also asks
+  the engine for each object's class name now (only on objects whose first word already looks like a
+  vtable) and takes `hkbClipGenerator` as the answer, rather than inferring it from the animation
+  name; depth and object limits are wider, and two histograms (`classes=`, `rejections=`) plus a
+  `capped=` flag say whether a future miss is a lost walk or an absent clip.
+
 ### Added
 
 - Play one of the source character's own animations on the copy (S2 animation

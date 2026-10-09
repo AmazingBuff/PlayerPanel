@@ -268,6 +268,21 @@ SCOPY IDLE enabled (F2); driver=Animations\female\mt_idle.hkx
 - **驱动**：F2 打开后由**我们自己的时钟**推进（暂停时引擎不推进），每帧采样→写 local→重算子树世界；
   找不到 clip 时自动回退程序化待机并在日志里说明。
 
+### HKX6（已实测，2026-10-10）：搜索被自己的窗口判据挡住，已修
+
+`play search objects=96 clips=0`、`objects` **恰好等于上限** → 搜索被**截断**而非走完。回退逻辑正确
+（`driver=procedural-idle`，程序化待机照常）。**根因**：扫描指针前要求整个 0x200 字节窗口可读，
+于是 0x78 字节的 `StateInfo`（clip 就挂在它的字段里）被整段跳过，遍历只能去啃状态机里的杂项对象。
+逐条见 [HKX6 实测证据](s2-hkx6-clipsearch-evidence-2026-10-10.md)。
+
+### HKX7（已实现并打包，待游戏内一轮）：按可读范围扫描 + 用类名判类 + 直方图
+
+1. **按可读范围扫描**（逐 8 字节前进，不可读即停，上限仍 0x200）——让 `StateInfo` 能进队；
+2. **用 `hkReferencedObject::GetClassType()->name` 判类**（只在首字像 vtable 的对象上调用），
+   类名 == `hkbClipGenerator` 才算候选；类名拿不到时才退回"名字像 `.hkx`"；
+3. 深度 4→8、对象 96→512，新增 `play classes='…'` 与 `play rejections='…'` 两行直方图，
+   `search` 行带 `capped=`——下一轮若还不中，这两行直接区分"遍历走丢"与"clip 不在图里"。
+
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
 1. **数值 A/B（主判据）**：同一动画、同一相位下，逐骨比较**副本的 local 变换**与**源角色的 local 变换**，
