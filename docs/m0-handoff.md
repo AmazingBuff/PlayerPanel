@@ -1,6 +1,9 @@
 # M0 handoff — state, verified facts, and the next work package
 
-## 新增：场景图复制 S0 实验（2026-10-08，**游戏验证通过**）
+## 场景图复制实验（2026-10-09 复核：静态显示初步成立，资源回收阻塞）
+
+当前需求与验收依据是 [PRD 0.6 §6.2–6.3](player-panel-prd.md)；下一轮使用 [测试单](scene-graph-copy-next-test-2026-10-09.md)。
+S2 未判定，S3 公开接口接入受限、独立模拟未验证。本次仅修改文档，当前 F2 的“探针后再 pose”顺序仍需实施者修正；等待新构建与游戏回传。
 
 用户授权在现有直绘框架上重新验证直接复制已装配的第三人称角色图。
 默认构建仍为 Actor 装配；`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON` 的测试构建关闭旧 Actor 路线，
@@ -9,9 +12,9 @@
 [2026-10-08 回传记录](scene-graph-copy-results-2026-10-08.md)。
 下文历史验证结论仍仅对应原 Actor／游离图路线。
 
-**S0 状态（2026-10-08 会话收官）**：CBBE 与 UBE 两种身形各一轮实机验证，
-**测试 A（复制／绘制／生命周期）与测试 B（换装／源图变化／外观与物理）全部通过、
-零崩溃**（含读档与回主菜单），Q01–Q12 见回传记录；副本内物理头发／衣物不继续模拟
+**S0 状态**：CBBE 与 UBE 的静态复制／显示、旋转及手动换装刷新有通过观察。
+停放构建的有限会话没有再触发已知析构崩溃，但安全释放与资源回收没有通过；Q09／Q10 必须区分显示切换与生命周期。
+Q01–Q12 见回传记录；副本内物理头发／衣物不继续模拟
 属 S0 既定范围（无独立驱动），不作为失败。
 配置走 `cmake --preset Release-scopy`（`CMakePresets.json`），构建 `--target CharacterPanelSceneCopyPackage`
 产出 `dist/CharacterPanel-scopy-S0-1.2.1.zip`。本机 `E:\SkyrimAE\mods\CharacterPanel`
@@ -19,11 +22,12 @@
 
 **动手前必读的三条结论**（都是这轮拿崩溃换来的）：
 
-1. **原生克隆图在会话内不可销毁**。`capture()` 内就地析构、延迟 4 帧的退役队列、
+1. **三种已测试的释放路径均崩溃，根因未定位**。`capture()` 内就地析构、延迟 4 帧的退役队列、
    读档／主菜单边界释放——三条路全崩，签名一致：`~CharacterClone` → `BSFadeNode` 析构 →
    tbbmalloc `rsi=0`（crashes 23-01-11 / 23-07-35 / 23-12-02）。现行做法 = 停放不销毁
-   （`SceneGraphCopy::m_parked`，cap 12 只丢记账条目），实验构建下 `~CharacterClone` 也不掉图引用。
-   与 Actor 路线"留活壳不删图"同源，别再试图省这份内存。
+   （`SceneGraphCopy::m_parked`，cap 12 只丢记账条目），实际泄漏没有这个上限。
+   C++ 析构体不显式 reset 不能阻止 NiPointer 成员自动析构；停放对象没被析构，与“析构不会释放图”不同。
+   不能从三次失败外推“任何时机都不可销毁”，也未证明与 Actor 路线同源。
 2. **玩家 3D 图不等于人物**。重度 mod 环境下它挂着法术特效、骨骼驱动的碰撞体
    （3BCA_*/VirtualGround/CollisionStopper）、脚本标记与法术光源，`passes=106` 而身体几何
    从未被世界渲染器画过。`prune_effect_objects()` 剪枝后 `geoms 123→51`、`passes 106→47`，
@@ -32,11 +36,11 @@
 3. **源图比较不能用精确浮点相等**。`NiTransform` 含 3×3 旋转矩阵，暂停帧内几个 ULP 的漂移
    会让 CBBE 永远 `BLOCKED`。`SOURCE-DIFF` 只把对象集合变化当失败，变换漂移仅作观测。
 
-**下一阶段 = S1（阻塞点已定位）**：把"有意泄漏"换成干净销毁。需要查清引擎为何在
+**S1 仍阻塞；S2 先补执行链的有效证据**：把“有意泄漏”换成干净销毁需要查清引擎为何在
 `BSFadeNode` 析构里踩空指针——三次崩溃现场 `RSP` 上都留着 `BSFlattenedBoneTree "NPC Root [Root]"`、
-`NiNode "NPC"`、`NiNode "skeleton_female.nif"`，指向引擎对克隆骨架的全局注册（很可能与
-`BSFlattenedBoneTree`／骨骼树更新链有关）。在此之前不要尝试释放：停放图累计上限 12，
-超出只丢记账条目。S2–S4（HKX 驱动、CBPC／FSMP 独立注册、持续换装同步）见
+`NiNode "NPC"`、`NiNode "skeleton_female.nif"`；这是定位线索，不证明全局注册根因。
+当前停放只限制记账条目最多 12；未释放的图持续累积，不做长时间压力循环来冒充生命周期通过。
+S2 必须先确认基础 pose 后的探针变化能到达真实 draw，再判 GPU 数据链。S2–S4（HKX 驱动、CBPC／FSMP 独立注册、持续换装同步）见
 [后续关卡表](scene-graph-copy-validation.md#后续关卡本轮未实现不作为-s0-已通过项)。
 
 - 日期:2026-10-01(run 19 收官:工作包 1+2 完成并经游戏验证)

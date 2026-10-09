@@ -38,6 +38,8 @@ config, input, present_hook
 
 ## Documentation
 
+- [Next scene-copy test](docs/scene-graph-copy-next-test-2026-10-09.md): PRD 0.6 review, corrected probe order prerequisites, T0–T3 measurements and result form. Static display is preliminary; safe teardown is blocked and animation/physics remain unverified.
+
 - [Scene-graph copy validation](docs/scene-graph-copy-validation.md): opt-in S0 experiment, F7/F8/F3/F4 controls, remote game runbook and twelve evidence questions; [result template](docs/scene-graph-copy-results-template.md). Independent animation/CBPC/FSMP drivers are later gates.
 
 - [M0 handoff](docs/m0-handoff.md): **start here for the next session** — current state (M0 gate passed), verified engine facts, the next work package, and the test runbook.

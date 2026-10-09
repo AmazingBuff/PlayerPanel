@@ -1,8 +1,12 @@
 # 场景图复制实验回传
 
+本模板用于 S0 观察；下一轮 S2／S1 的准备条件、测量点和 R01–R09 表见 [2026-10-09 测试单](scene-graph-copy-next-test-2026-10-09.md)。
+Q09／Q10 分开记录显示切换与实际回收，PARK 或容器上限不算释放通过。旧 F2 DLL 不能计为修正后的正式实验。
+
 ## 环境
 
 - 测试日期：
+- 源码提交／实际 CommonLib checkout／dirty 状态：
 - 测试包 manifest 中 DLL SHA-256：
 - 日志是否包含 `CharacterPanel-scopy-S0-2026-10-08`：
 - Skyrim／SKSE／Community Shaders／ReShade 版本：
@@ -41,6 +45,7 @@
 - 本次启动到结束的完整 CharacterPanel.log：
 - BEGIN／CLONE-RETURN／SOURCE-UNCHANGED／AUDIT／CENSUS／READY 或 BLOCKED：
 - F8 后 SCOPY DRAW：
+- 当前是否只是停放；累计捕获／实际未回收分配及内存／显存记录：
 - 正面、侧面、背面、换装前后截图：
 - 如崩溃：CrashLogger 日志及测试包 manifest（使用包内对应 PDB）：
 
