@@ -21,14 +21,14 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜）**：HKX11 已实测——管理器表 7872 条全 `not-object`，但被拒转储解码后与
-OAR 的 `HashedBehaviorData` 逐字段吻合（stream@+0x20、`DBData*`@+0x28），**动画本体在再下一跳
-`DBData.loadedData`（hkResource 包装）里**；CRC 反查失败不阻塞（见
-[HKX11 实测证据](s2-hkx11-animmgr-evidence-2026-10-10.md)）。
-**HKX12（已打包待测）**：调引擎自己的解析器 `GetHashedAnimFromAnimIndex(graph, 1022)`（AE ID
-63600，OAR 补丁点名）→ 返回值按记录形状走 `+0x28 DBData*` → `loadedData` 有界两级遍历，凡过裸
-动画校验者即 mt_idle（按索引取自引擎，无需 CRC 定名）→ 校验通过即接 ground-truth + F2 驱动，
-方案见 §5 末。
+**最新（2026-10-10 深夜）**：HKX12 已实测——`GetHashedAnimFromAnimIndex(graph, 1022)` 调用成功，
+但返回的是 **`&hashedAnimations[1022]`（`HashedData` 按值条目，0x20、纯文件信息、无指针）**，`+0x28`
+读到的是下一条目的 CRC——**"名字/索引注册"与"已装载数据"分离实锤**（见
+[HKX12 实测证据](s2-hkx12-hashed-evidence-2026-10-10.md)）。三轮（HKX10-12）已把注册表层完全看清：
+binding set = 空桩、hashedAnimations = 文件信息、已装载数据只在管理器记录的 ptr1/ptr2（未跟进）或
+管理器 unk68/unk88（未探）。**当前状态：无待验证代码；下一步待用户拍板——HKX13（最后一跳探针：
+跟进 ptr1/ptr2 + CRC 点名，检查点：拿不到即转 D）还是直接转路线 D（poseLocal 录制-回放，机制全已
+验证）**。
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -447,6 +447,25 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
   结构更深，按日志里的指针继续；`at=0x0` 或小整数 → 返回值语义不是指针，转 ProjectDBData 布局
   核对（OAR 布局带 static_assert，`bindings`@0x150 应等于角色的 animationBindingSet）。
 
+### HKX12（已实测，2026-10-10）：解析器返回文件注册表条目，已装载数据在更深的未探层
+
+- `GetHashedAnimFromAnimIndex(graph, 1022)` 调用成功、返回堆指针、记录开头 = AnimationFileInfo+
+  `"hkx"` 模式——但 **+0x28 = `0xb6aaba92` 是 32 位值，不是指针**：返回的是
+  **`&hashedAnimations[1022]`**（`HashedData` 按值条目 0x20、纯文件信息），`+0x28` 溢出到元素 1023；
+- **"名字/索引注册"与"已装载数据"分离实锤**。三轮合拢的地图：binding set = 空桩（HKX10）、
+  hashedAnimations = 纯文件信息（HKX12）、已装载数据只剩管理器记录 ptr1/ptr2（HKX11 转储中
+  +0x20/+0x28，未跟进）与管理器 unk68/unk88（未探）两处未探层；
+- 逐条见 [HKX12 实测证据](s2-hkx12-hashed-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx12-hashed-20261010.log)。
+
+### 当前决策点（HKX12 之后，用户暂缓拍板）
+
+- **HKX13（最后一跳探针）**：跟进管理器记录 ptr1/ptr2 + CRC32("mt_idle") 在 7872 条里点名，拿到即
+  接已铺好的驱动；**检查点：仍拿不到动画对象就转 D**（hkResource 内部布局是再一个未知层，边际收益
+  递减）。
+- **路线 D（poseLocal 录制-回放）**：机制全部已验证，小时级工程，直接交付 S2 待机验收；A″ 三轮的
+  结构图成果（虚表判类仪器、binding set/管理器/注册表布局）留作"展示动作切换"的地图。
+
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
 1. **数值 A/B（主判据）**：同一动画、同一相位下，逐骨比较**副本的 local 变换**与**源角色的 local 变换**，
@@ -475,11 +494,12 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
+- 当前产物：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
   `CharacterPanel-scopy-HKX12-4165d734ea-cl94faaed0c6-20261009T184849Z`（`source_baseline_dirty=false`，基线
-  `4165d734ea`），DLL SHA-256 `25d98ef7…`；引擎解析器 + 已装载资源两跳 + 条件驱动，方案见 §5 HKX12 节。HKX11 轮注：实际部署的是提交前
-  中间构建（`a93c005+dirty`，代码与最终包一致），判读见
-  [HKX11 实测证据](s2-hkx11-animmgr-evidence-2026-10-10.md)。**已实测的十一轮**：HKX11
+  `4165d734ea`），DLL SHA-256 `25d98ef7…`——**已实测**（判读见 §5 HKX12 节；实际部署的是提交前中间
+  构建 `2e22e8f+dirty`，代码一致）。**当前无待验证代码；下一步待用户拍板（HKX13 最后一跳 / 路线 D），
+  见 §5 决策点。****已实测的十二轮**：HKX12（[证据](s2-hkx12-hashed-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx12-hashed-20261010.log)）、HKX11
   （[证据](s2-hkx11-animmgr-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx11-animmgr-20261010.log)）、
   HKX10（`…-HKX10-d3c847a3b9-…`，[证据](s2-hkx10-control-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx10-control-20261010.log)）、
   HKX9（`…-HKX9-746ffacf13-…`，[证据](s2-hkx9-vtable-evidence-2026-10-10.md)、

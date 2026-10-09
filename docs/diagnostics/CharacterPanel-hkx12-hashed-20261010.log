@@ -1,0 +1,154 @@
+[02:43:02.924] [5408 ] [I] CharacterPanel v1-2-1-0
+[02:43:02.924] [5408 ] [I] CharacterPanel loaded
+[02:43:57.549] [34212] [I] All shaders compiled
+[02:43:57.549] [34212] [I] Installed pre-UI renderer hook
+[02:43:57.549] [34212] [I] Menu sink installed
+[02:43:57.549] [34212] [I] SCOPY BUILD CharacterPanel-scopy-HKX12-2e22e8f38f+dirty-cl94faaed0c6-20261009T184151Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle
+[02:43:57.569] [29176] [I] Studio host changed: 0x0 -> 0x26d88f56980 (paused=true)
+[02:43:57.569] [29176] [I] Studio light node has been created
+[02:43:57.569] [29176] [I] CP-LIGHT slot 0: registered, shell 0x26f0f747880 queued (ledger stays the authority)
+[02:43:57.569] [29176] [I] CP-LIGHT slot 1: registered, shell 0x26f0f747740 queued (ledger stays the authority)
+[02:43:57.569] [29176] [I] CP-LIGHT slot 2: registered, shell 0x26f0f747600 queued (ledger stays the authority)
+[02:43:57.569] [29176] [I] Studio lights registered on the ledger (scene=0x263efd06e80 -- ledger fetch will populate the slots)
+[02:43:57.570] [29176] [I] CP-LIGHT slot 0: ledger shell fetched 0x26f0f747880 (after 0 miss frames)
+[02:43:57.570] [29176] [I] CP-LIGHT slot 1: ledger shell fetched 0x26f0f747740 (after 0 miss frames)
+[02:43:57.570] [29176] [I] CP-LIGHT slot 2: ledger shell fetched 0x26f0f747600 (after 0 miss frames)
+[02:44:15.682] [29176] [I] CP-LIGHT slot 0: ledger shell dropped
+[02:44:15.682] [29176] [I] CP-LIGHT slot 1: ledger shell dropped
+[02:44:15.682] [29176] [I] CP-LIGHT slot 2: ledger shell dropped
+[02:44:15.682] [29176] [W] Studio lights not fully served by the ledger yet
+[02:44:19.952] [29176] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x26f0f747c40 filed to lightQueueAdd)
+[02:44:19.952] [29176] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x26f0f747240 filed to lightQueueAdd)
+[02:44:19.952] [29176] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x26f0f747100 filed to lightQueueAdd)
+[02:44:20.021] [29176] [I] CP-LIGHT slot 0: ledger shell fetched 0x26f0f747c40 (after 1 miss frames)
+[02:44:20.021] [29176] [I] CP-LIGHT slot 1: ledger shell fetched 0x26f0f747240 (after 1 miss frames)
+[02:44:20.021] [29176] [I] CP-LIGHT slot 2: ledger shell fetched 0x26f0f747100 (after 1 miss frames)
+[02:44:35.226] [5408 ] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x26f95e12c80 parent=0x26f95b11ec0 nodes=471 geoms=23 api=NiObject::Clone id=68835/70187
+[02:44:35.227] [5408 ] [I] SCOPY CLONE-RETURN capture=1 copy=0x26f9a554280
+[02:44:35.227] [5408 ] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=471 skin-bones=131
+[02:44:35.227] [5408 ] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[02:44:35.227] [5408 ] [I] SCOPY CENSUS source-nodes=471 copy-nodes=471 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[02:44:35.227] [5408 ] [I] SCOPY FRAME skinned-bound valid=true radius=74.1 center=(6360.4,1453.5,259.6) graph-bound radius=74.5 scale=0.35 pruned-nodes=0
+[02:44:35.227] [5408 ] [I] SCOPY READY capture=1 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[02:44:35.228] [5408 ] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=471
+[02:44:35.228] [5408 ] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[02:44:35.228] [5408 ] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=91 ambiguous=0 duplicate-nodes=0 parent-ancestors=91 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], SkirtLBone03, Shield, Weapon, MagicEffectsNode, Quiver' wrong-parent='-'
+[02:44:35.228] [5408 ] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[02:44:35.228] [5408 ] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=79 ambiguous=0 duplicate-nodes=0 parent-ancestors=79 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[02:44:35.228] [5408 ] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=91/116 ambiguous=0
+[02:44:35.228] [5408 ] [I] SCOPY ANIM map graph=0 bones=116 matched=91 helper-unresolved=3 other-unresolved=22
+[02:44:35.228] [5408 ] [I] SCOPY ANIM replay pose entries=116 scale-off-from-one=12
+[02:44:35.228] [5408 ] [I] SCOPY ANIM replay control max-pos-delta=128.162 max-rot-delta=171.85deg bones=91
+[02:44:35.228] [5408 ] [I] SCOPY ANIM replay order=skeleton quat=direct written=91 max-pos-delta=3.744 max-rot-delta=0.08deg bones=91
+[02:44:35.228] [5408 ] [I] SCOPY ANIM replay order=skeleton quat=transposed written=91 max-pos-delta=66.561 max-rot-delta=179.93deg bones=91
+[02:44:35.228] [5408 ] [I] SCOPY ANIM replay order=bone-nodes quat=direct written=106 max-pos-delta=1.583 max-rot-delta=0.05deg bones=106
+[02:44:35.228] [5408 ] [I] SCOPY ANIM replay order=bone-nodes quat=transposed written=106 max-pos-delta=63.554 max-rot-delta=152.70deg bones=106
+[02:44:35.228] [5408 ] [I] SCOPY ANIM replay restored max-pos-delta=0.000 max-rot-delta=0.04deg bones=91
+[02:44:35.228] [5408 ] [I] SCOPY ANIM replay verdict match=none control=128.162u best=1.5834u
+[02:44:35.231] [5408 ] [I] SCOPY ANIM catalogue character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx' names=15203 bindings=15203
+[02:44:35.235] [5408 ] [I] SCOPY ANIM catalogue idle-names=1526/15203 first='Animations\1hm_blockidle.hkx@20, Animations\1hm_idle.hkx@23, Animations\2hm_blockidle.hkx@123, Animations\2hm_idle.hkx@124, Animations\2hw_blockidle.hkx@204, Animations\2hw_idle.hkx@206, Animations\altar_leftidle.hkx@234, Animations\female\animobjectchairdrinkingidlebase.hkx@235'
+[02:44:35.235] [5408 ] [I] SCOPY ANIM catalogue idle-plain first='Animations\horse_rider\idle.hkx@705, Animations\horse_rider\idle_pet.hkx@706, Animations\horse_rider\idle_rearup.hkx@707, Animations\DLC01\idleactivatecoffinpuzzle.hkx@708, Animations\idleblessingkneel_enter.hkx@709, Animations\idleblessingkneel_exit.hkx@710, Animations\idleblessingkneel_loop.hkx@711, Animations\female\idlebloodportalactivate.hkx@712'
+[02:44:35.235] [5408 ] [I] SCOPY ANIM catalogue idle-base first='Animations\horse_rider\idle.hkx@705, Animations\female\mt_idle.hkx@1022, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Fbite_Head\female\mt_idle.hkx@11908, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued\female\_variants_mt_idle\mt_idle.hkx@11910, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Light\female\_variants_mt_idle\mt_idle.hkx@11911, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Cold_FBreath\female\_variants_mt_idle\mt_idle.hkx@11922, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Mid\female\_variants_mt_idle\mt_idle.hkx@11928, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Fbite_Body_Cold\female\mt_idle.hkx@11943'
+[02:44:35.235] [5408 ] [I] SCOPY ANIM catalogue elements=8 object-like=8/8 scan=0x80
+[02:44:35.236] [5408 ] [I] SCOPY ANIM catalogue candidate offset=0x00 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[02:44:35.236] [5408 ] [I] SCOPY ANIM catalogue candidate offset=0x30 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[02:44:35.236] [5408 ] [I] SCOPY ANIM catalogue raw index=0 qwords='00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649d8 000000000001ffff 0000000000000000 8000000000000000 0000000000000000 0000000000000000 0000026d732e9800 0000000000000010 0000000000000000 0000000000000000'
+[02:44:35.236] [5408 ] [I] SCOPY ANIM catalogue raw index=7601 qwords='00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6ef2649b8 000000000001ffff 0000000000000000 0000000000000000'
+[02:44:35.236] [5408 ] [I] SCOPY ANIM catalogue layout UNAVAILABLE reason=no-candidate (read the raw dump)
+[02:44:35.254] [5408 ] [I] SCOPY ANIM play root-sm name='Master_Behavior' readable-0x108=true states.size=11 data=0x26d34262d90 data-readable=true
+[02:44:35.275] [5408 ] [I] SCOPY ANIM play root-sm qwords='00007ff6ef264250 0000000000000000 0000000000000000 0000000000000000 8000000000000000 0000000000000000 0000000000000000 0000026d34262d80 0000000000010000 00000000ffffffff 0000000000000000 0000000000000000 0000000000000000 ffffffff00000000 ffffffffffffffff ffffffffffffffff 0000200000000000 0000000000000000 0000026d34262d90 8000000b0000000b 0000026d34262df0 0000026d73f83a40 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 ffffffff00000000 0000000000000000'
+[02:44:36.154] [5408 ] [I] SCOPY ANIM play progress objects=32 pending=46 clips=0
+[02:44:37.392] [5408 ] [I] SCOPY ANIM play progress objects=64 pending=31 clips=0
+[02:44:38.875] [5408 ] [I] SCOPY ANIM play progress objects=96 pending=101 clips=0
+[02:44:39.752] [5408 ] [I] SCOPY ANIM play progress objects=128 pending=97 clips=0
+[02:44:40.741] [5408 ] [I] SCOPY ANIM play progress objects=160 pending=99 clips=0
+[02:44:41.941] [5408 ] [I] SCOPY ANIM play progress objects=192 pending=97 clips=0
+[02:44:43.120] [5408 ] [I] SCOPY ANIM play progress objects=224 pending=93 clips=0
+[02:44:44.275] [5408 ] [I] SCOPY ANIM play progress objects=256 pending=93 clips=0
+[02:44:45.275] [5408 ] [I] SCOPY ANIM play progress objects=288 pending=93 clips=0
+[02:44:46.116] [5408 ] [I] SCOPY ANIM play progress objects=320 pending=86 clips=0
+[02:44:46.941] [5408 ] [I] SCOPY ANIM play progress objects=352 pending=92 clips=0
+[02:44:47.922] [5408 ] [I] SCOPY ANIM play progress objects=384 pending=76 clips=0
+[02:44:49.325] [5408 ] [I] SCOPY ANIM play progress objects=416 pending=87 clips=0
+[02:44:50.764] [5408 ] [I] SCOPY ANIM play progress objects=448 pending=77 clips=0
+[02:44:52.325] [5408 ] [I] SCOPY ANIM play progress objects=480 pending=69 clips=0
+[02:44:53.849] [5408 ] [I] SCOPY ANIM play progress objects=512 pending=89 clips=0
+[02:44:55.023] [5408 ] [I] SCOPY ANIM play progress objects=544 pending=78 clips=0
+[02:44:56.471] [5408 ] [I] SCOPY ANIM play progress objects=576 pending=58 clips=0
+[02:44:57.980] [5408 ] [I] SCOPY ANIM play progress objects=608 pending=35 clips=0
+[02:44:59.025] [5408 ] [I] SCOPY ANIM play progress objects=640 pending=41 clips=0
+[02:45:00.239] [5408 ] [I] SCOPY ANIM play progress objects=672 pending=49 clips=0
+[02:45:01.136] [5408 ] [I] SCOPY ANIM play progress objects=704 pending=37 clips=0
+[02:45:02.550] [5408 ] [I] SCOPY ANIM play progress objects=736 pending=33 clips=0
+[02:45:04.122] [5408 ] [I] SCOPY ANIM play progress objects=768 pending=44 clips=0
+[02:45:05.357] [5408 ] [I] SCOPY ANIM play progress objects=800 pending=33 clips=0
+[02:45:06.875] [5408 ] [I] SCOPY ANIM play progress objects=832 pending=16 clips=0
+[02:45:08.424] [5408 ] [I] SCOPY ANIM play progress objects=864 pending=22 clips=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play search objects=895 clips=0 states=21/100 capped=false first='-'
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play classes='other:657, hkbStateMachine$StateInfo:138, hkbClipGenerator:66, hkbStateMachine:34'
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play rejections='binding-null:66'
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=0 idle=no name='..\SharedKillMoves\Human&VampireLord\Paired_VampireLord_FeedFront.hkx' binding-index=1301 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=1 idle=no name='Animations\DLC01\Paired_VampFeedFront.hkx' binding-index=1299 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=2 idle=no name='Animations\DLC01\Paired_VampFeedBack.hkx' binding-index=1298 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=3 idle=no name='Animations\DLC01\IdleMesmerizes.hkx' binding-index=775 binding=0x0 control=0x0 speed=1.00 mode=1
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=4 idle=no name='..\SharedKillMoves\Human&Horse\Paired_Mount.hkx' binding-index=1294 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=5 idle=no name='..\SharedKillMoves\Human&Horse\Paired_Dismount.hkx' binding-index=1277 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=6 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedHeadSmash.hkx' binding-index=1303 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=7 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedHeadThrow.hkx' binding-index=1304 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=8 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedMaulingWithHuman.hkx' binding-index=1305 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=9 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedFeedingWithHuman.hkx' binding-index=1302 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=10 idle=no name='Animations\MT_HandCut.hkx' binding-index=1020 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=11 idle=no name='Animations\male\weaponAdjustment.hkx' binding-index=1629 binding=0x0 control=0x0 speed=1.00 mode=2
+[02:45:10.054] [5408 ] [I] SCOPY ANIM play clip-seen i=50 idle=yes name='Animations\male\MT_Idle.HKX' binding-index=1022 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:45:10.054] [5408 ] [I] SCOPY ANIM animmgr queued=0 loaded=7872
+[02:45:10.059] [5408 ] [I] SCOPY ANIM animmgr rejected-dump i=0 at=0x26f51087fd0 qwords='00786b68ad6f4173 30000002201ffc81 0000000000000000 0000000000000000 0000026d8626caf0 0000026d73f807b0 0000000000000000 0000000000000000'
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=0 idle=no file='-' crc=0xad6f4173 counter=4 data=0x26f51087fd0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=1 idle=no file='-' crc=0x02777ff6 counter=11 data=0x26f2fed90c0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=2 idle=no file='-' crc=0x02777ff6 counter=11 data=0x26f2fed9090 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=3 idle=no file='-' crc=0x5c35b265 counter=4 data=0x26f2fed9060 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=4 idle=no file='-' crc=0x02777ff6 counter=12 data=0x26f2fed9030 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=5 idle=no file='-' crc=0x02777ff6 counter=12 data=0x26f2fed9000 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=6 idle=no file='-' crc=0xdb5c1156 counter=8 data=0x26f2fed8fd0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=7 idle=no file='-' crc=0x02777ff6 counter=6 data=0x26f2fed8fa0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=8 idle=no file='-' crc=0xdb5c1156 counter=10 data=0x26f2fed8f70 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=9 idle=no file='-' crc=0xdb5c1156 counter=10 data=0x26f2fed8f40 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=10 idle=no file='-' crc=0xdb5c1156 counter=10 data=0x26f2fed8f10 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=11 idle=no file='-' crc=0xdb5c1156 counter=11 data=0x26f2fed8ee0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=12 idle=no file='-' crc=0xdb5c1156 counter=12 data=0x26f2fed8eb0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=13 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x26f2fed8e80 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=14 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x26f2fed8e50 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.115] [5408 ] [I] SCOPY ANIM animmgr loaded i=15 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x26f2fed8e20 probe=not-object type=unknown duration=0.00s tracks=0
+[02:45:10.116] [5408 ] [I] SCOPY ANIM hashed index=1022 at=0x27164df4f00
+[02:45:10.116] [5408 ] [I] SCOPY ANIM hashed record db-data=0xb6aaba92
+[02:45:10.117] [5408 ] [I] SCOPY ANIM hashed anims found=0
+[02:45:10.117] [5408 ] [I] SCOPY ANIM play UNAVAILABLE reason=no-clip-generator
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='FemaleBrowsHuman01' type='BSDynamicTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='00CVEO_00VAN_AA_ALDDEyes_Blue_FEMALE' type='BSDynamicTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='0_HAIRLINE_Female_Human_Straight' type='BSDynamicTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='0Anto92HL' type='BSDynamicTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='0Anto92' type='BSDynamicTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='FemaleMouthHumanoidDefault' type='BSDynamicTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='FemaleHeadNord' type='BSDynamicTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='shoes' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name=' (00000D6C)[1]/ (FE04CB10) [80%]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='clothes_underwear' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='clothes' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='CBBE' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Feet [SOvl0]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl2]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl1]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl0]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Hands [SOvl0]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl1]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl0]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Body [SOvl0]' type='BSTriShape'
+[02:45:10.117] [5408 ] [I] SCOPY GEOMETRY capture=1 name='Body [Ovl0]' type='BSTriShape'
+[02:45:24.936] [5408 ] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[02:45:24.936] [5408 ] [I] SCOPY IDLE bound 8/8 channels
+[02:45:24.939] [5408 ] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[02:45:24.939] [5408 ] [I] SCOPY DRAW frame=1 passes=23 lights=true animation-driver=none physics-driver=none
+[02:45:25.708] [5408 ] [I] SCOPY DRAW-TOGGLE enabled=false capture=1
+[02:45:26.006] [5408 ] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[02:45:26.317] [5408 ] [I] SCOPY DRAW-TOGGLE enabled=false capture=1
