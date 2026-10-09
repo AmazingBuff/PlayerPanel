@@ -21,20 +21,14 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜）**：**路线拍板 = A″（借 OAR 的解析逻辑当"逆向地图"，只读引擎自己的结构，
-不与 OAR 运行时交互）**。OAR 开源源码（ersh1/OpenAnimationReplacer）提供了决定性的引擎事实：
-①`hkbAnimationBindingWithTriggers` 全布局——`binding`（`hkaAnimationBinding*`）在 **+0x10**（HKX10
-探针的位置猜对了，空 = 动画未装载到该条目）；②引擎的动画注册表 = `BShkbAnimationGraph::projectDBData`
-（+0x200）→ `BShkbHkxDB::ProjectDBData`（0x180，OAR 布局带 static_assert：`hashedAnimations`、事件/
-变量 map、`bindings`@0x150）；③**引擎自己的解析函数被点名**：`GetHashedAnimFromAnimIndex`（AE ID
-63600，内部读 graph+0x200）；④**`AnimationFileManagerSingleton` 在 CLib 全类型**——`Queue/Load/Unload`
-在 clip 的 Activate/Update/Deactivate 期调用，**`loadedAnimations[]` 的 `LoadedAnimation{void* 数据;
-AnimationFileInfo{crc32文件名, 扩展名, crc32路径}; counter}` 就是已装载动画的存放处**，单例可达，
-CRC = 小写文件名去扩展名的标准 CRC32 → **可以用名字表自己反查每个已装载条目是哪个动画，零猜测、
-零 OAR 交互**。
-**HKX11（已实现并打包，待游戏内一轮）**：探针 `SCOPY ANIM animmgr`（已装载表逐条 CRC 反查名字 +
-裸动画校验）+ **条件驱动**（若 base-idle 名字的已装载动画校验通过 → 按"轨道 i = 骨骼 i"假设建
-playback → 共享 ground-truth 扫描验证该假设并交 F2 驱动），方案见 §5 末。
+**最新（2026-10-10 深夜）**：HKX11 已实测——管理器表 7872 条全 `not-object`，但被拒转储解码后与
+OAR 的 `HashedBehaviorData` 逐字段吻合（stream@+0x20、`DBData*`@+0x28），**动画本体在再下一跳
+`DBData.loadedData`（hkResource 包装）里**；CRC 反查失败不阻塞（见
+[HKX11 实测证据](s2-hkx11-animmgr-evidence-2026-10-10.md)）。
+**HKX12（已打包待测）**：调引擎自己的解析器 `GetHashedAnimFromAnimIndex(graph, 1022)`（AE ID
+63600，OAR 补丁点名）→ 返回值按记录形状走 `+0x28 DBData*` → `loadedData` 有界两级遍历，凡过裸
+动画校验者即 mt_idle（按索引取自引擎，无需 CRC 定名）→ 校验通过即接 ground-truth + F2 驱动，
+方案见 §5 末。
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -423,6 +417,36 @@ SCOPY ANIM play clip='…' type=… duration=… tracks=… copy-resolved=…/�
   verdict`；全部 `probe=not-object` 且 `rejected-dump` 显示包装结构 → 按 dump 定下一层；CRC 反查
   全 `-` → CRC 变体与标准不同，dump 的原始 CRC 留作人工对表。
 
+### HKX11（已实测，2026-10-10）：管理器表是项目级注册表，条目指向哈希记录而非动画
+
+- `animmgr queued=0 loaded=7872`——**项目级注册表**（≈15203/2），不是"最近使用"小表；
+- 7872 条全部 `probe=not-object`，但首个被拒转储解码后**与 OAR 的 `HashedBehaviorData`（0x30）
+  逐字段吻合**：{AnimationFileInfo(crc,"hkx",crcPath), …, stream*@+0x20, `DBData*`@+0x28}——
+  `loadedAnimations[i].unk00` 指向项目 DB 的连续哈希记录（多记录共享 CRC、0x30 步进），**动画本体
+  在再下一跳 `DBData : hkLoader { loadedData: hkArray<hkResource*> }` 里**；
+- CRC 反查（标准 CRC32）全 `-`——疑似行为文件名或另一变体，**不阻塞**：改用引擎自己的解析器按
+  索引取条目。逐条见 [HKX11 实测证据](s2-hkx11-animmgr-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx11-animmgr-20261010.log)。
+
+### HKX12（已实现并打包，待游戏内一轮）：调引擎自己的解析器，从已装载资源里走两跳
+
+```
+SCOPY ANIM hashed index=1022 at=0x…
+SCOPY ANIM hashed record db-data=0x…        （返回值带 AnimationFileInfo+"hkx" 模式时）
+SCOPY ANIM hashed anim i=0 at=0x… type=spline duration=…s tracks=116
+SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 binding 路共用 ground-truth）
+```
+
+- **调 `GetHashedAnimFromAnimIndex(graph, 1022)`**（AE ID 63600，OAR 补丁点名；索引 = clip-seen 的
+  mt_idle binding-index）——引擎权威映射，**无需 CRC 定名**；
+- 返回值若带 AnimationFileInfo+"hkx" 记录模式 → 取 **+0x28 `DBData*`** → `loadedData`
+  （hkArray@+0x10）有界两级遍历，凡过裸动画校验者即 mt_idle（链按索引取自引擎）；
+- 校验通过 → 按"轨道 i = 骨骼 i"建 playback → **ground-truth 扫描验证**（verdict=match ⇔ 映射与
+  采样都正确）→ F2 驱动；binding 路仍优先，三路共用同一段真值扫描；
+- **判读**：`hashed anim` 出现且 `ground-truth verdict=match` → **S2 驱动链闭环**；`found=0` → 资源
+  结构更深，按日志里的指针继续；`at=0x0` 或小整数 → 返回值语义不是指针，转 ProjectDBData 布局
+  核对（OAR 布局带 static_assert，`bindings`@0x150 应等于角色的 animationBindingSet）。
+
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
 1. **数值 A/B（主判据）**：同一动画、同一相位下，逐骨比较**副本的 local 变换**与**源角色的 local 变换**，
@@ -451,10 +475,12 @@ SCOPY ANIM play clip='…' type=… duration=… tracks=… copy-resolved=…/�
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX11-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX11-f00041f8b5-cl94faaed0c6-20261009T183138Z`（`source_baseline_dirty=false`，基线
-  `f00041f8b5`），DLL SHA-256 `e4df4170…`；animmgr 探针 + 条件驱动，方案见 §5 HKX11 节。**已实测的十轮**：HKX10（`…-HKX10-d3c847a3b9-…`，
-  [证据](s2-hkx10-control-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx10-control-20261010.log)）、
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`（身份以包内 manifest 为准；
+  引擎解析器 + 已装载资源两跳 + 条件驱动，方案见 §5 HKX12 节）。HKX11 轮注：实际部署的是提交前
+  中间构建（`a93c005+dirty`，代码与最终包一致），判读见
+  [HKX11 实测证据](s2-hkx11-animmgr-evidence-2026-10-10.md)。**已实测的十一轮**：HKX11
+  （[证据](s2-hkx11-animmgr-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx11-animmgr-20261010.log)）、
+  HKX10（`…-HKX10-d3c847a3b9-…`，[证据](s2-hkx10-control-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx10-control-20261010.log)）、
   HKX9（`…-HKX9-746ffacf13-…`，[证据](s2-hkx9-vtable-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx9-vtable-20261010.log)）、HKX8（`…-HKX8-7656223071-…`，
   [证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)、
@@ -466,8 +492,9 @@ SCOPY ANIM play clip='…' type=… duration=… tracks=… copy-resolved=…/�
   [docs/diagnostics](diagnostics/)）。操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。
   此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
 - 提交状态：`d9ad6b0`（归档探针与待机）→ HKX1–HKX6 每轮实现 + 实测 + 身份 → `7984bbda89`/`7656223`/
-  `746ffac`/`d3c847a`（HKX7 崩溃修复、HKX8 判读收窄、HKX9 虚表判类、HKX10 clip 明细与 control 路线）
-  → 路线重排待拍板；都在本地 `master`，`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
+  `746ffac`/`d3c847a`/`a93c005`/`f00041f`/`b715354`（HKX7 崩溃修复、HKX8 判读收窄、HKX9 虚表判类、
+  HKX10 clip 明细、HKX11 管理器探针、HKX12 引擎解析器）；
+  都在本地 `master`，`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
 - 热键现状（HKX3 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量 + 动画目录）、`F8` 绘制、`F3` 旋转、
   `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。
 
