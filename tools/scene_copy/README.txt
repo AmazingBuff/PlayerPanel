@@ -124,27 +124,31 @@ the conversion rather than a silent failure. `restored` proves the figure was pu
 back. Nothing is written to the source character or the engine's graphs, and the
 copy is left exactly as captured.
 
-This build also reads the character's animation list and validates how its
-bindings can be read (HKX3). The names are typed, so an index can be named; the
-binding elements are not typed, so both candidate layouts are judged
-structurally instead of being believed - the animation pointer has to look like
-a live engine object, its duration has to be plausible, and every track has to
-name a bone the skeleton has. Reads go through a committed-page check and
-nothing virtual is called on a candidate, so a misread pointer reports nonsense
-rather than crashing:
+This build also locates the animation binding inside a binding-set element
+(HKX4). The previous round proved the element is neither a binding nor a pointer
+to one, and that the names are typed and in the binding set's own order, so this
+round tries a table of offsets with both readings and judges every row
+structurally - the animation has to look like a live engine object with a
+plausible clip length, and its tracks have to name bones this skeleton has:
 
   SCOPY ANIM catalogue character='...' rig='...' behavior='...' names=N bindings=N
-  SCOPY ANIM catalogue idle-names=K/N first='Idle@0, ...'
-  SCOPY ANIM catalogue layout candidate=element-as-binding valid=K/N duration=(a..b)s
-  SCOPY ANIM catalogue layout candidate=element-holds-binding-pointer valid=K/N
-  SCOPY ANIM catalogue idle index=i name='Idle' element-as-binding=... duration=...s
-        tracks=K/N element-holds-binding=... duration=...s
+  SCOPY ANIM catalogue idle-names=K/N first='...'
+  SCOPY ANIM catalogue idle-plain first='...'
+  SCOPY ANIM catalogue elements=K object-like=K/N
+  SCOPY ANIM catalogue layout offset=0xNN as=value|pointer valid=K/N reasons='...'
+        (ten rows: offsets 0x00 0x08 0x10 0x18 0x20, each by value and by pointer)
+  SCOPY ANIM catalogue raw index=K qwords='...'     (two elements, first 0x40 bytes)
+  SCOPY ANIM catalogue layout best=offset=0xNN/value valid=K/N
+  SCOPY ANIM catalogue idle index=K name='...' valid=... reason=... duration=...s
+        tracks=K/N
 
-The candidate layout whose valid count is full is the one the next round reads
-animations through; the idle lines put a name next to a duration and a track
-table, which is what shows the name list and the binding set really are the same
-order. If the character's string data cannot be validated the line says so and
-names which pointer was missing - that is a result, not a failure to hide.
+The row whose valid count is full is the layout; the rejected rows say which
+check they failed (unreadable, no-animation, tracks-unreadable, duration,
+track-bones), and object-like says whether the element's first word looks like a
+vtable, which is what decides whether the binding can be the element at all. If
+no row matches, the two raw lines carry the bytes needed to read the layout by
+hand. Every read goes through a committed-page check and nothing virtual is
+called on a candidate, so a wrong offset reports nonsense rather than crashing.
 
 The package build is otherwise unchanged: F7/F8/F3/F4 plus the idle on F2.
 

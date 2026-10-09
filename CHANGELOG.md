@@ -4,6 +4,23 @@
 
 ### Added
 
+- Locate the binding inside a binding-set element instead of guessing it (S2
+  animation handoff, HKX4). The round before proved the element is neither an
+  `hkaAnimationBinding` nor a pointer to one, and that the character's animation
+  names are typed and already in the binding set's order, so this round tries a
+  table of offsets with both readings and judges every row structurally: the
+  animation has to look like a live object with a plausible clip length, and its
+  tracks have to name bones this skeleton has - no more tracks than bones, since
+  a transform track belongs to one bone. Every row reports why it was rejected
+  (`unreadable`, `no-animation`, `tracks-unreadable`, `duration`, `track-bones`)
+  and says whether the element's first word looks like a vtable at all, the first
+  0x40 bytes of two elements are dumped raw so a layout no row matches can still
+  be read off by hand, and the plain idles - file names starting with "idle",
+  which the path-sorted list buries under weapon and object idles - get their own
+  line with their indices.
+
+### Changed
+
 - Read the character's animation list and validate how its bindings can be read
   (S2 animation handoff, HKX3). The names are typed
   (`hkbCharacterStringData::animationNames`), so a binding index can be named

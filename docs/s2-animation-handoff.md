@@ -196,27 +196,37 @@ SCOPY ANIM replay verdict match=skeleton/direct control=…u best=…u
   命名的是引擎的映射，其余应当很大；`best/control < 1%` 才算"命中"（相对判据，不发明绝对容差）；`restored` 证明面板
   被复原；`helper-unresolved`/`other-unresolved` 按类计数（`x_` 帮手骨 vs 其他），`scale-off-from-one` 统计姿态里
   非 1 的缩放。
-### HKX3（已实现并打包，待游戏内一轮）：动画目录与绑定集布局核对
+### HKX3（已实测，2026-10-10）：动画目录成立，元素布局被否定
 
-`SCOPY ANIM catalogue …` 一组（每次 F7）：
+- **成立的一半**：`hkbCharacterSetup::data → hkbCharacterData::stringData → animationNames` 读通了
+  （`character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx'`），
+  且 **`names == bindings == 15203`** → 名字表与绑定集**同序**，"索引 → 动画名"可直接用；名字是 HKX 路径，
+  1526 个含 "idle"。下一步单测/实现按已核对过的 `stringData` 读，不再怀疑它。
+- **失败的一半**：`element-as-binding` 与 `element-holds-binding-pointer` **都是 `valid=0/8`**，而 8 个元素都可读 →
+  元素既不是 binding 本身、也不以指向它的指针开头。最可能是"元素是 `hkReferencedObject`、binding 是成员（偏移 ≥ 0x10）"。
+  上一版 `read_binding` 失败时只返回全零、看不出卡在哪一步（仪器缺陷，已修）。逐条见
+  [HKX3 实测证据](s2-hkx3-catalogue-evidence-2026-10-10.md)。
+
+### HKX4（已实现并打包，待游戏内一轮）：偏移表定位 binding + 原始转储
+
+不用一个猜测赌布局，而是**偏移表 × 两种取值方式**逐行结构化校验，并打印每行**失败的原因**：
 
 ```
-SCOPY ANIM catalogue character='DefaultFemale' rig='…' behavior='…' names=15203 bindings=15203
-SCOPY ANIM catalogue idle-names=37/15203 first='Idle@0, …'
-SCOPY ANIM catalogue layout candidate=element-as-binding valid=8/8 duration=(0.90..9.42)s
-SCOPY ANIM catalogue layout candidate=element-holds-binding-pointer valid=0/8
-SCOPY ANIM catalogue idle index=0 name='Idle' element-as-binding=true duration=4.03s tracks=116/116 element-holds-binding=false duration=0.00s
+SCOPY ANIM catalogue elements=8 object-like=8/8
+SCOPY ANIM catalogue layout offset=0x00 as=value valid=0/8 reasons='unreadable,…'
+SCOPY ANIM catalogue layout offset=0x00 as=pointer valid=0/8 reasons='…'
+… （0x08 / 0x10 / 0x18 / 0x20 各两行）
+SCOPY ANIM catalogue raw index=0 qwords='…'      （两个元素的前 0x40 字节原始转储）
+SCOPY ANIM catalogue layout best=offset=0x10/value valid=8/8
+SCOPY ANIM catalogue idle-plain first='Animations\Idle.hkx@…, …'
+SCOPY ANIM catalogue idle index=… name='…' valid=… reason=… duration=…s tracks=N/N
 ```
 
-- **判读**：`names`／`bindings` 两个计数相等 → "名字表与绑定集同序"这一假设成立；`idle-names` 直接给出可采样的索引。
-  两个 `layout candidate` 里 **`valid` 满的那个就是元素布局**（`element-as-binding` = 元素本身即 `hkaAnimationBinding`；
-  `element-holds-binding-pointer` = 元素首字段是指向它的指针）。依据是结构化三重校验：动画指针像活对象（vtable 落在游戏镜像的
-  rdata/data 段）、`duration` 在合理区间、`transformTrackToBoneIndices` 每一项都 ≤ 骨架骨数。
-- **安全**：所有读取先过"页已提交且可读"，且**不对候选调用任何虚函数**——读错只给出荒谬数字，不会崩游戏。
-  `idle index=…` 那几行把名字、时长与轨道表并排放置，是"名字表与绑定集确实同序"的最终确认。
-- **HKX4 据此落地**：挑 `Idle`（或用户指定的动作）→ `binding->animation->SampleTracks(t, out, nullptr, cache)`
-  （**带显式时间、const**，不碰源角色的 control）→ 用 HKX2 已验证的写路径写进副本；真值是同一相位下的 `poseLocal`，
-  但注意 **`poseLocal` 按 `boneNodes` 次序索引**（HKX2 实测），而轨道的骨索引是**动画骨架**索引，两者要用**骨名**桥接。
+- **判读**：`valid` 满的那一行就是布局；`reasons` 说明每个失败候选卡在哪一步（`unreadable`／`no-animation`／
+  `tracks-unreadable`／`duration`／`track-bones`）；`object-like=K/N` 说明元素首字是不是 vtable（是的话 binding 必为成员）。
+  `raw` 两行是"所有候选都不中"时的兜底证据：照着 qword 就能把布局读出来，`idle-plain` 给出裸 idle 的索引。
+- 通过后 HKX5：`binding->animation->SampleTracks(t, out, nullptr, cache)`（带显式时间、const，不碰源 control）
+  → 用 HKX2 已验证的写路径写进副本；真值取同相位 `poseLocal`（**按 `boneNodes` 索引**）。
 
 ## 6. 验收与对比协议（这是"可测试"的核心）
 

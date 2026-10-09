@@ -66,6 +66,11 @@ namespace
     constexpr size_t Catalogue_Sample_Count = 8;
     constexpr size_t Max_Catalogue_Names = 8;
 
+    // Where a binding could sit inside a binding-set element, tried with both readings. The element is
+    // a referenced object, so its binding is expected to be a member rather than the element itself.
+    constexpr std::int32_t Candidate_Offsets[] = { 0x00, 0x08, 0x10, 0x18, 0x20 };
+    constexpr size_t Raw_Dump_Bytes = 0x40;
+
     struct NodeTable
     {
         std::vector<RE::NiAVObject*> objects;
@@ -455,36 +460,43 @@ namespace
         return false;
     }
 
-    // What one candidate binding says, or that it is not worth believing.
+    // What one candidate binding says, or which structural check rejected it. The reason is carried
+    // because "valid=0" alone cannot tell a wrong offset from a wrong assumption about the element.
     struct BindingReading
     {
         bool valid;
+        const char* reason;
         float duration;
         size_t tracks;
         size_t tracks_in_range;
     };
 
-    // The validation the two candidate layouts are judged by: the animation pointer has to look like
-    // a live object with a plausible clip length, and its track-to-bone table has to name only bones
-    // this skeleton has. A pointer into the wrong object fails on all three.
+    // The validation every candidate layout is judged by: the animation pointer has to look like a
+    // live object with a plausible clip length, and its track-to-bone table has to name only bones
+    // this skeleton has - no more tracks than bones, because a transform track belongs to one bone.
+    // A pointer into the wrong object fails on all of it.
     BindingReading read_binding(RE::hkaAnimationBinding const* binding, std::int32_t bone_count)
     {
         if (!binding || !readable(binding, sizeof(RE::hkaAnimationBinding)))
-            return { false, 0.0f, 0, 0 };
+            return { false, "unreadable", 0.0f, 0, 0 };
         const RE::hkaAnimation* const animation = binding->animation.get();
         if (!animation || !readable(animation, sizeof(RE::hkaAnimation)) || !looks_like_object(animation))
-            return { false, 0.0f, 0, 0 };
+            return { false, "no-animation", 0.0f, 0, 0 };
 
         const std::int32_t track_count = binding->transformTrackToBoneIndices.size();
         const std::int16_t* const indices = binding->transformTrackToBoneIndices.data();
         if (track_count <= 0 || track_count > Max_Tracks_Read || !readable(indices, sizeof(std::int16_t) * static_cast<size_t>(track_count)))
-            return { false, 0.0f, 0, 0 };
+            return { false, "tracks-unreadable", 0.0f, 0, 0 };
 
         const float duration = animation->duration;
-        const bool plausible = std::isfinite(duration) && duration > 0.05f && duration < Max_Clip_Seconds;
+        if (!std::isfinite(duration) || duration <= 0.05f || duration >= Max_Clip_Seconds)
+            return { false, "duration", duration, static_cast<size_t>(track_count), 0 };
+
         const size_t tracks = static_cast<size_t>(track_count);
-        const bool in_range = track_indices_are_valid({ indices, tracks }, bone_count);
-        return { plausible && in_range, duration, tracks, in_range ? tracks : 0 };
+        const bool in_range = tracks <= static_cast<size_t>(bone_count) && track_indices_are_valid({ indices, tracks }, bone_count);
+        if (!in_range)
+            return { false, "track-bones", duration, tracks, 0 };
+        return { true, "valid", duration, tracks, tracks };
     }
 
     // Case-insensitive "idle": the animation list is where the game spells out what a binding index
@@ -503,6 +515,19 @@ namespace
                 return true;
         }
         return false;
+    }
+
+    bool starts_with_idle(std::string_view name)
+    {
+        constexpr std::string_view Idle = "idle";
+        if (name.size() < Idle.size())
+            return false;
+        for (size_t i = 0; i < Idle.size(); ++i)
+        {
+            if (std::tolower(static_cast<unsigned char>(name[i])) != Idle[i])
+                return false;
+        }
+        return true;
     }
 }
 
@@ -691,6 +716,7 @@ void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& sourc
     // what turns an index into "the animation the panel wants". Their indices are kept to be checked
     // against the binding set below.
     std::vector<std::pair<std::int32_t, std::string>> idle_names;
+    std::vector<std::pair<std::int32_t, std::string>> plain_idles;
     std::int32_t idle_count = 0;
     for (std::int32_t i = 0; i < strings->animationNames.size(); ++i)
     {
@@ -700,6 +726,14 @@ void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& sourc
         ++idle_count;
         if (idle_names.size() < Max_Catalogue_Names)
             idle_names.emplace_back(i, name);
+
+        // The list is sorted by path, so the first matches are weapon and object idles. The plain ones
+        // are those whose file name starts with "idle", and those are what a panel would play.
+        const std::string_view view(name);
+        const size_t slash = view.find_last_of("\\/");
+        const std::string_view base = slash == std::string_view::npos ? view : view.substr(slash + 1);
+        if (starts_with_idle(base) && plain_idles.size() < Max_Catalogue_Names)
+            plain_idles.emplace_back(i, name);
     }
 
     std::string idle_list;
@@ -709,7 +743,15 @@ void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& sourc
             idle_list += ", ";
         idle_list += fmt::format("{}@{}", name, index);
     }
+    std::string plain_list;
+    for (const auto& [index, name] : plain_idles)
+    {
+        if (!plain_list.empty())
+            plain_list += ", ";
+        plain_list += fmt::format("{}@{}", name, index);
+    }
     logger::info("SCOPY ANIM catalogue idle-names={}/{} first='{}'", idle_count, strings->animationNames.size(), idle_list.empty() ? "-" : idle_list);
+    logger::info("SCOPY ANIM catalogue idle-plain first='{}'", plain_list.empty() ? "-" : plain_list);
 
     if (!set || !looks_like_object(set) || binding_count <= 0)
     {
@@ -717,55 +759,125 @@ void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& sourc
         return;
     }
 
-    // Neither candidate layout is typed in this checkout, so both are judged structurally on a spread
-    // of indices: a real binding's animation looks like a live object with a plausible clip length,
-    // and every one of its tracks names a bone this skeleton has.
+    // No candidate layout is typed in this checkout, so instead of betting on one, a table of offsets
+    // is tried with both readings - a binding stored by value, and a pointer to one - and every row is
+    // judged structurally on a spread of indices. The row that validates on all of them is the layout,
+    // and each row that fails says which check rejected it, so a wrong assumption is told apart from a
+    // wrong offset.
     const std::int32_t bone_count = selected.skeleton->bones.size();
-    size_t tried = 0;
-    size_t as_binding = 0;
-    size_t holds_binding = 0;
-    float min_duration = std::numeric_limits<float>::max();
-    float max_duration = 0.0f;
+    std::vector<std::int32_t> sample_indices;
     for (size_t step = 0; step < Catalogue_Sample_Count; ++step)
     {
         const std::int32_t index = static_cast<std::int32_t>(static_cast<size_t>(binding_count) * step / Catalogue_Sample_Count);
-        if (index >= binding_count)
-            continue;
+        if (index < binding_count)
+            sample_indices.push_back(index);
+    }
+
+    // The element's first word says whether it is an object itself (a vtable) or a plain struct, which
+    // is what decides whether the binding can be the element at all.
+    size_t elements = 0;
+    size_t object_like = 0;
+    for (const std::int32_t index : sample_indices)
+    {
         const void* const element = set->bindings[index];
         if (!element || !readable(element, sizeof(void*)))
             continue;
-        ++tried;
+        ++elements;
+        object_like += looks_like_object(element) ? 1 : 0;
+    }
+    logger::info("SCOPY ANIM catalogue elements={} object-like={}/{}", elements, object_like, elements);
 
-        const BindingReading direct = read_binding(static_cast<const RE::hkaAnimationBinding*>(element), bone_count);
-        if (direct.valid)
+    struct LayoutRow
+    {
+        std::int32_t offset;
+        bool pointer;
+        size_t valid;
+        std::string reasons;
+    };
+
+    std::vector<LayoutRow> rows;
+    for (const std::int32_t offset : Candidate_Offsets)
+    {
+        for (const bool pointer : { false, true })
         {
-            ++as_binding;
-            min_duration = std::min(min_duration, direct.duration);
-            max_duration = std::max(max_duration, direct.duration);
+            const size_t width = pointer ? sizeof(void*) : sizeof(RE::hkaAnimationBinding);
+            LayoutRow row{ offset, pointer, 0, {} };
+            for (const std::int32_t index : sample_indices)
+            {
+                const void* const element = set->bindings[index];
+                if (!element || !readable(element, static_cast<size_t>(offset) + width))
+                    continue;
+                const auto* const base = static_cast<const std::uint8_t*>(element) + offset;
+                const RE::hkaAnimationBinding* binding = pointer
+                    ? *reinterpret_cast<RE::hkaAnimationBinding* const*>(base)
+                    : reinterpret_cast<const RE::hkaAnimationBinding*>(base);
+
+                const BindingReading reading = read_binding(binding, bone_count);
+                if (reading.valid)
+                    ++row.valid;
+                else
+                {
+                    if (!row.reasons.empty())
+                        row.reasons += ",";
+                    row.reasons += reading.reason;
+                }
+            }
+            rows.push_back(std::move(row));
         }
-        const auto* const pointed = *static_cast<RE::hkaAnimationBinding* const*>(element);
-        if (read_binding(pointed, bone_count).valid)
-            ++holds_binding;
     }
 
-    logger::info("SCOPY ANIM catalogue layout candidate=element-as-binding valid={}/{} duration=({:.2f}..{:.2f})s",
-        as_binding, tried, as_binding ? min_duration : 0.0f, max_duration);
-    logger::info("SCOPY ANIM catalogue layout candidate=element-holds-binding-pointer valid={}/{}", holds_binding, tried);
+    for (const LayoutRow& row : rows)
+    {
+        logger::info("SCOPY ANIM catalogue layout offset=0x{:02x} as={} valid={}/{} reasons='{}'",
+            row.offset, row.pointer ? "pointer" : "value", row.valid, sample_indices.size(), row.reasons.empty() ? "-" : row.reasons);
+    }
 
-    // The idle indices are where a name and a duration can be read side by side: "Idle" with a few
-    // seconds and a full track table says the name list and the binding set really are the same order.
-    for (const auto& [index, name] : idle_names)
+    // The raw bytes of two elements, so a layout no row matched can still be read off by hand.
+    for (size_t pick = 0; pick < 2 && pick < sample_indices.size(); ++pick)
+    {
+        const std::int32_t index = sample_indices[pick ? sample_indices.size() / 2 : 0];
+        const void* const element = set->bindings[index];
+        if (!element || !readable(element, Raw_Dump_Bytes))
+            continue;
+        const auto* const words = static_cast<const std::uint64_t*>(element);
+        std::string bytes;
+        for (size_t word = 0; word < Raw_Dump_Bytes / sizeof(std::uint64_t); ++word)
+            bytes += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+        logger::info("SCOPY ANIM catalogue raw index={} qwords='{}'", index, bytes);
+    }
+
+    const auto best = std::max_element(rows.begin(), rows.end(), [](LayoutRow const& lhs, LayoutRow const& rhs) { return lhs.valid < rhs.valid; });
+    if (best == rows.end() || best->valid == 0)
+    {
+        logger::info("SCOPY ANIM catalogue layout UNAVAILABLE reason=no-candidate (read the raw dump)");
+        return;
+    }
+    logger::info("SCOPY ANIM catalogue layout best=offset=0x{:02x}/{} valid={}/{}",
+        best->offset, best->pointer ? "pointer" : "value", best->valid, sample_indices.size());
+
+    const auto binding_at = [&](void const* element) -> const RE::hkaAnimationBinding*
+    {
+        const size_t width = best->pointer ? sizeof(void*) : sizeof(RE::hkaAnimationBinding);
+        if (!element || !readable(element, static_cast<size_t>(best->offset) + width))
+            return nullptr;
+        const auto* const base = static_cast<const std::uint8_t*>(element) + best->offset;
+        return best->pointer
+            ? *reinterpret_cast<RE::hkaAnimationBinding* const*>(base)
+            : reinterpret_cast<const RE::hkaAnimationBinding*>(base);
+    };
+
+    // The idle indices are where a name and a duration can be read side by side: the layout is right
+    // when a name that says idle comes back with a few seconds and a full track table.
+    std::vector<std::pair<std::int32_t, std::string>> probes = plain_idles;
+    for (size_t i = 0; i < idle_names.size() && probes.size() < Max_Catalogue_Names; ++i)
+        probes.push_back(idle_names[i]);
+    for (const auto& [index, name] : probes)
     {
         if (index >= binding_count)
             continue;
-        const void* const element = set->bindings[index];
-        if (!element || !readable(element, sizeof(void*)))
-            continue;
-        const BindingReading direct = read_binding(static_cast<const RE::hkaAnimationBinding*>(element), bone_count);
-        const auto* const pointed = *static_cast<RE::hkaAnimationBinding* const*>(element);
-        const BindingReading indirect = read_binding(pointed, bone_count);
-        logger::info("SCOPY ANIM catalogue idle index={} name='{}' element-as-binding={} duration={:.2f}s tracks={}/{} element-holds-binding={} duration={:.2f}s",
-            index, name, direct.valid, direct.duration, direct.tracks_in_range, direct.tracks, indirect.valid, indirect.duration);
+        const BindingReading reading = read_binding(binding_at(set->bindings[index]), bone_count);
+        logger::info("SCOPY ANIM catalogue idle index={} name='{}' valid={} reason={} duration={:.2f}s tracks={}/{}",
+            index, name, reading.valid, reading.reason, reading.duration, reading.tracks_in_range, reading.tracks);
     }
 }
 

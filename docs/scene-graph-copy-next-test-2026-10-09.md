@@ -54,6 +54,23 @@ CBBE 与 UBE 各一次更好。
    `hkbCharacterData::stringData` 的注释里本来就标着"该偏移的归属未定"，回传那一行即可，下一轮先核对它。
 4. 独立性同 HKX2：只读源角色与引擎的图，不写任何引擎状态。
 
+**HKX3 实测结果（2026-10-10）**：名字表成立且与绑定集**同序**（`names == bindings == 15203`，
+`character='DefaultFemale'`、`rig=…skeleton_female.hkx`）；两个候选布局**都被否定**（`valid=0/8`），
+说明元素既不是 binding 本身、也不以指向它的指针开头。逐条见
+[HKX3 实测证据](s2-hkx3-catalogue-evidence-2026-10-10.md)。
+
+## HKX4 轮（待测）：定位元素里的 binding
+
+前置：`dist/CharacterPanel-scopy-HKX4-1.2.1.zip` 的 DLL + 同包 PDB。**一次 F7**。
+
+1. 打开暂停的背包 → **F7** → 回传 `SCOPY ANIM catalogue …` 全部行 + `SCOPY BUILD` 首行。
+2. 判据：**`layout best=` 那一行**（偏移 + 取值方式 + `valid`）就是布局依据；十行 `layout offset=…` 的 `reasons`
+   说明每个候选卡在哪一步；`elements=… object-like=K/N` 说明元素首字是不是 vtable；若所有候选都不中，
+   回传两行 `raw … qwords='…'`（那是靠字节读布局的兜底证据）。
+3. `idle-plain` 给出文件名以 idle 开头的那些索引，`idle index=…` 每行给出 `valid/reason/duration/tracks`——
+   下一轮就按它挑要采样哪一段动画。
+4. 独立性同前：只读，不写引擎状态。
+
 ## 当前状态与执行前置
 
 2026-10-09 **IDLE1 已构建待测：程序化待机（FR-03 的第一个驱动器）**。

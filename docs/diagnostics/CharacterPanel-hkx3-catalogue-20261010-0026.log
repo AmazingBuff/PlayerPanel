@@ -1,0 +1,271 @@
+[00:24:05.273] [11912] [I] CharacterPanel v1-2-1-0
+[00:24:05.273] [11912] [I] CharacterPanel loaded
+[00:24:53.608] [8048 ] [I] All shaders compiled
+[00:24:53.608] [8048 ] [I] Installed pre-UI renderer hook
+[00:24:53.608] [8048 ] [I] Menu sink installed
+[00:24:53.608] [8048 ] [I] SCOPY BUILD CharacterPanel-scopy-HKX3-e32eafc31c-cl94faaed0c6-20261009T162129Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle
+[00:24:53.642] [11976] [I] Studio host changed: 0x0 -> 0x28909126980 (paused=true)
+[00:24:53.642] [11976] [I] Studio light node has been created
+[00:24:53.642] [11976] [I] CP-LIGHT slot 0: registered, shell 0x28a8f7ff880 queued (ledger stays the authority)
+[00:24:53.642] [11976] [I] CP-LIGHT slot 1: registered, shell 0x28a8f7ff740 queued (ledger stays the authority)
+[00:24:53.642] [11976] [I] CP-LIGHT slot 2: registered, shell 0x28a8f7ff600 queued (ledger stays the authority)
+[00:24:53.642] [11976] [I] Studio lights registered on the ledger (scene=0x27f4d876e80 -- ledger fetch will populate the slots)
+[00:24:53.642] [11976] [I] CP-LIGHT slot 0: ledger shell fetched 0x28a8f7ff880 (after 0 miss frames)
+[00:24:53.642] [11976] [I] CP-LIGHT slot 1: ledger shell fetched 0x28a8f7ff740 (after 0 miss frames)
+[00:24:53.642] [11976] [I] CP-LIGHT slot 2: ledger shell fetched 0x28a8f7ff600 (after 0 miss frames)
+[00:25:14.680] [11976] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:25:14.680] [11976] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:25:14.680] [11976] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:25:14.680] [11976] [W] Studio lights not fully served by the ledger yet
+[00:25:18.455] [11976] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x28a8f7ffc40 filed to lightQueueAdd)
+[00:25:18.455] [11976] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x28a8f7ff240 filed to lightQueueAdd)
+[00:25:18.455] [11976] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x28a8f7ff100 filed to lightQueueAdd)
+[00:25:18.518] [11976] [I] CP-LIGHT slot 0: ledger shell fetched 0x28a8f7ffc40 (after 1 miss frames)
+[00:25:18.518] [11976] [I] CP-LIGHT slot 1: ledger shell fetched 0x28a8f7ff240 (after 1 miss frames)
+[00:25:18.518] [11976] [I] CP-LIGHT slot 2: ledger shell fetched 0x28a8f7ff100 (after 1 miss frames)
+[00:25:27.069] [11912] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x28c164ae680 parent=0x28c161c1ec0 nodes=471 geoms=23 api=NiObject::Clone id=68835/70187
+[00:25:27.069] [11912] [I] SCOPY CLONE-RETURN capture=1 copy=0x28cb8890400
+[00:25:27.069] [11912] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=471 skin-bones=131
+[00:25:27.069] [11912] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[00:25:27.069] [11912] [I] SCOPY CENSUS source-nodes=471 copy-nodes=471 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[00:25:27.070] [11912] [I] SCOPY FRAME skinned-bound valid=true radius=74.1 center=(6375.1,1455.6,256.5) graph-bound radius=74.5 scale=0.35 pruned-nodes=0
+[00:25:27.070] [11912] [I] SCOPY READY capture=1 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[00:25:27.070] [11912] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=471
+[00:25:27.070] [11912] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[00:25:27.070] [11912] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=91 ambiguous=0 duplicate-nodes=0 parent-ancestors=91 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], SkirtLBone03, Shield, Weapon, MagicEffectsNode, Quiver' wrong-parent='-'
+[00:25:27.070] [11912] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[00:25:27.070] [11912] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=79 ambiguous=0 duplicate-nodes=0 parent-ancestors=79 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[00:25:27.070] [11912] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=91/116 ambiguous=0
+[00:25:27.070] [11912] [I] SCOPY ANIM map graph=0 bones=116 matched=91 helper-unresolved=3 other-unresolved=22
+[00:25:27.070] [11912] [I] SCOPY ANIM replay pose entries=116 scale-off-from-one=5
+[00:25:27.070] [11912] [I] SCOPY ANIM replay control max-pos-delta=126.847 max-rot-delta=171.77deg bones=91
+[00:25:27.070] [11912] [I] SCOPY ANIM replay order=skeleton quat=direct written=91 max-pos-delta=3.743 max-rot-delta=0.09deg bones=91
+[00:25:27.070] [11912] [I] SCOPY ANIM replay order=skeleton quat=transposed written=91 max-pos-delta=61.855 max-rot-delta=179.26deg bones=91
+[00:25:27.070] [11912] [I] SCOPY ANIM replay order=bone-nodes quat=direct written=106 max-pos-delta=1.657 max-rot-delta=0.04deg bones=106
+[00:25:27.070] [11912] [I] SCOPY ANIM replay order=bone-nodes quat=transposed written=106 max-pos-delta=61.855 max-rot-delta=177.49deg bones=106
+[00:25:27.070] [11912] [I] SCOPY ANIM replay restored max-pos-delta=0.000 max-rot-delta=0.03deg bones=91
+[00:25:27.070] [11912] [I] SCOPY ANIM replay verdict match=none control=126.847u best=1.6569u
+[00:25:27.072] [11912] [I] SCOPY ANIM catalogue character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx' names=15203 bindings=15203
+[00:25:27.075] [11912] [I] SCOPY ANIM catalogue idle-names=1526/15203 first='Animations\1hm_blockidle.hkx@20, Animations\1hm_idle.hkx@23, Animations\2hm_blockidle.hkx@123, Animations\2hm_idle.hkx@124, Animations\2hw_blockidle.hkx@204, Animations\2hw_idle.hkx@206, Animations\altar_leftidle.hkx@234, Animations\female\animobjectchairdrinkingidlebase.hkx@235'
+[00:25:27.076] [11912] [I] SCOPY ANIM catalogue layout candidate=element-as-binding valid=0/8 duration=(0.00..0.00)s
+[00:25:27.076] [11912] [I] SCOPY ANIM catalogue layout candidate=element-holds-binding-pointer valid=0/8
+[00:25:27.076] [11912] [I] SCOPY ANIM catalogue idle index=20 name='Animations\1hm_blockidle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:25:27.076] [11912] [I] SCOPY ANIM catalogue idle index=23 name='Animations\1hm_idle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:25:27.076] [11912] [I] SCOPY ANIM catalogue idle index=123 name='Animations\2hm_blockidle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:25:27.076] [11912] [I] SCOPY ANIM catalogue idle index=124 name='Animations\2hm_idle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:25:27.077] [11912] [I] SCOPY ANIM catalogue idle index=204 name='Animations\2hw_blockidle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:25:27.077] [11912] [I] SCOPY ANIM catalogue idle index=206 name='Animations\2hw_idle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:25:27.077] [11912] [I] SCOPY ANIM catalogue idle index=234 name='Animations\altar_leftidle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:25:27.077] [11912] [I] SCOPY ANIM catalogue idle index=235 name='Animations\female\animobjectchairdrinkingidlebase.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='FemaleBrowsHuman01' type='BSDynamicTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='00CVEO_00VAN_AA_ALDDEyes_Blue_FEMALE' type='BSDynamicTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='0_HAIRLINE_Female_Human_Straight' type='BSDynamicTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='0Anto92HL' type='BSDynamicTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='0Anto92' type='BSDynamicTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='FemaleMouthHumanoidDefault' type='BSDynamicTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='FemaleHeadNord' type='BSDynamicTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='shoes' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name=' (00000D6C)[1]/ (FE04CB10) [80%]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='clothes_underwear' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='clothes' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='CBBE' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Feet [SOvl0]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl2]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl1]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl0]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Hands [SOvl0]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl1]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl0]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Body [SOvl0]' type='BSTriShape'
+[00:25:27.077] [11912] [I] SCOPY GEOMETRY capture=1 name='Body [Ovl0]' type='BSTriShape'
+[00:25:29.505] [11912] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[00:25:29.505] [11912] [I] SCOPY IDLE bound 8/8 channels
+[00:25:29.508] [11912] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[00:25:29.508] [11912] [I] SCOPY DRAW frame=1 passes=23 lights=true animation-driver=none physics-driver=none
+[00:25:30.315] [11912] [I] SCOPY DRAW-TOGGLE enabled=false capture=1
+[00:25:30.606] [11912] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[00:25:30.858] [11912] [I] SCOPY DRAW-TOGGLE enabled=false capture=1
+[00:25:31.122] [11912] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[00:25:31.545] [11912] [I] SCOPY DRAW-TOGGLE enabled=false capture=1
+[00:25:36.221] [11976] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:25:36.221] [11976] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:25:36.221] [11976] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:25:36.999] [11976] [I] SCOPY RELEASE reason=session-boundary capture=1
+[00:25:36.999] [11976] [I] SCOPY PARK snapshots held alive for the process lifetime: 1
+[00:25:38.421] [11912] [W] Studio lights not fully served by the ledger yet
+[00:25:43.228] [11912] [W] Studio lights not fully served by the ledger yet
+[00:25:47.647] [11976] [W] Studio lights not fully served by the ledger yet
+[00:25:54.036] [11976] [W] Studio lights not fully served by the ledger yet
+[00:25:55.483] [11976] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x28a8f7fe480 filed to lightQueueAdd)
+[00:25:55.483] [11976] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x28a8f7fe200 filed to lightQueueAdd)
+[00:25:55.483] [11976] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x28a8f7fe0c0 filed to lightQueueAdd)
+[00:25:55.544] [11976] [I] CP-LIGHT slot 0: ledger shell fetched 0x28a8f7fe480 (after 1 miss frames)
+[00:25:55.544] [11976] [I] CP-LIGHT slot 1: ledger shell fetched 0x28a8f7fe200 (after 1 miss frames)
+[00:25:55.544] [11976] [I] CP-LIGHT slot 2: ledger shell fetched 0x28a8f7fe0c0 (after 1 miss frames)
+[00:26:07.654] [11912] [I] SCOPY BEGIN capture=2 actor=00000014 source=0x28c2eaadd80 parent=0x28c31b92c80 nodes=1851 geoms=123 api=NiObject::Clone id=68835/70187
+[00:26:07.656] [11912] [I] SCOPY CLONE-RETURN capture=2 copy=0x28e8a301900
+[00:26:07.657] [11912] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1851 skin-bones=886
+[00:26:07.657] [11912] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[00:26:07.657] [11912] [I] SCOPY CENSUS source-nodes=1851 copy-nodes=1851 source-geoms=123 copy-geoms=123 source-skins=60 copy-skins=60 source-dynamic=10 copy-dynamic=10
+[00:26:07.658] [11912] [I] SCOPY FRAME skinned-bound valid=true radius=78.2 center=(-1243.9,8212.1,-1009.6) graph-bound radius=282.1 scale=0.35 pruned-nodes=71
+[00:26:07.658] [11912] [I] SCOPY READY capture=2 controllers-removed=118 collisions-removed=19 draw=off actor-created=false F8=draw F3=rotate F4=release
+[00:26:07.658] [11912] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=1724
+[00:26:07.658] [11912] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[00:26:07.658] [11912] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=109 ambiguous=0 duplicate-nodes=147 parent-ancestors=109 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], Shield, Weapon, Quiver, Belly' wrong-parent='-'
+[00:26:07.658] [11912] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[00:26:07.659] [11912] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=80 ambiguous=0 duplicate-nodes=147 parent-ancestors=80 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[00:26:07.659] [11912] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=109/116 ambiguous=0
+[00:26:07.659] [11912] [I] SCOPY ANIM map graph=0 bones=116 matched=109 helper-unresolved=3 other-unresolved=4
+[00:26:07.659] [11912] [I] SCOPY ANIM replay pose entries=116 scale-off-from-one=5
+[00:26:07.659] [11912] [I] SCOPY ANIM replay control max-pos-delta=196.872 max-rot-delta=177.60deg bones=109
+[00:26:07.659] [11912] [I] SCOPY ANIM replay order=skeleton quat=direct written=109 max-pos-delta=5.591 max-rot-delta=0.10deg bones=109
+[00:26:07.659] [11912] [I] SCOPY ANIM replay order=skeleton quat=transposed written=109 max-pos-delta=145.232 max-rot-delta=178.41deg bones=109
+[00:26:07.659] [11912] [I] SCOPY ANIM replay order=bone-nodes quat=direct written=106 max-pos-delta=0.539 max-rot-delta=0.06deg bones=106
+[00:26:07.660] [11912] [I] SCOPY ANIM replay order=bone-nodes quat=transposed written=106 max-pos-delta=46.377 max-rot-delta=174.14deg bones=106
+[00:26:07.660] [11912] [I] SCOPY ANIM replay restored max-pos-delta=0.000 max-rot-delta=0.06deg bones=109
+[00:26:07.660] [11912] [I] SCOPY ANIM replay verdict match=bone-nodes/direct control=196.872u best=0.5385u
+[00:26:07.662] [11912] [I] SCOPY ANIM catalogue character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx' names=15203 bindings=15203
+[00:26:07.665] [11912] [I] SCOPY ANIM catalogue idle-names=1526/15203 first='Animations\1hm_blockidle.hkx@20, Animations\1hm_idle.hkx@23, Animations\2hm_blockidle.hkx@123, Animations\2hm_idle.hkx@124, Animations\2hw_blockidle.hkx@204, Animations\2hw_idle.hkx@206, Animations\altar_leftidle.hkx@234, Animations\female\animobjectchairdrinkingidlebase.hkx@235'
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue layout candidate=element-as-binding valid=0/8 duration=(0.00..0.00)s
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue layout candidate=element-holds-binding-pointer valid=0/8
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue idle index=20 name='Animations\1hm_blockidle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue idle index=23 name='Animations\1hm_idle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue idle index=123 name='Animations\2hm_blockidle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue idle index=124 name='Animations\2hm_idle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue idle index=204 name='Animations\2hw_blockidle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue idle index=206 name='Animations\2hw_idle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:26:07.667] [11912] [I] SCOPY ANIM catalogue idle index=234 name='Animations\altar_leftidle.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:26:07.668] [11912] [I] SCOPY ANIM catalogue idle index=235 name='Animations\female\animobjectchairdrinkingidlebase.hkx' element-as-binding=false duration=0.00s tracks=0/0 element-holds-binding=false duration=0.00s
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7EFD)[1]/ (FE2E7EFC) [100%]' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_EyeLashesZoe' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='T118' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='T117' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='T116' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='T112' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='T111' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='T110' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E118' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E117' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E116' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E115' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E114' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E113' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E112' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E111' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E110' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E19' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E18' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E17' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E16' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E15' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E14' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E13' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='E12' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='N15' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='N16' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='AE11' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_LDDLevisChoice13be_Female' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHuman_outer' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHuman_shadows' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleLensLeft_Dummy' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleLensRight_Dummy' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleEyesHumanLightGrey' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleMouth' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='00UBE_FemaleHead' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7807)[1]/ (FE2E7801) [100%]' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Feet' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Leg' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Butt' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Anus' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Belly' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Hand' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Arm' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Breast' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='3BCA_Head' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='VirtualGround' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name=' (FE2E7EFF)[1]/ (FE2E7EFE) [100%]' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Feet' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Heels' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Hands' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Bracelet' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='CollisionStopper' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='LowerBodyCollision' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='VirtualGround' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='BaseShape' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Thighstrap' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Armband' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Dress_Inner' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Dress' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Face [Ovl0]' type='BSDynamicTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='pSmallFlare' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSpray04' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Wisps:0' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Circle02' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Flash' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SuperSprayBreath' type='NiParticleSystem'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='Scb' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='SilverSword:0' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='BloodFX' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='BloodLighting' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name=':47' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name=':40' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='DiamondTop:1' type='BSTriShape'
+[00:26:07.668] [11912] [I] SCOPY GEOMETRY capture=2 name='DiamondBottom:0' type='BSTriShape'
+[00:26:11.392] [11912] [I] SCOPY DRAW-TOGGLE enabled=true capture=2
+[00:26:11.393] [11912] [I] SCOPY IDLE bound 8/8 channels
+[00:26:11.394] [11912] [I] Clone draw: passes=47 rd-null=44 lights=3 | geoms=51 skinned=48 roots=2 num-mat=903 bone-count=936 bound=903
+[00:26:11.394] [11912] [I] SCOPY DRAW frame=1 passes=47 lights=true animation-driver=none physics-driver=none
+[00:26:13.299] [11912] [I] SCOPY IDLE t=2.0s 'NPC Pelvis [Pelv]' moved=(0.78,0.00,0.00) rot=3.33deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=-2.41deg | 'NPC Spine2 [Spn2]' moved=(0.09,-0.05,-0.01) rot=-0.96deg | 'NPC Head [Head]' moved=(0.36,-0.37,0.08) rot=2.78deg
+[00:26:14.046] [11912] [I] Clone draw: passes=47 rd-null=44 lights=3 | geoms=51 skinned=48 roots=2 num-mat=903 bone-count=936 bound=903
+[00:26:14.046] [11912] [I] SCOPY DRAW frame=121 passes=47 lights=true animation-driver=none physics-driver=none
+[00:26:15.304] [11912] [I] SCOPY IDLE t=4.0s 'NPC Pelvis [Pelv]' moved=(-0.78,0.00,0.00) rot=-2.89deg | 'NPC Spine1 [Spn1]' moved=(0.00,0.00,0.00) rot=2.77deg | 'NPC Spine2 [Spn2]' moved=(-0.09,0.07,0.00) rot=0.87deg | 'NPC Head [Head]' moved=(-0.36,0.43,-0.11) rot=-1.36deg
