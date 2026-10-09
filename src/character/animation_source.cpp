@@ -74,9 +74,10 @@ namespace
     constexpr std::int32_t Scan_Bytes = 0x80;
     constexpr size_t Raw_Dump_Bytes = 0x80;
     // How far the clip search walks, how much of each object it scans, and how the ground-truth sweep
-    // is sampled.
-    constexpr int Max_Clip_Depth = 8;
-    constexpr size_t Max_Clip_Objects = 512;
+    // is sampled. The bounds are generous because vtable matching made each object cheap: the real
+    // generator tree is far wider than anything the old shape-only walk ever reached.
+    constexpr int Max_Clip_Depth = 12;
+    constexpr size_t Max_Clip_Objects = 1024;
     constexpr std::int32_t Max_States = 64;
     constexpr std::int32_t Container_Scan_Bytes = 0x200;
     constexpr size_t Sweep_Steps = 24;
@@ -644,35 +645,76 @@ namespace
         const RE::hkaAnimationBinding* binding;
     };
 
-    // The engine names every object's class, which is what tells a clip generator from the rest of the
-    // graph. It is a virtual call, so it is only made on an object whose first word already looks like a
-    // vtable of the game's own image.
-    const char* class_name_of(void const* object)
+    // The engine's own vtable addresses, resolved once through the address library. HKX7 died asking
+    // GetClassType about pointers it had merely guessed at; equality with a known vtable answers the
+    // same question with one guarded read and no call, so it is safe on anything the walk can read.
+    std::uintptr_t clip_generator_vtable()
     {
-        if (!looks_like_object(object))
-            return nullptr;
-        const auto* const referenced = static_cast<const RE::hkReferencedObject*>(object);
-        const RE::hkClass* const type = referenced->GetClassType();
-        return type && type->name ? type->name : nullptr;
+        static const std::uintptr_t vtable = RE::hkbClipGenerator::VTABLE[0].address();
+        return vtable;
     }
 
-    ClipReading read_clip_generator(void const* candidate, std::int32_t bone_count, bool typed)
+    std::uintptr_t state_machine_vtable()
+    {
+        static const std::uintptr_t vtable = RE::hkbStateMachine::VTABLE[0].address();
+        return vtable;
+    }
+
+    std::uintptr_t state_info_vtable()
+    {
+        static const std::uintptr_t vtable = RE::hkbStateMachine::StateInfo::VTABLE[0].address();
+        return vtable;
+    }
+
+    // What the walk believes an object to be, decided by its first word alone. "Other" is the honest
+    // verdict for everything whose vtable is none of the three the search cares about.
+    enum class GraphKind
+    {
+        Other,
+        ClipGenerator,
+        StateMachine,
+        StateInfo
+    };
+
+    GraphKind classify(void const* object)
+    {
+        if (!readable(object, sizeof(void*)))
+            return GraphKind::Other;
+        const std::uintptr_t vtable = *static_cast<const std::uintptr_t*>(object);
+        if (vtable == clip_generator_vtable())
+            return GraphKind::ClipGenerator;
+        if (vtable == state_machine_vtable())
+            return GraphKind::StateMachine;
+        if (vtable == state_info_vtable())
+            return GraphKind::StateInfo;
+        return GraphKind::Other;
+    }
+
+    const char* kind_name(GraphKind kind)
+    {
+        switch (kind)
+        {
+        case GraphKind::ClipGenerator:
+            return "hkbClipGenerator";
+        case GraphKind::StateMachine:
+            return "hkbStateMachine";
+        case GraphKind::StateInfo:
+            return "hkbStateMachine$StateInfo";
+        default:
+            return "other";
+        }
+    }
+
+    ClipReading read_clip_generator(void const* candidate, std::int32_t bone_count)
     {
         if (!candidate || !readable(candidate, sizeof(RE::hkbClipGenerator)) || !looks_like_object(candidate))
             return { false, "not-object", {}, nullptr };
         const auto* const generator = static_cast<const RE::hkbClipGenerator*>(candidate);
         const std::string name = guarded_string(generator->animationName);
 
-        // The class name is the typed answer to "is this a clip generator", but asking for it is a
-        // virtual call, so it is only asked of an object the graph reached through a typed edge. A
-        // shape-discovered pointer is judged by its data alone: a word that looks like a vtable is not
-        // proof that the object behind it implements the slot this call would jump through.
-        if (typed)
-        {
-            const char* const class_name = class_name_of(candidate);
-            if (class_name && std::string_view(class_name) != "hkbClipGenerator")
-                return { false, "other-class", {}, nullptr };
-        }
+        // The caller matched this object's first word against hkbClipGenerator's own vtable, so the
+        // name read above is not a guess: a name that fails here means the field offset is wrong,
+        // which is exactly the alarm this reason is kept to raise.
         if (!mentions_hkx(name))
             return { false, "no-animation-name", {}, nullptr };
 
@@ -693,7 +735,6 @@ namespace
         {
             void const* object;
             int depth;
-            bool typed;
         };
 
         std::vector<Step> pending;
@@ -702,17 +743,54 @@ namespace
         std::unordered_map<std::string, size_t> classes;
         std::unordered_map<std::string, size_t> reasons;
         size_t visited = 0;
+        size_t state_arrays = 0;
+        size_t state_entries = 0;
         bool capped = false;
+        bool root_reported = false;
     };
 
-    // The graph is a tree of only partly typed nodes, so the search follows only what is worth
-    // following - a live object's first word is a vtable, a child pointer is readable - inside a bounded
-    // depth and object count. A state machine's states are typed and followed by name; everything else
-    // by the shape of its pointers. A node is believed only after validating it as a clip generator, so
-    // a wrong step costs a rejection reason rather than a wrong clip.
+    // The first state machine the walk reaches is the graph root, and its raw words are printed once.
+    // HKX8 ended with clips=0 and only the root ever got a class name, so whether the states array
+    // reads empty, unreadable or at the wrong offset has to come from the object itself, not from a
+    // third guess: the dump makes the layout visible whatever the answer turns out to be.
+    void report_root_machine(void const* object, ClipSearch& search)
+    {
+        search.root_reported = true;
+        const auto* const machine = static_cast<const RE::hkbStateMachine*>(object);
+        const bool window = readable(object, sizeof(RE::hkbStateMachine));
+        std::string name = "-";
+        std::int32_t states = -1;
+        std::uintptr_t data = 0;
+        bool data_readable = false;
+        if (window)
+        {
+            name = guarded_string(machine->name);
+            states = machine->states.size();
+            data = reinterpret_cast<std::uintptr_t>(machine->states.data());
+            data_readable = machine->states.data() && states > 0 &&
+                            readable(machine->states.data(), sizeof(void*) * static_cast<size_t>(states));
+        }
+        logger::info("SCOPY ANIM play root-sm name='{}' readable-0x108={} states.size={} data=0x{:x} data-readable={}",
+            name, window, states, data, data_readable);
+
+        std::string bytes;
+        for (size_t word = 0; word * sizeof(std::uint64_t) < sizeof(RE::hkbStateMachine); ++word)
+        {
+            const auto* const address = static_cast<const std::uint8_t*>(object) + word * sizeof(std::uint64_t);
+            if (!readable(address, sizeof(std::uint64_t)))
+                break;
+            bytes += fmt::format("{}{:016x}", word ? " " : "", *reinterpret_cast<const std::uint64_t*>(address));
+        }
+        logger::info("SCOPY ANIM play root-sm qwords='{}'", bytes);
+    }
+
+    // The graph is a tree the engine names by vtable: a state machine's states are the typed edge into
+    // the tree, a state info carries its state's generator, and a clip generator is what the search is
+    // for. Class comes first now, so every step is decided by a fact about the object rather than by
+    // what its bytes could also be; a wrong step costs one histogram entry, never a call.
     void scan_for_clips(void const* root, std::int32_t bone_count, ClipSearch& search)
     {
-        search.pending.push_back({ root, 0, true });
+        search.pending.push_back({ root, 0 });
         while (!search.pending.empty())
         {
             if (search.visited >= Max_Clip_Objects)
@@ -733,32 +811,41 @@ namespace
             if (search.visited % Progress_Every == 0)
                 logger::info("SCOPY ANIM play progress objects={} pending={} clips={}", search.visited, search.pending.size(), search.clips.size());
 
-            if (step.typed)
+            const GraphKind kind = classify(step.object);
+            ++search.classes[kind_name(kind)];
+
+            if (kind == GraphKind::ClipGenerator)
             {
-                if (const char* const class_name = class_name_of(step.object))
-                    ++search.classes[class_name];
+                const ClipReading clip = read_clip_generator(step.object, bone_count);
+                if (clip.valid)
+                    search.clips.push_back(clip);
+                else
+                    ++search.reasons[clip.reason];
+                continue;  // a clip's fields are data, not graph nodes worth walking
             }
 
-            const ClipReading clip = read_clip_generator(step.object, bone_count, step.typed);
-            if (clip.valid)
-            {
-                search.clips.push_back(clip);
-                continue;
-            }
-            ++search.reasons[clip.reason];
             if (step.depth == Max_Clip_Depth)
                 continue;
 
-            if (readable(step.object, sizeof(RE::hkbStateMachine)))
+            if (kind == GraphKind::StateMachine)
             {
+                if (!search.root_reported)
+                    report_root_machine(step.object, search);
                 const auto* const machine = static_cast<const RE::hkbStateMachine*>(step.object);
-                const std::int32_t states = machine->states.size();
-                if (states > 0 && states <= Max_States && readable(machine->states.data(), sizeof(void*) * static_cast<size_t>(states)))
+                if (readable(&machine->states, sizeof(machine->states)))
                 {
-                    for (std::int32_t i = 0; i < states; ++i)
+                    const std::int32_t states = machine->states.size();
+                    if (states > 0 && states <= Max_States && readable(machine->states.data(), sizeof(void*) * static_cast<size_t>(states)))
                     {
-                        if (void const* const state = machine->states[i])
-                            search.pending.push_back({ state, step.depth + 1, true });
+                        ++search.state_arrays;
+                        for (std::int32_t i = 0; i < states; ++i)
+                        {
+                            if (void const* const state = machine->states[i])
+                            {
+                                ++search.state_entries;
+                                search.pending.push_back({ state, step.depth + 1 });
+                            }
+                        }
                     }
                 }
             }
@@ -773,7 +860,7 @@ namespace
                     break;
                 const void* const word = *reinterpret_cast<void* const*>(base);
                 if (word && readable(word, sizeof(void*)) && looks_like_object(word))
-                    search.pending.push_back({ word, step.depth + 1, false });
+                    search.pending.push_back({ word, step.depth + 1 });
             }
         }
     }
@@ -1268,7 +1355,7 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
             clip_list += ", ";
         clip_list += fmt::format("{}@{:.2f}s", search.clips[i].name, search.clips[i].binding->animation->duration);
     }
-    logger::info("SCOPY ANIM play search objects={} clips={} capped={} first='{}'", search.visited, search.clips.size(), search.capped, clip_list.empty() ? "-" : clip_list);
+    logger::info("SCOPY ANIM play search objects={} clips={} states={}/{} capped={} first='{}'", search.visited, search.clips.size(), search.state_arrays, search.state_entries, search.capped, clip_list.empty() ? "-" : clip_list);
     logger::info("SCOPY ANIM play classes='{}'", summarise(search.classes));
     logger::info("SCOPY ANIM play rejections='{}'", summarise(search.reasons));
     if (search.clips.empty())

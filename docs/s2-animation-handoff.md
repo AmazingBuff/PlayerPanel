@@ -21,8 +21,12 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-下一步 **HKX3（已打包待测）**：动画目录（typed 名字表 → 可直接采样的 Idle 索引）与绑定集元素布局的结构化核对，
-方案见 §5 末。
+**最新（2026-10-10 深夜）**：HKX8 已实测——不再对来历不明的指针虚调用（HKX7 崩溃消除），遍历走完全程
+（`objects=460`、`capped=false`）但 `clips=0`，判读收窄为 **typed states 边从未生效**（全程只有根一个
+typed 对象被访问，证据见 [HKX8 实测证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)）。
+下一步 **HKX9（已打包待测）**：判类改为与引擎自己的虚表地址精确比对（零虚调用）、states 边只在确证的
+状态机上触发并放宽整窗可读要求、**根状态机一次性转储**（`SCOPY ANIM play root-sm`）直接裁决 states
+偏移/空数组/超上限三种可能，方案见 §5 末。
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -283,6 +287,43 @@ SCOPY IDLE enabled (F2); driver=Animations\female\mt_idle.hkx
 3. 深度 4→8、对象 96→512，新增 `play classes='…'` 与 `play rejections='…'` 两行直方图，
    `search` 行带 `capped=`——下一轮若还不中，这两行直接区分"遍历走丢"与"clip 不在图里"。
 
+### HKX8（已实测，2026-10-10）：不再虚调用、遍历走完，但 clips=0 —— typed states 边从未生效
+
+- **成立的一半**：HKX7 的崩溃消失（判类不再虚调用）；面包屑每 32 对象一条走到底，
+  `objects=460 capped=false`、队列传空收尾——HKX6 的截断与 HKX7 的崩溃都已消除。
+- **没成立的一半**：`clips=0`；`classes='hkbStateMachine:1'` + `rejections='other-class:1'` 证明全程
+  只有根一个 typed 对象被访问。名字校验不依赖对象来历（`animationName` 在固定偏移上），460 个候选
+  全部 `no-animation-name` = **根本没踩到 clip generator**，遍历从未进入生成器树——states 边一次都没
+  跟出去（`states.data()` 指向指针数组，堆地址过不了形状判据，`StateInfo` 只能经类型化边到达）。
+  逐条见 [HKX8 实测证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx8-clipsearch2-20261010-0107.log)。
+- 三个候选根因（CLib 布局链 `hkbBindable=0x30 → hkbNode=0x48 → states@0x90` 自洽，根节点
+  `readable(0x110)` 在 HKX8 已成立，整窗可读性不是问题）：①CLib 的 `states` 偏移与实际引擎不符；
+  ②根状态机 states 数 > `Max_States`(64) 被静默跳过；③data 不可读（最不可能）——从外部分辨不了，
+  需要根状态机的原始转储裁决。
+
+### HKX9（已实现并打包，待游戏内一轮）：判类改虚表精确比对 + 根状态机转储
+
+```
+SCOPY ANIM play root-sm name='…' readable-0x108=… states.size=N data=0x… data-readable=…
+SCOPY ANIM play root-sm qwords='…'（0x108 字节）
+SCOPY ANIM play search objects=… clips=… states=数组/条目 capped=… first='…'
+SCOPY ANIM play classes='hkbStateMachine:…,hkbStateMachine$StateInfo:…,hkbClipGenerator:…,other:…'
+SCOPY ANIM play clip='…' …（选中后与 HKX6 协议相同）
+```
+
+- **判类 = 与引擎自己的虚表地址精确比对**（`VTABLE_hkbStateMachine` / `…__StateInfo` /
+  `VTABLE_hkbClipGenerator`，CLib AE ID 226812 / 226706 / 226785）：一次受保护的内存读、零虚调用
+  ——HKX7 的崩溃面被彻底移除，分类不再依赖"这个对象是怎么被发现的"。
+- **states 边**只在虚表确证的状态机上触发；成员窗口（`&states, 0x10`）可读即可，不再要求整 0x108。
+- **`root-sm` 转储**直接裁决 HKX8 留下的三选一：`states.size` 为 0 或垃圾大数 = 偏移问题（在转储里
+  找 {堆指针, 小整数, 小整数} 三元组定真实偏移）；正常小值但 `states=0/…` = data 可读性或上限问题。
+- **判读**：`states=0/0` = 边仍没生效（看 root-sm 转储）；`states>0` 而 `clips=0` = 已进树、识别问题
+  （看 classes/rejections）；`classes` 出现 `hkbClipGenerator` 计数而 `rejections` 有具体拒因 =
+  偏移级警报（名字读不出 = `animationName` 偏移错）。
+- 通过后照旧：ground-truth 相位扫描（HKX6 协议）→ F2 用自己的时钟驱动。
+- 深度 8→12、对象 512→1024（确证路径使每对象变廉价；真实生成器树比旧边界宽）。
+
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
 1. **数值 A/B（主判据）**：同一动画、同一相位下，逐骨比较**副本的 local 变换**与**源角色的 local 变换**，
@@ -311,15 +352,18 @@ SCOPY IDLE enabled (F2); driver=Animations\female\mt_idle.hkx
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX7-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX7-7984bbda89-cl94faaed0c6-20261009T165916Z`（`source_baseline_dirty=false`，基线
-  `7984bbda89`），DLL SHA-256 `21591e10…`。**已实测的六轮**：HKX6（`…-HKX6-733dfd5f17-…`，
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX9-1.2.1.zip`（身份以包内 manifest 为准；
+  判类改虚表精确比对 + root-sm 转储，方案见 §5 HKX9 节）。**已实测的八轮**：HKX8
+  （`…-HKX8-7656223071-…`，[证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx8-clipsearch2-20261010-0107.log)）、HKX7 崩溃轮
+  （[崩溃日志](diagnostics/CharacterPanel-hkx7-crash-20261010-0103.log)）、HKX6（`…-HKX6-733dfd5f17-…`，
   [证据](s2-hkx6-clipsearch-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx6-clipsearch-20261010-0056.log)）、
   HKX5（`…-HKX5-3cd816a1eb-…`，[证据](s2-hkx5-clip-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx5-clip-20261010-0041.log)）、HKX4、HKX3、HKX2、HKX1（各自的证据与日志见
   [docs/diagnostics](diagnostics/)）。操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。
   此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
-- 提交状态：`d9ad6b0`（归档探针与待机）→ HKX1–HKX6 每轮实现 + 实测 + 身份 → `7984bbda89` 一带（HKX7 修复与直方图）；
+- 提交状态：`d9ad6b0`（归档探针与待机）→ HKX1–HKX6 每轮实现 + 实测 + 身份 → `7984bbda89`/`7656223`
+  （HKX7 直方图与崩溃修复、HKX8 判读收窄）→ HKX9（虚表判类 + root-sm 转储）；
   都在本地 `master`，`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
 - 热键现状（HKX3 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量 + 动画目录）、`F8` 绘制、`F3` 旋转、
   `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。
