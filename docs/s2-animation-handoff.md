@@ -296,20 +296,20 @@ SCOPY IDLE enabled (F2); driver=Animations\female\mt_idle.hkx
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX5-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX5-3cd816a1eb-cl94faaed0c6-20261009T163707Z`（`source_baseline_dirty=false`，基线
-  `3cd816a1eb`），DLL SHA-256 `4e71b491…`。**已实测的四轮**：HKX4（`…-HKX4-215cea8805-…`，DLL `06cf6690…`，
-  [证据](s2-hkx4-layout-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx4-layout-20261010-0033.log)）、
-  HKX3（`…-HKX3-e32eafc31c-…`，DLL `f0adfc6a…`，[证据](s2-hkx3-catalogue-evidence-2026-10-10.md)、
-  [日志](diagnostics/CharacterPanel-hkx3-catalogue-20261010-0026.log)）、HKX2（`…-HKX2-a0eaef50cd-…`，DLL `506e21f7…`，
-  [证据](s2-hkx2-replay-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx2-replay-20261010-0016.log)）与
-  HKX1（`…-HKX1-cd646aefae-…`，DLL `356c71f4…`，[证据](s2-hkx1-alignment-evidence-2026-10-10.md)、
-  [日志](diagnostics/CharacterPanel-hkx1-align-20261010-0001.log)）。操作说明见
-  [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与分析脚本
-  都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
-- 提交状态：`d9ad6b0`（归档探针与待机）→ `cd646ae`/`66758ca`（HKX1）→ `1abe07d`（HKX1 实测）→ `a0eaef5`/`1aa167d`
-  （HKX2）→ `e32eafc`/`f65930a`（HKX3）→ `215cea8`/`b2877d8`（HKX4）→ `3cd816a`（HKX5）；都在本地 `master`，
-  `extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX6-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX6-733dfd5f17-cl94faaed0c6-20261009T165300Z`（`source_baseline_dirty=false`，基线
+  `733dfd5f17`），DLL SHA-256 `9377c1e5…`。**已实测的五轮**：HKX5（`…-HKX5-3cd816a1eb-…`，
+  [证据](s2-hkx5-clip-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx5-clip-20261010-0041.log)）、
+  HKX4（`…-HKX4-215cea8805-…`，[证据](s2-hkx4-layout-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx4-layout-20261010-0033.log)）、HKX3（`…-HKX3-e32eafc31c-…`，
+  [证据](s2-hkx3-catalogue-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx3-catalogue-20261010-0026.log)）、
+  HKX2（`…-HKX2-a0eaef50cd-…`，[证据](s2-hkx2-replay-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx2-replay-20261010-0016.log)）与 HKX1（`…-HKX1-cd646aefae-…`，
+  [证据](s2-hkx1-alignment-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx1-align-20261010-0001.log)）。
+  操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与
+  分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
+- 提交状态：`d9ad6b0`（归档探针与待机）→ `cd646ae`…`896bc0d`（HKX1–HKX5，每轮实现 + 实测 + 身份）→ `733dfd5`（HKX6
+  播放与真值）；都在本地 `master`，`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
 - 热键现状（HKX3 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量 + 动画目录）、`F8` 绘制、`F3` 旋转、
   `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。
 
