@@ -21,12 +21,14 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜）**：HKX8 已实测——不再对来历不明的指针虚调用（HKX7 崩溃消除），遍历走完全程
-（`objects=460`、`capped=false`）但 `clips=0`，判读收窄为 **typed states 边从未生效**（全程只有根一个
-typed 对象被访问，证据见 [HKX8 实测证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)）。
-下一步 **HKX9（已打包待测）**：判类改为与引擎自己的虚表地址精确比对（零虚调用）、states 边只在确证的
-状态机上触发并放宽整窗可读要求、**根状态机一次性转储**（`SCOPY ANIM play root-sm`）直接裁决 states
-偏移/空数组/超上限三种可能，方案见 §5 末。
+**最新（2026-10-10 深夜）**：HKX9 已实测——虚表精确判类成功、states 边生效、根状态机转储实锤
+**CLib 的 `hkbStateMachine::states`@0x90 布局正确**（`Master_Behavior`，size=11，教科书 hkArray），
+遍历进入真实生成器树并**虚表识别出 66 个 `hkbClipGenerator`**；但 66 个 clip 全部死在运行期
+`binding` 指针为空——**binding 是惰性链接**（静态链接 = `animationBindingIndex`），暂停菜单里未激活
+的 clip 就是空指针（证据见 [HKX9 实测证据](s2-hkx9-vtable-evidence-2026-10-10.md)）。
+下一步 **HKX10（已打包待测）**：66 个 clip 逐个打明细（`clip-seen`）+ **control 路线**（激活中的
+clip 的 `animationControl->binding` 应当是活的，`hkaAnimationControl` 全类型）+ binding set
+**定点转储**（用 clip 自带的索引瞄准一个元素），方案见 §5 末。
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -324,6 +326,39 @@ SCOPY ANIM play clip='…' …（选中后与 HKX6 协议相同）
 - 通过后照旧：ground-truth 相位扫描（HKX6 协议）→ F2 用自己的时钟驱动。
 - 深度 8→12、对象 512→1024（确证路径使每对象变廉价；真实生成器树比旧边界宽）。
 
+### HKX9（已实测，2026-10-10）：虚表判类进树成功，66 个 clip 全卡在运行期 binding 为空
+
+- **成立**：根状态机转储实锤 CLib 布局（`Master_Behavior`，`states.size=11`，转储 word18/19 =
+  教科书 hkArray）——HKX8 的三选一裁决为"偏移没错，旧整窗可读门槛是会话级脆弱判据"；states 边
+  21/100 生效；**66 个 `hkbClipGenerator` 被虚表精确识别**（34 状态机、140 StateInfo），零虚调用
+  零崩溃，名字校验全过（`animationName`@0x48 偏移实锤正确）。
+- **没成立**：66 个 clip 全部死于 `read_binding` 的 binding 指针检查（拒因 `unreadable:66`）——
+  运行期 `binding`（@0xA0）是**惰性链接**，暂停菜单里未激活的 clip 就是空指针；静态链接是
+  `animationBindingIndex`（@0x70）。这同时回头修正 HKX3-5 的判读：binding set 的空桩不是布局错，
+  是**没被填充**。逐条见 [HKX9 实测证据](s2-hkx9-vtable-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx9-vtable-20261010.log)。
+
+### HKX10（已实现并打包，待游戏内一轮）：clip 明细 + control 路线 + binding set 定点转储
+
+```
+SCOPY ANIM play clip-seen i=… idle=yes name='…mt_idle.hkx' binding-index=1022 binding=0x0 control=0x… speed=1.00 mode=0
+SCOPY ANIM play element index=1022 at=0x… readable-0x40=true
+SCOPY ANIM play element qwords='…'（0x40 字节）
+SCOPY ANIM play element binding-at-0x10 at=0x… valid=true reason=valid
+```
+
+- **clip-seen 明细**：每个被虚表识别的 clip 一行（名字、binding-index、binding 指针、control 指针、
+  速度、模式；base-idle 名字的必打）——谁的指针活着，一目了然。
+- **control 路线**：源角色此刻就在播 idle，激活中 clip 的 `animationControl`（@0x88）应当是活的，
+  CLib 的 `hkaAnimationControl` 全类型（`binding`@0x38 / `localTime`@0x10 / `weight`@0x14）——
+  `read_clip_generator` 现在接受两条路：直接 binding 有效，或 control->binding 有效。
+- **定点元素转储**：用 clip 自带的 binding-index 瞄准 binding set 的一个元素（优先 base-idle 名字、
+  次 control 非空、末首个），dump 0x40 字节并按统一校验判 `+0x10` 处的指针——已知索引的定点核对，
+  取代 HKX3-5 的盲扫；HKX4 看到的 27c8 变体若真是"已加载"形态，这次会在已知索引上复现。
+- **判读**：`clip-seen` 里若有 `binding` 或 `control` 非零的 base-idle 行，且 `element binding-at-0x10
+  valid=true` → 采样链的入场券到手，下一轮直接接 ground-truth 与 F2 驱动；若全空 → 转储指认
+  "已加载条目"的真实形态，布局从活样本上学。
+
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
 1. **数值 A/B（主判据）**：同一动画、同一相位下，逐骨比较**副本的 local 变换**与**源角色的 local 变换**，
@@ -352,10 +387,11 @@ SCOPY ANIM play clip='…' …（选中后与 HKX6 协议相同）
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX9-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX9-746ffacf13-cl94faaed0c6-20261009T174357Z`（`source_baseline_dirty=false`，基线
-  `746ffacf13`），DLL SHA-256 `57df5e72…`；判类改虚表精确比对 + root-sm 转储，方案见 §5 HKX9 节。**已实测的八轮**：HKX8
-  （`…-HKX8-7656223071-…`，[证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)、
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX10-1.2.1.zip`（身份以包内 manifest 为准；
+  clip 明细 + control 路线 + 定点元素转储，方案见 §5 HKX10 节）。**已实测的九轮**：HKX9
+  （`…-HKX9-746ffacf13-…`，[证据](s2-hkx9-vtable-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx9-vtable-20261010.log)）、HKX8（`…-HKX8-7656223071-…`，
+  [证据](s2-hkx8-clipsearch2-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx8-clipsearch2-20261010-0107.log)）、HKX7 崩溃轮
   （[崩溃日志](diagnostics/CharacterPanel-hkx7-crash-20261010-0103.log)）、HKX6（`…-HKX6-733dfd5f17-…`，
   [证据](s2-hkx6-clipsearch-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx6-clipsearch-20261010-0056.log)）、
@@ -363,8 +399,8 @@ SCOPY ANIM play clip='…' …（选中后与 HKX6 协议相同）
   [日志](diagnostics/CharacterPanel-hkx5-clip-20261010-0041.log)）、HKX4、HKX3、HKX2、HKX1（各自的证据与日志见
   [docs/diagnostics](diagnostics/)）。操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。
   此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
-- 提交状态：`d9ad6b0`（归档探针与待机）→ HKX1–HKX6 每轮实现 + 实测 + 身份 → `7984bbda89`/`7656223`
-  （HKX7 直方图与崩溃修复、HKX8 判读收窄）→ HKX9（虚表判类 + root-sm 转储）；
+- 提交状态：`d9ad6b0`（归档探针与待机）→ HKX1–HKX6 每轮实现 + 实测 + 身份 → `7984bbda89`/`7656223`/
+  `746ffac`（HKX7 崩溃修复、HKX8 判读收窄、HKX9 虚表判类）→ HKX10（clip 明细 + control 路线 + 定点转储）；
   都在本地 `master`，`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
 - 热键现状（HKX3 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量 + 动画目录）、`F8` 绘制、`F3` 旋转、
   `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。

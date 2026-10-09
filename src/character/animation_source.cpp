@@ -13,6 +13,8 @@
 #include "RE/H/hkClass.h"
 #include "RE/H/hkaAnimation.h"
 #include "RE/H/hkaAnimationBinding.h"
+#include "RE/H/hkaAnimationControl.h"
+#include "RE/H/hkaDefaultAnimationControl.h"
 #include "RE/H/hkaBone.h"
 #include "RE/H/hkaSkeleton.h"
 #include "RE/H/hkbAnimationBindingSet.h"
@@ -82,6 +84,13 @@ namespace
     constexpr std::int32_t Container_Scan_Bytes = 0x200;
     constexpr size_t Sweep_Steps = 24;
     constexpr size_t Max_Clips_Reported = 6;
+    // Every clip generator the walk meets is recorded up to this many, and this many of them printed:
+    // HKX9 met 66 and none of their direct bindings were live, so the record of who carries what is
+    // the evidence the next route is chosen from.
+    constexpr size_t Max_Clips_Tracked = 128;
+    constexpr size_t Max_Clips_Printed = 12;
+    // How much of one binding-set element is dumped when the dump is aimed by a clip's own index.
+    constexpr size_t Element_Dump_Bytes = 0x40;
     constexpr size_t Progress_Every = 32;
     constexpr double Max_Clip_Step_Seconds = 0.1;
 
@@ -705,6 +714,20 @@ namespace
         }
     }
 
+    // What one met clip generator carries, valid or not: the name, the binding-set index it was born
+    // with, and which of its two binding holders - the clip's own lazy link or the instance control -
+    // points anywhere. HKX9's 66 clips all read valid names and empty bindings; this record is how the
+    // next route finds a live one instead of guessing again.
+    struct ClipSeen
+    {
+        std::string name;
+        std::uint16_t binding_index = 0;
+        const RE::hkaAnimationBinding* binding = nullptr;
+        const RE::hkaDefaultAnimationControl* control = nullptr;
+        float speed = 0.0f;
+        std::uint8_t mode = 0;
+    };
+
     ClipReading read_clip_generator(void const* candidate, std::int32_t bone_count)
     {
         if (!candidate || !readable(candidate, sizeof(RE::hkbClipGenerator)) || !looks_like_object(candidate))
@@ -717,16 +740,38 @@ namespace
         // which is exactly the alarm this reason is kept to raise.
         if (!mentions_hkx(name))
             return { false, "no-animation-name", {}, nullptr };
-
-        const BindingReading binding = read_binding(generator->binding, bone_count);
-        if (!binding.valid)
-            return { false, binding.reason, {}, nullptr };
         if (static_cast<std::uint8_t>(generator->mode.get()) > 3)
             return { false, "playback-mode", {}, nullptr };
         const float speed = generator->playbackSpeed;
         if (!std::isfinite(speed) || speed <= 0.0f || speed > 10.0f)
             return { false, "playback-speed", {}, nullptr };
-        return { true, "valid", name, generator->binding };
+
+        // The runtime binding is a lazy link: an inactive clip carries only animationBindingIndex into
+        // the binding set, so an empty pointer is the normal state of a paused menu rather than a
+        // broken graph (HKX9: all 66 clips read valid names and empty bindings). The control is created
+        // with the clip's instance, and the source is playing its idle as we capture - the active
+        // clip's control is the one binding holder the graph has already filled in.
+        const char* reason = "binding-null";
+        if (generator->binding)
+        {
+            const BindingReading direct = read_binding(generator->binding, bone_count);
+            if (direct.valid)
+                return { true, "valid", name, generator->binding };
+            reason = direct.reason;
+        }
+        if (const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
+            control && readable(control, sizeof(RE::hkaAnimationControl)) && looks_like_object(control))
+        {
+            if (const RE::hkaAnimationBinding* const via_control = control->binding)
+            {
+                const BindingReading indirect = read_binding(via_control, bone_count);
+                if (indirect.valid)
+                    return { true, "valid", name, via_control };
+                if (std::string_view(reason) == "binding-null")
+                    reason = "control-binding-invalid";
+            }
+        }
+        return { false, reason, {}, nullptr };
     }
 
     struct ClipSearch
@@ -740,6 +785,7 @@ namespace
         std::vector<Step> pending;
         std::unordered_set<void const*> seen;
         std::vector<ClipReading> clips;
+        std::vector<ClipSeen> met;
         std::unordered_map<std::string, size_t> classes;
         std::unordered_map<std::string, size_t> reasons;
         size_t visited = 0;
@@ -816,6 +862,18 @@ namespace
 
             if (kind == GraphKind::ClipGenerator)
             {
+                if (search.met.size() < Max_Clips_Tracked && readable(step.object, sizeof(RE::hkbClipGenerator)))
+                {
+                    const auto* const generator = static_cast<const RE::hkbClipGenerator*>(step.object);
+                    ClipSeen record;
+                    record.name = guarded_string(generator->animationName);
+                    record.binding_index = generator->animationBindingIndex;
+                    record.binding = generator->binding;
+                    record.control = generator->animationControl.get();
+                    record.speed = generator->playbackSpeed;
+                    record.mode = static_cast<std::uint8_t>(generator->mode.get());
+                    search.met.push_back(std::move(record));
+                }
                 const ClipReading clip = read_clip_generator(step.object, bone_count);
                 if (clip.valid)
                     search.clips.push_back(clip);
@@ -1358,6 +1416,87 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
     logger::info("SCOPY ANIM play search objects={} clips={} states={}/{} capped={} first='{}'", search.visited, search.clips.size(), search.state_arrays, search.state_entries, search.capped, clip_list.empty() ? "-" : clip_list);
     logger::info("SCOPY ANIM play classes='{}'", summarise(search.classes));
     logger::info("SCOPY ANIM play rejections='{}'", summarise(search.reasons));
+
+    // What the walk met, valid or not: the first ones in discovery order, then every one whose file
+    // name is one of the character's own standing idles - the clip that is playing as we capture is
+    // the likeliest holder of a live binding, and its line says where that binding lives.
+    for (size_t i = 0; i < search.met.size(); ++i)
+    {
+        const ClipSeen& record = search.met[i];
+        const bool idle = is_base_idle(base_name_of(record.name));
+        if (i >= Max_Clips_Printed && !idle)
+            continue;
+        logger::info("SCOPY ANIM play clip-seen i={} idle={} name='{}' binding-index={} binding=0x{:x} control=0x{:x} speed={:.2f} mode={}",
+            i, idle ? "yes" : "no", record.name, record.binding_index,
+            reinterpret_cast<std::uintptr_t>(record.binding), reinterpret_cast<std::uintptr_t>(record.control),
+            record.speed, record.mode);
+    }
+
+    // One binding-set element, aimed by a clip's own index instead of sampled blind: if the standing
+    // idle is playing as we capture, its entry is the loaded kind, and the dump says what a loaded
+    // entry holds - HKX3-5 dug at this set blind and met only empty stubs.
+    RE::hkbAnimationBindingSet* const set = selected.graph->characterInstance.animationBindingSet.get();
+    const std::int32_t binding_count = (set && looks_like_object(set)) ? set->bindings.size() : 0;
+    std::int32_t target_index = -1;
+    for (const ClipSeen& record : search.met)
+    {
+        if (is_base_idle(base_name_of(record.name)) && record.binding_index < binding_count)
+        {
+            target_index = record.binding_index;
+            break;
+        }
+    }
+    if (target_index < 0)
+    {
+        for (const ClipSeen& record : search.met)
+        {
+            if (record.control && record.binding_index < binding_count)
+            {
+                target_index = record.binding_index;
+                break;
+            }
+        }
+    }
+    if (target_index < 0)
+    {
+        for (const ClipSeen& record : search.met)
+        {
+            if (record.binding_index < binding_count)
+            {
+                target_index = record.binding_index;
+                break;
+            }
+        }
+    }
+    if (target_index < 0)
+    {
+        logger::info("SCOPY ANIM play element UNAVAILABLE reason=no-index-in-range bindings={}", binding_count);
+    }
+    else
+    {
+        const void* const element = set->bindings[target_index];
+        const bool dumpable = element && readable(element, Element_Dump_Bytes);
+        logger::info("SCOPY ANIM play element index={} at=0x{:x} readable-0x40={}", target_index,
+            reinterpret_cast<std::uintptr_t>(element), dumpable);
+        if (dumpable)
+        {
+            const auto* const words = static_cast<const std::uint64_t*>(element);
+            std::string bytes;
+            for (size_t word = 0; word < Element_Dump_Bytes / sizeof(std::uint64_t); ++word)
+                bytes += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+            logger::info("SCOPY ANIM play element qwords='{}'", bytes);
+
+            // The loaded kind of stub carries a pointer at +0x10 (HKX4's dump); judge it by the same
+            // validation every binding candidate passes, so the layout claim is never taken on faith.
+            const auto* const stub = static_cast<const std::uint8_t*>(element);
+            const RE::hkaAnimationBinding* const candidate =
+                *reinterpret_cast<RE::hkaAnimationBinding* const*>(stub + 0x10);
+            const BindingReading reading = read_binding(candidate, bone_count);
+            logger::info("SCOPY ANIM play element binding-at-0x10 at=0x{:x} valid={} reason={}",
+                reinterpret_cast<std::uintptr_t>(candidate), reading.valid, reading.reason);
+        }
+    }
+
     if (search.clips.empty())
     {
         logger::info("SCOPY ANIM play UNAVAILABLE reason=no-clip-generator");
