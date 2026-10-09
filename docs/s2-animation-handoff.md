@@ -14,9 +14,15 @@
 **进展（2026-10-10）**：HKX1 的**第 1 步（骨架对齐）已实测通过**——引擎的动画数据能叫出副本的节点：第三人称图
 `DefaultFemale`（`root=true`）的骨架 **109/116 精确命中、零歧义**，缺的 7 个全是 Havok 帮手骨（`x_` 前缀）与装备
 附着骨（`Shield`/`Weapon`/`Quiver`/`Belly`）；骨架父子关系与 NIF 层级一致，写 local 由层级合成成立。**负结果**：
-`boneNodes` 的次序 ≠ 动画骨架的次序（同名率 37/116），"用 `boneNodes[i]` 指针对应"因此作废，按名匹配是必需的。
-逐条证据（含日志与逐条判读）见 [HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)。下一步 **HKX2**：
-把引擎自己的 `poseLocal` 写进副本做**带对照**的数值 A/B（全类型、不碰任何未定型布局），方案见 §5 末。
+`boneNodes` 的次序 ≠ 动画骨架的次序（同名率 37/116），"用 `boneNodes[i]` 指针对应"因此作废，按名匹配是必需的
+（[HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)）。
+
+**HKX2 也已实测通过**：把引擎自己的 `poseLocal` 写进副本，旋转复现到 **0.03–0.10°**、位置残差 **≤1.6 单位**、
+对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
+**`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
+
+下一步 **HKX3（已打包待测）**：动画目录（typed 名字表 → 可直接采样的 Idle 索引）与绑定集元素布局的结构化核对，
+方案见 §5 末。
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -68,6 +74,9 @@ idle 完全没法测试。
   CBBE 极简体型 90/116。
 - **`boneNodes[i]` 与 `bones[i]` 不同序**（同名率 37/116、78/99）→ 指针对应作废；**`poseLocal[i]` 的对应次序也必须实测**，不能假设。
 - 骨架父子关系与 NIF 层级一致（`parent-ancestors=matched`、`wrong-parent` 空）→ 写 local、由节点层级合成成立。
+- **HKX2（2026-10-10）**：`quat=direct` 把姿态复现到 0.03–0.10°，`quat=transposed` 给出 165–180°（即逆旋转）→ 四元数约定确定。
+- **`poseLocal` 按 `boneNodes` 次序索引**：`bone-nodes/direct` 0.529u 优于 `skeleton/direct` 5.591u → 拿它当真值时必须按
+  该表索引；动画轨道的骨索引是**骨架**索引，两者只能靠**骨名**桥接。
 
 ### 在 AE 上不可用的两条现成 API（2026-10-09 复核，规划时排除）
 
@@ -159,7 +168,7 @@ SCOPY ANIM gate verdict=… graph=i matched=N/N ambiguous=N
 （它要求"每根骨都有节点"）。下一轮的判据改为按类计数（`x_` 帮手骨 / 附着骨 / 核心骨）：**核心骨缺一根才算失败**，
 其余打印跳过清单。`bone-node-names-agree=37/116` 这条负结果已记入 §3。
 
-### HKX2（已实现并打包，待游戏内一轮）：用引擎自己的 `poseLocal` 做带对照的数值 A/B
+### HKX2（已实测通过，2026-10-10）：用引擎自己的 `poseLocal` 做带对照的数值 A/B
 
 引擎已经把当前姿态放在 `hkbCharacter::poseLocal`（116 项 `hkQsTransform`，实测非空），这是**全类型**的输入，
 不必碰任何未定型布局。每次 F7 在 HKX1 的对齐报告之后多打印一组：
@@ -176,11 +185,17 @@ SCOPY ANIM replay restored max-pos-delta=… max-rot-delta=…deg bones=109
 SCOPY ANIM replay verdict match=skeleton/direct control=…u best=…u
 ```
 
-- **判读**：`control` 是先把副本摆偏 0.5 rad 之后的"副本 vs 源"最差骨距离，它**必须明显大**——否则说明这套测量
-  不灵敏，后面的 0 什么也不证明。四个候选里 **`match=` 命名的那个就是引擎的映射**（次序 × 四元数约定；次序那两
-  个来自 HKX1 的负结果，四元数那两个覆盖 Havok→NIF 的约定），其余三个应当很大。`best/control < 1%` 才算命中
-  （相对判据，不发明绝对容差）。`restored` 证明这次验证把面板复原了。`helper-unresolved`/`other-unresolved`
-  按类计数（`x_` 帮手骨 vs 其他），`scale-off-from-one` 统计姿态里非 1 的缩放（NIF 只能存一个缩放）。
+- **实测（2026-10-10，两次捕获：CBBE 90 命中、UBE 109 命中）**：`quat=transposed` 两次都给出 165–180°（逆旋转）
+  → 约定 = `direct`，旋转复现到 **0.03–0.10°**；`bone-nodes/direct` 位置残差 **0.529u** 优于 `skeleton/direct` 的
+  5.591u → **`poseLocal` 按 `boneNodes` 次序**；`control` 124.7/199.0u、`restored` **0.000u** → 测量灵敏、面板被逐字复原。
+  capture 1 的 `match=none` 只是 `best/control=1.29%` 略高于 1% 相对门槛，**看排名即可**。残差是位置、且很小
+  （≤1.6u、旋转≈0），最可能是缩放语义（`scale-off-from-one=4/7`；`NiTransform` 只有一个缩放，姿态有三个）——
+  下一轮把"保留节点缩放"加为第二个缩放候选即可。逐条见
+  [HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)。
+- **判读规则（仍然适用）**：`control` 必须明显大，否则这套测量不灵敏、后面的 0 什么也不证明；四个候选里 `match=`
+  命名的是引擎的映射，其余应当很大；`best/control < 1%` 才算"命中"（相对判据，不发明绝对容差）；`restored` 证明面板
+  被复原；`helper-unresolved`/`other-unresolved` 按类计数（`x_` 帮手骨 vs 其他），`scale-off-from-one` 统计姿态里
+  非 1 的缩放。
 ### HKX3（已实现并打包，待游戏内一轮）：动画目录与绑定集布局核对
 
 `SCOPY ANIM catalogue …` 一组（每次 F7）：
@@ -231,17 +246,18 @@ SCOPY ANIM catalogue idle index=0 name='Idle' element-as-binding=true duration=4
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX2-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX2-a0eaef50cd-cl94faaed0c6-20261009T161113Z`（`source_baseline_dirty=false`，
-  基线提交 `a0eaef50cd`），DLL SHA-256 `506e21f7…`。上一轮 HKX1 的包
-  （`…-HKX1-cd646aefae-…`，DLL `356c71f4…`）**已实测**，逐条证据见
-  [HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)，归档日志
-  [CharacterPanel-hkx1-align-20261010-0001.log](diagnostics/CharacterPanel-hkx1-align-20261010-0001.log)。
-  操作说明见 [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、
-  日志与分析脚本都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
-- 提交状态：`d9ad6b0`（归档四轮探针与程序化待机）、`cd646ae`/`66758ca`（HKX1 实现与身份）、`1abe07d`（HKX1 实测记录）、
-  `a0eaef5`（HKX2 实现与测量）与最后一笔身份记录都在本地 `master`；`extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
-- 热键现状（HKX2 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量）、`F8` 绘制、`F3` 旋转、
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX3-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX3-e32eafc31c-cl94faaed0c6-20261009T162129Z`（`source_baseline_dirty=false`，基线
+  `e32eafc31c`），DLL SHA-256 `f0adfc6a…`。**已实测的两轮**：HKX2（`…-HKX2-a0eaef50cd-…`，DLL `506e21f7…`，
+  [证据](s2-hkx2-replay-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx2-replay-20261010-0016.log)）与
+  HKX1（`…-HKX1-cd646aefae-…`，DLL `356c71f4…`，[证据](s2-hkx1-alignment-evidence-2026-10-10.md)、
+  [日志](diagnostics/CharacterPanel-hkx1-align-20261010-0001.log)）。操作说明见
+  [tools/scene_copy/README.txt](../tools/scene_copy/README.txt)。此前 IDLE1–IDLE3、S2P1–S2P4 的包、日志与分析脚本
+  都在 `dist/` 与 [docs/diagnostics](diagnostics/)。
+- 提交状态：`d9ad6b0`（归档四轮探针与程序化待机）→ `cd646ae`/`66758ca`（HKX1 实现与身份）→ `1abe07d`（HKX1 实测记录）
+  → `a0eaef5`（HKX2 实现与测量）→ `1aa167d`（HKX2 身份）→ `e32eafc`（HKX3 目录与布局核对）；都在本地 `master`，
+  `extern/CommonLibSSE` 的历史 dirty 状态照旧排除。
+- 热键现状（HKX3 产品构建）：`F7` 捕获（审计通过后打印对齐报告 + 姿态重放测量 + 动画目录）、`F8` 绘制、`F3` 旋转、
   `F4` 释放、`F2` 待机开关（默认开）；探针只在 `-DCHARACTER_PANEL_S2_PROBE=ON` 的诊断构建里占 F6。
 
 ## 9. 明确不要做的事
