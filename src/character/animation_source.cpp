@@ -21,7 +21,9 @@
 #include "RE/H/hkbCharacterData.h"
 #include "RE/H/hkbCharacterSetup.h"
 #include "RE/H/hkbCharacterStringData.h"
+#include "RE/H/hkbClipGenerator.h"
 #include "RE/H/hkbGenerator.h"
+#include "RE/H/hkbStateMachine.h"
 #include "RE/T/TESObjectREFR.h"
 #include "REL/Module.h"
 
@@ -31,6 +33,7 @@
 #include <limits>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -70,6 +73,16 @@ namespace
     // a string read is allowed to run.
     constexpr std::int32_t Scan_Bytes = 0x80;
     constexpr size_t Raw_Dump_Bytes = 0x80;
+    // How far the clip search walks, how much of each object it scans, and how the ground-truth sweep
+    // is sampled.
+    constexpr int Max_Clip_Depth = 4;
+    constexpr size_t Max_Clip_Objects = 96;
+    constexpr std::int32_t Max_States = 64;
+    constexpr std::int32_t Container_Scan_Bytes = 0x200;
+    constexpr size_t Sweep_Steps = 24;
+    constexpr size_t Max_Clips_Reported = 6;
+    constexpr double Max_Clip_Step_Seconds = 0.1;
+
     // How long a string read is allowed to run, how many bone names a probe prints, and which file
     // names count as the character's own standing idle rather than a weapon or object one.
     constexpr size_t Max_String_Read = 128;
@@ -606,6 +619,117 @@ namespace
         }
         return false;
     }
+
+    std::string_view base_name_of(std::string_view path)
+    {
+        const size_t slash = path.find_last_of("\\/");
+        return slash == std::string_view::npos ? path : path.substr(slash + 1);
+    }
+
+    bool mentions_hkx(std::string_view name)
+    {
+        constexpr std::string_view Suffix = ".hkx";
+        return name.size() >= Suffix.size() && equals_ignore_case(name.substr(name.size() - Suffix.size()), Suffix);
+    }
+
+    // A clip generator is fully typed, so a pointer to one is believed only when everything that makes
+    // it one reads plausibly: a name that looks like an animation file, a binding that validates, a
+    // playback mode the engine defines and a speed the engine could be running at.
+    struct ClipReading
+    {
+        bool valid;
+        const char* reason;
+        std::string name;
+        const RE::hkaAnimationBinding* binding;
+    };
+
+    ClipReading read_clip_generator(void const* candidate, std::int32_t bone_count)
+    {
+        if (!candidate || !readable(candidate, sizeof(RE::hkbClipGenerator)) || !looks_like_object(candidate))
+            return { false, "not-object", {}, nullptr };
+        const auto* const generator = static_cast<const RE::hkbClipGenerator*>(candidate);
+        const std::string name = guarded_string(generator->animationName);
+        if (!mentions_hkx(name))
+            return { false, "not-a-clip", {}, nullptr };
+        const BindingReading binding = read_binding(generator->binding, bone_count);
+        if (!binding.valid)
+            return { false, binding.reason, {}, nullptr };
+        if (static_cast<std::uint8_t>(generator->mode.get()) > 3)
+            return { false, "playback-mode", {}, nullptr };
+        const float speed = generator->playbackSpeed;
+        if (!std::isfinite(speed) || speed <= 0.0f || speed > 10.0f)
+            return { false, "playback-speed", {}, nullptr };
+        return { true, "valid", name, generator->binding };
+    }
+
+    struct ClipSearch
+    {
+        std::vector<std::pair<void const*, int>> pending;
+        std::unordered_set<void const*> seen;
+        std::vector<ClipReading> clips;
+        size_t visited = 0;
+    };
+
+    // The graph is a tree of only partly typed nodes, so the search follows only what is worth
+    // following - a live object's first word is a vtable, a child pointer is readable - inside a bounded
+    // depth and object count. A state machine's states are typed and followed by name; everything else
+    // by the shape of its pointers. A node is believed only after validating it as a clip generator, so
+    // a wrong step costs a rejection reason rather than a wrong clip.
+    void scan_for_clips(void const* root, std::int32_t bone_count, ClipSearch& search)
+    {
+        search.pending.emplace_back(root, 0);
+        while (!search.pending.empty() && search.visited < Max_Clip_Objects)
+        {
+            const auto [object, depth] = search.pending.back();
+            search.pending.pop_back();
+            if (!object || depth > Max_Clip_Depth)
+                continue;
+            if (!search.seen.insert(object).second || !looks_like_object(object))
+                continue;
+            ++search.visited;
+
+            const ClipReading clip = read_clip_generator(object, bone_count);
+            if (clip.valid)
+            {
+                search.clips.push_back(clip);
+                continue;
+            }
+            if (depth == Max_Clip_Depth)
+                continue;
+
+            if (readable(object, sizeof(RE::hkbStateMachine)))
+            {
+                const auto* const machine = static_cast<const RE::hkbStateMachine*>(object);
+                const std::int32_t states = machine->states.size();
+                if (states > 0 && states <= Max_States && readable(machine->states.data(), sizeof(void*) * static_cast<size_t>(states)))
+                {
+                    for (std::int32_t i = 0; i < states; ++i)
+                    {
+                        if (void const* const state = machine->states[i])
+                            search.pending.emplace_back(state, depth + 1);
+                    }
+                }
+            }
+
+            if (!readable(object, Container_Scan_Bytes))
+                continue;
+            for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
+            {
+                const void* const word = *reinterpret_cast<void* const*>(static_cast<const std::uint8_t*>(object) + offset);
+                if (word && readable(word, sizeof(void*)) && looks_like_object(word))
+                    search.pending.emplace_back(word, depth + 1);
+            }
+        }
+    }
+
+    // The character's own standing idle first, and the engine's own copy of it before a mod's
+    // replacement of the same name.
+    int clip_preference(std::string_view name)
+    {
+        if (is_base_idle(base_name_of(name)))
+            return name.starts_with("data\\") || name.starts_with("data/") ? 1 : 0;
+        return mentions_idle(base_name_of(name)) ? 2 : 3;
+    }
 }
 
 void report_animation_source(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root)
@@ -1033,6 +1157,213 @@ void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& sourc
             guarded_string(binding->originalSkeletonName), bones,
             resolved, reading.tracks);
     }
+}
+
+bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out)
+{
+    out = ClipPlayback{};
+    const NodeTable copy_nodes = collect_nodes(copy_root);
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+    if (copy_nodes.names.empty() || !source.GetAnimationGraphManager(manager) || !manager)
+    {
+        logger::info("SCOPY ANIM play UNAVAILABLE reason=no-animation-graph-manager");
+        return false;
+    }
+
+    SelectedGraph selected{};
+    if (!select_graph(*manager, source, source_root, copy_nodes, selected, false))
+    {
+        logger::info("SCOPY ANIM play UNAVAILABLE reason=no-animation-skeleton");
+        return false;
+    }
+
+    RE::hkbBehaviorGraph* const behavior = selected.graph->characterInstance.behaviorGraph.get();
+    RE::hkbGenerator* const root_generator = behavior ? behavior->rootGenerator.get() : nullptr;
+    if (!root_generator)
+    {
+        logger::info("SCOPY ANIM play UNAVAILABLE reason=no-root-generator");
+        return false;
+    }
+
+    const std::int32_t bone_count = selected.skeleton->bones.size();
+    ClipSearch search;
+    scan_for_clips(root_generator, bone_count, search);
+    std::string clip_list;
+    for (size_t i = 0; i < search.clips.size() && i < Max_Clips_Reported; ++i)
+    {
+        if (!clip_list.empty())
+            clip_list += ", ";
+        clip_list += fmt::format("{}@{:.2f}s", search.clips[i].name, search.clips[i].binding->animation->duration);
+    }
+    logger::info("SCOPY ANIM play search objects={} clips={} first='{}'", search.visited, search.clips.size(), clip_list.empty() ? "-" : clip_list);
+    if (search.clips.empty())
+    {
+        logger::info("SCOPY ANIM play UNAVAILABLE reason=no-clip-generator");
+        return false;
+    }
+
+    const ClipReading* chosen = &search.clips.front();
+    for (const ClipReading& clip : search.clips)
+    {
+        if (clip_preference(clip.name) < clip_preference(chosen->name))
+            chosen = &clip;
+    }
+
+    const RE::hkaAnimationBinding* const binding = chosen->binding;
+    RE::hkaAnimation* const animation = binding->animation.get();
+    const std::int16_t* const track_to_bone = binding->transformTrackToBoneIndices.data();
+    const std::int32_t track_count = binding->transformTrackToBoneIndices.size();
+    const NameIndex copy_by_name = index_by_name(copy_nodes);
+
+    // The engine's own pose is indexed like its bone table, not like the animation skeleton (measured
+    // in HKX2), so the ground truth is looked up by bone name.
+    const RE::hkQsTransform* const pose = selected.graph->characterInstance.poseLocal;
+    const std::int32_t pose_count = selected.graph->characterInstance.numPoseLocal;
+    std::unordered_map<std::string_view, const RE::hkQsTransform*> pose_by_bone;
+    if (pose && pose_count > 0)
+    {
+        for (std::int32_t i = 0; i < static_cast<std::int32_t>(selected.graph->boneNodes.size()) && i < pose_count; ++i)
+        {
+            RE::NiNode* const node = selected.graph->boneNodes[i].node;
+            const char* const name = node ? node->name.c_str() : nullptr;
+            if (name)
+                pose_by_bone.emplace(name, pose + i);
+        }
+    }
+
+    ClipPlayback playback;
+    playback.animation = animation;
+    playback.name = chosen->name;
+    playback.duration = animation->duration;
+    std::vector<const RE::hkQsTransform*> truth;
+    for (std::int32_t track = 0; track < track_count; ++track)
+    {
+        const std::int16_t bone = track_to_bone[track];
+        if (bone < 0 || bone >= bone_count)
+            continue;
+        const char* const bone_name = selected.skeleton->bones[bone].name.c_str();
+        if (!bone_name)
+            continue;
+        const auto node = copy_by_name.find(bone_name);
+        if (node == copy_by_name.end())
+            continue;
+        playback.tracks.push_back(static_cast<std::uint16_t>(track));
+        playback.nodes.push_back(node->second);
+        const auto entry = pose_by_bone.find(bone_name);
+        truth.push_back(entry != pose_by_bone.end() ? entry->second : nullptr);
+    }
+
+    logger::info("SCOPY ANIM play clip='{}' type={} duration={:.2f}s tracks={} copy-resolved={}/{} truth-bones={}",
+        playback.name, animation_type_name(static_cast<std::uint32_t>(animation->type.get())), playback.duration,
+        track_count, playback.tracks.size(), track_count, pose_by_bone.size());
+    if (!playback.valid())
+    {
+        logger::info("SCOPY ANIM play UNAVAILABLE reason=no-track-resolves-to-the-copy");
+        return false;
+    }
+
+    // Ground truth: the clip's own pose at every phase against the pose the engine holds. The source is
+    // paused, so its phase is frozen and unknown - the sweep finds it, and the spread between the best
+    // and the worst phase is what tells a match from a coincidence.
+    std::vector<RE::hkQsTransform> sampled(playback.tracks.size());
+    float best_position = std::numeric_limits<float>::max();
+    float best_rotation = 0.0f;
+    float best_time = 0.0f;
+    float worst_position = 0.0f;
+    size_t compared = 0;
+    for (size_t step = 0; step < Sweep_Steps; ++step)
+    {
+        const float time = playback.duration * static_cast<float>(step) / static_cast<float>(Sweep_Steps);
+        animation->SampleIndividualTransformTracks(time, playback.tracks.data(), static_cast<std::uint32_t>(playback.tracks.size()), sampled.data());
+        float position = 0.0f;
+        float rotation = 0.0f;
+        size_t bones = 0;
+        for (size_t i = 0; i < sampled.size(); ++i)
+        {
+            if (!truth[i])
+                continue;
+            const PoseSample clip_pose = read_pose(sampled[i]);
+            const PoseSample engine_pose = read_pose(*truth[i]);
+            position = std::max(position, (RE::NiPoint3{ clip_pose.position[0], clip_pose.position[1], clip_pose.position[2] } -
+                                              RE::NiPoint3{ engine_pose.position[0], engine_pose.position[1], engine_pose.position[2] })
+                                                 .Length());
+            const RE::NiMatrix3 clip_rotation = ni_matrix_from_quaternion(clip_pose.quaternion[0], clip_pose.quaternion[1], clip_pose.quaternion[2], clip_pose.quaternion[3]);
+            const RE::NiMatrix3 engine_rotation = ni_matrix_from_quaternion(engine_pose.quaternion[0], engine_pose.quaternion[1], engine_pose.quaternion[2], engine_pose.quaternion[3]);
+            rotation = std::max(rotation, rotation_angle_degrees(engine_rotation, clip_rotation));
+            ++bones;
+        }
+        compared = std::max(compared, bones);
+        worst_position = std::max(worst_position, position);
+        if (position < best_position)
+        {
+            best_position = position;
+            best_rotation = rotation;
+            best_time = time;
+        }
+    }
+
+    logger::info("SCOPY ANIM play ground-truth best-t={:.2f}s max-pos-delta={:.3f} max-rot-delta={:.2f}deg worst-pos-delta={:.3f} bones={}",
+        best_time, best_position, best_rotation, worst_position, compared);
+    const bool matched = worst_position > 0.0f && best_position < worst_position * Match_Fraction_Of_Control;
+    logger::info("SCOPY ANIM play ground-truth verdict={} best={:.4f} worst={:.3f}", matched ? "match" : "none", best_position, worst_position);
+
+    out = std::move(playback);
+    return true;
+}
+
+size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root)
+{
+    if (!clip.valid())
+        return 0;
+
+    const float length = clip.duration > 0.05f ? clip.duration : 0.05f;
+    float looped = std::fmod(seconds, length);
+    if (looped < 0.0f)
+        looped += length;
+
+    std::vector<RE::hkQsTransform> sampled(clip.tracks.size());
+    clip.animation->SampleIndividualTransformTracks(looped, clip.tracks.data(), static_cast<std::uint32_t>(clip.tracks.size()), sampled.data());
+
+    size_t written = 0;
+    for (size_t i = 0; i < sampled.size(); ++i)
+    {
+        RE::NiAVObject* const node = clip.nodes[i];
+        if (!node)
+            continue;
+        RE::NiTransform local = ni_local_from_pose(read_pose(sampled[i]), false);
+        if (!std::isfinite(local.scale) || local.scale <= 0.0f)
+            local.scale = node->local.scale;
+        node->local = local;
+        ++written;
+    }
+    recompute_subtree_worlds(copy_root, 0);
+    return written;
+}
+
+void ClipPlayer::reset()
+{
+    m_clip = ClipPlayback{};
+    m_time = 0.0;
+    m_last_tick = std::chrono::steady_clock::now();
+}
+
+void ClipPlayer::set_clip(ClipPlayback clip)
+{
+    m_clip = std::move(clip);
+    m_time = 0.0;
+    m_last_tick = std::chrono::steady_clock::now();
+}
+
+size_t ClipPlayer::advance(RE::NiAVObject& copy_root)
+{
+    if (!m_clip.valid())
+        return 0;
+
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    const double step = std::min(std::chrono::duration<double>(now - m_last_tick).count(), Max_Clip_Step_Seconds);
+    m_last_tick = now;
+    m_time += std::max(step, 0.0);
+    return play_animation_clip(m_clip, static_cast<float>(m_time), copy_root);
 }
 
 PLUGIN_NAMESPACE_END

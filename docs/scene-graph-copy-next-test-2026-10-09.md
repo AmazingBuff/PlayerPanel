@@ -72,6 +72,25 @@ CBBE 与 UBE 各一次更好。
    - `idle-base` 给出角色自己的站立待机索引（`Idle.hkx` 之类），这是 HKX6 要播的那一段。
 3. 若 `layout UNAVAILABLE reason=no-object-in-element`：连两行 `raw … qwords='…'` 一起回传（0x80 字节，足够人工读布局）。
 
+**HKX5 实测结果（2026-10-10）**：0x80 字节转储显示 vtable **每 0x30 字节重复**，元素是 0x30 字节的小对象、
+内部没有 `hkaAnimationBinding` 字段——绑定集这条路性价比已经不对，改走**全类型**的 `hkbClipGenerator`。
+逐条见 [HKX5 实测证据](s2-hkx5-clip-evidence-2026-10-10.md)。
+
+## HKX6 轮（待测）：播放角色自己的动画（这一轮是兑现）
+
+前置：`dist/CharacterPanel-scopy-HKX6-1.2.1.zip` 的 DLL + 同包 PDB。
+
+1. 打开暂停的背包 → **F7** 捕获 → **F8** 绘制 → 看人物是否在动（**F2 默认开**，按 F2 可关/开）。
+2. 回传：`SCOPY ANIM play …` 全部行 + `SCOPY IDLE …` 行 + `SCOPY BUILD` 首行 + `SCOPY DRAW frame=1 …`。
+3. 判据：
+   - `play search objects=N clips=K`：能在行为图里找到几个 clip；`clips=0` 说明遍历深度/形态判据需要调；
+   - `play clip='…' type=… copy-resolved=K/N`：选中的是哪一段（应当是 `mt_idle.hkx` 或 `idle.hkx`），
+     以及它的轨道有多少能落到副本节点上（这就是能被驱动的比例）；
+   - **`play ground-truth verdict=match|none best=… worst=…`**：这一行是"我们采样的姿势能不能复现引擎自己的姿势"的判据；
+     `best` 远小于 `worst` 才算有区分度；
+   - 目视：F2 开时人物**播的是真实的待机动作**（重心、手臂、呼吸都来自引擎的动画数据），而不是程序化正弦。
+4. 独立性（FR-03/FR-05 红线）：退出背包后源角色姿态/位置/物理无变化；本轮只读源角色的图，只写副本节点。
+
 **HKX3 实测结果（2026-10-10）**：名字表成立且与绑定集**同序**（`names == bindings == 15203`，
 `character='DefaultFemale'`、`rig=…skeleton_female.hkx`）；两个候选布局**都被否定**（`valid=0/8`），
 说明元素既不是 binding 本身、也不以指向它的指针开头。逐条见

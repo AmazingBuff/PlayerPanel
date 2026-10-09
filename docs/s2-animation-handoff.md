@@ -238,6 +238,36 @@ SCOPY ANIM catalogue probe index=… name='Animations\Idle.hkx' type=spline dura
 - 通过后 HKX6：`SampleTracks(t, out, nullptr, cache)`（带显式时间、const，不碰源 control）→ 写副本（HKX2 已验证的路径）
   → 用自己的时钟循环播放，并按 `poseLocal`（`boneNodes` 次序）做同相位 A/B。
 
+### HKX5（已实测，2026-10-10）：绑定集元素是 0x30 字节的桩，路线改走 `hkbClipGenerator`
+
+0x80 字节转储显示元素里 **vtable 每 0x30 字节重复一次**（`[vtable][memSize 0xffff|refCount 1][0][0][0x8000…][0]`），
+即"元素是 0x30 字节的小对象"，其中**没有** `hkaAnimationBinding` 的字段；候选（0x00/0x30 两处 vtable）全部 `no-animation`。
+这条路线要继续挖下去只会越挖越深。逐条见 [HKX5 实测证据](s2-hkx5-clip-evidence-2026-10-10.md)。
+
+### HKX6（已实现并打包，待游戏内一轮）：走 `hkbClipGenerator`，采样用无 cache 的接口
+
+`hkbClipGenerator` 在 CommonLibSSE 里**全类型**，只需找到实例；采样改用
+`SampleIndividualTransformTracks(time, tracks, n, out)`——**它没有 chunk cache 参数**，
+所以"spline 动画是否需要 cache"这条悬案不必先答。
+
+```
+SCOPY ANIM play search objects=N clips=K first='Animations\female\mt_idle.hkx@3.40s, …'
+SCOPY ANIM play clip='Animations\female\mt_idle.hkx' type=spline duration=3.40s tracks=116 copy-resolved=109/116 truth-bones=116
+SCOPY ANIM play ground-truth best-t=…s max-pos-delta=… max-rot-delta=…deg worst-pos-delta=… bones=109
+SCOPY ANIM play ground-truth verdict=match|none best=… worst=…
+SCOPY IDLE enabled (F2); driver=Animations\female\mt_idle.hkx
+```
+
+- **发现**：从 `behaviorGraph->rootGenerator` 起做**有界**遍历（深度 ≤4、对象 ≤96）；状态机的 `states` 是**类型化**的按名跟进，
+  其余节点只跟"首字像 vtable"的指针；每个候选必须通过**clip generator 校验**（名字像 `.hkx`、binding 结构性通过、
+  `mode ≤ 3`、`playbackSpeed` 合理）才被采信——走错一步只会多一条拒绝理由，不会选错动画。
+- **选择**：优先**角色自己的站立待机**（`mt_idle.hkx` / `idle.hkx` / `idleforcedefaultstate.hkx` 的文件名），
+  且优先引擎自己那份（路径不以 `data\` 开头的 mod 替换件排在后面）。
+- **真值**：把该 clip 在**每个相位**采样一次，与引擎当前持有的姿态（`poseLocal`，**按 `boneNodes` 索引**）逐骨比较，
+  打印最佳相位与最差相位。`verdict=match` 表示某个相位能复现引擎姿态到 1% 以内——这就是"引擎的动画数据能被我们正确采样"的证据。
+- **驱动**：F2 打开后由**我们自己的时钟**推进（暂停时引擎不推进），每帧采样→写 local→重算子树世界；
+  找不到 clip 时自动回退程序化待机并在日志里说明。
+
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
 1. **数值 A/B（主判据）**：同一动画、同一相位下，逐骨比较**副本的 local 变换**与**源角色的 local 变换**，

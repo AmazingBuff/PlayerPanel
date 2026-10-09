@@ -377,6 +377,7 @@ void SceneGraphCopy::process_requests()
         retire(std::move(m_snapshot));
         reset_probe_target();
         m_idle.reset();
+        m_clip.reset();
         m_draw_enabled = false;
         m_seen_generation = generation;
         m_command.store(Command::e_none, std::memory_order_release);
@@ -390,6 +391,7 @@ void SceneGraphCopy::process_requests()
         retire(std::move(m_snapshot));
         reset_probe_target();
         m_idle.reset();
+        m_clip.reset();
         m_draw_enabled = false;
         logger::info("SCOPY RELEASE reason=F4 capture={}", m_capture_id);
         return;
@@ -475,8 +477,9 @@ void SceneGraphCopy::reset_probe_target()
 void SceneGraphCopy::toggle_idle()
 {
     m_idle.set_enabled(!m_idle.enabled());
-    logger::info("SCOPY IDLE {} (F6); the next frame's base placement restores the captured pose first, so nothing accumulates",
-        m_idle.enabled() ? "enabled" : "disabled");
+    logger::info("SCOPY IDLE {} (F2); driver={}; the next frame's base placement restores the captured pose first, so nothing accumulates",
+        m_idle.enabled() ? "enabled" : "disabled",
+        m_clip.ready() ? m_clip.name() : std::string("procedural-idle"));
 }
 
 void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
@@ -487,9 +490,16 @@ void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
     if (!root || !m_idle.enabled())
         return;
     // While F2 is armed the probe is the figure's owner: it rebuilds its bone from the captured pose
-    // every frame, so an idle underneath it would only fight the measurement.
+    // every frame, so a driver underneath it would only fight the measurement.
     if (m_anim_probe_enabled)
         return;
+    // The source character's own animation when the engine handed one over; the procedural idle is the
+    // fallback for a body whose graph has none, and the log said which one at capture.
+    if (m_clip.ready())
+    {
+        m_clip.advance(*root);
+        return;
+    }
     m_idle.advance(*root);
 }
 
@@ -1049,6 +1059,14 @@ void SceneGraphCopy::capture()
     // binding-set layouts survives a structural check, so the round after this can name the clip it
     // samples instead of guessing an index.
     report_animation_catalogue(*player, *source, *root);
+    // S2/HKX6: the animation the engine can hand over for this character, resolved onto the copy and
+    // compared against the pose the engine itself holds. F2 then plays it from the studio's clock,
+    // because the game is paused and nothing else advances a pose.
+    ClipPlayback clip;
+    if (prepare_animation_clip(*player, *source, *root, clip))
+        m_clip.set_clip(std::move(clip));
+    else
+        m_clip.reset();
     for (RE::NiAVObject* object : copy_inventory.objects)
         if (object->AsGeometry())
             logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());

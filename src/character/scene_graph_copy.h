@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "character/animation_source.h"
 #include "character/idle_driver.h"
 
 #include <string>
@@ -108,6 +109,9 @@ private:
     bool m_cap_logged;
     bool m_anim_probe_enabled;
     IdleDriver m_idle;
+    // The animation the copy plays when the source character has one the engine can hand over; the
+    // procedural idle is the fallback when it does not.
+    ClipPlayer m_clip;
     RE::NiAVObject* m_probe_bone_cache;
     // The geometry whose skin owns the probe bone: the pass that submits it is the draw under
     // measurement (T2), and its slot is the one sampled at T1-T3.

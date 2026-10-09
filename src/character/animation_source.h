@@ -17,11 +17,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include <chrono>
+
 #include <xmmintrin.h>
 
 namespace RE
 {
     class TESObjectREFR;
+    class hkaAnimation;
 }
 
 PLUGIN_NAMESPACE_BEGIN
@@ -267,5 +270,50 @@ void verify_pose_replay(RE::TESObjectREFR& source, RE::NiAVObject& source_root, 
 // before anything is read through it. Nothing virtual is called on a candidate and nothing is
 // written, so a misread pointer reports nonsense instead of crashing.
 void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
+
+// One animation of the source character, resolved onto the copy: what to sample, which copy node each
+// sampled track drives, and how long the clip runs.
+struct ClipPlayback
+{
+    RE::hkaAnimation* animation;
+    std::string name;
+    float duration;
+    std::vector<std::uint16_t> tracks;    // track indices handed to the sampler, in node order
+    std::vector<RE::NiAVObject*> nodes;   // the copy node each sampled track drives
+
+    [[nodiscard]] bool valid() const { return animation != nullptr && !tracks.empty() && tracks.size() == nodes.size(); }
+};
+
+// Finds a clip in the character's behaviour graph whose name says idle, validates it as a clip
+// generator (its animation name, its binding, its playback mode and speed), resolves the tracks it can
+// drive onto the copy's nodes, and prints the ground-truth comparison: the clip's own pose sampled at
+// every phase against the pose the engine currently holds, which is the one number that says whether
+// the sampling chain reproduces the engine. Fills `out` for `play_animation_clip`; writes nothing.
+bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out);
+
+// Samples the clip at `seconds` (looped over its own length) and writes the result into the copy's
+// nodes, then recomputes the worlds below the copy root. Sampling goes through
+// SampleIndividualTransformTracks, which takes no chunk cache, so no structure whose layout is unknown
+// is involved. Returns how many nodes were written.
+size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root);
+
+// Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
+class ClipPlayer
+{
+public:
+    void reset();
+    void set_clip(ClipPlayback clip);
+    [[nodiscard]] bool ready() const { return m_clip.valid(); }
+    [[nodiscard]] std::string const& name() const { return m_clip.name; }
+    [[nodiscard]] double time() const { return m_time; }
+
+    // Advances the clock and writes one frame of the clip; returns the nodes written.
+    size_t advance(RE::NiAVObject& copy_root);
+
+private:
+    ClipPlayback m_clip{};
+    double m_time = 0.0;
+    std::chrono::steady_clock::time_point m_last_tick{};
+};
 
 PLUGIN_NAMESPACE_END

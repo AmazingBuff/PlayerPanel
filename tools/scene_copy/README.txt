@@ -124,13 +124,11 @@ the conversion rather than a silent failure. `restored` proves the figure was pu
 back. Nothing is written to the source character or the engine's graphs, and the
 copy is left exactly as captured.
 
-This build picks the animation binding's offset from the element's own shape
-(HKX5). The raw dump of the previous round showed a binding-set element carries an
-hkReferencedObject header, an empty array, and then a second header of the same
-shape at +0x30 - a by-value hkaAnimationBinding - so the candidates now come from
-what the bytes look like (a vtable means an object begins there, a readable heap
-pointer means one is pointed at) instead of from a fixed list, and each one is
-judged by the animation's own fields:
+This build also reports the animation list and the shape of the binding set's
+elements, as the evidence that closed that route off. The names are typed, so an
+index can be named; the elements turned out to be 0x30-byte stubs with no
+animation binding inside them, which is why the animation itself is reached
+through a clip generator instead (below):
 
   SCOPY ANIM catalogue character='...' names=N bindings=N
   SCOPY ANIM catalogue idle-names=K/N first='...'
@@ -139,20 +137,43 @@ judged by the animation's own fields:
   SCOPY ANIM catalogue elements=K object-like=K/N scan=0x80
   SCOPY ANIM catalogue candidate offset=0xNN as=value|pointer valid=K/N reasons='...'
   SCOPY ANIM catalogue raw index=K qwords='...'     (two elements, first 0x80 bytes)
-  SCOPY ANIM catalogue layout best=offset=0xNN/value valid=K/N
   SCOPY ANIM catalogue probe index=K name='...' type=spline|interleaved|... duration=...s
         frames=K tracks=K animation-tracks=K skeleton-name='...' bones='...' copy-resolved=K/N
 
-The candidate whose valid count is full is the layout; a rejected one says which
-check it failed, and the animation's type, clip length and its own transform-track
-count (which has to equal the binding's track table) are what a wrapper object
-cannot fake. The probe line matters most for what comes next: type says whether
-sampling will need a chunk cache, and copy-resolved is how many of that
-animation's tracks land on nodes of the copy - the write coverage, measured
-without sampling anything. Every read goes through a committed-page check;
-sampling and any virtual call on a candidate are not part of this build.
+The two raw lines are the ones that settled the layout question, and every read
+goes through a committed-page check; nothing here calls a virtual function on a
+candidate or samples anything.
 
-The package build is otherwise unchanged: F7/F8/F3/F4 plus the idle on F2.
+This build plays one of the source character's own animations on the copy (HKX6).
+The binding set's elements turned out to be 0x30-byte stubs with no animation
+binding in them, so this route uses the fully typed hkbClipGenerator instead: a
+bounded walk of the behaviour graph follows a state machine's typed states and,
+for everything else, only pointers whose first word looks like a vtable, and
+believes a node only when its animation name looks like an animation file, its
+binding passes the structural checks, and its playback mode and speed are ones
+the engine defines. Sampling goes through SampleIndividualTransformTracks, which
+takes no chunk cache, so spline-compressed animations need no extra structure.
+
+  SCOPY ANIM play search objects=N clips=K first='...'
+  SCOPY ANIM play clip='Animations\female\mt_idle.hkx' type=spline duration=3.40s
+        tracks=116 copy-resolved=109/116 truth-bones=116
+  SCOPY ANIM play ground-truth best-t=...s max-pos-delta=... max-rot-delta=...deg
+        worst-pos-delta=... bones=109
+  SCOPY ANIM play ground-truth verdict=match|none best=... worst=...
+  SCOPY IDLE enabled (F2); driver=Animations\female\mt_idle.hkx
+
+The ground-truth pair is the one to read: the clip is sampled at every phase and
+compared against the pose the engine itself holds, so a small best next to a much
+larger worst says the sampling chain reproduces the engine. copy-resolved is how
+many of the clip's tracks land on nodes of the copy - the rest are bones this
+body does not carry.
+
+F2 now plays that clip from the studio's own clock, because the game is paused
+and nothing else advances a pose; when no clip was found it falls back to the
+procedural idle, and the line above says which one it chose. F7 prints the
+catalogue and the discovery, F8 draws, F3 rotates, F4 releases.
+
+The package build is otherwise unchanged: F7/F8/F3/F4 plus the animation on F2.
 
 The F2 probe swings one bone of the copy and measures whether that change
 reaches the actual draw. It runs inside the draw window in the fixed order the

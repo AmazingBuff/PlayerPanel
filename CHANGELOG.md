@@ -4,6 +4,26 @@
 
 ### Added
 
+- Play one of the source character's own animations on the copy (S2 animation
+  handoff, HKX6). The binding set's elements turned out to be 0x30-byte stubs
+  whose animation field is not where any reading put it, so this route stops
+  digging there and uses the fully typed `hkbClipGenerator` instead: a bounded
+  walk of the behaviour graph follows a state machine's typed `states` and, for
+  everything else, only pointers whose first word looks like a vtable, and
+  believes a node only when its animation name looks like an animation file, its
+  binding passes the structural checks, and its playback mode and speed are ones
+  the engine defines. The clip whose name is the character's own idle is picked,
+  its tracks are resolved onto the copy's nodes by bone name, and the ground
+  truth is printed: the clip sampled at every phase against the pose the engine
+  currently holds, with the spread between the best and the worst phase. Sampling
+  goes through `SampleIndividualTransformTracks`, which takes no chunk cache, so
+  the open question about spline-compressed animations does not have to be
+  answered first. F2 now plays that clip from the studio's own clock and falls
+  back to the procedural idle only when no clip was found, logging which of the
+  two it chose and how many of the clip's tracks the copy can be driven with.
+
+### Changed
+
 - Pick the binding's offset from the element's own shape and confirm it with the
   animation's own fields (S2 animation handoff, HKX5). The raw dump settled what
   the fixed candidate table could not: a binding-set element starts with an
