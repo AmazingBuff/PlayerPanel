@@ -475,8 +475,9 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`（身份以包内 manifest 为准；
-  引擎解析器 + 已装载资源两跳 + 条件驱动，方案见 §5 HKX12 节）。HKX11 轮注：实际部署的是提交前
+- 当前产物（**待你跑的一轮**）：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX12-4165d734ea-cl94faaed0c6-20261009T184849Z`（`source_baseline_dirty=false`，基线
+  `4165d734ea`），DLL SHA-256 `25d98ef7…`；引擎解析器 + 已装载资源两跳 + 条件驱动，方案见 §5 HKX12 节。HKX11 轮注：实际部署的是提交前
   中间构建（`a93c005+dirty`，代码与最终包一致），判读见
   [HKX11 实测证据](s2-hkx11-animmgr-evidence-2026-10-10.md)。**已实测的十一轮**：HKX11
   （[证据](s2-hkx11-animmgr-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx11-animmgr-20261010.log)）、
