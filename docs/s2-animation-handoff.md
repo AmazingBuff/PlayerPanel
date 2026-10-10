@@ -26,7 +26,17 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜，HKX14 已实测）**：**轨道表裁决完成——不是布局错，是引擎没填**。
+**最新（2026-10-10 深夜，HKX15 已实测）**：**选项 D（虚调用 control 访问器）裁定为无用，红线不必破**。
+control 的 `binding`（@0x38）= `0x15543c18d20` **与 clip 的 binding 逐位相同**（`same-as-clip-binding=true`）
+→ 访问器读的就是那张空表，返回同样空结果。control 布局也实锤正确（`localTime=1.094`/`weight=1.0`
+自洽、11 qwords = 0x58、三个字段独立吻合）。**新线索**：control 自带
+`transformTrackWeights`（size=**99**，与 `animation` 的 99 轨同数），但它是 `hkArray<uint8_t>` 的**权重**、
+不是 `int16_t` 骨索引，**不能当映射表**；不过它证明 clip 确实在播、control 是活且数据完整的，
+唯独 binding 的 `transformTrackToBoneIndices` 没填。三轮复现（idx 12066／12221／12219，皆 kClone）。
+**下一步只剩选项 B（未暂停帧观察）**，需改探针时机，动工前先确认。逐条见
+[HKX15 实测证据](s2-hkx15-control-evidence-2026-10-10.md)。
+
+**HKX14（历史）**：**轨道表裁决完成——不是布局错，是引擎没填**。
 活 binding 的 0x48 转储**逐字段对上 CLib 的 `hkaAnimationBinding`**（`animation`@+0x18 与独立读到的指针
 逐位相同、9 qwords = 0x48），而 `array=0x0 size=0`、`declared=99`（与 `animation->numberOfTransformTracks=99`
 自洽）→ **binding 与动画都是活对象、布局零疑问，缺的只是数据**。对照组 `weaponAdjustment.hkx` 两轮都
