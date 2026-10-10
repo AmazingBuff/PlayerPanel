@@ -459,3 +459,83 @@ SCOPY ANIM load spline qwords='…'   （对象原始 0xB0 字节）
 | `size` 合理但 `at` 不可读 | 指针未 patch | 说明这是**序列化镜像**而非活对象 |
 | 数组值像**偏移量**（远小于指针） | 同上，packfile 未 fixup | 需按 packfile 规则自行 fixup |
 | `frames/blocks` 为 0 或不可能值 | **布局与本版本不符** | 用 `qwords` 定真偏移 |
+
+## 20. HKX24 实测结果（2026-10-11 01:43）：**布局对、数据在，只有一张表真空**
+
+日志 `CharacterPanel-hkx24-spline-20261011.log`。**零崩溃**。
+
+```
+spline frames=150 blocks=1 max-per-block=256 mask-size=396 block-dur=4.279 frame-dur=0.0168 track-count=99
+spline array=block-offsets        size=1     at=0x…83e0 readable=true
+spline array=float-block-offsets  size=1     at=0x…83f0 readable=true
+spline array=transform-offsets    size=0     at=0x0
+spline array=float-offsets        size=0     at=0x0
+spline array=data                 size=20320 at=0x…8400 readable=true
+spline qwords='00007ff69ed4c008 0000000000000000 4020000000000005 0000000000000063 …'
+```
+
+**原始 22 个字（0xB0）逐字段解码，与 CLib 的 `hkaSplineCompressedAnimation` 完全吻合：**
+
+| 偏移 | 值 | 语义 |
+| --- | --- | --- |
+| +0x00 | `00007ff69ed4c008` | vtable |
+| +0x10 | `40200000`\|`00000005` | `duration=2.5`、`type=5`(spline) |
+| +0x18 | `00000063` | `numberOfTransformTracks=99` |
+| +0x38 | `0x96`\|`0x1` | `numFrames=150`、`numBlocks=1` |
+| +0x40 | `0x100`\|`0x18c` | `maxFramesPerBlock=256`、`maskAndQuantizationSize=396` |
+| +0x48 | `0x4088e9aa`\|`0x3e6f55bc` | `blockDuration=4.279`、`blockInverseDuration` |
+| +0x58 | 堆指针 + size=1 | `blockOffsets` ✓ |
+| +0x68 | 堆指针 + size=1 | `floatBlockOffsets` ✓ |
+| **+0x78** | **`0` + size=0** | **`transformOffsets` 真空** |
+| **+0x88** | **`0` + size=0** | **`floatOffsets` 真空** |
+| +0x98 | 堆指针 + size=**20320** | **`data` 在且可读** ✓ |
+
+**结论：不是布局错、不是数据缺 —— 是这张表本来就没填。**
+
+### 这一条解释了此前两个看似无关的现象
+
+1. **HKX16 的崩溃**：`mov r9d,[rax+rcx*4]` = 按轨道号索引 `transformOffsets`
+   → **索引一张 size=0 的表**。崩溃不是"数据没装载"，是**入口选错了**。
+2. **所有 spline 都报 `absent`**：我的判据**要求 `transformOffsets.size() >= 轨道数`** ——
+   而这个引擎**故意不填它**。**判据在要求采样器根本不需要的东西。**
+
+### 关键对照：OAR 用的不是这个入口
+
+[ActiveAnimationPreview.cpp:38](../OpenAnimationReplacer/src/ActiveAnimationPreview.cpp#L38)：
+
+```cpp
+previewAnimation->SamplePartialTracks(localTime, numTracks, transforms, numFloat, floats, nullptr);
+```
+
+**槽 04，不是槽 06。** 差别是本质的：
+
+| 入口 | 槽 | 轨道选择 | 需要 `transformOffsets`？ |
+| --- | --- | --- | --- |
+| `SampleIndividualTransformTracks` | 06 | **任意**轨道号 | **需要**（按号索引）→ 空表必崩 |
+| **`SamplePartialTracks`** | **04** | **从 0 起连续 N 轨** | **不需要** |
+
+**这就是引擎为什么不填那张表** —— 它走的是 04。
+
+## 21. HKX25：改用 OAR 的入口（槽 04）
+
+- 提交 `b580bfba`，包 `dist/CharacterPanel-scopy-HKX25-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX25-b580bfba19-cl94faaed0c6-20261010T174644Z`（`source_baseline_dirty=false`）。
+- DLL `c594e7bb…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+三处采样点全部改走 `SamplePartialTracks(t, count, out, 0, nullptr, nullptr)`；
+判据改为**只要求该调用真正触碰的东西**（`numFrames`/`numBlocks` 合理、`blockOffsets` 可读、`data` 可读）。
+
+**同时修掉一个正确性缺陷**：槽 04 取的是**从 0 起的连续段**，而收集到的轨道列表**可能因骨未解析而有空洞**
+—— 所以**按整段采样、按轨道号取值**，而不是按位置索引（后者会让空洞之后的每一对骨全部错位）。
+
+**判读表**：
+
+| 观测 | 含义 | 下一步 |
+| --- | --- | --- |
+| `ground-truth verdict=match` | **采样链闭环** | F2 播放 |
+| 有 `best-t` 但 `verdict=none` | 采样成功、映射不成立 | 恒等映射假设不成立 → 需真映射 |
+| 零崩溃且无 `mapping UNAVAILABLE` | 槽 04 不再碰空表 | 同上 |
+| 仍崩 | 槽 04 也依赖该表 | 回退并改在未暂停帧观察 |
+
+**未验证的假设（仍不采信）**：轨道表为空 ⇒ Havok 按**恒等映射**处理。本轮**没有假设它**——
+代码按轨道号取值，**是否正确由 `ground-truth` 相位扫描裁决**（PRD 要求的正是这种 A/B）。
