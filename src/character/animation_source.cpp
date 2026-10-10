@@ -112,6 +112,7 @@ namespace
     constexpr std::uint32_t Max_Walked_Records = 8;
     constexpr size_t Max_Resource_Objects = 24;
     constexpr size_t Resource_Dump_Bytes = 0x60;
+    constexpr size_t Max_Tree_Lines = 16;
     // How far the instance-side walk goes and how many of its clips are printed. Small on purpose: this
     // stage only answers whether a binding resolves, so it should cost one bounded pass, not a search.
     constexpr size_t Max_Instance_Objects = 256;
@@ -879,6 +880,7 @@ namespace
         std::string first_loader;   // the first loader's own words, for layout confirmation
         std::string first_resource; // the first resource's own words
         const char* resource_type = "-";  // what that resource's vtable says it is
+        size_t tree_lines = 0;      // objects described so far, so the tree dump stays bounded
     };
 
     void consider_animation(void const* candidate, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
@@ -950,6 +952,24 @@ namespace
             pending.pop_back();
             ++visited;
             consider_animation(object, walk, out);
+
+            // One line per object, so the shape of what a loaded animation resource actually holds is
+            // visible instead of inferred. Each line carries the object's own vtable and header words
+            // plus how the animation validation judged it, which is what says whether the animation is
+            // here at all or whether this walk is still looking in the wrong place.
+            if (walk.tree_lines < Max_Tree_Lines && readable(object, 0x20))
+            {
+                ++walk.tree_lines;
+                const auto* const words = static_cast<const std::uint64_t*>(object);
+                std::string qwords;
+                for (size_t word = 0; word < 4; ++word)
+                    qwords += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+                const RawAnimationReading raw = read_raw_animation(object);
+                const std::uintptr_t vtable = *static_cast<const std::uintptr_t*>(object);
+                logger::info("SCOPY ANIM load tree obj=0x{:x} vtable=0x{:x} animation={} reason={} type={} tracks={} qwords='{}'",
+                    reinterpret_cast<std::uintptr_t>(object), vtable, raw.valid, raw.reason,
+                    animation_type_name(raw.type), raw.tracks, qwords);
+            }
             for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
             {
                 const auto* const at = static_cast<const std::uint8_t*>(object) + offset;
@@ -2523,6 +2543,13 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
     LoadedWalk before_walk;
     std::vector<const RE::hkaAnimation*> before;
     walk_loaded_storage(*file_manager, before_walk, before);
+    // The addresses the classification compares against, printed so a "type=other" can be told apart
+    // from a wrong table: if the resource's own vtable equals one of these, the comparison is at fault;
+    // if it equals none, the object is simply not one of these five classes.
+    logger::info("SCOPY ANIM load vtables base=0x{:x} handle=0x{:x} container=0x{:x} map=0x{:x} resource=0x{:x}",
+        RE::VTABLE_hkResourceBase[0].address(), RE::VTABLE_hkResourceHandle[0].address(),
+        RE::VTABLE_hkResourceContainer[0].address(), RE::VTABLE_hkResourceMap[0].address(),
+        RE::VTABLE_hkResource[0].address());
     logger::info("SCOPY ANIM load before records={} current=0x{:x} current-crc=0x{:08x} records-walked={} with-loader={} with-resources={} resources={} anims={}",
         file_manager->loadedAnimations.size(), reinterpret_cast<std::uintptr_t>(file_manager->currentAnimation.unk00),
         file_manager->currentAnimation.fileInfo.crc32Filename,
