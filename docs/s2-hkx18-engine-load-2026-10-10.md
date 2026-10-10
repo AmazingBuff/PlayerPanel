@@ -132,3 +132,73 @@ SCOPY ANIM load after  records=… current=0x… current-crc=0x… records-walke
 | `with-loader>0` 但 `with-resources=0` | loader 的 `loadedData` 为空 | loader 布局或时机问题 |
 | `with-resources>0` 但 `anims=0` | 资源里没找到可校验动画 | 看资源窗口结构，改扫描范围 |
 | `anims>0` 且 `data-present=true` | **取数成功** | 接 ground-truth → F2 播放 |
+
+## 9. HKX19 实测结果（2026-10-11 00:51）：链路实锤正确，卡在资源内部
+
+日志 `CharacterPanel-hkx19-load-20261011.log`。**零崩溃**。
+
+```
+SCOPY ANIM load before records=7872 current=0x0 current-crc=0xb89be175 records-walked=64 with-loader=64 with-resources=64 resources=64 anims=0
+SCOPY ANIM load loader qwords='00007ff69ed463f0 000000000001ffff 000001fcf3f4c030 0000000100000001'
+SCOPY ANIM load index=12219 queued=1 loaded=true loaded-records=7871
+SCOPY ANIM load after  … records-walked=64 with-loader=64 with-resources=64 resources=64 anims=0
+```
+
+**这是本轮最重要的正结果 —— 那条链完全正确：**
+
+| 计数 | 值 | 含义 |
+| --- | --- | --- |
+| `records-walked` | 64 | 看了 64 条记录 |
+| **`with-loader`** | **64/64** | **`+0x28` 在每一条上都是可读的 loader 对象** |
+| **`with-resources`** | **64/64** | **每个 loader 的 `loadedData` 都非空** |
+| `resources` | 64 | 共 64 个资源（**每个 loader 恰好 1 个**） |
+| `anims` | **0** | 但这 64 个资源里没有一个能校验成动画 |
+
+`loader qwords` 逐字段实锤 **hkLoader 布局正确**：
+
+| 偏移 | 值 | 语义 |
+| --- | --- | --- |
+| +0x00 | `00007ff69ed463f0` | vtable（hkLoader） |
+| +0x08 | `000000000001ffff` | memSizeAndFlags\|refCount |
+| **+0x10** | `000001fcf3f4c030` | **`loadedData._data`**（堆指针） |
+| **+0x18** | `0000000100000001` | **`_size=1`、`_capacityAndFlags=1`** ✓ |
+
+→ **HKX11 的地图被证实**：`loadedAnimations[i].unk00 → +0x28 hkLoader → loadedData`，
+且 HKX12 走错的确实是数组（它读 `hashedAnimations`，本应用 `hashedBehaviors` 侧）。
+
+另外：`current=0x0`（装载前后都是空）→ 管理器的 `currentAnimation` 槽在本流程下不使用；
+`loaded-records` 7872 → 7871。
+
+**失败被精确归因到"资源内部"**：HKX18 的单层指针扫描够不到它。
+
+## 10. HKX20：给资源判类 + 转储 + 多层有界遍历
+
+- 提交 `9c20596e`，包 `dist/CharacterPanel-scopy-HKX20-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX20-9c20596ed2-cl94faaed0c6-20261010T165605Z`（`source_baseline_dirty=false`）。
+- DLL `88335d6d…`、PDB **均已从最终部署并校验一致**；单测 1/1。
+
+三处改动：
+
+1. **判类**：把资源的虚表与地址库声明的五个 `hkResource` 类逐一比对
+   （`hkResourceBase`／`hkResourceHandle`／`hkResourceContainer`／`hkResourceMap`／`hkResource`）——
+   一次受保护读、**零虚调用**，与 HKX9 让 clip 判类安全的同一手法；
+2. **转储**：首个资源的原始 `0x60` 字节 + 类名；
+3. **深层遍历**：把单层指针扫描换成**每个资源最多 24 个对象的有界遍历**
+   （地址本身与字指针都当候选，逐个校验后才采信）。记录数降到 8 以负担遍历成本。
+
+**新增日志**：
+
+```
+SCOPY ANIM load resource type=hkResource|hkResourceContainer|… qwords='…'
+```
+
+**判读表**：
+
+| 观测 | 含义 | 下一步 |
+| --- | --- | --- |
+| `type=hkResourceContainer` | 容器：动画在命名变体里 | 按容器布局取变体（OAR 的 `hkRootLevelContainer` 有型） |
+| `type=hkResourceHandle` | 句柄：真资源在另一处 | 跟句柄指针到目标资源 |
+| `type=hkResource` 且转储里出现「堆指针 + 小整数」 | 内容内联或经由该指针 | 按转储定偏移 |
+| `anims>0` 且 `data-present=true` | **取数成功** | 接 ground-truth → F2 播放 |
+
+**未变**：`Queue`/`Load` 仍有副作用；S1 安全回收仍阻塞；H03–H05 未测。
