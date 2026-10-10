@@ -1,5 +1,11 @@
 # S2 / S3 方案：副本的独立动作与物理
 
+> **2026-10-10 当前物理方案**：以 [PRD 0.8 §6.5](player-panel-prd.md) 和
+> [S3 独立物理测试单](s3-independent-physics-validation-2026-10-10.md) 为准。
+> 先用受控基础输入验证独立求解器，再接入真实 HKX；需要扩展／适配后端，尚未实现。
+> 已找到 Acro748/CBPCSSE 公开 C++ 源码，不再笼统认定 CBPC 闭源；与已调查的安装版本一致性仍待核对。
+> 下方旧“只剩自驱式”等推断不作为当前结论，自制摆动不能代替指定物理验收。
+
 > **2026-10-09 方向修正（以 [S2 动画 handoff](s2-animation-handoff.md) 为准）**：程序化待机虽然证明了
 > "持续写骨骼能驱动副本"，但它**没有真值、无法判定对错**，用户已要求改用**真实动画数据（HKX）**驱动
 > 并做**数值对比验证**。侦察已确认引擎侧的 Havok 采样管线在 CommonLibSSE 里可用
@@ -180,7 +186,7 @@ PRD FR-05 所禁止的。顺序因此固定：**先证明"能给副本摆姿"，
 | 组件 | 实际文件 | 备注 |
 | --- | --- | --- |
 | Faster HDT-SMP | `mods\Faster HDT-SMP\SKSE\Plugins\hdtsmp64.dll` | 附带官方 `.pdb`，可反查导出；`SMPFixes.dll`（0.0.3 for 3.0.0-Beta）在同装 |
-| CBPC | `mods\CBPC - Physics with Collisions\SKSE\Plugins\cbp.dll` | 闭源，另有大量 CBPC 配置 mod |
+| CBPC | `mods\CBPC - Physics with Collisions\SKSE\Plugins\cbp.dll` | 已找到公开 C++ 源码；源码与该安装版本的对应关系待核对，不能由 DLL 接口限制推断源码不可适配 |
 | 骨架／身形 | XP32MSSE、CBBE 3BA、UBE 2.0 等多套并存 | S0 已实测两种身形 |
 
 对外接口的可用性由并行调研确认（FSMP 是否提供 SKSE 插件 API、CBPC 是否只认 Papyrus／装备配置），

@@ -1,11 +1,16 @@
 # S2 动画：HKX／引擎动画路线侦察与下一工作包（下一个会话从这里开始）
 
-- 日期：2026-10-09（本轮以文档收尾，未再改代码）
+- 日期：2026-10-10（本轮更新规划文档，未修改动画取数代码）
 - 读者：下一个会话的 Agent / 开发者。本文是 S2（FR-03 动作）的**当前入口**；机制证据在
   [探针证据](s2-anim-probe-evidence-2026-10-09.md)，历史方案在 [S2/S3 方案](s2-s3-plan.md)，
   测试单在 [下一轮测试单](scene-graph-copy-next-test-2026-10-09.md)。
 
 ## 0. 一句话状态
+
+**当前决策依据更新**：[PRD 0.7 §6.4](player-panel-prd.md) 和 [HKX 下一工作包测试单](s2-hkx-next-work-package-2026-10-10.md)。
+首选核对真实 clip 的 Activate／Load／Update／采样生命周期，取得一段来源与持有关系明确的动画；不继续将注册记录当动画对象、不追加陌生指针层。
+只参考 OAR 源码，不引入运行时交互。D 录制回放是受限备选，不替代任意 HKX／展示动作切换或 CBPC／SMP。
+下文 HKX1–12 的观察与历史推断保留；“binding/control 普遍无效”“路线 B 被连带否定”“只剩两个去处”及“D 机制全验证／小时级交付”等表述不作为当前验收结论。
 
 副本**写骨骼能驱动画面**这一点已被四轮游戏内实测确证；但当前**程序化待机没有真值、无法判定对错**，
 用户已明确要求改为**用真实动画数据（HKX）驱动并可对比验证**。本工作包 = 用引擎自己的采样器播放
@@ -26,9 +31,8 @@
 读到的是下一条目的 CRC——**"名字/索引注册"与"已装载数据"分离实锤**（见
 [HKX12 实测证据](s2-hkx12-hashed-evidence-2026-10-10.md)）。三轮（HKX10-12）已把注册表层完全看清：
 binding set = 空桩、hashedAnimations = 文件信息、已装载数据只在管理器记录的 ptr1/ptr2（未跟进）或
-管理器 unk68/unk88（未探）。**当前状态：无待验证代码；下一步待用户拍板——HKX13（最后一跳探针：
-跟进 ptr1/ptr2 + CRC 点名，检查点：拿不到即转 D）还是直接转路线 D（poseLocal 录制-回放，机制全已
-验证）**。
+管理器 unk68/unk88（未探）；不能据此认定已装载数据只有这些去处。
+当前没有满足新测试单的构建。下一步转为真实活跃实例与资源链的有界核对，不直接跟陌生指针，也不默认转 D 视为完整交付。
 
 ## 1. 方向修正（用户批评，已接受）
 
@@ -56,26 +60,26 @@ idle 完全没法测试。
 
 ## 3. 侦察结果：引擎侧可取用的对象（本次读的是本仓 CommonLibSSE checkout）
 
-**结论：不需要自己写 HKX 解析器。** 引擎已把"加载→解码→采样"做完，CommonLibSSE 暴露了类型与偏移，
-我们只需**选一个动画、用自己的时钟推进、调用引擎的采样、按轨道→骨骼映射写进副本**。
+**当前优先复用引擎解码与采样，不自研 HKX 解析器。** CommonLibSSE 暴露了相关类型与入口，但具体 animation／binding 的可达性和持有链未闭环。
+先证明真实对象可安全取用，才能用自己的时钟采样；接口声明存在不是完整“加载→解码→采样”已实现的证明。
 
 | 能力 | 位置 |
 | --- | --- |
-| 引擎自己的采样函数（任意时间点取姿态） | `hkaAnimation::SampleTracks(time, hkQsTransform* out, float* floatTracks, hkaChunkCache*)` — [hkaAnimation.h:44](extern/CommonLibSSE/include/RE/H/hkaAnimation.h#L44) |
-| 轨道 → 骨骼索引映射 | `hkaAnimationBinding::transformTrackToBoneIndices` — [hkaAnimationBinding.h:26](extern/CommonLibSSE/include/RE/H/hkaAnimationBinding.h#L26) |
-| 动画骨架（骨名＋父索引，用于与副本节点对齐） | `hkbCharacterSetup::animationSkeleton` — [hkbCharacterSetup.h:25](extern/CommonLibSSE/include/RE/H/hkbCharacterSetup.h#L25)；`hkaSkeleton::{bones,parentIndices}` — [hkaSkeleton.h:33](extern/CommonLibSSE/include/RE/H/hkaSkeleton.h#L33) |
-| 可自驱的播放控制（公开 `localTime`） | `hkaAnimationControl`：`localTime`／`binding`／`SampleTracks(...)` — [hkaAnimationControl.h:23-38](extern/CommonLibSSE/include/RE/H/hkaAnimationControl.h#L23) |
-| 引擎的 clip 对象（含动画名与播放模式） | `hkbClipGenerator`：`animationName`／`binding`／`animationControl`／`localTime`／`time`／`playbackSpeed`／`mode` — [hkbClipGenerator.h:66-96](extern/CommonLibSSE/include/RE/H/hkbClipGenerator.h#L66) |
-| 骨索引 → NiNode 表（引擎自带映射） | `BShkbAnimationGraph::boneNodes`（`BoneNodeEntry{ NiNode* node; … }`）— [BShkbAnimationGraph.h:38-43](extern/CommonLibSSE/include/RE/B/BShkbAnimationGraph.h#L38)、成员在 0x160 |
-| 引擎每帧生成的姿态缓冲 | `BShkbAnimationGraph::generatorOutputs[2]`（0x220）；结构见 [hkbGeneratorOutput.h](extern/CommonLibSSE/include/RE/H/hkbGeneratorOutput.h) |
-| 角色的当前 local 姿态 | `hkbCharacter::poseLocal`／`numPoseLocal` — [hkbCharacter.h:53-54](extern/CommonLibSSE/include/RE/H/hkbCharacter.h#L53) |
-| 取图路径 | `BShkbAnimationGraph::characterInstance`（0xC0，`hkbCharacter`）；`hkbCharacter::{setup(0x50), animationBindingSet(0x68), behaviorGraph(0x58)}` — [hkbCharacter.h:45-48](extern/CommonLibSSE/include/RE/H/hkbCharacter.h#L45) |
-| 手动推进动画图（可选） | `IAnimationGraphManagerHolder::UpdateAnimationGraphManager(const BSAnimationUpdateData&)` — [IAnimationGraphManagerHolder.h:55](extern/CommonLibSSE/include/RE/I/IAnimationGraphManagerHolder.h#L55) |
+| 引擎自己的采样函数（任意时间点取姿态） | `hkaAnimation::SampleTracks(time, hkQsTransform* out, float* floatTracks, hkaChunkCache*)` — [hkaAnimation.h:44](../extern/CommonLibSSE/include/RE/H/hkaAnimation.h#L44) |
+| 轨道 → 骨骼索引映射 | `hkaAnimationBinding::transformTrackToBoneIndices` — [hkaAnimationBinding.h:26](../extern/CommonLibSSE/include/RE/H/hkaAnimationBinding.h#L26) |
+| 动画骨架（骨名＋父索引，用于与副本节点对齐） | `hkbCharacterSetup::animationSkeleton` — [hkbCharacterSetup.h:25](../extern/CommonLibSSE/include/RE/H/hkbCharacterSetup.h#L25)；`hkaSkeleton::{bones,parentIndices}` — [hkaSkeleton.h:33](../extern/CommonLibSSE/include/RE/H/hkaSkeleton.h#L33) |
+| 可自驱的播放控制（公开 `localTime`） | `hkaAnimationControl`：`localTime`／`binding`／`SampleTracks(...)` — [hkaAnimationControl.h:23-38](../extern/CommonLibSSE/include/RE/H/hkaAnimationControl.h#L23) |
+| 引擎的 clip 对象（含动画名与播放模式） | `hkbClipGenerator`：`animationName`／`binding`／`animationControl`／`localTime`／`time`／`playbackSpeed`／`mode` — [hkbClipGenerator.h:66-96](../extern/CommonLibSSE/include/RE/H/hkbClipGenerator.h#L66) |
+| 骨索引 → NiNode 表（引擎自带映射） | `BShkbAnimationGraph::boneNodes`（`BoneNodeEntry{ NiNode* node; … }`）— [BShkbAnimationGraph.h:38-43](../extern/CommonLibSSE/include/RE/B/BShkbAnimationGraph.h#L38)、成员在 0x160 |
+| 引擎每帧生成的姿态缓冲 | `BShkbAnimationGraph::generatorOutputs[2]`（0x220）；结构见 [hkbGeneratorOutput.h](../extern/CommonLibSSE/include/RE/H/hkbGeneratorOutput.h) |
+| 角色的当前 local 姿态 | `hkbCharacter::poseLocal`／`numPoseLocal` — [hkbCharacter.h:53-54](../extern/CommonLibSSE/include/RE/H/hkbCharacter.h#L53) |
+| 取图路径 | `BShkbAnimationGraph::characterInstance`（0xC0，`hkbCharacter`）；`hkbCharacter::{setup(0x50), animationBindingSet(0x68), behaviorGraph(0x58)}` — [hkbCharacter.h:45-48](../extern/CommonLibSSE/include/RE/H/hkbCharacter.h#L45) |
+| 手动推进动画图（可选） | `IAnimationGraphManagerHolder::UpdateAnimationGraphManager(const BSAnimationUpdateData&)` — [IAnimationGraphManagerHolder.h:55](../extern/CommonLibSSE/include/RE/I/IAnimationGraphManagerHolder.h#L55) |
 
 ### 已实测（2026-10-10，逐条证据见 [HKX1 实测证据](s2-hkx1-alignment-evidence-2026-10-10.md)）
 
 - 取图路径在 AE 1.6.1170 上成立：`TESObjectREFR::GetAnimationGraphManager` → 两个图（`DefaultFemale` root=true /
-  `FirstPerson` root=false，`holder`/`root` 判据可用），女性工程已加载 **15203** 条 binding，`poseLocal` 116 项。
+   `FirstPerson` root=false，`holder`/`root` 判据可用），女性工程有 **15203** 个绑定登记条目，`poseLocal` 116 项；登记数量不等于已持有的可采样动画数量。
 - 骨架 ↔ 副本节点：**109/116** 精确命中、`ambiguous=0`；缺的是 `x_` 帮手骨与装备附着骨（`Shield`/`Weapon`/`Quiver`/`Belly`），
   CBBE 极简体型 90/116。
 - **`boneNodes[i]` 与 `bones[i]` 不同序**（同名率 37/116、78/99）→ 指针对应作废；**`poseLocal[i]` 的对应次序也必须实测**，不能假设。
@@ -88,7 +92,7 @@ idle 完全没法测试。
 
 - `BSAnimationGraphManager::QueryAnimations`（两个重载）与 `RE::AnimationSystemUtils` 的**全部函数**在这个
   CommonLibSSE checkout 里 AE 地址都是 `0`（`RELOCATION_ID(62432, 0)`、`RELOCATION_ID(31942, 0)` …）。
-  `REL::RelocationID` 在 AE 构建下取 `_aeID`，为 0 时 `address()` 返回 0（[REL/ID.h:71-81](extern/CommonLibSSE/include/REL/ID.h#L71)），
+  `REL::RelocationID` 在 AE 构建下取 `_aeID`，为 0 时 `address()` 返回 0（[REL/ID.h:71-81](../extern/CommonLibSSE/include/REL/ID.h#L71)），
   **调用即跳到 0**。本项目只有 AE 1.6.1170，所以"用引擎现成 API 列出 clip 名／clip 信息"这条路不可规划。
 - `hkbStateMachine::StateInfo` 的成员全是 `unk30…unk70`，`hkbAnimationBindingWithTriggers` 只有前向声明：
   遍历 generator 树找 `hkbClipGenerator`、或读 `animationBindingSet::bindings` 的元素，**都要先做运行时布局核对**。
@@ -99,8 +103,8 @@ idle 完全没法测试。
 ### 必须验证的未知项（不要当成已知）
 
 1. **`hkbAnimationBindingWithTriggers` 在 CommonLibSSE 里只有前向声明、没有头文件**
-   （[hkbAnimationBindingSet.h:11](extern/CommonLibSSE/include/RE/H/hkbAnimationBindingSet.h#L11)），
-   而 `hkbAnimationBindingSet::bindings` 是它的指针数组（[:21](extern/CommonLibSSE/include/RE/H/hkbAnimationBindingSet.h#L21)）。
+   （[hkbAnimationBindingSet.h:11](../extern/CommonLibSSE/include/RE/H/hkbAnimationBindingSet.h#L11)），
+   而 `hkbAnimationBindingSet::bindings` 是它的指针数组（[:21](../extern/CommonLibSSE/include/RE/H/hkbAnimationBindingSet.h#L21)）。
    → 走这条路前必须**运行时核对布局**（例如用两个实例交叉验证），否则优先走有类型的
    `hkbClipGenerator::binding` 或 `hkaAnimationControl`。
 2. **暂停时行为图是否 tick**：本项目的既有结论是暂停时引擎计时器不推进、世界动画不前进；
@@ -458,13 +462,11 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
 - 逐条见 [HKX12 实测证据](s2-hkx12-hashed-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx12-hashed-20261010.log)。
 
-### 当前决策点（HKX12 之后，用户暂缓拍板）
+### 当前工作包（HKX12 之后，按 PRD 0.7 执行）
 
-- **HKX13（最后一跳探针）**：跟进管理器记录 ptr1/ptr2 + CRC32("mt_idle") 在 7872 条里点名，拿到即
-  接已铺好的驱动；**检查点：仍拿不到动画对象就转 D**（hkResource 内部布局是再一个未知层，边际收益
-  递减）。
-- **路线 D（poseLocal 录制-回放）**：机制全部已验证，小时级工程，直接交付 S2 待机验收；A″ 三轮的
-  结构图成果（虚表判类仪器、binding set/管理器/注册表布局）留作"展示动作切换"的地图。
+- **首选**：先固定源码／运行时和生命周期依据，观察一个已知真实 Idle 的活跃实例，证明 animation／binding 的来源和持有，再确定性采样并用独立时钟驱动一份副本；H01–H05 见新测试单。
+- **停止条件**：解释不了来源／类型／持有就不发新的盲探包；无有效对象且无新结构证据时停止本轮，不自动追加指针层，也不由一次 found=0 排除全部 HKX 路线。
+- **备选 D**：可验证录制、深复制、自有时钟、插值与循环，但完整周期／接缝、骨表变化与资源回收未通过；不能播放未录制动作，不是完整 HKX 或指定物理支持，不承诺小时级交付。
 
 ## 6. 验收与对比协议（这是"可测试"的核心）
 
@@ -478,6 +480,8 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
 5. 每轮单独日志与构建身份（`build-manifest.json` 的身份串必须与日志首行一致）。
 
 ## 7. 需要用户决定的一件事
+
+此节 A/B/C 选择问题保留为历史记录。当前先按 PRD 0.7 做有界活跃实例调查；静态准备不足时回报证据缺口，不要求用户反复在盲探指针与受限回放之间选择。
 
 **动画数据来源选 A / B / C？** 若选 B，请一并说明：文件放哪里、用什么方式让引擎加载它
 （替换某个 vanilla 动画／注册到行为工程／用 `NotifyAnimationGraph` 触发的自定义事件）。

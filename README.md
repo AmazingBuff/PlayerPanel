@@ -38,6 +38,10 @@ config, input, present_hook
 
 ## Documentation
 
+- [Independent physics validation](docs/s3-independent-physics-validation-2026-10-10.md): PRD 0.8 §6.5, proposed separate SMP/CBPC instances on a copied graph, V00–V10 game procedures, A/B evidence and teardown gates. Requires a new diagnostic build; the current DLL does not implement these interfaces.
+
+- [Next HKX work package](docs/s2-hkx-next-work-package-2026-10-10.md): PRD 0.7, one real active clip, resource ownership, deterministic sampling, independent clock and H01–H05 result form; recorded-pose replay remains a limited fallback.
+
 - [S2 animation handoff](docs/s2-animation-handoff.md): **start here for the next session on animation (FR-03)** — why the procedural idle cannot be verified, the engine-side Havok objects we can drive, the three data routes, the HKX1 work package and the numeric A/B protocol.
 
 - [Next scene-copy test](docs/scene-graph-copy-next-test-2026-10-09.md): PRD 0.6 review, corrected probe order prerequisites, T0–T3 measurements and result form. Static display is preliminary; safe teardown is blocked and animation/physics remain unverified.
