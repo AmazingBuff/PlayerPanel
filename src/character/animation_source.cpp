@@ -18,6 +18,7 @@
 #include "RE/H/hkaDefaultAnimationControl.h"
 #include "RE/H/hkaBone.h"
 #include "RE/H/hkaSkeleton.h"
+#include "RE/H/hkaSplineCompressedAnimation.h"
 #include "RE/H/hkbAnimationBindingSet.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbCharacter.h"
@@ -600,6 +601,39 @@ namespace
         if (tracks > static_cast<size_t>(bone_count) || !track_indices_are_valid({ indices, tracks }, bone_count))
             return { false, "track-bones", duration, tracks, 0, type };
         return { true, "valid", duration, tracks, tracks, type };
+    }
+
+    // Whether the animation's own data is actually present, so that sampling it is safe. Every route
+    // here reads the object's header first, and the header can be complete while the data is not: a
+    // spline animation de-references its transformOffsets table per track, and HKX16 crashed inside
+    // hkaSplineCompressedAnimation sampling on `mov r9d,[rax+rcx*4]` - an index into that table - after
+    // the header had passed every check. A null or unreadable table therefore has to be caught before
+    // the first sample, never after.
+    bool animation_data_is_present(RE::hkaAnimation const* animation, std::int32_t track_count)
+    {
+        if (!animation || !readable(animation, sizeof(RE::hkaAnimation)) || !looks_like_object(animation))
+            return false;
+        if (static_cast<std::uint32_t>(animation->type.get()) !=
+            static_cast<std::uint32_t>(RE::hkaAnimation::AnimationType::kSplineCompressedAnimation))
+            return true;
+
+        const auto* const spline = static_cast<const RE::hkaSplineCompressedAnimation*>(animation);
+        if (!readable(spline, sizeof(RE::hkaSplineCompressedAnimation)))
+            return false;
+
+        // The sampler indexes these per track, and reads the bytes they point into.
+        const std::int32_t offsets = spline->transformOffsets.size();
+        const std::uint32_t* const offset_data = spline->transformOffsets.data();
+        if (offsets < track_count || !offset_data ||
+            !readable(offset_data, sizeof(std::uint32_t) * static_cast<size_t>(offsets)))
+            return false;
+        if (spline->blockOffsets.size() <= 0 || !spline->blockOffsets.data() ||
+            !readable(spline->blockOffsets.data(), sizeof(std::uint32_t) * static_cast<size_t>(spline->blockOffsets.size())))
+            return false;
+        const std::int32_t bytes = spline->data.size();
+        if (bytes <= 0 || !spline->data.data() || !readable(spline->data.data(), static_cast<size_t>(bytes)))
+            return false;
+        return true;
     }
 
     // The two binding sets the engine keeps, in the precedence OAR's source uses
@@ -1934,6 +1968,11 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
             }
             if (tracks.size() < Min_Tracks_For_Skeleton_Test)
                 continue;
+            if (!animation_data_is_present(candidate, total_tracks))
+            {
+                logger::info("SCOPY ANIM mapping UNAVAILABLE reason=animation-data-not-present");
+                break;
+            }
 
             // One sample at an arbitrary phase is enough to compare skeletons against each other: the
             // wrong skeleton pairs unrelated bones and cannot produce a small distance.
@@ -1988,6 +2027,15 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
     if (!playback.valid())
     {
         logger::info("SCOPY ANIM play UNAVAILABLE reason=no-track-resolves-to-the-copy");
+        return false;
+    }
+
+    // Sampling de-references the animation's own per-track tables, and a header that validates says
+    // nothing about those (HKX16 crashed here on a spline whose transformOffsets was absent). Refuse
+    // before the first sample rather than inside it.
+    if (!animation_data_is_present(playback.animation, total_tracks))
+    {
+        logger::info("SCOPY ANIM play UNAVAILABLE reason=animation-data-not-present");
         return false;
     }
 
@@ -2299,6 +2347,10 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
 size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root)
 {
     if (!clip.valid())
+        return 0;
+    // The one place the clip is sampled every frame, so the same guard applies here: a clip that was
+    // accepted at capture can have had its data unloaded by the time a later frame draws it.
+    if (!animation_data_is_present(clip.animation, static_cast<std::int32_t>(clip.tracks.size())))
         return 0;
 
     const float length = clip.duration > 0.05f ? clip.duration : 0.05f;
