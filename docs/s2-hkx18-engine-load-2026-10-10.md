@@ -309,3 +309,84 @@ SCOPY ANIM load region-hit at=0x… offset=0x… type=spline duration=…s track
 | 只有 `region` 行、无 `region-hit` | 该区间内没有动画对象 | 换记录（首 8 条未必含目标）或扩区间 |
 
 **成本**：17776 字节 ÷ 8 = 2222 个候选/区间，区间数上限 4 —— 一次性开销，可接受。
+
+## 15. HKX22 实测结果（2026-10-11 01:25）：**找到 4 个真实动画**
+
+日志 `CharacterPanel-hkx22-region-20261011.log`。**零崩溃**。
+
+```
+SCOPY ANIM load region at=0x… bytes=44944 from-offset=0x10
+SCOPY ANIM load region-hit at=0x… offset=0x3ee0 type=spline duration=2.50s  tracks=99 data-present=false
+SCOPY ANIM load region at=0x… bytes=7376  from-offset=0x10
+SCOPY ANIM load region-hit at=0x… offset=0x270  type=spline duration=2.50s  tracks=97 data-present=false
+SCOPY ANIM load region at=0x… bytes=23552 from-offset=0x10
+SCOPY ANIM load region-hit at=0x… offset=0x270  type=spline duration=3.00s  tracks=99 data-present=false
+SCOPY ANIM load region at=0x… bytes=60656 from-offset=0x10
+SCOPY ANIM load region-hit at=0x… offset=0x270  type=spline duration=13.50s tracks=99 data-present=false
+SCOPY ANIM load verdict=no-new-animation anims-before=4 anims-after=4
+```
+
+**这是本轮之前从未达到的位置**：`anims=4` —— 装载存储里**确实存在活的动画对象**，
+且**不依赖任何布局假设**就能找到（内容扫描）。
+
+| 观测 | 判读 |
+| --- | --- |
+| `region` 行 `from-offset=0x10` | **我推断的「+0x10 指针 + 0x18 字节数」结构在 4 个资源上全部成立** |
+| 时长 2.50/2.50/3.00/13.50s、轨数 99/97/99/99 | 都是合理值 → **是真动画，不是巧合命中的字节** |
+| `anims-before=4 = anims-after=4` | 这 4 个**本来就在**，与本次 Load 无关（走了 8 条记录，全表 7872 条） |
+| 全部 `data-present=false` | **唯一未解**：对象是真的，数据仍未就绪 |
+
+## 16. 社区搜索（按用户指示）
+
+### 16.1 最佳社区参考就在本地：OAR 的完整配方（生产验证）
+
+OAR **从不遍历装载器的 arena**。[FakeClipGenerator.cpp:97-126](../OpenAnimationReplacer/src/FakeClipGenerator.cpp#L97)：
+
+```cpp
+animationFileManagerSingleton->Queue(a_context, fakeClipGeneratorPtr, nullptr);
+…
+const auto animationBindingSet = graph->characterInstance.animationBindingSet.get()
+                              ?: setup->animationBindingSet.get();
+const auto animationBindingWithTriggers = animationBindingSet->bindings[animationBindingIndex];
+binding = animationBindingWithTriggers->binding.get();      // ← 引擎 Load 之后，这里就有了
+```
+
+→ **我们漏掉的一步**：调了 `Queue`/`Load`（`loaded=true`）却**从未读回该索引的绑定集条目**；
+此前读过的绑定集条目都属于*正在播放*的 clip，不是我们刚装载的那个。
+
+### 16.2 自研解析：社区已有成熟先例，但无 C++ 可直接嵌入
+
+| 项目 | 语言 | 用途 |
+| --- | --- | --- |
+| [HKX2-Enhanced-Library](https://github.com/Monitor221hz/HKX2-Enhanced-Library) | C# | patch／import／export Skyrim SE/AE 的 hkx |
+| [soulstruct-havok](https://github.com/Grimrukh/soulstruct-havok) | Python | Havok packfile 类与工具 |
+| [serde-hkx](https://github.com/SARDONYX-sard/serde-hkx) | Rust | HKX 反序列化 |
+| [PyNifly hkx 格式文档](https://raw.githubusercontent.com/BadDogSkyrim/PyNifly/V25.14/docs/hkx_skeleton_format.md) | 文档 | 骨架／格式说明 |
+
+→ 自研解析**在社区是已解决问题**，可作为格式参考；但没有可直接嵌入本插件的 C++ 库。
+
+## 17. HKX23：走 OAR 验证过的路径 —— 读回刚装载索引的绑定
+
+- 提交 `9e907551`，包 `dist/CharacterPanel-scopy-HKX23-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX23-9e90755173-cl94faaed0c6-20261010T173332Z`（`source_baseline_dirty=false`）。
+- DLL `154631c7…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+**新增日志**：
+
+```
+SCOPY ANIM load bindingset idx=… set=character|setup|none element=0x… binding=0x… anim=0x…
+        anim-type=spline duration=…s tracks=… binding-valid=… reason=… data-present=true|false
+```
+
+**并且**：`data-present=true` 且 binding 校验通过时，**binding 与 animation 一起交给播放阶段**；
+`prepare_animation_clip` 里**引擎装载的 binding 优先**（其 `transformTrackToBoneIndices` 是权威映射，
+正是 OAR 读的那一份），走 walked-clip 路径作为后备。
+
+**判读表**：
+
+| 观测 | 含义 | 下一步 |
+| --- | --- | --- |
+| `binding-valid=true` + `data-present=true` | **动画与映射都到手** | ground-truth 相位扫描 → F2 播放 |
+| `binding=0x0` | 该索引的绑定集条目仍空 | 装载未落到绑定集 → 改在未暂停帧装载 |
+| `binding≠0` 但 `binding-valid=false` | 绑定在、轨道表仍空 | 看 `reason`；必要时用 `animation` + 实测映射 |
+| `data-present=false` | 与 HKX22 同 | 数据仍在更深处 |
