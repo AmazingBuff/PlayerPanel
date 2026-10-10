@@ -20,9 +20,12 @@ namespace
     // How often the running game is asked which idle the player's clips are playing. The answer only
     // changes when a new clip activates, so this is a sampling rate for a slow signal, not a budget.
     constexpr uint32_t Idle_Pool_Sample_Frames = 45;
-    // How many empty samples pass between attempts to find the clips again. The walk is bounded but it is
-    // still the only part of this that costs real time inside ordinary gameplay.
-    constexpr uint32_t Idle_Pool_Walk_Backoff = 8;
+    // The shortest gap between two discovery walks. Between them the cached clips are re-verified, which is
+    // cheap, and a switch that invalidates them simply goes unobserved until the next walk is due.
+    constexpr std::chrono::seconds Idle_Pool_Walk_Interval{ 3 };
+    // How much of the not-collected names is kept for the log, so an animation the two classifiers miss is
+    // visible by name instead of only as a count.
+    constexpr size_t Max_Other_Names_Bytes = 160;
 
     // The source graph can be re-driven between the copy and the re-read (the paused
     // world still runs animation and physics), so per-node transforms are compared with
@@ -328,7 +331,7 @@ SceneGraphCopy& SceneGraphCopy::instance()
     return s_instance;
 }
 
-SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_idle_pool_misses(0), m_other_clips(0), m_idle_pool_samples(0), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_target_geometry(nullptr), m_probe_witness(nullptr), m_probe_witness_radius(0.0f), m_probe_subtree_nodes(0), m_probe_affected_geometries(0), m_probe_skinned_geometries(0), m_probe_geometry_bones(0), m_probe_bone_world_pose{}, m_probe_bind_rotate{}, m_probe_bind_valid(false), m_previous_bone_rotate{}, m_previous_bone_valid(false), m_probe_dump_done(false), m_trace_frame(0), m_trace_capture(0), m_trace_bone_before{}, m_trace_bone_after{}, m_trace_witness_before{}, m_trace_witness_after{}, m_trace_slot_pre{}, m_trace_slot_submit{}, m_trace_slot_final{}, m_trace_drawn(0), m_trace_submit_sampled(false), m_trace_complete(false), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_samples(0), m_probe_invalid_logged(false), m_probe_frame_report(0) {}
+SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_other_clips(0), m_idle_pool_samples(0), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_target_geometry(nullptr), m_probe_witness(nullptr), m_probe_witness_radius(0.0f), m_probe_subtree_nodes(0), m_probe_affected_geometries(0), m_probe_skinned_geometries(0), m_probe_geometry_bones(0), m_probe_bone_world_pose{}, m_probe_bind_rotate{}, m_probe_bind_valid(false), m_previous_bone_rotate{}, m_previous_bone_valid(false), m_probe_dump_done(false), m_trace_frame(0), m_trace_capture(0), m_trace_bone_before{}, m_trace_bone_after{}, m_trace_witness_before{}, m_trace_witness_after{}, m_trace_slot_pre{}, m_trace_slot_submit{}, m_trace_slot_final{}, m_trace_drawn(0), m_trace_submit_sampled(false), m_trace_complete(false), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_samples(0), m_probe_invalid_logged(false), m_probe_frame_report(0) {}
 SceneGraphCopy::~SceneGraphCopy()
 {
     // Never destroy a parked graph, not even at unload.
@@ -529,14 +532,14 @@ void SceneGraphCopy::observe_idle_pool()
     ActiveAnimationIndices observed;
 
     // The pointers are re-verified before use and a dead one is dropped, so a clip generator freed while
-    // the game ran cannot be read as one. Re-verification is a few guarded reads; the walk that finds them
-    // in the first place costs thousands of page queries, so it happens only when none is left.
+    // the game ran cannot be read as one. Each survivor costs one page query and two field reads, and the
+    // name is not read again - that alone was a syscall per character, dozens of times per sample.
     size_t live = 0;
     for (auto it = m_idle_probe_clips.begin(); it != m_idle_probe_clips.end();)
     {
-        if (clip_generator_is_live(*it))
+        if (clip_generator_is_live(it->generator))
         {
-            tally_clip_generator(*it, observed);
+            tally_clip_generator(it->generator, it->kind, observed);
             ++live;
             ++it;
         }
@@ -546,23 +549,21 @@ void SceneGraphCopy::observe_idle_pool()
         }
     }
 
-    if (live == 0)
+    // A clip switch invalidates the cached clips, and walking to find the new ones is the only part of this
+    // that costs real time: it scans object windows and every page query is a syscall. Walking whenever the
+    // list empties therefore put a multi-millisecond hitch on every single action change, which is what the
+    // player saw. The walk is now rate-limited by wall clock, so a burst of switches costs at most one.
+    const auto now = std::chrono::steady_clock::now();
+    const bool walk_due = m_idle_probe_clips.empty() &&
+                          (m_idle_pool_last_walk.time_since_epoch().count() == 0 ||
+                           now - m_idle_pool_last_walk >= Idle_Pool_Walk_Interval);
+    if (walk_due)
     {
-        // The walk is bounded but still the costly part, so it is not repeated on every sample when it
-        // keeps finding nothing: the first attempt is immediate and the rest back off.
-        const bool should_walk = m_idle_pool_misses == 0 || m_idle_pool_misses % Idle_Pool_Walk_Backoff == 0;
-        ++m_idle_pool_misses;
-        if (should_walk)
-        {
-            m_idle_probe_clips.clear();
-            collect_active_clip_generators(*const_cast<RE::PlayerCharacter*>(player), m_idle_probe_clips);
-            for (const RE::hkbClipGenerator* const generator : m_idle_probe_clips)
-                tally_clip_generator(generator, observed);
-        }
-    }
-    else
-    {
-        m_idle_pool_misses = 0;
+        m_idle_pool_last_walk = now;
+        m_idle_probe_clips.clear();
+        collect_active_clip_generators(*const_cast<RE::PlayerCharacter*>(player), m_idle_probe_clips);
+        for (const ActiveClipEntry& entry : m_idle_probe_clips)
+            tally_clip_generator(entry.generator, entry.kind, observed);
     }
 
     ++m_idle_pool_samples;
@@ -571,8 +572,13 @@ void SceneGraphCopy::observe_idle_pool()
     for (const std::uint16_t index : observed.equips)
         ++m_equip_pool[index];
     m_other_clips += observed.others;
-    if (!observed.other_names.empty())
-        m_other_names = observed.other_names;
+    m_other_names.clear();
+    for (const ActiveClipEntry& entry : m_idle_probe_clips)
+    {
+        if (entry.kind != ClipClass::e_other || m_other_names.size() >= Max_Other_Names_Bytes)
+            continue;
+        m_other_names += fmt::format("{}{}", m_other_names.empty() ? "" : ", ", entry.name);
+    }
 }
 
 namespace

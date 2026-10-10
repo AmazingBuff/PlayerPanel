@@ -120,9 +120,6 @@ namespace
     // How far into an object the sampler looks for the pointers leading to those clips. See the note at
     // the scan: every slot is a syscall and this runs inside ordinary gameplay.
     constexpr std::int32_t Idle_Pool_Scan_Bytes = 0x40;
-    // How much of the not-collected names is kept for the log, so an animation the two classifiers miss is
-    // visible by name instead of only as a count.
-    constexpr size_t Max_Other_Names_Bytes = 160;
     constexpr size_t Resource_Dump_Bytes = 0x60;
     constexpr size_t Max_Tree_Lines = 16;
     // How far the content scan reaches into one byte range, and how many ranges one resource may offer.
@@ -2911,35 +2908,45 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
     }
 }
 
+ClipClass classify_clip_name(std::string_view file_name)
+{
+    if (is_base_idle(file_name))
+        return ClipClass::e_idle;
+    if (mentions_equip(file_name))
+        return ClipClass::e_equip;
+    return ClipClass::e_other;
+}
+
 bool clip_generator_is_live(void const* object)
 {
     return object && readable(object, sizeof(RE::hkbClipGenerator)) && looks_like_object(object) &&
            *static_cast<const std::uintptr_t*>(object) == clip_generator_vtable();
 }
 
-void tally_clip_generator(RE::hkbClipGenerator const* generator, ActiveAnimationIndices& out)
+void tally_clip_generator(RE::hkbClipGenerator const* generator, ClipClass kind, ActiveAnimationIndices& out)
 {
     if (!generator)
         return;
-    const std::string name = guarded_string(generator->animationName);
     // A live control means the engine is running this clip: that is the one OAR has chosen and activated,
-    // so its index is OAR's answer for this character right now.
+    // so its index is OAR's answer for this character right now. The index is re-read every time because
+    // OAR rewrites it when it picks a different replacement; the name is not, because it cannot change.
     if (!generator->animationControl.get())
         return;
-    const std::string_view base = base_name_of(name);
-    if (is_base_idle(base))
-        out.idles.push_back(generator->animationBindingIndex);
-    else if (mentions_equip(base))
-        out.equips.push_back(generator->animationBindingIndex);
-    else
+    switch (kind)
     {
+    case ClipClass::e_idle:
+        out.idles.push_back(generator->animationBindingIndex);
+        break;
+    case ClipClass::e_equip:
+        out.equips.push_back(generator->animationBindingIndex);
+        break;
+    default:
         ++out.others;
-        if (out.other_names.size() < Max_Other_Names_Bytes)
-            out.other_names += fmt::format("{}{}", out.other_names.empty() ? "" : ", ", base);
+        break;
     }
 }
 
-void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<RE::hkbClipGenerator const*>& out)
+void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out)
 {
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (!source.GetAnimationGraphManager(manager) || !manager)
@@ -2979,7 +2986,12 @@ void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<RE::h
             pending.pop_back();
             ++visited;
             if (clip_generator_is_live(object))
-                out.push_back(static_cast<const RE::hkbClipGenerator*>(object));
+            {
+                // The name is read exactly once per clip, here, and its class carried from then on.
+                const auto* const generator = static_cast<const RE::hkbClipGenerator*>(object);
+                const std::string name = guarded_string(generator->animationName);
+                out.push_back({ generator, classify_clip_name(base_name_of(name)), name });
+            }
             // A narrow window on purpose. Every slot costs a page query, which is a syscall, and this runs
             // inside ordinary gameplay: the wider windows used at capture belong to a paused menu where a
             // slow frame costs nothing. A clip generator's own fields sit at the start of the object, so

@@ -317,20 +317,42 @@ struct ActiveAnimationIndices
     std::vector<std::uint16_t> idles;
     std::vector<std::uint16_t> equips;
     std::uint32_t others = 0;      // clips that are neither, counted so what was skipped stays visible
-    std::string other_names;       // a few of their names, so the naming itself is checkable
 };
+
+// Which of the two classes the panel cares about an animation belongs to, or neither. Settled once from
+// the name when a clip generator is first seen: a name cannot change, and re-reading it costs a syscall
+// per character.
+enum class ClipClass : std::uint8_t
+{
+    e_idle,
+    e_equip,
+    e_other
+};
+
+[[nodiscard]] ClipClass classify_clip_name(std::string_view file_name);
 
 // Whether a pointer still reads as a live clip generator: its vtable is the engine's own and the object is
 // mapped. A handful of guarded reads, so this is cheap enough to run per frame.
 [[nodiscard]] bool clip_generator_is_live(void const* object);
 
-// Reads one clip generator's index into the class it belongs to by name. Cheap: no walking.
-void tally_clip_generator(RE::hkbClipGenerator const* generator, ActiveAnimationIndices& out);
+// Reads one clip generator's current index into the class it was already placed in. Two field reads and
+// the liveness check above - no name is read, which is what made this cost a syscall per character.
+void tally_clip_generator(RE::hkbClipGenerator const* generator, ClipClass kind, ActiveAnimationIndices& out);
+
+// One clip generator found on the instance side, with the class it belongs to. The name is kept because
+// reading it costs a syscall per character, so it is read once here rather than on every sample.
+struct ActiveClipEntry
+{
+    RE::hkbClipGenerator const* generator;
+    ClipClass kind;
+    std::string name;
+};
 
 // Finds the clip generators on the instance side of this character's own graphs. This is the expensive
-// part - it scans object windows and every page query costs a syscall - so callers are expected to hold
-// onto what it returns and re-verify with clip_generator_is_live rather than calling it repeatedly.
-void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<RE::hkbClipGenerator const*>& out);
+// part - it scans object windows and every page query costs a syscall - so callers hold onto what it
+// returns and re-verify with clip_generator_is_live rather than calling it again, and rate-limit it when
+// they do.
+void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out);
 
 // Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
 class ClipPlayer
