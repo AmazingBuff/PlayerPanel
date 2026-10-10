@@ -681,3 +681,67 @@ ground-truth best-t=12.51s max-pos-delta=2.656 max-rot-delta=44.13deg worst=7.76
 
 **下一步**：在**站立待机时**捕获（而非走路时），使被采样的动画与在播动画一致，
 `phase-check` 才有裁决力；同轮用 `animation-driver=` 确认驱动者。
+
+## 26. HKX27 实测结果（2026-10-11 02:03）：**定量证据到手 —— 位置残差 0.000**
+
+日志 `CharacterPanel-hkx27-driver-20261011.log`。**零崩溃**。
+
+```
+SCOPY ANIM load bindingset idx=12219 binding=0x226c3f19c20 anim=0x226c3ee0f60
+        anim-type=spline duration=20.00s tracks=99 binding-valid=false reason=tracks-unreadable data=present
+SCOPY ANIM play clip='instance-binding' type=spline duration=20.00s tracks=99 copy-resolved=90/99
+SCOPY ANIM play ground-truth best-t=5.00s max-pos-delta=0.028 max-rot-delta=4.60deg worst-pos-delta=2.019 bones=37
+SCOPY ANIM play phase-check  t=5.039s max-pos-delta=0.000 max-rot-delta=4.65deg bones=37
+SCOPY ANIM play ground-truth verdict=none best=0.0284 worst=2.019
+SCOPY DRAW frame=1   … animation-driver=instance-binding
+SCOPY DRAW frame=361 … animation-driver=off        ← F2 关
+SCOPY DRAW frame=481 … animation-driver=instance-binding
+```
+
+**三件事同时成立：**
+
+**① `phase-check max-pos-delta=0.000`** —— 在**引擎自己的相位**上，
+采样姿态的位置与引擎姿态**完全一致**。
+→ **"空轨道表 ⇒ 轨道 i → 骨骼 i"的恒等映射，在位置上被实测证实**（这不再是假设）。
+`ground-truth` 的 `best/worst = 0.0284/2.019 = 1.4%`，**只差阈值（1%）一点**。
+
+**② `animation-driver=instance-binding`** —— 驱动者确认是**引擎装载的动画**；
+`frame=361/601/721` 的 `off` 证明 **F2 开关真实生效**（HKX27 修掉说谎字段后第一次可读）。
+
+**③ 唯一未解释的数：`max-rot-delta=4.65°`。**
+
+两种成因含义完全不同，而单个 max 值**分辨不了**：
+
+| 成因 | 含义 | 修法 |
+| --- | --- | --- |
+| **少数骨被引擎修正**（混合／look-at／IK／物理） | **映射是对的**；PRD 明确说单个 clip 不必等于最终 `poseLocal` | 记录并接受 |
+| **映射在旋转上系统性偏差** | 映射错 | 另找映射来源 |
+
+## 27. HKX28：按骨拆分剩余旋转
+
+- 提交 `38e18ae5`，包 `dist/CharacterPanel-scopy-HKX28-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX28-38e18ae5f0-cl94faaed0c6-20261010T180735Z`（`source_baseline_dirty=false`）。
+- DLL `42d4097d…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+`phase-check` 追加一行：**1° 以内的骨数** + **最差几根骨的名称与各自旋转/位置差值**：
+
+```
+SCOPY ANIM play phase-check spread bones=37 within-1deg=… worst-bones='NPC Head [Head]:…deg/…u, …'
+```
+
+**判读**：少数具名骨远离其余 → **引擎修正，映射成立**；大面积散布 → **映射在旋转上错**。
+
+### 关卡状态（HKX27 后更新）
+
+| 关卡 | 状态 |
+| --- | --- |
+| H01 构建／实例身份 | **通过** |
+| H02 类型／持有 | **通过** —— 引擎装载、`data=present`、绑定集条目被引擎填充 |
+| H03 采样 | **基本通过** —— 同相位位置残差 **0.000**；旋转 4.65° 待拆分归因 |
+| H04 副本驱动 | **通过（目视 + 驱动者日志）** —— `animation-driver=instance-binding`，F2 可开关 |
+| H05 隔离／生命周期 | 未测 |
+| **S1 安全回收** | **仍阻塞**（反复开关／换装／长会话的前置门槛） |
+
+**保持诚实**：`ground-truth verdict=none`（1.4% vs 1% 阈值）**尚未正式通过**，
+且本轮 `binding-valid=false`（该 OAR 索引的表仍空，走的是恒等映射）。
+HKX26 的原版索引 1022 则给出 `binding-valid=true`。**两种索引行为不同，需分别记录。**
