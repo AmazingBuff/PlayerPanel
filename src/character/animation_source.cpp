@@ -1930,7 +1930,7 @@ void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& sourc
     }
 }
 
-bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out, const RE::hkaAnimation* a_instance_animation, const RE::hkaAnimationBinding* a_loaded_binding)
+bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out, const RE::hkaAnimation* a_instance_animation, const RE::hkaAnimationBinding* a_loaded_binding, float a_local_time)
 {
     out = ClipPlayback{};
     const NodeTable copy_nodes = collect_nodes(copy_root);
@@ -2417,6 +2417,35 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
 
     logger::info("SCOPY ANIM play ground-truth best-t={:.2f}s max-pos-delta={:.3f} max-rot-delta={:.2f}deg worst-pos-delta={:.3f} bones={}",
         best_time, best_position, best_rotation, worst_position, compared);
+
+    // The same comparison at the phase the engine itself is at, taken from the control rather than found
+    // by search. The sweep above is coarse - 24 steps across a clip of tens of seconds is over a second
+    // per step, which on a moving skeleton is tens of frames of drift - so its best phase is a bound, not
+    // the answer. This is the answer when the animation being sampled is the one being played: any
+    // remaining difference is mapping error, not phase error, and that is what decides the mapping.
+    if (a_local_time >= 0.0f && !sampled.empty())
+    {
+        sample_tracks(*playback.animation, a_local_time, static_cast<std::uint32_t>(sample_count), sampled.data(), nullptr, 0);
+        float position = 0.0f;
+        float rotation = 0.0f;
+        size_t bones = 0;
+        for (size_t i = 0; i < playback.tracks.size(); ++i)
+        {
+            if (!truth[i] || static_cast<size_t>(playback.tracks[i]) >= sampled.size())
+                continue;
+            const PoseSample clip_pose = read_pose(sampled[playback.tracks[i]]);
+            const PoseSample engine_pose = read_pose(*truth[i]);
+            position = std::max(position, (RE::NiPoint3{ clip_pose.position[0], clip_pose.position[1], clip_pose.position[2] } -
+                                           RE::NiPoint3{ engine_pose.position[0], engine_pose.position[1], engine_pose.position[2] })
+                                              .Length());
+            const RE::NiMatrix3 clip_rotation = ni_matrix_from_quaternion(clip_pose.quaternion[0], clip_pose.quaternion[1], clip_pose.quaternion[2], clip_pose.quaternion[3]);
+            const RE::NiMatrix3 engine_rotation = ni_matrix_from_quaternion(engine_pose.quaternion[0], engine_pose.quaternion[1], engine_pose.quaternion[2], engine_pose.quaternion[3]);
+            rotation = std::max(rotation, rotation_angle_degrees(engine_rotation, clip_rotation));
+            ++bones;
+        }
+        logger::info("SCOPY ANIM play phase-check t={:.3f}s max-pos-delta={:.3f} max-rot-delta={:.2f}deg bones={}",
+            a_local_time, position, rotation, bones);
+    }
     const bool matched = worst_position > 0.0f && best_position < worst_position * Match_Fraction_Of_Control;
     logger::info("SCOPY ANIM play ground-truth verdict={} best={:.4f} worst={:.3f}", matched ? "match" : "none", best_position, worst_position);
 
@@ -2433,10 +2462,11 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
 // address rather than by a virtual call; and a candidate entry is believed only once the structural
 // checks in read_binding pass. Nothing is written and no clip is activated, so a wrong step costs a
 // rejection reason in the log instead of a crash.
-void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation, const RE::hkaAnimationBinding*& out_binding)
+void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation, const RE::hkaAnimationBinding*& out_binding, float& out_local_time)
 {
     out_animation = nullptr;
     out_binding = nullptr;
+    out_local_time = -1.0f;
     const NodeTable copy_nodes = collect_nodes(copy_root);
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (copy_nodes.names.empty() || !source.GetAnimationGraphManager(manager) || !manager)
@@ -2618,6 +2648,12 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
                 reinterpret_cast<std::uintptr_t>(control), reinterpret_cast<std::uintptr_t>(control_binding),
                 control_binding == binding, control->localTime, control->weight,
                 control->transformTrackWeights.size(), control->floatTrackWeights.size());
+
+            // The phase the engine is at in the animation it is playing. The sweep below finds a phase by
+            // search, but this one is not searched for - it is the truth, and it is what the sample should
+            // be compared against when the animation being sampled is the one being played.
+            if (idle && out_local_time < 0.0f && std::isfinite(control->localTime))
+                out_local_time = control->localTime;
 
             if (control_binding && control_binding != binding && readable(control_binding, sizeof(RE::hkaAnimationBinding)))
             {

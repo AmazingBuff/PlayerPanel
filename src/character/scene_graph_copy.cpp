@@ -1065,12 +1065,13 @@ void SceneGraphCopy::capture()
     // Update. This stage looks there before anything is declared unreachable.
     const RE::hkaAnimation* instance_animation = nullptr;
     const RE::hkaAnimationBinding* loaded_binding = nullptr;
-    report_animation_instance(*player, *source, *root, instance_animation, loaded_binding);
+    float played_local_time = -1.0f;
+    report_animation_instance(*player, *source, *root, instance_animation, loaded_binding, played_local_time);
     // S2/HKX6: the animation the engine can hand over for this character, resolved onto the copy and
     // compared against the pose the engine itself holds. F2 then plays it from the studio's clock,
     // because the game is paused and nothing else advances a pose.
     ClipPlayback clip;
-    if (prepare_animation_clip(*player, *source, *root, clip, instance_animation, loaded_binding))
+    if (prepare_animation_clip(*player, *source, *root, clip, instance_animation, loaded_binding, played_local_time))
         m_clip.set_clip(std::move(clip));
     else
         m_clip.reset();
