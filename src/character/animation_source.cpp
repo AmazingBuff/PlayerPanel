@@ -2126,6 +2126,45 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
                 raw.reason, animation_type_name(raw.type), raw.duration, raw.tracks,
                 animation && readable(animation, sizeof(RE::hkaAnimation)) ? animation->numberOfFloatTracks : 0);
         }
+
+        // Would the control's typed accessors help? They are virtual, so calling them is a decision for
+        // the user, not for this probe. The question can be answered without calling them: the
+        // accessors read through hkaAnimationControl::binding (@0x38), so if that is the very same
+        // object whose track table is empty, they return the same empty table and are worth nothing.
+        // A read-only dump of the control's own fields says which, and also shows whether the control
+        // carries a track table of its own anywhere in its window.
+        const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
+        if (control && readable(control, sizeof(RE::hkaAnimationControl)))
+        {
+            const RE::hkaAnimationBinding* const control_binding = control->binding;
+            logger::info("SCOPY ANIM instance control at=0x{:x} binding@0x38=0x{:x} same-as-clip-binding={} localTime={:.3f} weight={:.3f} ttw-size={} ftw-size={}",
+                reinterpret_cast<std::uintptr_t>(control), reinterpret_cast<std::uintptr_t>(control_binding),
+                control_binding == binding, control->localTime, control->weight,
+                control->transformTrackWeights.size(), control->floatTrackWeights.size());
+
+            if (control_binding && control_binding != binding && readable(control_binding, sizeof(RE::hkaAnimationBinding)))
+            {
+                const std::int32_t control_tracks = control_binding->transformTrackToBoneIndices.size();
+                const std::int16_t* const control_indices = control_binding->transformTrackToBoneIndices.data();
+                logger::info("SCOPY ANIM instance control tracks=0x{:x} size={} readable={} animation=0x{:x}",
+                    reinterpret_cast<std::uintptr_t>(control_binding), control_tracks,
+                    control_indices != nullptr && control_tracks > 0 &&
+                        readable(control_indices, sizeof(std::int16_t) * static_cast<size_t>(control_tracks)),
+                    reinterpret_cast<std::uintptr_t>(control_binding->animation.get()));
+            }
+
+            // A wider look into the control itself: if it holds a mapping the binding does not, it will
+            // be a heap pointer followed by a small count somewhere in this window.
+            std::string bytes;
+            for (size_t word = 0; word < sizeof(RE::hkaAnimationControl) / sizeof(std::uint64_t); ++word)
+            {
+                const auto* const address = static_cast<const std::uint8_t*>(static_cast<const void*>(control)) + word * sizeof(std::uint64_t);
+                if (!readable(address, sizeof(std::uint64_t)))
+                    break;
+                bytes += fmt::format("{}{:016x}", word ? " " : "", *reinterpret_cast<const std::uint64_t*>(address));
+            }
+            logger::info("SCOPY ANIM instance control qwords='{}'", bytes);
+        }
     }
 
     // The entry the engine itself resolves for the standing idle's index, dumped at OAR's 0x28 spacing
