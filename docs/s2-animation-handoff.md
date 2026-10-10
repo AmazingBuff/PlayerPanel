@@ -26,7 +26,28 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜，HKX15 已实测）**：**选项 D（虚调用 control 访问器）裁定为无用，红线不必破**。
+**最新（2026-10-10 深夜，HKX18 已发包待测）**：**改由引擎装载游戏已注册的动作，再取其数据**。
+用户澄清的原则（已记为产品要求）：**面板动作不必与游戏角色当前在播的一致，但必须是原版或 OAR 注册的动作**，
+不是我们额外引入的资源。流程固定为：命名索引 → 引擎装载 → 从已装载存储取数据 → 作用于面板。
+实现参照 OAR 的 `LoadAnimation`（carrier 改为按 `sizeof(hkbClipGenerator)`=0x110 定长缓冲、
+context 改为 0x50 零缓冲，两处都比 OAR 安全），并第一次走通 **HKX11 找到、HKX12 走错**的那条链：
+`loadedAnimations[i].unk00 → +0x28 hkLoader → loadedData → hkResource → hkaAnimation`。
+装载前后各扫一遍，把"本次装载产生的"与"本来就在的"分开。**未测**，判读表见
+[HKX18 引擎装载](s2-hkx18-engine-load-2026-10-10.md)。
+**推论**：放在 `SKSE\Plugins\animations\` 的两个 hkx（`mt_idle0_d/j`）不在引擎动画名表里，
+**引擎不会装载**；本轮实现**完全不读它们**，要用必须放到会被注册的路径。
+
+**HKX17（历史）**：**崩溃已防住，且坐实"暂停捕获时动画数据未装载"**。HKX16 崩在
+`hkaSplineCompressedAnimation` 的 `mov r9d,[rax+rcx*4]`（按轨道索引 `transformOffsets`），
+而头部字段全对 → 新增 `animation_data_is_present()` 在**三处采样点**前检查
+`transformOffsets`／`blockOffsets`／`data`，零崩溃。答案不是"数据可用、闸加错"，而是
+**数据确实不存在**。对照：同为 spline 的 `weaponAdjustment.hkx`（7 轨）全通过 → 问题不是类型，是这一个对象没装载。
+
+**HKX16（历史）**：按用户指出的方向修正——**目标是每时刻每骨的变换**，binding 只是取得映射的一种途径。
+改为直接采样动画、用 `poseLocal` 当独立参考**测**映射（对每个图的骨架各试一遍，不盲配"轨道 i=骨骼 i"）。
+崩在第一次真正调用采样器。见 HKX17。
+
+**HKX15（历史）**：**选项 D（虚调用 control 访问器）裁定为无用，红线不必破**。
 control 的 `binding`（@0x38）= `0x15543c18d20` **与 clip 的 binding 逐位相同**（`same-as-clip-binding=true`）
 → 访问器读的就是那张空表，返回同样空结果。control 布局也实锤正确（`localTime=1.094`/`weight=1.0`
 自洽、11 qwords = 0x58、三个字段独立吻合）。**新线索**：control 自带
