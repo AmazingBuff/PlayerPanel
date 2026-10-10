@@ -34,6 +34,17 @@ binding set = 空桩、hashedAnimations = 文件信息、已装载数据只在�
 管理器 unk68/unk88（未探）；不能据此认定已装载数据只有这些去处。
 当前没有满足新测试单的构建。下一步转为真实活跃实例与资源链的有界核对，不直接跟陌生指针，也不默认转 D 视为完整交付。
 
+**静态核对结论（2026-10-10，[HKX13 静态核对](s2-hkx13-static-check-2026-10-10.md)，未发上机包）**：
+HKX6–HKX12 全程扫的是 `hkbBehaviorGraph::rootGenerator`（@0x80）＝**模板树**。HKX9／HKX10 两次独立会话的
+`root-sm` 原始转储按 CLib 类型化布局解码出 **`hkbNode::cloneState`(0x42)=1=kTemplate**、
+**`hkbStateMachine::isActive`(0x88)=0**（三重自校验偏移基准）。按 Havok 模板／克隆语义，`binding`（@0xA0）与
+`animationControl`（@0x88）只在每个角色的**克隆**上于 `Activate`/`Update` 时填充——这正好解释了 HKX10
+"名字全对、索引全对、指针全空"（名字与 binding-index 是静态字段，克隆时原样复制）。
+**因此 HKX10 的「标准 Havok binding/control 层在 Skyrim 运行时是死的」判读依据不成立，路线 A 的"死路"结论
+应撤回重判**——但仍未取得任何可采样对象，H01/H02 均未满足，不等于路线 A 已通过。
+通往活跃实例的类型化路线：`rootGeneratorClone`(0x90)、`activeNodes`(0x98)→`hkbNodeInfo::nodeClone`(0x58)，
+用 `cloneState==kClone(2)` 判定。**PRD §6.4 第 1 条要求的 OAR commit 固定与真实播放路径核对本轮未完成。**
+
 ## 1. 方向修正（用户批评，已接受）
 
 用户原话要点：既然已经知道骨骼能移动，为什么不直接用简单的 HKX 测试？HKX 还能对比；硬编码的
