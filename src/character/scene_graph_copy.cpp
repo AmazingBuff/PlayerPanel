@@ -17,6 +17,10 @@ namespace
 {
     constexpr size_t Max_Graph_Objects = 16384;
 
+    // How often the running game is asked which idle the player's clips are playing. The answer only
+    // changes when a new clip activates, so this is a sampling rate for a slow signal, not a budget.
+    constexpr uint32_t Idle_Pool_Sample_Frames = 45;
+
     // The source graph can be re-driven between the copy and the re-read (the paused
     // world still runs animation and physics), so per-node transforms are compared with
     // a tolerance and only the object set decides the outcome. Exact float equality
@@ -321,7 +325,7 @@ SceneGraphCopy& SceneGraphCopy::instance()
     return s_instance;
 }
 
-SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_target_geometry(nullptr), m_probe_witness(nullptr), m_probe_witness_radius(0.0f), m_probe_subtree_nodes(0), m_probe_affected_geometries(0), m_probe_skinned_geometries(0), m_probe_geometry_bones(0), m_probe_bone_world_pose{}, m_probe_bind_rotate{}, m_probe_bind_valid(false), m_previous_bone_rotate{}, m_previous_bone_valid(false), m_probe_dump_done(false), m_trace_frame(0), m_trace_capture(0), m_trace_bone_before{}, m_trace_bone_after{}, m_trace_witness_before{}, m_trace_witness_after{}, m_trace_slot_pre{}, m_trace_slot_submit{}, m_trace_slot_final{}, m_trace_drawn(0), m_trace_submit_sampled(false), m_trace_complete(false), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_samples(0), m_probe_invalid_logged(false), m_probe_frame_report(0) {}
+SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_idle_pool_samples(0), m_frame(0), m_cap_logged(false), m_anim_probe_enabled(false), m_probe_bone_cache(nullptr), m_probe_target_geometry(nullptr), m_probe_witness(nullptr), m_probe_witness_radius(0.0f), m_probe_subtree_nodes(0), m_probe_affected_geometries(0), m_probe_skinned_geometries(0), m_probe_geometry_bones(0), m_probe_bone_world_pose{}, m_probe_bind_rotate{}, m_probe_bind_valid(false), m_previous_bone_rotate{}, m_previous_bone_valid(false), m_probe_dump_done(false), m_trace_frame(0), m_trace_capture(0), m_trace_bone_before{}, m_trace_bone_after{}, m_trace_witness_before{}, m_trace_witness_after{}, m_trace_slot_pre{}, m_trace_slot_submit{}, m_trace_slot_final{}, m_trace_drawn(0), m_trace_submit_sampled(false), m_trace_complete(false), m_probe_move_min(-1.0f), m_probe_move_max(0.0f), m_probe_samples(0), m_probe_invalid_logged(false), m_probe_frame_report(0) {}
 SceneGraphCopy::~SceneGraphCopy()
 {
     // Never destroy a parked graph, not even at unload.
@@ -372,8 +376,8 @@ void SceneGraphCopy::process_requests()
     // Each visit to the panel starts the animation from its beginning. The engine is paused while the
     // inventory is up, so the studio's clocks are the only thing moving the figure, and letting their
     // time carry across a close and a reopen is what makes it resume mid-step instead of starting over.
-    // The flag comes from the menu event rather than from an edge seen here, because this function runs
-    // in the render-side hook and does not run in every frame.
+    // The flag comes from the menu event rather than from an edge watched here: this function does run
+    // every rendered frame, but the event is the authority on the menu's own state either way.
     if (PanelMonitor::instance().consume_panel_opened())
     {
         m_clip.restart();
@@ -383,6 +387,13 @@ void SceneGraphCopy::process_requests()
 
     const uint32_t generation = m_generation.load(std::memory_order_acquire);
     RE::UI* ui = RE::UI::GetSingleton();
+
+    // While the game runs, watch which registered idle the engine is actually running for the player.
+    // OAR's choice is the index it wrote onto that clip, so this collects its decisions as they happen;
+    // the sample is taken every so often because the answer only changes when a new clip activates.
+    if (ui && !ui->GameIsPaused() && m_frame % Idle_Pool_Sample_Frames == 0)
+        observe_idle_pool();
+
     if (generation != m_seen_generation || (ui && ui->IsMenuOpen(RE::MainMenu::MENU_NAME)))
     {
         if (m_snapshot)
@@ -504,6 +515,35 @@ std::string SceneGraphCopy::animation_driver() const
     if (m_clip.ready())
         return m_clip.name();
     return "procedural-idle";
+}
+
+void SceneGraphCopy::observe_idle_pool()
+{
+    const RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
+    if (!player)
+        return;
+
+    std::vector<std::uint16_t> indices;
+    collect_active_idle_indices(*const_cast<RE::PlayerCharacter*>(player), indices);
+    ++m_idle_pool_samples;
+    for (const std::uint16_t index : indices)
+        ++m_idle_pool[index];
+}
+
+void SceneGraphCopy::report_idle_pool(char const* where) const
+{
+    if (m_idle_pool.empty())
+    {
+        logger::info("SCOPY ANIM pool {} samples={} indices=0", where, m_idle_pool_samples);
+        return;
+    }
+
+    std::vector<std::pair<std::uint16_t, std::uint32_t>> ordered(m_idle_pool.begin(), m_idle_pool.end());
+    std::sort(ordered.begin(), ordered.end(), [](const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::string text;
+    for (size_t i = 0; i < ordered.size() && i < 8; ++i)
+        text += fmt::format("{}idx={}:{}", i ? ", " : "", ordered[i].first, ordered[i].second);
+    logger::info("SCOPY ANIM pool {} samples={} indices={} '{}'", where, m_idle_pool_samples, m_idle_pool.size(), text);
 }
 
 void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
@@ -1091,6 +1131,9 @@ void SceneGraphCopy::capture()
     const RE::hkaAnimationBinding* loaded_binding = nullptr;
     float played_local_time = -1.0f;
     report_animation_instance(*player, *source, *root, instance_animation, loaded_binding, played_local_time);
+    // What the running game showed of OAR's idle choices, so the panel's own selection can be built from
+    // decisions OAR actually made instead of from a reading of its configuration.
+    report_idle_pool("at-capture");
     // S2/HKX6: the animation the engine can hand over for this character, resolved onto the copy and
     // compared against the pose the engine itself holds. F2 then plays it from the studio's clock,
     // because the game is paused and nothing else advances a pose.

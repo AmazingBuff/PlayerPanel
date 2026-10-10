@@ -111,6 +111,9 @@ namespace
     // enough to afford a walk that is deep enough to reach a nested animation.
     constexpr std::uint32_t Max_Walked_Records = 8;
     constexpr size_t Max_Resource_Objects = 24;
+    // How far the idle-index sampler walks. It runs during normal play, so it is deliberately smaller
+    // than the capture-time walks: it needs a clip generator, not a census.
+    constexpr size_t Idle_Pool_Objects = 96;
     constexpr size_t Resource_Dump_Bytes = 0x60;
     constexpr size_t Max_Tree_Lines = 16;
     // How far the content scan reaches into one byte range, and how many ranges one resource may offer.
@@ -2876,6 +2879,67 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
             out_animation = animation;
             if (reading.valid)
                 out_binding = binding;
+        }
+    }
+}
+
+void collect_active_idle_indices(RE::TESObjectREFR& source, std::vector<std::uint16_t>& out)
+{
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+    if (!source.GetAnimationGraphManager(manager) || !manager)
+        return;
+
+    for (std::uint32_t i = 0; i < manager->graphs.size(); ++i)
+    {
+        RE::BShkbAnimationGraph* const graph = manager->graphs[i].get();
+        if (!graph || !graph->holder || static_cast<RE::TESObjectREFR*>(graph->holder) != &source)
+            continue;
+        RE::hkbBehaviorGraph* const behavior = graph->characterInstance.behaviorGraph.get();
+        if (!behavior)
+            continue;
+
+        // The instance side only: the template root holds clips that are never activated, which is what
+        // HKX9 through HKX12 spent their rounds learning.
+        std::unordered_set<void const*> seen;
+        std::vector<const void*> pending;
+        if (const void* const clone = behavior->rootGeneratorClone.get())
+        {
+            seen.insert(clone);
+            pending.push_back(clone);
+        }
+        if (behavior->activeNodes)
+        {
+            for (const RE::hkbNodeInfo& info : *behavior->activeNodes)
+            {
+                if (info.nodeClone && seen.insert(info.nodeClone).second)
+                    pending.push_back(info.nodeClone);
+            }
+        }
+
+        size_t visited = 0;
+        while (!pending.empty() && visited < Idle_Pool_Objects)
+        {
+            const void* const object = pending.back();
+            pending.pop_back();
+            ++visited;
+            if (classify(object) == GraphKind::ClipGenerator && readable(object, sizeof(RE::hkbClipGenerator)))
+            {
+                const auto* const generator = static_cast<const RE::hkbClipGenerator*>(object);
+                const std::string name = guarded_string(generator->animationName);
+                // An idle with a live control is one the engine is running: that is the clip OAR has
+                // chosen and activated, so its index is OAR's answer for this character right now.
+                if (is_base_idle(base_name_of(name)) && generator->animationControl.get())
+                    out.push_back(generator->animationBindingIndex);
+            }
+            for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
+            {
+                const auto* const at = static_cast<const std::uint8_t*>(object) + offset;
+                if (!readable(at, sizeof(void*)))
+                    break;
+                const void* const word = *reinterpret_cast<void* const*>(at);
+                if (word && readable(word, sizeof(void*)) && looks_like_object(word) && seen.insert(word).second)
+                    pending.push_back(word);
+            }
         }
     }
 }

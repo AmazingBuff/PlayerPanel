@@ -103,6 +103,12 @@ private:
     void report_probe_trace();
     void retire(std::unique_ptr<CharacterClone> snapshot);
     void log_parked() const;
+    // Samples which registered idle the engine is running for the player while the game is not paused.
+    // OAR decides that by writing an animation index onto the clip it activates, so tallying the index
+    // over time is how the panel learns the set of idles this character's conditions actually select -
+    // and how often, which is that configuration's own distribution as sampled by normal play.
+    void observe_idle_pool();
+    void report_idle_pool(char const* where) const;
 
 private:
     std::atomic<Command> m_command;
@@ -114,6 +120,11 @@ private:
     bool m_cap_logged;
     bool m_anim_probe_enabled;
     IdleDriver m_idle;
+    // Every standing-idle index seen on the player's own clips while the game was running, with how many
+    // times each was seen. OAR writes the index it chose onto the clip it activates, so this is OAR's
+    // selection as it happened rather than a guess at its configuration.
+    std::unordered_map<std::uint16_t, std::uint32_t> m_idle_pool;
+    uint32_t m_idle_pool_samples;
     // The animation the copy plays when the source character has one the engine can hand over; the
     // procedural idle is the fallback when it does not.
     ClipPlayer m_clip;

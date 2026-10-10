@@ -304,6 +304,13 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
 // candidate, so a wrong layout shows up as a rejection reason instead of a crash.
 void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation, const RE::hkaAnimationBinding*& out_binding, float& out_local_time);
 
+// Every standing-idle animation index the source's own clips are currently pointing at. OAR's choice for
+// this character is exactly the index it writes onto a clip generator, so watching that index over time
+// is how the panel learns which registered idles this character's conditions select - no evaluation of
+// OAR's configuration is needed, and none is possible through its API. Read-only and quiet: this runs
+// during normal play, so it walks a bounded set and prints nothing.
+void collect_active_idle_indices(RE::TESObjectREFR& source, std::vector<std::uint16_t>& out);
+
 // Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
 class ClipPlayer
 {
