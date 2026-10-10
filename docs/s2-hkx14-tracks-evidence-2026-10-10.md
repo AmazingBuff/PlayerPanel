@@ -90,4 +90,25 @@ virtual const std::int16_t* GetTransformTrackToBoneIndices() const;      // 0B
    但 PRD §6.4 **明确禁止**用"轨道 i = 骨骼 i"替代映射 —— **仅在拿到真值 A/B 验证后才可接受**，不作为首选。
 4. **D（虚调用 control 的两个访问器）**：最快，但破红线，需用户明确批准。
 
-仍须遵守：只读、**从最终 zip 部署**、测完立刻复制 `Documents\...\SKSE\CharacterPanel.log`。
+### 选项 A 已发包（HKX15）：只读转储 control，判定 D 是否值得破例
+
+- 提交 `5a1af365b0`，包 `dist/CharacterPanel-scopy-HKX15-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX15-5a1af365b0-cl94faaed0c6-20261010T143103Z`（`source_baseline_dirty=false`）。
+- DLL `a8dc0e90…`、PDB 均从最终 zip 部署并校验一致。
+- 新增日志：`SCOPY ANIM instance control …`（`binding@0x38`、**是否与 clip 的 binding 同一对象**、
+  `localTime`/`weight`、两个权重数组 size、control 的 0x58 字节转储），以及当 control 的 binding
+  **是另一个对象**时的 `instance control tracks …`。
+- **全程只读、零虚调用**——不碰红线。
+
+**判读表**：
+
+| 观测 | 结论 | 下一步 |
+| --- | --- | --- |
+| `same-as-clip-binding=true` | 访问器读的是同一张空表 → **D 无用** | 转 B（未暂停帧观察） |
+| `same-as-clip-binding=false` 且 `control tracks readable=true` | control 侧有真映射 → **D 值得，或直接用该表** | 拍板是否虚调用；或先试直接读该数组 |
+| `binding@0x38=0x0` | control 还没绑 | D 无用，转 B |
+| control 转储里出现「堆指针 + 小整数」且有 99 量级整数 | control 自带映射表（非 binding） | 用转储定偏移 |
+
+上机：进游戏 → 打开背包（暂停）→ **F7 捕获** → 看 `instance control …` →
+测完**立刻复制** `Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel.log`
+（mod 目录下那份是 10/05 的旧日志，非活动）。
