@@ -1,0 +1,308 @@
+[02:08:44.981] [36760] [I] CharacterPanel v1-2-1-0
+[02:08:44.981] [36760] [I] CharacterPanel loaded
+[02:09:34.448] [42008] [I] All shaders compiled
+[02:09:34.448] [42008] [I] Installed pre-UI renderer hook
+[02:09:34.448] [42008] [I] Menu sink installed
+[02:09:34.448] [42008] [I] SCOPY BUILD CharacterPanel-scopy-HKX28-38e18ae5f0-cl94faaed0c6-20261010T180735Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle
+[02:09:34.464] [35100] [I] Studio host changed: 0x0 -> 0x1c889116980 (paused=true)
+[02:09:34.464] [35100] [I] Studio light node has been created
+[02:09:34.464] [35100] [I] CP-LIGHT slot 0: registered, shell 0x1ca135cf880 queued (ledger stays the authority)
+[02:09:34.464] [35100] [I] CP-LIGHT slot 1: registered, shell 0x1ca135cf740 queued (ledger stays the authority)
+[02:09:34.464] [35100] [I] CP-LIGHT slot 2: registered, shell 0x1ca135cf600 queued (ledger stays the authority)
+[02:09:34.464] [35100] [I] Studio lights registered on the ledger (scene=0x1becfb16e80 -- ledger fetch will populate the slots)
+[02:09:34.464] [35100] [I] CP-LIGHT slot 0: ledger shell fetched 0x1ca135cf880 (after 0 miss frames)
+[02:09:34.464] [35100] [I] CP-LIGHT slot 1: ledger shell fetched 0x1ca135cf740 (after 0 miss frames)
+[02:09:34.464] [35100] [I] CP-LIGHT slot 2: ledger shell fetched 0x1ca135cf600 (after 0 miss frames)
+[02:09:52.103] [35100] [I] CP-LIGHT slot 0: ledger shell dropped
+[02:09:52.103] [35100] [I] CP-LIGHT slot 1: ledger shell dropped
+[02:09:52.103] [35100] [I] CP-LIGHT slot 2: ledger shell dropped
+[02:09:52.103] [35100] [W] Studio lights not fully served by the ledger yet
+[02:09:55.083] [35100] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1ca135cfc40 filed to lightQueueAdd)
+[02:09:55.083] [35100] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1ca135cf240 filed to lightQueueAdd)
+[02:09:55.083] [35100] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1ca135cf100 filed to lightQueueAdd)
+[02:09:55.144] [35100] [I] CP-LIGHT slot 0: ledger shell fetched 0x1ca135cfc40 (after 1 miss frames)
+[02:09:55.144] [35100] [I] CP-LIGHT slot 1: ledger shell fetched 0x1ca135cf240 (after 1 miss frames)
+[02:09:55.144] [35100] [I] CP-LIGHT slot 2: ledger shell fetched 0x1ca135cf100 (after 1 miss frames)
+[02:10:01.204] [36760] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x1cabcc42c80 parent=0x1ca9b2edec0 nodes=470 geoms=23 api=NiObject::Clone id=68835/70187
+[02:10:01.205] [36760] [I] SCOPY CLONE-RETURN capture=1 copy=0x1ca9b257100
+[02:10:01.205] [36760] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=0 world-loose=0 bound-loose=0 objects=470 skin-bones=131
+[02:10:01.205] [36760] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[02:10:01.205] [36760] [I] SCOPY CENSUS source-nodes=470 copy-nodes=470 source-geoms=23 copy-geoms=23 source-skins=13 copy-skins=13 source-dynamic=8 copy-dynamic=8
+[02:10:01.205] [36760] [I] SCOPY FRAME skinned-bound valid=true radius=74.3 center=(6367.0,1449.2,257.4) graph-bound radius=74.6 scale=0.35 pruned-nodes=0
+[02:10:01.205] [36760] [I] SCOPY READY capture=1 controllers-removed=14 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[02:10:01.205] [36760] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=470
+[02:10:01.205] [36760] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[02:10:01.205] [36760] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=90 ambiguous=0 duplicate-nodes=0 parent-ancestors=90 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], SkirtLBone03, Shield, Weapon, MagicEffectsNode, NPC Head MagicNode [Hmag]' wrong-parent='-'
+[02:10:01.205] [36760] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[02:10:01.205] [36760] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=78 ambiguous=0 duplicate-nodes=0 parent-ancestors=78 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[02:10:01.205] [36760] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=90/116 ambiguous=0
+[02:10:01.205] [36760] [I] SCOPY ANIM map graph=0 bones=116 matched=90 helper-unresolved=3 other-unresolved=23
+[02:10:01.205] [36760] [I] SCOPY ANIM replay pose entries=116 scale-off-from-one=10
+[02:10:01.205] [36760] [I] SCOPY ANIM replay control max-pos-delta=125.305 max-rot-delta=171.70deg bones=90
+[02:10:01.205] [36760] [I] SCOPY ANIM replay order=skeleton quat=direct written=90 max-pos-delta=3.743 max-rot-delta=0.08deg bones=90
+[02:10:01.205] [36760] [I] SCOPY ANIM replay order=skeleton quat=transposed written=90 max-pos-delta=69.481 max-rot-delta=179.73deg bones=90
+[02:10:01.205] [36760] [I] SCOPY ANIM replay order=bone-nodes quat=direct written=106 max-pos-delta=1.611 max-rot-delta=0.00deg bones=106
+[02:10:01.205] [36760] [I] SCOPY ANIM replay order=bone-nodes quat=transposed written=106 max-pos-delta=62.767 max-rot-delta=160.20deg bones=106
+[02:10:01.205] [36760] [I] SCOPY ANIM replay restored max-pos-delta=0.000 max-rot-delta=0.00deg bones=90
+[02:10:01.205] [36760] [I] SCOPY ANIM replay verdict match=none control=125.305u best=1.6108u
+[02:10:01.207] [36760] [I] SCOPY ANIM catalogue character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx' names=15203 bindings=15203
+[02:10:01.210] [36760] [I] SCOPY ANIM catalogue idle-names=1526/15203 first='Animations\1hm_blockidle.hkx@20, Animations\1hm_idle.hkx@23, Animations\2hm_blockidle.hkx@123, Animations\2hm_idle.hkx@124, Animations\2hw_blockidle.hkx@204, Animations\2hw_idle.hkx@206, Animations\altar_leftidle.hkx@234, Animations\female\animobjectchairdrinkingidlebase.hkx@235'
+[02:10:01.210] [36760] [I] SCOPY ANIM catalogue idle-plain first='Animations\horse_rider\idle.hkx@705, Animations\horse_rider\idle_pet.hkx@706, Animations\horse_rider\idle_rearup.hkx@707, Animations\DLC01\idleactivatecoffinpuzzle.hkx@708, Animations\idleblessingkneel_enter.hkx@709, Animations\idleblessingkneel_exit.hkx@710, Animations\idleblessingkneel_loop.hkx@711, Animations\female\idlebloodportalactivate.hkx@712'
+[02:10:01.210] [36760] [I] SCOPY ANIM catalogue idle-base first='Animations\horse_rider\idle.hkx@705, Animations\female\mt_idle.hkx@1022, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued\female\_variants_mt_idle\mt_idle.hkx@11909, data\meshes\actors\character\animations\OpenAnimationReplacer\RaySense - Cover Animation\2110000006_Sneak_Weapon_Exit\Female\mt_idle.hkx@11910, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Fbite_Body_Freeze\female\mt_idle.hkx@11917, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Light\female\_variants_mt_idle\mt_idle.hkx@11918, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Mid\female\_variants_mt_idle\mt_idle.hkx@11921, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Cold_FBreath\female\_variants_mt_idle\mt_idle.hkx@11923'
+[02:10:01.211] [36760] [I] SCOPY ANIM catalogue elements=8 object-like=8/8 scan=0x80
+[02:10:01.212] [36760] [I] SCOPY ANIM catalogue candidate offset=0x00 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[02:10:01.212] [36760] [I] SCOPY ANIM catalogue candidate offset=0x30 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[02:10:01.212] [36760] [I] SCOPY ANIM catalogue raw index=0 qwords='00007ff69ed249b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff69ed249d8 000000000001ffff 0000000000000000 8000000000000000 0000000000000000 0000000000000000 00007ff69ed527c8 000000000001ffff 000001c84512ac10 00003e4000003e40'
+[02:10:01.212] [36760] [I] SCOPY ANIM catalogue raw index=7601 qwords='00007ff69ed249b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff69ed249b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff69ed249b8 000000000001ffff 0000000000000000 0000000000000000'
+[02:10:01.212] [36760] [I] SCOPY ANIM catalogue layout UNAVAILABLE reason=no-candidate (read the raw dump)
+[02:10:01.212] [36760] [I] SCOPY ANIM instance graph=0 char-bindingset=0x1c8739aa620/15203 setup-bindingset=0x0/0 root-generator=0x1c834462c70 root-clone=0x0 active-nodes=106
+[02:10:01.213] [36760] [I] SCOPY ANIM instance roots generator=template clone=template
+[02:10:06.474] [36760] [I] SCOPY ANIM instance objects=498 clips=14 clone-states='kDefault:180, kClone:108, unknown:162, kShareable:13, kTemplate:35'
+[02:10:06.488] [36760] [I] SCOPY ANIM tracks binding=0x1c843972be0 array=0x0 size=0 declared=99 readable=false array-at=0x1c843972c00
+[02:10:06.488] [36760] [I] SCOPY ANIM tracks binding qwords='00007ff69ed45430 0000000000000000 000001c843972c30 000001c843939b10 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000'
+[02:10:06.488] [36760] [I] SCOPY ANIM instance clip name='Animations\male\MT_Idle.HKX' idx=12219 clone-state=kClone binding=0x1c843972be0 control=0x1c87318bd40 bind-src=clip tracks=0 reason=tracks-unreadable
+[02:10:06.489] [36760] [I] SCOPY ANIM instance anim binding=0x1c843972be0 animation=0x1c843939b10 probe=valid type=spline duration=30.00s transform-tracks=99 float-tracks=0
+[02:10:06.489] [36760] [I] SCOPY ANIM instance control at=0x1c87318bd40 binding@0x38=0x1c843972be0 same-as-clip-binding=true localTime=4.438 weight=1.000 ttw-size=99 ftw-size=0
+[02:10:06.489] [36760] [I] SCOPY ANIM instance control qwords='00007ff69ed4a2b8 000000000001ffff 3f800000408e05fb 000001c87356e700 0000006300000063 000001c8731bbef0 0000001000000000 000001c843972be0 0000000000000000 8000000000000000 000000003f800000'
+[02:10:06.508] [36760] [I] SCOPY ANIM instance clip name='Animations\MT_IdleMuscularOffset.hkx' idx=1058 clone-state=kTemplate binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.523] [36760] [I] SCOPY ANIM instance clip name='Animations\MT_Idle_Skinny.hkx' idx=1037 clone-state=kTemplate binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.538] [36760] [I] SCOPY ANIM instance clip name='Animations\FemaleBodyMorph.hkx' idx=673 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.552] [36760] [I] SCOPY ANIM instance clip name='Animations\male\MT_Idle.HKX' idx=1022 clone-state=kTemplate binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.571] [36760] [I] SCOPY ANIM instance clip name='Animations\male\weaponAdjustment.hkx' idx=1629 clone-state=kDefault binding=0x1c8733e9ed0 control=0x0 bind-src=bindingset tracks=7 reason=valid
+[02:10:06.572] [36760] [I] SCOPY ANIM instance anim binding=0x1c8733e9ed0 animation=0x1c8733e9ad0 probe=valid type=spline duration=3.33s transform-tracks=7 float-tracks=0
+[02:10:06.587] [36760] [I] SCOPY ANIM instance clip name='Animations\Shd_BlockIdle.hkx' idx=1400 clone-state=kTemplate binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.602] [36760] [I] SCOPY ANIM instance clip name='Animations\OffsetCarryLog.hkx' idx=1139 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.618] [36760] [I] SCOPY ANIM instance clip name='Animations\OffsetCarryBucket.hkx' idx=1135 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.634] [36760] [I] SCOPY ANIM instance clip name='Animations\OffsetCarryPot.hkx' idx=1140 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.654] [36760] [I] SCOPY ANIM instance clip name='Animations\DialogueResponsePositiveD.hkx' idx=620 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.675] [36760] [I] SCOPY ANIM instance clip name='Animations\MQ201Party_HoldingDrinkTray.hkx' idx=973 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[02:10:06.736] [36760] [I] SCOPY ANIM tracks binding=0x1c843972be0 array=0x0 size=0 declared=99 readable=false array-at=0x1c843972c00
+[02:10:06.736] [36760] [I] SCOPY ANIM tracks binding qwords='00007ff69ed45430 0000000000000000 000001c843972c30 000001c843939b10 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000'
+[02:10:06.736] [36760] [I] SCOPY ANIM instance element idx=12219 at=0x1c8734b8c00 set=character binding@0x10=0x1c843972be0 valid=false reason=tracks-unreadable
+[02:10:06.736] [36760] [I] SCOPY ANIM instance element qwords='00007ff69ed249b8 000000000001ffff 000001c843972be0 0000000000000000 8000000000000000 0000000000000000 00007ff69ed249b8 000000000001ffff'
+[02:10:06.736] [36760] [I] SCOPY ANIM instance verdict=binding-resolved
+[02:10:06.736] [36760] [I] SCOPY ANIM load tree obj=0x1c8741807e0 vtable=0x7ff69ed527c8 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed527c8 000000000001ffff 000001c835530050 00025ec000025ec0'
+[02:10:06.741] [36760] [I] SCOPY ANIM load tree obj=0x1c874195800 vtable=0x7ff69eda1910 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69eda1910 ffffffff0001ffff 000001c8741a1f80 000002b120dace41'
+[02:10:06.743] [36760] [I] SCOPY ANIM load tree obj=0x1c874183fa0 vtable=0x7ff69ed29ca0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed29ca0 000000000001ffff 00007ff69ebacdf8 000000000001ffff'
+[02:10:06.747] [36760] [I] SCOPY ANIM load tree obj=0x1c8343845c0 vtable=0x7ff69ed502b0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed502b0 000000000001ffff 00007ff69dfa9a80 000001c874189f80'
+[02:10:06.845] [36760] [I] SCOPY ANIM load tree obj=0x1c8741809c0 vtable=0x7ff69ed35320 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed35320 00000000000fffff 00007ff69ed352c8 000000000001ffff'
+[02:10:06.845] [36760] [I] SCOPY ANIM load tree obj=0x1c874189ee0 vtable=0x7ff69ed366d0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed366d0 00000000000dffff 000001c874195800 0000000000000000'
+[02:10:06.848] [36760] [I] SCOPY ANIM load tree obj=0x7ff6a0575a10 vtable=0x7ff69ed21ce0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed21ce0 00007ff6a0571960 0000000000000018 0000000000000000'
+[02:10:06.849] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ed05c20 vtable=0x7ff69ed14718 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed14718 0000000000000000 0000000000000000 000000000000000c'
+[02:10:06.852] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ed05be8 vtable=0x7ff69ed05bd0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed05bd0 0000000000000001 0000000000000000 00007ff69ed14448'
+[02:10:06.856] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ed05bd0 vtable=0x7ff69ed1b940 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed1b940 00007ff69ed05b38 00007ff6a0571c10 00007ff69ed05bd0'
+[02:10:06.859] [36760] [I] SCOPY ANIM load tree obj=0x7ff6a0571c10 vtable=0x7ff69ecff318 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecff318 0000000000000000 0000000000000008 0000000000000000'
+[02:10:06.860] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ecfdd10 vtable=0x7ff69ecfe604 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecfe604 0000000000000000 0000000000000000 000000000000001d'
+[02:10:06.863] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ecfdce8 vtable=0x7ff69ecfef28 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecfef28 0000000000000000 0000000000000000 0000040000000014'
+[02:10:06.866] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ecfdb50 vtable=0x7ff69ecfef18 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecfef18 0000000000000000 0000000000000000 000000000000001d'
+[02:10:06.869] [36760] [I] SCOPY ANIM load tree obj=0x7ff6a0571840 vtable=0x7ff69ecff0b0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecff0b0 0000000000000000 0000000000000028 0000000000000000'
+[02:10:06.870] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ecfcb80 vtable=0x7ff69ecfe540 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecfe540 0000000000000000 0000000000000000 000000000000000b'
+[02:10:06.892] [36760] [I] SCOPY ANIM load region at=0x1c8354130b0 bytes=44944 from-offset=0x10
+[02:10:09.772] [36760] [I] SCOPY ANIM load region-hit at=0x1c835416f90 offset=0x3ee0 type=spline duration=2.50s tracks=99 data=present
+[02:10:09.772] [36760] [I] SCOPY ANIM load spline frames=150 blocks=1 max-per-block=256 mask-size=396 block-dur=4.279 frame-dur=0.0168 track-count=99
+[02:10:09.773] [36760] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1c8354183e0 readable=true
+[02:10:09.773] [36760] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1c8354183f0 readable=true
+[02:10:09.773] [36760] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[02:10:09.773] [36760] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[02:10:09.773] [36760] [I] SCOPY ANIM load spline array=data size=20320 at=0x1c835418400 readable=true
+[02:10:09.773] [36760] [I] SCOPY ANIM load spline qwords='00007ff69ed4c008 0000000000000000 4020000000000005 0000000000000063 000001c83541d360 000001c835417040 8000006300000063 0000000100000096 0000018c00000100 3e6f55bc4088e9aa 000000003c89731d 000001c8354183e0 8000000100000001 000001c8354183f0 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001c835418400 80004f6000004f60 0000000000000000'
+[02:10:14.900] [36760] [I] SCOPY ANIM load region at=0x1c87405a000 bytes=7376 from-offset=0x10
+[02:10:14.901] [36760] [I] SCOPY ANIM load region-hit at=0x1c87405a270 offset=0x270 type=spline duration=2.50s tracks=97 data=present
+[02:10:14.901] [36760] [I] SCOPY ANIM load spline frames=75 blocks=1 max-per-block=256 mask-size=388 block-dur=8.615 frame-dur=0.0338 track-count=97
+[02:10:14.901] [36760] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1c87405ac40 readable=true
+[02:10:14.901] [36760] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1c87405ac50 readable=true
+[02:10:14.901] [36760] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[02:10:14.901] [36760] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[02:10:14.901] [36760] [I] SCOPY ANIM load spline array=data size=4048 at=0x1c87405ac60 readable=true
+[02:10:14.901] [36760] [I] SCOPY ANIM load spline qwords='00007ff69ed4c008 0000000000000000 4020000000000005 0000000000000061 0000000000000000 000001c87405a320 8000006100000061 000000010000004b 0000018400000100 3dedba874109d67d 000000003d0a60dd 000001c87405ac40 8000000100000001 000001c87405ac50 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001c87405ac60 80000fd000000fd0 0000000000000000'
+[02:10:14.924] [36760] [I] SCOPY ANIM load region at=0x1c8354c7da0 bytes=34224 from-offset=0x10
+[02:10:15.042] [36760] [I] SCOPY ANIM load region-hit at=0x1c8354c8010 offset=0x270 type=spline duration=8.17s tracks=99 data=present
+[02:10:15.042] [36760] [I] SCOPY ANIM load spline frames=246 blocks=1 max-per-block=256 mask-size=396 block-dur=8.500 frame-dur=0.0333 track-count=99
+[02:10:15.043] [36760] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1c8354c8a10 readable=true
+[02:10:15.043] [36760] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1c8354c8a20 readable=true
+[02:10:15.043] [36760] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[02:10:15.043] [36760] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[02:10:15.044] [36760] [I] SCOPY ANIM load spline array=data size=30848 at=0x1c8354c8a30 readable=true
+[02:10:15.044] [36760] [I] SCOPY ANIM load spline qwords='00007ff69ed4c008 0000000000000000 4102aaab00000005 0000000000000063 0000000000000000 000001c8354c80c0 8000006300000063 00000001000000f6 0000018c00000100 3df0f0f141080000 000000003d088889 000001c8354c8a10 8000000100000001 000001c8354c8a20 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001c8354c8a30 8000788000007880 0000000000000000'
+[02:10:21.002] [36760] [I] SCOPY ANIM load region at=0x1c835651f00 bytes=23552 from-offset=0x10
+[02:10:21.119] [36760] [I] SCOPY ANIM load region-hit at=0x1c835652170 offset=0x270 type=spline duration=3.00s tracks=99 data=present
+[02:10:21.119] [36760] [I] SCOPY ANIM load spline frames=91 blocks=1 max-per-block=256 mask-size=396 block-dur=8.500 frame-dur=0.0333 track-count=99
+[02:10:21.120] [36760] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1c835652bd0 readable=true
+[02:10:21.120] [36760] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1c835652be0 readable=true
+[02:10:21.120] [36760] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[02:10:21.120] [36760] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[02:10:21.121] [36760] [I] SCOPY ANIM load spline array=data size=20080 at=0x1c835652bf0 readable=true
+[02:10:21.121] [36760] [I] SCOPY ANIM load spline qwords='00007ff69ed4c008 0000000000000000 4040000000000005 0000000000000063 0000000000000000 000001c835652220 8000006300000063 000000010000005b 0000018c00000100 3df0f0f141080000 000000003d088889 000001c835652bd0 8000000100000001 000001c835652be0 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001c835652bf0 80004e7000004e70 0000000000000000'
+[02:10:25.226] [36760] [I] SCOPY ANIM load vtables base=0x7ff69ed26f68 handle=0x7ff69ed26f98 container=0x7ff69ed27010 map=0x7ff69ed27098 resource=0x7ff69ed52780
+[02:10:25.226] [36760] [I] SCOPY ANIM load before records=7872 current=0x0 current-crc=0x7f14d3bd records-walked=8 with-loader=8 with-resources=8 resources=8 anims=4
+[02:10:25.226] [36760] [I] SCOPY ANIM load loader qwords='00007ff69ed463f0 000000000001ffff 000001c8742cc030 0000000100000001'
+[02:10:25.226] [36760] [I] SCOPY ANIM load resource type=other qwords='00007ff69ed527c8 000000000001ffff 000001c835530050 00025ec000025ec0 000001c8355301d0 00007ff69ed26d08 000001c873f04dc0 0000000100000000 000001c873ee7610 0000000200000001 0000000000000000 0000000000000000'
+[02:10:25.226] [36760] [I] SCOPY ANIM load index=12219 queued=1 loaded=true loaded-records=7871
+[02:10:25.226] [36760] [I] SCOPY ANIM load tree obj=0x1c8741807e0 vtable=0x7ff69ed527c8 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed527c8 000000000001ffff 000001c835530050 00025ec000025ec0'
+[02:10:25.231] [36760] [I] SCOPY ANIM load tree obj=0x1c874195800 vtable=0x7ff69eda1910 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69eda1910 ffffffff0001ffff 000001c8741a1f80 000002b120dace41'
+[02:10:25.233] [36760] [I] SCOPY ANIM load tree obj=0x1c874183fa0 vtable=0x7ff69ed29ca0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed29ca0 000000000001ffff 00007ff69ebacdf8 000000000001ffff'
+[02:10:25.238] [36760] [I] SCOPY ANIM load tree obj=0x1c8343845c0 vtable=0x7ff69ed502b0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed502b0 000000000001ffff 00007ff69dfa9a80 000001c874189f80'
+[02:10:25.335] [36760] [I] SCOPY ANIM load tree obj=0x1c8741809c0 vtable=0x7ff69ed35320 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed35320 00000000000fffff 00007ff69ed352c8 000000000001ffff'
+[02:10:25.336] [36760] [I] SCOPY ANIM load tree obj=0x1c874189ee0 vtable=0x7ff69ed366d0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed366d0 00000000000dffff 000001c874195800 0000000000000000'
+[02:10:25.338] [36760] [I] SCOPY ANIM load tree obj=0x7ff6a0575a10 vtable=0x7ff69ed21ce0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed21ce0 00007ff6a0571960 0000000000000018 0000000000000000'
+[02:10:25.339] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ed05c20 vtable=0x7ff69ed14718 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed14718 0000000000000000 0000000000000000 000000000000000c'
+[02:10:25.343] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ed05be8 vtable=0x7ff69ed05bd0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed05bd0 0000000000000001 0000000000000000 00007ff69ed14448'
+[02:10:25.347] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ed05bd0 vtable=0x7ff69ed1b940 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ed1b940 00007ff69ed05b38 00007ff6a0571c10 00007ff69ed05bd0'
+[02:10:25.350] [36760] [I] SCOPY ANIM load tree obj=0x7ff6a0571c10 vtable=0x7ff69ecff318 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecff318 0000000000000000 0000000000000008 0000000000000000'
+[02:10:25.351] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ecfdd10 vtable=0x7ff69ecfe604 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecfe604 0000000000000000 0000000000000000 000000000000001d'
+[02:10:25.354] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ecfdce8 vtable=0x7ff69ecfef28 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecfef28 0000000000000000 0000000000000000 0000040000000014'
+[02:10:25.357] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ecfdb50 vtable=0x7ff69ecfef18 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecfef18 0000000000000000 0000000000000000 000000000000001d'
+[02:10:25.360] [36760] [I] SCOPY ANIM load tree obj=0x7ff6a0571840 vtable=0x7ff69ecff0b0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecff0b0 0000000000000000 0000000000000028 0000000000000000'
+[02:10:25.361] [36760] [I] SCOPY ANIM load tree obj=0x7ff69ecfcb80 vtable=0x7ff69ecfe540 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff69ecfe540 0000000000000000 0000000000000000 000000000000000b'
+[02:10:25.383] [36760] [I] SCOPY ANIM load region at=0x1c8354130b0 bytes=44944 from-offset=0x10
+[02:10:28.272] [36760] [I] SCOPY ANIM load region-hit at=0x1c835416f90 offset=0x3ee0 type=spline duration=2.50s tracks=99 data=present
+[02:10:28.273] [36760] [I] SCOPY ANIM load spline frames=150 blocks=1 max-per-block=256 mask-size=396 block-dur=4.279 frame-dur=0.0168 track-count=99
+[02:10:28.273] [36760] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1c8354183e0 readable=true
+[02:10:28.274] [36760] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1c8354183f0 readable=true
+[02:10:28.274] [36760] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[02:10:28.274] [36760] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[02:10:28.274] [36760] [I] SCOPY ANIM load spline array=data size=20320 at=0x1c835418400 readable=true
+[02:10:28.274] [36760] [I] SCOPY ANIM load spline qwords='00007ff69ed4c008 0000000000000000 4020000000000005 0000000000000063 000001c83541d360 000001c835417040 8000006300000063 0000000100000096 0000018c00000100 3e6f55bc4088e9aa 000000003c89731d 000001c8354183e0 8000000100000001 000001c8354183f0 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001c835418400 80004f6000004f60 0000000000000000'
+[02:10:33.412] [36760] [I] SCOPY ANIM load region at=0x1c87405a000 bytes=7376 from-offset=0x10
+[02:10:33.413] [36760] [I] SCOPY ANIM load region-hit at=0x1c87405a270 offset=0x270 type=spline duration=2.50s tracks=97 data=present
+[02:10:33.413] [36760] [I] SCOPY ANIM load spline frames=75 blocks=1 max-per-block=256 mask-size=388 block-dur=8.615 frame-dur=0.0338 track-count=97
+[02:10:33.413] [36760] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1c87405ac40 readable=true
+[02:10:33.413] [36760] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1c87405ac50 readable=true
+[02:10:33.413] [36760] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[02:10:33.413] [36760] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[02:10:33.413] [36760] [I] SCOPY ANIM load spline array=data size=4048 at=0x1c87405ac60 readable=true
+[02:10:33.413] [36760] [I] SCOPY ANIM load spline qwords='00007ff69ed4c008 0000000000000000 4020000000000005 0000000000000061 0000000000000000 000001c87405a320 8000006100000061 000000010000004b 0000018400000100 3dedba874109d67d 000000003d0a60dd 000001c87405ac40 8000000100000001 000001c87405ac50 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001c87405ac60 80000fd000000fd0 0000000000000000'
+[02:10:33.436] [36760] [I] SCOPY ANIM load region at=0x1c8354c7da0 bytes=34224 from-offset=0x10
+[02:10:33.555] [36760] [I] SCOPY ANIM load region-hit at=0x1c8354c8010 offset=0x270 type=spline duration=8.17s tracks=99 data=present
+[02:10:33.555] [36760] [I] SCOPY ANIM load spline frames=246 blocks=1 max-per-block=256 mask-size=396 block-dur=8.500 frame-dur=0.0333 track-count=99
+[02:10:33.556] [36760] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1c8354c8a10 readable=true
+[02:10:33.556] [36760] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1c8354c8a20 readable=true
+[02:10:33.556] [36760] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[02:10:33.556] [36760] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[02:10:33.557] [36760] [I] SCOPY ANIM load spline array=data size=30848 at=0x1c8354c8a30 readable=true
+[02:10:33.557] [36760] [I] SCOPY ANIM load spline qwords='00007ff69ed4c008 0000000000000000 4102aaab00000005 0000000000000063 0000000000000000 000001c8354c80c0 8000006300000063 00000001000000f6 0000018c00000100 3df0f0f141080000 000000003d088889 000001c8354c8a10 8000000100000001 000001c8354c8a20 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001c8354c8a30 8000788000007880 0000000000000000'
+[02:10:39.530] [36760] [I] SCOPY ANIM load region at=0x1c835651f00 bytes=23552 from-offset=0x10
+[02:10:39.649] [36760] [I] SCOPY ANIM load region-hit at=0x1c835652170 offset=0x270 type=spline duration=3.00s tracks=99 data=present
+[02:10:39.650] [36760] [I] SCOPY ANIM load spline frames=91 blocks=1 max-per-block=256 mask-size=396 block-dur=8.500 frame-dur=0.0333 track-count=99
+[02:10:39.650] [36760] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1c835652bd0 readable=true
+[02:10:39.651] [36760] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1c835652be0 readable=true
+[02:10:39.651] [36760] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[02:10:39.651] [36760] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[02:10:39.651] [36760] [I] SCOPY ANIM load spline array=data size=20080 at=0x1c835652bf0 readable=true
+[02:10:39.651] [36760] [I] SCOPY ANIM load spline qwords='00007ff69ed4c008 0000000000000000 4040000000000005 0000000000000063 0000000000000000 000001c835652220 8000006300000063 000000010000005b 0000018c00000100 3df0f0f141080000 000000003d088889 000001c835652bd0 8000000100000001 000001c835652be0 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001c835652bf0 80004e7000004e70 0000000000000000'
+[02:10:43.767] [36760] [I] SCOPY ANIM load after records=7871 current=0x0 current-crc=0x7f14d3bd records-walked=8 with-loader=8 with-resources=8 resources=8 anims=4
+[02:10:43.770] [36760] [I] SCOPY ANIM load anim at=0x1c835416f90 type=spline duration=2.50s tracks=99 data-present=true
+[02:10:43.770] [36760] [I] SCOPY ANIM load anim at=0x1c87405a270 type=spline duration=2.50s tracks=97 data-present=true
+[02:10:43.773] [36760] [I] SCOPY ANIM load anim at=0x1c8354c8010 type=spline duration=8.17s tracks=99 data-present=true
+[02:10:43.777] [36760] [I] SCOPY ANIM load anim at=0x1c835652170 type=spline duration=3.00s tracks=99 data-present=true
+[02:10:43.777] [36760] [I] SCOPY ANIM load verdict=no-new-animation anims-before=4 anims-after=4
+[02:10:43.777] [36760] [I] SCOPY ANIM tracks binding=0x1c843972be0 array=0x0 size=0 declared=99 readable=false array-at=0x1c843972c00
+[02:10:43.777] [36760] [I] SCOPY ANIM tracks binding qwords='00007ff69ed45430 0000000000000000 000001c843972c30 000001c843939b10 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000'
+[02:10:43.779] [36760] [I] SCOPY ANIM load bindingset idx=12219 set=character element=0x1c8734b8c00 binding=0x1c843972be0 anim=0x1c843939b10 anim-type=spline duration=30.00s tracks=99 binding-valid=false reason=tracks-unreadable data=present
+[02:10:43.790] [36760] [I] SCOPY ANIM play root-sm name='Master_Behavior' readable-0x108=true states.size=11 data=0x1c834462d90 data-readable=true
+[02:10:43.807] [36760] [I] SCOPY ANIM play root-sm qwords='00007ff69ed24250 0000000000000000 0000000000000000 0000000000000000 8000000000000000 0000000000000000 0000000000000000 000001c834462d80 0000000000010000 00000000ffffffff 0000000000000000 0000000000000000 0000000000000000 ffffffff00000000 ffffffffffffffff ffffffffffffffff 0000200000000000 0000000000000000 000001c834462d90 8000000b0000000b 000001c834462df0 000001c874183a40 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 ffffffff00000000 0000000000000000'
+[02:10:44.496] [36760] [I] SCOPY ANIM play progress objects=32 pending=46 clips=0
+[02:10:45.486] [36760] [I] SCOPY ANIM play progress objects=64 pending=31 clips=0
+[02:10:46.661] [36760] [I] SCOPY ANIM play progress objects=96 pending=101 clips=0
+[02:10:47.359] [36760] [I] SCOPY ANIM play progress objects=128 pending=97 clips=0
+[02:10:48.135] [36760] [I] SCOPY ANIM play progress objects=160 pending=99 clips=0
+[02:10:49.053] [36760] [I] SCOPY ANIM play progress objects=192 pending=97 clips=0
+[02:10:49.915] [36760] [I] SCOPY ANIM play progress objects=224 pending=93 clips=0
+[02:10:50.804] [36760] [I] SCOPY ANIM play progress objects=256 pending=93 clips=0
+[02:10:51.646] [36760] [I] SCOPY ANIM play progress objects=288 pending=93 clips=0
+[02:10:52.339] [36760] [I] SCOPY ANIM play progress objects=320 pending=86 clips=0
+[02:10:53.003] [36760] [I] SCOPY ANIM play progress objects=352 pending=92 clips=0
+[02:10:53.805] [36760] [I] SCOPY ANIM play progress objects=384 pending=76 clips=0
+[02:10:54.960] [36760] [I] SCOPY ANIM play progress objects=416 pending=87 clips=0
+[02:10:56.173] [36760] [I] SCOPY ANIM play progress objects=448 pending=77 clips=0
+[02:10:57.483] [36760] [I] SCOPY ANIM play progress objects=480 pending=69 clips=0
+[02:10:58.666] [36760] [I] SCOPY ANIM play progress objects=512 pending=89 clips=0
+[02:10:59.625] [36760] [I] SCOPY ANIM play progress objects=544 pending=78 clips=0
+[02:11:00.774] [36760] [I] SCOPY ANIM play progress objects=576 pending=58 clips=0
+[02:11:01.916] [36760] [I] SCOPY ANIM play progress objects=608 pending=35 clips=0
+[02:11:02.683] [36760] [I] SCOPY ANIM play progress objects=640 pending=42 clips=0
+[02:11:03.725] [36760] [I] SCOPY ANIM play progress objects=672 pending=50 clips=0
+[02:11:04.429] [36760] [I] SCOPY ANIM play progress objects=704 pending=38 clips=0
+[02:11:05.704] [36760] [I] SCOPY ANIM play progress objects=736 pending=32 clips=0
+[02:11:07.028] [36760] [I] SCOPY ANIM play progress objects=768 pending=47 clips=0
+[02:11:08.062] [36760] [I] SCOPY ANIM play progress objects=800 pending=32 clips=0
+[02:11:09.323] [36760] [I] SCOPY ANIM play progress objects=832 pending=20 clips=0
+[02:11:10.545] [36760] [I] SCOPY ANIM play progress objects=864 pending=26 clips=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play search objects=894 clips=0 states=21/100 capped=false first='-'
+[02:11:11.775] [36760] [I] SCOPY ANIM play classes='other:656, hkbStateMachine$StateInfo:138, hkbClipGenerator:66, hkbStateMachine:34'
+[02:11:11.775] [36760] [I] SCOPY ANIM play rejections='binding-null:66'
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=0 idle=no name='..\SharedKillMoves\Human&VampireLord\Paired_VampireLord_FeedFront.hkx' binding-index=1301 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=1 idle=no name='Animations\DLC01\Paired_VampFeedFront.hkx' binding-index=1299 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=2 idle=no name='Animations\DLC01\Paired_VampFeedBack.hkx' binding-index=1298 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=3 idle=no name='Animations\DLC01\IdleMesmerizes.hkx' binding-index=775 binding=0x0 control=0x0 speed=1.00 mode=1
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=4 idle=no name='..\SharedKillMoves\Human&Horse\Paired_Mount.hkx' binding-index=1294 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=5 idle=no name='..\SharedKillMoves\Human&Horse\Paired_Dismount.hkx' binding-index=1277 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=6 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedHeadSmash.hkx' binding-index=1303 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=7 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedHeadThrow.hkx' binding-index=1304 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=8 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedMaulingWithHuman.hkx' binding-index=1305 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=9 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedFeedingWithHuman.hkx' binding-index=1302 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=10 idle=no name='Animations\MT_HandCut.hkx' binding-index=1020 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=11 idle=no name='Animations\male\weaponAdjustment.hkx' binding-index=1629 binding=0x0 control=0x0 speed=1.00 mode=2
+[02:11:11.775] [36760] [I] SCOPY ANIM play clip-seen i=50 idle=yes name='Animations\male\MT_Idle.HKX' binding-index=1022 binding=0x0 control=0x0 speed=1.00 mode=0
+[02:11:11.775] [36760] [I] SCOPY ANIM animmgr queued=0 loaded=7871
+[02:11:11.781] [36760] [I] SCOPY ANIM animmgr rejected-dump i=0 at=0x1ca51a1bfd0 qwords='00786b68ad6f4173 300000025a99e3f8 0000000000000000 0000000000000000 000001c8867a7bb0 000001c8741807b0 0000000000000000 0000000000000000'
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=0 idle=no file='-' crc=0xad6f4173 counter=2 data=0x1ca51a1bfd0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=1 idle=no file='-' crc=0x02777ff6 counter=11 data=0x1ca3082d000 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=2 idle=no file='-' crc=0x02777ff6 counter=11 data=0x1ca3082cfd0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=3 idle=no file='-' crc=0x02777ff6 counter=4 data=0x1ca3082cfa0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=4 idle=no file='-' crc=0xdb5c1156 counter=8 data=0x1ca3082cf70 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=5 idle=no file='-' crc=0x02777ff6 counter=12 data=0x1ca3082cf40 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=6 idle=no file='-' crc=0x02777ff6 counter=12 data=0x1ca3082cf10 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=7 idle=no file='-' crc=0x02777ff6 counter=6 data=0x1ca3082cee0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=8 idle=no file='-' crc=0xdb5c1156 counter=8 data=0x1ca3082ceb0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=9 idle=no file='-' crc=0xdb5c1156 counter=10 data=0x1ca3082ce80 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=10 idle=no file='-' crc=0xdb5c1156 counter=10 data=0x1ca3082ce50 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=11 idle=no file='-' crc=0xdb5c1156 counter=11 data=0x1ca3082ce20 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=12 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x1ca3082cdf0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=13 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x1ca3082cdc0 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=14 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x1ca3082cd90 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.825] [36760] [I] SCOPY ANIM animmgr loaded i=15 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x1ca3082cd60 probe=not-object type=unknown duration=0.00s tracks=0
+[02:11:11.826] [36760] [I] SCOPY ANIM hashed index=1022 at=0x1cc64e6ce00
+[02:11:11.826] [36760] [I] SCOPY ANIM hashed record db-data=0x534d5f65b6aaba92
+[02:11:11.826] [36760] [I] SCOPY ANIM hashed anims found=0
+[02:11:11.829] [36760] [I] SCOPY ANIM mapping skeleton='NPC Root [Root]' bones=116 worst-rot-delta=86.47deg best
+[02:11:11.829] [36760] [I] SCOPY ANIM mapping skeleton='NPC Root [Root]' bones=99 worst-rot-delta=86.47deg
+[02:11:11.829] [36760] [I] SCOPY ANIM play clip='instance-binding' type=spline duration=30.00s tracks=99 copy-resolved=90/99 truth-bones=39
+[02:11:11.830] [36760] [I] SCOPY ANIM play ground-truth best-t=22.50s max-pos-delta=0.102 max-rot-delta=1.40deg worst-pos-delta=10.722 bones=37
+[02:11:11.830] [36760] [I] SCOPY ANIM play phase-check t=4.438s max-pos-delta=0.000 max-rot-delta=0.15deg bones=37
+[02:11:11.830] [36760] [I] SCOPY ANIM play phase-check spread bones=37 within-1deg=37 worst-bones='NPC Head [Head]:0.15deg/0.000u, NPC L UpperarmTwist1 [LUt1]:0.08deg/0.000u, NPC L Thigh [LThg]:0.06deg/0.000u, NPC R Foot [Rft ]:0.04deg/0.000u, SkirtBBone01:0.03deg/0.000u, NPC Pelvis [Pelv]:0.03deg/0.000u, NPC Spine1 [Spn1]:0.03deg/0.000u, NPC L Calf [LClf]:0.00deg/0.000u'
+[02:11:11.830] [36760] [I] SCOPY ANIM play ground-truth verdict=match best=0.1021 worst=10.722
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='FemaleBrowsHuman01' type='BSDynamicTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='00CVEO_00VAN_AA_ALDDEyes_Blue_FEMALE' type='BSDynamicTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='0_HAIRLINE_Female_Human_Straight' type='BSDynamicTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='0Anto92HL' type='BSDynamicTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='0Anto92' type='BSDynamicTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='FemaleMouthHumanoidDefault' type='BSDynamicTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='FemaleHeadNord' type='BSDynamicTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='shoes' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name=' (00000D6C)[1]/ (FE04CB10) [80%]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='clothes_underwear' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='clothes' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='CBBE' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Feet [SOvl0]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl2]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl1]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Feet [Ovl0]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Hands [SOvl0]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl1]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Hands [Ovl0]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Body [SOvl0]' type='BSTriShape'
+[02:11:11.830] [36760] [I] SCOPY GEOMETRY capture=1 name='Body [Ovl0]' type='BSTriShape'
+[02:11:38.441] [36760] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[02:11:38.446] [36760] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[02:11:38.446] [36760] [I] SCOPY DRAW frame=1 passes=23 lights=true animation-driver=instance-binding physics-driver=none
+[02:11:41.571] [36760] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[02:11:41.572] [36760] [I] SCOPY DRAW frame=121 passes=23 lights=true animation-driver=instance-binding physics-driver=none
+[02:11:43.945] [36760] [I] SCOPY DRAW-TOGGLE enabled=false capture=1
+[02:11:44.266] [36760] [I] SCOPY DRAW-TOGGLE enabled=true capture=1
+[02:11:45.042] [36760] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[02:11:45.042] [36760] [I] SCOPY DRAW frame=241 passes=23 lights=true animation-driver=instance-binding physics-driver=none
+[02:11:48.251] [36760] [I] Clone draw: passes=23 rd-null=23 lights=3 | geoms=23 skinned=23 roots=2 num-mat=331 bone-count=331 bound=331
+[02:11:48.251] [36760] [I] SCOPY DRAW frame=361 passes=23 lights=true animation-driver=instance-binding physics-driver=none

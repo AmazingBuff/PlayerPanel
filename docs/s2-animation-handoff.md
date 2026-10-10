@@ -26,7 +26,18 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜，HKX18 已发包待测）**：**改由引擎装载游戏已注册的动作，再取其数据**。
+**最新（2026-10-11，S2 里程碑已达成）**：**面板由游戏已注册的动画驱动，且与引擎姿态定量吻合**。
+HKX28 实测：同相位 `max-pos-delta=0.000`、`max-rot-delta=0.15°`、**37/37 骨在 1° 内**、
+**`ground-truth verdict=match`（首次）**、`animation-driver=instance-binding`（用户目视确认在播放 idle）。
+逐条见 [S2 里程碑](s2-animation-milestone-2026-10-11.md)。
+**这条链怎么通的**：命名角色名表的索引 → 引擎 `Queue`/`Load` → 读**绑定集条目**
+（`characterInstance.animationBindingSet`，空则回退 `setup`）→ 用 **`SamplePartialTracks`（槽 04）**采样
+→ 按骨名写副本 local → 一次自顶向下重算。
+**九轮弯路的教训**：HKX16–24 一直在查"数据是否装载"，真因是**采样入口选错**——
+槽 06 按轨道号索引 `transformOffsets`，而本引擎**故意留空**该表；OAR 用的是槽 04。
+**仍阻塞**：H05 隔离未测；**S1 安全回收仍是最硬的门槛**；展示动作切换未做。
+
+**HKX18–HKX27（历史）**：由引擎装载游戏已注册的动作再取其数据。
 用户澄清的原则（已记为产品要求）：**面板动作不必与游戏角色当前在播的一致，但必须是原版或 OAR 注册的动作**，
 不是我们额外引入的资源。流程固定为：命名索引 → 引擎装载 → 从已装载存储取数据 → 作用于面板。
 实现参照 OAR 的 `LoadAnimation`（carrier 改为按 `sizeof(hkbClipGenerator)`=0x110 定长缓冲、
