@@ -390,3 +390,72 @@ SCOPY ANIM load bindingset idx=… set=character|setup|none element=0x… bindin
 | `binding=0x0` | 该索引的绑定集条目仍空 | 装载未落到绑定集 → 改在未暂停帧装载 |
 | `binding≠0` 但 `binding-valid=false` | 绑定在、轨道表仍空 | 看 `reason`；必要时用 `animation` + 实测映射 |
 | `data-present=false` | 与 HKX22 同 | 数据仍在更深处 |
+
+## 18. HKX23 实测结果（2026-10-11 01:34）：**引擎确实填了绑定集；但我的判据在说谎**
+
+日志 `CharacterPanel-hkx23-bindingset-20261011.log`。**零崩溃**。
+
+```
+SCOPY ANIM load bindingset idx=12219 set=character element=0x22b7318dda0
+        binding=0x22b43d62bc0 anim=0x22b43d29f00 anim-type=spline duration=20.00s tracks=99
+        binding-valid=false reason=tracks-unreadable data-present=false
+```
+
+**① OAR 的路径被证实。** `Queue`/`Load` 之后，**该索引的绑定集条目被引擎填上了**：
+`binding` 非空、`animation` 头部有效（spline／20.00s／99 轨）。
+**读回绑定集条目是正确的地方** —— HKX20–22 往装载器 arena 里挖的方向本就是弯路。
+
+**② 判据有一个说谎点**：全日志唯一的 `true` 是
+
+```
+region-hit type=wavelet duration=0.93s tracks=107 data-present=true
+```
+
+而我的判据对**非 spline 类型直接返回 true**（只实现了 spline 布局的检查）——
+**这个 true 代表"没检查"，不是"数据在"**。真正有信号的是 spline，**全部 spline 都是 false**。
+
+**③ 两个 `hkArray` 同时读空**：binding 的 `transformTrackToBoneIndices`（`tracks-unreadable`）
+与 animation 的 `data`（`absent`）。HKX14 的原始转储已确认前者是 `data=0, size=0` —— **真空，不是读错**。
+
+### 一个待验证的假设（记录在案，未采信）
+
+Havok 的 `ConvertTrackPoseToBonePose` 在 `transformTrackToBoneIndices` 为 **NULL** 时
+**按恒等映射处理（轨道 i → 骨骼 i）**。Skyrim 的动画与骨架同源，**可能正因此故意不填这张表**——
+这能解释引擎为何从不填它。旁证：OAR 只在**带前缀的同步动画**里才用
+`hkaSkeleton_CreateSynchronizedClipBinding` 新建填好的表，其余情况直接用原表（**可能是空表**）。
+
+**但这仍是假设**：PRD §6.4 明文禁止未验证就用"轨道 i = 骨骼 i"。
+唯一可接受的验证 = 用 `poseLocal` 做真值 A/B（HKX2 已验证该参考可读）。
+**前置条件仍是数据可采样**，故本轮先解决 `absent` 的成因。
+
+## 19. HKX24：说清 `absent` 属哪一种成因
+
+- 提交 `23070b6e`，包 `dist/CharacterPanel-scopy-HKX24-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX24-23070b6ec7-cl94faaed0c6-20261010T173933Z`（`source_baseline_dirty=false`）。
+- DLL `fce0638a…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+**`data-present` 改为四态命名**，只有 spline 给真实答案：
+
+| 取值 | 含义 |
+| --- | --- |
+| `present` | spline 且五个数组全部可读 |
+| `absent` | spline 但检查未通过（成因见下表） |
+| **`unchecked-non-spline`** | **本检查不认识该类型 → 不给答案**（原先谎报 true） |
+| `no-object` | 不是对象 |
+
+**spline 逐字段转储**（`absent` 时打印）：
+
+```
+SCOPY ANIM load spline frames=… blocks=… max-per-block=… mask-size=… block-dur=… frame-dur=… track-count=…
+SCOPY ANIM load spline array=block-offsets|float-block-offsets|transform-offsets|float-offsets|data  size=… at=0x… readable=…
+SCOPY ANIM load spline qwords='…'   （对象原始 0xB0 字节）
+```
+
+**两种成因的修法完全不同，必须分开：**
+
+| 观测 | 成因 | 修法 |
+| --- | --- | --- |
+| 数组 `size=0`、`at=0x0` | **从未填充**（惰性装载） | 改在未暂停帧装载；或该动画确实无数据 |
+| `size` 合理但 `at` 不可读 | 指针未 patch | 说明这是**序列化镜像**而非活对象 |
+| 数组值像**偏移量**（远小于指针） | 同上，packfile 未 fixup | 需按 packfile 规则自行 fixup |
+| `frames/blocks` 为 0 或不可能值 | **布局与本版本不符** | 用 `qwords` 定真偏移 |
