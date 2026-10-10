@@ -114,6 +114,12 @@ namespace
     // How far the idle-index sampler walks. It runs during normal play, so it is deliberately smaller
     // than the capture-time walks: it needs a clip generator, not a census.
     constexpr size_t Idle_Pool_Objects = 96;
+    // How many clip generators the sampler keeps. Only a running clip matters, and a character has a
+    // handful of those, so this bounds both the discovery and the per-frame re-verification.
+    constexpr size_t Idle_Pool_Clips = 24;
+    // How far into an object the sampler looks for the pointers leading to those clips. See the note at
+    // the scan: every slot is a syscall and this runs inside ordinary gameplay.
+    constexpr std::int32_t Idle_Pool_Scan_Bytes = 0x40;
     // How much of the not-collected names is kept for the log, so an animation the two classifiers miss is
     // visible by name instead of only as a count.
     constexpr size_t Max_Other_Names_Bytes = 160;
@@ -2905,7 +2911,35 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
     }
 }
 
-void collect_active_animation_indices(RE::TESObjectREFR& source, ActiveAnimationIndices& out)
+bool clip_generator_is_live(void const* object)
+{
+    return object && readable(object, sizeof(RE::hkbClipGenerator)) && looks_like_object(object) &&
+           *static_cast<const std::uintptr_t*>(object) == clip_generator_vtable();
+}
+
+void tally_clip_generator(RE::hkbClipGenerator const* generator, ActiveAnimationIndices& out)
+{
+    if (!generator)
+        return;
+    const std::string name = guarded_string(generator->animationName);
+    // A live control means the engine is running this clip: that is the one OAR has chosen and activated,
+    // so its index is OAR's answer for this character right now.
+    if (!generator->animationControl.get())
+        return;
+    const std::string_view base = base_name_of(name);
+    if (is_base_idle(base))
+        out.idles.push_back(generator->animationBindingIndex);
+    else if (mentions_equip(base))
+        out.equips.push_back(generator->animationBindingIndex);
+    else
+    {
+        ++out.others;
+        if (out.other_names.size() < Max_Other_Names_Bytes)
+            out.other_names += fmt::format("{}{}", out.other_names.empty() ? "" : ", ", base);
+    }
+}
+
+void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<RE::hkbClipGenerator const*>& out)
 {
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (!source.GetAnimationGraphManager(manager) || !manager)
@@ -2939,33 +2973,18 @@ void collect_active_animation_indices(RE::TESObjectREFR& source, ActiveAnimation
         }
 
         size_t visited = 0;
-        while (!pending.empty() && visited < Idle_Pool_Objects)
+        while (!pending.empty() && visited < Idle_Pool_Objects && out.size() < Idle_Pool_Clips)
         {
             const void* const object = pending.back();
             pending.pop_back();
             ++visited;
-            if (classify(object) == GraphKind::ClipGenerator && readable(object, sizeof(RE::hkbClipGenerator)))
-            {
-                const auto* const generator = static_cast<const RE::hkbClipGenerator*>(object);
-                const std::string name = guarded_string(generator->animationName);
-                // A live control means the engine is running this clip: that is the one OAR has chosen and
-                // activated, so its index is OAR's answer for this character right now.
-                if (generator->animationControl.get())
-                {
-                    const std::string_view base = base_name_of(name);
-                    if (is_base_idle(base))
-                        out.idles.push_back(generator->animationBindingIndex);
-                    else if (mentions_equip(base))
-                        out.equips.push_back(generator->animationBindingIndex);
-                    else
-                    {
-                        ++out.others;
-                        if (out.other_names.size() < Max_Other_Names_Bytes)
-                            out.other_names += fmt::format("{}{}", out.other_names.empty() ? "" : ", ", base);
-                    }
-                }
-            }
-            for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
+            if (clip_generator_is_live(object))
+                out.push_back(static_cast<const RE::hkbClipGenerator*>(object));
+            // A narrow window on purpose. Every slot costs a page query, which is a syscall, and this runs
+            // inside ordinary gameplay: the wider windows used at capture belong to a paused menu where a
+            // slow frame costs nothing. A clip generator's own fields sit at the start of the object, so
+            // the reach needed to find one from its parent does not need the whole page.
+            for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Idle_Pool_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
             {
                 const auto* const at = static_cast<const std::uint8_t*>(object) + offset;
                 if (!readable(at, sizeof(void*)))

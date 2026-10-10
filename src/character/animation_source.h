@@ -320,8 +320,17 @@ struct ActiveAnimationIndices
     std::string other_names;       // a few of their names, so the naming itself is checkable
 };
 
-// Read-only and quiet: this runs during normal play, so it walks a bounded set and prints nothing itself.
-void collect_active_animation_indices(RE::TESObjectREFR& source, ActiveAnimationIndices& out);
+// Whether a pointer still reads as a live clip generator: its vtable is the engine's own and the object is
+// mapped. A handful of guarded reads, so this is cheap enough to run per frame.
+[[nodiscard]] bool clip_generator_is_live(void const* object);
+
+// Reads one clip generator's index into the class it belongs to by name. Cheap: no walking.
+void tally_clip_generator(RE::hkbClipGenerator const* generator, ActiveAnimationIndices& out);
+
+// Finds the clip generators on the instance side of this character's own graphs. This is the expensive
+// part - it scans object windows and every page query costs a syscall - so callers are expected to hold
+// onto what it returns and re-verify with clip_generator_is_live rather than calling it repeatedly.
+void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<RE::hkbClipGenerator const*>& out);
 
 // Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
 class ClipPlayer
