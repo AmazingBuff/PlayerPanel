@@ -482,6 +482,17 @@ void SceneGraphCopy::toggle_idle()
         m_clip.ready() ? m_clip.name() : std::string("procedural-idle"));
 }
 
+std::string SceneGraphCopy::animation_driver() const
+{
+    if (!m_idle.enabled())
+        return "off";
+    if (m_anim_probe_enabled)
+        return "probe";
+    if (m_clip.ready())
+        return m_clip.name();
+    return "procedural-idle";
+}
+
 void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
 {
     if (m_snapshot.get() != &clone)

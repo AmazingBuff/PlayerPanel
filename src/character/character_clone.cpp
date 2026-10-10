@@ -969,7 +969,8 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
             drawn, renderer_data_null, inject_lights ? Studio_Light_Count : 0,
             census.geometries, census.skinned, census.roots, census.num_matrices, census.bone_count, census.bound);
         if (m_is_snapshot)
-            logger::info("SCOPY DRAW frame={} passes={} lights={} animation-driver=none physics-driver=none", m_draw_frames, drawn, inject_lights);
+            logger::info("SCOPY DRAW frame={} passes={} lights={} animation-driver={} physics-driver=none",
+                m_draw_frames, drawn, inject_lights, SceneGraphCopy::instance().animation_driver());
     }
 
     RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);

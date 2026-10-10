@@ -45,6 +45,11 @@ public:
     // stage, so the studio's base placement is what it animates around and the probe can stay a
     // diagnostic that owns the figure while it is armed.
     void animate_at_base_pose(CharacterClone& clone);
+    // What is driving the drawn figure's bones at this moment: the clip the engine handed over, the
+    // procedural idle when that is what is left, the probe while it owns the figure, or nothing. Asked
+    // for rather than asserted - a log field that names a driver without ever looking at one reads the
+    // same whether the animation chain works or is silently absent.
+    [[nodiscard]] std::string animation_driver() const;
 
 private:
     // Freeing a native clone's graph crashed at every point that was tried
