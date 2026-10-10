@@ -113,6 +113,9 @@ namespace
     constexpr size_t Max_Resource_Objects = 24;
     constexpr size_t Resource_Dump_Bytes = 0x60;
     constexpr size_t Max_Tree_Lines = 16;
+    // How far the content scan reaches into one byte range, and how many ranges one resource may offer.
+    constexpr size_t Max_Region_Scan_Bytes = 0x10000;
+    constexpr size_t Max_Scanned_Regions = 4;
     // How far the instance-side walk goes and how many of its clips are printed. Small on purpose: this
     // stage only answers whether a binding resolves, so it should cost one bounded pass, not a search.
     constexpr size_t Max_Instance_Objects = 256;
@@ -881,6 +884,8 @@ namespace
         std::string first_resource; // the first resource's own words
         const char* resource_type = "-";  // what that resource's vtable says it is
         size_t tree_lines = 0;      // objects described so far, so the tree dump stays bounded
+        size_t region_hits = 0;     // aligned addresses in a scanned region that validated as animations
+        size_t regions_scanned = 0; // byte ranges the content scan has covered
     };
 
     void consider_animation(void const* candidate, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
@@ -926,7 +931,63 @@ namespace
         return "other";
     }
 
-    // What one resource holds, reached by a bounded walk rather than by a single dereference: the object
+    // A linear scan over bytes a resource owns, so an animation is found by what it is rather than by
+    // following a pointer graph whose shape has to be guessed first. The resource holds its objects in
+    // one arena - the dump shows a pointer and a byte count at +0x10 and +0x18, with a second pointer
+    // 0x1A0 into that arena - and a graph walk that only follows object-shaped words never descends
+    // into it. Offering every aligned address to the same validation an animation must pass needs no
+    // layout at all, and a wrong hit costs one rejected candidate.
+    void scan_region_for_animations(void const* region, size_t bytes, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
+    {
+        const size_t limit = std::min(bytes, Max_Region_Scan_Bytes);
+        if (!region || limit < sizeof(RE::hkaAnimation) || !readable(region, sizeof(RE::hkaAnimation)))
+            return;
+        for (size_t offset = 0; offset + sizeof(RE::hkaAnimation) <= limit; offset += sizeof(void*))
+        {
+            const auto* const candidate = static_cast<const std::uint8_t*>(region) + offset;
+            if (!readable(candidate, sizeof(RE::hkaAnimation)))
+                break;
+            const RawAnimationReading raw = read_raw_animation(candidate);
+            if (!raw.valid)
+                continue;
+            ++walk.region_hits;
+            consider_animation(candidate, walk, out);
+            if (walk.region_hits <= Max_Tree_Lines)
+                logger::info("SCOPY ANIM load region-hit at=0x{:x} offset=0x{:x} type={} duration={:.2f}s tracks={} data-present={}",
+                    reinterpret_cast<std::uintptr_t>(candidate), offset, animation_type_name(raw.type),
+                    raw.duration, raw.tracks,
+                    animation_data_is_present(reinterpret_cast<const RE::hkaAnimation*>(candidate), raw.tracks));
+        }
+    }
+
+    // Every byte range a resource's own header points at, found without assuming which field is which:
+    // any adjacent pair that reads as {heap pointer, plausible byte count} is treated as one region.
+    void scan_resource_regions(void const* resource, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
+    {
+        if (out.size() >= Max_Loaded_Anims || !resource || !readable(resource, Resource_Dump_Bytes))
+            return;
+        scan_region_for_animations(resource, Resource_Dump_Bytes, walk, out);
+
+        const auto* const words = static_cast<const std::uint64_t*>(resource);
+        for (size_t word = 0; word + 1 < Resource_Dump_Bytes / sizeof(std::uint64_t); ++word)
+        {
+            const void* const pointer = reinterpret_cast<void const*>(words[word]);
+            const std::int32_t size = static_cast<std::int32_t>(words[word + 1] & 0xFFFFFFFF);
+            if (!pointer || reinterpret_cast<std::uintptr_t>(pointer) < 0x10000)
+                continue;
+            if (size < static_cast<std::int32_t>(sizeof(RE::hkaAnimation)) || size > static_cast<std::int32_t>(Max_Region_Scan_Bytes))
+                continue;
+            if (!readable(pointer, 0x20))
+                continue;
+            if (walk.regions_scanned >= Max_Scanned_Regions)
+                return;
+            ++walk.regions_scanned;
+            logger::info("SCOPY ANIM load region at=0x{:x} bytes={} from-offset=0x{:x}",
+                reinterpret_cast<std::uintptr_t>(pointer), size, word * sizeof(std::uint64_t));
+            scan_region_for_animations(pointer, static_cast<size_t>(size), walk, out);
+        }
+    }
+
     // an animation file loads to is a container, and the animation sits some levels inside it, so one
     // level of pointers is not enough to reach it. Every candidate is validated before it is believed,
     // and nothing virtual is called on any of them.
@@ -983,6 +1044,10 @@ namespace
                     pending.push_back(word);
             }
         }
+
+        // The graph walk cannot leave the pointer-shaped objects, and the arena holds plain bytes, so it
+        // is scanned by content afterwards rather than reached by following anything.
+        scan_resource_regions(resource, walk, out);
     }
 
     void walk_loaded_record(void const* record, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
