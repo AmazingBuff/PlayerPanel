@@ -114,6 +114,9 @@ namespace
     // How far the idle-index sampler walks. It runs during normal play, so it is deliberately smaller
     // than the capture-time walks: it needs a clip generator, not a census.
     constexpr size_t Idle_Pool_Objects = 96;
+    // How much of the not-collected names is kept for the log, so an animation the two classifiers miss is
+    // visible by name instead of only as a count.
+    constexpr size_t Max_Other_Names_Bytes = 160;
     constexpr size_t Resource_Dump_Bytes = 0x60;
     constexpr size_t Max_Tree_Lines = 16;
     // How far the content scan reaches into one byte range, and how many ranges one resource may offer.
@@ -818,8 +821,7 @@ namespace
         return true;
     }
 
-    bool equals_ignore_case(std::string_view lhs, std::string_view rhs)
-    {
+    bool equals_ignore_case(std::string_view lhs, std::string_view rhs)    {
         if (lhs.size() != rhs.size())
             return false;
         for (size_t i = 0; i < lhs.size(); ++i)
@@ -828,6 +830,26 @@ namespace
                 return false;
         }
         return true;
+    }
+
+    // The equip class by name. The panel needs exactly two classes of animation - the idle it plays while
+    // nothing is happening and the equip animation it plays when equipment changes - so this is the whole
+    // of the second classifier. Names are the only handle available before an animation is loaded, and the
+    // log prints the names that fell into neither class so a wrong guess here is visible rather than silent.
+    bool mentions_equip(std::string_view name)
+    {
+        constexpr std::string_view Equip = "equip";
+        if (name.size() < Equip.size())
+            return false;
+        for (size_t start = 0; start + Equip.size() <= name.size(); ++start)
+        {
+            size_t matched = 0;
+            while (matched < Equip.size() && std::tolower(static_cast<unsigned char>(name[start + matched])) == Equip[matched])
+                ++matched;
+            if (matched == Equip.size())
+                return true;
+        }
+        return false;
     }
 
     bool is_base_idle(std::string_view file_name)
@@ -2883,7 +2905,7 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
     }
 }
 
-void collect_active_idle_indices(RE::TESObjectREFR& source, std::vector<std::uint16_t>& out)
+void collect_active_animation_indices(RE::TESObjectREFR& source, ActiveAnimationIndices& out)
 {
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (!source.GetAnimationGraphManager(manager) || !manager)
@@ -2926,10 +2948,22 @@ void collect_active_idle_indices(RE::TESObjectREFR& source, std::vector<std::uin
             {
                 const auto* const generator = static_cast<const RE::hkbClipGenerator*>(object);
                 const std::string name = guarded_string(generator->animationName);
-                // An idle with a live control is one the engine is running: that is the clip OAR has
-                // chosen and activated, so its index is OAR's answer for this character right now.
-                if (is_base_idle(base_name_of(name)) && generator->animationControl.get())
-                    out.push_back(generator->animationBindingIndex);
+                // A live control means the engine is running this clip: that is the one OAR has chosen and
+                // activated, so its index is OAR's answer for this character right now.
+                if (generator->animationControl.get())
+                {
+                    const std::string_view base = base_name_of(name);
+                    if (is_base_idle(base))
+                        out.idles.push_back(generator->animationBindingIndex);
+                    else if (mentions_equip(base))
+                        out.equips.push_back(generator->animationBindingIndex);
+                    else
+                    {
+                        ++out.others;
+                        if (out.other_names.size() < Max_Other_Names_Bytes)
+                            out.other_names += fmt::format("{}{}", out.other_names.empty() ? "" : ", ", base);
+                    }
+                }
             }
             for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
             {

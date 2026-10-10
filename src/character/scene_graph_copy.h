@@ -120,10 +120,15 @@ private:
     bool m_cap_logged;
     bool m_anim_probe_enabled;
     IdleDriver m_idle;
-    // Every standing-idle index seen on the player's own clips while the game was running, with how many
+    // Every idle and equip index seen on the player's own clips while the game was running, with how many
     // times each was seen. OAR writes the index it chose onto the clip it activates, so this is OAR's
-    // selection as it happened rather than a guess at its configuration.
+    // selection as it happened rather than a guess at its configuration, and the counts are that
+    // configuration's distribution as sampled by normal play. Anything else the player runs - walking,
+    // combat, jumping - is counted but not kept: the panel has no use for it.
     std::unordered_map<std::uint16_t, std::uint32_t> m_idle_pool;
+    std::unordered_map<std::uint16_t, std::uint32_t> m_equip_pool;
+    uint32_t m_other_clips;
+    std::string m_other_names;
     uint32_t m_idle_pool_samples;
     // The animation the copy plays when the source character has one the engine can hand over; the
     // procedural idle is the fallback when it does not.

@@ -304,12 +304,24 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
 // candidate, so a wrong layout shows up as a rejection reason instead of a crash.
 void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation, const RE::hkaAnimationBinding*& out_binding, float& out_local_time);
 
-// Every standing-idle animation index the source's own clips are currently pointing at. OAR's choice for
-// this character is exactly the index it writes onto a clip generator, so watching that index over time
-// is how the panel learns which registered idles this character's conditions select - no evaluation of
-// OAR's configuration is needed, and none is possible through its API. Read-only and quiet: this runs
-// during normal play, so it walks a bounded set and prints nothing.
-void collect_active_idle_indices(RE::TESObjectREFR& source, std::vector<std::uint16_t>& out);
+// The registered animations the player's own clips are running, split into the only two classes the panel
+// needs: the standing idles it plays while the character is doing nothing else, and the equip animations
+// it plays when equipment changes and then returns from. Running, combat and jumping are deliberately not
+// collected, because the panel has no use for them.
+//
+// OAR's choice for this character is exactly the index it writes onto the clip it activates, so watching
+// that index over time is how the panel learns which registered animations this character's conditions
+// select - no evaluation of OAR's configuration is needed, and none is possible through its API.
+struct ActiveAnimationIndices
+{
+    std::vector<std::uint16_t> idles;
+    std::vector<std::uint16_t> equips;
+    std::uint32_t others = 0;      // clips that are neither, counted so what was skipped stays visible
+    std::string other_names;       // a few of their names, so the naming itself is checkable
+};
+
+// Read-only and quiet: this runs during normal play, so it walks a bounded set and prints nothing itself.
+void collect_active_animation_indices(RE::TESObjectREFR& source, ActiveAnimationIndices& out);
 
 // Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
 class ClipPlayer
