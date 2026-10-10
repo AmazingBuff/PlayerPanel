@@ -43,7 +43,21 @@ HKX6–HKX12 全程扫的是 `hkbBehaviorGraph::rootGenerator`（@0x80）＝**�
 **因此 HKX10 的「标准 Havok binding/control 层在 Skyrim 运行时是死的」判读依据不成立，路线 A 的"死路"结论
 应撤回重判**——但仍未取得任何可采样对象，H01/H02 均未满足，不等于路线 A 已通过。
 通往活跃实例的类型化路线：`rootGeneratorClone`(0x90)、`activeNodes`(0x98)→`hkbNodeInfo::nodeClone`(0x58)，
-用 `cloneState==kClone(2)` 判定。**PRD §6.4 第 1 条要求的 OAR commit 固定与真实播放路径核对本轮未完成。**
+用 `cloneState==kClone(2)` 判定。
+
+**OAR 源码核对已闭环**（commit `f4e7688b`，[HKX13 静态核对](s2-hkx13-static-check-2026-10-10.md) §5）：
+① OAR **不遍历 `rootGenerator`**，而是钩 `hkbClipGenerator::Activate`／`Update`／`Deactivate` 由引擎递入实例
+（[Hooks.cpp:40-88](../OpenAnimationReplacer/src/Hooks.cpp#L40)）——佐证我们扫的是模板；
+② OAR 的替换只写 `animationBindingIndex`（[ActiveClip.cpp:120](../OpenAnimationReplacer/src/ActiveClip.cpp#L120)），
+**不需要 `hkaAnimation` 对象**，故其成功不构成"能取到动画对象"的证据；
+③ 但它确实从 binding set 取到有效 binding：优先 **`characterInstance.animationBindingSet`，为空才回退
+`setup->animationBindingSet`**（[FakeClipGenerator.cpp:106-126](../OpenAnimationReplacer/src/FakeClipGenerator.cpp#L106)），
+且 `hkbAnimationBindingWithTriggers` 是 **0x28 字节、`binding` 在 +0x10**（OAR 带 static_assert）——
+**据此修正 HKX4/5 的"0x30 空桩"判读（尺寸错），且我们全程只读了 `hkbCharacter` 那份、从未试过回退**；
+④ 采样传 **`cache = nullptr`**（[ActiveAnimationPreview.cpp:38](../OpenAnimationReplacer/src/ActiveAnimationPreview.cpp#L38)），
+HKX6 的"spline 是否需要 chunk cache"悬案不再是阻塞项；映射须走 `transformTrackToBoneIndices`，禁止"轨道 i=骨骼 i"。
+**OAR 未解决"长期安全持有"**（它在引擎 Activate/Update 窗口内操作，生命周期由引擎兜底）——这是我们自己的待办。
+活跃实例上 binding 是否非空仍需上机实测；PRD §6.4 第 1 条现已闭环。
 
 ## 1. 方向修正（用户批评，已接受）
 

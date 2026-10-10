@@ -87,12 +87,115 @@ hkbBehaviorGraph::activeNodes (0x98)                   → hkArray<hkbNodeInfo>
 
 判据可交叉验证：`nodeTemplateToCloneMap`（0xE0）应能把已扫到的模板 clip 映射到对应克隆。
 
-## 5. 尚未完成（PRD 第 1 条未闭环）
+## 5. OAR 源码核对（PRD §6.4 第 1 条，已闭环）
 
-- **未固定 OAR commit，未核对其真实播放路径**。PRD §6.4 第 1 条与测试单第 12 行要求固定 OAR commit 并核对
-  `ActiveClip.cpp` 的真实播放／混合路径（"仅参考源码，不调用其运行时接口"）。本轮该项**未完成**。
-- 未验证克隆链在运行期确实非空（需上机）。
-- 未涉及资源持有（PRD §6.4 "资源持有必须覆盖压缩数据、绑定与轨道表依赖的底层资源"）——留待取得对象后。
+**固定 commit：`f4e7688b065175aff70aa523073857911e15aca3`（2026-08-31，工作区干净）**，源码置于 `../OpenAnimationReplacer`。
+仅参考源码，未引入运行时交互（PRD §6.4 红线）。
+
+### 5.1 OAR 怎么拿到活跃 clip：**不遍历 `rootGenerator`，而是钩住 `Activate`**
+
+[Hooks.cpp:40-60](../OpenAnimationReplacer/src/Hooks.cpp#L40)：OAR 钩 `hkbClipGenerator::Activate`，
+由引擎把**正在被激活的那个 clip generator（`a_this`）**递进来，再 `AddOrGetActiveClip` 建 `ActiveClip`。
+`Update`（:62）与 `Deactivate`（:72）同法。**OAR 从头到尾没有遍历 `rootGenerator` 找 clip。**
+
+→ 佐证 §3：`rootGenerator` 是模板，`Activate` 收到的才是实例。我们的扫描路线与 OAR 完全不同。
+
+### 5.2 替换机制：写 `animationBindingIndex`，**不是读 binding 对象**
+
+[ActiveClip.cpp:120](../OpenAnimationReplacer/src/ActiveClip.cpp#L120) 注释明确：
+
+```
+_clipGenerator->animationBindingIndex = newBindingIndex;  // this is the most important part - this is what actually replaces the animation
+                                                          // the animation binding index is the index of an entry inside hkbCharacterStringData->animationNames
+```
+
+→ 说明 **OAR 不需要 `hkaAnimation` 对象**：它只改索引，引擎自己按索引去装载与绑定。
+这与 HKX3 的 `names == bindings == 15203` 同序结论一致。**OAR 的成功不构成"能取到 hkaAnimation 对象"的证据。**
+
+### 5.3 但 OAR 确实从 binding set 取到了有效 binding——且是从**角色自己的** binding set
+
+[FakeClipGenerator.cpp:106-126](../OpenAnimationReplacer/src/FakeClipGenerator.cpp#L106)：
+
+```cpp
+const RE::BShkbAnimationGraph* graph = reinterpret_cast<RE::BShkbAnimationGraph*>(behaviorGraph->userData);
+const auto& setup = graph->characterInstance.setup;
+auto animationBindingSet = static_cast<RE::hkbAnimationBindingSet*>(graph->characterInstance.animationBindingSet.get());
+if (!animationBindingSet) {
+    animationBindingSet = setup->animationBindingSet.get();      // ← 回退到 setup 的绑定集
+}
+const auto animationBindingWithTriggers = animationBindingSet->bindings[animationBindingIndex];
+binding = animationBindingWithTriggers->binding.get();           // ← hkbAnimationBindingWithTriggers +0x10
+```
+
+三处直接推翻我们的既有判读：
+
+1. **`hkbAnimationBindingWithTriggers` 是 0x28 字节、`binding` 在 +0x10**
+   （[Havok/Havok.h:200-203](../OpenAnimationReplacer/src/Havok/Havok.h#L200)，带 `static_assert`）。
+   我们 HKX4/5 判读的"0x30 字节小对象/空桩"**尺寸就错了**（0x30 vs 0x28）；HKX10 读 +0x10 位置虽对，
+   但**读的是 `hkbCharacter::animationBindingSet`（`hkbCharacter.h`@0x68）**，而 OAR **优先用
+   `graph->characterInstance.animationBindingSet`、为空才回退 `setup->animationBindingSet`（@0x38）**——
+   两个不同的绑定集，我们只读了后者，从未试过回退。
+2. **`binding` 为 null 时 OAR 自己造一个**：[FakeClipGenerator.cpp:128-134](../OpenAnimationReplacer/src/FakeClipGenerator.cpp#L128)
+   `hkHeapAlloc` + `hkaDefaultAnimationControl_ctor(animControl, binding, true, 2)`。
+3. **装载入口**：`AnimationFileManagerSingleton::Load(a_context, fakeClipGeneratorPtr, nullptr)`
+   （[FakeClipGenerator.cpp:144](../OpenAnimationReplacer/src/FakeClipGenerator.cpp#L144)）——与 CLib 注释的
+   "Load called in Update" 吻合，说明 **binding 的填充发生在 Update 期**。
+
+### 5.4 采样入口与 cache 参数（HKX6 悬案的实测答案）
+
+[ActiveAnimationPreview.cpp:38](../OpenAnimationReplacer/src/ActiveAnimationPreview.cpp#L38)：
+
+```cpp
+previewAnimation->SamplePartialTracks(_previewClipGenerator->localTime, numTransformTracks,
+                                      sampledTransformTracks.data(), previewAnimation->numberOfFloatTracks,
+                                      sampledFloatTracks.data(), nullptr);   // ← cache = nullptr
+```
+
+**OAR 传 `nullptr` 作为 `hkaChunkCache*`**，且注释未提 spline 例外。→ 支持 HKX6 选择
+`SampleIndividualTransformTracks`（无 cache 参数）的路线；"spline 是否需要 cache"不再是阻塞项。
+（未验证：OAR 走的是 `SamplePartialTracks`，与 `SampleIndividualTransformTracks` 是不同虚函数槽，
+两者对 cache 的要求未必完全等价——仍以我们自己上机实测为准。）
+
+轨道→骨骼映射取自 `binding->transformTrackToBoneIndices`（同上 :63），
+**不是**"轨道 i = 骨骼 i"——PRD §6.4 明确禁止用后者替代映射。
+
+### 5.5 持有方式
+
+OAR 用 `RE::hkRefPtr`（引用计数）持有 `animationControl`／`binding`
+（[FakeClipGenerator.h:43,46](../OpenAnimationReplacer/src/FakeClipGenerator.h#L43)：
+`hkRefPtr<hkaDefaultAnimationControl> animationControl;`）——而非裸指针。
+**注意**：OAR 全程在引擎的 Activate/Update/Generate 窗口内操作，生命周期由引擎的 clip 生命周期兜底，
+它**没有**证明"跨帧长期持有、暂停后仍有效"。PRD §6.4 要求的"资源持有必须覆盖压缩数据、绑定与轨道表依赖的
+底层资源"**OAR 未给出答案**——这是我们自己的待办。
+
+## 6. 结论与下一步
+
+### 已可确定的（静态）
+
+- 我们扫的是模板树（`cloneState=kTemplate`、`isActive=false`，两轮日志三重自校验）→ **路线 A 的"死路"结论撤回**。
+- 通往实例的路线：优先 `graph->characterInstance.animationBindingSet`、**为空才回退 `setup->animationBindingSet`**，
+  元素按 **0x28 字节** `hkbAnimationBindingWithTriggers`，`binding` 在 **+0x10**（OAR 带 static_assert）。
+- 采样可传 `cache = nullptr`；映射必须走 `transformTrackToBoneIndices`。
+
+### 仍未闭环
+
+- **活跃克隆上的 `binding` 是否非空，需上机实测**（HKX9/10 的 66 空是在模板上读的，不构成否定）。
+- OAR 未解决"长期安全持有"——这是我们自己的待办，不因 OAR 成功而消失。
+- 未验证 `SamplePartialTracks` 与 `SampleIndividualTransformTracks` 对 cache 的要求等价。
+
+### 下一轮上机的最小范围（待用户同意后实施）
+
+只问一个问题：**实例侧 binding 是否可取得**。建议日志面：
+
+```
+SCOPY ANIM instance graph=i char-bindingset=0x…/N setup-bindingset=0x…/N root-clone=0x… active-nodes=N
+SCOPY ANIM instance clone-states='kTemplate:…,kClone:…,other:…'
+SCOPY ANIM instance clip i=… name='…' idx=… clone-state=… binding=0x… control=0x… tracks=… reason=…
+SCOPY ANIM instance element idx=… at=0x… size=0x28 binding@0x10=0x… valid=… reason=…
+```
+
+仍须遵守：只读、不写源角色、不虚调用候选对象、**从最终 zip 部署**（HKX11/HKX12 曾部署提交前中间构建，
+日志横幅对不上 manifest，本轮起须纠正）。
 
 ## 6. 下一轮上机的建议范围（待用户同意后实施）
 
