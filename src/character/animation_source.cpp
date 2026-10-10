@@ -104,6 +104,8 @@ namespace
     // stage only answers whether a binding resolves, so it should cost one bounded pass, not a search.
     constexpr size_t Max_Instance_Objects = 256;
     constexpr size_t Max_Instance_Printed = 12;
+    // How many tracks a skeleton has to resolve before it is worth scoring against the engine's pose.
+    constexpr size_t Min_Tracks_For_Skeleton_Test = 8;
     constexpr size_t Progress_Every = 32;
     constexpr double Max_Clip_Step_Seconds = 0.1;
 
@@ -1575,7 +1577,7 @@ void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& sourc
     }
 }
 
-bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out)
+bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out, const RE::hkaAnimation* a_instance_animation)
 {
     out = ClipPlayback{};
     const NodeTable copy_nodes = collect_nodes(copy_root);
@@ -1875,6 +1877,13 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
                 candidate_name = best->name == "-" ? fmt::format("crc:{:08x}", best->crc_name) : best->name;
             }
         }
+        // The animation the instance side handed over, when the binding route had none. Its track table
+        // is unfilled, so the mapping is not taken from the binding - it is measured here.
+        if (!candidate && a_instance_animation)
+        {
+            candidate = a_instance_animation;
+            candidate_name = "instance-binding";
+        }
         if (!candidate)
         {
             logger::info("SCOPY ANIM play UNAVAILABLE reason=no-clip-generator");
@@ -1887,9 +1896,80 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
         playback.name = candidate_name;
         playback.duration = candidate->duration;
         total_tracks = std::min(read_raw_animation(candidate).tracks, bone_count);
+
+        // No binding means no track-to-bone table, and the animation's own track count need not match
+        // the skeleton the copy was aligned against - this character reports 99 tracks against 116
+        // bones on one graph and 99 against 99 on the other. Rather than assume which skeleton the
+        // tracks are indexed by, every graph's skeleton is tried and the one that reproduces the
+        // engine's own pose wins. The mapping is thereby measured against an independent reference
+        // (hkbCharacter::poseLocal, read in HKX2) instead of assumed, which is what the PRD requires
+        // before a mapping may be used.
+        const RE::hkaSkeleton* best_skeleton = selected.skeleton;
+        float best_score = std::numeric_limits<float>::max();
+        std::vector<std::pair<RE::hkaSkeleton const*, float>> skeleton_scores;
+        for (uint32_t i = 0; i < manager->graphs.size(); ++i)
+        {
+            RE::BShkbAnimationGraph* const graph = manager->graphs[i].get();
+            if (!graph)
+                continue;
+            const RE::hkaSkeleton* const skeleton = graph->characterInstance.setup.get()
+                ? graph->characterInstance.setup->animationSkeleton.get()
+                : nullptr;
+            if (!skeleton || !looks_like_object(skeleton) || skeleton->bones.empty())
+                continue;
+
+            const std::int32_t available = std::min(total_tracks, static_cast<std::int32_t>(skeleton->bones.size()));
+            std::vector<std::uint16_t> tracks;
+            std::vector<const RE::hkQsTransform*> poses;
+            for (std::int32_t track = 0; track < available; ++track)
+            {
+                const char* const bone_name = skeleton->bones[track].name.c_str();
+                if (!bone_name)
+                    continue;
+                const auto entry = pose_by_bone.find(bone_name);
+                if (entry == pose_by_bone.end())
+                    continue;
+                tracks.push_back(static_cast<std::uint16_t>(track));
+                poses.push_back(entry->second);
+            }
+            if (tracks.size() < Min_Tracks_For_Skeleton_Test)
+                continue;
+
+            // One sample at an arbitrary phase is enough to compare skeletons against each other: the
+            // wrong skeleton pairs unrelated bones and cannot produce a small distance.
+            std::vector<RE::hkQsTransform> sampled(tracks.size());
+            candidate->SampleIndividualTransformTracks(0.0f, tracks.data(), static_cast<std::uint32_t>(tracks.size()), sampled.data());
+            float worst = 0.0f;
+            for (size_t k = 0; k < sampled.size(); ++k)
+            {
+                if (!poses[k])
+                    continue;
+                const PoseSample clip_pose = read_pose(sampled[k]);
+                const PoseSample engine_pose = read_pose(*poses[k]);
+                worst = std::max(worst, rotation_angle_degrees(
+                    ni_matrix_from_quaternion(engine_pose.quaternion[0], engine_pose.quaternion[1], engine_pose.quaternion[2], engine_pose.quaternion[3]),
+                    ni_matrix_from_quaternion(clip_pose.quaternion[0], clip_pose.quaternion[1], clip_pose.quaternion[2], clip_pose.quaternion[3])));
+            }
+            skeleton_scores.emplace_back(skeleton, worst);
+            if (worst < best_score)
+            {
+                best_score = worst;
+                best_skeleton = skeleton;
+            }
+        }
+
+        for (const auto& entry : skeleton_scores)
+        {
+            logger::info("SCOPY ANIM mapping skeleton='{}' bones={} worst-rot-delta={:.2f}deg{}",
+                entry.first->name.c_str() ? entry.first->name.c_str() : "-", entry.first->bones.size(),
+                entry.second, entry.first == best_skeleton ? " best" : "");
+        }
+
         for (std::int32_t track = 0; track < total_tracks; ++track)
         {
-            const char* const bone_name = selected.skeleton->bones[track].name.c_str();
+            if (track >= static_cast<std::int32_t>(best_skeleton->bones.size()))
+                break;
+            const char* const bone_name = best_skeleton->bones[track].name.c_str();
             if (!bone_name)
                 continue;
             const auto node = copy_by_name.find(bone_name);
@@ -1969,8 +2049,9 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
 // address rather than by a virtual call; and a candidate entry is believed only once the structural
 // checks in read_binding pass. Nothing is written and no clip is activated, so a wrong step costs a
 // rejection reason in the log instead of a crash.
-void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root)
+void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation)
 {
+    out_animation = nullptr;
     const NodeTable copy_nodes = collect_nodes(copy_root);
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (copy_nodes.names.empty() || !source.GetAnimationGraphManager(manager) || !manager)
@@ -2108,6 +2189,17 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
         const BindingReading reading = read_binding(binding, bone_count, idle || printed <= 2);
         if (reading.valid)
             found_live = true;
+
+        // The object the whole exercise exists for. The binding's track table is what maps a track to a
+        // bone, and it is unfilled here, but that is only one way to learn the mapping - the animation
+        // itself can be sampled directly and the mapping measured against the pose the engine holds, so
+        // the animation is what this stage hands forward.
+        if (!out_animation && binding && readable(binding, sizeof(RE::hkaAnimationBinding)))
+        {
+            const RE::hkaAnimation* const animation = binding->animation.get();
+            if (read_raw_animation(animation).valid)
+                out_animation = animation;
+        }
         logger::info("SCOPY ANIM instance clip name='{}' idx={} clone-state={} binding=0x{:x} control=0x{:x} bind-src={} tracks={} reason={}",
             name, index, clone_state_name(static_cast<std::uint8_t>(generator->cloneState.get())),
             reinterpret_cast<std::uintptr_t>(binding), reinterpret_cast<std::uintptr_t>(generator->animationControl.get()),

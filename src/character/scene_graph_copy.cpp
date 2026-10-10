@@ -1063,12 +1063,13 @@ void SceneGraphCopy::capture()
     // started at rootGenerator, which the archived dumps show is a template (cloneState=kTemplate);
     // the engine fills binding and animationControl on the per-character clones during Activate and
     // Update. This stage looks there before anything is declared unreachable.
-    report_animation_instance(*player, *source, *root);
+    const RE::hkaAnimation* instance_animation = nullptr;
+    report_animation_instance(*player, *source, *root, instance_animation);
     // S2/HKX6: the animation the engine can hand over for this character, resolved onto the copy and
     // compared against the pose the engine itself holds. F2 then plays it from the studio's clock,
     // because the game is paused and nothing else advances a pose.
     ClipPlayback clip;
-    if (prepare_animation_clip(*player, *source, *root, clip))
+    if (prepare_animation_clip(*player, *source, *root, clip, instance_animation))
         m_clip.set_clip(std::move(clip));
     else
         m_clip.reset();
