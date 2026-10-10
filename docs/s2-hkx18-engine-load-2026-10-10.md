@@ -600,3 +600,84 @@ SCOPY ANIM play phase-check t=…s max-pos-delta=… max-rot-delta=…deg bones=
 | `max-rot-delta` 很小（数度内）、`max-pos-delta` 小 | **映射成立，采样链闭环** | 接 F2 播放，进 H03/H04 |
 | 仍 ~10° 且 `max-pos-delta` 大 | 相位对齐了，**差的是映射** | 按骨拆分误差，找哪些骨错位 |
 | `phase-check` 未打印 | `localTime` 未取到（非 idle 或 control 空） | 看 `instance control` 行 |
+
+## 24. HKX26 实测结果（2026-10-11 01:54）：**里程碑 —— 面板人物已在播放引擎装载的动画**
+
+日志 `CharacterPanel-hkx26-phase-20261011.log`。**零崩溃**。
+**用户目视确认：F7 之后按压 F8，面板内人物已经在播放 idle 动画。**
+
+```
+SCOPY ANIM load bindingset idx=1022 set=character element=0x24ff30f02a0
+        binding=0x24fc4d361d0 anim=0x24fc4d1acc0
+        anim-type=spline duration=25.02s tracks=99 binding-valid=true reason=valid data=present
+SCOPY ANIM play clip='engine-loaded' type=spline duration=25.02s tracks=99 copy-resolved=91/99 truth-bones=39
+```
+
+**决定性的 `binding-valid=true reason=valid`** —— 装载**原版 mt_idle（索引 1022）**之后，
+绑定集条目里的 binding **轨道表是填好的**。加上 `data=present`，**两个阻塞点同时解除**：
+
+| 阻塞点 | 状态 |
+| --- | --- |
+| 动画数据（HKX16–22 追了七轮） | **`data=present`** |
+| 轨道→骨骼映射（HKX13–15 追了三轮） | **`binding-valid=true`（真表）** |
+
+**与 HKX25 的关键差异**：HKX25 装载的是 **OAR 替换索引 12221** → `binding-valid=false`；
+本轮装载**原版索引 1022** → `binding-valid=true`。
+**原版注册条目给出完整的 binding**，这本身是重要发现。
+
+### 驱动路径（已核对代码）
+
+`animate_at_base_pose()`（[scene_graph_copy.cpp:485](src/character/scene_graph_copy.cpp#L485)）：
+`if (m_clip.ready()) { m_clip.advance(*root); return; }` —— **clip 就绪时每帧写副本骨骼**。
+`prepare_animation_clip` 成功即 `m_clip.set_clip(...)`，故 panel 由**引擎装载的 mt_idle**驱动。
+日志中 `SCOPY IDLE bound` **缺席**，与"程序化待机未接管"一致。
+
+### 本轮的 ground-truth 数字无效（不是回归）
+
+```
+ground-truth best-t=12.51s max-pos-delta=2.656 max-rot-delta=44.13deg worst=7.765 verdict=none
+```
+
+**这一组不能用于判定**：实例侧当时在播 **`MT_WalkForward`（idx 12702）**，
+即游戏角色在**走路**，而 `idle_index` 因此回退到 1022、我们采样的是 **mt_idle**。
+**拿走路姿态去比待机动画，差值必然大。** 这不是映射变差，是**比较本身不成立**。
+
+**反过来看，这恰好印证了产品设计**：面板播 mt_idle，**与游戏角色当时在走路无关** ——
+正是用户要求的"面板动作不必与游戏内实际动作一致，但必须是游戏已注册的动作"。
+
+### 一处被修掉的说谎字段
+
+`SCOPY DRAW … animation-driver=none` —— **`none` 是写死的字面量**（[character_clone.cpp:972](src/character/character_clone.cpp#L972)），
+**从不检查任何东西**。它与"`data-present` 对未检查类型返回 true"是**同一类缺陷**：
+**无论功能是否工作，字段读出来都一样**，因而**掩盖了动画链已经跑通这件事**。
+
+## 25. HKX27：如实报告驱动者
+
+- 提交 `c3bd9fbb`，包 `dist/CharacterPanel-scopy-HKX27-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX27-c3bd9fbb62-cl94faaed0c6-20261010T180042Z`（`source_baseline_dirty=false`）。
+- DLL `4667ae36…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+`SceneGraphCopy::animation_driver()` 返回真实答案（`off` / `probe` / **clip 名** / `procedural-idle`），
+`SCOPY DRAW` 行改为报告它。
+
+**判读表**：
+
+| `animation-driver=` | 含义 |
+| --- | --- |
+| **`engine-loaded`（或 clip 名）** | **引擎装载的动画正在驱动面板** |
+| `procedural-idle` | 回退到程序化待机（引擎那条链没成功） |
+| `off` | F2 关闭，无驱动 |
+
+### 关卡状态（不要过度宣称）
+
+| 关卡 | 状态 |
+| --- | --- |
+| H01 构建／实例身份 | 通过 |
+| H02 类型／持有 | **基本满足** —— 引擎提供的 binding（真表）+ `data=present` |
+| H03 采样 | **部分** —— 采样稳定运行且无崩溃；但本轮相位比对因"比错动画"无效，**需一轮同动画的 A/B** |
+| H04 副本驱动 | **用户目视成立**；**尚缺定量证据** |
+| H05 隔离／生命周期 | 未测 |
+| S1 安全回收 | **仍阻塞** |
+
+**下一步**：在**站立待机时**捕获（而非走路时），使被采样的动画与在播动画一致，
+`phase-check` 才有裁决力；同轮用 `animation-driver=` 确认驱动者。
