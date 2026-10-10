@@ -101,6 +101,10 @@ namespace
     // resource: this many objects at most, and this many validated animations recorded from one.
     constexpr size_t Max_Hashed_Visited = 96;
     constexpr size_t Max_Hashed_Anims = 8;
+    // How many animations are collected from the engine's loaded storage when walking it, and how many
+    // resources one loader record is allowed to hold before the count is treated as a misread.
+    constexpr size_t Max_Loaded_Anims = 8;
+    constexpr std::int32_t Max_Loaded_Resources = 64;
     // How far the instance-side walk goes and how many of its clips are printed. Small on purpose: this
     // stage only answers whether a binding resolves, so it should cost one bounded pass, not a search.
     constexpr size_t Max_Instance_Objects = 256;
@@ -843,6 +847,52 @@ namespace
                 const void* const word = *reinterpret_cast<void* const*>(word_address);
                 if (word && readable(word, sizeof(void*)) && looks_like_object(word) && seen.insert(word).second)
                     pending.push_back(word);
+            }
+        }
+    }
+
+    // CLib exposes only RTTI and VTABLE for these two classes, so their layout is taken from OAR's
+    // Havok.h, which static_asserts both sizes against the engine it runs in.
+    class hkLoaderLayout : public RE::hkReferencedObject
+    {
+    public:
+        RE::hkArray<void*> loadedData;  // 10
+    };
+    static_assert(sizeof(hkLoaderLayout) == 0x20);
+
+    // The engine's own loaded-animation storage, walked through the pointer the loader keeps. A loaded
+    // record points at a hash record whose +0x28 is the loader; its loadedData holds the resources that
+    // carry the animation.
+    //
+    // HKX12 could not reach the animation because it asked GetHashedAnimFromAnimIndex, which returns an
+    // entry of hashedAnimations: 0x20 bytes of file information with no pointer in it, so reading +0x28
+    // only ever ran into the next entry. The pointer lives here instead.
+    void find_animations_in_loaded_record(void const* record, std::vector<const RE::hkaAnimation*>& out)
+    {
+        if (out.size() >= Max_Loaded_Anims || !record || !readable(record, 0x30))
+            return;
+        void const* const db_data = *reinterpret_cast<void* const*>(static_cast<const std::uint8_t*>(record) + 0x28);
+        if (!db_data || !readable(db_data, sizeof(hkLoaderLayout)) || !looks_like_object(db_data))
+            return;
+
+        const auto* const loader = static_cast<const hkLoaderLayout*>(db_data);
+        const std::int32_t resources = loader->loadedData.size();
+        void* const* const data = loader->loadedData.data();
+        if (resources <= 0 || resources > Max_Loaded_Resources || !data ||
+            !readable(data, sizeof(void*) * static_cast<size_t>(resources)))
+            return;
+
+        for (std::int32_t i = 0; i < resources && out.size() < Max_Loaded_Anims; ++i)
+        {
+            const void* const resource = data[i];
+            if (!resource || !readable(resource, sizeof(void*)))
+                continue;
+            // hkResource is a wrapper; the object it holds is what the validation is applied to.
+            const void* const held = *reinterpret_cast<void* const*>(resource);
+            if (held && readable(held, sizeof(void*)) && looks_like_object(held) &&
+                read_raw_animation(held).valid)
+            {
+                out.push_back(static_cast<const RE::hkaAnimation*>(held));
             }
         }
     }
@@ -2342,6 +2392,96 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
     }
 
     logger::info("SCOPY ANIM instance verdict={}", found_live ? "binding-resolved" : "no-live-binding");
+
+    // Ask the engine to load the animation behind one of its own registered indices, then walk the
+    // storage the engine loaded it into. The panel must play animations the game already knows - vanilla
+    // or OAR-registered - so this never reads a file we supplied; it only ever names an index from the
+    // character's own animation list and lets the engine fetch it.
+    //
+    // OAR's LoadAnimation (OpenAnimationReplacer.cpp:772-802) shows the loading functions need only the
+    // binding index, carried in an object shaped like a clip generator. A real context is built here
+    // instead of OAR's reinterpret cast, because that one hands the loader a character pointer where a
+    // context is expected.
+    //
+    // Two read-only passes come first, so the effect of the load itself can be told apart from what was
+    // already there.
+    RE::AnimationFileManagerSingleton* const file_manager = RE::AnimationFileManagerSingleton::GetSingleton();
+    if (!file_manager)
+    {
+        logger::info("SCOPY ANIM load UNAVAILABLE reason=no-manager");
+        return;
+    }
+
+    std::vector<const RE::hkaAnimation*> before;
+    for (std::uint32_t i = 0; i < file_manager->loadedAnimations.size() && before.size() < Max_Loaded_Anims; ++i)
+        find_animations_in_loaded_record(file_manager->loadedAnimations[i].unk00, before);
+    logger::info("SCOPY ANIM load before records={} anims={}", file_manager->loadedAnimations.size(), before.size());
+
+    const std::int32_t load_index = idle_index >= 0 ? idle_index : 1022;
+
+    // A stand-in for a clip generator, sized like a real one so that a write past the fields the loader
+    // reads cannot run off the end of the object. A plain buffer is used rather than a real
+    // hkbClipGenerator because constructing one would run the engine's reference-counted members over
+    // uninitialised bytes; nothing virtual is called on this and no destructor is involved.
+    alignas(16) std::uint8_t carrier[sizeof(RE::hkbClipGenerator)]{};
+    *reinterpret_cast<std::uint16_t*>(carrier + 0x70) = static_cast<std::uint16_t>(load_index);
+
+    // hkbContext cannot be default-constructed here: two of its members are hkRefPtr/hkRefVariant whose
+    // pointee types are only forward-declared in this checkout, so their destructors have nothing to
+    // compile against. A zeroed buffer of its asserted size, with the two fields the loader reads filled
+    // in, is what the engine is handed instead - the same shape OAR passes, except that everything past
+    // those two fields is zero rather than whatever happened to be on the stack.
+    struct ContextLayout
+    {
+        RE::hkbCharacter* character;     // 00
+        RE::hkbBehaviorGraph* behavior;  // 08
+        std::uint64_t pad10;
+        std::uint64_t pad18;
+        std::uint64_t pad20;
+        std::uint64_t pad28;
+        std::uint64_t pad30;
+        std::uint64_t pad38;
+        std::uint64_t pad40;
+        std::uint64_t pad48;
+    };
+    static_assert(sizeof(ContextLayout) == 0x50);
+
+    ContextLayout context{};
+    context.character = &character;
+    context.behavior = behavior;
+    const RE::hkbContext& context_ref = reinterpret_cast<const RE::hkbContext&>(context);
+
+    const std::int32_t queued = file_manager->Queue(context_ref, reinterpret_cast<RE::hkbClipGenerator*>(&carrier), nullptr);
+    const bool loaded = file_manager->Load(context_ref, reinterpret_cast<RE::hkbClipGenerator*>(&carrier), nullptr);
+    logger::info("SCOPY ANIM load index={} queued={} loaded={} loaded-records={}",
+        load_index, queued, loaded, file_manager->loadedAnimations.size());
+
+    std::vector<const RE::hkaAnimation*> after;
+    for (std::uint32_t i = 0; i < file_manager->loadedAnimations.size() && after.size() < Max_Loaded_Anims; ++i)
+        find_animations_in_loaded_record(file_manager->loadedAnimations[i].unk00, after);
+    for (const RE::hkaAnimation* const animation : after)
+    {
+        const RawAnimationReading raw = read_raw_animation(animation);
+        logger::info("SCOPY ANIM load anim at=0x{:x} type={} duration={:.2f}s tracks={} data-present={}",
+            reinterpret_cast<std::uintptr_t>(animation), animation_type_name(raw.type), raw.duration, raw.tracks,
+            animation_data_is_present(animation, raw.tracks));
+    }
+    logger::info("SCOPY ANIM load verdict={} anims-before={} anims-after={}",
+        after.size() > before.size() ? "load-produced-animation" : "no-new-animation", before.size(), after.size());
+
+    // Hand the first animation that is complete enough to sample to the playback stage: it is one the
+    // game itself registered and the engine itself loaded, which is what the panel is meant to play.
+    if (!out_animation)
+    {
+        for (const RE::hkaAnimation* const animation : after)
+        {
+            if (animation_data_is_present(animation, Max_Tracks_Read))
+            {
+                out_animation = animation;
+                break;
+            }
+        }
+    }
 }
 
 size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root)
