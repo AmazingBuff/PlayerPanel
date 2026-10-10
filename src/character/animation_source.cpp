@@ -101,10 +101,12 @@ namespace
     // resource: this many objects at most, and this many validated animations recorded from one.
     constexpr size_t Max_Hashed_Visited = 96;
     constexpr size_t Max_Hashed_Anims = 8;
-    // How many animations are collected from the engine's loaded storage when walking it, and how many
-    // resources one loader record is allowed to hold before the count is treated as a misread.
+    // How many animations are collected from the engine's loaded storage when walking it, how many
+    // resources one loader record is allowed to hold before the count is treated as a misread, and how
+    // many records the walk looks at (the table holds thousands, and the scan is bounded on purpose).
     constexpr size_t Max_Loaded_Anims = 8;
     constexpr std::int32_t Max_Loaded_Resources = 64;
+    constexpr std::uint32_t Max_Walked_Records = 64;
     // How far the instance-side walk goes and how many of its clips are printed. Small on purpose: this
     // stage only answers whether a binding resolves, so it should cost one bounded pass, not a search.
     constexpr size_t Max_Instance_Objects = 256;
@@ -860,41 +862,91 @@ namespace
     };
     static_assert(sizeof(hkLoaderLayout) == 0x20);
 
-    // The engine's own loaded-animation storage, walked through the pointer the loader keeps. A loaded
-    // record points at a hash record whose +0x28 is the loader; its loadedData holds the resources that
-    // carry the animation.
-    //
-    // HKX12 could not reach the animation because it asked GetHashedAnimFromAnimIndex, which returns an
-    // entry of hashedAnimations: 0x20 bytes of file information with no pointer in it, so reading +0x28
-    // only ever ran into the next entry. The pointer lives here instead.
-    void find_animations_in_loaded_record(void const* record, std::vector<const RE::hkaAnimation*>& out)
+    // How far the loaded-storage walk reached, so a miss can be attributed to the step it died at
+    // instead of to the whole route.
+    struct LoadedWalk
+    {
+        size_t records = 0;         // records looked at
+        size_t with_loader = 0;     // records whose +0x28 read as an object
+        size_t with_resources = 0;  // of those, how many held a non-empty resource array
+        size_t resources = 0;       // resources seen in total
+        size_t animations = 0;      // animations validated out of them
+        std::string first_loader;   // the first loader's own words, for layout confirmation
+    };
+
+    void consider_animation(void const* candidate, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
+    {
+        if (out.size() >= Max_Loaded_Anims || !candidate ||
+            !readable(candidate, sizeof(RE::hkaAnimation)) || !looks_like_object(candidate))
+            return;
+        if (!read_raw_animation(candidate).valid)
+            return;
+        const auto* const animation = static_cast<const RE::hkaAnimation*>(candidate);
+        if (std::find(out.begin(), out.end(), animation) == out.end())
+        {
+            out.push_back(animation);
+            ++walk.animations;
+        }
+    }
+
+    // hkResource carries only its reference-counted header in the layout OAR asserts: 0x10 bytes with no
+    // contents member. What it holds therefore sits either immediately past that header or behind one of
+    // the pointers in its own window, and neither position is declared in this checkout - so every
+    // candidate is validated before it is believed, and the header itself is never mistaken for the
+    // object (reading +0x00 would only ever hand back the vtable).
+    void collect_resource_contents(void const* resource, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
+    {
+        if (out.size() >= Max_Loaded_Anims || !resource || !readable(resource, sizeof(void*)))
+            return;
+        consider_animation(static_cast<const std::uint8_t*>(resource) + 0x10, walk, out);
+        for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
+        {
+            const auto* const at = static_cast<const std::uint8_t*>(resource) + offset;
+            if (!readable(at, sizeof(void*)))
+                break;
+            consider_animation(at, walk, out);
+            consider_animation(*reinterpret_cast<void* const*>(at), walk, out);
+        }
+    }
+
+    void walk_loaded_record(void const* record, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
     {
         if (out.size() >= Max_Loaded_Anims || !record || !readable(record, 0x30))
             return;
+        ++walk.records;
         void const* const db_data = *reinterpret_cast<void* const*>(static_cast<const std::uint8_t*>(record) + 0x28);
         if (!db_data || !readable(db_data, sizeof(hkLoaderLayout)) || !looks_like_object(db_data))
             return;
+        ++walk.with_loader;
+
+        if (walk.first_loader.empty())
+        {
+            const auto* const words = static_cast<const std::uint64_t*>(db_data);
+            for (size_t word = 0; word < sizeof(hkLoaderLayout) / sizeof(std::uint64_t); ++word)
+                walk.first_loader += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+        }
 
         const auto* const loader = static_cast<const hkLoaderLayout*>(db_data);
-        const std::int32_t resources = loader->loadedData.size();
+        const std::int32_t count = loader->loadedData.size();
         void* const* const data = loader->loadedData.data();
-        if (resources <= 0 || resources > Max_Loaded_Resources || !data ||
-            !readable(data, sizeof(void*) * static_cast<size_t>(resources)))
+        if (count <= 0 || count > Max_Loaded_Resources || !data ||
+            !readable(data, sizeof(void*) * static_cast<size_t>(count)))
             return;
+        ++walk.with_resources;
+        walk.resources += static_cast<size_t>(count);
+        for (std::int32_t i = 0; i < count; ++i)
+            collect_resource_contents(data[i], walk, out);
+    }
 
-        for (std::int32_t i = 0; i < resources && out.size() < Max_Loaded_Anims; ++i)
-        {
-            const void* const resource = data[i];
-            if (!resource || !readable(resource, sizeof(void*)))
-                continue;
-            // hkResource is a wrapper; the object it holds is what the validation is applied to.
-            const void* const held = *reinterpret_cast<void* const*>(resource);
-            if (held && readable(held, sizeof(void*)) && looks_like_object(held) &&
-                read_raw_animation(held).valid)
-            {
-                out.push_back(static_cast<const RE::hkaAnimation*>(held));
-            }
-        }
+    // The manager's own "current animation" slot is the record a load has just touched, so it is walked
+    // first and on its own: whatever the load produced is behind this pointer even when no other record
+    // has been filled in yet.
+    void walk_loaded_storage(RE::AnimationFileManagerSingleton& manager, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
+    {
+        walk_loaded_record(manager.currentAnimation.unk00, walk, out);
+        const std::uint32_t limit = std::min<std::uint32_t>(manager.loadedAnimations.size(), Max_Walked_Records);
+        for (std::uint32_t i = 0; i < limit; ++i)
+            walk_loaded_record(manager.loadedAnimations[i].unk00, walk, out);
     }
 
     // A clip generator is fully typed, so a pointer to one is believed only when everything that makes
@@ -2412,10 +2464,15 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
         return;
     }
 
+    LoadedWalk before_walk;
     std::vector<const RE::hkaAnimation*> before;
-    for (std::uint32_t i = 0; i < file_manager->loadedAnimations.size() && before.size() < Max_Loaded_Anims; ++i)
-        find_animations_in_loaded_record(file_manager->loadedAnimations[i].unk00, before);
-    logger::info("SCOPY ANIM load before records={} anims={}", file_manager->loadedAnimations.size(), before.size());
+    walk_loaded_storage(*file_manager, before_walk, before);
+    logger::info("SCOPY ANIM load before records={} current=0x{:x} current-crc=0x{:08x} records-walked={} with-loader={} with-resources={} resources={} anims={}",
+        file_manager->loadedAnimations.size(), reinterpret_cast<std::uintptr_t>(file_manager->currentAnimation.unk00),
+        file_manager->currentAnimation.fileInfo.crc32Filename,
+        before_walk.records, before_walk.with_loader, before_walk.with_resources, before_walk.resources, before.size());
+    if (!before_walk.first_loader.empty())
+        logger::info("SCOPY ANIM load loader qwords='{}'", before_walk.first_loader);
 
     const std::int32_t load_index = idle_index >= 0 ? idle_index : 1022;
 
@@ -2456,9 +2513,15 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
     logger::info("SCOPY ANIM load index={} queued={} loaded={} loaded-records={}",
         load_index, queued, loaded, file_manager->loadedAnimations.size());
 
+    LoadedWalk after_walk;
     std::vector<const RE::hkaAnimation*> after;
-    for (std::uint32_t i = 0; i < file_manager->loadedAnimations.size() && after.size() < Max_Loaded_Anims; ++i)
-        find_animations_in_loaded_record(file_manager->loadedAnimations[i].unk00, after);
+    walk_loaded_storage(*file_manager, after_walk, after);
+    logger::info("SCOPY ANIM load after records={} current=0x{:x} current-crc=0x{:08x} records-walked={} with-loader={} with-resources={} resources={} anims={}",
+        file_manager->loadedAnimations.size(), reinterpret_cast<std::uintptr_t>(file_manager->currentAnimation.unk00),
+        file_manager->currentAnimation.fileInfo.crc32Filename,
+        after_walk.records, after_walk.with_loader, after_walk.with_resources, after_walk.resources, after.size());
+    if (after_walk.first_loader.empty() && !before_walk.first_loader.empty())
+        logger::info("SCOPY ANIM load loader-gone-after-load");
     for (const RE::hkaAnimation* const animation : after)
     {
         const RawAnimationReading raw = read_raw_animation(animation);
