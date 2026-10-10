@@ -170,6 +170,27 @@ OAR 用 `RE::hkRefPtr`（引用计数）持有 `animationControl`／`binding`
 
 ## 6. 结论与下一步
 
+### 构建与测试单（HKX13 包，已部署）
+
+- 提交 `47725682fa`，包 `dist/CharacterPanel-scopy-HKX13-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX13-47725682fa-cl94faaed0c6-20261010T135149Z`（`source_baseline_dirty=false`）。
+- DLL SHA-256 `b2869467…`、PDB `ca632f3d…`，**两者均已从最终 zip 部署并校验一致**（纠正 HKX11/12 部署中间构建的问题）；
+  上一份游戏日志已存档为 `docs/diagnostics/CharacterPanel-pre-hkx13-20261010-215222.log`。
+- 新增 `src/character/animation_source.cpp` 的 `report_animation_instance()`，在 `capture()` 里于 HKX6 之前调用。
+  单元测试 `snapshot_transform` 通过（1/1）。
+- **上机**：进游戏 → 打开背包（暂停）→ **F7 捕获** → 看 `SCOPY ANIM instance …` 系列 → F8 绘制 → 测完**立刻复制**
+  `CharacterPanel.log`（非追加模式）到 `docs/diagnostics/`。
+
+判读表：
+
+| 日志 | 含义 | 下一步 |
+| --- | --- | --- |
+| `roots generator=template clone=kClone` | 假设成立：两侧确实不同 | 看 instance clip 行 |
+| `roots generator=template clone=template` | 克隆根未建/不在该成员 | 转 `activeNodes` 行与 `clone-states` |
+| `instance clip … reason=valid` | **binding 已取得** | 接 ground-truth + F2 驱动（HKX6 协议） |
+| `instance clip … binding=0x0 reason=no-binding-in-set` | 实例侧也是空 | 判读"标准 binding 层确为惰性/未填"，转路线 D |
+| `UNAVAILABLE reason=no-clip-on-the-instance-side` | 未走到实例 | 看 `objects`/`clone-states` 定遍历问题 |
+
 ### 已可确定的（静态）
 
 - 我们扫的是模板树（`cloneState=kTemplate`、`isActive=false`，两轮日志三重自校验）→ **路线 A 的"死路"结论撤回**。

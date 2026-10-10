@@ -523,11 +523,14 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
-  `CharacterPanel-scopy-HKX12-4165d734ea-cl94faaed0c6-20261009T184849Z`（`source_baseline_dirty=false`，基线
-  `4165d734ea`），DLL SHA-256 `25d98ef7…`——**已实测**（判读见 §5 HKX12 节；实际部署的是提交前中间
-  构建 `2e22e8f+dirty`，代码一致）。**当前无待验证代码；下一步待用户拍板（HKX13 最后一跳 / 路线 D），
-  见 §5 决策点。****已实测的十二轮**：HKX12（[证据](s2-hkx12-hashed-evidence-2026-10-10.md)、
+- 当前产物：`dist/CharacterPanel-scopy-HKX13-1.2.1.zip`（提交 `47725682fa`），身份
+  `CharacterPanel-scopy-HKX13-47725682fa-cl94faaed0c6-20261010T135149Z`，DLL SHA-256 `b2869467…`、
+  PDB `ca632f3d…`——**DLL 与 PDB 均已从最终 zip 部署并校验一致**（HKX11/12 部署中间构建的问题已纠正）。
+  **待测（未上机）**：新增实例侧探针 `report_animation_instance()`，只回答"活跃克隆上 binding 是否可取得"。
+  上机与判读表见 [HKX13 静态核对](s2-hkx13-static-check-2026-10-10.md) §6。
+  已完成的前一轮：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX12-4165d734ea-cl94faaed0c6-20261009T184849Z`，DLL SHA-256 `25d98ef7…`——**已实测**
+  （判读见 §5 HKX12 节；实际部署的是提交前中间构建 `2e22e8f+dirty`，代码一致）。**已实测的十二轮**：HKX12（[证据](s2-hkx12-hashed-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx12-hashed-20261010.log)）、HKX11
   （[证据](s2-hkx11-animmgr-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx11-animmgr-20261010.log)）、
   HKX10（`…-HKX10-d3c847a3b9-…`，[证据](s2-hkx10-control-evidence-2026-10-10.md)、[日志](diagnostics/CharacterPanel-hkx10-control-20261010.log)）、

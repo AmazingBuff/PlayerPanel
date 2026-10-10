@@ -1,0 +1,368 @@
+[23:26:33.638] [42452] [I] CharacterPanel v1-2-0-0
+[23:26:33.638] [42452] [I] CharacterPanel loaded
+[23:27:20.424] [41428] [I] Proto v3 pass hook 0 installed at 0x7FF7DDD9551E; pre-patch target 0x7FF7DDD93DC0 (SetupAndDrawPass=0x7FF7DDD93DC0, unhooked)
+[23:27:20.424] [41428] [I] Proto v3 pass hook 1 installed at 0x7FF7DDD93C4F; pre-patch target 0x7FF7DC880D54 (SetupAndDrawPass=0x7FF7DDD93DC0, interposed, chain restored)
+[23:27:20.424] [41428] [I] Proto v3 pass hook 2 installed at 0x7FF7DDD9500D; pre-patch target 0x7FF7DDD93DC0 (SetupAndDrawPass=0x7FF7DDD93DC0, unhooked)
+[23:27:20.464] [41428] [I] Proto DrawInterfaceStart detour installed at 0x7FF7DD844F00
+[23:27:20.464] [41428] [I] M0 proto v6.70 installed: born-at-depth FALSIFIED (run 104 — the engine picks character LOD by reference distance at load; the depth-spawned graph had zero bind matrices and rendered scattered) — placement reverted to PlaceObjectAtMe, the flash is fixed by the grace fade guard instead. F7 = fallback, F8 = dump
+[23:27:42.127] [41960] [I] Proto P clone placed at the player (PlaceObjectAtMe; high-model assembly), grace node park + fade guard hold it invisible
+[23:27:42.127] [41960] [I] Proto P pinned (ref=0xFF0063BD): no-move/attack/cast flags, activation blocked, parked 8k below the player
+[23:27:42.127] [41960] [I] Proto P body-worn items mirrored: 2
+[23:27:42.127] [41960] [I] Proto P clone dressed; waiting for the biped 3D (park follows)
+[23:27:42.181] [42264] [I] Proto P whitelist armed: root=0x27bb39cfe80 (draw-time pose in the UI3D camera frame; no dependence on a highlighted item)
+[23:27:42.181] [42264] [I] Proto P renderer init check: 0/13 skinned geometries have device buffers (heartbeat keeps probing until full)
+[23:27:42.198] [42060] [I] Proto P home: graph relocated under CP_StudioHome — root=0x27BB39CFE80 (unchanged) old_parent=[] host=menuObjects[0] home_world=(0.00,0.00,0.00) scale=1.000
+[23:27:42.198] [42060] [I] Proto P clone actor killed
+[23:27:42.198] [42060] [I] Proto P round 2: shell actor deleted at relocation; the world holds no clone
+[23:27:51.658] [42752] [I] Proto P home parent ok (per-open check)
+[23:27:51.658] [42752] [I] Panel opened (inventory opened): every menu frame is now bracketed for studio redirection
+[23:27:51.664] [42452] [I] Proto v3 panel frame #1: menu roots changed to 8 [0]= [1]= [2]= [3]= [4]= [5]= [6]= [7]=
+[23:27:51.665] [42452] [I] Proto v6.44 self-create trace: renderer=0x7ff7dfb287c0 rt=0x7ff7dfb287d0 context=0x26e1b13f608 forwarder=0x26e1b13e280 target.rtv=0x0 targetFailed=false fb.texture=0x0 fb.RTV=0x26e17492ea0
+[23:27:51.665] [42452] [I] Proto v6.43 studio target self-created from kFRAMEBUFFER: 2560x1440 format=28 (no pass needed)
+[23:27:51.665] [42452] [I] Proto P studio T-pose: 0 bind bones over 2 skin root(s)
+[23:27:51.665] [42452] [I] Proto v6.30 studio pose: anchor=(-0.0,-485.4,-0.0) depth=485.0 w2c_t=-15.0 skinned_body_r=72.6 figure_scale=0.350 centered r=25.4 c=(-1.0,-485.6,21.3)
+[23:27:51.665] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.665] [42452] [I] Proto v6.50 studio lights created and handed to ShadowSceneNode::AddLight (activeLights.size=94 lightQueueAdd.size=3)
+[23:27:51.665] [42452] [I] Proto v6.54 shell[0] raw: lodDimmer=0.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0x0 worldTranslate=(0.0,0.0,0.0)
+[23:27:51.665] [42452] [I] Proto v6.54 shell[1] raw: lodDimmer=0.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0x0 worldTranslate=(0.0,0.0,0.0)
+[23:27:51.665] [42452] [I] Proto v6.54 shell[2] raw: lodDimmer=0.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0x0 worldTranslate=(0.0,0.0,0.0)
+[23:27:51.665] [42452] [I] Proto v6.54 studio light wrappers fetched and PATCHED (lodDimmer=1, lum=1, no cull) (activeLights.size=94 lightQueueAdd.size=3)
+[23:27:51.665] [42452] [I] Proto v6.47 studio lights applied to P passes: 3 SELF-BUILT point light(s) (menu-light dependence removed)
+[23:27:51.665] [42452] [I] Proto v6.37 frontal light rig: 3 light(s) repositioned (menu-lights=1); anchor=(-0.0,-485.4,-0.0) row_lengths=(6.27,11.15,1.00)
+[23:27:51.665] [42452] [I]   light[0]: point=true ambient=false dynamic=true lum=1.000 lodDimmer=1.000 rtti=NiPointLight base=NiLight radius.x=4096.0 fade=1.000 parent='CP_StudioLightRig' bs_old=(0.0,0.0,0.0) bs_new=(45.0,-415.4,50.0) ni_world=(45.0,70.0,50.0) node_moved=1
+[23:27:51.665] [42452] [I]   light[1]: point=true ambient=false dynamic=true lum=1.000 lodDimmer=1.000 rtti=NiPointLight base=NiLight radius.x=4096.0 fade=2.000 parent='CP_StudioLightRig' bs_old=(0.0,0.0,0.0) bs_new=(0.0,-415.4,50.0) ni_world=(0.0,70.0,50.0) node_moved=1
+[23:27:51.665] [42452] [I]   light[2]: point=true ambient=false dynamic=true lum=1.000 lodDimmer=1.000 rtti=NiPointLight base=NiLight radius.x=4096.0 fade=2.000 parent='CP_StudioLightRig' bs_old=(0.0,0.0,0.0) bs_new=(-45.0,-415.4,50.0) ni_world=(-45.0,70.0,50.0) node_moved=1
+[23:27:51.666] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.666] [42452] [I] Proto v6.8 P drawn proactively: 13 passes via GetRenderPasses
+[23:27:51.670] [42452] [I] Proto v4.6 composite ready: panel rect 73%..99% x 5%..96% of screen
+[23:27:51.670] [42452] [I] Proto v4.6 engine blend at composite time: enable=1 src=5 dest=6 (v4.5 wrote opaquely into an alpha-composited layer)
+[23:27:51.670] [42452] [I] Proto v4.6 rasterizer bound at composite time: cull=1 scissor=0 (the v4.1-4.3 quads were back-facing under this state and culled)
+[23:27:51.670] [42452] [I] Proto v4.6 composite draw #1 (2560x1440 panel rect on screen)
+[23:27:51.670] [42452] [I] Proto v6.42 end_frame composite #1 (kFRAMEBUFFER; zero pass dependence — the panel follows the inventory only)
+[23:27:51.679] [42452] [I] Proto v6.30 studio pose: anchor=(-0.0,-485.4,-0.0) depth=485.0 w2c_t=-15.0 skinned_body_r=75.5 figure_scale=0.350 centered r=26.4 c=(-0.3,-486.1,20.2)
+[23:27:51.679] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.679] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.719] [42452] [I] Proto v6.30 studio pose: anchor=(-0.0,-485.4,-0.0) depth=485.0 w2c_t=-15.0 skinned_body_r=75.5 figure_scale=0.350 centered r=26.4 c=(-0.3,-486.1,20.2)
+[23:27:51.719] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.719] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.735] [42452] [I] Proto v6.30 studio pose: anchor=(-0.0,-485.4,-0.0) depth=485.0 w2c_t=-15.0 skinned_body_r=75.5 figure_scale=0.350 centered r=26.4 c=(-0.3,-486.1,20.2)
+[23:27:51.735] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.736] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.758] [42452] [I] Proto v6.30 studio pose: anchor=(-0.0,-485.4,-0.0) depth=485.0 w2c_t=-15.0 skinned_body_r=75.5 figure_scale=0.350 centered r=26.4 c=(-0.3,-486.1,20.2)
+[23:27:51.758] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.758] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.783] [42452] [I] Proto v6.30 studio pose: anchor=(-0.0,-485.4,-0.0) depth=485.0 w2c_t=-15.0 skinned_body_r=75.5 figure_scale=0.350 centered r=26.4 c=(-0.3,-486.1,20.2)
+[23:27:51.783] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.783] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.803] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.803] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.827] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.827] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.854] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.854] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.875] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.875] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.902] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.902] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.927] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.927] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.954] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.954] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.976] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.976] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:51.999] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:51.999] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.023] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.023] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.047] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.047] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.070] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.070] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.094] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.094] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.116] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.116] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.140] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.140] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.161] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.162] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.185] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.185] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.207] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.207] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.230] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.230] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.254] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.254] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.277] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.278] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.299] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.299] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.320] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.320] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.344] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.344] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.367] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.367] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.390] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.390] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.414] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.414] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.438] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.438] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.464] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.464] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.486] [42452] [I] Panel force-closed (inventory closed)
+[23:27:52.526] [42452] [I] Proto v3 studio dump written: C:\Users\AmazingBuff\Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel\proto-pass-067.tga
+[23:27:52.526] [42452] [I] Proto v3 studio target released (panel closed)
+[23:27:52.856] [41960] [I] Proto P home parent ok (per-open check)
+[23:27:52.856] [41960] [I] Panel opened (inventory opened): every menu frame is now bracketed for studio redirection
+[23:27:52.863] [42452] [I] Proto v6.43 studio target self-created from kFRAMEBUFFER: 2560x1440 format=28 (no pass needed)
+[23:27:52.864] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.864] [42452] [I] Proto v6.54 shell[0] raw: lodDimmer=1.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0xFF worldTranslate=(45.0,70.0,100050.0)
+[23:27:52.864] [42452] [I] Proto v6.54 shell[1] raw: lodDimmer=1.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0xFF worldTranslate=(0.0,70.0,100050.0)
+[23:27:52.864] [42452] [I] Proto v6.54 shell[2] raw: lodDimmer=1.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0xFF worldTranslate=(-45.0,70.0,100050.0)
+[23:27:52.864] [42452] [I] Proto v6.54 studio light wrappers fetched and PATCHED (lodDimmer=1, lum=1, no cull) (activeLights.size=97 lightQueueAdd.size=0)
+[23:27:52.864] [42452] [I] Proto v6.47 studio lights applied to P passes: 3 SELF-BUILT point light(s) (menu-light dependence removed)
+[23:27:52.864] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.864] [42452] [I] Proto v6.8 P drawn proactively: 13 passes via GetRenderPasses
+[23:27:52.872] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.872] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.897] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.897] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.926] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.926] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.944] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.944] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.971] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.971] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:52.993] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:52.994] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.018] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.018] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.043] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.043] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.066] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.066] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.091] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.091] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.116] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.117] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.140] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.140] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.165] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.165] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.187] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.188] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.212] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.212] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.234] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.235] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.258] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.258] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.283] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=13
+[23:27:53.283] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=13 of 13 passes (source=live/recipes)
+[23:27:53.306] [42452] [I] Panel force-closed (inventory closed)
+[23:27:53.345] [42452] [I] Proto v3 studio dump written: C:\Users\AmazingBuff\Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel\proto-pass-068.tga
+[23:27:53.346] [42452] [I] Proto v3 studio target released (panel closed)
+[23:27:59.320] [42452] [I] Proto P whitelist disarmed (root=0x27BB39CFE80)
+[23:27:59.320] [42452] [I] Proto P clone actor killed
+[23:27:59.321] [42452] [I] Proto P home released: graph detached from CP_StudioHome and freed
+[23:27:59.321] [42452] [I] Proto P panel closed: main menu open
+[23:28:18.433] [42752] [I] Proto P clone placed at the player (PlaceObjectAtMe; high-model assembly), grace node park + fade guard hold it invisible
+[23:28:18.433] [42752] [I] Proto P pinned (ref=0xFF0068AA): no-move/attack/cast flags, activation blocked, parked 8k below the player
+[23:28:18.433] [42752] [I] Proto P body-worn items mirrored: 6
+[23:28:18.433] [42752] [I] Proto P clone dressed; waiting for the biped 3D (park follows)
+[23:28:20.428] [33436] [I] Proto P whitelist armed: root=0x27d526c1f00 (draw-time pose in the UI3D camera frame; no dependence on a highlighted item)
+[23:28:20.428] [33436] [I] Proto P renderer init check: 0/44 skinned geometries have device buffers (heartbeat keeps probing until full)
+[23:28:20.460] [42264] [I] Proto P home: graph relocated under CP_StudioHome — root=0x27D526C1F00 (unchanged) old_parent=[] host=menuObjects[0] home_world=(0.00,0.00,0.00) scale=1.000
+[23:28:20.460] [42264] [I] Proto P clone actor killed
+[23:28:20.460] [42264] [I] Proto P round 2: shell actor deleted at relocation; the world holds no clone
+[23:28:26.025] [33436] [I] Proto P home parent ok (per-open check)
+[23:28:26.025] [33436] [I] Panel opened (inventory opened): every menu frame is now bracketed for studio redirection
+[23:28:26.032] [42452] [I] Proto v6.43 studio target self-created from kFRAMEBUFFER: 2560x1440 format=28 (no pass needed)
+[23:28:26.033] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.033] [42452] [W] Proto v6.67 studio light wrappers not in the ledger yet (0/3 matched) — the figure renders without studio lights until they appear
+[23:28:26.034] [42452] [I] Proto v6.68 studio light rig reset: wrapper fetch stalled — the rig no longer reaches the ledger — re-creating under the current scene
+[23:28:26.034] [42452] [I] Proto v6.50 studio lights created and handed to ShadowSceneNode::AddLight (activeLights.size=251 lightQueueAdd.size=3)
+[23:28:26.035] [42452] [I] Proto v6.54 shell[0] raw: lodDimmer=0.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0x0 worldTranslate=(0.0,0.0,0.0)
+[23:28:26.035] [42452] [I] Proto v6.54 shell[1] raw: lodDimmer=0.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0x0 worldTranslate=(0.0,0.0,0.0)
+[23:28:26.035] [42452] [I] Proto v6.54 shell[2] raw: lodDimmer=0.000 lum=0.000 portalStrict=false dynamic=true pointLight=true frustrumCull=0x0 worldTranslate=(0.0,0.0,0.0)
+[23:28:26.035] [42452] [I] Proto v6.54 studio light wrappers fetched and PATCHED (lodDimmer=1, lum=1, no cull) (activeLights.size=251 lightQueueAdd.size=3)
+[23:28:26.035] [42452] [I] Proto v6.47 studio lights applied to P passes: 3 SELF-BUILT point light(s) (menu-light dependence removed)
+[23:28:26.035] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.035] [42452] [I] Proto v6.8 P drawn proactively: 36 passes via GetRenderPasses
+[23:28:26.060] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.060] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.097] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.097] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.134] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.134] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.148] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.148] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.179] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.179] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.201] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.201] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.221] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.221] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.244] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.244] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.273] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.273] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.298] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.298] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.329] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.329] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.354] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.354] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.380] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.380] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.411] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.411] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.429] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.429] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.454] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.454] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.478] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.482] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.506] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.506] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.530] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.530] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.554] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.554] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.579] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.579] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.602] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.602] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.627] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.627] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.652] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.652] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.676] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.676] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.701] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.701] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.724] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.724] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.748] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.748] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.772] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.772] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.796] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.796] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.819] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.819] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.844] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.844] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.868] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.868] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.892] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.892] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.916] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.916] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.941] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.942] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.966] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.966] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:26.990] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:26.990] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.013] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.014] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.037] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.038] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.057] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.060] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.085] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.085] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.106] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.106] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.129] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.130] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.157] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.157] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.184] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.184] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.204] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.206] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.223] [42452] [I] Panel force-closed (inventory closed)
+[23:28:27.267] [42452] [I] Proto v3 studio dump written: C:\Users\AmazingBuff\Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel\proto-pass-069.tga
+[23:28:27.267] [42452] [I] Proto v3 studio target released (panel closed)
+[23:28:27.652] [41960] [I] Proto P home parent ok (per-open check)
+[23:28:27.652] [41960] [I] Panel opened (inventory opened): every menu frame is now bracketed for studio redirection
+[23:28:27.667] [42452] [I] Proto v6.43 studio target self-created from kFRAMEBUFFER: 2560x1440 format=28 (no pass needed)
+[23:28:27.667] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.667] [42452] [I] Proto v6.54 studio light wrappers fetched (fields already good) (activeLights.size=254 lightQueueAdd.size=0)
+[23:28:27.667] [42452] [I] Proto v6.47 studio lights applied to P passes: 3 SELF-BUILT point light(s) (menu-light dependence removed)
+[23:28:27.667] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.667] [42452] [I] Proto v6.8 P drawn proactively: 36 passes via GetRenderPasses
+[23:28:27.682] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.682] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.713] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.713] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.729] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.729] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.758] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.758] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.779] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.779] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.805] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.805] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.828] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.828] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.853] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.853] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.877] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.877] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.930] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.931] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.965] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.965] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.980] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.980] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:27.997] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:27.997] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.030] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.030] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.045] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.045] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.077] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.078] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.095] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.095] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.123] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.123] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.146] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.146] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.170] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.170] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.195] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.195] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.220] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.220] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.243] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.243] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.266] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.266] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.289] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.289] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.313] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.313] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.336] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.336] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.358] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.358] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.382] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.382] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.405] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.405] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.429] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.430] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.452] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.453] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.477] [42452] [I] Proto v6.11 P draw: source=live/recipes passes=36
+[23:28:28.477] [42452] [I] Proto v6.17 P draw (SetupAndDrawPass): submitted=36 of 36 passes (source=live/recipes)
+[23:28:28.497] [42452] [I] Panel force-closed (inventory closed)
+[23:28:28.537] [42452] [I] Proto v3 studio dump written: C:\Users\AmazingBuff\Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel\proto-pass-070.tga
+[23:28:28.538] [42452] [I] Proto v3 studio target released (panel closed)
