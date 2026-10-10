@@ -25,6 +25,7 @@ namespace RE
 {
     class TESObjectREFR;
     class hkaAnimation;
+    class hkaAnimationBinding;
 }
 
 PLUGIN_NAMESPACE_BEGIN
@@ -289,7 +290,7 @@ struct ClipPlayback
 // drive onto the copy's nodes, and prints the ground-truth comparison: the clip's own pose sampled at
 // every phase against the pose the engine currently holds, which is the one number that says whether
 // the sampling chain reproduces the engine. Fills `out` for `play_animation_clip`; writes nothing.
-bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out, const RE::hkaAnimation* a_instance_animation);
+bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out, const RE::hkaAnimation* a_instance_animation, const RE::hkaAnimationBinding* a_loaded_binding);
 
 // Samples the clip at `seconds` (looped over its own length) and writes the result into the copy's
 // nodes, then recomputes the worlds below the copy root. Sampling goes through
@@ -301,7 +302,7 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
 // opposed to the shared template tree the earlier rounds walked - and whether a binding resolves there
 // at all. Read-only: no clip is activated, nothing is written, and no virtual call is made on a
 // candidate, so a wrong layout shows up as a rejection reason instead of a crash.
-void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation);
+void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation, const RE::hkaAnimationBinding*& out_binding);
 
 // Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
 class ClipPlayer

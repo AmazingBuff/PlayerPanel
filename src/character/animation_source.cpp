@@ -1854,7 +1854,7 @@ void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& sourc
     }
 }
 
-bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out, const RE::hkaAnimation* a_instance_animation)
+bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out, const RE::hkaAnimation* a_instance_animation, const RE::hkaAnimationBinding* a_loaded_binding)
 {
     out = ClipPlayback{};
     const NodeTable copy_nodes = collect_nodes(copy_root);
@@ -2081,6 +2081,11 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
     std::vector<const RE::hkQsTransform*> truth;
     std::int32_t total_tracks = 0;
 
+    // An engine-loaded binding is used first when there is one: it belongs to an index this character
+    // registers, and its track-to-bone table is the authoritative mapping - the same entry OAR reads
+    // (FakeClipGenerator.cpp:113-125). A clip the walk validated is the fallback.
+    const RE::hkaAnimationBinding* chosen_binding = a_loaded_binding;
+    std::string chosen_name = a_loaded_binding ? "engine-loaded" : std::string{};
     if (!search.clips.empty())
     {
         // The graph's own link: a validated clip binding carries the authoritative track-to-bone table.
@@ -2090,10 +2095,15 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
             if (clip_preference(clip.name) < clip_preference(chosen->name))
                 chosen = &clip;
         }
+        chosen_binding = chosen->binding;
+        chosen_name = chosen->name;
+    }
 
-        const RE::hkaAnimationBinding* const binding = chosen->binding;
+    if (chosen_binding)
+    {
+        const RE::hkaAnimationBinding* const binding = chosen_binding;
         playback.animation = binding->animation.get();
-        playback.name = chosen->name;
+        playback.name = chosen_name;
         playback.duration = playback.animation->duration;
         total_tracks = binding->transformTrackToBoneIndices.size();
         const std::int16_t* const track_to_bone = binding->transformTrackToBoneIndices.data();
@@ -2340,9 +2350,10 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
 // address rather than by a virtual call; and a candidate entry is believed only once the structural
 // checks in read_binding pass. Nothing is written and no clip is activated, so a wrong step costs a
 // rejection reason in the log instead of a crash.
-void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation)
+void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation, const RE::hkaAnimationBinding*& out_binding)
 {
     out_animation = nullptr;
+    out_binding = nullptr;
     const NodeTable copy_nodes = collect_nodes(copy_root);
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (copy_nodes.names.empty() || !source.GetAnimationGraphManager(manager) || !manager)
@@ -2682,17 +2693,30 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
     logger::info("SCOPY ANIM load verdict={} anims-before={} anims-after={}",
         after.size() > before.size() ? "load-produced-animation" : "no-new-animation", before.size(), after.size());
 
-    // Hand the first animation that is complete enough to sample to the playback stage: it is one the
-    // game itself registered and the engine itself loaded, which is what the panel is meant to play.
-    if (!out_animation)
+    // The step OAR's own source takes and this round had missed: after the engine has loaded an index,
+    // the binding for it is in the character's binding set - that is where OAR reads it from
+    // (FakeClipGenerator.cpp:106-126) rather than from anything the loader keeps. Reading it here is
+    // what turns a completed load into an animation, and the binding carries the track-to-bone table
+    // the playing clip's own binding was missing.
     {
-        for (const RE::hkaAnimation* const animation : after)
+        RE::hkbAnimationBindingSet* const set = set_holding(sets, load_index);
+        const void* element = set ? set->bindings[load_index] : nullptr;
+        const RE::hkaAnimationBinding* binding = binding_at_offset_0x10(element);
+        const BindingReading reading = read_binding(binding, bone_count, true);
+        const RE::hkaAnimation* animation = binding ? binding->animation.get() : nullptr;
+        const RawAnimationReading raw = read_raw_animation(animation);
+        logger::info("SCOPY ANIM load bindingset idx={} set={} element=0x{:x} binding=0x{:x} anim=0x{:x} anim-type={} duration={:.2f}s tracks={} binding-valid={} reason={} data-present={}",
+            load_index, set == sets.character ? "character" : set == sets.setup ? "setup" : "none",
+            reinterpret_cast<std::uintptr_t>(element), reinterpret_cast<std::uintptr_t>(binding),
+            reinterpret_cast<std::uintptr_t>(animation), animation_type_name(raw.type), raw.duration, raw.tracks,
+            reading.valid, reading.reason,
+            animation && animation_data_is_present(animation, raw.tracks));
+
+        if (animation && animation_data_is_present(animation, raw.tracks))
         {
-            if (animation_data_is_present(animation, Max_Tracks_Read))
-            {
-                out_animation = animation;
-                break;
-            }
+            out_animation = animation;
+            if (reading.valid)
+                out_binding = binding;
         }
     }
 }
