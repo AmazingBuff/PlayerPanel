@@ -651,6 +651,64 @@ namespace
         return true;
     }
 
+    // What the spline check found, said out loud instead of collapsed into one boolean. "absent" has
+    // several causes that need different fixes - an array that was never filled reads as a null pointer
+    // with size zero, while a layout that does not match this build reads as a plausible pointer or a
+    // count that cannot be true - and the caller cannot tell them apart from the boolean alone.
+    const char* animation_data_state(RE::hkaAnimation const* animation, std::int32_t track_count)
+    {
+        if (!animation || !readable(animation, sizeof(RE::hkaAnimation)) || !looks_like_object(animation))
+            return "no-object";
+        if (static_cast<std::uint32_t>(animation->type.get()) !=
+            static_cast<std::uint32_t>(RE::hkaAnimation::AnimationType::kSplineCompressedAnimation))
+            return "unchecked-non-spline";
+        return animation_data_is_present(animation, track_count) ? "present" : "absent";
+    }
+
+    // Every field the spline layout declares, so a mismatch is visible as a value rather than inferred
+    // from a failed check. The raw words come too: the scalars say whether the object is populated at
+    // all, and the words say where the arrays actually sit if these offsets are not the right ones.
+    void report_spline_fields(RE::hkaAnimation const* animation, std::int32_t track_count)
+    {
+        if (!animation || !readable(animation, sizeof(RE::hkaSplineCompressedAnimation)))
+        {
+            logger::info("SCOPY ANIM load spline UNAVAILABLE reason=window-unreadable");
+            return;
+        }
+        const auto* const spline = static_cast<const RE::hkaSplineCompressedAnimation*>(animation);
+        logger::info("SCOPY ANIM load spline frames={} blocks={} max-per-block={} mask-size={} block-dur={:.3f} frame-dur={:.4f} track-count={}",
+            spline->numFrames, spline->numBlocks, spline->maxFramesPerBlock, spline->maskAndQuantizationSize,
+            spline->blockDuration, spline->frameDuration, track_count);
+
+        struct ArrayView
+        {
+            const char* name;
+            const void* data;
+            std::int32_t size;
+        };
+        const ArrayView arrays[] = {
+            { "block-offsets", spline->blockOffsets.data(), spline->blockOffsets.size() },
+            { "float-block-offsets", spline->floatBlockOffsets.data(), spline->floatBlockOffsets.size() },
+            { "transform-offsets", spline->transformOffsets.data(), spline->transformOffsets.size() },
+            { "float-offsets", spline->floatOffsets.data(), spline->floatOffsets.size() },
+            { "data", spline->data.data(), spline->data.size() },
+        };
+        for (const ArrayView& array : arrays)
+        {
+            const bool ok = array.size > 0 && array.data &&
+                            readable(array.data, static_cast<size_t>(array.size));
+            logger::info("SCOPY ANIM load spline array={} size={} at=0x{:x} readable={}",
+                array.name, array.size, reinterpret_cast<std::uintptr_t>(array.data), ok);
+        }
+
+        std::string bytes;
+        const auto* const words = static_cast<const std::uint64_t*>(static_cast<const void*>(spline));
+        for (size_t word = 0; word < sizeof(RE::hkaSplineCompressedAnimation) / sizeof(std::uint64_t); ++word)
+            bytes += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+        logger::info("SCOPY ANIM load spline qwords='{}'", bytes);
+    }
+
+
     // The two binding sets the engine keeps, in the precedence OAR's source uses
     // (FakeClipGenerator.cpp:108-111): the character's own first, the setup's as the fallback. They are
     // distinct objects, and only one of them may have had its entries filled in.
@@ -953,10 +1011,14 @@ namespace
             ++walk.region_hits;
             consider_animation(candidate, walk, out);
             if (walk.region_hits <= Max_Tree_Lines)
-                logger::info("SCOPY ANIM load region-hit at=0x{:x} offset=0x{:x} type={} duration={:.2f}s tracks={} data-present={}",
+            {
+                logger::info("SCOPY ANIM load region-hit at=0x{:x} offset=0x{:x} type={} duration={:.2f}s tracks={} data={}",
                     reinterpret_cast<std::uintptr_t>(candidate), offset, animation_type_name(raw.type),
                     raw.duration, raw.tracks,
-                    animation_data_is_present(reinterpret_cast<const RE::hkaAnimation*>(candidate), raw.tracks));
+                    animation_data_state(reinterpret_cast<const RE::hkaAnimation*>(candidate), raw.tracks));
+                if (raw.type == static_cast<std::uint32_t>(RE::hkaAnimation::AnimationType::kSplineCompressedAnimation))
+                    report_spline_fields(reinterpret_cast<const RE::hkaAnimation*>(candidate), raw.tracks);
+            }
         }
     }
 
@@ -2705,12 +2767,12 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
         const BindingReading reading = read_binding(binding, bone_count, true);
         const RE::hkaAnimation* animation = binding ? binding->animation.get() : nullptr;
         const RawAnimationReading raw = read_raw_animation(animation);
-        logger::info("SCOPY ANIM load bindingset idx={} set={} element=0x{:x} binding=0x{:x} anim=0x{:x} anim-type={} duration={:.2f}s tracks={} binding-valid={} reason={} data-present={}",
+        logger::info("SCOPY ANIM load bindingset idx={} set={} element=0x{:x} binding=0x{:x} anim=0x{:x} anim-type={} duration={:.2f}s tracks={} binding-valid={} reason={} data={}",
             load_index, set == sets.character ? "character" : set == sets.setup ? "setup" : "none",
             reinterpret_cast<std::uintptr_t>(element), reinterpret_cast<std::uintptr_t>(binding),
             reinterpret_cast<std::uintptr_t>(animation), animation_type_name(raw.type), raw.duration, raw.tracks,
             reading.valid, reading.reason,
-            animation && animation_data_is_present(animation, raw.tracks));
+            animation_data_state(animation, raw.tracks));
 
         if (animation && animation_data_is_present(animation, raw.tracks))
         {
