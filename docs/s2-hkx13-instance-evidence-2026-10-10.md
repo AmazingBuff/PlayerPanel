@@ -89,13 +89,23 @@ SCOPY ANIM instance element qwords='00007ff69ed249b8 000000000001ffff 0000028b44
 | H05 隔离／生命周期 | 未测 | 本轮零崩溃、零 `[E]`，但未做换会话/读档 |
 | S1 安全回收 | 仍阻塞 | 未涉及 |
 
-## 6. 下一轮的最小范围
+## 6. 下一轮（HKX14）已发包：判定 `tracks-unreadable` 属于哪一种
 
-只解决 `tracks-unreadable`，其余不动：
+- 提交 `6b479c8367`，包 `dist/CharacterPanel-scopy-HKX14-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX14-6b479c8367-cl94faaed0c6-20261010T141937Z`（`source_baseline_dirty=false`）。
+- DLL SHA-256 `80644b6a…`、PDB `e16dd718…`，**均已从最终 zip 部署并校验一致**。
+- 新增日志：`SCOPY ANIM tracks …`（数组指针/size/是否可读/`animation` 自报轨道数/binding 的 0x48 转储）
+  与 `SCOPY ANIM instance anim …`（binding 指向的动画自身的类型/时长/轨道数）。
 
-1. `read_binding` 失败时打印 `tracks.size`、`tracks.data()`、`animation->numberOfTransformTracks`；
-2. 对 binding 对象 dump 0x48 字节，看 `transformTrackToBoneIndices`（CLib +0x20）是否为合法 hkArray；
-3. 若确定为布局变体 → 用 `animation->numberOfTransformTracks` 反推，或按 `binding->animation` 的类型另选映射来源；
-4. 若确定为惰性未装载 → 改在未暂停帧观察（PRD §6.4 第 2 条允许：O 正常世界更新中被动观察）。
+**判读表**：
 
-仍须遵守：只读、不虚调用、**从最终 zip 部署**、测完立刻复制日志。
+| 观测 | 结论 | 下一步 |
+| --- | --- | --- |
+| `declared=116`（合理）且 `array=0x0`/`size` 垃圾 | 惰性未装载 | 改在**未暂停帧**被动观察（PRD §6.4 第 2 条允许） |
+| `declared` 合理、`array` 是指针但 `readable=false` | 指针悬空或未填 | 同上，或换一个正在播的实例 |
+| `declared` 合理、数组可读但 `!= declared` | 布局变体：数组不在 +0x20 | 用转储找真偏移（找 {堆指针, 小整数, 小整数} 三元组） |
+| `declared` 本身是垃圾 | binding 尚未填充 | 该实例还没装载完，换时点 |
+
+上机：进游戏 → 打开背包（暂停）→ **F7 捕获** → 看 `SCOPY ANIM instance …` / `tracks …` / `anim …` →
+测完**立刻复制** `Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel.log`
+（注意：mod 目录下那份是旧的非活动日志，真正的日志在 SKSE 目录下）。
