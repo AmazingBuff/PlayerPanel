@@ -26,7 +26,17 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜）**：HKX12 已实测——`GetHashedAnimFromAnimIndex(graph, 1022)` 调用成功，
+**最新（2026-10-10 深夜，HKX13 已实测）**：**实例侧拿到了活 binding**——正在播放的
+`MT_Idle.HKX`（`cloneState=kClone`、idx **12066**，OAR 替换件）`binding=0x28b4433a770`、
+`control=0x28b730fab40` 两者都非空，且绑定集元素 `+0x10` 读到**同一个指针**（两条路互证）
+（见 [HKX13 实测证据](s2-hkx13-instance-evidence-2026-10-10.md)）。
+**HKX10「标准 Havok binding/control 层在运行时是死的」正式推翻**——它扫的是模板树。
+实例是经 **`activeNodes`（106 个）** 到达的，`rootGeneratorClone` 在本样本为空。
+新阻塞点：该 idle 的 `transformTrackToBoneIndices` **不可读**（`tracks-unreadable`），
+而 `weaponAdjustment.hkx`（7 轨）已 `reason=valid`。下一步只解决轨道表读取。
+H01 通过、H02 部分（指针已得、映射未成立）。
+
+**HKX12（历史）**：`GetHashedAnimFromAnimIndex(graph, 1022)` 调用成功，
 但返回的是 **`&hashedAnimations[1022]`（`HashedData` 按值条目，0x20、纯文件信息、无指针）**，`+0x28`
 读到的是下一条目的 CRC——**"名字/索引注册"与"已装载数据"分离实锤**（见
 [HKX12 实测证据](s2-hkx12-hashed-evidence-2026-10-10.md)）。三轮（HKX10-12）已把注册表层完全看清：
