@@ -26,7 +26,17 @@
 对照（先摆偏 0.5 rad）**125–199 单位**、复原 **0.000** —— 四元数约定 = 直接式；**第二个负结果**：`poseLocal` 按
 **`boneNodes` 次序**索引，不是骨架次序（[HKX2 实测证据](s2-hkx2-replay-evidence-2026-10-10.md)）。
 
-**最新（2026-10-10 深夜，HKX13 已实测）**：**实例侧拿到了活 binding**——正在播放的
+**最新（2026-10-10 深夜，HKX14 已实测）**：**轨道表裁决完成——不是布局错，是引擎没填**。
+活 binding 的 0x48 转储**逐字段对上 CLib 的 `hkaAnimationBinding`**（`animation`@+0x18 与独立读到的指针
+逐位相同、9 qwords = 0x48），而 `array=0x0 size=0`、`declared=99`（与 `animation->numberOfTransformTracks=99`
+自洽）→ **binding 与动画都是活对象、布局零疑问，缺的只是数据**。对照组 `weaponAdjustment.hkx` 两轮都
+`tracks=7 reason=valid`，证明校验器与写入路径本身没问题。
+两轮索引不同（12066 → 12221），符合 OAR 按条件动态替换。
+**已找到解法候选**：`hkaAnimationControl` 有 `GetNumTransformTrackToBoneIndices`／`GetTransformTrackToBoneIndices`
+（CLib 全类型，槽 0A/0B），活实例的 `control` 非空——但**这两个是虚函数**，是否破"不虚调用"红线**需用户拍板**。
+H02 仍只完成一半（对象已得、映射未成立）。逐条见 [HKX14 实测证据](s2-hkx14-tracks-evidence-2026-10-10.md)。
+
+**HKX13（历史）**：**实例侧拿到了活 binding**——正在播放的
 `MT_Idle.HKX`（`cloneState=kClone`、idx **12066**，OAR 替换件）`binding=0x28b4433a770`、
 `control=0x28b730fab40` 两者都非空，且绑定集元素 `+0x10` 读到**同一个指针**（两条路互证）
 （见 [HKX13 实测证据](s2-hkx13-instance-evidence-2026-10-10.md)）。
