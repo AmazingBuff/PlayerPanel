@@ -250,3 +250,62 @@ SCOPY ANIM load tree obj=0x… vtable=0x… animation=false reason=not-object ty
 | `tree` 里所有对象都 `reason=not-object` | 遍历到的都不是对象头（偏移错） | 用 `qwords` 重新定偏移 |
 | `tree` 里出现大对象但无动画 | 动画在更深层或不在该资源 | 加大遍历深度／换记录 |
 | `vtables` 行与资源虚表相等 | **我的判类有问题**，不是对象的问题 | 修对照表即可 |
+
+## 13. HKX21 实测结果（2026-10-11 01:01）：判类不可依赖，且遍历从未进入 arena
+
+日志 `CharacterPanel-hkx21-tree-20261011.log`。**零崩溃**。
+
+```
+SCOPY ANIM load vtables base=0x7ff69ed26f68 handle=0x… container=0x… map=0x… resource=0x7ff69ed52780
+SCOPY ANIM load tree obj=0x21af4000720 vtable=0x7ff69ed527c8 animation=false reason=animation-type …
+SCOPY ANIM load tree obj=0x21af4015800 vtable=0x7ff69eda1910 …
+… （共 16 行，后段 obj 地址已是模块静态区 0x7ff69ed05xxx / 0x7ff69ecfxxx）
+SCOPY ANIM load verdict=no-new-animation anims-before=0 anims-after=0
+```
+
+**两个决定性结论：**
+
+**① 判类不可依赖。** 资源虚表 `0x7ff69ed527c8` 比地址库给的 `hkResource` 虚表 `0x7ff69ed52780`
+**正好高 0x48（9 个槽位）**。要么这是另一个类，要么**这份地址库对 AE 1.6.1170 已陈旧**。
+两种可能都无法用"比对虚表"区分 → **HKX22 起不再依赖任何类名判定**。
+
+**② 遍历从未进入 arena。** 16 行全部 `reason=animation-type`（说明它们是对象形态、只是不是动画），
+且后段 `obj` 地址落在**模块静态区**（`0x7ff69ed05xxx`／`0x7ff69ecfxxx`，即引擎自带的
+`hkClass` 之类元数据）—— **指针图走出了堆、走进了静态表，而资源真正的数据一个字节都没碰到。**
+
+**资源结构（由转储手算确认）**：
+
+| 偏移 | 值 | 语义 |
+| --- | --- | --- |
+| +0x10 | 堆指针 | **arena 基址** |
+| +0x18 | `0x4570` = **17776** | **arena 字节数** |
+| +0x20 | arena 基址 **+ 0x1A0** | arena 内第二个指针 |
+
+arena 里是**纯字节**，而指针遍历只走"字形状像对象"的字 —— **所以它结构上就到不了 arena 内部**。
+
+## 14. HKX22：按内容扫描，不按图走
+
+- 提交 `f458d268`，包 `dist/CharacterPanel-scopy-HKX22-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX22-f458d268e9-cl94faaed0c6-20261010T170639Z`（`source_baseline_dirty=false`）。
+- DLL `5bb74b2d…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+**做法**：资源头部指向的每个字节区间（任何相邻两个字读作「堆指针 + 合理字节数」即视为一个区间）
+都**逐 8 字节对齐扫描**，每个候选地址交给**动画必须通过的那套校验**。
+**不假设任何布局**；错一次只损失一个被拒候选，不会得到错误答案。
+
+**新增日志**：
+
+```
+SCOPY ANIM load region at=0x… bytes=… from-offset=0x…
+SCOPY ANIM load region-hit at=0x… offset=0x… type=spline duration=…s tracks=… data-present=true|false
+```
+
+**判读表**：
+
+| 观测 | 含义 | 下一步 |
+| --- | --- | --- |
+| `region-hit` 且 `data-present=true` | **动画与数据都找到了** | 取映射（同法扫 binding）→ 接 ground-truth → F2 播放 |
+| `region-hit` 但 `data-present=false` | 找到动画对象，数据仍未就绪 | 数据在别的区间 → 看 `region` 行覆盖了哪些 |
+| 只有 `region` 行、无 `region-hit` | 该区间内没有动画对象 | 换记录（首 8 条未必含目标）或扩区间 |
+
+**成本**：17776 字节 ÷ 8 = 2222 个候选/区间，区间数上限 4 —— 一次性开销，可接受。
