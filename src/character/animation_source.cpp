@@ -536,11 +536,35 @@ namespace
         }
     }
 
+    // What the track table of one binding says when it does not validate, printed once per binding.
+    // HKX13 reached a live binding on the clip being played and still could not map it, and the two
+    // remaining explanations differ in what they predict: a track table the engine has not filled in
+    // yet reads as a null or garbage array, while a layout variant puts the array somewhere other than
+    // the offset this checkout declares. The array's own words and the animation's declared track
+    // count tell the two apart without a guess.
+    void report_track_table(RE::hkaAnimationBinding const* binding, RE::hkaAnimation const* animation, std::int32_t track_count, std::int16_t const* indices)
+    {
+        const std::int32_t declared = animation ? animation->numberOfTransformTracks : 0;
+        const bool array_readable = indices != nullptr && track_count > 0 &&
+                                    readable(indices, sizeof(std::int16_t) * static_cast<size_t>(track_count));
+        logger::info("SCOPY ANIM tracks binding=0x{:x} array=0x{:x} size={} declared={} readable={} array-at=0x{:x}",
+            reinterpret_cast<std::uintptr_t>(binding), reinterpret_cast<std::uintptr_t>(indices), track_count,
+            declared, array_readable, reinterpret_cast<std::uintptr_t>(&binding->transformTrackToBoneIndices));
+
+        if (!readable(binding, sizeof(RE::hkaAnimationBinding)))
+            return;
+        const auto* const words = static_cast<const std::uint64_t*>(static_cast<const void*>(binding));
+        std::string bytes;
+        for (size_t word = 0; word < sizeof(RE::hkaAnimationBinding) / sizeof(std::uint64_t); ++word)
+            bytes += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+        logger::info("SCOPY ANIM tracks binding qwords='{}'", bytes);
+    }
+
     // The validation every candidate layout is judged by, and it needs no virtual call: the animation
     // pointer has to look like a live object, its type has to be one the engine names, its clip length
     // has to be plausible, and its own transform-track count has to equal the binding's track table -
     // which is the check a wrapper object cannot pass, because its animation field is not there.
-    BindingReading read_binding(RE::hkaAnimationBinding const* binding, std::int32_t bone_count)
+    BindingReading read_binding(RE::hkaAnimationBinding const* binding, std::int32_t bone_count, bool detail_on_failure = false)
     {
         if (!binding || !readable(binding, sizeof(RE::hkaAnimationBinding)))
             return { false, "unreadable", 0.0f, 0, 0, 0 };
@@ -559,7 +583,14 @@ namespace
         const std::int32_t track_count = binding->transformTrackToBoneIndices.size();
         const std::int16_t* const indices = binding->transformTrackToBoneIndices.data();
         if (track_count <= 0 || track_count > Max_Tracks_Read || !readable(indices, sizeof(std::int16_t) * static_cast<size_t>(track_count)))
+        {
+            // The one number that separates the two explanations for an unreadable table: if the
+            // animation itself declares a sane track count, the binding is a live object and the array
+            // is either not filled in yet or not where this checkout reads it.
+            if (detail_on_failure)
+                report_track_table(binding, animation, track_count, indices);
             return { false, "tracks-unreadable", duration, 0, 0, type };
+        }
         if (animation->numberOfTransformTracks != track_count)
             return { false, "track-count-mismatch", duration, static_cast<size_t>(track_count), 0, type };
 
@@ -2072,7 +2103,9 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
                 reason = "no-binding-in-set";
         }
 
-        const BindingReading reading = read_binding(binding, bone_count);
+        // Detail is printed only where the answer is still open: a binding that resolved but whose
+        // track table did not, which is the one thing standing between this round and sampling.
+        const BindingReading reading = read_binding(binding, bone_count, idle || printed <= 2);
         if (reading.valid)
             found_live = true;
         logger::info("SCOPY ANIM instance clip name='{}' idx={} clone-state={} binding=0x{:x} control=0x{:x} bind-src={} tracks={} reason={}",
@@ -2080,6 +2113,19 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
             reinterpret_cast<std::uintptr_t>(binding), reinterpret_cast<std::uintptr_t>(generator->animationControl.get()),
             generator->binding ? "clip" : "bindingset", reading.tracks,
             reading.valid ? "valid" : std::string_view(reason) == "binding-null" ? reading.reason : reason);
+
+        // The animation a live binding points at, described by its own typed fields. A sane type,
+        // duration and track count here while the binding's array reads unreadable says the animation
+        // object is real and it is the mapping - not the animation - that is missing.
+        if (binding && readable(binding, sizeof(RE::hkaAnimationBinding)))
+        {
+            const RE::hkaAnimation* const animation = binding->animation.get();
+            const RawAnimationReading raw = read_raw_animation(animation);
+            logger::info("SCOPY ANIM instance anim binding=0x{:x} animation=0x{:x} probe={} type={} duration={:.2f}s transform-tracks={} float-tracks={}",
+                reinterpret_cast<std::uintptr_t>(binding), reinterpret_cast<std::uintptr_t>(animation),
+                raw.reason, animation_type_name(raw.type), raw.duration, raw.tracks,
+                animation && readable(animation, sizeof(RE::hkaAnimation)) ? animation->numberOfFloatTracks : 0);
+        }
     }
 
     // The entry the engine itself resolves for the standing idle's index, dumped at OAR's 0x28 spacing
@@ -2099,7 +2145,7 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
         {
             const void* const element = set->bindings[idle_index];
             const RE::hkaAnimationBinding* const binding = binding_at_offset_0x10(element);
-            const BindingReading reading = read_binding(binding, bone_count);
+            const BindingReading reading = read_binding(binding, bone_count, true);
             logger::info("SCOPY ANIM instance element idx={} at=0x{:x} set={} binding@0x10=0x{:x} valid={} reason={}",
                 idle_index, reinterpret_cast<std::uintptr_t>(element),
                 set == sets.character ? "character" : "setup",
