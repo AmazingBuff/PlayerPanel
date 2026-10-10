@@ -539,3 +539,64 @@ previewAnimation->SamplePartialTracks(localTime, numTracks, transforms, numFloat
 
 **未验证的假设（仍不采信）**：轨道表为空 ⇒ Havok 按**恒等映射**处理。本轮**没有假设它**——
 代码按轨道号取值，**是否正确由 `ground-truth` 相位扫描裁决**（PRD 要求的正是这种 A/B）。
+
+## 22. HKX25 实测结果（2026-10-11 01:47）：**采样成功，且存在一个相位几乎复现引擎姿态**
+
+日志 `CharacterPanel-hkx25-sample-20261011.log`。**零崩溃**。
+
+```
+SCOPY ANIM load bindingset idx=12221 binding=0x210c39debb0 anim=0x210c39a5ae0
+        anim-type=spline duration=30.00s tracks=99 binding-valid=false reason=tracks-unreadable data=present
+SCOPY ANIM mapping skeleton='NPC Root [Root]' bones=116 worst-rot-delta=86.42deg best
+SCOPY ANIM mapping skeleton='NPC Root [Root]' bones=99  worst-rot-delta=86.42deg
+SCOPY ANIM play clip='instance-binding' type=spline duration=30.00s tracks=99 copy-resolved=90/99 truth-bones=39
+SCOPY ANIM play ground-truth best-t=26.25s max-pos-delta=0.263 max-rot-delta=10.83deg worst-pos-delta=10.880 bones=37
+SCOPY ANIM play ground-truth verdict=none best=0.2629 worst=10.880
+```
+
+**两个关键结论：**
+
+**① `data=present`，零崩溃。** 槽 04 确实不碰那张空表 —— **HKX24 的入口判断被实测证实**，
+而 HKX16 的崩溃**从头到尾都是入口选错**，与"数据未装载"无关。
+
+**② `best=0.263` vs `worst=10.880` —— 41 倍跨度。**
+在某个相位，采样姿态与引擎自身持有的姿态差 **0.263 单位 / 10.83°**，最差相位差 10.88 单位。
+跨度这么大连同绝对值这么小，说明：**测量灵敏**，且**恒等映射基本成立**。
+
+`verdict=none` 只因阈值严格（要求 `best < worst × 1%`，实测为 **2.4%**）——
+**差一点，但差的方向很可能是相位而非映射**（见下）。
+
+**一处要诚实说明的观测**：`mapping` 两个骨架得分**完全相同（86.42°）** ——
+说明两套骨架的前 99 根骨名一致，恒等映射给出的是同一批配对，**该步骤在当前形态下没有区分力**。
+且它在 `t=0.0` 单点采样，而引擎当时不在相位 0，**所以 86.42° 大是必然的，不代表映射错**。
+真正有裁决力的是带相位搜索的 `ground-truth` 扫描。
+
+## 23. HKX26：在引擎自己的相位上比对，而不是搜出来的相位
+
+- 提交 `96c4524e`，包 `dist/CharacterPanel-scopy-HKX26-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX26-96c4524ebf-cl94faaed0c6-20261010T175333Z`（`source_baseline_dirty=false`）。
+- DLL `44cd7eb6…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+**方法缺陷**：`ground-truth` 是**搜索**，而且很粗 —— 24 步扫 30 秒 = **每步 1.25 秒**，
+在活动的骨架上相当于漂移数十帧。所以它的 `best-t` 是**上界，不是答案**，
+那 10.83° 里很可能有相当一部分是**相位误差而非映射误差**。
+
+**而相位根本不需要搜**：`control->localTime` 就是引擎在该动画里的真实位置
+（日志中一直可见，如 `localTime=1.088`）。当**采样的动画就是正在播放的那个**时
+（本轮正是如此 —— 装载的索引就是播放中 clip 的索引），这个值就是真值。
+
+**新增日志**：
+
+```
+SCOPY ANIM play phase-check t=…s max-pos-delta=… max-rot-delta=…deg bones=…
+```
+
+**在引擎自己的相位上**做同一套比对 → **剩余差值只可能是映射误差**，这才是裁决映射的那个数。
+
+**判读表**：
+
+| `phase-check` 观测 | 含义 | 下一步 |
+| --- | --- | --- |
+| `max-rot-delta` 很小（数度内）、`max-pos-delta` 小 | **映射成立，采样链闭环** | 接 F2 播放，进 H03/H04 |
+| 仍 ~10° 且 `max-pos-delta` 大 | 相位对齐了，**差的是映射** | 按骨拆分误差，找哪些骨错位 |
+| `phase-check` 未打印 | `localTime` 未取到（非 idle 或 control 空） | 看 `instance control` 行 |
