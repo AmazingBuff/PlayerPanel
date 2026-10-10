@@ -202,3 +202,51 @@ SCOPY ANIM load resource type=hkResource|hkResourceContainer|… qwords='…'
 | `anims>0` 且 `data-present=true` | **取数成功** | 接 ground-truth → F2 播放 |
 
 **未变**：`Queue`/`Load` 仍有副作用；S1 安全回收仍阻塞；H03–H05 未测。
+
+## 11. HKX20 实测结果（2026-10-11 00:56）：资源不是那五个类
+
+日志 `CharacterPanel-hkx20-resource-20261011.log`。**零崩溃**。
+
+```
+SCOPY ANIM load before records=7872 records-walked=8 with-loader=8 with-resources=8 resources=8 anims=0
+SCOPY ANIM load loader qwords='00007ff69ed463f0 000000000001ffff 000001f3f3fcc030 0000000100000001'
+SCOPY ANIM load resource type=other qwords='00007ff69ed527c8 000000000001ffff 000001f3b5351f00 00004b1000004b10
+                                           000001f3b53520a0 00007ff69ed26d08 000001f3f3c0cb40 0000000100000000
+                                           000001f3f3bf1650 0000000200000001 0000000000000000 0000000000000000'
+SCOPY ANIM load index=11921 queued=1 loaded=true loaded-records=7871
+```
+
+链路依旧 8/8 全通（loader 与非空 `loadedData`），**失败仍在资源内部**。两个意外：
+
+1. **`type=other`** —— 资源的虚表 `0x7ff69ed527c8` 与地址库声明的五个 `hkResource` 类**都不相等**；
+   要么这对象不是那五类之一，要么我的对照表本身不对（HKX21 会把五个地址打出来，一次分辨）；
+2. **结构比假设复杂** —— 资源里是一个**堆后端、size≈19216 的表**，后面还有更多表和一个
+   **第二个虚表形态的指针**（+0x28 = `0x7ff69ed26d08`）。**部分转储已不足以靠读推出来。**
+
+## 12. HKX21：逐对象转储整棵树
+
+- 提交 `eaea7ed6`，包 `dist/CharacterPanel-scopy-HKX21-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX21-eaea7ed69a-cl94faaed0c6-20261010T170019Z`（`source_baseline_dirty=false`）。
+- DLL `17f50a5f…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+**新增日志** —— 遍历到的**每个对象一行**，让结构从日志里读出来而不是再猜一次：
+
+```
+SCOPY ANIM load vtables base=0x… handle=0x… container=0x… map=0x… resource=0x…
+SCOPY ANIM load tree obj=0x… vtable=0x… animation=false reason=not-object type=unknown tracks=0 qwords='…'
+```
+
+`vtables` 行一次分辨"对照表错"还是"对象确实不属于这五类"：
+**资源虚表等于其中某个 → 比较有问题；都不等 → 对象确实不是这五类。**
+
+`tree` 行给出每个对象的**自身虚表 + 前 4 个字 + 校验判定与拒因**，
+所以"动画到底在不在里面"与"遍历是不是还在找错地方"可以分开判读。上限 16 行。
+
+**判读表**：
+
+| 观测 | 含义 | 下一步 |
+| --- | --- | --- |
+| `tree` 里出现 `animation=true` | 找到了可校验动画 | 看 `data-present` 是否也过 → 接 ground-truth |
+| `tree` 里所有对象都 `reason=not-object` | 遍历到的都不是对象头（偏移错） | 用 `qwords` 重新定偏移 |
+| `tree` 里出现大对象但无动画 | 动画在更深层或不在该资源 | 加大遍历深度／换记录 |
+| `vtables` 行与资源虚表相等 | **我的判类有问题**，不是对象的问题 | 修对照表即可 |
