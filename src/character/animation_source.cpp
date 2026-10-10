@@ -2445,6 +2445,46 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
         }
         logger::info("SCOPY ANIM play phase-check t={:.3f}s max-pos-delta={:.3f} max-rot-delta={:.2f}deg bones={}",
             a_local_time, position, rotation, bones);
+
+        // Which bones carry the rotation that is left, and how many are close to exact. A few named bones
+        // far from the rest is the engine correcting those bones - blending, look-at, IK, physics - and the
+        // PRD says a single clip cannot be required to equal that final pose. A spread across many bones
+        // means the mapping itself is off in rotation, which needs a different fix. The two look identical
+        // in one max value, so the distribution is what decides between them.
+        struct BoneDelta
+        {
+            float rotation;
+            float position;
+            const char* name;
+        };
+        std::vector<BoneDelta> deltas;
+        size_t within_one_degree = 0;
+        for (size_t i = 0; i < playback.tracks.size(); ++i)
+        {
+            if (!truth[i] || static_cast<size_t>(playback.tracks[i]) >= sampled.size())
+                continue;
+            const PoseSample clip_pose = read_pose(sampled[playback.tracks[i]]);
+            const PoseSample engine_pose = read_pose(*truth[i]);
+            const RE::NiMatrix3 clip_rotation = ni_matrix_from_quaternion(clip_pose.quaternion[0], clip_pose.quaternion[1], clip_pose.quaternion[2], clip_pose.quaternion[3]);
+            const RE::NiMatrix3 engine_rotation = ni_matrix_from_quaternion(engine_pose.quaternion[0], engine_pose.quaternion[1], engine_pose.quaternion[2], engine_pose.quaternion[3]);
+            const float bone_rotation = rotation_angle_degrees(engine_rotation, clip_rotation);
+            const float bone_position = (RE::NiPoint3{ clip_pose.position[0], clip_pose.position[1], clip_pose.position[2] } -
+                                         RE::NiPoint3{ engine_pose.position[0], engine_pose.position[1], engine_pose.position[2] })
+                                            .Length();
+            if (bone_rotation <= 1.0f)
+                ++within_one_degree;
+            RE::NiAVObject* const node = i < playback.nodes.size() ? playback.nodes[i] : nullptr;
+            const char* const node_name = node && node->name.c_str() ? node->name.c_str() : "?";
+            deltas.push_back({ bone_rotation, bone_position, node_name });
+        }
+        std::sort(deltas.begin(), deltas.end(), [](const BoneDelta& lhs, const BoneDelta& rhs) { return lhs.rotation > rhs.rotation; });
+        logger::info("SCOPY ANIM play phase-check spread bones={} within-1deg={} worst-bones='{}'",
+            deltas.size(), within_one_degree, [&deltas]() {
+                std::string text;
+                for (size_t i = 0; i < deltas.size() && i < Max_Bones_Reported * 2; ++i)
+                    text += fmt::format("{}{}:{:.2f}deg/{:.3f}u", i ? ", " : "", deltas[i].name, deltas[i].rotation, deltas[i].position);
+                return text.empty() ? std::string("-") : text;
+            }());
     }
     const bool matched = worst_position > 0.0f && best_position < worst_position * Match_Fraction_Of_Control;
     logger::info("SCOPY ANIM play ground-truth verdict={} best={:.4f} worst={:.3f}", matched ? "match" : "none", best_position, worst_position);
