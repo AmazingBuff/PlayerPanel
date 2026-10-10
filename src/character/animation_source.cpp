@@ -106,7 +106,12 @@ namespace
     // many records the walk looks at (the table holds thousands, and the scan is bounded on purpose).
     constexpr size_t Max_Loaded_Anims = 8;
     constexpr std::int32_t Max_Loaded_Resources = 64;
-    constexpr std::uint32_t Max_Walked_Records = 64;
+    // Records the walk looks at, and objects it may visit inside one resource. The table holds thousands
+    // of records and each resource costs a window scan, so both are bounded and the record count is small
+    // enough to afford a walk that is deep enough to reach a nested animation.
+    constexpr std::uint32_t Max_Walked_Records = 8;
+    constexpr size_t Max_Resource_Objects = 24;
+    constexpr size_t Resource_Dump_Bytes = 0x60;
     // How far the instance-side walk goes and how many of its clips are printed. Small on purpose: this
     // stage only answers whether a binding resolves, so it should cost one bounded pass, not a search.
     constexpr size_t Max_Instance_Objects = 256;
@@ -872,6 +877,8 @@ namespace
         size_t resources = 0;       // resources seen in total
         size_t animations = 0;      // animations validated out of them
         std::string first_loader;   // the first loader's own words, for layout confirmation
+        std::string first_resource; // the first resource's own words
+        const char* resource_type = "-";  // what that resource's vtable says it is
     };
 
     void consider_animation(void const* candidate, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
@@ -889,23 +896,72 @@ namespace
         }
     }
 
-    // hkResource carries only its reference-counted header in the layout OAR asserts: 0x10 bytes with no
-    // contents member. What it holds therefore sits either immediately past that header or behind one of
-    // the pointers in its own window, and neither position is declared in this checkout - so every
-    // candidate is validated before it is believed, and the header itself is never mistaken for the
-    // object (reading +0x00 would only ever hand back the vtable).
-    void collect_resource_contents(void const* resource, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
+    // Which of the engine's resource classes a pointer actually is. The five names are all declared in
+    // the address library, so equality with a known vtable answers the question with one guarded read
+    // and no call - the same technique that made HKX9's clip classification safe.
+    const char* resource_type_name(void const* resource)
+    {
+        if (!resource || !readable(resource, sizeof(void*)))
+            return "unreadable";
+        const std::uintptr_t vtable = *static_cast<const std::uintptr_t*>(resource);
+        struct Entry
+        {
+            std::uintptr_t address;
+            const char* name;
+        };
+        static const Entry entries[] = {
+            { RE::VTABLE_hkResourceBase[0].address(), "hkResourceBase" },
+            { RE::VTABLE_hkResourceHandle[0].address(), "hkResourceHandle" },
+            { RE::VTABLE_hkResourceContainer[0].address(), "hkResourceContainer" },
+            { RE::VTABLE_hkResourceMap[0].address(), "hkResourceMap" },
+            { RE::VTABLE_hkResource[0].address(), "hkResource" },
+        };
+        for (const Entry& entry : entries)
+        {
+            if (vtable == entry.address)
+                return entry.name;
+        }
+        return "other";
+    }
+
+    // What one resource holds, reached by a bounded walk rather than by a single dereference: the object
+    // an animation file loads to is a container, and the animation sits some levels inside it, so one
+    // level of pointers is not enough to reach it. Every candidate is validated before it is believed,
+    // and nothing virtual is called on any of them.
+    void collect_resource_animations(void const* resource, LoadedWalk& walk, std::vector<const RE::hkaAnimation*>& out)
     {
         if (out.size() >= Max_Loaded_Anims || !resource || !readable(resource, sizeof(void*)))
             return;
-        consider_animation(static_cast<const std::uint8_t*>(resource) + 0x10, walk, out);
-        for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
+
+        if (walk.first_resource.empty())
         {
-            const auto* const at = static_cast<const std::uint8_t*>(resource) + offset;
-            if (!readable(at, sizeof(void*)))
-                break;
-            consider_animation(at, walk, out);
-            consider_animation(*reinterpret_cast<void* const*>(at), walk, out);
+            walk.resource_type = resource_type_name(resource);
+            const auto* const words = static_cast<const std::uint64_t*>(resource);
+            for (size_t word = 0; word < Resource_Dump_Bytes / sizeof(std::uint64_t); ++word)
+                walk.first_resource += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+        }
+
+        std::unordered_set<void const*> seen{ resource };
+        std::vector<const void*> pending{ resource };
+        size_t visited = 0;
+        while (!pending.empty() && visited < Max_Resource_Objects && out.size() < Max_Loaded_Anims)
+        {
+            const void* const object = pending.back();
+            pending.pop_back();
+            ++visited;
+            consider_animation(object, walk, out);
+            for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
+            {
+                const auto* const at = static_cast<const std::uint8_t*>(object) + offset;
+                if (!readable(at, sizeof(void*)))
+                    break;
+                // The address itself may be where an inline object begins, and the word there may point
+                // at one; both are tried, and each is validated before it is recorded.
+                consider_animation(at, walk, out);
+                const void* const word = *reinterpret_cast<void* const*>(at);
+                if (word && readable(word, sizeof(void*)) && looks_like_object(word) && seen.insert(word).second)
+                    pending.push_back(word);
+            }
         }
     }
 
@@ -935,7 +991,7 @@ namespace
         ++walk.with_resources;
         walk.resources += static_cast<size_t>(count);
         for (std::int32_t i = 0; i < count; ++i)
-            collect_resource_contents(data[i], walk, out);
+            collect_resource_animations(data[i], walk, out);
     }
 
     // The manager's own "current animation" slot is the record a load has just touched, so it is walked
@@ -2473,6 +2529,8 @@ void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source
         before_walk.records, before_walk.with_loader, before_walk.with_resources, before_walk.resources, before.size());
     if (!before_walk.first_loader.empty())
         logger::info("SCOPY ANIM load loader qwords='{}'", before_walk.first_loader);
+    if (!before_walk.first_resource.empty())
+        logger::info("SCOPY ANIM load resource type={} qwords='{}'", before_walk.resource_type, before_walk.first_resource);
 
     const std::int32_t load_index = idle_index >= 0 ? idle_index : 1022;
 
