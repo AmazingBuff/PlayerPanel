@@ -624,7 +624,7 @@ namespace
     // hkaSplineCompressedAnimation sampling on `mov r9d,[rax+rcx*4]` - an index into that table - after
     // the header had passed every check. A null or unreadable table therefore has to be caught before
     // the first sample, never after.
-    bool animation_data_is_present(RE::hkaAnimation const* animation, std::int32_t track_count)
+    bool animation_data_is_present(RE::hkaAnimation const* animation, [[maybe_unused]] std::int32_t track_count)
     {
         if (!animation || !readable(animation, sizeof(RE::hkaAnimation)) || !looks_like_object(animation))
             return false;
@@ -636,11 +636,13 @@ namespace
         if (!readable(spline, sizeof(RE::hkaSplineCompressedAnimation)))
             return false;
 
-        // The sampler indexes these per track, and reads the bytes they point into.
-        const std::int32_t offsets = spline->transformOffsets.size();
-        const std::uint32_t* const offset_data = spline->transformOffsets.data();
-        if (offsets < track_count || !offset_data ||
-            !readable(offset_data, sizeof(std::uint32_t) * static_cast<size_t>(offsets)))
+        // What this checks is what the sampler this project actually calls needs: the block table and the
+        // compressed bytes. transformOffsets is deliberately not required - the dump shows this engine
+        // leaves it empty at size zero on animations that plainly do have their data, and that is not an
+        // accident: SampleIndividualTransformTracks indexes it per track, while the SamplePartialTracks
+        // entry point OAR uses takes a contiguous prefix and never needs it. Requiring it here is what
+        // made every animation read as absent while the bytes sat there readable.
+        if (spline->numFrames <= 0 || spline->numBlocks <= 0)
             return false;
         if (spline->blockOffsets.size() <= 0 || !spline->blockOffsets.data() ||
             !readable(spline->blockOffsets.data(), sizeof(std::uint32_t) * static_cast<size_t>(spline->blockOffsets.size())))
@@ -708,6 +710,18 @@ namespace
         logger::info("SCOPY ANIM load spline qwords='{}'", bytes);
     }
 
+
+    // The sampling entry point this project uses, taken from the one piece of working community code
+    // that does this exact job: OAR's preview samples a loaded animation through SamplePartialTracks
+    // with a null chunk cache (ActiveAnimationPreview.cpp:38). It takes a contiguous run of tracks from
+    // zero, which is what an empty track-to-bone table amounts to anyway - Havok treats a null table as
+    // the identity mapping - and it never indexes the per-track offset table that this engine leaves at
+    // size zero and that SampleIndividualTransformTracks walks straight into, which is what crashed the
+    // first attempt to sample and what made every animation read as having no data.
+    void sample_tracks(RE::hkaAnimation const& animation, float time, std::uint32_t count, RE::hkQsTransform* out, float* float_out, std::uint32_t float_count)
+    {
+        animation.SamplePartialTracks(time, count, out, float_count, float_out, nullptr);
+    }
 
     // The two binding sets the engine keeps, in the precedence OAR's source uses
     // (FakeClipGenerator.cpp:108-111): the character's own first, the setup's as the fallback. They are
@@ -2290,15 +2304,18 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
             }
 
             // One sample at an arbitrary phase is enough to compare skeletons against each other: the
-            // wrong skeleton pairs unrelated bones and cannot produce a small distance.
-            std::vector<RE::hkQsTransform> sampled(tracks.size());
-            candidate->SampleIndividualTransformTracks(0.0f, tracks.data(), static_cast<std::uint32_t>(tracks.size()), sampled.data());
+            // wrong skeleton pairs unrelated bones and cannot produce a small distance. The sampler takes
+            // a contiguous run from track zero, so the whole run is sampled and each pair is then read
+            // out by its own track number - the collected list can have gaps where a bone did not
+            // resolve, and indexing the sample by position would shift every pair after such a gap.
+            std::vector<RE::hkQsTransform> sampled(static_cast<size_t>(available));
+            sample_tracks(*candidate, 0.0f, static_cast<std::uint32_t>(available), sampled.data(), nullptr, 0);
             float worst = 0.0f;
-            for (size_t k = 0; k < sampled.size(); ++k)
+            for (size_t k = 0; k < tracks.size(); ++k)
             {
-                if (!poses[k])
+                if (!poses[k] || static_cast<size_t>(tracks[k]) >= sampled.size())
                     continue;
-                const PoseSample clip_pose = read_pose(sampled[k]);
+                const PoseSample clip_pose = read_pose(sampled[tracks[k]]);
                 const PoseSample engine_pose = read_pose(*poses[k]);
                 worst = std::max(worst, rotation_angle_degrees(
                     ni_matrix_from_quaternion(engine_pose.quaternion[0], engine_pose.quaternion[1], engine_pose.quaternion[2], engine_pose.quaternion[3]),
@@ -2357,7 +2374,11 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
     // Ground truth: the clip's own pose at every phase against the pose the engine holds. The source is
     // paused, so its phase is frozen and unknown - the sweep finds it, and the spread between the best
     // and the worst phase is what tells a match from a coincidence.
-    std::vector<RE::hkQsTransform> sampled(playback.tracks.size());
+    // The sampler covers a contiguous run from track zero, and the collected list can have gaps where a
+    // bone did not resolve, so the sample is taken over the whole run and each pair is read out by its
+    // own track number - indexing by position would shift every pair after a gap.
+    const size_t sample_count = playback.tracks.empty() ? 0 : static_cast<size_t>(playback.tracks.back()) + 1;
+    std::vector<RE::hkQsTransform> sampled(sample_count);
     float best_position = std::numeric_limits<float>::max();
     float best_rotation = 0.0f;
     float best_time = 0.0f;
@@ -2366,15 +2387,15 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
     for (size_t step = 0; step < Sweep_Steps; ++step)
     {
         const float time = playback.duration * static_cast<float>(step) / static_cast<float>(Sweep_Steps);
-        playback.animation->SampleIndividualTransformTracks(time, playback.tracks.data(), static_cast<std::uint32_t>(playback.tracks.size()), sampled.data());
+        sample_tracks(*playback.animation, time, static_cast<std::uint32_t>(sample_count), sampled.data(), nullptr, 0);
         float position = 0.0f;
         float rotation = 0.0f;
         size_t bones = 0;
-        for (size_t i = 0; i < sampled.size(); ++i)
+        for (size_t i = 0; i < playback.tracks.size(); ++i)
         {
-            if (!truth[i])
+            if (!truth[i] || static_cast<size_t>(playback.tracks[i]) >= sampled.size())
                 continue;
-            const PoseSample clip_pose = read_pose(sampled[i]);
+            const PoseSample clip_pose = read_pose(sampled[playback.tracks[i]]);
             const PoseSample engine_pose = read_pose(*truth[i]);
             position = std::max(position, (RE::NiPoint3{ clip_pose.position[0], clip_pose.position[1], clip_pose.position[2] } -
                                               RE::NiPoint3{ engine_pose.position[0], engine_pose.position[1], engine_pose.position[2] })
@@ -2797,16 +2818,19 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
     if (looped < 0.0f)
         looped += length;
 
-    std::vector<RE::hkQsTransform> sampled(clip.tracks.size());
-    clip.animation->SampleIndividualTransformTracks(looped, clip.tracks.data(), static_cast<std::uint32_t>(clip.tracks.size()), sampled.data());
+    const size_t sample_count = clip.tracks.empty() ? 0 : static_cast<size_t>(clip.tracks.back()) + 1;
+    if (sample_count == 0)
+        return 0;
+    std::vector<RE::hkQsTransform> sampled(sample_count);
+    sample_tracks(*clip.animation, looped, static_cast<std::uint32_t>(sample_count), sampled.data(), nullptr, 0);
 
     size_t written = 0;
-    for (size_t i = 0; i < sampled.size(); ++i)
+    for (size_t i = 0; i < clip.tracks.size(); ++i)
     {
         RE::NiAVObject* const node = clip.nodes[i];
-        if (!node)
+        if (!node || static_cast<size_t>(clip.tracks[i]) >= sampled.size())
             continue;
-        RE::NiTransform local = ni_local_from_pose(read_pose(sampled[i]), false);
+        RE::NiTransform local = ni_local_from_pose(read_pose(sampled[clip.tracks[i]]), false);
         if (!std::isfinite(local.scale) || local.scale <= 0.0f)
             local.scale = node->local.scale;
         node->local = local;
