@@ -85,3 +85,50 @@ SCOPY ANIM load verdict=load-produced-animation|no-new-animation anims-before=�
 进游戏 → 打开背包（暂停）→ **F7 捕获** → 看 `SCOPY ANIM load …` 系列 → 测完**立刻复制**
 `Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel.log`。
 （mod 目录下那份是 10/05 的旧日志，非活动。）
+
+## 7. HKX18 实测结果（2026-10-11 00:45）
+
+日志 `CharacterPanel-hkx18-load-20261011-0048.log`。**零崩溃**（最新 crash 仍是 22:54 的 HKX16 那次）。
+
+```
+SCOPY ANIM load before records=7872 anims=0
+SCOPY ANIM load index=12221 queued=1 loaded=true loaded-records=7871
+SCOPY ANIM load verdict=no-new-animation anims-before=0 anims-after=0
+```
+
+**最重要的正结果**：`queued=1`、`loaded=true` —— **引擎接受了按索引的装载调用并返回成功**。
+用户要的机制（命名游戏已注册的索引 → 引擎装载）**本身是通的**。
+
+**没成立的一半**：遍历仍 `anims=0`，且 `db-data` 行**从未打印**（该行在 HKX18 里被我遗漏，
+是诊断缺陷）。`loaded-records` 由 7872 变为 **7871**（少 1），说明 `Load` 确实动过表。
+
+## 8. HKX19：把失败归因到具体一步，并修一个真 bug
+
+- 提交 `8282e897`，包 `dist/CharacterPanel-scopy-HKX19-1.2.1.zip`，身份
+  `CharacterPanel-scopy-HKX19-8282e8977d-cl94faaed0c6-20261010T165014Z`（`source_baseline_dirty=false`）。
+- DLL `44b7b8c0…`、PDB **均已从最终 zip 部署并校验一致**；单测 1/1。
+
+**修的真 bug**：HKX18 把 `hkResource` 的内容当成 `+0x00` 处的指针读——**那是 vtable**。
+OAR 断言 `sizeof(hkResource) == 0x10`（只有引用计数头、**无内容成员**），
+所以对象要么在**头之后（+0x10）**，要么在资源自身窗口里的某个指针后面。
+HKX19 两个位置都试，且每个候选都先过校验，**表头再也不会被当成对象**。
+
+**新增诊断**（分级计数，一次定位死在哪一步）：
+
+```
+SCOPY ANIM load before records=… current=0x… current-crc=0x… records-walked=… with-loader=… with-resources=… resources=… anims=…
+SCOPY ANIM load loader qwords='…'      （首个 loader 的原始 0x20 字节，供对布局）
+SCOPY ANIM load after  records=… current=0x… current-crc=0x… records-walked=… with-loader=… with-resources=… resources=… anims=…
+```
+
+`currentAnimation` 槽（管理器 @0x20）单独打 —— 那是**装载刚触碰的那条记录**。
+记录扫描**上界 64 条**（表里几千条，每条一次窗口扫描）。
+
+**判读表**：
+
+| 观测 | 含义 | 下一步 |
+| --- | --- | --- |
+| `with-loader=0` | `+0x28` 不是 loader 指针 | 看 `loader qwords` 与 `current` 定真偏移 |
+| `with-loader>0` 但 `with-resources=0` | loader 的 `loadedData` 为空 | loader 布局或时机问题 |
+| `with-resources>0` 但 `anims=0` | 资源里没找到可校验动画 | 看资源窗口结构，改扫描范围 |
+| `anims>0` 且 `data-present=true` | **取数成功** | 接 ground-truth → F2 播放 |
