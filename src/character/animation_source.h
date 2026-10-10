@@ -310,6 +310,10 @@ class ClipPlayer
 public:
     void reset();
     void set_clip(ClipPlayback clip);
+    // Puts the studio clock back to zero, so the next frame draws the clip from its beginning. The
+    // inventory pauses the engine and the studio owns the clock, so without this the figure resumes
+    // wherever the last visit left it.
+    void restart();
     [[nodiscard]] bool ready() const { return m_clip.valid(); }
     [[nodiscard]] std::string const& name() const { return m_clip.name; }
     [[nodiscard]] double time() const { return m_time; }

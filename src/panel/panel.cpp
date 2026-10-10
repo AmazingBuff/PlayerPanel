@@ -15,9 +15,14 @@ RE::BSEventNotifyControl PanelMonitor::MenuSink::ProcessEvent(const RE::MenuOpen
     if (event->menuName == RE::InventoryMenu::MENU_NAME)
     {
         if (event->opening)
+        {
             instance().m_panel_open.store(true, std::memory_order_relaxed);
+            instance().m_panel_opened.store(true, std::memory_order_relaxed);
+        }
         else
+        {
             instance().m_panel_open.store(false, std::memory_order_relaxed);
+        }
     }
     return RE::BSEventNotifyControl::kContinue;
 }
@@ -42,7 +47,12 @@ bool PanelMonitor::is_menu_open() const
     return m_panel_open.load(std::memory_order_acquire);
 }
 
-PanelMonitor::PanelMonitor() : m_panel_open(false)
+bool PanelMonitor::consume_panel_opened()
+{
+    return m_panel_opened.exchange(false, std::memory_order_acq_rel);
+}
+
+PanelMonitor::PanelMonitor() : m_panel_open(false), m_panel_opened(false)
 {
 }
 

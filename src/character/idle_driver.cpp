@@ -32,6 +32,13 @@ void IdleDriver::reset()
     m_last_tick = std::chrono::steady_clock::now();
 }
 
+void IdleDriver::restart()
+{
+    m_time = 0.0;
+    m_last_report = 0.0;
+    m_last_tick = std::chrono::steady_clock::now();
+}
+
 void IdleDriver::set_enabled(bool enabled)
 {
     if (m_enabled == enabled)

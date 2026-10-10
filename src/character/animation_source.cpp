@@ -2930,6 +2930,12 @@ void ClipPlayer::set_clip(ClipPlayback clip)
     m_last_tick = std::chrono::steady_clock::now();
 }
 
+void ClipPlayer::restart()
+{
+    m_time = 0.0;
+    m_last_tick = std::chrono::steady_clock::now();
+}
+
 size_t ClipPlayer::advance(RE::NiAVObject& copy_root)
 {
     if (!m_clip.valid())

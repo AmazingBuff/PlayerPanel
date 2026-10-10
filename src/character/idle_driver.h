@@ -89,6 +89,10 @@ class IdleDriver
 {
 public:
     void reset();
+    // Puts the clock back to zero without disturbing what is bound: each visit to the panel should start
+    // the animation at its beginning, and the inventory pauses the engine, so carrying the studio's own
+    // time across a close and a reopen is the one thing that makes a paused figure resume mid-step.
+    void restart();
     void set_enabled(bool enabled);
     [[nodiscard]] bool enabled() const { return m_enabled; }
     [[nodiscard]] size_t driven_channels() const { return m_bound.size(); }

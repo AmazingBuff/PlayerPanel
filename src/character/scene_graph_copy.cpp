@@ -368,6 +368,19 @@ void SceneGraphCopy::reset_for_load()
 void SceneGraphCopy::process_requests()
 {
     ++m_frame;
+
+    // Each visit to the panel starts the animation from its beginning. The engine is paused while the
+    // inventory is up, so the studio's clocks are the only thing moving the figure, and letting their
+    // time carry across a close and a reopen is what makes it resume mid-step instead of starting over.
+    // The flag comes from the menu event rather than from an edge seen here, because this function runs
+    // in the render-side hook and does not run in every frame.
+    if (PanelMonitor::instance().consume_panel_opened())
+    {
+        m_clip.restart();
+        m_idle.restart();
+        logger::info("SCOPY ANIM restart at panel open capture={} driver={}", m_capture_id, animation_driver());
+    }
+
     const uint32_t generation = m_generation.load(std::memory_order_acquire);
     RE::UI* ui = RE::UI::GetSingleton();
     if (generation != m_seen_generation || (ui && ui->IsMenuOpen(RE::MainMenu::MENU_NAME)))
