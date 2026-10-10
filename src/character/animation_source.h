@@ -297,6 +297,12 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
 // is involved. Returns how many nodes were written.
 size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root);
 
+// Reports the instance side of the graph - the per-character clones the engine actually updates, as
+// opposed to the shared template tree the earlier rounds walked - and whether a binding resolves there
+// at all. Read-only: no clip is activated, nothing is written, and no virtual call is made on a
+// candidate, so a wrong layout shows up as a rejection reason instead of a crash.
+void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
+
 // Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
 class ClipPlayer
 {

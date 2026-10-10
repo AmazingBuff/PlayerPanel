@@ -26,6 +26,7 @@
 #include "RE/H/hkbCharacterStringData.h"
 #include "RE/H/hkbClipGenerator.h"
 #include "RE/H/hkbGenerator.h"
+#include "RE/H/hkbNode.h"
 #include "RE/H/hkbStateMachine.h"
 #include "RE/T/TESObjectREFR.h"
 #include "REL/Module.h"
@@ -99,6 +100,10 @@ namespace
     // resource: this many objects at most, and this many validated animations recorded from one.
     constexpr size_t Max_Hashed_Visited = 96;
     constexpr size_t Max_Hashed_Anims = 8;
+    // How far the instance-side walk goes and how many of its clips are printed. Small on purpose: this
+    // stage only answers whether a binding resolves, so it should cost one bounded pass, not a search.
+    constexpr size_t Max_Instance_Objects = 256;
+    constexpr size_t Max_Instance_Printed = 12;
     constexpr size_t Progress_Every = 32;
     constexpr double Max_Clip_Step_Seconds = 0.1;
 
@@ -564,6 +569,45 @@ namespace
         return { true, "valid", duration, tracks, tracks, type };
     }
 
+    // The two binding sets the engine keeps, in the precedence OAR's source uses
+    // (FakeClipGenerator.cpp:108-111): the character's own first, the setup's as the fallback. They are
+    // distinct objects, and only one of them may have had its entries filled in.
+    struct BindingSetPair
+    {
+        RE::hkbAnimationBindingSet* character;
+        RE::hkbAnimationBindingSet* setup;
+    };
+
+    BindingSetPair binding_sets(RE::hkbCharacter& character)
+    {
+        BindingSetPair pair{ character.animationBindingSet.get(), nullptr };
+        if (const RE::hkbCharacterSetup* const setup = character.setup.get())
+            pair.setup = setup->animationBindingSet.get();
+        return pair;
+    }
+
+    // Which of the two sets an index is read from, or nullptr when neither holds it.
+    RE::hkbAnimationBindingSet* set_holding(BindingSetPair const& pair, std::int32_t index)
+    {
+        for (RE::hkbAnimationBindingSet* const set : { pair.character, pair.setup })
+        {
+            if (set && index >= 0 && index < set->bindings.size())
+                return set;
+        }
+        return nullptr;
+    }
+
+    // One binding-set entry as OAR's source lays it out (Havok.h:200-203, static_asserted there):
+    // hkbAnimationBindingWithTriggers is 0x28 bytes and the hkaAnimationBinding pointer sits at +0x10.
+    // The earlier rounds read this at 0x30-wide spacing, which never lands on the field.
+    const RE::hkaAnimationBinding* binding_at_offset_0x10(void const* element)
+    {
+        if (!element || !readable(element, 0x18))
+            return nullptr;
+        const void* const candidate = *reinterpret_cast<void* const*>(static_cast<const std::uint8_t*>(element) + 0x10);
+        return static_cast<const RE::hkaAnimationBinding*>(candidate);
+    }
+
     // A string we are willing to print: read one byte at a time so an unterminated or non-textual
     // pointer cannot run away, and bounded either way.
     std::string guarded_string(RE::hkStringPtr const& value)
@@ -805,6 +849,36 @@ namespace
         default:
             return "other";
         }
+    }
+
+    // Whether a generator is the shared template or a per-character instance. hkbNode::cloneState is a
+    // typed byte at 0x42 (hkbNode.h:59); the archived root-machine dumps of HKX9 and HKX10 both decode
+    // to 1 (kTemplate) with isActive false, which is why the walk from rootGenerator only ever met
+    // templates. OAR never walks rootGenerator - it hooks Activate and receives the instance.
+    const char* clone_state_name(std::uint8_t state)
+    {
+        switch (static_cast<RE::hkbNode::CloneState>(state))
+        {
+        case RE::hkbNode::CloneState::kDefault:
+            return "kDefault";
+        case RE::hkbNode::CloneState::kTemplate:
+            return "kTemplate";
+        case RE::hkbNode::CloneState::kClone:
+            return "kClone";
+        case RE::hkbNode::CloneState::kShareable:
+            return "kShareable";
+        default:
+            return "unknown";
+        }
+    }
+
+    bool is_clone_instance(void const* object)
+    {
+        if (!object || !readable(object, sizeof(RE::hkbNode)))
+            return false;
+        const auto* const node = static_cast<const RE::hkbNode*>(object);
+        return static_cast<RE::hkbNode::CloneState>(static_cast<std::uint8_t>(node->cloneState.get())) ==
+               RE::hkbNode::CloneState::kClone;
     }
 
     // What one met clip generator carries, valid or not: the name, the binding-set index it was born
@@ -1853,6 +1927,196 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
 
     out = std::move(playback);
     return true;
+}
+
+// Answers one question, and nothing else: on the side of the graph that actually plays - the
+// per-character clone instances, not the shared template tree the earlier rounds walked - does a
+// binding resolve at all, and if so does it carry a sampleable animation?
+//
+// Everything here is read-only and typed. The instance side is reached through the two members of
+// hkbBehaviorGraph that the template walk never touched; every object is classified by its vtable
+// address rather than by a virtual call; and a candidate entry is believed only once the structural
+// checks in read_binding pass. Nothing is written and no clip is activated, so a wrong step costs a
+// rejection reason in the log instead of a crash.
+void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root)
+{
+    const NodeTable copy_nodes = collect_nodes(copy_root);
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+    if (copy_nodes.names.empty() || !source.GetAnimationGraphManager(manager) || !manager)
+    {
+        logger::info("SCOPY ANIM instance UNAVAILABLE reason=no-animation-graph-manager");
+        return;
+    }
+
+    SelectedGraph selected{};
+    if (!select_graph(*manager, source, source_root, copy_nodes, selected, false))
+    {
+        logger::info("SCOPY ANIM instance UNAVAILABLE reason=no-animation-skeleton");
+        return;
+    }
+
+    RE::hkbCharacter& character = selected.graph->characterInstance;
+    RE::hkbBehaviorGraph* const behavior = character.behaviorGraph.get();
+    if (!behavior)
+    {
+        logger::info("SCOPY ANIM instance UNAVAILABLE reason=no-behavior-graph");
+        return;
+    }
+
+    const BindingSetPair sets = binding_sets(character);
+    const std::int32_t bone_count = selected.skeleton->bones.size();
+    logger::info("SCOPY ANIM instance graph={} char-bindingset=0x{:x}/{} setup-bindingset=0x{:x}/{} root-generator=0x{:x} root-clone=0x{:x} active-nodes={}",
+        selected.index,
+        reinterpret_cast<std::uintptr_t>(sets.character), sets.character ? sets.character->bindings.size() : 0,
+        reinterpret_cast<std::uintptr_t>(sets.setup), sets.setup ? sets.setup->bindings.size() : 0,
+        reinterpret_cast<std::uintptr_t>(behavior->rootGenerator.get()),
+        reinterpret_cast<std::uintptr_t>(behavior->rootGeneratorClone.get()),
+        behavior->activeNodes ? behavior->activeNodes->size() : 0);
+
+    // Which side of the graph each start point belongs to. The template root is what HKX6-12 walked;
+    // the clone root and the active-node list are what the engine updates.
+    logger::info("SCOPY ANIM instance roots generator={} clone={}",
+        is_clone_instance(behavior->rootGenerator.get()) ? "kClone" : "template",
+        is_clone_instance(behavior->rootGeneratorClone.get()) ? "kClone" : "template");
+
+    // Instance-side clip generators: the clone root, then every node the engine holds as active.
+    std::vector<const RE::hkbClipGenerator*> instances;
+    std::unordered_set<void const*> pending;
+    std::unordered_map<std::string, size_t> clone_states;
+    auto consider = [&](void const* object)
+    {
+        if (!object || !readable(object, sizeof(RE::hkbNode)) || !looks_like_object(object))
+            return;
+        const auto* const node = static_cast<const RE::hkbNode*>(object);
+        const char* const state = clone_state_name(static_cast<std::uint8_t>(node->cloneState.get()));
+        ++clone_states[state];
+        if (classify(object) == GraphKind::ClipGenerator)
+            instances.push_back(static_cast<const RE::hkbClipGenerator*>(object));
+    };
+
+    // rootGeneratorClone is an hkRefVariant in this checkout, so it is read as a pointer rather than
+    // through the typed member.
+    const void* const clone_root = behavior->rootGeneratorClone.get();
+    if (clone_root)
+    {
+        pending.insert(clone_root);
+        consider(clone_root);
+    }
+    if (behavior->activeNodes)
+    {
+        for (const RE::hkbNodeInfo& info : *behavior->activeNodes)
+        {
+            if (info.nodeClone && pending.insert(info.nodeClone).second)
+                consider(info.nodeClone);
+        }
+    }
+
+    // One hop down the clone root so a clip nested in a state machine is still met. Bounded, vtable
+    // classified, and it never calls anything.
+    for (void const* const object : pending)
+    {
+        for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Container_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
+        {
+            const auto* const word_address = static_cast<const std::uint8_t*>(object) + offset;
+            if (!readable(word_address, sizeof(void*)))
+                break;
+            const void* const word = *reinterpret_cast<void* const*>(word_address);
+            if (!word || !looks_like_object(word) || !pending.insert(word).second)
+                continue;
+            consider(word);
+            if (pending.size() >= Max_Instance_Objects)
+                break;
+        }
+    }
+
+    std::string states;
+    for (const auto& entry : clone_states)
+    {
+        if (!states.empty())
+            states += ", ";
+        states += fmt::format("{}:{}", entry.first, entry.second);
+    }
+    logger::info("SCOPY ANIM instance objects={} clips={} clone-states='{}'",
+        pending.size(), instances.size(), states.empty() ? "-" : states);
+
+    if (instances.empty())
+    {
+        logger::info("SCOPY ANIM instance UNAVAILABLE reason=no-clip-on-the-instance-side");
+        return;
+    }
+
+    // Every instance clip whose name is the character's own standing idle, plus the first few others:
+    // the idle is the one the source is playing as we capture, so it is the one whose binding the
+    // engine has had to fill in.
+    size_t printed = 0;
+    bool found_live = false;
+    for (const RE::hkbClipGenerator* const generator : instances)
+    {
+        const std::string name = guarded_string(generator->animationName);
+        const bool idle = is_base_idle(base_name_of(name));
+        if (printed >= Max_Instance_Printed && !idle)
+            continue;
+        ++printed;
+
+        const std::int32_t index = static_cast<std::int32_t>(generator->animationBindingIndex);
+        const char* reason = "binding-null";
+        const RE::hkaAnimationBinding* binding = generator->binding;
+        if (!binding)
+        {
+            // OAR's fallback: the clip carries only an index, and the engine's own entry for that index
+            // is where the binding comes from (FakeClipGenerator.cpp:113-126).
+            if (RE::hkbAnimationBindingSet* const set = set_holding(sets, index))
+                if (const void* const element = set->bindings[index])
+                    binding = binding_at_offset_0x10(element);
+            if (!binding)
+                reason = "no-binding-in-set";
+        }
+
+        const BindingReading reading = read_binding(binding, bone_count);
+        if (reading.valid)
+            found_live = true;
+        logger::info("SCOPY ANIM instance clip name='{}' idx={} clone-state={} binding=0x{:x} control=0x{:x} bind-src={} tracks={} reason={}",
+            name, index, clone_state_name(static_cast<std::uint8_t>(generator->cloneState.get())),
+            reinterpret_cast<std::uintptr_t>(binding), reinterpret_cast<std::uintptr_t>(generator->animationControl.get()),
+            generator->binding ? "clip" : "bindingset", reading.tracks,
+            reading.valid ? "valid" : std::string_view(reason) == "binding-null" ? reading.reason : reason);
+    }
+
+    // The entry the engine itself resolves for the standing idle's index, dumped at OAR's 0x28 spacing
+    // so the layout can be confirmed from a live sample rather than inferred.
+    std::int32_t idle_index = -1;
+    for (const RE::hkbClipGenerator* const generator : instances)
+    {
+        if (is_base_idle(base_name_of(guarded_string(generator->animationName))))
+        {
+            idle_index = static_cast<std::int32_t>(generator->animationBindingIndex);
+            break;
+        }
+    }
+    if (idle_index >= 0)
+    {
+        if (RE::hkbAnimationBindingSet* const set = set_holding(sets, idle_index))
+        {
+            const void* const element = set->bindings[idle_index];
+            const RE::hkaAnimationBinding* const binding = binding_at_offset_0x10(element);
+            const BindingReading reading = read_binding(binding, bone_count);
+            logger::info("SCOPY ANIM instance element idx={} at=0x{:x} set={} binding@0x10=0x{:x} valid={} reason={}",
+                idle_index, reinterpret_cast<std::uintptr_t>(element),
+                set == sets.character ? "character" : "setup",
+                reinterpret_cast<std::uintptr_t>(binding), reading.valid, reading.reason);
+
+            if (element && readable(element, Element_Dump_Bytes))
+            {
+                const auto* const words = static_cast<const std::uint64_t*>(element);
+                std::string bytes;
+                for (size_t word = 0; word < Element_Dump_Bytes / sizeof(std::uint64_t); ++word)
+                    bytes += fmt::format("{}{:016x}", word ? " " : "", words[word]);
+                logger::info("SCOPY ANIM instance element qwords='{}'", bytes);
+            }
+        }
+    }
+
+    logger::info("SCOPY ANIM instance verdict={}", found_live ? "binding-resolved" : "no-live-binding");
 }
 
 size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root)

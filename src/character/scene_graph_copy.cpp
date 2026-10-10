@@ -1059,6 +1059,11 @@ void SceneGraphCopy::capture()
     // binding-set layouts survives a structural check, so the round after this can name the clip it
     // samples instead of guessing an index.
     report_animation_catalogue(*player, *source, *root);
+    // S2/HKX13: whether a binding resolves on the instance side of the graph. The HKX6-12 walks all
+    // started at rootGenerator, which the archived dumps show is a template (cloneState=kTemplate);
+    // the engine fills binding and animationControl on the per-character clones during Activate and
+    // Update. This stage looks there before anything is declared unreachable.
+    report_animation_instance(*player, *source, *root);
     // S2/HKX6: the animation the engine can hand over for this character, resolved onto the copy and
     // compared against the pose the engine itself holds. F2 then plays it from the studio's clock,
     // because the game is paused and nothing else advances a pose.
