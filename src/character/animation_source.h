@@ -319,6 +319,15 @@ bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
 // The live control time of one running clip, guarded; -1 when the control is gone or unreadable.
 [[nodiscard]] float live_clip_time(RE::hkbClipGenerator const* generator);
 
+// HKX39: one same-phase numeric A/B of the resolved clip against the puppet's own per-bone state
+// (hkbCharacter::poseLocal by bone name - the HKX28 protocol at a single phase, the live control
+// time). This is PRD 0.7 section 6.4's tier-2 verification for the identity tier: it measures,
+// per switch and after the blend has settled, whether the identity mapping reproduces what the
+// graph is actually playing. Returns the log line; "match" holds when enough bones compare and
+// the worst rotation stays within the HKX28 bar (1 degree).
+[[nodiscard]] std::string measure_clip_against_puppet(RE::TESObjectREFR& source,
+    RE::hkbClipGenerator const* generator, ClipPlayback const& playback, std::string const& mapping);
+
 // The registered animations the player's own clips are running, split into the only two classes the panel
 // needs: the standing idles it plays while the character is doing nothing else, and the equip animations
 // it plays when equipment changes and then returns from. Running, combat and jumping are deliberately not

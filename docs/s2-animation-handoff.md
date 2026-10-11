@@ -143,6 +143,17 @@ poseLocal 覆盖差（39 vs 109）按骨名桥接、A/B 走查限频。构建身
 `CharacterPanel-scopy-HKX38-d14af9a166+dirty-cl94faaed0c6-20261011T153149Z`，DLL SHA-256
 `a24605e3…` 已部署校验；单测 1/1。判读表见
 [调度器 v1 测试单](scene-copy-scheduler-v1-test-2026-10-11.md)。
+
+**HKX39 已打包待上机（2026-10-11 深夜）= 调度器 v2：恒等档体检 + 装备杠杆 + 泊位钉**。四项：
+①`measure_clip_against_puppet`（animation_source）——每次切换后 60 帧做单相同相 A/B（clip 采样
+vs 傀儡 poseLocal 按骨名桥接，HKX28 单相版），`SCOPY PUPPET ab … verdict=match|none`（匹配 =
+≥24 骨且 max-rot ≤1°），恒等映射从此每个替换件都被常驻体检；②equip 第二杠杆——暂停期逐
+tick 轮询玩家双手，变化即镜像（HKX37 配方）+ 同 tick `DrawWeaponMagicHands(draw|sheathe)`，
+反应行 `SCOPY PUPPET equip … pushed=…`；③泊位时 `SetMotionType(kFixed)`（HKX38 的泊深下坠
+循环消除）；④F2 行改打真实驱动链。构建身份
+`CharacterPanel-scopy-HKX39-96e2a5fc3b+dirty-cl94faaed0c6-20261011T160133Z`，DLL SHA-256
+`d8694577…` 已部署校验；单测 1/1。判读表与路线含义见
+[调度器 v2 测试单](scene-copy-scheduler-v2-test-2026-10-11.md)。
 **HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
 面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
 跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——

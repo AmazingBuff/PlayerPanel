@@ -3226,6 +3226,105 @@ float live_clip_time(RE::hkbClipGenerator const* generator)
     return std::isfinite(time) ? time : -1.0f;
 }
 
+namespace
+{
+    float quat_angle_degrees(float const* first, float const* second)
+    {
+        const float dot = std::abs(first[0] * second[0] + first[1] * second[1] + first[2] * second[2] + first[3] * second[3]);
+        return 2.0f * std::acos(std::clamp(dot, 0.0f, 1.0f)) * 57.2957795131f;
+    }
+}
+
+std::string measure_clip_against_puppet(RE::TESObjectREFR& source, RE::hkbClipGenerator const* generator,
+    ClipPlayback const& playback, std::string const& mapping)
+{
+    if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
+        return "SCOPY PUPPET ab UNAVAILABLE reason=generator-lost";
+    const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
+    if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
+        return "SCOPY PUPPET ab UNAVAILABLE reason=no-live-control";
+    if (!playback.valid() || !animation_data_is_present(playback.animation, static_cast<std::int32_t>(playback.tracks.size())))
+        return "SCOPY PUPPET ab UNAVAILABLE reason=playback-invalid";
+
+    // The puppet's own per-bone state, indexed by bone name: poseLocal follows boneNodes order
+    // (the HKX2 protocol), and the names come from the graph's own bone table.
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+    const RE::hkaSkeleton* skeleton = nullptr;
+    const RE::hkQsTransform* pose = nullptr;
+    std::int32_t pose_count = 0;
+    std::unordered_map<std::string_view, const RE::hkQsTransform*> pose_by_name;
+    if (source.GetAnimationGraphManager(manager) && manager)
+    {
+        for (const RE::BSTSmartPointer<RE::BShkbAnimationGraph>& holder : manager->graphs)
+        {
+            RE::BShkbAnimationGraph* const graph = holder.get();
+            if (!graph || !graph->holder || !graph->rootNode)
+                continue;
+            if (static_cast<const RE::TESObjectREFR*>(graph->holder) != &source)
+                continue;
+            skeleton = graph->characterInstance.setup.get()
+                ? graph->characterInstance.setup->animationSkeleton.get()
+                : nullptr;
+            pose = graph->characterInstance.poseLocal;
+            pose_count = graph->characterInstance.numPoseLocal;
+            if (pose && pose_count > 0 &&
+                readable(pose, static_cast<std::size_t>(pose_count) * sizeof(RE::hkQsTransform)))
+            {
+                const std::int32_t named = std::min<std::int32_t>(pose_count, static_cast<std::int32_t>(graph->boneNodes.size()));
+                pose_by_name.reserve(static_cast<std::size_t>(named));
+                for (std::int32_t i = 0; i < named; ++i)
+                {
+                    RE::NiNode* const node = graph->boneNodes[static_cast<std::uint32_t>(i)].node;
+                    const char* const name = node ? node->name.c_str() : nullptr;
+                    if (name)
+                        pose_by_name.emplace(name, pose + i);
+                }
+            }
+            break;
+        }
+    }
+    if (!skeleton || skeleton->bones.empty() || pose_by_name.empty())
+        return "SCOPY PUPPET ab UNAVAILABLE reason=no-pose-state";
+
+    // Sample the clip once, at the phase the graph is playing right now.
+    const std::uint32_t sample_count = playback.tracks.empty() ? 0 : static_cast<std::uint32_t>(playback.tracks.back()) + 1;
+    if (sample_count == 0)
+        return "SCOPY PUPPET ab UNAVAILABLE reason=no-tracks";
+    std::vector<RE::hkQsTransform> sampled(sample_count);
+    sample_tracks(*playback.animation, control->localTime, sample_count, sampled.data(), nullptr, 0);
+
+    // Compare bone by bone: the clip's track for a skeleton bone versus the graph's pose for the
+    // bone of the same name. Bones the pose state does not name are counted out, not failed.
+    std::uint32_t compared = 0;
+    std::uint32_t unnamed = 0;
+    float worst_rotation = 0.0f;
+    float worst_position = 0.0f;
+    for (size_t i = 0; i < playback.tracks.size(); ++i)
+    {
+        if (static_cast<std::uint32_t>(playback.tracks[i]) >= static_cast<std::uint32_t>(skeleton->bones.size()))
+            continue;
+        const char* const bone_name = skeleton->bones[playback.tracks[i]].name.c_str();
+        const auto found = bone_name ? pose_by_name.find(bone_name) : pose_by_name.end();
+        if (found == pose_by_name.end())
+        {
+            ++unnamed;
+            continue;
+        }
+        const PoseSample clip_pose = read_pose(sampled[playback.tracks[i]]);
+        const PoseSample graph_pose = read_pose(*found->second);
+        worst_rotation = std::max(worst_rotation, quat_angle_degrees(clip_pose.quaternion, graph_pose.quaternion));
+        const float dx = clip_pose.position[0] - graph_pose.position[0];
+        const float dy = clip_pose.position[1] - graph_pose.position[1];
+        const float dz = clip_pose.position[2] - graph_pose.position[2];
+        worst_position = std::max(worst_position, std::sqrt(dx * dx + dy * dy + dz * dz));
+        ++compared;
+    }
+    const bool match = compared >= 24 && worst_rotation <= 1.0f;
+    return fmt::format("SCOPY PUPPET ab clip='{}' mapping={} bones={}/{} unnamed={} max-rot={:.2f}deg max-pos={:.3f}u weight={:.2f} t={:.2f}s verdict={}",
+        playback.name, mapping, compared, playback.tracks.size(), unnamed, worst_rotation, worst_position,
+        control->weight, control->localTime, match ? "match" : "none");
+}
+
 void ClipPlayer::reset()
 {
     m_clip = ClipPlayback{};

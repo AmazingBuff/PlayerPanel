@@ -8,6 +8,7 @@
 #include "RE/B/BSAnimationGraphManager.h"
 #include "RE/B/BSFadeNode.h"
 #include "RE/I/IAnimationGraphManagerHolder.h"
+#include "RE/A/ActorEquipManager.h"
 #include "RE/P/PlayerCharacter.h"
 #include "RE/T/TESObjectREFR.h"
 
@@ -32,6 +33,9 @@ namespace
     // on this cadence while the world runs. During the pause the world does not move anyway.
     constexpr std::uint32_t Repark_Frames = 60;
     constexpr float Max_Manual_Step = 0.1f;
+    // The blend after a clip switch needs a beat before the A/B means anything; ~1 second of
+    // manual ticks is well past it.
+    constexpr std::uint32_t Ab_Settle_Ticks = 60;
     // Digest cadence while the manual tick owns the graph: one line per ~half second.
     constexpr std::uint32_t Digest_Ticks = 30;
 
@@ -151,6 +155,19 @@ void PuppetDriver::tick(bool paused)
     update.refr = puppet;
     puppet->UpdateAnimationGraphManager(update);
     ++m_manual_ticks;
+
+    // HKX39 equip lever: the mirror and the draw/sheathe push ride the same tick that advances
+    // the graph, so the panel's equip reaction happens inside the pause instead of waiting for
+    // the engine update that never comes (the HKX37 finding).
+    poll_equipment(*puppet);
+
+    // HKX39 tier-2 A/B: each switch schedules it once the blend has had time to settle.
+    if (m_ab_pending && m_manual_ticks >= m_ab_deadline && m_current_generator)
+    {
+        m_ab_pending = false;
+        logger::info("{}", measure_clip_against_puppet(*puppet, m_current_generator, m_playback, m_mapping));
+    }
+
     if (m_manual_ticks % Digest_Ticks == 0)
     {
         std::vector<ActiveClipEntry> running;
@@ -212,6 +229,11 @@ void PuppetDriver::spawn()
     m_manual_ticks = 0;
     m_stall_frames = 0;
     m_stall_logged = false;
+    m_ab_pending = false;
+    m_ab_deadline = 0;
+    m_right_form = 0;
+    m_left_form = 0;
+    m_equip_reactions = 0;
     m_current_generator = nullptr;
     m_playback = ClipPlayback{};
     m_mapping.clear();
@@ -229,6 +251,10 @@ void PuppetDriver::park(char const* why)
         return;
     const RE::NiPoint3 here = player->GetPosition();
     puppet->SetPosition(RE::NiPoint3{ here.x, here.y, here.z + Park_Depth_Offset }, false);
+    // HKX39: pin the physics too - at that depth there is no ground, and the engine phase made
+    // the graph cycle jump-fall-land forever (the HKX38 log). A fixed motion stops the fall
+    // without touching the behaviour graph, so OAR keeps evaluating a standing actor.
+    puppet->SetMotionType(RE::hkpMotion::MotionType::kFixed, false);
     restore_fade(puppet->Get3D(false));
     logger::info("SCOPY PUPPET parked reason={} offset={:.0f} (invisible; the engine may idle the graph there - panel time is ours)", why, Park_Depth_Offset);
 }
@@ -249,6 +275,47 @@ void PuppetDriver::release(char const* reason)
     m_manual_ticks = 0;
     m_stall_frames = 0;
     m_stall_logged = false;
+}
+
+void PuppetDriver::poll_equipment(RE::Actor& puppet)
+{
+    RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
+    if (!player)
+        return;
+    const RE::InventoryEntryData* const hands[2] = { player->GetEquippedEntryData(false), player->GetEquippedEntryData(true) };
+    const std::uint32_t forms[2] = {
+        hands[0] && hands[0]->object ? hands[0]->object->GetFormID() : 0,
+        hands[1] && hands[1]->object ? hands[1]->object->GetFormID() : 0,
+    };
+    if (forms[0] == m_right_form && forms[1] == m_left_form)
+        return;
+    const bool right_changed = forms[0] != m_right_form;
+    const bool left_changed = forms[1] != m_left_form;
+    m_right_form = forms[0];
+    m_left_form = forms[1];
+
+    RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();
+    if (!equip_manager)
+        return;
+    // Mirror the changed hands onto the puppet (the recipe the HKX37 probe validated), then push
+    // the graph's draw/sheathe state in the same tick - the lever the pause never delivers.
+    for (int hand = 0; hand < 2; ++hand)
+    {
+        if ((hand == 0 ? !right_changed : !left_changed) || !hands[hand] || !hands[hand]->object)
+            continue;
+        RE::TESBoundObject* const object = hands[hand]->object;
+        puppet.AddObjectToContainer(object, nullptr, 1, nullptr);
+        equip_manager->EquipObject(&puppet, object, nullptr, 1, nullptr, false, true, false, true);
+    }
+    const char* pushed = "none";
+    if (right_changed || left_changed)
+    {
+        const bool any_hand_filled = forms[0] != 0 || forms[1] != 0;
+        puppet.DrawWeaponMagicHands(any_hand_filled);
+        pushed = any_hand_filled ? "draw" : "sheathe";
+        ++m_equip_reactions;
+    }
+    logger::info("SCOPY PUPPET equip right={:08x} left={:08x} pushed={} reactions={}", forms[0], forms[1], pushed, m_equip_reactions);
 }
 
 std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
@@ -276,6 +343,8 @@ std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
         m_current_generator = pick;
         m_stall_frames = 0;
         m_stall_logged = false;
+        m_ab_pending = true;
+        m_ab_deadline = m_manual_ticks + Ab_Settle_Ticks;
         logger::info("SCOPY PUPPET driver clip='{}' mapping={} coverage={}", m_playback.name, m_mapping, coverage);
     }
 

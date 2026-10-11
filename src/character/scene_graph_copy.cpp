@@ -542,8 +542,7 @@ void SceneGraphCopy::toggle_idle()
 {
     m_idle.set_enabled(!m_idle.enabled());
     logger::info("SCOPY IDLE {} (F2); driver={}; the next frame's base placement restores the captured pose first, so nothing accumulates",
-        m_idle.enabled() ? "enabled" : "disabled",
-        m_clip.ready() ? m_clip.name() : std::string("procedural-idle"));
+        m_idle.enabled() ? "enabled" : "disabled", animation_driver());
 }
 
 std::string SceneGraphCopy::animation_driver() const

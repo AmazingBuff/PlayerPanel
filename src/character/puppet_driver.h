@@ -58,6 +58,9 @@ private:
 
     void spawn();
     void park(char const* why);
+    // HKX39: mirrors the player's hand equipment onto the puppet and pushes the draw/sheathe
+    // graph state in the same paused tick.
+    void poll_equipment(RE::Actor& puppet);
 
     std::atomic_bool m_spawn_requested{ false };
     std::atomic_bool m_release_requested{ false };
@@ -68,6 +71,15 @@ private:
     std::uint32_t m_manual_ticks = 0;
     std::uint32_t m_stall_frames = 0;
     bool m_stall_logged = false;
+    // HKX39: the tier-2 A/B fires on each switch, delayed past the blend's settle window.
+    bool m_ab_pending = false;
+    std::uint32_t m_ab_deadline = 0;
+    // HKX39: the equip lever. The player's hands are polled while the panel is open; a change is
+    // mirrored onto the puppet and the draw/sheathe graph state is pushed in the same tick, so
+    // the panel's equip reaction does not wait for an engine update the pause never delivers.
+    std::uint32_t m_right_form = 0;
+    std::uint32_t m_left_form = 0;
+    std::uint32_t m_equip_reactions = 0;
     std::chrono::steady_clock::time_point m_last_tick{};
     // The clip currently written into the copy: the full resolution is repeated only when the
     // graph's strongest control moves to another clip.
