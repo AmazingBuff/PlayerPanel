@@ -1,4 +1,4 @@
-# HKX35 测试单（2026-10-11，修复 HKX34 实测的切换卡顿残留）
+# HKX35 测试单（2026-10-11，修复 HKX34 实测的切换卡顿残留）——**已实测通过（2026-10-11 晚）**
 
 - 构建身份：`CharacterPanel-scopy-HKX35-9bbfcf3ccc+dirty-cl94faaed0c6-20261011T084556Z`
   （基线 = HKX34 提交 `9bbfcf3`，其上仅采样器三处改动，见下文）。
@@ -6,6 +6,25 @@
   **DLL 与 PDB 均已从最终 zip 部署到 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` 并校验一致**。
 - 单测 1/1（`snapshot_transform`）。
 - 上一轮判读（HKX34）：[HKX34 判读](#hkx34-判读2026-10-11-晚间)。
+
+## HKX35 判读（已实测，2026-10-11 晚，用户确认）
+
+日志：[CharacterPanel-hkx35-cost-model-20261011.log](diagnostics/CharacterPanel-hkx35-cost-model-20261011.log)。
+
+| # | 检查 | 结果 |
+| --- | --- | --- |
+| 1 | 切换卡顿 | **通过**（用户确认"现在不会卡顿了"）——成本模型修复成立 |
+| 2 | 面板人物 | **通过**（照常显示）；`Clone draw OM check: bound=studio match=true`（日志 ：411） |
+| 3 | 池子行 | **通过且首次采到完整分布**：`pool at-capture samples=34 idle=5 'idx=550:6, idx=12220:4, idx=12224:1, idx=11943:1, idx=11617:1' equip=4 'idx=11782:2, idx=528:2, idx=11766:1, idx=526:1' other-clips=141`（日志 ：206）——**多动作循环工作包的输入数据已经到手** |
+| 4 | 零回归 | **通过**（零 `[E]`；仅两条已知的灯光 ledger 收敛 `[W]`） |
+
+**本轮顺带确认的事实**：HKX33 的限速遍历会漏采（此前池子 idle=0），activeNodes 连续读取采到了
+5 个 idle 索引——采样器终态 = activeNodes 发现链 + 按指针名字缓存，两类兼得。
+**已知开放项（归多动作工作包，不阻塞本轮）**：本轮驱动 `animation-driver=engine-loaded`
+（idx=550，25.02s OAR 变体）但 `ground-truth verdict=none best=7.4769`（日志 ：276-278）——
+恒等映射对该变体未通过 A/B，视觉无碍但**不可作为"映射正确"的证据**；驱动选择 + 映射验证
+正是下一步要做的。
+
 
 ## HKX34 判读（2026-10-11 晚间）
 

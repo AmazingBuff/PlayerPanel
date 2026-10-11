@@ -62,8 +62,12 @@ VirtualQuery），叠加身份判定每条目 2 次查询，每 0.75s 采样 ≈
 ①名字/类别按 clip 指针缓存（首见读一次，停跑扫除）；②`clip_generator_is_live` 改 8 字节+
 精确虚表先行（非 clip 条目 1 次查询）；③`guarded_string` 改 16 字节窗口（语义不变，查询 ÷16）。
 稳态 ≈0.05ms/0.75s。包 `dist/CharacterPanel-scopy-HKX35-1.2.1.zip`，DLL `678b6936…` 已部署校验。
-若切换卡顿仍可感知：下一轮发 `observe_idle_pool()` 整体关闭的诊断构建二分——还卡就是
-OAR/引擎自己的动画装载，与本插件无关。判读表见
+**HKX35 已实测（晚间，用户确认）**：切换卡顿消失✓、面板照常（OM check match=true）✓、零回归✓——
+采样器终态 = activeNodes 发现链 + 按指针名字缓存。**池子首次采到完整分布**（samples=34：
+idle=5 个索引含 MT_Idle 与 OAR 变体、equip=4 个）——多动作循环的输入数据到手。
+已知开放项：本轮驱动 `engine-loaded` 但 `ground-truth verdict=none`（恒等映射对该 OAR 变体未过 A/B，
+视觉无碍、不可当映射正确的证据）——驱动选择 + 映射验证归多动作工作包。若未来切换卡顿复现：
+发 `observe_idle_pool()` 整体关闭的诊断构建二分。判读表与日志见
 [HKX35 测试单](scene-graph-copy-next-test-2026-10-11.md)。
 
 **HKX18–HKX27（历史）**：由引擎装载游戏已注册的动作再取其数据。
@@ -617,8 +621,9 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
 - 当前产物：`dist/CharacterPanel-scopy-HKX35-1.2.1.zip`（基线 `9bbfcf3+dirty`，采样器三处改动见
   [HKX35 测试单](scene-graph-copy-next-test-2026-10-11.md)），身份
   `CharacterPanel-scopy-HKX35-9bbfcf3ccc+dirty-cl94faaed0c6-20261011T084556Z`，DLL SHA-256 `678b6936…`——
-  **DLL 与 PDB 均已从最终 zip 部署并校验一致**；单测 1/1。**待上机**（判读表同上）。
-  已实测：HKX34（面板修复成立，判读见 §0）；HKX33（卡顿限速成立、面板黑屏暴露）。
+  **DLL 与 PDB 均已从最终 zip 部署并校验一致**；单测 1/1。**已实测全绿**（判读见 §0 HKX35 段）。
+  已实测：HKX34（面板修复成立）；HKX33（限速成立、面板黑屏暴露）。
+  日志已归档：[CharacterPanel-hkx35-cost-model-20261011.log](diagnostics/CharacterPanel-hkx35-cost-model-20261011.log)。
   更早轮次（HKX1–HKX13 时代）的历史留档：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
   `CharacterPanel-scopy-HKX12-4165d734ea-cl94faaed0c6-20261009T184849Z`，DLL SHA-256 `25d98ef7…`——**已实测**
   （判读见 §5 HKX12 节；实际部署的是提交前中间构建 `2e22e8f+dirty`，代码一致）。**已实测的十二轮**：HKX12（[证据](s2-hkx12-hashed-evidence-2026-10-10.md)、
