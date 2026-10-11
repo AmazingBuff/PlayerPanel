@@ -762,18 +762,37 @@ namespace
         return static_cast<const RE::hkaAnimationBinding*>(candidate);
     }
 
-    // A string we are willing to print: read one byte at a time so an unterminated or non-textual
-    // pointer cannot run away, and bounded either way.
+    // A string we are willing to print: read through one guarded window at a time so an
+    // unterminated or non-textual pointer cannot run away, and bounded either way. The window
+    // is what keeps the page queries affordable at a per-sample call site — one query per
+    // String_Guard_Window bytes instead of one per byte — with the same guarantee that no
+    // scan ever touches an address the query did not cover.
+    constexpr size_t String_Guard_Window = 16;
     std::string guarded_string(RE::hkStringPtr const& value)
     {
         const char* const text = value.c_str();
-        if (!text || !readable(text, 1))
+        if (!text)
             return "-";
         std::string out;
+        size_t verified = 0;
         for (size_t i = 0; i < Max_String_Read; ++i)
         {
-            if (!readable(text + i, 1))
-                return "-";
+            if (i >= verified)
+            {
+                const size_t span = std::min(String_Guard_Window, Max_String_Read - i);
+                if (readable(text + i, span))
+                {
+                    verified = i + span;
+                }
+                else if (readable(text + i, 1))
+                {
+                    verified = i + 1;  // a string can legitimately end at a page edge; keep going byte-wise
+                }
+                else
+                {
+                    return "-";
+                }
+            }
             const char character = text[i];
             if (character == '\0')
                 return out.empty() ? "-" : out;
@@ -2910,8 +2929,14 @@ ClipClass classify_clip_name(std::string_view file_name)
 
 bool clip_generator_is_live(void const* object)
 {
-    return object && readable(object, sizeof(RE::hkbClipGenerator)) && looks_like_object(object) &&
-           *static_cast<const std::uintptr_t*>(object) == clip_generator_vtable();
+    // One query for the common rejection first: almost every node offered to this check is not
+    // a clip generator, and the exact vtable compare needs only the first word readable — it is
+    // also strictly stronger than a "looks like an object" segment check. The full-struct
+    // readability that the field reads rely on is paid only by the few survivors.
+    if (!object || !readable(object, sizeof(void*)) ||
+        *static_cast<const std::uintptr_t*>(object) != clip_generator_vtable())
+        return false;
+    return readable(object, sizeof(RE::hkbClipGenerator));
 }
 
 void tally_clip_generator(RE::hkbClipGenerator const* generator, ClipClass kind, ActiveAnimationIndices& out)
@@ -2942,8 +2967,25 @@ void tally_clip_generator(RE::hkbClipGenerator const* generator, ClipClass kind,
 // and removes it on Deactivate (HKX13 reached a live, playing clip exactly this way), so the list is
 // the definition of "currently running" and an animation switch is just the next snapshot listing
 // different nodes - there is no discovery step to pay for, and no window scan to trigger.
+//
+// This runs inside ordinary gameplay, so the HKX32/33 cost model governs it: a name is read exactly
+// once per clip (it cannot change while the pointer is alive) and the identity check is one page
+// query for the non-clip entries that make up almost the whole list. HKX34 paid a name read for every
+// running clip on every sample - OAR's replacement paths are over a hundred characters - and that was
+// the stutter the player felt on every action change, the exact cost "stop reading names every
+// sample" had already removed once.
 void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out)
 {
+    struct ClipIdentity
+    {
+        ClipClass kind;
+        std::string name;
+    };
+    // Mutated on the render thread only (process_requests is the one caller). A clip that stops
+    // running is swept below, so a session of switching cannot grow it without bound, and a freed
+    // pointer that gets recycled simply re-pays one fresh name read.
+    static std::unordered_map<const RE::hkbClipGenerator*, ClipIdentity> cache;
+
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (!source.GetAnimationGraphManager(manager) || !manager)
         return;
@@ -2966,9 +3008,27 @@ void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<Acti
             if (!clip_generator_is_live(node))
                 continue;
             const auto* const generator = static_cast<const RE::hkbClipGenerator*>(node);
-            const std::string name = guarded_string(generator->animationName);
-            out.push_back({ generator, classify_clip_name(base_name_of(name)), name });
+            auto known = cache.find(generator);
+            if (known == cache.end())
+            {
+                const std::string name = guarded_string(generator->animationName);
+                known = cache.emplace(generator, ClipIdentity{ classify_clip_name(base_name_of(name)), name }).first;
+            }
+            out.push_back({ generator, known->second.kind, known->second.name });
         }
+    }
+
+    if (!out.empty())
+    {
+        std::unordered_set<const RE::hkbClipGenerator*> running;
+        running.reserve(out.size());
+        for (const ActiveClipEntry& entry : out)
+            running.insert(entry.generator);
+        std::erase_if(cache, [&](const auto& entry) { return running.find(entry.first) == running.end(); });
+    }
+    else
+    {
+        cache.clear();
     }
 }
 

@@ -51,6 +51,20 @@ HKX28 实测：同相位 `max-pos-delta=0.000`、`max-rot-delta=0.15°`、**37/3
 ②`draw()` 一次性 **OM 绑定回读**（`Clone draw OM check: … match=true|false`，路由裁决仪器）；
 ③activeNodes 池子采样首测。测试单与完整判读链见
 [HKX34 测试单](scene-graph-copy-next-test-2026-10-11.md)。
+**HKX34 已实测（晚间）**：面板人物正常渲染✓、物品卡垃圾消失✓、OM check match=true✓——
+按类剪枝 + 路由修复成立；**残留"动作切换时些许卡顿"**。
+
+**HKX35（当前待上机）= 修采样器把逐采样名字读带回来的回归**：HKX34 的 activeNodes 改写让
+每个运行中 clip 每次采样都调 `guarded_string`（当时逐字节查页，OAR 120 字符路径 ≈120 次
+VirtualQuery），叠加身份判定每条目 2 次查询，每 0.75s 采样 ≈1000–1600 次系统调用
+（≈0.2–0.8ms 尖峰），切换后首样最贵（新旧 clip 重叠 + 长路径首次入缓存）——HKX33 的
+"Stop reading names every sample" 被退回，故"些许"。HKX35 三处改动（均在 `animation_source.cpp`）：
+①名字/类别按 clip 指针缓存（首见读一次，停跑扫除）；②`clip_generator_is_live` 改 8 字节+
+精确虚表先行（非 clip 条目 1 次查询）；③`guarded_string` 改 16 字节窗口（语义不变，查询 ÷16）。
+稳态 ≈0.05ms/0.75s。包 `dist/CharacterPanel-scopy-HKX35-1.2.1.zip`，DLL `678b6936…` 已部署校验。
+若切换卡顿仍可感知：下一轮发 `observe_idle_pool()` 整体关闭的诊断构建二分——还卡就是
+OAR/引擎自己的动画装载，与本插件无关。判读表见
+[HKX35 测试单](scene-graph-copy-next-test-2026-10-11.md)。
 
 **HKX18–HKX27（历史）**：由引擎装载游戏已注册的动作再取其数据。
 用户澄清的原则（已记为产品要求）：**面板动作不必与游戏角色当前在播的一致，但必须是原版或 OAR 注册的动作**，
@@ -600,11 +614,11 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物：`dist/CharacterPanel-scopy-HKX34-1.2.1.zip`（基线 `99696da5b2+dirty`，三处改动见
-  [HKX34 测试单](scene-graph-copy-next-test-2026-10-11.md)），身份
-  `CharacterPanel-scopy-HKX34-99696da5b2+dirty-cl94faaed0c6-20261011T082733Z`，DLL SHA-256 `bacdd76e…`——
+- 当前产物：`dist/CharacterPanel-scopy-HKX35-1.2.1.zip`（基线 `9bbfcf3+dirty`，采样器三处改动见
+  [HKX35 测试单](scene-graph-copy-next-test-2026-10-11.md)），身份
+  `CharacterPanel-scopy-HKX35-9bbfcf3ccc+dirty-cl94faaed0c6-20261011T084556Z`，DLL SHA-256 `678b6936…`——
   **DLL 与 PDB 均已从最终 zip 部署并校验一致**；单测 1/1。**待上机**（判读表同上）。
-  已实测的前一轮：`dist/CharacterPanel-scopy-HKX33-1.2.1.zip`（判读见 §0 HKX33 段）。
+  已实测：HKX34（面板修复成立，判读见 §0）；HKX33（卡顿限速成立、面板黑屏暴露）。
   更早轮次（HKX1–HKX13 时代）的历史留档：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
   `CharacterPanel-scopy-HKX12-4165d734ea-cl94faaed0c6-20261009T184849Z`，DLL SHA-256 `25d98ef7…`——**已实测**
   （判读见 §5 HKX12 节；实际部署的是提交前中间构建 `2e22e8f+dirty`，代码一致）。**已实测的十二轮**：HKX12（[证据](s2-hkx12-hashed-evidence-2026-10-10.md)、
