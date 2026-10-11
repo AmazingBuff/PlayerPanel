@@ -91,6 +91,23 @@ per-base-clip 语义，池子 = "OAR 对 idle/equip 状态的选择历史"，与
 公开 API 无按需求值入口 + 替代路全部评估），形态 = 纯增量查询接口 + 面板探测式共存。
 fork 会话入口：[oar-fork-handoff.md](oar-fork-handoff.md)。
 
+**HKX36 已实测通过（2026-10-11 晚）= H05 隔离的仪器化证据成立**（遗留队列第 2 条，用户指定先做）：
+新模块 `src/character/isolation_watch.{h,cpp}`——暂停面板会话内、每个面板操作（F7/F8/F3/F2/F4）
+pre/post 各做一次**只读普查**（O 第三人称图节点集合+local/world/bound、`poseLocal` 摘要、O 参照
+位置朝向、附近 NPC 的位置朝向/标志/3D 根世界，全部页校验+句柄重解析），首次普查 = 基线，每普查
+输出窗口与全会话两份判读（阈值沿用 SOURCE-DIFF：loose 1e-3），会话在关面板/解除暂停/读档边界
+以 `SCOPY ISOLATION end … verdict=CLEAN|DRIFT|INCOMPLETE` 收口。**实测：7 会话/64 操作/128 普查，
+O 图 local、引擎姿态（116 骨 poseLocal）、O 参照与全部受监视 NPC 逐位冻结，全部操作窗口 CLEAN、
+F4 释放 4 行 CLEAN、零崩溃——H05 从"没崩溃"升级为数值判据并成立**。唯一 DRIFT 族 = 引擎侧
+SuperSprayBreath 粒子 ×49 节点 world 恒定 0.25u 自身节拍（五条证据归因引擎，与面板无关；
+"暂停期粒子系统仍走自己的更新"是本轮新确证的引擎事实）。后续小修（不阻塞）：普查按类剪除
+粒子节点可得零 DRIFT 报告。判读全表见
+[H05 测试单](scene-copy-h05-isolation-test-2026-10-11.md)、
+日志 [CharacterPanel-hkx36-isolation-20261011.log](diagnostics/CharacterPanel-hkx36-isolation-20261011.log)。
+构建身份 `CharacterPanel-scopy-HKX36-34b67816ad+dirty-cl94faaed0c6-20261011T140501Z`，DLL SHA-256
+`f9251957…` 已部署校验；单测 1/1。实现与判读均已提交。**遗留队列重排：多动作循环调度器
+（第 1 优先，设计已拍板）→ S1 安全回收 → OAR fork（另会话）。**
+
 **HKX18–HKX27（历史）**：由引擎装载游戏已注册的动作再取其数据。
 用户澄清的原则（已记为产品要求）：**面板动作不必与游戏角色当前在播的一致，但必须是原版或 OAR 注册的动作**，
 不是我们额外引入的资源。流程固定为：命名索引 → 引擎装载 → 从已装载存储取数据 → 作用于面板。
