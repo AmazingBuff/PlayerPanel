@@ -108,18 +108,26 @@ SuperSprayBreath 粒子 ×49 节点 world 恒定 0.25u 自身节拍（五条证�
 `f9251957…` 已部署校验；单测 1/1。实现与判读均已提交。**遗留队列重排：多动作循环调度器
 （第 1 优先，设计已拍板）→ S1 安全回收 → OAR fork（另会话）。**
 
-**HKX37 已打包待上机（2026-10-11 深夜）= 傀儡 Actor 可行性探针（用户拍板的新调度路线）**：
-用户方案 = 面板显示仍是场景图副本直绘（一行不改），但动画**数据源**换成引擎真实 tick 的
-傀儡 Actor（玩家副本）——OAR 对傀儡实时求值，面板采样 OAR 的实际选择。相比池子回放
-（历史决策）这是实时的；相比 OAR fork 不需要改 OAR 本体，且状态镜像（装备/法术/性别）可
-以吸收手部 idle 分类器缺口。`src/character/puppet_probe.{h,cpp}`：F6 五阶段机（出生 v6.70
-配方→暂停期手动 `UpdateAnimationGraphManager`（CLib 全类型在册）→装备镜像→HKX28 链数值
-A/B 参数化到傀儡→SetDelete 清理），探针构建专用（F6 与旧摆动探针解绑）。**生死判据 = 问 2
-（暂停期手动推图是否推进）+ 问 5（采样链在傀儡上 verdict=match）**；通过则 HKX38 工程轮
-（傀儡首选、池子兜底、探测式共存），问 2 红则回池子路线、fork 重新成为必要项。构建身份
-`CharacterPanel-scopy-HKX37-3b581ad8e1+dirty-cl94faaed0c6-20261011T144702Z`，DLL SHA-256
-`42351be7…` 已部署校验；单测 1/1。五问判读表见
-[傀儡探针测试单](scene-copy-puppet-probe-test-2026-10-11.md)。
+**HKX37 已实测通过（2026-10-11 深夜）= 傀儡 Actor 路线成立**（用户拍板的新调度路线，探针五问四绿）：
+新模块 `src/character/puppet_probe.{h,cpp}`，F6 五阶段机。**实测**：①出生成立（玩家副本
+form=ff000c77，引擎自己驱动其 idle，fade 钉死零可见）；②**生死判据绿——暂停期手动
+`UpdateAnimationGraphManager` 推进真 Actor 行为图 3300+ 帧实测成立**（t= 严格随我们的 dt 前进，
+跨索引切换不中断）；③OAR/图对傀儡实时出决策（clip 注册索引 12221→12224→12220 实时切换，
+与玩家池子已知索引吻合；OAR 替换是索引级、名字不变——名字形状探测如预期未命中）；④暂停期
+EquipObject 不触发一次性 equip clip（事件挂在引擎 actor 更新上，手动推图不泵动画事件）——但
+装备状态成立：解除暂停 2s 内图切 `IdleHHDRightEnter→IdleHHDRightIdle` 持物手部 idle 族，
+**手部 idle 分类器缺口被路线本身吸收**；产品轮第二杠杆 = 暂停期 SendAnimationEvent；⑤采样链
+机制全通（活 binding+活 control=HKX28 入场券、spline 99 轨、采样/真值扫描零崩溃）——
+`verdict=none max-rot=94.6deg` 与 HKX35 已知开放项同形（OAR 替换件空轨道表→恒等映射），
+**不是傀儡特有失败**，映射分级验证归多动作工作包；观测项：傀儡真值骨 39（玩家 109），HKX38
+按骨名桥接复核。清理未执行（第 5 按未按；ff-formID 不进存档、退出即消散，零残留风险）。
+判读全表见 [傀儡探针测试单](scene-copy-puppet-probe-test-2026-10-11.md)、
+日志 [CharacterPanel-hkx37-puppet-20261011.log](diagnostics/CharacterPanel-hkx37-puppet-20261011.log)。
+**下一工作包 = HKX38 工程轮**：傀儡生命周期产品化 → 调度器改为"采样傀儡当前运行集直驱显示
+副本"（idle 轮换交还给图，不再自建加权轮换）→ equip 第二杠杆 → 映射分级验证（PRD §6.4 修订）
+→ H05 仪表加傀儡白名单。构建身份 `CharacterPanel-scopy-HKX37-3b581ad8e1+dirty-cl94faaed0c6-20261011T144702Z`，
+DLL SHA-256 `42351be7…` 已部署校验；单测 1/1。**遗留队列再排：HKX38 傀儡调度器（第 1）→
+S1 安全回收 → OAR fork（傀儡成立后大概率不必立项）。**
 
 **HKX18–HKX27（历史）**：由引擎装载游戏已注册的动作再取其数据。
 用户澄清的原则（已记为产品要求）：**面板动作不必与游戏角色当前在播的一致，但必须是原版或 OAR 注册的动作**，
