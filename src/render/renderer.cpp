@@ -11,6 +11,7 @@
 
 #include "panel/panel.h"
 #include "character/character_manager.h"
+#include "character/puppet_probe.h"
 #include "character/scene_graph_copy.h"
 
 PLUGIN_NAMESPACE_BEGIN
@@ -67,6 +68,11 @@ namespace
                 const bool paused = !ui || ui->GameIsPaused();
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
                 SceneGraphCopy::instance().process_requests();
+#endif
+#if CHARACTER_PANEL_S2_PROBE
+                // The HKX37 puppet probe rides the same render bracket: F6 stages are consumed
+                // and the manual animation-graph tick happens here, frame-aligned with the panel.
+                PuppetProbe::instance().tick();
 #endif
 
                 // Host audit: menuObjects[0] is engine-managed and rebuilt

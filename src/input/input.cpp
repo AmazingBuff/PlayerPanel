@@ -4,6 +4,7 @@
 
 #include "input/input.h"
 
+#include "character/puppet_probe.h"
 #include "character/scene_graph_copy.h"
 
 #include <Windows.h>
@@ -59,9 +60,11 @@ namespace
                     SceneGraphCopy::instance().request(Command::e_idle_toggle);
 #if CHARACTER_PANEL_S2_PROBE
                 // Diagnostic build only: F6 is taken by another plugin in the usual setup, so the
-                // retired probe lives on an opt-in build rather than on the product's own key.
+                // probe lives on an opt-in build rather than on the product's own key. The HKX37
+                // round repurposed the key for the puppet stage machine; the retired S2 swing
+                // probe keeps its command enum value but has no binding.
                 else if (scan == MapVirtualKeyA(VK_F6, MAPVK_VK_TO_VSC))
-                    SceneGraphCopy::instance().request(Command::e_anim_probe);
+                    PuppetProbe::instance().request_advance();
 #endif
             }
 #endif
