@@ -175,6 +175,16 @@ poll_equipment 检测到玩家换装即重设隔离基线（HKX39 的 64 行合�
 `CharacterPanel-scopy-HKX40-c683faca89+dirty-cl94faaed0c6-20261011T161917Z`，DLL SHA-256
 `60ec0060…` 已部署校验；单测 1/1。**测试第一步 = 读档（还两轮欠账）**。判读表见
 [诊断轮测试单](scene-copy-diagnose-test-2026-10-12.md)。
+**HKX40 已实测（2026-10-12 凌晨）= 诊断定型，恒等档判死、换轨经验求解器**：①读档边界两轮
+欠账还清（released→born 零崩溃）；②`named=39` 全轮恒定——名字桥到达骨 = vanilla∩CBBE 名，
+桥健康，37/99 的可比面是固有形态；③**calm 分布系统性错位**（五族武器 idle 的 calm/compared
+= 62%/38%/43%/49%/46%，多数 <50%）→ 恒等映射对本机替换件整体失效；④equip 杠杆彻底实证：
+7 次换装全部 `pushed=draw`，**家族切换 3–4 秒内跟上**（1HM/2HW/2HM/Bow 全族轮遍）；⑤隔离再
+基线生效（`end reason=world-equipment`，[E] 64→2，剩余为已知粒子对）；⑥零崩溃。
+**HKX41 = 经验映射求解器**（设计已定型）：真值源换轴（傀儡 3D 节点 local 按骨名，覆盖 ~93 骨，
+弃 poseLocal 的 39 骨窄桥），逐轨道 K 相位最优匹配求映射（每 clip 一次、按 animation 指针缓存，
+毫秒级），ab 协议回验（0.15° 判据复现才算过），`SCOPY PUPPET solve … identity-agrees=J` 顺带
+量化 OAR 轨道重排规律。之后 S1 安全回收。判读全表见诊断轮测试单尾部。
 **HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
 面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
 跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——
