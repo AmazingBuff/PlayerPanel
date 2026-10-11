@@ -31,6 +31,10 @@ public:
     static SceneGraphCopy& instance();
     void request(Command command);
     void reset_for_load();
+    // The world changed for a reason the panel did not cause (the player equipped something and
+    // the weapon mesh joined O's graph): the isolation session's baseline describes a world that
+    // no longer exists, so it is folded with the change named and the next census re-baselines.
+    void note_world_change(char const* reason);
     // Only these two methods access the snapshot; both run on the render callback.
     void process_requests();
     CharacterClone* drawable() const;

@@ -368,6 +368,11 @@ void SceneGraphCopy::request(Command command)
     m_command.store(command, std::memory_order_release);
 }
 
+void SceneGraphCopy::note_world_change(char const* reason)
+{
+    m_isolation.end(reason);
+}
+
 void SceneGraphCopy::reset_for_load()
 {
     PuppetDriver::instance().request_release();

@@ -4,6 +4,8 @@
 
 #include "character/puppet_driver.h"
 
+#include "character/scene_graph_copy.h"
+
 #include "RE/A/Actor.h"
 #include "RE/B/BSAnimationGraphManager.h"
 #include "RE/B/BSFadeNode.h"
@@ -316,6 +318,10 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet)
         ++m_equip_reactions;
     }
     logger::info("SCOPY PUPPET equip right={:08x} left={:08x} pushed={} reactions={}", forms[0], forms[1], pushed, m_equip_reactions);
+    // The weapon mesh just joined or left O's own graph - a legitimate world change the panel did
+    // not make, so the isolation session re-baselines instead of reporting it forever (HKX39's
+    // 64-line noise).
+    SceneGraphCopy::instance().note_world_change("world-equipment");
 }
 
 std::string PuppetDriver::drive(RE::NiAVObject& copy_root)

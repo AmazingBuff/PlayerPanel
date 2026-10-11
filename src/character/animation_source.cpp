@@ -3294,9 +3294,14 @@ std::string measure_clip_against_puppet(RE::TESObjectREFR& source, RE::hkbClipGe
     sample_tracks(*playback.animation, control->localTime, sample_count, sampled.data(), nullptr, 0);
 
     // Compare bone by bone: the clip's track for a skeleton bone versus the graph's pose for the
-    // bone of the same name. Bones the pose state does not name are counted out, not failed.
+    // bone of the same name. Bones the pose state does not name are counted out, not failed. The
+    // named/calm pair reads the result: `named` is how many bones the name bridge reaches at all
+    // (the vanilla-named core inside a CBBE/UBE skeleton - HKX1 measured the same 37/116), and
+    // `calm` is how many of the compared bones sit inside the 1-degree bar, so a single wild bone
+    // no longer hides a mostly-correct mapping.
     std::uint32_t compared = 0;
     std::uint32_t unnamed = 0;
+    std::uint32_t calm = 0;
     float worst_rotation = 0.0f;
     float worst_position = 0.0f;
     for (size_t i = 0; i < playback.tracks.size(); ++i)
@@ -3312,7 +3317,9 @@ std::string measure_clip_against_puppet(RE::TESObjectREFR& source, RE::hkbClipGe
         }
         const PoseSample clip_pose = read_pose(sampled[playback.tracks[i]]);
         const PoseSample graph_pose = read_pose(*found->second);
-        worst_rotation = std::max(worst_rotation, quat_angle_degrees(clip_pose.quaternion, graph_pose.quaternion));
+        const float rotation = quat_angle_degrees(clip_pose.quaternion, graph_pose.quaternion);
+        worst_rotation = std::max(worst_rotation, rotation);
+        calm += rotation <= 1.0f ? 1u : 0u;
         const float dx = clip_pose.position[0] - graph_pose.position[0];
         const float dy = clip_pose.position[1] - graph_pose.position[1];
         const float dz = clip_pose.position[2] - graph_pose.position[2];
@@ -3320,8 +3327,8 @@ std::string measure_clip_against_puppet(RE::TESObjectREFR& source, RE::hkbClipGe
         ++compared;
     }
     const bool match = compared >= 24 && worst_rotation <= 1.0f;
-    return fmt::format("SCOPY PUPPET ab clip='{}' mapping={} bones={}/{} unnamed={} max-rot={:.2f}deg max-pos={:.3f}u weight={:.2f} t={:.2f}s verdict={}",
-        playback.name, mapping, compared, playback.tracks.size(), unnamed, worst_rotation, worst_position,
+    return fmt::format("SCOPY PUPPET ab clip='{}' mapping={} bones={}/{} unnamed={} named={} calm={} max-rot={:.2f}deg max-pos={:.3f}u weight={:.2f} t={:.2f}s verdict={}",
+        playback.name, mapping, compared, playback.tracks.size(), unnamed, pose_by_name.size(), calm, worst_rotation, worst_position,
         control->weight, control->localTime, match ? "match" : "none");
 }
 
