@@ -206,6 +206,15 @@ fmod 碰巧无害）。修复：采样时间按 `hkbClipGenerator::mode` 处理�
 构建身份 `CharacterPanel-scopy-HKX42-515d62f7d6+dirty-cl94faaed0c6-20261011T165746Z`，DLL
 SHA-256 `4e32ea27…` 已部署校验；单测 1/1。判读表与路线含义见
 [求解器测试单](scene-copy-solver-test-2026-10-12.md)。
+**HKX42 已实测（2026-10-12 凌晨）= 新引擎事实 + 求解器首版两处缺陷（判读在案）**：①**手动推图
+不把姿态传播到傀儡节点 local**（node-locals 真值 motion=0.05deg 全轮恒定冻结；图内部 control 的
+t=/weight 活着）——node-locals 真值路径关闭；②**retry 实现 bug**：frames=0 重触发 init，init
+无条件重建 node_path → pose-local 回退从未执行、死循环 retry；③个别 solve 在 motion 边界过线
+时以冻结数据完成 → **垃圾映射**（ab `mapping=solved max-rot=180deg max-pos=inf`，显示端那段
+是坏的）；④仪器照常零崩溃，`mode=` 字段首秀即见 `Dag_Equip mode=loop`（OAR 连播放模式都在改）。
+**HKX43 修复序**：init 拆分（结构一次 + 真值可重入）→ **真值源换时机**（求解累积挂引擎期
+tick——未暂停时节点是活的，93 骨全宽真值；面板期只消费结果；映射按 animation 指针缓存）→
+motion 3 位小数。HKX41 遗留：`Dag_Equip mode=loop` 族观测（按名族覆写后手待命）。
 **HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
 面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
 跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——

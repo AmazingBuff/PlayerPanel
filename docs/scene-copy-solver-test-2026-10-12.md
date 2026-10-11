@@ -53,3 +53,25 @@ SCOPY PUPPET ab clip='…' mapping=solved bones=… calm=… verdict=…        
 **路线含义**：#2+#3+#4 全绿 = FR-03 的"面板人物播对 OAR 替换件"闭环（映射实测化），S2 的
 动画线收敛，回 S1 安全回收主线；#1 红线 = 手动推图传播链的新事实，求解器转 poseLocal 路线
 再测（39 骨也能显著改善核心骨错位）。
+
+---
+
+## HKX42 判读（已实测，2026-10-12 凌晨；日志 [CharacterPanel-hkx42-solver-20261012.log](diagnostics/CharacterPanel-hkx42-solver-20261012.log)）
+
+| # | 检查 | 结果 |
+| --- | --- | --- |
+| 1 | 真值路径 | **红线但决定性**——`truth=node-locals motion=0.05deg` 全轮恒定：**手动推图不把姿态传播到傀儡节点 local**（图内部在推进——clip control 的 t=/weight 都活——但节点应用层不跑）。这是新引擎事实，node-locals 真值路径关闭 |
+| 2 | solve 完成 | **无一次干净完成**——全部走进 retry 循环（见 #3），个别在 motion 恰好过线时以冻结数据"完成" |
+| 3 | **求解器实现 bug（本轮引入）** | retry 把 `frames=0` 后**重新触发 init 块**，init 无条件重建 `node_path=node-locals` → pose-local 回退**永远没有跑**，死循环 retry；且冻结数据完成的 solve 写出了**垃圾映射**（ab `mapping=solved max-rot=180.00deg max-pos=infu` 实锤——那段时间显示端是坏的） |
+| 4 | 零回归 | 零崩溃；ab/driver/digest 仪器全部照常（`mode=` 字段首秀：`Dag_Equip mode=loop`、`1HM_Equip mode=single`——OAR 替换件连播放模式都在改写，HKX41 的按名族覆写后手确有需求场景） |
+
+### 修复方向（HKX43，按序）
+
+1. **init 拆分**：结构构建（候选表/骨架，一次）与真值选择（可重入）分离——retry 翻转 node_path
+   后不再被 init 覆盖，pose-local 回退真正执行。
+2. **冻结判死即不写映射**（已有）+ motion 打 3 位小数（0.05 的边界假象消除）。
+3. **真值源换时机**：节点 local 冻结只在暂停期成立——**引擎期傀儡节点是活的**（世界在 tick 它）。
+   求解累积改挂引擎期 tick（未暂停分支），面板期只消费结果——93 骨全宽真值回来，pose-local
+   39 骨降为备用。映射按 animation 指针缓存，跨面板会话复用。
+4. 若引擎期节点也冻结（不可能——世界在渲染它）再谈 pose-local。
+遗留：HKX43（上述修复）→ HKX41 遗留的 Dag_Equip 族 mode=loop 观测 → S1 安全回收。
