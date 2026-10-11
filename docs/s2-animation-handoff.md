@@ -154,6 +154,17 @@ tick 轮询玩家双手，变化即镜像（HKX37 配方）+ 同 tick `DrawWeapo
 `CharacterPanel-scopy-HKX39-96e2a5fc3b+dirty-cl94faaed0c6-20261011T160133Z`，DLL SHA-256
 `d8694577…` 已部署校验；单测 1/1。判读表与路线含义见
 [调度器 v2 测试单](scene-copy-scheduler-v2-test-2026-10-11.md)。
+**HKX39 已实测（2026-10-12 凌晨）= 仪器全部点火，恒等档判死刑第一例**：①A/B 仪器成立——
+`MT_Idle#12219 identity-unverified bones=37/99 max-rot=109.16deg verdict=none`，恒等映射
+**逐变体运气**实锤（#12220 过 0.15°、#12219 错 109°）；②可比骨只有 37/116——**泊深处 culler
+不渲染傀儡 → boneNodes 未绑槽 node=null → 姿态桥半盲**（HKX38 coverage 行数表长 116/116 掩盖
+了它）；③equip 杠杆机制成立（pushed=draw ×2、图切 1HM 族含 SCAR 包、族内 #8970→#8975 重选
+发生在暂停期），当场性待目视；④运动钉通过（零 JumpFall；park 行 motion=fixed 字样漏打，化妆）；
+⑤F2 化妆通过（driver=puppet:… 真实链）；⑥新观测：用户换装改 O 图对象集（武器挂骨架）→ 隔离
+全会话基线被合法动作污染（64 行 [E] 噪音，操作窗口全 CLEAN）。读档边界连续两轮未测。
+**HKX40 范围：泊位回退玩家身边+fade0.05+kFixed+钉桩（解锁姿态桥全骨可比）→ 轨道序映射或逐
+变体标定（泊位回退后重测再定）→ 隔离仪器装备再基线 → equip 当场性目视 → park 行化妆。**
+之后 S1 安全回收。判读全表见调度器 v2 测试单尾部。
 **HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
 面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
 跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——
