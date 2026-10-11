@@ -348,11 +348,13 @@ struct ActiveClipEntry
     std::string name;
 };
 
-// Finds the clip generators on the instance side of this character's own graphs. This is the expensive
-// part - it scans object windows and every page query costs a syscall - so callers hold onto what it
-// returns and re-verify with clip_generator_is_live rather than calling it again, and rate-limit it when
-// they do.
-void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out);
+// Finds the clip generators the engine is running right now for this character, taken from the
+// engine's own active-node list: the per-character record of every node whose Activate has run
+// and whose Deactivate has not, which is where a playing clip lives by definition (HKX13). One
+// page query per listed node and one short guarded name read per actually running clip - no
+// object window is scanned anywhere, so an animation switch costs a handful of extra reads
+// instead of triggering any walk.
+void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out);
 
 // Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
 class ClipPlayer

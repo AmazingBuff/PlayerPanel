@@ -111,15 +111,6 @@ namespace
     // enough to afford a walk that is deep enough to reach a nested animation.
     constexpr std::uint32_t Max_Walked_Records = 8;
     constexpr size_t Max_Resource_Objects = 24;
-    // How far the idle-index sampler walks. It runs during normal play, so it is deliberately smaller
-    // than the capture-time walks: it needs a clip generator, not a census.
-    constexpr size_t Idle_Pool_Objects = 96;
-    // How many clip generators the sampler keeps. Only a running clip matters, and a character has a
-    // handful of those, so this bounds both the discovery and the per-frame re-verification.
-    constexpr size_t Idle_Pool_Clips = 24;
-    // How far into an object the sampler looks for the pointers leading to those clips. See the note at
-    // the scan: every slot is a syscall and this runs inside ordinary gameplay.
-    constexpr std::int32_t Idle_Pool_Scan_Bytes = 0x40;
     constexpr size_t Resource_Dump_Bytes = 0x60;
     constexpr size_t Max_Tree_Lines = 16;
     // How far the content scan reaches into one byte range, and how many ranges one resource may offer.
@@ -2946,7 +2937,12 @@ void tally_clip_generator(RE::hkbClipGenerator const* generator, ClipClass kind,
     }
 }
 
-void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out)
+// The clip generators the engine lists as active right now, read from the engine's own active-node
+// record instead of from any scan of object memory. The engine appends a node when its Activate runs
+// and removes it on Deactivate (HKX13 reached a live, playing clip exactly this way), so the list is
+// the definition of "currently running" and an animation switch is just the next snapshot listing
+// different nodes - there is no discovery step to pay for, and no window scan to trigger.
+void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out)
 {
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (!source.GetAnimationGraphManager(manager) || !manager)
@@ -2958,53 +2954,20 @@ void collect_active_clip_generators(RE::TESObjectREFR& source, std::vector<Activ
         if (!graph || !graph->holder || static_cast<RE::TESObjectREFR*>(graph->holder) != &source)
             continue;
         RE::hkbBehaviorGraph* const behavior = graph->characterInstance.behaviorGraph.get();
-        if (!behavior)
+        if (!behavior || !behavior->activeNodes)
             continue;
 
-        // The instance side only: the template root holds clips that are never activated, which is what
-        // HKX9 through HKX12 spent their rounds learning.
-        std::unordered_set<void const*> seen;
-        std::vector<const void*> pending;
-        if (const void* const clone = behavior->rootGeneratorClone.get())
+        // The list is typed end to end (hkbNodeInfo::nodeClone), but it is the engine's live data:
+        // entries are re-validated with the same one-guarded-read identity check every other route
+        // uses, so a stale or misread entry is skipped rather than trusted.
+        for (const RE::hkbNodeInfo& info : *behavior->activeNodes)
         {
-            seen.insert(clone);
-            pending.push_back(clone);
-        }
-        if (behavior->activeNodes)
-        {
-            for (const RE::hkbNodeInfo& info : *behavior->activeNodes)
-            {
-                if (info.nodeClone && seen.insert(info.nodeClone).second)
-                    pending.push_back(info.nodeClone);
-            }
-        }
-
-        size_t visited = 0;
-        while (!pending.empty() && visited < Idle_Pool_Objects && out.size() < Idle_Pool_Clips)
-        {
-            const void* const object = pending.back();
-            pending.pop_back();
-            ++visited;
-            if (clip_generator_is_live(object))
-            {
-                // The name is read exactly once per clip, here, and its class carried from then on.
-                const auto* const generator = static_cast<const RE::hkbClipGenerator*>(object);
-                const std::string name = guarded_string(generator->animationName);
-                out.push_back({ generator, classify_clip_name(base_name_of(name)), name });
-            }
-            // A narrow window on purpose. Every slot costs a page query, which is a syscall, and this runs
-            // inside ordinary gameplay: the wider windows used at capture belong to a paused menu where a
-            // slow frame costs nothing. A clip generator's own fields sit at the start of the object, so
-            // the reach needed to find one from its parent does not need the whole page.
-            for (std::int32_t offset = 0; offset + static_cast<std::int32_t>(sizeof(void*)) <= Idle_Pool_Scan_Bytes; offset += static_cast<std::int32_t>(sizeof(void*)))
-            {
-                const auto* const at = static_cast<const std::uint8_t*>(object) + offset;
-                if (!readable(at, sizeof(void*)))
-                    break;
-                const void* const word = *reinterpret_cast<void* const*>(at);
-                if (word && readable(word, sizeof(void*)) && looks_like_object(word) && seen.insert(word).second)
-                    pending.push_back(word);
-            }
+            auto* const node = static_cast<const void*>(info.nodeClone);
+            if (!clip_generator_is_live(node))
+                continue;
+            const auto* const generator = static_cast<const RE::hkbClipGenerator*>(node);
+            const std::string name = guarded_string(generator->animationName);
+            out.push_back({ generator, classify_clip_name(base_name_of(name)), name });
         }
     }
 }

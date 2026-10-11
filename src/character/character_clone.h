@@ -68,6 +68,7 @@ private:
     bool m_is_snapshot;
     float m_snapshot_angle;
     uint32_t m_draw_frames;
+    bool m_om_check_logged = false;
     RE::NiTransform m_snapshot_root_world;
     RE::NiPoint3 m_snapshot_center;
     std::vector<SnapshotNode> m_snapshot_nodes;

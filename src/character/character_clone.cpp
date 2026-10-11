@@ -231,6 +231,20 @@ namespace
     {
         if (object->AsParticlesGeom())
             return true;
+        // Spell-effect meshes (rings, flares, breath cones) carry an effect shader
+        // property whatever they are named. The name tokens below miss whole
+        // families (Circle/GeoSphere/Tube all survived a prune), and an effect
+        // geometry's pass generation inside the UI3D accumulator window is the
+        // one engine call there that can flip DIRTY_RENDERTARGET — which makes
+        // every later SetupAndDrawPass re-apply the engine's ledger target
+        // instead of the studio one (v6.45 mechanism).
+        if (RE::BSGeometry* const geometry = object->AsGeometry())
+        {
+            const RE::BSShaderProperty* const property = geometry->GetGeometryRuntimeData().shaderProperty.get();
+            const char* const shader_rtti = property && property->GetRTTI() ? property->GetRTTI()->GetName() : nullptr;
+            if (shader_rtti && std::strstr(shader_rtti, "EffectShader") != nullptr)
+                return true;
+        }
         if (const char* name = object->name.c_str(); name && name[0] && is_collision_helper(name))
             return true;
         constexpr std::string_view tokens[] = { "Blood", "Flash", "Wisps", "SuperSpray", "pSmallFlare", "Scb", "Diamond", "ParticleSystem" };
@@ -957,6 +971,22 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT && CHARACTER_PANEL_S2_PROBE
     SceneGraphCopy::instance().probe_at_draw_done(*this, drawn);
 #endif
+
+    // One-shot per clone: read back what the context held after the batch. When
+    // the shadow state says DIRTY_RENDERTARGET, SetupAndDrawPass re-applies the
+    // engine's ledger target mid-batch (v6.45), which empties the studio target
+    // without any log line of its own — this decides "rerouted" from
+    // "drew-nothing" in one look.
+    if (!m_om_check_logged && drawn > 0)
+    {
+        m_om_check_logged = true;
+        REX::W32::ID3D11RenderTargetView* bound = nullptr;
+        runtime.context->OMGetRenderTargets(1, &bound, nullptr);
+        logger::info("Clone draw OM check: bound={} studio={} match={}",
+            static_cast<void*>(bound), static_cast<const void*>(rtv), bound == rtv);
+        if (bound)
+            bound->Release();
+    }
 
     // Per-frame summary plus the skin census: after the detach, the engine's
     // SetupGeometry writes numMatrices/boneMatrices every drawn frame — the

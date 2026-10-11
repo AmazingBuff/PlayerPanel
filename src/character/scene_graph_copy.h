@@ -103,10 +103,6 @@ private:
     void report_probe_trace();
     void retire(std::unique_ptr<CharacterClone> snapshot);
     void log_parked() const;
-    // Samples which registered idle the engine is running for the player while the game is not paused.
-    // OAR decides that by writing an animation index onto the clip it activates, so tallying the index
-    // over time is how the panel learns the set of idles this character's conditions actually select -
-    // and how often, which is that configuration's own distribution as sampled by normal play.
     void observe_idle_pool();
     void report_idle_pool(char const* where) const;
 
@@ -127,13 +123,6 @@ private:
     // combat, jumping - is counted but not kept: the panel has no use for it.
     std::unordered_map<std::uint16_t, std::uint32_t> m_idle_pool;
     std::unordered_map<std::uint16_t, std::uint32_t> m_equip_pool;
-    // The clip generators found on the player's instance side with the class each belongs to, kept so the
-    // per-sample cost is a page query and two field reads per clip rather than a walk that costs thousands
-    // of page queries inside ordinary gameplay.
-    std::vector<ActiveClipEntry> m_idle_probe_clips;
-    // When the walk last ran. A clip switch invalidates the cache, and walking on every switch put a hitch
-    // on every action change, so the walk is rate-limited rather than triggered by the list emptying.
-    std::chrono::steady_clock::time_point m_idle_pool_last_walk;
     uint32_t m_other_clips;
     std::string m_other_names;
     uint32_t m_idle_pool_samples;

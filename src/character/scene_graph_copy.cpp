@@ -20,9 +20,6 @@ namespace
     // How often the running game is asked which idle the player's clips are playing. The answer only
     // changes when a new clip activates, so this is a sampling rate for a slow signal, not a budget.
     constexpr uint32_t Idle_Pool_Sample_Frames = 45;
-    // The shortest gap between two discovery walks. Between them the cached clips are re-verified, which is
-    // cheap, and a switch that invalidates them simply goes unobserved until the next walk is due.
-    constexpr std::chrono::seconds Idle_Pool_Walk_Interval{ 3 };
     // How much of the not-collected names is kept for the log, so an animation the two classifiers miss is
     // visible by name instead of only as a count.
     constexpr size_t Max_Other_Names_Bytes = 160;
@@ -531,40 +528,16 @@ void SceneGraphCopy::observe_idle_pool()
 
     ActiveAnimationIndices observed;
 
-    // The pointers are re-verified before use and a dead one is dropped, so a clip generator freed while
-    // the game ran cannot be read as one. Each survivor costs one page query and two field reads, and the
-    // name is not read again - that alone was a syscall per character, dozens of times per sample.
-    size_t live = 0;
-    for (auto it = m_idle_probe_clips.begin(); it != m_idle_probe_clips.end();)
-    {
-        if (clip_generator_is_live(it->generator))
-        {
-            tally_clip_generator(it->generator, it->kind, observed);
-            ++live;
-            ++it;
-        }
-        else
-        {
-            it = m_idle_probe_clips.erase(it);
-        }
-    }
-
-    // A clip switch invalidates the cached clips, and walking to find the new ones is the only part of this
-    // that costs real time: it scans object windows and every page query is a syscall. Walking whenever the
-    // list empties therefore put a multi-millisecond hitch on every single action change, which is what the
-    // player saw. The walk is now rate-limited by wall clock, so a burst of switches costs at most one.
-    const auto now = std::chrono::steady_clock::now();
-    const bool walk_due = m_idle_probe_clips.empty() &&
-                          (m_idle_pool_last_walk.time_since_epoch().count() == 0 ||
-                           now - m_idle_pool_last_walk >= Idle_Pool_Walk_Interval);
-    if (walk_due)
-    {
-        m_idle_pool_last_walk = now;
-        m_idle_probe_clips.clear();
-        collect_active_clip_generators(*const_cast<RE::PlayerCharacter*>(player), m_idle_probe_clips);
-        for (const ActiveClipEntry& entry : m_idle_probe_clips)
-            tally_clip_generator(entry.generator, entry.kind, observed);
-    }
+    // The running clips are read fresh from the engine's own active-node list every sample: the list
+    // is typed (one guarded identity check per entry) and holds only what is actually playing, so
+    // re-reading it costs a couple of dozen guarded reads no matter what the player is doing. There
+    // is no cache to invalidate and no walk to trigger - an animation switch is simply the next
+    // snapshot listing different clips, which is what removed the hitch this observer once put on
+    // every action change.
+    std::vector<ActiveClipEntry> running;
+    collect_running_clip_generators(*const_cast<RE::PlayerCharacter*>(player), running);
+    for (const ActiveClipEntry& entry : running)
+        tally_clip_generator(entry.generator, entry.kind, observed);
 
     ++m_idle_pool_samples;
     for (const std::uint16_t index : observed.idles)
@@ -573,7 +546,7 @@ void SceneGraphCopy::observe_idle_pool()
         ++m_equip_pool[index];
     m_other_clips += observed.others;
     m_other_names.clear();
-    for (const ActiveClipEntry& entry : m_idle_probe_clips)
+    for (const ActiveClipEntry& entry : running)
     {
         if (entry.kind != ClipClass::e_other || m_other_names.size() >= Max_Other_Names_Bytes)
             continue;

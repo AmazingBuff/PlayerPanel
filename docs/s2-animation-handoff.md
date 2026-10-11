@@ -37,6 +37,21 @@ HKX28 实测：同相位 `max-pos-delta=0.000`、`max-rot-delta=0.15°`、**37/3
 槽 06 按轨道号索引 `transformOffsets`，而本引擎**故意留空**该表；OAR 用的是槽 04。
 **仍阻塞**：H05 隔离未测；**S1 安全回收仍是最硬的门槛**；展示动作切换未做。
 
+**HKX33 首次上机（2026-10-11 16:02）= 卡顿修复成立、面板黑屏回归（已定位，HKX34 待上机）**：
+先更正——上机的是**已提交的 HKX33 包**，工作区的 activeNodes 改动当时**未上机**。判读：
+游玩期卡顿消失✓；但面板纯黑、物品卡左侧出现特效/眼影垃圾。根因链 = 本轮重度存档的克隆图带
+约 50 个 `SuperSprayBreath` 粒子 + 一批特效网格（`Circle*`/`GeoSphere*`/`Tube*` 等），
+**按名 token 的 `is_effect_object()` 剪不掉它们** → 绘制窗口内对特效几何的 `GetRenderPasses`
+翻脏 `DIRTY_RENDERTARGET`（v6.45 机制）→ 全部 pass 改画进引擎账本目标 kFRAMEBUFFER：
+摄影棚目标只剩清屏 = 面板黑；克隆 pass 以 UI3D 相机投影落在屏幕中心 = 物品卡位置；
+45 个 `rd-null` 身体 pass 被分桶吞掉（run 48 同款），4 个共享源设备缓冲的 face/特效片画了出来
+= 用户看到的垃圾。HKX28 正常只因那个存档的克隆图没有特效网格。
+**HKX34**（`dist/CharacterPanel-scopy-HKX34-1.2.1.zip`，DLL `bacdd76e…` 已部署校验）：
+①`is_effect_object()` 补**着色器属性类型判据**（RTTI 含 `EffectShader` 即剪，按类不按名）；
+②`draw()` 一次性 **OM 绑定回读**（`Clone draw OM check: … match=true|false`，路由裁决仪器）；
+③activeNodes 池子采样首测。测试单与完整判读链见
+[HKX34 测试单](scene-graph-copy-next-test-2026-10-11.md)。
+
 **HKX18–HKX27（历史）**：由引擎装载游戏已注册的动作再取其数据。
 用户澄清的原则（已记为产品要求）：**面板动作不必与游戏角色当前在播的一致，但必须是原版或 OAR 注册的动作**，
 不是我们额外引入的资源。流程固定为：命名索引 → 引擎装载 → 从已装载存储取数据 → 作用于面板。
@@ -585,12 +600,12 @@ SCOPY ANIM play clip='hashed:1022' … copy-resolved=…/… …   （与 bindin
   诊断探针构建另加 `-DCHARACTER_PANEL_S2_PROBE=ON`（探针落在 F6）。
   **注意**：新增 `src/*.cpp` 后必须重新 configure（GLOB 在 configure 期求值）。
 - 默认（Actor 路线）构建同理用 `build/`，`cmake --build build --config Release --target CharacterPanel`。
-- 当前产物：`dist/CharacterPanel-scopy-HKX13-1.2.1.zip`（提交 `47725682fa`），身份
-  `CharacterPanel-scopy-HKX13-47725682fa-cl94faaed0c6-20261010T135149Z`，DLL SHA-256 `b2869467…`、
-  PDB `ca632f3d…`——**DLL 与 PDB 均已从最终 zip 部署并校验一致**（HKX11/12 部署中间构建的问题已纠正）。
-  **待测（未上机）**：新增实例侧探针 `report_animation_instance()`，只回答"活跃克隆上 binding 是否可取得"。
-  上机与判读表见 [HKX13 静态核对](s2-hkx13-static-check-2026-10-10.md) §6。
-  已完成的前一轮：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
+- 当前产物：`dist/CharacterPanel-scopy-HKX34-1.2.1.zip`（基线 `99696da5b2+dirty`，三处改动见
+  [HKX34 测试单](scene-graph-copy-next-test-2026-10-11.md)），身份
+  `CharacterPanel-scopy-HKX34-99696da5b2+dirty-cl94faaed0c6-20261011T082733Z`，DLL SHA-256 `bacdd76e…`——
+  **DLL 与 PDB 均已从最终 zip 部署并校验一致**；单测 1/1。**待上机**（判读表同上）。
+  已实测的前一轮：`dist/CharacterPanel-scopy-HKX33-1.2.1.zip`（判读见 §0 HKX33 段）。
+  更早轮次（HKX1–HKX13 时代）的历史留档：`dist/CharacterPanel-scopy-HKX12-1.2.1.zip`，身份
   `CharacterPanel-scopy-HKX12-4165d734ea-cl94faaed0c6-20261009T184849Z`，DLL SHA-256 `25d98ef7…`——**已实测**
   （判读见 §5 HKX12 节；实际部署的是提交前中间构建 `2e22e8f+dirty`，代码一致）。**已实测的十二轮**：HKX12（[证据](s2-hkx12-hashed-evidence-2026-10-10.md)、
   [日志](diagnostics/CharacterPanel-hkx12-hashed-20261010.log)）、HKX11
