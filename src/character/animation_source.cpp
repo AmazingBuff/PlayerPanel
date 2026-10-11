@@ -3389,18 +3389,21 @@ namespace
     // consumes the finished mapping. One observation per tick of the owning phase, ~1.5 seconds of
     // engine time to a verdict. Solved orders are cached per animation, so every later panel
     // session picks the mapping up without waiting.
+    //
+    // The HKX43 crash report pinned the rule this version lives by: the truth tables are rebuilt
+    // EVERY observation frame and hold no pointers across frames. The puppet's 3D is engine
+    // property - equipment attaches, facegen rebuilds, cell transitions replace the tree - and a
+    // NiNode* cached between ticks dangled exactly once before the process died. Per-frame
+    // re-resolution costs one tree walk (~0.1 ms) and removes the class.
     constexpr float Frozen_Truth_Degrees = 0.05f;
 
     struct TrackSolveState
     {
         RE::hkbClipGenerator const* generator = nullptr;
-        bool built = false;                              // structural tables survive truth retries
         bool node_path = false;                          // current truth: node locals vs pose locals
         bool paused_phase = false;                       // a phase change invalidates the accumulation
         std::uint32_t frames = 0;
-        std::vector<bool> reachable;                     // per skeleton bone: a truth source exists
-        std::vector<RE::NiNode*> node_candidates;        // node-locals path, per skeleton bone
-        std::vector<const RE::hkQsTransform*> pose_candidates;  // pose path, per skeleton bone
+        std::vector<bool> reachable;                     // per skeleton bone: a live truth source exists
         std::vector<RE::NiMatrix3> previous_truth;       // last frame's truth (frozen check)
         float truth_motion = 0.0f;
         std::vector<float> error;                        // accumulated: track x skeleton bone
@@ -3412,9 +3415,30 @@ namespace
         return s_state;
     }
 
-    // Truth rotations indexed by skeleton bone; unreachable bones carry identity and are excluded
-    // through `reachable` everywhere.
-    std::vector<RE::NiMatrix3> read_truth_rotations(const TrackSolveState& state)
+    // One guarded DFS lookup by exact node name - the per-frame copy-side twin of the puppet walk.
+    RE::NiAVObject* find_descendant(RE::NiAVObject& root, std::string_view name)
+    {
+        std::vector<RE::NiAVObject*> pending{ &root };
+        while (!pending.empty())
+        {
+            RE::NiAVObject* const object = pending.back();
+            pending.pop_back();
+            if (const char* const node_name = object->name.c_str())
+                if (name == node_name)
+                    return object;
+            if (RE::NiNode* const node = object->AsNode())
+                for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
+                    if (child)
+                        pending.push_back(child.get());
+        }
+        return nullptr;
+    }
+
+    // Truth rotations indexed by skeleton bone, read fresh from this frame's tables; a candidate
+    // whose pages are not readable this frame counts as unreachable for the frame.
+    std::vector<RE::NiMatrix3> read_truth_rotations(const TrackSolveState& state,
+        std::vector<RE::NiNode*> const& node_candidates,
+        std::vector<const RE::hkQsTransform*> const& pose_candidates)
     {
         std::vector<RE::NiMatrix3> rotations(state.reachable.size());
         for (size_t i = 0; i < state.reachable.size(); ++i)
@@ -3423,33 +3447,19 @@ namespace
                 continue;
             if (state.node_path)
             {
-                if (RE::NiNode* const node = state.node_candidates[i])
-                    rotations[i] = node->local.rotate;
+                if (RE::NiNode* const node = node_candidates[i])
+                    if (readable(node, sizeof(RE::NiAVObject)))
+                        rotations[i] = node->local.rotate;
             }
-            else if (const RE::hkQsTransform* const pose = state.pose_candidates[i])
+            else if (const RE::hkQsTransform* const pose = pose_candidates[i])
             {
+                if (!readable(pose, sizeof(RE::hkQsTransform)))
+                    continue;
                 const PoseSample sample = read_pose(*pose);
                 rotations[i] = ni_matrix_from_quaternion(sample.quaternion[0], sample.quaternion[1], sample.quaternion[2], sample.quaternion[3]);
             }
         }
         return rotations;
-    }
-
-    // Re-entrant truth selection with an explicit path: the structural tables survive retries,
-    // only the pointer and the reachability flip. The HKX42 round tripped over an inferred
-    // selection - frames==0 rebuilt the tables, forced node-locals back on, and the pose fallback
-    // never ran.
-    void select_truth(TrackSolveState& state, bool node_path)
-    {
-        state.node_path = node_path;
-        state.reachable.assign(state.reachable.size(), false);
-        if (node_path)
-            for (size_t i = 0; i < state.node_candidates.size(); ++i)
-                state.reachable[i] = state.node_candidates[i] != nullptr;
-        else
-            for (size_t i = 0; i < state.pose_candidates.size(); ++i)
-                state.reachable[i] = state.pose_candidates[i] != nullptr;
-        state.previous_truth = read_truth_rotations(state);
     }
 }
 
@@ -3465,7 +3475,7 @@ bool solve_tracks_step(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
     if (state.generator != generator || state.paused_phase != paused_phase)
     {
         // A new clip or a phase change invalidates the accumulation - the two truth spaces do not
-        // mix. The structural tables are rebuilt with the state.
+        // mix, and the per-frame tables carry nothing across anyway.
         state = TrackSolveState{};
         state.generator = generator;
         state.paused_phase = paused_phase;
@@ -3484,94 +3494,103 @@ bool solve_tracks_step(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
         return false;
     }
 
-    // Structural build, once per clip. Truth selection is the re-entrant part and runs after it.
-    if (!state.built)
+    // Every observation frame re-resolves the truth tables from the live engine state. The
+    // skeleton names the bones; the node path reads the puppet's own 3D by name, the pose path
+    // reads poseLocal through the graph's bone table.
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+    const RE::hkaSkeleton* skeleton = nullptr;
+    RE::hkbCharacter const* character = nullptr;
+    RE::BShkbAnimationGraph* third_person = nullptr;
+    if (source.GetAnimationGraphManager(manager) && manager)
     {
-        RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
-        const RE::hkaSkeleton* skeleton = nullptr;
-        RE::hkbCharacter const* character = nullptr;
-        RE::BShkbAnimationGraph* third_person = nullptr;
-        if (source.GetAnimationGraphManager(manager) && manager)
+        for (const RE::BSTSmartPointer<RE::BShkbAnimationGraph>& holder : manager->graphs)
         {
-            for (const RE::BSTSmartPointer<RE::BShkbAnimationGraph>& holder : manager->graphs)
-            {
-                RE::BShkbAnimationGraph* const graph = holder.get();
-                if (!graph || !graph->holder || !graph->rootNode)
-                    continue;
-                if (static_cast<const RE::TESObjectREFR*>(graph->holder) != &source)
-                    continue;
-                third_person = graph;
-                skeleton = graph->characterInstance.setup.get()
-                    ? graph->characterInstance.setup->animationSkeleton.get()
-                    : nullptr;
-                character = &graph->characterInstance;
-                break;
-            }
-        }
-        if (!skeleton || skeleton->bones.empty() || !third_person)
-        {
-            out_note = "SCOPY PUPPET solve UNAVAILABLE reason=no-skeleton";
-            reset_track_solver();
-            return false;
-        }
-        state.node_candidates.assign(static_cast<std::size_t>(skeleton->bones.size()), nullptr);
-        std::unordered_map<std::string_view, RE::NiAVObject*> puppet_nodes;
-        if (RE::NiAVObject* const puppet_root = source.Get3D(false))
-        {
-            std::vector<RE::NiAVObject*> pending{ puppet_root };
-            while (!pending.empty() && puppet_nodes.size() < 512)
-            {
-                RE::NiAVObject* const object = pending.back();
-                pending.pop_back();
-                if (const char* const name = object->name.c_str())
-                    puppet_nodes.emplace(name, object);
-                if (RE::NiNode* const node = object->AsNode())
-                    for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
-                        if (child)
-                            pending.push_back(child.get());
-            }
-            for (size_t i = 0; i < static_cast<std::size_t>(skeleton->bones.size()); ++i)
-            {
-                const char* const bone_name = skeleton->bones[static_cast<std::int32_t>(i)].name.c_str();
-                const auto found = bone_name ? puppet_nodes.find(bone_name) : puppet_nodes.end();
-                state.node_candidates[i] = found != puppet_nodes.end() ? found->second->AsNode() : nullptr;
-            }
-        }
-        state.pose_candidates.assign(static_cast<std::size_t>(skeleton->bones.size()), nullptr);
-        if (character && character->poseLocal && character->numPoseLocal > 0 &&
-            readable(character->poseLocal, static_cast<std::size_t>(character->numPoseLocal) * sizeof(RE::hkQsTransform)))
-        {
-            const std::int32_t named = std::min<std::int32_t>(character->numPoseLocal, static_cast<std::int32_t>(third_person->boneNodes.size()));
-            std::unordered_map<std::string_view, const RE::hkQsTransform*> pose_by_name;
-            for (std::int32_t i = 0; i < named; ++i)
-            {
-                RE::NiNode* const node = third_person->boneNodes[static_cast<std::uint32_t>(i)].node;
-                const char* const name = node ? node->name.c_str() : nullptr;
-                if (name)
-                    pose_by_name.emplace(name, character->poseLocal + i);
-            }
-            for (size_t i = 0; i < static_cast<std::size_t>(skeleton->bones.size()); ++i)
-            {
-                const char* const bone_name = skeleton->bones[static_cast<std::int32_t>(i)].name.c_str();
-                const auto found = bone_name ? pose_by_name.find(bone_name) : pose_by_name.end();
-                state.pose_candidates[i] = found != pose_by_name.end() ? found->second : nullptr;
-            }
-        }
-        state.built = true;
-        select_truth(state, !paused_phase);
-        state.error.assign(in_out_playback.tracks.size() * state.reachable.size(), 0.0f);
-        if (std::none_of(state.reachable.begin(), state.reachable.end(), [](const bool flag) { return flag; }))
-        {
-            select_truth(state, false);  // the node table came out empty; pose locals or nothing
-            state.error.assign(in_out_playback.tracks.size() * state.reachable.size(), 0.0f);
-            if (std::none_of(state.reachable.begin(), state.reachable.end(), [](const bool flag) { return flag; }))
-            {
-                out_note = "SCOPY PUPPET solve UNAVAILABLE reason=no-truth-candidates";
-                reset_track_solver();
-                return false;
-            }
+            RE::BShkbAnimationGraph* const graph = holder.get();
+            if (!graph || !graph->holder || !graph->rootNode)
+                continue;
+            if (static_cast<const RE::TESObjectREFR*>(graph->holder) != &source)
+                continue;
+            third_person = graph;
+            skeleton = graph->characterInstance.setup.get()
+                ? graph->characterInstance.setup->animationSkeleton.get()
+                : nullptr;
+            character = &graph->characterInstance;
+            break;
         }
     }
+    if (!skeleton || skeleton->bones.empty() || !third_person)
+    {
+        out_note = "SCOPY PUPPET solve UNAVAILABLE reason=no-skeleton";
+        reset_track_solver();
+        return false;
+    }
+    const size_t bone_count = static_cast<std::size_t>(skeleton->bones.size());
+
+    std::vector<RE::NiNode*> node_candidates(bone_count, nullptr);
+    std::vector<const RE::hkQsTransform*> pose_candidates(bone_count, nullptr);
+    RE::NiAVObject* const puppet_root = paused_phase ? nullptr : source.Get3D(false);
+    if (puppet_root)
+    {
+        // Engine phase: the puppet's own 3D by name is the wide truth (~93 bones).
+        std::unordered_map<std::string_view, RE::NiAVObject*> puppet_nodes;
+        std::vector<RE::NiAVObject*> pending{ puppet_root };
+        while (!pending.empty() && puppet_nodes.size() < 512)
+        {
+            RE::NiAVObject* const object = pending.back();
+            pending.pop_back();
+            if (const char* const name = object->name.c_str())
+                puppet_nodes.emplace(name, object);
+            if (RE::NiNode* const node = object->AsNode())
+                for (const RE::NiPointer<RE::NiAVObject>& child : node->children)
+                    if (child)
+                        pending.push_back(child.get());
+        }
+        for (size_t i = 0; i < bone_count; ++i)
+        {
+            const char* const bone_name = skeleton->bones[static_cast<std::int32_t>(i)].name.c_str();
+            const auto found = bone_name ? puppet_nodes.find(bone_name) : puppet_nodes.end();
+            node_candidates[i] = found != puppet_nodes.end() ? found->second->AsNode() : nullptr;
+        }
+    }
+    if (character && character->poseLocal && character->numPoseLocal > 0 &&
+        readable(character->poseLocal, static_cast<std::size_t>(character->numPoseLocal) * sizeof(RE::hkQsTransform)))
+    {
+        // Pose truth: poseLocal by name through the graph's bone table (~39 bones).
+        const std::int32_t named = std::min<std::int32_t>(character->numPoseLocal, static_cast<std::int32_t>(third_person->boneNodes.size()));
+        std::unordered_map<std::string_view, const RE::hkQsTransform*> pose_by_name;
+        for (std::int32_t i = 0; i < named; ++i)
+        {
+            RE::NiNode* const node = third_person->boneNodes[static_cast<std::uint32_t>(i)].node;
+            const char* const name = node ? node->name.c_str() : nullptr;
+            if (name)
+                pose_by_name.emplace(name, character->poseLocal + i);
+        }
+        for (size_t i = 0; i < bone_count; ++i)
+        {
+            const char* const bone_name = skeleton->bones[static_cast<std::int32_t>(i)].name.c_str();
+            const auto found = bone_name ? pose_by_name.find(bone_name) : pose_by_name.end();
+            pose_candidates[i] = found != pose_by_name.end() ? found->second : nullptr;
+        }
+    }
+
+    // Truth selection: node locals while the engine phase offers them, pose locals when paused or
+    // after a frozen verdict. A retry flips the path and the accumulation restarts clean.
+    const bool want_node_path = !paused_phase;
+    if (state.frames == 0 || state.node_path != want_node_path)
+    {
+        state.node_path = want_node_path;
+        state.reachable.assign(bone_count, false);
+        state.previous_truth.assign(bone_count, RE::NiMatrix3{});
+        state.truth_motion = 0.0f;
+        state.error.assign(in_out_playback.tracks.size() * bone_count, 0.0f);
+    }
+    state.reachable.assign(bone_count, false);
+    if (state.node_path)
+        for (size_t i = 0; i < bone_count; ++i)
+            state.reachable[i] = node_candidates[i] != nullptr;
+    else
+        for (size_t i = 0; i < bone_count; ++i)
+            state.reachable[i] = pose_candidates[i] != nullptr;
 
     const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
     if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
@@ -3598,7 +3617,7 @@ bool solve_tracks_step(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
     std::vector<RE::hkQsTransform> sampled(sample_count);
     sample_tracks(*in_out_playback.animation, time, sample_count, sampled.data(), nullptr, 0);
 
-    const std::vector<RE::NiMatrix3> truth = read_truth_rotations(state);
+    const std::vector<RE::NiMatrix3> truth = read_truth_rotations(state, node_candidates, pose_candidates);
     const size_t bones = state.reachable.size();
     for (size_t i = 0; i < track_count; ++i)
     {
@@ -3630,17 +3649,20 @@ bool solve_tracks_step(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
         return false;
     }
 
-    // A frozen truth convicts the source, never the mapping: fall back to the other path, or give
-    // up with the playback untouched. No frozen observation ever writes a mapping.
+    // A frozen truth convicts the source, never the mapping: the pose path takes over, or the
+    // round gives up with the playback untouched. No frozen observation ever writes a mapping.
     if (state.truth_motion < Frozen_Truth_Degrees)
     {
         if (state.node_path)
         {
             out_note = fmt::format("SCOPY PUPPET solve retry truth=node-locals-frozen motion={:.3f}deg (falling back to pose-local)", state.truth_motion);
-            select_truth(state, false);
-            std::fill(state.error.begin(), state.error.end(), 0.0f);
+            state.node_path = false;
             state.frames = 0;
             state.truth_motion = 0.0f;
+            state.reachable.assign(bone_count, false);
+            for (size_t i = 0; i < bone_count; ++i)
+                state.reachable[i] = pose_candidates[i] != nullptr;
+            std::fill(state.error.begin(), state.error.end(), 0.0f);
             return false;
         }
         out_note = fmt::format("SCOPY PUPPET solve UNAVAILABLE reason=truth-frozen motion={:.3f}deg (both sources)", state.truth_motion);
@@ -3679,43 +3701,21 @@ bool solve_tracks_step(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
             ++identity_agrees;
     }
 
-    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
-    const RE::hkaSkeleton* skeleton = nullptr;
-    if (source.GetAnimationGraphManager(manager) && manager)
-    {
-        for (const RE::BSTSmartPointer<RE::BShkbAnimationGraph>& holder : manager->graphs)
-        {
-            RE::BShkbAnimationGraph* const graph = holder.get();
-            if (!graph || !graph->holder || static_cast<const RE::TESObjectREFR*>(graph->holder) != &source)
-                continue;
-            skeleton = graph->characterInstance.setup.get()
-                ? graph->characterInstance.setup->animationSkeleton.get()
-                : nullptr;
-            break;
-        }
-    }
-    if (!skeleton)
-    {
-        out_note = "SCOPY PUPPET solve UNAVAILABLE reason=skeleton-lost-at-write";
-        reset_track_solver();
-        return false;
-    }
-    const NodeTable copy_nodes = collect_nodes(copy_root);
-    const NameIndex copy_by_name = index_by_name(copy_nodes);
     in_out_playback.tracks = solved_tracks;
     in_out_playback.nodes.assign(track_count, nullptr);
     size_t resolved = 0;
     for (size_t i = 0; i < track_count; ++i)
     {
-        if (static_cast<std::size_t>(solved_tracks[i]) >= static_cast<std::size_t>(skeleton->bones.size()))
+        if (static_cast<std::size_t>(solved_tracks[i]) >= bone_count)
             continue;
         const char* const bone_name = skeleton->bones[static_cast<std::int32_t>(solved_tracks[i])].name.c_str();
         if (!bone_name)
             continue;
-        const auto found = copy_by_name.find(bone_name);
-        if (found == copy_by_name.end() || found->second == &copy_root)
+        // The copy is walked this frame - its graph is as live as the puppet's.
+        RE::NiAVObject* const copy_node = find_descendant(copy_root, bone_name);
+        if (!copy_node || copy_node == &copy_root)
             continue;
-        in_out_playback.nodes[i] = found->second;
+        in_out_playback.nodes[i] = copy_node;
         ++resolved;
     }
     if (resolved == 0)

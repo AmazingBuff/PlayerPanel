@@ -223,6 +223,14 @@ motion 3 位小数。HKX41 遗留：`Dag_Equip mode=loop` 族观测（按名族�
 `CharacterPanel-scopy-HKX43-c6b9a4dfc8+dirty-cl94faaed0c6-20261011T172214Z`，DLL SHA-256
 `2c743cfd…` 已部署校验；单测 1/1。判读表见
 [求解器修复测试单](scene-copy-solver2-test-2026-10-12.md)。
+**HKX43 上机即崩 → HKX44 修复轮（2026-10-12）**：crash
+[01-27-26](diagnostics/crash-2026-10-12-01-27-26.log) 实锤 = **求解观测表跨帧持有裸 NiNode\*，
+引擎期傀儡 3D 被引擎重建后悬空**（`rotation_angle_degrees` 读悬空 NiMatrix3）。HKX44 修复：
+真值表**逐帧**从活树重建（跨帧只留误差矩阵与 frozen 状态，均按索引对位不持指针）+ 每帧页守卫
++ 副本节点改当帧 DFS 查找 + 观测语义修正（误差矩阵只在重启动清零——HKX43 曾逐帧清零使累积
+无效）。构建身份 `CharacterPanel-scopy-HKX44-fbd718c05e+dirty-cl94faaed0c6-20261011T173331Z`，
+DLL SHA-256 `35108e71…` 已部署校验；单测 1/1。判读表见
+[求解器修复 2 测试单](scene-copy-solver3-test-2026-10-12.md)（第一步=门转换/换装压力下零崩溃）。
 **HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
 面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
 跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——
