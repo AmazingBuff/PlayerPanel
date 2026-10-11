@@ -196,6 +196,16 @@ fmod 碰巧无害）。修复：采样时间按 `hkbClipGenerator::mode` 处理�
 `88028a48…` 已部署校验；单测 1/1。判读表见
 [一次性动作测试单](scene-copy-oneloop-test-2026-10-12.md)（含"若 OAR 把 mode 写成 loop 则按名字
 族覆写"的后手）。**HKX41 通过后继续 HKX42 经验映射求解器**（HKX40 定稿的设计），然后 S1。
+**HKX42 已打包待上机（2026-10-12）= 经验映射求解器落地**。`solve_tracks_step`
+（animation_source）：绑定表空的替换件不再猜轨道序——每暂停 tick 一帧观测（99 轨 live 相位
+采样 × 候选真值骨旋转），90 帧后逐轨道最小累积误差 argmin（贪心占位）就地重写
+`m_playback` 映射（`mapping=solved`），显示即生效；ab 顺延到求解后判 solved 结果。**双真值 +
+冻结检测**：首选傀儡 3D 节点 local（~93 骨同名空间）→ 位移 <0.05° 判冻结自动回落 poseLocal
+（39 骨）→ 双冻结如实报告（这本身是"手动推图传播链"的新事实出口）。`identity-agrees=J` 首次
+量化 OAR 轨道重排。SceneGraphCopy 新增 `copy_root()`（求解器就地重写副本映射用）。
+构建身份 `CharacterPanel-scopy-HKX42-515d62f7d6+dirty-cl94faaed0c6-20261011T165746Z`，DLL
+SHA-256 `4e32ea27…` 已部署校验；单测 1/1。判读表与路线含义见
+[求解器测试单](scene-copy-solver-test-2026-10-12.md)。
 **HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
 面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
 跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——

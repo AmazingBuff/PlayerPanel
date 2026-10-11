@@ -38,6 +38,9 @@ public:
     // Only these two methods access the snapshot; both run on the render callback.
     void process_requests();
     CharacterClone* drawable() const;
+    // The accepted copy's graph root, for instruments outside this class (the HKX42 solver
+    // rewrites the copy's mapping in place); null while nothing is accepted.
+    [[nodiscard]] RE::NiAVObject* copy_root() const;
 
     // S2 probe stages, called by CharacterClone::draw() in the order PRD 0.6 §6.3 fixes: the
     // studio's base placement, the controlled bone transform, the engine's pass preparation and

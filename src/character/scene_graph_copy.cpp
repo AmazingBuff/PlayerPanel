@@ -1099,6 +1099,12 @@ CharacterClone* SceneGraphCopy::drawable() const
     return m_draw_enabled ? m_snapshot.get() : nullptr;
 }
 
+RE::NiAVObject* SceneGraphCopy::copy_root() const
+{
+    const CharacterClone* const snapshot = m_snapshot.get();
+    return snapshot ? snapshot->graph() : nullptr;
+}
+
 void SceneGraphCopy::capture()
 {
     m_draw_enabled = false;

@@ -163,8 +163,26 @@ void PuppetDriver::tick(bool paused)
     // the engine update that never comes (the HKX37 finding).
     poll_equipment(*puppet);
 
-    // HKX39 tier-2 A/B: each switch schedules it once the blend has had time to settle.
-    if (m_ab_pending && m_manual_ticks >= m_ab_deadline && m_current_generator)
+    // HKX42: the empirical solver accumulates one observation per paused tick until the mapping
+    // is measured, then the A/B judges the result.
+    if (m_solving && m_current_generator)
+    {
+        if (RE::NiAVObject* const copy_root = SceneGraphCopy::instance().copy_root())
+        {
+            std::string note;
+            if (solve_tracks_step(*puppet, *copy_root, m_current_generator, m_playback, note))
+            {
+                m_mapping = "solved";
+                m_solving = false;
+                logger::info("{}", note);
+            }
+            else if (!note.empty() && (m_manual_ticks % 45 == 0 || note.find("UNAVAILABLE") != std::string::npos || note.find("retry") != std::string::npos))
+                logger::info("{}", note);
+        }
+    }
+
+    // HKX39 tier-2 A/B: judges the mapping the display actually writes.
+    if (m_ab_pending && !m_solving && m_manual_ticks >= m_ab_deadline && m_current_generator)
     {
         m_ab_pending = false;
         logger::info("{}", measure_clip_against_puppet(*puppet, m_current_generator, m_playback, m_mapping));
@@ -349,14 +367,17 @@ std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
         m_current_generator = pick;
         m_stall_frames = 0;
         m_stall_logged = false;
+        m_solving = m_mapping == "identity-unverified";
+        // The A/B judges whatever mapping the display finally writes: past the solve when one is
+        // armed, otherwise past the blend window.
+        m_ab_deadline = m_manual_ticks + (m_solving ? Track_Solve_Frames : 0) + Ab_Settle_Ticks;
         m_ab_pending = true;
-        m_ab_deadline = m_manual_ticks + Ab_Settle_Ticks;
-        logger::info("SCOPY PUPPET driver clip='{}' mode={} mapping={} coverage={}",
+        logger::info("SCOPY PUPPET driver clip='{}' mode={} mapping={} solving={} coverage={}",
             m_playback.name,
             readable(m_current_generator, sizeof(RE::hkbClipGenerator))
                 ? (m_current_generator->mode.get() == RE::hkbClipGenerator::PlaybackMode::kModeLooping ? "loop" : "single")
                 : "?",
-            m_mapping, coverage);
+            m_mapping, m_solving ? 1 : 0, coverage);
     }
 
     const float time = live_clip_time(m_current_generator);

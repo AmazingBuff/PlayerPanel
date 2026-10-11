@@ -323,6 +323,30 @@ bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
 // The live control time of one running clip, guarded; -1 when the control is gone or unreadable.
 [[nodiscard]] float live_clip_time(RE::hkbClipGenerator const* generator);
 
+// HKX42: the empirical mapping solver. The binding table on OAR replacements is empty and the
+// HKX40 A/B convicted identity across weapon families (calm 38-62%), so the true track order is
+// measured instead of guessed: per paused tick one observation frame - every track sampled at the
+// live control time, its rotation compared against each candidate truth bone; after enough frames
+// the per-track argmin (with claims) names the bone each track really drives, and the playback's
+// mapping is rewritten in place (mapping becomes "solved").
+//
+// Truth, in order of preference: the puppet's own 3D node locals by bone name (~93 bones, the same
+// name space as the display mapping) - unless they measure frozen across the frames (the graph may
+// not propagate pose to nodes during a manual tick), then hkbCharacter::poseLocal by name (39
+// bones, the vanilla-named core). When both truth sources measure frozen the solver reports it and
+// leaves the playback untouched - that is itself a finding.
+//
+// One solver at a time (the driver drives one clip); a different generator resets the state.
+// Call once per paused tick; returns true when the solve finished this frame.
+bool solve_tracks_step(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
+    RE::hkbClipGenerator const* generator, ClipPlayback& in_out_playback, std::string& out_note);
+
+// Drops the solver's accumulated state (clip switch, session end).
+void reset_track_solver();
+
+// How many observation frames one solve accumulates before the argmin runs.
+inline constexpr std::uint32_t Track_Solve_Frames = 90;
+
 // HKX39: one same-phase numeric A/B of the resolved clip against the puppet's own per-bone state
 // (hkbCharacter::poseLocal by bone name - the HKX28 protocol at a single phase, the live control
 // time). This is PRD 0.7 section 6.4's tier-2 verification for the identity tier: it measures,
