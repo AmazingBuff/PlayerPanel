@@ -369,6 +369,9 @@ void SceneGraphCopy::request(Command command)
 void SceneGraphCopy::reset_for_load()
 {
     m_command.store(Command::e_none, std::memory_order_release);
+    // H05: an isolation session must not span a load. The render bracket is asked to fold it on
+    // its next frame, because this runs on the main thread while a census may be mid-read there.
+    m_isolation.request_end();
     m_generation.fetch_add(1, std::memory_order_acq_rel);
 }
 
@@ -390,6 +393,17 @@ void SceneGraphCopy::process_requests()
 
     const uint32_t generation = m_generation.load(std::memory_order_acquire);
     RE::UI* ui = RE::UI::GetSingleton();
+
+    // H05: the instrumented session only covers the paused panel. The close and the unpause arrive
+    // together, so the session folds on the first frame that no longer qualifies; a load boundary
+    // queues its own request from the main thread.
+    if (m_isolation.armed())
+    {
+        if (m_isolation.take_end_request())
+            m_isolation.end("load-boundary");
+        else if (!ui || !ui->GameIsPaused() || !PanelMonitor::instance().is_menu_open())
+            m_isolation.end("panel-closed");
+    }
 
     // While the game runs, watch which registered idle the engine is actually running for the player.
     // OAR's choice is the index it wrote onto that clip, so this collects its decisions as they happen;
@@ -415,12 +429,19 @@ void SceneGraphCopy::process_requests()
         return;
     if (command == Command::e_release)
     {
+        // F4 also works while the game runs; a census only means something inside the paused
+        // session, so it fences the release when one is armed and otherwise stays out of the way.
+        const bool watch = m_isolation.armed();
+        if (watch)
+            m_isolation.census_pre("release");
         retire(std::move(m_snapshot));
         reset_probe_target();
         m_idle.reset();
         m_clip.reset();
         m_draw_enabled = false;
         logger::info("SCOPY RELEASE reason=F4 capture={}", m_capture_id);
+        if (watch)
+            m_isolation.census_post("release");
         return;
     }
     if (!ui || !ui->GameIsPaused() || !PanelMonitor::instance().is_menu_open() || ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
@@ -431,26 +452,38 @@ void SceneGraphCopy::process_requests()
     switch (command)
     {
     case Command::e_capture:
+        m_isolation.census_pre("capture");
         capture();
+        m_isolation.census_post("capture");
         break;
     case Command::e_toggle_draw:
         if (m_snapshot)
         {
+            m_isolation.census_pre("draw-toggle");
             m_draw_enabled = !m_draw_enabled;
-            logger::info("SCOPY DRAW-TOGGLE enabled={} capture={}", m_draw_enabled, m_capture_id);
+            logger::info("SCOPY DRAW-Toggle enabled={} capture={}", m_draw_enabled, m_capture_id);
+            m_isolation.census_post("draw-toggle");
         }
         else
             logger::warn("SCOPY DRAW-TOGGLE rejected: no accepted snapshot (press F7 and inspect AUDIT)");
         break;
     case Command::e_rotate:
         if (m_snapshot)
+        {
+            m_isolation.census_pre("rotate");
             m_snapshot->rotate_snapshot();
+            m_isolation.census_post("rotate");
+        }
         break;
     case Command::e_anim_probe:
+        m_isolation.census_pre("anim-probe");
         toggle_animation_probe();
+        m_isolation.census_post("anim-probe");
         break;
     case Command::e_idle_toggle:
+        m_isolation.census_pre("idle-toggle");
         toggle_idle();
+        m_isolation.census_post("idle-toggle");
         break;
     default:
         break;

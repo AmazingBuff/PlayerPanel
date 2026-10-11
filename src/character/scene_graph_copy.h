@@ -6,6 +6,7 @@
 
 #include "character/animation_source.h"
 #include "character/idle_driver.h"
+#include "character/isolation_watch.h"
 
 #include <string>
 
@@ -180,6 +181,11 @@ private:
     std::unique_ptr<CharacterClone> m_snapshot;
     // Raw on purpose: these snapshots own graphs that must outlive every boundary.
     std::vector<CharacterClone*> m_parked;
+    // H05: the read-only instrument that fences every panel operation. It takes a census of the
+    // world the panel borrowed from before and after each operation and folds the session into
+    // one verdict at close, so isolation is judged from numbers rather than from the absence of
+    // a crash.
+    IsolationWatch m_isolation;
 };
 
 PLUGIN_NAMESPACE_END
