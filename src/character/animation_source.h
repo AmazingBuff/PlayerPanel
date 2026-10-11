@@ -296,7 +296,11 @@ bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_ro
 // nodes, then recomputes the worlds below the copy root. Sampling goes through
 // SampleIndividualTransformTracks, which takes no chunk cache, so no structure whose layout is unknown
 // is involved. Returns how many nodes were written.
-size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root);
+// `loop` follows the clip generator's own playback mode: a looping clip wraps the sample time by
+// its duration, a single-play clip clamps at the end and holds the final frame - the engine blends
+// that frame out while the state machine moves on, and wrapping it here was what made the panel
+// replay a finished equip until the next clip won the pick (the HKX40 field report).
+size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop = true);
 
 // Reports the instance side of the graph - the per-character clones the engine actually updates, as
 // opposed to the shared template tree the earlier rounds walked - and whether a binding resolves there

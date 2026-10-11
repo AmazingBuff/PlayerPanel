@@ -351,7 +351,12 @@ std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
         m_stall_logged = false;
         m_ab_pending = true;
         m_ab_deadline = m_manual_ticks + Ab_Settle_Ticks;
-        logger::info("SCOPY PUPPET driver clip='{}' mapping={} coverage={}", m_playback.name, m_mapping, coverage);
+        logger::info("SCOPY PUPPET driver clip='{}' mode={} mapping={} coverage={}",
+            m_playback.name,
+            readable(m_current_generator, sizeof(RE::hkbClipGenerator))
+                ? (m_current_generator->mode.get() == RE::hkbClipGenerator::PlaybackMode::kModeLooping ? "loop" : "single")
+                : "?",
+            m_mapping, coverage);
     }
 
     const float time = live_clip_time(m_current_generator);
@@ -362,7 +367,14 @@ std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
         m_current_generator = nullptr;
         return {};
     }
-    const size_t written = play_animation_clip(m_playback, time, copy_root);
+    // The generator's own playback mode decides how the sample time behaves past the clip's end: a
+    // looping clip wraps (its control time already does, engine-side), a single-play clip holds the
+    // final frame while the state machine blends it out - wrapping it here was the equip-replay bug
+    // from the HKX40 field report.
+    bool loops = true;
+    if (readable(m_current_generator, sizeof(RE::hkbClipGenerator)))
+        loops = m_current_generator->mode.get() == RE::hkbClipGenerator::PlaybackMode::kModeLooping;
+    const size_t written = play_animation_clip(m_playback, time, copy_root, loops);
     if (written == 0)
     {
         ++m_stall_frames;

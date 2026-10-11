@@ -3032,7 +3032,7 @@ void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<Acti
     }
 }
 
-size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root)
+size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop)
 {
     if (!clip.valid())
         return 0;
@@ -3042,9 +3042,15 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
         return 0;
 
     const float length = clip.duration > 0.05f ? clip.duration : 0.05f;
-    float looped = std::fmod(seconds, length);
-    if (looped < 0.0f)
-        looped += length;
+    float looped = seconds;
+    if (loop)
+    {
+        looped = std::fmod(seconds, length);
+        if (looped < 0.0f)
+            looped += length;
+    }
+    else if (looped > length)
+        looped = length;  // single-play: the engine blends the final frame out; hold it, never replay
 
     const size_t sample_count = clip.tracks.empty() ? 0 : static_cast<size_t>(clip.tracks.back()) + 1;
     if (sample_count == 0)

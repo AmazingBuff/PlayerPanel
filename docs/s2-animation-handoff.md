@@ -185,6 +185,17 @@ poll_equipment 检测到玩家换装即重设隔离基线（HKX39 的 64 行合�
 弃 poseLocal 的 39 骨窄桥），逐轨道 K 相位最优匹配求映射（每 clip 一次、按 animation 指针缓存，
 毫秒级），ab 协议回验（0.15° 判据复现才算过），`SCOPY PUPPET solve … identity-agrees=J` 顺带
 量化 OAR 轨道重排规律。之后 S1 安全回收。判读全表见诊断轮测试单尾部。
+**HKX41 已打包待上机（2026-10-12）= 一次性动作不回绕（用户报告优先插入）**。用户报告：背包内
+换武器动作结束后又循环播放。HKX40 日志实锤根因：**傀儡图无重入**（2HW_Equip 0.77→1.62s 后图切
+2HW_Idle），循环在显示端——`play_animation_clip` 无条件 fmod(duration)，一次性 clip 在混合出场
+窗口里 localTime 越过时长即被从头重放（idle 不暴露是因为其 control localTime 由引擎自己回绕，
+fmod 碰巧无害）。修复：采样时间按 `hkbClipGenerator::mode` 处理（kModeLooping 回绕 / 其余钳制
+持末帧——引擎正在把末帧混合淡出，持帧才忠实），驱动器逐帧读 mode，ClipPlayer 路线不变；driver
+行补 `mode=loop|single`。构建身份
+`CharacterPanel-scopy-HKX41-1fd1779d46+dirty-cl94faaed0c6-20261011T163821Z`，DLL SHA-256
+`88028a48…` 已部署校验；单测 1/1。判读表见
+[一次性动作测试单](scene-copy-oneloop-test-2026-10-12.md)（含"若 OAR 把 mode 写成 loop 则按名字
+族覆写"的后手）。**HKX41 通过后继续 HKX42 经验映射求解器**（HKX40 定稿的设计），然后 S1。
 **HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
 面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
 跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——
