@@ -5,6 +5,7 @@
 #include "character/isolation_watch.h"
 
 #include "character/animation_source.h"
+#include "character/puppet_driver.h"
 
 #include "RE/B/BSAnimationGraphManager.h"
 #include "RE/B/BShkbAnimationGraph.h"
@@ -220,6 +221,10 @@ namespace
             {
                 RE::Actor* const actor = handle.get().get();
                 if (!actor || actor->GetFormID() == player_id)
+                    continue;
+                // The scheduler's puppet is the panel's own shell (HKX38), not a world change;
+                // the census counts the world the panel must leave untouched.
+                if (PuppetDriver::is_owned_form(actor->GetFormID()))
                     continue;
                 const RE::NiPoint3 position = actor->GetPosition();
                 if (position.GetDistance(origin) > Watch_Radius)

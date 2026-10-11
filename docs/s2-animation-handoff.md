@@ -129,6 +129,21 @@ EquipObject 不触发一次性 equip clip（事件挂在引擎 actor 更新上�
 DLL SHA-256 `42351be7…` 已部署校验；单测 1/1。**遗留队列再排：HKX38 傀儡调度器（第 1）→
 S1 安全回收 → OAR fork（傀儡成立后大概率不必立项）。**
 
+**HKX38 已打包待上机（2026-10-11 深夜）= 调度器 v1：傀儡直驱上产品**。新模块
+`src/character/puppet_driver.{h,cpp}`：kPostLoadGame 请求出生（渲染括号第一个未暂停帧，v6.70
+配方），240 帧 fade 钉死装配窗后泊玩家下方 -8000（未暂停时每 60 帧重泊，对冲引擎更新链覆盖
+一次性 SetPosition），读档/主菜单边界释放，运行时 formID 不进存档（崩零残留）；暂停期手动推图
+（HKX37 实测入口，dt 钳 0.1s，digest 每 ~0.5s）；`animate_at_base_pose` 驱动链升级为
+**傀儡 → 捕获 clip → 程序化**（F2 仍是总闸），每帧取混合权重最强的运行 clip、按 live control
+localTime 采样写副本，**clip 切换才做一次轻量解析**（无走查无扫描——capture 期 A/B 走查的
+~80s 教训），映射分级落地：绑定表非空 → `table`（权威）；OAR 空表 → `identity-unverified`
+（显式标注不静默信任）；H05 普查按"面板所有物"排除傀儡（npc-set 不再 +1）。**本轮不做**
+（HKX39）：equip 第二杠杆（暂停期 SendAnimationEvent）、identity 档的时机性 A/B 与视觉标定、
+poseLocal 覆盖差（39 vs 109）按骨名桥接、A/B 走查限频。构建身份
+`CharacterPanel-scopy-HKX38-d14af9a166+dirty-cl94faaed0c6-20261011T153149Z`，DLL SHA-256
+`a24605e3…` 已部署校验；单测 1/1。判读表见
+[调度器 v1 测试单](scene-copy-scheduler-v1-test-2026-10-11.md)。
+
 **HKX18–HKX27（历史）**：由引擎装载游戏已注册的动作再取其数据。
 用户澄清的原则（已记为产品要求）：**面板动作不必与游戏角色当前在播的一致，但必须是原版或 OAR 注册的动作**，
 不是我们额外引入的资源。流程固定为：命名索引 → 引擎装载 → 从已装载存储取数据 → 作用于面板。

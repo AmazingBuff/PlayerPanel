@@ -3068,6 +3068,164 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
     return written;
 }
 
+RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source)
+{
+    std::vector<ActiveClipEntry> running;
+    collect_running_clip_generators(source, running);
+    RE::hkbClipGenerator const* best = nullptr;
+    float best_weight = 0.0f;
+    for (const ActiveClipEntry& entry : running)
+    {
+        RE::hkbClipGenerator const* const generator = entry.generator;
+        if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
+            continue;
+        const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
+        if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
+            continue;
+        if (control->weight > best_weight)
+        {
+            best_weight = control->weight;
+            best = generator;
+        }
+    }
+    return best;
+}
+
+bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
+    ClipPlayback& out, std::string& out_mapping, std::string& out_coverage)
+{
+    if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
+    {
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=generator-lost");
+        return false;
+    }
+
+    const char* const raw_name = generator->animationName.c_str();
+    const std::string clip_name = raw_name ? raw_name : "";
+    const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
+    if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
+    {
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-live-control clip='{}'", clip_name);
+        return false;
+    }
+
+    const RE::hkaAnimationBinding* const binding = generator->binding;
+    if (!binding || !readable(binding, sizeof(RE::hkaAnimationBinding)) || !looks_like_object(binding))
+    {
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-live-binding clip='{}'", clip_name);
+        return false;
+    }
+    RE::hkaAnimation* const animation = binding->animation.get();
+    if (!animation || !readable(animation, sizeof(RE::hkaAnimation)) || !looks_like_object(animation))
+    {
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-animation clip='{}'", clip_name);
+        return false;
+    }
+    const std::int32_t track_count = animation->numberOfTransformTracks;
+    if (track_count <= 0 || track_count > Max_Tracks_Read || !animation_data_is_present(animation, track_count))
+    {
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=animation-data clip='{}' tracks={}", clip_name, track_count);
+        return false;
+    }
+
+    // The animation skeleton names the bones the tracks are indexed against; the graph that holds
+    // this character is the third-person one (holder matches). Its per-bone state also gives the
+    // coverage note the log uses to watch the pose bridge.
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+    const RE::hkaSkeleton* skeleton = nullptr;
+    std::uint32_t bone_nodes = 0;
+    std::uint32_t pose_count = 0;
+    if (source.GetAnimationGraphManager(manager) && manager)
+    {
+        for (const RE::BSTSmartPointer<RE::BShkbAnimationGraph>& holder : manager->graphs)
+        {
+            RE::BShkbAnimationGraph* const graph = holder.get();
+            if (!graph || !graph->holder || !graph->rootNode)
+                continue;
+            if (static_cast<const RE::TESObjectREFR*>(graph->holder) != &source)
+                continue;
+            skeleton = graph->characterInstance.setup.get()
+                ? graph->characterInstance.setup->animationSkeleton.get()
+                : nullptr;
+            bone_nodes = static_cast<std::uint32_t>(graph->boneNodes.size());
+            pose_count = static_cast<std::uint32_t>(std::max(graph->characterInstance.numPoseLocal, 0));
+            break;
+        }
+    }
+    if (!skeleton || skeleton->bones.empty())
+    {
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-animation-skeleton clip='{}'", clip_name);
+        return false;
+    }
+
+    // Tier 1: the engine-filled table is the authority. Tier 2: the known-empty OAR shape falls
+    // back to identity over the skeleton; marked unverified and left to the occasional A/B.
+    const RE::hkArray<std::int16_t>& table = binding->transformTrackToBoneIndices;
+    std::vector<std::uint16_t> tracks;
+    if (!table.empty() && readable(table.begin(), static_cast<std::size_t>(table.size()) * sizeof(std::int16_t)))
+    {
+        const std::int32_t count = std::min<std::int32_t>(track_count, static_cast<std::int32_t>(table.size()));
+        tracks.reserve(static_cast<std::size_t>(count));
+        for (std::int32_t i = 0; i < count; ++i)
+        {
+            const std::int16_t bone = table[static_cast<std::size_t>(i)];
+            if (bone < 0 || static_cast<std::uint32_t>(bone) >= static_cast<std::uint32_t>(skeleton->bones.size()))
+                continue;
+            tracks.push_back(static_cast<std::uint16_t>(bone));
+        }
+        out_mapping = "table";
+    }
+    else
+    {
+        const std::int32_t count = std::min<std::int32_t>(track_count, static_cast<std::int32_t>(skeleton->bones.size()));
+        tracks.reserve(static_cast<std::size_t>(count));
+        for (std::int32_t i = 0; i < count; ++i)
+            tracks.push_back(static_cast<std::uint16_t>(i));
+        out_mapping = "identity-unverified";
+    }
+
+    // Copy nodes by bone name, one walk per clip switch (switches are seconds apart). The
+    // skeleton's own root never drives: the studio owns the copy's root placement.
+    const NodeTable copy_nodes = collect_nodes(copy_root);
+    const NameIndex copy_by_name = index_by_name(copy_nodes);
+    out = ClipPlayback{};
+    out.animation = animation;
+    out.name = clip_name;
+    out.duration = animation->duration;
+    out.tracks = tracks;
+    out.nodes.assign(tracks.size(), nullptr);
+    size_t resolved = 0;
+    for (size_t i = 0; i < tracks.size(); ++i)
+    {
+        const char* const bone_name = skeleton->bones[tracks[i]].name.c_str();
+        if (!bone_name)
+            continue;
+        const auto found = copy_by_name.find(bone_name);
+        if (found == copy_by_name.end() || found->second == &copy_root)
+            continue;
+        out.nodes[i] = found->second;
+        ++resolved;
+    }
+    if (resolved == 0)
+    {
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-copy-nodes clip='{}' tracks={}", clip_name, tracks.size());
+        return false;
+    }
+    out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={}", tracks.size(), resolved, bone_nodes, pose_count);
+    return true;
+}
+
+float live_clip_time(RE::hkbClipGenerator const* generator)
+{
+    if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
+        return -1.0f;
+    const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
+    if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
+        return -1.0f;
+    const float time = control->localTime;
+    return std::isfinite(time) ? time : -1.0f;
+}
+
 void ClipPlayer::reset()
 {
     m_clip = ClipPlayback{};

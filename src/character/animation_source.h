@@ -304,6 +304,21 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
 // candidate, so a wrong layout shows up as a rejection reason instead of a crash.
 void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation, const RE::hkaAnimationBinding*& out_binding, float& out_local_time);
 
+// HKX38 scheduler: the puppet's live clip, in two steps. The cheap step runs every frame - the
+// sampler's activeNodes list picks the running clip whose control blends strongest, which is the
+// pose the graph is actually playing out. The full step runs only when that pick changes: the
+// clip's own live binding hands over the animation, and the track-to-bone mapping is tiered per
+// PRD 0.7 section 6.4 - the binding's table when the engine filled it, identity over the
+// animation skeleton when it is the known-empty OAR shape (marked unverified; the occasional A/B
+// measures it, nothing trusts it silently). No discovery walk and no ground-truth sweep here.
+[[nodiscard]] RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source);
+
+bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
+    ClipPlayback& out, std::string& out_mapping, std::string& out_coverage);
+
+// The live control time of one running clip, guarded; -1 when the control is gone or unreadable.
+[[nodiscard]] float live_clip_time(RE::hkbClipGenerator const* generator);
+
 // The registered animations the player's own clips are running, split into the only two classes the panel
 // needs: the standing idles it plays while the character is doing nothing else, and the equip animations
 // it plays when equipment changes and then returns from. Running, combat and jumping are deliberately not

@@ -11,6 +11,7 @@
 
 #include "panel/panel.h"
 #include "character/character_manager.h"
+#include "character/puppet_driver.h"
 #include "character/puppet_probe.h"
 #include "character/scene_graph_copy.h"
 
@@ -73,6 +74,11 @@ namespace
                 // The HKX37 puppet probe rides the same render bracket: F6 stages are consumed
                 // and the manual animation-graph tick happens here, frame-aligned with the panel.
                 PuppetProbe::instance().tick();
+#endif
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+                // The scheduler's data source: lifecycle pump, and while the panel pauses the
+                // world this frame also drives the puppet's graph on the studio clock.
+                PuppetDriver::instance().tick(paused);
 #endif
 
                 // Host audit: menuObjects[0] is engine-managed and rebuilt

@@ -7,6 +7,7 @@
 #include "render/renderer.h"
 #include "render/shader_manager.h"
 #include "render/studio/light.h"
+#include "character/puppet_driver.h"
 #include "character/scene_graph_copy.h"
 #include "input/input.h"
 
@@ -56,6 +57,14 @@ namespace
             PLUGIN_NAMESPACE::CharacterManager::instance().clear_clones();
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             PLUGIN_NAMESPACE::SceneGraphCopy::instance().reset_for_load();
+            PLUGIN_NAMESPACE::PuppetDriver::instance().request_release();
+#endif
+            break;
+        case SKSE::MessagingInterface::kPostLoadGame:
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+            // The scheduler's data source for this save session; the render bracket consumes the
+            // request on the first unpaused frame (assembly needs the engine's update loop).
+            PLUGIN_NAMESPACE::PuppetDriver::instance().request_spawn();
 #endif
             break;
         default:

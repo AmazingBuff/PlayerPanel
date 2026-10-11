@@ -4,6 +4,8 @@
 
 #include "character/scene_graph_copy.h"
 
+#include "character/puppet_driver.h"
+
 #include "character/animation_source.h"
 #include "character/character_clone.h"
 #include "character/snapshot_transform.h"
@@ -368,6 +370,7 @@ void SceneGraphCopy::request(Command command)
 
 void SceneGraphCopy::reset_for_load()
 {
+    PuppetDriver::instance().request_release();
     m_command.store(Command::e_none, std::memory_order_release);
     // H05: an isolation session must not span a load. The render bracket is asked to fold it on
     // its next frame, because this runs on the main thread while a census may be mid-read there.
@@ -413,6 +416,7 @@ void SceneGraphCopy::process_requests()
 
     if (generation != m_seen_generation || (ui && ui->IsMenuOpen(RE::MainMenu::MENU_NAME)))
     {
+        PuppetDriver::instance().release("session-boundary");
         if (m_snapshot)
             logger::info("SCOPY RELEASE reason=session-boundary capture={}", m_capture_id);
         retire(std::move(m_snapshot));
@@ -548,6 +552,8 @@ std::string SceneGraphCopy::animation_driver() const
         return "off";
     if (m_anim_probe_enabled)
         return "probe";
+    if (!m_driver_note.empty())
+        return m_driver_note;
     if (m_clip.ready())
         return m_clip.name();
     return "procedural-idle";
@@ -620,14 +626,22 @@ void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
     // every frame, so a driver underneath it would only fight the measurement.
     if (m_anim_probe_enabled)
         return;
-    // The source character's own animation when the engine handed one over; the procedural idle is the
-    // fallback for a body whose graph has none, and the log said which one at capture.
+    // The driver chain, strongest first: the puppet's live graph (real OAR decisions, HKX38),
+    // the clip the engine handed over at capture, then the procedural idle for a body with
+    // neither. Each stage serves the frame or hands it down, and the log names the winner.
+    if (std::string puppet_note = PuppetDriver::instance().drive(*root); !puppet_note.empty())
+    {
+        m_driver_note = std::move(puppet_note);
+        return;
+    }
     if (m_clip.ready())
     {
         m_clip.advance(*root);
+        m_driver_note = fmt::format("clip:{}", m_clip.name());
         return;
     }
     m_idle.advance(*root);
+    m_driver_note = "procedural-idle";
 }
 
 void SceneGraphCopy::select_probe_target(RE::NiAVObject& root)

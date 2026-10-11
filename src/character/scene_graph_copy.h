@@ -150,6 +150,9 @@ private:
     std::string m_probe_root;
     std::string m_probe_parent_chain;
     std::string m_probe_skin_report;
+    // Who animated the copy on the latest driven frame (puppet/clip/procedural), for the log. The
+    // puppet replaces the capture-time clip as the preferred source; the field names the winner.
+    std::string m_driver_note;
     // The slot's bind-pose transform (static skin data) and the orientation the previous frame's
     // swing produced: both are candidate quantities the sampled slot may actually hold, and both
     // come from the engine rather than from a value this code wrote.
