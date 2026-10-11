@@ -136,8 +136,24 @@ void PuppetDriver::tick(bool paused)
 
     if (!paused)
     {
-        // The world runs: keep the shell deep (the engine's update chain overrides a one-shot
-        // park), and leave the graph to the engine's own ticking.
+        // The world runs: the solver observes here (node locals move under the engine's tick),
+        // and the repark keeps the shell deep. The graph itself is the engine's own business.
+        if (m_solving && m_current_generator)
+        {
+            if (RE::NiAVObject* const copy_root = SceneGraphCopy::instance().copy_root())
+            {
+                std::string note;
+                if (solve_tracks_step(*puppet, *copy_root, m_current_generator, paused, m_playback, note))
+                {
+                    m_mapping = "solved";
+                    m_solving = false;
+                    logger::info("{}", note);
+                }
+                else if (!note.empty() && (m_repark_frames % 90 == 0 || note.find("UNAVAILABLE") != std::string::npos || note.find("retry") != std::string::npos))
+                    logger::info("{}", note);
+            }
+        }
+        // Keep the shell deep (the engine's update chain overrides a one-shot park).
         if (++m_repark_frames >= Repark_Frames)
         {
             m_repark_frames = 0;
@@ -163,14 +179,15 @@ void PuppetDriver::tick(bool paused)
     // the engine update that never comes (the HKX37 finding).
     poll_equipment(*puppet);
 
-    // HKX42: the empirical solver accumulates one observation per paused tick until the mapping
-    // is measured, then the A/B judges the result.
+    // HKX43: the empirical solver accumulates where the truth lives - node locals move under the
+    // engine's own tick (unpaused), so the paused phase only consumes; a pause that catches the
+    // solve mid-window continues on pose locals, the measured-dead node path stays off.
     if (m_solving && m_current_generator)
     {
         if (RE::NiAVObject* const copy_root = SceneGraphCopy::instance().copy_root())
         {
             std::string note;
-            if (solve_tracks_step(*puppet, *copy_root, m_current_generator, m_playback, note))
+            if (solve_tracks_step(*puppet, *copy_root, m_current_generator, paused, m_playback, note))
             {
                 m_mapping = "solved";
                 m_solving = false;

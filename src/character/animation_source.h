@@ -339,7 +339,7 @@ bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
 // One solver at a time (the driver drives one clip); a different generator resets the state.
 // Call once per paused tick; returns true when the solve finished this frame.
 bool solve_tracks_step(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
-    RE::hkbClipGenerator const* generator, ClipPlayback& in_out_playback, std::string& out_note);
+    RE::hkbClipGenerator const* generator, bool paused_phase, ClipPlayback& in_out_playback, std::string& out_note);
 
 // Drops the solver's accumulated state (clip switch, session end).
 void reset_track_solver();

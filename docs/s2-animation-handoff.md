@@ -215,6 +215,14 @@ t=/weight 活着）——node-locals 真值路径关闭；②**retry 实现 bug*
 **HKX43 修复序**：init 拆分（结构一次 + 真值可重入）→ **真值源换时机**（求解累积挂引擎期
 tick——未暂停时节点是活的，93 骨全宽真值；面板期只消费结果；映射按 animation 指针缓存）→
 motion 3 位小数。HKX41 遗留：`Dag_Equip mode=loop` 族观测（按名族覆写后手待命）。
+**HKX43 已打包待上机（2026-10-12）= 求解器修复轮**（HKX42 判读三项逐项）：①init/真值选择
+拆分——retry 不再重建结构表，pose-local 回退可执行；②**求解观测改挂引擎期 tick**（未暂停分支，
+节点 local 活着，93 骨全宽真值；暂停期只消费，中段捕获按 pose-local 续，两相观测不混积）；
+③冻结绝不写映射 + motion 3 位小数 + **求解映射按 animation 指针缓存**（resolve 第三档
+`solved-cached`，跨面板会话免等）。构建身份
+`CharacterPanel-scopy-HKX43-c6b9a4dfc8+dirty-cl94faaed0c6-20261011T172214Z`，DLL SHA-256
+`2c743cfd…` 已部署校验；单测 1/1。判读表见
+[求解器修复测试单](scene-copy-solver2-test-2026-10-12.md)。
 **HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
 面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
 跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——
