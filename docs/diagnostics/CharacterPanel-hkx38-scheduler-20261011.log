@@ -1,0 +1,814 @@
+[23:37:46.661] [14376] [I] CharacterPanel v1-2-1-0
+[23:37:46.661] [14376] [I] CharacterPanel loaded
+[23:38:37.858] [9300 ] [I] All shaders compiled
+[23:38:37.858] [9300 ] [I] Installed pre-UI renderer hook
+[23:38:37.858] [9300 ] [I] Menu sink installed
+[23:38:37.858] [9300 ] [I] SCOPY BUILD CharacterPanel-scopy-HKX38-d14af9a166+dirty-cl94faaed0c6-20261011T153149Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle F6-anim-probe(opt-in)
+[23:38:37.873] [43016] [I] Studio host changed: 0x0 -> 0x1e12d056980 (paused=true)
+[23:38:37.873] [43016] [I] Studio light node has been created
+[23:38:37.873] [43016] [I] CP-LIGHT slot 0: registered, shell 0x1e2b0a97880 queued (ledger stays the authority)
+[23:38:37.873] [43016] [I] CP-LIGHT slot 1: registered, shell 0x1e2b0a97740 queued (ledger stays the authority)
+[23:38:37.873] [43016] [I] CP-LIGHT slot 2: registered, shell 0x1e2b0a97600 queued (ledger stays the authority)
+[23:38:37.873] [43016] [I] Studio lights registered on the ledger (scene=0x1d742bf6e80 -- ledger fetch will populate the slots)
+[23:38:37.873] [43016] [I] CP-LIGHT slot 0: ledger shell fetched 0x1e2b0a97880 (after 0 miss frames)
+[23:38:37.873] [43016] [I] CP-LIGHT slot 1: ledger shell fetched 0x1e2b0a97740 (after 0 miss frames)
+[23:38:37.873] [43016] [I] CP-LIGHT slot 2: ledger shell fetched 0x1e2b0a97600 (after 0 miss frames)
+[23:39:09.111] [43016] [I] CP-LIGHT slot 0: ledger shell dropped
+[23:39:09.111] [43016] [I] CP-LIGHT slot 1: ledger shell dropped
+[23:39:09.111] [43016] [I] CP-LIGHT slot 2: ledger shell dropped
+[23:39:09.111] [43016] [W] Studio lights not fully served by the ledger yet
+[23:39:15.486] [43016] [W] Studio lights not fully served by the ledger yet
+[23:39:17.881] [43016] [I] SCOPY PUPPET born form=ff006918 base=00000007 grace=240 frames (fade-pinned at the player; parks deep after assembly)
+[23:39:17.881] [43016] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1e2b0a96fc0 filed to lightQueueAdd)
+[23:39:17.881] [43016] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1e2b0a96e80 filed to lightQueueAdd)
+[23:39:17.881] [43016] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1e2b0a96d40 filed to lightQueueAdd)
+[23:39:17.950] [43016] [I] CP-LIGHT slot 0: ledger shell fetched 0x1e2b0a96fc0 (after 1 miss frames)
+[23:39:17.950] [43016] [I] CP-LIGHT slot 1: ledger shell fetched 0x1e2b0a96e80 (after 1 miss frames)
+[23:39:17.950] [43016] [I] CP-LIGHT slot 2: ledger shell fetched 0x1e2b0a96d40 (after 1 miss frames)
+[23:39:28.420] [14376] [I] SCOPY PUPPET parked reason=grace-complete offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:29.515] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:30.589] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:31.631] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:32.702] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:33.766] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:34.953] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:36.289] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:37.677] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:39.059] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:40.441] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:41.795] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:43.022] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:44.358] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:45.709] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:47.118] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:48.457] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:50.017] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:51.483] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:52.939] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:54.617] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:56.133] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:57.404] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:58.598] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:39:59.740] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:00.907] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:02.083] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:03.187] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:04.294] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:05.354] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:06.377] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:07.468] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:08.581] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:09.693] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:10.772] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:11.869] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:12.886] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:13.923] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:14.967] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:15.982] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:16.943] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:18.029] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:19.042] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:20.092] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:21.150] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:22.194] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:23.230] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:24.252] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:25.273] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:26.278] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:27.363] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:28.403] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:29.456] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:30.521] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:31.537] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:32.540] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:33.587] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:34.654] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:35.707] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:36.736] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:37.761] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:38.780] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:39.877] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:40.957] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:42.024] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:43.136] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:44.244] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:45.249] [14376] [I] SCOPY PUPPET digest ticks=30 step=0.0171 clips=1 [Animations\male\MT_Idle.HKX#12222(0.98s)]
+[23:40:45.772] [14376] [I] SCOPY PUPPET digest ticks=60 step=0.0163 clips=1 [Animations\male\MT_Idle.HKX#12222(1.50s)]
+[23:40:46.287] [14376] [I] SCOPY PUPPET digest ticks=90 step=0.0162 clips=1 [Animations\male\MT_Idle.HKX#12222(2.02s)]
+[23:40:46.810] [14376] [I] SCOPY PUPPET digest ticks=120 step=0.0164 clips=1 [Animations\male\MT_Idle.HKX#12222(2.53s)]
+[23:40:47.333] [14376] [I] SCOPY PUPPET digest ticks=150 step=0.0165 clips=1 [Animations\male\MT_Idle.HKX#12222(3.06s)]
+[23:40:55.941] [14376] [I] SCOPY PUPPET digest ticks=180 step=0.0171 clips=1 [Animations\male\MT_Idle.HKX#12222(3.65s)]
+[23:40:56.903] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:58.042] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:40:58.366] [14376] [I] SCOPY PUPPET digest ticks=210 step=0.0169 clips=1 [Animations\male\MT_Idle.HKX#12222(6.11s)]
+[23:40:58.860] [14376] [I] SCOPY PUPPET digest ticks=240 step=0.0145 clips=1 [Animations\male\MT_Idle.HKX#12222(6.60s)]
+[23:41:00.081] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:01.158] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:02.310] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:03.510] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:04.657] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:06.149] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:07.561] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:08.864] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:10.286] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:11.731] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:12.973] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:14.248] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:15.430] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:16.664] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:17.990] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:19.307] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:20.598] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:21.861] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:23.116] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:24.340] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:25.644] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:26.923] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:28.209] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:29.472] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:30.512] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:31.502] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:32.475] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:33.497] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:34.863] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:36.130] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:37.472] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:38.562] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:39.940] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:41.456] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:42.975] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:44.495] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:45.901] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:47.314] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:48.213] [14376] [I] SCOPY ANIM restart at panel open capture=0 driver=procedural-idle
+[23:41:48.613] [14376] [I] SCOPY PUPPET digest ticks=270 step=0.0249 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(3.19s)]
+[23:41:49.119] [14376] [I] SCOPY ANIM restart at panel open capture=0 driver=procedural-idle
+[23:41:49.663] [14376] [I] SCOPY PUPPET digest ticks=300 step=0.0263 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(4.26s)]
+[23:41:50.376] [14376] [I] SCOPY PUPPET digest ticks=330 step=0.0237 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.31s)]
+[23:41:51.077] [14376] [I] SCOPY PUPPET digest ticks=360 step=0.0241 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.01s)]
+[23:41:51.786] [14376] [I] SCOPY PUPPET digest ticks=390 step=0.0254 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.71s)]
+[23:41:52.488] [14376] [I] SCOPY PUPPET digest ticks=420 step=0.0213 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(2.42s)]
+[23:41:53.186] [14376] [I] SCOPY PUPPET digest ticks=450 step=0.0219 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(3.12s)]
+[23:41:53.892] [14376] [I] SCOPY PUPPET digest ticks=480 step=0.0290 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(3.82s)]
+[23:41:54.590] [14376] [I] SCOPY PUPPET digest ticks=510 step=0.0221 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(4.52s)]
+[23:41:55.289] [14376] [I] SCOPY PUPPET digest ticks=540 step=0.0250 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.55s)]
+[23:41:55.987] [14376] [I] SCOPY PUPPET digest ticks=570 step=0.0206 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.25s)]
+[23:41:57.075] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:41:58.520] [14376] [I] SCOPY ANIM restart at panel open capture=0 driver=procedural-idle
+[23:41:58.535] [14376] [I] SCOPY PUPPET digest ticks=600 step=0.1000 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(3.80s)]
+[23:41:59.301] [14376] [I] SCOPY PUPPET digest ticks=630 step=0.0249 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(4.57s)]
+[23:41:59.945] [14376] [I] SCOPY ISOLATION baseline op=capture nodes=1842 npcs=24 pose-bones=116 pose-note='' root=0x1e45d39f880 parent=0x1e45c634280 beyond-radius=0
+[23:41:59.945] [14376] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x1e45d39f880 parent=0x1e45c634280 nodes=1842 geoms=117 api=NiObject::Clone id=68835/70187
+[23:41:59.948] [14376] [I] SCOPY CLONE-RETURN capture=1 copy=0x1e448dde500
+[23:41:59.948] [14376] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1842 skin-bones=891
+[23:41:59.949] [14376] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[23:41:59.949] [14376] [I] SCOPY CENSUS source-nodes=1842 copy-nodes=1842 source-geoms=117 copy-geoms=117 source-skins=62 copy-skins=62 source-dynamic=10 copy-dynamic=10
+[23:41:59.949] [14376] [I] SCOPY FRAME skinned-bound valid=true radius=77.5 center=(-514.9,-86.1,411.3) graph-bound radius=279.8 scale=0.35 pruned-nodes=67
+[23:41:59.949] [14376] [I] SCOPY READY capture=1 controllers-removed=116 collisions-removed=18 draw=off actor-created=false F8=draw F3=rotate F4=release
+[23:41:59.949] [14376] [I] SCOPY ANIM source form=00000014 graphs=2 copy-nodes=1721
+[23:41:59.949] [14376] [I] SCOPY ANIM graph[0] project='DefaultFemale' holder=true root=true bone-nodes=116 anim-bones=116 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=15203 pose-local=116
+[23:41:59.950] [14376] [I] SCOPY ANIM skeleton graph=0 name='NPC Root [Root]' bones=116 bone-nodes=116 bone-node-names-agree=37/116 matched=109 ambiguous=0 duplicate-nodes=147 parent-ancestors=109 missing='x_NPC LookNode [Look], x_NPC Translate [Pos ], x_NPC Rotate [Rot ], Shield, Weapon, Quiver, Belly' wrong-parent='-'
+[23:41:59.950] [14376] [I] SCOPY ANIM graph[1] project='FirstPerson' holder=true root=false bone-nodes=99 anim-bones=99 behavior-graph=true root-generator='hkbStateMachine' binding-set=true bindings=2275 pose-local=99
+[23:41:59.950] [14376] [I] SCOPY ANIM skeleton graph=1 name='NPC Root [Root]' bones=99 bone-nodes=99 bone-node-names-agree=78/99 matched=80 ambiguous=0 duplicate-nodes=147 parent-ancestors=80 missing='NPC LookNode [Look], NPC Translate [Pos ], NPC Rotate [Rot ], x_SkirtRBone01, x_SkirtRBone02, x_SkirtRBone03, x_SkirtLBone01, x_SkirtLBone02' wrong-parent='-'
+[23:41:59.950] [14376] [I] SCOPY ANIM gate verdict=INCOMPLETE graph=0 matched=109/116 ambiguous=0
+[23:41:59.950] [14376] [I] SCOPY ANIM map graph=0 bones=116 matched=109 helper-unresolved=3 other-unresolved=4
+[23:41:59.950] [14376] [I] SCOPY ANIM replay pose entries=116 scale-off-from-one=5
+[23:41:59.950] [14376] [I] SCOPY ANIM replay control max-pos-delta=203.412 max-rot-delta=179.70deg bones=109
+[23:41:59.951] [14376] [I] SCOPY ANIM replay order=skeleton quat=direct written=109 max-pos-delta=5.591 max-rot-delta=0.08deg bones=109
+[23:41:59.951] [14376] [I] SCOPY ANIM replay order=skeleton quat=transposed written=109 max-pos-delta=143.616 max-rot-delta=179.42deg bones=109
+[23:41:59.951] [14376] [I] SCOPY ANIM replay order=bone-nodes quat=direct written=106 max-pos-delta=0.404 max-rot-delta=0.04deg bones=106
+[23:41:59.951] [14376] [I] SCOPY ANIM replay order=bone-nodes quat=transposed written=106 max-pos-delta=69.926 max-rot-delta=174.42deg bones=106
+[23:41:59.951] [14376] [I] SCOPY ANIM replay restored max-pos-delta=0.000 max-rot-delta=0.04deg bones=109
+[23:41:59.951] [14376] [I] SCOPY ANIM replay verdict match=bone-nodes/direct control=203.412u best=0.4037u
+[23:41:59.954] [14376] [I] SCOPY ANIM catalogue character='DefaultFemale' rig='Character Assets Female\skeleton_female.hkx' behavior='Behaviors\0_Master.hkx' names=15203 bindings=15203
+[23:41:59.957] [14376] [I] SCOPY ANIM catalogue idle-names=1526/15203 first='Animations\1hm_blockidle.hkx@20, Animations\1hm_idle.hkx@23, Animations\2hm_blockidle.hkx@123, Animations\2hm_idle.hkx@124, Animations\2hw_blockidle.hkx@204, Animations\2hw_idle.hkx@206, Animations\altar_leftidle.hkx@234, Animations\female\animobjectchairdrinkingidlebase.hkx@235'
+[23:41:59.957] [14376] [I] SCOPY ANIM catalogue idle-plain first='Animations\horse_rider\idle.hkx@705, Animations\horse_rider\idle_pet.hkx@706, Animations\horse_rider\idle_rearup.hkx@707, Animations\DLC01\idleactivatecoffinpuzzle.hkx@708, Animations\idleblessingkneel_enter.hkx@709, Animations\idleblessingkneel_exit.hkx@710, Animations\idleblessingkneel_loop.hkx@711, Animations\female\idlebloodportalactivate.hkx@712'
+[23:41:59.957] [14376] [I] SCOPY ANIM catalogue idle-base first='Animations\horse_rider\idle.hkx@705, Animations\female\mt_idle.hkx@1022, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Fbite_Body_Freeze\female\mt_idle.hkx@11908, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued\female\_variants_mt_idle\mt_idle.hkx@11910, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\WC_FF_Blizzard_Idle_Cold\female\mt_idle.hkx@11913, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Light\female\_variants_mt_idle\mt_idle.hkx@11914, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\FF_Cold_FBreath\female\_variants_mt_idle\mt_idle.hkx@11918, data\meshes\actors\character\animations\OpenAnimationReplacer\AsheConditionalAnims\1Fatigued_Mid\female\_variants_mt_idle\mt_idle.hkx@11921'
+[23:41:59.958] [14376] [I] SCOPY ANIM catalogue elements=8 object-like=8/8 scan=0x80
+[23:41:59.959] [14376] [I] SCOPY ANIM catalogue candidate offset=0x00 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[23:41:59.959] [14376] [I] SCOPY ANIM catalogue candidate offset=0x30 as=value valid=0/8 reasons='no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation,no-animation'
+[23:41:59.959] [14376] [I] SCOPY ANIM catalogue raw index=0 qwords='00007ff6176549b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6176549d8 000000000001ffff 0000000000000000 8000000000000000 0000000000000000 0000000000000000 00007ff618f7d458 0000000000000016 7055204c2043504e 5b206d7241726570'
+[23:41:59.960] [14376] [I] SCOPY ANIM catalogue raw index=7601 qwords='00007ff6176549b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6176549b8 000000000001ffff 0000000000000000 0000000000000000 8000000000000000 0000000000000000 00007ff6176549b8 000000000001ffff 0000000000000000 0000000000000000'
+[23:41:59.960] [14376] [I] SCOPY ANIM catalogue layout UNAVAILABLE reason=no-candidate (read the raw dump)
+[23:41:59.960] [14376] [I] SCOPY ANIM instance graph=0 char-bindingset=0x1e1178277e0/15203 setup-bindingset=0x0/0 root-generator=0x1e0d8ba2c70 root-clone=0x0 active-nodes=106
+[23:41:59.962] [14376] [I] SCOPY ANIM instance roots generator=template clone=template
+[23:42:04.679] [14376] [I] SCOPY ANIM instance objects=497 clips=13 clone-states='kDefault:155, kClone:99, unknown:160, kShareable:19, kTemplate:64'
+[23:42:04.680] [14376] [I] SCOPY ANIM tracks binding=0x1e0e8ac3180 array=0x0 size=0 declared=99 readable=false array-at=0x1e0e8ac31a0
+[23:42:04.681] [14376] [I] SCOPY ANIM tracks binding qwords='00007ff617675430 0000000000000000 000001e0e8ac31d0 000001e0e8a8a4c0 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000'
+[23:42:04.681] [14376] [I] SCOPY ANIM instance clip name='Animations\male\MT_Idle.HKX' idx=12218 clone-state=kClone binding=0x1e0e8ac3180 control=0x1e1168cea80 bind-src=clip tracks=0 reason=tracks-unreadable
+[23:42:04.682] [14376] [I] SCOPY ANIM instance anim binding=0x1e0e8ac3180 animation=0x1e0e8a8a4c0 probe=valid type=spline duration=20.00s transform-tracks=99 float-tracks=0
+[23:42:04.683] [14376] [I] SCOPY ANIM instance control at=0x1e1168cea80 binding@0x38=0x1e0e8ac3180 same-as-clip-binding=true localTime=6.921 weight=1.000 ttw-size=99 ftw-size=0
+[23:42:04.683] [14376] [I] SCOPY ANIM instance control qwords='00007ff61767a2b8 000000000001ffff 3f80000040dd7bbb 000001e117059d00 0000006300000063 000001e1175ae460 0000001000000000 000001e0e8ac3180 0000000000000000 8000000000000000 000000003f800000'
+[23:42:04.686] [14376] [I] SCOPY ANIM instance clip name='Animations\male\weaponAdjustment.hkx' idx=1629 clone-state=kDefault binding=0x1e117a61ed0 control=0x0 bind-src=bindingset tracks=7 reason=valid
+[23:42:04.686] [14376] [I] SCOPY ANIM instance anim binding=0x1e117a61ed0 animation=0x1e117a61ad0 probe=valid type=spline duration=3.33s transform-tracks=7 float-tracks=0
+[23:42:04.687] [14376] [I] SCOPY ANIM instance clip name='Animations\FemaleBodyMorph.hkx' idx=673 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.688] [14376] [I] SCOPY ANIM instance clip name='Animations\male\MT_Idle.HKX' idx=1022 clone-state=kTemplate binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.690] [14376] [I] SCOPY ANIM instance clip name='Animations\DialogueResponsePositiveD.hkx' idx=620 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.692] [14376] [I] SCOPY ANIM instance clip name='Animations\DialogueResponsePositiveC.hkx' idx=619 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.693] [14376] [I] SCOPY ANIM instance clip name='Animations\BFCO_PowerAttack_Charge2.hkx' idx=1697 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.695] [14376] [I] SCOPY ANIM instance clip name='Animations\male\DialogueNeutralExpressiveA.hkx' idx=603 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.696] [14376] [I] SCOPY ANIM instance clip name='Animations\DialogueAngryBase.hkx' idx=595 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.698] [14376] [I] SCOPY ANIM instance clip name='Animations\male\DialogueAngryE.hkx' idx=596 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.700] [14376] [I] SCOPY ANIM instance clip name='Animations\male\DialogueNeutralExpressiveA.hkx' idx=603 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.701] [14376] [I] SCOPY ANIM instance clip name='Animations\DialogueResponseNegativeC.hkx' idx=617 clone-state=kDefault binding=0x0 control=0x0 bind-src=bindingset tracks=0 reason=no-binding-in-set
+[23:42:04.704] [14376] [I] SCOPY ANIM tracks binding=0x1e0e8ac3180 array=0x0 size=0 declared=99 readable=false array-at=0x1e0e8ac31a0
+[23:42:04.704] [14376] [I] SCOPY ANIM tracks binding qwords='00007ff617675430 0000000000000000 000001e0e8ac31d0 000001e0e8a8a4c0 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000'
+[23:42:04.704] [14376] [I] SCOPY ANIM instance element idx=12218 at=0x1e117543050 set=character binding@0x10=0x1e0e8ac3180 valid=false reason=tracks-unreadable
+[23:42:04.704] [14376] [I] SCOPY ANIM instance element qwords='00007ff6176549b8 000000000001ffff 000001e0e8ac3180 0000000000000000 8000000000000000 0000000000000000 00007ff6176549b8 000000000001ffff'
+[23:42:04.704] [14376] [I] SCOPY ANIM instance verdict=binding-resolved
+[23:42:04.704] [14376] [I] SCOPY ANIM load tree obj=0x1e1188c07e0 vtable=0x7ff6176827c8 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff6176827c8 000000000001ffff 000001e0d9d91f00 0000524000005240'
+[23:42:04.708] [14376] [I] SCOPY ANIM load tree obj=0x1e1188d5800 vtable=0x7ff6176d1910 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff6176d1910 ffffffff0001ffff 000001e1188e1f80 000002b120dace41'
+[23:42:04.710] [14376] [I] SCOPY ANIM load tree obj=0x1e1188c3fa0 vtable=0x7ff617659ca0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617659ca0 000000000001ffff 00007ff6174dcdf8 000000000001ffff'
+[23:42:04.715] [14376] [I] SCOPY ANIM load tree obj=0x1e0d8ac45c0 vtable=0x7ff6176802b0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff6176802b0 000000000001ffff 00007ff6168d9a80 000001e1188c9f80'
+[23:42:04.820] [14376] [I] SCOPY ANIM load tree obj=0x1e1188c09c0 vtable=0x7ff617665320 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617665320 00000000000fffff 00007ff6176652c8 000000000001ffff'
+[23:42:04.821] [14376] [I] SCOPY ANIM load tree obj=0x1e1188c9ee0 vtable=0x7ff6176666d0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff6176666d0 00000000000dffff 000001e1188d5800 0000000000000000'
+[23:42:04.823] [14376] [I] SCOPY ANIM load tree obj=0x7ff618ea5a10 vtable=0x7ff617651ce0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617651ce0 00007ff618ea1960 0000000000000018 0000000000000000'
+[23:42:04.824] [14376] [I] SCOPY ANIM load tree obj=0x7ff617635c20 vtable=0x7ff617644718 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617644718 0000000000000000 0000000000000000 000000000000000c'
+[23:42:04.828] [14376] [I] SCOPY ANIM load tree obj=0x7ff617635be8 vtable=0x7ff617635bd0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617635bd0 0000000000000001 0000000000000000 00007ff617644448'
+[23:42:04.832] [14376] [I] SCOPY ANIM load tree obj=0x7ff617635bd0 vtable=0x7ff61764b940 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61764b940 00007ff617635b38 00007ff618ea1c10 00007ff617635bd0'
+[23:42:04.836] [14376] [I] SCOPY ANIM load tree obj=0x7ff618ea1c10 vtable=0x7ff61762f318 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762f318 0000000000000000 0000000000000008 0000000000000000'
+[23:42:04.836] [14376] [I] SCOPY ANIM load tree obj=0x7ff61762dd10 vtable=0x7ff61762e604 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762e604 0000000000000000 0000000000000000 000000000000001d'
+[23:42:04.839] [14376] [I] SCOPY ANIM load tree obj=0x7ff61762dce8 vtable=0x7ff61762ef28 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762ef28 0000000000000000 0000000000000000 0000040000000014'
+[23:42:04.842] [14376] [I] SCOPY ANIM load tree obj=0x7ff61762db50 vtable=0x7ff61762ef18 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762ef18 0000000000000000 0000000000000000 000000000000001d'
+[23:42:04.845] [14376] [I] SCOPY ANIM load tree obj=0x7ff618ea1840 vtable=0x7ff61762f0b0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762f0b0 0000000000000000 0000000000000028 0000000000000000'
+[23:42:04.846] [14376] [I] SCOPY ANIM load tree obj=0x7ff61762cb80 vtable=0x7ff61762e540 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762e540 0000000000000000 0000000000000000 000000000000000b'
+[23:42:04.864] [14376] [I] SCOPY ANIM load region at=0x1e0d9d91f00 bytes=21056 from-offset=0x10
+[23:42:04.994] [14376] [I] SCOPY ANIM load region-hit at=0x1e0d9d92180 offset=0x280 type=wavelet duration=0.93s tracks=107 data=unchecked-non-spline
+[23:42:08.923] [14376] [I] SCOPY ANIM load region at=0x1e0d9b530b0 bytes=44944 from-offset=0x10
+[23:42:12.059] [14376] [I] SCOPY ANIM load region-hit at=0x1e0d9b56f90 offset=0x3ee0 type=spline duration=2.50s tracks=99 data=present
+[23:42:12.060] [14376] [I] SCOPY ANIM load spline frames=150 blocks=1 max-per-block=256 mask-size=396 block-dur=4.279 frame-dur=0.0168 track-count=99
+[23:42:12.060] [14376] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1e0d9b583e0 readable=true
+[23:42:12.061] [14376] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1e0d9b583f0 readable=true
+[23:42:12.061] [14376] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[23:42:12.061] [14376] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[23:42:12.061] [14376] [I] SCOPY ANIM load spline array=data size=20320 at=0x1e0d9b58400 readable=true
+[23:42:12.061] [14376] [I] SCOPY ANIM load spline qwords='00007ff61767c008 0000000000000000 4020000000000005 0000000000000063 000001e0d9b5d360 000001e0d9b57040 8000006300000063 0000000100000096 0000018c00000100 3e6f55bc4088e9aa 000000003c89731d 000001e0d9b583e0 8000000100000001 000001e0d9b583f0 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001e0d9b58400 80004f6000004f60 0000000000000000'
+[23:42:17.653] [14376] [I] SCOPY ANIM load region at=0x1e11879a000 bytes=7376 from-offset=0x10
+[23:42:17.654] [14376] [I] SCOPY ANIM load region-hit at=0x1e11879a270 offset=0x270 type=spline duration=2.50s tracks=97 data=present
+[23:42:17.654] [14376] [I] SCOPY ANIM load spline frames=75 blocks=1 max-per-block=256 mask-size=388 block-dur=8.615 frame-dur=0.0338 track-count=97
+[23:42:17.654] [14376] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1e11879ac40 readable=true
+[23:42:17.654] [14376] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1e11879ac50 readable=true
+[23:42:17.654] [14376] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[23:42:17.654] [14376] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[23:42:17.654] [14376] [I] SCOPY ANIM load spline array=data size=4048 at=0x1e11879ac60 readable=true
+[23:42:17.654] [14376] [I] SCOPY ANIM load spline qwords='00007ff61767c008 0000000000000000 4020000000000005 0000000000000061 0000000000000000 000001e11879a320 8000006100000061 000000010000004b 0000018400000100 3dedba874109d67d 000000003d0a60dd 000001e11879ac40 8000000100000001 000001e11879ac50 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001e11879ac60 80000fd000000fd0 0000000000000000'
+[23:42:17.677] [14376] [I] SCOPY ANIM load region at=0x1e0d9c07da0 bytes=19216 from-offset=0x10
+[23:42:17.805] [14376] [I] SCOPY ANIM load region-hit at=0x1e0d9c08020 offset=0x280 type=wavelet duration=0.93s tracks=107 data=unchecked-non-spline
+[23:42:21.489] [14376] [I] SCOPY ANIM load vtables base=0x7ff617656f68 handle=0x7ff617656f98 container=0x7ff617657010 map=0x7ff617657098 resource=0x7ff617682780
+[23:42:21.489] [14376] [I] SCOPY ANIM load before records=7886 current=0x0 current-crc=0x7bffc8fc records-walked=8 with-loader=8 with-resources=8 resources=8 anims=4
+[23:42:21.489] [14376] [I] SCOPY ANIM load loader qwords='00007ff6176763f0 000000000001ffff 000001e118a0c030 0000000100000001'
+[23:42:21.489] [14376] [I] SCOPY ANIM load resource type=other qwords='00007ff6176827c8 000000000001ffff 000001e0d9d91f00 0000524000005240 000001e0d9d920a0 00007ff617656d08 000001e11864adc0 0000000100000000 000001e11862d710 0000000200000001 0000000000000000 0000000000000000'
+[23:42:21.489] [14376] [I] SCOPY ANIM load index=12218 queued=1 loaded=true loaded-records=7885
+[23:42:21.489] [14376] [I] SCOPY ANIM load tree obj=0x1e1188c07e0 vtable=0x7ff6176827c8 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff6176827c8 000000000001ffff 000001e0d9d91f00 0000524000005240'
+[23:42:21.493] [14376] [I] SCOPY ANIM load tree obj=0x1e1188d5800 vtable=0x7ff6176d1910 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff6176d1910 ffffffff0001ffff 000001e1188e1f80 000002b120dace41'
+[23:42:21.495] [14376] [I] SCOPY ANIM load tree obj=0x1e1188c3fa0 vtable=0x7ff617659ca0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617659ca0 000000000001ffff 00007ff6174dcdf8 000000000001ffff'
+[23:42:21.500] [14376] [I] SCOPY ANIM load tree obj=0x1e0d8ac45c0 vtable=0x7ff6176802b0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff6176802b0 000000000001ffff 00007ff6168d9a80 000001e1188c9f80'
+[23:42:21.605] [14376] [I] SCOPY ANIM load tree obj=0x1e1188c09c0 vtable=0x7ff617665320 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617665320 00000000000fffff 00007ff6176652c8 000000000001ffff'
+[23:42:21.606] [14376] [I] SCOPY ANIM load tree obj=0x1e1188c9ee0 vtable=0x7ff6176666d0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff6176666d0 00000000000dffff 000001e1188d5800 0000000000000000'
+[23:42:21.608] [14376] [I] SCOPY ANIM load tree obj=0x7ff618ea5a10 vtable=0x7ff617651ce0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617651ce0 00007ff618ea1960 0000000000000018 0000000000000000'
+[23:42:21.609] [14376] [I] SCOPY ANIM load tree obj=0x7ff617635c20 vtable=0x7ff617644718 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617644718 0000000000000000 0000000000000000 000000000000000c'
+[23:42:21.613] [14376] [I] SCOPY ANIM load tree obj=0x7ff617635be8 vtable=0x7ff617635bd0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff617635bd0 0000000000000001 0000000000000000 00007ff617644448'
+[23:42:21.616] [14376] [I] SCOPY ANIM load tree obj=0x7ff617635bd0 vtable=0x7ff61764b940 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61764b940 00007ff617635b38 00007ff618ea1c10 00007ff617635bd0'
+[23:42:21.620] [14376] [I] SCOPY ANIM load tree obj=0x7ff618ea1c10 vtable=0x7ff61762f318 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762f318 0000000000000000 0000000000000008 0000000000000000'
+[23:42:21.620] [14376] [I] SCOPY ANIM load tree obj=0x7ff61762dd10 vtable=0x7ff61762e604 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762e604 0000000000000000 0000000000000000 000000000000001d'
+[23:42:21.623] [14376] [I] SCOPY ANIM load tree obj=0x7ff61762dce8 vtable=0x7ff61762ef28 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762ef28 0000000000000000 0000000000000000 0000040000000014'
+[23:42:21.626] [14376] [I] SCOPY ANIM load tree obj=0x7ff61762db50 vtable=0x7ff61762ef18 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762ef18 0000000000000000 0000000000000000 000000000000001d'
+[23:42:21.629] [14376] [I] SCOPY ANIM load tree obj=0x7ff618ea1840 vtable=0x7ff61762f0b0 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762f0b0 0000000000000000 0000000000000028 0000000000000000'
+[23:42:21.630] [14376] [I] SCOPY ANIM load tree obj=0x7ff61762cb80 vtable=0x7ff61762e540 animation=false reason=animation-type type=unknown tracks=0 qwords='00007ff61762e540 0000000000000000 0000000000000000 000000000000000b'
+[23:42:21.648] [14376] [I] SCOPY ANIM load region at=0x1e0d9d91f00 bytes=21056 from-offset=0x10
+[23:42:21.776] [14376] [I] SCOPY ANIM load region-hit at=0x1e0d9d92180 offset=0x280 type=wavelet duration=0.93s tracks=107 data=unchecked-non-spline
+[23:42:25.694] [14376] [I] SCOPY ANIM load region at=0x1e0d9b530b0 bytes=44944 from-offset=0x10
+[23:42:28.826] [14376] [I] SCOPY ANIM load region-hit at=0x1e0d9b56f90 offset=0x3ee0 type=spline duration=2.50s tracks=99 data=present
+[23:42:28.827] [14376] [I] SCOPY ANIM load spline frames=150 blocks=1 max-per-block=256 mask-size=396 block-dur=4.279 frame-dur=0.0168 track-count=99
+[23:42:28.827] [14376] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1e0d9b583e0 readable=true
+[23:42:28.828] [14376] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1e0d9b583f0 readable=true
+[23:42:28.828] [14376] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[23:42:28.828] [14376] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[23:42:28.828] [14376] [I] SCOPY ANIM load spline array=data size=20320 at=0x1e0d9b58400 readable=true
+[23:42:28.828] [14376] [I] SCOPY ANIM load spline qwords='00007ff61767c008 0000000000000000 4020000000000005 0000000000000063 000001e0d9b5d360 000001e0d9b57040 8000006300000063 0000000100000096 0000018c00000100 3e6f55bc4088e9aa 000000003c89731d 000001e0d9b583e0 8000000100000001 000001e0d9b583f0 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001e0d9b58400 80004f6000004f60 0000000000000000'
+[23:42:34.398] [14376] [I] SCOPY ANIM load region at=0x1e11879a000 bytes=7376 from-offset=0x10
+[23:42:34.399] [14376] [I] SCOPY ANIM load region-hit at=0x1e11879a270 offset=0x270 type=spline duration=2.50s tracks=97 data=present
+[23:42:34.399] [14376] [I] SCOPY ANIM load spline frames=75 blocks=1 max-per-block=256 mask-size=388 block-dur=8.615 frame-dur=0.0338 track-count=97
+[23:42:34.399] [14376] [I] SCOPY ANIM load spline array=block-offsets size=1 at=0x1e11879ac40 readable=true
+[23:42:34.399] [14376] [I] SCOPY ANIM load spline array=float-block-offsets size=1 at=0x1e11879ac50 readable=true
+[23:42:34.399] [14376] [I] SCOPY ANIM load spline array=transform-offsets size=0 at=0x0 readable=false
+[23:42:34.399] [14376] [I] SCOPY ANIM load spline array=float-offsets size=0 at=0x0 readable=false
+[23:42:34.399] [14376] [I] SCOPY ANIM load spline array=data size=4048 at=0x1e11879ac60 readable=true
+[23:42:34.400] [14376] [I] SCOPY ANIM load spline qwords='00007ff61767c008 0000000000000000 4020000000000005 0000000000000061 0000000000000000 000001e11879a320 8000006100000061 000000010000004b 0000018400000100 3dedba874109d67d 000000003d0a60dd 000001e11879ac40 8000000100000001 000001e11879ac50 8000000100000001 0000000000000000 8000000000000000 0000000000000000 8000000000000000 000001e11879ac60 80000fd000000fd0 0000000000000000'
+[23:42:34.423] [14376] [I] SCOPY ANIM load region at=0x1e0d9c07da0 bytes=19216 from-offset=0x10
+[23:42:34.553] [14376] [I] SCOPY ANIM load region-hit at=0x1e0d9c08020 offset=0x280 type=wavelet duration=0.93s tracks=107 data=unchecked-non-spline
+[23:42:38.182] [14376] [I] SCOPY ANIM load after records=7885 current=0x0 current-crc=0x7bffc8fc records-walked=8 with-loader=8 with-resources=8 resources=8 anims=4
+[23:42:38.184] [14376] [I] SCOPY ANIM load anim at=0x1e0d9d92180 type=wavelet duration=0.93s tracks=107 data-present=true
+[23:42:38.188] [14376] [I] SCOPY ANIM load anim at=0x1e0d9b56f90 type=spline duration=2.50s tracks=99 data-present=true
+[23:42:38.188] [14376] [I] SCOPY ANIM load anim at=0x1e11879a270 type=spline duration=2.50s tracks=97 data-present=true
+[23:42:38.190] [14376] [I] SCOPY ANIM load anim at=0x1e0d9c08020 type=wavelet duration=0.93s tracks=107 data-present=true
+[23:42:38.190] [14376] [I] SCOPY ANIM load verdict=no-new-animation anims-before=4 anims-after=4
+[23:42:38.191] [14376] [I] SCOPY ANIM tracks binding=0x1e0e8ac3180 array=0x0 size=0 declared=99 readable=false array-at=0x1e0e8ac31a0
+[23:42:38.191] [14376] [I] SCOPY ANIM tracks binding qwords='00007ff617675430 0000000000000000 000001e0e8ac31d0 000001e0e8a8a4c0 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000'
+[23:42:38.192] [14376] [I] SCOPY ANIM load bindingset idx=12218 set=character element=0x1e117543050 binding=0x1e0e8ac3180 anim=0x1e0e8a8a4c0 anim-type=spline duration=20.00s tracks=99 binding-valid=false reason=tracks-unreadable data=present
+[23:42:38.193] [14376] [I] SCOPY ANIM pool at-capture samples=149 idle=9 'idx=550:96, idx=12218:48, idx=12219:17, idx=12223:11, idx=12220:4, idx=12221:4, idx=12222:1, idx=1091:1' equip=0 '-' other-clips=411 other-names='-'
+[23:42:38.196] [14376] [I] SCOPY ANIM play root-sm name='Master_Behavior' readable-0x108=true states.size=11 data=0x1e0d8ba2d90 data-readable=true
+[23:42:38.214] [14376] [I] SCOPY ANIM play root-sm qwords='00007ff617654250 0000000000000000 0000000000000000 0000000000000000 8000000000000000 0000000000000000 0000000000000000 000001e0d8ba2d80 0000000000010000 00000000ffffffff 0000000000000000 0000000000000000 0000000000000000 ffffffff00000000 ffffffffffffffff ffffffffffffffff 0000200000000000 0000000000000000 000001e0d8ba2d90 8000000b0000000b 000001e0d8ba2df0 000001e1188c3a40 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 8000000000000000 0000000000000000 ffffffff00000000 0000000000000000'
+[23:42:38.969] [14376] [I] SCOPY ANIM play progress objects=32 pending=46 clips=0
+[23:42:40.053] [14376] [I] SCOPY ANIM play progress objects=64 pending=31 clips=0
+[23:42:40.326] [14376] [I] SCOPY ANIM play progress objects=96 pending=74 clips=0
+[23:42:40.350] [14376] [I] SCOPY ANIM play progress objects=128 pending=121 clips=0
+[23:42:40.362] [14376] [I] SCOPY ANIM play progress objects=160 pending=128 clips=0
+[23:42:40.370] [14376] [I] SCOPY ANIM play progress objects=192 pending=87 clips=0
+[23:42:40.382] [14376] [I] SCOPY ANIM play progress objects=224 pending=80 clips=0
+[23:42:40.387] [14376] [I] SCOPY ANIM play progress objects=256 pending=78 clips=0
+[23:42:40.396] [14376] [I] SCOPY ANIM play progress objects=288 pending=84 clips=0
+[23:42:40.404] [14376] [I] SCOPY ANIM play progress objects=320 pending=82 clips=0
+[23:42:40.411] [14376] [I] SCOPY ANIM play progress objects=352 pending=84 clips=0
+[23:42:40.427] [14376] [I] SCOPY ANIM play progress objects=384 pending=75 clips=0
+[23:42:40.439] [14376] [I] SCOPY ANIM play progress objects=416 pending=86 clips=0
+[23:42:40.446] [14376] [I] SCOPY ANIM play progress objects=448 pending=85 clips=0
+[23:42:40.461] [14376] [I] SCOPY ANIM play progress objects=480 pending=108 clips=0
+[23:42:40.480] [14376] [I] SCOPY ANIM play progress objects=512 pending=75 clips=0
+[23:42:40.504] [14376] [I] SCOPY ANIM play progress objects=544 pending=86 clips=0
+[23:42:40.513] [14376] [I] SCOPY ANIM play progress objects=576 pending=84 clips=0
+[23:42:40.534] [14376] [I] SCOPY ANIM play progress objects=608 pending=73 clips=0
+[23:42:40.544] [14376] [I] SCOPY ANIM play progress objects=640 pending=80 clips=0
+[23:42:40.559] [14376] [I] SCOPY ANIM play progress objects=672 pending=74 clips=0
+[23:42:40.585] [14376] [I] SCOPY ANIM play progress objects=704 pending=90 clips=0
+[23:42:40.594] [14376] [I] SCOPY ANIM play progress objects=736 pending=118 clips=0
+[23:42:40.611] [14376] [I] SCOPY ANIM play progress objects=768 pending=62 clips=0
+[23:42:41.314] [14376] [I] SCOPY ANIM play progress objects=800 pending=102 clips=0
+[23:42:42.085] [14376] [I] SCOPY ANIM play progress objects=832 pending=103 clips=0
+[23:42:42.911] [14376] [I] SCOPY ANIM play progress objects=864 pending=96 clips=0
+[23:42:43.904] [14376] [I] SCOPY ANIM play progress objects=896 pending=102 clips=0
+[23:42:44.628] [14376] [I] SCOPY ANIM play progress objects=928 pending=96 clips=0
+[23:42:45.274] [14376] [I] SCOPY ANIM play progress objects=960 pending=90 clips=0
+[23:42:46.442] [14376] [I] SCOPY ANIM play progress objects=992 pending=99 clips=0
+[23:42:46.968] [14376] [I] SCOPY ANIM play progress objects=1024 pending=84 clips=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play search objects=1024 clips=0 states=9/38 capped=true first='-'
+[23:42:47.014] [14376] [I] SCOPY ANIM play classes='other:937, hkbStateMachine$StateInfo:56, hkbStateMachine:20, hkbClipGenerator:11'
+[23:42:47.014] [14376] [I] SCOPY ANIM play rejections='binding-null:11'
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=0 idle=no name='..\SharedKillMoves\Human&VampireLord\Paired_VampireLord_FeedFront.hkx' binding-index=1301 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=1 idle=no name='Animations\DLC01\Paired_VampFeedFront.hkx' binding-index=1299 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=2 idle=no name='Animations\DLC01\Paired_VampFeedBack.hkx' binding-index=1298 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=3 idle=no name='Animations\DLC01\IdleMesmerizes.hkx' binding-index=775 binding=0x0 control=0x0 speed=1.00 mode=1
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=4 idle=no name='..\SharedKillMoves\Human&Horse\Paired_Mount.hkx' binding-index=1294 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=5 idle=no name='..\SharedKillMoves\Human&Horse\Paired_Dismount.hkx' binding-index=1277 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=6 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedHeadSmash.hkx' binding-index=1303 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=7 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedHeadThrow.hkx' binding-index=1304 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=8 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedMaulingWithHuman.hkx' binding-index=1305 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=9 idle=no name='..\SharedKillMoves\Human&Werewolf\Paired_WW_PairedFeedingWithHuman.hkx' binding-index=1302 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM play clip-seen i=10 idle=no name='Animations\MT_HandCut.hkx' binding-index=1020 binding=0x0 control=0x0 speed=1.00 mode=0
+[23:42:47.014] [14376] [I] SCOPY ANIM animmgr queued=0 loaded=7885
+[23:42:47.019] [14376] [I] SCOPY ANIM animmgr rejected-dump i=0 at=0x1e2f2c67fd0 qwords='00786b68ad6f4173 30000002237e59f2 0000000000000000 0000000000000000 000001e12a3928f0 000001e1188c07b0 0000000000000000 0000000000000000'
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=0 idle=no file='-' crc=0xad6f4173 counter=2 data=0x1e2f2c67fd0 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=1 idle=no file='-' crc=0x02777ff6 counter=11 data=0x1e2d06190c0 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=2 idle=no file='-' crc=0x02777ff6 counter=11 data=0x1e2d0619090 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=3 idle=no file='-' crc=0xad6f4173 counter=4 data=0x1e2d0619060 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=4 idle=no file='-' crc=0x23bdfb15 counter=4 data=0x1e2d0619030 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=5 idle=no file='-' crc=0xdb5c1156 counter=8 data=0x1e2d0619000 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=6 idle=no file='-' crc=0x02777ff6 counter=12 data=0x1e2d0618fd0 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=7 idle=no file='-' crc=0x02777ff6 counter=12 data=0x1e2d0618fa0 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=8 idle=no file='-' crc=0x02777ff6 counter=6 data=0x1e2d0618f70 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=9 idle=no file='-' crc=0x836c144e counter=6 data=0x1e2d0618f40 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=10 idle=no file='-' crc=0x02777ff6 counter=6 data=0x1e2d0618f10 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=11 idle=no file='-' crc=0xdb5c1156 counter=10 data=0x1e2d0618ee0 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=12 idle=no file='-' crc=0xdb5c1156 counter=10 data=0x1e2d0618eb0 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=13 idle=no file='-' crc=0xdb5c1156 counter=11 data=0x1e2d0618e80 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=14 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x1e2d0618e50 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.070] [14376] [I] SCOPY ANIM animmgr loaded i=15 idle=no file='-' crc=0xdb5c1156 counter=14 data=0x1e2d0618e20 probe=not-object type=unknown duration=0.00s tracks=0
+[23:42:47.071] [14376] [I] SCOPY ANIM hashed index=1301 at=0x1e45b5bc5e0
+[23:42:47.071] [14376] [I] SCOPY ANIM hashed record db-data=0xa8aaef55d67aab28
+[23:42:47.071] [14376] [I] SCOPY ANIM hashed anims found=0
+[23:42:47.075] [14376] [I] SCOPY ANIM mapping skeleton='NPC Root [Root]' bones=116 worst-rot-delta=55.20deg best
+[23:42:47.075] [14376] [I] SCOPY ANIM mapping skeleton='NPC Root [Root]' bones=99 worst-rot-delta=55.20deg
+[23:42:47.075] [14376] [I] SCOPY ANIM play clip='instance-binding' type=spline duration=20.00s tracks=99 copy-resolved=93/99 truth-bones=39
+[23:42:47.076] [14376] [I] SCOPY ANIM play ground-truth best-t=7.50s max-pos-delta=0.034 max-rot-delta=43.55deg worst-pos-delta=1.709 bones=37
+[23:42:47.076] [14376] [I] SCOPY ANIM play phase-check t=6.921s max-pos-delta=0.000 max-rot-delta=42.93deg bones=37
+[23:42:47.076] [14376] [I] SCOPY ANIM play phase-check spread bones=37 within-1deg=29 worst-bones='NPC R Calf [RClf]:42.93deg/0.000u, NPC R Foot [Rft ]:26.61deg/0.000u, NPC L Foot [Lft ]:25.50deg/0.000u, NPC R Thigh [RThg]:17.42deg/0.000u, NPC Head [Head]:12.36deg/0.000u, NPC Spine2 [Spn2]:8.15deg/0.000u, NPC Neck [Neck]:8.15deg/0.000u, NPC Spine1 [Spn1]:2.02deg/0.000u'
+[23:42:47.076] [14376] [I] SCOPY ANIM play ground-truth verdict=none best=0.0340 worst=1.709
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name=' (FE2E7EFD)[1]/ (FE2E7EFC) [100%]' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name=' (FE2E7EFF)[1]/ (FE2E7EFE) [100%]' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='ChestCollision' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='Necklace' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_EyeLashesZoe' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='T118' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='T117' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='T116' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='T112' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='T111' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='T110' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E118' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E117' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E116' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E115' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E114' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E113' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E112' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E111' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E110' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E19' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E18' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E17' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E16' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E15' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E14' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E13' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='E12' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='N15' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='N16' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='AE11' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_LDDLevisChoice13be_Female' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleEyesHuman_outer' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleEyesHuman_shadows' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleLensLeft_Dummy' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleLensRight_Dummy' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleEyesHumanLightGrey' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleMouth' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleHead' type='BSDynamicTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name=' (FE2E7807)[1]/ (FE2E7801) [100%]' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Feet' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Leg' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Butt' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Anus' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Belly' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Hand' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Arm' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Breast' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='3BCA_Head' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='VirtualGround' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='Heels' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='Hands' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='Bracelet' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='CollisionStopper' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='LowerBodyCollision' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='VirtualGround' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='BaseShape' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='Thighstrap' type='BSTriShape'
+[23:42:47.076] [14376] [I] SCOPY GEOMETRY capture=1 name='Armband' type='BSTriShape'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='Dress_Inner' type='BSTriShape'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='Dress' type='BSTriShape'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='pSmallFlare' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSpray04' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='Wisps:0' type='BSTriShape'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='Circle02' type='BSTriShape'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='Flash' type='BSTriShape'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.077] [14376] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[23:42:47.078] [14376] [E] SCOPY ISOLATION op=capture stage=post window='capture:pre→post' verdict=DRIFT cum=DRIFT nodes=1842/1842 max-local=0.000000 max-world=0.250000 max-pose=0.000000 actor-pos=0.000000 actor-rot=0.000000 npc-pos=0.000000 npc-rot=0.000000 npc-world=0.000000 npc-set=+0/-0 flags=0 attach=0
+[23:42:47.078] [14376] [E] SCOPY ISOLATION DRIFT op=capture stage=post kind=node-world node='SuperSprayBreath' max=0.250000 loose-count=49
+[23:42:47.093] [14376] [I] SCOPY ISOLATION end reason=load-boundary ops=1 censuses=2 verdict=DRIFT max-local=0.000000 max-world=0.250000 max-pose=0.000000 actor-pos=0.000000 actor-rot=0.000000 npc-pos=0.000000 npc-rot=0.000000 npc-world=0.000000 npc-set=+0/-0 attach=0 notes='[capture:pre→post post local=0.0000 world=0.2500] '
+[23:42:47.137] [14376] [I] SCOPY PUPPET digest ticks=660 step=0.0213 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.68s)]
+[23:42:47.841] [14376] [I] SCOPY PUPPET digest ticks=690 step=0.0234 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.38s)]
+[23:42:48.534] [14376] [I] SCOPY PUPPET digest ticks=720 step=0.0238 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(2.08s)]
+[23:42:49.228] [14376] [I] SCOPY PUPPET digest ticks=750 step=0.0254 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(2.77s)]
+[23:42:49.939] [14376] [I] SCOPY PUPPET digest ticks=780 step=0.0229 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(3.48s)]
+[23:42:50.631] [14376] [I] SCOPY PUPPET digest ticks=810 step=0.0225 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(4.17s)]
+[23:42:51.328] [14376] [I] SCOPY PUPPET digest ticks=840 step=0.0220 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.20s)]
+[23:42:52.019] [14376] [I] SCOPY PUPPET digest ticks=870 step=0.0216 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.90s)]
+[23:42:52.055] [14376] [I] SCOPY ISOLATION baseline op=draw-toggle nodes=1842 npcs=24 pose-bones=116 pose-note='' root=0x1e45d39f880 parent=0x1e45c634280 beyond-radius=0
+[23:42:52.055] [14376] [I] SCOPY DRAW-Toggle enabled=true capture=1
+[23:42:52.055] [14376] [I] SCOPY ISOLATION op=draw-toggle stage=post window='draw-toggle:pre→post' verdict=CLEAN cum=CLEAN nodes=1842/1842 max-local=0.000000 max-world=0.000000 max-pose=0.000000 actor-pos=0.000000 actor-rot=0.000000 npc-pos=0.000000 npc-rot=0.000000 npc-world=0.000000 npc-set=+0/-0 flags=0 attach=0
+[23:42:52.070] [14376] [I] SCOPY PUPPET driver clip='Animations\IdlePickaxe_Floor.hkx' mapping=identity-unverified coverage=tracks=116 resolved=109 bone-nodes=116 pose=116
+[23:42:52.072] [14376] [I] Clone draw OM check: bound=0x1e2222134e0 studio=0x1e2222134e0 match=true
+[23:42:52.072] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:42:52.072] [14376] [I] SCOPY DRAW frame=1 passes=45 lights=true animation-driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096 physics-driver=none
+[23:42:52.739] [14376] [I] SCOPY PUPPET digest ticks=900 step=0.0237 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.61s)]
+[23:42:53.477] [14376] [I] SCOPY PUPPET digest ticks=930 step=0.0249 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(2.35s)]
+[23:42:54.215] [14376] [I] SCOPY PUPPET digest ticks=960 step=0.0247 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(3.09s)]
+[23:42:54.947] [14376] [I] SCOPY PUPPET digest ticks=990 step=0.0245 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(3.82s)]
+[23:42:55.007] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:42:55.007] [14376] [I] SCOPY DRAW frame=121 passes=45 lights=true animation-driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096 physics-driver=none
+[23:42:55.685] [14376] [I] SCOPY PUPPET digest ticks=1020 step=0.0236 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(4.56s)]
+[23:42:56.419] [14376] [I] SCOPY PUPPET digest ticks=1050 step=0.0237 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.63s)]
+[23:42:57.162] [14376] [I] SCOPY PUPPET digest ticks=1080 step=0.0241 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.37s)]
+[23:42:57.892] [14376] [I] SCOPY PUPPET digest ticks=1110 step=0.0245 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(2.10s)]
+[23:42:57.950] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:42:57.950] [14376] [I] SCOPY DRAW frame=241 passes=45 lights=true animation-driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096 physics-driver=none
+[23:42:58.615] [14376] [I] SCOPY PUPPET digest ticks=1140 step=0.0228 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(2.83s)]
+[23:42:59.347] [14376] [I] SCOPY PUPPET digest ticks=1170 step=0.0239 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(3.56s)]
+[23:43:00.081] [14376] [I] SCOPY PUPPET digest ticks=1200 step=0.0242 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(4.29s)]
+[23:43:00.756] [14376] [I] SCOPY ISOLATION op=idle-toggle stage=pre window='draw-toggle→idle-toggle' verdict=CLEAN cum=CLEAN nodes=1842/1842 max-local=0.000000 max-world=0.000000 max-pose=0.000000 actor-pos=0.000000 actor-rot=0.000000 npc-pos=0.000000 npc-rot=0.000000 npc-world=0.000000 npc-set=+0/-0 flags=0 attach=0
+[23:43:00.756] [14376] [I] SCOPY IDLE disabled (F2); driver=instance-binding; the next frame's base placement restores the captured pose first, so nothing accumulates
+[23:43:00.757] [14376] [I] SCOPY ISOLATION op=idle-toggle stage=post window='idle-toggle:pre→post' verdict=CLEAN cum=CLEAN nodes=1842/1842 max-local=0.000000 max-world=0.000000 max-pose=0.000000 actor-pos=0.000000 actor-rot=0.000000 npc-pos=0.000000 npc-rot=0.000000 npc-world=0.000000 npc-set=+0/-0 flags=0 attach=0
+[23:43:00.819] [14376] [I] SCOPY PUPPET digest ticks=1230 step=0.0373 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.36s)]
+[23:43:00.855] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:43:00.855] [14376] [I] SCOPY DRAW frame=361 passes=45 lights=true animation-driver=off physics-driver=none
+[23:43:01.544] [14376] [I] SCOPY PUPPET digest ticks=1260 step=0.0250 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.09s)]
+[23:43:01.582] [14376] [I] SCOPY ISOLATION op=idle-toggle stage=pre window='idle-toggle→idle-toggle' verdict=CLEAN cum=CLEAN nodes=1842/1842 max-local=0.000000 max-world=0.000000 max-pose=0.000000 actor-pos=0.000000 actor-rot=0.000000 npc-pos=0.000000 npc-rot=0.000000 npc-world=0.000000 npc-set=+0/-0 flags=0 attach=0
+[23:43:01.582] [14376] [I] SCOPY IDLE enabled (F2); driver=instance-binding; the next frame's base placement restores the captured pose first, so nothing accumulates
+[23:43:01.582] [14376] [I] SCOPY ISOLATION op=idle-toggle stage=post window='idle-toggle:pre→post' verdict=CLEAN cum=CLEAN nodes=1842/1842 max-local=0.000000 max-world=0.000000 max-pose=0.000000 actor-pos=0.000000 actor-rot=0.000000 npc-pos=0.000000 npc-rot=0.000000 npc-world=0.000000 npc-set=+0/-0 flags=0 attach=0
+[23:43:02.284] [14376] [I] SCOPY PUPPET digest ticks=1290 step=0.0250 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.83s)]
+[23:43:03.038] [14376] [I] SCOPY PUPPET digest ticks=1320 step=0.0242 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(2.58s)]
+[23:43:03.191] [14376] [I] SCOPY ISOLATION end reason=panel-closed ops=3 censuses=6 verdict=CLEAN max-local=0.000000 max-world=0.000000 max-pose=0.000000 actor-pos=0.000000 actor-rot=0.000000 npc-pos=0.000000 npc-rot=0.000000 npc-world=0.000000 npc-set=+0/-0 attach=0 notes=''
+[23:43:03.261] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:04.700] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:06.091] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:07.599] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:09.065] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:10.281] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:11.443] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:12.560] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:13.676] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:14.814] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:16.031] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:17.307] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:18.709] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:20.179] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:21.629] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:22.893] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:24.062] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:25.265] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:26.520] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:27.731] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:28.950] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:30.280] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:31.802] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:33.269] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:34.608] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:35.883] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:37.280] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:38.733] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:40.268] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:41.520] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:41.899] [14376] [I] SCOPY ANIM restart at panel open capture=1 driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096
+[23:43:42.655] [14376] [I] SCOPY PUPPET digest ticks=1350 step=0.0297 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(4.27s)]
+[23:43:42.721] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:43:42.721] [14376] [I] SCOPY DRAW frame=481 passes=45 lights=true animation-driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096 physics-driver=none
+[23:43:43.492] [14376] [I] SCOPY PUPPET digest ticks=1380 step=0.0268 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.45s)]
+[23:43:44.292] [14376] [I] SCOPY ANIM restart at panel open capture=1 driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096
+[23:43:44.792] [14376] [I] SCOPY PUPPET digest ticks=1410 step=0.0268 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.78s)]
+[23:43:45.701] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:46.564] [14376] [I] SCOPY ANIM restart at panel open capture=1 driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096
+[23:43:47.314] [14376] [I] SCOPY PUPPET digest ticks=1440 step=0.0319 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(4.34s)]
+[23:43:48.212] [14376] [I] SCOPY PUPPET digest ticks=1470 step=0.0302 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(0.57s)]
+[23:43:48.281] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:43:48.281] [14376] [I] SCOPY DRAW frame=601 passes=45 lights=true animation-driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096 physics-driver=none
+[23:43:49.103] [14376] [I] SCOPY PUPPET digest ticks=1500 step=0.0311 clips=1 [Animations\IdlePickaxe_Floor.hkx#11096(1.47s)]
+[23:43:49.940] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:51.250] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:52.330] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:53.369] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:54.387] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:55.452] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:56.804] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:58.141] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:43:59.424] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:00.711] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:01.871] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:02.886] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:03.857] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:04.841] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:06.096] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:07.384] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:08.525] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:09.558] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:10.624] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:11.655] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:12.685] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:13.729] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:14.857] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:16.411] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:17.683] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:18.797] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:19.781] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:20.798] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:21.825] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:22.768] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:23.754] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:24.736] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:25.712] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:26.841] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:28.025] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:29.164] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:30.315] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:31.373] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:32.447] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:33.642] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:34.677] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:35.702] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:36.941] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:38.198] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:38.995] [14376] [I] SCOPY ANIM restart at panel open capture=1 driver=puppet:Animations\IdlePickaxe_Floor.hkx#11096
+[23:44:39.011] [14376] [I] SCOPY PUPPET driver clip='Animations\MT_JumpFall.hkx' mapping=identity-unverified coverage=tracks=99 resolved=93 bone-nodes=116 pose=116
+[23:44:39.655] [14376] [I] SCOPY PUPPET digest ticks=1530 step=0.0295 clips=1 [Animations\MT_JumpFall.hkx#12261(2.97s)]
+[23:44:40.477] [14376] [I] SCOPY PUPPET digest ticks=1560 step=0.0265 clips=1 [Animations\MT_JumpFall.hkx#12261(3.80s)]
+[23:44:41.230] [14376] [I] SCOPY PUPPET digest ticks=1590 step=0.0247 clips=1 [Animations\MT_JumpFall.hkx#12261(4.55s)]
+[23:44:41.289] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:44:41.289] [14376] [I] SCOPY DRAW frame=721 passes=45 lights=true animation-driver=puppet:Animations\MT_JumpFall.hkx#12261 physics-driver=none
+[23:44:41.495] [14376] [I] SCOPY PUPPET driver clip='Animations\MT_JumpLand.hkx' mapping=identity-unverified coverage=tracks=99 resolved=93 bone-nodes=116 pose=116
+[23:44:41.528] [14376] [I] SCOPY PUPPET driver clip='Animations\male\MT_Idle.HKX' mapping=identity-unverified coverage=tracks=99 resolved=93 bone-nodes=116 pose=116
+[23:44:42.074] [14376] [I] SCOPY PUPPET digest ticks=1620 step=0.0301 clips=2 [Animations\male\MT_Idle.HKX#12218(0.55s); Animations\MT_JumpLand.hkx#12327(0.37s)]
+[23:44:42.916] [14376] [I] SCOPY PUPPET digest ticks=1650 step=0.0273 clips=1 [Animations\male\MT_Idle.HKX#12218(1.39s)]
+[23:44:43.741] [14376] [I] SCOPY PUPPET digest ticks=1680 step=0.0265 clips=1 [Animations\male\MT_Idle.HKX#12218(2.22s)]
+[23:44:44.583] [14376] [I] SCOPY PUPPET digest ticks=1710 step=0.0272 clips=1 [Animations\male\MT_Idle.HKX#12218(3.06s)]
+[23:44:44.648] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:44:44.648] [14376] [I] SCOPY DRAW frame=841 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:44:45.273] [14376] [I] SCOPY ANIM restart at panel open capture=1 driver=puppet:Animations\male\MT_Idle.HKX#12218
+[23:44:45.289] [14376] [I] SCOPY PUPPET driver clip='Animations\MT_JumpFall.hkx' mapping=identity-unverified coverage=tracks=99 resolved=93 bone-nodes=116 pose=116
+[23:44:45.816] [14376] [I] SCOPY PUPPET digest ticks=1740 step=0.0303 clips=1 [Animations\MT_JumpFall.hkx#12261(0.92s)]
+[23:44:46.454] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:44:47.238] [14376] [I] SCOPY ANIM restart at panel open capture=1 driver=puppet:Animations\MT_JumpFall.hkx#12261
+[23:44:47.881] [14376] [I] SCOPY PUPPET digest ticks=1770 step=0.0296 clips=1 [Animations\MT_JumpFall.hkx#12261(3.03s)]
+[23:44:48.734] [14376] [I] SCOPY PUPPET digest ticks=1800 step=0.0293 clips=1 [Animations\MT_JumpFall.hkx#12261(3.88s)]
+[23:44:49.509] [14376] [I] SCOPY PUPPET digest ticks=1830 step=0.0259 clips=1 [Animations\MT_JumpFall.hkx#12261(4.66s)]
+[23:44:49.571] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:44:49.571] [14376] [I] SCOPY DRAW frame=961 passes=45 lights=true animation-driver=puppet:Animations\MT_JumpFall.hkx#12261 physics-driver=none
+[23:44:49.681] [14376] [I] SCOPY PUPPET driver clip='Animations\MT_JumpLand.hkx' mapping=identity-unverified coverage=tracks=99 resolved=93 bone-nodes=116 pose=116
+[23:44:49.716] [14376] [I] SCOPY PUPPET driver clip='Animations\male\MT_Idle.HKX' mapping=identity-unverified coverage=tracks=99 resolved=93 bone-nodes=116 pose=116
+[23:44:50.403] [14376] [I] SCOPY PUPPET digest ticks=1860 step=0.0301 clips=2 [Animations\male\MT_Idle.HKX#12218(0.69s); Animations\MT_JumpLand.hkx#12327(0.37s)]
+[23:44:51.362] [14376] [I] SCOPY PUPPET digest ticks=1890 step=0.0323 clips=1 [Animations\male\MT_Idle.HKX#12218(1.65s)]
+[23:44:52.234] [14376] [I] SCOPY PUPPET digest ticks=1920 step=0.0277 clips=1 [Animations\male\MT_Idle.HKX#12218(2.52s)]
+[23:44:53.092] [14376] [I] SCOPY PUPPET digest ticks=1950 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12218(3.38s)]
+[23:44:53.159] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:44:53.159] [14376] [I] SCOPY DRAW frame=1081 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:44:53.943] [14376] [I] SCOPY PUPPET digest ticks=1980 step=0.0280 clips=1 [Animations\male\MT_Idle.HKX#12218(4.23s)]
+[23:44:54.812] [14376] [I] SCOPY PUPPET digest ticks=2010 step=0.0289 clips=1 [Animations\male\MT_Idle.HKX#12218(5.10s)]
+[23:44:55.683] [14376] [I] SCOPY PUPPET digest ticks=2040 step=0.0300 clips=1 [Animations\male\MT_Idle.HKX#12218(5.97s)]
+[23:44:56.565] [14376] [I] SCOPY PUPPET digest ticks=2070 step=0.0285 clips=1 [Animations\male\MT_Idle.HKX#12218(6.86s)]
+[23:44:56.632] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:44:56.633] [14376] [I] SCOPY DRAW frame=1201 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:44:57.427] [14376] [I] SCOPY PUPPET digest ticks=2100 step=0.0276 clips=1 [Animations\male\MT_Idle.HKX#12218(7.72s)]
+[23:44:58.290] [14376] [I] SCOPY PUPPET digest ticks=2130 step=0.0284 clips=1 [Animations\male\MT_Idle.HKX#12218(8.58s)]
+[23:44:59.142] [14376] [I] SCOPY PUPPET digest ticks=2160 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12218(9.43s)]
+[23:45:00.004] [14376] [I] SCOPY PUPPET digest ticks=2190 step=0.0283 clips=1 [Animations\male\MT_Idle.HKX#12218(10.29s)]
+[23:45:00.077] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:00.077] [14376] [I] SCOPY DRAW frame=1321 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:45:00.862] [14376] [I] SCOPY PUPPET digest ticks=2220 step=0.0268 clips=1 [Animations\male\MT_Idle.HKX#12218(11.15s)]
+[23:45:01.762] [14376] [I] SCOPY PUPPET digest ticks=2250 step=0.0276 clips=1 [Animations\male\MT_Idle.HKX#12218(12.05s)]
+[23:45:02.620] [14376] [I] SCOPY PUPPET digest ticks=2280 step=0.0280 clips=1 [Animations\male\MT_Idle.HKX#12218(12.91s)]
+[23:45:03.478] [14376] [I] SCOPY PUPPET digest ticks=2310 step=0.0286 clips=1 [Animations\male\MT_Idle.HKX#12218(13.77s)]
+[23:45:03.547] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:03.547] [14376] [I] SCOPY DRAW frame=1441 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:45:04.335] [14376] [I] SCOPY PUPPET digest ticks=2340 step=0.0289 clips=1 [Animations\male\MT_Idle.HKX#12218(14.62s)]
+[23:45:05.203] [14376] [I] SCOPY PUPPET digest ticks=2370 step=0.0292 clips=1 [Animations\male\MT_Idle.HKX#12218(15.49s)]
+[23:45:06.056] [14376] [I] SCOPY PUPPET digest ticks=2400 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12218(16.35s)]
+[23:45:06.925] [14376] [I] SCOPY PUPPET digest ticks=2430 step=0.0290 clips=1 [Animations\male\MT_Idle.HKX#12218(17.21s)]
+[23:45:07.012] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:07.012] [14376] [I] SCOPY DRAW frame=1561 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:45:07.805] [14376] [I] SCOPY PUPPET digest ticks=2460 step=0.0285 clips=1 [Animations\male\MT_Idle.HKX#12218(18.09s)]
+[23:45:08.646] [14376] [I] SCOPY PUPPET digest ticks=2490 step=0.0273 clips=1 [Animations\male\MT_Idle.HKX#12218(18.94s)]
+[23:45:09.502] [14376] [I] SCOPY PUPPET digest ticks=2520 step=0.0281 clips=1 [Animations\male\MT_Idle.HKX#12219(29.81s)]
+[23:45:10.358] [14376] [I] SCOPY PUPPET digest ticks=2550 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12219(0.67s)]
+[23:45:10.429] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:10.429] [14376] [I] SCOPY DRAW frame=1681 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:11.220] [14376] [I] SCOPY PUPPET digest ticks=2580 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12219(1.53s)]
+[23:45:12.098] [14376] [I] SCOPY PUPPET digest ticks=2610 step=0.0338 clips=1 [Animations\male\MT_Idle.HKX#12219(2.41s)]
+[23:45:12.970] [14376] [I] SCOPY PUPPET digest ticks=2640 step=0.0274 clips=1 [Animations\male\MT_Idle.HKX#12219(3.28s)]
+[23:45:13.823] [14376] [I] SCOPY PUPPET digest ticks=2670 step=0.0278 clips=1 [Animations\male\MT_Idle.HKX#12219(4.13s)]
+[23:45:13.893] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:13.893] [14376] [I] SCOPY DRAW frame=1801 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:14.685] [14376] [I] SCOPY PUPPET digest ticks=2700 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12219(5.00s)]
+[23:45:15.548] [14376] [I] SCOPY PUPPET digest ticks=2730 step=0.0299 clips=1 [Animations\male\MT_Idle.HKX#12219(5.86s)]
+[23:45:16.402] [14376] [I] SCOPY PUPPET digest ticks=2760 step=0.0288 clips=1 [Animations\male\MT_Idle.HKX#12219(6.71s)]
+[23:45:17.257] [14376] [I] SCOPY PUPPET digest ticks=2790 step=0.0282 clips=1 [Animations\male\MT_Idle.HKX#12219(7.57s)]
+[23:45:17.328] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:17.328] [14376] [I] SCOPY DRAW frame=1921 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:18.142] [14376] [I] SCOPY PUPPET digest ticks=2820 step=0.0286 clips=1 [Animations\male\MT_Idle.HKX#12219(8.45s)]
+[23:45:19.005] [14376] [I] SCOPY PUPPET digest ticks=2850 step=0.0296 clips=1 [Animations\male\MT_Idle.HKX#12219(9.32s)]
+[23:45:19.876] [14376] [I] SCOPY PUPPET digest ticks=2880 step=0.0305 clips=1 [Animations\male\MT_Idle.HKX#12219(10.19s)]
+[23:45:20.745] [14376] [I] SCOPY PUPPET digest ticks=2910 step=0.0318 clips=1 [Animations\male\MT_Idle.HKX#12219(11.05s)]
+[23:45:20.819] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:20.819] [14376] [I] SCOPY DRAW frame=2041 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:21.647] [14376] [I] SCOPY PUPPET digest ticks=2940 step=0.0281 clips=1 [Animations\male\MT_Idle.HKX#12219(11.96s)]
+[23:45:22.511] [14376] [I] SCOPY PUPPET digest ticks=2970 step=0.0281 clips=1 [Animations\male\MT_Idle.HKX#12219(12.82s)]
+[23:45:23.399] [14376] [I] SCOPY PUPPET digest ticks=3000 step=0.0276 clips=1 [Animations\male\MT_Idle.HKX#12219(13.71s)]
+[23:45:24.250] [14376] [I] SCOPY PUPPET digest ticks=3030 step=0.0293 clips=1 [Animations\male\MT_Idle.HKX#12219(14.56s)]
+[23:45:24.317] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:24.317] [14376] [I] SCOPY DRAW frame=2161 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:25.098] [14376] [I] SCOPY PUPPET digest ticks=3060 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12219(15.41s)]
+[23:45:25.951] [14376] [I] SCOPY PUPPET digest ticks=3090 step=0.0276 clips=1 [Animations\male\MT_Idle.HKX#12219(16.26s)]
+[23:45:26.810] [14376] [I] SCOPY PUPPET digest ticks=3120 step=0.0288 clips=1 [Animations\male\MT_Idle.HKX#12219(17.12s)]
+[23:45:27.672] [14376] [I] SCOPY PUPPET digest ticks=3150 step=0.0286 clips=1 [Animations\male\MT_Idle.HKX#12219(17.98s)]
+[23:45:27.740] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:27.740] [14376] [I] SCOPY DRAW frame=2281 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:28.585] [14376] [I] SCOPY PUPPET digest ticks=3180 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12219(18.90s)]
+[23:45:29.442] [14376] [I] SCOPY PUPPET digest ticks=3210 step=0.0291 clips=1 [Animations\male\MT_Idle.HKX#12219(19.75s)]
+[23:45:30.308] [14376] [I] SCOPY PUPPET digest ticks=3240 step=0.0280 clips=1 [Animations\male\MT_Idle.HKX#12219(20.62s)]
+[23:45:31.166] [14376] [I] SCOPY PUPPET digest ticks=3270 step=0.0280 clips=1 [Animations\male\MT_Idle.HKX#12219(21.48s)]
+[23:45:31.235] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:31.235] [14376] [I] SCOPY DRAW frame=2401 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:32.029] [14376] [I] SCOPY PUPPET digest ticks=3300 step=0.0284 clips=1 [Animations\male\MT_Idle.HKX#12219(22.34s)]
+[23:45:32.892] [14376] [I] SCOPY PUPPET digest ticks=3330 step=0.0301 clips=1 [Animations\male\MT_Idle.HKX#12219(23.20s)]
+[23:45:33.789] [14376] [I] SCOPY PUPPET digest ticks=3360 step=0.0283 clips=1 [Animations\male\MT_Idle.HKX#12219(24.10s)]
+[23:45:34.656] [14376] [I] SCOPY PUPPET digest ticks=3390 step=0.0284 clips=1 [Animations\male\MT_Idle.HKX#12219(24.97s)]
+[23:45:34.725] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:34.725] [14376] [I] SCOPY DRAW frame=2521 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:35.525] [14376] [I] SCOPY PUPPET digest ticks=3420 step=0.0295 clips=1 [Animations\male\MT_Idle.HKX#12219(25.84s)]
+[23:45:36.418] [14376] [I] SCOPY PUPPET digest ticks=3450 step=0.0302 clips=1 [Animations\male\MT_Idle.HKX#12219(26.73s)]
+[23:45:37.302] [14376] [I] SCOPY PUPPET digest ticks=3480 step=0.0285 clips=1 [Animations\male\MT_Idle.HKX#12219(27.61s)]
+[23:45:38.178] [14376] [I] SCOPY PUPPET digest ticks=3510 step=0.0297 clips=1 [Animations\male\MT_Idle.HKX#12219(28.49s)]
+[23:45:38.246] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:38.246] [14376] [I] SCOPY DRAW frame=2641 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12219 physics-driver=none
+[23:45:39.094] [14376] [I] SCOPY PUPPET digest ticks=3540 step=0.0285 clips=1 [Animations\male\MT_Idle.HKX#12219(29.40s)]
+[23:45:39.953] [14376] [I] SCOPY PUPPET digest ticks=3570 step=0.0281 clips=1 [Animations\male\MT_Idle.HKX#12218(0.27s)]
+[23:45:40.815] [14376] [I] SCOPY PUPPET digest ticks=3600 step=0.0278 clips=1 [Animations\male\MT_Idle.HKX#12218(1.13s)]
+[23:45:41.676] [14376] [I] SCOPY PUPPET digest ticks=3630 step=0.0295 clips=1 [Animations\male\MT_Idle.HKX#12218(1.99s)]
+[23:45:41.743] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:41.743] [14376] [I] SCOPY DRAW frame=2761 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:45:42.533] [14376] [I] SCOPY PUPPET digest ticks=3660 step=0.0277 clips=1 [Animations\male\MT_Idle.HKX#12218(2.85s)]
+[23:45:43.395] [14376] [I] SCOPY PUPPET digest ticks=3690 step=0.0294 clips=1 [Animations\male\MT_Idle.HKX#12218(3.71s)]
+[23:45:44.310] [14376] [I] SCOPY PUPPET digest ticks=3720 step=0.0370 clips=1 [Animations\male\MT_Idle.HKX#12218(4.62s)]
+[23:45:45.194] [14376] [I] SCOPY PUPPET digest ticks=3750 step=0.0287 clips=1 [Animations\male\MT_Idle.HKX#12218(5.51s)]
+[23:45:45.261] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:45.261] [14376] [I] SCOPY DRAW frame=2881 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:45:46.067] [14376] [I] SCOPY PUPPET digest ticks=3780 step=0.0281 clips=1 [Animations\male\MT_Idle.HKX#12218(6.38s)]
+[23:45:46.926] [14376] [I] SCOPY PUPPET digest ticks=3810 step=0.0281 clips=1 [Animations\male\MT_Idle.HKX#12218(7.24s)]
+[23:45:47.789] [14376] [I] SCOPY PUPPET digest ticks=3840 step=0.0271 clips=1 [Animations\male\MT_Idle.HKX#12218(8.10s)]
+[23:45:48.652] [14376] [I] SCOPY PUPPET digest ticks=3870 step=0.0287 clips=1 [Animations\male\MT_Idle.HKX#12218(8.97s)]
+[23:45:48.721] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:48.721] [14376] [I] SCOPY DRAW frame=3001 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:45:49.529] [14376] [I] SCOPY PUPPET digest ticks=3900 step=0.0302 clips=1 [Animations\male\MT_Idle.HKX#12218(9.84s)]
+[23:45:50.402] [14376] [I] SCOPY PUPPET digest ticks=3930 step=0.0291 clips=1 [Animations\male\MT_Idle.HKX#12218(10.72s)]
+[23:45:51.300] [14376] [I] SCOPY PUPPET digest ticks=3960 step=0.0302 clips=1 [Animations\male\MT_Idle.HKX#12218(11.61s)]
+[23:45:52.177] [14376] [I] SCOPY PUPPET digest ticks=3990 step=0.0285 clips=1 [Animations\male\MT_Idle.HKX#12218(12.49s)]
+[23:45:52.246] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:52.246] [14376] [I] SCOPY DRAW frame=3121 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:45:53.044] [14376] [I] SCOPY PUPPET digest ticks=4020 step=0.0277 clips=1 [Animations\male\MT_Idle.HKX#12218(13.36s)]
+[23:45:53.904] [14376] [I] SCOPY PUPPET digest ticks=4050 step=0.0290 clips=1 [Animations\male\MT_Idle.HKX#12218(14.22s)]
+[23:45:54.773] [14376] [I] SCOPY PUPPET digest ticks=4080 step=0.0274 clips=1 [Animations\male\MT_Idle.HKX#12218(15.09s)]
+[23:45:55.656] [14376] [I] SCOPY PUPPET digest ticks=4110 step=0.0279 clips=1 [Animations\male\MT_Idle.HKX#12218(15.97s)]
+[23:45:55.723] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:55.723] [14376] [I] SCOPY DRAW frame=3241 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:45:56.521] [14376] [I] SCOPY PUPPET digest ticks=4140 step=0.0286 clips=1 [Animations\male\MT_Idle.HKX#12218(16.83s)]
+[23:45:57.471] [14376] [I] SCOPY PUPPET digest ticks=4170 step=0.0277 clips=1 [Animations\male\MT_Idle.HKX#12218(17.78s)]
+[23:45:58.349] [14376] [I] SCOPY PUPPET digest ticks=4200 step=0.0285 clips=1 [Animations\male\MT_Idle.HKX#12218(18.66s)]
+[23:45:59.225] [14376] [I] SCOPY PUPPET digest ticks=4230 step=0.0288 clips=1 [Animations\male\MT_Idle.HKX#12218(19.54s)]
+[23:45:59.294] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:45:59.294] [14376] [I] SCOPY DRAW frame=3361 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:46:00.112] [14376] [I] SCOPY PUPPET digest ticks=4260 step=0.0284 clips=1 [Animations\male\MT_Idle.HKX#12218(0.43s)]
+[23:46:01.004] [14376] [I] SCOPY PUPPET digest ticks=4290 step=0.0275 clips=1 [Animations\male\MT_Idle.HKX#12218(1.32s)]
+[23:46:01.869] [14376] [I] SCOPY PUPPET digest ticks=4320 step=0.0286 clips=1 [Animations\male\MT_Idle.HKX#12218(2.18s)]
+[23:46:02.727] [14376] [I] SCOPY PUPPET digest ticks=4350 step=0.0278 clips=1 [Animations\male\MT_Idle.HKX#12218(3.04s)]
+[23:46:02.795] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:46:02.795] [14376] [I] SCOPY DRAW frame=3481 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:46:03.649] [14376] [I] SCOPY PUPPET digest ticks=4380 step=0.0281 clips=1 [Animations\male\MT_Idle.HKX#12218(3.96s)]
+[23:46:04.595] [14376] [I] SCOPY PUPPET digest ticks=4410 step=0.0281 clips=1 [Animations\male\MT_Idle.HKX#12218(4.91s)]
+[23:46:05.465] [14376] [I] SCOPY PUPPET digest ticks=4440 step=0.0280 clips=1 [Animations\male\MT_Idle.HKX#12218(5.78s)]
+[23:46:06.344] [14376] [I] SCOPY PUPPET digest ticks=4470 step=0.0270 clips=1 [Animations\male\MT_Idle.HKX#12218(6.66s)]
+[23:46:06.411] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:46:06.411] [14376] [I] SCOPY DRAW frame=3601 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:46:07.210] [14376] [I] SCOPY PUPPET digest ticks=4500 step=0.0293 clips=1 [Animations\male\MT_Idle.HKX#12218(7.52s)]
+[23:46:08.096] [14376] [I] SCOPY PUPPET digest ticks=4530 step=0.0287 clips=1 [Animations\male\MT_Idle.HKX#12218(8.41s)]
+[23:46:08.973] [14376] [I] SCOPY PUPPET digest ticks=4560 step=0.0287 clips=1 [Animations\male\MT_Idle.HKX#12218(9.29s)]
+[23:46:09.846] [14376] [I] SCOPY PUPPET digest ticks=4590 step=0.0280 clips=1 [Animations\male\MT_Idle.HKX#12218(10.16s)]
+[23:46:09.915] [14376] [I] Clone draw: passes=45 rd-null=45 lights=3 | geoms=49 skinned=49 roots=2 num-mat=908 bone-count=941 bound=908
+[23:46:09.916] [14376] [I] SCOPY DRAW frame=3721 passes=45 lights=true animation-driver=puppet:Animations\male\MT_Idle.HKX#12218 physics-driver=none
+[23:46:10.722] [14376] [I] SCOPY PUPPET digest ticks=4620 step=0.0325 clips=1 [Animations\male\MT_Idle.HKX#12218(11.03s)]
+[23:46:11.660] [14376] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:46:11.867] [14376] [I] SCOPY ANIM restart at panel open capture=1 driver=puppet:Animations\male\MT_Idle.HKX#12218
+[23:46:11.883] [14376] [I] SCOPY PUPPET driver clip='Animations\MT_JumpFall.hkx' mapping=identity-unverified coverage=tracks=99 resolved=93 bone-nodes=116 pose=116
+[23:46:12.633] [14376] [I] SCOPY PUPPET digest ticks=4650 step=0.0301 clips=1 [Animations\MT_JumpFall.hkx#12261(1.86s)]
+[23:46:14.175] [14376] [I] SCOPY PUPPET digest ticks=4680 step=0.1000 clips=1 [Animations\MT_JumpFall.hkx#12261(3.43s)]
+[23:46:14.792] [14376] [I] SCOPY PUPPET digest ticks=4710 step=0.0207 clips=1 [Animations\MT_JumpFall.hkx#12261(4.05s)]
+[23:46:15.388] [14376] [I] SCOPY PUPPET digest ticks=4740 step=0.0191 clips=1 [Animations\MT_JumpFall.hkx#12261(4.64s)]
+[23:46:15.957] [14376] [I] SCOPY PUPPET digest ticks=4770 step=0.0185 clips=2 [Animations\male\MT_Idle.HKX#12218(0.37s); Animations\MT_JumpLand.hkx#12327(0.37s)]
+[23:46:16.468] [14376] [I] SCOPY PUPPET digest ticks=4800 step=0.0165 clips=1 [Animations\male\MT_Idle.HKX#12218(0.89s)]
+[23:46:16.938] [14376] [I] SCOPY PUPPET digest ticks=4830 step=0.0153 clips=1 [Animations\male\MT_Idle.HKX#12218(1.36s)]
+[23:46:17.368] [14376] [I] SCOPY PUPPET digest ticks=4860 step=0.0140 clips=1 [Animations\male\MT_Idle.HKX#12218(1.79s)]
+[23:46:17.744] [14376] [I] SCOPY PUPPET digest ticks=4890 step=0.0121 clips=1 [Animations\male\MT_Idle.HKX#12218(2.16s)]

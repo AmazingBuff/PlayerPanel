@@ -143,6 +143,15 @@ poseLocal 覆盖差（39 vs 109）按骨名桥接、A/B 走查限频。构建身
 `CharacterPanel-scopy-HKX38-d14af9a166+dirty-cl94faaed0c6-20261011T153149Z`，DLL SHA-256
 `a24605e3…` 已部署校验；单测 1/1。判读表见
 [调度器 v1 测试单](scene-copy-scheduler-v1-test-2026-10-11.md)。
+**HKX38 已实测通过（2026-10-11 深夜）= 调度器 v1 成立**：面板副本由傀儡实时驱动 ~5.5 分钟暂停
+面板时间（4890 手动推图/163 digest/8 次切换解析零卡顿）；**暂停期内 OAR 实时切件被驱动链同帧
+跟上**（MT_Idle#12222 → IdlePickaxe_Floor#11096 风味件）；coverage=bone-nodes 116/pose 116——
+HKX37 的真值骨 39 异常在产品读取上不复现；F2 关冻结/开续播（图连续）；H05 普查 npc-set=+0/-0
+（白名单生效）；零崩溃零新 `[E]`。新引擎事实：泊深 -8000 的傀儡引擎期会下坠（JumpFall 循环，
+面板无害，HKX39 加 SetMotionType 钉死）；本机 OAR 全量替换 idle → identity-unverified 档成为
+主路径常态，其视觉标定升为 HKX39 主判据。读档边界本轮未穿越（机制与 HKX37 软复位同源）。
+**HKX39 范围：identity 档时机性 A/B + 视觉标定（主）、equip 第二杠杆、泊深运动钉、F2 日志化妆
+→ S1 安全回收 → OAR fork（大概率免立项）。**
 
 **HKX18–HKX27（历史）**：由引擎装载游戏已注册的动作再取其数据。
 用户澄清的原则（已记为产品要求）：**面板动作不必与游戏角色当前在播的一致，但必须是原版或 OAR 注册的动作**，
