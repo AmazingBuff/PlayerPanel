@@ -409,6 +409,7 @@ private:
     struct SubjectState
     {
         std::vector<PoseSample> pose[2];
+        std::vector<PoseSample> pose_local;
         std::vector<BoneState> bones;
         // How many node locals moved since the previous mark: the verdict carries it because a
         // calibration against a frozen tree measures nothing, and the reader has to see that on the
@@ -432,6 +433,12 @@ private:
         bool paused = false;
         std::vector<PoseSample> pose[2];
         std::vector<BoneState> bones;
+        // `hkbCharacter::poseLocal`, the pose the character itself holds - a second, differently
+        // ordered source of the same information (HKX2 measured it boneNodes-ordered while the graph's
+        // output pose is skeleton-ordered). It is sampled because the paused puppet has no output pose
+        // at all: if this one still moves under the panel's own clock, the route has a source while
+        // paused; if it is frozen too, the missing piece is the engine's evaluation, not our read.
+        std::vector<PoseSample> pose_local;
         void const* output[2] = { nullptr, nullptr };
         std::int32_t pose_count[2] = { 0, 0 };
         char const* reason[2] = { "not-read", "not-read" };

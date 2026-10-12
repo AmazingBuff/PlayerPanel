@@ -61,12 +61,47 @@ AFP2 的取景按设计输入里的退路走：**draw 窗口内临时改根变�
    **应用拒绝的原因是我的桥，不是姿态**。**已修**：桥走整棵树，再反查回引擎活骨表的索引（每帧解析仍只读表，
    不跨帧持指针；表里没有的节点记 `unreachable`）。
 
-## 6. 下一步（一次约 1 分钟的会话）
+## 7. 追加判读（2026-10-13 22:56–22:58 会话）：**是暂停拿走了输出，不是推图状态**
 
-1. 进存档 → **F4** 到 `held-pinned` → 等装配窗 → **F3** 循环到 `tick+apply`（世界期）→ 看
-   `SCOPY AFP2 verify … match=1`，以及新的 `names skeleton=116 tree=109 table=?`（这条会告诉我们引擎骨表到底
-   能寻址多少根动画骨）。
-2. **开背包** → **F2**：`A2` 行现在会明确回答 **`blocked=no-pose-while-paused`（暂停拿走输出）**
-   还是 **`apply=on written=N`（应用真的在写）**。
-3. 若仍是 `no-pose-while-paused`：下一轮的目标就锁定为"**让暂停期也有最终输出**"——调查 `hkbBehaviorGraph::Generate`
-   （OAR hooks 的那一层，`OpenAnimationReplacer/src/Hooks.cpp:211`）能否由我们按帧调用，而不是继续在应用阶段打转。
+- 包：`…AFP1-ee54611706…T145401Z`（含三个修复）；日志 `docs/diagnostics/CharacterPanel-afp1c-paused-20261012.log`。
+- 状态：`placement=held-pinned`、`drive=tick+apply`（**推图开**）、mark `paused=1`。
+
+| 观察 | 傀儡 | 玩家（同帧对照） |
+| --- | --- | --- |
+| `num-anim-bones` | **0** | 116 |
+| pose 轨 | 空（`no-candidate`） | `num-data=116` |
+| 标定 | —— | **`match=1 ratio=1.00 within-1deg=109/109`** |
+| 应用阶段 | 重复 `blocked=no-pose-while-paused` | —— |
+
+→ **之前两个变量（暂停、推图关）同时动过，这次分开了：推图是开的，姿态仍然没有。暂停本身就是原因。**
+应用阶段现在"先看有没有姿态再报理由"，这条新的 block 就是它给出的答案。
+
+**三个修复在同一次上机里得到验证**：
+
+- `verifications=1 generation=0`（上一轮是 `58/59`）→ 标定不再每帧重试，代数也不再是"尝试次数"。
+- 玩家侧 `world-within-1deg=88/109`（上一轮 `0/109`）→ world 对齐修复成立；残余 21 根与 local 侧的
+  腿部/CME 家族一致，不是对齐问题。
+- 新的 `names skeleton=116 tree=109 table=37` → **引擎的骨表只寻址 116 根动画骨里的 37 根**，
+  而树里有 109 根同名节点。这条决定了应用阶段的**写入覆盖面只能到 37 根**（我改成树桥 + 反查骨表之后仍受此限），
+  也解释了两个数字的差别：仪器走树是 `86/92=0.93`，应用走树再反查骨表是 `31/37=0.84`，
+  失败的 6 根都是同一批腿骨。**新开问题**：傀儡的骨表是"缩减集"，还是它指向的节点根本不在傀儡自己的树里？
+  （廉价判据：把骨表节点与傀儡树、玩家树各比一次，看哪边命中。）
+
+## 8. 下一步（本轮已备好探针）
+
+暂停期既没有 `generatorOutputs` 的姿态，那就问第二个源：`hkbCharacter::poseLocal`（HKX2 实测为 **boneNodes 次序**，
+与图输出是两套数组）。**本轮已把 poseLocal 纳入 A0/A1 配对**（`pose-local=N/N pose-local-moved=K pose-local-max-rot=X`），
+下次会话按 F2 即可回答：
+
+- **poseLocal 在暂停期仍然随我们的时钟变化** → 路线有源：把姿态来源从 `generatorOutputs` 换成 `poseLocal`
+  （次序按 HKX2 的 boneNodes），应用阶段照现状即可工作；
+- **poseLocal 也冻结** → 缺的是"引擎的求值"本身，下一步锁定 `hkbBehaviorGraph::Generate`
+  （OAR 钩的那一层，`OpenAnimationReplacer/src/Hooks.cpp:211`）能否由我们按帧调用，而不是继续在应用阶段打转。
+
+## 9. 上机步骤（下一次）
+
+1. 进存档 → **F4** 到 `held-pinned` → 等装配窗 → **F3** 循环到 `tick+apply`（**世界期**）→
+   看 `SCOPY AFP2 verify … match=1` 与 `names skeleton=116 tree=109 table=?`。
+2. **开背包** → **F2** ×2（间隔几秒）：看 `A0A1` 的 **`pose-local-moved`** 是 0 还是非 0——
+   这一条决定姿态来源换不换。
+3. 同一对标记里 `A2` 行会说明应用是否还在 `blocked=no-pose-while-paused`。

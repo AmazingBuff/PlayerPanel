@@ -553,6 +553,19 @@ FinalPoseProbe::PreSample FinalPoseProbe::sample_only(RE::TESObjectREFR* a_subje
         sample.bones.push_back(state);
     }
 
+    // The character's own local pose, as a second source of the same information.
+    if (readable(&graph->characterInstance, sizeof(RE::hkbCharacter)))
+    {
+        const RE::hkbCharacter& character = graph->characterInstance;
+        if (character.poseLocal && character.numPoseLocal > 0 &&
+            readable(character.poseLocal, static_cast<std::size_t>(character.numPoseLocal) * sizeof(RE::hkQsTransform)))
+        {
+            sample.pose_local.reserve(static_cast<std::size_t>(character.numPoseLocal));
+            for (std::int32_t i = 0; i < character.numPoseLocal; ++i)
+                sample.pose_local.push_back(read_pose_unaligned(character.poseLocal[i]));
+        }
+    }
+
     sample.valid = true;
     return sample;
 }
@@ -575,11 +588,11 @@ void FinalPoseProbe::sample_before_tick()
             logger::info("SCOPY FP A0 subject={} UNAVAILABLE reason=no-sample", a_label);
             return;
         }
-        logger::info("SCOPY FP A0 subject={} output0=0x{:x} pose0={} reason0={} output1=0x{:x} pose1={} reason1={} bones={}/{}",
+        logger::info("SCOPY FP A0 subject={} output0=0x{:x} pose0={} reason0={} output1=0x{:x} pose1={} reason1={} bones={}/{} pose-local={}",
             a_label,
             reinterpret_cast<std::uintptr_t>(a_sample.output[0]), a_sample.pose_count[0], a_sample.reason[0],
             reinterpret_cast<std::uintptr_t>(a_sample.output[1]), a_sample.pose_count[1], a_sample.reason[1],
-            a_sample.bones_present, a_sample.bones.size());
+            a_sample.bones_present, a_sample.bones.size(), a_sample.pose_local.size());
     };
     report_pre("puppet", m_puppet_pre);
     report_pre("player", m_player_pre);
@@ -627,13 +640,26 @@ void FinalPoseProbe::report_frame_delta(char const* a_label, PreSample const& a_
         nodes_position = std::max(nodes_position, position);
     }
 
-    logger::info("SCOPY FP A0A1 subject={} pose0={}/{} pose1={}/{} pose-max-rot={:.3f}deg nodes={}/{} nodes-moved={} nodes-max-rot={:.3f}deg nodes-max-pos={:.3f} nodes-rebound={}",
+    // The character's own local pose, asked the same question: did this frame move it?
+    std::uint32_t local_moved = 0;
+    float local_rotation = 0.0f;
+    const std::size_t local_comparable = std::min(a_pre.pose_local.size(), a_now.pose_local.size());
+    for (std::size_t i = 0; i < local_comparable; ++i)
+    {
+        const float rotation = quat_angle_degrees(a_pre.pose_local[i], a_now.pose_local[i]);
+        if (rotation > 0.01f)
+            ++local_moved;
+        local_rotation = std::max(local_rotation, rotation);
+    }
+
+    logger::info("SCOPY FP A0A1 subject={} pose0={}/{} pose1={}/{} pose-max-rot={:.3f}deg nodes={}/{} nodes-moved={} nodes-max-rot={:.3f}deg nodes-max-pos={:.3f} nodes-rebound={} pose-local={}/{} pose-local-moved={} pose-local-max-rot={:.3f}deg",
         a_label,
         a_pre.pose[0].size(), a_now.pose[0].size(),
         a_pre.pose[1].size(), a_now.pose[1].size(),
         pose_rotation,
         nodes_compared, a_pre.bones.size(),
-        nodes_moved, nodes_rotation, nodes_position, nodes_rebound);
+        nodes_moved, nodes_rotation, nodes_position, nodes_rebound,
+        local_comparable, a_pre.pose_local.size(), local_moved, local_rotation);
 }
 
 void FinalPoseProbe::tick(bool a_paused)
@@ -875,6 +901,18 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
     }
     a_state.nodes_moved = moved;
     a_state.bones = std::move(bones);
+
+    // The character's own local pose, alongside the graph's output pose: the paused puppet has no
+    // output at all, and whether this one still moves under our own clock is the difference between
+    // "the route needs another source" and "the engine stopped evaluating".
+    a_state.pose_local.clear();
+    if (character && character->poseLocal && character->numPoseLocal > 0 &&
+        readable(character->poseLocal, static_cast<std::size_t>(character->numPoseLocal) * sizeof(RE::hkQsTransform)))
+    {
+        a_state.pose_local.reserve(static_cast<std::size_t>(character->numPoseLocal));
+        for (std::int32_t i = 0; i < character->numPoseLocal; ++i)
+            a_state.pose_local.push_back(read_pose_unaligned(character->poseLocal[i]));
+    }
 
     const Calibration calibration = calibrate(*graph, a_state, a_label);
     const Candidate& best = calibration.candidate;
