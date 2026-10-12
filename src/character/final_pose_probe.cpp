@@ -10,7 +10,9 @@
 #include "RE/A/Actor.h"
 #include "RE/B/BSAnimationGraphManager.h"
 #include "RE/B/BSFadeNode.h"
+#include "RE/B/BSGeometry.h"
 #include "RE/B/BSShaderAccumulator.h"
+#include "RE/B/BSShaderProperty.h"
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/B/BSVisit.h"
 #include "RE/H/hkaSkeleton.h"
@@ -263,6 +265,69 @@ namespace
             root->worldBound.center.x, root->worldBound.center.y, root->worldBound.center.z,
             root->worldBound.radius);
     }
+
+    // R01's other prerequisite, measured before anything is drawn: the Actor's own tree has to carry
+    // geometries that can produce passes at all. `rendererData` is the device-side shape the engine
+    // creates lazily, and the round that hand-drew a figure the paused world had never rendered found
+    // every pass dead on exactly that field (runs 49-52), so it is counted here instead of being
+    // discovered at draw time. Read-only - the class check goes through the typed shader property,
+    // and nothing generates or submits a pass.
+    void report_geometry(char const* a_label, RE::TESObjectREFR& a_subject)
+    {
+        RE::NiAVObject* const root = a_subject.Get3D(false);
+        if (!root || !readable(root, sizeof(RE::NiAVObject)))
+        {
+            logger::info("SCOPY FP geoms subject={} UNAVAILABLE reason=no-3d", a_label);
+            return;
+        }
+
+        std::uint32_t geometries = 0;
+        std::uint32_t skinned = 0;
+        std::uint32_t with_property = 0;
+        std::uint32_t without_property = 0;
+        std::uint32_t effect_shader = 0;
+        std::uint32_t renderer_data = 0;
+        std::uint32_t skinned_with_renderer_data = 0;
+
+        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* a_geometry)
+        {
+            if (!a_geometry || !readable(a_geometry, sizeof(RE::BSGeometry)))
+                return RE::BSVisit::BSVisitControl::kContinue;
+            ++geometries;
+
+            const RE::BSGeometry::GEOMETRY_RUNTIME_DATA& data = a_geometry->GetGeometryRuntimeData();
+            const RE::NiSkinInstance* const skin = data.skinInstance.get();
+            const bool is_skinned = skin && skin->rootParent;
+            if (is_skinned)
+                ++skinned;
+
+            const RE::BSShaderProperty* const property = data.shaderProperty.get();
+            if (property && readable(property, sizeof(RE::BSShaderProperty)))
+            {
+                ++with_property;
+                const RE::NiRTTI* const rtti = property->GetRTTI();
+                const char* const name = rtti ? rtti->GetName() : nullptr;
+                if (name && std::strstr(name, "EffectShader") != nullptr)
+                    ++effect_shader;
+            }
+            else
+            {
+                ++without_property;
+            }
+
+            if (data.rendererData)
+            {
+                ++renderer_data;
+                if (is_skinned)
+                    ++skinned_with_renderer_data;
+            }
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+
+        logger::info("SCOPY FP geoms subject={} root=0x{:x} geometries={} skinned={} property={} none={} effect={} renderer-data={} skinned-with-rd={}",
+            a_label, reinterpret_cast<std::uintptr_t>(root), geometries, skinned, with_property, without_property,
+            effect_shader, renderer_data, skinned_with_renderer_data);
+    }
 }
 
 bool read_pose_track(RE::BShkbAnimationGraph& a_graph, int a_slot, OutputTrackView& a_view,
@@ -449,6 +514,7 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
         skeleton ? skeleton->bones.size() : 0);
 
     report_figure(a_label, *a_subject);
+    report_geometry(a_label, *a_subject);
 
     for (int slot = 0; slot < Output_Slots; ++slot)
     {
@@ -589,12 +655,13 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
             a_label, calibration.decision.reason, a_state.nodes_moved);
         return;
     }
-    logger::info("SCOPY FP verdict subject={} match={} reason={} best={}/slot{} within-1deg={}/{} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f} named={} nodes-moved={}",
+    logger::info("SCOPY FP verdict subject={} match={} reason={} best={}/slot{} within-1deg={}/{} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f} max-scale={:.4f} world-within-1deg={}/{} named={} nodes-moved={}",
         a_label,
         calibration.decision.match ? 1 : 0,
         calibration.decision.reason,
         best.order, best.slot, best.score.within, best.score.compared, best.score.ratio(),
-        best.score.max_rotation, best.score.max_position, best.named, a_state.nodes_moved);
+        best.score.max_rotation, best.score.max_position, best.score.max_scale_deviation,
+        best.world.within, best.world.compared, best.named, a_state.nodes_moved);
 }
 
 FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a_graph, SubjectState const& a_state,
@@ -602,18 +669,49 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
 {
     Calibration calibration;
 
-    // The two candidate tables, built once per mark. Index alignment is the whole point: entry i is
-    // the node pose index i would drive under that order, and an index without a node is marked
-    // absent rather than dropped, so a sparse table cannot shift the comparison onto wrong bones.
-    std::vector<NodeLocal> by_bone_nodes(a_graph.boneNodes.size());
+    // One candidate index order as data: the node's local and world transform per index, plus the
+    // names, so an outlier can be reported by the bone it belongs to instead of by a number. Index
+    // alignment is the whole point: entry i is the node pose index i would drive under that order, and
+    // an index without a node is marked absent rather than dropped, so a sparse table cannot shift
+    // the comparison onto the wrong bones.
+    struct CandidateTable
+    {
+        std::vector<TransformSample> locals;
+        std::vector<TransformSample> worlds;
+        std::vector<std::string> names;
+        std::uint32_t named = 0;   // skeleton order only: bones that resolved to a node by exact name
+    };
+
+    const auto read_node = [](RE::NiAVObject const* a_node, TransformSample& a_local, TransformSample& a_world)
+    {
+        if (!a_node || !readable(a_node, sizeof(RE::NiAVObject)))
+            return false;
+        a_local.rotate = a_node->local.rotate;
+        a_local.translate = a_node->local.translate;
+        a_local.scale = a_node->local.scale;
+        a_local.present = true;
+        a_world.rotate = a_node->world.rotate;
+        a_world.translate = a_node->world.translate;
+        a_world.scale = a_node->world.scale;
+        a_world.present = true;
+        return true;
+    };
+
+    CandidateTable by_bone_nodes;
+    by_bone_nodes.locals.resize(a_graph.boneNodes.size());
+    by_bone_nodes.worlds.resize(a_graph.boneNodes.size());
+    by_bone_nodes.names.resize(a_graph.boneNodes.size());
     for (std::int32_t i = 0; i < static_cast<std::int32_t>(a_graph.boneNodes.size()); ++i)
     {
+        const std::size_t index = static_cast<std::size_t>(i);
         RE::NiNode* const node = a_graph.boneNodes[i].node;
-        if (!node || !readable(node, sizeof(RE::NiAVObject)))
-            continue;
-        by_bone_nodes[static_cast<std::size_t>(i)].rotate = node->local.rotate;
-        by_bone_nodes[static_cast<std::size_t>(i)].translate = node->local.translate;
-        by_bone_nodes[static_cast<std::size_t>(i)].present = true;
+        read_node(node, by_bone_nodes.locals[index], by_bone_nodes.worlds[index]);
+        if (node && readable(node, sizeof(RE::NiAVObject)))
+        {
+            const char* const name = node->name.c_str();
+            if (name && *name)
+                by_bone_nodes.names[index] = name;
+        }
     }
 
     const RE::hkaSkeleton* skeleton = nullptr;
@@ -632,57 +730,98 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
     if (skeleton && a_graph.rootNode && readable(a_graph.rootNode, sizeof(RE::NiAVObject)))
         by_name = nodes_by_name(*a_graph.rootNode);
 
-    std::vector<NodeLocal> by_skeleton(skeleton ? static_cast<std::size_t>(skeleton->bones.size()) : 0);
-    std::uint32_t named = 0;
-    for (std::int32_t i = 0; i < static_cast<std::int32_t>(by_skeleton.size()); ++i)
+    CandidateTable by_skeleton;
+    if (skeleton)
     {
-        const char* const name = skeleton->bones[i].name.c_str();
-        if (!name || !*name)
-            continue;
-        const auto found = by_name.find(std::string_view(name));
-        if (found == by_name.end())
-            continue;
-        RE::NiAVObject* const node = found->second;
-        if (!node || !readable(node, sizeof(RE::NiAVObject)))
-            continue;
-        const std::size_t index = static_cast<std::size_t>(i);
-        by_skeleton[index].rotate = node->local.rotate;
-        by_skeleton[index].translate = node->local.translate;
-        by_skeleton[index].present = true;
-        ++named;
+        const std::size_t bones = static_cast<std::size_t>(skeleton->bones.size());
+        by_skeleton.locals.resize(bones);
+        by_skeleton.worlds.resize(bones);
+        by_skeleton.names.resize(bones);
+        for (std::int32_t i = 0; i < static_cast<std::int32_t>(bones); ++i)
+        {
+            const std::size_t index = static_cast<std::size_t>(i);
+            const char* const name = skeleton->bones[i].name.c_str();
+            if (name && *name)
+                by_skeleton.names[index] = name;
+
+            const auto found = name && *name ? by_name.find(std::string_view(name)) : by_name.end();
+            if (found == by_name.end())
+                continue;
+            if (read_node(found->second, by_skeleton.locals[index], by_skeleton.worlds[index]))
+                ++by_skeleton.named;
+        }
     }
+
+    // The names of the bones a candidate did not reproduce: R03 asks which ones, because a helper
+    // branch can be skipped while a target mesh's own bone cannot.
+    const auto name_outliers = [](OrderScore const& a_score, std::vector<std::string> const& a_names)
+    {
+        std::string out;
+        for (std::uint32_t index : a_score.outliers)
+        {
+            if (!out.empty())
+                out += ",";
+            out += "'";
+            out += index < a_names.size() && !a_names[index].empty() ? a_names[index] : "?";
+            out += "'";
+        }
+        return out.empty() ? std::string("-") : out;
+    };
 
     std::vector<Candidate> candidates;
     for (int order = 0; order < 2; ++order)
     {
         const bool skeleton_order = order == 1;
         const char* const order_name = skeleton_order ? "skeleton" : "bone-nodes";
-        const std::vector<NodeLocal>& table = skeleton_order ? by_skeleton : by_bone_nodes;
+        const CandidateTable& table = skeleton_order ? by_skeleton : by_bone_nodes;
 
         for (int slot = 0; slot < Output_Slots; ++slot)
         {
             const std::vector<PoseSample>& pose = a_state.pose[slot];
-            if (pose.empty() || table.empty())
+            if (pose.empty() || table.locals.empty())
                 continue;
 
             Candidate candidate;
             candidate.order = order_name;
             candidate.slot = slot;
             candidate.sampled = static_cast<std::uint32_t>(pose.size());
-            candidate.named = skeleton_order ? named : 0;
-            candidate.score = score_pose_order(pose, table, Pose_Match_Degrees);
+            candidate.named = table.named;
+            candidate.score = score_pose_order(pose, table.locals, Pose_Match_Degrees);
+
+            // The world space, only where a real parent table exists to compose with: the animation
+            // skeleton's own. The pose is expected to reproduce whole bone chains, so a mismatch here
+            // says the two hierarchies disagree even though every local matched.
+            if (skeleton_order && skeleton && !skeleton->parentIndices.empty() &&
+                readable(skeleton->parentIndices.data(), sizeof(std::int16_t) * static_cast<std::size_t>(skeleton->parentIndices.size())))
+            {
+                std::vector<TransformSample> expected_locals(pose.size());
+                pose_locals(pose, expected_locals);
+                std::vector<TransformSample> expected_worlds(expected_locals.size());
+                compose_worlds(expected_locals,
+                    { skeleton->parentIndices.data(), static_cast<std::size_t>(skeleton->parentIndices.size()) },
+                    expected_worlds);
+                candidate.world = score_transforms(expected_worlds, table.worlds, Pose_Match_Degrees);
+            }
 
             if (skeleton_order)
             {
-                logger::info("SCOPY FP order={} slot={} subject={} sampled={} bones={} named={} compared={} within-1deg={} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f}",
-                    order_name, slot, a_label, candidate.sampled, table.size(), candidate.named, candidate.score.compared,
-                    candidate.score.within, candidate.score.ratio(), candidate.score.max_rotation, candidate.score.max_position);
+                logger::info("SCOPY FP order={} slot={} subject={} sampled={} bones={} named={} compared={} within-1deg={} beyond={} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f} max-scale={:.4f} outliers={}",
+                    order_name, slot, a_label, candidate.sampled, table.locals.size(), candidate.named,
+                    candidate.score.compared, candidate.score.within, candidate.score.beyond, candidate.score.ratio(),
+                    candidate.score.max_rotation, candidate.score.max_position, candidate.score.max_scale_deviation,
+                    name_outliers(candidate.score, table.names));
+                logger::info("SCOPY FP world order={} slot={} subject={} compared={} within-1deg={} beyond={} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f} max-scale={:.4f} outliers={}",
+                    order_name, slot, a_label, candidate.world.compared, candidate.world.within, candidate.world.beyond,
+                    candidate.world.ratio(), candidate.world.max_rotation, candidate.world.max_position,
+                    candidate.world.max_scale_deviation, name_outliers(candidate.world, table.names));
             }
             else
             {
-                logger::info("SCOPY FP order={} slot={} subject={} sampled={} bones={} compared={} within-1deg={} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f}",
-                    order_name, slot, a_label, candidate.sampled, table.size(), candidate.score.compared,
-                    candidate.score.within, candidate.score.ratio(), candidate.score.max_rotation, candidate.score.max_position);
+                logger::info("SCOPY FP order={} slot={} subject={} sampled={} bones={} compared={} within-1deg={} beyond={} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f} max-scale={:.4f} outliers={}",
+                    order_name, slot, a_label, candidate.sampled, table.locals.size(), candidate.score.compared,
+                    candidate.score.within, candidate.score.beyond, candidate.score.ratio(),
+                    candidate.score.max_rotation, candidate.score.max_position, candidate.score.max_scale_deviation,
+                    name_outliers(candidate.score, table.names));
             }
 
             candidates.push_back(candidate);
@@ -691,7 +830,7 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
 
     // The decision the application stage will take on exactly these numbers, reached by the same call
     // it will make - so this log says whether that stage would be allowed to write, not just how the
-    // candidates scored.
+    // candidates scored. It gates on the local space, which is what a write would have to reproduce.
     std::vector<OrderScore> scores;
     scores.reserve(candidates.size());
     for (Candidate const& candidate : candidates)

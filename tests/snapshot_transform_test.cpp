@@ -563,12 +563,10 @@ int main()
 
         const auto make_locals = [](std::vector<PLUGIN_NAMESPACE::PoseSample> const& pose, bool present)
         {
-            std::vector<PLUGIN_NAMESPACE::NodeLocal> locals;
+            std::vector<PLUGIN_NAMESPACE::TransformSample> locals;
             for (PLUGIN_NAMESPACE::PoseSample const& sample : pose)
             {
-                PLUGIN_NAMESPACE::NodeLocal local;
-                local.rotate = PLUGIN_NAMESPACE::ni_local_from_pose(sample, false).rotate;
-                local.translate = PLUGIN_NAMESPACE::pose_position(sample);
+                PLUGIN_NAMESPACE::TransformSample local = PLUGIN_NAMESPACE::pose_local(sample);
                 local.present = present;
                 locals.push_back(local);
             }
@@ -576,31 +574,125 @@ int main()
         };
 
         const std::vector<PLUGIN_NAMESPACE::PoseSample> pose = make_pose(12);
-        const std::vector<PLUGIN_NAMESPACE::NodeLocal> matching = make_locals(pose, true);
+        const std::vector<PLUGIN_NAMESPACE::TransformSample> matching = make_locals(pose, true);
 
         const PLUGIN_NAMESPACE::OrderScore exact = PLUGIN_NAMESPACE::score_pose_order(pose, matching, PLUGIN_NAMESPACE::Pose_Match_Degrees);
         check(exact.compared == 12 && exact.within == 12, "an order whose nodes carry the pose exactly must reproduce every bone");
         check(exact.ratio() == 1.0f && exact.max_rotation <= PLUGIN_NAMESPACE::Pose_Match_Degrees,
             "a correct mapping must score a full ratio inside the declared tolerance");
+        check(exact.beyond == 0 && exact.outliers.empty() && exact.max_scale_deviation <= 0.0001f,
+            "a correct mapping must report no outlier and no scale deviation against the pose it came from");
 
         // The wrong order: the same bones, shifted by one. Half the fixture's bones turn by only a
         // few degrees, so this is exactly the shape that must NOT be believed - a plausible number
         // that is not the mapping.
-        std::vector<PLUGIN_NAMESPACE::NodeLocal> shifted = matching;
+        std::vector<PLUGIN_NAMESPACE::TransformSample> shifted = matching;
         std::rotate(shifted.begin(), shifted.begin() + 1, shifted.end());
         const PLUGIN_NAMESPACE::OrderScore wrong = PLUGIN_NAMESPACE::score_pose_order(pose, shifted, PLUGIN_NAMESPACE::Pose_Match_Degrees);
         check(wrong.compared == 12 && wrong.ratio() < PLUGIN_NAMESPACE::Pose_Match_Min_Ratio,
             "an order shifted by one bone must fall below the ratio the application stage requires");
+        check(wrong.beyond == wrong.compared - wrong.within && !wrong.outliers.empty(),
+            "a wrong order must name the bones it failed on, not only count them");
 
         // An index without a node is not a mismatch: dropping it instead would shift every later
         // index onto the wrong bone, which is why absence is carried rather than erased.
-        std::vector<PLUGIN_NAMESPACE::NodeLocal> sparse = matching;
+        std::vector<PLUGIN_NAMESPACE::TransformSample> sparse = matching;
         sparse[1].present = false;
         sparse[7].present = false;
         const PLUGIN_NAMESPACE::OrderScore partial = PLUGIN_NAMESPACE::score_pose_order(pose, sparse, PLUGIN_NAMESPACE::Pose_Match_Degrees);
         check(partial.compared == 10 && partial.within == 10, "absent nodes must leave the comparison instead of counting as failures");
         check(PLUGIN_NAMESPACE::score_pose_order(pose, make_locals(pose, false), PLUGIN_NAMESPACE::Pose_Match_Degrees).compared == 0,
             "a table with no node at all must compare nothing");
+
+        // The outlier list is a sample while the count is exact: a wrong order can put every bone
+        // outside the bar, and the log is read by a human.
+        std::vector<PLUGIN_NAMESPACE::TransformSample> turned = matching;
+        for (PLUGIN_NAMESPACE::TransformSample& local : turned)
+        {
+            RE::NiMatrix3 rotate;
+            rotate.MakeXRotation(1.5707963f);
+            local.rotate = rotate;
+        }
+        const PLUGIN_NAMESPACE::OrderScore all_wrong = PLUGIN_NAMESPACE::score_pose_order(pose, turned, PLUGIN_NAMESPACE::Pose_Match_Degrees);
+        check(all_wrong.beyond == all_wrong.compared, "a table whose every bone is turned must count every bone as an outlier");
+        check(all_wrong.outliers.size() <= PLUGIN_NAMESPACE::Score_Outlier_Cap, "the outlier list must be capped");
+
+        // A pose carries three scales where a NIF node carries one: the deviation is measured for the
+        // record (R03's third space) and must never gate the decision.
+        std::vector<PLUGIN_NAMESPACE::TransformSample> scaled = matching;
+        scaled[3].scale = 1.5f;
+        const PLUGIN_NAMESPACE::OrderScore scaled_score = PLUGIN_NAMESPACE::score_pose_order(pose, scaled, PLUGIN_NAMESPACE::Pose_Match_Degrees);
+        check(scaled_score.within == 12 && scaled_score.ratio() == 1.0f, "a scale difference alone must not fail a bone");
+        check(close(scaled_score.max_scale_deviation, 0.5f, 0.0001f), "the scale deviation must be reported");
+
+        // The world space, composed along a parent table (R03 asks for local and world separately):
+        // a three-bone chain where the child's world is its parent's world times its own local.
+        {
+            std::vector<PLUGIN_NAMESPACE::PoseSample> chain = make_pose(3);
+            for (std::size_t i = 0; i < chain.size(); ++i)
+                chain[i].position[1] = static_cast<float>(i) * 4.0f;  // +Y offsets, so parents carry children
+            const std::vector<std::int16_t> parents{ -1, 0, 1 };
+
+            std::vector<PLUGIN_NAMESPACE::TransformSample> locals(chain.size());
+            PLUGIN_NAMESPACE::pose_locals(chain, locals);
+            std::vector<PLUGIN_NAMESPACE::TransformSample> worlds(chain.size());
+            PLUGIN_NAMESPACE::compose_worlds(locals, parents, worlds);
+
+            check(worlds[0].present && worlds[2].present, "every composed world must be present");
+            const auto to_transform = [](PLUGIN_NAMESPACE::TransformSample const& sample)
+            {
+                RE::NiTransform transform;
+                transform.rotate = sample.rotate;
+                transform.translate = sample.translate;
+                transform.scale = sample.scale;
+                return transform;
+            };
+            const RE::NiTransform expected_child =
+                (to_transform(locals[0]) * to_transform(locals[1])) * to_transform(locals[2]);
+            check((worlds[2].translate - expected_child.translate).Length() < 1e-3f,
+                "a composed world must be the chain of its ancestors' locals, not just the bone's own");
+            check((worlds[0].translate - locals[0].translate).Length() < 1e-5f,
+                "a root's world must be its own local");
+
+            // A parent that is missing or not before its child is a root, not something to trust, and
+            // a cyclic table must terminate.
+            const std::vector<std::int16_t> broken{ -1, 5, 2 };
+            std::vector<PLUGIN_NAMESPACE::TransformSample> broken_worlds(chain.size());
+            PLUGIN_NAMESPACE::compose_worlds(locals, broken, broken_worlds);
+            check((broken_worlds[1].translate - locals[1].translate).Length() < 1e-5f,
+                "an out-of-range parent must be treated as a root");
+            const std::vector<std::int16_t> cyclic{ 1, 2, 0 };
+            std::vector<PLUGIN_NAMESPACE::TransformSample> cyclic_worlds(chain.size());
+            PLUGIN_NAMESPACE::compose_worlds(locals, cyclic, cyclic_worlds);
+            check((cyclic_worlds[0].translate - locals[0].translate).Length() < 1e-5f,
+                "a parent that is not before its child must be treated as a root (a cyclic table must terminate)");
+
+            // Here the two spaces disagree by construction: the locals match the nodes exactly, while
+            // the nodes' worlds carry an extra parent offset - which is what a helper branch does.
+            // Translation is measured and rotation gates, in both spaces alike, so an offset shows up
+            // as max-position rather than as a failed bone.
+            std::vector<PLUGIN_NAMESPACE::TransformSample> node_locals = locals;
+            std::vector<PLUGIN_NAMESPACE::TransformSample> node_worlds = worlds;
+            node_worlds[2].translate.y += 10.0f;
+            check(PLUGIN_NAMESPACE::score_transforms(locals, node_locals, PLUGIN_NAMESPACE::Pose_Match_Degrees).within == 3,
+                "matching locals must score full in the local space");
+            const PLUGIN_NAMESPACE::OrderScore offset_world =
+                PLUGIN_NAMESPACE::score_transforms(worlds, node_worlds, PLUGIN_NAMESPACE::Pose_Match_Degrees);
+            check(offset_world.compared == 3 && offset_world.within == 3 && offset_world.beyond == 0,
+                "a world translation offset must not fail a bone");
+            check(close(offset_world.max_position, 10.0f, 0.01f), "a world translation offset must be reported as max-position");
+
+            // A world *rotation* that disagrees is what the world space is there to catch: it fails
+            // even though every local matched, and it is named by index.
+            std::vector<PLUGIN_NAMESPACE::TransformSample> turned_worlds = worlds;
+            RE::NiMatrix3 quarter_turn;
+            quarter_turn.MakeZRotation(1.5707963f);
+            turned_worlds[1].rotate = turned_worlds[1].rotate * quarter_turn;
+            const PLUGIN_NAMESPACE::OrderScore turned_score =
+                PLUGIN_NAMESPACE::score_transforms(worlds, turned_worlds, PLUGIN_NAMESPACE::Pose_Match_Degrees);
+            check(turned_score.compared == 3 && turned_score.beyond == 1 && turned_score.outliers.size() == 1 && turned_score.outliers[0] == 1,
+                "a world rotation that disagrees must be counted and named even when every local matched");
+        }
 
         // The decision, over the candidates a mark produces.
         const std::vector<PLUGIN_NAMESPACE::OrderScore> both{ wrong, exact };

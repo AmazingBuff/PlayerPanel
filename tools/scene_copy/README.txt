@@ -69,7 +69,7 @@ and both are measured here, read-only:
 Press F11 for one mark. A mark samples both the puppet and, as the reference, the player (whose
 graph the engine drives by itself), and writes nothing anywhere:
 
-  SCOPY FP mark=N paused=0|1 tick=on|off manual-ticks=N
+  SCOPY FP mark=N paused=0|1 tick=on|off manual-ticks=N placement=parked-deep|held-pinned
   SCOPY FP camera ui3d=0x... ui3d-camera=0x... accumulator=0x... accumulator-camera=0x...
         world-camera=0x... accumulator-is-ui3d=0|1 accumulator-is-world=0|1 ui3d-is-world=0|1
   SCOPY FP camera ui3d-camera world-t=(x,y,z) view=(x,y,z) w2c-t=(x,y,z) near=X far=X
@@ -77,6 +77,8 @@ graph the engine drives by itself), and writes nothing anywhere:
         ui3d-frustum l=X r=X t=X b=X near=X far=X
   SCOPY FP figure subject=... root=0x... world-t=(x,y,z) view-depth=X lateral=X
         eye-distance=X fade=X bound-center=(x,y,z) bound-radius=X
+  SCOPY FP geoms subject=... root=0x... geometries=N skinned=N property=N none=N effect=N
+        renderer-data=N skinned-with-rd=N
   SCOPY FP census subject=puppet form=... graph=0x... bone-nodes=N bound=N pose-local=N
         num-anim-bones=N tracks-in-lod=N lod=N skeleton='...' skeleton-bones=N
   SCOPY FP slot=0|1 subject=... out=0x... tracks=N on-tracks=[i,j,...] exists=0|1 valid=0|1
@@ -113,11 +115,24 @@ How to read it:
                        nodes do not follow); changed>0 means this Actor's nodes are being driven.
   order=... / verdict  the calibration. Each candidate (index order x output slot) is scored against
                        the node locals the engine itself wrote; ratio is the fraction of compared
-                       bones that the candidate reproduces within one degree. The verdict names the
-                       best candidate and the decision `decide_pose_order` reaches on those numbers -
-                       the same call the application stage makes, so the line says whether that stage
-                       would be allowed to write: match=1 reason=matched, or match=0 with
-                       reason=no-candidate / insufficient-compared / below-ratio.
+                       bones that the candidate reproduces within one degree, `beyond` counts the
+                       ones that missed and `outliers` names up to eight of them - R03 asks which
+                       bones, because a helper branch can be skipped while a target mesh's own bone
+                       cannot. `max-scale` is the third space, measured and never gating: a pose
+                       carries three scales where a NIF node carries one. The verdict names the best
+                       candidate and the decision `decide_pose_order` reaches on those numbers - the
+                       same call the application stage makes: match=1 reason=matched, or match=0
+                       with reason=no-candidate / insufficient-compared / below-ratio.
+  world order=...      the same pose composed along the animation skeleton's own parent table and
+                       compared against the nodes' worlds. R03 asks for local and world separately
+                       because they disagree exactly where the two hierarchies do: a helper branch
+                       hangs a bone where the skeleton does not. This line appears only for the
+                       skeleton order, the one that has a real parent table to compose with.
+  geoms ...            the Actor's own geometry inventory, read-only: how many geometries its 3D root
+                       carries, how many are skinned, how many have a shader property (and how many of
+                       those are EffectShader by class), and - the field runs 49-52 died on - how many
+                       already have device-side `rendererData`. A figure the paused world never
+                       rendered has none, and every pass generation dies on it.
   camera ...           the camera chain the studio draw renders through, read-only. The pass
                        submission takes no camera and writes no projection, so the view the figure is
                        projected with is engine state left in place - and the route that must not

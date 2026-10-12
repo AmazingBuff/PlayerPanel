@@ -4,6 +4,23 @@
 
 ### Added
 
+- Complete the R03 evidence the next session has to produce, and measure R01's other prerequisite
+  before anything is drawn. The comparison is now over whole transforms in both spaces: `order=` line
+  carries `beyond`, `max-scale` (the third space, measured and never gating, because a pose carries
+  three scales where a NIF node carries one) and `outliers=`, which names up to eight of the bones
+  that missed the bar - R03 asks which ones, since a helper branch can be skipped while a target
+  mesh's own bone cannot. A second `world` line composes the same pose along the animation skeleton's
+  own parent table and compares it with the nodes' worlds: the local and world spaces are asked for
+  separately because they disagree exactly where the two hierarchies do, which is what a CME/helper
+  branch is. Both rules are pure header code and the unit test now pins them - a shifted order is
+  convicted and named, an absent node leaves the comparison instead of shifting it, a scale
+  difference never fails a bone, a world translation offset is reported as max-position rather than
+  as a failure, and a world *rotation* disagreement is counted and named even when every local
+  matched. A `geoms` line reports the Actor's own geometry inventory read-only: how many geometries,
+  how many skinned, how many have a shader property (and how many of those are `EffectShader` by
+  class), and how many already have device-side `rendererData` - the field runs 49-52 died on, which
+  a figure the paused world never rendered simply does not have.
+
 - Report AFP1's first in-game verdict and give its one blocker a lever
   ([verdict](docs/afp1-verdict-2026-10-13.md)). The pose track is readable and
   fully validated in game (`reason=ok`, 116 elements, 0x30 elements, data at

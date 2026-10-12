@@ -37,27 +37,40 @@ inline constexpr float Pose_Match_Degrees = 1.0f;
 inline constexpr std::uint32_t Pose_Match_Min_Compared = 8;
 inline constexpr float Pose_Match_Min_Ratio = 0.9f;
 
-// The engine's node local for one candidate index, as plain numbers. The calibration compares the
-// graph's own output pose against what the engine applied to the nodes, so both sides can be handed
-// over as data - which is exactly what lets the decision itself be unit-tested. A mapping rule that
-// can only be exercised inside the game is a rule nobody can check.
+// One transform as plain numbers, used for both sides of every comparison: what a pose implies for a
+// bone, and what the node actually holds. The calibration compares the graph's own output pose
+// against what the engine applied, so both sides can be handed over as data - which is exactly what
+// lets the decision itself be unit-tested. A mapping rule that can only be exercised inside the game
+// is a rule nobody can check.
 //
-// `present` is what keeps an index honest: a table entry without a node is *not comparable*, and
-// dropping it instead would shift every later index of that candidate onto the wrong bone.
-struct NodeLocal
+// `present` is what keeps an index honest: an entry without a node is *not comparable*, and dropping
+// it instead would shift every later index of that candidate onto the wrong bone.
+struct TransformSample
 {
     RE::NiMatrix3 rotate;
     RE::NiPoint3 translate;
+    float scale = 1.0f;
     bool present = false;
 };
 
-// What one index order scored against those node locals.
+// How many outliers a score names. The count is always exact; the list is a sample, because a wrong
+// order can put every bone outside the bar and the log is read by a human.
+inline constexpr std::size_t Score_Outlier_Cap = 8;
+
+// What one index order scored against the node transforms.
 struct OrderScore
 {
     std::uint32_t compared = 0;
     std::uint32_t within = 0;      // bones whose rotation landed inside the tolerance
+    std::uint32_t beyond = 0;      // ... and the ones that did not
     float max_rotation = 0.0f;
     float max_position = 0.0f;
+    // R03 asks for the three spaces separately: a pose carries three scales where a NIF node carries
+    // one, so this is measured for the record rather than used as a gate.
+    float max_scale_deviation = 0.0f;
+    // Indices (into the candidate table) of the bones beyond the bar, capped. The caller turns them
+    // into names, because naming is a fact about the skeleton, not about the comparison.
+    std::vector<std::uint32_t> outliers;
 
     [[nodiscard]] float ratio() const
     {
@@ -72,34 +85,115 @@ struct OrderScore
     return RE::NiPoint3{ a_sample.position[0], a_sample.position[1], a_sample.position[2] };
 }
 
-// Scores one index order: pose[i] is compared with locals[i], index by index, and a bone counts as
-// reproduced when its rotation is within the tolerance. Translation is measured and reported but
-// never gates: a pose carries three scales where a NIF node carries one, so a systematic offset in a
-// translation is a fact about the spaces, not a verdict about the order. Indices without a node are
-// skipped and do not enter `compared`.
-[[nodiscard]] inline OrderScore score_pose_order(std::span<PoseSample const> a_pose, std::span<NodeLocal const> a_locals,
-    float a_tolerance_degrees)
+// The local transform one pose sample implies, in the convention this codebase measured (HKX2:
+// `direct`, and the pose's own scale kept as one number).
+[[nodiscard]] inline TransformSample pose_local(PoseSample const& a_sample)
+{
+    const RE::NiTransform local = ni_local_from_pose(a_sample, false);
+    TransformSample sample;
+    sample.rotate = local.rotate;
+    sample.translate = local.translate;
+    sample.scale = a_sample.scale;
+    sample.present = true;
+    return sample;
+}
+
+// Everything one pose implies, as a table: this is the "expected" side of a comparison, and it is
+// built without touching the game so the rules below can be tested against fabricated skeletons.
+inline void pose_locals(std::span<PoseSample const> a_pose, std::span<TransformSample> a_out)
+{
+    const std::size_t count = std::min(a_pose.size(), a_out.size());
+    for (std::size_t i = 0; i < count; ++i)
+        a_out[i] = pose_local(a_pose[i]);
+}
+
+// Composes a local table into world transforms along a parent table: world[i] = world[parent] *
+// local[i]. R03 asks for the local and the world space separately, because they disagree exactly
+// where the two hierarchies differ - a CME/helper branch hangs a bone somewhere the animation
+// skeleton does not. A parent that is missing, out of range or not before its child is treated as a
+// root rather than trusted: the loop is bounded by the table, so a cyclic table cannot hang it.
+inline void compose_worlds(std::span<TransformSample const> a_locals, std::span<std::int16_t const> a_parents,
+    std::span<TransformSample> a_out)
+{
+    const std::size_t count = std::min(a_locals.size(), a_out.size());
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        RE::NiTransform world;
+        const std::int16_t parent = i < a_parents.size() ? a_parents[i] : -1;
+        if (parent >= 0 && static_cast<std::size_t>(parent) < i && a_out[static_cast<std::size_t>(parent)].present)
+        {
+            const TransformSample& parent_world = a_out[static_cast<std::size_t>(parent)];
+            RE::NiTransform parent_transform;
+            parent_transform.rotate = parent_world.rotate;
+            parent_transform.translate = parent_world.translate;
+            parent_transform.scale = parent_world.scale;
+
+            RE::NiTransform local;
+            local.rotate = a_locals[i].rotate;
+            local.translate = a_locals[i].translate;
+            local.scale = a_locals[i].scale;
+            world = parent_transform * local;
+        }
+        else
+        {
+            world.rotate = a_locals[i].rotate;
+            world.translate = a_locals[i].translate;
+            world.scale = a_locals[i].scale;
+        }
+
+        a_out[i].rotate = world.rotate;
+        a_out[i].translate = world.translate;
+        a_out[i].scale = world.scale;
+        a_out[i].present = a_locals[i].present;
+    }
+}
+
+// The comparison itself: expected[i] against actual[i], index by index. Rotation is what gates - a
+// bone counts as reproduced when it lands inside the tolerance - while translation and scale are
+// measured for the record, because a pose carries three scales where a NIF node carries one and a
+// systematic offset is a fact about the spaces rather than a verdict about the order. Indices whose
+// actual side is absent are skipped and do not enter `compared`.
+[[nodiscard]] inline OrderScore score_transforms(std::span<TransformSample const> a_expected,
+    std::span<TransformSample const> a_actual, float a_tolerance_degrees)
 {
     OrderScore score;
-    const std::size_t comparable = std::min(a_pose.size(), a_locals.size());
+    const std::size_t comparable = std::min(a_expected.size(), a_actual.size());
     for (std::size_t i = 0; i < comparable; ++i)
     {
-        // An index without a node says nothing about this order either way, so it is skipped rather
-        // than counted as a mismatch (which would let a sparse table convict a correct order).
-        if (!a_locals[i].present)
+        if (!a_actual[i].present || !a_expected[i].present)
             continue;
 
-        const RE::NiMatrix3 rotation = ni_local_from_pose(a_pose[i], false).rotate;
-        const float degrees = rotation_angle_degrees(rotation, a_locals[i].rotate);
-        const float position = (pose_position(a_pose[i]) - a_locals[i].translate).Length();
+        const float degrees = rotation_angle_degrees(a_expected[i].rotate, a_actual[i].rotate);
+        const float position = (a_expected[i].translate - a_actual[i].translate).Length();
+        const float scale = std::abs(a_expected[i].scale - a_actual[i].scale);
 
         ++score.compared;
         if (degrees <= a_tolerance_degrees)
             ++score.within;
+        else
+        {
+            ++score.beyond;
+            if (score.outliers.size() < Score_Outlier_Cap)
+                score.outliers.push_back(static_cast<std::uint32_t>(i));
+        }
         score.max_rotation = std::max(score.max_rotation, degrees);
         score.max_position = std::max(score.max_position, position);
+        score.max_scale_deviation = std::max(score.max_scale_deviation, scale);
     }
     return score;
+}
+
+// Scores one index order: pose[i] is compared with locals[i], index by index.
+[[nodiscard]] inline OrderScore score_pose_order(std::span<PoseSample const> a_pose, std::span<TransformSample const> a_locals,
+    float a_tolerance_degrees)
+{
+    // A small stack of the expected side would be cheaper, but the table has to be index-aligned with
+    // the candidate (an absent node still occupies its index), so it is built whole.
+    std::vector<TransformSample> expected(a_locals.size());
+    const std::size_t count = std::min(a_pose.size(), expected.size());
+    for (std::size_t i = 0; i < count; ++i)
+        expected[i] = pose_local(a_pose[i]);
+    return score_transforms(expected, a_locals, a_tolerance_degrees);
 }
 
 // The decision the application stage needs, and the reason when it must not write.
@@ -239,6 +333,12 @@ private:
     // One (index order, output slot) reading of the calibration: which order and buffer it was, plus
     // the score itself. `named` is the skeleton order's own reach - bones that resolved to a node by
     // exact name - and is what tells a failed ratio apart from a failed bridge.
+    //
+    // Both spaces are kept: `score` is the local one, which is what a write would have to reproduce
+    // and therefore what the decision gates on, while `world` is the same pose composed along the
+    // animation skeleton's parent table and compared with the nodes' own worlds (R03 asks for both,
+    // because they disagree exactly where the two hierarchies do). `world.compared == 0` means this
+    // order has no parent table to compose with, not that the world space agreed.
     struct Candidate
     {
         char const* order = "none";
@@ -246,6 +346,7 @@ private:
         std::uint32_t sampled = 0;
         std::uint32_t named = 0;
         OrderScore score;
+        OrderScore world;
     };
 
     // Everything one calibration produced: the candidate the decision chose, and the decision itself

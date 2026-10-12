@@ -67,8 +67,12 @@ slot=1 tracks=21 on-tracks=[-]                   exists=1 valid=0 type=1 flags=0
 
 ## 5. 下一轮（AFP1b）最小动作
 
-1. 部署 `5fa5d1f2…`（含 `camera`/`figure` 行、`verdict match=/reason=`、`pose-empty` 独立 reason、放置模式杠杆）。
+1. 部署最新包（`215d3832b3…T140929Z`，DLL `36c97f8a…`）：在首轮的三行之外再加 `geoms` 行（R01 前置：
+   Actor 自己的几何有没有 shader property、有没有设备侧 `rendererData`——runs 49-52 正是死在后者为 0），
+   `order=` 行补 `beyond`／`max-scale`／`outliers=`（点名超差骨，上限 8），并新增 **`world` 行**（R03 的第二个空间：
+   把姿态沿动画骨架自己的父表合成后与节点 world 比对——两级层级不一致才会在这一行露出来）。
 2. 会话内：世界期 F11 → 小键盘 1（held）→ 等装配窗 → F11 ×2；再小键盘 1（parked）→ F11 ×2。
-3. 看三件事：held 下 `num-anim-bones` 与 `num-data` 是否变成 116；`verdict` 是否 `match=1`；
+3. 看四件事：held 下 `num-anim-bones` 与 `num-data` 是否变成 116；`verdict` 是否 `match=1`；
+   `order=` 的 `outliers=` 点名的是哪几根骨、`world` 行是否仍然过；`geoms` 行的 `renderer-data` 是否非零；
    以及 `camera` 行的 `accumulator-is-ui3d`（显示侧取景判据）。
 4. held 模式下傀儡站在玩家处（fade 0.05），**只作诊断**，测完切回 parked；这也是 R07 要记录的"世界副作用"样本。

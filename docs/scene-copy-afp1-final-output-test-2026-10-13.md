@@ -9,9 +9,9 @@
 
 | | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-d1aa9c8bb8+dirty-cl94faaed0c6-20261012T140304Z` |
-| DLL SHA-256 | `07bb8ff4…` | `c6d5e6f6…`（全值 `c6d5e6f6adcaedbdf09a3e26fee94bb3cffd7d812c184bda1c8cc07e4ffed752`） |
-| 多了什么 | —— | `camera`/`figure` 行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆（`5fa5d1f2…` 的相机与纯判定改动也在其中） |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-215d3832b3+dirty-cl94faaed0c6-20261012T140929Z` |
+| DLL SHA-256 | `07bb8ff4…` | `36c97f8a…`（全值 `36c97f8aec23e433e05b272c8c91340ec7f85805538452c1bf785e8f268a92d8`） |
+| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers`（点名超差骨）、新增 **`world` 行**（R03 的第二个空间） |
 
 - 包：`dist/CharacterPanel-scopy-AFP1-1.2.1.zip`（每次打包覆盖同名 zip）。`c6d5e6f6` 的 DLL／PDB 已在
   `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` 并校验一致。
@@ -63,13 +63,14 @@
 | --- | --- | --- | --- |
 | 1 | **最终输出可读** | **通过**（玩家）：`reason=ok valid=1 type=1 elem=48 num-data=116 cap=116 off=448` | 已通过，保留 |
 | 2 | **活缓冲识别** | **通过**：活的那个 `num-data>0`，但两个缓冲对象地址每标记都在变 → **不得按下标读** | —— |
-| 3 | **索引语义（R03 前置）** | **通过**：`order=skeleton slot=0 within-1deg=105/109 ratio=0.96` vs `bone-nodes 45/106 ratio=0.42` → **骨架序** | 残余 4/109 根骨超出 1°（最坏 30.6°）——AFP2 应用前必须点名是谁 |
+| 3 | **索引语义（R03 前置）** | **通过**：`order=skeleton slot=0 within-1deg=105/109 ratio=0.96` vs `bone-nodes 45/106 ratio=0.42` → **骨架序** | 本轮已加 `outliers=`（点名超差骨，上限 8）与 `world` 行（R03 的第二个空间）——下一会话直接给出"那 4 根是谁"以及骨架序在 world 空间是否仍然成立 |
 | 4 | **手动推图推进输出** | **部分**：玩家侧暂停期仍 `changed=29…55`；傀儡侧 `changed=0`（轨空） | 见第 5/6 条 |
 | 5 | **F12 冻结成立** | **通过**：`manual-ticks` 停在 2103、两处 delta 归零 | —— |
 | 6 | **泊深傀儡产出最终输出（阻断项）** | **不通过**：`num-anim-bones=0`、pose 轨 `num-data=0 reason=pose-empty`（2103 次推图只动 2 根骨） | **本轮 NUM1 → `held-pinned` 就是回答它的实验**：若 `num-data` 变 116、`num-anim-bones` 变 116 → 空输出是泊位（cull 停用图）造成的；若仍为 0 → 傀儡的图根本不产出，路线需换前提 |
 | 7 | **显示侧取景机制（AFP2 前置）** | 未测（首版无该行） | `accumulator-is-ui3d=1` → 走"相机适配"；`=0` → draw 窗口内临时改根变换并恢复 |
 | 8 | **傀儡在图里的实际位置** | 未测（首版无该行） | `fade`／`lateral`／`view-depth` 是 AFP2 取景设计输入 |
 | 9 | **零崩溃零回归** | **通过**（6 标记、零 crash、零 `[E]`，两条已知灯光 warn） | —— |
+| 10 | **R01 前置：Actor 自己的几何能不能画**〔新增〕 | `geoms` 行：`skinned>0`、`property≈skinned`、**`renderer-data>0`** | `renderer-data=0` = 设备侧几何从未创建（runs 49-52 的死因），直绘前必须先让引擎渲染过它（`held-pinned` 的作用域内装配应给出非零值）；`effect` 非零 = HKX34 那类特效几何，直绘前需按类剪枝 |
 
 **这张表决定什么**：第 1–3 条已给出"读得到 + 按骨架序"；第 6 条是下一轮唯一要翻的石头（空输出是泊位还是图的本质），
 第 7/8 条给显示侧取景。AFP2（手动应用 + 直绘 P 自己的 3D）照抄这三条结论，不再猜。
