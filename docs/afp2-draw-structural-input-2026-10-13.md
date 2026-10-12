@@ -102,6 +102,27 @@ FigurePassStats draw_figure_passes(const FigurePassRequest& request,
 
 ## 6. AFP2 待办（不依赖 AFP1 结果的部分已明确）
 
+### 6.0 先说一个被 AFP1 逼出来的设计张力（下一会话的直接后果）
+
+AFP1 判读给出：**泊深 = 世界里看不见、摸不到，但图不产出最终姿态**；**站玩家处 = 在引擎动画作用域内**。
+于是"隐藏"和"有姿态"在 v6.25 的泊位机制下是互斥的。三条出路：
+
+1. **held-pinned + 世界侧 pass 抑制**（本仓已有实测机制）：v6.19/v6.22 证明过"把属于 P 的 pass 在世界流里
+   透传抑制"（`is_p_descendant` 纯祖先链判据 + 预热窗），当时用于隐藏游离克隆。把这条用在"站在作用域内
+   的傀儡"上，得到"引擎照常动画它、世界侧看不见它、摄影棚照常画它"——**这是目前最完整的一条**，
+   代价是抑制器要跟着 Actor 的图（而非克隆的图）走，且 R07 要给出世界副作用的数值证据。
+2. **换隐藏位置**：把傀儡放到视野外但在 LOD 集合内（另一个房间/遮挡后）。要实测 cull 与动画作用域是否
+   真的同一件事——若不是，这条路最省事。
+3. **自己驱动 generate**：引擎对 culled actor 跳过的是"把求值结果写进 `generatorOutputs`"那一步（HKX37/38
+   证明 update 在跑：clip 时间、状态机、OAR 决策都在动）。若 placement 之外还有必要，就去查
+   `hkbBehaviorGraph::Generate` 这一层（OAR 正是钩它，`Hooks.cpp:211`）能否由我们按帧调用——**风险高于前两条**，
+   放在最后。
+
+下一步的顺序因此是：先由 placement 实验判定"空输出是不是泊位造成的"；是 → 走第 1 条并为其取证据；
+不是 → 先查第 3 条的入口，再决定路线前提。
+
+### 6.1 其余待办
+
 1. **应用阶段**：`read_pose_track` → `score_pose_order`/`decide_pose_order`（已单测）→ 写节点 local + 一次自顶向下重算。
    写路径照抄已验证写法（`animation_source.cpp` :397-418）：`ni_local_from_pose(..., transposed=false)`，**保证 NIF 自身缩放**
    （pose 的缩放退化时保留节点原值），然后 `recompute_subtree_worlds`（`snapshot_transform.h` :107）。
