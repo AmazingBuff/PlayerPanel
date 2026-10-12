@@ -90,6 +90,12 @@ private:
     // A step is one frame of work as well as one advance: R02 wants a single step to advance exactly
     // one declared dt AND apply once, so the stage remembers that the next paused frame is that one.
     bool m_step_pending = false;
+    // The identity the mapping belongs to. A new 3D root or a new graph invalidates it wholesale, and
+    // a failed verification waits for that event instead of retrying every frame.
+    void const* m_root = nullptr;
+    void const* m_graph = nullptr;
+    bool m_seen_identity = false;
+    bool m_verify_attempted = false;
     // pose index -> index into the engine's live boneNodes table, for the mapping that was verified.
     // Indices the mapping cannot reach are -1 and counted, never silently skipped.
     std::vector<std::int32_t> m_targets;

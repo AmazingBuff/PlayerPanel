@@ -171,6 +171,55 @@ inline void compose_worlds(std::span<TransformSample const> a_locals, std::span<
     }
 }
 
+// Aligns a composed world table with the worlds a node tree actually holds. The composition starts at
+// each root bone's own local, while a node's world also carries everything above the skeleton - the
+// Actor's placement, its root node, the CME branches a modded body hangs - so comparing the two raw
+// convicts every bone of an offset that has nothing to do with the pose (measured: 0 of 92 bones
+// inside one degree, worst translation 2044 units, on both subjects). One delta per root chain - the
+// transform that maps the composed root onto the node's own root world - removes exactly that, so what
+// the comparison then measures is the skeleton's structure rather than where the Actor stands.
+inline void align_worlds_to_root(std::span<TransformSample const> a_composed, std::span<std::int16_t const> a_parents,
+    std::span<TransformSample const> a_node_worlds, std::span<TransformSample> a_out)
+{
+    const std::size_t count = std::min(a_composed.size(), a_out.size());
+    std::vector<RE::NiTransform> root_delta(count);
+
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        RE::NiTransform delta;  // identity unless this chain has a root whose node world is known
+        const std::int16_t parent = i < a_parents.size() ? a_parents[i] : -1;
+        const bool has_parent = parent >= 0 && static_cast<std::size_t>(parent) < i;
+        if (has_parent)
+        {
+            delta = root_delta[static_cast<std::size_t>(parent)];
+        }
+        else if (i < a_node_worlds.size() && a_node_worlds[i].present && a_composed[i].present)
+        {
+            RE::NiTransform composed;
+            composed.rotate = a_composed[i].rotate;
+            composed.translate = a_composed[i].translate;
+            composed.scale = a_composed[i].scale;
+            RE::NiTransform node;
+            node.rotate = a_node_worlds[i].rotate;
+            node.translate = a_node_worlds[i].translate;
+            node.scale = a_node_worlds[i].scale;
+            // node_world = delta * composed  =>  delta = node_world * composed^-1
+            delta = node * composed.Invert();
+        }
+        root_delta[i] = delta;
+
+        RE::NiTransform composed;
+        composed.rotate = a_composed[i].rotate;
+        composed.translate = a_composed[i].translate;
+        composed.scale = a_composed[i].scale;
+        const RE::NiTransform world = delta * composed;
+        a_out[i].rotate = world.rotate;
+        a_out[i].translate = world.translate;
+        a_out[i].scale = world.scale;
+        a_out[i].present = a_composed[i].present;
+    }
+}
+
 // The comparison itself: expected[i] against actual[i], index by index. Rotation is what gates - a
 // bone counts as reproduced when it lands inside the tolerance - while translation and scale are
 // measured for the record, because a pose carries three scales where a NIF node carries one and a
@@ -305,6 +354,11 @@ struct OutputTrackView
 // The character's third-person graph: the one whose holder is that character and which has a root
 // node. Shared by the instrument and the application stage so both read the same graph the same way.
 [[nodiscard]] RE::BShkbAnimationGraph* find_third_person_graph(RE::TESObjectREFR& a_subject);
+
+// Every node of a tree by exact name, for the name bridge. Exposed because the application stage needs
+// the same bridge the instrument measured - and a second copy of a name rule is a second thing to be
+// wrong. Read-only: nothing is retained and no name is copied out of the engine's storage.
+[[nodiscard]] std::unordered_map<std::string_view, RE::NiAVObject*> nodes_by_name(RE::NiAVObject& a_root);
 
 // AFP1 (PRD 0.9 section 6.6): the first instrument of the same-Actor route.
 //

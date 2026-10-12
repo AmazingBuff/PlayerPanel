@@ -59,6 +59,28 @@ namespace
         std::vector<TransformSample> locals;
         std::uint32_t unreachable = 0;
     };
+
+    // The live output pose: the buffer that carries elements, identified by its content and never by
+    // its index (AFP1 saw the live one in slot 0 in every mark while the two buffer objects themselves
+    // moved). Null with `a_count` = 0 when no buffer carries a pose - a state this route has to report
+    // rather than treat as an error: the parked puppet and the paused puppet both measured exactly
+    // that, and they mean different things.
+    const RE::hkQsTransform* live_pose(RE::BShkbAnimationGraph& a_graph, std::int32_t& a_count)
+    {
+        a_count = 0;
+        for (int slot = 0; slot < Output_Slots; ++slot)
+        {
+            OutputTrackView view;
+            const RE::hkQsTransform* candidate = nullptr;
+            std::int32_t candidate_count = 0;
+            if (read_pose_track(a_graph, slot, view, candidate, candidate_count) && candidate_count > 0)
+            {
+                a_count = candidate_count;
+                return candidate;
+            }
+        }
+        return nullptr;
+    }
 }
 
 FinalPoseApply& FinalPoseApply::instance()
@@ -156,27 +178,22 @@ void FinalPoseApply::verify(RE::Actor& a_puppet)
         return;
     }
 
-    // The generation this verification belongs to: a new root or graph invalidates it wholesale, so
-    // the same event the instrument numbers is the event that forces a re-verify here.
-    const std::uint32_t generation = m_generation + 1;
-    m_generation = generation;
-
-    // The live output pose. The buffer is identified by its content, never by its index: AFP1 saw the
-    // live one in slot 0 every time while the two buffer objects themselves moved.
-    const RE::hkQsTransform* pose = nullptr;
-    std::int32_t count = 0;
-    for (int slot = 0; slot < Output_Slots; ++slot)
+    // The generation is the identity of the Actor's 3D root and its graph - the event that
+    // invalidates a mapping wholesale - and not a count of attempts. A failed verification is
+    // therefore not retried every frame: it waits for that identity to change or for a new arm, both
+    // of which reset the latch that got us here.
+    if (m_root != root || m_graph != graph)
     {
-        OutputTrackView view;
-        const RE::hkQsTransform* candidate = nullptr;
-        std::int32_t candidate_count = 0;
-        if (read_pose_track(*graph, slot, view, candidate, candidate_count) && candidate_count > 0)
-        {
-            pose = candidate;
-            count = candidate_count;
-            break;
-        }
+        m_root = root;
+        m_graph = graph;
+        if (m_seen_identity)
+            ++m_generation;
+        m_seen_identity = true;
     }
+
+    // The live output pose, identified by content (see `live_pose`).
+    std::int32_t count = 0;
+    const RE::hkQsTransform* const pose = live_pose(*graph, count);
     if (!pose)
     {
         // A live-but-empty pose track is the parked puppet's measured state, and it is a block, not a
@@ -207,9 +224,14 @@ void FinalPoseApply::verify(RE::Actor& a_puppet)
             by_bone_nodes.targets[static_cast<std::size_t>(i)] = i;
     }
 
-    // Candidate two: pose index i drives the bone whose NAME the animation skeleton gives that index,
-    // resolved through the engine's own bone table. A name bridge is required rather than assumed -
-    // HKX1 measured the two orders as different, and AFP1 measured this output pose as the skeleton's.
+    // Candidate two: pose index i drives the bone whose NAME the animation skeleton gives that index.
+    //
+    // The bridge runs over the Actor's own tree, because the engine's bone table does not reliably
+    // carry the animation skeleton's names - the 2026-10-13 session measured 37 of 116 on the puppet's
+    // reduced graph (numAnimBones 98) against 109 of 116 on the player, on the same tree walk. The
+    // resolved node is then mapped back to the table index the per-frame write uses, so the bridge can
+    // be the tree's while nothing is held across frames: the table is re-read every frame, and a node
+    // the table does not address is counted as unreachable rather than written through a stale pointer.
     const RE::hkaSkeleton* skeleton = nullptr;
     if (readable(&graph->characterInstance, sizeof(RE::hkbCharacter)))
     {
@@ -226,31 +248,38 @@ void FinalPoseApply::verify(RE::Actor& a_puppet)
     by_skeleton.name = "skeleton";
     by_skeleton.targets.resize(samples.size(), -1);
     by_skeleton.locals.resize(samples.size());
+    std::uint32_t tree_matched = 0;
+    std::uint32_t table_matched = 0;
     if (skeleton && !skeleton->bones.empty())
     {
-        std::unordered_map<std::string_view, std::int32_t> table_by_name;
-        table_by_name.reserve(by_bone_nodes.locals.size());
+        std::unordered_map<std::string_view, RE::NiAVObject*> tree_by_name = nodes_by_name(*root);
+        std::unordered_map<RE::NiAVObject const*, std::int32_t> table_index;
+        table_index.reserve(by_bone_nodes.locals.size());
         for (std::int32_t i = 0; i < static_cast<std::int32_t>(by_bone_nodes.locals.size()); ++i)
         {
             RE::NiNode* const node = graph->boneNodes[i].node;
-            if (!node || !readable(node, sizeof(RE::NiAVObject)))
-                continue;
-            const char* const name = node->name.c_str();
-            if (name && *name)
-                table_by_name.try_emplace(std::string_view(name), i);
+            if (node)
+                table_index.try_emplace(node, i);
         }
 
         for (std::int32_t i = 0; i < static_cast<std::int32_t>(samples.size()); ++i)
         {
-            const std::size_t index = static_cast<std::size_t>(i);
             const char* const name = i < static_cast<std::int32_t>(skeleton->bones.size())
                 ? skeleton->bones[i].name.c_str()
                 : nullptr;
-            const auto found = name && *name ? table_by_name.find(std::string_view(name)) : table_by_name.end();
-            if (found == table_by_name.end())
+            const auto found = name && *name ? tree_by_name.find(std::string_view(name)) : tree_by_name.end();
+            if (found == tree_by_name.end())
                 continue;
-            by_skeleton.targets[index] = found->second;
-            by_skeleton.locals[index] = by_bone_nodes.locals[static_cast<std::size_t>(found->second)];
+            ++tree_matched;
+
+            const auto slot = table_index.find(found->second);
+            if (slot == table_index.end())
+                continue;
+            ++table_matched;
+
+            const std::size_t index = static_cast<std::size_t>(i);
+            by_skeleton.targets[index] = slot->second;
+            by_skeleton.locals[index] = by_bone_nodes.locals[static_cast<std::size_t>(slot->second)];
         }
     }
 
@@ -260,8 +289,9 @@ void FinalPoseApply::verify(RE::Actor& a_puppet)
     const OrderDecision decision = decide_pose_order(scores);
     ++m_stats.verifications;
 
-    logger::info("SCOPY AFP2 verify generation={} samples={} bone-nodes within-1deg={}/{} ratio={:.2f} | skeleton within-1deg={}/{} ratio={:.2f} | match={} reason={}",
-        generation, samples.size(),
+    logger::info("SCOPY AFP2 verify generation={} samples={} names skeleton={} tree={} table={} | bone-nodes within-1deg={}/{} ratio={:.2f} | skeleton within-1deg={}/{} ratio={:.2f} | match={} reason={}",
+        m_generation, samples.size(),
+        skeleton ? skeleton->bones.size() : 0, tree_matched, table_matched,
         bone_score.within, bone_score.compared, bone_score.ratio(),
         skeleton_score.within, skeleton_score.compared, skeleton_score.ratio(),
         decision.match ? 1 : 0, decision.reason);
@@ -293,20 +323,8 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
         return;
     }
 
-    const RE::hkQsTransform* pose = nullptr;
     std::int32_t count = 0;
-    for (int slot = 0; slot < Output_Slots; ++slot)
-    {
-        OutputTrackView view;
-        const RE::hkQsTransform* candidate = nullptr;
-        std::int32_t candidate_count = 0;
-        if (read_pose_track(*graph, slot, view, candidate, candidate_count) && candidate_count > 0)
-        {
-            pose = candidate;
-            count = candidate_count;
-            break;
-        }
-    }
+    const RE::hkQsTransform* const pose = live_pose(*graph, count);
     if (!pose)
     {
         block("no-pose");
@@ -381,16 +399,45 @@ void FinalPoseApply::tick(bool a_paused)
         return;
     }
 
+    // The identity check runs before anything else: a new 3D root or a new graph invalidates the
+    // mapping whatever the drive state is, and it is also the event that re-arms a verification that
+    // failed (the alternative - retrying every frame - made the 2026-10-13 session's `generation`
+    // count 59 in ten seconds, which is a counter of attempts and not an identity).
+    RE::NiAVObject* const root = puppet->Get3D(false);
+    RE::BShkbAnimationGraph* const graph = find_third_person_graph(*puppet);
+    if (m_root != root || m_graph != graph)
+    {
+        m_root = root;
+        m_graph = graph;
+        if (m_seen_identity)
+            ++m_generation;
+        m_seen_identity = true;
+        m_verified = false;
+        m_verify_attempted = false;
+        m_targets.clear();
+        m_mapping = "none";
+    }
+
     // R03 then R04: verify while the engine still applies the pose (its locals are then the truth to
     // compare against), write while it does not. After the first write the node locals are ours, so a
     // re-score would compare the pose with itself - which is why verification is not repeated per
-    // frame. A single step is a write frame too, so it obeys the same rule.
+    // frame.
     if (!m_verified)
     {
         if (a_paused)
-            block("unverified-world-first");
-        else
+        {
+            // Ask whether there is a pose at all BEFORE reporting why nothing was written: "the graph
+            // produced nothing" and "the mapping was never verified" are different answers, and the
+            // 2026-10-13 session could not tell them apart because the stage refused without looking.
+            std::int32_t count = 0;
+            live_pose(*graph, count);
+            block(count > 0 ? "unverified-world-first" : "no-pose-while-paused");
+        }
+        else if (!m_verify_attempted)
+        {
+            m_verify_attempted = true;
             verify(*puppet);
+        }
         return;
     }
 

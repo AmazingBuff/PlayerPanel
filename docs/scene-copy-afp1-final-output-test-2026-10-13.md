@@ -1,4 +1,4 @@
-# AFP1 测试单（2026-10-13，同 Actor 最终输出只读取证）
+﻿# AFP1 测试单（2026-10-13，同 Actor 最终输出只读取证）
 
 > **判读已出（首轮，21:54 会话）：见 [AFP1 判读](afp1-verdict-2026-10-13.md)。**
 > 三句话：**最终输出读得到**（pose 轨 `reason=ok`、116 元素、0x30 步长），**次序 = 动画骨架**（105/109 骨 ≤1°，
@@ -9,8 +9,8 @@
 
 | | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-64090de829+dirty-cl94faaed0c6-20261012T144137Z` |
-| DLL SHA-256 | `07bb8ff4…` | `d74f6b46…`（全值 `d74f6b4622737d1714caf55acfc564c9211dce546c355c8ccfdb4d105b60eff6`） |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-ee54611706+dirty-cl94faaed0c6-20261012T145401Z` |
+| DLL SHA-256 | `07bb8ff4…` | `f38384d7…`（全值 `f38384d77169dc464c5c6a3ab76c51ab4b611f9714813ee723f27f1c3123a0ab`） |
 | 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **F4** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、`world` 行、**`A0`/`A0A1`/`A3` 帧内配对**、**`necessary` 行**、**census 行加 `gen=`/`root=`（R02/R06 要的 3D generation）**；直绘缝重构与默认配置编译修复 |
 
 > **判读风险与回滚**：直绘缝重构动了**当前正在用的面板绘制路径**，而它只能在游戏里验证。两点降低风险：

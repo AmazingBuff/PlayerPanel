@@ -118,28 +118,9 @@ namespace
         return live.empty() ? "-" : live;
     }
 
-    // The character's third-person graph moved to the shared helper (it is declared with the other
-    // shared reader in this header), so the application stage selects the same graph this reads.
-
-    // Every node of the graph's own tree by exact name. The engine's boneNodes table does not list
-    // every bone the animation skeleton names - the alignment round measured 37/116 shared order and
-    // 109/116 reachable names - so a name bridge is the only way to ask the skeleton order its
-    // question at all.
-    std::unordered_map<std::string_view, RE::NiAVObject*> nodes_by_name(RE::NiAVObject& a_root)
-    {
-        std::unordered_map<std::string_view, RE::NiAVObject*> by_name;
-        RE::BSVisit::TraverseScenegraphObjects(&a_root, [&](RE::NiAVObject* a_object)
-        {
-            if (a_object && readable(a_object, sizeof(RE::NiAVObject)))
-            {
-                const char* const name = a_object->name.c_str();
-                if (name && *name)
-                    by_name.try_emplace(std::string_view(name), a_object);
-            }
-            return RE::BSVisit::BSVisitControl::kContinue;
-        });
-        return by_name;
-    }
+    // The character's third-person graph and the tree's name table moved to the shared helpers: they
+    // are declared with the other shared readers in this header, so the application stage selects the
+    // same graph and bridges the same names this reads.
 
     // The camera chain the studio draw actually renders through, read-only. The pass submission
     // (`BSBatchRenderer::SetupAndDrawPass`) takes no camera and writes no projection, so the view the
@@ -382,6 +363,25 @@ namespace
             a_label, reinterpret_cast<std::uintptr_t>(root), geometries, skinned, with_property, without_property,
             effect_shader, renderer_data, skinned_with_renderer_data);
     }
+}
+
+std::unordered_map<std::string_view, RE::NiAVObject*> nodes_by_name(RE::NiAVObject& a_root)
+{
+    // The engine's boneNodes table does not list every bone the animation skeleton names - the
+    // alignment round measured 37/116 shared order and 109/116 reachable names - so a name bridge is
+    // the only way to ask the skeleton order its question at all.
+    std::unordered_map<std::string_view, RE::NiAVObject*> by_name;
+    RE::BSVisit::TraverseScenegraphObjects(&a_root, [&](RE::NiAVObject* a_object)
+    {
+        if (a_object && readable(a_object, sizeof(RE::NiAVObject)))
+        {
+            const char* const name = a_object->name.c_str();
+            if (name && *name)
+                by_name.try_emplace(std::string_view(name), a_object);
+        }
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+    return by_name;
 }
 
 RE::BShkbAnimationGraph* find_third_person_graph(RE::TESObjectREFR& a_subject)
@@ -1039,7 +1039,14 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
                 compose_worlds(expected_locals,
                     { skeleton->parentIndices.data(), static_cast<std::size_t>(skeleton->parentIndices.size()) },
                     expected_worlds);
-                candidate.world = score_transforms(expected_worlds, table.worlds, Pose_Match_Degrees);
+                // The composed worlds start at the root bone; the node worlds carry the Actor's own
+                // placement on top. Align the chains before scoring, or every bone is convicted of an
+                // offset that belongs to the world, not to the pose.
+                std::vector<TransformSample> aligned(expected_worlds.size());
+                align_worlds_to_root(expected_worlds,
+                    { skeleton->parentIndices.data(), static_cast<std::size_t>(skeleton->parentIndices.size()) },
+                    table.worlds, aligned);
+                candidate.world = score_transforms(aligned, table.worlds, Pose_Match_Degrees);
             }
 
             if (skeleton_order)

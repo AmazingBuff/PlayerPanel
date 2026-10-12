@@ -692,6 +692,35 @@ int main()
                 PLUGIN_NAMESPACE::score_transforms(worlds, turned_worlds, PLUGIN_NAMESPACE::Pose_Match_Degrees);
             check(turned_score.compared == 3 && turned_score.beyond == 1 && turned_score.outliers.size() == 1 && turned_score.outliers[0] == 1,
                 "a world rotation that disagrees must be counted and named even when every local matched");
+
+            // The Actor's own placement is not the pose's business. A node tree whose worlds carry an
+            // extra root transform - an Actor standing 2000 units away, which is exactly what the first
+            // in-game read measured - must score FULL once the chains are aligned to their roots, and
+            // must fail without that alignment. This is the rule that keeps the world line from
+            // convicting every bone of an offset that belongs to the world.
+            RE::NiTransform placement;
+            placement.translate = RE::NiPoint3{ 1106.7f, -832.3f, -1475.9f };
+            placement.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, 0.7f);
+            placement.scale = 1.0f;
+            std::vector<PLUGIN_NAMESPACE::TransformSample> placed_worlds;
+            for (PLUGIN_NAMESPACE::TransformSample const& sample : worlds)
+            {
+                const RE::NiTransform placed = placement * to_transform(sample);
+                PLUGIN_NAMESPACE::TransformSample entry = sample;
+                entry.rotate = placed.rotate;
+                entry.translate = placed.translate;
+                entry.scale = placed.scale;
+                placed_worlds.push_back(entry);
+            }
+            check(PLUGIN_NAMESPACE::score_transforms(worlds, placed_worlds, PLUGIN_NAMESPACE::Pose_Match_Degrees).within == 0,
+                "an unaligned world comparison must convict every bone of the Actor's own placement");
+            std::vector<PLUGIN_NAMESPACE::TransformSample> aligned(worlds.size());
+            PLUGIN_NAMESPACE::align_worlds_to_root(worlds, parents, placed_worlds, aligned);
+            const PLUGIN_NAMESPACE::OrderScore aligned_score =
+                PLUGIN_NAMESPACE::score_transforms(aligned, placed_worlds, PLUGIN_NAMESPACE::Pose_Match_Degrees);
+            check(aligned_score.compared == 3 && aligned_score.within == 3,
+                "aligning each chain to its root world must remove the Actor's placement and nothing else");
+            check(close(aligned_score.max_position, 0.0f, 0.01f), "the aligned comparison must leave no translation residue");
         }
 
         // The decision, over the candidates a mark produces.
