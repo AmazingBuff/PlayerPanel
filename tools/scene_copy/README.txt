@@ -93,11 +93,15 @@ graph the engine drives by itself), and writes nothing anywhere:
   SCOPY FP nodes subject=... bones=N compared=N rebound=N gone=N missing=N changed=N
         max-rot=Xdeg max-pos=X vs-mark=N
   SCOPY FP order=bone-nodes slot=0|1 subject=... sampled=N bones=N compared=N
-        within-1deg=N ratio=X max-rot=Xdeg max-pos=X
+        within-1deg=N beyond=N ratio=X max-rot=Xdeg max-pos=X max-scale=X outliers='...','...'
   SCOPY FP order=skeleton slot=0|1 subject=... sampled=N bones=N named=N compared=N
-        within-1deg=N ratio=X max-rot=Xdeg max-pos=X
-  SCOPY FP verdict subject=... best=<order>/slot<N> within-1deg=N/N ratio=X
-        max-rot=Xdeg max-pos=X named=N nodes-moved=N
+        within-1deg=N beyond=N ratio=X max-rot=Xdeg max-pos=X max-scale=X outliers='...','...'
+  SCOPY FP world order=skeleton slot=0|1 subject=... compared=N within-1deg=N beyond=N
+        ratio=X max-rot=Xdeg max-pos=X max-scale=X outliers='...'
+  SCOPY FP necessary subject=... outliers=N necessary=N helper=N palettes=N/N entries=N
+        verdict=classified|unbound-palette
+  SCOPY FP verdict subject=... match=0|1 reason=... best=<order>/slot<N> within-1deg=N/N
+        ratio=X max-rot=Xdeg max-pos=X max-scale=X world-within-1deg=N/N named=N nodes-moved=N
 
 How to read it:
 
@@ -142,6 +146,12 @@ How to read it:
                        because they disagree exactly where the two hierarchies do: a helper branch
                        hangs a bone where the skeleton does not. This line appears only for the
                        skeleton order, the one that has a real parent table to compose with.
+  necessary ...        of the bones nothing reproduced, how many a skinned mesh actually reads - the
+                       palette `NiSkinInstance::bones` points at. A bone a target mesh reads cannot be
+                       skipped; a helper branch or a cloth chain the panel does not draw can. `palettes=
+                       bound/skinned` is what makes the answer honest: an unbound palette (a figure the
+                       engine has never rendered) means the classification is unavailable, not that
+                       nothing is necessary.
   geoms ...            the Actor's own geometry inventory, read-only: how many geometries its 3D root
                        carries, how many are skinned, how many have a shader property (and how many of
                        those are EffectShader by class), and - the field runs 49-52 died on - how many

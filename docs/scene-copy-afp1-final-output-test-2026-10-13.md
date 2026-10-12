@@ -9,9 +9,9 @@
 
 | | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-53f57b98dc+dirty-cl94faaed0c6-20261012T142141Z` |
-| DLL SHA-256 | `07bb8ff4…` | `5cee705d…`（全值 `5cee705dd5a4cc89ee827669b698e0a9284387e3141a2017f7265eb80bc82396`） |
-| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、`world` 行；**`A0`/`A0A1`/`A3` 三行（帧内配对）**；直绘缝重构（`render/studio/figure_passes.{h,cpp}`）与默认配置的编译修复 |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-2efe72ccf5+dirty-cl94faaed0c6-20261012T142507Z` |
+| DLL SHA-256 | `07bb8ff4…` | `e3321451…`（全值 `e33214519795238225c8389d4b6ed7f410a656c756935babcdab3242b1086d33`） |
+| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、`world` 行、**`A0`/`A0A1`/`A3` 帧内配对**、**`necessary` 行（超差骨里哪些是网格真正读的）**；直绘缝重构与默认配置编译修复 |
 
 > **判读风险与回滚**：直绘缝重构动了**当前正在用的面板绘制路径**，而它只能在游戏里验证。两点降低风险：
 > ①AFP1b 要的那些数（`SCOPY FP` 全部行、`SCOPY PUPPET` 放置）**不经过绘制路径**，即使面板画不出来也不影响本轮判读；
@@ -76,6 +76,7 @@
 | 8 | **傀儡在图里的实际位置** | 未测（首版无该行） | `fade`／`lateral`／`view-depth` 是 AFP2 取景设计输入 |
 | 9 | **零崩溃零回归** | **通过**（6 标记、零 crash、零 `[E]`，两条已知灯光 warn） | —— |
 | 10 | **R01 前置：Actor 自己的几何能不能画**〔新增〕 | `geoms` 行：`skinned>0`、`property≈skinned`、**`renderer-data>0`** | `renderer-data=0` = 设备侧几何从未创建（runs 49-52 的死因），直绘前必须先让引擎渲染过它（`held-pinned` 的作用域内装配应给出非零值）；`effect` 非零 = HKX34 那类特效几何，直绘前需按类剪枝 |
+| 11 | **R04 前置：超差骨是否阻断**〔新增〕 | `necessary` 行：`necessary=0`（超差的全是 helper，可跳过）或 `necessary>0` 且能逐根解释 | `verdict=unbound-palette`（`palettes=0/N`）= 该 Actor 的调色板从未绑定（引擎没画过它）→ 分类不可用，**不能**当作"没有必要骨"；`necessary>0` = 按 R04 必须阻断样本并点名 |
 
 **这张表决定什么**：第 1–3 条已给出"读得到 + 按骨架序"；第 6 条是下一轮唯一要翻的石头（空输出是泊位还是图的本质），
 第 7/8 条给显示侧取景。AFP2（手动应用 + 直绘 P 自己的 3D）照抄这三条结论，不再猜。

@@ -266,6 +266,87 @@ namespace
             root->worldBound.radius);
     }
 
+    // The nodes a skinned draw actually consumes: the palette `NiSkinInstance::bones` points at. R03
+    // and R04 need to tell an outlier that blocks from one that does not - a bone a target mesh reads
+    // cannot be skipped, while a helper branch or a cloth chain the panel does not draw can - and an
+    // unbound palette (a figure the engine has never rendered, runs 49-52's shape) says the
+    // classification is unavailable rather than that nothing is necessary.
+    struct SkinPalette
+    {
+        std::unordered_set<RE::NiAVObject const*> nodes;
+        std::uint32_t skinned = 0;
+        std::uint32_t bound = 0;    // skins whose palette carried at least one node
+        std::uint32_t entries = 0;
+    };
+
+    SkinPalette skin_palette(RE::NiAVObject& a_root)
+    {
+        constexpr std::uint32_t Max_Palette_Entries = 1024;
+
+        SkinPalette palette;
+        RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
+        {
+            if (!a_geometry || !readable(a_geometry, sizeof(RE::BSGeometry)))
+                return RE::BSVisit::BSVisitControl::kContinue;
+
+            const RE::NiSkinInstance* const skin = a_geometry->GetGeometryRuntimeData().skinInstance.get();
+            if (!skin || !skin->rootParent || !readable(skin, sizeof(RE::NiSkinInstance)))
+                return RE::BSVisit::BSVisitControl::kContinue;
+            ++palette.skinned;
+
+            const std::uint32_t declared = skin->allocatedSize;
+            RE::NiAVObject* const* const bones = skin->bones;
+            if (!bones || declared == 0 || declared > Max_Palette_Entries ||
+                !readable(bones, sizeof(RE::NiAVObject*) * static_cast<std::size_t>(declared)))
+                return RE::BSVisit::BSVisitControl::kContinue;
+
+            bool bound = false;
+            for (std::uint32_t i = 0; i < declared; ++i)
+            {
+                RE::NiAVObject* const node = bones[i];
+                if (!node)
+                    continue;
+                bound = true;
+                ++palette.entries;
+                palette.nodes.insert(node);
+            }
+            if (bound)
+                ++palette.bound;
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+        return palette;
+    }
+
+    // What the chosen candidate's outliers mean for a draw: how many of them a skinned mesh reads.
+    void report_necessity(char const* a_label, RE::TESObjectREFR& a_subject,
+        std::vector<RE::NiAVObject*> const& a_outliers)
+    {
+        if (a_outliers.empty())
+            return;
+
+        RE::NiAVObject* const root = a_subject.Get3D(false);
+        if (!root || !readable(root, sizeof(RE::NiAVObject)))
+        {
+            logger::info("SCOPY FP necessary subject={} UNAVAILABLE reason=no-3d", a_label);
+            return;
+        }
+
+        const SkinPalette palette = skin_palette(*root);
+        std::uint32_t necessary = 0;
+        std::uint32_t helper = 0;
+        for (RE::NiAVObject* const node : a_outliers)
+        {
+            if (node && palette.nodes.contains(node))
+                ++necessary;
+            else
+                ++helper;
+        }
+
+        logger::info("SCOPY FP necessary subject={} outliers={} necessary={} helper={} palettes={}/{} entries={} verdict={}",
+            a_label, a_outliers.size(), necessary, helper, palette.bound, palette.skinned, palette.entries,
+            palette.bound != 0 ? "classified" : "unbound-palette");
+    }
+
     // R01's other prerequisite, measured before anything is drawn: the Actor's own tree has to carry
     // geometries that can produce passes at all. `rendererData` is the device-side shape the engine
     // creates lazily, and the round that hand-drew a figure the paused world had never rendered found
@@ -794,6 +875,9 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
         best.order, best.slot, best.score.within, best.score.compared, best.score.ratio(),
         best.score.max_rotation, best.score.max_position, best.score.max_scale_deviation,
         best.world.within, best.world.compared, best.named, a_state.nodes_moved);
+
+    // Which of the bones nothing reproduced are ones a draw would actually read.
+    report_necessity(a_label, *a_subject, calibration.outlier_nodes);
 }
 
 FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a_graph, SubjectState const& a_state,
@@ -811,6 +895,7 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
         std::vector<TransformSample> locals;
         std::vector<TransformSample> worlds;
         std::vector<std::string> names;
+        std::vector<RE::NiAVObject*> nodes;   // the node each index resolved to, for the palette question
         std::uint32_t named = 0;   // skeleton order only: bones that resolved to a node by exact name
     };
 
@@ -833,6 +918,7 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
     by_bone_nodes.locals.resize(a_graph.boneNodes.size());
     by_bone_nodes.worlds.resize(a_graph.boneNodes.size());
     by_bone_nodes.names.resize(a_graph.boneNodes.size());
+    by_bone_nodes.nodes.resize(a_graph.boneNodes.size());
     for (std::int32_t i = 0; i < static_cast<std::int32_t>(a_graph.boneNodes.size()); ++i)
     {
         const std::size_t index = static_cast<std::size_t>(i);
@@ -840,6 +926,7 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
         read_node(node, by_bone_nodes.locals[index], by_bone_nodes.worlds[index]);
         if (node && readable(node, sizeof(RE::NiAVObject)))
         {
+            by_bone_nodes.nodes[index] = node;
             const char* const name = node->name.c_str();
             if (name && *name)
                 by_bone_nodes.names[index] = name;
@@ -869,6 +956,7 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
         by_skeleton.locals.resize(bones);
         by_skeleton.worlds.resize(bones);
         by_skeleton.names.resize(bones);
+        by_skeleton.nodes.resize(bones);
         for (std::int32_t i = 0; i < static_cast<std::int32_t>(bones); ++i)
         {
             const std::size_t index = static_cast<std::size_t>(i);
@@ -880,7 +968,10 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
             if (found == by_name.end())
                 continue;
             if (read_node(found->second, by_skeleton.locals[index], by_skeleton.worlds[index]))
+            {
+                by_skeleton.nodes[index] = found->second;
                 ++by_skeleton.named;
+            }
         }
     }
 
@@ -969,7 +1060,21 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
         scores.push_back(candidate.score);
     calibration.decision = decide_pose_order(scores);
     if (!candidates.empty())
+    {
         calibration.candidate = candidates[calibration.decision.best];
+
+        // The chosen candidate's outlier nodes, by index: the palette question below asks which of
+        // them a skinned mesh reads, and that depends on which order was chosen.
+        const CandidateTable& chosen = std::string_view(calibration.candidate.order) == "skeleton"
+            ? by_skeleton
+            : by_bone_nodes;
+        calibration.outlier_nodes.reserve(calibration.candidate.score.outliers.size());
+        for (std::uint32_t index : calibration.candidate.score.outliers)
+        {
+            if (static_cast<std::size_t>(index) < chosen.nodes.size() && chosen.nodes[static_cast<std::size_t>(index)])
+                calibration.outlier_nodes.push_back(chosen.nodes[static_cast<std::size_t>(index)]);
+        }
+    }
 
     return calibration;
 }

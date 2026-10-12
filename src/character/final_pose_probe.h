@@ -375,6 +375,10 @@ private:
     {
         Candidate candidate;
         OrderDecision decision;
+        // The nodes the chosen candidate's outliers sit on, in outlier order. R03/R04 need to know
+        // whether a bone nothing reproduced is one a target mesh reads (which blocks) or a helper
+        // branch (which does not), and that question is about the skin palette, not about the score.
+        std::vector<RE::NiAVObject*> outlier_nodes;
     };
 
     FinalPoseProbe() = default;

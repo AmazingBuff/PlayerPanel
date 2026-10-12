@@ -4,6 +4,16 @@
 
 ### Added
 
+- Tell the bones that block from the bones that do not. The calibration already names up to eight
+  bones nothing reproduced, but R03/R04 need to know which of them a draw actually reads, so the
+  outliers are checked against the skin palette `NiSkinInstance::bones` points at: a bone a target
+  mesh reads cannot be skipped, while a helper branch or a cloth chain the panel does not draw can.
+  `SCOPY FP necessary … necessary=N helper=N palettes=bound/skinned` carries it, and `palettes=0/N` -
+  a figure the engine has never rendered, runs 49-52's shape - reports the classification as
+  `unbound-palette` rather than as "nothing is necessary", which is the difference between an answer
+  and a silence.
+
+
 - Take the mark twice in one frame, which is the only way to ask whether our own tick moved the
   graph's output. `FinalPoseProbe::sample_before_tick` runs before the drivers tick and records A0
   (both output buffers' identity, element counts and reasons, and the node locals), and the report
