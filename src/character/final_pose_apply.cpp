@@ -139,8 +139,12 @@ void FinalPoseApply::cycle()
         driver.request_step();
 
     // A new drive state re-verifies: the mapping is a property of the Actor and its graph generation,
-    // and an operator who has just changed the state is exactly who should see it checked again.
+    // and an operator who has just changed the state is exactly who should see it checked again. The
+    // force flag changes what a running world actually puts on the skeleton, so it re-arms the same
+    // way - otherwise the 2026-10-13 session repeats, where the one verification available was taken
+    // before force was ever on and scored 37 bones it never got to re-score.
     m_verified = false;
+    m_verify_attempted = false;
     m_blocked = applying ? "verifying" : "not-armed";
     m_step_pending = next == Drive::e_step;
 
@@ -281,14 +285,25 @@ void FinalPoseApply::verify(RE::Actor& a_puppet)
                 continue;
             ++tree_matched;
 
+            const std::size_t index = static_cast<std::size_t>(i);
+            // The proof of the order is the node's OWN local, read from the tree - which is what the
+            // instrument scores (109 of 109) and what this stage used to throw away by insisting the
+            // bone also be addressable in the engine's table. The table holds 37 of 116 here, so that
+            // insistence turned a full-order proof into a 37-bone one that landed at 0.89 and blocked.
+            // The table is still consulted, but for the WRITE: a bone it cannot address is counted as
+            // unreachable there rather than excluded from the evidence here.
+            if (!found->second || !readable(found->second, sizeof(RE::NiAVObject)))
+                continue;
+            by_skeleton.locals[index].rotate = found->second->local.rotate;
+            by_skeleton.locals[index].translate = found->second->local.translate;
+            by_skeleton.locals[index].scale = found->second->local.scale;
+            by_skeleton.locals[index].present = true;
+
             const auto slot = table_index.find(found->second);
             if (slot == table_index.end())
                 continue;
             ++table_matched;
-
-            const std::size_t index = static_cast<std::size_t>(i);
             by_skeleton.targets[index] = slot->second;
-            by_skeleton.locals[index] = by_bone_nodes.locals[static_cast<std::size_t>(slot->second)];
         }
     }
 
