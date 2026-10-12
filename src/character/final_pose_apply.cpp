@@ -138,15 +138,15 @@ void FinalPoseApply::cycle()
     if (next == Drive::e_step)
         driver.request_step();
 
-    // A new drive state re-verifies: the mapping is a property of the Actor and its graph generation,
-    // and an operator who has just changed the state is exactly who should see it checked again.
+    // A drive cycle does NOT re-verify. It used to, and AFP6 showed what that costs: cycling from
+    // tick+apply into tick+apply+force threw away a proof taken seconds earlier at 0.98, then the
+    // paused forced frame found itself unverified and wrote nothing
+    // (`blocked=unverified-world-first` with the pose sitting right there).
     //
-    // It does NOT re-verify merely because the force flag moved, which is the one thing AFP4 changed
-    // the mind of: force changes what the paused panel generates but not what the running engine
-    // applies, and the mapping is proved against the latter. Re-arming on a force flip discarded a
-    // 0.99 proof taken under the only condition where a proof means anything, and demanded a new one
-    // under a condition where the pose and the locals deliberately disagree (AFP4: 0.99 -> 0.67).
-    m_verified = false;
+    // The mapping is a property of the Actor and its graph generation, and the only event that
+    // invalidates it wholesale is that identity changing - which the per-frame identity check below
+    // handles. Force changes what the paused panel generates but not what the running engine applies,
+    // and the mapping is proved against the latter, so moving the flag is not a reason to lose it.
     m_verify_attempted = false;
     m_blocked = applying ? "verifying" : "not-armed";
     m_step_pending = next == Drive::e_step;
@@ -389,11 +389,6 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
     for (std::size_t i = 0; i < writable; ++i)
     {
         const std::int32_t target = m_targets[i];
-        if (target < 0)
-        {
-            ++stats.unreachable;
-            continue;
-        }
 
         RE::NiAVObject* node = nullptr;
         if (i < m_bone_names.size() && !m_bone_names[i].empty())
@@ -402,7 +397,7 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
             if (found != tree_by_name.end())
                 node = found->second;
         }
-        if (!node && target < static_cast<std::int32_t>(graph->boneNodes.size()))
+        if (!node && target >= 0 && target < static_cast<std::int32_t>(graph->boneNodes.size()))
         {
             // The table is the fallback, not the gate: it is still index-aligned with the pose and
             // still the cheapest resolution when the tree walk found nothing for that name.
