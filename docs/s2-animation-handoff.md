@@ -6,28 +6,29 @@
 > 不是恢复旧摘图／Disable／T-pose，也不是继续从最强 clip 重放到第二套骨架；下方 HKX28–44 历史与待测项保留；
 > 部分样本匹配、读档重新出生不代表通用映射或实际回收通过。
 >
-> **AFP1 已打包并部署待上机（2026-10-13）= 该路线的第一个仪器轮（只读，未写骨架）**：HKX44 按用户决定
-> **不再上机**（求解器线不再是关键路径）。新模块 `src/character/final_pose_probe.{h,cpp}`：**F11** 每按一次取一份
-> **只读取证**——`BShkbAnimationGraph::generatorOutputs[0]/[1]` 的 pose 轨（`hkbGeneratorOutput`，标准轨 2）逐级
-> 校验（输出对象 → tracks 主头 → 轨道头 → 元素尺寸 0x30 → 数据跨度，失败给具体 `reason`）、姿态副本的跨标记
-> delta、引擎已应用节点 local 的 delta、以及**两候选索引次序**（`boneNodes` vs 动画骨架，按名桥接）对节点 local
-> 的标定（≤1° 记 reproduces，门槛发包前定死）。**F12** = 推图开／关（R02 语义，冻结保持时钟新鲜）。**默认仍走
-> 旧显示链，本轮不写骨架、不摘图、不 Disable、不取 clip 重采样、不跑经验求解器。** 测试单
+> **AFP1 已上机并出判读（2026-10-13）= 该路线的第一个仪器轮（只读，未写骨架）**：HKX44 按用户决定
+> **不再上机**。新模块 `src/character/final_pose_probe.{h,cpp}`：**F11** 取一份只读取证、
+> **F12** 推图开／关、**NUM1** 放置模式切换。判读全文见 [AFP1 判读](afp1-verdict-2026-10-13.md)，
+> 三句话：
+> ①**最终输出读得到**——玩家侧 pose 轨 `reason=ok`、`num-data=cap=116`、`elem=48`、数据在 `tracks+448`，
+> 且**活缓冲必须按内容识别**（`valid=1/num-data>0`）：六次标记里活的那个都在 slot 0，但两个缓冲对象的
+> 地址每次都变；
+> ②**索引语义 = 动画骨架次序**（按精确骨名桥接）：`within-1deg=105/109 ratio=0.96`，`boneNodes` 序只有
+> `45/106 ratio=0.42`——这与 HKX2 测到的"`poseLocal` 是 `boneNodes` 序"是**两个数组、两种次序**；
+> 残余 4/109 根骨超 1°（最坏 30.6°）留待 AFP2 点名；
+> ③**阻断项：泊深傀儡的输出是空的**——`num-anim-bones=0`、pose 轨 `num-data=0 reason=pose-empty`，
+> 2103 次手动推图只动了 2 根骨（0.040°），而玩家同期 116。泊位（v6.25）把傀儡移出了引擎的动画作用域，
+> 代价到这一轮才被量出来；**这也收紧了 HKX42 的"暂停期 node-local 冻结"**：不只是不传播，是根本没有输出。
+> **为此新增 `NUM1`**：`parked-deep` ↔ `held-pinned`（站玩家处、fade 钉 0.05、留在作用域内），标记行打印
+> `placement=`。下一会话只需几次 F11 就能判定空输出是不是泊位造成的。**当前部署 = `c6d5e6f6…`
+> （`…T140304Z`）**，含 `camera`/`figure` 行、`verdict match=/reason=`、`pose-empty` 独立 reason 与放置杠杆；
+> 首版 `07bb8ff4…`（判读来源）与 `5fa5d1f2…` 都在 `dist/` 下。测试单
 > [AFP1](scene-copy-afp1-final-output-test-2026-10-13.md)；包 `dist/CharacterPanel-scopy-AFP1-1.2.1.zip`。
-> **两个包，别混**：上机中的是 `07bb8ff4…`（`…T134954Z`，已部署，`verdict` 无 `match=`、无 `camera`/`figure` 行）；
-> 下一个是 `5fa5d1f2…`（`…T135708Z`，**已构建未部署**——打包时 DLL 正被运行中的游戏占用），它加上
-> `camera`/`figure` 两行、`verdict match=/reason=`，并把标定判定收进头文件内联的纯函数
-> （`score_pose_order`/`decide_pose_order`；门槛 1°／≥8 骨／≥90% 定死，单测覆盖移位次序、骨数不足、空候选、
-> 比率并列四种拒法）。**这张表决定三件事：①最终输出到底能不能拿到（拿不到路线不成立）；②写骨架时必须用的
-> 次序与缓冲；③显示侧取景靠搬相机还是搬根**——AFP2（手动应用 + 直绘 P 自己的 3D）照抄这三条，不再猜。
 >
-> **AFP2 直绘侧的结构侦察已完成（2026-10-13，只读）**：现行 `CharacterClone::draw()` 的逐阶段序列与
-> "哪些步骤依赖插件自有游离图"已逐行落档；可复用缝 = 抽出 `draw_figure_passes(root, accumulator, …)`
-> （覆盖 character_clone.cpp:912-969 的绑定/清屏/遍历/逐 pass 提交 + OM 回读 + DIRTY_RENDERTARGET 前后处理），
-> 路线专属部分只剩所有权、摆姿阶段与灯光锚点。**取景现状 = 每帧改根 local**（:849/:862/:868-870，正是新路线
-> 不许做的）；改走相机侧的唯一入口是 `UI3DSceneManager::SetCameraPosition/Rotate/FOV`，而"投影到底读谁"
-> 必须由上表的 `camera` 行回答。风险清单（线程/双宿主/共享 pass 被改写/灯光 rig 偏移按 -Y 视轴调过/
-> 设备缓冲与 fade 关系）已逐条带行号记录，供 AFP2 发包前的 R00 解释使用。
+> **AFP2 直绘侧的结构侦察已完成（2026-10-13，只读）**：见
+> [AFP2 结构侦察](afp2-draw-structural-input-2026-10-13.md)（逐阶段序列、可复用缝 `draw_figure_passes`、
+> 取景现状 = 每帧改根 local :849/:862/:868-870、相机侧唯一入口 `UI3DSceneManager::SetCameraPosition/Rotate/FOV`、
+> 九条带行号风险）。"投影到底读谁"由 `camera` 行的 `accumulator-is-ui3d` 回答。
 
 > **此前待办（已被 AFP1 取代，留档）**：HKX44（求解器崩溃修复：
 > 真值表逐帧重建、零跨帧指针）已部署待上机——测试单

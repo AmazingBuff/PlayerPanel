@@ -116,6 +116,25 @@ void PuppetDriver::toggle_tick()
         enabled ? "on" : "off", enabled ? "the panel drives the graph" : "the graph is frozen on our clock");
 }
 
+char const* PuppetDriver::placement_name(Placement a_placement)
+{
+    return a_placement == Placement::e_parked_deep ? "parked-deep" : "held-pinned";
+}
+
+void PuppetDriver::cycle_placement()
+{
+    const Placement next = m_placement.load(std::memory_order_acquire) == Placement::e_parked_deep
+        ? Placement::e_held_pinned
+        : Placement::e_parked_deep;
+    m_placement.store(next, std::memory_order_release);
+    m_grace_frames = 0;
+    logger::info("SCOPY PUPPET placement={} ({}); the next mark reads the graph in this placement",
+        placement_name(next),
+        next == Placement::e_parked_deep
+            ? "deep below the player, out of the engine's animation scope"
+            : "standing at the player with the fade pinned, inside the animation scope");
+}
+
 void PuppetDriver::tick(bool paused)
 {
     if (m_release_requested.exchange(false, std::memory_order_acq_rel))
@@ -141,14 +160,26 @@ void PuppetDriver::tick(bool paused)
         return;
     }
 
+    const Placement placement = m_placement.load(std::memory_order_acquire);
     if (m_grace_frames < Grace_Frames)
     {
         ++m_grace_frames;
         suppress_fade(puppet->Get3D(false));
         if (m_grace_frames == Grace_Frames)
-            park("grace-complete");
+        {
+            if (placement == Placement::e_parked_deep)
+                park("grace-complete");
+            else
+                logger::info("SCOPY PUPPET held at the player (placement=held-pinned); the shell stays inside the engine's own animation scope with the fade pinned - the variable the parked puppet's empty output pose needs isolated");
+        }
         return;
     }
+
+    // Held placement: keep the shell near-invisible and never move it, so it stays inside whatever
+    // scope the engine animates. Fade 0 would make the culler skip it entirely (v6.x), so it is
+    // pinned at 0.05 rather than zeroed.
+    if (placement == Placement::e_held_pinned)
+        suppress_fade(puppet->Get3D(false));
 
     if (!paused)
     {
@@ -170,7 +201,7 @@ void PuppetDriver::tick(bool paused)
             }
         }
         // Keep the shell deep (the engine's update chain overrides a one-shot park).
-        if (++m_repark_frames >= Repark_Frames)
+        if (placement == Placement::e_parked_deep && ++m_repark_frames >= Repark_Frames)
         {
             m_repark_frames = 0;
             park("keep-parked");

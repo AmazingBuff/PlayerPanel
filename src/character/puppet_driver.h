@@ -62,6 +62,21 @@ public:
     void toggle_tick();
     [[nodiscard]] std::uint32_t manual_ticks() const { return m_manual_ticks; }
 
+    // AFP1's other finding needs a lever: the parked puppet's behaviour graph generates an output
+    // with no pose in it (pose track live, zero elements, numAnimBones 0), so the route's premise
+    // cannot be judged while it stays parked out of the engine's animation scope. This cycles the
+    // placement between that park and standing at the player with the fade pinned near-invisible -
+    // the one variable the measurement needs to move.
+    enum class Placement : std::uint8_t
+    {
+        e_parked_deep,
+        e_held_pinned
+    };
+
+    void cycle_placement();
+    [[nodiscard]] Placement placement() const { return m_placement.load(std::memory_order_acquire); }
+    [[nodiscard]] static char const* placement_name(Placement a_placement);
+
 private:
     PuppetDriver() = default;
 
@@ -76,6 +91,7 @@ private:
     // AFP1: the manual tick's gate, on by default - the panel's own time is what drives the puppet
     // while the world is paused, and the instrument has to be able to stop it and watch what freezes.
     std::atomic_bool m_tick_enabled{ true };
+    std::atomic<Placement> m_placement{ Placement::e_parked_deep };
     RE::NiPointer<RE::TESObjectREFR> m_puppet;
     std::uint32_t m_puppet_form_id = 0;
     std::uint32_t m_grace_frames = 0;

@@ -4,6 +4,27 @@
 
 ### Added
 
+- Report AFP1's first in-game verdict and give its one blocker a lever
+  ([verdict](docs/afp1-verdict-2026-10-13.md)). The pose track is readable and
+  fully validated in game (`reason=ok`, 116 elements, 0x30 elements, data at
+  `tracks+448`), and its index order is the **animation skeleton** bridged by
+  exact bone name: 105 of 109 comparable bones land inside one degree, against
+  45 of 106 for the `boneNodes` order - two arrays, two orders, since
+  `hkbCharacter::poseLocal` measured as `boneNodes`-ordered in HKX2. The live
+  buffer must be identified by content, not by index: the live one sat in slot 0
+  in every mark, but the two buffer objects themselves moved between marks. The
+  blocker is the parked puppet: its graph generates an output with a **live but
+  empty** pose track (`num-data=0`, `numAnimBones=0`) while the player's carries
+  116, and 2103 manual ticks moved two bones by 0.040 degrees - so the park
+  (v6.25, chosen so the shell is invisible and untouchable) had moved it out of
+  the engine's animation scope, and HKX42's "the manual tick does not propagate
+  the pose to the nodes" now reads as "there is no output to propagate". The
+  empty count gets its own `reason=pose-empty` instead of reading as a bad
+  count, and NUMPAD1 cycles the placement between that park and standing at the
+  player with the fade pinned (inside the scope), with `placement=` on the mark
+  line - the one variable that isolates whether the emptiness is the park or the
+  graph itself.
+
 - Open the same-Actor route (PRD 0.9 section 6.6) with its first instrument, AFP1. That route draws
   the puppet Actor's own third-person 3D and applies the behaviour graph's final output pose to that
   Actor's own skeleton while the panel pauses the world, so `src/character/final_pose_probe.{h,cpp}`

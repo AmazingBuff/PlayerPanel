@@ -1,18 +1,22 @@
-# AFP1 测试单（2026-10-13，同 Actor 最终输出只读取证）——**待上机**
+# AFP1 测试单（2026-10-13，同 Actor 最终输出只读取证）
 
-**两个包，别混**（2026-10-13，游戏正在运行中发现 DLL 被占用）：
+> **判读已出（首轮，21:54 会话）：见 [AFP1 判读](afp1-verdict-2026-10-13.md)。**
+> 三句话：**最终输出读得到**（pose 轨 `reason=ok`、116 元素、0x30 步长），**次序 = 动画骨架**（105/109 骨 ≤1°，
+> boneNodes 序只有 45/106），**但泊深傀儡的输出是空的**（`num-data=0`、`num-anim-bones=0`，2103 次手动推图只动了
+> 2 根骨）。为此本轮加了 `NUM1` 放置模式杠杆，下面第 7 条改由它回答。
 
-| | 上机中的包（**当前部署，正在跑的就是它**） | 下一个包（已构建，**等游戏退出后部署**） |
+**三个包，别混**：
+
+| | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-8d6037c573+dirty-cl94faaed0c6-20261012T135708Z` |
-| DLL SHA-256 | `07bb8ff4…`（全值 `07bb8ff4f43a9590847d738524fe464500cb89550ecb0afbe21e5312a8fb3297`） | `5fa5d1f2…`（全值 `5fa5d1f2cd5d39c3a2ecfca62fa9afd781b992cf2211f40c7225f0949d2a30ea`） |
-| 日志格式 | `verdict` 行**不含** `match=`/`reason=`；**没有** `camera`/`figure` 行 | `verdict` 行含 `match=`/`reason=`；新增 `camera`/`figure` 两行 |
-| 本轮会话怎么用 | 判读表第 **1–6、9** 条（最终输出能否拿到、次序语义、冻结、零崩溃）——这些它都能答 | 判读表第 **7–8** 条（显示侧取景机制、傀儡在图里的位置）**要它**；部署后不用重开会话，再按几次 F11 即可 |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-d1aa9c8bb8+dirty-cl94faaed0c6-20261012T140304Z` |
+| DLL SHA-256 | `07bb8ff4…` | `c6d5e6f6…`（全值 `c6d5e6f6adcaedbdf09a3e26fee94bb3cffd7d812c184bda1c8cc07e4ffed752`） |
+| 多了什么 | —— | `camera`/`figure` 行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆（`5fa5d1f2…` 的相机与纯判定改动也在其中） |
 
-- 包：`dist/CharacterPanel-scopy-AFP1-1.2.1.zip`（打包脚本每次覆盖同名 zip，目录 `dist/CharacterPanel-scopy-AFP1/` 里的就是最新的 `5fa5d1f2`）。
-  `07bb8ff4` 的 DLL／PDB 已在 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` 并校验一致；**`5fa5d1f2` 尚未部署**（DLL 被运行中的游戏占用），游戏退出后再覆盖并校验。
-- 单测 `snapshot_transform` 1/1 通过（含本轮新增的次序判定用例：移位次序被拒、骨数不足被拒、空候选被拒、比率并列取可比更多者）。
-- 回滚：HKX44 的 DLL／PDB／manifest 仍在 `dist/CharacterPanel-scopy-HKX44/`（SHA-256 `35108e71…`）。
+- 包：`dist/CharacterPanel-scopy-AFP1-1.2.1.zip`（每次打包覆盖同名 zip）。`c6d5e6f6` 的 DLL／PDB 已在
+  `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` 并校验一致。
+- 单测 `snapshot_transform` 1/1 通过（含次序判定用例：移位次序被拒、骨数不足被拒、空候选被拒、比率并列取更多者）。
+- 回滚：HKX44（`35108e71…`）与已上机的 AFP1 首版（`07bb8ff4…`）的 DLL／PDB／manifest 都在 `dist/` 下。
 - 依据：[PRD 0.9 §6.6](player-panel-prd.md)、[同 Actor 最终姿态测试单](actor-final-pose-validation-2026-10-12.md) §2 R00。
 
 ## 1. 本轮是什么、不是什么
@@ -36,44 +40,41 @@
 
 | 位置 | 内容 |
 | --- | --- |
-| `src/character/final_pose_probe.{h,cpp}`（新） | 取证仪器：`read_pose_track()` 逐级校验（输出对象 → tracks 主头 → 轨道头 → 元素尺寸 0x30 → 数据跨度），失败给出**具体 reason**；每标记一份姿态副本（普通浮点，`memcpy` 读，避免错位向量读）＋节点 local 摘要；`on-tracks=[…]` 顺带列出该缓冲当前活着的标准轨（pose 之外还看得到 world-from-model／extracted motion，为后面根运动留数据） |
+| `src/character/final_pose_probe.{h,cpp}`（新） | 取证仪器：`read_pose_track()` 逐级校验（输出对象 → tracks 主头 → 轨道头 → 元素尺寸 0x30 → 数据跨度），失败给出**具体 reason**（`pose-empty` 单独一条：轨在、元素为 0）；每标记一份姿态副本（普通浮点，`memcpy` 读，避免错位向量读）＋节点 local 摘要；`on-tracks=[…]` 顺带列出该缓冲当前活着的标准轨 |
 | 同上（纯规则，可离线测） | `score_pose_order()` / `decide_pose_order()` 为**头文件内联的纯函数**：给定姿态副本与两候选表（`NodeLocal`，含 `present` 位——缺席的索引必须留位而不是被丢掉，否则整张表会错位），打分并判定 `match/reason`。门槛 `Pose_Match_Degrees=1.0`、`Pose_Match_Min_Compared=8`、`Pose_Match_Min_Ratio=0.9` 全是发包前定死的常量。**AFP2 的写入闸门就是同一个函数**，不是另写一份 |
-| 同上（显示侧取证） | `SCOPY FP camera` / `figure` 两行：累加器启动时用的相机（`NiAccumulator::camera`）与 `ui3d->camera`／`world-camera` 的指针同一性、`NiCamera` 的 `worldToCam` 第 3 行／投影视锥、UI3D 缓存的相机位姿，以及被摄体 3D 根的 `world-t`／沿视轴深度／离轴距离／`fade`／包围球。**全是读**，用来判定 AFP2 的取景该搬相机还是搬根 |
-| `src/character/puppet_driver.{h,cpp}` | `actor()`（给仪器用）、`tick_enabled()/toggle_tick()`（R02 的"推图开／关"）、`manual_ticks()`；冻结时保持时钟新鲜（解冻只走一步，不补步） |
-| `src/input/input.cpp` | **F11** = 标记；**F12** = 推图开／关（F5 是游戏自己的快速存档，第一版选错，已改） |
+| 同上（显示侧取证） | `SCOPY FP camera` / `figure` 两行：累加器启动时用的相机（`NiAccumulator::camera`）与 `ui3d->camera`／`world-camera` 的指针同一性、`NiCamera` 的 `worldToCam` 第 3 行／投影视锥、UI3D 缓存的相机位姿，以及被摄体 3D 根的 `world-t`／沿视轴深度／离轴距离／`fade`／包围球。**全是读** |
+| `src/character/puppet_driver.{h,cpp}` | `actor()`、`tick_enabled()/toggle_tick()`（R02 的"推图开／关"）、`manual_ticks()`；**`cycle_placement()`/`placement()`**——`parked-deep` ↔ `held-pinned`（站在玩家处、fade 钉 0.05、留在引擎动画作用域内），这是首轮判读逼出来的唯一变量 |
+| `src/input/input.cpp` | **F11** = 标记；**F12** = 推图开／关；**NUM1** = 放置模式切换（F5 是游戏自己的快速存档，第一版选错，已改） |
 | `src/render/renderer.cpp` | 渲染括号内、`PuppetDriver::tick()` 之后消费标记（样本描述的是本帧将要绘制的那一帧） |
 
 标定判据**发包前定死**（R00）：旋转 ≤ **1.0°** 记 reproduces（沿用 HKX28 门槛），位移只作观测不设门。
 
-## 3. 上机步骤
+## 3. 上机步骤（第二轮：回答"空输出是不是泊位造成的"）
 
-1. 确认部署：DLL SHA-256 `07bb8ff4…`；日志首行 `SCOPY BUILD …-AFP1-…`。
-2. 进存档 → **世界期**（未暂停）先按 **F11**：这是参考组，引擎自己驱动傀儡与玩家的图与节点。
-   `SCOPY PUPPET born …` 应已出现（HKX38 配方，读档边界出生）。
-3. 开背包（暂停）→ **F11** 建立基线 → 等 3 秒（F12 默认 on）→ **F11**：看 `delta slot=… changed=`
-   与 `nodes … changed=`。
-4. **F12** 关推图 → **F11** → 等 3 秒 → **F11**：两处 delta 应归零（冻结的是图，不是藏起来）。
-5. 归档日志 `docs/diagnostics/CharacterPanel-afp1-final-output-20261013.log`（日志非追加，测完立刻复制）。
+1. 确认部署：DLL SHA-256 `c6d5e6f6…`；日志首行 `SCOPY BUILD …-AFP1-…`。
+2. 进存档 → **世界期**先按 **F11**（参考组）→ 再按 **NUM1** 切到 `held-pinned` → 等装配窗（约 4 秒）→ **F11** ×2。
+3. 开背包（暂停）→ **F11** ×2（`tick=on`）→ **F12** → **F11** ×2（冻结对照）。
+4. 按 **NUM1** 切回 `parked-deep` → **F11** ×2（同会话内的直接对照）。
+5. 归档日志 `docs/diagnostics/CharacterPanel-afp1b-placement-<日期>.log`（日志非追加，测完立刻复制）。
 
 ## 4. 判读表
 
-| # | 检查 | 通过判据 | 失败/信息不足时 |
+| # | 检查 | 首轮结果 | 失败/信息不足时 |
 | --- | --- | --- | --- |
-| 1 | **最终输出可读** | 至少一个 slot `reason=ok readable=1 valid=1 type=1 elem=48 num-data≈骨架骨数` | `reason=` 点名断在哪一级；两个 slot 都不可读 = 这条路线的输入不存在，回传全部 slot 行 |
-| 2 | **可读但空** | `valid=0 / on=0.000`（轨道 off）或 `num-data` 远小于骨架骨数 | 也是有效答案：说明手动推图没走到求值阶段，转去查求值入口 |
-| 3 | **手动推图确实推进输出** | 暂停期两次 F11，`delta slot=… changed>0`（姿态副本在动） | `changed=0` 且 `manual-ticks` 在涨 = HKX42 同源（图在跑、输出不更新），回传 |
-| 4 | **F12 冻结成立** | F12 off 后两处 delta 全 0，`manual-ticks` 停涨 | 仍在动 = 有别的写入者在推图，回传 |
-| 5 | **索引语义（R03 前置）** | 世界期 F11 的 `verdict` 行 `match=1 reason=matched`、`ratio` 接近 1、`nodes-moved>0` | `nodes-moved=0` = 该 Actor 节点没被驱动（泊深 cull？），标定性无效，回传 |
-| 6 | **两个缓冲的关系** | 记录两个 slot 各自的 `changed`／ratio，判出"当前帧用哪个" | 都不动/都不匹配 = 输出缓冲与节点不是同源，本轮结论填此 |
-| 7 | **显示侧取景机制（AFP2 前置）**〔下一包〕 | `camera` 行 `accumulator-is-ui3d=1`：生成摄影棚 pass 的累加器就是用 UI3D 相机启动的 → 直绘路线走"相机适配"（`SetCameraPosition/Rotate`），不必每帧搬 Actor | `=0`：记录 `accumulator-camera` 与 `ui3d-camera` 两个指针原值，AFP2 改为在 draw 窗口内临时改根变换并恢复 |
-| 8 | **傀儡在图里的实际位置**〔下一包〕 | `figure` 行给出 `world-t`／`view-depth`／`lateral`／`eye-distance`／`fade` | `fade=0` = 引擎会跳过该节点（相机适配前必须先解掉）；`lateral` 很大 = 泊位与取景完全脱节。两者都是 AFP2 的设计输入 |
-| 9 | **零崩溃零回归** | 全程无 crash、零新 `[E]` | 立即回传 crash + PDB + 动作序列 |
+| 1 | **最终输出可读** | **通过**（玩家）：`reason=ok valid=1 type=1 elem=48 num-data=116 cap=116 off=448` | 已通过，保留 |
+| 2 | **活缓冲识别** | **通过**：活的那个 `num-data>0`，但两个缓冲对象地址每标记都在变 → **不得按下标读** | —— |
+| 3 | **索引语义（R03 前置）** | **通过**：`order=skeleton slot=0 within-1deg=105/109 ratio=0.96` vs `bone-nodes 45/106 ratio=0.42` → **骨架序** | 残余 4/109 根骨超出 1°（最坏 30.6°）——AFP2 应用前必须点名是谁 |
+| 4 | **手动推图推进输出** | **部分**：玩家侧暂停期仍 `changed=29…55`；傀儡侧 `changed=0`（轨空） | 见第 5/6 条 |
+| 5 | **F12 冻结成立** | **通过**：`manual-ticks` 停在 2103、两处 delta 归零 | —— |
+| 6 | **泊深傀儡产出最终输出（阻断项）** | **不通过**：`num-anim-bones=0`、pose 轨 `num-data=0 reason=pose-empty`（2103 次推图只动 2 根骨） | **本轮 NUM1 → `held-pinned` 就是回答它的实验**：若 `num-data` 变 116、`num-anim-bones` 变 116 → 空输出是泊位（cull 停用图）造成的；若仍为 0 → 傀儡的图根本不产出，路线需换前提 |
+| 7 | **显示侧取景机制（AFP2 前置）** | 未测（首版无该行） | `accumulator-is-ui3d=1` → 走"相机适配"；`=0` → draw 窗口内临时改根变换并恢复 |
+| 8 | **傀儡在图里的实际位置** | 未测（首版无该行） | `fade`／`lateral`／`view-depth` 是 AFP2 取景设计输入 |
+| 9 | **零崩溃零回归** | **通过**（6 标记、零 crash、零 `[E]`，两条已知灯光 warn） | —— |
 
-**这张表决定什么**：第 1/2 条决定路线是否成立（拿不到最终输出就没有"应用"可言）；第 5 条给出
-**写骨架时必须用的次序与缓冲**；第 7/8 条给出**显示侧怎么取景**（搬相机还是临时搬根）。AFP2
-（手动应用 + 直绘 P 自己的 3D）照抄这三条结论，不再猜。
+**这张表决定什么**：第 1–3 条已给出"读得到 + 按骨架序"；第 6 条是下一轮唯一要翻的石头（空输出是泊位还是图的本质），
+第 7/8 条给显示侧取景。AFP2（手动应用 + 直绘 P 自己的 3D）照抄这三条结论，不再猜。
 
 ## 5. 回传
 
-完整 `CharacterPanel.log`、`build-manifest.json`、puppet 出生行与全部 `SCOPY FP` 块（世界期与暂停期
-分开标注每次 F11 的时机）、以及第 5 条 `verdict` 行。崩溃则附 CrashLogger 日志与本包 PDB。
+完整 `CharacterPanel.log`、`build-manifest.json`、`SCOPY PUPPET` 出生/放置行与全部 `SCOPY FP` 块
+（标出每次 F11／NUM1／F12 的时机）。崩溃则附 CrashLogger 日志与本包 PDB。

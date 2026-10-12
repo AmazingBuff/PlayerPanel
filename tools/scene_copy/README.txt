@@ -43,6 +43,12 @@ and the game paused:
   F12  AFP1: freeze or resume the panel's manual tick of the puppet's own
        behaviour graph. This says nothing about the game's UI pause; it only
        stops the panel from advancing that graph.
+  NUM1 AFP1: cycle the puppet's placement - parked deep below the player (the
+       default, out of the engine's animation scope) or held at the player with
+       the fade pinned near-invisible (inside it). AFP1 measured the parked
+       puppet's pose track as live but EMPTY (zero elements, numAnimBones 0)
+       while the player's carried 116, so this is the one variable that
+       isolates why; the mark line prints which placement was measured.
 
 Same-Actor final output (AFP1)
 
@@ -92,6 +98,12 @@ How to read it:
                        size (a full 0x30 QsTransform) and the pose data span. Any other reason names
                        the step that failed, so a buffer this build does not understand reports
                        which assumption broke instead of printing zeros that look like data.
+                       reason=pose-empty is its own answer: the track is part of the output
+                       (onFraction=1) but carries zero elements - the graph generated no pose, which
+                       is what the parked puppet does and the player never did.
+  WHICH BUFFER         do not read the index: AFP1 saw the live buffer at slot 0 in every mark while
+                       the two buffer objects themselves moved, so the live one is the one with
+                       valid=1 / num-data>0. Both must be read and compared, never assumed.
   delta slot=...       what the pose in that buffer did since the previous mark. This is the line
                        that answers "does our manual tick (F12 on) move the final output, and does
                        freezing it stop the output": without it, an idle that holds still and an
@@ -137,7 +149,13 @@ A reading that means something, in four presses:
      again: delta slot=... changed>0 says the manual tick really does move the final output.
   3. Press F12 (tick off), press F11, wait, press F11. Both the pose delta and the node delta should
      be zero - a frozen graph, not a hidden one.
-  4. Return the whole block, plus whether the puppet was born at all (SCOPY PUPPET born ...).
+  4. Press NUM1 (placement=held-pinned), wait for the assembly window, press F11 twice. This is the
+     measurement AFP1's empty puppet pose asks for: if the pose track's num-data turns 116 and
+     num-anim-bones turns 116 here, the emptiness was the park (the engine does not animate what it
+     has culled); if it stays 0, the puppet's graph never generates an output at all and the route
+     needs that answer instead. Press NUM1 again to go back to parked-deep - held means the shell
+     stands next to the player (fade 0.05), which is diagnostic only.
+  5. Return the whole block, plus whether the puppet was born at all (SCOPY PUPPET born ...).
 
 The camera and figure lines come with every mark, so the same four presses also answer the display
 question: whether the accumulator that generates the studio's passes was started with the UI3D

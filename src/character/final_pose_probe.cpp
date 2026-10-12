@@ -330,7 +330,15 @@ bool read_pose_track(RE::BShkbAnimationGraph& a_graph, int a_slot, OutputTrackVi
         a_view.reason = "track-off";
         return false;
     }
-    if (a_view.num_data <= 0 || a_view.num_data > Max_Pose_Count)
+    // `onFraction` says the track is part of this output; the element count says whether it carries
+    // anything. A live track with zero elements is a real state - the graph generated an output with
+    // no pose in it (measured on the parked puppet, AFP1) - and it must not read as a bad count.
+    if (a_view.num_data == 0)
+    {
+        a_view.reason = "pose-empty";
+        return false;
+    }
+    if (a_view.num_data < 0 || a_view.num_data > Max_Pose_Count)
     {
         a_view.reason = "pose-count-out-of-range";
         return false;
@@ -377,8 +385,9 @@ void FinalPoseProbe::tick(bool a_paused)
 
     ++m_marks;
     PuppetDriver& driver = PuppetDriver::instance();
-    logger::info("SCOPY FP mark={} paused={} tick={} manual-ticks={}",
-        m_marks, a_paused ? 1 : 0, driver.tick_enabled() ? "on" : "off", driver.manual_ticks());
+    logger::info("SCOPY FP mark={} paused={} tick={} manual-ticks={} placement={}",
+        m_marks, a_paused ? 1 : 0, driver.tick_enabled() ? "on" : "off", driver.manual_ticks(),
+        PuppetDriver::placement_name(driver.placement()));
 
     // The camera chain first: it is shared by both subjects, and it is what the display side has to
     // adapt once the Actor may no longer be translated into frame.

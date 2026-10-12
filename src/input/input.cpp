@@ -69,6 +69,12 @@ namespace
                     FinalPoseProbe::instance().request_mark();
                 else if (scan == MapVirtualKeyA(VK_F12, MAPVK_VK_TO_VSC))
                     PuppetDriver::instance().toggle_tick();
+                // Numpad 1: cycle the puppet's placement. AFP1 measured the parked puppet's output
+                // pose as empty (track live, zero elements, numAnimBones 0), and this is the one
+                // variable that isolates why - parked out of the engine's animation scope versus
+                // standing at the player with the fade pinned.
+                else if (scan == MapVirtualKeyA(VK_NUMPAD1, MAPVK_VK_TO_VSC))
+                    PuppetDriver::instance().cycle_placement();
 #if CHARACTER_PANEL_S2_PROBE
                 // Diagnostic build only: F6 is taken by another plugin in the usual setup, so the
                 // probe lives on an opt-in build rather than on the product's own key. The HKX37
