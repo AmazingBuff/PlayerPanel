@@ -53,6 +53,15 @@ public:
     // H05 census: this form id is the panel's own, not a world change.
     [[nodiscard]] static bool is_owned_form(std::uint32_t form_id);
 
+    // AFP1 (PRD 0.9 section 6.6): the same-Actor instrument measures this Actor and its graph, so it
+    // needs the reference, R02's push/freeze control over the manual tick, and the tick's own count.
+    // A frozen tick keeps the clock fresh instead of accumulating: resuming must not deliver a
+    // catch-up step the operator never asked for.
+    [[nodiscard]] RE::Actor* actor() const;
+    [[nodiscard]] bool tick_enabled() const { return m_tick_enabled.load(std::memory_order_acquire); }
+    void toggle_tick();
+    [[nodiscard]] std::uint32_t manual_ticks() const { return m_manual_ticks; }
+
 private:
     PuppetDriver() = default;
 
@@ -64,6 +73,9 @@ private:
 
     std::atomic_bool m_spawn_requested{ false };
     std::atomic_bool m_release_requested{ false };
+    // AFP1: the manual tick's gate, on by default - the panel's own time is what drives the puppet
+    // while the world is paused, and the instrument has to be able to stop it and watch what freezes.
+    std::atomic_bool m_tick_enabled{ true };
     RE::NiPointer<RE::TESObjectREFR> m_puppet;
     std::uint32_t m_puppet_form_id = 0;
     std::uint32_t m_grace_frames = 0;

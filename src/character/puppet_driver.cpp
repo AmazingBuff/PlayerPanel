@@ -100,6 +100,22 @@ bool PuppetDriver::is_owned_form(std::uint32_t form_id)
     return instance().m_puppet_form_id != 0 && instance().m_puppet_form_id == form_id;
 }
 
+RE::Actor* PuppetDriver::actor() const
+{
+    RE::TESObjectREFR* const reference = m_puppet.get();
+    if (!reference || !readable(reference, sizeof(RE::TESObjectREFR)))
+        return nullptr;
+    return reference->As<RE::Actor>();
+}
+
+void PuppetDriver::toggle_tick()
+{
+    const bool enabled = !m_tick_enabled.load(std::memory_order_acquire);
+    m_tick_enabled.store(enabled, std::memory_order_release);
+    logger::info("SCOPY PUPPET tick {} ({}); the UI pause is the game's, not this",
+        enabled ? "on" : "off", enabled ? "the panel drives the graph" : "the graph is frozen on our clock");
+}
+
 void PuppetDriver::tick(bool paused)
 {
     if (m_release_requested.exchange(false, std::memory_order_acq_rel))
@@ -162,8 +178,15 @@ void PuppetDriver::tick(bool paused)
         return;
     }
 
-    // The panel pauses the world: OUR clock drives the puppet's behaviour graph now.
+    // The panel pauses the world: OUR clock drives the puppet's behaviour graph now. A frozen tick
+    // (AFP1's push/freeze control) advances nothing and keeps the clock fresh, so unfreezing delivers
+    // one step rather than however long the freeze lasted.
     const auto now = std::chrono::steady_clock::now();
+    if (!tick_enabled())
+    {
+        m_last_tick = now;
+        return;
+    }
     float step = std::chrono::duration<float>(now - m_last_tick).count();
     m_last_tick = now;
     step = std::clamp(step, 0.0f, Max_Manual_Step);

@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Added
+
+- Open the same-Actor route (PRD 0.9 section 6.6) with its first instrument, AFP1. That route draws
+  the puppet Actor's own third-person 3D and applies the behaviour graph's final output pose to that
+  Actor's own skeleton while the panel pauses the world, so `src/character/final_pose_probe.{h,cpp}`
+  measures the two things it rests on, read-only. One mark (F11) walks the graph's own output buffers
+  (`BShkbAnimationGraph::generatorOutputs[0]` and `[1]`): the output object, the tracks blob, the
+  pose track's header, its element size and its data span are each validated in turn and the step
+  that stops the read is named, so a buffer this build does not understand reports which assumption
+  broke instead of printing zeros. It then keeps a copy of the pose as plain numbers (read with
+  `memcpy`, because the offset and alignment are exactly what is being validated), prints what that
+  copy did since the previous mark, prints what the engine-applied node locals did, and scores both
+  candidate index orders - the engine's `boneNodes` table and the animation skeleton bridged by
+  exact bone name - against those node locals, one line per candidate. The bar is the HKX28 one
+  degree, fixed before the package ships. The player is sampled beside the puppet as the reference,
+  because the engine drives that graph and those nodes itself. `PuppetDriver` gains the Actor
+  reference, the manual tick's gate (F12, R02's push/freeze control, which keeps the clock fresh so
+  unfreezing delivers one step rather than a catch-up) and its tick count. Nothing here writes a
+  skeleton, detaches a graph, disables an Actor, resets a bind pose, resamples a clip or draws:
+  AFP2 is where the measured order and buffer become an application and a draw.
+
 ### Fixed
 
 - Follow the clip search's own rules when scanning a node: an object is scanned as far as it is

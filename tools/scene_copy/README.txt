@@ -38,6 +38,86 @@ and the game paused:
   F4   release the copy
   F2   enable or disable the procedural idle (on by default once the copy is
        drawn)
+  F11  AFP1: take one read-only mark of the same-Actor final-output forensics
+       (see "Same-Actor final output (AFP1)" below)
+  F12  AFP1: freeze or resume the panel's manual tick of the puppet's own
+       behaviour graph. This says nothing about the game's UI pause; it only
+       stops the panel from advancing that graph.
+
+Same-Actor final output (AFP1)
+
+This round opens the route PRD 0.9 section 6.6 describes; it does not implement it yet. That route
+draws the puppet Actor's OWN third-person 3D and, while the world is paused, applies the behaviour
+graph's FINAL output pose to that Actor's own skeleton: no detached copy, no single clip resampled
+onto a second skeleton, no empirical track solver, no procedural fallback.
+
+Two things have to be measured before any build may write a pose into a skeleton (test sheet R00),
+and both are measured here, read-only:
+
+  1. whether the graph's own output buffers (BShkbAnimationGraph::generatorOutputs[0] and [1]) hold a
+     readable final pose, and which of the two buffers is the current one;
+  2. which index order that pose uses - the engine's boneNodes table, or the animation skeleton -
+     because the engine applied it during normal play and the manual route has to reproduce exactly
+     that.
+
+Press F11 for one mark. A mark samples both the puppet and, as the reference, the player (whose
+graph the engine drives by itself), and writes nothing anywhere:
+
+  SCOPY FP mark=N paused=0|1 tick=on|off manual-ticks=N
+  SCOPY FP census subject=puppet form=... graph=0x... bone-nodes=N bound=N pose-local=N
+        num-anim-bones=N tracks-in-lod=N lod=N skeleton='...' skeleton-bones=N
+  SCOPY FP slot=0|1 subject=... out=0x... tracks=N on-tracks=[i,j,...] exists=0|1 valid=0|1
+        type=N flags=N num-data=N cap=N elem=N off=N on=X data=0x... readable=0|1 reason=...
+  SCOPY FP delta slot=0|1 subject=... prev=N now=N compared=N changed=N
+        max-rot=Xdeg max-pos=X vs-mark=N
+  SCOPY FP nodes subject=... bones=N compared=N rebound=N gone=N missing=N changed=N
+        max-rot=Xdeg max-pos=X vs-mark=N
+  SCOPY FP order=bone-nodes slot=0|1 subject=... sampled=N bones=N compared=N
+        within-1deg=N ratio=X max-rot=Xdeg max-pos=X
+  SCOPY FP order=skeleton slot=0|1 subject=... sampled=N bones=N named=N compared=N
+        within-1deg=N ratio=X max-rot=Xdeg max-pos=X
+  SCOPY FP verdict subject=... best=<order>/slot<N> within-1deg=N/N ratio=X
+        max-rot=Xdeg max-pos=X named=N nodes-moved=N
+
+How to read it:
+
+  reason=ok            the whole chain validated: output object, tracks blob, track header, element
+                       size (a full 0x30 QsTransform) and the pose data span. Any other reason names
+                       the step that failed, so a buffer this build does not understand reports
+                       which assumption broke instead of printing zeros that look like data.
+  delta slot=...       what the pose in that buffer did since the previous mark. This is the line
+                       that answers "does our manual tick (F12 on) move the final output, and does
+                       freezing it stop the output": without it, an idle that holds still and an
+                       output that is never written look the same.
+  nodes subject=...    what the engine-applied node locals did since the previous mark. changed=0
+                       while delta changed>0 is exactly the HKX42 finding (the graph advances, the
+                       nodes do not follow); changed>0 means this Actor's nodes are being driven.
+  order=... / verdict  the calibration. Each candidate (index order x output slot) is scored against
+                       the node locals the engine itself wrote; ratio is the fraction of compared
+                       bones that the candidate reproduces within one degree. The best ratio names
+                       the order and slot the manual route would have to use.
+  named=N              the skeleton order only: how many bones of the animation skeleton resolved to
+                       a node of this Actor by exact name (the HKX1/HKX40 name bridge reach).
+  on-tracks=[...]      which standard tracks that buffer currently carries. The pose (2) is what this
+                       round needs; world-from-model (0) and extracted motion (1) are what the
+                       display side will need later for root motion, and they come free with the
+                       header read.
+  nodes-moved=N        carried on the verdict line, because a calibration against a frozen tree
+                       measures nothing and that has to be readable next to the number it qualifies.
+
+A reading that means something, in four presses:
+
+  1. In the running world (not paused) press F11. nodes-moved should be non-zero and the verdict
+     should name one order/slot with a high ratio: that is the engine's own answer on this machine
+     and skeleton, and it is the reference every later step is judged against.
+  2. Open the paused inventory. Press F11 (baseline), wait a few seconds with F12 on, press F11
+     again: delta slot=... changed>0 says the manual tick really does move the final output.
+  3. Press F12 (tick off), press F11, wait, press F11. Both the pose delta and the node delta should
+     be zero - a frozen graph, not a hidden one.
+  4. Return the whole block, plus whether the puppet was born at all (SCOPY PUPPET born ...).
+
+If the puppet's slots report reason=output-unreadable or reason=no-pose-track while the player's do
+not, that is a finding about the parked Actor and not a crash: return both blocks.
 
 The procedural idle drives a few of the copy's own joints from our own clock —
 hips shifting sideways, tilting and turning, the spine counter-rolling and

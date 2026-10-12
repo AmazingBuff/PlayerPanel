@@ -38,6 +38,8 @@ config, input, present_hook
 
 ## Documentation
 
+- [AFP1 final-output test sheet](docs/scene-copy-afp1-final-output-test-2026-10-13.md): **the round now deployed and awaiting a game session** — F5 samples, read-only, whether the behaviour graph's own output buffers hold a readable final pose and which index order and buffer reproduce the node locals the engine applied. Decides whether the same-Actor route can be implemented and exactly how to write the pose.
+
 - [Actor final-pose validation](docs/actor-final-pose-validation-2026-10-12.md): PRD 0.9 §6.6, proposed single-Actor rendering with manual application of final graph output; R00–R09 procedures, engine-reference comparison, blending, physics and lifecycle gates. Not implemented by the HKX44 package.
 
 - [Independent physics validation](docs/s3-independent-physics-validation-2026-10-10.md): PRD 0.8 §6.5, proposed separate SMP/CBPC instances on a copied graph, V00–V10 game procedures, A/B evidence and teardown gates. Requires a new diagnostic build; the current DLL does not implement these interfaces.

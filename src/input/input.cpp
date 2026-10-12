@@ -4,6 +4,8 @@
 
 #include "input/input.h"
 
+#include "character/final_pose_probe.h"
+#include "character/puppet_driver.h"
 #include "character/puppet_probe.h"
 #include "character/scene_graph_copy.h"
 
@@ -58,6 +60,15 @@ namespace
                     SceneGraphCopy::instance().request(Command::e_release);
                 else if (scan == MapVirtualKeyA(VK_F2, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_idle_toggle);
+                // AFP1 (PRD 0.9 section 6.6) controls, on the keys the earlier rounds left free: F11
+                // marks the final-output sample and F12 freezes or resumes the panel's manual graph
+                // tick. F5 was the first choice and is wrong - the game's own quicksave owns it, and
+                // this sink does not consume input. Both controls are read-only with respect to the
+                // Actor, its graph and the source.
+                else if (scan == MapVirtualKeyA(VK_F11, MAPVK_VK_TO_VSC))
+                    FinalPoseProbe::instance().request_mark();
+                else if (scan == MapVirtualKeyA(VK_F12, MAPVK_VK_TO_VSC))
+                    PuppetDriver::instance().toggle_tick();
 #if CHARACTER_PANEL_S2_PROBE
                 // Diagnostic build only: F6 is taken by another plugin in the usual setup, so the
                 // probe lives on an opt-in build rather than on the product's own key. The HKX37
