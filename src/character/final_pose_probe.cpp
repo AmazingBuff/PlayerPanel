@@ -443,6 +443,130 @@ void FinalPoseProbe::request_mark()
     m_mark_requested.store(true, std::memory_order_release);
 }
 
+FinalPoseProbe::PreSample FinalPoseProbe::sample_only(RE::TESObjectREFR* a_subject)
+{
+    PreSample sample;
+    if (!a_subject || !readable(a_subject, sizeof(RE::TESObjectREFR)))
+        return sample;
+
+    RE::BShkbAnimationGraph* const graph = third_person_graph(*a_subject);
+    if (!graph || !readable(graph, sizeof(RE::BShkbAnimationGraph)))
+        return sample;
+
+    for (int slot = 0; slot < Output_Slots; ++slot)
+    {
+        OutputTrackView view;
+        RE::hkQsTransform const* pose = nullptr;
+        std::int32_t count = 0;
+        sample.reason[slot] = read_pose_track(*graph, slot, view, pose, count) ? "ok" : view.reason;
+        sample.output[slot] = view.output;
+        sample.pose_count[slot] = view.num_data;
+        if (pose && count > 0)
+        {
+            sample.pose[slot].reserve(static_cast<std::size_t>(count));
+            for (std::int32_t i = 0; i < count; ++i)
+                sample.pose[slot].push_back(copy_pose(pose[i]));
+        }
+    }
+
+    sample.bones.reserve(graph->boneNodes.size());
+    for (RE::BShkbAnimationGraph::BoneNodeEntry const& entry : graph->boneNodes)
+    {
+        RE::NiNode* const node = entry.node;
+        BoneState state;
+        if (node && readable(node, sizeof(RE::NiAVObject)))
+        {
+            state.node = node;
+            state.rotate = node->local.rotate;
+            state.translate = node->local.translate;
+            ++sample.bones_present;
+        }
+        sample.bones.push_back(state);
+    }
+
+    sample.valid = true;
+    return sample;
+}
+
+void FinalPoseProbe::sample_before_tick()
+{
+    // Not consuming the request here: this is the A0 half of the same mark the tick will report.
+    if (!m_mark_requested.load(std::memory_order_acquire))
+        return;
+
+    PuppetDriver& driver = PuppetDriver::instance();
+    m_puppet_pre = sample_only(driver.actor());
+    m_player_pre = sample_only(RE::PlayerCharacter::GetSingleton());
+
+    // The A0 lines: what the two subjects looked like before this frame advanced anything.
+    const auto report_pre = [](char const* a_label, PreSample const& a_sample)
+    {
+        if (!a_sample.valid)
+        {
+            logger::info("SCOPY FP A0 subject={} UNAVAILABLE reason=no-sample", a_label);
+            return;
+        }
+        logger::info("SCOPY FP A0 subject={} output0=0x{:x} pose0={} reason0={} output1=0x{:x} pose1={} reason1={} bones={}/{}",
+            a_label,
+            reinterpret_cast<std::uintptr_t>(a_sample.output[0]), a_sample.pose_count[0], a_sample.reason[0],
+            reinterpret_cast<std::uintptr_t>(a_sample.output[1]), a_sample.pose_count[1], a_sample.reason[1],
+            a_sample.bones_present, a_sample.bones.size());
+    };
+    report_pre("puppet", m_puppet_pre);
+    report_pre("player", m_player_pre);
+}
+
+void FinalPoseProbe::report_frame_delta(char const* a_label, PreSample const& a_pre, SubjectState const& a_now)
+{
+    if (!a_pre.valid)
+        return;
+
+    // What this frame's tick changed, measured on the two samples the same frame produced. The node
+    // comparison keeps the identity rule the mark deltas use: only the same node at the same index
+    // counts, and a rebuilt tree is reported as rebound instead of as a phantom move.
+    float pose_rotation = 0.0f;
+    for (int slot = 0; slot < Output_Slots; ++slot)
+    {
+        const std::size_t comparable = std::min(a_pre.pose[slot].size(), a_now.pose[slot].size());
+        for (std::size_t i = 0; i < comparable; ++i)
+            pose_rotation = std::max(pose_rotation, quat_angle_degrees(a_pre.pose[slot][i], a_now.pose[slot][i]));
+    }
+
+    std::uint32_t nodes_compared = 0;
+    std::uint32_t nodes_moved = 0;
+    std::uint32_t nodes_rebound = 0;
+    float nodes_rotation = 0.0f;
+    float nodes_position = 0.0f;
+    const std::size_t comparable = std::min(a_pre.bones.size(), a_now.bones.size());
+    for (std::size_t i = 0; i < comparable; ++i)
+    {
+        BoneState const& before = a_pre.bones[i];
+        BoneState const& now = a_now.bones[i];
+        if (!before.node || !now.node)
+            continue;
+        if (before.node != now.node)
+        {
+            ++nodes_rebound;
+            continue;
+        }
+        ++nodes_compared;
+        const float rotation = rotation_angle_degrees(before.rotate, now.rotate);
+        const float position = (before.translate - now.translate).Length();
+        if (rotation > 0.01f || position > 0.01f)
+            ++nodes_moved;
+        nodes_rotation = std::max(nodes_rotation, rotation);
+        nodes_position = std::max(nodes_position, position);
+    }
+
+    logger::info("SCOPY FP A0A1 subject={} pose0={}/{} pose1={}/{} pose-max-rot={:.3f}deg nodes={}/{} nodes-moved={} nodes-max-rot={:.3f}deg nodes-max-pos={:.3f} nodes-rebound={}",
+        a_label,
+        a_pre.pose[0].size(), a_now.pose[0].size(),
+        a_pre.pose[1].size(), a_now.pose[1].size(),
+        pose_rotation,
+        nodes_compared, a_pre.bones.size(),
+        nodes_moved, nodes_rotation, nodes_position, nodes_rebound);
+}
+
 void FinalPoseProbe::tick(bool a_paused)
 {
     if (!m_mark_requested.exchange(false, std::memory_order_acq_rel))
@@ -464,6 +588,14 @@ void FinalPoseProbe::tick(bool a_paused)
     // actually delivers.
     subject("puppet", driver.actor(), m_puppet);
     subject("player", RE::PlayerCharacter::GetSingleton(), m_player);
+
+    // The A0 -> A1 pair, then the physics stage this round does not have: writing `skipped` is what
+    // keeps the six observation points complete instead of silently absent (R00's A3).
+    report_frame_delta("puppet", m_puppet_pre, m_puppet);
+    report_frame_delta("player", m_player_pre, m_player);
+    logger::info("SCOPY FP A3 physics=skipped reason=first-round-physics-off");
+    m_puppet_pre = PreSample{};
+    m_player_pre = PreSample{};
 }
 
 void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, SubjectState& a_state)

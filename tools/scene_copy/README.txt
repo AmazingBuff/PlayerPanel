@@ -70,6 +70,11 @@ Press F11 for one mark. A mark samples both the puppet and, as the reference, th
 graph the engine drives by itself), and writes nothing anywhere:
 
   SCOPY FP mark=N paused=0|1 tick=on|off manual-ticks=N placement=parked-deep|held-pinned
+  SCOPY FP A0 subject=... output0=0x... pose0=N reason0=... output1=0x... pose1=N reason1=...
+        bones=N/N
+  SCOPY FP A0A1 subject=... pose0=N/N pose1=N/N pose-max-rot=Xdeg nodes=N/N nodes-moved=N
+        nodes-max-rot=Xdeg nodes-max-pos=X nodes-rebound=N
+  SCOPY FP A3 physics=skipped reason=first-round-physics-off
   SCOPY FP camera ui3d=0x... ui3d-camera=0x... accumulator=0x... accumulator-camera=0x...
         world-camera=0x... accumulator-is-ui3d=0|1 accumulator-is-world=0|1 ui3d-is-world=0|1
   SCOPY FP camera ui3d-camera world-t=(x,y,z) view=(x,y,z) w2c-t=(x,y,z) near=X far=X
@@ -96,6 +101,15 @@ graph the engine drives by itself), and writes nothing anywhere:
 
 How to read it:
 
+  A0 / A0A1            the mark is now taken twice in one frame: A0 before anything advanced it, A0A1
+                       after the drivers ticked. That pair is what answers "is OUR tick what moved
+                       the output", which no cross-mark delta can separate from the engine having run
+                       in between - and in a paused world only one of the two can move anything.
+                       pose0/pose1 are the element counts of the two buffers at A0 and after the
+                       tick; nodes-moved / nodes-rebound are the node locals this frame changed, with
+                       a rebuilt tree reported as rebound rather than as a phantom move.
+  A3                   physics=skipped until the physics round: written out so the six observation
+                       points are complete and an absent stage cannot read as a passing one.
   reason=ok            the whole chain validated: output object, tracks blob, track header, element
                        size (a full 0x30 QsTransform) and the pose data span. Any other reason names
                        the step that failed, so a buffer this build does not understand reports

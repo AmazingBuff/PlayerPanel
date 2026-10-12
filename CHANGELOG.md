@@ -4,6 +4,17 @@
 
 ### Added
 
+- Take the mark twice in one frame, which is the only way to ask whether our own tick moved the
+  graph's output. `FinalPoseProbe::sample_before_tick` runs before the drivers tick and records A0
+  (both output buffers' identity, element counts and reasons, and the node locals), and the report
+  after the tick adds an `A0A1` line per subject: the pose change this frame produced, the node
+  locals it moved, and `nodes-rebound` for a tree that was rebuilt between the two samples. A
+  cross-mark delta cannot separate our tick from the engine having run in between; in a paused world
+  only one of the two can move anything, which is exactly what R02 asks. A3 is written out as
+  `physics=skipped` so the six observation points are complete until the physics round and an absent
+  stage cannot read as a passing one.
+
+
 - Split the studio's pass batch away from who owns the figure it draws
   (`src/render/studio/figure_passes.{h,cpp}`): a request (root, accumulator, context, target, states,
   light slots, whether to read the bound target back once) and the batch itself - bind and clear the

@@ -9,9 +9,9 @@
 
 | | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-af0aa68cbe+dirty-cl94faaed0c6-20261012T141721Z` |
-| DLL SHA-256 | `07bb8ff4…` | `e264845a…`（全值 `e264845aa5f50b72834914c0ae9f91ea399f2826e0b88dd697048103155b2193`） |
-| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、新增 **`world` 行**；另含**直绘缝重构**（`render/studio/figure_passes.{h,cpp}`，`CharacterClone::draw` 已改走它，行为按逐句对照保持，两处顺序差异已注释）与默认配置的编译修复 |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-53f57b98dc+dirty-cl94faaed0c6-20261012T142141Z` |
+| DLL SHA-256 | `07bb8ff4…` | `5cee705d…`（全值 `5cee705dd5a4cc89ee827669b698e0a9284387e3141a2017f7265eb80bc82396`） |
+| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、`world` 行；**`A0`/`A0A1`/`A3` 三行（帧内配对）**；直绘缝重构（`render/studio/figure_passes.{h,cpp}`）与默认配置的编译修复 |
 
 > **判读风险与回滚**：直绘缝重构动了**当前正在用的面板绘制路径**，而它只能在游戏里验证。两点降低风险：
 > ①AFP1b 要的那些数（`SCOPY FP` 全部行、`SCOPY PUPPET` 放置）**不经过绘制路径**，即使面板画不出来也不影响本轮判读；
@@ -69,7 +69,7 @@
 | 1 | **最终输出可读** | **通过**（玩家）：`reason=ok valid=1 type=1 elem=48 num-data=116 cap=116 off=448` | 已通过，保留 |
 | 2 | **活缓冲识别** | **通过**：活的那个 `num-data>0`，但两个缓冲对象地址每标记都在变 → **不得按下标读** | —— |
 | 3 | **索引语义（R03 前置）** | **通过**：`order=skeleton slot=0 within-1deg=105/109 ratio=0.96` vs `bone-nodes 45/106 ratio=0.42` → **骨架序** | 本轮已加 `outliers=`（点名超差骨，上限 8）与 `world` 行（R03 的第二个空间）——下一会话直接给出"那 4 根是谁"以及骨架序在 world 空间是否仍然成立 |
-| 4 | **手动推图推进输出** | **部分**：玩家侧暂停期仍 `changed=29…55`；傀儡侧 `changed=0`（轨空） | 见第 5/6 条 |
+| 4 | **手动推图推进输出** | **部分**：玩家侧暂停期仍 `changed=29…55`；傀儡侧 `changed=0`（轨空） | 本轮新增 **`A0A1` 帧内配对**：它把"我们的 tick 是否就是动它的原因"从跨标记比较里分出来——暂停世界里只有一方能推动。`pose0/1` 是两槽元素数（A0 → A1），`nodes-moved`/`nodes-rebound` 是本帧节点变化（重建的树记 rebound，不记幽灵位移） |
 | 5 | **F12 冻结成立** | **通过**：`manual-ticks` 停在 2103、两处 delta 归零 | —— |
 | 6 | **泊深傀儡产出最终输出（阻断项）** | **不通过**：`num-anim-bones=0`、pose 轨 `num-data=0 reason=pose-empty`（2103 次推图只动 2 根骨） | **本轮 NUM1 → `held-pinned` 就是回答它的实验**：若 `num-data` 变 116、`num-anim-bones` 变 116 → 空输出是泊位（cull 停用图）造成的；若仍为 0 → 傀儡的图根本不产出，路线需换前提 |
 | 7 | **显示侧取景机制（AFP2 前置）** | 未测（首版无该行） | `accumulator-is-ui3d=1` → 走"相机适配"；`=0` → draw 窗口内临时改根变换并恢复 |

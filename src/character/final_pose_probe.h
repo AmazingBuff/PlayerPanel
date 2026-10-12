@@ -304,6 +304,11 @@ public:
 
     // The mark control: the next rendered frame takes one read-only sample of both subjects.
     void request_mark();
+    // A0: call once per rendered frame inside the render bracket BEFORE the drivers tick. The mark
+    // then holds the frame's state as the engine left it, so the report taken after the tick (A1) can
+    // say whether this frame's manual tick is what changed the output - which no cross-mark delta can
+    // separate from the engine having run in between (R02 asks for exactly this pair).
+    void sample_before_tick();
     // Call once per rendered frame inside the render bracket, after the drivers have ticked, so the
     // sample sees the frame the panel is about to draw.
     void tick(bool a_paused);
@@ -328,6 +333,21 @@ private:
         // calibration against a frozen tree measures nothing, and the reader has to see that on the
         // same line as the number it qualifies.
         std::uint32_t nodes_moved = 0;
+    };
+
+    // A0's own sample. It reads the same two arrays the report reads but keeps them separately, so
+    // the report path stays exactly as it was measured and the pair can only ever be compared, never
+    // confused. `reason` is the pose track's own verdict per buffer.
+    struct PreSample
+    {
+        bool valid = false;
+        bool paused = false;
+        std::vector<PoseSample> pose[2];
+        std::vector<BoneState> bones;
+        void const* output[2] = { nullptr, nullptr };
+        std::int32_t pose_count[2] = { 0, 0 };
+        char const* reason[2] = { "not-read", "not-read" };
+        std::uint32_t bones_present = 0;
     };
 
     // One (index order, output slot) reading of the calibration: which order and buffer it was, plus
@@ -360,6 +380,12 @@ private:
     FinalPoseProbe() = default;
 
     void subject(char const* a_label, RE::TESObjectREFR* a_subject, SubjectState& a_state);
+    // A0's sampler: output buffers and node locals, nothing printed.
+    PreSample sample_only(RE::TESObjectREFR* a_subject);
+    // The A0 -> A1 pair for one subject: what this frame's tick changed, in the output and in the
+    // nodes, with the same identity rule the mark deltas use (a rebuilt tree reports rebound, never a
+    // phantom move).
+    void report_frame_delta(char const* a_label, PreSample const& a_pre, SubjectState const& a_now);
     // The order calibration: every candidate (order x output slot) is scored against the node locals
     // the engine itself wrote, one log line each, and the best of them is judged by
     // `decide_pose_order` - the same call the application stage makes, so the log says whether that
@@ -368,6 +394,8 @@ private:
 
     SubjectState m_puppet;
     SubjectState m_player;
+    PreSample m_puppet_pre;
+    PreSample m_player_pre;
     std::atomic_bool m_mark_requested{ false };
     std::uint32_t m_marks = 0;
 };

@@ -77,6 +77,9 @@ namespace
                 PuppetProbe::instance().tick();
 #endif
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+                // AFP1: A0 is taken before anything advances this frame, so the report after the
+                // drivers ticked can say whether our own tick is what moved the output (R02).
+                FinalPoseProbe::instance().sample_before_tick();
                 // The scheduler's data source: lifecycle pump, and while the panel pauses the
                 // world this frame also drives the puppet's graph on the studio clock.
                 PuppetDriver::instance().tick(paused);

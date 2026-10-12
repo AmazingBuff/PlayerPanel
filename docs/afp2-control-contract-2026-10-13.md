@@ -27,12 +27,12 @@
 
 | 点 | 记录内容 | 实现位置 |
 | --- | --- | --- |
-| **A0 推图前** | frame／update 序号、P 与根／generation、UI paused、累计时间、输出摘要（`generatorOutputs` 两槽的身份与 `num-data`）、节点当前姿态摘要 | 标记处理的开头（`PuppetDriver::tick` 之前） |
-| **A1 求值后** | 最终输出阶段／数组身份、骨表身份、内容副本与摘要、活动 clip／权重／相位（**仅诊断，clip 不是显示输入**） | 手动 tick 之后、应用之前 |
-| **A2 应用后** | 逐骨 local／world、helper／根处理、应用与缺失骨数量、必要后代与包围盒、`decide` 结论 | apply 阶段内部（写入前后各一读） |
-| **A3 物理后** | 后端状态／任务完成、物理输出节点；首轮物理关闭时明确写 `skipped` | R08 之前固定打 `skipped` |
-| **A4 pass 前** | 同一节点与实际 geometry／skin／palette、图与 generation 是否仍有效、覆盖与路由 | `draw_figure_passes` 的 `before_pass` 回调 |
-| **A5 draw 后** | 实际 draw 数、蒙皮准备后的观测、画面时间标记、图与渲染状态恢复结果 | `draw_figure_passes` 的 `after_batch` 回调 ＋ 收尾 |
+| **A0 推图前** | frame／update 序号、P 与根／generation、UI paused、累计时间、输出摘要（`generatorOutputs` 两槽的身份与 `num-data`）、节点当前姿态摘要 | **已实现**：渲染括号内、驱动 tick **之前**（`FinalPoseProbe::sample_before_tick`），打 `SCOPY FP A0` |
+| **A1 求值后** | 最终输出阶段／数组身份、骨表身份、内容副本与摘要、活动 clip／权重／相位（**仅诊断，clip 不是显示输入**） | **已实现**：tick 之后的全套 `SCOPY FP` 报告 ＋ **`A0A1` 帧内配对**（同一帧 A0 vs A1；`pose0/1`、`nodes-moved`、`nodes-rebound`） |
+| **A2 应用后** | 逐骨 local／world、helper／根处理、应用与缺失骨数量、必要后代与包围盒、`decide` 结论 | apply 阶段内部（写入前后各一读） | 
+| **A3 物理后** | 后端状态／任务完成、物理输出节点；首轮物理关闭时明确写 `skipped` | **已实现**：每个标记打 `SCOPY FP A3 physics=skipped reason=first-round-physics-off` |
+| **A4 pass 前** | 同一节点与实际 geometry／skin／palette、图与 generation 是否仍有效、覆盖与路由 | `draw_figure_passes` 的 `before_pass` 回调（缝已就位，等 Actor 直绘接线） |
+| **A5 draw 后** | 实际 draw 数、蒙皮准备后的观测、画面时间标记、图与渲染状态恢复结果 | `draw_figure_passes` 的 `after_batch` 回调（同上） |
 
 **A2→A4 的一致性只证明"输出没被覆盖"**，不证明动画来源正确——动画正确性另由 R03 的正常引擎参考与 R05 的状态／混合验收（测试单原文），这条不许在本包里被简化。
 
