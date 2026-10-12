@@ -34,10 +34,16 @@ F8 (draw it), while its old F2 idle / F3 rotate / F4 release bindings are gone.
 
   F2   mark: one read-only sample of the same-Actor forensics (see "Same-Actor
        final output (AFP1)" below). Changes nothing anywhere.
-  F3   drive: off -> tick -> tick+apply -> step -> off. "off" is freeze-all - no
+  F3   drive: off -> tick -> tick+apply -> tick+apply+force -> step -> off.
+        "off" is freeze-all - no
        graph tick on the panel's clock and no pose written. "tick" advances the
        puppet's own behaviour graph on the panel's clock. "tick+apply" also
        writes the graph's final output pose into the puppet's skeleton.
+        "tick+apply+force" is the same push and the same write, except that the
+        update block asks for hkbGenerator::generate() on every frame instead of
+        letting the engine skip some: the two adjacent states are an A/B of that
+        one field, and one session then separates "the pose was skipped" from
+        "the graph cannot generate" (see AFP3 below).
        "step" is a one-shot: exactly one declared dt (1/60 s) and one
        application, then the state falls back to off. One key carries R02's
        push/freeze control, R04's A/B pair and single-step, because this setup
@@ -86,6 +92,60 @@ could not resolve to a bone table entry - a name the engine's table does not
 carry is counted, never silently dropped. `blocked=matched|verified` means the
 stage is allowed to write; any other value names the condition that stopped it.
 
+AFP3: why the paused output is empty, and the one field that decides it
+
+Two rounds of forensics said the same thing from opposite ends: while the panel pauses the world the
+puppet's output pose is empty (numAnimBones 0, zero elements) and its poseLocal does not move with our
+clock either; while the world runs and the puppet stands at the player the same graph carries 98
+elements. Reading the engine's update chain from the sources that hook it names the missing piece:
+
+  Actor::UpdateAnimation(dt) [vtable 0x7D] -> UpdateAnimationGraphManager [id 32899] ->
+  BSAnimationGraphManager frame function [id 63358] ->
+  BShkbAnimationGraph::UpdateAnimation(graph, updateData, a3) ->
+  hkbBehaviorGraph::Update [vtable 0x5] and, unless the frame is skipped,
+  hkbBehaviorGraph::Generate [vtable 0x17]
+
+UpdateAnimation is allowed to generate a pose on some frames and interpolate between the two output
+buffers on others (generatorOutputs[2] plus interpolationAmounts[2], and the [Animation] INI block's
+fAnimInterpNearDist/FarDist pair). The update block it reads carries the flag that forbids the skip -
+documented in Precision, which hooks that very function, as "forces animation update
+(hkbGenerator::generate()) without skipping frames" (Precision/src/Hooks.cpp:583, struct field
+BShkbAnimationGraph_UpdateData::unk2A = BSAnimationUpdateData::unk2A). "Clip time advances, no pose
+is produced" is precisely the signature of a skipped generate, and that is what the previous rounds
+measured - while OUR call passed a block with every field except deltaTime and refr zeroed.
+
+F3's tick+apply+force state sets that flag and also supplies the two inputs the engine always fills
+and we never did: the camera position (the translation inside the WorldRoot camera's world transform)
+and the Actor's own IPostAnimationChannelUpdateFunctor. Nothing else changes, so with the pause held
+and the placement fixed the two adjacent F3 states answer which of these it is:
+
+   pose appears only with force=on   -> the pose was being skipped; the route needs this flag (and
+                                        the engine's evaluation was never the problem);
+   pose stays empty either way       -> the graph cannot generate in this state; the next question is
+                                        the graph's own state, which the mark now prints.
+
+Every mark also prints that state, for the puppet AND for the player, so the difference between the
+subject whose output survives the pause and the one whose does not is on the record:
+
+   SCOPY FP state subject=... bhv=0x.. bhv-readable=0|1 is-active=0|1|-1 is-linked=...
+         update-active-nodes=... state-changed=... static-nodes=... interm-outputs=...
+         active-nodes=0x.. node-clones=N root-generator=0x.. user-data=0x.. anim-bones=N
+         interp=(x,y) fade-controllers=N do-foot-ik=N holder=0x.. root-node=0x..
+   SCOPY FP raw subject=... what=anim-graph|behavior-graph|character off=0x.. <hex bytes>
+
+is-active is hkbBehaviorGraph::isActive (+0x12C): 0 means the graph was deactivated, which is a
+different answer from "nobody called generate", and the two need different fixes. interp is
+BShkbAnimationGraph::interpolationAmounts: two buffers mid-blend is what a skipped generate looks
+like from outside. The aw lines print the fields no source names yet, because a flag nobody has
+documented is exactly the kind of difference a named field read will miss.
+
+Engine image dump (automatic, once per process)
+
+The shipped SkyrimSE.exe is Steam-wrapped: its .text is encrypted on disk and only the running process
+holds it as code, so this build writes that section once - next to the plugin log, as
+CharacterPanel-engine-text.bin plus a .txt sidecar with the resolved anchors and vtables - and logs
+both paths. It is read-only with respect to the engine and it makes engine code readable offline for
+every later question (tools/re/engine_scan.py reads the pair). Nothing about the panel depends on it.
 Same-Actor final output (AFP1)
 
 This round opens the route PRD 0.9 section 6.6 describes; it does not implement it yet. That route

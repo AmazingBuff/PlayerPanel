@@ -11,6 +11,8 @@
 #include "RE/B/BSFadeNode.h"
 #include "RE/I/IAnimationGraphManagerHolder.h"
 #include "RE/A/ActorEquipManager.h"
+#include "RE/M/Main.h"
+#include "RE/N/NiCamera.h"
 #include "RE/P/PlayerCharacter.h"
 #include "RE/T/TESObjectREFR.h"
 
@@ -123,6 +125,20 @@ void PuppetDriver::request_step()
     m_step_requested.store(true, std::memory_order_release);
 }
 
+void PuppetDriver::set_force_generate(bool a_enabled)
+{
+    if (m_force_generate.exchange(a_enabled, std::memory_order_acq_rel) == a_enabled)
+        return;
+    // The update block is logged when it changes, so the log says which inputs the engine got on the
+    // frames whose pose it is about to report.
+    m_data_logged = false;
+    logger::info("SCOPY PUPPET force-generate {} ({})",
+        a_enabled ? "on" : "off",
+        a_enabled
+            ? "every tick asks UpdateAnimation for hkbGenerator::generate() and the skip is bypassed"
+            : "the engine's own skip decides on which frames this tick produces a pose");
+}
+
 char const* PuppetDriver::placement_name(Placement a_placement)
 {
     return a_placement == Placement::e_parked_deep ? "parked-deep" : "held-pinned";
@@ -231,9 +247,29 @@ void PuppetDriver::tick(bool paused)
     m_last_tick = now;
     step = std::clamp(step, 0.0f, Max_Manual_Step);
 
+    // AFP3: the engine calls this same entry point every frame with a block it filled itself, and
+    // three of the inputs ours left zero are real inputs to the update: the camera position (the
+    // translation inside the WorldRoot camera's world transform - Precision/src/Havok/Havok.h:238),
+    // this Actor's own post-animation functor (+0x20, Actor+0xE0 on AE), and `unk2A`, the flag that
+    // forbids the frame-skip around hkbGenerator::generate(). Supplying them is what makes our tick
+    // comparable to the engine's; F3's force state is what makes `unk2A` an A/B rather than a guess.
     RE::BSAnimationUpdateData update{};
     update.deltaTime = step;
     update.refr = puppet;
+    if (RE::NiCamera* const camera = RE::Main::WorldRootCamera(); camera && readable(camera, sizeof(RE::NiAVObject)))
+        update.optionalEyePosition = std::addressof(camera->world.translate);
+    update.updateFunctor = puppet->AsIPostAnimationChannelUpdateFunctor();
+    update.unk2A = force_generate();
+    if (std::exchange(m_data_logged, true) == false)
+    {
+        logger::info("SCOPY PUPPET update-data delta-time={:.4f} refr={:08x} camera=0x{:x} functor=0x{:x} flags=0x{:x} force-generate={}",
+            update.deltaTime,
+            update.refr ? update.refr->GetFormID() : 0,
+            reinterpret_cast<std::uintptr_t>(update.optionalEyePosition),
+            reinterpret_cast<std::uintptr_t>(update.updateFunctor),
+            static_cast<std::uint32_t>(update.flags),
+            update.unk2A ? 1 : 0);
+    }
     puppet->UpdateAnimationGraphManager(update);
     ++m_manual_ticks;
 

@@ -64,6 +64,15 @@ public:
     // dt" without a fourth key.
     void set_tick_enabled(bool a_enabled);
     void request_step();
+
+    // AFP3: the engine's per-frame call into `BShkbAnimationGraph::UpdateAnimation` may generate a
+    // pose or skip one; the update block carries the flag that forbids the skip ("forces animation
+    // update (hkbGenerator::generate()) without skipping frames" - Precision/src/Hooks.cpp:583, which
+    // hooks that very function). Ours left the whole block zeroed, and a live graph with an empty
+    // output pose is exactly what a skipped generate looks like, so F3's force state sets it and the
+    // adjacent state does not: the two are an A/B of this one field.
+    void set_force_generate(bool a_enabled);
+    [[nodiscard]] bool force_generate() const { return m_force_generate.load(std::memory_order_acquire); }
     [[nodiscard]] std::uint32_t manual_ticks() const { return m_manual_ticks; }
 
     // AFP1's other finding needs a lever: the parked puppet's behaviour graph generates an output
@@ -98,12 +107,18 @@ private:
     // One declared step, consumed by the next paused frame even when the gate is closed. The declared
     // dt is a constant rather than "however long the key was held": R00 fixes it before shipping.
     std::atomic_bool m_step_requested{ false };
+    // AFP3: whether the manual tick asks for a generate on every frame instead of letting the engine
+    // skip. Set only by F3's force state.
+    std::atomic_bool m_force_generate{ false };
     std::atomic<Placement> m_placement{ Placement::e_parked_deep };
     RE::NiPointer<RE::TESObjectREFR> m_puppet;
     std::uint32_t m_puppet_form_id = 0;
     std::uint32_t m_grace_frames = 0;
     std::uint32_t m_repark_frames = 0;
     std::uint32_t m_manual_ticks = 0;
+    // AFP3: the update block is logged once, and again whenever the force flag changes, so the log
+    // carries the inputs the engine received on the frames whose pose it reports.
+    bool m_data_logged = false;
     std::uint32_t m_stall_frames = 0;
     bool m_stall_logged = false;
     // HKX39: the tier-2 A/B fires on each switch, delayed past the blend's settle window. With

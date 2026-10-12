@@ -9,6 +9,7 @@
 #include "render/studio/light.h"
 #include "character/puppet_driver.h"
 #include "character/scene_graph_copy.h"
+#include "diagnostics/engine_image.h"
 #include "input/input.h"
 
 namespace
@@ -40,6 +41,9 @@ namespace
         switch (message->type)
         {
         case SKSE::MessagingInterface::kDataLoaded:
+            // Once per process, while the loading screen still covers the frame cost: the engine's own
+            // code section, which exists as code only inside this process.
+            PLUGIN_NAMESPACE::EngineImage::dump_once();
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
             PLUGIN_NAMESPACE::Renderer::install();
             PLUGIN_NAMESPACE::PanelMonitor::instance().install();

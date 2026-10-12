@@ -479,6 +479,14 @@ private:
     FinalPoseProbe() = default;
 
     void subject(char const* a_label, RE::TESObjectREFR* a_subject, SubjectState& a_state);
+    // What the graph itself says about the frame the census counted, which the pose report cannot see:
+    // whether the behaviour graph is active at all (a deactivated one generates nothing however often
+    // it is ticked), whether it is linked, how many node clones it carries, and how far the engine has
+    // interpolated between its two output buffers. The paused puppet's empty pose is the whole
+    // question AFP3 was opened for, and "deactivated" / "never generated" / "generated and consumed"
+    // are three different answers - so the state that separates them is printed rather than inferred
+    // from an element count, and the fields no source names yet are printed raw.
+    void report_state(char const* a_label, RE::BShkbAnimationGraph const& a_graph, RE::hkbCharacter const* a_character);
     // A0's sampler: output buffers and node locals, nothing printed.
     PreSample sample_only(RE::TESObjectREFR* a_subject);
     // The A0 -> A1 pair for one subject: what this frame's tick changed, in the output and in the

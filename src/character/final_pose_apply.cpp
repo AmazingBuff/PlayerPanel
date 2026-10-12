@@ -99,6 +99,8 @@ char const* FinalPoseApply::drive_name(Drive a_drive)
         return "tick";
     case Drive::e_tick_apply:
         return "tick+apply";
+    case Drive::e_tick_apply_force:
+        return "tick+apply+force";
     case Drive::e_step:
         return "step";
     }
@@ -116,6 +118,8 @@ void FinalPoseApply::cycle()
         case Drive::e_tick:
             return Drive::e_tick_apply;
         case Drive::e_tick_apply:
+            return Drive::e_tick_apply_force;
+        case Drive::e_tick_apply_force:
             return Drive::e_step;
         case Drive::e_step:
             return Drive::e_off;
@@ -128,21 +132,26 @@ void FinalPoseApply::cycle()
     // The gate the driver obeys. `step` leaves nothing running: it is a one-shot, so the driver stays
     // closed and the next paused frame advances exactly the declared dt.
     PuppetDriver& driver = PuppetDriver::instance();
-    driver.set_tick_enabled(next == Drive::e_tick || next == Drive::e_tick_apply);
+    const bool applying = next == Drive::e_tick_apply || next == Drive::e_tick_apply_force;
+    driver.set_tick_enabled(next == Drive::e_tick || applying);
+    driver.set_force_generate(next == Drive::e_tick_apply_force);
     if (next == Drive::e_step)
         driver.request_step();
 
     // A new drive state re-verifies: the mapping is a property of the Actor and its graph generation,
     // and an operator who has just changed the state is exactly who should see it checked again.
     m_verified = false;
-    m_blocked = next == Drive::e_tick_apply ? "verifying" : "not-armed";
+    m_blocked = applying ? "verifying" : "not-armed";
     m_step_pending = next == Drive::e_step;
 
-    logger::info("SCOPY AFP2 drive={} apply={} tick={} ({})",
+    logger::info("SCOPY AFP2 drive={} apply={} force-generate={} tick={} ({})",
         drive_name(next),
-        next == Drive::e_tick_apply ? "on" : "off",
+        applying ? "on" : "off",
+        next == Drive::e_tick_apply_force ? "on" : "off",
         driver.tick_enabled() ? "on" : "off",
-        next == Drive::e_step ? "one declared step, then frozen" : "F3 cycles off -> tick -> tick+apply -> step");
+        next == Drive::e_step
+            ? "one declared step, then frozen"
+            : "F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step");
 }
 
 void FinalPoseApply::block(char const* a_reason)
@@ -386,10 +395,9 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
 
 void FinalPoseApply::tick(bool a_paused)
 {
-    const Drive drive = this->drive();
-    // The step state runs exactly one frame of work; the continuous state runs every frame.
+    // The step state runs exactly one frame of work; the continuous states run every frame.
     const bool step_frame = m_step_pending;
-    if (drive != Drive::e_tick_apply && !step_frame)
+    if (!apply_enabled() && !step_frame)
         return;
 
     RE::Actor* const puppet = PuppetDriver::instance().actor();

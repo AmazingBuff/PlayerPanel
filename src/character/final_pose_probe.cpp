@@ -17,6 +17,7 @@
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/B/BSVisit.h"
 #include "RE/H/hkaSkeleton.h"
+#include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbCharacter.h"
 #include "RE/H/hkbCharacterSetup.h"
 #include "RE/M/Main.h"
@@ -708,6 +709,66 @@ void FinalPoseProbe::tick(bool a_paused)
     m_player_pre = PreSample{};
 }
 
+void FinalPoseProbe::report_state(char const* a_label, RE::BShkbAnimationGraph const& a_graph, RE::hkbCharacter const* a_character)
+{
+    constexpr std::size_t raw_row = 16;
+
+    RE::hkbBehaviorGraph* const behavior = a_graph.behaviorGraph;
+    const bool behavior_readable = behavior && readable(behavior, sizeof(RE::hkbBehaviorGraph));
+
+    logger::info("SCOPY FP state subject={} bhv=0x{:x} bhv-readable={} is-active={} is-linked={} update-active-nodes={} state-changed={} static-nodes={} interm-outputs={} active-nodes=0x{:x} node-clones={} root-generator=0x{:x} user-data=0x{:x} anim-bones={} interp=({:.3f},{:.3f}) fade-controllers={} do-foot-ik={} holder=0x{:x} root-node=0x{:x}",
+        a_label,
+        reinterpret_cast<std::uintptr_t>(behavior),
+        behavior_readable ? 1 : 0,
+        behavior_readable ? static_cast<std::int32_t>(behavior->isActive) : -1,
+        behavior_readable ? static_cast<std::int32_t>(behavior->isLinked) : -1,
+        behavior_readable ? static_cast<std::int32_t>(behavior->updateActiveNodes) : -1,
+        behavior_readable ? static_cast<std::int32_t>(behavior->stateOrTransitionChanged) : -1,
+        behavior_readable ? static_cast<std::int32_t>(behavior->numStaticNodes) : -1,
+        behavior_readable ? behavior->numIntermediateOutputs : -1,
+        reinterpret_cast<std::uintptr_t>(behavior_readable ? behavior->activeNodes : nullptr),
+        behavior_readable && behavior->activeNodes && readable(behavior->activeNodes, sizeof(RE::NodeList))
+            ? static_cast<std::uint32_t>(behavior->activeNodes->size())
+            : 0u,
+        reinterpret_cast<std::uintptr_t>(behavior_readable ? behavior->rootGenerator.get() : nullptr),
+        static_cast<std::uintptr_t>(behavior_readable ? behavior->userData : 0),
+        static_cast<std::uint32_t>(a_graph.numAnimBones),
+        a_graph.interpolationAmounts[0],
+        a_graph.interpolationAmounts[1],
+        static_cast<std::uint32_t>(a_graph.fadeControllers.size()),
+        static_cast<std::uint32_t>(a_graph.doFootIK),
+        reinterpret_cast<std::uintptr_t>(a_graph.holder),
+        reinterpret_cast<std::uintptr_t>(a_graph.rootNode));
+
+    // The bytes no source has named yet, printed rather than guessed at: the graph's flag tail (the
+    // two unknown words and six unknown bytes after numAnimBones), the behaviour graph's lifecycle
+    // tail, and the character's LOD fields with the padding that sits beside them.
+    auto const raw = [a_label, raw_row](char const* what, void const* base, std::size_t offset, std::size_t size)
+    {
+        auto const* const start = static_cast<std::uint8_t const*>(base) + offset;
+        if (!readable(start, size))
+        {
+            logger::info("SCOPY FP raw subject={} what={} off=0x{:x} UNAVAILABLE reason=unreadable", a_label, what, offset);
+            return;
+        }
+
+        for (std::size_t row = 0; row < size; row += raw_row)
+        {
+            const std::size_t count = std::min(raw_row, size - row);
+            std::string bytes;
+            for (std::size_t index = 0; index < count; ++index)
+                bytes += fmt::format("{:02x} ", start[row + index]);
+            logger::info("SCOPY FP raw subject={} what={} off=0x{:x} {}", a_label, what, offset + row, bytes);
+        }
+    };
+
+    raw("anim-graph", &a_graph, 0x238, 0x18);
+    if (behavior_readable)
+        raw("behavior-graph", behavior, 0x118, 0x18);
+    if (a_character && readable(a_character, sizeof(RE::hkbCharacter)))
+        raw("character", a_character, 0x18, 0x18);
+}
+
 void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, SubjectState& a_state)
 {
     if (!a_subject || !readable(a_subject, sizeof(RE::TESObjectREFR)))
@@ -767,6 +828,8 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
         character ? character->currentLOD : -1,
         skeleton && skeleton->name.c_str() ? skeleton->name.c_str() : "",
         skeleton ? skeleton->bones.size() : 0);
+
+    report_state(a_label, *graph, character);
 
     report_figure(a_label, *a_subject);
     report_geometry(a_label, *a_subject);
