@@ -15,10 +15,6 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
-    // Rotate and release are quiet commands, so a press that never reaches them is
-    // otherwise indistinguishable from a dropped key; log the first few presses only.
-    uint32_t Rotate_Key_Log_Remaining = 5;
-
     class InputHandler final : public RE::BSTEventSink<RE::InputEvent*>
     {
     public:
@@ -47,33 +43,27 @@ namespace
                     SceneGraphCopy::instance().request(Command::e_capture);
                 else if (scan == MapVirtualKeyA(VK_F8, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_toggle_draw);
-                else if (scan == MapVirtualKeyA(VK_F3, MAPVK_VK_TO_VSC))
-                {
-                    if (Rotate_Key_Log_Remaining != 0)
-                    {
-                        logger::info("SCOPY KEY rotate pressed (VK_F3 -> scan {})", scan);
-                        --Rotate_Key_Log_Remaining;
-                    }
-                    SceneGraphCopy::instance().request(Command::e_rotate);
-                }
-                else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
-                    SceneGraphCopy::instance().request(Command::e_release);
+                // The AFP route's controls, on the three keys this setup can spare: F2/F3/F4. The
+                // scene-copy route's rotate, release and idle toggle gave those keys up for them (F7
+                // still re-captures, which releases the previous copy), and the earlier choices were
+                // wrong for their own reasons - F5 is the game's quicksave, and this sink does not
+                // consume input, while F11/F12 and NUMPAD1 were tried and are not wanted either.
+                //
+                //   F2  mark: one read-only forensic sample (A0/A1, the calibration, the camera and
+                //       geometry lines). Changes nothing.
+                //   F3  drive: off -> tick -> off. "off" is freeze-all (no graph tick, no pose);
+                //       "tick" advances the puppet's graph on the panel clock. When the application
+                //       stage lands this becomes off -> tick -> tick+apply, which is R04's A/B pair
+                //       and R02's push/freeze control on one key.
+                //   F4  placement: parked-deep <-> held-pinned. AFP1 measured the parked puppet's
+                //       output pose as empty (track live, zero elements, numAnimBones 0) while the
+                //       player's carried 116, so this is the one variable that isolates why: out of
+                //       the engine's animation scope versus standing at the player, fade pinned.
                 else if (scan == MapVirtualKeyA(VK_F2, MAPVK_VK_TO_VSC))
-                    SceneGraphCopy::instance().request(Command::e_idle_toggle);
-                // AFP1 (PRD 0.9 section 6.6) controls, on the keys the earlier rounds left free: F11
-                // marks the final-output sample and F12 freezes or resumes the panel's manual graph
-                // tick. F5 was the first choice and is wrong - the game's own quicksave owns it, and
-                // this sink does not consume input. Both controls are read-only with respect to the
-                // Actor, its graph and the source.
-                else if (scan == MapVirtualKeyA(VK_F11, MAPVK_VK_TO_VSC))
                     FinalPoseProbe::instance().request_mark();
-                else if (scan == MapVirtualKeyA(VK_F12, MAPVK_VK_TO_VSC))
+                else if (scan == MapVirtualKeyA(VK_F3, MAPVK_VK_TO_VSC))
                     PuppetDriver::instance().toggle_tick();
-                // Numpad 1: cycle the puppet's placement. AFP1 measured the parked puppet's output
-                // pose as empty (track live, zero elements, numAnimBones 0), and this is the one
-                // variable that isolates why - parked out of the engine's animation scope versus
-                // standing at the player with the fade pinned.
-                else if (scan == MapVirtualKeyA(VK_NUMPAD1, MAPVK_VK_TO_VSC))
+                else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
                     PuppetDriver::instance().cycle_placement();
 #if CHARACTER_PANEL_S2_PROBE
                 // Diagnostic build only: F6 is taken by another plugin in the usual setup, so the

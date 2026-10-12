@@ -14,6 +14,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <span>
 #include <string_view>
 #include <unordered_map>
@@ -83,6 +84,28 @@ struct OrderScore
 [[nodiscard]] inline RE::NiPoint3 pose_position(PoseSample const& a_sample)
 {
     return RE::NiPoint3{ a_sample.position[0], a_sample.position[1], a_sample.position[2] };
+}
+
+// One pose sample as plain numbers, read out of the engine's SSE quads with memcpy rather than with
+// an aligned vector load. It reads the same three quads `read_pose` (animation_source.h) does, but
+// this one is pointed at engine memory whose offset and alignment are exactly what the validation
+// chain establishes - a misaligned load would fault inside the instrument that exists to turn a wrong
+// assumption into a printed number.
+[[nodiscard]] inline PoseSample read_pose_unaligned(RE::hkQsTransform const& a_pose)
+{
+    float raw[12];
+    std::memcpy(raw, &a_pose, sizeof(raw));
+
+    PoseSample sample{};
+    sample.position[0] = raw[0];
+    sample.position[1] = raw[1];
+    sample.position[2] = raw[2];
+    sample.quaternion[0] = raw[4];
+    sample.quaternion[1] = raw[5];
+    sample.quaternion[2] = raw[6];
+    sample.quaternion[3] = raw[7];
+    sample.scale = raw[8];
+    return sample;
 }
 
 // The local transform one pose sample implies, in the convention this codebase measured (HKX2:
@@ -278,6 +301,10 @@ struct OutputTrackView
 // output object, tracks blob, track header, element size, data span - validated.
 [[nodiscard]] bool read_pose_track(RE::BShkbAnimationGraph& a_graph, int a_slot, OutputTrackView& a_view,
     RE::hkQsTransform const*& a_pose, std::int32_t& a_count);
+
+// The character's third-person graph: the one whose holder is that character and which has a root
+// node. Shared by the instrument and the application stage so both read the same graph the same way.
+[[nodiscard]] RE::BShkbAnimationGraph* find_third_person_graph(RE::TESObjectREFR& a_subject);
 
 // AFP1 (PRD 0.9 section 6.6): the first instrument of the same-Actor route.
 //

@@ -1,4 +1,4 @@
-# S2 动画：HKX／引擎动画路线侦察与下一工作包（下一个会话从这里开始）
+﻿# S2 动画：HKX／引擎动画路线侦察与下一工作包（下一个会话从这里开始）
 
 > **当前验证方向（2026-10-12，用户讨论后，仅更新方案文档）**：按 [PRD 0.9 §6.6](player-panel-prd.md) 和
 > [同 Actor 最终姿态测试单](actor-final-pose-validation-2026-10-12.md) 准备独立诊断包：保留傀儡 Actor 与其 3D，
@@ -7,8 +7,8 @@
 > 部分样本匹配、读档重新出生不代表通用映射或实际回收通过。
 >
 > **AFP1 已上机并出判读（2026-10-13）= 该路线的第一个仪器轮（只读，未写骨架）**：HKX44 按用户决定
-> **不再上机**。新模块 `src/character/final_pose_probe.{h,cpp}`：**F11** 取一份只读取证、
-> **F12** 推图开／关、**NUM1** 放置模式切换。判读全文见 [AFP1 判读](afp1-verdict-2026-10-13.md)，
+> **不再上机**。新模块 `src/character/final_pose_probe.{h,cpp}`：**F2** 取一份只读取证、
+> **F3** 推图开／关、**F4** 放置模式切换。判读全文见 [AFP1 判读](afp1-verdict-2026-10-13.md)，
 > 三句话：
 > ①**最终输出读得到**——玩家侧 pose 轨 `reason=ok`、`num-data=cap=116`、`elem=48`、数据在 `tracks+448`，
 > 且**活缓冲必须按内容识别**（`valid=1/num-data>0`）：六次标记里活的那个都在 slot 0，但两个缓冲对象的
@@ -19,8 +19,8 @@
 > ③**阻断项：泊深傀儡的输出是空的**——`num-anim-bones=0`、pose 轨 `num-data=0 reason=pose-empty`，
 > 2103 次手动推图只动了 2 根骨（0.040°），而玩家同期 116。泊位（v6.25）把傀儡移出了引擎的动画作用域，
 > 代价到这一轮才被量出来；**这也收紧了 HKX42 的"暂停期 node-local 冻结"**：不只是不传播，是根本没有输出。
-> **为此新增 `NUM1`**：`parked-deep` ↔ `held-pinned`（站玩家处、fade 钉 0.05、留在作用域内），标记行打印
-> `placement=`。下一会话只需几次 F11 就能判定空输出是不是泊位造成的。**当前部署 = `c6d5e6f6…`
+> **为此新增 `F4`**：`parked-deep` ↔ `held-pinned`（站玩家处、fade 钉 0.05、留在作用域内），标记行打印
+> `placement=`。下一会话只需几次 F2 就能判定空输出是不是泊位造成的。**当前部署 = `c6d5e6f6…`
 > （`…T140304Z`）**，含 `camera`/`figure` 行、`verdict match=/reason=`、`pose-empty` 独立 reason 与放置杠杆；
 > 首版 `07bb8ff4…`（判读来源）与 `5fa5d1f2…` 都在 `dist/` 下。测试单
 > [AFP1](scene-copy-afp1-final-output-test-2026-10-13.md)；包 `dist/CharacterPanel-scopy-AFP1-1.2.1.zip`。

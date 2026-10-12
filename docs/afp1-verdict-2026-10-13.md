@@ -1,9 +1,9 @@
-# AFP1 判读（2026-10-13）：最终输出读得到；**但泊深傀儡根本不产出姿态**
+﻿# AFP1 判读（2026-10-13）：最终输出读得到；**但泊深傀儡根本不产出姿态**
 
 - 包：`CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z`，DLL SHA-256 `07bb8ff4…`（上机中的那一版）。
 - 日志：`docs/diagnostics/CharacterPanel-afp1-final-output-20261012.log`（21:54:26 启动，228 行；6 次标记、零崩溃、零 `[E]`，
   只有两条已知的灯光账本 warn）。
-- 上机动作（按日志顺序）：F11 ×6（mark 1–6），其中 mark 1–2 为世界期、mark 3–4 暂停且推图开、mark 5–6 暂停且 F12 冻结推图。
+- 上机动作（按日志顺序）：F2 ×6（mark 1–6），其中 mark 1–2 为世界期、mark 3–4 暂停且推图开、mark 5–6 暂停且 F3 冻结推图。
 
 ## 1. 读得到：pose 轨的完整身份（玩家，6 次标记恒定）
 
@@ -53,8 +53,8 @@ slot=1 tracks=21 on-tracks=[-]                   exists=1 valid=0 type=1 flags=0
   **泊深的傀儡连最终输出都没有**。
 - 机制候选（待测，不再靠推断）：泊位把它移出了引擎的动画作用域（culled → 图被停用 → `numAnimBones=0` → 无 generate）。
   v6.25 的泊位是为"世界里看不见/摸不到"设计的，代价现在才被量出来。
-- **因此本轮新增杠杆**：`小键盘 1` 在 `parked-deep`（现状）与 `held-pinned`（站在玩家处、fade 钉在 0.05、
-  引擎动画作用域内）之间切换；标记行新增 `placement=`。下一会话只需按几次 F11，就能判定"空输出"是不是泊位造成的。
+- **因此本轮新增杠杆**：`F4` 在 `parked-deep`（现状）与 `held-pinned`（站在玩家处、fade 钉在 0.05、
+  引擎动画作用域内）之间切换；标记行新增 `placement=`。下一会话只需按几次 F2，就能判定"空输出"是不是泊位造成的。
 
 ## 4. 附带观测（记录，不结论）
 
@@ -62,7 +62,7 @@ slot=1 tracks=21 on-tracks=[-]                   exists=1 valid=0 type=1 flags=0
   4→5 `changed=55 max-rot=10.022°`、5→6 `changed=29 max-rot=0.069°`，节点侧同期 `changed=20`/`3`。
   HKX36 的 H05 普查曾判 O 的姿态"逐位冻结"，两者口径不同（那次量的是 `poseLocal` 与固定阈值，
   且以面板操作窗口为单位）。**在把任何一侧称为漂移之前，需要一次专门的对照读数**（同窗口、同数组、同阈值）。
-- 冻结（F12 off）后 `manual-ticks` 停在 2103 ✓，语义按设计工作。
+- 冻结（F3 off）后 `manual-ticks` 停在 2103 ✓，语义按设计工作。
 - 判读表第 9 条（零崩溃零回归）通过。
 
 ## 5. 下一轮（AFP1b）最小动作
@@ -71,7 +71,7 @@ slot=1 tracks=21 on-tracks=[-]                   exists=1 valid=0 type=1 flags=0
    Actor 自己的几何有没有 shader property、有没有设备侧 `rendererData`——runs 49-52 正是死在后者为 0），
    `order=` 行补 `beyond`／`max-scale`／`outliers=`（点名超差骨，上限 8），并新增 **`world` 行**（R03 的第二个空间：
    把姿态沿动画骨架自己的父表合成后与节点 world 比对——两级层级不一致才会在这一行露出来）。
-2. 会话内：世界期 F11 → 小键盘 1（held）→ 等装配窗 → F11 ×2；再小键盘 1（parked）→ F11 ×2。
+2. 会话内：世界期 F2 → F4（held）→ 等装配窗 → F2 ×2；再F4（parked）→ F2 ×2。
 3. 看四件事：held 下 `num-anim-bones` 与 `num-data` 是否变成 116；`verdict` 是否 `match=1`；
    `order=` 的 `outliers=` 点名的是哪几根骨、`world` 行是否仍然过；`geoms` 行的 `renderer-data` 是否非零；
    以及 `camera` 行的 `accumulator-is-ui3d`（显示侧取景判据）。

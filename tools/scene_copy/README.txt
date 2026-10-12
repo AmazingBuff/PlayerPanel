@@ -28,27 +28,22 @@ driver is implemented: a copy whose hair or cloth stays in the captured pose is
 expected, not a failure.
 
 Keys (pressed events only; no game input is consumed), with the inventory open
-and the game paused:
+and the game paused. Three keys, and the AFP route owns all of them: the
+scene-copy route keeps F7 (re-capture, which also releases the previous copy) and
+F8 (draw it), while its old F2 idle / F3 rotate / F4 release bindings are gone.
 
-  F7   release the old copy, then copy and audit the current third-person
-       graph. The load and main menus refuse the copy, and so does the world
-       with no inventory open.
-  F8   start or stop drawing the copy that passed the audit
-  F3   rotate the copy 90 degrees
-  F4   release the copy
-  F2   enable or disable the procedural idle (on by default once the copy is
-       drawn)
-  F11  AFP1: take one read-only mark of the same-Actor final-output forensics
-       (see "Same-Actor final output (AFP1)" below)
-  F12  AFP1: freeze or resume the panel's manual tick of the puppet's own
-       behaviour graph. This says nothing about the game's UI pause; it only
-       stops the panel from advancing that graph.
-  NUM1 AFP1: cycle the puppet's placement - parked deep below the player (the
-       default, out of the engine's animation scope) or held at the player with
-       the fade pinned near-invisible (inside it). AFP1 measured the parked
-       puppet's pose track as live but EMPTY (zero elements, numAnimBones 0)
-       while the player's carried 116, so this is the one variable that
-       isolates why; the mark line prints which placement was measured.
+  F2   mark: one read-only sample of the same-Actor forensics (see "Same-Actor
+       final output (AFP1)" below). Changes nothing anywhere.
+  F3   drive: off -> tick -> off. "off" is freeze-all - no graph tick on the
+       panel clock, no pose written. "tick" advances the puppet's own behaviour
+       graph on the panel's clock. When the application stage lands this becomes
+       off -> tick -> tick+apply, which is R02's push/freeze control and R04's
+       A/B pair on the same key.
+  F4   placement: parked-deep <-> held-pinned. The park is what hides the shell
+       from the world, and AFP1 measured the parked puppet's pose track as live
+       but EMPTY (zero elements, numAnimBones 0) while the player's carried 116 -
+       so this is the one variable that isolates whether the emptiness is the
+       park or the graph. The mark line prints which placement was measured.
 
 Same-Actor final output (AFP1)
 
@@ -66,7 +61,7 @@ and both are measured here, read-only:
      because the engine applied it during normal play and the manual route has to reproduce exactly
      that.
 
-Press F11 for one mark. A mark samples both the puppet and, as the reference, the player (whose
+Press F2 for one mark. A mark samples both the puppet and, as the reference, the player (whose
 graph the engine drives by itself), and writes nothing anywhere:
 
   SCOPY FP mark=N paused=0|1 tick=on|off manual-ticks=N placement=parked-deep|held-pinned
@@ -125,7 +120,7 @@ How to read it:
                        the two buffer objects themselves moved, so the live one is the one with
                        valid=1 / num-data>0. Both must be read and compared, never assumed.
   delta slot=...       what the pose in that buffer did since the previous mark. This is the line
-                       that answers "does our manual tick (F12 on) move the final output, and does
+                       that answers "does our manual tick (F3 on) move the final output, and does
                        freezing it stop the output": without it, an idle that holds still and an
                        output that is never written look the same.
   nodes subject=...    what the engine-applied node locals did since the previous mark. changed=0
@@ -186,18 +181,18 @@ How to read it:
 
 A reading that means something, in four presses:
 
-  1. In the running world (not paused) press F11. nodes-moved should be non-zero and the verdict
+  1. In the running world (not paused) press F2. nodes-moved should be non-zero and the verdict
      should name one order/slot with a high ratio: that is the engine's own answer on this machine
      and skeleton, and it is the reference every later step is judged against.
-  2. Open the paused inventory. Press F11 (baseline), wait a few seconds with F12 on, press F11
+  2. Open the paused inventory. Press F2 (baseline), wait a few seconds with F3 on, press F2
      again: delta slot=... changed>0 says the manual tick really does move the final output.
-  3. Press F12 (tick off), press F11, wait, press F11. Both the pose delta and the node delta should
+  3. Press F3 (tick off), press F2, wait, press F2. Both the pose delta and the node delta should
      be zero - a frozen graph, not a hidden one.
-  4. Press NUM1 (placement=held-pinned), wait for the assembly window, press F11 twice. This is the
+  4. Press F4 (placement=held-pinned), wait for the assembly window, press F2 twice. This is the
      measurement AFP1's empty puppet pose asks for: if the pose track's num-data turns 116 and
      num-anim-bones turns 116 here, the emptiness was the park (the engine does not animate what it
      has culled); if it stays 0, the puppet's graph never generates an output at all and the route
-     needs that answer instead. Press NUM1 again to go back to parked-deep - held means the shell
+     needs that answer instead. Press F4 again to go back to parked-deep - held means the shell
      stands next to the player (fade 0.05), which is diagnostic only.
   5. Return the whole block, plus whether the puppet was born at all (SCOPY PUPPET born ...).
 

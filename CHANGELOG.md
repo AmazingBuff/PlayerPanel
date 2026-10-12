@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Changed
+
+- Move the AFP route's controls onto the three keys this setup can actually spare: F2 marks, F3 is
+  the drive cycle, F4 cycles the placement. The earlier bindings were wrong or unwanted - F5 is the
+  game's own quicksave (and this sink does not consume input), F11/F12 and NUMPAD1 were tried and are
+  not wanted - and the scene-copy route gives up its old F2 idle / F3 rotate / F4 release bindings for
+  them, keeping F7 (re-capture, which releases the previous copy) and F8 (draw it). F3 is designed to
+  absorb the application stage rather than to need a fourth key: it becomes off -> tick -> tick+apply
+  -> step-once, which is R02's push/freeze control, R04's A/B pair and single-step on one key. The
+  control contract now also states what deliberately has no key - birth, display and equipment
+  mirroring are automatic, framing is a build-time preset, and physics and teardown belong to their
+  own gates - because a small, declared control surface is what R00 asks for, not a key per behaviour.
+
 ### Added
 
 - Tell the bones that block from the bones that do not. The calibration already names up to eight

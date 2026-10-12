@@ -65,25 +65,11 @@ namespace
         return begin + bytes <= end;
     }
 
-    // A copy of one pose sample as plain numbers. It reads the same three SSE quads `read_pose` in
-    // animation_source.h reads, but with memcpy: this one is pointed at engine memory whose offset
-    // and alignment are exactly what is being validated, and a misaligned vector load would fault
-    // inside the probe that exists to turn a wrong assumption into a printed number.
+    // A copy of one pose sample as plain numbers. The shared helper owns the layout and the
+    // unaligned-read reasoning; this name is what the sampling code here calls it by.
     PoseSample copy_pose(RE::hkQsTransform const& a_pose)
     {
-        float raw[12];
-        std::memcpy(raw, &a_pose, sizeof(raw));
-
-        PoseSample sample{};
-        sample.position[0] = raw[0];
-        sample.position[1] = raw[1];
-        sample.position[2] = raw[2];
-        sample.quaternion[0] = raw[4];
-        sample.quaternion[1] = raw[5];
-        sample.quaternion[2] = raw[6];
-        sample.quaternion[3] = raw[7];
-        sample.scale = raw[8];
-        return sample;
+        return read_pose_unaligned(a_pose);
     }
 
     float quat_angle_degrees(PoseSample const& a_first, PoseSample const& a_second)
@@ -131,22 +117,8 @@ namespace
         return live.empty() ? "-" : live;
     }
 
-    // The character's third-person graph: the one whose holder is that character and which has a root
-    // node. Same selection the animation-source round established, reused rather than re-guessed.
-    RE::BShkbAnimationGraph* third_person_graph(RE::TESObjectREFR& a_subject)
-    {
-        RE::BSAnimationGraphManagerPtr manager;
-        if (!a_subject.GetAnimationGraphManager(manager) || !manager)
-            return nullptr;
-        for (RE::BSTSmartPointer<RE::BShkbAnimationGraph> const& holder : manager->graphs)
-        {
-            RE::BShkbAnimationGraph* const graph = holder.get();
-            if (graph && graph->holder && graph->rootNode &&
-                static_cast<RE::TESObjectREFR*>(graph->holder) == &a_subject)
-                return graph;
-        }
-        return nullptr;
-    }
+    // The character's third-person graph moved to the shared helper (it is declared with the other
+    // shared reader in this header), so the application stage selects the same graph this reads.
 
     // Every node of the graph's own tree by exact name. The engine's boneNodes table does not list
     // every bone the animation skeleton names - the alignment round measured 37/116 shared order and
@@ -411,6 +383,21 @@ namespace
     }
 }
 
+RE::BShkbAnimationGraph* find_third_person_graph(RE::TESObjectREFR& a_subject)
+{
+    RE::BSAnimationGraphManagerPtr manager;
+    if (!a_subject.GetAnimationGraphManager(manager) || !manager)
+        return nullptr;
+    for (RE::BSTSmartPointer<RE::BShkbAnimationGraph> const& holder : manager->graphs)
+    {
+        RE::BShkbAnimationGraph* const graph = holder.get();
+        if (graph && graph->holder && graph->rootNode &&
+            static_cast<RE::TESObjectREFR*>(graph->holder) == &a_subject)
+            return graph;
+    }
+    return nullptr;
+}
+
 bool read_pose_track(RE::BShkbAnimationGraph& a_graph, int a_slot, OutputTrackView& a_view,
     RE::hkQsTransform const*& a_pose, std::int32_t& a_count)
 {
@@ -530,7 +517,7 @@ FinalPoseProbe::PreSample FinalPoseProbe::sample_only(RE::TESObjectREFR* a_subje
     if (!a_subject || !readable(a_subject, sizeof(RE::TESObjectREFR)))
         return sample;
 
-    RE::BShkbAnimationGraph* const graph = third_person_graph(*a_subject);
+    RE::BShkbAnimationGraph* const graph = find_third_person_graph(*a_subject);
     if (!graph || !readable(graph, sizeof(RE::BShkbAnimationGraph)))
         return sample;
 
@@ -687,7 +674,7 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
         return;
     }
 
-    RE::BShkbAnimationGraph* const graph = third_person_graph(*a_subject);
+    RE::BShkbAnimationGraph* const graph = find_third_person_graph(*a_subject);
     if (!graph || !readable(graph, sizeof(RE::BShkbAnimationGraph)))
     {
         logger::info("SCOPY FP subject={} form={:08x} UNAVAILABLE reason=no-third-person-graph",
