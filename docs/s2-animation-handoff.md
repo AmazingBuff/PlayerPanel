@@ -1,4 +1,4 @@
-﻿# S2 动画：HKX／引擎动画路线侦察与下一工作包（下一个会话从这里开始）
+# S2 动画：HKX／引擎动画路线侦察与下一工作包（下一个会话从这里开始）
 
 > **当前验证方向（2026-10-12，用户讨论后，仅更新方案文档）**：按 [PRD 0.9 §6.6](player-panel-prd.md) 和
 > [同 Actor 最终姿态测试单](actor-final-pose-validation-2026-10-12.md) 准备独立诊断包：保留傀儡 Actor 与其 3D，
@@ -13,9 +13,21 @@
 > delta、引擎已应用节点 local 的 delta、以及**两候选索引次序**（`boneNodes` vs 动画骨架，按名桥接）对节点 local
 > 的标定（≤1° 记 reproduces，门槛发包前定死）。**F12** = 推图开／关（R02 语义，冻结保持时钟新鲜）。**默认仍走
 > 旧显示链，本轮不写骨架、不摘图、不 Disable、不取 clip 重采样、不跑经验求解器。** 测试单
-> [AFP1](scene-copy-afp1-final-output-test-2026-10-13.md)；包 `dist/CharacterPanel-scopy-AFP1-1.2.1.zip`，
-> DLL SHA-256 `07bb8ff4…` 已部署校验；单测 1/1。**这张表决定：第一，最终输出到底能不能拿到（拿不到路线不成立）；
-> 第二，写骨架时必须用的次序与缓冲**——AFP2（手动应用 + 直绘 P 自己的 3D）直接照抄，不再猜。
+> [AFP1](scene-copy-afp1-final-output-test-2026-10-13.md)；包 `dist/CharacterPanel-scopy-AFP1-1.2.1.zip`。
+> **两个包，别混**：上机中的是 `07bb8ff4…`（`…T134954Z`，已部署，`verdict` 无 `match=`、无 `camera`/`figure` 行）；
+> 下一个是 `5fa5d1f2…`（`…T135708Z`，**已构建未部署**——打包时 DLL 正被运行中的游戏占用），它加上
+> `camera`/`figure` 两行、`verdict match=/reason=`，并把标定判定收进头文件内联的纯函数
+> （`score_pose_order`/`decide_pose_order`；门槛 1°／≥8 骨／≥90% 定死，单测覆盖移位次序、骨数不足、空候选、
+> 比率并列四种拒法）。**这张表决定三件事：①最终输出到底能不能拿到（拿不到路线不成立）；②写骨架时必须用的
+> 次序与缓冲；③显示侧取景靠搬相机还是搬根**——AFP2（手动应用 + 直绘 P 自己的 3D）照抄这三条，不再猜。
+>
+> **AFP2 直绘侧的结构侦察已完成（2026-10-13，只读）**：现行 `CharacterClone::draw()` 的逐阶段序列与
+> "哪些步骤依赖插件自有游离图"已逐行落档；可复用缝 = 抽出 `draw_figure_passes(root, accumulator, …)`
+> （覆盖 character_clone.cpp:912-969 的绑定/清屏/遍历/逐 pass 提交 + OM 回读 + DIRTY_RENDERTARGET 前后处理），
+> 路线专属部分只剩所有权、摆姿阶段与灯光锚点。**取景现状 = 每帧改根 local**（:849/:862/:868-870，正是新路线
+> 不许做的）；改走相机侧的唯一入口是 `UI3DSceneManager::SetCameraPosition/Rotate/FOV`，而"投影到底读谁"
+> 必须由上表的 `camera` 行回答。风险清单（线程/双宿主/共享 pass 被改写/灯光 rig 偏移按 -Y 视轴调过/
+> 设备缓冲与 fade 关系）已逐条带行号记录，供 AFP2 发包前的 R00 解释使用。
 
 > **此前待办（已被 AFP1 取代，留档）**：HKX44（求解器崩溃修复：
 > 真值表逐帧重建、零跨帧指针）已部署待上机——测试单

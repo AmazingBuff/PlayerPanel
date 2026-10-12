@@ -9,13 +9,18 @@
 
 #include "RE/A/Actor.h"
 #include "RE/B/BSAnimationGraphManager.h"
+#include "RE/B/BSFadeNode.h"
+#include "RE/B/BSShaderAccumulator.h"
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/B/BSVisit.h"
 #include "RE/H/hkaSkeleton.h"
 #include "RE/H/hkbCharacter.h"
 #include "RE/H/hkbCharacterSetup.h"
+#include "RE/M/Main.h"
+#include "RE/N/NiCamera.h"
 #include "RE/P/PlayerCharacter.h"
 #include "RE/T/TESObjectREFR.h"
+#include "RE/U/UI3DSceneManager.h"
 
 #include <cmath>
 #include <cstring>
@@ -124,11 +129,6 @@ namespace
         return live.empty() ? "-" : live;
     }
 
-    RE::NiPoint3 pose_position(PoseSample const& a_sample)
-    {
-        return RE::NiPoint3{ a_sample.position[0], a_sample.position[1], a_sample.position[2] };
-    }
-
     // The character's third-person graph: the one whose holder is that character and which has a root
     // node. Same selection the animation-source round established, reused rather than re-guessed.
     RE::BShkbAnimationGraph* third_person_graph(RE::TESObjectREFR& a_subject)
@@ -164,6 +164,104 @@ namespace
             return RE::BSVisit::BSVisitControl::kContinue;
         });
         return by_name;
+    }
+
+    // The camera chain the studio draw actually renders through, read-only. The pass submission
+    // (`BSBatchRenderer::SetupAndDrawPass`) takes no camera and writes no projection, so the view the
+    // figure is projected with is whatever engine state was left in place when the batch runs - and
+    // that has to be known before the display side can be designed at all: the route that must not
+    // translate the Actor per frame has to move this camera instead. The accumulator records the
+    // camera it was started with (`NiAccumulator::camera`), which is the decisive identity: if it is
+    // the UI3D camera, then that camera is the one to adapt.
+    void report_camera()
+    {
+        const RE::UI3DSceneManager* const ui3d = RE::UI3DSceneManager::GetSingleton();
+        if (!ui3d || !readable(ui3d, sizeof(RE::UI3DSceneManager)))
+        {
+            logger::info("SCOPY FP camera UNAVAILABLE reason=no-ui3d-manager");
+            return;
+        }
+
+        RE::NiCamera* const ui3d_camera = ui3d->camera.get();
+        RE::BSShaderAccumulator* const accumulator = ui3d->unk10.get();
+        const RE::NiCamera* accumulator_camera = nullptr;
+        if (accumulator && readable(accumulator, sizeof(RE::NiAccumulator)))
+            accumulator_camera = accumulator->camera;
+        RE::NiCamera* const world_camera = RE::Main::WorldRootCamera();
+
+        logger::info("SCOPY FP camera ui3d=0x{:x} ui3d-camera=0x{:x} accumulator=0x{:x} accumulator-camera=0x{:x} world-camera=0x{:x} accumulator-is-ui3d={} accumulator-is-world={} ui3d-is-world={}",
+            reinterpret_cast<std::uintptr_t>(ui3d),
+            reinterpret_cast<std::uintptr_t>(ui3d_camera),
+            reinterpret_cast<std::uintptr_t>(accumulator),
+            reinterpret_cast<std::uintptr_t>(accumulator_camera),
+            reinterpret_cast<std::uintptr_t>(world_camera),
+            accumulator_camera && accumulator_camera == ui3d_camera ? 1 : 0,
+            accumulator_camera && accumulator_camera == world_camera ? 1 : 0,
+            ui3d_camera && ui3d_camera == world_camera ? 1 : 0);
+
+        if (!ui3d_camera || !readable(ui3d_camera, sizeof(RE::NiCamera)))
+        {
+            logger::info("SCOPY FP camera ui3d-camera UNAVAILABLE reason=unreadable");
+            return;
+        }
+
+        const RE::NiCamera::RUNTIME_DATA& flat = ui3d_camera->GetRuntimeData();
+        const RE::NiCamera::RUNTIME_DATA2& projection = ui3d_camera->GetRuntimeData2();
+        // The view axis is row 2 of worldToCam - the quantity the studio's own anchor is built from.
+        const RE::NiPoint3 view{ flat.worldToCam[2][0], flat.worldToCam[2][1], flat.worldToCam[2][2] };
+
+        logger::info("SCOPY FP camera ui3d-camera world-t=({:.1f},{:.1f},{:.1f}) view=({:.4f},{:.4f},{:.4f}) w2c-t=({:.1f},{:.1f},{:.1f}) near={:.2f} far={:.1f} l={:.1f} r={:.1f} t={:.1f} b={:.1f} ortho={} cached-pos=({:.1f},{:.1f},{:.1f}) cached-rot-col2=({:.4f},{:.4f},{:.4f}) ui3d-frustum l={:.1f} r={:.1f} t={:.1f} b={:.1f} near={:.2f} far={:.1f}",
+            ui3d_camera->world.translate.x, ui3d_camera->world.translate.y, ui3d_camera->world.translate.z,
+            view.x, view.y, view.z,
+            flat.worldToCam[3][0], flat.worldToCam[3][1], flat.worldToCam[3][2],
+            projection.viewFrustum.fNear, projection.viewFrustum.fFar,
+            projection.viewFrustum.fLeft, projection.viewFrustum.fRight,
+            projection.viewFrustum.fTop, projection.viewFrustum.fBottom,
+            projection.viewFrustum.bOrtho ? 1 : 0,
+            ui3d->cachedCameraPos.x, ui3d->cachedCameraPos.y, ui3d->cachedCameraPos.z,
+            ui3d->cachedCameraRot.entry[0][2], ui3d->cachedCameraRot.entry[1][2], ui3d->cachedCameraRot.entry[2][2],
+            ui3d->viewFrustum.fLeft, ui3d->viewFrustum.fRight, ui3d->viewFrustum.fTop, ui3d->viewFrustum.fBottom,
+            ui3d->viewFrustum.fNear, ui3d->viewFrustum.fFar);
+    }
+
+    // What the display side needs about the figure itself: where its own root sits in the world, how
+    // far along the camera's view axis that is, and how far off the axis - the two numbers a
+    // camera-adapting framing would have to drive to zero - plus the fade, because a fade of zero
+    // makes the engine skip the node entirely.
+    void report_figure(char const* a_label, RE::TESObjectREFR& a_subject)
+    {
+        RE::NiAVObject* const root = a_subject.Get3D(false);
+        if (!root || !readable(root, sizeof(RE::NiAVObject)))
+        {
+            logger::info("SCOPY FP figure subject={} UNAVAILABLE reason=no-3d", a_label);
+            return;
+        }
+
+        RE::NiPoint3 view{ 0.0f, 0.0f, 0.0f };
+        RE::NiPoint3 eye{ 0.0f, 0.0f, 0.0f };
+        if (const RE::UI3DSceneManager* const ui3d = RE::UI3DSceneManager::GetSingleton())
+        {
+            if (RE::NiCamera* const camera = ui3d->camera.get(); camera && readable(camera, sizeof(RE::NiCamera)))
+            {
+                const RE::NiCamera::RUNTIME_DATA& flat = camera->GetRuntimeData();
+                view = RE::NiPoint3{ flat.worldToCam[2][0], flat.worldToCam[2][1], flat.worldToCam[2][2] };
+                eye = camera->world.translate;
+            }
+        }
+
+        const RE::NiPoint3 position = root->world.translate;
+        const float depth = position.Dot(view);
+        const float lateral = (position - view * depth).Length();
+        const RE::BSFadeNode* const fade = root->AsFadeNode();
+
+        logger::info("SCOPY FP figure subject={} root=0x{:x} world-t=({:.1f},{:.1f},{:.1f}) view-depth={:.1f} lateral={:.1f} eye-distance={:.1f} fade={:.3f} bound-center=({:.1f},{:.1f},{:.1f}) bound-radius={:.1f}",
+            a_label,
+            reinterpret_cast<std::uintptr_t>(root),
+            position.x, position.y, position.z,
+            depth, lateral, (position - eye).Length(),
+            fade ? fade->currentFade : -1.0f,
+            root->worldBound.center.x, root->worldBound.center.y, root->worldBound.center.z,
+            root->worldBound.radius);
     }
 }
 
@@ -282,6 +380,10 @@ void FinalPoseProbe::tick(bool a_paused)
     logger::info("SCOPY FP mark={} paused={} tick={} manual-ticks={}",
         m_marks, a_paused ? 1 : 0, driver.tick_enabled() ? "on" : "off", driver.manual_ticks());
 
+    // The camera chain first: it is shared by both subjects, and it is what the display side has to
+    // adapt once the Actor may no longer be translated into frame.
+    report_camera();
+
     // The puppet first: it is the Actor the route would draw. The player follows as the reference -
     // the engine drives that one's graph and nodes itself, so its calibration says what the correct
     // answer looks like on this machine and skeleton, while the puppet's says what the parked Actor
@@ -336,6 +438,8 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
         character ? character->currentLOD : -1,
         skeleton && skeleton->name.c_str() ? skeleton->name.c_str() : "",
         skeleton ? skeleton->bones.size() : 0);
+
+    report_figure(a_label, *a_subject);
 
     for (int slot = 0; slot < Output_Slots; ++slot)
     {
@@ -468,24 +572,40 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
     a_state.nodes_moved = moved;
     a_state.bones = std::move(bones);
 
-    const Candidate best = calibrate(*graph, a_state, a_label);
+    const Calibration calibration = calibrate(*graph, a_state, a_label);
+    const Candidate& best = calibration.candidate;
     if (best.slot < 0)
     {
-        logger::info("SCOPY FP verdict subject={} best=none reason=no-readable-pose-or-no-node-truth nodes-moved={}",
-            a_label, a_state.nodes_moved);
+        logger::info("SCOPY FP verdict subject={} match=0 reason={} nodes-moved={}",
+            a_label, calibration.decision.reason, a_state.nodes_moved);
         return;
     }
-    logger::info("SCOPY FP verdict subject={} best={}/slot{} within-1deg={}/{} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f} named={} nodes-moved={}",
-        a_label, best.order, best.slot, best.within, best.compared,
-        best.compared ? static_cast<float>(best.within) / static_cast<float>(best.compared) : 0.0f,
-        best.max_rotation, best.max_position, best.named, a_state.nodes_moved);
+    logger::info("SCOPY FP verdict subject={} match={} reason={} best={}/slot{} within-1deg={}/{} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f} named={} nodes-moved={}",
+        a_label,
+        calibration.decision.match ? 1 : 0,
+        calibration.decision.reason,
+        best.order, best.slot, best.score.within, best.score.compared, best.score.ratio(),
+        best.score.max_rotation, best.score.max_position, best.named, a_state.nodes_moved);
 }
 
-FinalPoseProbe::Candidate FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a_graph, SubjectState const& a_state,
+FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a_graph, SubjectState const& a_state,
     char const* a_label)
 {
-    Candidate best;
-    float best_ratio = 0.0f;
+    Calibration calibration;
+
+    // The two candidate tables, built once per mark. Index alignment is the whole point: entry i is
+    // the node pose index i would drive under that order, and an index without a node is marked
+    // absent rather than dropped, so a sparse table cannot shift the comparison onto wrong bones.
+    std::vector<NodeLocal> by_bone_nodes(a_graph.boneNodes.size());
+    for (std::int32_t i = 0; i < static_cast<std::int32_t>(a_graph.boneNodes.size()); ++i)
+    {
+        RE::NiNode* const node = a_graph.boneNodes[i].node;
+        if (!node || !readable(node, sizeof(RE::NiAVObject)))
+            continue;
+        by_bone_nodes[static_cast<std::size_t>(i)].rotate = node->local.rotate;
+        by_bone_nodes[static_cast<std::size_t>(i)].translate = node->local.translate;
+        by_bone_nodes[static_cast<std::size_t>(i)].present = true;
+    }
 
     const RE::hkaSkeleton* skeleton = nullptr;
     if (readable(&a_graph.characterInstance, sizeof(RE::hkbCharacter)))
@@ -503,85 +623,75 @@ FinalPoseProbe::Candidate FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a_g
     if (skeleton && a_graph.rootNode && readable(a_graph.rootNode, sizeof(RE::NiAVObject)))
         by_name = nodes_by_name(*a_graph.rootNode);
 
+    std::vector<NodeLocal> by_skeleton(skeleton ? static_cast<std::size_t>(skeleton->bones.size()) : 0);
+    std::uint32_t named = 0;
+    for (std::int32_t i = 0; i < static_cast<std::int32_t>(by_skeleton.size()); ++i)
+    {
+        const char* const name = skeleton->bones[i].name.c_str();
+        if (!name || !*name)
+            continue;
+        const auto found = by_name.find(std::string_view(name));
+        if (found == by_name.end())
+            continue;
+        RE::NiAVObject* const node = found->second;
+        if (!node || !readable(node, sizeof(RE::NiAVObject)))
+            continue;
+        const std::size_t index = static_cast<std::size_t>(i);
+        by_skeleton[index].rotate = node->local.rotate;
+        by_skeleton[index].translate = node->local.translate;
+        by_skeleton[index].present = true;
+        ++named;
+    }
+
+    std::vector<Candidate> candidates;
     for (int order = 0; order < 2; ++order)
     {
         const bool skeleton_order = order == 1;
         const char* const order_name = skeleton_order ? "skeleton" : "bone-nodes";
-        const std::size_t table = skeleton_order
-            ? (skeleton ? skeleton->bones.size() : 0)
-            : a_graph.boneNodes.size();
+        const std::vector<NodeLocal>& table = skeleton_order ? by_skeleton : by_bone_nodes;
 
         for (int slot = 0; slot < Output_Slots; ++slot)
         {
             const std::vector<PoseSample>& pose = a_state.pose[slot];
-            if (pose.empty() || table == 0)
+            if (pose.empty() || table.empty())
                 continue;
 
             Candidate candidate;
             candidate.order = order_name;
             candidate.slot = slot;
             candidate.sampled = static_cast<std::uint32_t>(pose.size());
+            candidate.named = skeleton_order ? named : 0;
+            candidate.score = score_pose_order(pose, table, Pose_Match_Degrees);
 
-            const std::size_t comparable = std::min(pose.size(), table);
-            // The engine's own containers index with a 32-bit size type, so the walk uses one: this
-            // is the same shape the animation-source round indexes boneNodes and the skeleton with.
-            for (std::int32_t i = 0; i < static_cast<std::int32_t>(comparable); ++i)
-            {
-                RE::NiAVObject* node = nullptr;
-                if (skeleton_order)
-                {
-                    const char* const name = skeleton->bones[i].name.c_str();
-                    if (!name || !*name)
-                        continue;
-                    const auto found = by_name.find(std::string_view(name));
-                    if (found == by_name.end())
-                        continue;
-                    ++candidate.named;
-                    node = found->second;
-                }
-                else
-                {
-                    node = a_graph.boneNodes[i].node;
-                }
-
-                if (!node || !readable(node, sizeof(RE::NiAVObject)))
-                    continue;
-
-                ++candidate.compared;
-                const RE::NiMatrix3 rotation = ni_local_from_pose(pose[static_cast<std::size_t>(i)], false).rotate;
-                const float degrees = rotation_angle_degrees(rotation, node->local.rotate);
-                const float position = (pose_position(pose[static_cast<std::size_t>(i)]) - node->local.translate).Length();
-                if (degrees <= Match_Rotation_Degrees)
-                    ++candidate.within;
-                candidate.max_rotation = std::max(candidate.max_rotation, degrees);
-                candidate.max_position = std::max(candidate.max_position, position);
-            }
-
-            const float ratio = candidate.compared
-                ? static_cast<float>(candidate.within) / static_cast<float>(candidate.compared)
-                : 0.0f;
             if (skeleton_order)
             {
                 logger::info("SCOPY FP order={} slot={} subject={} sampled={} bones={} named={} compared={} within-1deg={} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f}",
-                    order_name, slot, a_label, candidate.sampled, table, candidate.named, candidate.compared,
-                    candidate.within, ratio, candidate.max_rotation, candidate.max_position);
+                    order_name, slot, a_label, candidate.sampled, table.size(), candidate.named, candidate.score.compared,
+                    candidate.score.within, candidate.score.ratio(), candidate.score.max_rotation, candidate.score.max_position);
             }
             else
             {
                 logger::info("SCOPY FP order={} slot={} subject={} sampled={} bones={} compared={} within-1deg={} ratio={:.2f} max-rot={:.3f}deg max-pos={:.3f}",
-                    order_name, slot, a_label, candidate.sampled, table, candidate.compared,
-                    candidate.within, ratio, candidate.max_rotation, candidate.max_position);
+                    order_name, slot, a_label, candidate.sampled, table.size(), candidate.score.compared,
+                    candidate.score.within, candidate.score.ratio(), candidate.score.max_rotation, candidate.score.max_position);
             }
 
-            if (ratio > best_ratio)
-            {
-                best_ratio = ratio;
-                best = candidate;
-            }
+            candidates.push_back(candidate);
         }
     }
 
-    return best;
+    // The decision the application stage will take on exactly these numbers, reached by the same call
+    // it will make - so this log says whether that stage would be allowed to write, not just how the
+    // candidates scored.
+    std::vector<OrderScore> scores;
+    scores.reserve(candidates.size());
+    for (Candidate const& candidate : candidates)
+        scores.push_back(candidate.score);
+    calibration.decision = decide_pose_order(scores);
+    if (!candidates.empty())
+        calibration.candidate = candidates[calibration.decision.best];
+
+    return calibration;
 }
 
 PLUGIN_NAMESPACE_END

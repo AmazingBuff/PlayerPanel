@@ -3,11 +3,15 @@
 //
 
 #include "character/animation_source.h"
+#include "character/final_pose_probe.h"
 #include "character/idle_driver.h"
 #include "character/snapshot_transform.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <string_view>
+#include <vector>
 
 // Conventions below are MEASURED, not assumed (see the harness that produced them in this file's
 // history): A * B applies B first, a transform times its own inverse is the identity, matrix
@@ -530,11 +534,113 @@ int main()
         check(!PLUGIN_NAMESPACE::track_indices_are_valid(good, 0), "a skeleton without bones cannot validate a track table");
     }
 
+    // The same-Actor route's mapping decision (AFP1/AFP2): which index order of the graph's own final
+    // output pose reproduces the node locals the engine applied, and whether that answer is good
+    // enough to write. Both halves are pure rules, so the case that matters most - a wrong order that
+    // still looks plausible - is decided here rather than in the game.
+    {
+        // A pose of n bones about +Z by i*3 degrees, and the node locals of the order that carries
+        // them: the engine's answer for a correct mapping.
+        const auto make_pose = [](std::size_t count)
+        {
+            std::vector<PLUGIN_NAMESPACE::PoseSample> pose;
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                const float half = static_cast<float>(i) * 0.0261799f;  // half of i*3 degrees
+                PLUGIN_NAMESPACE::PoseSample sample{};
+                sample.position[0] = static_cast<float>(i);
+                sample.position[1] = 0.0f;
+                sample.position[2] = 0.0f;
+                sample.quaternion[0] = 0.0f;
+                sample.quaternion[1] = 0.0f;
+                sample.quaternion[2] = std::sin(half);
+                sample.quaternion[3] = std::cos(half);
+                sample.scale = 1.0f;
+                pose.push_back(sample);
+            }
+            return pose;
+        };
+
+        const auto make_locals = [](std::vector<PLUGIN_NAMESPACE::PoseSample> const& pose, bool present)
+        {
+            std::vector<PLUGIN_NAMESPACE::NodeLocal> locals;
+            for (PLUGIN_NAMESPACE::PoseSample const& sample : pose)
+            {
+                PLUGIN_NAMESPACE::NodeLocal local;
+                local.rotate = PLUGIN_NAMESPACE::ni_local_from_pose(sample, false).rotate;
+                local.translate = PLUGIN_NAMESPACE::pose_position(sample);
+                local.present = present;
+                locals.push_back(local);
+            }
+            return locals;
+        };
+
+        const std::vector<PLUGIN_NAMESPACE::PoseSample> pose = make_pose(12);
+        const std::vector<PLUGIN_NAMESPACE::NodeLocal> matching = make_locals(pose, true);
+
+        const PLUGIN_NAMESPACE::OrderScore exact = PLUGIN_NAMESPACE::score_pose_order(pose, matching, PLUGIN_NAMESPACE::Pose_Match_Degrees);
+        check(exact.compared == 12 && exact.within == 12, "an order whose nodes carry the pose exactly must reproduce every bone");
+        check(exact.ratio() == 1.0f && exact.max_rotation <= PLUGIN_NAMESPACE::Pose_Match_Degrees,
+            "a correct mapping must score a full ratio inside the declared tolerance");
+
+        // The wrong order: the same bones, shifted by one. Half the fixture's bones turn by only a
+        // few degrees, so this is exactly the shape that must NOT be believed - a plausible number
+        // that is not the mapping.
+        std::vector<PLUGIN_NAMESPACE::NodeLocal> shifted = matching;
+        std::rotate(shifted.begin(), shifted.begin() + 1, shifted.end());
+        const PLUGIN_NAMESPACE::OrderScore wrong = PLUGIN_NAMESPACE::score_pose_order(pose, shifted, PLUGIN_NAMESPACE::Pose_Match_Degrees);
+        check(wrong.compared == 12 && wrong.ratio() < PLUGIN_NAMESPACE::Pose_Match_Min_Ratio,
+            "an order shifted by one bone must fall below the ratio the application stage requires");
+
+        // An index without a node is not a mismatch: dropping it instead would shift every later
+        // index onto the wrong bone, which is why absence is carried rather than erased.
+        std::vector<PLUGIN_NAMESPACE::NodeLocal> sparse = matching;
+        sparse[1].present = false;
+        sparse[7].present = false;
+        const PLUGIN_NAMESPACE::OrderScore partial = PLUGIN_NAMESPACE::score_pose_order(pose, sparse, PLUGIN_NAMESPACE::Pose_Match_Degrees);
+        check(partial.compared == 10 && partial.within == 10, "absent nodes must leave the comparison instead of counting as failures");
+        check(PLUGIN_NAMESPACE::score_pose_order(pose, make_locals(pose, false), PLUGIN_NAMESPACE::Pose_Match_Degrees).compared == 0,
+            "a table with no node at all must compare nothing");
+
+        // The decision, over the candidates a mark produces.
+        const std::vector<PLUGIN_NAMESPACE::OrderScore> both{ wrong, exact };
+        const PLUGIN_NAMESPACE::OrderDecision chosen = PLUGIN_NAMESPACE::decide_pose_order(both);
+        check(chosen.match && chosen.best == 1, "the decision must pick the order that reproduces the nodes");
+        check(std::string_view(chosen.reason) == "matched", "a passing decision must say so by name");
+
+        // Too few bones: a full ratio over four bones is a coincidence, not a mapping (R00).
+        std::vector<PLUGIN_NAMESPACE::PoseSample> tiny_pose = make_pose(4);
+        const std::vector<PLUGIN_NAMESPACE::OrderScore> tiny{ PLUGIN_NAMESPACE::score_pose_order(tiny_pose, make_locals(tiny_pose, true), PLUGIN_NAMESPACE::Pose_Match_Degrees) };
+        const PLUGIN_NAMESPACE::OrderDecision too_few = PLUGIN_NAMESPACE::decide_pose_order(tiny);
+        check(!too_few.match && std::string_view(too_few.reason) == "insufficient-compared",
+            "a perfect score over too few bones must be blocked, not accepted");
+
+        // And the two other blocks, each named: nothing comparable at all, and a best candidate that
+        // is comparable but wrong.
+        const PLUGIN_NAMESPACE::OrderDecision empty = PLUGIN_NAMESPACE::decide_pose_order({});
+        check(!empty.match && std::string_view(empty.reason) == "no-candidate", "a mark without a readable pose must report no candidate");
+        const std::vector<PLUGIN_NAMESPACE::OrderScore> only_wrong{ wrong };
+        const PLUGIN_NAMESPACE::OrderDecision below = PLUGIN_NAMESPACE::decide_pose_order(only_wrong);
+        check(!below.match && std::string_view(below.reason) == "below-ratio", "a wrong order must be blocked by the ratio, not by silence");
+
+        // A tie on ratio is broken towards the candidate that compared more bones: the same percentage
+        // over more bones is the stronger evidence. (These two are not named `small`/`large`: the
+        // Windows RPC headers define `small` as a macro.)
+        PLUGIN_NAMESPACE::OrderScore few_bones;
+        few_bones.compared = 10;
+        few_bones.within = 10;
+        PLUGIN_NAMESPACE::OrderScore many_bones;
+        many_bones.compared = 100;
+        many_bones.within = 100;
+        const std::vector<PLUGIN_NAMESPACE::OrderScore> tie{ many_bones, few_bones };
+        check(PLUGIN_NAMESPACE::decide_pose_order(tie).best == 0, "a ratio tie must go to the candidate that compared more bones");
+    }
+
     if (failures != 0)
     {
         std::printf("FAILED: %d assertion(s)\n", failures);
         return 1;
     }
-    std::puts("PASS: a swing rotates about the node's own origin, keeps it fixed, advances the swung axis by the requested angle for any pose and scale, carries child joints through the matching arc, and leaves an on-axis witness (correctly) motionless");
+    std::puts("PASS: a swing rotates about the node's own origin, keeps it fixed, advances the swung axis by the requested angle for any pose and scale, carries child joints through the matching arc, and leaves an on-axis witness (correctly) motionless; the same-Actor mapping decision accepts the order that reproduces the engine-applied nodes and blocks a shifted order, too few bones, and an empty candidate set by name");
     return 0;
 }

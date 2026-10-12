@@ -23,6 +23,22 @@
   skeleton, detaches a graph, disables an Actor, resets a bind pose, resamples a clip or draws:
   AFP2 is where the measured order and buffer become an application and a draw.
 
+- Make the same-Actor route's mapping decision a tested rule instead of a printed number, and read the
+  camera chain the studio draw actually renders through. `score_pose_order` and `decide_pose_order`
+  are inline header rules over plain data (the pose copy and a per-index `NodeLocal` table, whose
+  `present` flag keeps an index without a node from being dropped and shifting the whole comparison):
+  they score one index order against the node locals the engine applied and refuse to let it drive a
+  skeleton unless at least 8 bones were comparable and 90% of them landed inside the HKX28 one-degree
+  bar, with `no-candidate` / `insufficient-compared` / `below-ratio` named as the block. AFP2's write
+  gate is that same call, not a second copy of it, and the unit test now convicts a shifted order,
+  blocks a perfect score over four bones, and proves a ratio tie goes to the candidate that compared
+  more bones. The mark also reports the camera chain: `NiAccumulator::camera` (the camera the
+  accumulator generating the studio's passes was started with) against `ui3d->camera` and the world
+  camera, the camera's view axis and projection frustum, and where the subject's own 3D root sits -
+  world position, distance along the view axis, distance off it, fade and bound. The pass submission
+  takes no camera and writes no projection, so that identity is what decides whether the route that
+  may not translate the Actor per frame adapts the camera instead; it is read, not moved to find out.
+
 ### Fixed
 
 - Follow the clip search's own rules when scanning a node: an object is scanned as far as it is

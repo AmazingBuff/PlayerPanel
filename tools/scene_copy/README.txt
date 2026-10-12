@@ -64,6 +64,13 @@ Press F11 for one mark. A mark samples both the puppet and, as the reference, th
 graph the engine drives by itself), and writes nothing anywhere:
 
   SCOPY FP mark=N paused=0|1 tick=on|off manual-ticks=N
+  SCOPY FP camera ui3d=0x... ui3d-camera=0x... accumulator=0x... accumulator-camera=0x...
+        world-camera=0x... accumulator-is-ui3d=0|1 accumulator-is-world=0|1 ui3d-is-world=0|1
+  SCOPY FP camera ui3d-camera world-t=(x,y,z) view=(x,y,z) w2c-t=(x,y,z) near=X far=X
+        l=X r=X t=X b=X ortho=0|1 cached-pos=(x,y,z) cached-rot-col2=(x,y,z)
+        ui3d-frustum l=X r=X t=X b=X near=X far=X
+  SCOPY FP figure subject=... root=0x... world-t=(x,y,z) view-depth=X lateral=X
+        eye-distance=X fade=X bound-center=(x,y,z) bound-radius=X
   SCOPY FP census subject=puppet form=... graph=0x... bone-nodes=N bound=N pose-local=N
         num-anim-bones=N tracks-in-lod=N lod=N skeleton='...' skeleton-bones=N
   SCOPY FP slot=0|1 subject=... out=0x... tracks=N on-tracks=[i,j,...] exists=0|1 valid=0|1
@@ -94,8 +101,24 @@ How to read it:
                        nodes do not follow); changed>0 means this Actor's nodes are being driven.
   order=... / verdict  the calibration. Each candidate (index order x output slot) is scored against
                        the node locals the engine itself wrote; ratio is the fraction of compared
-                       bones that the candidate reproduces within one degree. The best ratio names
-                       the order and slot the manual route would have to use.
+                       bones that the candidate reproduces within one degree. The verdict names the
+                       best candidate and the decision `decide_pose_order` reaches on those numbers -
+                       the same call the application stage makes, so the line says whether that stage
+                       would be allowed to write: match=1 reason=matched, or match=0 with
+                       reason=no-candidate / insufficient-compared / below-ratio.
+  camera ...           the camera chain the studio draw renders through, read-only. The pass
+                       submission takes no camera and writes no projection, so the view the figure is
+                       projected with is engine state left in place - and the route that must not
+                       translate the Actor per frame has to adapt that camera instead.
+                       accumulator-camera is the decisive identity: it is the camera the accumulator
+                       generating these passes was started with, so accumulator-is-ui3d=1 means the
+                       UI3D camera (the one whose view axis the studio anchor is built from) is the
+                       object to move. `view` is row 2 of worldToCam, `w2c-t` its translation.
+  figure ...           where the subject's own 3D root sits: its world translation, how far along the
+                       camera's view axis that is (view-depth), how far off that axis (lateral), and
+                       the fade. A camera-adapting framing has to drive lateral to zero and choose a
+                       view-depth; a fade of 0 makes the engine skip the node entirely, which is why
+                       it is printed next to the position rather than left to be discovered.
   named=N              the skeleton order only: how many bones of the animation skeleton resolved to
                        a node of this Actor by exact name (the HKX1/HKX40 name bridge reach).
   on-tracks=[...]      which standard tracks that buffer currently carries. The pose (2) is what this
@@ -115,6 +138,11 @@ A reading that means something, in four presses:
   3. Press F12 (tick off), press F11, wait, press F11. Both the pose delta and the node delta should
      be zero - a frozen graph, not a hidden one.
   4. Return the whole block, plus whether the puppet was born at all (SCOPY PUPPET born ...).
+
+The camera and figure lines come with every mark, so the same four presses also answer the display
+question: whether the accumulator that generates the studio's passes was started with the UI3D
+camera (accumulator-is-ui3d), and where the puppet's own root actually sits relative to that camera
+(view-depth, lateral, eye-distance, fade). Both are read-only; nothing is moved to find out.
 
 If the puppet's slots report reason=output-unreadable or reason=no-pose-track while the player's do
 not, that is a finding about the parked Actor and not a crash: return both blocks.
