@@ -109,9 +109,19 @@ private:
     void const* m_graph = nullptr;
     bool m_seen_identity = false;
     bool m_verify_attempted = false;
-    // pose index -> index into the engine's live boneNodes table, for the mapping that was verified.
-    // Indices the mapping cannot reach are -1 and counted, never silently skipped.
+    // pose index -> animation-skeleton bone index, for the mapping that was verified. Indices the
+    // mapping cannot reach are -1 and counted, never silently skipped.
+    //
+    // This used to be an index into the engine's live boneNodes table, which is the cheap way to
+    // resolve a node per frame - and which reaches only 36 of 68 here (AFP5 measured
+    // `unreachable=32` on exactly that limit, and `table=37` held at 37 across every round). The
+    // table and the tree overlap only partially, so reachability through the table is not the same
+    // question as reachability of the bone; the skeleton bridge already answers the latter.
     std::vector<std::int32_t> m_targets;
+    // The bone name behind each target, captured at verification so the per-frame write resolves the
+    // node without re-reading the skeleton: the skeleton order is an index identity, but the node is
+    // what gets written, and it is found by name in the tree.
+    std::vector<std::string> m_bone_names;
     char const* m_mapping = "none";
     char const* m_blocked = "not-armed";
     bool m_verified = false;

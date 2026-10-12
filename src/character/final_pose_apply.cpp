@@ -332,6 +332,22 @@ void FinalPoseApply::verify(RE::Actor& a_puppet)
     const Mapping& winner = decision.best == 1 ? by_skeleton : by_bone_nodes;
     m_targets = winner.targets;
     m_mapping = winner.name;
+    // The per-frame write resolves nodes by name in the tree, so the names are captured once - here,
+    // where the skeleton that defines the index order is already in hand. A name is stable across
+    // the frame boundary in a way a node pointer is not (HKX43's dangling read came from keeping
+    // one), and it reaches the bones the engine's bone table does not address.
+    m_bone_names.assign(samples.size(), std::string{});
+    if (skeleton && decision.best == 1)
+    {
+        for (std::size_t i = 0; i < m_bone_names.size(); ++i)
+        {
+            if (i >= static_cast<std::size_t>(skeleton->bones.size()))
+                continue;
+            const char* const name = skeleton->bones[static_cast<std::int32_t>(i)].name.c_str();
+            if (name && *name)
+                m_bone_names[i] = name;
+        }
+    }
     m_verified = true;
     m_blocked = "verified";
 }
@@ -360,6 +376,15 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
 
     Stats stats;
     const std::size_t writable = std::min(m_targets.size(), static_cast<std::size_t>(count));
+    // Every node is resolved from the tree on THIS frame, by the name the verification captured:
+    // the engine's bone table reaches only 36 of 68 bones here (AFP5: unreachable=32), and a bone
+    // the table does not address is still a bone the pose drives. Nothing is held across frames -
+    // no node pointer (HKX43) and no per-frame page query (HKX35) - and a name that resolves to
+    // nothing is counted, never skipped.
+    std::unordered_map<std::string_view, RE::NiAVObject*> tree_by_name;
+    if (root && readable(root, sizeof(RE::NiAVObject)))
+        tree_by_name = nodes_by_name(*root);
+
     // The reference for "what the write changed" is the node as the engine left it this frame.
     for (std::size_t i = 0; i < writable; ++i)
     {
@@ -369,13 +394,21 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
             ++stats.unreachable;
             continue;
         }
-        if (target >= static_cast<std::int32_t>(graph->boneNodes.size()))
+
+        RE::NiAVObject* node = nullptr;
+        if (i < m_bone_names.size() && !m_bone_names[i].empty())
         {
-            ++stats.unreachable;
-            continue;
+            const auto found = tree_by_name.find(std::string_view(m_bone_names[i]));
+            if (found != tree_by_name.end())
+                node = found->second;
         }
-        RE::NiNode* const node = graph->boneNodes[static_cast<std::size_t>(target)].node;
-        if (!node)
+        if (!node && target < static_cast<std::int32_t>(graph->boneNodes.size()))
+        {
+            // The table is the fallback, not the gate: it is still index-aligned with the pose and
+            // still the cheapest resolution when the tree walk found nothing for that name.
+            node = graph->boneNodes[static_cast<std::size_t>(target)].node;
+        }
+        if (!node || !readable(node, sizeof(RE::NiAVObject)))
         {
             ++stats.unreachable;
             continue;
@@ -441,6 +474,7 @@ void FinalPoseApply::tick(bool a_paused)
         m_verified = false;
         m_verify_attempted = false;
         m_targets.clear();
+        m_bone_names.clear();
         m_mapping = "none";
     }
 
