@@ -208,23 +208,11 @@ void PuppetDriver::tick(bool paused)
     {
         // The world runs: the solver observes here (node locals move under the engine's tick),
         // and the repark keeps the shell deep. The graph itself is the engine's own business -
-        // except when the force flag is armed, which is the one case where this stage has to
-        // disagree with the engine on purpose: verification compares the pose against the locals
-        // the engine applied, and if the paused write will be driven by a forced generate then the
-        // running-world proof has to be taken from a forced generate too. Otherwise the mapping is
-        // verified against a 98-bone pose and asked to write a 116-bone one.
-        if (force_generate() && tick_enabled())
-        {
-            RE::BSAnimationUpdateData update{};
-            update.deltaTime = Declared_Step_Seconds;
-            update.refr = puppet;
-            if (RE::NiCamera* const camera = RE::Main::WorldRootCamera(); camera && readable(camera, sizeof(RE::NiAVObject)))
-                update.optionalEyePosition = std::addressof(camera->world.translate);
-            update.updateFunctor = puppet->AsIPostAnimationChannelUpdateFunctor();
-            update.unk2A = true;
-            puppet->UpdateAnimationGraphManager(update);
-        }
-
+        // including while the force flag is armed, which is deliberate. Forcing a generate here
+        // would make the pose and the locals the engine applied disagree, and that pair is
+        // exactly what the mapping is proved against: AFP4 measured the proof fall from 0.99 to
+        // 0.67 on the frame force started driving the running world. Force belongs to the paused
+        // clock, where the panel owns the graph and nothing of the engine's is being applied.
         if (m_solving && m_current_generator)
         {
             if (RE::NiAVObject* const copy_root = SceneGraphCopy::instance().copy_root())

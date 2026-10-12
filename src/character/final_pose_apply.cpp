@@ -139,10 +139,13 @@ void FinalPoseApply::cycle()
         driver.request_step();
 
     // A new drive state re-verifies: the mapping is a property of the Actor and its graph generation,
-    // and an operator who has just changed the state is exactly who should see it checked again. The
-    // force flag changes what a running world actually puts on the skeleton, so it re-arms the same
-    // way - otherwise the 2026-10-13 session repeats, where the one verification available was taken
-    // before force was ever on and scored 37 bones it never got to re-score.
+    // and an operator who has just changed the state is exactly who should see it checked again.
+    //
+    // It does NOT re-verify merely because the force flag moved, which is the one thing AFP4 changed
+    // the mind of: force changes what the paused panel generates but not what the running engine
+    // applies, and the mapping is proved against the latter. Re-arming on a force flip discarded a
+    // 0.99 proof taken under the only condition where a proof means anything, and demanded a new one
+    // under a condition where the pose and the locals deliberately disagree (AFP4: 0.99 -> 0.67).
     m_verified = false;
     m_verify_attempted = false;
     m_blocked = applying ? "verifying" : "not-armed";
@@ -458,8 +461,20 @@ void FinalPoseApply::tick(bool a_paused)
         }
         else if (!m_verify_attempted)
         {
-            m_verify_attempted = true;
-            verify(*puppet);
+            // The proof needs the pose and the locals to share an origin, and only the unforced
+            // running world gives them one: the engine generated the pose AND applied it. With force
+            // on, the panel generates one the engine did not apply, so the score measures that drift
+            // instead of the index order - AFP4 watched 0.99 become 0.67 on exactly that frame. The
+            // latch therefore stays closed through a force flip; force is a property of the write.
+            if (force_generate())
+            {
+                block("verification-waits-for-unforced-world");
+            }
+            else
+            {
+                m_verify_attempted = true;
+                verify(*puppet);
+            }
         }
         return;
     }

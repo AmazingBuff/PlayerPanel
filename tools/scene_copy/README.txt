@@ -146,6 +146,29 @@ holds it as code, so this build writes that section once - next to the plugin lo
 CharacterPanel-engine-text.bin plus a .txt sidecar with the resolved anchors and vtables - and logs
 both paths. It is read-only with respect to the engine and it makes engine code readable offline for
 every later question (tools/re/engine_scan.py reads the pair). Nothing about the panel depends on it.
+AFP4/AFP5: which world proves the mapping, and which one gets the pose
+
+The order is proved on the tree now: 108 of 109 bones at 1.0 degrees, because the candidate local is
+read from the matched tree node instead of only from bones the engine's bone table happens to address
+(the table holds 37 of 116 here, which is what collapsed an earlier proof to 33 of 37).
+
+But the two halves need OPPOSITE worlds, and AFP4 measured why:
+
+  prove the order   -> world RUNNING, force OFF. The engine generated the pose and applied it, so the
+                       pose and the locals share an origin - 0.99.
+  write the pose    -> world PAUSED,  force ON.  The panel owns the clock and generates 116 bones.
+
+Forcing a generate in a RUNNING world breaks the proof: the panel generates a pose the engine did not
+choose to apply that frame, so the score measures that drift instead of the index order. AFP4 watched
+it fall 0.99 -> 0.67 -> 0.59 monotonically with the forced ticks. Force is a property of the WRITE,
+not of the verification, and the verification latch now survives a force flip instead of being reset
+by it.
+
+So the F3 order that works is: verify in the running world WITHOUT force first, then open the
+inventory, then turn force on for the write. Turning force on while the world is still running is
+deliberately ignored for the graph (the driver leaves the running world to the engine) and the
+application stage reports locked=verification-waits-for-unforced-world rather than re-scoring a
+pair that disagrees by design.
 Same-Actor final output (AFP1)
 
 This round opens the route PRD 0.9 section 6.6 describes; it does not implement it yet. That route
