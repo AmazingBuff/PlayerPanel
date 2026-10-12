@@ -4,6 +4,30 @@
 
 ### Added
 
+- Split the studio's pass batch away from who owns the figure it draws
+  (`src/render/studio/figure_passes.{h,cpp}`): a request (root, accumulator, context, target, states,
+  light slots, whether to read the bound target back once) and the batch itself - bind and clear the
+  studio target, walk the figure's geometries, generate passes through the UI3D accumulator, submit
+  each one with the studio rig swapped in and restored, then put the engine's ledger expectation back.
+  Two callbacks carry the seams the S2 probe and the census attach to. `CharacterClone::draw` now
+  keeps only what is specific to a detached graph it owns - ownership gate, `pose()`, the animation
+  and probe base stage, the light anchor, the census - which is exactly the split the same-Actor route
+  needs to draw an Actor's own third-person 3D through the same proven path. Two orderings moved
+  deliberately and are commented where they moved: the DIRTY_RENDERTARGET reset now happens inside the
+  batch (later is only more thorough, and nothing between the old and new points generates a pass or
+  changes a binding), and the set now precedes the census (which never read the flag).
+
+### Fixed
+
+- Compile the default (Actor-route) configuration again. `CharacterClone`'s per-frame summary named
+  `SceneGraphCopy::instance().animation_driver()` unconditionally, while that class only exists in the
+  `CHARACTER_PANEL_SCENE_COPY_EXPERIMENT` configuration and its header include is gated by the same
+  macro - so the default build had not compiled since that log line was added. A stale `build/`
+  directory, configured before several source files existed, had been hiding it: the first real build
+  in that configuration surfaced it. The line is now branched by configuration (the experiment keeps
+  its exact line, the default logs the same summary without the driver name), and
+  `cmake --preset Release` + `--target CharacterPanel` compiles and links.
+
 - Complete the R03 evidence the next session has to produce, and measure R01's other prerequisite
   before anything is drawn. The comparison is now over whole transforms in both spaces: `order=` line
   carries `beyond`, `max-scale` (the third space, measured and never gating, because a pose carries

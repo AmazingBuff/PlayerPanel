@@ -5,6 +5,7 @@
 #include "character_clone.h"
 #include "character/snapshot_transform.h"
 
+#include "render/studio/figure_passes.h"
 #include "render/studio/light.h"
 
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
@@ -493,43 +494,9 @@ namespace
         return found;
     }
 
-    void submit_pass(RE::BSRenderPass* pass, bool inject_lights, RE::BSLight** studio_lights)
-    {
-        RE::BSLight** saved_scene_lights = nullptr;
-        std::uint8_t saved_num_lights = 0;
-        std::uint8_t saved_shadow_lights = 0;
-        if (inject_lights)
-        {
-            saved_scene_lights = pass->sceneLights;
-            saved_num_lights = pass->numLights;
-            saved_shadow_lights = pass->numShadowLights;
-
-            pass->numLights = static_cast<std::uint8_t>(Studio_Light_Count);
-            pass->numShadowLights = 0;
-            pass->sceneLights = studio_lights;
-
-            for (std::size_t i = 0; i < Studio_Light_Count; ++i)
-            {
-                if (RE::BSLight* shell = studio_lights[i])
-                {
-                    shell->lodDimmer = 1.0f;
-                    shell->luminance = 1.0f;
-                    shell->frustrumCull = 0;
-                }
-            }
-        }
-
-        RE::BSBatchRenderer::SetupAndDrawPass(pass, pass->passEnum, (pass->passEnum & 0x40) != 0, 0x200);
-
-        if (inject_lights)
-        {
-            pass->sceneLights = saved_scene_lights;
-            pass->numLights = saved_num_lights;
-            pass->numShadowLights = saved_shadow_lights;
-        }
-    }
+    // The per-pass submission this file used to own now lives in render/studio/figure_passes.cpp,
+    // shared with the same-Actor route; what stayed here is only what is specific to a detached graph.
 }
-
 CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_state(CloneState::e_none), m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0), m_is_snapshot(false), m_snapshot_angle(0.0f), m_draw_frames(0)
 {
     m_settle_last_geoms = 0;
@@ -881,15 +848,11 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     RE::NiAVObject* p_root = m_graph_object.get();
     if (!p_root || !ui3d || !ui3d->camera || !ui3d->unk10)
         return false;
-    const RE::NiPointer<RE::BSShaderAccumulator>& accumulator = ui3d->unk10;
 
     RE::BSGraphics::Renderer* renderer = RE::BSGraphics::Renderer::GetSingleton();
     const RE::BSGraphics::RendererData& runtime = renderer->GetRuntimeData();
     if (!runtime.context || !runtime.forwarder)
         return false;
-
-    RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
-
 
     pose();
 
@@ -909,83 +872,48 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     // place the cascade runs. Must precede the pass generation.
     StudioLight::instance().place(m_anchor);
 
-    REX::W32::D3D11_VIEWPORT viewport{
-        .topLeftX = 0.0f,
-        .topLeftY = 0.0f,
-        .width = static_cast<float>(render_target.width()),
-        .height = static_cast<float>(render_target.height()),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
+    // The batch itself is shared with the same-Actor route (render/studio/figure_passes.h); what
+    // stays here is what only this route knows: the graph it detached, its anchor, and the probe and
+    // census seams.
+    const FigurePassRequest request{
+        .root = p_root,
+        .accumulator = ui3d->unk10.get(),
+        .context = runtime.context,
+        .target = &render_target,
+        .states = &states,
+        .light_slots = StudioLight::instance().lights(),
+        .light_count = Studio_Light_Count,
+        .check_render_target = !m_om_check_logged,
     };
-    runtime.context->RSSetViewports(1, &viewport);
 
-
-    REX::W32::ID3D11RenderTargetView* const rtv = render_target.rtv();
-
-    runtime.context->OMSetRenderTargets(1, &rtv, render_target.dsv());
-    runtime.context->OMSetDepthStencilState(states.depth_default(), 0);
-
-    constexpr float clear_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    runtime.context->ClearRenderTargetView(rtv, clear_color);
-    runtime.context->ClearDepthStencilView(render_target.dsv(), REX::W32::D3D11_CLEAR_DEPTH | REX::W32::D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-    runtime.context->OMSetBlendState(states.opaque(), nullptr, 0xFFFFFFFF);
-    runtime.context->RSSetState(states.cull_none());
-
-
-    // Per-pass injection engages only when every studio slot is ledger-served;
-    // otherwise the passes draw with whatever the accumulator carries.
-    RE::BSLight** studio_lights = StudioLight::instance().lights();
-    const bool inject_lights = studio_lights && studio_lights[0] && studio_lights[1] && studio_lights[2];
-
-    std::uint32_t drawn = 0;
-    std::uint32_t renderer_data_null = 0;
-    RE::BSVisit::TraverseScenegraphGeometries(p_root, [&](RE::BSGeometry* geometry)
-    {
-        const RE::BSGeometry::GEOMETRY_RUNTIME_DATA& geom_rt = geometry->GetGeometryRuntimeData();
-        if (!geom_rt.shaderProperty)
-            return RE::BSVisit::BSVisitControl::kContinue;
-
-        if (const RE::BSShaderProperty::RenderPassArray* pass_array = geom_rt.shaderProperty->GetRenderPasses(geometry, std::to_underlying(RE::BSShaderAccumulator::RENDER_MODE::kNormal), accumulator.get()))
+    const FigurePassStats stats = draw_figure_passes(request,
+        [&](RE::BSRenderPass* pass)
         {
-            for (RE::BSRenderPass* pass = pass_array->head; pass; pass = pass->next)
-            {
-                if (pass->geometry != geometry || !pass->shader)
-                    continue;
-                // Diagnostics only — never gate the draw on rendererData: the
-                // engine's SetupAndDrawPass lazily creates the device buffers
-                // (run 95), and a gate here would remove the only caller that
-                // could ever initialize them (run 52).
-                if (!geom_rt.rendererData)
-                    ++renderer_data_null;
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT && CHARACTER_PANEL_S2_PROBE
-                SceneGraphCopy::instance().probe_at_pass_submit(*this, pass);
+            SceneGraphCopy::instance().probe_at_pass_submit(*this, pass);
+#else
+            static_cast<void>(pass);
 #endif
-                submit_pass(pass, inject_lights, studio_lights);
-                ++drawn;
-            }
-        }
-        return RE::BSVisit::BSVisitControl::kContinue;
-    });
-
+        },
+        [&](std::uint32_t drawn)
+        {
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT && CHARACTER_PANEL_S2_PROBE
-    SceneGraphCopy::instance().probe_at_draw_done(*this, drawn);
+            SceneGraphCopy::instance().probe_at_draw_done(*this, drawn);
+#else
+            static_cast<void>(drawn);
 #endif
+        });
 
     // One-shot per clone: read back what the context held after the batch. When
     // the shadow state says DIRTY_RENDERTARGET, SetupAndDrawPass re-applies the
     // engine's ledger target mid-batch (v6.45), which empties the studio target
     // without any log line of its own — this decides "rerouted" from
     // "drew-nothing" in one look.
-    if (!m_om_check_logged && drawn > 0)
+    if (stats.render_target_checked)
     {
         m_om_check_logged = true;
-        REX::W32::ID3D11RenderTargetView* bound = nullptr;
-        runtime.context->OMGetRenderTargets(1, &bound, nullptr);
         logger::info("Clone draw OM check: bound={} studio={} match={}",
-            static_cast<void*>(bound), static_cast<const void*>(rtv), bound == rtv);
-        if (bound)
-            bound->Release();
+            stats.render_target_bound, static_cast<const void*>(render_target.rtv()), stats.render_target_matched);
     }
 
     // Per-frame summary plus the skin census: after the detach, the engine's
@@ -996,16 +924,23 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
         const AssemblyStats census = measure_assembly(p_root);
         logger::info(
             "Clone draw: passes={} rd-null={} lights={} | geoms={} skinned={} roots={} num-mat={} bone-count={} bound={}",
-            drawn, renderer_data_null, inject_lights ? Studio_Light_Count : 0,
+            stats.drawn, stats.renderer_data_null, stats.inject_lights ? Studio_Light_Count : 0,
             census.geometries, census.skinned, census.roots, census.num_matrices, census.bone_count, census.bound);
         if (m_is_snapshot)
+        {
+            // `animation_driver` lives in the scene-copy class, which only exists in that
+            // configuration: naming it unconditionally is what broke the default (Actor-route) build.
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             logger::info("SCOPY DRAW frame={} passes={} lights={} animation-driver={} physics-driver=none",
-                m_draw_frames, drawn, inject_lights, SceneGraphCopy::instance().animation_driver());
+                m_draw_frames, stats.drawn, stats.inject_lights, SceneGraphCopy::instance().animation_driver());
+#else
+            logger::info("Clone draw frame={} passes={} lights={} physics-driver=none",
+                m_draw_frames, stats.drawn, stats.inject_lights);
+#endif
+        }
     }
 
-    RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
-
-    if (drawn == 0)
+    if (stats.drawn == 0)
     {
         logger::warn("Clone draw: no render pass to draw");
         StudioLight::instance().park();

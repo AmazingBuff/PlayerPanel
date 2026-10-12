@@ -9,9 +9,14 @@
 
 | | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-215d3832b3+dirty-cl94faaed0c6-20261012T140929Z` |
-| DLL SHA-256 | `07bb8ff4…` | `36c97f8a…`（全值 `36c97f8aec23e433e05b272c8c91340ec7f85805538452c1bf785e8f268a92d8`） |
-| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers`（点名超差骨）、新增 **`world` 行**（R03 的第二个空间） |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-af0aa68cbe+dirty-cl94faaed0c6-20261012T141721Z` |
+| DLL SHA-256 | `07bb8ff4…` | `e264845a…`（全值 `e264845aa5f50b72834914c0ae9f91ea399f2826e0b88dd697048103155b2193`） |
+| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、新增 **`world` 行**；另含**直绘缝重构**（`render/studio/figure_passes.{h,cpp}`，`CharacterClone::draw` 已改走它，行为按逐句对照保持，两处顺序差异已注释）与默认配置的编译修复 |
+
+> **判读风险与回滚**：直绘缝重构动了**当前正在用的面板绘制路径**，而它只能在游戏里验证。两点降低风险：
+> ①AFP1b 要的那些数（`SCOPY FP` 全部行、`SCOPY PUPPET` 放置）**不经过绘制路径**，即使面板画不出来也不影响本轮判读；
+> ②若面板异常，日志里的 `Clone draw: passes=… rd-null=…`／`Clone draw OM check: … match=` 会直接说明是"零 pass"
+> 还是"被改道"，回滚 = `git checkout af0aa68 -- src/character/character_clone.cpp` 后重新构建（源在 git，无需旧二进制）。
 
 - 包：`dist/CharacterPanel-scopy-AFP1-1.2.1.zip`（每次打包覆盖同名 zip）。`c6d5e6f6` 的 DLL／PDB 已在
   `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` 并校验一致。

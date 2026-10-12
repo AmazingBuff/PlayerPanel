@@ -51,9 +51,10 @@
 - `SCOPY FP figure` 行给出被摄体 3D 根的 `world-t`／沿视轴深度／离轴距离／`eye-distance`／`fade`：相机适配要把
   离轴距离驱动到 0 并选定深度；`fade=0` 会让引擎跳过该节点（`character_clone.cpp` :103-110），必须先解掉。
 
-## 4. 可复用缝（最小重构，尚未实施）
+## 4. 可复用缝（**已实施**，`src/render/studio/figure_passes.{h,cpp}`）
 
-抽出 `src/render/studio/figure_passes.h`，不含 `CharacterClone`/`SceneGraphCopy`：
+抽出 `FigurePassRequest`/`FigurePassStats` + `draw_figure_passes()`：不含 `CharacterClone`/`SceneGraphCopy`，
+两条路线各自只提供 request。
 
 ```cpp
 struct FigurePassRequest
@@ -61,21 +62,32 @@ struct FigurePassRequest
     RE::NiAVObject* root;
     RE::BSShaderAccumulator* accumulator;
     REX::W32::ID3D11DeviceContext* context;
-    const RenderTarget& target;
-    const CommonStates& states;
+    const RenderTarget* target;
+    const CommonStates* states;
     RE::BSLight** light_slots;
     std::size_t light_count;
+    bool check_render_target;   // 回读一次绑定（调用方自己决定"只做一次"）
 };
-struct FigurePassStats { std::uint32_t drawn; std::uint32_t renderer_data_null; bool om_matched; };
+struct FigurePassStats { drawn, renderer_data_null, inject_lights, render_target_checked, render_target_matched, render_target_bound };
 
-FigurePassStats draw_figure_passes(const FigurePassRequest& request,
+FigurePassStats draw_figure_passes(const FigurePassRequest&,
     std::function<void(RE::BSRenderPass*)> const& before_pass = {},
     std::function<void(std::uint32_t)> const& after_batch = {});
 ```
 
-函数体 = :912-969 原样 + :980-989 的 OM 回读 + :1006 置位 + :891 复位；`m_graph_object`→`root`、
-`studio_lights/inject_lights`→`light_slots/light_count`、`m_om_check_logged`→调用方持有、`m_draw_frames`→统计；
-两个回调承接现有探针缝（:962／:972）。两条路线各自只提供 request。
+函数体 = 原 :912-969 的绑定/清屏/遍历/逐 pass 提交 + OM 回读 + `DIRTY_RENDERTARGET` 前后处理；
+两个回调承接原探针缝（:962／:972）。`CharacterClone::draw()` 现在只剩**路线专属**部分：
+所有权门、`pose()`、动画/探针的 base 阶段、灯光落位、普查日志与收尾。
+
+**两处有意为之的顺序差异**（都已写进代码注释）：`DIRTY_RENDERTARGET` 的复位从"pose 之前"移到 seam 内
+（即 pose/动画/灯光之后）——复位更晚只会更彻底，而这一步之前没有任何东西会生成 pass 或改绑定；
+置位从"普查之后"移到 seam 内（普查不读该标志）。
+
+**顺带修掉一个既有破损**：`CharacterClone` 的 `SCOPY DRAW …` 日志无条件引用 `SceneGraphCopy`（该类只在
+`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT` 配置里存在），而它的 include 是宏门控的——**默认（Actor 路线）
+配置在 HEAD 上根本编译不过**，只是因为 `build/` 目录的 configure 早于若干源文件、一直没真正编到那一行而
+被掩盖。现已按配置分支：实验构建保留原行，默认构建打不带 `animation-driver` 的版本。修后
+`cmake --preset Release` + `--target CharacterPanel` **编译并链接通过**。
 
 ## 5. 风险清单（Actor 自持图带来的差异，逐条带锚点）
 

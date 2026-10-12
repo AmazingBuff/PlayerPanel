@@ -38,7 +38,11 @@ config, input, present_hook
 
 ## Documentation
 
-- [AFP1 final-output test sheet](docs/scene-copy-afp1-final-output-test-2026-10-13.md): **the round now deployed and awaiting a game session** — F5 samples, read-only, whether the behaviour graph's own output buffers hold a readable final pose and which index order and buffer reproduce the node locals the engine applied. Decides whether the same-Actor route can be implemented and exactly how to write the pose.
+- [AFP1 final-output test sheet](docs/scene-copy-afp1-final-output-test-2026-10-13.md): **the round now deployed and awaiting a game session** — F11 samples, read-only, whether the behaviour graph's own output buffers hold a readable final pose and which index order and buffer reproduce the node locals the engine applied; NUM1 switches the puppet between the deep park and standing at the player, the one variable its empty pose track needs isolated. Also documents which build produced which verdict.
+
+- [AFP1 verdict](docs/afp1-verdict-2026-10-13.md): the first in-game result — the pose track is readable and animation-skeleton-ordered (105/109 bones within one degree), and the parked puppet's graph generates an output with a live but empty pose track, which re-reads HKX42's node freeze as "there was no output to propagate".
+
+- [AFP2 draw structural input](docs/afp2-draw-structural-input-2026-10-13.md): the read-only pass over the draw path that the same-Actor route needs before it writes anything — per-step sequence, the now-shared pass batch, the per-frame root translation it may not do, the camera entry points, and nine line-referenced risks.
 
 - [Actor final-pose validation](docs/actor-final-pose-validation-2026-10-12.md): PRD 0.9 §6.6, proposed single-Actor rendering with manual application of final graph output; R00–R09 procedures, engine-reference comparison, blending, physics and lifecycle gates. Not implemented by the HKX44 package.
 
