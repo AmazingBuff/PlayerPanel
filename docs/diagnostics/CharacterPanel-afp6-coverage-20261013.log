@@ -1,0 +1,324 @@
+[00:54:20.113] [33828] [I] CharacterPanel v1-2-1-0
+[00:54:20.113] [33828] [I] CharacterPanel loaded
+[00:55:13.864] [25332] [I] SCOPY ENGINE text module='SkyrimSE.exe' base=0x7ff621e00000 text-rva=0x1000 text-size=0x174d938 fnv1a=0xc529f5aecf5545d1 cached=1 path='C:\Users\AmazingBuff\Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel-engine-text.bin'
+[00:55:13.864] [25332] [I] SCOPY ENGINE anchors path='C:\Users\AmazingBuff\Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel-engine-text.txt' update-graph-manager=0x54c1f0 graph-variable-bool=0xbb6910 vtables=hkbBehaviorGraph:BShkbAnimationGraph:hkbCharacter
+[00:55:13.868] [25332] [I] All shaders compiled
+[00:55:13.868] [25332] [I] Installed pre-UI renderer hook
+[00:55:13.868] [25332] [I] Menu sink installed
+[00:55:13.868] [25332] [I] SCOPY BUILD CharacterPanel-scopy-AFP6-aba359416a+dirty-cl94faaed0c6-20261012T165304Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle F6-anim-probe(opt-in)
+[00:55:13.893] [32960] [I] Studio host changed: 0x0 -> 0x26289096980 (paused=true)
+[00:55:13.893] [32960] [I] Studio light node has been created
+[00:55:13.893] [32960] [I] CP-LIGHT slot 0: registered, shell 0x264112c7880 queued (ledger stays the authority)
+[00:55:13.893] [32960] [I] CP-LIGHT slot 1: registered, shell 0x264112c7740 queued (ledger stays the authority)
+[00:55:13.893] [32960] [I] CP-LIGHT slot 2: registered, shell 0x264112c7600 queued (ledger stays the authority)
+[00:55:13.893] [32960] [I] Studio lights registered on the ledger (scene=0x258a2946e80 -- ledger fetch will populate the slots)
+[00:55:13.893] [32960] [I] CP-LIGHT slot 0: ledger shell fetched 0x264112c7880 (after 0 miss frames)
+[00:55:13.893] [32960] [I] CP-LIGHT slot 1: ledger shell fetched 0x264112c7740 (after 0 miss frames)
+[00:55:13.893] [32960] [I] CP-LIGHT slot 2: ledger shell fetched 0x264112c7600 (after 0 miss frames)
+[00:55:39.861] [32960] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:55:39.861] [32960] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:55:39.861] [32960] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:55:39.861] [32960] [W] Studio lights not fully served by the ledger yet
+[00:55:46.250] [32960] [W] Studio lights not fully served by the ledger yet
+[00:55:48.917] [32960] [I] SCOPY PUPPET born form=ff006946 base=00000007 grace=240 frames (fade-pinned at the player; parks deep after assembly)
+[00:55:48.917] [32960] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x264112c6fc0 filed to lightQueueAdd)
+[00:55:48.917] [32960] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x264112c6e80 filed to lightQueueAdd)
+[00:55:48.917] [32960] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x264112c6d40 filed to lightQueueAdd)
+[00:55:48.981] [32960] [I] CP-LIGHT slot 0: ledger shell fetched 0x264112c6fc0 (after 1 miss frames)
+[00:55:48.981] [32960] [I] CP-LIGHT slot 1: ledger shell fetched 0x264112c6e80 (after 1 miss frames)
+[00:55:48.981] [32960] [I] CP-LIGHT slot 2: ledger shell fetched 0x264112c6d40 (after 1 miss frames)
+[00:56:00.210] [33828] [I] SCOPY PUPPET parked reason=grace-complete offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:01.819] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:03.519] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:05.254] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:06.927] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:08.652] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:10.525] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:10.694] [33828] [I] SCOPY PUPPET update-data delta-time=0.1000 refr=ff006946 camera=0x258a2916f20 functor=0x26427fd3de0 flags=0x0 force-generate=0
+[00:56:10.696] [33828] [I] SCOPY PUPPET equip right=560c2a4c left=00000000 pushed=draw reactions=1
+[00:56:36.934] [33828] [I] SCOPY PUPPET digest ticks=30 step=0.0122 clips=1 [Animations\male\MT_Idle.HKX#12218(11.42s)]
+[00:56:38.801] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:40.352] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:41.697] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:43.103] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:56:43.675] [28400] [I] SCOPY AFP2 drive=tick+apply apply=on force-generate=off tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[00:56:43.698] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose mapping=none verified=0 generation=0
+[00:56:44.326] [33828] [I] SCOPY PUPPET digest ticks=60 step=0.0221 clips=2 [Animations\1HM_Idle.hkx#9003(3.63s); Animations\SCAR_1hmReadyDummy.hkx#15071(6.14s)]
+[00:56:44.997] [33828] [I] SCOPY PUPPET digest ticks=90 step=0.0212 clips=2 [Animations\1HM_Idle.hkx#9003(4.30s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.48s)]
+[00:56:45.663] [33828] [I] SCOPY PUPPET digest ticks=120 step=0.0229 clips=2 [Animations\1HM_Idle.hkx#9003(4.97s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.14s)]
+[00:56:58.102] [33828] [I] SCOPY PUPPET digest ticks=150 step=0.0306 clips=2 [Animations\1HM_Idle.hkx#9003(6.10s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.27s)]
+[00:56:58.279] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[00:56:58.686] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:00.200] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:01.734] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:03.243] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:04.843] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:05.762] [25832] [I] SCOPY PUPPET force-generate on (every tick asks UpdateAnimation for hkbGenerator::generate() and the skip is bypassed)
+[00:57:05.762] [25832] [I] SCOPY AFP2 drive=tick+apply+force apply=on force-generate=on tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[00:57:05.918] [33828] [I] SCOPY PUPPET update-data delta-time=0.1000 refr=ff006946 camera=0x258a2916f20 functor=0x26427fd3de0 flags=0x0 force-generate=1
+[00:57:06.325] [33828] [I] SCOPY PUPPET digest ticks=180 step=0.0239 clips=2 [Animations\1HM_Idle.hkx#9003(14.28s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.10s)]
+[00:57:07.069] [33828] [I] SCOPY PUPPET digest ticks=210 step=0.0253 clips=2 [Animations\1HM_Idle.hkx#9003(15.02s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.85s)]
+[00:57:07.819] [33828] [I] SCOPY PUPPET digest ticks=240 step=0.0225 clips=2 [Animations\1HM_Idle.hkx#9003(15.77s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.60s)]
+[00:57:08.576] [33828] [I] SCOPY PUPPET digest ticks=270 step=0.0207 clips=2 [Animations\1HM_Idle.hkx#9003(16.53s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.02s)]
+[00:57:08.702] [33828] [I] SCOPY AFP2 apply blocked reason=unverified-world-first mapping=none verified=0 generation=0
+[00:57:09.310] [33828] [I] SCOPY PUPPET digest ticks=300 step=0.0237 clips=2 [Animations\1HM_Idle.hkx#9003(17.27s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.76s)]
+[00:57:09.895] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:22.322] [33828] [I] SCOPY PUPPET digest ticks=330 step=0.0229 clips=2 [Animations\1HM_Idle.hkx#9003(18.80s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.29s)]
+[00:57:23.356] [33828] [I] SCOPY AFP2 apply blocked reason=verification-waits-for-unforced-world mapping=none verified=0 generation=0
+[00:57:23.995] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:25.660] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:26.780] [33828] [I] SCOPY AFP2 apply blocked reason=verification-waits-for-unforced-world mapping=none verified=0 generation=0
+[00:57:27.422] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:29.233] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:30.401] [33828] [I] SCOPY AFP2 apply blocked reason=verification-waits-for-unforced-world mapping=none verified=0 generation=0
+[00:57:31.059] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:32.680] [28400] [I] SCOPY PUPPET tick off (the graph is frozen on our clock); the UI pause is the game's, not this
+[00:57:32.680] [28400] [I] SCOPY PUPPET force-generate off (the engine's own skip decides on which frames this tick produces a pose)
+[00:57:32.680] [28400] [I] SCOPY AFP2 drive=step apply=off force-generate=off tick=off (one declared step, then frozen)
+[00:57:32.815] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:32.859] [33828] [I] SCOPY PUPPET update-data delta-time=0.0167 refr=ff006946 camera=0x258a2916f20 functor=0x26427fd3de0 flags=0x0 force-generate=0
+[00:57:34.069] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[00:57:53.263] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:54.995] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:56.686] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:57:58.451] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:58:00.563] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:58:01.148] [28400] [I] SCOPY AFP2 drive=off apply=off force-generate=off tick=off (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[00:58:28.690] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:58:30.651] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:58:31.793] [28400] [I] SCOPY PUPPET tick on (the panel drives the graph); the UI pause is the game's, not this
+[00:58:31.793] [28400] [I] SCOPY AFP2 drive=tick apply=off force-generate=off tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[00:58:32.493] [33828] [I] SCOPY PUPPET digest ticks=360 step=0.0247 clips=2 [Animations\1HM_Idle.hkx#9041(1.47s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.17s)]
+[00:58:33.221] [33828] [I] SCOPY PUPPET digest ticks=390 step=0.0226 clips=2 [Animations\1HM_Idle.hkx#9041(2.20s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.90s)]
+[00:58:33.830] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:58:34.466] [33828] [I] SCOPY PUPPET digest ticks=420 step=0.0225 clips=2 [Animations\1HM_Idle.hkx#9041(3.50s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.21s)]
+[00:58:46.352] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:58:46.379] [19936] [I] SCOPY AFP2 drive=tick+apply apply=on force-generate=off tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[00:58:46.998] [33828] [I] SCOPY PUPPET digest ticks=450 step=0.0296 clips=2 [Animations\1HM_Idle.hkx#9041(6.12s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.45s)]
+[00:58:48.127] [33828] [I] SCOPY PUPPET digest ticks=480 step=0.0354 clips=2 [Animations\1HM_Idle.hkx#9041(7.32s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.65s)]
+[00:58:49.907] [33828] [I] SCOPY PUPPET digest ticks=510 step=0.0312 clips=2 [Animations\1HM_Idle.hkx#9041(8.26s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.58s)]
+[00:58:49.918] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[00:59:08.639] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:59:10.255] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:59:11.904] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:59:13.589] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:59:15.259] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:59:15.426] [35788] [I] SCOPY PUPPET force-generate on (every tick asks UpdateAnimation for hkbGenerator::generate() and the skip is bypassed)
+[00:59:15.426] [35788] [I] SCOPY AFP2 drive=tick+apply+force apply=on force-generate=on tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[00:59:15.624] [33828] [I] SCOPY PUPPET update-data delta-time=0.1000 refr=ff006946 camera=0x258a2916f20 functor=0x26427fd3de0 flags=0x0 force-generate=1
+[00:59:15.651] [33828] [I] SCOPY PUPPET digest ticks=540 step=0.0093 clips=2 [Animations\1HM_Idle.hkx#9041(17.34s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.31s)]
+[00:59:16.525] [33828] [I] SCOPY PUPPET digest ticks=570 step=0.0267 clips=2 [Animations\1HM_Idle.hkx#9041(18.22s); Animations\SCAR_1hmReadyDummy.hkx#15071(6.19s)]
+[00:59:17.343] [33828] [I] SCOPY PUPPET digest ticks=600 step=0.0265 clips=2 [Animations\1HM_Idle.hkx#9041(19.03s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.65s)]
+[00:59:18.075] [33828] [I] SCOPY AFP2 apply blocked reason=unverified-world-first mapping=none verified=0 generation=0
+[00:59:18.169] [33828] [I] SCOPY PUPPET digest ticks=630 step=0.0278 clips=2 [Animations\1HM_Idle.hkx#9041(0.06s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.48s)]
+[00:59:19.620] [33828] [I] SCOPY PUPPET digest ticks=660 step=0.0256 clips=2 [Animations\1HM_Idle.hkx#9041(1.57s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.99s)]
+[00:59:48.577] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:59:48.917] [33828] [I] SCOPY AFP2 apply blocked reason=verification-waits-for-unforced-world mapping=none verified=0 generation=0
+[00:59:50.519] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:59:52.520] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[00:59:52.672] [28400] [I] SCOPY PUPPET tick off (the graph is frozen on our clock); the UI pause is the game's, not this
+[00:59:52.672] [28400] [I] SCOPY PUPPET force-generate off (the engine's own skip decides on which frames this tick produces a pose)
+[00:59:52.672] [28400] [I] SCOPY AFP2 drive=step apply=off force-generate=off tick=off (one declared step, then frozen)
+[00:59:52.866] [33828] [I] SCOPY PUPPET update-data delta-time=0.0167 refr=ff006946 camera=0x258a2916f20 functor=0x26427fd3de0 flags=0x0 force-generate=0
+[00:59:52.997] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[01:00:15.816] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:00:16.963] [35788] [I] SCOPY AFP2 drive=off apply=off force-generate=off tick=off (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[01:00:39.207] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:00:41.059] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:00:42.679] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:00:44.219] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:00:45.618] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:00:47.268] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:05.281] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:07.170] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:17.505] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:17.802] [35788] [I] SCOPY PUPPET tick on (the panel drives the graph); the UI pause is the game's, not this
+[01:01:17.802] [35788] [I] SCOPY AFP2 drive=tick apply=off force-generate=off tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[01:01:18.025] [33828] [I] SCOPY PUPPET digest ticks=690 step=0.1000 clips=2 [Animations\1HM_Idle.hkx#9041(1.94s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.08s)]
+[01:01:18.952] [33828] [I] SCOPY PUPPET digest ticks=720 step=0.0304 clips=2 [Animations\1HM_Idle.hkx#9041(2.87s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.01s)]
+[01:01:20.724] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:21.864] [28400] [I] SCOPY AFP2 drive=tick+apply apply=on force-generate=off tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[01:01:22.636] [33828] [I] SCOPY PUPPET digest ticks=750 step=0.0268 clips=2 [Animations\1HM_Idle.hkx#9041(6.61s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.40s)]
+[01:01:23.495] [33828] [I] SCOPY PUPPET digest ticks=780 step=0.0175 clips=2 [Animations\1HM_Idle.hkx#9041(7.48s); Animations\SCAR_1hmReadyDummy.hkx#15071(3.27s)]
+[01:01:23.570] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[01:01:24.337] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:36.228] [33828] [I] SCOPY PUPPET digest ticks=810 step=0.0263 clips=2 [Animations\1HM_Idle.hkx#9041(9.79s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.58s)]
+[01:01:37.469] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:38.994] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:40.756] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:42.356] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:44.056] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:45.774] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:47.459] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:01:49.161] [33828] [I] SCOPY PUPPET digest ticks=840 step=0.0359 clips=2 [Animations\1HM_Idle.hkx#9041(2.03s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.92s)]
+[01:02:19.737] [33828] [I] SCOPY PUPPET digest ticks=870 step=0.0121 clips=2 [Animations\1HM_Idle.hkx#9041(2.79s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.68s)]
+[01:02:21.417] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:22.998] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:24.598] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:26.187] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:27.776] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:28.569] [33828] [I] SCOPY PUPPET digest ticks=900 step=0.0208 clips=2 [Animations\1HM_Idle.hkx#9041(11.65s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.85s)]
+[01:02:28.650] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[01:02:39.078] [33828] [I] SCOPY PUPPET digest ticks=930 step=0.0226 clips=2 [Animations\1HM_Idle.hkx#9041(12.41s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.61s)]
+[01:02:40.760] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:42.411] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:44.030] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:45.651] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:47.223] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:48.742] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:50.409] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:02:52.091] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:15.871] [33828] [I] SCOPY PUPPET digest ticks=960 step=0.1000 clips=2 [Animations\1HM_Idle.hkx#9003(7.49s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.70s)]
+[01:03:16.725] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:18.285] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:19.845] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:21.355] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:22.740] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:24.117] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:25.578] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:26.956] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:28.525] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:30.239] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:31.853] [33828] [I] SCOPY PUPPET digest ticks=990 step=0.0255 clips=2 [Animations\1HM_Idle.hkx#9041(0.44s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.49s)]
+[01:03:48.148] [33828] [I] SCOPY PUPPET digest ticks=1020 step=0.0137 clips=2 [Animations\1HM_Idle.hkx#9041(1.16s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.21s)]
+[01:03:48.253] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[01:03:48.893] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:50.263] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:51.304] [19936] [I] SCOPY PUPPET force-generate on (every tick asks UpdateAnimation for hkbGenerator::generate() and the skip is bypassed)
+[01:03:51.304] [19936] [I] SCOPY AFP2 drive=tick+apply+force apply=on force-generate=on tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[01:03:51.442] [33828] [I] SCOPY PUPPET update-data delta-time=0.1000 refr=ff006946 camera=0x258a2916f20 functor=0x26427fd3de0 flags=0x0 force-generate=1
+[01:03:51.609] [33828] [I] SCOPY PUPPET digest ticks=1050 step=0.0202 clips=2 [Animations\1HM_Idle.hkx#9041(4.68s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.73s)]
+[01:03:52.274] [33828] [I] SCOPY PUPPET digest ticks=1080 step=0.0226 clips=2 [Animations\1HM_Idle.hkx#9041(5.35s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.05s)]
+[01:03:52.844] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:03:53.360] [7732 ] [I] SCOPY PUPPET tick off (the graph is frozen on our clock); the UI pause is the game's, not this
+[01:03:53.360] [7732 ] [I] SCOPY PUPPET force-generate off (the engine's own skip decides on which frames this tick produces a pose)
+[01:03:53.360] [7732 ] [I] SCOPY AFP2 drive=step apply=off force-generate=off tick=off (one declared step, then frozen)
+[01:03:53.498] [33828] [I] SCOPY PUPPET update-data delta-time=0.0167 refr=ff006946 camera=0x258a2916f20 functor=0x26427fd3de0 flags=0x0 force-generate=0
+[01:03:53.745] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[01:04:16.728] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:04:19.110] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:04:19.637] [34200] [I] SCOPY AFP2 drive=off apply=off force-generate=off tick=off (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[01:04:36.099] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:04:37.665] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:04:44.237] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:04:45.732] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:04:46.370] [28400] [I] SCOPY PUPPET tick on (the panel drives the graph); the UI pause is the game's, not this
+[01:04:46.370] [28400] [I] SCOPY AFP2 drive=tick apply=off force-generate=off tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[01:04:46.800] [33828] [I] SCOPY PUPPET digest ticks=1110 step=0.0236 clips=2 [Animations\1HM_Idle.hkx#9041(15.73s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.08s)]
+[01:04:47.501] [33828] [I] SCOPY PUPPET digest ticks=1140 step=0.0221 clips=2 [Animations\1HM_Idle.hkx#9041(16.43s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.79s)]
+[01:04:48.191] [33828] [I] SCOPY PUPPET digest ticks=1170 step=0.0225 clips=2 [Animations\1HM_Idle.hkx#9041(17.12s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.48s)]
+[01:04:48.877] [33828] [I] SCOPY PUPPET digest ticks=1200 step=0.0226 clips=2 [Animations\1HM_Idle.hkx#9041(17.81s); Animations\SCAR_1hmReadyDummy.hkx#15071(6.16s)]
+[01:04:50.071] [33828] [I] SCOPY PUPPET digest ticks=1230 step=0.0246 clips=2 [Animations\1HM_Idle.hkx#9041(19.06s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.07s)]
+[01:04:51.143] [33828] [I] SCOPY PUPPET digest ticks=1260 step=0.0213 clips=2 [Animations\1HM_Idle.hkx#9003(0.41s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.19s)]
+[01:04:51.931] [33828] [I] SCOPY PUPPET digest ticks=1290 step=0.0330 clips=2 [Animations\1HM_Idle.hkx#9003(1.20s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.98s)]
+[01:04:52.568] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:04:52.992] [33828] [I] SCOPY PUPPET digest ticks=1320 step=0.0276 clips=2 [Animations\1HM_Idle.hkx#9003(2.32s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.10s)]
+[01:04:55.041] [33828] [I] SCOPY PUPPET digest ticks=1350 step=0.0257 clips=2 [Animations\1HM_Idle.hkx#9003(4.43s); Animations\SCAR_1hmReadyDummy.hkx#15071(6.21s)]
+[01:05:05.652] [33828] [I] SCOPY PUPPET digest ticks=1380 step=0.0268 clips=2 [Animations\1HM_Idle.hkx#9003(5.22s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.65s)]
+[01:05:05.731] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:07.483] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:09.174] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:10.751] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:12.197] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:13.767] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:15.426] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:16.952] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:18.499] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:20.024] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:21.686] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:23.137] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:24.485] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:25.948] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:27.392] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:28.737] [25832] [I] SCOPY AFP2 drive=tick+apply apply=on force-generate=off tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[01:05:28.766] [33828] [I] SCOPY AFP2 verify generation=0 samples=68 names skeleton=116 tree=62 table=36 | bone-nodes within-1deg=45/58 ratio=0.78 | skeleton within-1deg=61/62 ratio=0.98 | match=1 reason=matched
+[01:05:28.827] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:28.939] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose mapping=skeleton verified=1 generation=0
+[01:05:29.577] [33828] [I] SCOPY PUPPET digest ticks=1410 step=0.0235 clips=2 [Animations\1HM_Idle.hkx#9003(12.85s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.40s)]
+[01:05:30.298] [33828] [I] SCOPY PUPPET digest ticks=1440 step=0.0252 clips=2 [Animations\1HM_Idle.hkx#9003(13.56s); Animations\SCAR_1hmReadyDummy.hkx#15071(6.12s)]
+[01:05:31.017] [33828] [I] SCOPY PUPPET digest ticks=1470 step=0.0205 clips=2 [Animations\1HM_Idle.hkx#9003(14.29s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.50s)]
+[01:05:31.731] [33828] [I] SCOPY PUPPET digest ticks=1500 step=0.0218 clips=2 [Animations\1HM_Idle.hkx#9003(15.00s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.21s)]
+[01:05:31.842] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose mapping=skeleton verified=1 generation=0
+[01:05:33.270] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:05:34.779] [33828] [I] SCOPY PUPPET digest ticks=1530 step=0.0222 clips=2 [Animations\1HM_Idle.hkx#9003(18.11s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.32s)]
+[01:06:09.538] [33828] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[01:06:10.545] [33828] [I] SCOPY ANIM restart at panel open capture=0 driver=procedural-idle
+[01:06:10.744] [33828] [I] SCOPY PUPPET digest ticks=1560 step=0.0317 clips=2 [Animations\1HM_Idle.hkx#9003(20.27s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.10s)]
+[01:06:11.592] [33828] [I] SCOPY PUPPET digest ticks=1590 step=0.0262 clips=2 [Animations\1HM_Idle.hkx#9003(21.12s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.95s)]
+[01:06:12.351] [33828] [I] SCOPY PUPPET digest ticks=1620 step=0.0280 clips=2 [Animations\1HM_Idle.hkx#9003(21.88s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.70s)]
+[01:06:12.574] [33828] [I] SCOPY AFP2 apply blocked reason=no-pose mapping=skeleton verified=1 generation=0
+[01:06:12.875] [33828] [I] SCOPY PUPPET force-generate on (every tick asks UpdateAnimation for hkbGenerator::generate() and the skip is bypassed)
+[01:06:12.875] [33828] [I] SCOPY AFP2 drive=tick+apply+force apply=on force-generate=on tick=on (F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[01:06:12.883] [33828] [I] SCOPY PUPPET update-data delta-time=0.0228 refr=ff006946 camera=0x258a2916f20 functor=0x26427fd3de0 flags=0x0 force-generate=1
+[01:06:13.029] [33828] [I] SCOPY PUPPET digest ticks=1650 step=0.0198 clips=2 [Animations\1HM_Idle.hkx#9003(22.56s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.38s)]
+[01:06:13.680] [33828] [I] SCOPY PUPPET digest ticks=1680 step=0.0208 clips=2 [Animations\1HM_Idle.hkx#9041(0.32s); Animations\SCAR_1hmReadyDummy.hkx#15071(3.03s)]
+[01:06:14.355] [33828] [I] SCOPY PUPPET digest ticks=1710 step=0.0217 clips=2 [Animations\1HM_Idle.hkx#9041(1.00s); Animations\SCAR_1hmReadyDummy.hkx#15071(3.71s)]
+[01:06:26.198] [33828] [I] SCOPY PUPPET digest ticks=1740 step=0.0211 clips=2 [Animations\1HM_Idle.hkx#9041(1.75s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.46s)]
+[01:06:26.426] [33828] [I] SCOPY AFP2 apply blocked reason=unverified-world-first mapping=skeleton verified=0 generation=0
+[01:06:26.856] [33828] [I] SCOPY PUPPET digest ticks=1770 step=0.0199 clips=2 [Animations\1HM_Idle.hkx#9041(2.40s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.11s)]
+[01:06:27.514] [33828] [I] SCOPY PUPPET digest ticks=1800 step=0.0228 clips=2 [Animations\1HM_Idle.hkx#9041(3.06s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.77s)]
+[01:06:28.180] [33828] [I] SCOPY PUPPET digest ticks=1830 step=0.0263 clips=2 [Animations\1HM_Idle.hkx#9041(3.73s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.09s)]
+[01:06:28.867] [33828] [I] SCOPY PUPPET digest ticks=1860 step=0.0227 clips=2 [Animations\1HM_Idle.hkx#9041(4.42s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.78s)]
+[01:06:28.881] [33828] [I] SCOPY FP A0 subject=puppet output0=0x26272436ce0 pose0=116 reason0=ok output1=0x26272436cb0 pose1=0 reason1=track-off bones=106/116 pose-local=116
+[01:06:28.881] [33828] [I] SCOPY FP A0 subject=player output0=0x2627296cdf0 pose0=116 reason0=ok output1=0x2627296ce20 pose1=0 reason1=track-off bones=106/116 pose-local=116
+[01:06:28.881] [33828] [I] SCOPY FP mark=1 paused=1 tick=on manual-ticks=1861 placement=parked-deep
+[01:06:28.881] [33828] [I] SCOPY FP camera ui3d=0x7ff624f90fe0 ui3d-camera=0x262890ec100 accumulator=0x262890bb400 accumulator-camera=0x0 world-camera=0x258a2916e80 accumulator-is-ui3d=0 accumulator-is-world=0 ui3d-is-world=0
+[01:06:28.881] [33828] [I] SCOPY FP camera ui3d-camera world-t=(0.0,0.0,0.0) view=(-0.0000,-1.0007,-0.0000) w2c-t=(-0.0,-1.0,-0.0) near=15.00 far=20480.0 l=-0.2 r=0.2 t=0.1 b=-0.1 ortho=0 cached-pos=(0.0,0.0,0.0) cached-rot-col2=(0.0000,0.0000,1.0000) ui3d-frustum l=-0.2 r=0.2 t=0.1 b=-0.1 near=15.00 far=20480.0
+[01:06:28.883] [33828] [I] SCOPY FP census subject=puppet form=ff006946 gen=0 graph=0x267274f5300 root=0x26720a60e80 bone-nodes=116 bound=106 pose-local=116 num-anim-bones=116 tracks-in-lod=-1 lod=-1 skeleton='NPC Root [Root]' skeleton-bones=116
+[01:06:28.883] [33828] [I] SCOPY FP state subject=puppet bhv=0x26272f18780 bhv-readable=1 is-active=1 is-linked=0 update-active-nodes=0 state-changed=1 static-nodes=-30018 interm-outputs=0 active-nodes=0x26272324e50 node-clones=109 root-generator=0x262343e2c70 user-data=0x267274f5300 anim-bones=116 interp=(1.000,0.000) fade-controllers=8 do-foot-ik=0 holder=0x26427fd3d00 root-node=0x26720a60e80
+[01:06:28.883] [33828] [I] SCOPY FP raw subject=puppet what=anim-graph off=0x238 00 09 b2 5d 64 02 00 00 74 00 00 00 00 01 01 01 
+[01:06:28.883] [33828] [I] SCOPY FP raw subject=puppet what=anim-graph off=0x248 00 00 f5 42 61 9c 3c 3f 
+[01:06:28.883] [33828] [I] SCOPY FP raw subject=puppet what=behavior-graph off=0x118 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 
+[01:06:28.883] [33828] [I] SCOPY FP raw subject=puppet what=behavior-graph off=0x128 be 8a c0 8a 01 00 00 01 
+[01:06:28.883] [33828] [I] SCOPY FP raw subject=puppet what=character off=0x18 00 00 00 00 00 00 00 80 ff ff ff ff 42 6a eb 40 
+[01:06:28.883] [33828] [I] SCOPY FP raw subject=puppet what=character off=0x28 00 00 00 00 00 00 00 00 
+[01:06:28.883] [33828] [I] SCOPY FP figure subject=puppet root=0x26720a60e80 world-t=(993.7,9588.5,-171.3) view-depth=-9595.5 lateral=1008.5 eye-distance=9641.3 fade=1.000 bound-center=(993.6,9588.6,-158.7) bound-radius=125.8
+[01:06:28.884] [33828] [I] SCOPY FP geoms subject=puppet root=0x26720a60e80 geometries=52 skinned=44 property=44 none=8 effect=1 renderer-data=8 skinned-with-rd=0
+[01:06:28.884] [33828] [I] SCOPY FP slot=0 subject=puppet out=0x26272436cb0 tracks=21 on-tracks=[0,1,2,3,4,5,8,10,11] exists=1 valid=1 type=1 flags=0 num-data=116 cap=116 elem=48 off=448 on=1.000 data=0x2624a8ce9d0 readable=1 reason=ok
+[01:06:28.884] [33828] [I] SCOPY FP delta slot=0 subject=puppet prev=0 now=116 first=1 readable=1
+[01:06:28.884] [33828] [I] SCOPY FP slot=1 subject=puppet out=0x26272436ce0 tracks=21 on-tracks=[-] exists=1 valid=0 type=1 flags=0 num-data=0 cap=116 elem=48 off=448 on=0.000 data=0x0 readable=0 reason=track-off
+[01:06:28.884] [33828] [I] SCOPY FP delta slot=1 subject=puppet prev=0 now=0 first=1 readable=0
+[01:06:28.884] [33828] [I] SCOPY FP nodes subject=puppet bones=116 missing=10 first=1
+[01:06:28.889] [33828] [I] SCOPY FP pose-local order subject=puppet entries=116 bone-nodes within-1deg=52/106 ratio=0.49 | skeleton within-1deg=109/109 ratio=1.00
+[01:06:28.889] [33828] [I] SCOPY FP order=bone-nodes slot=0 subject=puppet sampled=116 bones=116 compared=106 within-1deg=52 beyond=54 ratio=0.49 max-rot=177.260deg max-pos=75.693 max-scale=0.0000 outliers='NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]'
+[01:06:28.890] [33828] [I] SCOPY FP order=skeleton slot=0 subject=puppet sampled=116 bones=116 named=109 compared=109 within-1deg=109 beyond=0 ratio=1.00 max-rot=0.093deg max-pos=2.796 max-scale=0.0000 outliers=-
+[01:06:28.890] [33828] [I] SCOPY FP world order=skeleton slot=0 subject=puppet compared=109 within-1deg=15 beyond=94 ratio=0.14 max-rot=57.486deg max-pos=16.329 max-scale=0.0000 outliers='NPC COM [COM ]','NPC Pelvis [Pelv]','NPC L Thigh [LThg]','NPC L Calf [LClf]','NPC R Thigh [RThg]','NPC R Calf [RClf]','SkirtRBone01','SkirtRBone02'
+[01:06:28.890] [33828] [I] SCOPY FP verdict subject=puppet match=1 reason=matched best=skeleton/slot0 within-1deg=109/109 ratio=1.00 max-rot=0.093deg max-pos=2.796 max-scale=0.0000 world-within-1deg=15/109 named=109 nodes-moved=0
+[01:06:28.891] [33828] [I] SCOPY FP census subject=player form=00000014 gen=0 graph=0x26727a45a80 root=0x264999ed180 bone-nodes=116 bound=106 pose-local=116 num-anim-bones=116 tracks-in-lod=-1 lod=-1 skeleton='NPC Root [Root]' skeleton-bones=116
+[01:06:28.891] [33828] [I] SCOPY FP state subject=player bhv=0x262737cb900 bhv-readable=1 is-active=1 is-linked=0 update-active-nodes=0 state-changed=1 static-nodes=-30018 interm-outputs=0 active-nodes=0x26273178120 node-clones=106 root-generator=0x262343e2c70 user-data=0x26727a45a80 anim-bones=116 interp=(1.000,0.000) fade-controllers=8 do-foot-ik=1 holder=0x263dfc4a080 root-node=0x264999ed180
+[01:06:28.891] [33828] [I] SCOPY FP raw subject=player what=anim-graph off=0x238 00 09 b2 5d 64 02 00 00 74 00 00 00 00 01 01 00 
+[01:06:28.891] [33828] [I] SCOPY FP raw subject=player what=anim-graph off=0x248 00 01 00 00 00 00 00 00 
+[01:06:28.891] [33828] [I] SCOPY FP raw subject=player what=behavior-graph off=0x118 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 
+[01:06:28.891] [33828] [I] SCOPY FP raw subject=player what=behavior-graph off=0x128 be 8a 49 8c 01 00 00 01 
+[01:06:28.891] [33828] [I] SCOPY FP raw subject=player what=character off=0x18 00 00 00 00 00 00 00 80 ff ff ff ff 00 00 00 00 
+[01:06:28.891] [33828] [I] SCOPY FP raw subject=player what=character off=0x28 00 00 00 00 00 00 00 00 
+[01:06:28.892] [33828] [I] SCOPY FP figure subject=player root=0x264999ed180 world-t=(1849.1,7883.4,-161.9) view-depth=-7889.1 lateral=1856.2 eye-distance=8098.9 fade=1.000 bound-center=(1930.1,7893.5,-12.7) bound-radius=278.0
+[01:06:28.892] [33828] [I] SCOPY FP geoms subject=player root=0x264999ed180 geometries=123 skinned=61 property=106 none=17 effect=55 renderer-data=11 skinned-with-rd=0
+[01:06:28.893] [33828] [I] SCOPY FP slot=0 subject=player out=0x2627296cdf0 tracks=21 on-tracks=[0,1,2,3,4,5,8,10,11] exists=1 valid=1 type=1 flags=0 num-data=116 cap=116 elem=48 off=448 on=1.000 data=0x262456cc5b0 readable=1 reason=ok
+[01:06:28.893] [33828] [I] SCOPY FP delta slot=0 subject=player prev=0 now=116 first=1 readable=1
+[01:06:28.894] [33828] [I] SCOPY FP slot=1 subject=player out=0x2627296ce20 tracks=21 on-tracks=[-] exists=1 valid=0 type=1 flags=0 num-data=0 cap=116 elem=48 off=448 on=0.000 data=0x0 readable=0 reason=track-off
+[01:06:28.894] [33828] [I] SCOPY FP delta slot=1 subject=player prev=0 now=0 first=1 readable=0
+[01:06:28.894] [33828] [I] SCOPY FP nodes subject=player bones=116 missing=10 first=1
+[01:06:28.901] [33828] [I] SCOPY FP pose-local order subject=player entries=116 bone-nodes within-1deg=49/106 ratio=0.46 | skeleton within-1deg=109/109 ratio=1.00
+[01:06:28.901] [33828] [I] SCOPY FP order=bone-nodes slot=0 subject=player sampled=116 bones=116 compared=106 within-1deg=45 beyond=61 ratio=0.42 max-rot=176.439deg max-pos=75.693 max-scale=0.0163 outliers='NPC L Thigh [LThg]','NPC L Calf [LClf]','NPC L Foot [Lft ]','NPC R Foot [Rft ]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]'
+[01:06:28.901] [33828] [I] SCOPY FP order=skeleton slot=0 subject=player sampled=116 bones=116 named=109 compared=109 within-1deg=105 beyond=4 ratio=0.96 max-rot=12.638deg max-pos=5.591 max-scale=0.0163 outliers='NPC L Thigh [LThg]','NPC L Calf [LClf]','NPC L Foot [Lft ]','NPC R Foot [Rft ]'
+[01:06:28.901] [33828] [I] SCOPY FP world order=skeleton slot=0 subject=player compared=109 within-1deg=81 beyond=28 ratio=0.74 max-rot=60.472deg max-pos=19.324 max-scale=0.0109 outliers='NPC Pelvis [Pelv]','NPC L Thigh [LThg]','NPC L Calf [LClf]','NPC L Foot [Lft ]','NPC R Foot [Rft ]','SkirtRBone01','SkirtRBone02','SkirtRBone03'
+[01:06:28.902] [33828] [I] SCOPY FP verdict subject=player match=1 reason=matched best=skeleton/slot0 within-1deg=105/109 ratio=0.96 max-rot=12.638deg max-pos=5.591 max-scale=0.0163 world-within-1deg=81/109 named=109 nodes-moved=0
+[01:06:28.903] [33828] [I] SCOPY FP necessary subject=player outliers=4 necessary=4 helper=0 palettes=27/61 entries=9009 verdict=classified
+[01:06:28.903] [33828] [I] SCOPY FP A0A1 subject=puppet pose0=116/116 pose1=0/0 pose-max-rot=0.274deg nodes=106/116 nodes-moved=14 nodes-max-rot=0.274deg nodes-max-pos=0.078 nodes-rebound=0 pose-local=116/116 pose-local-moved=38 pose-local-max-rot=0.274deg
+[01:06:28.903] [33828] [I] SCOPY FP A0A1 subject=player pose0=116/116 pose1=0/0 pose-max-rot=0.069deg nodes=106/116 nodes-moved=1 nodes-max-rot=0.028deg nodes-max-pos=0.000 nodes-rebound=0 pose-local=116/116 pose-local-moved=26 pose-local-max-rot=0.097deg
+[01:06:28.903] [33828] [I] SCOPY FP A3 physics=skipped reason=first-round-physics-off
+[01:06:28.903] [33828] [I] SCOPY FP A2 drive=tick+apply+force apply=on mapping=skeleton verified=0 generation=0 written=36 unreachable=32 frames=1 verifications=1 max-rot=0.056deg max-pos=0.000 blocked=unverified-world-first
+[01:06:29.145] [33828] [I] SCOPY AFP2 apply blocked reason=unverified-world-first mapping=skeleton verified=0 generation=0
+[01:06:29.557] [33828] [I] SCOPY PUPPET digest ticks=1890 step=0.0188 clips=2 [Animations\1HM_Idle.hkx#9041(5.10s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.47s)]
+[01:06:30.207] [33828] [I] SCOPY PUPPET digest ticks=1920 step=0.0229 clips=2 [Animations\1HM_Idle.hkx#9041(5.76s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.12s)]
+[01:06:30.869] [33828] [I] SCOPY PUPPET digest ticks=1950 step=0.0217 clips=2 [Animations\1HM_Idle.hkx#9041(6.42s); Animations\SCAR_1hmReadyDummy.hkx#15071(2.78s)]
+[01:07:12.023] [33828] [I] SCOPY PUPPET digest ticks=1980 step=0.0208 clips=2 [Animations\1HM_Idle.hkx#9041(7.14s); Animations\SCAR_1hmReadyDummy.hkx#15071(3.51s)]
+[01:07:12.300] [33828] [I] SCOPY AFP2 apply blocked reason=unverified-world-first mapping=skeleton verified=0 generation=0
+[01:07:13.221] [33828] [I] SCOPY PUPPET digest ticks=2010 step=0.0223 clips=2 [Animations\1HM_Idle.hkx#9041(8.35s); Animations\SCAR_1hmReadyDummy.hkx#15071(4.72s)]
+[01:07:13.858] [33828] [I] SCOPY PUPPET digest ticks=2040 step=0.0208 clips=2 [Animations\1HM_Idle.hkx#9041(8.99s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.36s)]
+[01:07:14.462] [33828] [I] SCOPY PUPPET digest ticks=2070 step=0.0197 clips=2 [Animations\1HM_Idle.hkx#9041(9.60s); Animations\SCAR_1hmReadyDummy.hkx#15071(5.97s)]
+[01:07:14.926] [33828] [I] SCOPY AFP2 apply blocked reason=unverified-world-first mapping=skeleton verified=0 generation=0
+[01:07:15.033] [33828] [I] SCOPY PUPPET digest ticks=2100 step=0.0191 clips=2 [Animations\1HM_Idle.hkx#9041(10.17s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.19s)]
+[01:07:15.567] [33828] [I] SCOPY PUPPET digest ticks=2130 step=0.0175 clips=2 [Animations\1HM_Idle.hkx#9041(10.70s); Animations\SCAR_1hmReadyDummy.hkx#15071(0.72s)]
+[01:07:16.067] [33828] [I] SCOPY PUPPET digest ticks=2160 step=0.0163 clips=2 [Animations\1HM_Idle.hkx#9041(11.20s); Animations\SCAR_1hmReadyDummy.hkx#15071(1.22s)]
