@@ -158,7 +158,7 @@ void FinalPoseApply::cycle()
         driver.tick_enabled() ? "on" : "off",
         next == Drive::e_step
             ? "one declared step, then frozen"
-            : "F3 cycles off -> tick -> tick+apply -> tick+apply+force -> step");
+            : "F4 cycles off -> tick -> tick+apply -> tick+apply+force -> step");
 }
 
 void FinalPoseApply::block(char const* a_reason)

@@ -59,7 +59,7 @@ public:
     // catch-up step the operator never asked for.
     [[nodiscard]] RE::Actor* actor() const;
     [[nodiscard]] bool tick_enabled() const { return m_tick_enabled.load(std::memory_order_acquire); }
-    // F3's drive cycle owns this gate now (the application stage sets it), and a single step is a
+    // The drive cycle owns this gate now (the application stage sets it), and a single step is a
     // declared dt advanced once even while the gate is closed - R02's "freeze, then step exactly one
     // dt" without a fourth key.
     void set_tick_enabled(bool a_enabled);
@@ -69,7 +69,8 @@ public:
     // pose or skip one; the update block carries the flag that forbids the skip ("forces animation
     // update (hkbGenerator::generate()) without skipping frames" - Precision/src/Hooks.cpp:583, which
     // hooks that very function). Ours left the whole block zeroed, and a live graph with an empty
-    // output pose is exactly what a skipped generate looks like, so F3's force state sets it and the
+    // output pose is exactly what a skipped generate looks like, so the drive cycle's force state
+    // sets it and the adjacent state does not.
     // adjacent state does not: the two are an A/B of this one field.
     void set_force_generate(bool a_enabled);
     [[nodiscard]] bool force_generate() const { return m_force_generate.load(std::memory_order_acquire); }
@@ -108,7 +109,7 @@ private:
     // dt is a constant rather than "however long the key was held": R00 fixes it before shipping.
     std::atomic_bool m_step_requested{ false };
     // AFP3: whether the manual tick asks for a generate on every frame instead of letting the engine
-    // skip. Set only by F3's force state.
+    // skip. Set only by the drive cycle's force state.
     std::atomic_bool m_force_generate{ false };
     std::atomic<Placement> m_placement{ Placement::e_parked_deep };
     RE::NiPointer<RE::TESObjectREFR> m_puppet;

@@ -44,28 +44,26 @@ namespace
                     SceneGraphCopy::instance().request(Command::e_capture);
                 else if (scan == MapVirtualKeyA(VK_F8, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_toggle_draw);
-                // The AFP route's controls, on the three keys this setup can spare: F2/F3/F4. The
-                // scene-copy route's rotate, release and idle toggle gave those keys up for them (F7
-                // still re-captures, which releases the previous copy), and the earlier choices were
-                // wrong for their own reasons - F5 is the game's quicksave, and this sink does not
-                // consume input, while F11/F12 and NUMPAD1 were tried and are not wanted either.
+                // The AFP route's controls. F3 is bound by another mod in this load order, and
+                // pressing it pauses the world - exactly the state the drive's verification needs
+                // NOT to be in (AFP7's session waited for a verify that could never run), so the
+                // key is left to that mod and the drive lives on F4. The placement cycle that used
+                // to own F4 is unbound for now: the park was measured not to matter (AFP3b -
+                // parked-deep still generated 98 elements with the world running), so the cycle had
+                // no remaining question to answer.
                 //
                 //   F2  mark: one read-only forensic sample (A0/A1, the calibration, the camera and
                 //       geometry lines). Changes nothing.
-                //   F3  drive: off -> tick -> off. "off" is freeze-all (no graph tick, no pose);
-                //       "tick" advances the puppet's graph on the panel clock. When the application
-                //       stage lands this becomes off -> tick -> tick+apply, which is R04's A/B pair
-                //       and R02's push/freeze control on one key.
-                //   F4  placement: parked-deep <-> held-pinned. AFP1 measured the parked puppet's
-                //       output pose as empty (track live, zero elements, numAnimBones 0) while the
-                //       player's carried 116, so this is the one variable that isolates why: out of
-                //       the engine's animation scope versus standing at the player, fade pinned.
+                //   F4  drive: off -> tick -> tick+apply -> tick+apply+force -> step -> off. "off"
+                //       is freeze-all (no graph tick, no pose). "tick" advances the puppet's graph
+                //       on the panel clock. "tick+apply" also writes the graph's final output pose
+                //       into the puppet's skeleton. "tick+apply+force" additionally asks for
+                //       hkbGenerator::generate() on every frame, which is what makes the paused
+                //       graph produce a pose at all. "step" is a one-shot declared dt.
                 else if (scan == MapVirtualKeyA(VK_F2, MAPVK_VK_TO_VSC))
                     FinalPoseProbe::instance().request_mark();
-                else if (scan == MapVirtualKeyA(VK_F3, MAPVK_VK_TO_VSC))
-                    FinalPoseApply::instance().cycle();
                 else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
-                    PuppetDriver::instance().cycle_placement();
+                    FinalPoseApply::instance().cycle();
 #if CHARACTER_PANEL_S2_PROBE
                 // Diagnostic build only: F6 is taken by another plugin in the usual setup, so the
                 // probe lives on an opt-in build rather than on the product's own key. The HKX37

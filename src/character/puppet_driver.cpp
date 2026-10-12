@@ -257,7 +257,8 @@ void PuppetDriver::tick(bool paused)
     // translation inside the WorldRoot camera's world transform - Precision/src/Havok/Havok.h:238),
     // this Actor's own post-animation functor (+0x20, Actor+0xE0 on AE), and `unk2A`, the flag that
     // forbids the frame-skip around hkbGenerator::generate(). Supplying them is what makes our tick
-    // comparable to the engine's; F3's force state is what makes `unk2A` an A/B rather than a guess.
+    // comparable to the engine's; the drive cycle's force state is what makes `unk2A` an A/B rather
+    // than a guess.
     RE::BSAnimationUpdateData update{};
     update.deltaTime = step;
     update.refr = puppet;

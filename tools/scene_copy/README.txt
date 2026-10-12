@@ -34,7 +34,7 @@ F8 (draw it), while its old F2 idle / F3 rotate / F4 release bindings are gone.
 
   F2   mark: one read-only sample of the same-Actor forensics (see "Same-Actor
        final output (AFP1)" below). Changes nothing anywhere.
-  F3   drive: off -> tick -> tick+apply -> tick+apply+force -> step -> off.
+  F4   drive: off -> tick -> tick+apply -> tick+apply+force -> step -> off.
         "off" is freeze-all - no
        graph tick on the panel's clock and no pose written. "tick" advances the
        puppet's own behaviour graph on the panel's clock. "tick+apply" also
@@ -44,11 +44,16 @@ F8 (draw it), while its old F2 idle / F3 rotate / F4 release bindings are gone.
         letting the engine skip some: the two adjacent states are an A/B of that
         one field, and one session then separates "the pose was skipped" from
         "the graph cannot generate" (see AFP3 below).
+  The drive lives on F4 because F3 is bound by another mod in this load order
+  whose handler pauses the world - the one state the mapping's verification
+  cannot run in (an AFP7 session waited for a verify that could never run).
+  The placement cycle that used to own F4 is unbound for now: the park was
+  measured not to matter, so it had no remaining question to answer.
        "step" is a one-shot: exactly one declared dt (1/60 s) and one
        application, then the state falls back to off. One key carries R02's
        push/freeze control, R04's A/B pair and single-step, because this setup
        has three keys, not nine.
-  F4   placement: parked-deep <-> held-pinned. The park is what hides the shell
+  F4   placement (UNBOUND): parked-deep <-> held-pinned. The park is what hides the shell
        from the world, and AFP1 measured the parked puppet's pose track as live
        but EMPTY (zero elements, numAnimBones 0) while the player's carried 116 -
        so this is the one variable that isolates whether the emptiness is the

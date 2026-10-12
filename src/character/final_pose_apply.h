@@ -36,13 +36,14 @@ PLUGIN_NAMESPACE_BEGIN
 class FinalPoseApply
 {
 public:
-    // F3: off -> tick -> tick+apply -> tick+apply+force -> step-once -> off. One key carries R02's
+    // F4: off -> tick -> tick+apply -> tick+apply+force -> step-once -> off. One key carries R02's
     // push/freeze control, R04's A/B pair and the declared single step, because this setup has three
-    // keys and not nine.
+    // keys and not nine. (F3 is bound by another mod in this load order and its handler pauses the
+    // world, which is the one state the verification cannot run in.)
     //
     // `tick+apply+force` is the same push and the same write with one field of the update block set -
     // the flag the engine's own update data uses to generate a pose every frame instead of skipping
-    // (see PuppetDriver::set_force_generate). Two adjacent F3 states therefore A/B that flag alone,
+    // (see PuppetDriver::set_force_generate). Two adjacent F4 states therefore A/B that flag alone,
     // inside one session and one placement, which is the only way the difference is not confounded
     // with the engine's own frame-to-frame decisions.
     enum class Drive : std::uint8_t
@@ -57,7 +58,7 @@ public:
     static FinalPoseApply& instance();
     [[nodiscard]] static char const* drive_name(Drive a_drive);
 
-    // The F3 control: advances the cycle and pushes the resulting gate into PuppetDriver.
+    // The F4 control: advances the cycle and pushes the resulting gate into PuppetDriver.
     void cycle();
     [[nodiscard]] Drive drive() const { return m_drive.load(std::memory_order_acquire); }
     [[nodiscard]] bool apply_enabled() const
