@@ -132,11 +132,61 @@ AFP2 的取景按设计输入里的退路走：**draw 窗口内临时改根变�
 即可绕过"暂停期不生成"的问题，应用阶段几乎不用改；两者任一不成立 → 锁定 `hkbBehaviorGraph::Generate`
 （OAR 钩的那一层）由我们按帧调用。
 
-## 12. 上机步骤（下一次）
+## 13. 判读（2026-10-13 23:09–23:11）：`poseLocal` **不受我们的时钟驱动**，且它其实是**骨架序**
+
+- 包：`…AFP1-128ffaa2f4…T150719Z`；日志 `docs/diagnostics/CharacterPanel-afp1e-poselocal-order-20261012.log`。
+- 条件：暂停期、`drive=tick+apply`（推图开）、**两次标记都是 `parked-deep`**（F4 切回泊深之后才标记）。
+
+### 13.1 新事实：`poseLocal` 是**动画骨架次序**，不是 boneNodes 次序
+
+```
+pose-local order subject=puppet entries=116 bone-nodes within-1deg= 49/106 ratio=0.46 | skeleton within-1deg= 99/109 ratio=0.91
+pose-local order subject=player entries=116 bone-nodes within-1deg= 50/106 ratio=0.47 | skeleton within-1deg=109/109 ratio=1.00
+```
+
+→ **`poseLocal[i]` 对应的就是动画骨架第 i 根骨（按精确骨名桥接）**；玩家侧 **109/109 = 1.00**——它逐骨等于节点 local
+（也就是"引擎已应用的结果"）。
+
+**这条与 HKX2 当年"poseLocal 是 boneNodes 次序"（0.529u vs 5.591u）相反**，必须更正：
+HKX2 比的是"把姿态写进副本后与源角色的**位移残差**"，而 5.591 那个数今天反复出现在**骨架序**的 `max-pos` 上
+（本会话玩家 `max-pos=5.591`）——也就是说当年被当成"次序证据"的位移差，更可能是**平移/缩放语义**的固定偏移，
+不是次序。今天的测量是直接对节点 local 打分、109/109 满分，**次序结论以它为准**：`poseLocal` 与图输出姿态
+**同为骨架序**（只有一种次序，不是两种）。
+
+### 13.2 结论：暂停期**没有任何源受我们的时钟驱动**
+
+| 跨标记窗口（傀儡被推 ~500 次；玩家一次都没有） | 傀儡 | 玩家 |
+| --- | --- | --- |
+| `pose-local moved` | 23 | **27** |
+| `pose-local max-rot` | 0.069° | 0.069° |
+
+- **傀儡被推了约 500 次，位移与一次都没被推的玩家几乎一样（23 vs 27，同为 0.069°）** → **`poseLocal` 不受我们的时钟驱动**。
+- 而且同一帧内（A0A1）的数字也是 23/27、0.069°：**一个帧内振荡、跨 500 帧仍是同一个 0.069°**，
+  说明那是**双态抖动/刷新噪声**，不是累积动画。玩家从不被我们 tick，却同样有这个抖动。
+- 因此暂停期两个可能源都不成立：`generatorOutputs` **空**、`poseLocal` **静止**。
+  手动推图确实推进了图内部（HKX37/38 的 clip/状态机），**但下游没有任何东西被求值**。
+
+### 13.3 下一步目标（已锁定）
+
+不再是"应用阶段"或"换源"，而是：**让暂停期的引擎真正求值一次**。三个候选，按风险排序：
+
+1. **查"为什么玩家的图在暂停期还活着"**（`num-anim-bones` 116 vs 傀儡 0）——如果那是某个可设置的
+   状态（动画 LOD／更新注册／"相机主体"标记），把傀儡放进去即可，**不需要我们自己调引擎内部函数**；
+2. 查 `BSAnimationGraphManager::Update` / `BShkbAnimationGraph` 的更新入口，看引擎在
+   `UpdateAnimationGraphManager` 之外还做了什么（我们的手动推图只走了前者）；
+3. 最后才是自己去调 `hkbBehaviorGraph::Generate`（OAR 钩的那一层，`Hooks.cpp:211`）——
+   需要构造 `hkbContext`，风险最高，放最后。
+
+**同时**：`names … table=37`（引擎骨表只寻址 37/116 根动画骨）仍是写入覆盖面的上限，与本节问题独立，待一并解决。
+
+## 14. 上机步骤（下一次，仍三键）
 
 1. 进存档 → **F4** 到 `held-pinned` → 等装配窗 → **F3** 循环到 `tick+apply`（**世界期**）→
    看 `SCOPY AFP2 verify … match=1` 与 `names skeleton=116 tree=109 table=?`。
-2. **开背包** → **F2** ×2（间隔几秒，中间不要按键）→ 看两行：
+2. **开背包** → **F2** ×2（间隔几秒，中间不要按键）→ 两行关键：
    - `SCOPY FP pose-local subject=… moved=K max-rot=X vs-mark=…`：傀儡与玩家的同窗口对照；
-   - `SCOPY FP pose-local order subject=…`：boneNodes 与 skeleton 两个比例，谁高就是它的次序、高不高决定它能不能当源。
-3. 同一对标记里 `A2` 行会说明应用是否还在 `blocked=no-pose-while-paused`。
+   - `SCOPY FP pose-local order subject=…`：boneNodes 与 skeleton 两个比例。
+3. 同一对标记里 `A2` 行说明应用是否仍在 `blocked=no-pose-while-paused`。
+
+（本节在 §13 锁定"让暂停期引擎真正求值"之后，主要是给**换源/换调用**之后的复验留格式；
+   下一轮的重点是代码调查而不是又一次上机。）
