@@ -9,9 +9,9 @@
 
 | | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-2efe72ccf5+dirty-cl94faaed0c6-20261012T142507Z` |
-| DLL SHA-256 | `07bb8ff4…` | `e3321451…`（全值 `e33214519795238225c8389d4b6ed7f410a656c756935babcdab3242b1086d33`） |
-| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、`world` 行、**`A0`/`A0A1`/`A3` 帧内配对**、**`necessary` 行（超差骨里哪些是网格真正读的）**；直绘缝重构与默认配置编译修复 |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-f671ef6838+dirty-cl94faaed0c6-20261012T142742Z` |
+| DLL SHA-256 | `07bb8ff4…` | `ef94fa77…`（全值 `ef94fa777eba59383f9957a7128a4c2f9a8c651f95804f1e3fade58c7739ea9d`） |
+| 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **NUM1** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、`world` 行、**`A0`/`A0A1`/`A3` 帧内配对**、**`necessary` 行**、**census 行加 `gen=`/`root=`（R02/R06 要的 3D generation）**；直绘缝重构与默认配置编译修复 |
 
 > **判读风险与回滚**：直绘缝重构动了**当前正在用的面板绘制路径**，而它只能在游戏里验证。两点降低风险：
 > ①AFP1b 要的那些数（`SCOPY FP` 全部行、`SCOPY PUPPET` 放置）**不经过绘制路径**，即使面板画不出来也不影响本轮判读；

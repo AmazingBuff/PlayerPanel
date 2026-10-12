@@ -333,6 +333,13 @@ private:
         // calibration against a frozen tree measures nothing, and the reader has to see that on the
         // same line as the number it qualifies.
         std::uint32_t nodes_moved = 0;
+        // The panel's own generation notion, which R02/R06 ask for next to the graph and the bone
+        // table: it counts how many times this subject's 3D root or its graph changed identity, and
+        // that is exactly the event that invalidates a mapping or a pose held across frames. A tree
+        // the engine rebuilt is therefore numbered here rather than inferred from `rebound` counts.
+        std::uint32_t generation = 0;
+        void const* root = nullptr;
+        void const* graph = nullptr;
     };
 
     // A0's own sample. It reads the same two arrays the report reads but keeps them separately, so

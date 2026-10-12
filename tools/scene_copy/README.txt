@@ -84,8 +84,8 @@ graph the engine drives by itself), and writes nothing anywhere:
         eye-distance=X fade=X bound-center=(x,y,z) bound-radius=X
   SCOPY FP geoms subject=... root=0x... geometries=N skinned=N property=N none=N effect=N
         renderer-data=N skinned-with-rd=N
-  SCOPY FP census subject=puppet form=... graph=0x... bone-nodes=N bound=N pose-local=N
-        num-anim-bones=N tracks-in-lod=N lod=N skeleton='...' skeleton-bones=N
+  SCOPY FP census subject=puppet form=... gen=N graph=0x... root=0x... bone-nodes=N bound=N
+        pose-local=N num-anim-bones=N tracks-in-lod=N lod=N skeleton='...' skeleton-bones=N
   SCOPY FP slot=0|1 subject=... out=0x... tracks=N on-tracks=[i,j,...] exists=0|1 valid=0|1
         type=N flags=N num-data=N cap=N elem=N off=N on=X data=0x... readable=0|1 reason=...
   SCOPY FP delta slot=0|1 subject=... prev=N now=N compared=N changed=N
@@ -172,6 +172,11 @@ How to read it:
                        it is printed next to the position rather than left to be discovered.
   named=N              the skeleton order only: how many bones of the animation skeleton resolved to
                        a node of this Actor by exact name (the HKX1/HKX40 name bridge reach).
+  gen=N                how many times this subject's 3D root or its graph changed identity since the
+                       first mark. That is exactly the event that invalidates a mapping or a pose held
+                       across frames (R02/R06 ask for a generation next to the graph and the bone
+                       table), so a rebuilt tree is numbered here instead of being inferred from
+                       rebound counts.
   on-tracks=[...]      which standard tracks that buffer currently carries. The pose (2) is what this
                        round needs; world-from-model (0) and extracted motion (1) are what the
                        display side will need later for root motion, and they come free with the

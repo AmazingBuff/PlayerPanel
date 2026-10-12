@@ -713,10 +713,23 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
             ++bound;
     }
 
-    logger::info("SCOPY FP census subject={} form={:08x} graph=0x{:x} bone-nodes={} bound={} pose-local={} num-anim-bones={} tracks-in-lod={} lod={} skeleton='{}' skeleton-bones={}",
+    // The generation this mark belongs to: a new 3D root or a new graph invalidates every mapping and
+    // every pose held across frames, so it is counted rather than left to be noticed (R02/R06).
+    RE::NiAVObject* const subject_root = a_subject->Get3D(false);
+    if (a_state.root != subject_root || a_state.graph != graph)
+    {
+        if (a_state.root || a_state.graph)
+            ++a_state.generation;
+        a_state.root = subject_root;
+        a_state.graph = graph;
+    }
+
+    logger::info("SCOPY FP census subject={} form={:08x} gen={} graph=0x{:x} root=0x{:x} bone-nodes={} bound={} pose-local={} num-anim-bones={} tracks-in-lod={} lod={} skeleton='{}' skeleton-bones={}",
         a_label,
         a_subject->GetFormID(),
+        a_state.generation,
         reinterpret_cast<std::uintptr_t>(graph),
+        reinterpret_cast<std::uintptr_t>(subject_root),
         graph->boneNodes.size(),
         bound,
         character ? character->numPoseLocal : -1,
