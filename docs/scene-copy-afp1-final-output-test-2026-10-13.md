@@ -9,8 +9,8 @@
 
 | | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-dff55917c2+dirty-cl94faaed0c6-20261012T150048Z` |
-| DLL SHA-256 | `07bb8ff4…` | `bc7b4410…`（全值 `bc7b4410bb080bd125c598a87143bc3a151d964ffb23faf89cdf3d3ba0f0e336`） |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-128ffaa2f4+dirty-cl94faaed0c6-20261012T150719Z` |
+| DLL SHA-256 | `07bb8ff4…` | `d02cbe5f…`（全值 `d02cbe5fbcb2d821d744d316aec1b5fad8c83a316a15158dbb9ea4b9acc7ac8b`） |
 | 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **F4** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、`world` 行、**`A0`/`A0A1`/`A3` 帧内配对**、**`necessary` 行**、**census 行加 `gen=`/`root=`（R02/R06 要的 3D generation）**；直绘缝重构与默认配置编译修复 |
 
 > **判读风险与回滚**：直绘缝重构动了**当前正在用的面板绘制路径**，而它只能在游戏里验证。两点降低风险：

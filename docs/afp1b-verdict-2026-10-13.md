@@ -98,10 +98,45 @@ AFP2 的取景按设计输入里的退路走：**draw 窗口内临时改根变�
 - **poseLocal 也冻结** → 缺的是"引擎的求值"本身，下一步锁定 `hkbBehaviorGraph::Generate`
   （OAR 钩的那一层，`OpenAnimationReplacer/src/Hooks.cpp:211`）能否由我们按帧调用，而不是继续在应用阶段打转。
 
-## 9. 上机步骤（下一次）
+## 10. 追加判读（2026-10-13 23:03–23:05）：`poseLocal` **没有**冻死——但还不能归功于我们的推图
+
+- 包：`…AFP1-dff55917c2…T150048Z`；日志 `docs/diagnostics/CharacterPanel-afp1d-poselocal-20261012.log`。
+- 两次标记都在暂停期、`drive=tick+apply`（推图开）、`placement=held-pinned`、`manual-ticks` 917 → 1460。
+
+| 观察（同一帧内 A0→A1） | 傀儡 | 玩家 |
+| --- | --- | --- |
+| `generatorOutputs` pose 轨 | **空**（`pose-empty`） | `num-data=116` |
+| `num-anim-bones` | **0** | 116 |
+| `poseLocal` | **116 项，29 项在动，≤0.079°** | 116 项，**29 项在动，≤0.069°** |
+
+**两个结论**：
+
+1. **`poseLocal` 在暂停期并没有冻结**（与 `generatorOutputs` 的空姿态形成对比）——这是"暂停期可能还有别的姿态来源"
+   的第一个正面信号；
+2. **但两个 subject 的数字几乎一样（29 / 0.069–0.079）**，而**玩家从不被我们手动推图**。所以这一帧的微动**不能**
+   归因于我们的时钟：它更像引擎侧一个共享的低速源（idle／呼吸那类，HKX36 也见过暂停期粒子自走）。
+   **必须用跨标记窗口来分离**：傀儡在两次标记之间被推了 ~543 次，玩家一次都没有。
+3. 顺带确认上一节的机制：**暂停期引擎把玩家的动画留着（`num-anim-bones=116`），把傀儡的停用（`=0`）**。
+   这就是"同为 Actor，一个有输出一个没有"的全部差别；`names … table=37` 本轮复现（同一数值）。
+
+## 11. 本轮新增的两个测量（已部署）
+
+1. **跨标记 `poseLocal` 位移**：`SCOPY FP pose-local subject=… entries=116 moved=K max-rot=Xdeg max-pos=Y vs-mark=N`
+   —— 窗口是几百次手动推图，与玩家的同窗口对照即可判定"我们的时钟是否真的在驱动 poseLocal"。
+2. **`poseLocal` 是否是一份可用的姿态、以及它的次序**：
+   `SCOPY FP pose-local order subject=… bone-nodes within-1deg=A/B ratio=X | skeleton within-1deg=C/D ratio=Y`
+   —— 拿它与节点 local 按两候选次序各打一次分（HKX2 实测它是 boneNodes 次序）。若它只是微动，这一行会接近 0，
+   那样就**不能**把它当成姿态来源。
+
+**判读分岔**：跨标记位移显著 **且** `pose-local order` 的 boneNodes 比例高 → 换源（`poseLocal` + boneNodes 次序）
+即可绕过"暂停期不生成"的问题，应用阶段几乎不用改；两者任一不成立 → 锁定 `hkbBehaviorGraph::Generate`
+（OAR 钩的那一层）由我们按帧调用。
+
+## 12. 上机步骤（下一次）
 
 1. 进存档 → **F4** 到 `held-pinned` → 等装配窗 → **F3** 循环到 `tick+apply`（**世界期**）→
    看 `SCOPY AFP2 verify … match=1` 与 `names skeleton=116 tree=109 table=?`。
-2. **开背包** → **F2** ×2（间隔几秒）：看 `A0A1` 的 **`pose-local-moved`** 是 0 还是非 0——
-   这一条决定姿态来源换不换。
+2. **开背包** → **F2** ×2（间隔几秒，中间不要按键）→ 看两行：
+   - `SCOPY FP pose-local subject=… moved=K max-rot=X vs-mark=…`：傀儡与玩家的同窗口对照；
+   - `SCOPY FP pose-local order subject=…`：boneNodes 与 skeleton 两个比例，谁高就是它的次序、高不高决定它能不能当源。
 3. 同一对标记里 `A2` 行会说明应用是否还在 `blocked=no-pose-while-paused`。

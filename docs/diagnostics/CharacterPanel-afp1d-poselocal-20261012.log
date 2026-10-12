@@ -1,0 +1,222 @@
+[23:02:26.282] [32796] [I] CharacterPanel v1-2-1-0
+[23:02:26.282] [32796] [I] CharacterPanel loaded
+[23:03:15.091] [6408 ] [I] All shaders compiled
+[23:03:15.091] [6408 ] [I] Installed pre-UI renderer hook
+[23:03:15.091] [6408 ] [I] Menu sink installed
+[23:03:15.091] [6408 ] [I] SCOPY BUILD CharacterPanel-scopy-AFP1-dff55917c2+dirty-cl94faaed0c6-20261012T150048Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F3-rotate F4-release F2-idle-toggle F6-anim-probe(opt-in)
+[23:03:15.132] [34372] [I] Studio host changed: 0x0 -> 0x225685ae980 (paused=true)
+[23:03:15.132] [34372] [I] Studio light node has been created
+[23:03:15.132] [34372] [I] CP-LIGHT slot 0: registered, shell 0x226124cf880 queued (ledger stays the authority)
+[23:03:15.132] [34372] [I] CP-LIGHT slot 1: registered, shell 0x226124cf740 queued (ledger stays the authority)
+[23:03:15.132] [34372] [I] CP-LIGHT slot 2: registered, shell 0x226124cf600 queued (ledger stays the authority)
+[23:03:15.132] [34372] [I] Studio lights registered on the ledger (scene=0x21af4036e80 -- ledger fetch will populate the slots)
+[23:03:15.132] [34372] [I] CP-LIGHT slot 0: ledger shell fetched 0x226124cf880 (after 0 miss frames)
+[23:03:15.132] [34372] [I] CP-LIGHT slot 1: ledger shell fetched 0x226124cf740 (after 0 miss frames)
+[23:03:15.132] [34372] [I] CP-LIGHT slot 2: ledger shell fetched 0x226124cf600 (after 0 miss frames)
+[23:03:59.648] [34372] [I] CP-LIGHT slot 0: ledger shell dropped
+[23:03:59.648] [34372] [I] CP-LIGHT slot 1: ledger shell dropped
+[23:03:59.648] [34372] [I] CP-LIGHT slot 2: ledger shell dropped
+[23:03:59.648] [34372] [W] Studio lights not fully served by the ledger yet
+[23:04:06.008] [34372] [W] Studio lights not fully served by the ledger yet
+[23:04:06.188] [34372] [I] SCOPY PUPPET born form=ff006915 base=00000007 grace=240 frames (fade-pinned at the player; parks deep after assembly)
+[23:04:06.188] [34372] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x226124cefc0 filed to lightQueueAdd)
+[23:04:06.188] [34372] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x226124cee80 filed to lightQueueAdd)
+[23:04:06.188] [34372] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x226124ced40 filed to lightQueueAdd)
+[23:04:06.252] [34372] [I] CP-LIGHT slot 0: ledger shell fetched 0x226124cefc0 (after 1 miss frames)
+[23:04:06.252] [34372] [I] CP-LIGHT slot 1: ledger shell fetched 0x226124cee80 (after 1 miss frames)
+[23:04:06.252] [34372] [I] CP-LIGHT slot 2: ledger shell fetched 0x226124ced40 (after 1 miss frames)
+[23:04:15.985] [32796] [I] SCOPY PUPPET parked reason=grace-complete offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:17.161] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:18.342] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:19.553] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:20.722] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:21.901] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:23.113] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:24.297] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:25.517] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:26.723] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:27.883] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:29.065] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:30.280] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:31.456] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:32.628] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:33.810] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:34.983] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:36.124] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:37.316] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:38.471] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:39.676] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:40.922] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:42.123] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:43.162] [32796] [I] SCOPY PUPPET digest ticks=30 step=0.0163 clips=1 [Animations\male\MT_Idle.HKX#12219(1.10s)]
+[23:04:47.416] [32796] [I] SCOPY PUPPET digest ticks=60 step=0.0151 clips=1 [Animations\male\MT_Idle.HKX#12219(1.66s)]
+[23:04:47.885] [32796] [I] SCOPY PUPPET digest ticks=90 step=0.0157 clips=1 [Animations\male\MT_Idle.HKX#12219(2.13s)]
+[23:04:48.749] [32796] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[23:04:49.160] [18892] [I] SCOPY PUPPET placement=held-pinned (standing at the player with the fade pinned, inside the animation scope); the next mark reads the graph in this placement
+[23:04:54.111] [32796] [I] SCOPY PUPPET held at the player (placement=held-pinned); the shell stays inside the engine's own animation scope with the fade pinned - the variable the parked puppet's empty output pose needs isolated
+[23:05:01.890] [14820] [I] SCOPY AFP2 drive=tick+apply apply=on tick=on (F3 cycles off -> tick -> tick+apply -> step)
+[23:05:01.919] [32796] [I] SCOPY AFP2 verify generation=0 samples=116 names skeleton=116 tree=109 table=37 | bone-nodes within-1deg=43/106 ratio=0.41 | skeleton within-1deg=31/37 ratio=0.84 | match=0 reason=below-ratio
+[23:05:02.022] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:02.295] [32796] [I] SCOPY PUPPET digest ticks=120 step=0.0168 clips=1 [Animations\male\MT_Idle.HKX#11967(13.49s)]
+[23:05:02.772] [32796] [I] SCOPY PUPPET digest ticks=150 step=0.0154 clips=1 [Animations\male\MT_Idle.HKX#11967(13.96s)]
+[23:05:03.240] [32796] [I] SCOPY PUPPET digest ticks=180 step=0.0144 clips=1 [Animations\male\MT_Idle.HKX#11967(14.43s)]
+[23:05:03.702] [32796] [I] SCOPY PUPPET digest ticks=210 step=0.0168 clips=1 [Animations\male\MT_Idle.HKX#11967(14.89s)]
+[23:05:03.941] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:04.163] [32796] [I] SCOPY PUPPET digest ticks=240 step=0.0146 clips=1 [Animations\male\MT_Idle.HKX#11967(15.36s)]
+[23:05:04.624] [32796] [I] SCOPY PUPPET digest ticks=270 step=0.0135 clips=1 [Animations\male\MT_Idle.HKX#11967(15.82s)]
+[23:05:05.086] [32796] [I] SCOPY PUPPET digest ticks=300 step=0.0153 clips=1 [Animations\male\MT_Idle.HKX#11967(16.28s)]
+[23:05:05.544] [32796] [I] SCOPY PUPPET digest ticks=330 step=0.0132 clips=1 [Animations\male\MT_Idle.HKX#11967(16.74s)]
+[23:05:05.811] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:06.018] [32796] [I] SCOPY PUPPET digest ticks=360 step=0.0167 clips=1 [Animations\male\MT_Idle.HKX#11967(17.21s)]
+[23:05:06.479] [32796] [I] SCOPY PUPPET digest ticks=390 step=0.0155 clips=1 [Animations\male\MT_Idle.HKX#11967(17.67s)]
+[23:05:06.939] [32796] [I] SCOPY PUPPET digest ticks=420 step=0.0163 clips=1 [Animations\male\MT_Idle.HKX#11967(18.13s)]
+[23:05:07.400] [32796] [I] SCOPY PUPPET digest ticks=450 step=0.0147 clips=1 [Animations\male\MT_Idle.HKX#11967(18.59s)]
+[23:05:07.668] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:07.861] [32796] [I] SCOPY PUPPET digest ticks=480 step=0.0165 clips=1 [Animations\male\MT_Idle.HKX#11967(19.05s)]
+[23:05:08.322] [32796] [I] SCOPY PUPPET digest ticks=510 step=0.0153 clips=1 [Animations\male\MT_Idle.HKX#11967(19.51s)]
+[23:05:08.783] [32796] [I] SCOPY PUPPET digest ticks=540 step=0.0154 clips=1 [Animations\male\MT_Idle.HKX#11967(19.98s)]
+[23:05:09.241] [32796] [I] SCOPY PUPPET digest ticks=570 step=0.0156 clips=1 [Animations\male\MT_Idle.HKX#11967(20.43s)]
+[23:05:09.539] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:09.713] [32796] [I] SCOPY PUPPET digest ticks=600 step=0.0148 clips=1 [Animations\male\MT_Idle.HKX#11967(20.91s)]
+[23:05:10.174] [32796] [I] SCOPY PUPPET digest ticks=630 step=0.0153 clips=1 [Animations\male\MT_Idle.HKX#11967(21.37s)]
+[23:05:10.639] [32796] [I] SCOPY PUPPET digest ticks=660 step=0.0148 clips=1 [Animations\male\MT_Idle.HKX#11967(21.83s)]
+[23:05:11.098] [32796] [I] SCOPY PUPPET digest ticks=690 step=0.0159 clips=1 [Animations\male\MT_Idle.HKX#11967(22.29s)]
+[23:05:14.298] [32796] [I] SCOPY ANIM restart at panel open capture=0 driver=procedural-idle
+[23:05:14.411] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:14.652] [32796] [I] SCOPY PUPPET digest ticks=720 step=0.0226 clips=1 [Animations\male\MT_Idle.HKX#11967(25.86s)]
+[23:05:15.276] [32796] [I] SCOPY PUPPET digest ticks=750 step=0.0200 clips=1 [Animations\male\MT_Idle.HKX#11967(26.48s)]
+[23:05:15.853] [32796] [I] SCOPY PUPPET digest ticks=780 step=0.0198 clips=1 [Animations\male\MT_Idle.HKX#11967(27.06s)]
+[23:05:16.426] [32796] [I] SCOPY PUPPET digest ticks=810 step=0.0178 clips=1 [Animations\male\MT_Idle.HKX#11967(27.63s)]
+[23:05:16.818] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:17.000] [32796] [I] SCOPY PUPPET digest ticks=840 step=0.0183 clips=1 [Animations\male\MT_Idle.HKX#11967(28.20s)]
+[23:05:17.572] [32796] [I] SCOPY PUPPET digest ticks=870 step=0.0189 clips=1 [Animations\male\MT_Idle.HKX#11967(28.78s)]
+[23:05:18.144] [32796] [I] SCOPY PUPPET digest ticks=900 step=0.0187 clips=1 [Animations\male\MT_Idle.HKX#11967(29.35s)]
+[23:05:18.463] [32796] [I] SCOPY FP A0 subject=puppet output0=0x2247224d1f0 pose0=0 reason0=pose-empty output1=0x2247224d220 pose1=0 reason1=track-off bones=106/116 pose-local=116
+[23:05:18.463] [32796] [I] SCOPY FP A0 subject=player output0=0x224729d1b30 pose0=116 reason0=ok output1=0x224729d1b60 pose1=0 reason1=track-off bones=106/116 pose-local=116
+[23:05:18.463] [32796] [I] SCOPY FP mark=1 paused=1 tick=on manual-ticks=917 placement=held-pinned
+[23:05:18.463] [32796] [I] SCOPY FP camera ui3d=0x7ff624f90fe0 ui3d-camera=0x22568604100 accumulator=0x225685d3400 accumulator-camera=0x0 world-camera=0x21af4006e80 accumulator-is-ui3d=0 accumulator-is-world=0 ui3d-is-world=0
+[23:05:18.463] [32796] [I] SCOPY FP camera ui3d-camera world-t=(0.0,0.0,0.0) view=(-0.0000,-1.0007,-0.0000) w2c-t=(-0.0,-1.0,-0.0) near=15.00 far=20480.0 l=-0.2 r=0.2 t=0.1 b=-0.1 ortho=0 cached-pos=(0.0,0.0,0.0) cached-rot-col2=(0.0000,0.0000,1.0000) ui3d-frustum l=-0.2 r=0.2 t=0.1 b=-0.1 near=15.00 far=20480.0
+[23:05:18.465] [32796] [I] SCOPY FP census subject=puppet form=ff006915 gen=0 graph=0x22970264900 root=0x22978122380 bone-nodes=116 bound=106 pose-local=116 num-anim-bones=0 tracks-in-lod=-1 lod=-1 skeleton='NPC Root [Root]' skeleton-bones=116
+[23:05:18.465] [32796] [I] SCOPY FP figure subject=puppet root=0x22978122380 world-t=(1106.7,-832.2,-1475.9) view-depth=832.9 lateral=1844.7 eye-distance=2023.7 fade=0.050 bound-center=(1106.8,-832.8,-1462.7) bound-radius=126.4
+[23:05:18.465] [32796] [I] SCOPY FP geoms subject=puppet root=0x22978122380 geometries=48 skinned=44 property=40 none=8 effect=1 renderer-data=4 skinned-with-rd=0
+[23:05:18.465] [32796] [I] SCOPY FP slot=0 subject=puppet out=0x2247224d220 tracks=21 on-tracks=[0,1,2,4,5,8,10,11] exists=1 valid=1 type=1 flags=0 num-data=0 cap=116 elem=48 off=448 on=1.000 data=0x0 readable=0 reason=pose-empty
+[23:05:18.465] [32796] [I] SCOPY FP delta slot=0 subject=puppet prev=0 now=0 first=1 readable=0
+[23:05:18.466] [32796] [I] SCOPY FP slot=1 subject=puppet out=0x2247224d1f0 tracks=21 on-tracks=[-] exists=1 valid=0 type=1 flags=0 num-data=0 cap=116 elem=48 off=448 on=0.000 data=0x0 readable=0 reason=track-off
+[23:05:18.466] [32796] [I] SCOPY FP delta slot=1 subject=puppet prev=0 now=0 first=1 readable=0
+[23:05:18.466] [32796] [I] SCOPY FP nodes subject=puppet bones=116 missing=10 first=1
+[23:05:18.475] [32796] [I] SCOPY FP verdict subject=puppet match=0 reason=no-candidate nodes-moved=0
+[23:05:18.476] [32796] [I] SCOPY FP census subject=player form=00000014 gen=0 graph=0x2294026ec00 root=0x226bb46f100 bone-nodes=116 bound=106 pose-local=116 num-anim-bones=116 tracks-in-lod=-1 lod=-1 skeleton='NPC Root [Root]' skeleton-bones=116
+[23:05:18.476] [32796] [I] SCOPY FP figure subject=player root=0x226bb46f100 world-t=(1081.5,-886.1,-1471.8) view-depth=886.8 lateral=1826.4 eye-distance=2030.0 fade=1.000 bound-center=(1081.8,-885.6,-1449.8) bound-radius=127.7
+[23:05:18.476] [32796] [I] SCOPY FP geoms subject=player root=0x226bb46f100 geometries=63 skinned=63 property=45 none=18 effect=0 renderer-data=0 skinned-with-rd=0
+[23:05:18.477] [32796] [I] SCOPY FP slot=0 subject=player out=0x224729d1b30 tracks=21 on-tracks=[0,1,2,3,4,5,8,10,11] exists=1 valid=1 type=1 flags=0 num-data=116 cap=116 elem=48 off=448 on=1.000 data=0x2244529fef0 readable=1 reason=ok
+[23:05:18.477] [32796] [I] SCOPY FP delta slot=0 subject=player prev=0 now=116 first=1 readable=1
+[23:05:18.478] [32796] [I] SCOPY FP slot=1 subject=player out=0x224729d1b60 tracks=21 on-tracks=[-] exists=1 valid=0 type=1 flags=0 num-data=0 cap=116 elem=48 off=448 on=0.000 data=0x0 readable=0 reason=track-off
+[23:05:18.478] [32796] [I] SCOPY FP delta slot=1 subject=player prev=0 now=0 first=1 readable=0
+[23:05:18.478] [32796] [I] SCOPY FP nodes subject=player bones=116 missing=10 first=1
+[23:05:18.484] [32796] [I] SCOPY FP order=bone-nodes slot=0 subject=player sampled=116 bones=116 compared=106 within-1deg=50 beyond=56 ratio=0.47 max-rot=176.437deg max-pos=75.693 max-scale=0.0136 outliers='NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]'
+[23:05:18.484] [32796] [I] SCOPY FP order=skeleton slot=0 subject=player sampled=116 bones=116 named=109 compared=109 within-1deg=109 beyond=0 ratio=1.00 max-rot=0.097deg max-pos=5.591 max-scale=0.0136 outliers=-
+[23:05:18.484] [32796] [I] SCOPY FP world order=skeleton slot=0 subject=player compared=109 within-1deg=87 beyond=22 ratio=0.80 max-rot=60.209deg max-pos=19.003 max-scale=0.0096 outliers='NPC Pelvis [Pelv]','SkirtRBone01','SkirtRBone02','SkirtRBone03','SkirtLBone01','SkirtLBone02','SkirtLBone03','SkirtBBone01'
+[23:05:18.484] [32796] [I] SCOPY FP verdict subject=player match=1 reason=matched best=skeleton/slot0 within-1deg=109/109 ratio=1.00 max-rot=0.097deg max-pos=5.591 max-scale=0.0136 world-within-1deg=87/109 named=109 nodes-moved=0
+[23:05:18.484] [32796] [I] SCOPY FP A0A1 subject=puppet pose0=0/0 pose1=0/0 pose-max-rot=0.000deg nodes=106/116 nodes-moved=2 nodes-max-rot=0.028deg nodes-max-pos=0.000 nodes-rebound=0 pose-local=116/116 pose-local-moved=29 pose-local-max-rot=0.079deg
+[23:05:18.484] [32796] [I] SCOPY FP A0A1 subject=player pose0=116/116 pose1=0/0 pose-max-rot=0.069deg nodes=106/116 nodes-moved=2 nodes-max-rot=0.028deg nodes-max-pos=0.000 nodes-rebound=0 pose-local=116/116 pose-local-moved=29 pose-local-max-rot=0.069deg
+[23:05:18.484] [32796] [I] SCOPY FP A3 physics=skipped reason=first-round-physics-off
+[23:05:18.484] [32796] [I] SCOPY FP A2 drive=tick+apply apply=on mapping=none verified=0 generation=0 written=0 unreachable=0 frames=0 verifications=1 max-rot=0.000deg max-pos=0.000 blocked=no-pose-while-paused
+[23:05:18.740] [32796] [I] SCOPY PUPPET digest ticks=930 step=0.0193 clips=1 [Animations\male\MT_Idle.HKX#12219(19.97s)]
+[23:05:19.154] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:19.316] [32796] [I] SCOPY PUPPET digest ticks=960 step=0.0182 clips=1 [Animations\male\MT_Idle.HKX#12219(0.54s)]
+[23:05:19.889] [32796] [I] SCOPY PUPPET digest ticks=990 step=0.0177 clips=1 [Animations\male\MT_Idle.HKX#12219(1.12s)]
+[23:05:20.464] [32796] [I] SCOPY PUPPET digest ticks=1020 step=0.0180 clips=1 [Animations\male\MT_Idle.HKX#12219(1.69s)]
+[23:05:21.036] [32796] [I] SCOPY PUPPET digest ticks=1050 step=0.0189 clips=1 [Animations\male\MT_Idle.HKX#12219(2.26s)]
+[23:05:21.464] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:21.606] [32796] [I] SCOPY PUPPET digest ticks=1080 step=0.0184 clips=1 [Animations\male\MT_Idle.HKX#12219(2.83s)]
+[23:05:22.177] [32796] [I] SCOPY PUPPET digest ticks=1110 step=0.0175 clips=1 [Animations\male\MT_Idle.HKX#12219(3.40s)]
+[23:05:22.750] [32796] [I] SCOPY PUPPET digest ticks=1140 step=0.0201 clips=1 [Animations\male\MT_Idle.HKX#12219(3.98s)]
+[23:05:23.321] [32796] [I] SCOPY PUPPET digest ticks=1170 step=0.0192 clips=1 [Animations\male\MT_Idle.HKX#12219(4.55s)]
+[23:05:23.774] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:23.900] [32796] [I] SCOPY PUPPET digest ticks=1200 step=0.0191 clips=1 [Animations\male\MT_Idle.HKX#12219(5.13s)]
+[23:05:24.474] [32796] [I] SCOPY PUPPET digest ticks=1230 step=0.0190 clips=1 [Animations\male\MT_Idle.HKX#12219(5.70s)]
+[23:05:25.045] [32796] [I] SCOPY PUPPET digest ticks=1260 step=0.0176 clips=1 [Animations\male\MT_Idle.HKX#12219(6.27s)]
+[23:05:25.620] [32796] [I] SCOPY PUPPET digest ticks=1290 step=0.0204 clips=1 [Animations\male\MT_Idle.HKX#12219(6.85s)]
+[23:05:26.090] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:26.196] [32796] [I] SCOPY PUPPET digest ticks=1320 step=0.0194 clips=1 [Animations\male\MT_Idle.HKX#12219(7.42s)]
+[23:05:26.767] [32796] [I] SCOPY PUPPET digest ticks=1350 step=0.0186 clips=1 [Animations\male\MT_Idle.HKX#12219(7.99s)]
+[23:05:27.343] [32796] [I] SCOPY PUPPET digest ticks=1380 step=0.0192 clips=1 [Animations\male\MT_Idle.HKX#12219(8.57s)]
+[23:05:27.921] [32796] [I] SCOPY PUPPET digest ticks=1410 step=0.0185 clips=1 [Animations\male\MT_Idle.HKX#12219(9.15s)]
+[23:05:28.410] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:28.497] [32796] [I] SCOPY PUPPET digest ticks=1440 step=0.0191 clips=1 [Animations\male\MT_Idle.HKX#12219(9.72s)]
+[23:05:28.875] [32796] [I] SCOPY FP A0 subject=puppet output0=0x2247224d220 pose0=0 reason0=pose-empty output1=0x2247224d1f0 pose1=0 reason1=track-off bones=106/116 pose-local=116
+[23:05:28.875] [32796] [I] SCOPY FP A0 subject=player output0=0x224729d1b30 pose0=116 reason0=ok output1=0x224729d1b60 pose1=0 reason1=track-off bones=106/116 pose-local=116
+[23:05:28.875] [32796] [I] SCOPY FP mark=2 paused=1 tick=on manual-ticks=1460 placement=held-pinned
+[23:05:28.875] [32796] [I] SCOPY FP camera ui3d=0x7ff624f90fe0 ui3d-camera=0x22568604100 accumulator=0x225685d3400 accumulator-camera=0x0 world-camera=0x21af4006e80 accumulator-is-ui3d=0 accumulator-is-world=0 ui3d-is-world=0
+[23:05:28.875] [32796] [I] SCOPY FP camera ui3d-camera world-t=(0.0,0.0,0.0) view=(-0.0000,-1.0007,-0.0000) w2c-t=(-0.0,-1.0,-0.0) near=15.00 far=20480.0 l=-0.2 r=0.2 t=0.1 b=-0.1 ortho=0 cached-pos=(0.0,0.0,0.0) cached-rot-col2=(0.0000,0.0000,1.0000) ui3d-frustum l=-0.2 r=0.2 t=0.1 b=-0.1 near=15.00 far=20480.0
+[23:05:28.876] [32796] [I] SCOPY FP census subject=puppet form=ff006915 gen=0 graph=0x22970264900 root=0x22978122380 bone-nodes=116 bound=106 pose-local=116 num-anim-bones=0 tracks-in-lod=-1 lod=-1 skeleton='NPC Root [Root]' skeleton-bones=116
+[23:05:28.876] [32796] [I] SCOPY FP figure subject=puppet root=0x22978122380 world-t=(1106.7,-832.2,-1475.9) view-depth=832.9 lateral=1844.7 eye-distance=2023.7 fade=0.050 bound-center=(1106.8,-832.8,-1462.7) bound-radius=126.4
+[23:05:28.877] [32796] [I] SCOPY FP geoms subject=puppet root=0x22978122380 geometries=48 skinned=44 property=40 none=8 effect=1 renderer-data=4 skinned-with-rd=0
+[23:05:28.877] [32796] [I] SCOPY FP slot=0 subject=puppet out=0x2247224d1f0 tracks=21 on-tracks=[0,1,2,4,5,8,10,11] exists=1 valid=1 type=1 flags=0 num-data=0 cap=116 elem=48 off=448 on=1.000 data=0x0 readable=0 reason=pose-empty
+[23:05:28.877] [32796] [I] SCOPY FP delta slot=0 subject=puppet prev=0 now=0 first=1 readable=0
+[23:05:28.877] [32796] [I] SCOPY FP slot=1 subject=puppet out=0x2247224d220 tracks=21 on-tracks=[-] exists=1 valid=0 type=1 flags=0 num-data=0 cap=116 elem=48 off=448 on=0.000 data=0x0 readable=0 reason=track-off
+[23:05:28.877] [32796] [I] SCOPY FP delta slot=1 subject=puppet prev=0 now=0 first=1 readable=0
+[23:05:28.878] [32796] [I] SCOPY FP nodes subject=puppet bones=116 compared=106 rebound=0 gone=10 missing=10 changed=2 max-rot=0.028deg max-pos=0.000 vs-mark=1
+[23:05:28.886] [32796] [I] SCOPY FP verdict subject=puppet match=0 reason=no-candidate nodes-moved=2
+[23:05:28.887] [32796] [I] SCOPY FP census subject=player form=00000014 gen=0 graph=0x2294026ec00 root=0x226bb46f100 bone-nodes=116 bound=106 pose-local=116 num-anim-bones=116 tracks-in-lod=-1 lod=-1 skeleton='NPC Root [Root]' skeleton-bones=116
+[23:05:28.887] [32796] [I] SCOPY FP figure subject=player root=0x226bb46f100 world-t=(1081.5,-886.1,-1471.8) view-depth=886.8 lateral=1826.4 eye-distance=2030.0 fade=1.000 bound-center=(1081.8,-885.6,-1449.8) bound-radius=127.7
+[23:05:28.887] [32796] [I] SCOPY FP geoms subject=player root=0x226bb46f100 geometries=63 skinned=63 property=45 none=18 effect=0 renderer-data=0 skinned-with-rd=0
+[23:05:28.888] [32796] [I] SCOPY FP slot=0 subject=player out=0x224729d1b30 tracks=21 on-tracks=[0,1,2,3,4,5,8,10,11] exists=1 valid=1 type=1 flags=0 num-data=116 cap=116 elem=48 off=448 on=1.000 data=0x2244529fef0 readable=1 reason=ok
+[23:05:28.888] [32796] [I] SCOPY FP delta slot=0 subject=player prev=116 now=116 compared=116 changed=29 max-rot=0.069deg max-pos=0.000 vs-mark=1
+[23:05:28.889] [32796] [I] SCOPY FP slot=1 subject=player out=0x224729d1b60 tracks=21 on-tracks=[-] exists=1 valid=0 type=1 flags=0 num-data=0 cap=116 elem=48 off=448 on=0.000 data=0x0 readable=0 reason=track-off
+[23:05:28.889] [32796] [I] SCOPY FP delta slot=1 subject=player prev=0 now=0 first=1 readable=0
+[23:05:28.889] [32796] [I] SCOPY FP nodes subject=player bones=116 compared=106 rebound=0 gone=10 missing=10 changed=2 max-rot=0.028deg max-pos=0.000 vs-mark=1
+[23:05:28.894] [32796] [I] SCOPY FP order=bone-nodes slot=0 subject=player sampled=116 bones=116 compared=106 within-1deg=50 beyond=56 ratio=0.47 max-rot=176.437deg max-pos=75.693 max-scale=0.0136 outliers='NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]','NPC Root [Root]'
+[23:05:28.895] [32796] [I] SCOPY FP order=skeleton slot=0 subject=player sampled=116 bones=116 named=109 compared=109 within-1deg=109 beyond=0 ratio=1.00 max-rot=0.097deg max-pos=5.591 max-scale=0.0136 outliers=-
+[23:05:28.895] [32796] [I] SCOPY FP world order=skeleton slot=0 subject=player compared=109 within-1deg=87 beyond=22 ratio=0.80 max-rot=60.209deg max-pos=19.003 max-scale=0.0096 outliers='NPC Pelvis [Pelv]','SkirtRBone01','SkirtRBone02','SkirtRBone03','SkirtLBone01','SkirtLBone02','SkirtLBone03','SkirtBBone01'
+[23:05:28.895] [32796] [I] SCOPY FP verdict subject=player match=1 reason=matched best=skeleton/slot0 within-1deg=109/109 ratio=1.00 max-rot=0.097deg max-pos=5.591 max-scale=0.0136 world-within-1deg=87/109 named=109 nodes-moved=2
+[23:05:28.895] [32796] [I] SCOPY FP A0A1 subject=puppet pose0=0/0 pose1=0/0 pose-max-rot=0.000deg nodes=106/116 nodes-moved=2 nodes-max-rot=0.028deg nodes-max-pos=0.000 nodes-rebound=0 pose-local=116/116 pose-local-moved=29 pose-local-max-rot=0.079deg
+[23:05:28.895] [32796] [I] SCOPY FP A0A1 subject=player pose0=116/116 pose1=0/0 pose-max-rot=0.069deg nodes=106/116 nodes-moved=2 nodes-max-rot=0.028deg nodes-max-pos=0.000 nodes-rebound=0 pose-local=116/116 pose-local-moved=29 pose-local-max-rot=0.069deg
+[23:05:28.895] [32796] [I] SCOPY FP A3 physics=skipped reason=first-round-physics-off
+[23:05:28.895] [32796] [I] SCOPY FP A2 drive=tick+apply apply=on mapping=none verified=0 generation=0 written=0 unreachable=0 frames=0 verifications=1 max-rot=0.000deg max-pos=0.000 blocked=no-pose-while-paused
+[23:05:29.093] [32796] [I] SCOPY PUPPET digest ticks=1470 step=0.0178 clips=1 [Animations\male\MT_Idle.HKX#12219(10.32s)]
+[23:05:29.665] [32796] [I] SCOPY PUPPET digest ticks=1500 step=0.0192 clips=1 [Animations\male\MT_Idle.HKX#12219(10.89s)]
+[23:05:30.237] [32796] [I] SCOPY PUPPET digest ticks=1530 step=0.0198 clips=1 [Animations\male\MT_Idle.HKX#12219(11.46s)]
+[23:05:30.740] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:30.807] [32796] [I] SCOPY PUPPET digest ticks=1560 step=0.0196 clips=1 [Animations\male\MT_Idle.HKX#12219(12.03s)]
+[23:05:31.378] [32796] [I] SCOPY PUPPET digest ticks=1590 step=0.0185 clips=1 [Animations\male\MT_Idle.HKX#12219(12.60s)]
+[23:05:31.948] [32796] [I] SCOPY PUPPET digest ticks=1620 step=0.0194 clips=1 [Animations\male\MT_Idle.HKX#12219(13.17s)]
+[23:05:32.524] [32796] [I] SCOPY PUPPET digest ticks=1650 step=0.0204 clips=1 [Animations\male\MT_Idle.HKX#12219(13.75s)]
+[23:05:33.051] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:33.098] [32796] [I] SCOPY PUPPET digest ticks=1680 step=0.0189 clips=1 [Animations\male\MT_Idle.HKX#12219(14.33s)]
+[23:05:33.673] [32796] [I] SCOPY PUPPET digest ticks=1710 step=0.0174 clips=1 [Animations\male\MT_Idle.HKX#12219(14.90s)]
+[23:05:34.247] [32796] [I] SCOPY PUPPET digest ticks=1740 step=0.0191 clips=1 [Animations\male\MT_Idle.HKX#12219(15.47s)]
+[23:05:34.821] [32796] [I] SCOPY PUPPET digest ticks=1770 step=0.0194 clips=1 [Animations\male\MT_Idle.HKX#12219(16.05s)]
+[23:05:35.364] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:35.393] [32796] [I] SCOPY PUPPET digest ticks=1800 step=0.0193 clips=1 [Animations\male\MT_Idle.HKX#12219(16.62s)]
+[23:05:35.967] [32796] [I] SCOPY PUPPET digest ticks=1830 step=0.0177 clips=1 [Animations\male\MT_Idle.HKX#12219(17.19s)]
+[23:05:36.539] [32796] [I] SCOPY PUPPET digest ticks=1860 step=0.0189 clips=1 [Animations\male\MT_Idle.HKX#12219(17.77s)]
+[23:05:37.110] [32796] [I] SCOPY PUPPET digest ticks=1890 step=0.0190 clips=1 [Animations\male\MT_Idle.HKX#12219(18.34s)]
+[23:05:37.683] [32796] [I] SCOPY PUPPET digest ticks=1920 step=0.0181 clips=1 [Animations\male\MT_Idle.HKX#12219(18.91s)]
+[23:05:37.683] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:38.268] [32796] [I] SCOPY PUPPET digest ticks=1950 step=0.0187 clips=1 [Animations\male\MT_Idle.HKX#12219(19.49s)]
+[23:05:38.841] [32796] [I] SCOPY PUPPET digest ticks=1980 step=0.0188 clips=1 [Animations\male\MT_Idle.HKX#12219(0.07s)]
+[23:05:41.214] [32796] [I] SCOPY PUPPET digest ticks=2010 step=0.1000 clips=1 [Animations\male\MT_Idle.HKX#12219(2.44s)]
+[23:05:41.838] [32796] [I] SCOPY PUPPET digest ticks=2040 step=0.0201 clips=1 [Animations\male\MT_Idle.HKX#12219(3.06s)]
+[23:05:41.850] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:42.435] [32796] [I] SCOPY PUPPET digest ticks=2070 step=0.0193 clips=1 [Animations\male\MT_Idle.HKX#12219(3.66s)]
+[23:05:42.997] [32796] [I] SCOPY PUPPET digest ticks=2100 step=0.0177 clips=1 [Animations\male\MT_Idle.HKX#12219(4.22s)]
+[23:05:43.527] [32796] [I] SCOPY PUPPET digest ticks=2130 step=0.0175 clips=1 [Animations\male\MT_Idle.HKX#12219(4.75s)]
+[23:05:44.021] [32796] [I] SCOPY PUPPET digest ticks=2160 step=0.0162 clips=1 [Animations\male\MT_Idle.HKX#12219(5.25s)]
+[23:05:44.043] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:44.483] [32796] [I] SCOPY PUPPET digest ticks=2190 step=0.0155 clips=1 [Animations\male\MT_Idle.HKX#12219(5.71s)]
+[23:05:44.908] [32796] [I] SCOPY PUPPET digest ticks=2220 step=0.0142 clips=1 [Animations\male\MT_Idle.HKX#12219(6.13s)]
+[23:05:45.300] [32796] [I] SCOPY PUPPET digest ticks=2250 step=0.0124 clips=1 [Animations\male\MT_Idle.HKX#12219(6.52s)]
+[23:05:45.657] [32796] [I] SCOPY PUPPET digest ticks=2280 step=0.0106 clips=1 [Animations\male\MT_Idle.HKX#12219(6.88s)]
+[23:05:45.681] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:45.987] [32796] [I] SCOPY PUPPET digest ticks=2310 step=0.0112 clips=1 [Animations\male\MT_Idle.HKX#12219(7.21s)]
+[23:05:46.319] [32796] [I] SCOPY PUPPET digest ticks=2340 step=0.0112 clips=1 [Animations\male\MT_Idle.HKX#12219(7.54s)]
+[23:05:46.653] [32796] [I] SCOPY PUPPET digest ticks=2370 step=0.0112 clips=1 [Animations\male\MT_Idle.HKX#12219(7.88s)]
+[23:05:46.986] [32796] [I] SCOPY PUPPET digest ticks=2400 step=0.0117 clips=1 [Animations\male\MT_Idle.HKX#12219(8.21s)]
+[23:05:47.022] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:47.321] [32796] [I] SCOPY PUPPET digest ticks=2430 step=0.0113 clips=1 [Animations\male\MT_Idle.HKX#12219(8.54s)]
+[23:05:47.653] [32796] [I] SCOPY PUPPET digest ticks=2460 step=0.0112 clips=1 [Animations\male\MT_Idle.HKX#12219(8.88s)]
+[23:05:47.986] [32796] [I] SCOPY PUPPET digest ticks=2490 step=0.0111 clips=1 [Animations\male\MT_Idle.HKX#12219(9.21s)]
+[23:05:48.320] [32796] [I] SCOPY PUPPET digest ticks=2520 step=0.0115 clips=1 [Animations\male\MT_Idle.HKX#12219(9.54s)]
+[23:05:48.365] [32796] [I] SCOPY AFP2 apply blocked reason=no-pose-while-paused mapping=none verified=0 generation=0
+[23:05:48.653] [32796] [I] SCOPY PUPPET digest ticks=2550 step=0.0113 clips=1 [Animations\male\MT_Idle.HKX#12219(9.88s)]

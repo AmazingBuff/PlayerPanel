@@ -905,13 +905,41 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
     // The character's own local pose, alongside the graph's output pose: the paused puppet has no
     // output at all, and whether this one still moves under our own clock is the difference between
     // "the route needs another source" and "the engine stopped evaluating".
-    a_state.pose_local.clear();
+    //
+    // Its movement is also measured ACROSS marks, not only within a frame: the 2026-10-13 23:03 session
+    // measured 29 of 116 entries moving by at most 0.079 degrees inside one paused frame on BOTH
+    // subjects - and the player is never manually ticked, so that alone cannot say whether our tick is
+    // what drives it. A window of hundreds of ticks can.
+    std::vector<PoseSample> fresh_local;
     if (character && character->poseLocal && character->numPoseLocal > 0 &&
         readable(character->poseLocal, static_cast<std::size_t>(character->numPoseLocal) * sizeof(RE::hkQsTransform)))
     {
-        a_state.pose_local.reserve(static_cast<std::size_t>(character->numPoseLocal));
+        fresh_local.reserve(static_cast<std::size_t>(character->numPoseLocal));
         for (std::int32_t i = 0; i < character->numPoseLocal; ++i)
-            a_state.pose_local.push_back(read_pose_unaligned(character->poseLocal[i]));
+            fresh_local.push_back(read_pose_unaligned(character->poseLocal[i]));
+    }
+
+    if (!fresh_local.empty())
+    {
+        float local_rotation = 0.0f;
+        float local_position = 0.0f;
+        std::uint32_t local_moved = 0;
+        const std::size_t count = std::min(fresh_local.size(), a_state.pose_local.size());
+        for (std::size_t i = 0; i < count; ++i)
+        {
+            const float rotation = quat_angle_degrees(a_state.pose_local[i], fresh_local[i]);
+            const float position = pose_distance(a_state.pose_local[i], fresh_local[i]);
+            if (rotation > 0.01f || position > 0.01f)
+                ++local_moved;
+            local_rotation = std::max(local_rotation, rotation);
+            local_position = std::max(local_position, position);
+        }
+        if (!a_state.pose_local.empty())
+        {
+            logger::info("SCOPY FP pose-local subject={} entries={} moved={} max-rot={:.3f}deg max-pos={:.3f} vs-mark={}",
+                a_label, fresh_local.size(), local_moved, local_rotation, local_position, m_marks - 1);
+        }
+        a_state.pose_local = std::move(fresh_local);
     }
 
     const Calibration calibration = calibrate(*graph, a_state, a_label);
@@ -1044,6 +1072,21 @@ FinalPoseProbe::Calibration FinalPoseProbe::calibrate(RE::BShkbAnimationGraph& a
         }
         return out.empty() ? std::string("-") : out;
     };
+
+    // The character's own local pose, scored the same way the graph's output pose is: it is the second
+    // source the paused panel could read, and this line says whether it is a whole pose at all and in
+    // which order it is indexed (HKX2 measured `poseLocal` as boneNodes-ordered, unlike this graph
+    // output). A source that is only micro-drift would score near zero here and must not be mistaken
+    // for a pose.
+    if (!a_state.pose_local.empty() && (skeleton || !by_bone_nodes.locals.empty()))
+    {
+        const OrderScore local_by_bones = score_pose_order(a_state.pose_local, by_bone_nodes.locals, Pose_Match_Degrees);
+        const OrderScore local_by_skeleton = score_pose_order(a_state.pose_local, by_skeleton.locals, Pose_Match_Degrees);
+        logger::info("SCOPY FP pose-local order subject={} entries={} bone-nodes within-1deg={}/{} ratio={:.2f} | skeleton within-1deg={}/{} ratio={:.2f}",
+            a_label, a_state.pose_local.size(),
+            local_by_bones.within, local_by_bones.compared, local_by_bones.ratio(),
+            local_by_skeleton.within, local_by_skeleton.compared, local_by_skeleton.ratio());
+    }
 
     std::vector<Candidate> candidates;
     for (int order = 0; order < 2; ++order)
