@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Added
+
+- Implement the same-Actor route's application stage: the behaviour graph's own final output pose
+  written into the puppet's skeleton, which is the half the engine does not do while the panel owns
+  the clock (HKX42 measured the locals frozen). It is deliberately strict. It writes only a mapping
+  it has just verified against the engine's own applied node locals through the same scoring and
+  decision the forensics print, and blocks with the reason when that fails - so verification happens
+  while the world is RUNNING (the engine applies the pose then, which makes its locals the reference)
+  and the write happens while the panel pauses the world; arming it while already paused reports
+  `unverified-world-first` instead of guessing, and it never re-scores once it has started writing,
+  because the locals would then be its own. Every node is resolved from the engine's live bone table
+  on the frame it writes: no node pointer is kept across frames, which is exactly what crashed HKX43,
+  and no per-frame scene walk is done, which is what made HKX35's sampling cost real. The write sets
+  local transforms and recomputes the subtree's worlds once, the only path this codebase has measured
+  reaching a draw. A2 reports what it did on every mark: the mapping, the generation, how many bones
+  the last frame posed, how many pose indices the chosen mapping could not reach, and the worst change
+  it made. F3's cycle carries it as `tick+apply`, with `step` as one declared dt plus one application,
+  and the driver gains the single step that runs even while its gate is closed.
+
 ### Changed
 
 - Move the AFP route's controls onto the three keys this setup can actually spare: F2 marks, F3 is

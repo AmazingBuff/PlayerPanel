@@ -4,6 +4,7 @@
 
 #include "character/final_pose_probe.h"
 
+#include "character/final_pose_apply.h"
 #include "character/puppet_driver.h"
 #include "character/snapshot_transform.h"
 
@@ -662,6 +663,21 @@ void FinalPoseProbe::tick(bool a_paused)
     report_frame_delta("puppet", m_puppet_pre, m_puppet);
     report_frame_delta("player", m_player_pre, m_player);
     logger::info("SCOPY FP A3 physics=skipped reason=first-round-physics-off");
+
+    // A2: what the application stage did on the frame this mark describes. The stage owns the numbers;
+    // the mark is where a reader looks for them, so they are printed together with the rest.
+    const FinalPoseApply& apply = FinalPoseApply::instance();
+    const FinalPoseApply::Stats& apply_stats = apply.stats();
+    logger::info("SCOPY FP A2 drive={} apply={} mapping={} verified={} generation={} written={} unreachable={} frames={} verifications={} max-rot={:.3f}deg max-pos={:.3f} blocked={}",
+        FinalPoseApply::drive_name(apply.drive()),
+        apply.apply_enabled() ? "on" : "off",
+        apply.mapping(),
+        apply.verified() ? 1 : 0,
+        apply.generation(),
+        apply_stats.written, apply_stats.unreachable, apply_stats.frames, apply_stats.verifications,
+        apply_stats.max_rotation, apply_stats.max_position,
+        apply.blocked());
+
     m_puppet_pre = PreSample{};
     m_player_pre = PreSample{};
 }

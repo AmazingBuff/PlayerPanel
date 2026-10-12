@@ -1,4 +1,4 @@
-# AFP2 控制与观测契约（2026-10-13）
+﻿# AFP2 控制与观测契约（2026-10-13）
 
 - 性质：**R00 要求的那份"发包前的实现证据与控制清单"**（[测试单 §2](actor-final-pose-validation-2026-10-12.md)、PRD 0.9 §6.6）。
   本文是 AFP2 包**必须实现的行为契约**，不是测试步骤的复述；键位与行名以本文为准，实现完成后写进包内 runbook 与 manifest。
@@ -13,9 +13,9 @@
 | --- | --- | --- | --- | --- |
 | 标记／逐阶段采样 | **F2** | 一次只读取证：AFP1 全套行 ＋ A0／A0A1／A3 阶段行；每按一次一个 mark 号。**不改变任何状态** | `SCOPY FP mark=…` | 已实现 |
 | 推图 开／关 | **F3**（循环态 `tick`） | 只控制面板对 P 行为图的 `UpdateAnimationGraphManager` 调用；不动 UI 暂停；关时保持时钟新鲜（解冻只走一步） | `SCOPY PUPPET tick on|off` | 已实现 |
-| 最终姿态应用 开／关 | **F3**（循环态 `tick+apply`） | 控制"图输出 → P 骨架节点 local"的写入。**关**（`tick` 态）：继续推图但冻结在最后一次节点结果，不恢复快照/绑定姿态；**开**：每帧按 `decide_pose_order` 的结论写入或阻断并点名理由 | `SCOPY AFP2 apply on|off gated=<reason>` ＋ A2 行 | 待判(placement) |
-| 冻结全部／继续 | **F3**（循环态 `off`／退出 `off`） | `off` = 推图关 + 应用关，不写新姿态、手动推图计数停止；离开 `off` 即继续，时钟从当前时刻续，**不补**冻结期间的时间 | `SCOPY AFP2 drive=off|tick|tick+apply|step` | 部分（off/tick 已有） |
-| 单步 | **F3**（循环态 `step`，一次性） | 推进**一个已声明 dt**（`AFP2_Step_Seconds = 1/60`）并执行**一次**应用，然后自动回到 `off`；连续按即连续单步 | `SCOPY AFP2 step dt=0.0167 index=K` ＋ A1/A2 行 | 待判(placement) |
+| 最终姿态应用 开／关 | **F3**（循环态 `tick+apply`）**已实现** | 控制"图输出 → P 骨架节点 local"的写入。**关**（`tick` 态）：继续推图但冻结在最后一次节点结果，不恢复快照/绑定姿态；**开**：每帧按 `decide_pose_order` 的结论写入或阻断并点名理由 | `SCOPY AFP2 apply on|off gated=<reason>` ＋ A2 行 | 待判(placement) |
+| 冻结全部／继续 | **F3**（循环态 `off`／退出 `off`）**已实现** | `off` = 推图关 + 应用关，不写新姿态、手动推图计数停止；离开 `off` 即继续，时钟从当前时刻续，**不补**冻结期间的时间 | `SCOPY AFP2 drive=off|tick|tick+apply|step` | 部分（off/tick 已有） |
+| 单步 | **F3**（循环态 `step`，一次性）**已实现** | 推进**一个已声明 dt**（`AFP2_Step_Seconds = 1/60`）并执行**一次**应用，然后自动回到 `off`；连续按即连续单步 | `SCOPY AFP2 step dt=0.0167 index=K` ＋ A1/A2 行 | 待判(placement) |
 | 放置模式 | **F4** | `parked-deep` ↔ `held-pinned`（站玩家处、fade 钉 0.05、留在引擎动画作用域内）；切换必经一次装配窗 | `SCOPY PUPPET placement=…` | 已实现 |
 | 准备／显示 P | 自动（**不占键**） | 出生：读档边界在玩家处装配（v6.70 配方），随后按放置模式处置；显示：面板打开即绘制 P 的 3D（关闭背包即隐藏），**不改变 P 的世界状态、不摘图、不 Disable** | `SCOPY AFP2 figure draw=on|off root=0x… gen=…` | 待判(取景) |
 | 相机取景／旋转 | **构建期常量预设**（不占键） | 取景是常量而非常按键：`AFP2_View_Preset`（近/中/远 × 正面/侧 45°）。R07 要对照取景时改预设重编并记进 manifest，**不为此再占一个键** | `SCOPY AFP2 camera preset=… angle=…` | 待判(取景) |
@@ -34,10 +34,10 @@
 | --- | --- | --- |
 | **A0 推图前** | frame／update 序号、P 与根／generation、UI paused、累计时间、输出摘要（`generatorOutputs` 两槽的身份与 `num-data`）、节点当前姿态摘要 | **已实现**：渲染括号内、驱动 tick **之前**（`FinalPoseProbe::sample_before_tick`），打 `SCOPY FP A0` |
 | **A1 求值后** | 最终输出阶段／数组身份、骨表身份、内容副本与摘要、活动 clip／权重／相位（**仅诊断，clip 不是显示输入**） | **已实现**：tick 之后的全套 `SCOPY FP` 报告 ＋ **`A0A1` 帧内配对**（同一帧 A0 vs A1；`pose0/1`、`nodes-moved`、`nodes-rebound`） |
-| **A2 应用后** | 逐骨 local／world、helper／根处理、应用与缺失骨数量、必要后代与包围盒、`decide` 结论 | apply 阶段内部（写入前后各一读） | 
+| **A2 应用后** | 逐骨 local／world、helper／根处理、应用与缺失骨数量、必要后代与包围盒、`decide` 结论 | **已实现**：每个标记打 `SCOPY FP A2`（drive／apply／mapping／verified／generation／written／unreachable／frames／verifications／max-rot／max-pos／blocked），数字由应用阶段逐帧统计 | 
 | **A3 物理后** | 后端状态／任务完成、物理输出节点；首轮物理关闭时明确写 `skipped` | **已实现**：每个标记打 `SCOPY FP A3 physics=skipped reason=first-round-physics-off` |
-| **A4 pass 前** | 同一节点与实际 geometry／skin／palette、图与 generation 是否仍有效、覆盖与路由 | `draw_figure_passes` 的 `before_pass` 回调（缝已就位，等 Actor 直绘接线） |
-| **A5 draw 后** | 实际 draw 数、蒙皮准备后的观测、画面时间标记、图与渲染状态恢复结果 | `draw_figure_passes` 的 `after_batch` 回调（同上） |
+| **A4 pass 前**（缝已就位） | 同一节点与实际 geometry／skin／palette、图与 generation 是否仍有效、覆盖与路由 | `draw_figure_passes` 的 `before_pass` 回调（缝已就位，等 Actor 直绘接线） |
+| **A5 draw 后**（缝已就位） | 实际 draw 数、蒙皮准备后的观测、画面时间标记、图与渲染状态恢复结果 | `draw_figure_passes` 的 `after_batch` 回调（同上） |
 
 **A2→A4 的一致性只证明"输出没被覆盖"**，不证明动画来源正确——动画正确性另由 R03 的正常引擎参考与 R05 的状态／混合验收（测试单原文），这条不许在本包里被简化。
 

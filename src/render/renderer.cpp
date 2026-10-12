@@ -11,6 +11,7 @@
 
 #include "panel/panel.h"
 #include "character/character_manager.h"
+#include "character/final_pose_apply.h"
 #include "character/final_pose_probe.h"
 #include "character/puppet_driver.h"
 #include "character/puppet_probe.h"
@@ -83,6 +84,9 @@ namespace
                 // The scheduler's data source: lifecycle pump, and while the panel pauses the
                 // world this frame also drives the puppet's graph on the studio clock.
                 PuppetDriver::instance().tick(paused);
+                // AFP2: the application stage. It verifies the mapping while the world runs (the
+                // engine's own applied locals are the reference then) and writes while it is paused.
+                FinalPoseApply::instance().tick(paused);
                 // AFP1: the mark is consumed after the drivers ticked, so the sample describes the
                 // frame the panel is about to draw rather than the one before it.
                 FinalPoseProbe::instance().tick(paused);

@@ -1,4 +1,4 @@
-﻿# AFP1 测试单（2026-10-13，同 Actor 最终输出只读取证）
+# AFP1 测试单（2026-10-13，同 Actor 最终输出只读取证）
 
 > **判读已出（首轮，21:54 会话）：见 [AFP1 判读](afp1-verdict-2026-10-13.md)。**
 > 三句话：**最终输出读得到**（pose 轨 `reason=ok`、116 元素、0x30 步长），**次序 = 动画骨架**（105/109 骨 ≤1°，
@@ -9,8 +9,8 @@
 
 | | 已上机（判读已出） | 已构建未上机（**当前部署的就是它**） |
 | --- | --- | --- |
-| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-c15b56ec0f+dirty-cl94faaed0c6-20261012T143622Z` |
-| DLL SHA-256 | `07bb8ff4…` | `669c6102…`（全值 `669c61028c3d43dfd4c0073b25d51f30e3a46633d0725fbf70abd24ec02ccd34`） |
+| 构建身份 | `CharacterPanel-scopy-AFP1-6764d4e1d5+dirty-cl94faaed0c6-20261012T134954Z` | `CharacterPanel-scopy-AFP1-64090de829+dirty-cl94faaed0c6-20261012T144137Z` |
+| DLL SHA-256 | `07bb8ff4…` | `d74f6b46…`（全值 `d74f6b4622737d1714caf55acfc564c9211dce546c355c8ccfdb4d105b60eff6`） |
 | 多了什么 | —— | `camera`/`figure`/`geoms` 三行、`verdict match=/reason=`、`reason=pose-empty` 独立化、`placement=` 与 **F4** 杠杆、`order=` 行补 `beyond`/`max-scale`/`outliers=`、`world` 行、**`A0`/`A0A1`/`A3` 帧内配对**、**`necessary` 行**、**census 行加 `gen=`/`root=`（R02/R06 要的 3D generation）**；直绘缝重构与默认配置编译修复 |
 
 > **判读风险与回滚**：直绘缝重构动了**当前正在用的面板绘制路径**，而它只能在游戏里验证。两点降低风险：
@@ -77,6 +77,7 @@
 | 9 | **零崩溃零回归** | **通过**（6 标记、零 crash、零 `[E]`，两条已知灯光 warn） | —— |
 | 10 | **R01 前置：Actor 自己的几何能不能画**〔新增〕 | `geoms` 行：`skinned>0`、`property≈skinned`、**`renderer-data>0`** | `renderer-data=0` = 设备侧几何从未创建（runs 49-52 的死因），直绘前必须先让引擎渲染过它（`held-pinned` 的作用域内装配应给出非零值）；`effect` 非零 = HKX34 那类特效几何，直绘前需按类剪枝 |
 | 11 | **R04 前置：超差骨是否阻断**〔新增〕 | `necessary` 行：`necessary=0`（超差的全是 helper，可跳过）或 `necessary>0` 且能逐根解释 | `verdict=unbound-palette`（`palettes=0/N`）= 该 Actor 的调色板从未绑定（引擎没画过它）→ 分类不可用，**不能**当作"没有必要骨"；`necessary>0` = 按 R04 必须阻断样本并点名 |
+| 12 | **R03/R04：应用阶段**〔新增〕 | 世界期把 F3 循环到 `tick+apply`，先看 `SCOPY AFP2 verify … match=1 reason=matched`；再开背包看 `SCOPY FP A2 … apply=on written=N unreachable=N blocked=verified` | `match=0` 带 `reason`（`no-candidate`/`insufficient-compared`/`below-ratio`）→ 不写并点名；`blocked=unverified-world-first` = 在暂停里才武装（应先在**世界期**武装）；`unreachable` 偏大 = 名字桥接没覆盖引擎骨表里的那些骨，按 R03 记"部分机制成立" |
 
 **这张表决定什么**：第 1–3 条已给出"读得到 + 按骨架序"；第 6 条是下一轮唯一要翻的石头（空输出是泊位还是图的本质），
 第 7/8 条给显示侧取景。AFP2（手动应用 + 直绘 P 自己的 3D）照抄这三条结论，不再猜。

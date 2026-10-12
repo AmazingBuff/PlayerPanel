@@ -59,7 +59,11 @@ public:
     // catch-up step the operator never asked for.
     [[nodiscard]] RE::Actor* actor() const;
     [[nodiscard]] bool tick_enabled() const { return m_tick_enabled.load(std::memory_order_acquire); }
-    void toggle_tick();
+    // F3's drive cycle owns this gate now (the application stage sets it), and a single step is a
+    // declared dt advanced once even while the gate is closed - R02's "freeze, then step exactly one
+    // dt" without a fourth key.
+    void set_tick_enabled(bool a_enabled);
+    void request_step();
     [[nodiscard]] std::uint32_t manual_ticks() const { return m_manual_ticks; }
 
     // AFP1's other finding needs a lever: the parked puppet's behaviour graph generates an output
@@ -91,6 +95,9 @@ private:
     // AFP1: the manual tick's gate, on by default - the panel's own time is what drives the puppet
     // while the world is paused, and the instrument has to be able to stop it and watch what freezes.
     std::atomic_bool m_tick_enabled{ true };
+    // One declared step, consumed by the next paused frame even when the gate is closed. The declared
+    // dt is a constant rather than "however long the key was held": R00 fixes it before shipping.
+    std::atomic_bool m_step_requested{ false };
     std::atomic<Placement> m_placement{ Placement::e_parked_deep };
     RE::NiPointer<RE::TESObjectREFR> m_puppet;
     std::uint32_t m_puppet_form_id = 0;

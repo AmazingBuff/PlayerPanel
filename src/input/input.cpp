@@ -4,6 +4,7 @@
 
 #include "input/input.h"
 
+#include "character/final_pose_apply.h"
 #include "character/final_pose_probe.h"
 #include "character/puppet_driver.h"
 #include "character/puppet_probe.h"
@@ -62,7 +63,7 @@ namespace
                 else if (scan == MapVirtualKeyA(VK_F2, MAPVK_VK_TO_VSC))
                     FinalPoseProbe::instance().request_mark();
                 else if (scan == MapVirtualKeyA(VK_F3, MAPVK_VK_TO_VSC))
-                    PuppetDriver::instance().toggle_tick();
+                    FinalPoseApply::instance().cycle();
                 else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
                     PuppetDriver::instance().cycle_placement();
 #if CHARACTER_PANEL_S2_PROBE

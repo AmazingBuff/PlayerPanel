@@ -34,16 +34,57 @@ F8 (draw it), while its old F2 idle / F3 rotate / F4 release bindings are gone.
 
   F2   mark: one read-only sample of the same-Actor forensics (see "Same-Actor
        final output (AFP1)" below). Changes nothing anywhere.
-  F3   drive: off -> tick -> off. "off" is freeze-all - no graph tick on the
-       panel clock, no pose written. "tick" advances the puppet's own behaviour
-       graph on the panel's clock. When the application stage lands this becomes
-       off -> tick -> tick+apply, which is R02's push/freeze control and R04's
-       A/B pair on the same key.
+  F3   drive: off -> tick -> tick+apply -> step -> off. "off" is freeze-all - no
+       graph tick on the panel's clock and no pose written. "tick" advances the
+       puppet's own behaviour graph on the panel's clock. "tick+apply" also
+       writes the graph's final output pose into the puppet's skeleton.
+       "step" is a one-shot: exactly one declared dt (1/60 s) and one
+       application, then the state falls back to off. One key carries R02's
+       push/freeze control, R04's A/B pair and single-step, because this setup
+       has three keys, not nine.
   F4   placement: parked-deep <-> held-pinned. The park is what hides the shell
        from the world, and AFP1 measured the parked puppet's pose track as live
        but EMPTY (zero elements, numAnimBones 0) while the player's carried 116 -
        so this is the one variable that isolates whether the emptiness is the
        park or the graph. The mark line prints which placement was measured.
+
+The application stage (F3's tick+apply)
+
+The engine applies the behaviour graph's pose to the skeleton every frame while
+the world runs; while the panel pauses the world it does not (that is HKX42's
+finding, and AFP1 re-read it as "the parked puppet has no output to propagate").
+This stage does that half, strictly:
+
+  - it writes only a mapping it verified against the engine's OWN applied node
+    locals through the same scoring and decision the forensics print, and blocks
+    with the reason when that fails. Nothing unverified drives a skeleton;
+  - verification therefore happens while the world is RUNNING - the engine is
+    applying the pose then, so its node locals are the reference - and the write
+    happens while the panel pauses the world. Cycle F3 to tick+apply in the
+    running world first, then open the inventory. If you arm it while already
+    paused it reports `blocked reason=unverified-world-first` instead of
+    guessing, and it never re-scores after it has started writing (the locals
+    would then be its own);
+  - every node is resolved from the engine's live bone table on the frame it
+    writes; no node pointer is kept across frames, which is what crashed HKX43;
+  - it writes local transforms and recomputes the subtree's worlds once - the
+    only write path this codebase has measured reaching a draw.
+
+  SCOPY AFP2 drive=tick+apply apply=on tick=off (...)      one line per F3 press
+  SCOPY AFP2 verify generation=N samples=N bone-nodes within-1deg=A/B ratio=X
+        | skeleton within-1deg=C/D ratio=Y | match=0|1 reason=matched|...
+  SCOPY AFP2 apply blocked reason=... mapping=... verified=0|1 generation=N
+        (at most once per ~120 frames while it stays blocked)
+  SCOPY FP A2 drive=... apply=... mapping=skeleton|bone-nodes|none verified=0|1
+        generation=N written=N unreachable=N frames=N verifications=N
+        max-rot=Xdeg max-pos=X blocked=...
+
+`verify` is the R03 comparison: the same output pose scored against the two
+index orders on the engine's own applied locals. `written` counts the bones the
+last frame actually posed and `unreachable` the pose indices the chosen mapping
+could not resolve to a bone table entry - a name the engine's table does not
+carry is counted, never silently dropped. `blocked=matched|verified` means the
+stage is allowed to write; any other value names the condition that stopped it.
 
 Same-Actor final output (AFP1)
 
