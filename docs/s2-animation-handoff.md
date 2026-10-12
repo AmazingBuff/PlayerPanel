@@ -29,6 +29,13 @@
 > [AFP2 结构侦察](afp2-draw-structural-input-2026-10-13.md)（逐阶段序列、可复用缝 `draw_figure_passes`、
 > 取景现状 = 每帧改根 local :849/:862/:868-870、相机侧唯一入口 `UI3DSceneManager::SetCameraPosition/Rotate/FOV`、
 > 九条带行号风险）。"投影到底读谁"由 `camera` 行的 `accumulator-is-ui3d` 回答。
+>
+> **AFP2 控制与观测契约已写定（2026-10-13）**：[afp2-control-contract](afp2-control-contract-2026-10-13.md)
+> ——R00 要求的那份控制清单（每个行为的键位、精确语义、日志行、是否已实现）、A0–A5 观测点及各自的实现位置、
+> 发包前定死的常量（1°／≥8 骨／≥90%、单步 dt=1/60、补步上限 4），以及四个未决项各自"由什么回答、决定什么"。
+> **实现与测试的键位／行名以它为准。** 同轮还把 `CharacterClone::draw` 的 pass 批抽成两条路线共用的
+> `render/studio/figure_passes.{h,cpp}`（`FigurePassRequest` + `draw_figure_passes`，两个回调承接 A4／A5），
+> 并修掉默认（Actor 路线）配置在 HEAD 上编译不过的既有破损（`SCOPY DRAW` 那行无条件引用只在实验配置里存在的类）。
 
 > **此前待办（已被 AFP1 取代，留档）**：HKX44（求解器崩溃修复：
 > 真值表逐帧重建、零跨帧指针）已部署待上机——测试单
