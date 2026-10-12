@@ -38,6 +38,8 @@ config, input, present_hook
 
 ## Documentation
 
+- [Actor final-pose validation](docs/actor-final-pose-validation-2026-10-12.md): PRD 0.9 §6.6, proposed single-Actor rendering with manual application of final graph output; R00–R09 procedures, engine-reference comparison, blending, physics and lifecycle gates. Not implemented by the HKX44 package.
+
 - [Independent physics validation](docs/s3-independent-physics-validation-2026-10-10.md): PRD 0.8 §6.5, proposed separate SMP/CBPC instances on a copied graph, V00–V10 game procedures, A/B evidence and teardown gates. Requires a new diagnostic build; the current DLL does not implement these interfaces.
 
 - [Next HKX work package](docs/s2-hkx-next-work-package-2026-10-10.md): PRD 0.7, one real active clip, resource ownership, deterministic sampling, independent clock and H01–H05 result form; recorded-pose replay remains a limited fallback.
