@@ -26,8 +26,7 @@ public:
     void pose();
 
     bool draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target);
-    void rotate_snapshot();
-    // The owned studio graph; the S2 animation probe poses a bone of it directly.
+    // The detached graph drawn in the studio.
     [[nodiscard]] RE::NiAVObject* graph() const { return m_graph_object.get(); }
 private:
     enum class CloneState : uint8_t
@@ -66,7 +65,6 @@ private:
     };
 
     bool m_is_snapshot;
-    float m_snapshot_angle;
     uint32_t m_draw_frames;
     bool m_om_check_logged = false;
     RE::NiTransform m_snapshot_root_world;

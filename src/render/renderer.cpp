@@ -14,7 +14,6 @@
 #include "character/final_pose_apply.h"
 #include "character/final_pose_probe.h"
 #include "character/puppet_driver.h"
-#include "character/puppet_probe.h"
 #include "character/scene_graph_copy.h"
 
 PLUGIN_NAMESPACE_BEGIN
@@ -72,11 +71,7 @@ namespace
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
                 SceneGraphCopy::instance().process_requests();
 #endif
-#if CHARACTER_PANEL_S2_PROBE
-                // The HKX37 puppet probe rides the same render bracket: F6 stages are consumed
-                // and the manual animation-graph tick happens here, frame-aligned with the panel.
-                PuppetProbe::instance().tick();
-#endif
+
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
                 // AFP1: A0 is taken before anything advances this frame, so the report after the
                 // drivers ticked can say whether our own tick is what moved the output (R02).

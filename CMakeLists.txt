@@ -12,18 +12,13 @@ set(PROJECT_AUTHOR AmazingBuff)
 option(ENABLE_SKYRIM_SE "Enable support for Skyrim SE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
-option(CHARACTER_PANEL_BUILD_PROBE "Build the opt-in M0 engine evidence probe." ON)
 option(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT "Use the manual, paused scene-graph-copy validation path." OFF)
-# The S2 measurement probe answered its questions (four recorded rounds); F2 now belongs to the
-# procedural idle, so the probe is off unless a build explicitly asks for it. It is read-only and
-# costs nothing when disabled: its hotkey and its per-frame measurement stages are compiled out.
-option(CHARACTER_PANEL_S2_PROBE "Bind the retired S2 measurement probe to F6 instead of leaving F2 to the idle." OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
 
-file(GLOB_RECURSE PLUGIN_SOURCES src/*.cpp)
-file(GLOB_RECURSE PLUGIN_HEADERS src/*.h)
+file(GLOB_RECURSE PLUGIN_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE PLUGIN_HEADERS CONFIGURE_DEPENDS src/*.h)
 
 # HLSL sources live as real files under src/render/shaders and are embedded
 # into a generated header at build time (the HLC reference-project pattern).
@@ -52,12 +47,8 @@ add_custom_command(
 
 set(VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/plugin.h)
 
-# Per-round experiment identity. A new probe build has to be distinguishable from the previous one
-# by its banner alone: every archived S0 round logged the same string, so a stale deployment could
-# not be told apart from a fresh build (test sheet 2026-10-09, R01). The baselines are captured
-# here at configure time; the package manifest records the same identity and the packaging step
-# verifies the shipped DLL contains it.
-set(CHARACTER_PANEL_PROBE_REVISION "S2P1" CACHE STRING "Scene-copy probe round identifier (bump it every round)")
+# Keep build identity and manifest provenance for game results returned from another machine.
+set(CHARACTER_PANEL_PROBE_REVISION "dev" CACHE STRING "Scene-copy build identity label (legacy option name)")
 
 execute_process(
 	COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-parse --short=10 HEAD
@@ -142,7 +133,6 @@ target_compile_features(
 
 target_compile_definitions(CharacterPanel PRIVATE
 	CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=$<BOOL:${CHARACTER_PANEL_SCENE_COPY_EXPERIMENT}>
-	CHARACTER_PANEL_S2_PROBE=$<BOOL:${CHARACTER_PANEL_S2_PROBE}>
 )
 
 # Align the MSVC toolset with the one vcpkg uses for dependencies (spdlog).
@@ -252,105 +242,6 @@ if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 		${CMAKE_CURRENT_SOURCE_DIR}/cmake/scene_copy_packaging.cmake
 		DEPENDS
 		CharacterPanel
-		VERBATIM
-	)
-endif()
-
-if(CHARACTER_PANEL_BUILD_PROBE)
-	set(PROBE_VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/probe/probe_config.h)
-	configure_file(
-		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_probe/probe_config.h.in
-		${PROBE_VERSION_HEADER}
-		@ONLY
-	)
-
-	set(PROBE_VERSION_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/probe/probe_version.rc)
-	configure_file(
-		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_probe/probe_version.rc.in
-		${PROBE_VERSION_RESOURCE}
-		@ONLY
-	)
-
-	add_library(
-		CharacterPanelProbe
-		SHARED
-		tools/m0_probe/probe.h
-		tools/m0_probe/probe_main.cpp
-		tools/m0_probe/probe_capture.cpp
-		${PROBE_VERSION_HEADER}
-		${PROBE_VERSION_RESOURCE}
-	)
-
-	target_compile_features(
-		CharacterPanelProbe
-		PRIVATE
-		cxx_std_23
-	)
-
-	set_target_properties(
-		CharacterPanelProbe
-		PROPERTIES
-		OUTPUT_NAME CharacterPanelProbe
-		VS_GLOBAL_VCToolsVersion "14.44.35207"
-	)
-
-	if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
-		target_compile_options(
-			CharacterPanelProbe
-			PRIVATE
-			/sdl
-			/utf-8
-			/Zi
-			/permissive-
-			/Zc:preprocessor
-			/wd4200
-			$<$<CONFIG:DEBUG>:/ZI>
-			$<$<CONFIG:RELEASE>:/Zi;/Zc:inline;/JMC-;/Ob3>
-		)
-
-		target_compile_definitions(
-			CharacterPanelProbe
-			PRIVATE
-			NOMINMAX
-		)
-
-		target_link_options(
-			CharacterPanelProbe
-			PRIVATE
-			$<$<CONFIG:DEBUG>:/INCREMENTAL;/OPT:NOREF;/OPT:NOICF>
-			$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>
-		)
-	endif()
-
-	target_include_directories(
-		CharacterPanelProbe
-		PRIVATE
-		${CMAKE_CURRENT_BINARY_DIR}/probe
-		${CMAKE_CURRENT_SOURCE_DIR}/tools/m0_probe
-	)
-
-	target_link_libraries(
-		CharacterPanelProbe
-		PRIVATE
-		spdlog::spdlog
-		fmt::fmt
-		CommonLibSSE::CommonLibSSE
-		user32
-		ntdll
-	)
-
-	add_custom_target(
-		CharacterPanelProbePackage
-		COMMAND
-		${CMAKE_COMMAND}
-		-DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
-		-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
-		-DPROJECT_VERSION=${PROJECT_VERSION}
-		-DDLL_PATH=$<TARGET_FILE:CharacterPanelProbe>
-		-P
-		${CMAKE_CURRENT_SOURCE_DIR}/cmake/probe_packaging.cmake
-		DEPENDS
-		CharacterPanelProbe
 		VERBATIM
 	)
 endif()

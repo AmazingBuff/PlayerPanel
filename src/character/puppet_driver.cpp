@@ -19,8 +19,7 @@
 #include <algorithm>
 #include <cmath>
 
-// winnt.h defines macros of these names, which would rewrite the REX constants used below as
-// `REX::W32::0x1000`; every Windows header this file needs is already parsed at this point.
+// Windows macros conflict with the qualified REX constants below.
 #undef MEM_COMMIT
 #undef PAGE_NOACCESS
 
@@ -28,26 +27,18 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
-    // Full-LOD assembly window at the player (the culler must render the shell or the skin never
-    // binds - run 104's born-at-depth lesson). After it the shell moves deep.
+    // Assembly needs a culled/rendered shell before its skin binds; fade must remain nonzero.
     constexpr std::uint32_t Grace_Frames = 240;
-    // v6.25's proven park: directly below the player, out of every sight and interaction range.
+
     constexpr float Park_Depth_Offset = -8000.0f;
-    // The engine's update chain overrides a one-shot SetPosition (run 38), so the park is renewed
-    // on this cadence while the world runs. During the pause the world does not move anyway.
+
     constexpr std::uint32_t Repark_Frames = 60;
     constexpr float Max_Manual_Step = 0.1f;
-    // The declared dt of a single step (R00 fixes it before shipping; the manifest carries it).
+
     constexpr float Declared_Step_Seconds = 1.0f / 60.0f;
-    // The blend after a clip switch needs a beat before the A/B means anything; ~1 second of
-    // manual ticks is well past it.
-    constexpr std::uint32_t Ab_Settle_Ticks = 60;
-    // Digest cadence while the manual tick owns the graph: one line per ~half second.
+
     constexpr std::uint32_t Digest_Ticks = 30;
 
-    // The flash guard, the recipe character_clone.cpp validated: the fade node is pinned
-    // near-invisible (not zero - a zeroed BSFadeNode is skipped by the culler and the skin never
-    // binds) until the grace ends and the shell is parked.
     void suppress_fade(RE::NiAVObject* graph)
     {
         if (RE::BSFadeNode* const fade = graph ? graph->AsFadeNode() : nullptr)
@@ -129,33 +120,13 @@ void PuppetDriver::set_force_generate(bool a_enabled)
 {
     if (m_force_generate.exchange(a_enabled, std::memory_order_acq_rel) == a_enabled)
         return;
-    // The update block is logged when it changes, so the log says which inputs the engine got on the
-    // frames whose pose it is about to report.
+
     m_data_logged = false;
     logger::info("SCOPY PUPPET force-generate {} ({})",
         a_enabled ? "on" : "off",
         a_enabled
             ? "every tick asks UpdateAnimation for hkbGenerator::generate() and the skip is bypassed"
             : "the engine's own skip decides on which frames this tick produces a pose");
-}
-
-char const* PuppetDriver::placement_name(Placement a_placement)
-{
-    return a_placement == Placement::e_parked_deep ? "parked-deep" : "held-pinned";
-}
-
-void PuppetDriver::cycle_placement()
-{
-    const Placement next = m_placement.load(std::memory_order_acquire) == Placement::e_parked_deep
-        ? Placement::e_held_pinned
-        : Placement::e_parked_deep;
-    m_placement.store(next, std::memory_order_release);
-    m_grace_frames = 0;
-    logger::info("SCOPY PUPPET placement={} ({}); the next mark reads the graph in this placement",
-        placement_name(next),
-        next == Placement::e_parked_deep
-            ? "deep below the player, out of the engine's animation scope"
-            : "standing at the player with the fade pinned, inside the animation scope");
 }
 
 void PuppetDriver::tick(bool paused)
@@ -183,53 +154,21 @@ void PuppetDriver::tick(bool paused)
         return;
     }
 
-    const Placement placement = m_placement.load(std::memory_order_acquire);
     if (m_grace_frames < Grace_Frames)
     {
         ++m_grace_frames;
         suppress_fade(puppet->Get3D(false));
         if (m_grace_frames == Grace_Frames)
         {
-            if (placement == Placement::e_parked_deep)
-                park("grace-complete");
-            else
-                logger::info("SCOPY PUPPET held at the player (placement=held-pinned); the shell stays inside the engine's own animation scope with the fade pinned - the variable the parked puppet's empty output pose needs isolated");
+            park("grace-complete");
         }
         return;
     }
 
-    // Held placement: keep the shell near-invisible and never move it, so it stays inside whatever
-    // scope the engine animates. Fade 0 would make the culler skip it entirely (v6.x), so it is
-    // pinned at 0.05 rather than zeroed.
-    if (placement == Placement::e_held_pinned)
-        suppress_fade(puppet->Get3D(false));
-
+    // Engine-applied locals are the independent calibration reference while the world runs.
     if (!paused)
     {
-        // The world runs: the solver observes here (node locals move under the engine's tick),
-        // and the repark keeps the shell deep. The graph itself is the engine's own business -
-        // including while the force flag is armed, which is deliberate. Forcing a generate here
-        // would make the pose and the locals the engine applied disagree, and that pair is
-        // exactly what the mapping is proved against: AFP4 measured the proof fall from 0.99 to
-        // 0.67 on the frame force started driving the running world. Force belongs to the paused
-        // clock, where the panel owns the graph and nothing of the engine's is being applied.
-        if (m_solving && m_current_generator)
-        {
-            if (RE::NiAVObject* const copy_root = SceneGraphCopy::instance().copy_root())
-            {
-                std::string note;
-                if (solve_tracks_step(*puppet, *copy_root, m_current_generator, paused, m_playback, note))
-                {
-                    m_mapping = "solved";
-                    m_solving = false;
-                    logger::info("{}", note);
-                }
-                else if (!note.empty() && (m_repark_frames % 90 == 0 || note.find("UNAVAILABLE") != std::string::npos || note.find("retry") != std::string::npos))
-                    logger::info("{}", note);
-            }
-        }
-        // Keep the shell deep (the engine's update chain overrides a one-shot park).
-        if (placement == Placement::e_parked_deep && ++m_repark_frames >= Repark_Frames)
+        if (++m_repark_frames >= Repark_Frames)
         {
             m_repark_frames = 0;
             park("keep-parked");
@@ -237,14 +176,11 @@ void PuppetDriver::tick(bool paused)
         return;
     }
 
-    // The panel pauses the world: OUR clock drives the puppet's behaviour graph now. A frozen tick
-    // (AFP1's push/freeze control) advances nothing and keeps the clock fresh, so unfreezing delivers
-    // one step rather than however long the freeze lasted - unless this frame is a requested single
-    // step, which advances exactly the declared dt and nothing else.
     const auto now = std::chrono::steady_clock::now();
     const bool step_only = m_step_requested.exchange(false, std::memory_order_acq_rel);
     if (!tick_enabled() && !step_only)
     {
+        // Freeze must not accumulate a catch-up step.
         m_last_tick = now;
         return;
     }
@@ -252,13 +188,6 @@ void PuppetDriver::tick(bool paused)
     m_last_tick = now;
     step = std::clamp(step, 0.0f, Max_Manual_Step);
 
-    // AFP3: the engine calls this same entry point every frame with a block it filled itself, and
-    // three of the inputs ours left zero are real inputs to the update: the camera position (the
-    // translation inside the WorldRoot camera's world transform - Precision/src/Havok/Havok.h:238),
-    // this Actor's own post-animation functor (+0x20, Actor+0xE0 on AE), and `unk2A`, the flag that
-    // forbids the frame-skip around hkbGenerator::generate(). Supplying them is what makes our tick
-    // comparable to the engine's; the drive cycle's force state is what makes `unk2A` an A/B rather
-    // than a guess.
     RE::BSAnimationUpdateData update{};
     update.deltaTime = step;
     update.refr = puppet;
@@ -276,39 +205,11 @@ void PuppetDriver::tick(bool paused)
             static_cast<std::uint32_t>(update.flags),
             update.unk2A ? 1 : 0);
     }
+    // Camera, post-animation functor and force-generation flag mirror the engine update block.
     puppet->UpdateAnimationGraphManager(update);
     ++m_manual_ticks;
 
-    // HKX39 equip lever: the mirror and the draw/sheathe push ride the same tick that advances
-    // the graph, so the panel's equip reaction happens inside the pause instead of waiting for
-    // the engine update that never comes (the HKX37 finding).
     poll_equipment(*puppet);
-
-    // HKX43: the empirical solver accumulates where the truth lives - node locals move under the
-    // engine's own tick (unpaused), so the paused phase only consumes; a pause that catches the
-    // solve mid-window continues on pose locals, the measured-dead node path stays off.
-    if (m_solving && m_current_generator)
-    {
-        if (RE::NiAVObject* const copy_root = SceneGraphCopy::instance().copy_root())
-        {
-            std::string note;
-            if (solve_tracks_step(*puppet, *copy_root, m_current_generator, paused, m_playback, note))
-            {
-                m_mapping = "solved";
-                m_solving = false;
-                logger::info("{}", note);
-            }
-            else if (!note.empty() && (m_manual_ticks % 45 == 0 || note.find("UNAVAILABLE") != std::string::npos || note.find("retry") != std::string::npos))
-                logger::info("{}", note);
-        }
-    }
-
-    // HKX39 tier-2 A/B: judges the mapping the display actually writes.
-    if (m_ab_pending && !m_solving && m_manual_ticks >= m_ab_deadline && m_current_generator)
-    {
-        m_ab_pending = false;
-        logger::info("{}", measure_clip_against_puppet(*puppet, m_current_generator, m_playback, m_mapping));
-    }
 
     if (m_manual_ticks % Digest_Ticks == 0)
     {
@@ -349,8 +250,6 @@ void PuppetDriver::spawn()
     puppet_base->fullName = "CharacterPanel Puppet";
     puppet_base->defaultOutfit = nullptr;
 
-    // The v6.70 recipe verbatim: born AT the player so the engine assembles the full-LOD graph,
-    // fade pinned until the grace ends, pin flags keep the shell inert the whole session.
     const RE::NiPointer<RE::TESObjectREFR> placed = player->PlaceObjectAtMe(puppet_base, false);
     RE::Actor* const puppet = placed ? placed->As<RE::Actor>() : nullptr;
     if (!puppet)
@@ -371,15 +270,13 @@ void PuppetDriver::spawn()
     m_manual_ticks = 0;
     m_stall_frames = 0;
     m_stall_logged = false;
-    m_ab_pending = false;
-    m_ab_deadline = 0;
+
     m_right_form = 0;
     m_left_form = 0;
     m_equip_reactions = 0;
     m_current_generator = nullptr;
     m_playback = ClipPlayback{};
     m_mapping.clear();
-    m_driver_note.clear();
     m_last_tick = std::chrono::steady_clock::now();
     logger::info("SCOPY PUPPET born form={:08x} base={:08x} grace={} frames (fade-pinned at the player; parks deep after assembly)",
         m_puppet_form_id, source_base ? source_base->GetFormID() : 0, Grace_Frames);
@@ -393,9 +290,7 @@ void PuppetDriver::park(char const* why)
         return;
     const RE::NiPoint3 here = player->GetPosition();
     puppet->SetPosition(RE::NiPoint3{ here.x, here.y, here.z + Park_Depth_Offset }, false);
-    // HKX39: pin the physics too - at that depth there is no ground, and the engine phase made
-    // the graph cycle jump-fall-land forever (the HKX38 log). A fixed motion stops the fall
-    // without touching the behaviour graph, so OAR keeps evaluating a standing actor.
+
     puppet->SetMotionType(RE::hkpMotion::MotionType::kFixed, false);
     restore_fade(puppet->Get3D(false));
     logger::info("SCOPY PUPPET parked reason={} offset={:.0f} (invisible; the engine may idle the graph there - panel time is ours)", why, Park_Depth_Offset);
@@ -411,7 +306,6 @@ void PuppetDriver::release(char const* reason)
     m_current_generator = nullptr;
     m_playback = ClipPlayback{};
     m_mapping.clear();
-    m_driver_note.clear();
     m_grace_frames = 0;
     m_repark_frames = 0;
     m_manual_ticks = 0;
@@ -439,8 +333,7 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet)
     RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();
     if (!equip_manager)
         return;
-    // Mirror the changed hands onto the puppet (the recipe the HKX37 probe validated), then push
-    // the graph's draw/sheathe state in the same tick - the lever the pause never delivers.
+
     for (int hand = 0; hand < 2; ++hand)
     {
         if ((hand == 0 ? !right_changed : !left_changed) || !hands[hand] || !hands[hand]->object)
@@ -458,9 +351,7 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet)
         ++m_equip_reactions;
     }
     logger::info("SCOPY PUPPET equip right={:08x} left={:08x} pushed={} reactions={}", forms[0], forms[1], pushed, m_equip_reactions);
-    // The weapon mesh just joined or left O's own graph - a legitimate world change the panel did
-    // not make, so the isolation session re-baselines instead of reporting it forever (HKX39's
-    // 64-line noise).
+
     SceneGraphCopy::instance().note_world_change("world-equipment");
 }
 
@@ -470,7 +361,6 @@ std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
     if (!puppet || !readable(puppet, sizeof(RE::Actor)))
         return {};
 
-    // The graph's strongest control picks the clip; the full resolution reruns only on a switch.
     RE::hkbClipGenerator const* const pick = pick_running_clip(*puppet);
     if (pick != m_current_generator)
     {
@@ -489,31 +379,21 @@ std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
         m_current_generator = pick;
         m_stall_frames = 0;
         m_stall_logged = false;
-        m_solving = m_mapping == "identity-unverified";
-        // The A/B judges whatever mapping the display finally writes: past the solve when one is
-        // armed, otherwise past the blend window.
-        m_ab_deadline = m_manual_ticks + (m_solving ? Track_Solve_Frames : 0) + Ab_Settle_Ticks;
-        m_ab_pending = true;
-        logger::info("SCOPY PUPPET driver clip='{}' mode={} mapping={} solving={} coverage={}",
+        logger::info("SCOPY PUPPET driver clip='{}' mode={} mapping={} coverage={}",
             m_playback.name,
             readable(m_current_generator, sizeof(RE::hkbClipGenerator))
                 ? (m_current_generator->mode.get() == RE::hkbClipGenerator::PlaybackMode::kModeLooping ? "loop" : "single")
                 : "?",
-            m_mapping, m_solving ? 1 : 0, coverage);
+            m_mapping, coverage);
     }
 
     const float time = live_clip_time(m_current_generator);
     if (time < 0.0f)
     {
-        // The graph moved past this clip mid-frame (or its control died): drop the playback so the
-        // next frame re-resolves from whatever runs now.
         m_current_generator = nullptr;
         return {};
     }
-    // The generator's own playback mode decides how the sample time behaves past the clip's end: a
-    // looping clip wraps (its control time already does, engine-side), a single-play clip holds the
-    // final frame while the state machine blends it out - wrapping it here was the equip-replay bug
-    // from the HKX40 field report.
+
     bool loops = true;
     if (readable(m_current_generator, sizeof(RE::hkbClipGenerator)))
         loops = m_current_generator->mode.get() == RE::hkbClipGenerator::PlaybackMode::kModeLooping;

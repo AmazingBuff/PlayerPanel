@@ -9,7 +9,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 
 namespace RE
 {
@@ -62,14 +61,11 @@ struct FigurePassStats
 };
 
 // Binds the studio target, clears it, generates and submits the figure's passes, and restores the
-// engine's ledger expectation around the batch. `a_before_pass` runs before each submission and
-// `a_after_batch` once after the loop, with the number of passes drawn - the two seams the S2 probe
-// and the census attach to, so a caller can instrument without owning the loop.
+// engine's ledger expectation around the batch. The returned statistics describe
+// the completed batch without exposing per-pass callbacks.
 //
 // The caller must already be inside a D3D state capture (CharacterClone's callers are): the viewport,
 // render targets, depth/blend/rasterizer states this sets are restored by that capture, not here.
-[[nodiscard]] FigurePassStats draw_figure_passes(FigurePassRequest const& a_request,
-    std::function<void(RE::BSRenderPass*)> const& a_before_pass = {},
-    std::function<void(std::uint32_t)> const& a_after_batch = {});
+[[nodiscard]] FigurePassStats draw_figure_passes(FigurePassRequest const& a_request);
 
 PLUGIN_NAMESPACE_END

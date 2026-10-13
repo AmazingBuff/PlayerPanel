@@ -7,7 +7,6 @@
 #include "character/final_pose_apply.h"
 #include "character/final_pose_probe.h"
 #include "character/puppet_driver.h"
-#include "character/puppet_probe.h"
 #include "character/scene_graph_copy.h"
 
 #include <Windows.h>
@@ -44,34 +43,12 @@ namespace
                     SceneGraphCopy::instance().request(Command::e_capture);
                 else if (scan == MapVirtualKeyA(VK_F8, MAPVK_VK_TO_VSC))
                     SceneGraphCopy::instance().request(Command::e_toggle_draw);
-                // The AFP route's controls. F3 is bound by another mod in this load order, and
-                // pressing it pauses the world - exactly the state the drive's verification needs
-                // NOT to be in (AFP7's session waited for a verify that could never run), so the
-                // key is left to that mod and the drive lives on F4. The placement cycle that used
-                // to own F4 is unbound for now: the park was measured not to matter (AFP3b -
-                // parked-deep still generated 98 elements with the world running), so the cycle had
-                // no remaining question to answer.
-                //
-                //   F2  mark: one read-only forensic sample (A0/A1, the calibration, the camera and
-                //       geometry lines). Changes nothing.
-                //   F4  drive: off -> tick -> tick+apply -> tick+apply+force -> step -> off. "off"
-                //       is freeze-all (no graph tick, no pose). "tick" advances the puppet's graph
-                //       on the panel clock. "tick+apply" also writes the graph's final output pose
-                //       into the puppet's skeleton. "tick+apply+force" additionally asks for
-                //       hkbGenerator::generate() on every frame, which is what makes the paused
-                //       graph produce a pose at all. "step" is a one-shot declared dt.
+
+                // F3 conflicts with another mod; AFP mark and drive use F2 and F4.
                 else if (scan == MapVirtualKeyA(VK_F2, MAPVK_VK_TO_VSC))
                     FinalPoseProbe::instance().request_mark();
                 else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
                     FinalPoseApply::instance().cycle();
-#if CHARACTER_PANEL_S2_PROBE
-                // Diagnostic build only: F6 is taken by another plugin in the usual setup, so the
-                // probe lives on an opt-in build rather than on the product's own key. The HKX37
-                // round repurposed the key for the puppet stage machine; the retired S2 swing
-                // probe keeps its command enum value but has no binding.
-                else if (scan == MapVirtualKeyA(VK_F6, MAPVK_VK_TO_VSC))
-                    PuppetProbe::instance().request_advance();
-#endif
             }
 #endif
 

@@ -112,7 +112,7 @@ struct OrderScore
 // `direct`, and the pose's own scale kept as one number).
 [[nodiscard]] inline TransformSample pose_local(PoseSample const& a_sample)
 {
-    const RE::NiTransform local = ni_local_from_pose(a_sample, false);
+    const RE::NiTransform local = ni_local_from_pose(a_sample);
     TransformSample sample;
     sample.rotate = local.rotate;
     sample.translate = local.translate;
@@ -486,7 +486,7 @@ private:
     // question AFP3 was opened for, and "deactivated" / "never generated" / "generated and consumed"
     // are three different answers - so the state that separates them is printed rather than inferred
     // from an element count, and the fields no source names yet are printed raw.
-    void report_state(char const* a_label, RE::BShkbAnimationGraph const& a_graph, RE::hkbCharacter const* a_character);
+    void report_state(char const* a_label, RE::BShkbAnimationGraph const& a_graph);
     // A0's sampler: output buffers and node locals, nothing printed.
     PreSample sample_only(RE::TESObjectREFR* a_subject);
     // The A0 -> A1 pair for one subject: what this frame's tick changed, in the output and in the

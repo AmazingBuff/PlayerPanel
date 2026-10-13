@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Removed
+
+- Remove retired M0 probe/prototype build targets, engine image dumping, S2 measurement controls,
+  capture-time animation scans and the empirical track solver. Keep Actor assembly, animated
+  scene-copy rendering and pending final-pose diagnostics; use F2 mark, F4 drive and F7/F8 capture/draw.
+- Replace exploratory verification matrices with two focused regressions for snapshot placement
+  and final-pose index-order calibration.
+
 ### Added
 
 - Implement the same-Actor route's application stage: the behaviour graph's own final output pose
@@ -12,24 +20,24 @@
   while the world is RUNNING (the engine applies the pose then, which makes its locals the reference)
   and the write happens while the panel pauses the world; arming it while already paused reports
   `unverified-world-first` instead of guessing, and it never re-scores once it has started writing,
-  because the locals would then be its own. Every node is resolved from the engine's live bone table
-  on the frame it writes: no node pointer is kept across frames, which is exactly what crashed HKX43,
-  and no per-frame scene walk is done, which is what made HKX35's sampling cost real. The write sets
+  because the locals would then be its own. Every node is resolved by name in the current Actor tree
+  on the frame it writes, with the engine's bone table as a fallback; no node pointer is kept across
+  frames. The write sets
   local transforms and recomputes the subtree's worlds once, the only path this codebase has measured
   reaching a draw. A2 reports what it did on every mark: the mapping, the generation, how many bones
   the last frame posed, how many pose indices the chosen mapping could not reach, and the worst change
-  it made. F3's cycle carries it as `tick+apply`, with `step` as one declared dt plus one application,
+  it made. F4's cycle carries `tick+apply` and `tick+apply+force`, with `step` as one declared dt plus one application,
   and the driver gains the single step that runs even while its gate is closed.
 
 ### Changed
 
-- Move the AFP route's controls onto the three keys this setup can actually spare: F2 marks, F3 is
-  the drive cycle, F4 cycles the placement. The earlier bindings were wrong or unwanted - F5 is the
+- Move the AFP route's controls onto the available keys: F2 marks and F4 is
+  the drive cycle; placement has no control entry. The earlier bindings were wrong or unwanted - F5 is the
   game's own quicksave (and this sink does not consume input), F11/F12 and NUMPAD1 were tried and are
   not wanted - and the scene-copy route gives up its old F2 idle / F3 rotate / F4 release bindings for
-  them, keeping F7 (re-capture, which releases the previous copy) and F8 (draw it). F3 is designed to
+  them, keeping F7 (re-capture, which parks the previous copy) and F8 (draw it). F4 is designed to
   absorb the application stage rather than to need a fourth key: it becomes off -> tick -> tick+apply
-  -> step-once, which is R02's push/freeze control, R04's A/B pair and single-step on one key. The
+  -> tick+apply+force -> step-once, which is R02's push/freeze control, R04's A/B pair and single-step on one key. The
   control contract now also states what deliberately has no key - birth, display and equipment
   mirroring are automatic, framing is a build-time preset, and physics and teardown belong to their
   own gates - because a small, declared control surface is what R00 asks for, not a key per behaviour.
@@ -62,9 +70,9 @@
   light slots, whether to read the bound target back once) and the batch itself - bind and clear the
   studio target, walk the figure's geometries, generate passes through the UI3D accumulator, submit
   each one with the studio rig swapped in and restored, then put the engine's ledger expectation back.
-  Two callbacks carry the seams the S2 probe and the census attach to. `CharacterClone::draw` now
+  The returned statistics describe the completed batch; retired S2 callbacks are removed. `CharacterClone::draw` now
   keeps only what is specific to a detached graph it owns - ownership gate, `pose()`, the animation
-  and probe base stage, the light anchor, the census - which is exactly the split the same-Actor route
+  base stage, the light anchor, the census - which is exactly the split the same-Actor route
   needs to draw an Actor's own third-person 3D through the same proven path. Two orderings moved
   deliberately and are commented where they moved: the DIRTY_RENDERTARGET reset now happens inside the
   batch (later is only more thorough, and nothing between the old and new points generates a pass or

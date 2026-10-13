@@ -28,9 +28,8 @@ PLUGIN_NAMESPACE_BEGIN
 //   - the verification therefore happens while the world is RUNNING (the engine applies every frame,
 //     so its locals are the reference), and the write happens while the panel pauses the world (the
 //     engine applies nothing). That is R03 followed by R04, encoded rather than hoped for;
-//   - it resolves every node from the engine's live bone table on the frame it writes: no node
-//     pointer is kept across frames (HKX43's dangling read came from exactly that), and no per-frame
-//     walk of the scene graph is done (each step of such a walk costs a page query - HKX35);
+//   - it resolves names in the current Actor tree each frame, with a bone-table fallback;
+//     no node pointer is kept across frames;
 //   - it writes local transforms and recomputes the subtree's worlds once, which is the only write
 //     path this codebase has measured reaching a draw (HKX2/S2P4).
 class FinalPoseApply

@@ -497,7 +497,7 @@ namespace
     // The per-pass submission this file used to own now lives in render/studio/figure_passes.cpp,
     // shared with the same-Actor route; what stayed here is only what is specific to a detached graph.
 }
-CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_state(CloneState::e_none), m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0), m_is_snapshot(false), m_snapshot_angle(0.0f), m_draw_frames(0)
+CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_state(CloneState::e_none), m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0), m_is_snapshot(false), m_draw_frames(0)
 {
     m_settle_last_geoms = 0;
     m_settle_last_skinned = 0;
@@ -558,7 +558,7 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_sta
 CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph) :
     m_clone(nullptr), m_clone_state(CloneState::e_ready), m_graph_object(std::move(graph)),
     m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0),
-    m_is_snapshot(true), m_snapshot_angle(0.0f), m_draw_frames(0)
+    m_is_snapshot(true), m_draw_frames(0)
 {
     restore_fade(m_graph_object.get());
     const size_t pruned = prune_effect_objects(m_graph_object.get());
@@ -574,24 +574,11 @@ CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph) :
     });
 }
 
-void CharacterClone::rotate_snapshot()
-{
-    if (m_is_snapshot)
-    {
-        m_snapshot_angle += 1.57079632679f;
-        logger::info("SCOPY ROTATE angle-deg={:.0f}", m_snapshot_angle * 57.2957795131f);
-    }
-}
-
 CharacterClone::~CharacterClone()
 {
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-    // The experiment's snapshot graph is a native NiObject::Clone that no engine teardown
-    // path survives: releasing it crashed in capture(), at a clean frame boundary and at
-    // the main-menu boundary (crashes 2026-10-08 23-01-11, 23-07-35, 23-12-02), always in
-    // BSFadeNode's destructor through the tbb allocator. This class holds the graph's only
-    // reference, so leaving m_graph_object untouched keeps it alive and the process
-    // reclaims it at exit.
+    // Native snapshot teardown remains unsafe. SceneGraphCopy parks the owning wrapper
+    // without destroying it; this branch alone does not prevent automatic NiPointer destruction.
     (void)m_graph_object.get();
 #else
     // A detached graph is solely owned here; releasing the pointer frees it.
@@ -797,7 +784,7 @@ void CharacterClone::pose()
     {
         RE::NiTransform placement;
         placement.translate = anchor;
-        placement.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, m_snapshot_angle);
+        placement.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, 0.0f);
         placement.scale = Studio_Figure_Scale;
         const RE::NiTransform delta = snapshot_delta(m_snapshot_root_world, placement, m_snapshot_center, anchor);
         m_graph_object->local = delta * m_snapshot_root_world;
@@ -857,14 +844,8 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     pose();
 
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-    // PRD 0.6 §6.3 fixes this order inside the draw window: base placement (pose, above) -> the
-    // figure's own motion -> the probe's controlled transform -> engine pass preparation -> draw.
-    // Running the probe before pose() let the captured worlds be restored over it, which is why the
-    // archived S2 rounds could not show whether the write ever reached the draw.
+    // Restore placement before applying animation; the draw must retain the resulting worlds.
     SceneGraphCopy::instance().animate_at_base_pose(*this);
-#if CHARACTER_PANEL_S2_PROBE
-    SceneGraphCopy::instance().probe_at_base_pose(*this);
-#endif
 #endif
 
     // Pull the detached light rig to the anchor and cascade it: the shader
@@ -873,8 +854,7 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     StudioLight::instance().place(m_anchor);
 
     // The batch itself is shared with the same-Actor route (render/studio/figure_passes.h); what
-    // stays here is what only this route knows: the graph it detached, its anchor, and the probe and
-    // census seams.
+    // stays here is what only this route knows: the graph it detached, its anchor and placement.
     const FigurePassRequest request{
         .root = p_root,
         .accumulator = ui3d->unk10.get(),
@@ -886,23 +866,7 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
         .check_render_target = !m_om_check_logged,
     };
 
-    const FigurePassStats stats = draw_figure_passes(request,
-        [&](RE::BSRenderPass* pass)
-        {
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT && CHARACTER_PANEL_S2_PROBE
-            SceneGraphCopy::instance().probe_at_pass_submit(*this, pass);
-#else
-            static_cast<void>(pass);
-#endif
-        },
-        [&](std::uint32_t drawn)
-        {
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT && CHARACTER_PANEL_S2_PROBE
-            SceneGraphCopy::instance().probe_at_draw_done(*this, drawn);
-#else
-            static_cast<void>(drawn);
-#endif
-        });
+    const FigurePassStats stats = draw_figure_passes(request);
 
     // One-shot per clone: read back what the context held after the batch. When
     // the shadow state says DIRTY_RENDERTARGET, SetupAndDrawPass re-applies the

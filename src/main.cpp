@@ -9,7 +9,6 @@
 #include "render/studio/light.h"
 #include "character/puppet_driver.h"
 #include "character/scene_graph_copy.h"
-#include "diagnostics/engine_image.h"
 #include "input/input.h"
 
 namespace
@@ -41,19 +40,14 @@ namespace
         switch (message->type)
         {
         case SKSE::MessagingInterface::kDataLoaded:
-            // Once per process, while the loading screen still covers the frame cost: the engine's own
-            // code section, which exists as code only inside this process.
-            PLUGIN_NAMESPACE::EngineImage::dump_once();
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
             PLUGIN_NAMESPACE::Renderer::install();
             PLUGIN_NAMESPACE::PanelMonitor::instance().install();
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             PLUGIN_NAMESPACE::InputManager::install();
-#if CHARACTER_PANEL_S2_PROBE
-            logger::info("SCOPY BUILD {} runtime={} mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F2-mark F4-drive F6-anim-probe(opt-in)", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
-#else
-            logger::info("SCOPY BUILD {} runtime={} mode=manual-scene-copy legacy-actor-route=disabled animation=procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F2-mark F4-drive", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
-#endif
+
+            logger::info("SCOPY BUILD {} runtime={} mode=manual-scene-copy legacy-actor-route=disabled animation=puppet-clip/captured-clip/procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F2-mark F4-drive", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
+
 #endif
             break;
         case SKSE::MessagingInterface::kPreLoadGame:

@@ -9,15 +9,12 @@
 #include "RE/N/NiMatrix3.h"
 #include "RE/N/NiTransform.h"
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
-
-#include <chrono>
 
 #include <xmmintrin.h>
 
@@ -25,7 +22,6 @@ namespace RE
 {
     class TESObjectREFR;
     class hkaAnimation;
-    class hkaAnimationBinding;
 }
 
 PLUGIN_NAMESPACE_BEGIN
@@ -88,327 +84,43 @@ struct PoseSample
     return matrix;
 }
 
-// A pose sample as the local transform of the node it drives. `transposed` builds the inverse
-// rotation instead: the replay writes both candidates and reports which one lands the copy on the
-// source, so the engine's quaternion convention is measured at capture rather than assumed here.
-[[nodiscard]] inline RE::NiTransform ni_local_from_pose(PoseSample const& sample, bool transposed)
+[[nodiscard]] inline RE::NiTransform ni_local_from_pose(PoseSample const& sample)
 {
     RE::NiTransform local;
     local.rotate = ni_matrix_from_quaternion(sample.quaternion[0], sample.quaternion[1], sample.quaternion[2], sample.quaternion[3]);
-    if (transposed)
-        local.rotate = local.rotate.Transpose();
     local.translate = RE::NiPoint3{ sample.position[0], sample.position[1], sample.position[2] };
     local.scale = sample.scale;
     return local;
 }
 
-// The engine's animation skeleton lined up against the copy's node tree: the mapping the S2
-// engine-animation route (docs/s2-animation-handoff.md) has to establish before anything samples a
-// clip into the copy. Bones resolve to nodes by exact name, because the copy carries several
-// skeletons plus modded hair and cloth chains whose node names contain the same words, and the S2
-// probe already drove the wrong skeleton by matching loosely.
-//
-// The skeleton's own parent relation is reported, not required: this rig's pelvis and spine hang
-// under different parents (CME LBody / CME UBody), so a skeleton hierarchy that disagrees with the
-// node hierarchy is expected here and says nothing about whether the names resolved. What the write
-// path needs is that every bone has a node; it writes local transforms and lets the node hierarchy
-// compose them.
-struct SkeletonAlignment
-{
-    size_t bones;              // bones in the animation skeleton
-    size_t matched;            // bones whose name is exactly a node name of the copy
-    size_t ambiguous;          // of the matched, bones whose name is shared by more than one node
-    size_t duplicate_nodes;    // nodes sharing their name with another node
-    size_t parent_ancestors;   // matched bones whose parent bone is an ancestor of that node
-    std::string missing;       // unmatched bone names, up to the report cap
-    std::string wrong_parent;  // matched bones whose parent bone resolves to a non-ancestor node
-};
-
-// Whether one node sits strictly below another in the node hierarchy. Bounded by the table size, so
-// a cycle in the data cannot hang the walk.
-[[nodiscard]] inline bool node_has_ancestor(std::span<std::int32_t const> node_parents, std::int32_t node, std::int32_t ancestor)
-{
-    for (size_t step = 0; step < node_parents.size(); ++step)
-    {
-        if (node < 0 || static_cast<size_t>(node) >= node_parents.size())
-            return false;
-        node = node_parents[static_cast<size_t>(node)];
-        if (node == ancestor)
-            return true;
-    }
-    return false;
-}
-
-// Pure mapping rules, unit-tested without a running game. Both tables are indexed like their names
-// and hold -1 at a root; an out-of-range parent reads as a root. An unnamed bone cannot resolve and
-// is not printed, so `bones - matched` is the number of unresolved bones including those.
-// `bone_node_out` receives the node index each bone resolved to (-1 when it did not) and may be
-// empty when only the counts are wanted.
-[[nodiscard]] inline SkeletonAlignment align_skeleton(
-    std::span<std::string_view const> bone_names,
-    std::span<std::int16_t const> bone_parents,
-    std::span<std::string_view const> node_names,
-    std::span<std::int32_t const> node_parents,
-    std::span<std::int32_t> bone_node_out,
-    size_t max_names_reported)
-{
-    SkeletonAlignment alignment{};
-
-    for (std::int32_t& slot : bone_node_out)
-        slot = -1;
-
-    std::unordered_map<std::string_view, std::vector<std::int32_t>> nodes_by_name;
-    nodes_by_name.reserve(node_names.size());
-    for (size_t i = 0; i < node_names.size(); ++i)
-        nodes_by_name[node_names[i]].push_back(static_cast<std::int32_t>(i));
-    for (auto const& entry : nodes_by_name)
-    {
-        if (entry.second.size() > 1)
-            alignment.duplicate_nodes += entry.second.size();
-    }
-
-    alignment.bones = bone_names.size();
-    std::vector<std::int32_t> bone_node(bone_names.size(), -1);
-    size_t missing_reported = 0;
-    for (size_t i = 0; i < bone_names.size(); ++i)
-    {
-        const auto found = bone_names[i].empty() ? nodes_by_name.end() : nodes_by_name.find(bone_names[i]);
-        if (found == nodes_by_name.end())
-        {
-            if (!bone_names[i].empty() && missing_reported < max_names_reported)
-            {
-                if (!alignment.missing.empty())
-                    alignment.missing += ", ";
-                alignment.missing += bone_names[i];
-                ++missing_reported;
-            }
-            continue;
-        }
-        if (found->second.size() > 1)
-            ++alignment.ambiguous;
-        bone_node[i] = found->second.front();
-        if (i < bone_node_out.size())
-            bone_node_out[i] = bone_node[i];
-        ++alignment.matched;
-    }
-
-    size_t wrong_parent_reported = 0;
-    for (size_t i = 0; i < bone_names.size(); ++i)
-    {
-        if (bone_node[i] < 0)
-            continue;
-        const std::int32_t parent_bone = i < bone_parents.size() ? bone_parents[i] : -1;
-        // A root, an out-of-range index and an unresolved parent cannot contradict the hierarchy.
-        if (parent_bone < 0 || static_cast<size_t>(parent_bone) >= bone_node.size() || bone_node[parent_bone] < 0)
-        {
-            ++alignment.parent_ancestors;
-            continue;
-        }
-        if (node_has_ancestor(node_parents, bone_node[i], bone_node[parent_bone]))
-        {
-            ++alignment.parent_ancestors;
-            continue;
-        }
-        if (wrong_parent_reported < max_names_reported)
-        {
-            if (!alignment.wrong_parent.empty())
-                alignment.wrong_parent += ", ";
-            alignment.wrong_parent += bone_names[i];
-            ++wrong_parent_reported;
-        }
-    }
-
-    return alignment;
-}
-
-// The gate the sampling route rests on: every bone of the skeleton names a node of the copy.
-[[nodiscard]] inline bool alignment_resolves_all_bones(SkeletonAlignment const& alignment)
-{
-    return alignment.bones != 0 && alignment.matched == alignment.bones;
-}
-
-// Whether a candidate track-to-bone table is structurally valid for a skeleton of `bone_count`
-// bones: at least one track, and every entry either names a bone of this skeleton or is -1 for a
-// track without one. This is what tells a real animation binding from a misread pointer without
-// calling anything on the candidate.
-[[nodiscard]] inline bool track_indices_are_valid(std::span<std::int16_t const> track_to_bone, std::int32_t bone_count)
-{
-    if (track_to_bone.empty() || bone_count <= 0)
-        return false;
-    for (std::int16_t index : track_to_bone)
-    {
-        if (index < -1 || index >= bone_count)
-            return false;
-    }
-    return true;
-}
-
-// Read-only reconnaissance of the source character's animation graphs: which graphs exist, which of
-// them holds the graph that was captured, what each one's animation skeleton is, and how that
-// skeleton resolves against the copy. Runs at capture, while the game is paused; it writes nothing,
-// neither into the source character nor into the engine's graphs.
-void report_animation_source(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
-
-// Writes the source character's own current pose into the copy and measures how far the copy lands
-// from the source, then puts the captured pose back. The engine holds that pose in
-// hkbCharacter::poseLocal, so this needs no clip, no binding set and no untyped layout, and it
-// exercises the whole write path the sampling route will use: bone → node by name, quaternion →
-// NiMatrix3, local write, one downward world recompute.
-//
-// Every candidate is compared with one instrument, including a control posed away from the source by
-// a known amount: without it a zero delta would only say the measurement is insensitive. The
-// candidates are the two orders the pose could be indexed in (the animation skeleton's, and the
-// engine's own boneNodes table, which the alignment round proved is NOT the skeleton's order) times
-// the two quaternion conventions (direct and transposed) - the verdict names the one that reproduces
-// the source.
-void verify_pose_replay(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
-
-// Reads what the character's own animation list says and validates the two candidate layouts of the
-// binding set, without believing either: the engine's animation *names* are typed
-// (hkbCharacterStringData::animationNames), the binding elements are not, so each candidate is
-// checked structurally - its animation pointer has to look like a live object, its duration has to
-// be a plausible clip length, and its track-to-bone table has to name only bones this skeleton has -
-// before anything is read through it. Nothing virtual is called on a candidate and nothing is
-// written, so a misread pointer reports nonsense instead of crashing.
-void report_animation_catalogue(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root);
-
-// One animation of the source character, resolved onto the copy: what to sample, which copy node each
-// sampled track drives, and how long the clip runs.
+// Borrowed animation and node references are used only while their source session is live.
 struct ClipPlayback
 {
     RE::hkaAnimation* animation;
     std::string name;
     float duration;
-    std::vector<std::uint16_t> tracks;    // track indices handed to the sampler, in node order
-    std::vector<RE::NiAVObject*> nodes;   // the copy node each sampled track drives
+    std::vector<std::uint16_t> tracks;
+    std::vector<RE::NiAVObject*> nodes;
 
     [[nodiscard]] bool valid() const { return animation != nullptr && !tracks.empty() && tracks.size() == nodes.size(); }
 };
 
-// Finds a clip in the character's behaviour graph whose name says idle, validates it as a clip
-// generator (its animation name, its binding, its playback mode and speed), resolves the tracks it can
-// drive onto the copy's nodes, and prints the ground-truth comparison: the clip's own pose sampled at
-// every phase against the pose the engine currently holds, which is the one number that says whether
-// the sampling chain reproduces the engine. Fills `out` for `play_animation_clip`; writes nothing.
-bool prepare_animation_clip(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, ClipPlayback& out, const RE::hkaAnimation* a_instance_animation, const RE::hkaAnimationBinding* a_loaded_binding, float a_local_time);
-
-// Samples the clip at `seconds` (looped over its own length) and writes the result into the copy's
-// nodes, then recomputes the worlds below the copy root. Sampling goes through
-// SampleIndividualTransformTracks, which takes no chunk cache, so no structure whose layout is unknown
-// is involved. Returns how many nodes were written.
-// `loop` follows the clip generator's own playback mode: a looping clip wraps the sample time by
-// its duration, a single-play clip clamps at the end and holds the final frame - the engine blends
-// that frame out while the state machine moves on, and wrapping it here was what made the panel
-// replay a finished equip until the next clip won the pick (the HKX40 field report).
 size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop = true);
-
-// Reports the instance side of the graph - the per-character clones the engine actually updates, as
-// opposed to the shared template tree the earlier rounds walked - and whether a binding resolves there
-// at all. Read-only: no clip is activated, nothing is written, and no virtual call is made on a
-// candidate, so a wrong layout shows up as a rejection reason instead of a crash.
-void report_animation_instance(RE::TESObjectREFR& source, RE::NiAVObject& source_root, RE::NiAVObject& copy_root, const RE::hkaAnimation*& out_animation, const RE::hkaAnimationBinding*& out_binding, float& out_local_time);
-
-// HKX38 scheduler: the puppet's live clip, in two steps. The cheap step runs every frame - the
-// sampler's activeNodes list picks the running clip whose control blends strongest, which is the
-// pose the graph is actually playing out. The full step runs only when that pick changes: the
-// clip's own live binding hands over the animation, and the track-to-bone mapping is tiered per
-// PRD 0.7 section 6.4 - the binding's table when the engine filled it, identity over the
-// animation skeleton when it is the known-empty OAR shape (marked unverified; the occasional A/B
-// measures it, nothing trusts it silently). No discovery walk and no ground-truth sweep here.
 [[nodiscard]] RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source);
-
 bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
     ClipPlayback& out, std::string& out_mapping, std::string& out_coverage);
-
-// The live control time of one running clip, guarded; -1 when the control is gone or unreadable.
 [[nodiscard]] float live_clip_time(RE::hkbClipGenerator const* generator);
 
-// HKX42: the empirical mapping solver. The binding table on OAR replacements is empty and the
-// HKX40 A/B convicted identity across weapon families (calm 38-62%), so the true track order is
-// measured instead of guessed: per paused tick one observation frame - every track sampled at the
-// live control time, its rotation compared against each candidate truth bone; after enough frames
-// the per-track argmin (with claims) names the bone each track really drives, and the playback's
-// mapping is rewritten in place (mapping becomes "solved").
-//
-// Truth, in order of preference: the puppet's own 3D node locals by bone name (~93 bones, the same
-// name space as the display mapping) - unless they measure frozen across the frames (the graph may
-// not propagate pose to nodes during a manual tick), then hkbCharacter::poseLocal by name (39
-// bones, the vanilla-named core). When both truth sources measure frozen the solver reports it and
-// leaves the playback untouched - that is itself a finding.
-//
-// One solver at a time (the driver drives one clip); a different generator resets the state.
-// Call once per paused tick; returns true when the solve finished this frame.
-bool solve_tracks_step(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
-    RE::hkbClipGenerator const* generator, bool paused_phase, ClipPlayback& in_out_playback, std::string& out_note);
-
-// Drops the solver's accumulated state (clip switch, session end).
-void reset_track_solver();
-
-// How many observation frames one solve accumulates before the argmin runs.
-inline constexpr std::uint32_t Track_Solve_Frames = 90;
-
-// HKX39: one same-phase numeric A/B of the resolved clip against the puppet's own per-bone state
-// (hkbCharacter::poseLocal by bone name - the HKX28 protocol at a single phase, the live control
-// time). This is PRD 0.7 section 6.4's tier-2 verification for the identity tier: it measures,
-// per switch and after the blend has settled, whether the identity mapping reproduces what the
-// graph is actually playing. Returns the log line; "match" holds when enough bones compare and
-// the worst rotation stays within the HKX28 bar (1 degree).
-[[nodiscard]] std::string measure_clip_against_puppet(RE::TESObjectREFR& source,
-    RE::hkbClipGenerator const* generator, ClipPlayback const& playback, std::string const& mapping);
-
-// The registered animations the player's own clips are running, split into the only two classes the panel
-// needs: the standing idles it plays while the character is doing nothing else, and the equip animations
-// it plays when equipment changes and then returns from. Running, combat and jumping are deliberately not
-// collected, because the panel has no use for them.
-//
-// OAR's choice for this character is exactly the index it writes onto the clip it activates, so watching
-// that index over time is how the panel learns which registered animations this character's conditions
-// select - no evaluation of OAR's configuration is needed, and none is possible through its API.
-struct ActiveAnimationIndices
-{
-    std::vector<std::uint16_t> idles;
-    std::vector<std::uint16_t> equips;
-    std::uint32_t others = 0;      // clips that are neither, counted so what was skipped stays visible
-};
-
-// Which of the two classes the panel cares about an animation belongs to, or neither. Settled once from
-// the name when a clip generator is first seen: a name cannot change, and re-reading it costs a syscall
-// per character.
-enum class ClipClass : std::uint8_t
-{
-    e_idle,
-    e_equip,
-    e_other
-};
-
-[[nodiscard]] ClipClass classify_clip_name(std::string_view file_name);
-
-// Whether a pointer still reads as a live clip generator: its vtable is the engine's own and the object is
-// mapped. A handful of guarded reads, so this is cheap enough to run per frame.
 [[nodiscard]] bool clip_generator_is_live(void const* object);
 
-// Reads one clip generator's current index into the class it was already placed in. Two field reads and
-// the liveness check above - no name is read, which is what made this cost a syscall per character.
-void tally_clip_generator(RE::hkbClipGenerator const* generator, ClipClass kind, ActiveAnimationIndices& out);
-
-// One clip generator found on the instance side, with the class it belongs to. The name is kept because
-// reading it costs a syscall per character, so it is read once here rather than on every sample.
 struct ActiveClipEntry
 {
     RE::hkbClipGenerator const* generator;
-    ClipClass kind;
     std::string name;
 };
 
-// Finds the clip generators the engine is running right now for this character, taken from the
-// engine's own active-node list: the per-character record of every node whose Activate has run
-// and whose Deactivate has not, which is where a playing clip lives by definition (HKX13). One
-// page query per listed node and one short guarded name read per actually running clip - no
-// object window is scanned anywhere, so an animation switch costs a handful of extra reads
-// instead of triggering any walk.
 void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out);
 
-// Plays a prepared clip from the studio's own clock: the game is paused, so nothing else advances it.
 class ClipPlayer
 {
 public:
@@ -420,7 +132,6 @@ public:
     void restart();
     [[nodiscard]] bool ready() const { return m_clip.valid(); }
     [[nodiscard]] std::string const& name() const { return m_clip.name; }
-    [[nodiscard]] double time() const { return m_time; }
 
     // Advances the clock and writes one frame of the clip; returns the nodes written.
     size_t advance(RE::NiAVObject& copy_root);

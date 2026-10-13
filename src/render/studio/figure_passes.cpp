@@ -56,9 +56,7 @@ namespace
     }
 }
 
-FigurePassStats draw_figure_passes(FigurePassRequest const& a_request,
-    std::function<void(RE::BSRenderPass*)> const& a_before_pass,
-    std::function<void(std::uint32_t)> const& a_after_batch)
+FigurePassStats draw_figure_passes(FigurePassRequest const& a_request)
 {
     FigurePassStats stats;
     if (!a_request.root || !a_request.accumulator || !a_request.context || !a_request.target || !a_request.states)
@@ -119,17 +117,12 @@ FigurePassStats draw_figure_passes(FigurePassRequest const& a_request,
                 // remove the only caller that could ever initialize them (run 52).
                 if (!geom_rt.rendererData)
                     ++stats.renderer_data_null;
-                if (a_before_pass)
-                    a_before_pass(pass);
                 submit_pass(pass, stats.inject_lights, a_request.light_slots, a_request.light_count);
                 ++stats.drawn;
             }
         }
         return RE::BSVisit::BSVisitControl::kContinue;
     });
-
-    if (a_after_batch)
-        a_after_batch(stats.drawn);
 
     // What the context holds after the batch. When the shadow state says DIRTY_RENDERTARGET,
     // SetupAndDrawPass re-applies the engine's ledger target mid-batch (v6.45), which empties the

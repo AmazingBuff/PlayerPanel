@@ -672,7 +672,7 @@ void FinalPoseProbe::tick(bool a_paused)
     PuppetDriver& driver = PuppetDriver::instance();
     logger::info("SCOPY FP mark={} paused={} tick={} manual-ticks={} placement={}",
         m_marks, a_paused ? 1 : 0, driver.tick_enabled() ? "on" : "off", driver.manual_ticks(),
-        PuppetDriver::placement_name(driver.placement()));
+        "parked-deep");
 
     // The camera chain first: it is shared by both subjects, and it is what the display side has to
     // adapt once the Actor may no longer be translated into frame.
@@ -709,10 +709,8 @@ void FinalPoseProbe::tick(bool a_paused)
     m_player_pre = PreSample{};
 }
 
-void FinalPoseProbe::report_state(char const* a_label, RE::BShkbAnimationGraph const& a_graph, RE::hkbCharacter const* a_character)
+void FinalPoseProbe::report_state(char const* a_label, RE::BShkbAnimationGraph const& a_graph)
 {
-    constexpr std::size_t raw_row = 16;
-
     RE::hkbBehaviorGraph* const behavior = a_graph.behaviorGraph;
     const bool behavior_readable = behavior && readable(behavior, sizeof(RE::hkbBehaviorGraph));
 
@@ -740,33 +738,7 @@ void FinalPoseProbe::report_state(char const* a_label, RE::BShkbAnimationGraph c
         reinterpret_cast<std::uintptr_t>(a_graph.holder),
         reinterpret_cast<std::uintptr_t>(a_graph.rootNode));
 
-    // The bytes no source has named yet, printed rather than guessed at: the graph's flag tail (the
-    // two unknown words and six unknown bytes after numAnimBones), the behaviour graph's lifecycle
-    // tail, and the character's LOD fields with the padding that sits beside them.
-    auto const raw = [a_label, raw_row](char const* what, void const* base, std::size_t offset, std::size_t size)
-    {
-        auto const* const start = static_cast<std::uint8_t const*>(base) + offset;
-        if (!readable(start, size))
-        {
-            logger::info("SCOPY FP raw subject={} what={} off=0x{:x} UNAVAILABLE reason=unreadable", a_label, what, offset);
-            return;
-        }
 
-        for (std::size_t row = 0; row < size; row += raw_row)
-        {
-            const std::size_t count = std::min(raw_row, size - row);
-            std::string bytes;
-            for (std::size_t index = 0; index < count; ++index)
-                bytes += fmt::format("{:02x} ", start[row + index]);
-            logger::info("SCOPY FP raw subject={} what={} off=0x{:x} {}", a_label, what, offset + row, bytes);
-        }
-    };
-
-    raw("anim-graph", &a_graph, 0x238, 0x18);
-    if (behavior_readable)
-        raw("behavior-graph", behavior, 0x118, 0x18);
-    if (a_character && readable(a_character, sizeof(RE::hkbCharacter)))
-        raw("character", a_character, 0x18, 0x18);
 }
 
 void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, SubjectState& a_state)
@@ -829,7 +801,7 @@ void FinalPoseProbe::subject(char const* a_label, RE::TESObjectREFR* a_subject, 
         skeleton && skeleton->name.c_str() ? skeleton->name.c_str() : "",
         skeleton ? skeleton->bones.size() : 0);
 
-    report_state(a_label, *graph, character);
+    report_state(a_label, *graph);
 
     report_figure(a_label, *a_subject);
     report_geometry(a_label, *a_subject);

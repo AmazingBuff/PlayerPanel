@@ -410,7 +410,7 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
         }
 
         const PoseSample sample = read_pose_unaligned(pose[i]);
-        RE::NiTransform local = ni_local_from_pose(sample, false);
+        RE::NiTransform local = ni_local_from_pose(sample);
         // A pose without a usable scale keeps the node's own: a NIF node carries one scale where the
         // pose carries three, and clobbering a real scale would distort the figure rather than report
         // anything (the same rule the measured replay path uses).
