@@ -89,6 +89,8 @@ public:
     [[nodiscard]] REX::W32::ID3D11RenderTargetView* rtv() const noexcept { return m_rtv; }
     [[nodiscard]] REX::W32::ID3D11DepthStencilView* dsv() const noexcept { return m_dsv; }
     [[nodiscard]] REX::W32::ID3D11ShaderResourceView* srv() const noexcept { return m_srv; }
+    // The colour texture itself, for the forensic readback (evidence.cpp).
+    [[nodiscard]] REX::W32::ID3D11Texture2D* texture() const noexcept { return m_texture; }
     [[nodiscard]] uint32_t width() const noexcept { return m_width; }
     [[nodiscard]] uint32_t height() const noexcept { return m_height; }
 private:

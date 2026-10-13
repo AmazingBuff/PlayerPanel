@@ -4,7 +4,9 @@
 
 #include "character/puppet_driver.h"
 
+#include "character/puppet_draw.h"
 #include "character/scene_graph_copy.h"
+#include "character/snapshot_transform.h"
 
 #include "RE/A/Actor.h"
 #include "RE/B/BSAnimationGraphManager.h"
@@ -32,7 +34,10 @@ namespace
 
     constexpr float Park_Depth_Offset = -8000.0f;
 
-    constexpr std::uint32_t Repark_Frames = 60;
+    // How often the per-frame re-assertion reports itself: the park RUNS every unpaused frame (the
+    // engine re-derives the transform each frame and wins over a one-shot write), but only this
+    // every-th one prints, which is what keeps the log readable.
+    constexpr std::uint32_t Repark_Log_Period = 60;
     constexpr float Max_Manual_Step = 0.1f;
 
     constexpr float Declared_Step_Seconds = 1.0f / 60.0f;
@@ -168,13 +173,20 @@ void PuppetDriver::tick(bool paused)
     // Engine-applied locals are the independent calibration reference while the world runs.
     if (!paused)
     {
-        if (++m_repark_frames >= Repark_Frames)
-        {
-            m_repark_frames = 0;
-            park("keep-parked");
-        }
+        // Re-asserted EVERY frame, not every N: this actor's transform is re-derived by the engine
+        // each frame and the derivation wins over a one-shot write (the 2026-10-13 23:35 session
+        // measured the parked world back at the spawn spot one second later). The v6.25 route parked
+        // per tick for the same reason; the log stays sparse.
+        park(++m_repark_frames % Repark_Log_Period == 0 ? "keep-parked" : nullptr);
         return;
     }
+
+    // While the panel pauses the world the figure must still be held where the panel put it: either
+    // the studio framing owns the transform this frame, or the figure has to stay parked - the menu
+    // renders the world behind it, and the engine's per-frame derivation would otherwise put the
+    // clone back beside the player the moment the panel opens (2026-10-13 23:45 observation).
+    if (!PuppetDraw::instance().framing_active())
+        park(nullptr);
 
     const auto now = std::chrono::steady_clock::now();
     const bool step_only = m_step_requested.exchange(false, std::memory_order_acq_rel);
@@ -282,18 +294,66 @@ void PuppetDriver::spawn()
         m_puppet_form_id, source_base ? source_base->GetFormID() : 0, Grace_Frames);
 }
 
-void PuppetDriver::park(char const* why)
+void PuppetDriver::park(char const* a_why)
 {
     RE::Actor* const puppet = m_puppet ? m_puppet->As<RE::Actor>() : nullptr;
     RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
     if (!puppet || !player)
         return;
     const RE::NiPoint3 here = player->GetPosition();
-    puppet->SetPosition(RE::NiPoint3{ here.x, here.y, here.z + Park_Depth_Offset }, false);
+    const RE::NiPoint3 target{ here.x, here.y, here.z + Park_Depth_Offset };
+
+    // `Actor::SetPosition`'s second parameter is `a_updateCharController`, and the reference alone does
+    // NOT take the character controller (the collision and the activation target) with it: with it
+    // false the shell stayed interactable beside the player while the figure itself was invisible
+    // (2026-10-13 user report), and the engine kept re-deriving the 3D from the controller's stale
+    // position. The historical route parked with this flag set and measured interaction as
+    // unreachable. It is passed only when the reference actually moves, so the per-frame re-assertion
+    // does not warp the controller every frame.
+    const bool warp = (target - m_park_target).Length() > 1.0f;
+    puppet->SetPosition(target, warp);
+    if (warp)
+        m_park_target = target;
 
     puppet->SetMotionType(RE::hkpMotion::MotionType::kFixed, false);
-    restore_fade(puppet->Get3D(false));
-    logger::info("SCOPY PUPPET parked reason={} offset={:.0f} (invisible; the engine may idle the graph there - panel time is ours)", why, Park_Depth_Offset);
+
+    // The reference position alone does NOT take the figure out of the world, and neither does a
+    // world-only write: this actor's subtree is re-derived from its root's LOCAL every frame, so the
+    // derived world snaps back (AFP9e measured the world parked at 23:24:32 and back at the player's
+    // height 1.3 s later, and a fully visible clone standing beside the player). The local is the
+    // input the derivation reads, so the local is what gets written - plus the worlds for the frames
+    // that draw before the next derivation. `a_why` is null on the per-frame re-assertions that would
+    // otherwise flood the log.
+    RE::NiAVObject* const root = puppet->Get3D(false);
+    if (root && readable(root, sizeof(RE::NiAVObject)))
+    {
+        const RE::NiPoint3 before = root->world.translate;
+        RE::NiTransform target_world = root->world;   // keep the engine's rotation and scale
+        target_world.translate = target;
+        root->local = root->parent && readable(root->parent, sizeof(RE::NiAVObject))
+            ? root->parent->world.Invert() * target_world
+            : target_world;
+        root->world = target_world;
+        root->previousWorld = target_world;
+        recompute_subtree_worlds(*root, 0);
+
+        if (a_why)
+        {
+            // The read-back settles whether the reference itself moves: `ref-now` is where the game
+            // says the actor is, `ref-t` is where this call asked it to go.
+            const RE::NiPoint3 ref_now = puppet->GetPosition();
+            logger::info("SCOPY PUPPET park-3d reason={} warp={} ref-t=({:.1f},{:.1f},{:.1f}) ref-now=({:.1f},{:.1f},{:.1f}) world-t-before=({:.1f},{:.1f},{:.1f}) world-t-after=({:.1f},{:.1f},{:.1f})",
+                a_why, warp ? 1 : 0,
+                target.x, target.y, target.z,
+                ref_now.x, ref_now.y, ref_now.z,
+                before.x, before.y, before.z,
+                root->world.translate.x, root->world.translate.y, root->world.translate.z);
+        }
+    }
+
+    restore_fade(root);
+    if (a_why)
+        logger::info("SCOPY PUPPET parked reason={} offset={:.0f} (player-side invisible; the engine may idle the graph there - panel time is ours)", a_why, Park_Depth_Offset);
 }
 
 void PuppetDriver::release(char const* reason)

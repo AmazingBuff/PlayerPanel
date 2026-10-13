@@ -6,6 +6,7 @@
 
 #include "character/final_pose_apply.h"
 #include "character/final_pose_probe.h"
+#include "character/puppet_draw.h"
 #include "character/puppet_driver.h"
 #include "character/scene_graph_copy.h"
 
@@ -49,6 +50,10 @@ namespace
                     FinalPoseProbe::instance().request_mark();
                 else if (scan == MapVirtualKeyA(VK_F4, MAPVK_VK_TO_VSC))
                     FinalPoseApply::instance().cycle();
+
+                // AFP9: R01 direct draw of the puppet's own 3D (F6 is unbound elsewhere).
+                else if (scan == MapVirtualKeyA(VK_F6, MAPVK_VK_TO_VSC))
+                    PuppetDraw::instance().toggle();
             }
 #endif
 

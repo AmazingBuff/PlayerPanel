@@ -5,6 +5,7 @@
 #include "character/final_pose_probe.h"
 
 #include "character/final_pose_apply.h"
+#include "character/figure_audit.h"
 #include "character/puppet_driver.h"
 #include "character/snapshot_transform.h"
 
@@ -28,6 +29,8 @@
 
 #include <cmath>
 #include <cstring>
+
+#include <fmt/ranges.h>
 
 // winnt.h defines macros of these names, which would rewrite the REX constants used below as
 // `REX::W32::0x1000`; every Windows header this file needs is already parsed at this point.
@@ -221,56 +224,10 @@ namespace
             root->worldBound.radius);
     }
 
-    // The nodes a skinned draw actually consumes: the palette `NiSkinInstance::bones` points at. R03
-    // and R04 need to tell an outlier that blocks from one that does not - a bone a target mesh reads
-    // cannot be skipped, while a helper branch or a cloth chain the panel does not draw can - and an
-    // unbound palette (a figure the engine has never rendered, runs 49-52's shape) says the
-    // classification is unavailable rather than that nothing is necessary.
-    struct SkinPalette
-    {
-        std::unordered_set<RE::NiAVObject const*> nodes;
-        std::uint32_t skinned = 0;
-        std::uint32_t bound = 0;    // skins whose palette carried at least one node
-        std::uint32_t entries = 0;
-    };
-
-    SkinPalette skin_palette(RE::NiAVObject& a_root)
-    {
-        constexpr std::uint32_t Max_Palette_Entries = 1024;
-
-        SkinPalette palette;
-        RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
-        {
-            if (!a_geometry || !readable(a_geometry, sizeof(RE::BSGeometry)))
-                return RE::BSVisit::BSVisitControl::kContinue;
-
-            const RE::NiSkinInstance* const skin = a_geometry->GetGeometryRuntimeData().skinInstance.get();
-            if (!skin || !skin->rootParent || !readable(skin, sizeof(RE::NiSkinInstance)))
-                return RE::BSVisit::BSVisitControl::kContinue;
-            ++palette.skinned;
-
-            const std::uint32_t declared = skin->allocatedSize;
-            RE::NiAVObject* const* const bones = skin->bones;
-            if (!bones || declared == 0 || declared > Max_Palette_Entries ||
-                !readable(bones, sizeof(RE::NiAVObject*) * static_cast<std::size_t>(declared)))
-                return RE::BSVisit::BSVisitControl::kContinue;
-
-            bool bound = false;
-            for (std::uint32_t i = 0; i < declared; ++i)
-            {
-                RE::NiAVObject* const node = bones[i];
-                if (!node)
-                    continue;
-                bound = true;
-                ++palette.entries;
-                palette.nodes.insert(node);
-            }
-            if (bound)
-                ++palette.bound;
-            return RE::BSVisit::BSVisitControl::kContinue;
-        });
-        return palette;
-    }
+    // The palette walk moved to the shared audit helpers (figure_audit.h): the same "what does a
+    // skinned draw actually read" question is asked by this probe and by the AFP9 coverage audit, and
+    // a second copy of a memory rule is a second thing to be wrong. It collects POINTERS only and
+    // never dereferences an entry.
 
     // What the chosen candidate's outliers mean for a draw: how many of them a skinned mesh reads.
     void report_necessity(char const* a_label, RE::TESObjectREFR& a_subject,
@@ -286,7 +243,7 @@ namespace
             return;
         }
 
-        const SkinPalette palette = skin_palette(*root);
+        const SkinPalette palette = figure_skin_palette(*root);
         std::uint32_t necessary = 0;
         std::uint32_t helper = 0;
         for (RE::NiAVObject* const node : a_outliers)
@@ -692,18 +649,26 @@ void FinalPoseProbe::tick(bool a_paused)
     logger::info("SCOPY FP A3 physics=skipped reason=first-round-physics-off");
 
     // A2: what the application stage did on the frame this mark describes. The stage owns the numbers;
-    // the mark is where a reader looks for them, so they are printed together with the rest.
+    // the mark is where a reader looks for them, so they are printed together with the rest. The AFP9
+    // coverage fields extend the receipt: attempted/unprocessed close the ledger against the output
+    // slot count (written + unreachable + unprocessed == output-slots), and the latest named audit
+    // rides along so one mark carries both the numbers and the names.
     const FinalPoseApply& apply = FinalPoseApply::instance();
     const FinalPoseApply::Stats& apply_stats = apply.stats();
-    logger::info("SCOPY FP A2 drive={} apply={} mapping={} verified={} generation={} written={} unreachable={} frames={} verifications={} max-rot={:.3f}deg max-pos={:.3f} blocked={}",
+    const FinalPoseApply::SlotAudit& audit = apply.slot_audit();
+    logger::info("SCOPY FP A2 drive={} apply={} mapping={} verified={} generation={} written={} unreachable={} unprocessed={} attempted={} output-slots={} frames={} verifications={} max-rot={:.3f}deg max-pos={:.3f} blocked={} audit-names=[{}|{}] palette={}/{}",
         FinalPoseApply::drive_name(apply.drive()),
         apply.apply_enabled() ? "on" : "off",
         apply.mapping(),
         apply.verified() ? 1 : 0,
         apply.generation(),
-        apply_stats.written, apply_stats.unreachable, apply_stats.frames, apply_stats.verifications,
+        apply_stats.written, apply_stats.unreachable, apply_stats.unprocessed, apply_stats.attempted, apply_stats.output_slots,
+        apply_stats.frames, apply_stats.verifications,
         apply_stats.max_rotation, apply_stats.max_position,
-        apply.blocked());
+        apply.blocked(),
+        fmt::join(audit.unreachable_names, ","),
+        fmt::join(audit.unprocessed_names, ","),
+        audit.palette_bound, audit.palette_skinned);
 
     m_puppet_pre = PreSample{};
     m_player_pre = PreSample{};

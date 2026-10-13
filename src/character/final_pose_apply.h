@@ -11,6 +11,7 @@
 namespace RE
 {
     class Actor;
+    class NiAVObject;
 }
 
 PLUGIN_NAMESPACE_BEGIN
@@ -77,6 +78,12 @@ public:
         bool applied = false;            // a pose was written on the frame this describes
         std::uint32_t written = 0;
         std::uint32_t unreachable = 0;   // pose indices the chosen mapping could not resolve to a node
+        // AFP9 coverage audit (package A): the application loop processes min(mapping, output)
+        // slots; everything the output carries beyond that never entered it. The ledger must
+        // reconcile: written + unreachable + unprocessed == output slots.
+        std::uint32_t attempted = 0;     // slots the loop actually processed
+        std::uint32_t unprocessed = 0;   // output slots beyond the mapping table's length
+        std::uint32_t output_slots = 0;  // elements the live output carried this frame
         std::uint32_t frames = 0;
         std::uint32_t verifications = 0;
         float max_rotation = 0.0f;       // what the write changed on that frame
@@ -89,6 +96,25 @@ public:
     [[nodiscard]] std::uint32_t generation() const { return m_generation; }
     [[nodiscard]] bool verified() const { return m_verified; }
 
+    // AFP9 package A: the named bones the last apply could not reach or never processed, with the
+    // necessity class the skin palette assigned each. Printed by the audit when the counts change.
+    struct SlotAudit
+    {
+        std::vector<std::string> unreachable_names;
+        std::vector<std::string> unprocessed_names;
+        // figure_slot_necessity's verdict per name, parallel to the vectors above.
+        std::vector<std::string> unreachable_classes;
+        std::vector<std::string> unprocessed_classes;
+        // Names that resolved to a node in the actor's own tree - the evidence behind a `necessary`
+        // verdict, and the difference between "no such bone" and "a bone no palette reads".
+        std::uint32_t unreachable_resolved = 0;
+        std::uint32_t unprocessed_resolved = 0;
+        std::uint32_t palette_bound = 0;   // skins whose palette carried at least one node
+        std::uint32_t palette_skinned = 0;
+    };
+
+    [[nodiscard]] SlotAudit const& slot_audit() const { return m_slot_audit; }
+
 private:
     FinalPoseApply() = default;
 
@@ -98,6 +124,11 @@ private:
     // Writes one frame of the pose through the kept mapping.
     void apply(RE::Actor& a_puppet);
     void block(char const* a_reason);
+    // AFP9 package A: names and classifies the unreachable/unprocessed slots against the skin
+    // palette. Runs inside apply() only when the ledger's signature changed, so a stable pose does
+    // not pay for the audit every frame. `a_root` is the actor's own 3D root: the palette walk and
+    // the name bridge both run over that tree, and neither ever dereferences a palette entry.
+    void audit_slots(RE::Actor& a_puppet, RE::NiAVObject& a_root, std::size_t a_attempted);
 
     std::atomic<Drive> m_drive{ Drive::e_tick };
     // A step is one frame of work as well as one advance: R02 wants a single step to advance exactly
@@ -128,6 +159,11 @@ private:
     std::uint32_t m_generation = 0;
     std::uint32_t m_log_countdown = 0;
     Stats m_stats;
+    SlotAudit m_slot_audit;
+    // The audit signature the last audit run described; a different signature re-runs it.
+    std::uint32_t m_audit_attempted = 0;
+    std::uint32_t m_audit_unreachable = 0;
+    std::uint32_t m_audit_unprocessed = 0;
 };
 
 PLUGIN_NAMESPACE_END

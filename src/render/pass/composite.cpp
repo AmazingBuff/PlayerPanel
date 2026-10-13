@@ -104,14 +104,36 @@ void CompositePass::draw(REX::W32::ID3D11DeviceContext* context, REX::W32::ID3D1
     context->RSSetState(states.cull_none());
 
     REX::W32::ID3D11ShaderResourceView* srv = render_target.srv();
+
+    // ORDER IS LOAD-BEARING: release the studio texture from the output-merger stage BEFORE binding
+    // it as a sampler source. A resource bound as a render target and as a shader resource at the
+    // same time is silently unbound by D3D11 - the PS then samples nothing and the panel renders
+    // black while the studio target itself is perfectly correct (2026-10-13 AFP9: the draw and the
+    // composite shared one state capture, so the studio RTV was still bound here).
+    context->OMSetRenderTargets(1, &rtv, nullptr);
+
     context->PSSetShader(m_ref_pixel_shader, nullptr, 0);
     context->PSSetShaderResources(0, 1, &srv);
     context->PSSetSamplers(0, 1, &m_sampler);
     context->PSSetConstantBuffers(0, 1, &m_cb);
 
-    context->OMSetRenderTargets(1, &rtv, nullptr);
     context->OMSetBlendState(states.opaque(), nullptr, 0xFFFFFFFF);
     context->OMSetDepthStencilState(states.depth_none(), 0);
+
+    // The readback is the evidence for exactly that failure: `bound` is what the slot really holds
+    // after the calls above, so a mismatch is visible in the log instead of only in a frame capture.
+    static std::uint32_t s_src_checks = 0;
+    if (++s_src_checks == 1 || s_src_checks % 600 == 0)
+    {
+        REX::W32::ID3D11ShaderResourceView* bound = nullptr;
+        context->PSGetShaderResources(0, 1, &bound);
+        logger::info("SCOPY COMPOSITE src=0x{:x} bound=0x{:x} match={} draws={}",
+            reinterpret_cast<std::uintptr_t>(srv),
+            reinterpret_cast<std::uintptr_t>(bound),
+            bound == srv ? 1 : 0, s_src_checks);
+        if (bound)
+            bound->Release();
+    }
 
     context->Draw(6, 0);
 }

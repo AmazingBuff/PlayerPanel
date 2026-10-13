@@ -5,6 +5,7 @@
 #include "character/final_pose_apply.h"
 
 #include "character/final_pose_probe.h"
+#include "character/figure_audit.h"
 #include "character/puppet_driver.h"
 #include "character/snapshot_transform.h"
 
@@ -20,6 +21,8 @@
 #include <cstring>
 #include <string_view>
 #include <unordered_map>
+
+#include <fmt/ranges.h>
 
 // winnt.h defines macros of these names, which would rewrite the REX constants used below as
 // `REX::W32::0x1000`; every Windows header this file needs is already parsed at this point.
@@ -375,7 +378,11 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
     }
 
     Stats stats;
+    // The ledger the AFP9 audit reconciles: output slots, mapping slots, what the loop processed.
+    stats.output_slots = static_cast<std::uint32_t>(count);
     const std::size_t writable = std::min(m_targets.size(), static_cast<std::size_t>(count));
+    stats.attempted = static_cast<std::uint32_t>(writable);
+    stats.unprocessed = stats.output_slots - stats.attempted;
     // Every node is resolved from the tree on THIS frame, by the name the verification captured:
     // the engine's bone table reaches only 36 of 68 bones here (AFP5: unreachable=32), and a bone
     // the table does not address is still a bone the pose drives. Nothing is held across frames -
@@ -437,6 +444,151 @@ void FinalPoseApply::apply(RE::Actor& a_puppet)
     m_stats = stats;
     m_stats.verifications = verifications;
     ++m_stats.frames;
+
+    // Package A: name and classify the coverage gap, but only when the gap itself moved - a stable
+    // pose must not pay for a tree walk and a palette scan every frame.
+    if (stats.unreachable != m_audit_unreachable || stats.unprocessed != m_audit_unprocessed)
+        audit_slots(a_puppet, *root, writable);
+}
+
+void FinalPoseApply::audit_slots(RE::Actor& a_puppet, RE::NiAVObject& a_root, std::size_t a_attempted)
+{
+    m_audit_unreachable = m_stats.unreachable;
+    m_audit_unprocessed = m_stats.unprocessed;
+
+    SlotAudit audit;
+    audit.unreachable_names.reserve(m_stats.unreachable);
+    audit.unprocessed_names.reserve(m_stats.unprocessed);
+
+    // Names come from the animation skeleton - the identity the verification proved the pose is
+    // indexed by. It covers every slot, including the ones past the mapping table the write loop
+    // never reached, which is exactly why the audit reads the skeleton instead of the captured
+    // per-slot name table (that table is sized from the verification-time sample).
+    const RE::hkaSkeleton* skeleton = nullptr;
+    RE::BShkbAnimationGraph* const graph = find_third_person_graph(a_puppet);
+    if (graph && readable(graph, sizeof(RE::BShkbAnimationGraph)) &&
+        readable(&graph->characterInstance, sizeof(RE::hkbCharacter)))
+    {
+        const RE::hkbCharacter& character = graph->characterInstance;
+        if (character.setup && readable(character.setup.get(), sizeof(RE::hkbCharacterSetup)))
+        {
+            const RE::hkaSkeleton* const candidate = character.setup->animationSkeleton.get();
+            if (candidate && readable(candidate, sizeof(RE::hkaSkeleton)))
+                skeleton = candidate;
+        }
+    }
+
+    const auto name_of = [skeleton](std::size_t a_index) -> std::string
+    {
+        if (!skeleton || a_index >= static_cast<std::size_t>(skeleton->bones.size()))
+            return {};
+        const char* const name = skeleton->bones[static_cast<RE::hkArrayBase<RE::hkaBone>::size_type>(a_index)].name.c_str();
+        return name && *name ? std::string(name) : std::string{};
+    };
+
+    // Unreachable: slots the loop processed but no node answered for. This repeats the WRITE's own
+    // resolution order - name first, then the engine's bone table - because a negative table target
+    // alone is NOT unreachable: the name bridge writes exactly those slots (AFP9 first test printed
+    // 61 "unreachable" names against a per-frame count of 6 for that reason).
+    const auto table_node = [graph](std::int32_t a_target) -> RE::NiAVObject*
+    {
+        if (!graph || a_target < 0 || a_target >= static_cast<std::int32_t>(graph->boneNodes.size()))
+            return nullptr;
+        RE::NiNode* const node = graph->boneNodes[static_cast<std::size_t>(a_target)].node;
+        return node && readable(node, sizeof(RE::NiAVObject)) ? node : nullptr;
+    };
+
+    std::unordered_map<std::string_view, RE::NiAVObject*> by_name = nodes_by_name(a_root);
+    const auto resolved_node = [&](std::string const& a_name) -> RE::NiAVObject*
+    {
+        if (a_name.empty())
+            return nullptr;
+        const auto found = by_name.find(std::string_view(a_name));
+        if (found == by_name.end() || !found->second || !readable(found->second, sizeof(RE::NiAVObject)))
+            return nullptr;
+        return found->second;
+    };
+
+    for (std::size_t i = 0; i < a_attempted; ++i)
+    {
+        std::string name = i < m_bone_names.size() ? m_bone_names[i] : std::string{};
+        if (name.empty())
+            name = name_of(i);
+        const RE::NiAVObject* const by_name_node = resolved_node(name);
+        const RE::NiAVObject* const by_table_node = table_node(i < m_targets.size() ? m_targets[i] : -1);
+        if (by_name_node || by_table_node)
+            continue;   // the write reached this slot
+        audit.unreachable_names.push_back(name.empty() ? fmt::format("slot#{}", i) : name);
+    }
+
+    // Unprocessed: the output slots past the mapping table. Named from the skeleton in the same
+    // order the pose is - the order the verification proved.
+    for (std::size_t i = a_attempted; i < m_stats.output_slots; ++i)
+    {
+        std::string name = i < m_bone_names.size() ? m_bone_names[i] : std::string{};
+        if (name.empty())
+            name = name_of(i);
+        audit.unprocessed_names.push_back(name.empty() ? fmt::format("slot#{}", i) : name);
+    }
+
+    // The necessity oracle: the puppet's own skin palette decides which of these a draw reads. The
+    // palette walk collects POINTERS only (the 2026-10-13 crash proved its entries cannot be
+    // dereferenced as nodes), so every slot is classified through the node the actor's own tree
+    // resolves for its name - which also records whether that name resolved at all.
+    const SkinPalette palette = figure_skin_palette(a_root);
+    audit.palette_bound = palette.bound;
+    audit.palette_skinned = palette.skinned;
+
+    const auto classify = [&](std::vector<std::string> const& a_names, std::vector<std::string>& a_classes,
+        std::uint32_t& a_resolved)
+    {
+        a_classes.reserve(a_names.size());
+        for (const std::string& name : a_names)
+        {
+            RE::NiAVObject* const node = resolved_node(name);
+            if (node)
+                ++a_resolved;
+            a_classes.push_back(slot_necessity_name(figure_slot_necessity(name, node, palette)));
+        }
+    };
+    classify(audit.unreachable_names, audit.unreachable_classes, audit.unreachable_resolved);
+    classify(audit.unprocessed_names, audit.unprocessed_classes, audit.unprocessed_resolved);
+
+    const auto summarize = [](std::vector<std::string> const& a_names, std::vector<std::string> const& a_classes,
+        std::uint32_t a_resolved, std::vector<std::string>& a_out, std::string& a_counts)
+    {
+        constexpr std::size_t Name_Cap = 16;
+        std::unordered_map<std::string_view, std::uint32_t> by_class;
+        for (const std::string& klass : a_classes)
+            ++by_class[klass];
+        for (const auto& [klass, count] : by_class)
+            a_counts += fmt::format("{}={} ", klass, count);
+        a_counts += fmt::format("resolved={}/{} ", a_resolved, a_names.size());
+        for (std::size_t i = 0; i < a_names.size() && i < Name_Cap; ++i)
+            a_out.push_back(fmt::format("{}({})", a_names[i], i < a_classes.size() ? a_classes[i] : "?"));
+    };
+
+    std::string unreachable_counts;
+    std::string unprocessed_counts;
+    std::vector<std::string> unreachable_entries;
+    std::vector<std::string> unprocessed_entries;
+    summarize(audit.unreachable_names, audit.unreachable_classes, audit.unreachable_resolved, unreachable_entries, unreachable_counts);
+    summarize(audit.unprocessed_names, audit.unprocessed_classes, audit.unprocessed_resolved, unprocessed_entries, unprocessed_counts);
+
+    // The names go out verbatim with their class, capped, so the log alone can decide which of the
+    // 18+6 are weapon attachments the graph does not drive and which are bones a target mesh reads.
+    // `reconciles` compares the named set with the write's own per-frame count: they are computed by
+    // different code on purpose, and a disagreement is a finding rather than a formatting detail.
+    const bool reconciles = audit.unreachable_names.size() == m_stats.unreachable &&
+        audit.unprocessed_names.size() == m_stats.unprocessed;
+    logger::info("SCOPY AFP9 audit attempted={} unreachable={} unprocessed={} names={}/{} reconciles={} | unreachable: {}| names: [{}] | unprocessed: {}| names: [{}] | palette={}/{} nodes={}",
+        a_attempted, m_stats.unreachable, m_stats.unprocessed,
+        audit.unreachable_names.size(), audit.unprocessed_names.size(), reconciles ? 1 : 0,
+        unreachable_counts, fmt::join(unreachable_entries, ", "),
+        unprocessed_counts, fmt::join(unprocessed_entries, ", "),
+        audit.palette_bound, audit.palette_skinned, palette.nodes.size());
+
+    m_slot_audit = std::move(audit);
 }
 
 void FinalPoseApply::tick(bool a_paused)

@@ -60,6 +60,9 @@ private:
     std::atomic_bool m_force_generate{ false };
     RE::NiPointer<RE::TESObjectREFR> m_puppet;
     std::uint32_t m_puppet_form_id = 0;
+    // Where the reference was last parked WITH the character controller (see park()): the warp is
+    // only requested when the reference actually moves, so the per-frame re-assertion stays cheap.
+    RE::NiPoint3 m_park_target{};
     std::uint32_t m_grace_frames = 0;
     std::uint32_t m_repark_frames = 0;
     std::uint32_t m_manual_ticks = 0;
