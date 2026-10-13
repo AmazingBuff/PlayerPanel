@@ -1,0 +1,15 @@
+[23:42:03.693] [3992 ] [I] CharacterPanel v1-2-1-0
+[23:42:03.693] [3992 ] [I] CharacterPanel loaded
+[23:43:12.549] [23412] [I] All shaders compiled
+[23:43:12.550] [23412] [I] Installed pre-UI renderer hook
+[23:43:12.550] [23412] [I] Menu sink installed
+[23:43:12.550] [23412] [I] SCOPY BUILD CharacterPanel-scopy-AFP9f-ce35ad79e3+dirty-cl94faaed0c6-20261013T154043Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=puppet-clip/captured-clip/procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F2-mark F4-drive
+[23:43:12.605] [22912] [I] Studio host changed: 0x0 -> 0x13f090b6980 (paused=true)
+[23:43:12.605] [22912] [I] Studio light node has been created
+[23:43:12.605] [22912] [I] CP-LIGHT slot 0: registered, shell 0x140b2143880 queued (ledger stays the authority)
+[23:43:12.605] [22912] [I] CP-LIGHT slot 1: registered, shell 0x140b2143740 queued (ledger stays the authority)
+[23:43:12.605] [22912] [I] CP-LIGHT slot 2: registered, shell 0x140b2143600 queued (ledger stays the authority)
+[23:43:12.605] [22912] [I] Studio lights registered on the ledger (scene=0x13571af6e80 -- ledger fetch will populate the slots)
+[23:43:12.605] [22912] [I] CP-LIGHT slot 0: ledger shell fetched 0x140b2143880 (after 0 miss frames)
+[23:43:12.605] [22912] [I] CP-LIGHT slot 1: ledger shell fetched 0x140b2143740 (after 0 miss frames)
+[23:43:12.605] [22912] [I] CP-LIGHT slot 2: ledger shell fetched 0x140b2143600 (after 0 miss frames)

@@ -2,6 +2,119 @@
 
 ## Unreleased
 
+### Fixed
+
+- AFP9j interactable shell beside the player: `Actor::SetPosition`'s second parameter is
+  `a_updateCharController`, and passing false moved only the reference - the collision and activation
+  target stayed beside the player (perceptible through the activation prompt while the figure itself
+  was invisible), and the engine kept deriving the 3D from the controller's stale position, which is
+  the root of the earlier "world and local writes are reverted every frame" finding. The park now
+  requests the warp when the reference actually moves (`park-3d warp=1`), false otherwise so the
+  per-frame re-assertion stays cheap. The historical route parked this way and measured interaction as
+  unreachable.
+
+### Fixed
+
+- AFP9i intermittent "only the axe" frame: `NiSkinInstance::frameID` is the engine's "skin already
+  computed for this render frame" gate, and when the engine had computed it BEFORE the studio
+  placement and the applied pose were written, `SetupGeometry` kept those matrices - the skinned body
+  was drawn at the older (parked) bone worlds and vanished while a rigid attachment like a weapon
+  followed its node and stayed visible. The readback images show a complete, correctly framed figure
+  and a lone axe alternating within one session. The batch now invalidates that id for the tree
+  (`invalidate_skin_cache`, nothing written to `boneMatrices`) so the engine recomputes from the bone
+  worlds this frame wrote - which also removes the one-frame lag on an applied pose.
+
+### Fixed
+
+- AFP9h framing reference: the studio placement was centred against `figure_skinned_bound`, which
+  reads geometry `worldBound`s - a cache the engine refreshes on its own schedule, measured still
+  carrying the pre-park world position while the bones had already moved to the anchor. Centring on
+  that stale centre threw the figure ~2820 world units deeper than the anchor, which is why the first
+  readback image showed it small, dark (far from the studio rig) and off-centre while `center-d`
+  reported 0. Framing now measures `figure_skeleton_bound` (live bone world positions, palette slots
+  filtered through the tree's own node set) and logs both bounds side by side. The park is also
+  re-asserted on paused frames unless this frame's framing owns the transform, because the menu
+  renders the world behind it and the engine's per-frame derivation otherwise puts the clone back
+  beside the player the moment the panel opens.
+
+### Added
+
+- AFP9g forensics: the studio target can be read back to a TGA under `.../SKSE/CharacterPanel/`
+  (`r01-panel-NNN.tga`, first drawn frame and every 300 after, capped) - the facility this project
+  used before 172984a and dropped, which turned every later round into an external frame-capture
+  conversation. Alongside it: an `R01 census` line (geometry/skinned counts, and the first skinned
+  geometry's skin `frameID`/`num-matrices`/first-bone world and bound) and a `park-3d ref-now`
+  read-back that settles whether `SetPosition` moves the reference at all. The park is now re-asserted
+  every unpaused frame instead of every 60, because the engine re-derives the transform each frame and
+  wins over a one-shot write.
+
+### Fixed
+
+- AFP9f transform layer: a live actor's subtree is re-derived from its root's `local` every frame, so
+  a world-space write lasts one frame (measured: the park's world write was undone 1.3 s later, which
+  is why the clone stayed beside the player), and the skin state is computed during the graph update,
+  so a placement applied afterwards reaches rigid attachments only (the axe followed, the skinned body
+  did not). Placement now writes the root's `local` together with the derived worlds, and R01 applies
+  it in `begin_frame` BEFORE the puppet's graph update, restoring it in `end_frame` after the draw
+  branch on every path.
+
+- AFP9e visible clone beside the player: `PuppetDriver::park()` moved only the reference position, and
+  this actor's 3D is never re-derived from it (measured: twenty unpaused seconds with the reference
+  parked while the root's world stayed at the player), so restoring the fade left a fully visible
+  clone standing next to the player - and it is also why the F6 figure projected arbitrarily, since
+  the tree never left the player. The park now moves the 3D subtree by the same world offset,
+  computed against the absolute target so repeated parks cannot stack, and logs
+  `park-3d ref-t / world-t-before / world-t-after / moved-z` as the reconciliation line.
+
+- AFP9c F6 off-screen figure: the R01 framing wrote the puppet root's `local` and cascaded, but a
+  downward pass recomputes the children from the object's own world and never moves the object - so
+  the figure stayed at its park depth (`restore world-d=(0,0,0)`) and every vertex projected far
+  outside the frustum (NDC ≈ (236, 290), the user's RenderDoc reading). The framing is now a
+  world-space delta applied downward (`figure_world_delta` reusing the copy route's own solve plus
+  `apply_world_delta_downward`), which touches no local at all, and it asserts itself with a
+  `SCOPY R01 frame … center-d=` line. The measured bound is refreshed before framing, the root's
+  bound cache is written back on exit, and a unit case covers the delta.
+
+- AFP9b black panel: the figure draw and the composite shared one D3D state-capture scope, so the
+  composite bound the studio texture as a sampler source while it was still bound as the output
+  target - D3D11 silently unbinds a resource used as both, and the panel sampled nothing while the
+  studio target itself was correct (both routes affected; the user's RenderDoc reading was right).
+  The composite now releases the output target before binding its source, the draw and the composite
+  use separate capture scopes again, and the composite reads the bound source back once and logs
+  `SCOPY COMPOSITE src/bound/match`. The audit's unreachable naming was also wrong (a negative bone
+  table target is not unreachable - the name bridge writes those slots; 61 names were printed against
+  a per-frame count of 6) and now repeats the write's own resolution order with a `reconciles=` check;
+  the R01 restore check no longer fails on the worldBound cache the engine refreshes during pass
+  setup (world drift was already 0), which also removes its per-frame log flood.
+
+- AFP9 first-test crash (`EXCEPTION_ACCESS_VIOLATION` at `CharacterPanel.dll+0x2B78A`, a name read at
+  `0x1010`): the coverage audit's palette walk dereferenced `NiSkinInstance::bones` entries as nodes
+  while reading their names. The walk now collects pointers only - the shape the probe has run for
+  weeks - and a slot is classified through the node the caller resolves itself in the actor's tree,
+  which also reports whether the name resolved at all (`resolved=x/y`). The probe's private palette
+  walk was deleted in favour of the shared one, so the memory rule exists once. Field logs are kept
+  in `docs/diagnostics`; verdict in `docs/afp9-verdict-2026-10-13.md`.
+
+### Added
+
+- AFP9 package A: the application stage reconciles its coverage ledger every frame
+  (output-slots = attempted + written + unreachable + unprocessed, the A2 mark carries it) and, when
+  the gap changes, names the unreachable and unprocessed slots against the animation skeleton and
+  classifies each by the puppet's own skin palette (necessary / helper / weapon-attachment; an
+  unbound palette reports `unbound-palette`, never "nothing is necessary"). The audit names and
+  classifies only - it does not extend the write past the mapping table, because the `Weapon*`
+  slots AFP8 measured as graph-driven residue would move the weapons if written blindly.
+- AFP9 package B, R01: an opt-in (F6) same-Actor direct-draw path. When enabled the panel draws the
+  puppet's own `Get3D(false)` tree through the shared pass seam instead of the detached copy, with a
+  provenance line (actor form, root, graph, generation), fixed-bone A4 (pre-pass) and A5 (post-draw)
+  samples proving the draw does not overwrite the applied pose, and a temporary framing whose saved
+  root local, world and worldBound are restored with a printed before/after reconciliation on every
+  exit including failures. The puppet path falls back to the copy and logs the reason; physics and
+  FaceGen stay out of scope (A3 = skipped).
+- Shared audit helpers (`figure_audit.h/.cpp`): skin-palette names, collision-helper-filtered
+  skinned bound, placement solve, and the slot-necessity classifier, unit-tested alongside the new
+  coverage-ledger arithmetic in the focused regression target.
+
 ### Removed
 
 - Remove retired M0 probe/prototype build targets, engine image dumping, S2 measurement controls,
@@ -31,6 +144,9 @@
 
 ### Changed
 
+- F6 is no longer documented as "gone": AFP9 binds R01 direct draw to it. F3 remains with the other
+  mod that owns it. The package README's control table and the maintenance document carry the same
+  contract.
 - Move the AFP route's controls onto the available keys: F2 marks and F4 is
   the drive cycle; placement has no control entry. The earlier bindings were wrong or unwanted - F5 is the
   game's own quicksave (and this sink does not consume input), F11/F12 and NUMPAD1 were tried and are

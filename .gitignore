@@ -40,5 +40,10 @@ _deps/
 # Except archived diagnostic evidence, which is what the analysis documents cite
 !docs/diagnostics/*.log
 
+# Frame captures: kept beside the logs on disk because the verdicts cite them, but a single
+# studio-target readback is ~14 MB and 12 of them would bloat the history for no reviewer benefit.
+*.tga
+*.png
+
 # Local diagnostic packages
 /dist/

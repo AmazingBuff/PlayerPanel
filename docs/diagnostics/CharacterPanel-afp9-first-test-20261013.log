@@ -1,0 +1,55 @@
+[22:30:46.190] [17140] [I] CharacterPanel v1-2-1-0
+[22:30:46.190] [17140] [I] CharacterPanel loaded
+[22:32:07.929] [25172] [I] All shaders compiled
+[22:32:07.930] [25172] [I] Installed pre-UI renderer hook
+[22:32:07.930] [25172] [I] Menu sink installed
+[22:32:07.930] [25172] [I] SCOPY BUILD CharacterPanel-scopy-AFP9-ce35ad79e3+dirty-cl94faaed0c6-20261013T141655Z runtime=1-6-1170-0 mode=manual-scene-copy legacy-actor-route=disabled animation=puppet-clip/captured-clip/procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-copy F8-draw F2-mark F4-drive
+[22:32:07.967] [18360] [I] Studio host changed: 0x0 -> 0x27189296980 (paused=true)
+[22:32:07.967] [18360] [I] Studio light node has been created
+[22:32:07.967] [18360] [I] CP-LIGHT slot 0: registered, shell 0x273115e7880 queued (ledger stays the authority)
+[22:32:07.967] [18360] [I] CP-LIGHT slot 1: registered, shell 0x273115e7740 queued (ledger stays the authority)
+[22:32:07.967] [18360] [I] CP-LIGHT slot 2: registered, shell 0x273115e7600 queued (ledger stays the authority)
+[22:32:07.967] [18360] [I] Studio lights registered on the ledger (scene=0x267fca16e80 -- ledger fetch will populate the slots)
+[22:32:07.967] [18360] [I] CP-LIGHT slot 0: ledger shell fetched 0x273115e7880 (after 0 miss frames)
+[22:32:07.967] [18360] [I] CP-LIGHT slot 1: ledger shell fetched 0x273115e7740 (after 0 miss frames)
+[22:32:07.967] [18360] [I] CP-LIGHT slot 2: ledger shell fetched 0x273115e7600 (after 0 miss frames)
+[22:32:48.477] [18360] [I] CP-LIGHT slot 0: ledger shell dropped
+[22:32:48.477] [18360] [I] CP-LIGHT slot 1: ledger shell dropped
+[22:32:48.477] [18360] [I] CP-LIGHT slot 2: ledger shell dropped
+[22:32:48.478] [18360] [W] Studio lights not fully served by the ledger yet
+[22:32:54.838] [18360] [W] Studio lights not fully served by the ledger yet
+[22:32:57.400] [18360] [I] SCOPY PUPPET born form=ff006913 base=00000007 grace=240 frames (fade-pinned at the player; parks deep after assembly)
+[22:32:57.400] [18360] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x273115e6fc0 filed to lightQueueAdd)
+[22:32:57.400] [18360] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x273115e6e80 filed to lightQueueAdd)
+[22:32:57.400] [18360] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x273115e6d40 filed to lightQueueAdd)
+[22:32:57.464] [18360] [I] CP-LIGHT slot 0: ledger shell fetched 0x273115e6fc0 (after 1 miss frames)
+[22:32:57.464] [18360] [I] CP-LIGHT slot 1: ledger shell fetched 0x273115e6e80 (after 1 miss frames)
+[22:32:57.464] [18360] [I] CP-LIGHT slot 2: ledger shell fetched 0x273115e6d40 (after 1 miss frames)
+[22:33:07.730] [17140] [I] SCOPY PUPPET parked reason=grace-complete offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:08.978] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:10.175] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:11.459] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:12.903] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:14.299] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:14.930] [17140] [I] SCOPY PUPPET update-data delta-time=0.1000 refr=ff006913 camera=0x267fc9e6f20 functor=0x27328ccbde0 flags=0x0 force-generate=0
+[22:33:18.471] [17140] [I] SCOPY PUPPET digest ticks=30 step=0.0394 clips=1 [Animations\male\MT_Idle.HKX#12218(13.76s)]
+[22:33:19.396] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:19.793] [33384] [I] SCOPY AFP2 drive=tick+apply apply=on force-generate=off tick=on (F4 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[22:33:19.819] [17140] [I] SCOPY AFP2 verify generation=0 samples=98 names skeleton=116 tree=92 table=37 | bone-nodes within-1deg=40/88 ratio=0.45 | skeleton within-1deg=88/92 ratio=0.96 | match=1 reason=matched
+[22:33:20.657] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:21.001] [17140] [I] SCOPY AFP2 apply blocked reason=no-pose mapping=skeleton verified=1 generation=0
+[22:33:21.335] [17140] [I] SCOPY PUPPET digest ticks=60 step=0.0210 clips=1 [Animations\male\MT_Idle.HKX#12218(16.66s)]
+[22:33:50.836] [17140] [I] SCOPY PUPPET digest ticks=90 step=0.0223 clips=1 [Animations\male\MT_Idle.HKX#12218(17.39s)]
+[22:33:51.494] [17140] [I] SCOPY PUPPET digest ticks=120 step=0.0225 clips=1 [Animations\male\MT_Idle.HKX#12218(18.04s)]
+[22:33:52.152] [17140] [I] SCOPY PUPPET digest ticks=150 step=0.0264 clips=1 [Animations\male\MT_Idle.HKX#12218(18.70s)]
+[22:33:52.490] [17140] [I] SCOPY AFP2 apply blocked reason=no-pose mapping=skeleton verified=1 generation=0
+[22:33:52.804] [17140] [I] SCOPY PUPPET digest ticks=180 step=0.0214 clips=1 [Animations\male\MT_Idle.HKX#12218(19.35s)]
+[22:33:54.264] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:55.865] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:57.246] [27992] [I] SCOPY PUPPET force-generate on (every tick asks UpdateAnimation for hkbGenerator::generate() and the skip is bypassed)
+[22:33:57.246] [27992] [I] SCOPY AFP2 drive=tick+apply+force apply=on force-generate=on tick=on (F4 cycles off -> tick -> tick+apply -> tick+apply+force -> step)
+[22:33:57.451] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:33:58.979] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:34:00.498] [17140] [I] SCOPY PUPPET parked reason=keep-parked offset=-8000 (invisible; the engine may idle the graph there - panel time is ours)
+[22:34:00.944] [17140] [I] SCOPY ANIM restart at panel open capture=0 driver=procedural-idle
+[22:34:00.944] [17140] [I] SCOPY PUPPET update-data delta-time=0.1000 refr=ff006913 camera=0x267fc9e6f20 functor=0x27328ccbde0 flags=0x0 force-generate=1
