@@ -1,6 +1,8 @@
 # AFP summary: the same-Actor final-pose route, AFP1 through AFP8
 
 Date: 2026-10-13 · route owner: PRD 0.9 §6.6
+Review: [PRD 0.10 §6.6](player-panel-prd.md) and [next validation / paused gaps](afp-next-validation-and-paused-gaps-2026-10-13.md).
+The generation/application premise has positive evidence; same-Actor panel rendering is still open.
 Spans: [AFP1/1b](afp1-verdict-2026-10-13.md) → [AFP3](afp3-verdict-2026-10-13.md) →
 [AFP4](afp4-verdict-2026-10-13.md) → [AFP5](afp5-verdict-2026-10-13.md) → [AFP8](afp8-verdict-2026-10-13.md)
 Tooling built along the way: `tools/re/engine_scan.py`, `src/diagnostics/engine_image.*`
@@ -22,11 +24,10 @@ Each was measured, then re-measured in a later round:
    `Actor::UpdateAnimation` (vtable 0x7D) → `UpdateAnimationGraphManager` (id 32899) →
    `BSAnimationGraphManager` frame function (id 63358) → `BShkbAnimationGraph::UpdateAnimation`
    → Havok `Update` (vtable 0x5) and, unless skipped, `Generate` (vtable 0x17).
-2. **The pose is skeleton-ordered, and there is only one order.** `hkbCharacter::poseLocal` is an
-   array indexed by animation bone (109/109 against the tree), which corrects HKX2's claim that the
-   graph output was boneNodes-ordered. The engine's own `boneNodes` table is a *different* set that
-   overlaps the tree only partially — it addresses 36–37 of the 68–116 bones the pose carries, which
-   is why writing through the table alone could never cover a figure.
+2. **The measured generator-output pose uses animation-skeleton order.** Do not transfer an index
+   rule between `generatorOutputs`, `poseLocal`, `boneNodes` or clip tracks without separate evidence.
+   The measured bone table reaches only 36–37 nodes, while tree lookup reaches substantially more;
+   using the table as the write gate restricted this sample's coverage.
 3. **The park never mattered and the pause never disabled anything.** A parked-deep puppet with the
    world running generates a full pose (98 elements, and in AFP8 a parked puppet stood at a normal
    location with 116). The single variable was the skip.
@@ -43,8 +44,8 @@ Each was measured, then re-measured in a later round:
 | AFP1/1b | Both pose sources convicted while paused: the output pose empty (`numAnimBones=0`), `poseLocal` static (0.069° two-state jitter, tick-independent, skeleton-ordered). `world-within-1deg=0`. |
 | AFP3 | `unk2A` flips the skip: paused, `parked-deep`, 0 → 116 bones with a 109/109 match, reversible. `is-active=1` throughout falsifies "the graph gets deactivated". Engine image dumped (Steam-wrapped `.text` is encrypted on disk; only a live process holds it as code). |
 | AFP4 | The order proof moves from 37 bones to 109 by reading the candidate local from the matched tree node: 108/109 = 0.99. Also measures a forced generate in a running world breaking that proof (0.99 → 0.67). |
-| AFP5 | First write: `written=36 max-rot=13.937deg` while paused. Both output buffers hold the forced pose (68/68 each) and `interp=(0.194,0.068)` — the two-buffer blend the `[Animation]` INI block describes, measured directly. `unreachable=32` quantifies the bone-table limit. |
-| AFP8 | The closed receipt: `verify 90/92=0.98 match=1` in the running world, then paused `written=92 unreachable=6`, and the mark's own calibration scores the *written* nodes against the pose at **109/109 with max-rot=0.048°** — conversion rounding. World space 0/92 (AFP1) → 104/109, the five outliers being weapon attachment nodes the graph does not drive. |
+| AFP5 | First write: `written=36 max-rot=13.937deg` while paused. Both output buffers are populated (68/68 each) and `interp=(0.194,0.068)` is observed; this does not yet prove buffer selection or interpolation semantics. `unreachable=32` quantifies the bone-table limit. |
+| AFP8 | Unforced-world reference `90/92=0.98`; paused application `written=92 unreachable=6`. The separate observed-node comparison is `109/109`, max-rot=0.048°, not a 109-node write receipt. Output expanded from 98 to 116 but the application still processes 98 slots; weapon world outliers and the remaining coverage require checks. Direct drawing is not connected. |
 
 ## 4. The four fixes between AFP5 and AFP8, and what each one was
 
@@ -76,9 +77,16 @@ Worth recording, because each was a real hypothesis that a measurement killed:
 
 ## 6. Next
 
-1. **R01 direct draw** — the panel still renders the clone, so the route is proven but not visible.
-   Draw the puppet's own third-person 3D; framing must use the temporary root transform because the
-   accumulator camera is null.
-2. **Name the 6 unreachable bones** (of 98 sampled) — likely the same unnamed family as the probe's
-   `missing=10`, and worth confirming before coverage is called complete.
-3. Cosmetic: `A2 frames=` reads 1 by construction; it should count frames, not report the last one.
+1. Audit complete coverage: 18 unprocessed output slots, 6 unreachable items and 5 weapon attachment
+   world outliers. Keep explicit write counts separate from post-application comparisons.
+2. Connect **R01 direct draw** and A2/A4/A5. Temporary framing is a candidate requiring restoration
+   and task synchronization; a null accumulator camera is not proof that all other camera paths fail.
+3. Test final-output slot selection and complete idle/equip/idle mixing, including two live buffers.
+4. User observation, 2026-10-13: the current clone animates during pause but has no physical effect
+   or facial-expression deformation; the cloned Actor also does not inherit the source Actor's
+   body deformation. Build/hash was not supplied with these observations; do not silently label
+   them AFP8 measurements. Body pose, solver state, FaceGen and body-shape synchronization are
+   separate stages; the Actor-specific body-shape issue does not prove the copied static graph loses it.
+5. Follow [the detailed next test](afp-next-validation-and-paused-gaps-2026-10-13.md) for independent
+   physics, expression and BM00–BM03 body-shape diagnosis. Appearance acceptance remains open;
+   actual cleanup is still a gate before stress runs.

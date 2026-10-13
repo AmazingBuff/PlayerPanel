@@ -1,4 +1,6 @@
-# AFP8 verdict: the same-Actor route is closed end to end
+# AFP8 verdict: paused final-pose application has positive evidence; direct draw remains open
+
+**2026-10-13 review:** this is an application-stage result, not end-to-end panel validation. The renderer still draws the copied graph. See [next validation and paused gaps](afp-next-validation-and-paused-gaps-2026-10-13.md).
 
 Date: 2026-10-13 · build `CharacterPanel-scopy-AFP8-ac27f6e83a+dirty-cl94faaed0c6-20261012T173308Z`
 Log: `docs/diagnostics/CharacterPanel-afp8-f4-drive-20261013.log`
@@ -12,7 +14,7 @@ Baseline: [afp5 verdict](afp5-verdict-2026-10-13.md), [afp6/7 latch+coverage fix
 
 01:38:48  A2  drive=tick+apply+force apply=on mapping=skeleton verified=1
               written=92 unreachable=6 frames=1 max-rot=0.028deg max-pos=0.000
-              blocked=verified
+              blocked=verifying
 ```
 
 And the mark's own calibration, taken on the same frame — pose versus the puppet's node locals:
@@ -24,12 +26,16 @@ world order=skeleton compared=109 within-1deg=104/109 ratio=0.95
                outliers=WeaponAxe,WeaponBack,WeaponBow,WeaponDagger,WeaponMace
 ```
 
-The world was paused and the engine applies nothing while paused, so the only thing that can have
-put the pose onto those nodes is this stage's write. `max-rot=0.048°` is the hkQsTransform →
-NiTransform conversion's rounding — i.e. the nodes hold the pose to within conversion noise, on all
-109 named bones. Even the world-space composition now agrees (104/109); AFP1 measured the same
-comparison at **0/92**. The five world-space outliers are weapon attachment nodes, which the graph
-does not drive.
+The application explicitly reports 92 written nodes. The 109/109 comparison establishes agreement
+between the observed nodes and the pose, not that this stage wrote all 109 or was their only writer.
+The small rotation residual is consistent with conversion noise but does not prove that cause alone.
+World-space agreement is 104/109; the five weapon attachment outliers require attachment, hierarchy
+and skin relevance checks before they may be excluded.
+
+Verification captured 98 samples while the forced output contains 116. `apply()` limits its loop to
+`min(m_targets.size(), count)`, and verification sized that table and the name list from the 98 samples.
+Thus 92 written + 6 unreachable describes only the initial 98 slots; 18 later output slots are not
+processed by this loop. Complete coverage is not established.
 
 ## 2. What each fix contributed
 
@@ -42,18 +48,20 @@ does not drive.
 
 ## 3. The route, as it now stands
 
-While the panel pauses the world, the puppet Actor's own behaviour graph produces its own final
-output pose (116 of 116 bones), and that pose is written into the puppet Actor's own skeleton —
-proved on the skeleton itself at 1.00 with 0.048° of conversion noise. PRD 0.9 §6.6's premise, plus
-R03 (index order) and R04 (the A/B pair), are all measured and green.
+While the panel pauses the world, the puppet's graph can produce a 116-element output and the
+application writes 92 nodes of its own skeleton. R02 and the index-order portion of R03 have
+positive evidence. R04's node-application portion has evidence, but its actual draw/skin consumption
+is not yet measured. R01 and complete R03/R04 remain open; physics, expressions and cleanup do too.
 
 ## 4. Still open
 
-1. **R01 direct draw** — the panel still draws the *clone*, so nothing is visually different yet.
-   Drawing the puppet's own third-person 3D is the next work item (framing must use the temporary
-   root transform; the accumulator camera is null).
-2. **6 unreachable bones** of 98 sampled — bones whose names resolve neither in the tree nor in the
-   table. Worth naming (the probe logs `missing=10` unnamed table entries; these six are probably the
-   same family) before calling coverage complete.
-3. Cosmetic: the `A2 frames=` counter reads 1 by construction (the stats are replaced per frame), so
-   it reports "the last frame wrote", not how many frames wrote.
+1. Audit the 98→116 coverage limit; list the 18 unprocessed slots and 6 unreachable items, with
+   bone/branch/skin relevance and explicit reasons.
+2. **R01 direct draw**: connect the puppet's own 3D and A2/A4/A5. If temporary framing transforms
+   are used, prove complete restoration and synchronization; a null accumulator camera alone does
+   not prove every camera-adaptation route impossible.
+3. Validate buffer selection/interpolation through the full idle/equip/idle transition, including
+   both output slots populated. Selecting the first readable slot is not yet a verified policy.
+4. Validate R08 physical simulation and FaceGen independently; record the user's paused observation
+   of animation without physics or expressions without attributing it to an unconfirmed build.
+5. Cosmetic: `A2 frames=1` is a last-frame statistic, not duration or stress evidence.
