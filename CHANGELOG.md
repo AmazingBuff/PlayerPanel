@@ -4,6 +4,27 @@
 
 ### Fixed
 
+- AFP10e the panel figure not moving until F4 had been pressed (reported 2026-10-14): with the drive
+  state the session started on, the graph was advanced but nothing was applied, so the figure stood
+  still until the key walk reached an applying state. Fixing that by defaulting to the applying state
+  is not possible either, because the two requirements conflict in time: the proof that the mapping is
+  right needs a frame the engine generated AND applied, which only an UNFORCED running world provides,
+  while a PAUSED panel produces no pose at all unless the generate is forced (`pose-empty`, AFP3). A
+  new startup drive state resolves it per frame - forced while paused, unforced while the world runs -
+  so the panel animates the moment the inventory opens and the proof still has its unforced frame. The
+  F4 cycle keeps its five fixed-flag diagnostic states and now starts from this one.
+
+- AFP10e the initial equipment going missing (reported 2026-10-14 as a regression: clothing could not
+  be swapped the day before, but weapons could). The hand mirror skipped both slots whenever the
+  player's own hands had not moved, and the strip added in AFP10c empties the puppet's hands without
+  the player's hands changing at all - so after dressing, the weapon the strip had just taken off was
+  never put back until the player swapped weapons by hand. The decision is now made against what the
+  puppet actually HOLDS rather than against a cached form id (the same stateless shape the worn-body
+  reconciliation already had), and dressing clears the cache so the next poll re-equips and re-pushes
+  the draw state.
+
+### Fixed
+
 - AFP10d the panel drawing nothing with direct draw on (`SCOPY R01 fallback to the copy
   reason=not-framed` on every frame, reported 2026-10-14 as "F6 no longer brings up the panel"): the
   framing needed a bound, the live bound is measured from the skin palette, and the engine allocates

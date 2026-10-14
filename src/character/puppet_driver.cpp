@@ -200,6 +200,17 @@ void PuppetDriver::set_force_generate(bool a_enabled)
             : "the engine's own skip decides on which frames this tick produces a pose");
 }
 
+void PuppetDriver::set_force_when_paused(bool a_enabled)
+{
+    if (m_force_when_paused.exchange(a_enabled, std::memory_order_acq_rel) == a_enabled)
+        return;
+    logger::info("SCOPY PUPPET force-when-paused {} ({})",
+        a_enabled ? "on" : "off",
+        a_enabled
+            ? "auto: the paused panel's generate is forced, the running world's is not"
+            : "the drive state decides force on its own");
+}
+
 void PuppetDriver::tick(bool paused)
 {
     if (m_release_requested.exchange(false, std::memory_order_acq_rel))
@@ -311,7 +322,10 @@ void PuppetDriver::tick(bool paused)
     if (RE::NiCamera* const camera = RE::Main::WorldRootCamera(); camera && readable(camera, sizeof(RE::NiAVObject)))
         update.optionalEyePosition = std::addressof(camera->world.translate);
     update.updateFunctor = puppet->AsIPostAnimationChannelUpdateFunctor();
-    update.unk2A = force_generate();
+    // Auto mode resolves here: a paused frame is forced (the panel needs a pose to write at all - the
+    // engine's own skip leaves the output empty), an unpaused one is not (the mapping proof compares
+    // the pose against the locals the engine applied, which only an unforced frame provides).
+    update.unk2A = force_generate() || (force_when_paused() && paused);
     if (std::exchange(m_data_logged, true) == false)
     {
         logger::info("SCOPY PUPPET update-data delta-time={:.4f} refr={:08x} camera=0x{:x} functor=0x{:x} flags=0x{:x} force-generate={}",
@@ -555,6 +569,11 @@ std::uint32_t PuppetDriver::dress(RE::Actor& a_puppet)
     if (RE::NiAVObject* const root = a_puppet.Get3D(false); root && readable(root, sizeof(RE::NiAVObject)))
         logger::info("SCOPY PUPPET shell names=[{}]", shell_geometry_names(*root, 12));
 
+    // The strip emptied the puppet's hands, so the cached "what the player's hands were" no longer
+    // describes the figure: clearing it makes the next poll re-equip AND re-push the draw state.
+    m_right_form = 0;
+    m_left_form = 0;
+
     const std::uint32_t equipped = equipment_equip_all_worn(a_puppet, *player);
     // The hand slots are the other poll's business, but the figure is about to leave the world: push
     // them here too so the first panel frame is not the first time it holds anything.
@@ -602,8 +621,6 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
         hands[0] && hands[0]->object ? hands[0]->object->GetFormID() : 0,
         hands[1] && hands[1]->object ? hands[1]->object->GetFormID() : 0,
     };
-    if (forms[0] == m_right_form && forms[1] == m_left_form)
-        return;
     const bool right_changed = forms[0] != m_right_form;
     const bool left_changed = forms[1] != m_left_form;
     m_right_form = forms[0];
@@ -618,30 +635,31 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
 
     for (int hand = 0; hand < 2; ++hand)
     {
-        if (hand == 0 ? !right_changed : !left_changed)
-            continue;
-        RE::TESBoundObject* const wanted = hands[hand] && hands[hand]->object ? hands[hand]->object : nullptr;
         const bool left = hand == 1;
+        RE::TESBoundObject* const wanted = hands[hand] && hands[hand]->object ? hands[hand]->object : nullptr;
 
-        // AFP10b: the hand is mirrored EXACTLY, which means the puppet's current one comes off first.
-        // Equipping only ever went one way, so every weapon the player drew during a session stayed on
-        // the figure for good: the 2026-10-14 report was an axe, a shield and a bow on a puppet whose
-        // player held none of them, because nothing had ever unequipped the earlier ones.
+        // Compared against what the puppet HOLDS, not against a cached form id. A strip, a fresh
+        // placement or a re-assembly empties the puppet's hands while the player's hands never
+        // changed, and a decision cached from "the player's hands last time" left those slots empty:
+        // the 2026-10-14 report was a figure that only got its weapon back after the player swapped.
         RE::InventoryEntryData* const held_entry = puppet.GetEquippedEntryData(left);
         RE::TESBoundObject* const held = held_entry && held_entry->object ? held_entry->object : nullptr;
-        if (held && held != wanted)
-        {
-            if (equip_manager->UnequipObject(&puppet, held, nullptr, 1, nullptr, false, true, false, true))
-                ++hand_removed;
-        }
+        if (held == wanted)
+            continue;
+
+        if (held && equip_manager->UnequipObject(&puppet, held, nullptr, 1, nullptr, false, true, false, true))
+            ++hand_removed;
 
         if (wanted)
         {
-            puppet.AddObjectToContainer(wanted, nullptr, 1, nullptr);
+            RE::InventoryChanges* const changes = puppet.GetInventoryChanges(true);
+            if (changes && changes->GetItemCount(wanted) <= 0)
+                puppet.AddObjectToContainer(wanted, nullptr, 1, nullptr);
             equip_manager->EquipObject(&puppet, wanted, nullptr, 1, nullptr, false, true, false, true);
             ++hand_equipped;
         }
     }
+
     const char* pushed = "none";
     if (right_changed || left_changed)
     {
@@ -650,6 +668,10 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
         pushed = any_hand_filled ? "draw" : "sheathe";
         ++m_equip_reactions;
     }
+
+    if (hand_equipped == 0 && hand_removed == 0 && !right_changed && !left_changed)
+        return;   // the hands already agree and the player's own set did not move
+
     logger::info("SCOPY PUPPET equip right={:08x} left={:08x} pushed={} equipped={} removed={} reactions={}",
         forms[0], forms[1], pushed, hand_equipped, hand_removed, m_equip_reactions);
 

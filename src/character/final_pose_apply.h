@@ -48,6 +48,15 @@ public:
     // with the engine's own frame-to-frame decisions.
     enum class Drive : std::uint8_t
     {
+        // The startup mode and the product behaviour: force-generation follows the pause state. The
+        // two requirements pull in opposite directions at different times, which is why no single
+        // fixed flag satisfies both - the proof that the mapping is right needs a frame the engine
+        // generated AND applied (an unforced, RUNNING world), while a paused panel has no pose at all
+        // unless the generate is forced. Auto is therefore forced while paused and unforced while the
+        // world runs, so the panel animates the moment the inventory opens without waiting for a key.
+        e_auto,
+        // The diagnostic states below are the F4 instrument: fixed flags, so the two adjacent `apply`
+        // states A/B force-generation alone, inside one session and one placement.
         e_off,
         e_tick,
         e_tick_apply,
@@ -59,13 +68,15 @@ public:
     [[nodiscard]] static char const* drive_name(Drive a_drive);
 
     // The F4 control: advances the cycle and pushes the resulting gate into PuppetDriver.
-    void cycle();
-    [[nodiscard]] Drive drive() const { return m_drive.load(std::memory_order_acquire); }
+    void cycle();    [[nodiscard]] Drive drive() const { return m_drive.load(std::memory_order_acquire); }
     [[nodiscard]] bool apply_enabled() const
     {
         const Drive current = drive();
-        return current == Drive::e_tick_apply || current == Drive::e_tick_apply_force;
+        return current == Drive::e_auto || current == Drive::e_tick_apply || current == Drive::e_tick_apply_force;
     }
+    // The DIAGNOSTIC meaning only: a fixed force flag. `e_auto` resolves per frame inside the driver
+    // (see PuppetDriver::force_when_paused), which is also what keeps the proof's precondition - an
+    // unforced frame - available while the world runs.
     [[nodiscard]] bool force_generate() const { return drive() == Drive::e_tick_apply_force; }
 
     // Once per rendered frame, inside the render bracket, after the drivers ticked and before the
@@ -130,7 +141,16 @@ private:
     // the name bridge both run over that tree, and neither ever dereferences a palette entry.
     void audit_slots(RE::Actor& a_puppet, RE::NiAVObject& a_root, std::size_t a_attempted);
 
-    std::atomic<Drive> m_drive{ Drive::e_tick };
+    // Pushes one drive's gates into PuppetDriver and says so. `cycle()` is the F4 caller; the first
+    // tick calls it once with the DEFAULT drive, because the default has to reach the driver too -
+    // setting the member alone left the graph un-advanced and the pose unwritten, so the panel showed
+    // a figure that only moved after F4 had been pressed twice.
+    void apply_drive(Drive a_drive);
+
+    std::atomic<Drive> m_drive{ Drive::e_auto };
+    // Whether the current drive has been pushed into PuppetDriver. The first tick does it, so a fresh
+    // session starts on the default drive rather than on whatever the driver's own defaults are.
+    bool m_drive_pushed = false;
     // A step is one frame of work as well as one advance: R02 wants a single step to advance exactly
     // one declared dt AND apply once, so the stage remembers that the next paused frame is that one.
     bool m_step_pending = false;

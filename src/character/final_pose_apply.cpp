@@ -96,6 +96,8 @@ char const* FinalPoseApply::drive_name(Drive a_drive)
 {
     switch (a_drive)
     {
+    case Drive::e_auto:
+        return "auto";
     case Drive::e_off:
         return "off";
     case Drive::e_tick:
@@ -110,38 +112,22 @@ char const* FinalPoseApply::drive_name(Drive a_drive)
     return "?";
 }
 
-void FinalPoseApply::cycle()
+void FinalPoseApply::apply_drive(Drive a_drive)
 {
-    const Drive next = [current = drive()]
-    {
-        switch (current)
-        {
-        case Drive::e_off:
-            return Drive::e_tick;
-        case Drive::e_tick:
-            return Drive::e_tick_apply;
-        case Drive::e_tick_apply:
-            return Drive::e_tick_apply_force;
-        case Drive::e_tick_apply_force:
-            return Drive::e_step;
-        case Drive::e_step:
-            return Drive::e_off;
-        }
-        return Drive::e_off;
-    }();
-
-    m_drive.store(next, std::memory_order_release);
-
     // The gate the driver obeys. `step` leaves nothing running: it is a one-shot, so the driver stays
     // closed and the next paused frame advances exactly the declared dt.
     PuppetDriver& driver = PuppetDriver::instance();
-    const bool applying = next == Drive::e_tick_apply || next == Drive::e_tick_apply_force;
-    driver.set_tick_enabled(next == Drive::e_tick || applying);
-    driver.set_force_generate(next == Drive::e_tick_apply_force);
-    if (next == Drive::e_step)
+    const bool applying = a_drive == Drive::e_auto || a_drive == Drive::e_tick_apply || a_drive == Drive::e_tick_apply_force;
+    driver.set_tick_enabled(a_drive == Drive::e_tick || applying);
+    driver.set_force_generate(a_drive == Drive::e_tick_apply_force);
+    // Auto is the only state whose force flag is not fixed: the driver resolves it per frame from the
+    // pause state, which is what lets the proof run in the unforced running world and the paused panel
+    // still have a pose to write.
+    driver.set_force_when_paused(a_drive == Drive::e_auto);
+    if (a_drive == Drive::e_step)
         driver.request_step();
 
-    // A drive cycle does NOT re-verify. It used to, and AFP6 showed what that costs: cycling from
+    // A drive change does NOT re-verify. It used to, and AFP6 showed what that costs: cycling from
     // tick+apply into tick+apply+force threw away a proof taken seconds earlier at 0.98, then the
     // paused forced frame found itself unverified and wrote nothing
     // (`blocked=unverified-world-first` with the pose sitting right there).
@@ -152,16 +138,42 @@ void FinalPoseApply::cycle()
     // and the mapping is proved against the latter, so moving the flag is not a reason to lose it.
     m_verify_attempted = false;
     m_blocked = applying ? "verifying" : "not-armed";
-    m_step_pending = next == Drive::e_step;
+    m_step_pending = a_drive == Drive::e_step;
 
     logger::info("SCOPY AFP2 drive={} apply={} force-generate={} tick={} ({})",
-        drive_name(next),
+        drive_name(a_drive),
         applying ? "on" : "off",
-        next == Drive::e_tick_apply_force ? "on" : "off",
+        a_drive == Drive::e_tick_apply_force ? "on" : "off",
         driver.tick_enabled() ? "on" : "off",
-        next == Drive::e_step
+        a_drive == Drive::e_step
             ? "one declared step, then frozen"
-            : "F4 cycles off -> tick -> tick+apply -> tick+apply+force -> step");
+            : "F4 cycles auto -> off -> tick -> tick+apply -> tick+apply+force -> step");
+}
+
+void FinalPoseApply::cycle()
+{
+    const Drive next = [current = drive()]
+    {
+        switch (current)
+        {
+        case Drive::e_auto:
+            return Drive::e_off;
+        case Drive::e_off:
+            return Drive::e_tick;
+        case Drive::e_tick:
+            return Drive::e_tick_apply;
+        case Drive::e_tick_apply:
+            return Drive::e_tick_apply_force;
+        case Drive::e_tick_apply_force:
+            return Drive::e_step;
+        case Drive::e_step:
+            return Drive::e_auto;
+        }
+        return Drive::e_off;
+    }();
+
+    m_drive.store(next, std::memory_order_release);
+    apply_drive(next);
 }
 
 void FinalPoseApply::block(char const* a_reason)
@@ -593,6 +605,15 @@ void FinalPoseApply::audit_slots(RE::Actor& a_puppet, RE::NiAVObject& a_root, st
 
 void FinalPoseApply::tick(bool a_paused)
 {
+    // The default drive has to reach the driver, not just the member: with the driver's own defaults
+    // the graph is advanced but nothing is applied, and the panel showed a figure that only started
+    // moving after F4 had been pressed twice (2026-10-14 report).
+    if (!m_drive_pushed)
+    {
+        m_drive_pushed = true;
+        apply_drive(drive());
+    }
+
     // The step state runs exactly one frame of work; the continuous states run every frame.
     const bool step_frame = m_step_pending;
     if (!apply_enabled() && !step_frame)

@@ -41,6 +41,11 @@ public:
 
     void set_force_generate(bool a_enabled);
     [[nodiscard]] bool force_generate() const { return m_force_generate.load(std::memory_order_acquire); }
+
+    // Auto mode (`FinalPoseApply::Drive::e_auto`): the generate is forced on PAUSED frames only, so a
+    // paused panel has a pose to write while an unpaused one stays unforced for the mapping proof.
+    void set_force_when_paused(bool a_enabled);
+    [[nodiscard]] bool force_when_paused() const { return m_force_when_paused.load(std::memory_order_acquire); }
     [[nodiscard]] std::uint32_t manual_ticks() const { return m_manual_ticks; }
 
 private:
@@ -74,6 +79,7 @@ private:
     std::atomic_bool m_step_requested{ false };
 
     std::atomic_bool m_force_generate{ false };
+    std::atomic_bool m_force_when_paused{ true };
     RE::NiPointer<RE::TESObjectREFR> m_puppet;
     std::uint32_t m_puppet_form_id = 0;
     // Where the reference was last parked WITH the character controller (see park()): the warp is

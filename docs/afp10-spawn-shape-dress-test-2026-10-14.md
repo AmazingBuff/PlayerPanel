@@ -197,7 +197,50 @@ SCOPY COMPOSITE src=… match=1 draws=1                    ← 整局只合成�
 `nodes`，面板出人后应转为 `palette`；③ `R01 fallback … reason=` 不再逐帧出现；
 ④ 回传 `shell names=[…]` 与 `unequipped=[…]` 两行——前者点名傀儡树里的网格，后者点名它自带的东西。
 
-## 8. 判读回传
+## 8. AFP10e：初始装备回归（我引入的）与"要按 F4 才有动作"
+
+### 8.1 初始装备：剥离把手部镜像的缓存判断拆了
+
+用户原话："昨天只是服装不能更换，但武器是可以切换的，所以是你今天的某处修改有问题。"——判断正确。
+
+机制：手部轮询原来只在**玩家的 formID 变过**时才装备。而 AFP10c 新增的剥离会在
+**玩家双手毫无变化**的情况下清空傀儡的手：
+
+```
+出生剥离 → 手空
+装配期轮询（未暂停分支）→ 把玩家的武器装上，缓存 m_right_form = 玩家武器
+穿衣前再剥离 → 手又空，但缓存仍是玩家武器
+下一帧轮询 → forms == 缓存 → 两个手都 continue → 武器再也回不来
+```
+所以"初始装备"是缺的，而**切换武器**（玩家 formID 变化）仍然有效——与用户的观察完全一致。
+
+**修正**：装备决策改为**对着傀儡此刻手里是什么**问（`GetEquippedEntryData` vs 玩家），无状态；
+缓存只用于"要不要推 draw/sheathe"和日志；剥离后清缓存。
+
+### 8.2 打开背包没有动作：force 与证明在时间上互斥
+
+用户要求"一打开背包人物就会播放动作"。原默认档是 `tick`（只推图、不写姿态），所以静止；
+但**改成"默认 tick+apply+force"也不行**：
+
+- 暂停的面板若不强 generate，输出是空的（`pose-empty`，AFP3）→ 没有姿态可写 → 静止；
+- 映射证明要求"引擎生成并应用了同一帧姿态"的**运行世界**帧（AFP4 实测：强制过的帧把 0.99 打成 0.67）
+  → 代码里 `force_generate()` 为真时直接 `block("verification-waits-for-unforced-world")`，
+  **证明被永久挡住** → 永远不 verified → 永远不写。
+
+**没有一个固定档位能同时满足两者**。修正：新增启动档 **`Drive::e_auto`**，在驱动侧逐帧解析
+（`force_when_paused`）：**暂停帧强制 generate、运行世界不强制**。于是：
+
+- 世界运行时：不强制 → 证明照常成立（`SCOPY FP verdict … match=1`）；
+- 一开背包（暂停）：强制 → 图产出姿态 → 应用写入 → **人物立即有动作**。
+
+F4 的五个固定档（off/tick/tick+apply/tick+apply+force/step）保留为诊断仪器，循环为
+`auto → off → tick → tick+apply → tick+apply+force → step → auto`。
+
+**复测项**：① 开背包**无需按任何键**人物即在动；② `SCOPY AFP2 drive=auto apply=on force-generate=off
+tick=on` 出现在会话开头；③ `SCOPY PUPPET force-when-paused on`；④ 世界运行段仍有
+`SCOPY FP verdict … match=1`（证明没有被 auto 破坏）；⑤ 武器在**不切换**的情况下从一开面板就在手里。
+
+## 9. 判读回传
 
 | 项 | 读数 |
 | --- | --- |

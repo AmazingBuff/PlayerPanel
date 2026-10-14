@@ -7,9 +7,13 @@ Current controls:
   F7: capture/audit player third-person 3D in paused InventoryMenu; draw starts off.
   F8: toggle drawing of the accepted copied graph.
   F2: AFP mark (final output slots, calibration, camera, geometry, source comparison).
-  F4: off -> tick -> tick+apply -> tick+apply+force -> step -> off.
-      Step advances the puppet once by 1/60 second. Verify mapping while the world
-      runs before judging paused apply. F3 stays with the other mod that owns it.
+  F4: the AFP drive cycle, starting from `auto`. `auto` is the product state: the
+      paused panel forces the generate it needs to have a pose at all, while the
+      running world does not (the mapping proof needs a frame the engine both
+      generated and applied). The five fixed states after it - off, tick,
+      tick+apply, tick+apply+force, step - are the diagnostic instrument, and the
+      two adjacent `apply` states A/B force-generation alone. Step advances the
+      puppet once by 1/60 second. F3 stays with the other mod that owns it.
   F6: direct draw toggle, ON by default. The panel shows the puppet's OWN 3D the
       moment the inventory opens - no capture, no key press; F6 switches to the
       detached copied graph instead. The puppet path falls back to the copy and

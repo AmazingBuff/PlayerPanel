@@ -58,7 +58,7 @@ cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPacka
 | F7 | 暂停背包中捕获并审计玩家第三人称 3D；替换前一副本，draw 初始关闭。 |
 | F8 | 切换当前已接受副本的显示。 |
 | F2 | 一次 AFP mark：输出、校准、来源对照、相机与目标网格状态；A2 行含 AFP9 覆盖对账与审计点名。 |
-| F4 | AFP `off → tick → tick+apply → tick+apply+force → step → off`。单步为一次 1/60 秒。 |
+| F4 | AFP 驱动档位：`auto → off → tick → tick+apply → tick+apply+force → step`。**默认 `auto`**：暂停帧强制 generate（面板才有姿态可写），运行世界不强制（映射证明需要未被引擎强制过的帧）。单步为一次 1/60 秒。 |
 | F6 | R01 直绘开关（**默认开**）：开 = 面板画傀儡自身 3D（开背包即出人，无需 F7/F6）；关 = 复制图。不可用时回退复制图并告警。 |
 
 F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe stage 没有控制入口。生命周期边界仍由重捕获／读档／主菜单处理。F4 的冻结／推进针对傀儡图与最终姿态应用，不等于冻结独立时钟运行的显示副本。
@@ -104,6 +104,8 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 23. **镜像必须双向，只装不卸等于累积**：手部轮询原先只在"玩家手上有东西且换过"时装备，玩家空手时只推 sheathe——于是本会话里画过的每把武器都永久留在傀儡身上（2026-10-14 用户报告：玩家身上没有的斧头/盾/弓出现在 clone 上）。同步语义 = **先卸掉傀儡手里与玩家不同的那一件，再装玩家的**；日志行必须同时给 `equipped=` 与 `removed=`，否则下一轮无法区分"没装"与"没卸"。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §2。
 24. **新放置的 Actor 不是空的**：它的基础记录自带作者放进去的东西，而傀儡的基础记录是**玩家 NPC 的副本**——2026-10-14 用户报告的"默认新 Actor 的弓箭/盾牌/斧头"就是它自带的，且在装配窗口内开面板（穿衣之前）就会看到；叠在镜像装备之上就是"装备叠加"。所以傀儡**出生时剥一次、穿衣前再剥一次**（每个 biped 槽位的 worn 项 + 双手 + 全部库存条目），并把 `items=/removed=/unequipped=/inherited=[名字(formID)]` 打进日志——自带的到底是什么由日志点名，不靠图猜。另外：装 worn 项前先查 `GetItemCount`，已有就不再 `AddObjectToContainer`（重复添加是叠加的另一半）。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §6。
 25. **蒙皮 palette 是"画过才分配"的，取景不能等它**：引擎在**绘制**几何时才分配 `NiSkinInstance` 的骨骼指针数组，所以从未被画过的图每个 skin 都是 `allocatedSize==0`——此时 `bound-nodes=0/0` 且 `skin-data-null=0 bones-null=0`（AFP10d 实测：壳 44 个蒙皮几何全为 0）。`figure_skeleton_bound` 只能从 palette 取点，因此恒为 invalid → `begin_frame` 不取景 → `draw` 报 `not-framed` → 回退复制图（没有 F7 捕获时面板就是空白）：**"等 palette 才能画"与"画了才有 palette"是死锁**。取景必须回退到**树自身的节点云**（`figure_node_cloud_bound`，活数据、排除碰撞辅助体），画过一次后自动回到 palette 活值；日志行 `R01 frame bound-from=palette|nodes` 指出用的是哪一个。fade 归零让世界渲染器永不触碰壳，正是这条死锁的起点——若要再动 fade 守卫，先确认 palette 已由别的路径分配。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §7。
+26. **镜像的"变了没"必须对着目标现状问，不能对着缓存问**：手部轮询原先按"玩家手上一次的 formID"判断是否需要装备。而剥离（AFP10c）会在**玩家双手毫无变化**的情况下清空傀儡的手——于是刚被剥掉的武器再也装不回来，直到玩家手动换一次武器（2026-10-14 用户报告：昨天武器还能换，今天初始装备出问题）。规则：**装备决策 = 傀儡此刻手里是什么 vs 玩家手里是什么**（无状态），缓存只用于"要不要推 draw/sheathe"与日志；任何剥离之后必须清缓存。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §9。
+27. **force-generate 与映射证明在时间上互斥**：暂停的面板若不强 generate，输出就是空的（`pose-empty`，AFP3），没有姿态可写；而映射证明要求"引擎生成并应用了同一帧姿态"的运行世界帧（AFP4：强制过的帧拿 0.99 打成 0.67）。所以**没有一个固定档位能同时满足两者**：默认档必须按暂停状态逐帧解析（`Drive::e_auto`，驱动侧 `force_when_paused`），F4 的五个固定档保留为诊断仪器。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §9。
 
 ## 验证与安全修改
 
