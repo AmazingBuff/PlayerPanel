@@ -3,6 +3,8 @@
 //
 
 #include "character_clone.h"
+#include "character/equipment_mirror.h"
+#include "character/figure_audit.h"
 #include "character/snapshot_transform.h"
 
 #include "render/studio/figure_passes.h"
@@ -38,54 +40,15 @@ namespace
     constexpr uint32_t Clone_Settle_Limit_Frames = 600;
     constexpr uint32_t Clone_Settle_Warn_Frames = 120;
     
-    constexpr RE::BGSBipedObjectForm::BipedObjectSlot Body_Slots[] =
-    {
-        RE::BGSBipedObjectForm::BipedObjectSlot::kBody,     RE::BGSBipedObjectForm::BipedObjectSlot::kHead,                 RE::BGSBipedObjectForm::BipedObjectSlot::kHands,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kForearms, RE::BGSBipedObjectForm::BipedObjectSlot::kAmulet,               RE::BGSBipedObjectForm::BipedObjectSlot::kRing,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kFeet,     RE::BGSBipedObjectForm::BipedObjectSlot::kCalves,               RE::BGSBipedObjectForm::BipedObjectSlot::kTail,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kLongHair, RE::BGSBipedObjectForm::BipedObjectSlot::kCirclet,              RE::BGSBipedObjectForm::BipedObjectSlot::kEars,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModMouth, RE::BGSBipedObjectForm::BipedObjectSlot::kModNeck,              RE::BGSBipedObjectForm::BipedObjectSlot::kModChestPrimary,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModChestSecondary, RE::BGSBipedObjectForm::BipedObjectSlot::kModShoulder, RE::BGSBipedObjectForm::BipedObjectSlot::kModArmLeft,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModArmRight, RE::BGSBipedObjectForm::BipedObjectSlot::kModLegRight,       RE::BGSBipedObjectForm::BipedObjectSlot::kModLegLeft,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModFaceJewelry,
-    };
-    
     void mirror_worn_equipment(RE::Actor* clone, RE::Actor* actor)
     {
-        RE::InventoryChanges* changes = actor->GetInventoryChanges(true);
-        RE::ActorEquipManager* equip_manager = RE::ActorEquipManager::GetSingleton();
-        if (!changes || !changes->entryList || !equip_manager)
-        {
-            logger::warn("Clone dressing unavailable (changes={} equip={})", static_cast<void*>(changes), static_cast<void*>(equip_manager));
+        // The worn-item walk moved to the shared mirror (equipment_mirror.h): the puppet dresses from
+        // the same rule, and the two routes must not keep two answers to "what is the player wearing".
+        if (!clone || !actor)
             return;
-        }
-
-        std::uint32_t added = 0;
-        for (const RE::InventoryEntryData* entry : *changes->entryList)
-        {
-            if (!entry || !entry->IsWorn())
-                continue;
-            RE::TESBoundObject* object = entry->object;
-            if (!object)
-                continue;
-
-            RE::BGSBipedObjectForm* biped = object->As<RE::BGSBipedObjectForm>();
-            if (biped && std::ranges::any_of(Body_Slots, [biped](RE::BGSBipedObjectForm::BipedObjectSlot slot) { return biped->HasPartOf(slot); }))
-            {
-                clone->AddObjectToContainer(object, nullptr, 1, nullptr);
-                equip_manager->EquipObject(
-                    clone,
-                    object,
-                    nullptr,
-                    1,
-                    nullptr,
-                    false,  // queueEquip: applied in this call
-                    true,   // forceEquip: the clone has no AI to choose
-                    false,  // playSounds: silent
-                    true);  // applyNow: dressed immediately
-                ++added;
-            }
-        }
+        const std::uint32_t added = equipment_equip_all_worn(*clone, *actor);
+        if (added == 0)
+            logger::warn("Clone dressing found no worn body item to mirror (equip={})", static_cast<void*>(RE::ActorEquipManager::GetSingleton()));
     }
     
     
@@ -129,67 +92,9 @@ namespace
         }
     }
 
-    struct AssemblyStats
-    {
-        std::uint32_t geometries;
-        std::uint32_t skinned;
-        std::uint32_t roots;
-        std::uint32_t num_matrices;
-        std::uint32_t bone_count;
-        std::uint32_t alloc_slots;
-        std::uint32_t bound;
-        std::uint32_t bound_nodes;
-        std::uint32_t skin_data_null;
-        std::uint32_t bones_array_null;
-    };
-
-    // Bind-bone census over skin roots. Three different layers live here:
-    // numMatrices = per-frame render activity (SetupGeometry writes it);
-    // bone_count = NiSkinData capacity (nif data, static); bound_nodes =
-    // skin->bones[i] pointers actually filled — the skin-to-skeleton
-    // BINDING state. Armor attach is async (a first-load head part can
-    // outwait any fixed frame window), and an unbound skin renders its
-    // vertices at model-space origin — "at the feet".
-    AssemblyStats measure_assembly(RE::NiAVObject* root)
-    {
-        AssemblyStats out{ .geometries = 0, .skinned = 0, .roots = 0, .num_matrices = 0, .bone_count = 0, .bound = 0, .bound_nodes = 0, .skin_data_null = 0, .bones_array_null = 0 };
-        std::unordered_set<const RE::NiAVObject*> seen_roots;
-        RE::BSVisit::TraverseScenegraphGeometries(root, [&](RE::BSGeometry* geometry)
-        {
-            ++out.geometries;
-            const RE::NiSkinInstance* skin = geometry->GetGeometryRuntimeData().skinInstance.get();
-            if (!skin || !skin->rootParent)
-                return RE::BSVisit::BSVisitControl::kContinue;
-            ++out.skinned;
-            if (seen_roots.insert(skin->rootParent).second)
-                ++out.roots;
-            if (!skin->skinData)
-            {
-                ++out.skin_data_null;
-                return RE::BSVisit::BSVisitControl::kContinue;
-            }
-            out.num_matrices += skin->numMatrices;
-            const std::uint32_t cap = skin->skinData->GetBoneCount();
-            out.bone_count += cap;
-            // The engine allocates the instance bone-pointer array on demand;
-            // "fully bound" is measured against the ALLOCATED slots, not the
-            // declared capacity (a 3BA skin measured 47 slots vs 131 declared,
-            // bound and rendering fine — waiting for 131 cost 600 frames).
-            const std::uint32_t n = std::min(cap, skin->allocatedSize);
-            out.alloc_slots += n;
-            out.bound += std::min(skin->numMatrices, cap);
-            if (!skin->bones)
-            {
-                ++out.bones_array_null;
-                return RE::BSVisit::BSVisitControl::kContinue;
-            }
-            for (std::uint32_t i = 0; i < n; ++i)
-                if (skin->bones[i])
-                    ++out.bound_nodes;
-            return RE::BSVisit::BSVisitControl::kContinue;
-        });
-        return out;
-    }
+    // The bind-bone census (struct + walk) lives in figure_audit.h: the puppet's assembly gate asks
+    // the same three-layer question - render activity, nif capacity, binding state - and the AFP9
+    // crash proved a second copy of a palette walk is a second chance to get the memory rule wrong.
 
     // Geom name census for the detach-time forensics log: the settle gate
     // above needs its one-shot evidence line to be decidable from the log
@@ -211,16 +116,11 @@ namespace
 
     // Body and physics mods name their skeleton-driven collision helpers after these
     // tokens; they carry a skinInstance but are not part of the visible figure.
+    // The rule itself lives in figure_audit.h (figure_is_collision_helper) - the puppet's framing
+    // asks the same question, and two token lists would drift.
     bool is_collision_helper(const char* name)
     {
-        if (!name || !name[0])
-            return false;
-        constexpr std::string_view tokens[] = { "Collision", "VirtualGround", "3BCA_", "Stopper" };
-        const std::string_view view{ name };
-        for (const std::string_view token : tokens)
-            if (view.find(token) != std::string_view::npos)
-                return true;
-        return false;
+        return name && name[0] && figure_is_collision_helper(name);
     }
 
     // A captured player graph carries more than the character: spell and ability visuals,
@@ -619,7 +519,7 @@ bool CharacterClone::detach_graph()
 
     ++m_wait_frames;
 
-    const AssemblyStats stats = measure_assembly(graph);
+    const FigureAssembly stats = graph ? figure_measure_assembly(*graph) : FigureAssembly{};
 
     if (!m_dressed)
     {
@@ -885,7 +785,7 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     // census watching `bound` climb (0 → ~74) is the binding-has-run proof.
     if (!m_is_snapshot || ++m_draw_frames % 120 == 1)
     {
-        const AssemblyStats census = measure_assembly(p_root);
+        const FigureAssembly census = p_root ? figure_measure_assembly(*p_root) : FigureAssembly{};
         logger::info(
             "Clone draw: passes={} rd-null={} lights={} | geoms={} skinned={} roots={} num-mat={} bone-count={} bound={}",
             stats.drawn, stats.renderer_data_null, stats.inject_lights ? Studio_Light_Count : 0,

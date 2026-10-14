@@ -163,6 +163,42 @@ namespace
         const bool disjoint_grew = std::abs(out.radius - 22.5f) <= 0.001f && std::abs(out.center.x - 12.5f) <= 0.001f;
         return contained_kept && disjoint_grew;
     }
+
+    // AFP10-A, the puppet's assembly gate: "the shell may be moved away from the player" is the copy
+    // route's fully-bound rule expressed on the shared census. The trap it must not fall into is
+    // measuring binding against the DECLARED bone capacity - the engine allocates the instance
+    // palette on demand, and waiting for the declared count is what cost the copy route 600 frames
+    // while a 3BA skin rendered fine with 47 of 131 slots.
+    bool assembly_gate_measures_allocated_slots()
+    {
+        PLUGIN_NAMESPACE::FigureAssembly census;
+        const bool empty_is_not_ready = !census.assembled() && !census.bound_ready();
+
+        census.geometries = 16;
+        census.skinned = 12;
+        census.roots = 2;
+        census.bone_count = 131;      // declared by the nif
+        census.alloc_slots = 47;      // what the engine actually allocated
+        census.bound_nodes = 47;      // every allocated slot bound
+        const bool allocated_is_ready = census.assembled() && census.bound_ready();
+        // The declared count is not the bar: 47 of 131 is ready, and that is the whole point.
+        const bool declared_is_not_the_bar = census.bound_nodes < census.bone_count && census.bound_ready();
+
+        census.bound_nodes = 46;      // one allocated slot short
+        const bool short_of_allocated = !census.bound_ready();
+        census.bound_nodes = 47;
+        census.alloc_slots = 0;       // no skin data anywhere: nothing to bind against
+        const bool no_allocation = !census.bound_ready();
+
+        // The settle identity moves when the mesh set moves and holds when it does not.
+        PLUGIN_NAMESPACE::FigureAssembly same = census;
+        const bool stable_signature = same.signature() == census.signature();
+        ++same.geometries;
+        const bool grew_signature = same.signature() != census.signature();
+
+        return empty_is_not_ready && allocated_is_ready && declared_is_not_the_bar &&
+            short_of_allocated && no_allocation && stable_signature && grew_signature;
+    }
 }
 
 int main()
@@ -173,8 +209,9 @@ int main()
     const bool ledger = coverage_ledger_reconciles();
     const bool necessity = slot_necessity_orders_exceptions();
     const bool bound = figure_bound_merges_spheres();
-    std::printf("snapshot placement: %s\nfinal pose index order: %s\nr01 framing delta: %s\ncoverage ledger: %s\nslot necessity: %s\nfigure bound union: %s\n",
+    const bool assembly = assembly_gate_measures_allocated_slots();
+    std::printf("snapshot placement: %s\nfinal pose index order: %s\nr01 framing delta: %s\ncoverage ledger: %s\nslot necessity: %s\nfigure bound union: %s\nassembly gate: %s\n",
         placement ? "PASS" : "FAIL", mapping ? "PASS" : "FAIL", framing ? "PASS" : "FAIL",
-        ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL");
-    return placement && mapping && framing && ledger && necessity && bound ? 0 : 1;
+        ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL", assembly ? "PASS" : "FAIL");
+    return placement && mapping && framing && ledger && necessity && bound && assembly ? 0 : 1;
 }

@@ -4,6 +4,45 @@
 
 ### Fixed
 
+- AFP10 the first seconds of every session: the puppet's assembly window pinned its fade to 0.05, which
+  is a five-percent ghost standing inside the player's own body. The window cannot simply be removed -
+  the reference has to be beside the player when the character graph loads, because the engine picks
+  the character LOD by reference distance at load (run 104: a reference born at the park depth
+  assembled a low-detail graph with missing parts and a stripped skin). So the window is now spent
+  invisible: the fade guard is 0 (this route has no `numMatrices` gate that a zeroed BSFadeNode would
+  starve - the puppet's binding is read from its tree), and the window CLOSES EARLY as soon as the
+  shared census reports the shell assembled, fully bound and unchanged for ten frames, with a 20-frame
+  floor so the reference is demonstrably beside the player at load and the old 240 frames only as the
+  backstop for a shell that never reports ready. The shared `FigureAssembly` census moved into
+  `figure_audit` and the copy route's settle gate now uses the same one.
+
+### Added
+
+- AFP10 clothing on the panel figure: the driver only ever looked at the player's two hands, so the
+  puppet carried weapons and nothing else. Worn BIPED body items (armor, clothes, boots, jewelry) are
+  now mirrored through a shared `equipment_mirror` module - the copy route's own worn-item walk moved
+  there, so "what is the player wearing" has one answer - dressed while the reference is still beside
+  the player (the order the copy route validated, because a biped change is applied asynchronously)
+  and then reconciled every frame while the panel is open and every 30 frames while the world runs.
+  The reconciliation is stateless: both inventories are read fresh, so a missed frame cannot
+  desynchronise it and nothing survives a 3D generation change. Weapons stay with the hand poll.
+
+- AFP10 the player's body shape on the puppet. OBody NG hands a freshly placed NPC a *random* preset
+  every session (its log: `No preset defined for this actor, getting it randomly` -> `Preset Mia UBE
+  will be applied to CharacterPanel Puppet`, a different one next session), which is why the panel
+  figure's body never matched. Shape here is mesh morphs, not node scaling - all 639 `.osp` slider
+  sets on this machine carry zero bone/scale definitions and BodySlide presets are realized as `.tri`
+  vertex deltas - so the copy uses the same route OBody writes with: RaceMenu skee64's
+  `IBodyMorphInterface`, reached through SKSE's interface exchange (`BodyMorph`, runtime version 5).
+  The module mirrors that interface's vtable order locally, checks the reported version before the
+  first call and refuses an older layout rather than guessing slots. The sync compares the source's
+  morphs against the target's and only writes when they disagree, clearing the target's OBody keys
+  first so the random preset cannot survive the copy, then re-applying the vertex buffers in the same
+  call. It runs at dressing time and is re-checked on a slow panel cadence, so OBody re-shaping the
+  shell or the player changing their own body is repaired rather than assumed away.
+
+### Fixed
+
 - AFP9j interactable shell beside the player: `Actor::SetPosition`'s second parameter is
   `a_updateCharController`, and passing false moved only the reference - the collision and activation
   target stayed beside the player (perceptible through the activation prompt while the figure itself

@@ -54,6 +54,45 @@ struct SkinPalette
 
 [[nodiscard]] SkinPalette figure_skin_palette(RE::NiAVObject& a_root);
 
+// What one figure's 3D tree is made of right now, and how far its skin-to-skeleton BINDING has
+// progressed. Three different layers live here and they must not be conflated:
+//   num_matrices = per-frame render activity (SetupGeometry writes it);
+//   bone_count   = NiSkinData capacity (nif data, static);
+//   bound_nodes  = skin->bones[i] pointers actually filled - the BINDING state.
+// Armor attach is asynchronous (a first-load head part can outwait any fixed frame window) and an
+// unbound skin renders its vertices at model-space origin ("at the feet"), so a caller that wants to
+// move or dress a figure has to know which of the three it is looking at.
+//
+// This census began life as the copy route's own (character_clone.cpp) and is shared so the rule
+// exists once: the puppet's assembly gate asks exactly the same question the clone's settle gate did.
+struct FigureAssembly
+{
+    std::uint32_t geometries = 0;
+    std::uint32_t skinned = 0;
+    std::uint32_t roots = 0;
+    std::uint32_t num_matrices = 0;
+    std::uint32_t bone_count = 0;
+    std::uint32_t alloc_slots = 0;
+    std::uint32_t bound = 0;
+    std::uint32_t bound_nodes = 0;
+    std::uint32_t skin_data_null = 0;
+    std::uint32_t bones_array_null = 0;
+
+    // The mesh set exists at all: geometry present and skinned to a root.
+    [[nodiscard]] bool assembled() const { return skinned != 0 && roots != 0; }
+    // "Fully bound" is measured against the ALLOCATED slots, not the declared capacity: the engine
+    // allocates the bone-pointer array on demand and a 3BA skin measured 47 slots against 131
+    // declared while rendering fine - waiting for 131 cost the copy route 600 frames.
+    [[nodiscard]] bool bound_ready() const { return alloc_slots != 0 && bound_nodes >= alloc_slots; }
+    // A cheap identity for "the census did not move between two frames" (settle detection).
+    [[nodiscard]] std::uint32_t signature() const
+    {
+        return geometries * 1000003u ^ skinned * 10007u ^ bound_nodes * 101u ^ alloc_slots;
+    }
+};
+
+[[nodiscard]] FigureAssembly figure_measure_assembly(RE::NiAVObject& a_root);
+
 // The visible figure's skinned bound, excluding collision helpers. R01's framing must follow the
 // body the panel draws, not the 3BCA_*/VirtualGround helpers that drag a 3BA/UBE bound off it.
 struct FigureBound

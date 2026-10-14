@@ -5,6 +5,7 @@
 #pragma once
 
 #include "character/animation_source.h"
+#include "character/figure_audit.h"
 
 #include <atomic>
 #include <chrono>
@@ -48,7 +49,22 @@ private:
     void spawn();
     void park(char const* why);
 
-    void poll_equipment(RE::Actor& puppet);
+    // AFP10-A: has the shell finished assembling? The census has to be non-empty, fully bound and
+    // unchanged for Assembly_Stable_Frames before the park may move the reference away from the
+    // player. Keeps the last census so the park line can print what it decided on.
+    [[nodiscard]] bool assembly_settled(RE::NiAVObject* a_root);
+
+    // AFP10-B: the player's worn body items onto the puppet. Returns how many were equipped.
+    std::uint32_t dress(RE::Actor& a_puppet);
+
+    // AFP10-C: the player's body morphs onto the puppet (skee64 BodyMorph, the same route OBody uses
+    // to shape it). Compares before it writes, so it is cheap when the two already agree - which is
+    // what lets the panel re-assert it on a slow cadence and survive OBody re-rolling the preset.
+    void apply_body_shape(RE::Actor& a_puppet, char const* a_why);
+
+    // `a_every_frame` is the paused panel: the player is looking at the figure while changing gear.
+    // While the world runs the worn set is re-read on the Worn_Poll_Period cadence instead.
+    void poll_equipment(RE::Actor& a_puppet, bool a_every_frame);
 
     std::atomic_bool m_spawn_requested{ false };
     std::atomic_bool m_release_requested{ false };
@@ -67,6 +83,14 @@ private:
     std::uint32_t m_repark_frames = 0;
     std::uint32_t m_manual_ticks = 0;
 
+    // The assembly window's own state: the census identity it last saw, how long that identity has
+    // held, whether the figure has been dressed yet, and how long the dressing has had to settle.
+    FigureAssembly m_assembly_census;
+    std::uint32_t m_assembly_signature = 0;
+    std::uint32_t m_assembly_stable = 0;
+    bool m_dressed = false;
+    std::uint32_t m_dress_frames = 0;
+
     bool m_data_logged = false;
     std::uint32_t m_stall_frames = 0;
     bool m_stall_logged = false;
@@ -74,6 +98,8 @@ private:
     std::uint32_t m_right_form = 0;
     std::uint32_t m_left_form = 0;
     std::uint32_t m_equip_reactions = 0;
+    std::uint32_t m_worn_poll_frames = 0;
+    std::uint32_t m_shape_ticks = 0;
     std::chrono::steady_clock::time_point m_last_tick{};
 
     RE::hkbClipGenerator const* m_current_generator = nullptr;

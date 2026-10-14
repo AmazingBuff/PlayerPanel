@@ -16,10 +16,12 @@
 | [character_manager.cpp](../src/character/character_manager.cpp) / [character_clone.cpp](../src/character/character_clone.cpp) | 默认路线通过 Actor 装配装备／3D，再摘出图绘制；`pose()` 负责摄影棚取景。该路线不等于尚待验证的“保留 Actor 与 3D 绑定后直绘”。 |
 | [scene_graph_copy.cpp](../src/character/scene_graph_copy.cpp) | F7 捕获、来源／副本审计、隔离观测、旧图停放；`animate_at_base_pose()` 在取景之后驱动显示副本。 |
 | [animation_source.cpp](../src/character/animation_source.cpp) | 从 typed `activeNodes` 读取运行 clip；`pick_running_clip()` 选最强 control，`resolve_clip_playback()` 解析现有 binding，`play_animation_clip()` 采样并写节点。捕获时也复用这条路径，不再扫描模板、registry 或任意对象窗口。 |
-| [puppet_driver.cpp](../src/character/puppet_driver.cpp) | 存档会话内的傀儡装配、泊位、暂停图推进和手部装备同步；`drive()` 为显示副本供给 clip 姿态。 |
+| [puppet_driver.cpp](../src/character/puppet_driver.cpp) | 存档会话内的傀儡装配、泊位、暂停图推进和装备同步；`drive()` 为显示副本供给 clip 姿态。AFP10：装配窗口改为"普查就绪即泊位"且窗口内 fade 归零（不可感知）；穿着整套 worn body items；`apply_body_shape()` 把玩家体型同步到傀儡。 |
+| [equipment_mirror.h/.cpp](../src/character/equipment_mirror.h) | AFP10 共用件：biped 身体槽位的 worn 集合读取、整套穿上、以及无状态对账（多则补、少则卸）。复制图的 `mirror_worn_equipment` 也走这一份，槽位表只有一处。手部武器不在此列（驱动器自己的手部轮询 + draw/sheathe）。 |
+| [body_shape.h/.cpp](../src/character/body_shape.h) | AFP10 体型同步：本地镜像 skee64 的 `IBodyMorphInterface`（SKSE 接口交换 `BodyMorph`），先比较后写入，写前清掉 OBody 派给傀儡的随机预设；版本低于镜像布局时拒绝调用。 |
 | [idle_driver.cpp](../src/character/idle_driver.cpp) / [snapshot_transform.h](../src/character/snapshot_transform.h) | 现有程序 idle fallback、取景变换和子树更新；不再包含测试用蒙皮缓存写入或距离测量。 |
 | [final_pose_probe.cpp](../src/character/final_pose_probe.cpp) / [final_pose_apply.cpp](../src/character/final_pose_apply.cpp) | 最终输出读取、索引校准、独立真值比较、暂停写入和强制生成诊断；当前写入傀儡，而画面默认仍由复制图提供。AFP9：apply 同帧对账（output/attempted/written/unreachable/unprocessed），缺口变化时点名并按 palette 分类（必要骨不跳过）。 |
-| [figure_audit.h/.cpp](../src/character/figure_audit.h) | AFP9 共享审计件：skin palette 读取（只收集指针、绝不解引用槽位；引擎从未渲染的图记 unbound-palette）、碰撞辅助体过滤的蒙皮包围盒、取景 placement 解算、槽位必要性分类（palette 成员 → Weapon* 附着 → helper）。探针与审计共用同一份 palette 遍历。 |
+| [figure_audit.h/.cpp](../src/character/figure_audit.h) | AFP9 共享审计件：skin palette 读取（只收集指针、绝不解引用槽位；引擎从未渲染的图记 unbound-palette）、碰撞辅助体过滤的蒙皮包围盒、取景 placement 解算、槽位必要性分类（palette 成员 → Weapon* 附着 → helper）。AFP10 另收编装配普查 `FigureAssembly`／`figure_measure_assembly()`（几何/skin/已分配槽位/绑定数与稳定签名），复制图的落定门与傀儡的泊位门共用它。 |
 | [puppet_draw.h/.cpp](../src/character/puppet_draw.h) | AFP9 R01 直绘：F6 开关；傀儡 `Get3D(false)` 根 + 共用 figure_passes 缝；临时取景（保存/恢复根 local + world/worldBound 对账）；固定骨集 A4/A5 采样；不可用时回退复制图并告警。 |
 | [isolation_watch.cpp](../src/character/isolation_watch.cpp) | 来源与 NPC 的观测、装备变更重新设基线及会话判读；不是全骨骼／全部物理隔离已通过的证明。 |
 | [figure_passes.cpp](../src/render/studio/figure_passes.cpp) | 共用的引擎 pass 生成、灯光临时替换、提交与状态恢复；移除无人使用的逐 pass／batch 探针 callbacks。 |
@@ -59,11 +61,11 @@ cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPacka
 | F4 | AFP `off → tick → tick+apply → tick+apply+force → step → off`。单步为一次 1/60 秒。 |
 | F6 | AFP9 R01 直绘开关（默认关）：开 = 面板画傀儡自身 3D；关 = 复制图。不可用时回退复制图并告警。 |
 
-F3、F6 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe stage 没有控制入口。生命周期边界仍由重捕获／读档／主菜单处理。F4 的冻结／推进针对傀儡图与最终姿态应用，不等于冻结独立时钟运行的显示副本。
+F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe stage 没有控制入口。生命周期边界仍由重捕获／读档／主菜单处理。F4 的冻结／推进针对傀儡图与最终姿态应用，不等于冻结独立时钟运行的显示副本。
 
 `CHARACTER_PANEL_SCENE_COPY_EXPERIMENT` 默认为 OFF。删除 `CHARACTER_PANEL_BUILD_PROBE`、`CHARACTER_PANEL_S2_PROBE`、M0 probe/proto targets；旧 cache 可能仍列出历史变量，但当前构建已不消费它们。`CHARACTER_PANEL_PROBE_REVISION` 保留为兼容的构建身份／包 manifest 标记，与已删除探针无关。
 
-场景复制包仍包含 DLL、PDB、身份与 SHA-256 manifest、当前包 README，输出在 `dist`；打包不部署。本轮未生成或部署新测试包。
+场景复制包仍包含 DLL、PDB、身份与 SHA-256 manifest、当前包 README，输出在 `dist`；打包不部署。最近一轮 AFP10 的包与部署见其测试单与 Changelog。
 
 ## 保留诊断及理由
 
@@ -95,6 +97,9 @@ F3、F6 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetP
 16. **取景不得用引擎缓存量做参照**：几何 `worldBound` 是引擎按自己节奏刷新的缓存，可停在泊位之前（AFP9g 实测差 8000 单位，导致人物偏深 2820、变小变暗）；定心必须用本帧自己写下的活数据（骨骼世界坐标，`figure_skeleton_bound`），palette 槽位先经本树节点集合过滤。`center-d=0` 只证明"delta 把所测中心摆到了锚点"，不证明测的是对的对象。暂停帧也要重泊（菜单会把世界画在背景里）。见 [stale-bound verdict](afp9-stale-bound-verdict-2026-10-13.md)。
 17. **`NiSkinInstance::frameID` 是"本渲染帧已算过蒙皮"的门**：若引擎在取景写入之前已算过，`SetupGeometry` 会保留旧矩阵——蒙皮身体按旧骨骼世界（泊位）绘制而不可见，刚体挂件照常可见（AFP9h 实测：同一会话完整人物与孤斧交替）。直绘前必须 `invalidate_skin_cache()`（置 `frameID` 为无效），让引擎按本帧骨骼世界重算；**不得写 `boneMatrices`**（缓存归引擎所有），顺带消除姿态的一帧延迟。见 [skin-cache verdict](afp9-skin-cache-verdict-2026-10-13.md)。
 18. **`Actor::SetPosition(pos, a_updateCharController)` 的第二参必须按需传 true**：只挪引用不搬控制器时，碰撞/激活目标留在原地（玩家身边仍能感到克隆体），且引擎的 3D 推导源（控制器）也停住——这就是"world/local 写入被每帧推回 spawn"的底层原因。引用确实移动时传 true（`park-3d warp=1`），未动时传 false 以免每帧 warp。见 [controller-park verdict](afp9-controller-park-verdict-2026-10-13.md)。
+19. **装配窗口内的 fade 必须是 0，且窗口按"就绪即走"关闭**：0.05 是玩家身体里一个可见的幽灵（2026-10-14 用户报告"前几秒仍在玩家附近"）；引用又不能提前搬走，因为**角色 LOD 在引用装载时按距离选定**（run 104：泊位深度出生的引用装配出缺件、蒙皮剥离的低模图）。因此窗口里做三件事：fade 归零、每帧普查、**几何非空 + skin data 齐全 + 每个已分配槽位已绑定 + 连续 10 帧不变**就立刻泊位；240 帧只是从不就绪时的兜底（超时照泊 = 旧行为）。门用**已分配**槽位而非 NIF 声明容量（复制图落定门实测 47/131 渲染正常，等 131 白等 600 帧）。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md)。
+20. **本机体型 = 网格 morph，不是节点缩放**：639 个 `.osp` slider set 零骨骼/缩放定义，BodySlide 预设由 `.tri` 顶点 delta 实现；复制 `local.scale` 等于什么都没复制。且**新放置的 NPC 会被 OBody NG 随机派预设**（`OBody.log`：`No preset defined for this actor, getting it randomly` → `Preset … will be applied to CharacterPanel Puppet`），所以"傀儡体型 = 玩家"必须显式同步，且写前先 `ClearBodyMorphKeys(傀儡, "OBody")` 清掉那份随机预设。
+21. **skee64 的 `BodyMorph` 接口只能按镜像虚表 + 版本门调用**：接口经 SKSE 接口交换（消息 `0x9E3779B9` → `IInterfaceMap::QueryInterface("BodyMorph")`）取得；本地镜像必须保持上游**虚表顺序**，并在首次调用前查 `GetVersion()`（本机为 5），低于镜像布局一律拒绝——不猜偏移、不硬编码槽位。获取失败（无 RaceMenu/版本不符）时保持原样并只打印一次。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md)。
 
 ## 验证与安全修改
 

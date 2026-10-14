@@ -25,6 +25,8 @@ reasons.
 
 ## Documentation
 
+- [AFP10 test sheet](docs/afp10-spawn-shape-dress-test-2026-10-14.md): the three reports of 2026-10-14 and what each work package changed - nothing perceptible during the assembly window (fade zero, and the window closes as soon as the census reports the shell bound and settled), the player's worn body items mirrored onto the figure, and the player's body shape copied through RaceMenu skee64's BodyMorph interface instead of the random preset OBody NG assigns to every newly placed NPC.
+
 - [AFP9 verdict 9: the character controller](docs/afp9-controller-park-verdict-2026-10-13.md): with the panel stable, the last visible defect was an interactable shell beside the player while the figure was invisible - `SetPosition`'s second parameter (`a_updateCharController`) had been passed false, so the collision and activation target never left, and the 3D kept being derived from the controller's stale position. The park now warps the controller when the reference moves.
 
 - [AFP9 verdict 8: the skin cache gate](docs/afp9-skin-cache-verdict-2026-10-13.md): the first complete panel image (whole figure, centred, holding the weapon) and, in the same session, frames with only the weapon - `NiSkinInstance::frameID` had already been set for that render frame before the studio placement was written, so the engine kept matrices computed from the parked bone worlds and the skinned body vanished while the rigid weapon followed its node. The batch now invalidates that id and lets the engine recompute, with no write to `boneMatrices`.

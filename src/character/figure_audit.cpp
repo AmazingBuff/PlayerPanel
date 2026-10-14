@@ -8,6 +8,7 @@
 #include "RE/B/BSVisit.h"
 #include "RE/N/NiNode.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -79,8 +80,51 @@ SkinPalette figure_skin_palette(RE::NiAVObject& a_root)
     return palette;
 }
 
-FigureBound figure_skinned_bound(RE::NiAVObject& a_root)
+FigureAssembly figure_measure_assembly(RE::NiAVObject& a_root)
 {
+    FigureAssembly out;
+    std::unordered_set<RE::NiAVObject const*> seen_roots;
+    RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
+    {
+        if (!a_geometry || !readable(a_geometry, sizeof(RE::BSGeometry)))
+            return RE::BSVisit::BSVisitControl::kContinue;
+        ++out.geometries;
+
+        const RE::NiSkinInstance* const skin = a_geometry->GetGeometryRuntimeData().skinInstance.get();
+        if (!skin || !skin->rootParent || !readable(skin, sizeof(RE::NiSkinInstance)))
+            return RE::BSVisit::BSVisitControl::kContinue;
+        ++out.skinned;
+        if (seen_roots.insert(skin->rootParent).second)
+            ++out.roots;
+        if (!skin->skinData)
+        {
+            ++out.skin_data_null;
+            return RE::BSVisit::BSVisitControl::kContinue;
+        }
+        out.num_matrices += skin->numMatrices;
+        const std::uint32_t capacity = skin->skinData->GetBoneCount();
+        out.bone_count += capacity;
+        const std::uint32_t slots = std::min(capacity, skin->allocatedSize);
+        out.alloc_slots += slots;
+        out.bound += std::min(skin->numMatrices, capacity);
+
+        // Only pointer comparison here: a palette slot is not guaranteed to be a readable node
+        // (the AFP9 crash read a name at 0x1010), so nothing below is dereferenced.
+        RE::NiAVObject* const* const bones = skin->bones;
+        if (!bones)
+        {
+            ++out.bones_array_null;
+            return RE::BSVisit::BSVisitControl::kContinue;
+        }
+        for (std::uint32_t i = 0; i < slots; ++i)
+            if (bones[i])
+                ++out.bound_nodes;
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+    return out;
+}
+
+FigureBound figure_skinned_bound(RE::NiAVObject& a_root){
     FigureBound out;
     RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
     {

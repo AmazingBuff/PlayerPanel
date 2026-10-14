@@ -23,6 +23,32 @@ palette). R01 direct draw samples a fixed bone set before the passes and after
 the batch (A4/A5) and prints a full framing-restoration reconciliation; physics
 and FaceGen remain out of scope.
 
+AFP10 additions - three things the panel figure now does that it did not before:
+
+1. Nothing visible for the first seconds. The shell must still load beside the
+   player (the engine picks the character LOD by reference distance at load), so
+   the assembly window is spent with the fade pinned to ZERO and it now closes as
+   soon as the census says the shell is bound and settled, instead of after a
+   fixed 240 frames. Check `SCOPY PUPPET assembly ... reason=assembled` - a
+   `reason=assembly-timeout` line means the census never reported ready; return it
+   with its `bound-nodes=/stable=` numbers.
+
+2. Clothing, not only weapons. The player's worn body items (armor, clothes,
+   boots, jewelry) are mirrored onto the puppet while the reference is still
+   beside the player, and reconciled afterwards: `SCOPY PUPPET worn equipped=...
+   removed=... worn=...`. Change a piece of armor in the inventory and the panel
+   figure should follow within a frame; report the line if it does not.
+
+3. The player's body shape. OBody NG hands a freshly placed NPC a RANDOM preset
+   every session (`OBody.log`: "No preset defined for this actor, getting it
+   randomly"), so the puppet's body is copied from the player through RaceMenu's
+   skee64 BodyMorph interface instead: `SCOPY SHAPE applied ... compared=...
+   mismatched=... copied=... sample=[...]`. `SCOPY SHAPE skee BodyMorph interface
+   acquired version=N` confirms the interface; `unavailable` means no RaceMenu was
+   found and the puppet keeps whatever body it was given. The copy compares before
+   it writes, so a line only appears when the two actually disagreed - its absence
+   on a later check is the healthy state, not a failure.
+
 Panel black but the studio target correct? Check `SCOPY COMPOSITE src/bound/match`
 - match=0 means the studio texture was bound as an output target and as a sampler
 source at once, which D3D11 silently resolves by unbinding the source. Return that
@@ -56,8 +82,9 @@ and procedural idle remain the fallback display chain when F6 is off.
 
 Retained diagnostics distinguish two output buffers, missing/necessary bones,
 local/world transforms, camera and draw prerequisites. Coverage 98 -> 116 and
-buffer selection remain open. Physics, facial expressions and runtime body morphs
-have not been added by cleanup.
+buffer selection remain open. Physics and facial expressions have not been added;
+the body SHAPE is now copied from the player (see AFP10 above), which is not the
+same thing as physics or FaceGen.
 
 Return CharacterPanel.log and the manifest, plus screenshots for visible changes.
 For crashes also return CrashLogger output and this package's PDB. Logs are
@@ -71,8 +98,9 @@ capped at 20) - that picture, plus `SCOPY R01 census` (geoms/skinned/skin frameI
 num-matrices/first bone world) and `SCOPY PUPPET park-3d ... ref-now`, is what a
 direct-draw round is judged from now; an external frame capture is optional.
 
+AFP10 test sheet: docs/afp10-spawn-shape-dress-test-2026-10-14.md (start here).
 AFP9 test sheet: docs/afp9-coverage-and-direct-draw-test-2026-10-13.md.
 Current commands and module map: docs/code-maintenance.md.
-Next validation: docs/afp-next-validation-and-paused-gaps-2026-10-13.md.
+Next validation after AFP10: docs/afp-next-validation-and-paused-gaps-2026-10-13.md.
 Historical documents describe their recorded revisions; removed tools/source can
 be recovered from Git history. This package does not install or deploy itself.

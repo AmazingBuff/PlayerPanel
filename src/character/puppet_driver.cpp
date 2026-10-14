@@ -5,6 +5,8 @@
 #include "character/puppet_driver.h"
 
 #include "character/puppet_draw.h"
+#include "character/body_shape.h"
+#include "character/equipment_mirror.h"
 #include "character/scene_graph_copy.h"
 #include "character/snapshot_transform.h"
 
@@ -29,8 +31,26 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
-    // Assembly needs a culled/rendered shell before its skin binds; fade must remain nonzero.
+    // How long the reference may stay beside the player while the shell assembles. This window is a
+    // VISIBILITY compromise with a hard engine constraint behind it: the engine picks the character
+    // LOD when the reference is loaded, so the reference has to be near the player for the graph to
+    // come out at full detail (run 104: a reference born at the park depth assembled a low-detail
+    // graph with missing parts and a stripped skin), and it cannot be parked before that load ran.
+    //
+    // It is a CAP, not a wait: the park happens as soon as the census says the shell is assembled,
+    // bound and settled, which is typically a fraction of a second. The cap only bounds a shell that
+    // never reports itself ready.
     constexpr std::uint32_t Grace_Frames = 240;
+    // ... and this is the floor, so the reference is demonstrably near the player when the graph is
+    // loaded rather than for one frame that may have raced the load.
+    constexpr std::uint32_t Grace_Min_Frames = 20;
+    // The census has to hold still this long before the shell counts as assembled: armor and facegen
+    // mount asynchronously, and parking on the frame a mesh set is still growing is the race the copy
+    // route's settle gate was built for (2026-10-07: detached 14 ms after dressed, geoms 12→8).
+    constexpr std::uint32_t Assembly_Stable_Frames = 10;
+    // Dressing is a biped change and the engine applies it over the following frames, so the park
+    // waits for the census to settle again after it.
+    constexpr std::uint32_t Dress_Wait_Frames = 10;
 
     constexpr float Park_Depth_Offset = -8000.0f;
 
@@ -44,13 +64,32 @@ namespace
 
     constexpr std::uint32_t Digest_Ticks = 30;
 
+    // The worn body set is re-read at this cadence once the world runs; the paused panel reads it
+    // every frame. Both are flag tests over an inventory list, but the paused case is the one the
+    // player is looking at while changing gear.
+    constexpr std::uint32_t Worn_Poll_Period = 30;
+
+    // How often the panel re-asserts the player's body shape on the puppet. OBody shapes an actor
+    // whenever its 3D loads - including a shell it has already processed - and the player can change
+    // their own body in RaceMenu, so the agreement is re-checked on a slow cadence rather than
+    // assumed once. The check is a comparison walk; only a real disagreement writes.
+    constexpr std::uint32_t Shape_Refresh_Ticks = 300;
+
+    // The assembly window's visibility guard, and it MUST be zero: anything above it is a figure the
+    // player can see standing inside their own body - the 2026-10-14 report was exactly that, a 0.05
+    // ghost for the first seconds of every session. The copy route needed a nonzero fade because its
+    // detach gate waited for `numMatrices`, which a zeroed BSFadeNode never gets; this route has no
+    // such gate - the puppet's binding is read from the tree, and the panel's own draw is what gives
+    // the figure its device buffers.
+    constexpr float Assembly_Fade = 0.0f;
+
     void suppress_fade(RE::NiAVObject* graph)
     {
         if (RE::BSFadeNode* const fade = graph ? graph->AsFadeNode() : nullptr)
         {
-            fade->unk128 = 0.05f;
+            fade->unk128 = Assembly_Fade;
             fade->unk12C = 0.0f;
-            fade->currentFade = 0.05f;
+            fade->currentFade = Assembly_Fade;
         }
     }
 
@@ -159,25 +198,59 @@ void PuppetDriver::tick(bool paused)
         return;
     }
 
+    // The assembly window. The reference cannot leave the player before the engine has loaded the
+    // character graph (it picks the LOD by reference distance at load), so the window is spent
+    // invisible instead of spent beside the player: the fade is pinned to zero every frame and the
+    // park happens the moment the census reports the shell assembled, bound and settled. The cap is
+    // the backstop for a shell that never reports ready - it parks anyway, exactly as before.
     if (m_grace_frames < Grace_Frames)
     {
         ++m_grace_frames;
-        suppress_fade(puppet->Get3D(false));
-        if (m_grace_frames == Grace_Frames)
+        RE::NiAVObject* const root = puppet->Get3D(false);
+        suppress_fade(root);
+
+        const bool settled = assembly_settled(root);
+        const bool timed_out = m_grace_frames >= Grace_Frames;
+
+        if (!m_dressed)
         {
-            park("grace-complete");
+            // Wait for the shell (or the cap), then dress it: the biped change is applied by the
+            // engine over the following frames, so it happens while the reference still stands
+            // beside the player - the order the copy route validated before its own detach.
+            if (!timed_out && (m_grace_frames < Grace_Min_Frames || !settled))
+                return;
+
+            const std::uint32_t equipped = dress(*puppet);
+            m_dressed = true;
+            m_dress_frames = 0;
+            logger::info("SCOPY PUPPET dressed equipped={} frames={} reason={} geoms={} skinned={} bound-nodes={}/{} (the player's worn body items; the reference is still beside the player)",
+                equipped, m_grace_frames, timed_out ? "assembly-timeout" : "assembled",
+                m_assembly_census.geometries, m_assembly_census.skinned,
+                m_assembly_census.bound_nodes, m_assembly_census.alloc_slots);
+            if (!timed_out)
+                return;   // let the dressing settle before the park moves the figure away
         }
+
+        // Park on the settled dressing, or at the cap whatever the census says.
+        if (!timed_out && ++m_dress_frames < Dress_Wait_Frames)
+            return;
+
+        logger::info("SCOPY PUPPET assembly frames={} reason={} geoms={} skinned={} roots={} bound-nodes={}/{} stable={}",
+            m_grace_frames, timed_out ? "assembly-timeout" : "assembled",
+            m_assembly_census.geometries, m_assembly_census.skinned, m_assembly_census.roots,
+            m_assembly_census.bound_nodes, m_assembly_census.alloc_slots, m_assembly_stable);
+        park(timed_out ? "assembly-timeout" : "assembled");
         return;
     }
 
     // Engine-applied locals are the independent calibration reference while the world runs.
     if (!paused)
     {
-        // Re-asserted EVERY frame, not every N: this actor's transform is re-derived by the engine
-        // each frame and the derivation wins over a one-shot write (the 2026-10-13 23:35 session
-        // measured the parked world back at the spawn spot one second later). The v6.25 route parked
-        // per tick for the same reason; the log stays sparse.
+        // Gear changes happen in the world too (quick-equip, a follower handing something over), so
+        // the worn set is reconciled here as well - on the slow cadence, after the park so an equip's
+        // own 3D work cannot land between this frame's transform write and the draw.
         park(++m_repark_frames % Repark_Log_Period == 0 ? "keep-parked" : nullptr);
+        poll_equipment(*puppet, false);
         return;
     }
 
@@ -221,7 +294,15 @@ void PuppetDriver::tick(bool paused)
     puppet->UpdateAnimationGraphManager(update);
     ++m_manual_ticks;
 
-    poll_equipment(*puppet);
+    poll_equipment(*puppet, true);
+
+    // The shape agreement is re-established on a slow panel cadence: OBody re-shapes an actor
+    // whenever its 3D loads, and the player's own body can change while the panel is open.
+    if (++m_shape_ticks >= Shape_Refresh_Ticks)
+    {
+        m_shape_ticks = 0;
+        apply_body_shape(*puppet, "panel-refresh");
+    }
 
     if (m_manual_ticks % Digest_Ticks == 0)
     {
@@ -286,11 +367,18 @@ void PuppetDriver::spawn()
     m_right_form = 0;
     m_left_form = 0;
     m_equip_reactions = 0;
+    m_worn_poll_frames = 0;
+    m_shape_ticks = 0;
+    m_assembly_census = FigureAssembly{};
+    m_assembly_signature = 0;
+    m_assembly_stable = 0;
+    m_dressed = false;
+    m_dress_frames = 0;
     m_current_generator = nullptr;
     m_playback = ClipPlayback{};
     m_mapping.clear();
     m_last_tick = std::chrono::steady_clock::now();
-    logger::info("SCOPY PUPPET born form={:08x} base={:08x} grace={} frames (fade-pinned at the player; parks deep after assembly)",
+    logger::info("SCOPY PUPPET born form={:08x} base={:08x} grace={} frames (fade-pinned INVISIBLE beside the player; parks as soon as the shell is bound and settled, or at the cap)",
         m_puppet_form_id, source_base ? source_base->GetFormID() : 0, Grace_Frames);
 }
 
@@ -371,13 +459,89 @@ void PuppetDriver::release(char const* reason)
     m_manual_ticks = 0;
     m_stall_frames = 0;
     m_stall_logged = false;
+    m_assembly_census = FigureAssembly{};
+    m_assembly_signature = 0;
+    m_assembly_stable = 0;
+    m_dressed = false;
+    m_dress_frames = 0;
+    m_worn_poll_frames = 0;
+    m_shape_ticks = 0;
 }
 
-void PuppetDriver::poll_equipment(RE::Actor& puppet)
+bool PuppetDriver::assembly_settled(RE::NiAVObject* a_root)
+{
+    if (!a_root || !readable(a_root, sizeof(RE::NiAVObject)))
+    {
+        m_assembly_census = FigureAssembly{};
+        m_assembly_signature = 0;
+        m_assembly_stable = 0;
+        return false;
+    }
+
+    m_assembly_census = figure_measure_assembly(*a_root);
+    if (m_assembly_census.signature() == m_assembly_signature)
+        ++m_assembly_stable;
+    else
+    {
+        m_assembly_signature = m_assembly_census.signature();
+        m_assembly_stable = 0;
+    }
+
+    // "Ready" is the copy route's own fully-bound criterion, moved onto this route's census: every
+    // skinned geometry has its skin data, no palette array is missing, and every ALLOCATED slot is
+    // bound. A shell that never reaches it is not stuck in this window - the frame cap parks it.
+    const bool fully_bound = m_assembly_census.skin_data_null == 0 && m_assembly_census.bones_array_null == 0 &&
+        m_assembly_census.bound_ready();
+    return m_assembly_census.assembled() && fully_bound && m_assembly_stable >= Assembly_Stable_Frames;
+}
+
+std::uint32_t PuppetDriver::dress(RE::Actor& a_puppet)
+{
+    RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
+    if (!player)
+        return 0;
+    const std::uint32_t equipped = equipment_equip_all_worn(a_puppet, *player);
+    // The hand slots are the other poll's business, but the figure is about to leave the world: push
+    // them here too so the first panel frame is not the first time it holds anything.
+    poll_equipment(a_puppet, true);
+    // OBody has already shaped this shell by now (it applies its own - random - preset when the
+    // reference's 3D loads), so the player's shape is written after it, not instead of it.
+    apply_body_shape(a_puppet, "dressing");
+    return equipped;
+}
+
+void PuppetDriver::apply_body_shape(RE::Actor& a_puppet, char const* a_why)
 {
     RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
     if (!player)
         return;
+    const BodyShapeSync sync = body_shape_sync(a_puppet, *player);
+    if (!sync.changed())
+        return;
+    logger::info("SCOPY SHAPE applied reason={} compared={} mismatched={} copied={} sample=[{}]",
+        a_why, sync.compared, sync.mismatched, sync.copied, sync.sample);
+}
+
+void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
+    RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
+    if (!player)
+        return;
+
+    // AFP10-B: the worn BODY set - armor, clothing, jewelry - which the hand poll below never saw.
+    // The weapons a hand carries and the body items a biped slot carries are disjoint sets, so the
+    // two polls do not fight over anything.
+    if (a_every_frame || ++m_worn_poll_frames >= Worn_Poll_Period)
+    {
+        m_worn_poll_frames = 0;
+        const EquipmentSync sync = equipment_sync_worn(puppet, *player);
+        if (sync.changed())
+        {
+            logger::info("SCOPY PUPPET worn equipped={} removed={} worn={} (the player's body items, reconciled)",
+                sync.equipped, sync.removed, sync.worn);
+            SceneGraphCopy::instance().note_world_change("world-equipment");
+        }
+    }
+
     const RE::InventoryEntryData* const hands[2] = { player->GetEquippedEntryData(false), player->GetEquippedEntryData(true) };
     const std::uint32_t forms[2] = {
         hands[0] && hands[0]->object ? hands[0]->object->GetFormID() : 0,
