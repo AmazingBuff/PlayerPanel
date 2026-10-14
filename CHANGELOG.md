@@ -4,6 +4,30 @@
 
 ### Fixed
 
+- AFP10d the panel drawing nothing with direct draw on (`SCOPY R01 fallback to the copy
+  reason=not-framed` on every frame, reported 2026-10-14 as "F6 no longer brings up the panel"): the
+  framing needed a bound, the live bound is measured from the skin palette, and the engine allocates
+  that palette only when it sets a geometry up - at draw time. The shell arrived with 44 skinned
+  geometries and `allocatedSize == 0` on every one of them (so `bound-nodes=0/0` with no null skin data
+  and no null bones array), the palette bound was therefore invalid on every frame, `begin_frame`
+  framed nothing, and the draw that would have allocated the palette never ran. The zeroed fade guard
+  is what started it: the shell is never drawn by the world, and the 0.05 of the earlier rounds had
+  been what let the engine touch it once. The framing now falls back to the tree's own node cloud
+  (`figure_node_cloud_bound`, live node worlds, collision helpers excluded) and returns to the palette
+  bound by itself as soon as a draw has allocated it; the frame line reports `bound-from=palette|nodes`.
+
+- AFP10d the panel needed a key press to show anything: R01 direct draw now defaults ON, so opening the
+  inventory shows the figure with no F7 capture and no F6 press. F6 still switches between the puppet's
+  own 3D and the detached copy.
+
+### Added
+
+- AFP10d two more pieces of evidence for the equipment reports, because a picture cannot name a mesh: the
+  dressing step logs the shell's geometry names (`SCOPY PUPPET shell names=[...]`) and a strip logs the
+  names and form ids of the worn items it took off (`unequipped=[name(formid) ...]`), not only counts.
+
+### Fixed
+
 - AFP10c the figure's equipment stacking, and a bow/shield/axe nobody equipped (both reported
   2026-10-14): a freshly placed Actor is not empty - its base record carries what it was authored
   with, and this puppet's base is a copy of the PLAYER's NPC record - so the shell arrived wearing its

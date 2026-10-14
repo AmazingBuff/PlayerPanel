@@ -242,7 +242,20 @@ void PuppetDraw::begin_frame()
     // The cached bound is still logged beside it, because the difference is the finding.
     root->UpdateWorldBound();
     const FigureBound cached = figure_skinned_bound(*root);
-    const FigureBound bound = figure_skeleton_bound(*root);
+    FigureBound bound = figure_skeleton_bound(*root);
+    // The palette is the live source and is used whenever it has anything to say, but it is EMPTY
+    // until the engine has set a skin up - and the engine does that when the geometry is drawn, which
+    // is the very thing this path is trying to do. Measured 2026-10-14: the shell arrived with 44
+    // skinned geometries and a zero allocation on every one, so the palette bound was invalid on every
+    // F6 frame, `begin_frame` framed nothing, `draw` fell back with `reason=not-framed` and the panel
+    // stayed empty. The tree's own node cloud is the fallback; once a draw has allocated the palette
+    // the live bound takes over again by itself.
+    char const* source = "palette";
+    if (!bound.valid)
+    {
+        bound = figure_node_cloud_bound(*root);
+        source = "nodes";
+    }
     if (!bound.valid)
         return;
 
@@ -278,8 +291,8 @@ void PuppetDraw::begin_frame()
     const float center_d = (framed_center - anchor).Length();
     if (verbose || center_d > 0.5f)
     {
-        logger::info("SCOPY R01 frame frame={} center-d={:.4f} world-t-before=({:.1f},{:.1f},{:.1f}) world-t-after=({:.1f},{:.1f},{:.1f}) anchor=({:.1f},{:.1f},{:.1f}) | skeleton-bound c=({:.1f},{:.1f},{:.1f}) r={:.1f} cached-bound c=({:.1f},{:.1f},{:.1f}) r={:.1f}",
-            s_frames, center_d,
+        logger::info("SCOPY R01 frame frame={} bound-from={} center-d={:.4f} world-t-before=({:.1f},{:.1f},{:.1f}) world-t-after=({:.1f},{:.1f},{:.1f}) anchor=({:.1f},{:.1f},{:.1f}) | bound c=({:.1f},{:.1f},{:.1f}) r={:.1f} cached-bound c=({:.1f},{:.1f},{:.1f}) r={:.1f}",
+            s_frames, source, center_d,
             m_saved_world.translate.x, m_saved_world.translate.y, m_saved_world.translate.z,
             root->world.translate.x, root->world.translate.y, root->world.translate.z,
             anchor.x, anchor.y, anchor.z,

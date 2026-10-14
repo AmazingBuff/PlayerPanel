@@ -156,6 +156,14 @@ EquipmentStrip equipment_strip(RE::Actor& a_actor)
 {
     EquipmentStrip out;
 
+    const auto note = [&out](RE::TESBoundObject* a_object)
+    {
+        if (!a_object || out.unequipped_sample.size() >= 200)
+            return;
+        const char* const name = a_object->GetName();
+        out.unequipped_sample += fmt::format("{}({:08x}) ", name && *name ? name : "?", a_object->GetFormID());
+    };
+
     // Worn items come off first: an item removed while it is still worn leaves the figure dressed
     // from a biped state whose items no longer exist.
     RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();
@@ -165,14 +173,20 @@ EquipmentStrip equipment_strip(RE::Actor& a_actor)
         {
             RE::TESObjectARMO* const worn = a_actor.GetWornArmor(slot);
             if (worn && equip_manager->UnequipObject(&a_actor, worn, nullptr, 1, nullptr, false, true, false, true))
+            {
                 ++out.unequipped;
+                note(worn);
+            }
         }
         for (const bool left : { false, true })
         {
             const RE::InventoryEntryData* const held = a_actor.GetEquippedEntryData(left);
             RE::TESBoundObject* const object = held && held->object ? held->object : nullptr;
             if (object && equip_manager->UnequipObject(&a_actor, object, nullptr, 1, nullptr, false, true, false, true))
+            {
                 ++out.unequipped;
+                note(object);
+            }
         }
     }
 

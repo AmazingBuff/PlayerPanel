@@ -46,8 +46,9 @@ class PuppetDraw
 public:
     static PuppetDraw& instance();
 
-    // F6: the R01 toggle. When enabled the panel draws the puppet; when the puppet is unavailable it
-    // falls back to the copy and says so.
+    // F6: the R01 toggle. ON is the default, because the panel is meant to show the figure the moment
+    // the inventory opens and this is the route that draws it without a capture step first; F6 switches
+    // to the detached copy. When the puppet is unavailable either way, it falls back and says so.
     void toggle();
     [[nodiscard]] bool enabled() const { return m_enabled.load(std::memory_order_acquire); }
 
@@ -76,7 +77,7 @@ private:
     static constexpr std::uint32_t Dump_Period_Frames = 300;
     static constexpr std::uint32_t Max_Dumps = 20;
 
-    std::atomic_bool m_enabled{ false };
+    std::atomic_bool m_enabled{ true };
     // One-shot per identity: the R01 provenance line prints when the drawn root or the graph
     // changes, not once per session - a reload or re-assembly must re-prove itself.
     void const* m_logged_root = nullptr;

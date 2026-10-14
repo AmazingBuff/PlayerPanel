@@ -124,7 +124,41 @@ FigureAssembly figure_measure_assembly(RE::NiAVObject& a_root)
     return out;
 }
 
-FigureBound figure_skinned_bound(RE::NiAVObject& a_root){
+FigureBound figure_node_cloud_bound(RE::NiAVObject& a_root)
+{
+    std::vector<RE::NiPoint3> points;
+    RE::BSVisit::TraverseScenegraphObjects(&a_root, [&](RE::NiAVObject* a_object)
+    {
+        if (!a_object || !readable(a_object, sizeof(RE::NiAVObject)))
+            return RE::BSVisit::BSVisitControl::kContinue;
+        if (a_object->AsGeometry())
+            return RE::BSVisit::BSVisitControl::kContinue;   // the skeleton's extent, not the meshes'
+        if (figure_is_collision_helper(a_object->name.c_str()))
+            return RE::BSVisit::BSVisitControl::kContinue;
+        points.push_back(a_object->world.translate);
+        return RE::BSVisit::BSVisitControl::kContinue;
+    });
+
+    FigureBound out;
+    if (points.empty())
+        return out;
+
+    RE::NiPoint3 sum{};
+    for (RE::NiPoint3 const& point : points)
+        sum = sum + point;
+    const RE::NiPoint3 center = sum / static_cast<float>(points.size());
+    float radius = 0.0f;
+    for (RE::NiPoint3 const& point : points)
+        radius = std::max(radius, (point - center).Length());
+
+    out.center = center;
+    out.radius = radius;
+    out.valid = true;
+    return out;
+}
+
+FigureBound figure_skinned_bound(RE::NiAVObject& a_root)
+{
     FigureBound out;
     RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
     {

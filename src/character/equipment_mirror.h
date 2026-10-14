@@ -63,7 +63,8 @@ struct EquipmentStrip
     std::uint32_t items = 0;       // inventory entries the actor carried
     std::uint32_t removed = 0;     // ... of which were removed
     std::uint32_t unequipped = 0;  // worn items taken off before that
-    std::string sample;            // `name(formID)` of a few entries, for the log
+    std::string sample;            // `name(formID)` of a few inventory entries, for the log
+    std::string unequipped_sample; // `name(formID)` of the worn items taken off
 
     [[nodiscard]] bool changed() const { return removed != 0 || unequipped != 0; }
 };

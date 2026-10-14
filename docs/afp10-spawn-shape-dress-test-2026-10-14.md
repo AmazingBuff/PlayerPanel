@@ -158,7 +158,46 @@ SCOPY PUPPET equip right=00000000 left=00000000 pushed=sheathe equipped=0 remove
 AFP10c 的该行新增 `skin-data-null=` / `bones-null=` 两个字段用于区分"skin data 没装载"与
 "bones 数组为空"。若稳定复现，下一轮把门从"帧数上限"改为"skin data 就绪 + 时间上限"。
 
-## 6. 判读回传
+## 7. AFP10d：面板空白（"F6 按不出面板"）与默认直绘
+
+**报告**：用户要求"直接在背包内显示 clone 面板、不需要额外操作"，并报告"现在 F6 按不出面板了"。
+
+**现场日志**（AFP10c 会话）：
+
+```
+SCOPY R01 fallback to the copy reason=not-framed        ← 每一帧
+SCOPY PUPPET dressed equipped=6 frames=240 reason=assembly-timeout geoms=44 skinned=44 bound-nodes=0/0 skin-data-null=0 bones-null=0 stable=237
+SCOPY COMPOSITE src=… match=1 draws=1                    ← 整局只合成过一次
+```
+
+**机制（本轮引入的死锁，非 F6 被别的 mod 占用）**：`SCOPY R01 direct-draw on/off` 在日志里
+成对出现，说明 **F6 事件本身是收到的**；问题在取景：
+
+1. 引擎**只在绘制几何时**分配 `NiSkinInstance` 的骨骼指针数组。壳从未被世界渲染器画过
+   （fade 归零 + 泊位深度），所以每个 skin 都是 `allocatedSize == 0`
+   → `bound-nodes=0/0`，且 `skin-data-null=0 / bones-null=0` 正说明"不是缺数据，是没分配"。
+2. 取景用的活数据 `figure_skeleton_bound` 只能从 palette 取点 → 恒 invalid。
+3. `begin_frame()` 因此每帧直接返回 → `draw()` 报 `not-framed` → 回退复制图；
+   而这一局没有 F7 捕获 → **面板空白**。
+
+即 **"等 palette 才敢画"与"画了才会分配 palette"互相等待**。上一轮 fade=0.05 能工作，正是因为
+它让引擎在装配期画过一次——fade 归零顺手掐断了这条供给。
+
+**修正（AFP10d）**：
+
+1. 取景回退：palette 活值不可用时改用**树自身的节点云**（新增 `figure_node_cloud_bound`，
+   活数据、排除碰撞辅助体），并打印 `bound-from=palette|nodes`；画过一次后 palette 被分配，
+   自动回到活值。
+2. **R01 直绘默认开**：开背包即出人，F7 捕获与 F6 都不需要；F6 仍可切回复制图。
+3. 补两处取证：穿衣时打印壳的几何名（`SCOPY PUPPET shell names=[…]`），剥离时打印被脱下的
+   worn 项名字与形式 ID（`unequipped=[名字(formID)]`）——上一轮的 `unequipped=1` 只给了数量，
+   无法点名，这正是"面板上的弓/盾/斧到底是谁的"至今只能猜的原因。
+
+**复测项**：① 开背包**直接**出人（不按任何键）；② `R01 frame … bound-from=` 首次可能是
+`nodes`，面板出人后应转为 `palette`；③ `R01 fallback … reason=` 不再逐帧出现；
+④ 回传 `shell names=[…]` 与 `unequipped=[…]` 两行——前者点名傀儡树里的网格，后者点名它自带的东西。
+
+## 8. 判读回传
 
 | 项 | 读数 |
 | --- | --- |

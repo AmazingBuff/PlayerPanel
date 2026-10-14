@@ -13,6 +13,8 @@
 #include "RE/A/Actor.h"
 #include "RE/B/BSAnimationGraphManager.h"
 #include "RE/B/BSFadeNode.h"
+#include "RE/B/BSGeometry.h"
+#include "RE/B/BSVisit.h"
 #include "RE/I/IAnimationGraphManagerHolder.h"
 #include "RE/A/ActorEquipManager.h"
 #include "RE/M/Main.h"
@@ -115,6 +117,31 @@ namespace
         const auto* const begin = static_cast<const std::uint8_t*>(address);
         const auto* const end = static_cast<const std::uint8_t*>(info.baseAddress) + info.regionSize;
         return begin + bytes <= end;
+    }
+
+    // What the shell is actually made of, by name. The 2026-10-14 sessions reported meshes on the
+    // figure that neither the player nor this plugin had equipped (a bow, a shield, an axe) while the
+    // shell's own inventory was empty, so the names are the evidence that says where they came from -
+    // a picture cannot, and a count cannot either.
+    std::string shell_geometry_names(RE::NiAVObject& a_root, std::uint32_t a_limit)
+    {
+        std::string names;
+        std::uint32_t shown = 0;
+        std::uint32_t total = 0;
+        RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
+        {
+            ++total;
+            if (shown < a_limit)
+            {
+                const char* const name = a_geometry ? a_geometry->name.c_str() : nullptr;
+                names += fmt::format("'{}' ", name && *name ? name : "?");
+                ++shown;
+            }
+            return RE::BSVisit::BSVisitControl::kContinue;
+        });
+        if (total > shown)
+            names += fmt::format("+{} more", total - shown);
+        return names;
     }
 }
 
@@ -370,8 +397,8 @@ void PuppetDriver::spawn()
     // What it came with is logged - the form ids name the source - and taken off, because the figure
     // is supposed to wear exactly the player's items and nothing else.
     const EquipmentStrip inherited = equipment_strip(*puppet);
-    logger::info("SCOPY PUPPET stripped items={} removed={} unequipped={} inherited=[{}]",
-        inherited.items, inherited.removed, inherited.unequipped, inherited.sample);
+    logger::info("SCOPY PUPPET stripped items={} removed={} unequipped={} inherited=[{}] unequipped=[{}]",
+        inherited.items, inherited.removed, inherited.unequipped, inherited.sample, inherited.unequipped_sample);
     m_grace_frames = 0;
     m_repark_frames = 0;
     m_manual_ticks = 0;
@@ -521,9 +548,12 @@ std::uint32_t PuppetDriver::dress(RE::Actor& a_puppet)
     const EquipmentStrip stripped = equipment_strip(a_puppet);
     if (stripped.changed())
     {
-        logger::info("SCOPY PUPPET stripped again items={} removed={} unequipped={} sample=[{}]",
-            stripped.items, stripped.removed, stripped.unequipped, stripped.sample);
+        logger::info("SCOPY PUPPET stripped again items={} removed={} unequipped={} unequipped=[{}] sample=[{}]",
+            stripped.items, stripped.removed, stripped.unequipped, stripped.unequipped_sample, stripped.sample);
     }
+
+    if (RE::NiAVObject* const root = a_puppet.Get3D(false); root && readable(root, sizeof(RE::NiAVObject)))
+        logger::info("SCOPY PUPPET shell names=[{}]", shell_geometry_names(*root, 12));
 
     const std::uint32_t equipped = equipment_equip_all_worn(a_puppet, *player);
     // The hand slots are the other poll's business, but the figure is about to leave the world: push

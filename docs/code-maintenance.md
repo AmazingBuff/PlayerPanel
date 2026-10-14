@@ -59,7 +59,7 @@ cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPacka
 | F8 | 切换当前已接受副本的显示。 |
 | F2 | 一次 AFP mark：输出、校准、来源对照、相机与目标网格状态；A2 行含 AFP9 覆盖对账与审计点名。 |
 | F4 | AFP `off → tick → tick+apply → tick+apply+force → step → off`。单步为一次 1/60 秒。 |
-| F6 | AFP9 R01 直绘开关（默认关）：开 = 面板画傀儡自身 3D；关 = 复制图。不可用时回退复制图并告警。 |
+| F6 | R01 直绘开关（**默认开**）：开 = 面板画傀儡自身 3D（开背包即出人，无需 F7/F6）；关 = 复制图。不可用时回退复制图并告警。 |
 
 F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe stage 没有控制入口。生命周期边界仍由重捕获／读档／主菜单处理。F4 的冻结／推进针对傀儡图与最终姿态应用，不等于冻结独立时钟运行的显示副本。
 
@@ -103,6 +103,7 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 22. **morph 存储是多方共用的，只许写自己那把键**：AFP10 首测把玩家的全部 morph（193 条）照搬到傀儡，结果傀儡"凭空"多出弓与匕首——因为随行搬过去的还有 **XPMSE 自己的"当前装备了哪类武器"状态**（`XPMSEAABase_axeeqp/_boweqp/_dageqp/_1hmeqp/_2hmeqp`），傀儡的武器附着节点于是相信那些武器在那里。身体形状只住在 **OBody 键**下（OBody 写预设用的就是这把键），所以同步只拷该键，其余键只计数（`skipped=`）绝不写入。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §3。
 23. **镜像必须双向，只装不卸等于累积**：手部轮询原先只在"玩家手上有东西且换过"时装备，玩家空手时只推 sheathe——于是本会话里画过的每把武器都永久留在傀儡身上（2026-10-14 用户报告：玩家身上没有的斧头/盾/弓出现在 clone 上）。同步语义 = **先卸掉傀儡手里与玩家不同的那一件，再装玩家的**；日志行必须同时给 `equipped=` 与 `removed=`，否则下一轮无法区分"没装"与"没卸"。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §2。
 24. **新放置的 Actor 不是空的**：它的基础记录自带作者放进去的东西，而傀儡的基础记录是**玩家 NPC 的副本**——2026-10-14 用户报告的"默认新 Actor 的弓箭/盾牌/斧头"就是它自带的，且在装配窗口内开面板（穿衣之前）就会看到；叠在镜像装备之上就是"装备叠加"。所以傀儡**出生时剥一次、穿衣前再剥一次**（每个 biped 槽位的 worn 项 + 双手 + 全部库存条目），并把 `items=/removed=/unequipped=/inherited=[名字(formID)]` 打进日志——自带的到底是什么由日志点名，不靠图猜。另外：装 worn 项前先查 `GetItemCount`，已有就不再 `AddObjectToContainer`（重复添加是叠加的另一半）。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §6。
+25. **蒙皮 palette 是"画过才分配"的，取景不能等它**：引擎在**绘制**几何时才分配 `NiSkinInstance` 的骨骼指针数组，所以从未被画过的图每个 skin 都是 `allocatedSize==0`——此时 `bound-nodes=0/0` 且 `skin-data-null=0 bones-null=0`（AFP10d 实测：壳 44 个蒙皮几何全为 0）。`figure_skeleton_bound` 只能从 palette 取点，因此恒为 invalid → `begin_frame` 不取景 → `draw` 报 `not-framed` → 回退复制图（没有 F7 捕获时面板就是空白）：**"等 palette 才能画"与"画了才有 palette"是死锁**。取景必须回退到**树自身的节点云**（`figure_node_cloud_bound`，活数据、排除碰撞辅助体），画过一次后自动回到 palette 活值；日志行 `R01 frame bound-from=palette|nodes` 指出用的是哪一个。fade 归零让世界渲染器永不触碰壳，正是这条死锁的起点——若要再动 fade 守卫，先确认 palette 已由别的路径分配。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §7。
 
 ## 验证与安全修改
 

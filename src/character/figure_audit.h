@@ -115,6 +115,18 @@ struct FigureBound
 // far from the studio rig). Framing measures from this one; the cached bound stays as a comparison.
 [[nodiscard]] FigureBound figure_skeleton_bound(RE::NiAVObject& a_root);
 
+// The same bound solved WITHOUT the skin palette: the tree's own node cloud, minus the collision
+// helpers, using each node's `world.translate`.
+//
+// This exists because the palette is not always available when a caller needs a bound. The engine
+// allocates a skin's bone-pointer array when it sets the geometry up - at draw time - so a figure
+// that has not been drawn yet reports `allocatedSize == 0` on every skin: measured 2026-10-14 on the
+// puppet, 44 skinned geometries with a zero allocation on all of them. A caller that refuses to frame
+// such a figure and waits for the palette never draws it, and the draw is what would have allocated
+// the palette. Node worlds are live data the frame owns (the same reason `figure_skeleton_bound`
+// exists), which is why this is the fallback rather than the geometry `worldBound` cache.
+[[nodiscard]] FigureBound figure_node_cloud_bound(RE::NiAVObject& a_root);
+
 // R01's framing, expressed the only way a LIVE actor's tree accepts it: a world-space delta applied
 // downward. Writing the root's `local` and cascading does NOT move the root itself - measured on the
 // puppet (AFP9c: `restore world-d=(0,0,0)` while the vertices projected to NDC (236, 290), i.e. the

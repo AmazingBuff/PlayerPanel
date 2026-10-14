@@ -10,9 +10,9 @@ Current controls:
   F4: off -> tick -> tick+apply -> tick+apply+force -> step -> off.
       Step advances the puppet once by 1/60 second. Verify mapping while the world
       runs before judging paused apply. F3 stays with the other mod that owns it.
-  F6: R01 direct draw toggle (AFP9). When on, the panel draws the puppet's OWN
-      third-person 3D (no detach, framing restored after each draw); when off, the
-      copied graph serves as before. The puppet path falls back to the copy and
+  F6: direct draw toggle, ON by default. The panel shows the puppet's OWN 3D the
+      moment the inventory opens - no capture, no key press; F6 switches to the
+      detached copied graph instead. The puppet path falls back to the copy and
       logs the reason whenever it cannot draw.
 
 AFP9 additions: the apply stage reconciles its coverage ledger per frame
@@ -72,7 +72,11 @@ Panel black but the studio target correct? Check `SCOPY COMPOSITE src/bound/matc
 source at once, which D3D11 silently resolves by unbinding the source. Return that
 line if it appears.
 
-F6 shows no figure? Check `SCOPY R01 frame ... center-d=` - it must be ~0, and
+F6 shows no figure? Check `SCOPY R01 fallback to the copy reason=...` first. A
+`reason=not-framed` on every frame means the framing had no bound; the frame line
+says where that bound came from (`bound-from=palette` is the live skin palette,
+`bound-from=nodes` the tree's node cloud that serves until a draw has allocated
+the palette). Then check `SCOPY R01 frame ... center-d=`: it must be ~0, and
 `world-t-after` must equal `anchor`. A non-zero center-d means the framing delta did
 not reach the tree (a local write on a parented node moves nothing); equal values
 with an empty panel move the question to projection, where `rd-null` and the pass
