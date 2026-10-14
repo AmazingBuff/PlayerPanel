@@ -38,16 +38,26 @@ AFP10 additions - three things the panel figure now does that it did not before:
    beside the player, and reconciled afterwards: `SCOPY PUPPET worn equipped=...
    removed=... worn=...`. Change a piece of armor in the inventory and the panel
    figure should follow within a frame; report the line if it does not.
+   Weapons are mirrored exactly in BOTH directions - the puppet's current hand
+   item is taken off when the player's hand holds something else or nothing, and
+   the `SCOPY PUPPET equip` line reports `equipped=`/`removed=`. A weapon on the
+   figure that the player is not holding now means the removal failed, so return
+   that line rather than only the picture.
 
 3. The player's body shape. OBody NG hands a freshly placed NPC a RANDOM preset
    every session (`OBody.log`: "No preset defined for this actor, getting it
    randomly"), so the puppet's body is copied from the player through RaceMenu's
    skee64 BodyMorph interface instead: `SCOPY SHAPE applied ... compared=...
-   mismatched=... copied=... sample=[...]`. `SCOPY SHAPE skee BodyMorph interface
-   acquired version=N` confirms the interface; `unavailable` means no RaceMenu was
-   found and the puppet keeps whatever body it was given. The copy compares before
-   it writes, so a line only appears when the two actually disagreed - its absence
-   on a later check is the healthy state, not a failure.
+   mismatched=... copied=... skipped=... sample=[...]`. `SCOPY SHAPE skee
+   BodyMorph interface acquired version=N` confirms the interface; `unavailable`
+   means no RaceMenu was found and the puppet keeps whatever body it was given.
+   The copy compares before it writes, so a line only appears when the two
+   actually disagreed - its absence on a later check is the healthy state, not a
+   failure. ONLY OBody's own morph key is copied: a morph store is shared with
+   every other system that uses one, and copying all of it once put XPMSE's
+   "which weapon type is equipped" state on the puppet, which made it show an axe
+   and a bow it had never been given. The other keys are counted in `skipped=`
+   and left alone.
 
 Panel black but the studio target correct? Check `SCOPY COMPOSITE src/bound/match`
 - match=0 means the studio texture was bound as an output target and as a sampler

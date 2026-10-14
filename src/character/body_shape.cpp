@@ -8,6 +8,7 @@
 #include "RE/T/TESObjectREFR.h"
 
 #include <cmath>
+#include <cstring>
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -166,7 +167,9 @@ namespace
         return s_morph;
     }
 
-    // Compares the source's morphs against the target's without writing anything.
+    // Compares the source's body morphs against the target's without writing anything. Entries under
+    // any other key are the other morph users' business (XPMSE's equipped-weapon state among them)
+    // and are only counted, never compared: a mismatch there is not something this route repairs.
     class MorphComparer final : public IBodyMorphInterface::MorphValueVisitor
     {
     public:
@@ -179,20 +182,27 @@ namespace
         {
             if (!a_name || !*a_name)
                 return;
+            if (!a_key || std::strcmp(a_key, OBody_Morph_Key) != 0)
+            {
+                ++m_skipped;
+                return;
+            }
             ++m_compared;
-            const float current = m_morph->GetMorph(m_target, a_name, a_key ? a_key : "");
+            const float current = m_morph->GetMorph(m_target, a_name, a_key);
             if (std::abs(current - a_value) > Morph_Match_Epsilon)
                 ++m_mismatched;
         }
 
         [[nodiscard]] std::uint32_t compared() const { return m_compared; }
         [[nodiscard]] std::uint32_t mismatched() const { return m_mismatched; }
+        [[nodiscard]] std::uint32_t skipped() const { return m_skipped; }
 
     private:
         RE::TESObjectREFR* m_target;
         IBodyMorphInterface* m_morph;
         std::uint32_t m_compared = 0;
         std::uint32_t m_mismatched = 0;
+        std::uint32_t m_skipped = 0;
     };
 
     class MorphCopier final : public IBodyMorphInterface::MorphValueVisitor
@@ -207,7 +217,12 @@ namespace
         {
             if (!a_name || !*a_name)
                 return;
-            m_morph->SetMorph(m_target, a_name, a_key ? a_key : "", a_value);
+            if (!a_key || std::strcmp(a_key, OBody_Morph_Key) != 0)
+            {
+                ++m_sync.skipped;
+                return;
+            }
+            m_morph->SetMorph(m_target, a_name, a_key, a_value);
             ++m_sync.copied;
             if (m_sync.sample.size() < 140)
             {
@@ -242,6 +257,7 @@ BodyShapeSync body_shape_sync(RE::Actor& a_target, RE::Actor& a_source)
     morph->VisitMorphValues(&a_source, comparer);
     sync.compared = comparer.compared();
     sync.mismatched = comparer.mismatched();
+    sync.skipped = comparer.skipped();
 
     // A figure that already carries the source's shape is left alone: re-applying identical morphs
     // would rewrite the vertex buffers for nothing, and the check is what keeps this callable on a

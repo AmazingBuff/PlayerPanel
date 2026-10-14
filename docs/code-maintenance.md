@@ -100,6 +100,8 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 19. **装配窗口内的 fade 必须是 0，且窗口按"就绪即走"关闭**：0.05 是玩家身体里一个可见的幽灵（2026-10-14 用户报告"前几秒仍在玩家附近"）；引用又不能提前搬走，因为**角色 LOD 在引用装载时按距离选定**（run 104：泊位深度出生的引用装配出缺件、蒙皮剥离的低模图）。因此窗口里做三件事：fade 归零、每帧普查、**几何非空 + skin data 齐全 + 每个已分配槽位已绑定 + 连续 10 帧不变**就立刻泊位；240 帧只是从不就绪时的兜底（超时照泊 = 旧行为）。门用**已分配**槽位而非 NIF 声明容量（复制图落定门实测 47/131 渲染正常，等 131 白等 600 帧）。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md)。
 20. **本机体型 = 网格 morph，不是节点缩放**：639 个 `.osp` slider set 零骨骼/缩放定义，BodySlide 预设由 `.tri` 顶点 delta 实现；复制 `local.scale` 等于什么都没复制。且**新放置的 NPC 会被 OBody NG 随机派预设**（`OBody.log`：`No preset defined for this actor, getting it randomly` → `Preset … will be applied to CharacterPanel Puppet`），所以"傀儡体型 = 玩家"必须显式同步，且写前先 `ClearBodyMorphKeys(傀儡, "OBody")` 清掉那份随机预设。
 21. **skee64 的 `BodyMorph` 接口只能按镜像虚表 + 版本门调用**：接口经 SKSE 接口交换（消息 `0x9E3779B9` → `IInterfaceMap::QueryInterface("BodyMorph")`）取得；本地镜像必须保持上游**虚表顺序**，并在首次调用前查 `GetVersion()`（本机为 5），低于镜像布局一律拒绝——不猜偏移、不硬编码槽位。获取失败（无 RaceMenu/版本不符）时保持原样并只打印一次。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md)。
+22. **morph 存储是多方共用的，只许写自己那把键**：AFP10 首测把玩家的全部 morph（193 条）照搬到傀儡，结果傀儡"凭空"多出弓与匕首——因为随行搬过去的还有 **XPMSE 自己的"当前装备了哪类武器"状态**（`XPMSEAABase_axeeqp/_boweqp/_dageqp/_1hmeqp/_2hmeqp`），傀儡的武器附着节点于是相信那些武器在那里。身体形状只住在 **OBody 键**下（OBody 写预设用的就是这把键），所以同步只拷该键，其余键只计数（`skipped=`）绝不写入。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §3。
+23. **镜像必须双向，只装不卸等于累积**：手部轮询原先只在"玩家手上有东西且换过"时装备，玩家空手时只推 sheathe——于是本会话里画过的每把武器都永久留在傀儡身上（2026-10-14 用户报告：玩家身上没有的斧头/盾/弓出现在 clone 上）。同步语义 = **先卸掉傀儡手里与玩家不同的那一件，再装玩家的**；日志行必须同时给 `equipped=` 与 `removed=`，否则下一轮无法区分"没装"与"没卸"。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §2。
 
 ## 验证与安全修改
 

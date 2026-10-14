@@ -93,7 +93,34 @@
 **红线**：本模块只写傀儡的 morph，从不写玩家的；`ClearBodyMorphKeys` 只清傀儡自己那份。
 接口获取失败（无 RaceMenu、版本不符）时**保持原样并打印一次**，不猜布局、不硬编码偏移。
 
-## 4. 判读回传
+## 4. AFP10b：首测现场的三处修正（2026-10-14 同一会话）
+
+AFP10 上机后用户报告：**clone 身上出现了玩家没有的斧头、盾牌和弓箭**。现场日志（`CharacterPanel.log`）直接给出三处：
+
+1. **`SCOPY SHAPE` 把全部 morph 都搬了**（`compared=193 mismatched=177 copied=193`），sample 里是
+   `XPMSEAABase_axeeqp`、`XPMSEAABase_boweqp`、`XPMSEAABase_dageqp`、`XPMSEAABase_1hmeqp`、`XPMSEAABase_2hmeqp`
+   ——**XPMSE 自己的"当前装备了哪类武器"状态**。同帧 FP 行的 world 离群节点正是
+   `WeaponAxe, WeaponBack, WeaponBow, WeaponDagger, WeaponMace`：傀儡的武器附着节点被告知"这些武器在"。
+   **修正**：只拷 **OBody 键**（身体形状就住在那里），其余键只计数（`skipped=`）不写。
+2. **手部镜像只装不卸**：`equip right=… pushed=sheathe` 在玩家空手时只推收起动作，
+   **从不卸下傀儡手里的旧武器**——本会话画过的斧头/盾/弓于是全部留着。
+   **修正**：双向镜像，先卸掉与玩家不同的那一件再装玩家的；日志行补 `equipped=/removed=`。
+3. **装配行每帧刷屏**：提前泊位后 `m_grace_frames` 仍小于上限，窗口块下一帧再次进入，
+   于是 `assembly` 行与 `park-3d` 每帧重复到 240 帧。**修正**：泊位后一律关闭窗口。
+
+同时记录两条本轮实测事实（不是失败，是判读输入）：
+
+- 装配门**能提前放行**：第二个会话 `dressed equipped=2 frames=20 reason=assembled`、
+  `assembly frames=30 reason=assembled bound-nodes=47/47 stable=8` —— 从 240 帧降到 30 帧。
+- 但**重载存档后的第一次出生可能等满 240**：第一个会话 `bound-nodes=0/0 · stable=237`，
+  即该壳的几何都在（48/44）却一个 skin data 都没就绪，且 240 帧内毫无变化；
+  超时兜底按旧行为泊位（面板照常）。这条要留观：若稳定复现，下一轮把门从"帧数上限"改为
+  "skin data 就绪 + 时间上限"。
+
+**AFP10b 复测项**：① 反复切武器（斧→盾→弓→空手），面板武器数量**始终**与玩家一致，
+`equip` 行出现 `removed=`；② 面板不再出现玩家没有的武器；③ 装配行**只出现一次**。
+
+## 5. 判读回传
 
 | 项 | 读数 |
 | --- | --- |

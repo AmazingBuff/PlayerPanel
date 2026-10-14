@@ -240,6 +240,10 @@ void PuppetDriver::tick(bool paused)
             m_assembly_census.geometries, m_assembly_census.skinned, m_assembly_census.roots,
             m_assembly_census.bound_nodes, m_assembly_census.alloc_slots, m_assembly_stable);
         park(timed_out ? "assembly-timeout" : "assembled");
+        // The window is over on EVERY path once the park ran, not only on the timeout path: leaving
+        // `m_grace_frames` below the cap re-entered this block on the next frame, which re-printed
+        // this line and re-parked the figure every frame until the cap was reached (2026-10-14 log).
+        m_grace_frames = Grace_Frames;
         return;
     }
 
@@ -518,8 +522,8 @@ void PuppetDriver::apply_body_shape(RE::Actor& a_puppet, char const* a_why)
     const BodyShapeSync sync = body_shape_sync(a_puppet, *player);
     if (!sync.changed())
         return;
-    logger::info("SCOPY SHAPE applied reason={} compared={} mismatched={} copied={} sample=[{}]",
-        a_why, sync.compared, sync.mismatched, sync.copied, sync.sample);
+    logger::info("SCOPY SHAPE applied reason={} compared={} mismatched={} copied={} skipped={} sample=[{}]",
+        a_why, sync.compared, sync.mismatched, sync.copied, sync.skipped, sync.sample);
 }
 
 void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
@@ -558,13 +562,34 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
     if (!equip_manager)
         return;
 
+    std::uint32_t hand_equipped = 0;
+    std::uint32_t hand_removed = 0;
+
     for (int hand = 0; hand < 2; ++hand)
     {
-        if ((hand == 0 ? !right_changed : !left_changed) || !hands[hand] || !hands[hand]->object)
+        if (hand == 0 ? !right_changed : !left_changed)
             continue;
-        RE::TESBoundObject* const object = hands[hand]->object;
-        puppet.AddObjectToContainer(object, nullptr, 1, nullptr);
-        equip_manager->EquipObject(&puppet, object, nullptr, 1, nullptr, false, true, false, true);
+        RE::TESBoundObject* const wanted = hands[hand] && hands[hand]->object ? hands[hand]->object : nullptr;
+        const bool left = hand == 1;
+
+        // AFP10b: the hand is mirrored EXACTLY, which means the puppet's current one comes off first.
+        // Equipping only ever went one way, so every weapon the player drew during a session stayed on
+        // the figure for good: the 2026-10-14 report was an axe, a shield and a bow on a puppet whose
+        // player held none of them, because nothing had ever unequipped the earlier ones.
+        RE::InventoryEntryData* const held_entry = puppet.GetEquippedEntryData(left);
+        RE::TESBoundObject* const held = held_entry && held_entry->object ? held_entry->object : nullptr;
+        if (held && held != wanted)
+        {
+            if (equip_manager->UnequipObject(&puppet, held, nullptr, 1, nullptr, false, true, false, true))
+                ++hand_removed;
+        }
+
+        if (wanted)
+        {
+            puppet.AddObjectToContainer(wanted, nullptr, 1, nullptr);
+            equip_manager->EquipObject(&puppet, wanted, nullptr, 1, nullptr, false, true, false, true);
+            ++hand_equipped;
+        }
     }
     const char* pushed = "none";
     if (right_changed || left_changed)
@@ -574,7 +599,8 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
         pushed = any_hand_filled ? "draw" : "sheathe";
         ++m_equip_reactions;
     }
-    logger::info("SCOPY PUPPET equip right={:08x} left={:08x} pushed={} reactions={}", forms[0], forms[1], pushed, m_equip_reactions);
+    logger::info("SCOPY PUPPET equip right={:08x} left={:08x} pushed={} equipped={} removed={} reactions={}",
+        forms[0], forms[1], pushed, hand_equipped, hand_removed, m_equip_reactions);
 
     SceneGraphCopy::instance().note_world_change("world-equipment");
 }

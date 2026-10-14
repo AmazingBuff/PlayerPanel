@@ -4,6 +4,29 @@
 
 ### Fixed
 
+- AFP10b weapons appearing on the panel figure that the player was not holding (reported 2026-10-14 as
+  "an axe, a shield and a bow"): the hand mirror only ever equipped. It pushed the player's hand item
+  onto the puppet on every change and had no path that took one off, so every weapon the player drew
+  during a session stayed on the figure for good - the axe from the first swap, the shield from the
+  next, the bow after that. The mirror is now exact in both directions: the puppet's current hand item
+  comes off first when it differs from the player's, and the equip line reports `equipped=`/`removed=`
+  so the next round can tell the two apart.
+
+- AFP10b the body-shape copy no longer carries other systems' morph state: the first AFP10 session
+  copied every morph the player had (193 of them) and the puppet came up with a bow and a dagger
+  attached, because the copy had also carried XPMSE's own "which weapon type is equipped" morphs
+  (`XPMSEAABase_axeeqp`, `_boweqp`, `_dageqp`, `_1hmeqp`, `_2hmeqp`) onto an actor whose attachment
+  nodes then believed those weapons were there. A morph store is shared by every system that uses one,
+  so the copy is now restricted to OBody's own key - the key OBody writes its preset to, and where the
+  body shape this route exists for actually lives. Everything else is counted and reported as
+  `skipped=`, never written.
+
+- AFP10b the assembly line printed once per frame after a successful early park: the window block
+  re-entered on every frame below the frame cap, re-printing the line and re-parking the figure until
+  the cap was reached. Parking now ends the window on every path.
+
+### Fixed
+
 - AFP10 the first seconds of every session: the puppet's assembly window pinned its fade to 0.05, which
   is a five-percent ghost standing inside the player's own body. The window cannot simply be removed -
   the reference has to be beside the player when the character graph loads, because the engine picks
