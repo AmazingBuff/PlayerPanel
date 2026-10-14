@@ -1,6 +1,6 @@
 # 当前代码维护说明
 
-更新日期：2026-10-13（AFP9）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
+更新日期：2026-10-15（AFP10g）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
 
 ## 范围
 
@@ -16,8 +16,8 @@
 | [character_manager.cpp](../src/character/character_manager.cpp) / [character_clone.cpp](../src/character/character_clone.cpp) | 默认路线通过 Actor 装配装备／3D，再摘出图绘制；`pose()` 负责摄影棚取景。该路线不等于尚待验证的“保留 Actor 与 3D 绑定后直绘”。 |
 | [scene_graph_copy.cpp](../src/character/scene_graph_copy.cpp) | F7 捕获、来源／副本审计、隔离观测、旧图停放；`animate_at_base_pose()` 在取景之后驱动显示副本。 |
 | [animation_source.cpp](../src/character/animation_source.cpp) | 从 typed `activeNodes` 读取运行 clip；`pick_running_clip()` 选最强 control，`resolve_clip_playback()` 解析现有 binding，`play_animation_clip()` 采样并写节点。捕获时也复用这条路径，不再扫描模板、registry 或任意对象窗口。 |
-| [puppet_driver.cpp](../src/character/puppet_driver.cpp) | 存档会话内的傀儡装配、泊位、暂停图推进和装备同步；`drive()` 为显示副本供给 clip 姿态。AFP10：装配窗口改为"普查就绪即泊位"且窗口内 fade 归零（不可感知）；穿着整套 worn body items；`apply_body_shape()` 把玩家体型同步到傀儡。 |
-| [equipment_mirror.h/.cpp](../src/character/equipment_mirror.h) | AFP10 共用件：biped 身体槽位的 worn 集合读取、整套穿上、以及无状态对账（多则补、少则卸）。复制图的 `mirror_worn_equipment` 也走这一份，槽位表只有一处。手部武器不在此列（驱动器自己的手部轮询 + draw/sheathe）。 |
+| [puppet_driver.cpp](../src/character/puppet_driver.cpp) | 存档会话内的傀儡装配、泊位、暂停图推进和装备同步；`drive()` 为显示副本供给 clip 姿态。AFP10：装配窗口改为"普查就绪即泊位"且窗口内 fade 归零（不可感知）；穿着整套 worn body items；`apply_body_shape()` 把玩家体型同步到傀儡。AFP10g：spawn 处断掉副本记录的自带套装（容器清空 + 双 outfit 置空），prune/worn 各持独立节奏计数器，箭袋对账到玩家当前弹药。 |
+| [equipment_mirror.h/.cpp](../src/character/equipment_mirror.h) | AFP10 共用件：biped 身体槽位的 worn 集合读取、整套穿上、以及无状态对账（多则补、少则卸）。复制图的 `mirror_worn_equipment` 也走这一份，槽位表只有一处。手部武器不在此列（驱动器自己的手部轮询 + draw/sheathe）。AFP10g：槽位表补全（kHair/kModBack/kModMisc1/2/kModPelvis*，kShield 归手部轮询、FX01 排除），`equipment_sync_ammo` 把傀儡当前弹药对账到玩家的，prune 的弹药豁免收窄为"玩家的当前弹药"。 |
 | [body_shape.h/.cpp](../src/character/body_shape.h) | AFP10 体型同步：本地镜像 skee64 的 `IBodyMorphInterface`（SKSE 接口交换 `BodyMorph`），先比较后写入，写前清掉 OBody 派给傀儡的随机预设；版本低于镜像布局时拒绝调用。 |
 | [idle_driver.cpp](../src/character/idle_driver.cpp) / [snapshot_transform.h](../src/character/snapshot_transform.h) | 现有程序 idle fallback、取景变换和子树更新；不再包含测试用蒙皮缓存写入或距离测量。 |
 | [final_pose_probe.cpp](../src/character/final_pose_probe.cpp) / [final_pose_apply.cpp](../src/character/final_pose_apply.cpp) | 最终输出读取、索引校准、独立真值比较、暂停写入和强制生成诊断；当前写入傀儡，而画面默认仍由复制图提供。AFP9：apply 同帧对账（output/attempted/written/unreachable/unprocessed），缺口变化时点名并按 palette 分类（必要骨不跳过）。 |
@@ -106,7 +106,10 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 25. **蒙皮 palette 是"画过才分配"的，取景不能等它**：引擎在**绘制**几何时才分配 `NiSkinInstance` 的骨骼指针数组，所以从未被画过的图每个 skin 都是 `allocatedSize==0`——此时 `bound-nodes=0/0` 且 `skin-data-null=0 bones-null=0`（AFP10d 实测：壳 44 个蒙皮几何全为 0）。`figure_skeleton_bound` 只能从 palette 取点，因此恒为 invalid → `begin_frame` 不取景 → `draw` 报 `not-framed` → 回退复制图（没有 F7 捕获时面板就是空白）：**"等 palette 才能画"与"画了才有 palette"是死锁**。取景必须回退到**树自身的节点云**（`figure_node_cloud_bound`，活数据、排除碰撞辅助体），画过一次后自动回到 palette 活值；日志行 `R01 frame bound-from=palette|nodes` 指出用的是哪一个。fade 归零让世界渲染器永不触碰壳，正是这条死锁的起点——若要再动 fade 守卫，先确认 palette 已由别的路径分配。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §7。
 26. **镜像的"变了没"必须对着目标现状问，不能对着缓存问**：手部轮询原先按"玩家手上一次的 formID"判断是否需要装备。而剥离（AFP10c）会在**玩家双手毫无变化**的情况下清空傀儡的手——于是刚被剥掉的武器再也装不回来，直到玩家手动换一次武器（2026-10-14 用户报告：昨天武器还能换，今天初始装备出问题）。规则：**装备决策 = 傀儡此刻手里是什么 vs 玩家手里是什么**（无状态），缓存只用于"要不要推 draw/sheathe"与日志；任何剥离之后必须清缓存。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §9。
 27. **force-generate 与映射证明在时间上互斥**：暂停的面板若不强 generate，输出就是空的（`pose-empty`，AFP3），没有姿态可写；而映射证明要求"引擎生成并应用了同一帧姿态"的运行世界帧（AFP4：强制过的帧拿 0.99 打成 0.67）。所以**没有一个固定档位能同时满足两者**：默认档必须按暂停状态逐帧解析（`Drive::e_auto`，驱动侧 `force_when_paused`），F4 的五个固定档保留为诊断仪器。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §9。
-28. **"剥"必须把物品从库存里删掉，且读库存要用 `GetInventoryChanges(false)`**：`(true)` 是"不初始化"，刚放置的 Actor 容器还没建 → 返回空 → 剥离报 `items=0`，而实测该壳手上**戴着**铁战斧 00013790（记录自带的起始套装）；套装随后进库存，**引擎的 best-fit 自动装备会把它再装回去**（傀儡没有 AI 去否决）。同理，"卸下"不等于"移出库存"：只卸不删，被卸的武器仍被携带，引擎会再装回来——这就是"武器装上就不再被替换"（2026-10-14）。现行规则 = 剥离 + **持续修剪**（凡玩家未穿且未持的携带物一律卸下并删除，弹药豁免：拉弓的箭袋由它渲染）+ 手部替换时把旧武器删出库存；计数报告**实际删除**而非 equip API 的返回值（同一会话里 `removed=0` 而武器仍在手上）。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §10。
+28. **"剥"必须把物品从库存里删掉，且读库存要用 `GetInventoryChanges(false)`**：`(true)` 是"不初始化"，刚放置的 Actor 容器还没建 → 返回空 → 剥离报 `items=0`，而实测该壳手上**戴着**铁战斧 00013790（记录自带的起始套装）；套装随后进库存，**引擎的 best-fit 自动装备会把它再装回去**（傀儡没有 AI 去否决）。同理，"卸下"不等于"移出库存"：只卸不删，被卸的武器仍被携带，引擎会再装回来——这就是"武器装上就不再被替换"（2026-10-14）。现行规则 = 剥离 + **持续修剪**（凡玩家未穿且未持的携带物一律卸下并删除）+ 手部替换时把旧武器删出库存；计数报告**实际删除**而非 equip API 的返回值（同一会话里 `removed=0` 而武器仍在手上）。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §10。
+29. **自带套装要在源头断掉，运行期剥离只是护栏**：套装的入口是 `CreateDuplicateForm` 副本记录自带的容器——引擎按它初始化新 Actor 的库存并 best-fit 自动装备。AFP10b–f 的"叠加/自带/装回"整条链，都是副本容器这个源头漏进来之后三层运行期补救（出生剥、穿衣前剥、持续修剪）在追。spawn 处对副本 `TESContainer::ClearDataComponent()` + `defaultOutfit/sleepOutfit` 双置空（复制图路线 2026-10-05 起就在用、从未出过此类报告的配方）之后，剥离只负责挡脚本/mod 的注入并点名日志。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §11。
+30. **箭袋 = 玩家当前弹药，必须独立对账**：拉弓时背上的箭袋模型由 **worn ammo**（当前弹药）渲染，既非 biped 槽也非手槽，两套镜像都不经过它；prune 的"全部弹药豁免"会让残留箭（记录自带的）成为引擎 best-fit 的唯一候选。规则 = `equipment_sync_ammo` 把傀儡当前弹药对账到玩家的（先装后卸、替换即删出库存），prune 的豁免收窄为"玩家的当前弹药进 keep 集"。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §11。
+31. **同一节奏的多个对账器不得共用一个"由别人递增、由别人清零"的计数器**：prune 的门读 `m_worn_poll_frames >= 30`，而该计数器只被 worn 块递增、且到达 30 的同一帧清零——门条件在世界运行期不可达，prune 从未在世界上跑过（`pruned` 行只在暂停期出现即判据）。规则：每个门自己递增自己清零（`a_every_frame || ++counter >= period` + 块内归零）。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §11。
 
 ## 验证与安全修改
 

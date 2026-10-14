@@ -25,6 +25,8 @@ reasons.
 
 ## Documentation
 
+- [AFP10g round](docs/afp10-spawn-shape-dress-test-2026-10-14.md): the record's own kit is cut at the source (the duplicate's container cleared and both outfits nulled at spawn, the copy route's recipe), the prune's world-cadence branch works again (its old gate shared a counter the worn sync reset), the figure's quiver now follows the player's current ammo (`equipment_sync_ammo`), and the body-slot list covers wigs, capes, belts and misc attachments it used to skip.
+
 - [AFP10 test sheet](docs/afp10-spawn-shape-dress-test-2026-10-14.md): the three reports of 2026-10-14 and what each work package changed - nothing perceptible during the assembly window (fade zero, and the window closes as soon as the census reports the shell bound and settled), the player's worn body items mirrored onto the figure, and the player's body shape copied through RaceMenu skee64's BodyMorph interface instead of the random preset OBody NG assigns to every newly placed NPC.
 
 - [AFP9 verdict 9: the character controller](docs/afp9-controller-park-verdict-2026-10-13.md): with the panel stable, the last visible defect was an interactable shell beside the player while the figure was invisible - `SetPosition`'s second parameter (`a_updateCharController`) had been passed false, so the collision and activation target never left, and the 3D kept being derived from the controller's stale position. The park now warps the controller when the reference moves.

@@ -26,8 +26,9 @@ PLUGIN_NAMESPACE_BEGIN
 // by the driver's own hand poll, which also has to push the draw/sheathe state. A weapon is not a
 // biped form, so the two sets do not overlap.
 //
-// The biped slots worth mirroring. Every body slot except the two hand slots: those hold the
-// weapons the hand poll owns.
+// The biped slots worth mirroring: every armor-bearing slot except the shield - the shield rides
+// the left-hand equip slot and belongs to the hand poll - and except FX01, which carries effect
+// attachments (the effect-object prune drops their kin from the drawn graph anyway).
 [[nodiscard]] bool equipment_is_body_biped(RE::TESBoundObject& a_object);
 
 // Every worn body-slot item the actor carries. `IsWorn()` is a pure `ExtraWorn`/`ExtraWornLeft`
@@ -89,7 +90,9 @@ struct EquipmentPrune
 };
 
 // Removes everything the source is NOT using: any carried item that is neither worn on its body nor
-// held in one of its hands.
+// held in one of its hands. Ammunition is held to a stricter rule than plain exemption: only the
+// source's CURRENT ammo survives, every other carried round goes - the quiver's model comes from the
+// current ammo, so a residual stack left the figure rendering a quiver the player is not wearing.
 //
 // Equipping the source's set is not enough on its own, because of who else equips. The engine equips
 // best-fit gear for an actor from that actor's own inventory, and this figure has no AI to decide
@@ -98,5 +101,22 @@ struct EquipmentPrune
 // opportunity: after a prune the figure carries only the source's own set, so nothing else can be
 // equipped on it.
 [[nodiscard]] EquipmentPrune equipment_prune(RE::Actor& a_target, RE::Actor& a_source);
+
+// What one ammunition reconciliation changed. `wanted` is the source's current ammo (0 when it has
+// none - a player with a drawn bow always has one; a melee player may have none).
+struct EquipmentAmmo
+{
+    std::uint32_t wanted = 0;    // the source's current ammo form id
+    std::uint32_t equipped = 0;  // target ammo entries left carried (0 or 1)
+    std::uint32_t removed = 0;   // target ammo entries taken away
+
+    [[nodiscard]] bool changed() const { return equipped != 0 || removed != 0; }
+};
+
+// Brings the target's ammunition in line with the source's CURRENT ammo: the current ammo is added
+// (and equipped, so the engine renders its quiver) and every other carried ammo is taken away. The
+// engine picks an actor's current ammo from its own inventory, so a residual stack - the record's
+// own starting arrows - would otherwise decide the quiver the figure wears.
+[[nodiscard]] EquipmentAmmo equipment_sync_ammo(RE::Actor& a_target, RE::Actor& a_source);
 
 PLUGIN_NAMESPACE_END

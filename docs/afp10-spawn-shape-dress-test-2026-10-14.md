@@ -284,6 +284,53 @@ SCOPY PUPPET stripped items=0 removed=0 unequipped=1 inherited=[] unequipped=[Ir
 ③ 面板上**任何时刻只有玩家当前那一套**，自带套装不再出现；④ 出现 `SCOPY PUPPET pruned removed=N
 sample=[…]` 就说明引擎又塞了什么进来，那行就是证据。
 
+## 11. AFP10g：断源、prune 死条件、箭袋对账、槽位补全（2026-10-15 代码轮，待上机）
+
+对 §9 的结构收口：AFP10b–f 修的都是"套装已经进来了之后怎么追"，本轮让它根本进不来。
+
+### 11.1 断源（根因修复）
+
+套装的入口 = 副本记录自带的容器：`CreateDuplicateForm` 复制玩家 NPC 记录（本机有 mod 给它加了起始套装：弓/盾/铁战斧 00013790），引擎按该容器初始化新 Actor 库存并 best-fit 自动装备。出生剥、穿衣前剥、持续修剪都是它的下游。
+
+**改动**（`puppet_driver.cpp` spawn）：`defaultOutfit=null` + **`sleepOutfit=null`** + **`TESContainer::ClearDataComponent()`**——复制图路线（`character_clone.cpp`）自 2026-10-05 起就在用的配方，该路线从未出过此类报告。剥离与 prune 保留为护栏（挡脚本/mod 注入），日志行不变：`SCOPY PUPPET stripped items=… inherited=[…]`。
+
+**判读**：出生剥离行应恒为 `items=0`；若 >0，`sample=[…]` 点名的是脚本/mod 注入路径，回传。
+
+### 11.2 prune 死条件
+
+prune 的门读 `m_worn_poll_frames >= Worn_Poll_Period`，而该计数器只被 worn 块 `++`、且到达 30 的同一帧清零——门条件在世界运行期**不可达**，prune 从未在世界上跑过（此前 `pruned` 行只在暂停期出现）。
+
+**改动**（`puppet_driver.{h,cpp}`）：prune 独立计数器 `m_prune_poll_frames`（各自递增、各自清零）；worn 块不变。
+
+**判读**：世界运行 ≥30 帧后，若引擎又塞了东西，`pruned` 行**可以**在世界期出现。
+
+### 11.3 箭袋对账
+
+箭袋模型由 **worn ammo**（当前弹药）渲染，既非 biped 槽也非手槽——两套镜像都不经过它；prune 的"全部弹药豁免"让记录自带箭成为 best-fit 的唯一候选。新增 `equipment_sync_ammo`（`equipment_mirror`）：先 EquipObject 玩家当前弹药（不足则先加 1 发进库存），再把**其余**携带弹药按 `take_away` 卸下并删除；`held == wanted` 时无操作。prune 的豁免收窄为"玩家当前弹药进 keep 集"。挂在世界/暂停同一 cadence（worn 块内）。
+
+**判读行**：`SCOPY PUPPET ammo wanted=<formid> equipped=… removed=…`（仅变化时打印）。
+
+### 11.4 槽位补全
+
+`Body_Slots` 缺 `kHair`（假发）、`kModBack`（披风/背包/背鞘）、`kModMisc1/2`、`kModPelvisPrimary/Secondary`（腰带/裙甲件）——这些槽的穿戴物既不镜像也不被槽位剥离点名。**改动**：列表补全为"除 kShield（手部轮询领地）与 FX01（特效附着）外的全部装甲槽"。
+
+### 11.5 其余三处小修
+
+- 手部装备路径最后一处 `GetInventoryChanges(true)` 改 `(false)`（AFP10f 扫雷遗漏）；
+- 复制图路线穿衣源从硬编码 PlayerCharacter 改为构造时保存的 `m_source`（当前唯一用法是玩家，行为不变；为后续克隆 NPC 铺路）；其 spawn 补 `sleepOutfit=null`；
+- `equipment_mirror.cpp` 增 `RE/T/TESAmmo.h` 包含、`current_ammo()` 内联助手。
+
+### 11.6 复测项（叠加在 §10 之上）
+
+| 项 | 期望 |
+| --- | --- |
+| 出生剥离行 | 恒 `items=0`（断源生效）；>0 则回传 `sample=[…]` |
+| 世界运行 ≥30 帧 | 无 `pruned` 行（干净）或偶发 `pruned removed=1 of=1 sample=[脚本注入物]` |
+| 拉弓开面板 | 傀儡箭袋与玩家**同款**；出现 `SCOPY PUPPET ammo wanted=… equipped=1` |
+| 换弹药类型 | `ammo` 行 `equipped=1 removed=1`，箭袋随换 |
+| 玩家穿披风/腰带/假发（如有） | 面板人物同穿 |
+| 回归 | AFP10f 全部复测项不回归；`equipped=/removed=` 仍成对 |
+
 ## 10. 判读回传
 
 | 项 | 读数 |

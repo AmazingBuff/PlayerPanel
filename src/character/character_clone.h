@@ -39,6 +39,10 @@ private:
 
 private:
     RE::NiPointer<RE::TESObjectREFR> m_clone;
+    // The Actor this clone wraps: the dressing source. The dressing walks THIS actor's worn set,
+    // not the player's - the manager may be handed any actor, and a hardcoded player source would
+    // put the player's gear on someone else's figure.
+    RE::Actor* m_source = nullptr;
     std::atomic<CloneState> m_clone_state;
 
     // Sole owner of the detached graph once e_ready; null before that.

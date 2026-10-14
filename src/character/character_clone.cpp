@@ -417,6 +417,7 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_sta
 
     // remove all objects by cloning
     clone_base->defaultOutfit = nullptr;
+    clone_base->sleepOutfit = nullptr;
     static_cast<RE::TESContainer*>(clone_base)->ClearDataComponent();
 
     RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
@@ -450,6 +451,7 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_sta
     // the bare skeleton has bound. detach_graph runs the phases.
 
     m_clone = placed;
+    m_source = actor;
     m_clone_state.store(CloneState::e_generated, std::memory_order_release);
     m_wait_frames = 0;
     logger::info("Clone has been created at the player, from {} ({:08x})", actor->GetDisplayFullName(), actor->GetFormID());
@@ -559,7 +561,7 @@ bool CharacterClone::detach_graph()
         // Phase 2: dress while the shell is still alive (the m0 order:
         // spawn → grace → dressing). Equipping in the birth frame raced the
         // skeleton assembly.
-        mirror_worn_equipment(clone, RE::PlayerCharacter::GetSingleton());
+        mirror_worn_equipment(clone, m_source);
         m_dressed = true;
         m_wait_frames = 0;
         logger::info(

@@ -104,7 +104,12 @@ private:
     std::uint32_t m_right_form = 0;
     std::uint32_t m_left_form = 0;
     std::uint32_t m_equip_reactions = 0;
+    // Two independent cadence counters for the world-running branch of poll_equipment: the worn
+    // reconcile and the prune must not share one, or the counter-resetting call starves the other
+    // (the shared counter let the worn sync's reset keep the prune's threshold permanently unreachable
+    // while the world ran - the prune only ever fired on paused frames).
     std::uint32_t m_worn_poll_frames = 0;
+    std::uint32_t m_prune_poll_frames = 0;
     std::uint32_t m_shape_ticks = 0;
     std::chrono::steady_clock::time_point m_last_tick{};
 

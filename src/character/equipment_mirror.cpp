@@ -10,6 +10,7 @@
 #include "RE/I/InventoryChanges.h"
 #include "RE/I/InventoryEntryData.h"
 #include "RE/I/ItemRemoveReason.h"
+#include "RE/T/TESAmmo.h"
 #include "RE/T/TESBoundObject.h"
 #include "RE/T/TESForm.h"
 
@@ -17,13 +18,16 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
-    // Every biped slot that carries the worn figure's appearance. The hand slots are excluded: those
-    // hold the weapons the driver's own hand poll mirrors (with the draw/sheathe push that belongs to
-    // them), and a weapon is not a `BGSBipedObjectForm`, so neither set can reach into the other.
+    // Every biped slot that carries the worn figure's appearance. The shield is excluded: it rides
+    // the left-hand equip slot and the driver's hand poll mirrors it (with the draw/sheathe push that
+    // belongs there), and a weapon is not a `BGSBipedObjectForm`, so neither set can reach into the
+    // other. FX01 stays out too: it carries effect attachments, and the effect-object prune drops
+    // their kin from the drawn graph anyway.
     constexpr RE::BGSBipedObjectForm::BipedObjectSlot Body_Slots[] =
     {
-        RE::BGSBipedObjectForm::BipedObjectSlot::kBody,
         RE::BGSBipedObjectForm::BipedObjectSlot::kHead,
+        RE::BGSBipedObjectForm::BipedObjectSlot::kHair,
+        RE::BGSBipedObjectForm::BipedObjectSlot::kBody,
         RE::BGSBipedObjectForm::BipedObjectSlot::kHands,
         RE::BGSBipedObjectForm::BipedObjectSlot::kForearms,
         RE::BGSBipedObjectForm::BipedObjectSlot::kAmulet,
@@ -39,12 +43,24 @@ namespace
         RE::BGSBipedObjectForm::BipedObjectSlot::kModChestPrimary,
         RE::BGSBipedObjectForm::BipedObjectSlot::kModChestSecondary,
         RE::BGSBipedObjectForm::BipedObjectSlot::kModShoulder,
+        RE::BGSBipedObjectForm::BipedObjectSlot::kModBack,
+        RE::BGSBipedObjectForm::BipedObjectSlot::kModMisc1,
+        RE::BGSBipedObjectForm::BipedObjectSlot::kModPelvisPrimary,
+        RE::BGSBipedObjectForm::BipedObjectSlot::kModPelvisSecondary,
         RE::BGSBipedObjectForm::BipedObjectSlot::kModArmLeft,
         RE::BGSBipedObjectForm::BipedObjectSlot::kModArmRight,
         RE::BGSBipedObjectForm::BipedObjectSlot::kModLegRight,
         RE::BGSBipedObjectForm::BipedObjectSlot::kModLegLeft,
         RE::BGSBipedObjectForm::BipedObjectSlot::kModFaceJewelry,
+        RE::BGSBipedObjectForm::BipedObjectSlot::kModMisc2,
     };
+
+    // The actor's CURRENT ammunition, as the engine itself selects it (same virtual, same source
+    // the quiver model is rendered from). Null when the actor has no current ammo.
+    RE::TESAmmo* current_ammo(RE::Actor& a_actor)
+    {
+        return a_actor.GetCurrentAmmo();
+    }
 
     void collect_worn(RE::Actor& a_actor, std::vector<RE::TESBoundObject*>& a_out)
     {
@@ -178,7 +194,8 @@ EquipmentPrune equipment_prune(RE::Actor& a_target, RE::Actor& a_source)
 {
     EquipmentPrune out;
 
-    // Everything the source is actually using: what it wears on the body and what its two hands hold.
+    // Everything the source is actually using: what it wears on the body, what its two hands hold,
+    // and the one ammo its quiver renders from.
     std::vector<RE::TESBoundObject*> keep;
     collect_worn(a_source, keep);
     for (const bool left : { false, true })
@@ -187,6 +204,8 @@ EquipmentPrune equipment_prune(RE::Actor& a_target, RE::Actor& a_source)
         if (held && held->object)
             keep.push_back(held->object);
     }
+    if (RE::TESAmmo* const ammo = current_ammo(a_source))
+        keep.push_back(ammo);
 
     RE::InventoryChanges* const changes = a_target.GetInventoryChanges(false);
     if (!changes || !changes->entryList)
@@ -199,11 +218,6 @@ EquipmentPrune equipment_prune(RE::Actor& a_target, RE::Actor& a_source)
         if (!entry || !entry->object)
             continue;
         ++out.considered;
-        // Ammunition is exempt: the arrow the engine puts in an actor's inventory is what a drawn bow
-        // renders its quiver from, and it is not one of the two hand slots this keep-set is built
-        // from, so pruning it would strip the quiver off a figure holding exactly the player's bow.
-        if (entry->object->IsAmmo())
-            continue;
         if (std::ranges::any_of(keep, [object = entry->object](RE::TESBoundObject* a_kept) { return a_kept == object; }))
             continue;
         extras.push_back(entry->object);
@@ -221,6 +235,64 @@ EquipmentPrune equipment_prune(RE::Actor& a_target, RE::Actor& a_source)
     }
 
     return out;
+}
+
+EquipmentAmmo equipment_sync_ammo(RE::Actor& a_target, RE::Actor& a_source)
+{
+    EquipmentAmmo sync;
+    RE::TESAmmo* const wanted = current_ammo(a_source);
+    RE::TESAmmo* const held = current_ammo(a_target);
+    sync.wanted = wanted ? wanted->GetFormID() : 0;
+    if (held == wanted)
+        return sync;   // the quiver already follows the player's, or both are empty
+
+    RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();
+    if (!equip_manager)
+        return sync;
+
+    // The held one comes off first, by the same route everything else does - it may be
+    // equipped-but-uncarried, the state the birth strip measured on the record's iron war axe,
+    // which no inventory walk can see.
+    if (held)
+    {
+        take_away(a_target, held);
+        ++sync.removed;
+    }
+
+    // Collected after that removal: the remaining carried ammo the player is not using.
+    std::vector<RE::TESBoundObject*> stale;
+    RE::InventoryChanges* const changes = a_target.GetInventoryChanges(false);
+    if (changes && changes->entryList)
+    {
+        for (const RE::InventoryEntryData* entry : *changes->entryList)
+        {
+            if (!entry || !entry->object || !entry->object->IsAmmo())
+                continue;
+            if (wanted && entry->object == wanted)
+                continue;
+            if (held && entry->object == held)
+                continue;   // already taken above
+            stale.push_back(entry->object);
+        }
+    }
+
+    // The wanted ammo has to be carried AND equipped: the engine picks an actor's current ammo from
+    // what it carries, so an unequipped stack leaves the quiver to whatever else is in there.
+    if (wanted)
+    {
+        if (changes && changes->GetItemCount(wanted) <= 0)
+            a_target.AddObjectToContainer(wanted, nullptr, 1, nullptr);
+        equip_manager->EquipObject(&a_target, wanted, nullptr, 1, nullptr, false, true, false, true);
+        ++sync.equipped;
+    }
+
+    for (RE::TESBoundObject* const object : stale)
+    {
+        take_away(a_target, object);
+        ++sync.removed;
+    }
+
+    return sync;
 }
 
 EquipmentStrip equipment_strip(RE::Actor& a_actor)

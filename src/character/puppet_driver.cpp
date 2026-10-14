@@ -387,7 +387,15 @@ void PuppetDriver::spawn()
         return;
     }
     puppet_base->fullName = "CharacterPanel Puppet";
+    // Cut the record's own kit at the source, the order the copy route validated from its first
+    // session: a duplicated NPC record arrives carrying the player's authored starting kit (on this
+    // machine a bow, a shield and an iron war axe), the reference's 3D load puts it into the
+    // inventory, and the engine's best-fit equip dresses a no-AI figure with whatever it finds there.
+    // With the container empty and both outfits nulled there is nothing to arrive, so the strip and
+    // the prune below are guards against other sources (scripts, mods), not the first line of defense.
     puppet_base->defaultOutfit = nullptr;
+    puppet_base->sleepOutfit = nullptr;
+    static_cast<RE::TESContainer*>(puppet_base)->ClearDataComponent();
 
     const RE::NiPointer<RE::TESObjectREFR> placed = player->PlaceObjectAtMe(puppet_base, false);
     RE::Actor* const puppet = placed ? placed->As<RE::Actor>() : nullptr;
@@ -405,11 +413,10 @@ void PuppetDriver::spawn()
     m_puppet = placed;
     m_puppet_form_id = puppet->GetFormID();
 
-    // A freshly placed Actor is NOT empty: its base record carries whatever it was authored with, and
-    // this puppet's base is a copy of the player's NPC record. The 2026-10-14 report was a bow, a
-    // shield and an axe on the panel figure that neither the player nor this plugin had put there.
-    // What it came with is logged - the form ids name the source - and taken off, because the figure
-    // is supposed to wear exactly the player's items and nothing else.
+    // Guardrail, not the first line of defense: the record's container was cleared above, so the
+    // authored kit cannot arrive - what this strip catches now is anything a script or a mod handed
+    // the fresh reference between placement and here. It still logs names and form ids, so whatever
+    // does arrive is identifiable from the log rather than only from the picture.
     const EquipmentStrip inherited = equipment_strip(*puppet);
     logger::info("SCOPY PUPPET stripped items={} removed={} unequipped={} inherited=[{}] unequipped=[{}]",
         inherited.items, inherited.removed, inherited.unequipped, inherited.sample, inherited.unequipped_sample);
@@ -423,6 +430,7 @@ void PuppetDriver::spawn()
     m_left_form = 0;
     m_equip_reactions = 0;
     m_worn_poll_frames = 0;
+    m_prune_poll_frames = 0;
     m_shape_ticks = 0;
     m_assembly_census = FigureAssembly{};
     m_assembly_signature = 0;
@@ -520,6 +528,7 @@ void PuppetDriver::release(char const* reason)
     m_dressed = false;
     m_dress_frames = 0;
     m_worn_poll_frames = 0;
+    m_prune_poll_frames = 0;
     m_shape_ticks = 0;
 }
 
@@ -606,8 +615,12 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
     // inventory and this figure has no AI to decide otherwise, so a carried-but-unwanted item comes
     // straight back on (that is how the record's starting kit survived the strip, and how a replaced
     // weapon stayed in the hand).
-    if (a_every_frame || m_worn_poll_frames >= Worn_Poll_Period)
+    //
+    // The two cadence counters are independent (see the members): a shared one let the worn sync's
+    // reset keep this threshold permanently unreachable while the world ran.
+    if (a_every_frame || ++m_prune_poll_frames >= Worn_Poll_Period)
     {
+        m_prune_poll_frames = 0;
         const EquipmentPrune prune = equipment_prune(puppet, *player);
         if (prune.changed())
         {
@@ -617,17 +630,30 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
         }
     }
 
-    // AFP10-B: the worn BODY set - armor, clothing, jewelry - which the hand poll below never saw.
-    // The weapons a hand carries and the body items a biped slot carries are disjoint sets, so the
-    // two polls do not fight over anything.
+    // The quiver's model comes from the actor's CURRENT ammo, and the engine picks the current ammo
+    // from the actor's own inventory - so a residual stack (the record's starting arrows) renders a
+    // quiver the player is not wearing. Kept to exactly the player's current ammo, carried and
+    // equipped; on the same cadence as the body set.
     if (a_every_frame || ++m_worn_poll_frames >= Worn_Poll_Period)
     {
         m_worn_poll_frames = 0;
+
+        // AFP10-B: the worn BODY set - armor, clothing, jewelry - which the hand poll below never
+        // saw. The weapons a hand carries and the body items a biped slot carries are disjoint
+        // sets, so the two polls do not fight over anything.
         const EquipmentSync sync = equipment_sync_worn(puppet, *player);
         if (sync.changed())
         {
             logger::info("SCOPY PUPPET worn equipped={} removed={} worn={} (the player's body items, reconciled)",
                 sync.equipped, sync.removed, sync.worn);
+            SceneGraphCopy::instance().note_world_change("world-equipment");
+        }
+
+        const EquipmentAmmo ammo = equipment_sync_ammo(puppet, *player);
+        if (ammo.changed())
+        {
+            logger::info("SCOPY PUPPET ammo wanted={:08x} equipped={} removed={} (the quiver follows the player's current ammo)",
+                ammo.wanted, ammo.equipped, ammo.removed);
             SceneGraphCopy::instance().note_world_change("world-equipment");
         }
     }
@@ -678,7 +704,10 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
 
         if (wanted)
         {
-            RE::InventoryChanges* const changes = puppet.GetInventoryChanges(true);
+            // (false) = initialise on demand, the AFP10f rule for every read: with `true` a
+            // not-yet-initialised container handed back null, the add was skipped, and the equip
+            // below ran on an item the figure did not carry.
+            RE::InventoryChanges* const changes = puppet.GetInventoryChanges(false);
             if (changes && changes->GetItemCount(wanted) <= 0)
                 puppet.AddObjectToContainer(wanted, nullptr, 1, nullptr);
             equip_manager->EquipObject(&puppet, wanted, nullptr, 1, nullptr, false, true, false, true);

@@ -4,6 +4,48 @@
 
 ### Fixed
 
+- AFP10g the record's own kit reaching the figure AT ALL (the root the AFP10b-f rounds kept chasing
+  symptoms of): the puppet's base is a `CreateDuplicateForm` of the player's NPC record, and the
+  duplicate carries the record's container - the reference's 3D load serves it into the inventory and
+  the engine's best-fit equip dresses a no-AI figure with whatever it finds. The spawn now cuts the
+  source the way the copy route has since its first session: both outfit fields nulled and the
+  duplicate's container cleared (`TESContainer::ClearDataComponent`) before `PlaceObjectAtMe`, so
+  nothing arrives for the birth strip, the dress strip or the prune to chase - those stay as guards
+  against other sources (scripts, mods) and keep their naming logs.
+
+- AFP10g the prune never running while the world ran: its cadence gate read the same counter the
+  worn-sync block incremented and reset at the same threshold, so the prune's `>= Worn_Poll_Period`
+  was unreachable outside the pause (the shared counter sat at most at 29 at the prune's check).
+  The two reconcilers now hold independent counters; the ammo reconciliation below rides the worn
+  cadence.
+
+- AFP10g the figure's quiver following whatever the engine's best-fit picked from residual arrows:
+  the quiver's model comes from an actor's CURRENT ammo, which neither the biped walk nor the hand
+  poll carries, and the prune's blanket ammunition exemption kept the record's own stack alive as
+  the only candidate. A new `equipment_sync_ammo` equips exactly the player's current ammo on the
+  figure (added to the inventory first, the old one taken off by the same unequip-and-remove route
+  as the hands), and the prune's exemption is narrowed to "the source's current ammo" - every other
+  carried round is pruned like any unused item. New line `SCOPY PUPPET ammo wanted=… equipped=…
+  removed=…`.
+
+- AFP10g appearance gear silently dropping off the figure: `Body_Slots` was missing `kHair` (wigs),
+  `kModBack` (cloaks, backpacks, back sheaths), `kModMisc1/2` and `kModPelvisPrimary/Secondary`
+  (belts, skirt pieces), so anything a mod put there was neither mirrored nor stripped by the slot
+  walk. The list now covers every armor-bearing slot except the shield (the hand poll's territory)
+  and FX01 (effect attachments).
+
+- AFP10g the last `GetInventoryChanges(true)`: the hand-equip path still asked for the figure's
+  container without initialising it - the one read the AFP10f sweep missed. Every read initialises
+  now.
+
+- AFP10g the clone route dressing from a hardcoded player: `detach_graph` walked the player's worn
+  set regardless of which actor the clone wraps. The source is stored at construction and the
+  dressing walks it; for the current player-only use the behavior is identical, and a future
+  non-player clone dresses from its own subject. The clone's spawn also nulls `sleepOutfit` next to
+  `defaultOutfit`, matching the puppet's source cut.
+
+### Fixed
+
 - AFP10f the record's own starting kit surviving on the figure, and a weapon that was never replaced
   once equipped (both reported 2026-10-14). Two causes, both about who else equips and what "removed"
   means. The birth strip asked for the inventory with `GetInventoryChanges(true)` - no initialisation -
