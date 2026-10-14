@@ -4,6 +4,19 @@
 
 ### Fixed
 
+- AFP10c the figure's equipment stacking, and a bow/shield/axe nobody equipped (both reported
+  2026-10-14): a freshly placed Actor is not empty - its base record carries what it was authored
+  with, and this puppet's base is a copy of the PLAYER's NPC record - so the shell arrived wearing its
+  own default items on top of whatever the mirror put on it. Those are also what the panel showed when
+  it was opened during the assembly window, before the dressing step ran. The puppet is now stripped
+  (every worn body item, both hands, every inventory entry) once when the reference is born and again
+  before dressing, and the strip logs `items=/removed=/unequipped=/inherited=[name(formid) ...]` so
+  whatever it came with is identifiable from the log rather than only from the picture. Worn-body
+  equipping also stops adding a second copy of an item the target already carries, which was the other
+  half of the stacking.
+
+### Fixed
+
 - AFP10b weapons appearing on the panel figure that the player was not holding (reported 2026-10-14 as
   "an axe, a shield and a bow"): the hand mirror only ever equipped. It pushed the player's hand item
   onto the puppet on every change and had no path that took one off, so every weapon the player drew

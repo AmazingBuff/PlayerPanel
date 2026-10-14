@@ -235,10 +235,11 @@ void PuppetDriver::tick(bool paused)
         if (!timed_out && ++m_dress_frames < Dress_Wait_Frames)
             return;
 
-        logger::info("SCOPY PUPPET assembly frames={} reason={} geoms={} skinned={} roots={} bound-nodes={}/{} stable={}",
+        logger::info("SCOPY PUPPET assembly frames={} reason={} geoms={} skinned={} roots={} bound-nodes={}/{} skin-data-null={} bones-null={} stable={}",
             m_grace_frames, timed_out ? "assembly-timeout" : "assembled",
             m_assembly_census.geometries, m_assembly_census.skinned, m_assembly_census.roots,
-            m_assembly_census.bound_nodes, m_assembly_census.alloc_slots, m_assembly_stable);
+            m_assembly_census.bound_nodes, m_assembly_census.alloc_slots,
+            m_assembly_census.skin_data_null, m_assembly_census.bones_array_null, m_assembly_stable);
         park(timed_out ? "assembly-timeout" : "assembled");
         // The window is over on EVERY path once the park ran, not only on the timeout path: leaving
         // `m_grace_frames` below the cap re-entered this block on the next frame, which re-printed
@@ -362,6 +363,15 @@ void PuppetDriver::spawn()
 
     m_puppet = placed;
     m_puppet_form_id = puppet->GetFormID();
+
+    // A freshly placed Actor is NOT empty: its base record carries whatever it was authored with, and
+    // this puppet's base is a copy of the player's NPC record. The 2026-10-14 report was a bow, a
+    // shield and an axe on the panel figure that neither the player nor this plugin had put there.
+    // What it came with is logged - the form ids name the source - and taken off, because the figure
+    // is supposed to wear exactly the player's items and nothing else.
+    const EquipmentStrip inherited = equipment_strip(*puppet);
+    logger::info("SCOPY PUPPET stripped items={} removed={} unequipped={} inherited=[{}]",
+        inherited.items, inherited.removed, inherited.unequipped, inherited.sample);
     m_grace_frames = 0;
     m_repark_frames = 0;
     m_manual_ticks = 0;
@@ -504,6 +514,17 @@ std::uint32_t PuppetDriver::dress(RE::Actor& a_puppet)
     RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
     if (!player)
         return 0;
+
+    // Stripped again here, not only at birth: the shell's own 3D load re-runs the record's default
+    // items after the birth strip, and dressing on top of those is what left the figure with two of
+    // everything (the 2026-10-14 "equipment stacking" report).
+    const EquipmentStrip stripped = equipment_strip(a_puppet);
+    if (stripped.changed())
+    {
+        logger::info("SCOPY PUPPET stripped again items={} removed={} unequipped={} sample=[{}]",
+            stripped.items, stripped.removed, stripped.unequipped, stripped.sample);
+    }
+
     const std::uint32_t equipped = equipment_equip_all_worn(a_puppet, *player);
     // The hand slots are the other poll's business, but the figure is about to leave the world: push
     // them here too so the first panel frame is not the first time it holds anything.

@@ -38,6 +38,14 @@ AFP10 additions - three things the panel figure now does that it did not before:
    beside the player, and reconciled afterwards: `SCOPY PUPPET worn equipped=...
    removed=... worn=...`. Change a piece of armor in the inventory and the panel
    figure should follow within a frame; report the line if it does not.
+   The figure is STRIPPED first - once when the reference is born and again
+   before dressing - because a freshly placed Actor is not empty: its base record
+   carries its own items, and this puppet's base is a copy of the player's NPC
+   record. Without the strip it arrived wearing a bow, a shield and an axe that
+   nobody had equipped, stacked on top of the mirrored gear, and a panel opened
+   during the assembly window showed exactly that. The strip names what it took
+   off - `SCOPY PUPPET stripped items=... removed=... inherited=[name(formid)
+   ...]` - so the source is identifiable from the log; return that line.
    Weapons are mirrored exactly in BOTH directions - the puppet's current hand
    item is taken off when the player's hand holds something else or nothing, and
    the `SCOPY PUPPET equip` line reports `equipped=`/`removed=`. A weapon on the

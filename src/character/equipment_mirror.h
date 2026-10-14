@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace RE
@@ -55,5 +56,26 @@ struct EquipmentSync
 // read fresh from the two inventories every call - so a missed frame cannot desynchronise it and
 // nothing has to be invalidated across a 3D generation change.
 [[nodiscard]] EquipmentSync equipment_sync_worn(RE::Actor& a_target, RE::Actor& a_source);
+
+// What one strip took off a figure.
+struct EquipmentStrip
+{
+    std::uint32_t items = 0;       // inventory entries the actor carried
+    std::uint32_t removed = 0;     // ... of which were removed
+    std::uint32_t unequipped = 0;  // worn items taken off before that
+    std::string sample;            // `name(formID)` of a few entries, for the log
+
+    [[nodiscard]] bool changed() const { return removed != 0 || unequipped != 0; }
+};
+
+// Takes EVERYTHING off an actor: every worn body item, both hands, and every inventory entry.
+//
+// This exists because a freshly placed Actor is not empty. Its base record carries what the record
+// itself was authored with, and the 2026-10-14 session showed the result on the panel figure: a bow,
+// a shield and an axe - none of them the player's, and none of them anything this plugin equipped -
+// sitting on a puppet whose base is a copy of the PLAYER's NPC record, on top of the equipment the
+// mirror had just put there. A figure that is supposed to wear exactly the player's items must start
+// from nothing, so the driver strips it once when the reference is born and again before dressing.
+[[nodiscard]] EquipmentStrip equipment_strip(RE::Actor& a_actor);
 
 PLUGIN_NAMESPACE_END

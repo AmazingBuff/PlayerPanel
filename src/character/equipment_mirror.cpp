@@ -9,7 +9,9 @@
 #include "RE/B/BGSBipedObjectForm.h"
 #include "RE/I/InventoryChanges.h"
 #include "RE/I/InventoryEntryData.h"
+#include "RE/I/ItemRemoveReason.h"
 #include "RE/T/TESBoundObject.h"
+#include "RE/T/TESForm.h"
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -86,6 +88,7 @@ std::uint32_t equipment_equip_all_worn(RE::Actor& a_target, RE::Actor& a_source)
     std::vector<RE::TESBoundObject*> worn;
     collect_worn(a_source, worn);
 
+    RE::InventoryChanges* const target_changes = a_target.GetInventoryChanges(true);
     std::uint32_t equipped = 0;
     for (RE::TESBoundObject* const object : worn)
     {
@@ -94,7 +97,10 @@ std::uint32_t equipment_equip_all_worn(RE::Actor& a_target, RE::Actor& a_source)
         // The copy route's order, unchanged: the item has to exist in the target's own inventory
         // before the equip is asked for, and `applyNow` is what makes the biped change happen in this
         // call rather than on the actor's next update (a figure with no AI never gets that update).
-        a_target.AddObjectToContainer(object, nullptr, 1, nullptr);
+        // It is added only when it is not already carried - adding a second copy is how a figure ends
+        // up with two of the same item.
+        if (target_changes && target_changes->GetItemCount(object) <= 0)
+            a_target.AddObjectToContainer(object, nullptr, 1, nullptr);
         equip_manager->EquipObject(&a_target, object, nullptr, 1, nullptr, false, true, false, true);
         ++equipped;
     }
@@ -116,6 +122,7 @@ EquipmentSync equipment_sync_worn(RE::Actor& a_target, RE::Actor& a_source)
     std::vector<RE::TESBoundObject*> current;
     collect_worn(a_target, current);
 
+    RE::InventoryChanges* const target_changes = a_target.GetInventoryChanges(true);
     const auto in = [](const std::vector<RE::TESBoundObject*>& a_set, RE::TESBoundObject* a_object)
     {
         return std::ranges::any_of(a_set, [a_object](RE::TESBoundObject* a_entry) { return a_entry == a_object; });
@@ -125,7 +132,8 @@ EquipmentSync equipment_sync_worn(RE::Actor& a_target, RE::Actor& a_source)
     {
         if (!object || in(current, object))
             continue;
-        a_target.AddObjectToContainer(object, nullptr, 1, nullptr);
+        if (target_changes && target_changes->GetItemCount(object) <= 0)
+            a_target.AddObjectToContainer(object, nullptr, 1, nullptr);
         equip_manager->EquipObject(&a_target, object, nullptr, 1, nullptr, false, true, false, true);
         ++sync.equipped;
     }
@@ -142,6 +150,56 @@ EquipmentSync equipment_sync_worn(RE::Actor& a_target, RE::Actor& a_source)
     }
 
     return sync;
+}
+
+EquipmentStrip equipment_strip(RE::Actor& a_actor)
+{
+    EquipmentStrip out;
+
+    // Worn items come off first: an item removed while it is still worn leaves the figure dressed
+    // from a biped state whose items no longer exist.
+    RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();
+    if (equip_manager)
+    {
+        for (const RE::BGSBipedObjectForm::BipedObjectSlot slot : Body_Slots)
+        {
+            RE::TESObjectARMO* const worn = a_actor.GetWornArmor(slot);
+            if (worn && equip_manager->UnequipObject(&a_actor, worn, nullptr, 1, nullptr, false, true, false, true))
+                ++out.unequipped;
+        }
+        for (const bool left : { false, true })
+        {
+            const RE::InventoryEntryData* const held = a_actor.GetEquippedEntryData(left);
+            RE::TESBoundObject* const object = held && held->object ? held->object : nullptr;
+            if (object && equip_manager->UnequipObject(&a_actor, object, nullptr, 1, nullptr, false, true, false, true))
+                ++out.unequipped;
+        }
+    }
+
+    RE::InventoryChanges* const changes = a_actor.GetInventoryChanges(true);
+    if (!changes || !changes->entryList)
+        return out;
+
+    // Collected first, removed afterwards: the removal mutates the list being walked.
+    std::vector<std::pair<RE::TESBoundObject*, std::int32_t>> entries;
+    for (const RE::InventoryEntryData* entry : *changes->entryList)
+        if (entry && entry->object)
+            entries.emplace_back(entry->object, entry->countDelta);
+    out.items = static_cast<std::uint32_t>(entries.size());
+
+    for (auto const& [object, count] : entries)
+    {
+        if (!object || count == 0)
+            continue;
+        if (out.sample.size() < 200)
+        {
+            const char* const name = object->GetName();
+            out.sample += fmt::format("{}({:08x}) ", name && *name ? name : "?", object->GetFormID());
+        }
+        a_actor.RemoveItem(object, count > 0 ? count : 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+        ++out.removed;
+    }
+    return out;
 }
 
 PLUGIN_NAMESPACE_END

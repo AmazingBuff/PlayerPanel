@@ -120,7 +120,45 @@ AFP10 上机后用户报告：**clone 身上出现了玩家没有的斧头、盾
 **AFP10b 复测项**：① 反复切武器（斧→盾→弓→空手），面板武器数量**始终**与玩家一致，
 `equip` 行出现 `removed=`；② 面板不再出现玩家没有的武器；③ 装配行**只出现一次**。
 
-## 5. 判读回传
+## 5. AFP10c：装备叠加与"新 Actor 自带装备"（2026-10-14 第二轮报告）
+
+第二轮报告两条：**装备叠加**；**初始阶段**同步仍有问题——傀儡会带上"默认新 Actor 的弓箭、盾牌、斧头"。
+
+根因（同一件事的两半）：
+
+- **新放置的 Actor 不是空的**。它的基础记录自带作者放进去的东西，而傀儡的基础记录是**玩家 NPC 记录的副本**
+  （`CreateDuplicateForm`），于是壳一生出来就穿着自己那套（弓/盾/斧），叠在镜像穿的装备之上 = 叠加。
+- **装配窗口内开面板就会看到它**：穿衣发生在窗口末尾（`dressed` 行），在第一轮日志里是 `born`
+  之后约 10 秒（`reason=assembly-timeout`，等满 240 帧）。这 10 秒里壳是"自带装备 + 未镜像"的状态。
+
+**修正（AFP10c）**：
+
+1. 新增 `equipment_strip()`：把每个 biped 槽位的 worn 项、双手、以及**全部库存条目**脱下并移除；
+2. **出生时剥一次**（并把 `inherited=[名字(formID)]` 打进日志，自带的到底是什么由日志点名），
+   **穿衣前再剥一次**（壳的 3D 装载会按记录再挂一次默认装备）；
+3. 装 worn 项前先 `GetItemCount`，已有就不再 `AddObjectToContainer`（重复添加是叠加的另一半）。
+
+AFP10b 会话已确认修好的部分（同一次日志）：
+
+```
+SCOPY SHAPE applied reason=dressing compared=170 mismatched=161 copied=170 skipped=46
+SCOPY PUPPET equip right=000be19c left=00000000 pushed=draw    equipped=1 removed=1
+SCOPY PUPPET equip right=00000000 left=00000000 pushed=sheathe equipped=0 removed=1
+```
+
+即：XPMSE 的 46 条状态 morph 已被排除（`skipped=46`），手部现在**双向**（玩家放下时 `removed=1`）。
+
+**AFP10c 复测项**：① 出生后立刻开面板：壳应是**裸的**或已穿玩家装备，**绝不出现**弓/盾/斧这类自带件；
+② `SCOPY PUPPET stripped items=… removed=… inherited=[…]` 行点名了自带件（把它们的形式 ID 记下来，
+可定位是哪个 mod 给玩家 NPC 记录加的）；③ 面板上任何一件装备都**只有一份**（不再叠加）；
+④ `equip` 行仍然 `equipped=/removed=` 成对。
+
+**仍待观察（已加日志字段）**：`assembly-timeout` 仍在重载后的第一次出生出现，且
+`bound-nodes=0/0`、`stable=237`——壳的几何都在（48/44）却一个 skin data 都没就绪且 240 帧不变。
+AFP10c 的该行新增 `skin-data-null=` / `bones-null=` 两个字段用于区分"skin data 没装载"与
+"bones 数组为空"。若稳定复现，下一轮把门从"帧数上限"改为"skin data 就绪 + 时间上限"。
+
+## 6. 判读回传
 
 | 项 | 读数 |
 | --- | --- |
