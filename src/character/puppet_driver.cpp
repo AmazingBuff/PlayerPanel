@@ -601,6 +601,22 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
     if (!player)
         return;
 
+    // AFP10f: anything the player is not using leaves the figure's inventory outright. Equipping the
+    // player's set is not enough on its own - the engine equips best-fit gear from an actor's own
+    // inventory and this figure has no AI to decide otherwise, so a carried-but-unwanted item comes
+    // straight back on (that is how the record's starting kit survived the strip, and how a replaced
+    // weapon stayed in the hand).
+    if (a_every_frame || m_worn_poll_frames >= Worn_Poll_Period)
+    {
+        const EquipmentPrune prune = equipment_prune(puppet, *player);
+        if (prune.changed())
+        {
+            logger::info("SCOPY PUPPET pruned removed={} of={} sample=[{}]",
+                prune.removed, prune.considered, prune.sample);
+            SceneGraphCopy::instance().note_world_change("world-equipment");
+        }
+    }
+
     // AFP10-B: the worn BODY set - armor, clothing, jewelry - which the hand poll below never saw.
     // The weapons a hand carries and the body items a biped slot carries are disjoint sets, so the
     // two polls do not fight over anything.
@@ -647,8 +663,18 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
         if (held == wanted)
             continue;
 
-        if (held && equip_manager->UnequipObject(&puppet, held, nullptr, 1, nullptr, false, true, false, true))
+        // The old one comes off AND leaves the inventory. Unequipping alone left it carried, and the
+        // engine's own best-fit equip puts a carried weapon straight back - the 2026-10-14 report of a
+        // weapon that was never replaced once it had been equipped. The count reports the removal
+        // itself, not the equip API's opinion of it.
+        if (held)
+        {
+            equip_manager->UnequipObject(&puppet, held, nullptr, 1, nullptr, false, true, false, true);
+            RE::InventoryChanges* const stale = puppet.GetInventoryChanges(false);
+            const std::int16_t carried = stale ? stale->GetItemCount(held) : 0;
+            puppet.RemoveItem(held, carried > 0 ? carried : 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
             ++hand_removed;
+        }
 
         if (wanted)
         {

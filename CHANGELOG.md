@@ -4,6 +4,19 @@
 
 ### Fixed
 
+- AFP10f the record's own starting kit surviving on the figure, and a weapon that was never replaced
+  once equipped (both reported 2026-10-14). Two causes, both about who else equips and what "removed"
+  means. The birth strip asked for the inventory with `GetInventoryChanges(true)` - no initialisation -
+  and a freshly placed Actor's container does not exist yet, so it reported `items=0` on a shell that
+  was measurably wearing an iron war axe (00013790, the record's kit); the kit then arrived, and the
+  engine's own best-fit equip puts a carried item straight back on a figure that has no AI to decide
+  otherwise. Strips and reads now initialise the container, and a new prune removes EVERY carried item
+  the player is not wearing or holding (ammunition exempt: it is what a drawn bow renders its quiver
+  from) - after a prune there is nothing left for the engine to equip. The hand replacement also
+  removes the old weapon from the inventory instead of only unequipping it, and reports the removal
+  itself rather than the equip API's opinion: the same session logged `removed=0` on every replacement
+  while the old weapon stayed in the hand.
+
 - AFP10e the panel figure not moving until F4 had been pressed (reported 2026-10-14): with the drive
   state the session started on, the graph was advanced but nothing was applied, so the figure stood
   still until the key walk reached an applying state. Fixing that by defaulting to the applying state

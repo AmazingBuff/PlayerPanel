@@ -49,7 +49,10 @@ namespace
     void collect_worn(RE::Actor& a_actor, std::vector<RE::TESBoundObject*>& a_out)
     {
         a_out.clear();
-        RE::InventoryChanges* const changes = a_actor.GetInventoryChanges(true);
+        // `false` = initialise the container if it is not there yet. A freshly placed Actor's inventory
+        // is created on demand, and asking for it with `true` handed back nothing at all - which is how
+        // the 2026-10-14 strip reported `items=0` on a shell that was wearing an iron war axe.
+        RE::InventoryChanges* const changes = a_actor.GetInventoryChanges(false);
         if (!changes || !changes->entryList)
             return;
         for (const RE::InventoryEntryData* entry : *changes->entryList)
@@ -60,6 +63,26 @@ namespace
             if (object && equipment_is_body_biped(*object))
                 a_out.push_back(object);
         }
+    }
+    // Takes an item off a figure and out of its inventory.
+    //
+    // Both halves are needed. Unequipping alone leaves the item carried, and a figure with no AI to
+    // decide otherwise is exactly what the engine's own auto-equip serves: it puts the item straight
+    // back on. And the equip API's own report is not to be trusted here - the 2026-10-14 session
+    // logged `removed=0` on every weapon replacement while the old weapon stayed in the hand, so the
+    // removal is done through the inventory as well and the caller re-reads to see what happened.
+    void take_away(RE::Actor& a_actor, RE::TESBoundObject* a_object)
+    {
+        if (!a_object)
+            return;
+        if (RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton())
+            equip_manager->UnequipObject(&a_actor, a_object, nullptr, 1, nullptr, false, true, false, true);
+
+        RE::InventoryChanges* const changes = a_actor.GetInventoryChanges(false);
+        const std::int16_t carried = changes ? changes->GetItemCount(a_object) : 0;
+        // An equipped-but-uncarried item still has to go: the birth strip met exactly that state (an
+        // iron war axe in the hand and an empty inventory).
+        a_actor.RemoveItem(a_object, carried > 0 ? carried : 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
     }
 }
 
@@ -88,7 +111,7 @@ std::uint32_t equipment_equip_all_worn(RE::Actor& a_target, RE::Actor& a_source)
     std::vector<RE::TESBoundObject*> worn;
     collect_worn(a_source, worn);
 
-    RE::InventoryChanges* const target_changes = a_target.GetInventoryChanges(true);
+    RE::InventoryChanges* const target_changes = a_target.GetInventoryChanges(false);
     std::uint32_t equipped = 0;
     for (RE::TESBoundObject* const object : worn)
     {
@@ -122,7 +145,6 @@ EquipmentSync equipment_sync_worn(RE::Actor& a_target, RE::Actor& a_source)
     std::vector<RE::TESBoundObject*> current;
     collect_worn(a_target, current);
 
-    RE::InventoryChanges* const target_changes = a_target.GetInventoryChanges(true);
     const auto in = [](const std::vector<RE::TESBoundObject*>& a_set, RE::TESBoundObject* a_object)
     {
         return std::ranges::any_of(a_set, [a_object](RE::TESBoundObject* a_entry) { return a_entry == a_object; });
@@ -132,7 +154,8 @@ EquipmentSync equipment_sync_worn(RE::Actor& a_target, RE::Actor& a_source)
     {
         if (!object || in(current, object))
             continue;
-        if (target_changes && target_changes->GetItemCount(object) <= 0)
+        RE::InventoryChanges* const changes = a_target.GetInventoryChanges(false);
+        if (changes && changes->GetItemCount(object) <= 0)
             a_target.AddObjectToContainer(object, nullptr, 1, nullptr);
         equip_manager->EquipObject(&a_target, object, nullptr, 1, nullptr, false, true, false, true);
         ++sync.equipped;
@@ -140,16 +163,64 @@ EquipmentSync equipment_sync_worn(RE::Actor& a_target, RE::Actor& a_source)
 
     for (RE::TESBoundObject* const object : current)
     {
-        // Anything the target wears that the source no longer does comes off. The item stays in the
-        // target's container: it is invisible inventory (the figure is dressed from the worn flags,
-        // not from what it carries) and the set is bounded by the distinct items the player wore.
+        // Anything the target wears that the source no longer does comes off AND leaves the container:
+        // carried-but-unwanted is what the engine's auto-equip picks back up.
         if (!object || in(wanted, object))
             continue;
-        if (equip_manager->UnequipObject(&a_target, object, nullptr, 1, nullptr, false, true, false, true))
-            ++sync.removed;
+        take_away(a_target, object);
+        ++sync.removed;
     }
 
     return sync;
+}
+
+EquipmentPrune equipment_prune(RE::Actor& a_target, RE::Actor& a_source)
+{
+    EquipmentPrune out;
+
+    // Everything the source is actually using: what it wears on the body and what its two hands hold.
+    std::vector<RE::TESBoundObject*> keep;
+    collect_worn(a_source, keep);
+    for (const bool left : { false, true })
+    {
+        const RE::InventoryEntryData* const held = a_source.GetEquippedEntryData(left);
+        if (held && held->object)
+            keep.push_back(held->object);
+    }
+
+    RE::InventoryChanges* const changes = a_target.GetInventoryChanges(false);
+    if (!changes || !changes->entryList)
+        return out;
+
+    // Collected first: taking an item away mutates the list being walked.
+    std::vector<RE::TESBoundObject*> extras;
+    for (const RE::InventoryEntryData* entry : *changes->entryList)
+    {
+        if (!entry || !entry->object)
+            continue;
+        ++out.considered;
+        // Ammunition is exempt: the arrow the engine puts in an actor's inventory is what a drawn bow
+        // renders its quiver from, and it is not one of the two hand slots this keep-set is built
+        // from, so pruning it would strip the quiver off a figure holding exactly the player's bow.
+        if (entry->object->IsAmmo())
+            continue;
+        if (std::ranges::any_of(keep, [object = entry->object](RE::TESBoundObject* a_kept) { return a_kept == object; }))
+            continue;
+        extras.push_back(entry->object);
+    }
+
+    for (RE::TESBoundObject* const object : extras)
+    {
+        if (out.sample.size() < 200)
+        {
+            const char* const name = object->GetName();
+            out.sample += fmt::format("{}({:08x}) ", name && *name ? name : "?", object->GetFormID());
+        }
+        take_away(a_target, object);
+        ++out.removed;
+    }
+
+    return out;
 }
 
 EquipmentStrip equipment_strip(RE::Actor& a_actor)
@@ -164,53 +235,51 @@ EquipmentStrip equipment_strip(RE::Actor& a_actor)
         out.unequipped_sample += fmt::format("{}({:08x}) ", name && *name ? name : "?", a_object->GetFormID());
     };
 
-    // Worn items come off first: an item removed while it is still worn leaves the figure dressed
-    // from a biped state whose items no longer exist.
-    RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();
-    if (equip_manager)
+    // Worn items come off first, and by the same route everything else does: the equip API alone was
+    // measured leaving a hand occupied (`removed=0` on a replacement), so the item is unequipped and
+    // then removed rather than trusted to a return value.
+    for (const RE::BGSBipedObjectForm::BipedObjectSlot slot : Body_Slots)
     {
-        for (const RE::BGSBipedObjectForm::BipedObjectSlot slot : Body_Slots)
-        {
-            RE::TESObjectARMO* const worn = a_actor.GetWornArmor(slot);
-            if (worn && equip_manager->UnequipObject(&a_actor, worn, nullptr, 1, nullptr, false, true, false, true))
-            {
-                ++out.unequipped;
-                note(worn);
-            }
-        }
-        for (const bool left : { false, true })
-        {
-            const RE::InventoryEntryData* const held = a_actor.GetEquippedEntryData(left);
-            RE::TESBoundObject* const object = held && held->object ? held->object : nullptr;
-            if (object && equip_manager->UnequipObject(&a_actor, object, nullptr, 1, nullptr, false, true, false, true))
-            {
-                ++out.unequipped;
-                note(object);
-            }
-        }
+        RE::TESObjectARMO* const worn = a_actor.GetWornArmor(slot);
+        if (!worn)
+            continue;
+        take_away(a_actor, worn);
+        ++out.unequipped;
+        note(worn);
+    }
+    for (const bool left : { false, true })
+    {
+        const RE::InventoryEntryData* const held = a_actor.GetEquippedEntryData(left);
+        RE::TESBoundObject* const object = held && held->object ? held->object : nullptr;
+        if (!object)
+            continue;
+        take_away(a_actor, object);
+        ++out.unequipped;
+        note(object);
     }
 
-    RE::InventoryChanges* const changes = a_actor.GetInventoryChanges(true);
+    // `false`: initialise the container if it is not there. With `true` a freshly placed Actor handed
+    // back nothing at all, which is how the first strip reported `items=0` on a shell that was wearing
+    // an iron war axe - the record's own kit then arrived later and nothing ever took it off.
+    RE::InventoryChanges* const changes = a_actor.GetInventoryChanges(false);
     if (!changes || !changes->entryList)
         return out;
 
     // Collected first, removed afterwards: the removal mutates the list being walked.
-    std::vector<std::pair<RE::TESBoundObject*, std::int32_t>> entries;
+    std::vector<RE::TESBoundObject*> entries;
     for (const RE::InventoryEntryData* entry : *changes->entryList)
-        if (entry && entry->object)
-            entries.emplace_back(entry->object, entry->countDelta);
+        if (entry && entry->object && entry->countDelta != 0)
+            entries.push_back(entry->object);
     out.items = static_cast<std::uint32_t>(entries.size());
 
-    for (auto const& [object, count] : entries)
+    for (RE::TESBoundObject* const object : entries)
     {
-        if (!object || count == 0)
-            continue;
         if (out.sample.size() < 200)
         {
             const char* const name = object->GetName();
             out.sample += fmt::format("{}({:08x}) ", name && *name ? name : "?", object->GetFormID());
         }
-        a_actor.RemoveItem(object, count > 0 ? count : 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+        take_away(a_actor, object);
         ++out.removed;
     }
     return out;

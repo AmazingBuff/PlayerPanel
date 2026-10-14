@@ -240,7 +240,51 @@ F4 的五个固定档（off/tick/tick+apply/tick+apply+force/step）保留为诊
 tick=on` 出现在会话开头；③ `SCOPY PUPPET force-when-paused on`；④ 世界运行段仍有
 `SCOPY FP verdict … match=1`（证明没有被 auto 破坏）；⑤ 武器在**不切换**的情况下从一开面板就在手里。
 
-## 9. 判读回传
+## 9. AFP10f：自带套装仍在，以及"武器装上就不再被替换"
+
+两条报告，根因都是"还有别人在装备"和"`removed` 到底代表什么"。
+
+### 9.1 自带套装仍在（AFP10c 的剥离没有生效）
+
+现场唯一一条剥离行：
+
+```
+SCOPY PUPPET stripped items=0 removed=0 unequipped=1 inherited=[] unequipped=[Iron War Axe(00013790)]
+```
+
+`unequipped=[Iron War Axe(00013790)]`——**Skyrim.esm 的铁战斧**，本机某个 mod 把起始套装加进了
+玩家 NPC 记录，而傀儡的基础记录是它的副本。但 `items=0`：**库存读成了空**。
+
+原因：`GetInventoryChanges(true)` 的 `true` 是"**不要**初始化容器"。刚放置的 Actor 容器还没建 →
+返回空 → 剥离只脱了手上的、一个条目都没删。随后引擎把记录自带的物品放进库存并**自动装备**
+（best-fit），而傀儡没有 AI 去否决它——于是"初始装备仍然存在"。
+
+**修正**：
+
+1. 剥离/读取一律改用 `GetInventoryChanges(false)`（按需初始化）；
+2. 新增**持续修剪** `equipment_prune()`：凡玩家**未穿且未持**的携带物，一律卸下并删除
+   （弹药豁免——拉弓的箭袋由它渲染）。修剪之后傀儡只携带玩家那套，**引擎没有可自动装回的东西**；
+3. 剥离的删除改走同一路径（`take_away` = 卸下 + 从库存删除），不再依赖 equip API 的返回值。
+
+### 9.2 武器不被替换
+
+```
+22:31:04 equip right=00000000 … equipped=0 removed=0   ← 玩家收刀，傀儡的手没被卸下
+22:31:05 equip right=560c2a4c … equipped=1 removed=0
+```
+
+`removed=0` 表示卸下没生效，而装备成功了 → **只增不减**。而且即使卸下成功，物品仍在傀儡库存里，
+引擎的 best-fit 又会把它装回去。
+
+**修正**：替换时旧武器**同时从库存删除**；`removed` 计数改为报告**实际删除**，不再报告 equip API
+的返回值（同一会话里 `removed=0` 而武器明明还在手上）。
+
+**复测项**：① 出生后 `stripped items=` 应 **>0**，且 `removed=`/`unequipped=[…]` 点名记录自带的套装
+（把它回传，形式 ID 能定位是哪个 mod 给玩家记录加的）；② 玩家换武器 → `equip … equipped=1 removed=1`；
+③ 面板上**任何时刻只有玩家当前那一套**，自带套装不再出现；④ 出现 `SCOPY PUPPET pruned removed=N
+sample=[…]` 就说明引擎又塞了什么进来，那行就是证据。
+
+## 10. 判读回传
 
 | 项 | 读数 |
 | --- | --- |

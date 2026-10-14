@@ -69,14 +69,34 @@ struct EquipmentStrip
     [[nodiscard]] bool changed() const { return removed != 0 || unequipped != 0; }
 };
 
-// Takes EVERYTHING off an actor: every worn body item, both hands, and every inventory entry.
+// Takes everything off an actor: every worn body item, both hands, and every inventory entry.
 //
 // This exists because a freshly placed Actor is not empty. Its base record carries what the record
-// itself was authored with, and the 2026-10-14 session showed the result on the panel figure: a bow,
-// a shield and an axe - none of them the player's, and none of them anything this plugin equipped -
-// sitting on a puppet whose base is a copy of the PLAYER's NPC record, on top of the equipment the
-// mirror had just put there. A figure that is supposed to wear exactly the player's items must start
+// itself was authored with - on this machine that is a starting kit added to the player's NPC record,
+// and 2026-10-14 measured the figure born wearing an iron war axe (00013790) - and the puppet's base
+// is a copy of that record. A figure that is supposed to wear exactly the player's items must start
 // from nothing, so the driver strips it once when the reference is born and again before dressing.
 [[nodiscard]] EquipmentStrip equipment_strip(RE::Actor& a_actor);
+
+// What one prune took off a figure.
+struct EquipmentPrune
+{
+    std::uint32_t considered = 0;  // inventory entries the actor carried
+    std::uint32_t removed = 0;     // ... of which were not the source's and were taken away
+    std::string sample;            // `name(formID)` of a few of them, for the log
+
+    [[nodiscard]] bool changed() const { return removed != 0; }
+};
+
+// Removes everything the source is NOT using: any carried item that is neither worn on its body nor
+// held in one of its hands.
+//
+// Equipping the source's set is not enough on its own, because of who else equips. The engine equips
+// best-fit gear for an actor from that actor's own inventory, and this figure has no AI to decide
+// otherwise, so an item left carried comes straight back on - which is how a weapon that should have
+// been replaced stayed in the hand (2026-10-14). Pruning the inventory is what removes the engine's
+// opportunity: after a prune the figure carries only the source's own set, so nothing else can be
+// equipped on it.
+[[nodiscard]] EquipmentPrune equipment_prune(RE::Actor& a_target, RE::Actor& a_source);
 
 PLUGIN_NAMESPACE_END
