@@ -29,6 +29,19 @@ namespace oar
         std::atomic<std::uint32_t> s_standing_frames = 0;
         std::atomic<WeaponForm> s_standing_form{ WeaponForm::kNone };
         std::atomic<RE::hkbClipGenerator const*> s_selected = nullptr;
+        // The active-query chain (see binary_profile.h): resolved only when the build's query
+        // entries carry the bytes the profile recorded, so an unverified build never runs one.
+        using GetSingleton = void* (*)();
+        using ForEachProjectData = void (*)(void const*, std::function<void(RE::hkbCharacterStringData*, void*)> const&);
+        using GetReplacements = void* (*)(void const*, std::uint16_t);
+        using EvaluateReplacements = void* (*)(void const*, RE::TESObjectREFR*, RE::hkbClipGenerator*);
+        GetSingleton s_get_singleton = nullptr;
+        ForEachProjectData s_for_each_project_data = nullptr;
+        GetReplacements s_get_replacements = nullptr;
+        EvaluateReplacements s_evaluate_replacements = nullptr;
+        // Diagnostics only: how many evaluations the window actually saw, so the log can say
+        // whether the open edge produced an OAR decision at all.
+        std::atomic<std::uint32_t> s_window_hits = 0;
 
         struct Frame
         {
@@ -96,6 +109,9 @@ namespace oar
             if (!scope && standing_window_open() && source && source->IsPlayerRef())
             {
                 s_selected.store(clip, std::memory_order_release);
+                if (s_window_hits.fetch_add(1, std::memory_order_relaxed) == 0)
+                    logger::info("SCOPY OAR window hit clip=0x{:x} form={}", reinterpret_cast<std::uintptr_t>(clip),
+                        weapon_form_name(standing_weapon_form()));
                 RE::BSString window_storage;
                 const std::string_view name = condition_name(*condition, window_storage);
                 PreviewState const standing{
@@ -325,6 +341,14 @@ namespace oar
             std::memory_order_acq_rel, std::memory_order_acquire))
         {
         }
+        if (left == 1)
+        {
+            // The window just closed: report what it saw, so a fallback in the panel's capture can
+            // be told apart from a window that never ran.
+            logger::info("SCOPY OAR window closed hits={} selected={}", s_window_hits.load(std::memory_order_relaxed),
+                s_selected.load(std::memory_order_acquire) != nullptr ? 1 : 0);
+            s_window_hits.store(0, std::memory_order_relaxed);
+        }
     }
 
     bool standing_window_open()
@@ -350,6 +374,41 @@ namespace oar
     void clear_selected_clip()
     {
         s_selected.store(nullptr, std::memory_order_release);
+    }
+
+    bool query_supported()
+    {
+        return s_get_singleton && s_for_each_project_data && s_get_replacements && s_evaluate_replacements;
+    }
+
+    void* query_replacement(RE::TESObjectREFR& a_source, RE::hkbClipGenerator& a_clip, std::uint16_t a_base_index,
+        std::uint32_t& a_candidates, std::uint32_t& a_with_replacements)
+    {
+        a_candidates = 0;
+        a_with_replacements = 0;
+        if (!query_supported())
+            return nullptr;
+        void* const singleton = s_get_singleton();
+        if (!singleton)
+            return nullptr;
+        void* found = nullptr;
+        // The project datas are walked until one of them produces a replacement for the base index
+        // whose conditions hold; the conditions run through the hooks above, so the standing
+        // answers are in force for the whole decision.
+        std::function<void(RE::hkbCharacterStringData*, void*)> visit =
+            [&](RE::hkbCharacterStringData*, void* a_project_data)
+            {
+                if (found || !a_project_data)
+                    return;
+                ++a_candidates;
+                void* const replacements = s_get_replacements(a_project_data, a_base_index);
+                if (!replacements)
+                    return;
+                ++a_with_replacements;
+                found = s_evaluate_replacements(replacements, std::addressof(a_source), std::addressof(a_clip));
+            };
+        s_for_each_project_data(singleton, visit);
+        return found;
     }
 
     bool install_hooks()
@@ -408,8 +467,22 @@ namespace oar
             return false;
         }
         s_ready.store(true, std::memory_order_release);
-        logger::info("OAR {}.{}.{} hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only",
-            profile->version[0], profile->version[1], profile->version[2]);
+        // The active-query chain: an entry that is zero, or whose bytes do not match what the
+        // profile recorded, leaves the query unarmed - the two condition hooks keep working.
+        QueryProfile const& query = profile->query;
+        const auto image = std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(module), profile->image_size);
+        const bool complete = std::ranges::all_of(query.entries, [](QueryEntry const& a_entry) { return a_entry.rva != 0; });
+        const std::array<std::uint8_t, 16> unused_guid{};
+        if (complete && matches_query(query, 0, 0, unused_guid, 0, image))
+        {
+            s_get_singleton = reinterpret_cast<GetSingleton>(base + query.entries[0].rva);
+            s_for_each_project_data = reinterpret_cast<ForEachProjectData>(base + query.entries[1].rva);
+            s_get_replacements = reinterpret_cast<GetReplacements>(base + query.entries[2].rva);
+            s_evaluate_replacements = reinterpret_cast<EvaluateReplacements>(base + query.entries[3].rva);
+        }
+        logger::info("OAR {}.{}.{} hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query {}",
+            profile->version[0], profile->version[1], profile->version[2],
+            query_supported() ? "available" : "unavailable for this build");
         return true;
     }
 

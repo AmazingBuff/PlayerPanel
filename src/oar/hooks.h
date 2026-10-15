@@ -46,6 +46,15 @@ namespace oar
     [[nodiscard]] SelectedClip selected_clip();
     void clear_selected_clip();
 
+    // The ACTIVE query (see binary_profile.h): asks OAR what it would choose for this actor and
+    // base clip RIGHT NOW, instead of waiting for the engine to activate a clip - the paused panel
+    // has no evaluation in flight (2026-10-16 log: hits=0). The conditions inside OAR's own
+    // decision run through the hooks above, so the standing answers are in force while it decides.
+    // The returned pointer is OAR's object, never dereferenced here.
+    [[nodiscard]] bool query_supported();
+    void* query_replacement(RE::TESObjectREFR& a_source, RE::hkbClipGenerator& a_clip,
+        std::uint16_t a_base_index, std::uint32_t& a_candidates, std::uint32_t& a_with_replacements);
+
     // Evaluates an audited condition tree. Selection/loading/playback are separate responsibilities.
     [[nodiscard]] EvaluationResult evaluate_condition(::Conditions::ICondition const& condition,
         RE::TESObjectREFR& source, RE::hkbClipGenerator& preview_clip, PreviewState const& state,

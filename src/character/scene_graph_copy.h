@@ -50,6 +50,8 @@ private:
     uint32_t m_capture_id;
     bool m_draw_enabled;
     bool m_cap_logged;
+    // A panel open whose capture is still waiting for the OAR standing window to finish.
+    bool m_open_pending = false;
     IdleDriver m_idle;
     ClipPlayer m_clip;
     std::string m_driver_note;

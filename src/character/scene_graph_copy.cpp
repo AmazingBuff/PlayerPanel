@@ -366,6 +366,20 @@ void SceneGraphCopy::process_requests()
     {
         m_clip.restart();
         m_idle.restart();
+        // The standing window is armed on the open edge and OAR evaluates over the frames that
+        // follow, so the capture WAITS for the window to finish before it reads the selection -
+        // capturing on the open frame itself reads an empty window and always falls back to the
+        // running clip (2026-10-16 log: every capture reported pick=running-clip).
+        m_open_pending = true;
+        logger::info("SCOPY ANIM restart at panel open capture={} driver={} (capture waits for the standing window)",
+            m_capture_id, animation_driver());
+    }
+
+    if (m_open_pending)
+    {
+        if (oar::standing_window_open())
+            return;
+        m_open_pending = false;
         if (ui && ui->GameIsPaused() && !ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
         {
             m_isolation.census_pre("capture");
@@ -376,7 +390,6 @@ void SceneGraphCopy::process_requests()
             logger::info("SCOPY AUTO recaptured at panel open capture={} draw={} driver={}",
                 m_capture_id, m_draw_enabled ? 1 : 0, animation_driver());
         }
-        logger::info("SCOPY ANIM restart at panel open capture={} driver={}", m_capture_id, animation_driver());
     }
     const Command command = m_command.exchange(Command::e_none, std::memory_order_acq_rel);
     if (command == Command::e_none)
@@ -577,6 +590,27 @@ void SceneGraphCopy::capture()
     }
     else
         m_clip.reset();
+
+    // The ACTIVE query (state-idle v3): ask OAR itself what it would choose for a base clip with
+    // the standing answers in force, instead of waiting for the engine to activate one - the
+    // paused panel has no evaluation in flight (2026-10-16: window hits=0). Log-only this round:
+    // the line says whether OAR returns a replacement for the standing stance at all, which is
+    // what the copy will play once the returned animation is resolved.
+    if (oar::query_supported() && player)
+    {
+        if (RE::hkbClipGenerator const* const base = generator ? generator : pick_running_clip(*player))
+        {
+            std::uint32_t candidates = 0;
+            std::uint32_t with_replacements = 0;
+            oar::arm_standing_window(2);
+            void* const replacement = oar::query_replacement(*player,
+                const_cast<RE::hkbClipGenerator&>(*base), base->animationBindingIndex, candidates, with_replacements);
+            oar::arm_standing_window(0);
+            logger::info("SCOPY OAR query base={} clip='{}' candidates={} with-replacements={} replacement=0x{:x}",
+                base->animationBindingIndex, clip.name, candidates, with_replacements,
+                reinterpret_cast<std::uintptr_t>(replacement));
+        }
+    }
     for (RE::NiAVObject* object : copy_inventory.objects)
         if (object->AsGeometry())
             logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());
