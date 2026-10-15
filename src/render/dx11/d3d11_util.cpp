@@ -111,6 +111,7 @@ bool render_target_dimensions(REX::W32::ID3D11RenderTargetView* target, uint32_t
 
 D3D11StateCapture::D3D11StateCapture(REX::W32::ID3D11DeviceContext* context) :
     m_ref_context(context),
+    m_context1(),
     m_render_targets{},
     m_unordered_access_views{},
     m_depth_stencil(nullptr),
@@ -149,6 +150,10 @@ D3D11StateCapture::D3D11StateCapture(REX::W32::ID3D11DeviceContext* context) :
     m_domain_instance_count(Class_Instance_Count),
     m_vertex_cbs{},
     m_pixel_cbs{},
+    m_vertex_cb_first{},
+    m_vertex_cb_count{},
+    m_pixel_cb_first{},
+    m_pixel_cb_count{},
     m_pixel_srvs{},
     m_pixel_sampler(nullptr)
 {
@@ -271,8 +276,18 @@ void D3D11StateCapture::capture()
     m_ref_context->GSGetShader(&m_geometry_shader, m_geometry_instances, &m_geometry_instance_count);
     m_ref_context->HSGetShader(&m_hull_shader, m_hull_instances, &m_hull_instance_count);
     m_ref_context->DSGetShader(&m_domain_shader, m_domain_instances, &m_domain_instance_count);
-    m_ref_context->VSGetConstantBuffers(0, 2, m_vertex_cbs);
-    m_ref_context->PSGetConstantBuffers(0, 2, m_pixel_cbs);
+    const REX::W32::HRESULT context_hr = m_ref_context->QueryInterface(REX::W32::IID_ID3D11DeviceContext1,
+        reinterpret_cast<void**>(m_context1.GetAddressOf()));
+    if (REX::W32::SUCCESS(context_hr) && m_context1.Get())
+    {
+        m_context1->VSGetConstantBuffers1(0, Constant_Buffer_Count, m_vertex_cbs, m_vertex_cb_first, m_vertex_cb_count);
+        m_context1->PSGetConstantBuffers1(0, Constant_Buffer_Count, m_pixel_cbs, m_pixel_cb_first, m_pixel_cb_count);
+    }
+    else
+    {
+        m_ref_context->VSGetConstantBuffers(0, Constant_Buffer_Count, m_vertex_cbs);
+        m_ref_context->PSGetConstantBuffers(0, Constant_Buffer_Count, m_pixel_cbs);
+    }
     m_ref_context->PSGetShaderResources(0, 3, m_pixel_srvs);
     m_ref_context->PSGetSamplers(0, 1, &m_pixel_sampler);
 }
@@ -323,8 +338,18 @@ void D3D11StateCapture::restore() const noexcept
     m_ref_context->GSSetShader(m_geometry_shader, m_geometry_instances, m_geometry_instance_count);
     m_ref_context->HSSetShader(m_hull_shader, m_hull_instances, m_hull_instance_count);
     m_ref_context->DSSetShader(m_domain_shader, m_domain_instances, m_domain_instance_count);
-    m_ref_context->VSSetConstantBuffers(0, 2, m_vertex_cbs);
-    m_ref_context->PSSetConstantBuffers(0, 2, m_pixel_cbs);
+    // Skyrim binds subranges of unified constant buffers, including alpha reference at slot 0xB.
+    // Restoring just the buffer pointer with SetConstantBuffers would discard those ranges.
+    if (m_context1.Get())
+    {
+        m_context1->VSSetConstantBuffers1(0, Constant_Buffer_Count, m_vertex_cbs, m_vertex_cb_first, m_vertex_cb_count);
+        m_context1->PSSetConstantBuffers1(0, Constant_Buffer_Count, m_pixel_cbs, m_pixel_cb_first, m_pixel_cb_count);
+    }
+    else
+    {
+        m_ref_context->VSSetConstantBuffers(0, Constant_Buffer_Count, m_vertex_cbs);
+        m_ref_context->PSSetConstantBuffers(0, Constant_Buffer_Count, m_pixel_cbs);
+    }
     m_ref_context->PSSetShaderResources(0, 3, m_pixel_srvs);
     m_ref_context->PSSetSamplers(0, 1, &m_pixel_sampler);
 }

@@ -8,6 +8,9 @@
 #include "character/snapshot_transform.h"
 #include "oar/binary_profile.h"
 #include "oar/policy.h"
+#include "render/dx11/d3d11_util.h"
+#include "render/studio/figure_draw_order.h"
+#include "render/studio/figure_pipeline_state.h"
 
 #include <algorithm>
 #include <cmath>
@@ -18,6 +21,141 @@
 
 namespace
 {
+    bool d3d_constant_buffer_ranges_are_restored()
+    {
+        REX::W32::ComPtr<REX::W32::ID3D11Device> device;
+        REX::W32::ComPtr<REX::W32::ID3D11DeviceContext> context;
+        static constexpr uint32_t s_d3d11_sdk_version = 7;
+        const REX::W32::HRESULT device_hr = REX::W32::D3D11CreateDevice(nullptr, REX::W32::D3D_DRIVER_TYPE_WARP,
+            nullptr, 0, nullptr, 0, s_d3d11_sdk_version, device.GetAddressOf(), nullptr, context.GetAddressOf());
+        if (!REX::W32::SUCCESS(device_hr))
+            return false;
+        REX::W32::ComPtr<REX::W32::ID3D11DeviceContext1> context1;
+        const REX::W32::HRESULT context_hr = context->QueryInterface(REX::W32::IID_ID3D11DeviceContext1,
+            reinterpret_cast<void**>(context1.GetAddressOf()));
+        if (!REX::W32::SUCCESS(context_hr))
+            return false;
+
+        const REX::W32::D3D11_BUFFER_DESC buffer_desc{
+            .byteWidth = 4096,
+            .usage = REX::W32::D3D11_USAGE_DEFAULT,
+            .bindFlags = REX::W32::D3D11_BIND_CONSTANT_BUFFER,
+        };
+        REX::W32::ComPtr<REX::W32::ID3D11Buffer> buffer;
+        const REX::W32::HRESULT buffer_hr = device->CreateBuffer(&buffer_desc, nullptr, buffer.GetAddressOf());
+        if (!REX::W32::SUCCESS(buffer_hr))
+            return false;
+        const uint32_t first = 16;
+        const uint32_t count = 32;
+        context1->VSSetConstantBuffers1(10, 1, buffer.GetAddressOf(), &first, &count);
+        context1->PSSetConstantBuffers1(11, 1, buffer.GetAddressOf(), &first, &count);
+        context->VSSetConstantBuffers(0, 1, buffer.GetAddressOf());
+        REX::W32::ComPtr<REX::W32::ID3D11Buffer> full_binding;
+        uint32_t full_first = 0;
+        uint32_t full_count = 0;
+        context1->VSGetConstantBuffers1(0, 1, full_binding.GetAddressOf(), &full_first, &full_count);
+        {
+            PLUGIN_NAMESPACE::D3D11StateCapture capture(context.Get());
+            context->ClearState();
+        }
+        REX::W32::ComPtr<REX::W32::ID3D11Buffer> restored_vs;
+        REX::W32::ComPtr<REX::W32::ID3D11Buffer> restored_ps;
+        REX::W32::ComPtr<REX::W32::ID3D11Buffer> restored_full;
+        uint32_t vs_first = 0;
+        uint32_t vs_count = 0;
+        uint32_t ps_first = 0;
+        uint32_t ps_count = 0;
+        uint32_t restored_full_first = 0;
+        uint32_t restored_full_count = 0;
+        context1->VSGetConstantBuffers1(10, 1, restored_vs.GetAddressOf(), &vs_first, &vs_count);
+        context1->PSGetConstantBuffers1(11, 1, restored_ps.GetAddressOf(), &ps_first, &ps_count);
+        context1->VSGetConstantBuffers1(0, 1, restored_full.GetAddressOf(), &restored_full_first, &restored_full_count);
+        return restored_vs.Get() == buffer.Get() && restored_ps.Get() == buffer.Get() &&
+            vs_first == first && vs_count == count && ps_first == first && ps_count == count &&
+            restored_full.Get() == full_binding.Get() && restored_full_first == full_first && restored_full_count == full_count;
+    }
+
+    bool figure_transparency_draw_order()
+    {
+        using PLUGIN_NAMESPACE::FigureGeometry;
+        RE::BSGeometry* const brow = reinterpret_cast<RE::BSGeometry*>(0x10);
+        RE::BSGeometry* const face = reinterpret_cast<RE::BSGeometry*>(0x20);
+        RE::BSGeometry* const cutout = reinterpret_cast<RE::BSGeometry*>(0x30);
+        RE::BSGeometry* const far_layer = reinterpret_cast<RE::BSGeometry*>(0x40);
+        RE::BSGeometry* const tied_layer = reinterpret_cast<RE::BSGeometry*>(0x50);
+        std::vector<FigureGeometry> geometry{
+            { true, false, false, 10.0f, brow },
+            { false, false, false, 9.0f, face },
+            { true, true, false, 12.0f, far_layer },
+            { false, true, false, 8.0f, cutout },
+            { true, false, false, 12.0f, tied_layer },
+        };
+        PLUGIN_NAMESPACE::order_figure_geometry(geometry);
+        if (geometry[0].geometry != face || geometry[1].geometry != cutout ||
+            geometry[2].geometry != far_layer || geometry[3].geometry != tied_layer || geometry[4].geometry != brow)
+            return false;
+
+        geometry = {
+            { true, false, false, 10.0f, brow },
+            { true, false, true, 1.0f, cutout },
+            { true, false, false, 20.0f, far_layer },
+            { true, false, false, 30.0f, tied_layer },
+        };
+        PLUGIN_NAMESPACE::order_figure_geometry(geometry);
+        return geometry[0].geometry == brow && geometry[1].geometry == cutout &&
+            geometry[2].geometry == tied_layer && geometry[3].geometry == far_layer;
+    }
+
+    bool figure_material_state_is_restored()
+    {
+        RE::BSGraphics::RendererShadowState::FLAT_RUNTIME_DATA state{};
+        state.viewPort = { 10.0f, 20.0f, 1920.0f, 1080.0f, 0.0f, 1.0f };
+        state.depthStencilDepthMode = RE::BSGraphics::DepthStencilDepthMode::kTestEqual;
+        state.depthStencilDepthModePrevious = RE::BSGraphics::DepthStencilDepthMode::kTestWrite;
+        state.depthStencilStencilMode = 3;
+        state.stencilRef = 7;
+        state.rasterStateCullMode = RE::BSGraphics::RASTER_STATE_CULL_MODE_FRONT;
+        state.alphaBlendMode = 3;
+        state.alphaBlendAlphaToCoverage = 1;
+        state.alphaBlendWriteMode = 11;
+        state.alphaBlendModeExtra = 1;
+        state.alphaTestEnabled = true;
+        state.alphaTestRef = 0.4f;
+        state.stateUpdateFlags.set(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET,
+            RE::BSGraphics::ShaderFlags::DIRTY_VERTEX_DESC);
+        const RE::BSGraphics::RendererShadowState::FLAT_RUNTIME_DATA before = state;
+        const REX::W32::D3D11_VIEWPORT studio{ 0.0f, 0.0f, 512.0f, 1024.0f, 0.0f, 1.0f };
+        {
+            PLUGIN_NAMESPACE::FigurePipelineState scope(state);
+            scope.prepare(studio, false, true, false);
+            if (state.depthStencilDepthMode != RE::BSGraphics::DepthStencilDepthMode::kTestWrite || !state.alphaTestEnabled ||
+                state.rasterStateCullMode != RE::BSGraphics::RASTER_STATE_CULL_MODE_BACK)
+                return false;
+            scope.prepare(studio, true, false, true);
+            if (state.depthStencilDepthMode != RE::BSGraphics::DepthStencilDepthMode::kTest || state.alphaTestEnabled ||
+                state.rasterStateCullMode != RE::BSGraphics::RASTER_STATE_CULL_MODE_NONE ||
+                !state.stateUpdateFlags.all(RE::BSGraphics::ShaderFlags::DIRTY_ALPHA_BLEND,
+                    RE::BSGraphics::ShaderFlags::DIRTY_ALPHA_TEST_REF, RE::BSGraphics::ShaderFlags::DIRTY_ALPHA_ENABLE_TEST) ||
+                state.stateUpdateFlags.any(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET))
+                return false;
+            state.alphaBlendMode = 6;
+            state.alphaTestRef = 0.8f;
+            state.stateUpdateFlags = {};
+        }
+        return state.viewPort.width == before.viewPort.width && state.viewPort.topLeftX == before.viewPort.topLeftX &&
+            state.depthStencilDepthMode == before.depthStencilDepthMode &&
+            state.depthStencilDepthModePrevious == before.depthStencilDepthModePrevious &&
+            state.depthStencilStencilMode == before.depthStencilStencilMode && state.stencilRef == before.stencilRef &&
+            state.rasterStateCullMode == before.rasterStateCullMode && state.alphaBlendMode == before.alphaBlendMode &&
+            state.alphaBlendAlphaToCoverage == before.alphaBlendAlphaToCoverage &&
+            state.alphaBlendWriteMode == before.alphaBlendWriteMode && state.alphaBlendModeExtra == before.alphaBlendModeExtra &&
+            state.alphaTestEnabled == before.alphaTestEnabled && state.alphaTestRef == before.alphaTestRef &&
+            state.stateUpdateFlags.all(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET,
+                RE::BSGraphics::ShaderFlags::DIRTY_VERTEX_DESC, RE::BSGraphics::ShaderFlags::DIRTY_VIEWPORT,
+                RE::BSGraphics::ShaderFlags::DIRTY_DEPTH_MODE, RE::BSGraphics::ShaderFlags::DIRTY_ALPHA_BLEND,
+                RE::BSGraphics::ShaderFlags::DIRTY_ALPHA_TEST_REF, RE::BSGraphics::ShaderFlags::DIRTY_ALPHA_ENABLE_TEST);
+    }
+
     bool oar_preview_scope_is_isolated()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
@@ -287,11 +425,16 @@ int main()
     const bool shape_clear = empty_source_clears_body_shape();
     const bool oar_scope = oar_preview_scope_is_isolated();
     const bool oar_binary = oar_binary_profile_rejects_mismatches();
+    const bool alpha_order = figure_transparency_draw_order();
+    const bool alpha_state = figure_material_state_is_restored();
+    const bool d3d_ranges = d3d_constant_buffer_ranges_are_restored();
     std::printf("snapshot placement: %s\nfinal pose index order: %s\nr01 framing delta: %s\ncoverage ledger: %s\nslot necessity: %s\nfigure bound union: %s\nassembly gate: %s\nanimation track identity: %s\nempty source body shape: %s\n",
         placement ? "PASS" : "FAIL", mapping ? "PASS" : "FAIL", framing ? "PASS" : "FAIL",
         ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL", assembly ? "PASS" : "FAIL",
         track_identity ? "PASS" : "FAIL", shape_clear ? "PASS" : "FAIL");
     std::printf("OAR preview scope: %s\nOAR binary identity: %s\n", oar_scope ? "PASS" : "FAIL", oar_binary ? "PASS" : "FAIL");
+    std::printf("figure transparency order: %s\nfigure material state: %s\n", alpha_order ? "PASS" : "FAIL", alpha_state ? "PASS" : "FAIL");
+    std::printf("D3D constant buffer ranges: %s\n", d3d_ranges ? "PASS" : "FAIL");
     return placement && mapping && framing && ledger && necessity && bound && assembly && track_identity && shape_clear &&
-        oar_scope && oar_binary ? 0 : 1;
+        oar_scope && oar_binary && alpha_order && alpha_state && d3d_ranges ? 0 : 1;
 }

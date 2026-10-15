@@ -418,6 +418,7 @@ bool PuppetDraw::draw(RE::UI3DSceneManager const& a_ui3d, CommonStates const& a_
     const FigurePassRequest request{
         .root = root,
         .accumulator = a_ui3d.unk10.get(),
+        .camera = camera,
         .context = runtime.context,
         .target = &a_target,
         .states = &a_states,

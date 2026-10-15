@@ -760,6 +760,7 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     const FigurePassRequest request{
         .root = p_root,
         .accumulator = ui3d->unk10.get(),
+        .camera = ui3d->camera.get(),
         .context = runtime.context,
         .target = &render_target,
         .states = &states,

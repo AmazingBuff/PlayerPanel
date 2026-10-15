@@ -3,6 +3,17 @@ CharacterPanel scene-copy / AFP development package
 Use this package's CharacterPanel.dll and PDB together. Read build-manifest.json
 and SCOPY BUILD to confirm build identity, source baseline, runtime and hashes.
 
+2026-10-15 UBE transparency trial (ube-alpha1): both figure sources now use native
+per-mesh alpha blending/testing, opaque-before-alpha order and read-only depth
+for blended surfaces. The test package is named
+CharacterPanel-scopy-ube-alpha1-1.2.1.zip. Check the same UBE brows, eye shadows,
+lashes and hair that showed black mesh-sized patches, rotate the figure, change
+head equipment, then close/reopen the panel and check the normal game view.
+The log reports `FIGURE transparency ... render-flags=0x204` on audited draws.
+Local builds and 14 checks pass, including WARP constant-buffer range restoration;
+the actual black-patch fix remains a game-validation result. Return the log and
+same-angle images if it persists. Full notes: docs/ube-transparency-test-2026-10-15.md.
+
 Current controls:
   F7: capture/audit player third-person 3D in paused InventoryMenu; draw starts off.
   F8: toggle drawing of the accepted copied graph.

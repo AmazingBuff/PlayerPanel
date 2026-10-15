@@ -12,6 +12,14 @@
 
 ### Fixed
 
+- UBE transparency trial (`ube-alpha1`): both figure sources now draw opaque/cutout geometry before
+  sorted alpha surfaces, read alpha testing from each mesh's NiAlphaProperty, and request native
+  per-geometry blend setup. Blended surfaces use read-only depth. The studio restores the engine's
+  material-state cache and all VS/PS constant-buffer bindings, including D3D11.1 subranges.
+  Both Release configurations and 14 local checks pass, including a WARP check of constant-buffer
+  subrange restoration. The mesh-sized brow/eye-shadow black patches still require in-game validation;
+  package identity and reproduction steps are recorded in `docs/ube-transparency-test-2026-10-15.md`.
+
 - Review fixes (2026-10-15): non-identity animation bindings now keep track and bone indices
   separate and sample only the animation's real track count. Recapturing a graph invalidates
   the puppet's cached target nodes even when the active generator is unchanged.

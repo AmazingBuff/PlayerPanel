@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include "REX/W32/COMPTR.h"
+#include "REX/W32/D3D11_1.h"
+
 PLUGIN_NAMESPACE_BEGIN
 
 bool create_vertex_shader(REX::W32::ID3D11Device* device, char const* source, char const* entry, char const* name, REX::W32::ID3D11VertexShader** shader, REX::W32::ID3DBlob** blob);
@@ -28,8 +31,10 @@ private:
     static constexpr uint32_t Max_Unordered_Access_View_Count = REX::W32::D3D11_PS_CS_UAV_REGISTER_COUNT;
     static constexpr uint32_t Vertex_Buffer_Count = 2;
     static constexpr uint32_t Class_Instance_Count = 256;
+    static constexpr uint32_t Constant_Buffer_Count = REX::W32::D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
 
     REX::W32::ID3D11DeviceContext* m_ref_context;
+    REX::W32::ComPtr<REX::W32::ID3D11DeviceContext1> m_context1;
 
     REX::W32::ID3D11RenderTargetView* m_render_targets[Render_Target_Count];
     REX::W32::ID3D11UnorderedAccessView* m_unordered_access_views[Max_Unordered_Access_View_Count];
@@ -67,8 +72,12 @@ private:
     REX::W32::ID3D11DomainShader* m_domain_shader;
     REX::W32::ID3D11ClassInstance* m_domain_instances[Class_Instance_Count];
     uint32_t m_domain_instance_count;
-    REX::W32::ID3D11Buffer* m_vertex_cbs[2];
-    REX::W32::ID3D11Buffer* m_pixel_cbs[2];
+    REX::W32::ID3D11Buffer* m_vertex_cbs[Constant_Buffer_Count];
+    REX::W32::ID3D11Buffer* m_pixel_cbs[Constant_Buffer_Count];
+    uint32_t m_vertex_cb_first[Constant_Buffer_Count];
+    uint32_t m_vertex_cb_count[Constant_Buffer_Count];
+    uint32_t m_pixel_cb_first[Constant_Buffer_Count];
+    uint32_t m_pixel_cb_count[Constant_Buffer_Count];
     REX::W32::ID3D11ShaderResourceView* m_pixel_srvs[3];
     REX::W32::ID3D11SamplerState* m_pixel_sampler;
 };

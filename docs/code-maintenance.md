@@ -1,6 +1,6 @@
 # 当前代码维护说明
 
-更新日期：2026-10-15（AFP10g 后审查修复）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
+更新日期：2026-10-15（审查修复、OAR 条件 hook 与 UBE 透明材质试修）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
 
 ## 范围
 
@@ -18,6 +18,25 @@
 
 本地新增两个回归：带乱序和未映射项的轨道映射，以及空来源对目标残留体型的识别。游戏内仍须验证新游戏／原地重读存档、双持换手、清空 OBody 预设和慢速装备装配；本地测试不证明这些引擎行为已通过。旧图的安全销毁仍未解决。
 
+## UBE 透明材质试修（ube-alpha1）
+
+复制图和傀儡自身 3D 都通过共用的 `draw_figure_passes()` 绘制。本轮针对眉毛、眼周阴影的
+mesh 轮廓黑块补齐透明处理；**实现和本地验证已完成，黑块是否消失仍待用户在游戏中验证**。
+
+- 从每个 mesh 的 `NiAlphaProperty` 读取 alpha test 开关，使用 `0x204` 让引擎按原材质设置
+  混合与裁剪阈值；不再把菜单 pass 的 `0x200` 和 `passEnum & 0x40` 当作通用材质状态。
+- 实体／仅裁剪几何先画，混合几何随后按实际 UI3D 相机方向由远至近稳定排序；`No Sorter`
+  表面保留透明阶段的插入位置。混合阶段的基准深度只测试不写入，剔除遵循双面标志。
+- 每个 pass 更新引擎材质状态缓存；退出时恢复 viewport、深度、剔除、混合、alpha reference
+  及原有待更新标志。外层 D3D 捕获负责恢复实际绑定。
+- VS／PS 常量缓冲保存覆盖全部 14 槽；D3D11.1 额外保留每个绑定的偏移和长度。
+  WARP 离屏回归验证高槽位、完整缓冲与子范围的实际恢复。
+
+默认与实验两种 Release 配置均构建通过；既有 `snapshot_transform` 入口现在包含 14 项检查，
+其中新增透明顺序、材质缓存恢复和 WARP 缓冲范围三项。测试包身份、校验值、复现命令和游戏
+判据见 [UBE 透明材质验证](ube-transparency-test-2026-10-15.md)。透明 mesh 内部三角形排序、
+折射和第三方 OIT 专属流程不属于本轮实现。
+
 ## 当前模块与数据流
 
 | 模块 | 职责与入口 |
@@ -33,16 +52,19 @@
 | [equipment_mirror.h/.cpp](../src/character/equipment_mirror.h) | AFP10 共用件：biped 身体槽位的 worn 集合读取、整套穿上、以及无状态对账（多则补、少则卸）。复制图的 `mirror_worn_equipment` 也走这一份，槽位表只有一处。手部武器不在此列（驱动器自己的手部轮询 + draw/sheathe）。AFP10g：槽位表补全（kHair/kModBack/kModMisc1/2/kModPelvis*，kShield 归手部轮询、FX01 排除），`equipment_sync_ammo` 把傀儡当前弹药对账到玩家的，prune 的弹药豁免收窄为"玩家的当前弹药"。 |
 | [body_shape.h/.cpp](../src/character/body_shape.h) | AFP10 体型同步：本地镜像 skee64 的 `IBodyMorphInterface`（SKSE 接口交换 `BodyMorph`），先比较后写入，写前清掉 OBody 派给傀儡的随机预设；版本低于镜像布局时拒绝调用。 |
 | [idle_driver.cpp](../src/character/idle_driver.cpp) / [snapshot_transform.h](../src/character/snapshot_transform.h) | 现有程序 idle fallback、取景变换和子树更新；不再包含测试用蒙皮缓存写入或距离测量。 |
-| [final_pose_probe.cpp](../src/character/final_pose_probe.cpp) / [final_pose_apply.cpp](../src/character/final_pose_apply.cpp) | 最终输出读取、索引校准、独立真值比较、暂停写入和强制生成诊断；当前写入傀儡，而画面默认仍由复制图提供。AFP9：apply 同帧对账（output/attempted/written/unreachable/unprocessed），缺口变化时点名并按 palette 分类（必要骨不跳过）。 |
+| [final_pose_probe.cpp](../src/character/final_pose_probe.cpp) / [final_pose_apply.cpp](../src/character/final_pose_apply.cpp) | 最终输出读取、索引校准、独立真值比较、暂停写入和强制生成诊断；当前写入傀儡。实验配置 F6 默认开启，优先显示傀儡自身 3D；关闭或直绘不可用时走复制图。AFP9：apply 同帧对账（output/attempted/written/unreachable/unprocessed），缺口变化时点名并按 palette 分类（必要骨不跳过）。 |
 | [figure_audit.h/.cpp](../src/character/figure_audit.h) | AFP9 共享审计件：skin palette 读取（只收集指针、绝不解引用槽位；引擎从未渲染的图记 unbound-palette）、碰撞辅助体过滤的蒙皮包围盒、取景 placement 解算、槽位必要性分类（palette 成员 → Weapon* 附着 → helper）。AFP10 另收编装配普查 `FigureAssembly`／`figure_measure_assembly()`（几何/skin/已分配槽位/绑定数与稳定签名），复制图的落定门与傀儡的泊位门共用它。 |
 | [puppet_draw.h/.cpp](../src/character/puppet_draw.h) | AFP9 R01 直绘：F6 开关；傀儡 `Get3D(false)` 根 + 共用 figure_passes 缝；临时取景（保存/恢复根 local + world/worldBound 对账）；固定骨集 A4/A5 采样；不可用时回退复制图并告警。 |
 | [isolation_watch.cpp](../src/character/isolation_watch.cpp) | 来源与 NPC 的观测、装备变更重新设基线及会话判读；不是全骨骼／全部物理隔离已通过的证明。 |
-| [figure_passes.cpp](../src/render/studio/figure_passes.cpp) | 共用的引擎 pass 生成、灯光临时替换、提交与状态恢复；移除无人使用的逐 pass／batch 探针 callbacks。 |
-| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | 既有变换／姿态／装配等九项检查；另增 OAR 作用域隔离和二进制身份拒绝两项回归。 |
+| [figure_passes.cpp](../src/render/studio/figure_passes.cpp) | 两条来源共用的按材质分类、引擎 pass 生成、灯光临时替换与提交；读取原 alpha 属性，原生混合设置使用 `0x204`。 |
+| [figure_draw_order.h](../src/render/studio/figure_draw_order.h) / [figure_pipeline_state.h](../src/render/studio/figure_pipeline_state.h) | 实体／透明阶段排序及 No Sorter 边界；逐 pass 的引擎材质状态准备和作用域退出恢复。 |
+| [d3d11_util.h/.cpp](../src/render/dx11/d3d11_util.h) | D3D 设备绑定保护与离屏目标；VS／PS 保存全部常量缓冲槽，并在支持 D3D11.1 时保留绑定子范围。 |
+| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | 变换／姿态／装配等九项、OAR 隔离与二进制身份两项、透明排序／材质恢复／WARP 缓冲范围三项，共 14 项；仍使用 `snapshot_transform` 这个 CTest 入口。 |
 
-场景复制配置的每帧顺序：请求／会话处理 → AFP A0 → 傀儡图推进 → AFP 校准或应用 → AFP mark → 副本 `pose()` → 傀儡 clip／捕获 clip／程序 idle → 引擎蒙皮与 draw → 合成。
+实验配置使用复制图显示时的每帧顺序：请求／会话处理 → AFP A0 → 傀儡图推进 → AFP 校准或应用 → AFP mark → 副本 `pose()` → 傀儡 clip／捕获 clip／程序 idle → 引擎蒙皮与 draw → 合成。
 
 AFP 写入与复制图显示是两条不同的路径；不得把 AFP 应用后的节点自比较标记为直绘通过。
+两种显示来源的提交阶段现在共用“实体／镂空 → 排序透明 → 恢复状态 → 合成”的顺序。
 
 ## 构建、控制与打包
 
@@ -58,7 +80,7 @@ cmake --build build --config Release --target CharacterPanel
 场景复制与 AFP 开发配置：
 
 ```powershell
-cmake --preset Release -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_PROBE_REVISION=cleanup
+cmake --preset Release -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_PROBE_REVISION=ube-alpha1
 cmake --build build-scopy --config Release --target CharacterPanel CharacterPanelCopyMathTest
 ctest --test-dir build-scopy -C Release -R '^snapshot_transform$' --output-on-failure
 cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPackage
@@ -78,14 +100,18 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 
 `CHARACTER_PANEL_SCENE_COPY_EXPERIMENT` 默认为 OFF。删除 `CHARACTER_PANEL_BUILD_PROBE`、`CHARACTER_PANEL_S2_PROBE`、M0 probe/proto targets；旧 cache 可能仍列出历史变量，但当前构建已不消费它们。`CHARACTER_PANEL_PROBE_REVISION` 保留为兼容的构建身份／包 manifest 标记，与已删除探针无关。
 
-场景复制包仍包含 DLL、PDB、身份与 SHA-256 manifest、当前包 README，输出在 `dist`；打包不部署。最近一轮 AFP10 的包与部署见其测试单与 Changelog。
+场景复制包包含 DLL、PDB、身份与 SHA-256 manifest、当前包 README，输出在 `dist`；打包不部署。
+当前透明材质试修包为 `CharacterPanel-scopy-ube-alpha1-1.2.1.zip`，首次交付包从 `6e5ac99+dirty`
+构建；提交源码不会追写该包身份，核对时应以其清单和 [已记录的校验值](ube-transparency-test-2026-10-15.md#测试包身份) 为准。
+如果为了复用依赖而传入 MSBuild 的 `BuildProjectReferences=false`，须先显式构建 `CharacterPanel`
+再运行打包目标，避免只打包旧 DLL。AFP10 的既有部署记录保留在对应测试单与 Changelog。
 
 ## 保留诊断及理由
 
 - 图隔离审计、来源漂移观测、内存／vtable／数据范围检查：对象来自游戏及第三方插件，指针与 ABI 生命周期仍是真实边界。
 - AFP 两个输出槽位、A0/A1 和 poseLocal／节点对照、索引次序校准：双缓冲选择与最终姿态来源尚未完成验证。
 - 必需骨／palette、local/world/scale、覆盖计数：标定 98 项而强制生成 116 项的问题尚未关闭。不能删掉这些证据或调整通过阈值掩盖缺口。
-- 相机、几何、蒙皮与目标回读：同一 Actor 的实际 draw 尚待接入，仍需要区分应用到正确树、取景和渲染目标问题。
+- 相机、几何、蒙皮与目标回读：同一 Actor 的直绘已通过 F6 接入，仍需要区分应用到正确树、取景、材质和渲染目标问题。
 - force-generation、freeze 和 step：暂停动画链路的必要操作控制；不修改原有算法与阈值。
 
 已移除 AFP 未命名字节的 raw hex dump；保留 typed 状态、输出数量和插值信息。S2 swing／T0–T3 蒙皮缓存探针、capture-time perturb/replay、catalogue/loader/registry/vtable 扫描、idle 池统计、HKX42–44 求解与延迟 A/B、程序 idle 位移日志，以及无调用者的容器／尸体／库存／按键／hash 模板 helpers 均已退役。
@@ -126,11 +152,15 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 
 ## 验证与安全修改
 
-本地验收只构建 CharacterPanel 的两个配置与上述聚焦 regression target，再检查 `git diff --check`、删除符号引用和当前链接。最多两条有意义行为案例，不恢复已验证的测试矩阵。
+本地验证构建 CharacterPanel 的两个配置与上述聚焦 regression target，再检查 `git diff --check`、
+当前符号引用和文档链接。仅为本轮真实风险补充行为案例：透明排序、材质缓存恢复与 D3D11.1
+常量缓冲范围；不恢复已退役的重型探针矩阵。14 项本地检查通过不等于游戏验收通过。
 
 游戏 PC 仍需 smoke：F7/F8 捕获及显示；确认 driver 为傀儡 clip、捕获 clip 或原 fallback；在运行世界完成 AFP 校准，再暂停使用 F2/F4 比较输出及 apply；验证没有改变来源与 NPC。AFP9 增判据：A2 行对账恒等式（written+unreachable+unprocessed=output-slots）与审计点名；F6 开时 R01 身份行（root/graph/generation 同源）、A5vsA4 max-rot≈0、restore 对账 ok=1、关面板回世界无副作用。本地构建与 CTest 不能代替这些结果。后续直绘、过渡和覆盖工作依据 [AFP 后续验证单](afp-next-validation-and-paused-gaps-2026-10-13.md) 与 [AFP9 测试单](afp9-coverage-and-direct-draw-test-2026-10-13.md)；场景后端规则依据 [路由文档](display-backend-routing-2026-10-13.md)。
 
-修改 engine 入口、ABI、钩子、所有权或物理接口需要独立设计与游戏验证。本轮没有引入新 hook 或改变图回收策略。维护代码时同步本文、README、CMake、包 README 与 Changelog。
+修改 engine 入口、ABI、钩子、所有权或物理接口需要独立设计与游戏验证。本轮透明材质试修没有引入新 hook 或改变图回收策略；OAR 模块的既有 hook 和限制见其独立文档。维护代码时同步本文、README、CMake、包 README 与 Changelog。
+透明材质回归还需按 [ube-alpha1 测试单](ube-transparency-test-2026-10-15.md#游戏内检查) 验证
+眉毛／眼周、头发透明层、换装、面板反复开关及退出后的游戏画面；目前尚未收到这一轮游戏结果。
 
 ## 历史证据
 

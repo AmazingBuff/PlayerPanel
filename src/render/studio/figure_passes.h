@@ -16,6 +16,7 @@ namespace RE
     class BSRenderPass;
     class BSShaderAccumulator;
     class NiAVObject;
+    class NiCamera;
 }
 
 PLUGIN_NAMESPACE_BEGIN
@@ -35,6 +36,7 @@ struct FigurePassRequest
     // The accumulator the passes are generated into (the UI3D one, ui3d->unk10). Its render mode and
     // its own camera decide how the figure projects.
     RE::BSShaderAccumulator* accumulator = nullptr;
+    RE::NiCamera const* camera = nullptr;
     REX::W32::ID3D11DeviceContext* context = nullptr;
     RenderTarget const* target = nullptr;
     CommonStates const* states = nullptr;
@@ -60,8 +62,10 @@ struct FigurePassStats
     void const* render_target_bound = nullptr;
 };
 
-// Binds the studio target, clears it, generates and submits the figure's passes, and restores the
-// engine's ledger expectation around the batch. The returned statistics describe
+// Binds and clears the studio target, draws opaque/cutout geometry before the sorted alpha stage,
+// and uses each geometry's original NiAlphaProperty for native blend/threshold setup. Alpha-blended
+// surfaces test depth without writing it. Device bindings and the engine material cache are restored
+// around the batch. The returned statistics describe
 // the completed batch without exposing per-pass callbacks.
 //
 // The caller must already be inside a D3D state capture (CharacterClone's callers are): the viewport,
