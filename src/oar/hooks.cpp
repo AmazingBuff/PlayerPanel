@@ -64,14 +64,15 @@ namespace oar
             return nullptr;
         }
 
-        bool compare(Condition const& condition, float value, RE::TESObjectREFR* source, ScopedEvaluation& scope)
+        std::optional<bool> compare(Condition const& condition, float value, RE::TESObjectREFR* source,
+            ScopedEvaluation& scope)
         {
             const auto* const comparison = component<::Conditions::IComparisonConditionComponent>(condition);
             const auto* const numeric = component<::Conditions::INumericConditionComponent>(condition);
             if (!comparison || !numeric)
             {
                 scope.reject("condition component layout mismatch");
-                return false;
+                return std::nullopt;
             }
             return comparison->GetComparisonResult(value, numeric->GetNumericValue(source));
         }
@@ -85,6 +86,10 @@ namespace oar
             Frame frame(source, clip);
             if (!scope->matches(source, clip))
                 return s_evaluate(condition, source, clip, submod);
+            scope->note_evaluated();
+            // A projection wraps OAR's own decision: a condition this module does not model must
+            // keep the engine's answer instead of vetoing a replacement OAR would have accepted.
+            const bool projected = scope->mode() == ScopeMode::kProjected;
             if (condition->IsDisabled())
                 return true;
 
@@ -94,37 +99,55 @@ namespace oar
             if (!value)
             {
                 if (const auto number = standing_value(name))
+                {
                     value = compare(*condition, *number, source, *scope);
+                }
                 else if (name == "IsMovementDirection" || name == "IsCombatState")
                 {
                     const auto* const numeric = component<::Conditions::INumericConditionComponent>(*condition);
                     if (!numeric)
+                    {
                         scope->reject("state/direction component layout mismatch");
-                    const float requested = numeric ? numeric->GetNumericValue(source) : -1.0f;
-                    value = numeric && (name == "IsCombatState" ? std::trunc(requested) == 0.0f : requested == 0.0f);
+                    }
+                    else
+                    {
+                        const float requested = numeric->GetNumericValue(source);
+                        value = name == "IsCombatState" ? std::trunc(requested) == 0.0f : requested == 0.0f;
+                    }
                 }
                 else if (name == "HasGraphVariable")
                 {
                     const auto* const text = component<::Conditions::ITextConditionComponent>(*condition);
                     if (!text)
+                    {
                         scope->reject("graph-variable component layout mismatch");
-                    const RE::BSString variable = text ? text->GetTextValue() : RE::BSString{};
-                    const auto found = scope->state().graph_variables.find(variable.c_str() ? variable.c_str() : "");
-                    // HasGraphVariable tests existence, not the variable's numeric truth/value.
-                    value = text && found != scope->state().graph_variables.end();
+                    }
+                    else
+                    {
+                        const RE::BSString variable = text->GetTextValue();
+                        const auto found = scope->state().graph_variables.find(variable.c_str() ? variable.c_str() : "");
+                        // HasGraphVariable tests existence, not the variable's numeric truth/value. An
+                        // audited caller supplies the preview's complete table; a projection does not.
+                        if (found != scope->state().graph_variables.end())
+                            value = true;
+                        else if (!projected)
+                            value = false;
+                    }
                 }
             }
             if (value)
             {
-                scope->note_override();
-                return finish_predicate(*value, false, condition->IsNegated());
+                const bool projected_value = finish_predicate(*value, false, condition->IsNegated());
+                // The engine's own answer for the SAME evaluation is the only direct measure of
+                // "this projection changed an input OAR decides on"; asking it costs one call.
+                const bool differs = projected && s_evaluate(condition, source, clip, submod) != projected_value;
+                scope->note_override(name, differs);
+                return projected_value;
             }
-            if (!forwards_source(name))
-            {
-                scope->reject(fmt::format("unsupported preview condition: {}", name));
-                return false;
-            }
-            return s_evaluate(condition, source, clip, submod);
+            if (projected || forwards_source(name))
+                return s_evaluate(condition, source, clip, submod);
+            scope->reject(fmt::format("unsupported preview condition: {}", name));
+            return false;
         }
 
         float numeric_thunk(void const* numeric, RE::TESObjectREFR* source)
@@ -132,22 +155,29 @@ namespace oar
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             const Frame* const frame = Frame::current;
             if (!scope || !frame || source != frame->m_source || !scope->matches(frame->m_source, frame->m_clip) ||
-                read_at<std::int32_t>(numeric, profile_3_2_1::Numeric_Type_Offset) != 3)
+                read_at<std::int32_t>(numeric, Numeric_Type_Offset) != 3)
                 return s_numeric(numeric, source);
 
             // MSVC 14.44 std::string layout and both offsets verified in the Nexus DLL/PDB.
             static_assert(sizeof(std::string) == 0x20);
             const auto& name = *reinterpret_cast<std::string const*>(
-                static_cast<std::uint8_t const*>(numeric) + profile_3_2_1::Graph_Name_Offset);
+                static_cast<std::uint8_t const*>(numeric) + Graph_Name_Offset);
             const auto found = scope->state().graph_variables.find(name);
             if (found == scope->state().graph_variables.end())
             {
+                // A projection supplies only the variables it overrides; everything else stays the
+                // engine's value (an audited query is answered against its complete preview table).
+                if (scope->mode() == ScopeMode::kProjected)
+                    return s_numeric(numeric, source);
                 scope->reject(fmt::format("unmapped numeric graph variable: {}", name));
                 return 0.0f;
             }
-            scope->note_override();
             const float value = found->second;
-            switch (read_at<std::int32_t>(numeric, profile_3_2_1::Graph_Type_Offset))
+            // Same differential as the predicate path: the engine's own read of this variable is
+            // what OAR would have decided on without the projection.
+            const bool differs = scope->mode() == ScopeMode::kProjected && s_numeric(numeric, source) != value;
+            scope->note_override(name, differs);
+            switch (read_at<std::int32_t>(numeric, Graph_Type_Offset))
             {
             case 0: return value;
             case 1:
@@ -210,9 +240,8 @@ namespace oar
             return true;
         }
 
-        bool verify_image(HMODULE module)
+        bool verify_image(HMODULE module, BinaryProfile const& profile)
         {
-            using namespace profile_3_2_1;
             auto const* const base = reinterpret_cast<std::uint8_t const*>(module);
             auto const* const dos = reinterpret_cast<IMAGE_DOS_HEADER const*>(base);
             if (dos->e_magic != IMAGE_DOS_SIGNATURE || dos->e_lfanew < 0 || dos->e_lfanew > 0x1000)
@@ -220,23 +249,26 @@ namespace oar
             auto const* const nt = reinterpret_cast<IMAGE_NT_HEADERS64 const*>(base + dos->e_lfanew);
             if (nt->Signature != IMAGE_NT_SIGNATURE || nt->FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
                 nt->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC ||
-                nt->FileHeader.TimeDateStamp != Timestamp || nt->OptionalHeader.SizeOfImage != Image_Size)
+                nt->FileHeader.TimeDateStamp != profile.timestamp ||
+                nt->OptionalHeader.SizeOfImage != profile.image_size)
                 return false;
             const auto& directory = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
             if (directory.Size < sizeof(IMAGE_DEBUG_DIRECTORY) || directory.Size > 4096 ||
-                directory.VirtualAddress > Image_Size - directory.Size)
+                directory.VirtualAddress > profile.image_size - directory.Size)
                 return false;
             auto const* const entries = reinterpret_cast<IMAGE_DEBUG_DIRECTORY const*>(base + directory.VirtualAddress);
             for (std::size_t i = 0; i < directory.Size / sizeof(IMAGE_DEBUG_DIRECTORY); ++i)
             {
                 auto const& entry = entries[i];
                 if (entry.Type != IMAGE_DEBUG_TYPE_CODEVIEW || entry.SizeOfData < 24 ||
-                    entry.SizeOfData > Image_Size || entry.AddressOfRawData > Image_Size - entry.SizeOfData)
+                    entry.SizeOfData > profile.image_size ||
+                    entry.AddressOfRawData > profile.image_size - entry.SizeOfData)
                     continue;
                 auto const* const record = base + entry.AddressOfRawData;
-                if (std::memcmp(record, "RSDS", 4) == 0 && matches(nt->FileHeader.TimeDateStamp,
+                if (std::memcmp(record, "RSDS", 4) == 0 && matches(profile, nt->FileHeader.TimeDateStamp,
                     nt->OptionalHeader.SizeOfImage, { record + 4, 16 }, read_at<std::uint32_t>(record, 20),
-                    { base + Evaluate_Rva, Evaluate_Prefix.size() }, { base + Numeric_Rva, Numeric_Prefix.size() }))
+                    { base + profile.evaluate_rva, profile.evaluate_prefix.size() },
+                    { base + profile.numeric_rva, profile.numeric_prefix.size() }))
                     return true;
             }
             return false;
@@ -254,14 +286,26 @@ namespace oar
             logger::info("OAR hooks unavailable: Open Animation Replacer is not loaded");
             return false;
         }
-        if (info->version != REL::Version(3, 2, 1, 0).pack() || !verify_image(module))
+        BinaryProfile const* const profile = [&]() -> BinaryProfile const*
         {
-            logger::error("OAR hooks refused: expected verified Nexus 3.2.1 DLL/PDB identity and function bytes");
+            for (auto const& candidate : Profiles)
+            {
+                if (info->version == REL::Version(candidate.version).pack() && verify_image(module, candidate))
+                    return &candidate;
+            }
+            return nullptr;
+        }();
+        if (!profile)
+        {
+            logger::error("OAR hooks refused: no verified profile matches this DLL/PDB identity, entry bytes "
+                          "and plugin version {}.{}.{}.{}",
+                (info->version >> 24) & 0xFF, (info->version >> 16) & 0xFF,
+                (info->version >> 4) & 0xFFF, info->version & 0xF);
             return false;
         }
         const auto base = reinterpret_cast<std::uintptr_t>(module);
-        s_evaluate = reinterpret_cast<Evaluate>(base + profile_3_2_1::Evaluate_Rva);
-        s_numeric = reinterpret_cast<NumericValue>(base + profile_3_2_1::Numeric_Rva);
+        s_evaluate = reinterpret_cast<Evaluate>(base + profile->evaluate_rva);
+        s_numeric = reinterpret_cast<NumericValue>(base + profile->numeric_rva);
         LONG result = DetourTransactionBegin();
         if (result != NO_ERROR)
         {
@@ -287,7 +331,8 @@ namespace oar
             return false;
         }
         s_ready.store(true, std::memory_order_release);
-        logger::info("OAR 3.2.1 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only");
+        logger::info("OAR {}.{}.{} hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only",
+            profile->version[0], profile->version[1], profile->version[2]);
         return true;
     }
 

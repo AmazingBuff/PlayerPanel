@@ -54,6 +54,13 @@ namespace
                 // AFP9: R01 direct draw of the puppet's own 3D (F6 is unbound elsewhere).
                 else if (scan == MapVirtualKeyA(VK_F6, MAPVK_VK_TO_VSC))
                     PuppetDraw::instance().toggle();
+
+                // F11: the OAR projection's on/off arm (F1/F5/F9/F10/F12 belong to other mods).
+                else if (scan == MapVirtualKeyA(VK_F11, MAPVK_VK_TO_VSC))
+                {
+                    PuppetDriver& driver = PuppetDriver::instance();
+                    driver.set_projection(!driver.projection());
+                }
             }
 #endif
 
