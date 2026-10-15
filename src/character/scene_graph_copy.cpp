@@ -320,19 +320,6 @@ void SceneGraphCopy::reset_for_load()
 
 void SceneGraphCopy::process_requests()
 {
-
-    // Each visit to the panel starts the animation from its beginning. The engine is paused while the
-    // inventory is up, so the studio's clocks are the only thing moving the figure, and letting their
-    // time carry across a close and a reopen is what makes it resume mid-step instead of starting over.
-    // The flag comes from the menu event rather than from an edge watched here: this function does run
-    // every rendered frame, but the event is the authority on the menu's own state either way.
-    if (PanelMonitor::instance().consume_panel_opened())
-    {
-        m_clip.restart();
-        m_idle.restart();
-        logger::info("SCOPY ANIM restart at panel open capture={} driver={}", m_capture_id, animation_driver());
-    }
-
     const uint32_t generation = m_generation.load(std::memory_order_acquire);
     RE::UI* ui = RE::UI::GetSingleton();
 
@@ -359,6 +346,36 @@ void SceneGraphCopy::process_requests()
         m_seen_generation = generation;
         m_command.store(Command::e_none, std::memory_order_release);
         return;
+    }
+
+    // Each visit to the panel starts the animation from its beginning. The engine is paused while the
+    // inventory is up, so the studio's clocks are the only thing moving the figure, and letting their
+    // time carry across a close and a reopen is what makes it resume mid-step instead of starting over.
+    // The flag comes from the menu event rather than from an edge watched here: this function does run
+    // every rendered frame, but the event is the authority on the menu's own state either way.
+    //
+    // The copy-route decision (2026-10-15): the panel shows the detached copy of the player's real
+    // 3D - the capture carries every body-morph and outfit-transform state the mods gave the player,
+    // so no per-plugin compatibility is needed and the route needs no display Actor. Every panel
+    // open therefore recaptures (the player's visible outfit may have changed since the last visit)
+    // and enables the draw on success; F7/F8 stay as the manual overrides. A not-yet-paused open
+    // falls through to the queued-command path below, which carries the same paused-panel validation.
+    // This block runs AFTER the generation boundary above, so a recapture can never be dropped by it.
+    if (PanelMonitor::instance().consume_panel_opened())
+    {
+        m_clip.restart();
+        m_idle.restart();
+        if (ui && ui->GameIsPaused() && !ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
+        {
+            m_isolation.census_pre("capture");
+            capture();
+            m_isolation.census_post("capture");
+            if (m_snapshot)
+                m_draw_enabled = true;
+            logger::info("SCOPY AUTO recaptured at panel open capture={} draw={} driver={}",
+                m_capture_id, m_draw_enabled ? 1 : 0, animation_driver());
+        }
+        logger::info("SCOPY ANIM restart at panel open capture={} driver={}", m_capture_id, animation_driver());
     }
     const Command command = m_command.exchange(Command::e_none, std::memory_order_acq_rel);
     if (command == Command::e_none)

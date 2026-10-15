@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Changed
+
+- Display route: the panel now draws the DETACHED COPY of the player's real third-person 3D, and
+  no display puppet is spawned any more (the copy-route decision, 2026-10-15). The copy carries
+  every body-morph and outfit-transform state other mods gave the player (OBody, outfit plugins),
+  so the old clone-Actor route's per-plugin compatibility work and its OAR hook adaptations are
+  no longer on the critical path. Every panel open now RECAPTURES the player's current 3D (the
+  visible outfit may have changed since the last visit) and enables the draw on success - the
+  panel shows the figure without pressing F7 first. F7/F8 stay as the manual recapture and
+  draw-toggle overrides; F6 (R01 same-Actor direct draw) stays as a diagnostic, default off,
+  and the puppet code itself is retained for those diagnostics. The figure's motion comes from
+  the captured clip (the engine's own OAR-decided clip at capture time) with the procedural
+  idle as fallback; hooking OAR for state-specific idles and per-equip animations on the copy
+  is the next work package. Build identity: `CharacterPanel-scopy-copy-primary-98a8b87507+
+  dirty-cl94faaed0c6-20261015T170011Z` (DLL SHA-256 `ff3045659365d28bbabbcec02bd6b7e76a70f8b889dff4c85da17a073ed46d4d`),
+  deployed and hash-verified; game validation pending.
+
 ### Added
 
 - A dedicated `src/oar` integration module for the Nexus OAR binary. It verifies the
