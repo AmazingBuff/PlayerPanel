@@ -21,6 +21,22 @@
 
 ### Added
 
+- Pose-idle pool (state-idle v2, user-corrected): the panel figure ALWAYS shows a STANDING idle -
+  opening the panel while sneaking, swimming, jumping or moving serves the standing idle of the
+  current weapon stance, never the sneak/swim/locomotion cycle; only a DRAWN weapon changes the
+  idle to the one for its form (one-handed, two-handed, bow, dual-wield, spell, staff, torch,
+  shield). While the world runs, a sampler (every 45 frames, panel closed and engine unpaused)
+  files the engine's own idle clip under the pose class whenever the player stands still in a
+  legible pose; at panel open the desired class is computed from the CURRENT stance and served
+  from the pool first, then the running idle, then the strongest clip, with the pick named in the
+  capture log (`pick=pool|running-idle|strongest-fallback`). A pool entry's generator handle is
+  re-validated through the full resolve chain before use; misses are logged, never dereferenced.
+  The pure rules (pose classes, hand kinds, pool) carry their own regression (`pose idle pool`,
+  17 checks now). Build identity `CharacterPanel-scopy-copy-primary-5bd36c28a8+dirty…T180610Z`
+  (DLL SHA-256 `039f8701fb724f6f89ef6a8a8c49571ee46e310eeef70a4c75ecd24b1c2345ac`), deployed and
+  hash-verified; game validation pending (sneak/swim opens must show the standing idle, drawn
+  stances the weapon-form idle, and `SCOPY POSE pool sample` lines the filing).
+
 - State-idle capture (copy-primary, second package): the figure the panel shows now plays the
   state the player was in at capture. The capture prefers the strongest running clip whose name
   carries the engine's idle family marker ("idle", case-insensitive - sneakIdle, 1hm_idle, the

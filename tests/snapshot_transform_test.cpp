@@ -6,6 +6,7 @@
 #include "character/body_shape.h"
 #include "character/equipment_mirror.h"
 #include "character/figure_audit.h"
+#include "character/pose_idle_pool.h"
 #include "character/snapshot_transform.h"
 #include "oar/binary_profile.h"
 #include "oar/policy.h"
@@ -264,6 +265,44 @@ namespace
             satisfied_from_the_other_entry && one_handed_stays_per_entry;
     }
 
+    bool pose_idle_pool_serves_standing_idles()
+    {
+        namespace pid = PLUGIN_NAMESPACE;
+        // The panel figure ALWAYS stands (state-idle v2): a sneaking, swimming or moving stance
+        // folds into the NEUTRAL standing idle, and only the drawn weapon's form changes the
+        // class. Sneak+combat is the weapon's stance, not the sneak pose.
+        const bool sheathed_stays_neutral =
+            pid::pose_class_for({ .weapon_drawn = false, .sneaking = true }) == pid::PoseClass::kNeutral &&
+            pid::pose_class_for({ .weapon_drawn = false, .swimming = true }) == pid::PoseClass::kNeutral &&
+            pid::pose_class_for({ .weapon_drawn = false, .moving = true }) == pid::PoseClass::kNeutral;
+        const bool drawn_forms_split =
+            pid::pose_class_for({ .weapon_drawn = true, .right_kind = pid::HandKind::kTwoHandedWeapon }) == pid::PoseClass::kTwoHanded &&
+            pid::pose_class_for({ .weapon_drawn = true, .right_kind = pid::HandKind::kOneHandedWeapon, .left_kind = pid::HandKind::kOneHandedWeapon }) == pid::PoseClass::kDualWield &&
+            pid::pose_class_for({ .weapon_drawn = true, .right_kind = pid::HandKind::kOneHandedWeapon }) == pid::PoseClass::kOneHanded &&
+            pid::pose_class_for({ .weapon_drawn = true, .right_kind = pid::HandKind::kSpell, .left_kind = pid::HandKind::kSpell }) == pid::PoseClass::kMagic &&
+            pid::pose_class_for({ .weapon_drawn = true, .right_kind = pid::HandKind::kStaff }) == pid::PoseClass::kStaff &&
+            pid::pose_class_for({ .weapon_drawn = true, .sneaking = true, .right_kind = pid::HandKind::kOneHandedWeapon }) == pid::PoseClass::kOneHanded;
+        // A moving or attacking stance is not the engine playing a pose idle: the sampler must not
+        // file a locomotion cycle or a swing into the pool.
+        const bool motion_is_not_idle =
+            !pid::pose_is_standing_idle({ .moving = true }) &&
+            !pid::pose_is_standing_idle({ .attacking = true }) &&
+            !pid::pose_is_standing_idle({ .sneaking = true }) &&
+            pid::pose_is_standing_idle({ .weapon_drawn = true, .right_kind = pid::HandKind::kOneHandedWeapon });
+        // The pool holds one newest entry per class and serves it back; a load boundary clears it.
+        pid::PoseIdlePool pool;
+        const bool files_and_serves = pool.file({ pid::PoseClass::kOneHanded, "1hm_idle", 0x1234 }) &&
+            pool.file({ pid::PoseClass::kNeutral, "IdleForceDefaultState", 0x5678 }) &&
+            pool.file({ pid::PoseClass::kOneHanded, "1hm_weakleft_idle", 0x9abc }) &&
+            pool.find(pid::PoseClass::kOneHanded)->clip_name == "1hm_weakleft_idle" &&
+            pool.find(pid::PoseClass::kOneHanded)->generator == 0x9abc &&
+            pool.find(pid::PoseClass::kNeutral)->clip_name == "IdleForceDefaultState" &&
+            pool.find(pid::PoseClass::kBow) == nullptr && pool.size() == 2;
+        pool.clear();
+        const bool clears = pool.size() == 0 && pool.find(pid::PoseClass::kNeutral) == nullptr;
+        return sheathed_stays_neutral && drawn_forms_split && motion_is_not_idle && files_and_serves && clears;
+    }
+
     bool oar_binary_profile_rejects_mismatches()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
@@ -515,6 +554,7 @@ int main()
     const bool track_identity = animation_mapping_preserves_track_identity();
     const bool shape_clear = empty_source_clears_body_shape();
     const bool two_handed = two_handed_weapon_keeps_one_hand_state();
+    const bool pose_pool = pose_idle_pool_serves_standing_idles();
     const bool oar_scope = oar_preview_scope_is_isolated();
     const bool oar_projection = oar_projection_scope_covers_every_clip();
     const bool oar_binary = oar_binary_profile_rejects_mismatches();
@@ -528,7 +568,8 @@ int main()
     std::printf("OAR preview scope: %s\nOAR projection scope: %s\nOAR binary identity: %s\n",
         oar_scope ? "PASS" : "FAIL", oar_projection ? "PASS" : "FAIL", oar_binary ? "PASS" : "FAIL");
     std::printf("figure transparency order: %s\nfigure material state: %s\n", alpha_order ? "PASS" : "FAIL", alpha_state ? "PASS" : "FAIL");
-    std::printf("D3D constant buffer ranges: %s\ntwo-handed hand state: %s\n", d3d_ranges ? "PASS" : "FAIL", two_handed ? "PASS" : "FAIL");
+    std::printf("D3D constant buffer ranges: %s\ntwo-handed hand state: %s\npose idle pool: %s\n",
+        d3d_ranges ? "PASS" : "FAIL", two_handed ? "PASS" : "FAIL", pose_pool ? "PASS" : "FAIL");
     return placement && mapping && framing && ledger && necessity && bound && assembly && track_identity && shape_clear &&
-        two_handed && oar_scope && oar_projection && oar_binary && alpha_order && alpha_state && d3d_ranges ? 0 : 1;
+        two_handed && oar_scope && oar_projection && oar_binary && alpha_order && alpha_state && d3d_ranges && pose_pool ? 0 : 1;
 }

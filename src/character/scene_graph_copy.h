@@ -7,6 +7,7 @@
 #include "character/animation_source.h"
 #include "character/idle_driver.h"
 #include "character/isolation_watch.h"
+#include "character/pose_idle_pool.h"
 
 #include <string>
 
@@ -42,6 +43,10 @@ private:
     void capture();
     void retire(std::unique_ptr<CharacterClone> snapshot);
     void log_parked() const;
+    // The pose-idle sampler: while the world runs, files the engine's own idle for the pose the
+    // player stands in; at panel open, picks the clip for the CURRENT stance.
+    void sample_pose_idle();
+    [[nodiscard]] RE::hkbClipGenerator const* pick_pose_idle(RE::Actor& a_player, char const*& a_pick) const;
 
 private:
     std::atomic<Command> m_command;
@@ -57,6 +62,8 @@ private:
     // Retired snapshots deliberately remain alive until process exit.
     std::vector<CharacterClone*> m_parked;
     IsolationWatch m_isolation;
+    PoseIdlePool m_pose_pool;
+    std::uint32_t m_pose_sample_frames = 0;
 };
 
 PLUGIN_NAMESPACE_END

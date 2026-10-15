@@ -213,7 +213,7 @@ target_precompile_headers(
 
 if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 	enable_testing()
-	add_executable(CharacterPanelCopyMathTest tests/snapshot_transform_test.cpp src/render/dx11/d3d11_util.cpp)
+	add_executable(CharacterPanelCopyMathTest tests/snapshot_transform_test.cpp src/render/dx11/d3d11_util.cpp src/character/pose_idle_pool.cpp)
 	target_compile_features(CharacterPanelCopyMathTest PRIVATE cxx_std_23)
 	target_compile_definitions(CharacterPanelCopyMathTest PRIVATE CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=1 NOMINMAX)
 	target_include_directories(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src)
