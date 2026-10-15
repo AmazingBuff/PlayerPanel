@@ -21,6 +21,19 @@
 
 ### Added
 
+- State-idle capture (copy-primary, second package): the figure the panel shows now plays the
+  state the player was in at capture. The capture prefers the strongest running clip whose name
+  carries the engine's idle family marker ("idle", case-insensitive - sneakIdle, 1hm_idle, the
+  hand-idle family) - the engine's own OAR-decided idle for the current state (jumping, sneaking,
+  swimming, combat, weapon-drawn); with no idle-named clip running (mid-locomotion) it falls back
+  to the strongest clip and logs the pick (`pick=idle-named|strongest-fallback`). The capture log
+  now carries the engine actor state beside the clip (`state[sneaking=… swimming=… sitting=…
+  weapon-drawn=… attack=… knock=… life=…]`), so a reader can tell which state the clip belongs to
+  without inferring from the clip name. Build identity
+  `CharacterPanel-scopy-copy-primary-98a8b87507+dirty…T170011Z` (DLL SHA-256
+  `b504d7665084fe94e66e36936177a3c7672de34e64a9736a9ce2c23cd255a2f6`), deployed and hash-verified;
+  game validation pending (sneak/swim/combat opens, mid-locomotion opens).
+
 - A dedicated `src/oar` integration module for the Nexus OAR binary. It verifies the
   DLL/PDB build identity and entry bytes before installing preview-scoped condition and
   numeric graph-variable hooks. Audited queries retain source identity/equipment while

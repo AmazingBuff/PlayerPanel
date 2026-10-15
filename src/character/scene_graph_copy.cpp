@@ -539,13 +539,39 @@ void SceneGraphCopy::capture()
     // Snapshot the native clone's captured worlds without re-running facegen, Havok or SMP.
     m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root));
     logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F2=mark F4=drive", m_capture_id, removed_controllers, removed_collisions);
+    // The figure's motion = the state the player was in at capture (state-idle decision,
+    // 2026-10-15): the strongest running clip IS the engine's own OAR-decided answer for the
+    // state the player is in - jumping, sneaking, swimming, combat idle, a weapon-drawn idle -
+    // so mirroring it needs no per-state hook and no per-plugin compatibility. The actor state
+    // is logged beside it so a reader can tell which state the clip belongs to.
+    std::string state_note;
+    if (const RE::ActorState* const state = player->AsActorState())
+    {
+        state_note = fmt::format("sneaking={} swimming={} sitting={} weapon-drawn={} attack={} knock={} life={}",
+            state->IsSneaking() ? 1 : 0,
+            state->IsSwimming() ? 1 : 0,
+            state->IsSitting() ? 1 : 0,
+            state->IsWeaponDrawn() ? 1 : 0,
+            static_cast<std::uint32_t>(state->GetAttackState()),
+            static_cast<std::uint32_t>(state->GetKnockState()),
+            static_cast<std::uint32_t>(state->GetLifeState()));
+    }
     ClipPlayback clip;
     std::string mapping;
     std::string coverage;
-    RE::hkbClipGenerator const* const generator = pick_running_clip(*player);
+    // State-idle preference: the panel shows the state's IDLE, not a locomotion cycle - a
+    // mid-sprint open must not put the copy on a treadmill. The engine's own idle-named clip
+    // running right now IS its OAR decision for this state; without one, the strongest clip
+    // still serves (it is the best available answer for the state) and the pick is logged.
+    RE::hkbClipGenerator const* const generator = pick_idle_running_clip(*player);
+    const char* pick = "idle-named";
+    if (!generator)
+    {
+        pick = "strongest-fallback";
+    }
     if (resolve_clip_playback(*player, *root, generator, clip, mapping, coverage))
     {
-        logger::info("SCOPY ANIM captured clip='{}' mapping={} coverage={}", clip.name, mapping, coverage);
+        logger::info("SCOPY ANIM captured clip='{}' pick={} mapping={} coverage={} state[{}]", clip.name, pick, mapping, coverage, state_note);
         m_clip.set_clip(std::move(clip));
     }
     else

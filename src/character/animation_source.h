@@ -131,6 +131,10 @@ struct ClipPlayback
 
 size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop = true);
 [[nodiscard]] RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source);
+// The state-idle preference: the strongest running clip whose NAME carries the engine's idle
+// family marker ("idle", case-insensitive - covers sneakIdle, 1hm_idle and the hand-idle family),
+// or null when no idle-named clip is running (locomotion) and the caller should fall back.
+[[nodiscard]] RE::hkbClipGenerator const* pick_idle_running_clip(RE::TESObjectREFR& source);
 bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
     ClipPlayback& out, std::string& out_mapping, std::string& out_coverage);
 [[nodiscard]] float live_clip_time(RE::hkbClipGenerator const* generator);

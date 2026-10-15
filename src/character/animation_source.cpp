@@ -285,6 +285,41 @@ RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source)
     return best;
 }
 
+RE::hkbClipGenerator const* pick_idle_running_clip(RE::TESObjectREFR& source)
+{
+    std::vector<ActiveClipEntry> running;
+    collect_running_clip_generators(source, running);
+    RE::hkbClipGenerator const* best = nullptr;
+    float best_weight = 0.0f;
+    for (const ActiveClipEntry& entry : running)
+    {
+        // The state-idle preference (state-idle decision, 2026-10-15): the strongest running clip
+        // while MOVING is a locomotion cycle, but the panel wants the state's IDLE - the engine's
+        // own idle family is recognisable by name (sneakIdle, 1hm_idle, MTn_IdleHorse, the
+        // hand-idle family *Lh_Idle/*Rh_Idle the old classifier gap named). Attack and equip
+        // one-shots carry other names and lose. No idle-named clip running (e.g. mid-sprint)
+        // returns null and the caller falls back to the strongest clip, logging the pick.
+        std::string lowered;
+        lowered.reserve(entry.name.size());
+        std::transform(entry.name.begin(), entry.name.end(), std::back_inserter(lowered),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (lowered.find("idle") == std::string::npos)
+            continue;
+        RE::hkbClipGenerator const* const generator = entry.generator;
+        if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
+            continue;
+        const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
+        if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
+            continue;
+        if (control->weight > best_weight)
+        {
+            best_weight = control->weight;
+            best = generator;
+        }
+    }
+    return best;
+}
+
 bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
     ClipPlayback& out, std::string& out_mapping, std::string& out_coverage)
 {
