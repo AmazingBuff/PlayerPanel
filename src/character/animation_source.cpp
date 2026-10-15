@@ -240,10 +240,10 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
     else if (looped > length)
         looped = length;  // single-play: the engine blends the final frame out; hold it, never replay
 
-    const size_t sample_count = clip.tracks.empty() ? 0 : static_cast<size_t>(clip.tracks.back()) + 1;
-    if (sample_count == 0)
+    const std::int32_t sample_count = clip.animation->numberOfTransformTracks;
+    if (sample_count <= 0 || sample_count > Max_Tracks_Read)
         return 0;
-    std::vector<RE::hkQsTransform> sampled(sample_count);
+    std::vector<RE::hkQsTransform> sampled(static_cast<std::size_t>(sample_count));
     sample_tracks(*clip.animation, looped, static_cast<std::uint32_t>(sample_count), sampled.data(), nullptr, 0);
 
     size_t written = 0;
@@ -351,40 +351,36 @@ bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
 
     // Empty replacement tables retain the existing unverified identity fallback.
     const RE::hkArray<std::int16_t>& table = binding->transformTrackToBoneIndices;
-    std::vector<std::uint16_t> tracks;
-    if (!table.empty() && readable(table.begin(), static_cast<std::size_t>(table.size()) * sizeof(std::int16_t)))
+    std::span<std::int16_t const> track_table;
+    if (!table.empty())
     {
-        const std::int32_t count = std::min<std::int32_t>(track_count, static_cast<std::int32_t>(table.size()));
-        tracks.reserve(static_cast<std::size_t>(count));
-        for (std::int32_t i = 0; i < count; ++i)
+        if (!readable(table.begin(), static_cast<std::size_t>(table.size()) * sizeof(std::int16_t)))
         {
-            const std::int16_t bone = table[static_cast<std::size_t>(i)];
-            if (bone < 0 || static_cast<std::uint32_t>(bone) >= static_cast<std::uint32_t>(skeleton->bones.size()))
-                continue;
-            tracks.push_back(static_cast<std::uint16_t>(bone));
+            logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=track-table-unreadable clip='{}'", clip_name);
+            return false;
         }
+        track_table = { table.begin(), static_cast<std::size_t>(table.size()) };
         out_mapping = "table";
     }
     else
     {
-        const std::int32_t count = std::min<std::int32_t>(track_count, static_cast<std::int32_t>(skeleton->bones.size()));
-        tracks.reserve(static_cast<std::size_t>(count));
-        for (std::int32_t i = 0; i < count; ++i)
-            tracks.push_back(static_cast<std::uint16_t>(i));
         out_mapping = "identity-unverified";
     }
+    const auto bindings = resolve_animation_tracks(track_table, static_cast<std::size_t>(track_count),
+        static_cast<std::size_t>(skeleton->bones.size()));
 
     const NameIndex copy_by_name = index_nodes_by_name(copy_root);
     out = ClipPlayback{};
     out.animation = animation;
     out.name = clip_name;
     out.duration = animation->duration;
-    out.tracks = tracks;
-    out.nodes.assign(tracks.size(), nullptr);
+    out.tracks.reserve(bindings.size());
+    out.nodes.assign(bindings.size(), nullptr);
     size_t resolved = 0;
-    for (size_t i = 0; i < tracks.size(); ++i)
+    for (size_t i = 0; i < bindings.size(); ++i)
     {
-        const char* const bone_name = skeleton->bones[tracks[i]].name.c_str();
+        out.tracks.push_back(bindings[i].track);
+        const char* const bone_name = skeleton->bones[bindings[i].bone].name.c_str();
         if (!bone_name)
             continue;
         const auto found = copy_by_name.find(bone_name);
@@ -395,10 +391,10 @@ bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
     }
     if (resolved == 0)
     {
-        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-copy-nodes clip='{}' tracks={}", clip_name, tracks.size());
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-copy-nodes clip='{}' tracks={}", clip_name, bindings.size());
         return false;
     }
-    out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={}", tracks.size(), resolved, bone_nodes, pose_count);
+    out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={}", bindings.size(), resolved, bone_nodes, pose_count);
     return true;
 }
 

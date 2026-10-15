@@ -155,7 +155,7 @@ private:
     // one declared dt AND apply once, so the stage remembers that the next paused frame is that one.
     bool m_step_pending = false;
     // The identity the mapping belongs to. A new 3D root or a new graph invalidates it wholesale, and
-    // a failed verification waits for that event instead of retrying every frame.
+    // a rejected comparison waits for that event; unavailable pose data may be retried.
     void const* m_root = nullptr;
     void const* m_graph = nullptr;
     bool m_seen_identity = false;

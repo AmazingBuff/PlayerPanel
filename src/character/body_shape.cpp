@@ -121,8 +121,6 @@ namespace
     // marker is the morph `obody_processed` under the same key.
     constexpr char OBody_Morph_Key[] = "OBody";
 
-    constexpr float Morph_Match_Epsilon = 0.0001f;
-
     IBodyMorphInterface* acquire()
     {
         static IBodyMorphInterface* s_morph = nullptr;
@@ -167,75 +165,24 @@ namespace
         return s_morph;
     }
 
-    // Compares the source's body morphs against the target's without writing anything. Entries under
-    // any other key are the other morph users' business (XPMSE's equipped-weapon state among them)
-    // and are only counted, never compared: a mismatch there is not something this route repairs.
-    class MorphComparer final : public IBodyMorphInterface::MorphValueVisitor
+    // Snapshot before comparing or writing: visiting a store must not mutate that store.
+    class MorphCollector final : public IBodyMorphInterface::MorphValueVisitor
     {
     public:
-        MorphComparer(RE::TESObjectREFR* a_target, IBodyMorphInterface* a_morph)
-            : m_target(a_target), m_morph(a_morph)
-        {
-        }
-
         void Visit(RE::TESObjectREFR*, char const* a_name, char const* a_key, float a_value) override
         {
             if (!a_name || !*a_name)
                 return;
             if (!a_key || std::strcmp(a_key, OBody_Morph_Key) != 0)
             {
-                ++m_skipped;
+                ++skipped;
                 return;
             }
-            ++m_compared;
-            const float current = m_morph->GetMorph(m_target, a_name, a_key);
-            if (std::abs(current - a_value) > Morph_Match_Epsilon)
-                ++m_mismatched;
+            values.insert_or_assign(a_name, a_value);
         }
 
-        [[nodiscard]] std::uint32_t compared() const { return m_compared; }
-        [[nodiscard]] std::uint32_t mismatched() const { return m_mismatched; }
-        [[nodiscard]] std::uint32_t skipped() const { return m_skipped; }
-
-    private:
-        RE::TESObjectREFR* m_target;
-        IBodyMorphInterface* m_morph;
-        std::uint32_t m_compared = 0;
-        std::uint32_t m_mismatched = 0;
-        std::uint32_t m_skipped = 0;
-    };
-
-    class MorphCopier final : public IBodyMorphInterface::MorphValueVisitor
-    {
-    public:
-        MorphCopier(RE::TESObjectREFR* a_target, IBodyMorphInterface* a_morph, BodyShapeSync& a_sync)
-            : m_target(a_target), m_morph(a_morph), m_sync(a_sync)
-        {
-        }
-
-        void Visit(RE::TESObjectREFR*, char const* a_name, char const* a_key, float a_value) override
-        {
-            if (!a_name || !*a_name)
-                return;
-            if (!a_key || std::strcmp(a_key, OBody_Morph_Key) != 0)
-            {
-                ++m_sync.skipped;
-                return;
-            }
-            m_morph->SetMorph(m_target, a_name, a_key, a_value);
-            ++m_sync.copied;
-            if (m_sync.sample.size() < 140)
-            {
-                if (!m_sync.sample.empty())
-                    m_sync.sample += ",";
-                m_sync.sample += fmt::format("{}={:.0f}", a_name, a_value);
-            }
-        }
-
-    private:
-        RE::TESObjectREFR* m_target;
-        IBodyMorphInterface* m_morph;
-        BodyShapeSync& m_sync;
+        BodyMorphValues values;
+        std::uint32_t skipped = 0;
     };
 }
 
@@ -253,27 +200,37 @@ BodyShapeSync body_shape_sync(RE::Actor& a_target, RE::Actor& a_source)
         return sync;
     sync.available = true;
 
-    MorphComparer comparer(&a_target, morph);
-    morph->VisitMorphValues(&a_source, comparer);
-    sync.compared = comparer.compared();
-    sync.mismatched = comparer.mismatched();
-    sync.skipped = comparer.skipped();
+    MorphCollector source;
+    MorphCollector target;
+    morph->VisitMorphValues(&a_source, source);
+    morph->VisitMorphValues(&a_target, target);
+    sync.compared = static_cast<std::uint32_t>(source.values.size());
+    sync.mismatched = body_shape_mismatches(source.values, target.values);
+    sync.skipped = source.skipped;
 
     // A figure that already carries the source's shape is left alone: re-applying identical morphs
     // would rewrite the vertex buffers for nothing, and the check is what keeps this callable on a
     // panel cadence.
-    if (sync.compared == 0 || sync.mismatched == 0)
+    if (sync.mismatched == 0)
         return sync;
 
     // Clear the OBody key first: that is the random preset OBody assigned to this actor, and the
     // source's own values (which live under the same key) are written on top of the cleared set.
     morph->ClearBodyMorphKeys(&a_target, OBody_Morph_Key);
 
-    MorphCopier copier(&a_target, morph, sync);
-    morph->VisitMorphValues(&a_source, copier);
+    for (auto const& [name, value] : source.values)
+    {
+        morph->SetMorph(&a_target, name.c_str(), OBody_Morph_Key, value);
+        ++sync.copied;
+        if (sync.sample.size() < 140)
+        {
+            if (!sync.sample.empty())
+                sync.sample += ",";
+            sync.sample += fmt::format("{}={:.0f}", name, value);
+        }
+    }
 
-    // `deferUpdate = false`: the vertex buffers are rewritten inside this call, so the change is in
-    // the geometry the next draw consumes rather than in some later skin update.
+    // The provider may still queue GPU work when this call is outside the game's main thread.
     morph->ApplyBodyMorphs(&a_target, false);
     sync.applied = true;
     return sync;

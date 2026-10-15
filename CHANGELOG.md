@@ -2,7 +2,28 @@
 
 ## Unreleased
 
+### Added
+
+- A dedicated `src/oar` integration module for the Nexus OAR 3.2.1 binary. It verifies the
+  DLL/PDB build identity and entry bytes before installing preview-scoped condition and
+  numeric graph-variable hooks. Audited queries retain source identity/equipment while
+  projecting supported standing-preview state; unsupported conditions are reported.
+  Animation selection and the rendering backend are not switched by this addition.
+
 ### Fixed
+
+- Review fixes (2026-10-15): non-identity animation bindings now keep track and bone indices
+  separate and sample only the animation's real track count. Recapturing a graph invalidates
+  the puppet's cached target nodes even when the active generator is unchanged.
+- New games now request a puppet, parking uses the current Actor's position across reloads,
+  and post-dressing assembly must bind and settle before parking (with the existing timeout).
+  Final-pose verification retries unavailable input without accepting an unverified mapping.
+- Hand mirroring preserves left/right slots and dual-wield quantities, removes both old hands
+  before replacement, and retains an item still wanted in the other hand. Two-handed weapons
+  keep their two-handed equip slot.
+- OBody shape reconciliation now detects target-only sliders and an empty source preset.
+  Clearing stale morphs is reported as a change even when no replacement values are copied;
+  morph keys belonging to other plugins remain untouched.
 
 - AFP10g the record's own kit reaching the figure AT ALL (the root the AFP10b-f rounds kept chasing
   symptoms of): the puppet's base is a `CreateDuplicateForm` of the player's NPC record, and the

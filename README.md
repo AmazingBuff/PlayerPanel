@@ -25,6 +25,10 @@ reasons.
 
 ## Documentation
 
+- [OAR 3.2.1 hooks](docs/oar-hooks.md): version-gated, preview-scoped condition evaluation under `src/oar`, verified against the Nexus DLL/PDB. Animation selection and playback integration remain separate work.
+
+- [Review fixes (2026-10-15)](docs/code-maintenance.md): separate animation tracks from skeleton indices, invalidate playback on recapture, reconcile complete OBody sets, preserve hand slots and dual-wield counts, retry animation verification while data is unavailable, and correct new-game spawning and assembly/parking boundaries. Local regression checks cover non-identity track mapping and clearing a stale body preset; game validation remains required.
+
 - [AFP10g round](docs/afp10-spawn-shape-dress-test-2026-10-14.md): the record's own kit is cut at the source (the duplicate's container cleared and both outfits nulled at spawn, the copy route's recipe), the prune's world-cadence branch works again (its old gate shared a counter the worn sync reset), the figure's quiver now follows the player's current ammo (`equipment_sync_ammo`), and the body-slot list covers wigs, capes, belts and misc attachments it used to skip.
 
 - [AFP10 test sheet](docs/afp10-spawn-shape-dress-test-2026-10-14.md): the three reports of 2026-10-14 and what each work package changed - nothing perceptible during the assembly window (fade zero, and the window closes as soon as the census reports the shell bound and settled), the player's worn body items mirrored onto the figure, and the player's body shape copied through RaceMenu skee64's BodyMorph interface instead of the random preset OBody NG assigns to every newly placed NPC.

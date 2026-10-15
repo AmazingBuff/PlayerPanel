@@ -9,9 +9,11 @@
 #include "RE/N/NiMatrix3.h"
 #include "RE/N/NiTransform.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -93,13 +95,35 @@ struct PoseSample
     return local;
 }
 
+struct AnimationTrackBinding
+{
+    std::uint16_t track;
+    std::uint16_t bone;
+};
+
+[[nodiscard]] inline std::vector<AnimationTrackBinding> resolve_animation_tracks(
+    std::span<std::int16_t const> table, std::size_t track_count, std::size_t bone_count)
+{
+    const std::size_t count = std::min(track_count, table.empty() ? bone_count : table.size());
+    std::vector<AnimationTrackBinding> bindings;
+    bindings.reserve(count);
+    for (std::size_t track = 0; track < count; ++track)
+    {
+        const std::int32_t bone = table.empty() ? static_cast<std::int32_t>(track) : table[track];
+        if (bone < 0 || static_cast<std::size_t>(bone) >= bone_count)
+            continue;
+        bindings.push_back({ static_cast<std::uint16_t>(track), static_cast<std::uint16_t>(bone) });
+    }
+    return bindings;
+}
+
 // Borrowed animation and node references are used only while their source session is live.
 struct ClipPlayback
 {
     RE::hkaAnimation* animation;
     std::string name;
     float duration;
-    std::vector<std::uint16_t> tracks;
+    std::vector<std::uint16_t> tracks;  // animation track indices, never skeleton bone indices
     std::vector<RE::NiAVObject*> nodes;
 
     [[nodiscard]] bool valid() const { return animation != nullptr && !tracks.empty() && tracks.size() == nodes.size(); }

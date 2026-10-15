@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 
 namespace RE
 {
@@ -13,6 +15,27 @@ namespace RE
 }
 
 PLUGIN_NAMESPACE_BEGIN
+
+using BodyMorphValues = std::unordered_map<std::string, float>;
+
+[[nodiscard]] inline std::uint32_t body_shape_mismatches(BodyMorphValues const& source, BodyMorphValues const& target)
+{
+    constexpr float Match_Epsilon = 0.0001f;
+    std::uint32_t mismatches = 0;
+    for (auto const& [name, value] : source)
+    {
+        const auto found = target.find(name);
+        if (found == target.end() || std::abs(found->second - value) > Match_Epsilon)
+            ++mismatches;
+    }
+    for (auto const& [name, value] : target)
+    {
+        (void)value;
+        if (!source.contains(name))
+            ++mismatches;
+    }
+    return mismatches;
+}
 
 // AFP10-C: the puppet's BODY SHAPE, taken from the player.
 //
@@ -32,21 +55,20 @@ struct BodyShapeSync
     bool available = false;   // skee64 answered and the mirrored layout was accepted
     bool applied = false;     // the target's morphs were rewritten (i.e. the check found a difference)
     std::uint32_t compared = 0;    // body morphs the source carries (the mirrored key only)
-    std::uint32_t mismatched = 0;  // ... of which the target disagreed with
+    std::uint32_t mismatched = 0;  // missing, different or target-only values under the mirrored key
     std::uint32_t copied = 0;      // values actually written onto the target
     std::uint32_t skipped = 0;     // morphs under OTHER keys, deliberately not copied
     std::string sample;            // a few `name=value` pairs, for the log
 
-    [[nodiscard]] bool changed() const { return applied && copied != 0; }
+    [[nodiscard]] bool changed() const { return applied; }
 };
 
 // True once the interface has been acquired (it is acquired lazily on first use).
 [[nodiscard]] bool body_shape_available();
 
 // Makes `a_target`'s body morphs agree with `a_source`'s, and only pays for the write when they
-// disagree: the source's values are visited once and compared against the target's own, so a figure
-// that already matches costs a walk and nothing else. When it does not match, the target's OBody keys
-// are cleared first - that is what removes the random preset OBody picked for the puppet - and the
+// disagree: both OBody sets are compared, including target-only values and an empty source. When
+// they do not match, the target's OBody keys are cleared first to remove its random preset, and the
 // source's values are copied over it before the vertex buffers are re-applied.
 //
 // ONLY the OBody key is copied, and that is load-bearing rather than an optimisation. A morph store

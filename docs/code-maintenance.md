@@ -1,15 +1,28 @@
 # 当前代码维护说明
 
-更新日期：2026-10-15（AFP10g）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
+更新日期：2026-10-15（AFP10g 后审查修复）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
 
 ## 范围
 
-本轮清理删除已退役的调查工具、骨骼／缓存探针、经验轨道求解器及验证用测试矩阵，保留现有预览行为与 AFP 最终姿态诊断。AFP9 新增两件：应用阶段的覆盖对账审计（点名 unreachable/unprocessed 并按 skin palette 分类，不扩写），以及 R01 同 Actor 直绘实验（F6 开关，傀儡自身 3D 进摄影棚，取景恢复带对账；物理/表情仍不在范围内）。没有实现同一 Actor 直接绘制以外的身体 morph、FaceGen 表情、SMP／CBPC、双人物或安全回收。
+此前清理删除已退役的调查工具、骨骼／缓存探针、经验轨道求解器及验证用测试矩阵，保留现有预览行为与 AFP 最终姿态诊断。AFP9 保留覆盖对账审计与 R01 同 Actor 直绘；AFP10 的体型同步只处理 OBody 键。FaceGen 表情、SMP／CBPC、双人物与安全回收仍未实现。
+
+## 审查修复（2026-10-15）
+
+- 动画 binding 显式区分 `track` 与 `bone`：按 track 采样、按 bone 找节点，采样数量取动画的真实轨道数。非空但不可读的映射表拒绝解析；空表仍保留 `identity-unverified` fallback。
+- `PuppetDriver::drive()` 同时检查 generator 与目标 root；F7 重捕获后重新绑定到新树。
+- `park()` 直接比较目标泊位和当前 Actor 的引用位置，不再复用上一 Actor 的泊位缓存。
+- 动画验证仅在取得足够骨骼并实际评分后锁住本次尝试；缺图、缺姿态或比较数量不足时可在后续运行帧重试，实际映射不匹配仍阻止写入。
+- 手部同步先完成双手卸装，再按明确手槽装备；仍被另一手使用的物品保留，双持同款单手武器时补足两件，双手武器保留其原有双手槽。
+- 体型同步先快照双方的 OBody 集合，再比较值与条目是否存在；目标多余条目与玩家清空预设都会触发清除和重新应用，其他键不写入。`copied=0` 也可能是有效的清除更新。
+- 新游戏也排队创建傀儡，实际创建仍等待未暂停帧。穿衣后重新开始统计稳定帧，满足绑定与稳定条件才泊位；240 帧上限保持为兜底。
+
+本地新增两个回归：带乱序和未映射项的轨道映射，以及空来源对目标残留体型的识别。游戏内仍须验证新游戏／原地重读存档、双持换手、清空 OBody 预设和慢速装备装配；本地测试不证明这些引擎行为已通过。旧图的安全销毁仍未解决。
 
 ## 当前模块与数据流
 
 | 模块 | 职责与入口 |
 | --- | --- |
+| [oar/hooks.h/.cpp](../src/oar/hooks.h) | Nexus OAR 3.2.1 的条件与数字图变量 hook；固定 DLL/PDB profile，通过原角色身份与预览专用作用域进行有界求值。[证据及限制](oar-hooks.md)。当前渲染后端尚未切换至该入口。 |
 | [main.cpp](../src/main.cpp) | SKSE 初始化、消息、渲染安装和存档会话边界；不再转储引擎映像。 |
 | [panel.cpp](../src/panel/panel.cpp) | 菜单状态、预览请求和打开通知。 |
 | [renderer.cpp](../src/render/renderer.cpp) | 渲染回调、D3D 状态保护、摄影棚目标及合成；按构建选项选择当前后端。 |
@@ -25,7 +38,7 @@
 | [puppet_draw.h/.cpp](../src/character/puppet_draw.h) | AFP9 R01 直绘：F6 开关；傀儡 `Get3D(false)` 根 + 共用 figure_passes 缝；临时取景（保存/恢复根 local + world/worldBound 对账）；固定骨集 A4/A5 采样；不可用时回退复制图并告警。 |
 | [isolation_watch.cpp](../src/character/isolation_watch.cpp) | 来源与 NPC 的观测、装备变更重新设基线及会话判读；不是全骨骼／全部物理隔离已通过的证明。 |
 | [figure_passes.cpp](../src/render/studio/figure_passes.cpp) | 共用的引擎 pass 生成、灯光临时替换、提交与状态恢复；移除无人使用的逐 pass／batch 探针 callbacks。 |
-| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | 两个聚焦回归：取景保持中心与子树相对尺度；最终姿态正确索引与错位索引的判别。 |
+| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | 既有变换／姿态／装配等九项检查；另增 OAR 作用域隔离和二进制身份拒绝两项回归。 |
 
 场景复制配置的每帧顺序：请求／会话处理 → AFP A0 → 傀儡图推进 → AFP 校准或应用 → AFP mark → 副本 `pose()` → 傀儡 clip／捕获 clip／程序 idle → 引擎蒙皮与 draw → 合成。
 
@@ -83,10 +96,10 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 2. 先恢复副本取景，再写入动画，禁止恢复捕获姿态覆盖本帧动作。引擎继续负责蒙皮提交。
 3. 傀儡保持 Actor／3D 关联用于行为决策；在暂停期间只手动推进它的图。默认 Actor 装配后摘图路线仍单独保留。
 4. AFP 每帧重新查当前树，保留已验证映射和必要的 bone-table fallback；不跨帧缓存目标节点。当前映射覆盖和双缓冲策略没有在本轮修复。
-5. typed clip resolver 保留现有 table 与 `identity-unverified` fallback。空表轨道映射、非 identity 表解释、clip 混合与任意 OAR 动作的正确性仍需游戏证明；删除经验求解器不等于这些问题已解决。
+5. typed clip resolver 保留 table 与 `identity-unverified` fallback；table 的轨道编号和骨骼编号现已分开，非 identity 的索引关系有本地回归。空表映射、clip 混合与任意 OAR 动作仍需游戏证明。
 6. 旧图仍通过 `snapshot.release()` 停放，原有释放崩溃没有修复。12 项仅限制 bookkeeping；更早指针被移除时内存仍泄漏。不要进行无限重捕获压力测试，也不要把无崩溃称为回收通过。
-7. 物理、脸部表情、身体 morph、尸体卸装刷新及双人物后端路由仍是后续工作，不能通过清理顺带实现。
-8. 傀儡 clip 绑定目前只在 generator 切换时重建。F7 换成新 root 而 generator 不变时，仍可能写入旧停放图；重复捕获必须上机复核，后续需要按 root 与 generation 失效绑定。本轮没有修复该既有缓存边界，也没有证明所有重捕获后的显示持续性。
+7. 物理、脸部表情、OBody 以外的体型来源、尸体卸装刷新及双人物后端路由仍是后续工作。
+8. 傀儡 clip 绑定在 generator 或目标 root 切换时重建；重捕获不再沿用旧 root 的节点缓存。重复捕获后的显示持续性仍需游戏验证，不等于旧图安全回收已通过。
 9. AFP9 红线：覆盖审计只点名分类、不扩写 98 槽之外的姿态（`Weapon*` 槽盲写会把武器写出正确位置）；R01 直绘不改写根 local 以外的树数据、不移动 Actor 引用、不动相机、不解除暂停，取景失败与关闭出口同样恢复。
 10. **`NiSkinInstance::bones` 的槽位只能比较指针**：不保证是可读节点（AFP9 首测崩溃：`figure_audit.cpp` 读槽位名字，`cmp [rcx], r12b` @ 0x1010，见 [AFP9 verdict 1](afp9-verdict-2026-10-13.md)）。遍历 palettes 的代码不得读名字、不得解引用、不得调用虚函数。
 11. **同一纹理不得同时作为 OM 目标与 PS 采样源**：D3D11 不报错，只在绑 SRV 时静默置空该槽位，表现为"摄影棚图正确、面板全黑"（AFP9b，见 [black-panel verdict](afp9-black-panel-verdict-2026-10-13.md)）。合成必须先换 OM 再绑 SRV；绘制与合成各自使用独立的状态捕获作用域；合成侧保留 `SCOPY COMPOSITE src/bound/match` 回读证据行。

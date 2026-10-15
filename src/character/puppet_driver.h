@@ -82,9 +82,6 @@ private:
     std::atomic_bool m_force_when_paused{ true };
     RE::NiPointer<RE::TESObjectREFR> m_puppet;
     std::uint32_t m_puppet_form_id = 0;
-    // Where the reference was last parked WITH the character controller (see park()): the warp is
-    // only requested when the reference actually moves, so the per-frame re-assertion stays cheap.
-    RE::NiPoint3 m_park_target{};
     std::uint32_t m_grace_frames = 0;
     std::uint32_t m_repark_frames = 0;
     std::uint32_t m_manual_ticks = 0;
@@ -114,6 +111,7 @@ private:
     std::chrono::steady_clock::time_point m_last_tick{};
 
     RE::hkbClipGenerator const* m_current_generator = nullptr;
+    RE::NiAVObject const* m_playback_root = nullptr;
     ClipPlayback m_playback;
     std::string m_mapping;
 };

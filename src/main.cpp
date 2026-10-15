@@ -10,6 +10,7 @@
 #include "character/puppet_driver.h"
 #include "character/scene_graph_copy.h"
 #include "input/input.h"
+#include "oar/hooks.h"
 
 namespace
 {
@@ -39,6 +40,9 @@ namespace
     {
         switch (message->type)
         {
+        case SKSE::MessagingInterface::kPostPostLoad:
+            (void)PLUGIN_NAMESPACE::oar::install_hooks();
+            break;
         case SKSE::MessagingInterface::kDataLoaded:
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
             PLUGIN_NAMESPACE::Renderer::install();
@@ -56,6 +60,8 @@ namespace
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             PLUGIN_NAMESPACE::SceneGraphCopy::instance().reset_for_load();
             PLUGIN_NAMESPACE::PuppetDriver::instance().request_release();
+            if (message->type == SKSE::MessagingInterface::kNewGame)
+                PLUGIN_NAMESPACE::PuppetDriver::instance().request_spawn();
 #endif
             break;
         case SKSE::MessagingInterface::kPostLoadGame:

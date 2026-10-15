@@ -3,17 +3,90 @@
 //
 
 #include "character/final_pose_probe.h"
+#include "character/body_shape.h"
 #include "character/figure_audit.h"
 #include "character/snapshot_transform.h"
+#include "oar/binary_profile.h"
+#include "oar/policy.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <thread>
 
 namespace
 {
+    bool oar_preview_scope_is_isolated()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        auto* const source = reinterpret_cast<RE::TESObjectREFR*>(0x1000);
+        auto* const clip = reinterpret_cast<RE::hkbClipGenerator*>(0x2000);
+        auto* const world_clip = reinterpret_cast<RE::hkbClipGenerator*>(0x3000);
+        oar::PreviewState state;
+        state.weapon_drawn = true;
+        bool isolated_thread = false;
+        bool nested_restored = false;
+        bool standing = false;
+        {
+            oar::ScopedEvaluation outer(source, clip, state);
+            std::thread other([&] { isolated_thread = oar::ScopedEvaluation::current() == nullptr; });
+            other.join();
+            oar::PreviewState inner_state;
+            {
+                oar::ScopedEvaluation inner(source, world_clip, inner_state);
+                if (oar::ScopedEvaluation::current() != &inner)
+                    return false;
+            }
+            nested_restored = oar::ScopedEvaluation::current() == &outer && outer.matches(source, clip) &&
+                !outer.matches(source, world_clip);
+            const auto in_air = oar::standing_predicate("IsInAir", state);
+            const auto sneaking = oar::standing_predicate("IsSneaking", state);
+            standing = in_air && !*in_air && sneaking && !*sneaking &&
+                oar::finish_predicate(*in_air, false, true) && oar::finish_predicate(true, true, true) &&
+                *oar::standing_predicate("IsWeaponDrawn", state) && oar::forwards_source("IsForm") &&
+                !oar::forwards_source("Random");
+        }
+        return standing && nested_restored && isolated_thread && oar::ScopedEvaluation::current() == nullptr;
+    }
+
+    bool oar_binary_profile_rejects_mismatches()
+    {
+        namespace profile = PLUGIN_NAMESPACE::oar::profile_3_2_1;
+        const bool official = profile::matches(profile::Timestamp, profile::Image_Size, profile::Pdb_Guid,
+            profile::Pdb_Age, profile::Evaluate_Prefix, profile::Numeric_Prefix);
+        auto damaged = profile::Evaluate_Prefix;
+        damaged[0] ^= 1;
+        return official && !profile::matches(profile::Timestamp, profile::Image_Size, profile::Pdb_Guid,
+            profile::Pdb_Age, damaged, profile::Numeric_Prefix);
+    }
+
+    bool animation_mapping_preserves_track_identity()
+    {
+        const std::int16_t table[] = { 7, -1, 2, 0 };
+        const float samples[] = { 10.0f, 20.0f, 30.0f, 40.0f };
+        float bones[8]{};
+        const auto bindings = PLUGIN_NAMESPACE::resolve_animation_tracks(table, std::size(samples), std::size(bones));
+        for (auto const& binding : bindings)
+        {
+            if (binding.track >= std::size(samples) || binding.bone >= std::size(bones))
+                return false;
+            bones[binding.bone] = samples[binding.track];
+        }
+        return bindings.size() == 3 && bones[7] == 10.0f && bones[2] == 30.0f && bones[0] == 40.0f;
+    }
+
+    bool empty_source_clears_body_shape()
+    {
+        const PLUGIN_NAMESPACE::BodyMorphValues source;
+        const PLUGIN_NAMESPACE::BodyMorphValues target{ { "OldPresetSlider", 1.0f } };
+        PLUGIN_NAMESPACE::BodyShapeSync sync;
+        sync.mismatched = PLUGIN_NAMESPACE::body_shape_mismatches(source, target);
+        sync.applied = sync.mismatched != 0;
+        return sync.mismatched == 1 && sync.copied == 0 && sync.changed();
+    }
+
     bool snapshot_placement_preserves_subtree()
     {
         RE::NiTransform captured;
@@ -210,8 +283,15 @@ int main()
     const bool necessity = slot_necessity_orders_exceptions();
     const bool bound = figure_bound_merges_spheres();
     const bool assembly = assembly_gate_measures_allocated_slots();
-    std::printf("snapshot placement: %s\nfinal pose index order: %s\nr01 framing delta: %s\ncoverage ledger: %s\nslot necessity: %s\nfigure bound union: %s\nassembly gate: %s\n",
+    const bool track_identity = animation_mapping_preserves_track_identity();
+    const bool shape_clear = empty_source_clears_body_shape();
+    const bool oar_scope = oar_preview_scope_is_isolated();
+    const bool oar_binary = oar_binary_profile_rejects_mismatches();
+    std::printf("snapshot placement: %s\nfinal pose index order: %s\nr01 framing delta: %s\ncoverage ledger: %s\nslot necessity: %s\nfigure bound union: %s\nassembly gate: %s\nanimation track identity: %s\nempty source body shape: %s\n",
         placement ? "PASS" : "FAIL", mapping ? "PASS" : "FAIL", framing ? "PASS" : "FAIL",
-        ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL", assembly ? "PASS" : "FAIL");
-    return placement && mapping && framing && ledger && necessity && bound && assembly ? 0 : 1;
+        ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL", assembly ? "PASS" : "FAIL",
+        track_identity ? "PASS" : "FAIL", shape_clear ? "PASS" : "FAIL");
+    std::printf("OAR preview scope: %s\nOAR binary identity: %s\n", oar_scope ? "PASS" : "FAIL", oar_binary ? "PASS" : "FAIL");
+    return placement && mapping && framing && ledger && necessity && bound && assembly && track_identity && shape_clear &&
+        oar_scope && oar_binary ? 0 : 1;
 }

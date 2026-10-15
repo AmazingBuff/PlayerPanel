@@ -15,12 +15,15 @@
 #include "RE/B/BSFadeNode.h"
 #include "RE/B/BSGeometry.h"
 #include "RE/B/BSVisit.h"
+#include "RE/B/BGSDefaultObjectManager.h"
+#include "RE/B/BGSEquipSlot.h"
 #include "RE/I/IAnimationGraphManagerHolder.h"
 #include "RE/A/ActorEquipManager.h"
 #include "RE/M/Main.h"
 #include "RE/N/NiCamera.h"
 #include "RE/P/PlayerCharacter.h"
 #include "RE/T/TESObjectREFR.h"
+#include "RE/T/TESObjectWEAP.h"
 
 #include <algorithm>
 #include <cmath>
@@ -28,6 +31,7 @@
 // Windows macros conflict with the qualified REX constants below.
 #undef MEM_COMMIT
 #undef PAGE_NOACCESS
+#undef GetObject
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -261,6 +265,8 @@ void PuppetDriver::tick(bool paused)
             const std::uint32_t equipped = dress(*puppet);
             m_dressed = true;
             m_dress_frames = 0;
+            m_assembly_signature = 0;
+            m_assembly_stable = 0;
             logger::info("SCOPY PUPPET dressed equipped={} frames={} reason={} geoms={} skinned={} bound-nodes={}/{} (the player's worn body items; the reference is still beside the player)",
                 equipped, m_grace_frames, timed_out ? "assembly-timeout" : "assembled",
                 m_assembly_census.geometries, m_assembly_census.skinned,
@@ -270,7 +276,7 @@ void PuppetDriver::tick(bool paused)
         }
 
         // Park on the settled dressing, or at the cap whatever the census says.
-        if (!timed_out && ++m_dress_frames < Dress_Wait_Frames)
+        if (!timed_out && (++m_dress_frames < Dress_Wait_Frames || !settled))
             return;
 
         logger::info("SCOPY PUPPET assembly frames={} reason={} geoms={} skinned={} roots={} bound-nodes={}/{} skin-data-null={} bones-null={} stable={}",
@@ -438,6 +444,7 @@ void PuppetDriver::spawn()
     m_dressed = false;
     m_dress_frames = 0;
     m_current_generator = nullptr;
+    m_playback_root = nullptr;
     m_playback = ClipPlayback{};
     m_mapping.clear();
     m_last_tick = std::chrono::steady_clock::now();
@@ -461,10 +468,8 @@ void PuppetDriver::park(char const* a_why)
     // position. The historical route parked with this flag set and measured interaction as
     // unreachable. It is passed only when the reference actually moves, so the per-frame re-assertion
     // does not warp the controller every frame.
-    const bool warp = (target - m_park_target).Length() > 1.0f;
+    const bool warp = (target - puppet->GetPosition()).Length() > 1.0f;
     puppet->SetPosition(target, warp);
-    if (warp)
-        m_park_target = target;
 
     puppet->SetMotionType(RE::hkpMotion::MotionType::kFixed, false);
 
@@ -515,6 +520,7 @@ void PuppetDriver::release(char const* reason)
     m_puppet = nullptr;
     m_puppet_form_id = 0;
     m_current_generator = nullptr;
+    m_playback_root = nullptr;
     m_playback = ClipPlayback{};
     m_mapping.clear();
     m_grace_frames = 0;
@@ -659,9 +665,13 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
     }
 
     const RE::InventoryEntryData* const hands[2] = { player->GetEquippedEntryData(false), player->GetEquippedEntryData(true) };
+    RE::TESBoundObject* const wanted[2] = {
+        hands[0] ? hands[0]->object : nullptr,
+        hands[1] ? hands[1]->object : nullptr,
+    };
     const std::uint32_t forms[2] = {
-        hands[0] && hands[0]->object ? hands[0]->object->GetFormID() : 0,
-        hands[1] && hands[1]->object ? hands[1]->object->GetFormID() : 0,
+        wanted[0] ? wanted[0]->GetFormID() : 0,
+        wanted[1] ? wanted[1]->GetFormID() : 0,
     };
     const bool right_changed = forms[0] != m_right_form;
     const bool left_changed = forms[1] != m_left_form;
@@ -672,51 +682,66 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
     if (!equip_manager)
         return;
 
+    const RE::BGSDefaultObjectManager* const defaults = RE::BGSDefaultObjectManager::GetSingleton();
+    if (!defaults)
+        return;
+    RE::BGSEquipSlot* const slots[2] = {
+        defaults->GetObject<RE::BGSEquipSlot>(RE::DEFAULT_OBJECT::kRightHandEquip),
+        defaults->GetObject<RE::BGSEquipSlot>(RE::DEFAULT_OBJECT::kLeftHandEquip),
+    };
+    RE::BGSEquipSlot* const both_hands = defaults->GetObject<RE::BGSEquipSlot>(RE::DEFAULT_OBJECT::kEitherHandEquip);
+    if (!slots[0] || !slots[1] || !both_hands)
+        return;
+    const auto slot_for = [&](RE::TESBoundObject* object, int hand)
+    {
+        const RE::TESObjectWEAP* const weapon = object->As<RE::TESObjectWEAP>();
+        return weapon && weapon->GetEquipSlot() == both_hands ? both_hands : slots[hand];
+    };
+
     std::uint32_t hand_equipped = 0;
     std::uint32_t hand_removed = 0;
 
+    // Finish both removals before equipping: swapping hands must not delete the other hand's item.
     for (int hand = 0; hand < 2; ++hand)
     {
         const bool left = hand == 1;
-        RE::TESBoundObject* const wanted = hands[hand] && hands[hand]->object ? hands[hand]->object : nullptr;
-
-        // Compared against what the puppet HOLDS, not against a cached form id. A strip, a fresh
-        // placement or a re-assembly empties the puppet's hands while the player's hands never
-        // changed, and a decision cached from "the player's hands last time" left those slots empty:
-        // the 2026-10-14 report was a figure that only got its weapon back after the player swapped.
         RE::InventoryEntryData* const held_entry = puppet.GetEquippedEntryData(left);
         RE::TESBoundObject* const held = held_entry && held_entry->object ? held_entry->object : nullptr;
-        if (held == wanted)
+        if (!held || held == wanted[hand])
             continue;
 
-        // The old one comes off AND leaves the inventory. Unequipping alone left it carried, and the
-        // engine's own best-fit equip puts a carried weapon straight back - the 2026-10-14 report of a
-        // weapon that was never replaced once it had been equipped. The count reports the removal
-        // itself, not the equip API's opinion of it.
-        if (held)
+        equip_manager->UnequipObject(&puppet, held, nullptr, 1, slot_for(held, hand), false, true, false, true);
+        if (held != wanted[0] && held != wanted[1])
         {
-            equip_manager->UnequipObject(&puppet, held, nullptr, 1, nullptr, false, true, false, true);
             RE::InventoryChanges* const stale = puppet.GetInventoryChanges(false);
             const std::int16_t carried = stale ? stale->GetItemCount(held) : 0;
             puppet.RemoveItem(held, carried > 0 ? carried : 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
-            ++hand_removed;
         }
+        ++hand_removed;
+    }
 
-        if (wanted)
+    for (int hand = 0; hand < 2; ++hand)
+    {
+        RE::TESBoundObject* const object = wanted[hand];
+        if (!object)
+            continue;
+        const RE::BGSEquipSlot* const slot = slot_for(object, hand);
+        const std::int32_t needed = wanted[0] == wanted[1] && slot != both_hands ? 2 : 1;
+        RE::InventoryChanges* const changes = puppet.GetInventoryChanges(false);
+        const std::int32_t carried = changes ? changes->GetItemCount(object) : 0;
+        if (carried < needed)
+            puppet.AddObjectToContainer(object, nullptr, needed - carried, nullptr);
+
+        const RE::InventoryEntryData* const held = puppet.GetEquippedEntryData(hand == 1);
+        if (!held || held->object != object)
         {
-            // (false) = initialise on demand, the AFP10f rule for every read: with `true` a
-            // not-yet-initialised container handed back null, the add was skipped, and the equip
-            // below ran on an item the figure did not carry.
-            RE::InventoryChanges* const changes = puppet.GetInventoryChanges(false);
-            if (changes && changes->GetItemCount(wanted) <= 0)
-                puppet.AddObjectToContainer(wanted, nullptr, 1, nullptr);
-            equip_manager->EquipObject(&puppet, wanted, nullptr, 1, nullptr, false, true, false, true);
+            equip_manager->EquipObject(&puppet, object, nullptr, 1, slot, false, true, false, true);
             ++hand_equipped;
         }
     }
 
     const char* pushed = "none";
-    if (right_changed || left_changed)
+    if (right_changed || left_changed || hand_equipped != 0 || hand_removed != 0)
     {
         const bool any_hand_filled = forms[0] != 0 || forms[1] != 0;
         puppet.DrawWeaponMagicHands(any_hand_filled);
@@ -740,12 +765,13 @@ std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
         return {};
 
     RE::hkbClipGenerator const* const pick = pick_running_clip(*puppet);
-    if (pick != m_current_generator)
+    if (pick != m_current_generator || m_playback_root != &copy_root)
     {
         std::string coverage;
         if (!pick || !resolve_clip_playback(*puppet, copy_root, pick, m_playback, m_mapping, coverage))
         {
             m_current_generator = nullptr;
+            m_playback_root = nullptr;
             m_playback = ClipPlayback{};
             if (!m_stall_logged)
             {
@@ -755,6 +781,7 @@ std::string PuppetDriver::drive(RE::NiAVObject& copy_root)
             return {};
         }
         m_current_generator = pick;
+        m_playback_root = &copy_root;
         m_stall_frames = 0;
         m_stall_logged = false;
         logger::info("SCOPY PUPPET driver clip='{}' mode={} mapping={} coverage={}",

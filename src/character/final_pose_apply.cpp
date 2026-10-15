@@ -209,10 +209,7 @@ void FinalPoseApply::verify(RE::Actor& a_puppet)
         return;
     }
 
-    // The generation is the identity of the Actor's 3D root and its graph - the event that
-    // invalidates a mapping wholesale - and not a count of attempts. A failed verification is
-    // therefore not retried every frame: it waits for that identity to change or for a new arm, both
-    // of which reset the latch that got us here.
+    // Only a real comparison consumes the attempt; assembly and empty output may recover next frame.
     if (m_root != root || m_graph != graph)
     {
         m_root = root;
@@ -329,6 +326,12 @@ void FinalPoseApply::verify(RE::Actor& a_puppet)
     const OrderScore skeleton_score = score_pose_order(samples, by_skeleton.locals, Pose_Match_Degrees);
     const OrderScore scores[2] = { bone_score, skeleton_score };
     const OrderDecision decision = decide_pose_order(scores);
+    if (decision.score.compared < Pose_Match_Min_Compared)
+    {
+        block(decision.reason);
+        return;
+    }
+    m_verify_attempted = true;
     ++m_stats.verifications;
 
     logger::info("SCOPY AFP2 verify generation={} samples={} names skeleton={} tree={} table={} | bone-nodes within-1deg={}/{} ratio={:.2f} | skeleton within-1deg={}/{} ratio={:.2f} | match={} reason={}",
@@ -645,6 +648,11 @@ void FinalPoseApply::tick(bool a_paused)
         m_bone_names.clear();
         m_mapping = "none";
     }
+    if (!root || !graph || !readable(graph, sizeof(RE::BShkbAnimationGraph)))
+    {
+        block("no-3d-or-graph");
+        return;
+    }
 
     // R03 then R04: verify while the engine still applies the pose (its locals are then the truth to
     // compare against), write while it does not. After the first write the node locals are ours, so a
@@ -674,7 +682,6 @@ void FinalPoseApply::tick(bool a_paused)
             }
             else
             {
-                m_verify_attempted = true;
                 verify(*puppet);
             }
         }

@@ -19,8 +19,17 @@ Current controls:
       detached copied graph instead. The puppet path falls back to the copy and
       logs the reason whenever it cannot draw.
 
+2026-10-15 review fixes: new games request the puppet as well as loaded saves;
+parking compares the CURRENT reference position, and dressing waits for binding
+and stable assembly again. Hand mirroring preserves hand slots and same-form
+dual-wield quantities. OBody reconciliation removes target-only values and
+handles a cleared source preset (`copied=0` can be a successful clear). Animation
+tracks and skeleton indices are separate; F7 recapture rebinds target nodes.
+Unavailable final-pose input retries on running frames; a rejected mapping still
+blocks writes. These lifecycle/equipment behaviors still require game validation.
+
 AFP9 additions: the apply stage reconciles its coverage ledger per frame
-(output-slots = attempted + written + unreachable + unprocessed) and names the
+(attempted = written + unreachable; output-slots = attempted + unprocessed) and names the
 unreachable/unprocessed slots against the animation skeleton, classified by the
 puppet's own skin palette (necessary / helper / weapon-attachment / unbound
 palette). R01 direct draw samples a fixed bone set before the passes and after
