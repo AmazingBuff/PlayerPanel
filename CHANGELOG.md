@@ -21,21 +21,20 @@
 
 ### Added
 
-- Pose-idle pool (state-idle v2, user-corrected): the panel figure ALWAYS shows a STANDING idle -
-  opening the panel while sneaking, swimming, jumping or moving serves the standing idle of the
-  current weapon stance, never the sneak/swim/locomotion cycle; only a DRAWN weapon changes the
-  idle to the one for its form (one-handed, two-handed, bow, dual-wield, spell, staff, torch,
-  shield). While the world runs, a sampler (every 45 frames, panel closed and engine unpaused)
-  files the engine's own idle clip under the pose class whenever the player stands still in a
-  legible pose; at panel open the desired class is computed from the CURRENT stance and served
-  from the pool first, then the running idle, then the strongest clip, with the pick named in the
-  capture log (`pick=pool|running-idle|strongest-fallback`). A pool entry's generator handle is
-  re-validated through the full resolve chain before use; misses are logged, never dereferenced.
-  The pure rules (pose classes, hand kinds, pool) carry their own regression (`pose idle pool`,
-  17 checks now). Build identity `CharacterPanel-scopy-copy-primary-5bd36c28a8+dirty…T180610Z`
-  (DLL SHA-256 `039f8701fb724f6f89ef6a8a8c49571ee46e310eeef70a4c75ecd24b1c2345ac`), deployed and
-  hash-verified; game validation pending (sneak/swim opens must show the standing idle, drawn
-  stances the weapon-form idle, and `SCOPY POSE pool sample` lines the filing).
+- Panel pose pre-condition on the OAR hooks (state-idle v3, user): the panel figure answers OAR
+  as a STANDING figure in the player's weapon stance. While the panel is open, every condition
+  OAR evaluates for the figure's original is answered with the standing pose - sneaking,
+  swimming, attacking, running, in-air and mounted all answer no, and the weapon state answers
+  from the weapon form the player actually holds (one-handed, two-handed, bow, dual-wield,
+  spell, staff, torch, shield), so OAR selects that stance's idle by its own rules. Closed, the
+  engine's original path answers again and nothing in the world changes. The form is decided by
+  a pure rule over the two hands (`oar::weapon_form_from_hands`), and the panel's regression
+  `panel pose answer` covers both the standing answers and the form split (17 checks).
+  Not a sampled pool: an unsampled animation could never be played from one, and the replay of
+  sampled clips was retired with the pool statistics. Build identity
+  `CharacterPanel-scopy-copy-primary-ab128d95db+dirty…T182842Z` (DLL SHA-256
+  `8731e5eaa3a2637d379609ad6859a400e4c59b46207888f4ce80bde25a76878c`), deployed and hash-verified;
+  game validation pending (panel opens in sneak/swim/combat, weapon-form stances).
 
 - State-idle capture (copy-primary, second package): the figure the panel shows now plays the
   state the player was in at capture. The capture prefers the strongest running clip whose name

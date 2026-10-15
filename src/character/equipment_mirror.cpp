@@ -120,6 +120,41 @@ void equipment_collect_worn(RE::Actor& a_actor, std::vector<RE::TESBoundObject*>
     collect_worn(a_actor, a_out);
 }
 
+oar::WeaponForm equipment_weapon_form(RE::Actor& a_actor)
+{
+    // Only the reading is engine work: which kind each hand carries. The form itself is decided by
+    // oar::weapon_form_from_hands, a pure rule the panel's regression covers.
+    const auto kind = [](RE::TESForm const* a_form) -> oar::HandKind
+    {
+        if (!a_form)
+            return oar::HandKind::kEmpty;
+        if (const RE::TESObjectWEAP* const weapon = a_form->As<RE::TESObjectWEAP>())
+        {
+            switch (weapon->GetWeaponType())
+            {
+            case RE::WEAPON_TYPE::kTwoHandSword:
+            case RE::WEAPON_TYPE::kTwoHandAxe:
+            case RE::WEAPON_TYPE::kBow:
+            case RE::WEAPON_TYPE::kCrossbow:
+                return oar::HandKind::kTwoHandedWeapon;
+            case RE::WEAPON_TYPE::kStaff:
+                return oar::HandKind::kStaff;
+            default:
+                return oar::HandKind::kOneHandedWeapon;
+            }
+        }
+        if (a_form->As<RE::TESObjectLIGH>())
+            return oar::HandKind::kTorch;
+        if (a_form->IsArmor())
+            return oar::HandKind::kShield;  // a shield is the only armour a hand equips
+        if (a_form->Is(RE::FormType::Spell) || a_form->Is(RE::FormType::Scroll) || a_form->Is(RE::FormType::Shout))
+            return oar::HandKind::kSpell;
+        return oar::HandKind::kEmpty;
+    };
+
+    return oar::weapon_form_from_hands(kind(a_actor.GetEquippedObject(false)), kind(a_actor.GetEquippedObject(true)));
+}
+
 std::uint32_t equipment_equip_all_worn(RE::Actor& a_target, RE::Actor& a_source)
 {
     RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();

@@ -24,6 +24,10 @@ namespace oar
         Evaluate s_evaluate = nullptr;
         NumericValue s_numeric = nullptr;
         std::atomic_bool s_ready = false;
+        // The panel's pre-condition state (see hooks.h): set on the render thread, read by both
+        // thunks on whatever thread OAR evaluates on.
+        std::atomic_bool s_panel_open = false;
+        std::atomic<WeaponForm> s_panel_form{ WeaponForm::kNone };
 
         struct Frame
         {
@@ -81,6 +85,36 @@ namespace oar
             RE::hkbClipGenerator* clip, void* submod)
         {
             ScopedEvaluation* const scope = ScopedEvaluation::current();
+            // The panel's pre-condition (state-idle v3): while the panel is open, OAR's decisions
+            // for the panel figure are answered with the STANDING pose in the player's weapon
+            // stance. This is a pre-condition on the evaluation itself - the panel is open and the
+            // source is the figure's original - so every condition OAR asks here describes a
+            // standing figure, and OAR selects that stance's idle by its own rules. Outside the
+            // panel nothing below runs: the engine's original path answers.
+            if (!scope && panel_open() && source && source->IsPlayerRef())
+            {
+                RE::BSString panel_storage;
+                const std::string_view name = condition_name(*condition, panel_storage);
+                PreviewState const standing{
+                    .weapon_drawn = weapon_form_is_drawn(panel_weapon_form())
+                };
+                if (std::optional<bool> const answer = standing_predicate(name, standing))
+                {
+                    return finish_predicate(*answer, condition->IsDisabled(), condition->IsNegated());
+                }
+                if (name == "IsEquippedType")
+                {
+                    if (const auto type = weapon_form_type(panel_weapon_form()))
+                    {
+                        const auto* const comparison = component<::Conditions::IComparisonConditionComponent>(*condition);
+                        const auto* const numeric = component<::Conditions::INumericConditionComponent>(*condition);
+                        if (comparison && numeric)
+                            return finish_predicate(comparison->GetComparisonResult(*type, *type),
+                                condition->IsDisabled(), condition->IsNegated());
+                    }
+                }
+                return s_evaluate(condition, source, clip, submod);
+            }
             if (!scope)
                 return s_evaluate(condition, source, clip, submod);
             Frame frame(source, clip);
@@ -273,6 +307,26 @@ namespace oar
             }
             return false;
         }
+    }
+
+    void set_panel_open(bool a_open)
+    {
+        s_panel_open.store(a_open, std::memory_order_release);
+    }
+
+    bool panel_open()
+    {
+        return s_panel_open.load(std::memory_order_acquire);
+    }
+
+    void set_panel_weapon_form(WeaponForm a_form)
+    {
+        s_panel_form.store(a_form, std::memory_order_release);
+    }
+
+    WeaponForm panel_weapon_form()
+    {
+        return s_panel_form.load(std::memory_order_acquire);
     }
 
     bool install_hooks()

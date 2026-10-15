@@ -6,6 +6,7 @@
 
 #include "RE/B/BGSEquipSlot.h"
 #include "RE/T/TESObjectWEAP.h"
+#include "oar/policy.h"
 
 #include <cstdint>
 #include <string>
@@ -38,6 +39,12 @@ PLUGIN_NAMESPACE_BEGIN
 // extra-data flag test - it reads no biped slot and no 3D - so the result is what the actor's own
 // inventory says is on the body, which is the only honest source for a figure with no AI.
 void equipment_collect_worn(RE::Actor& a_actor, std::vector<RE::TESBoundObject*>& a_out);
+
+// The weapon stance the two hands carry, as the panel's standing figure answers OAR with
+// (state-idle v3): the panel figure always stands, so the weapon form is the only thing that
+// changes the idle OAR selects for it. Both hands are read, because the engine reports a
+// two-handed weapon - and a bow - in whichever hand entry it last touched.
+[[nodiscard]] oar::WeaponForm equipment_weapon_form(RE::Actor& a_actor);
 
 // Puts everything `a_source` wears onto `a_target`. Used for the puppet's initial dressing, before
 // its figure is parked out of the world: the engine re-derives a biped change asynchronously, and

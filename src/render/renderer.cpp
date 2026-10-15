@@ -11,11 +11,13 @@
 
 #include "panel/panel.h"
 #include "character/character_manager.h"
+#include "character/equipment_mirror.h"
 #include "character/final_pose_apply.h"
 #include "character/final_pose_probe.h"
 #include "character/puppet_draw.h"
 #include "character/puppet_driver.h"
 #include "character/scene_graph_copy.h"
+#include "oar/hooks.h"
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -124,7 +126,21 @@ namespace
                 }
 
 #endif
-                if (PanelMonitor::instance().is_menu_open())
+                const bool panel_open = PanelMonitor::instance().is_menu_open();
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+                // The panel's OAR pre-condition (state-idle v3): while the panel is open, OAR
+                // answers for the panel figure as a STANDING figure in the player's weapon stance,
+                // so it selects that stance's idle by its own rules - no clip is replayed and
+                // nothing the player is doing (sneaking, swimming, attacking) leaks into the pose.
+                // Closed, the flag drops and the engine's original path answers again.
+                oar::set_panel_open(panel_open);
+                if (panel_open)
+                {
+                    if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
+                        oar::set_panel_weapon_form(equipment_weapon_form(*player));
+                }
+#endif
+                if (panel_open)
                 {
                     bool image_ready = false;
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT

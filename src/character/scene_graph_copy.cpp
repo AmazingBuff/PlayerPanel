@@ -19,58 +19,6 @@ namespace
 {
     constexpr size_t Max_Graph_Objects = 16384;
 
-    // The pose-idle sampler's world cadence (state-idle v2): about every 0.75 s at 60 fps, the
-    // rate the retired pool sampler used and the HKX35 cost model measured at ~0.05 ms per pass.
-    constexpr std::uint32_t Pose_Sample_Period = 45;
-
-    // The pose-idle sampler's engine reads (state-idle v2, 2026-10-15): the stance and the two
-    // hands' item kinds, as the engine's own idle selection would read them. Unknown objects stay
-    // empty hands - the pool files only what the engine actually played for a legible pose.
-    HandKind hand_kind(RE::TESForm const* a_form)
-    {
-        if (!a_form)
-            return HandKind::kEmpty;
-        if (const RE::TESObjectWEAP* const weapon = a_form->As<RE::TESObjectWEAP>())
-        {
-            switch (weapon->GetWeaponType())
-            {
-            case RE::WEAPON_TYPE::kTwoHandSword:
-            case RE::WEAPON_TYPE::kTwoHandAxe:
-            case RE::WEAPON_TYPE::kBow:
-            case RE::WEAPON_TYPE::kCrossbow:
-                return HandKind::kTwoHandedWeapon;
-            case RE::WEAPON_TYPE::kStaff:
-                return HandKind::kStaff;
-            default:
-                return HandKind::kOneHandedWeapon;
-            }
-        }
-        if (a_form->IsAmmo())
-            return HandKind::kEmpty;  // an equipped ammo entry is the quiver, not a hand item
-        if (const RE::TESObjectLIGH* const light = a_form->As<RE::TESObjectLIGH>())
-            return light->CanBeCarried() ? HandKind::kTorch : HandKind::kEmpty;
-        if (a_form->IsArmor())
-            return HandKind::kShield;  // a shield is the only armour a hand equips
-        if (a_form->Is(RE::FormType::Spell) || a_form->Is(RE::FormType::Scroll) || a_form->Is(RE::FormType::Shout))
-            return HandKind::kSpell;
-        return HandKind::kEmpty;
-    }
-
-    PoseInputs pose_inputs(RE::ActorState const& a_state, RE::TESForm const* a_right, RE::TESForm const* a_left)
-    {
-        PoseInputs inputs;
-        inputs.weapon_drawn = a_state.IsWeaponDrawn();
-        inputs.sneaking = a_state.IsSneaking();
-        inputs.swimming = a_state.IsSwimming();
-        inputs.sitting = a_state.IsSitting();
-        inputs.attacking = a_state.GetAttackState() != RE::ATTACK_STATE_ENUM::kNone;
-        inputs.staggering = a_state.IsStaggered();
-        inputs.knocked = a_state.GetKnockState() != RE::KNOCK_STATE_ENUM::kNormal;
-        inputs.right_kind = hand_kind(a_right);
-        inputs.left_kind = hand_kind(a_left);
-        return inputs;
-    }
-
     // The source graph can be re-driven between the copy and the re-read (the paused
     // world still runs animation and physics), so per-node transforms are compared with
     // a tolerance and only the object set decides the outcome. Exact float equality
@@ -397,17 +345,7 @@ void SceneGraphCopy::process_requests()
         m_draw_enabled = false;
         m_seen_generation = generation;
         m_command.store(Command::e_none, std::memory_order_release);
-        m_pose_pool.clear();
         return;
-    }
-
-    // The pose-idle pool fills while the world runs: this bracket only qualifies when the panel is
-    // closed and the engine is unpaused - the exact inverse of the capture request's validation.
-    // Inside it the player stands in real poses the pool can file; a paused or open panel never
-    // samples (its reads would describe the frozen world).
-    if (!ui || !ui->GameIsPaused() || !PanelMonitor::instance().is_menu_open())
-    {
-        sample_pose_idle();
     }
 
     // Each visit to the panel starts the animation from its beginning. The engine is paused while the
@@ -509,79 +447,6 @@ CharacterClone* SceneGraphCopy::drawable() const
     return m_draw_enabled ? m_snapshot.get() : nullptr;
 }
 
-void SceneGraphCopy::sample_pose_idle()
-{
-    // Runs every rendered frame while the world is UNPAUSED and the panel closed (called from
-    // process_requests). Every Pose_Sample_Period frames the player's stance and hands are read;
-    // while the player stands still in a legible pose, the strongest idle-named running clip - the
-    // engine's own OAR decision for that pose - is filed under that pose's class. Moving frames
-    // file nothing: a locomotion cycle is not a stance's idle.
-    RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
-    if (!player)
-        return;
-    const RE::ActorState* const state = player->AsActorState();
-    if (!state)
-        return;
-    RE::TESForm* const right = player->GetEquippedObject(false);
-    RE::TESForm* const left = player->GetEquippedObject(true);
-    PoseInputs const inputs = pose_inputs(*state, right, left);
-    if (++m_pose_sample_frames % Pose_Sample_Period != 0)
-        return;
-    if (!pose_is_standing_idle(inputs))
-        return;
-
-    RE::hkbClipGenerator const* const generator = pick_idle_running_clip(*player);
-    if (!generator)
-        return;
-    const char* const name_ptr = generator->animationName.c_str();
-    const std::string name = name_ptr ? name_ptr : "";
-    if (name.empty() || name == "-")
-        return;
-    const PoseClass pose = pose_class_for(inputs);
-    if (m_pose_pool.file({ pose, name, reinterpret_cast<std::uintptr_t>(generator) }))
-        logger::info("SCOPY POSE pool sample pose={} clip='{}' held={}",
-            pose_class_name(pose), name, m_pose_pool.size());
-}
-
-RE::hkbClipGenerator const* SceneGraphCopy::pick_pose_idle(RE::Actor& a_player, char const*& a_pick) const
-{
-    // Panel-open selection: the desired pose from the player's CURRENT stance, served from the
-    // pool first. The pool's generator value is a HANDLE - resolve_clip_playback re-validates the
-    // whole chain (vtable, readability, control, binding, animation, copy nodes) before any use
-    // and rejects dead ones, the same discipline every borrowed pointer here follows. Sneaking,
-    // swimming or moving at open changes nothing: the desired class is the standing idle of the
-    // current weapon stance.
-    const RE::ActorState* const state = a_player.AsActorState();
-    if (!state)
-        return nullptr;
-    PoseInputs const inputs = pose_inputs(*state,
-        a_player.GetEquippedObject(false), a_player.GetEquippedObject(true));
-    const PoseClass desired = pose_class_for(inputs);
-    RE::NiAVObject* const copy_root = m_snapshot ? m_snapshot->graph() : nullptr;
-    if (PoseIdleEntry const* const entry = m_pose_pool.find(desired); entry && copy_root)
-    {
-        RE::hkbClipGenerator const* const candidate =
-            reinterpret_cast<RE::hkbClipGenerator const*>(entry->generator);
-        ClipPlayback probe;
-        std::string mapping;
-        std::string coverage;
-        if (resolve_clip_playback(a_player, *copy_root, candidate, probe, mapping, coverage))
-        {
-            a_pick = "pool";
-            return candidate;
-        }
-        logger::info("SCOPY POSE pool miss pose={} clip='{}' (generator no longer resolvable; the running idle serves)",
-            pose_class_name(desired), entry->clip_name);
-    }
-    if (RE::hkbClipGenerator const* const running = pick_idle_running_clip(a_player))
-    {
-        a_pick = "running-idle";
-        return running;
-    }
-    a_pick = "strongest-fallback";
-    return pick_running_clip(a_player);
-}
-
 void SceneGraphCopy::capture()
 {
     m_draw_enabled = false;
@@ -674,12 +539,12 @@ void SceneGraphCopy::capture()
     // Snapshot the native clone's captured worlds without re-running facegen, Havok or SMP.
     m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root));
     logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F2=mark F4=drive", m_capture_id, removed_controllers, removed_collisions);
-    // The state-idle v2 selection: the panel figure ALWAYS stands (state-idle v2, user) - the
-    // desired pose is the player's CURRENT weapon stance, not the sneak/swim/locomotion cycle the
-    // player happens to be in at open. The pool serves the engine's own clip for that stance
-    // (filed while the world ran); the running idle and the strongest clip are the fallbacks, and
-    // `pick` names the source. The actor state is logged beside the clip so a reader can tell
-    // which stance the player was in without inferring from the clip name.
+    ClipPlayback clip;
+    std::string mapping;
+    std::string coverage;
+    // The pose the player was in at capture, logged beside the clip so a reader can tell which
+    // stance the sampled animation belongs to (the panel answers OAR as a standing figure in the
+    // player's weapon form - state-idle v3 - so the clip's own name is not the whole story).
     std::string state_note;
     if (const RE::ActorState* const state = player->AsActorState())
     {
@@ -692,14 +557,10 @@ void SceneGraphCopy::capture()
             static_cast<std::uint32_t>(state->GetKnockState()),
             static_cast<std::uint32_t>(state->GetLifeState()));
     }
-    ClipPlayback clip;
-    std::string mapping;
-    std::string coverage;
-    const char* pick = "none";
-    RE::hkbClipGenerator const* const generator = pick_pose_idle(*player, pick);
+    RE::hkbClipGenerator const* const generator = pick_running_clip(*player);
     if (resolve_clip_playback(*player, *root, generator, clip, mapping, coverage))
     {
-        logger::info("SCOPY ANIM captured clip='{}' pick={} mapping={} coverage={} state[{}]", clip.name, pick, mapping, coverage, state_note);
+        logger::info("SCOPY ANIM captured clip='{}' mapping={} coverage={} state[{}]", clip.name, mapping, coverage, state_note);
         m_clip.set_clip(std::move(clip));
     }
     else

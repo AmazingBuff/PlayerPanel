@@ -9,6 +9,105 @@
 PLUGIN_NAMESPACE_BEGIN
 namespace oar
 {
+    // The weapon form whose idle the panel's standing figure shows (state-idle v3, 2026-10-15):
+    // the panel figure always stands, so the only pose question OAR answers for it is the weapon
+    // stance. Unknown forms stay kNone - a standing figure with nothing legible in its hands.
+    enum class WeaponForm : std::uint8_t
+    {
+        kNone = 0,   // nothing drawn / nothing legible: the plain standing idle
+        kOneHanded,
+        kTwoHanded,
+        kBow,
+        kDualWield,
+        kMagic,   // a hand holds a spell
+        kStaff,
+        kTorch,
+        kShield   // a shield (or other hand-worn armour) with no weapon
+    };
+
+    [[nodiscard]] inline std::string_view weapon_form_name(WeaponForm a_form)
+    {
+        switch (a_form)
+        {
+        case WeaponForm::kNone: return "none";
+        case WeaponForm::kOneHanded: return "1h";
+        case WeaponForm::kTwoHanded: return "2h";
+        case WeaponForm::kBow: return "bow";
+        case WeaponForm::kDualWield: return "dual";
+        case WeaponForm::kMagic: return "magic";
+        case WeaponForm::kStaff: return "staff";
+        case WeaponForm::kTorch: return "torch";
+        case WeaponForm::kShield: return "shield";
+        default: return "?";
+        }
+    }
+
+    // The panel's standing figure answers with the form the two hands carry: a two-handed weapon or
+    // a bow occupies both hands (the engine reports it in whichever entry it last touched, so both
+    // are read), two one-handed weapons are the dual stance, and a lone one-handed weapon with a
+    // shield, torch or spell in the other hand is still the one-handed stance.
+    enum class HandKind : std::uint8_t
+    {
+        kEmpty = 0,
+        kOneHandedWeapon,
+        kTwoHandedWeapon,  // two-handed melee, bow or crossbow
+        kStaff,
+        kSpell,
+        kTorch,
+        kShield
+    };
+
+    [[nodiscard]] inline WeaponForm weapon_form_from_hands(HandKind a_right, HandKind a_left)
+    {
+        if (a_right == HandKind::kTwoHandedWeapon || a_left == HandKind::kTwoHandedWeapon)
+            return WeaponForm::kTwoHanded;
+        if (a_right == HandKind::kStaff || a_left == HandKind::kStaff)
+            return WeaponForm::kStaff;
+        if (a_right == HandKind::kOneHandedWeapon && a_left == HandKind::kOneHandedWeapon)
+            return WeaponForm::kDualWield;
+        if (a_right == HandKind::kOneHandedWeapon || a_left == HandKind::kOneHandedWeapon)
+            return WeaponForm::kOneHanded;
+        if (a_right == HandKind::kSpell || a_left == HandKind::kSpell)
+            return WeaponForm::kMagic;
+        if (a_right == HandKind::kTorch || a_left == HandKind::kTorch)
+            return WeaponForm::kTorch;
+        if (a_right == HandKind::kShield || a_left == HandKind::kShield)
+            return WeaponForm::kShield;
+        return WeaponForm::kNone;
+    }
+
+    // Whether a form draws the weapon: the panel's figure only ever "holds" the stance, and
+    // IsWeaponDrawn is the condition OAR asks for a drawn idle.
+    [[nodiscard]] inline bool weapon_form_is_drawn(WeaponForm a_form)
+    {
+        return a_form != WeaponForm::kNone;
+    }
+
+    // OAR's equipment-type condition (IsEquippedType) reads a numeric weapon type: 0 one-handed,
+    // 1 two-handed, 2 bow/crossbow, 3 staff, 4 spell/torch/shield variants. The panel's standing
+    // figure answers with the form the player actually holds.
+    [[nodiscard]] inline std::optional<float> weapon_form_type(WeaponForm a_form)
+    {
+        switch (a_form)
+        {
+        case WeaponForm::kOneHanded:
+        case WeaponForm::kDualWield:
+        case WeaponForm::kShield:
+            return 0.0f;  // one-handed family
+        case WeaponForm::kTwoHanded:
+            return 1.0f;
+        case WeaponForm::kBow:
+            return 2.0f;
+        case WeaponForm::kStaff:
+            return 3.0f;
+        case WeaponForm::kMagic:
+        case WeaponForm::kTorch:
+            return 4.0f;
+        default:
+            return std::nullopt;  // nothing legible: keep OAR's own answer
+        }
+    }
+
     [[nodiscard]] inline std::optional<bool> standing_predicate(std::string_view name, PreviewState const& state)
     {
         if (name == "IsWeaponDrawn")
