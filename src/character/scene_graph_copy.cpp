@@ -5,6 +5,7 @@
 #include "character/scene_graph_copy.h"
 
 #include "character/puppet_driver.h"
+#include "oar/hooks.h"
 
 #include "character/animation_source.h"
 #include "character/character_clone.h"
@@ -557,11 +558,22 @@ void SceneGraphCopy::capture()
             static_cast<std::uint32_t>(state->GetKnockState()),
             static_cast<std::uint32_t>(state->GetLifeState()));
     }
-    RE::hkbClipGenerator const* const generator = pick_running_clip(*player);
-    if (resolve_clip_playback(*player, *root, generator, clip, mapping, coverage))
+    // The clip the panel plays: OAR's own selection from the standing window armed at the
+    // inventory-open edge (state-idle v3) - a STANDING figure in the player's weapon stance, taken
+    // from a real decision instead of replaying whatever the player happened to be doing. With no
+    // decision seen (OAR not installed, or no replacement evaluated in the window), the running
+    // clip serves and the pick says so.
+    const char* pick = "running-clip";
+    RE::hkbClipGenerator const* generator = oar::selected_clip().generator;
+    if (generator && resolve_clip_playback(*player, *root, generator, clip, mapping, coverage))
+        pick = "oar-standing-window";
+    else if (resolve_clip_playback(*player, *root, pick_running_clip(*player), clip, mapping, coverage))
+        pick = "running-clip";
+    if (!clip.name.empty())
     {
-        logger::info("SCOPY ANIM captured clip='{}' mapping={} coverage={} state[{}]", clip.name, mapping, coverage, state_note);
+        logger::info("SCOPY ANIM captured clip='{}' pick={} mapping={} coverage={} state[{}]", clip.name, pick, mapping, coverage, state_note);
         m_clip.set_clip(std::move(clip));
+        oar::clear_selected_clip();
     }
     else
         m_clip.reset();

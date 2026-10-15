@@ -24,10 +24,11 @@ namespace oar
         Evaluate s_evaluate = nullptr;
         NumericValue s_numeric = nullptr;
         std::atomic_bool s_ready = false;
-        // The panel's pre-condition state (see hooks.h): set on the render thread, read by both
-        // thunks on whatever thread OAR evaluates on.
-        std::atomic_bool s_panel_open = false;
-        std::atomic<WeaponForm> s_panel_form{ WeaponForm::kNone };
+        // The standing-window state (see hooks.h): armed on the inventory-open edge, ticked down
+        // once per rendered frame. Both thunks read it on whatever thread OAR evaluates on.
+        std::atomic<std::uint32_t> s_standing_frames = 0;
+        std::atomic<WeaponForm> s_standing_form{ WeaponForm::kNone };
+        std::atomic<RE::hkbClipGenerator const*> s_selected = nullptr;
 
         struct Frame
         {
@@ -85,18 +86,20 @@ namespace oar
             RE::hkbClipGenerator* clip, void* submod)
         {
             ScopedEvaluation* const scope = ScopedEvaluation::current();
-            // The panel's pre-condition (state-idle v3): while the panel is open, OAR's decisions
-            // for the panel figure are answered with the STANDING pose in the player's weapon
-            // stance. This is a pre-condition on the evaluation itself - the panel is open and the
-            // source is the figure's original - so every condition OAR asks here describes a
-            // standing figure, and OAR selects that stance's idle by its own rules. Outside the
-            // panel nothing below runs: the engine's original path answers.
-            if (!scope && panel_open() && source && source->IsPlayerRef())
+            // The standing-window pre-condition (state-idle v3): armed on the INVENTORY-OPEN edge,
+            // while the world is still advancing and OAR is evaluating for the player. Every pose
+            // condition OAR asks in that window is answered for a STANDING figure in the player's
+            // weapon stance, so the replacement OAR decides on is that stance's idle - played in
+            // the panel whether or not this session ever ran it. The generator under evaluation is
+            // filed as the selection; the window's own expiry (or a close) drops the flag and the
+            // engine's original path answers again.
+            if (!scope && standing_window_open() && source && source->IsPlayerRef())
             {
-                RE::BSString panel_storage;
-                const std::string_view name = condition_name(*condition, panel_storage);
+                s_selected.store(clip, std::memory_order_release);
+                RE::BSString window_storage;
+                const std::string_view name = condition_name(*condition, window_storage);
                 PreviewState const standing{
-                    .weapon_drawn = weapon_form_is_drawn(panel_weapon_form())
+                    .weapon_drawn = weapon_form_is_drawn(standing_weapon_form())
                 };
                 if (std::optional<bool> const answer = standing_predicate(name, standing))
                 {
@@ -104,7 +107,7 @@ namespace oar
                 }
                 if (name == "IsEquippedType")
                 {
-                    if (const auto type = weapon_form_type(panel_weapon_form()))
+                    if (const auto type = weapon_form_type(standing_weapon_form()))
                     {
                         const auto* const comparison = component<::Conditions::IComparisonConditionComponent>(*condition);
                         const auto* const numeric = component<::Conditions::INumericConditionComponent>(*condition);
@@ -309,24 +312,44 @@ namespace oar
         }
     }
 
-    void set_panel_open(bool a_open)
+    void arm_standing_window(std::uint32_t a_frames)
     {
-        s_panel_open.store(a_open, std::memory_order_release);
+        s_standing_frames.store(a_frames, std::memory_order_release);
+        clear_selected_clip();
     }
 
-    bool panel_open()
+    void tick_standing_window()
     {
-        return s_panel_open.load(std::memory_order_acquire);
+        std::uint32_t left = s_standing_frames.load(std::memory_order_acquire);
+        while (left != 0 && !s_standing_frames.compare_exchange_weak(left, left - 1,
+            std::memory_order_acq_rel, std::memory_order_acquire))
+        {
+        }
     }
 
-    void set_panel_weapon_form(WeaponForm a_form)
+    bool standing_window_open()
     {
-        s_panel_form.store(a_form, std::memory_order_release);
+        return s_standing_frames.load(std::memory_order_acquire) != 0;
     }
 
-    WeaponForm panel_weapon_form()
+    void set_standing_weapon_form(WeaponForm a_form)
     {
-        return s_panel_form.load(std::memory_order_acquire);
+        s_standing_form.store(a_form, std::memory_order_release);
+    }
+
+    WeaponForm standing_weapon_form()
+    {
+        return s_standing_form.load(std::memory_order_acquire);
+    }
+
+    SelectedClip selected_clip()
+    {
+        return SelectedClip{ s_selected.load(std::memory_order_acquire) };
+    }
+
+    void clear_selected_clip()
+    {
+        s_selected.store(nullptr, std::memory_order_release);
     }
 
     bool install_hooks()

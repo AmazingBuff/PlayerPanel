@@ -23,6 +23,11 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
+    // How many rendered frames the standing window stays armed after the inventory opens (see the
+    // arm site): OAR's evaluation for the player lands in the first frames the menu is coming up,
+    // and a bounded window keeps the pre-condition from ever leaking into the running world.
+    constexpr std::uint32_t Standing_Window_Frames = 8;
+
     class PassMerger
     {
     public:
@@ -128,17 +133,23 @@ namespace
 #endif
                 const bool panel_open = PanelMonitor::instance().is_menu_open();
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-                // The panel's OAR pre-condition (state-idle v3): while the panel is open, OAR
-                // answers for the panel figure as a STANDING figure in the player's weapon stance,
-                // so it selects that stance's idle by its own rules - no clip is replayed and
-                // nothing the player is doing (sneaking, swimming, attacking) leaks into the pose.
-                // Closed, the flag drops and the engine's original path answers again.
-                oar::set_panel_open(panel_open);
-                if (panel_open)
+                // The standing-window pre-condition (state-idle v3): armed on the INVENTORY-OPEN
+                // edge, where the world is still advancing and OAR is evaluating for the player,
+                // so one real OAR decision can be taken for a standing figure in the player's
+                // weapon stance. The rising edge is read here rather than consumed - the copy's
+                // own animation restart consumes the menu event - and the window then expires by
+                // itself; the panel being open is not the pre-condition, and nothing is driven.
+                static bool s_was_panel_open = false;
+                if (panel_open && !s_was_panel_open)
                 {
                     if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
-                        oar::set_panel_weapon_form(equipment_weapon_form(*player));
+                        oar::set_standing_weapon_form(equipment_weapon_form(*player));
+                    oar::arm_standing_window(Standing_Window_Frames);
                 }
+                s_was_panel_open = panel_open;
+                oar::tick_standing_window();
+                if (!panel_open)
+                    oar::arm_standing_window(0);
 #endif
                 if (panel_open)
                 {
