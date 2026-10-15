@@ -14,6 +14,8 @@
 #include "RE/T/TESBoundObject.h"
 #include "RE/T/TESForm.h"
 
+#include <algorithm>
+
 PLUGIN_NAMESPACE_BEGIN
 
 namespace
@@ -319,12 +321,16 @@ EquipmentStrip equipment_strip(RE::Actor& a_actor)
         ++out.unequipped;
         note(worn);
     }
+    // A two-handed weapon is reported in BOTH hand entries, and taking the same object away twice
+    // would count it twice and hand the removal a count it no longer carries.
+    std::vector<RE::TESBoundObject*> stripped_hands;
     for (const bool left : { false, true })
     {
         const RE::InventoryEntryData* const held = a_actor.GetEquippedEntryData(left);
         RE::TESBoundObject* const object = held && held->object ? held->object : nullptr;
-        if (!object)
+        if (!object || std::ranges::find(stripped_hands, object) != stripped_hands.end())
             continue;
+        stripped_hands.push_back(object);
         take_away(a_actor, object);
         ++out.unequipped;
         note(object);

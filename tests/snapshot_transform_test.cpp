@@ -4,6 +4,7 @@
 
 #include "character/final_pose_probe.h"
 #include "character/body_shape.h"
+#include "character/equipment_mirror.h"
 #include "character/figure_audit.h"
 #include "character/snapshot_transform.h"
 #include "oar/binary_profile.h"
@@ -189,15 +190,105 @@ namespace
         return standing && nested_restored && isolated_thread && oar::ScopedEvaluation::current() == nullptr;
     }
 
+    bool oar_projection_scope_covers_every_clip()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        auto* const source = reinterpret_cast<RE::TESObjectREFR*>(0x1000);
+        auto* const other_source = reinterpret_cast<RE::TESObjectREFR*>(0x1800);
+        auto* const first_clip = reinterpret_cast<RE::hkbClipGenerator*>(0x2000);
+        auto* const second_clip = reinterpret_cast<RE::hkbClipGenerator*>(0x3000);
+        oar::PreviewState state;
+        const oar::ScopedEvaluation projection(source, nullptr, state, oar::ScopeMode::kProjected);
+        const bool covers_every_clip = projection.matches(source, first_clip) &&
+            projection.matches(source, second_clip) && projection.matches(source, nullptr);
+        const bool still_scoped_to_source = !projection.matches(other_source, first_clip);
+        const bool reports_mode = projection.mode() == oar::ScopeMode::kProjected;
+        bool counted = false;
+        bool tallied = false;
+        {
+            oar::ScopedEvaluation audited(source, first_clip, state);
+            const bool defaults_to_audited = audited.mode() == oar::ScopeMode::kAudited;
+            const bool named_clip_only = audited.matches(source, first_clip) && !audited.matches(source, second_clip);
+            audited.note_evaluated();
+            audited.note_override("IsInAir", false);
+            counted = defaults_to_audited && named_clip_only && audited.evaluated() == 1 && audited.overrides() == 1;
+        }
+        {
+            oar::OverrideTally tally;
+            oar::ScopedEvaluation projected(source, nullptr, state, oar::ScopeMode::kProjected, &tally);
+            projected.note_override("IsInAir", false);
+            projected.note_override("IsInAir", true);
+            projected.note_override("CurrentMovementSpeed", true);
+            const auto air = tally.find("IsInAir");
+            const auto speed = tally.find("CurrentMovementSpeed");
+            tallied = projected.overrides() == 3 && air != tally.end() && air->second.overrides == 2 &&
+                air->second.differing == 1 && speed != tally.end() && speed->second.overrides == 1 &&
+                speed->second.differing == 1;
+        }
+        return covers_every_clip && still_scoped_to_source && reports_mode && counted && tallied;
+    }
+
+    bool two_handed_weapon_keeps_one_hand_state()
+    {
+        auto* const sword = reinterpret_cast<RE::TESBoundObject*>(0x1000);
+        auto* const blade = reinterpret_cast<RE::TESBoundObject*>(0x2000);
+        auto* const other = reinterpret_cast<RE::TESBoundObject*>(0x3000);
+        // The removal loop must keep the weapon in either entry (the engine flips which one reports
+        // it), must still take away a third item, and must still replace the weapon when the player
+        // has moved on to something else.
+        const bool keeps_the_weapon = PLUGIN_NAMESPACE::hand_item_is_wanted(blade, nullptr, blade) &&
+            PLUGIN_NAMESPACE::hand_item_is_wanted(blade, blade, blade) &&
+            PLUGIN_NAMESPACE::hand_item_is_wanted(other, other, blade);
+        const bool still_removes_others = !PLUGIN_NAMESPACE::hand_item_is_wanted(blade, other, other) &&
+            !PLUGIN_NAMESPACE::hand_item_is_wanted(other, blade, blade) &&
+            !PLUGIN_NAMESPACE::hand_item_is_wanted(nullptr, blade, blade);
+        // The removal loop asks "is there something to take off", not "is the wanted item held": an
+        // EMPTY hand must skip the removal branch outright (asking the held-question of nothing
+        // answers no, and falling through put a null item into slot_for/RemoveItem - crash
+        // 2026-10-15 23:02:27, first dressing while the player held a one-handed weapon).
+        const bool empty_hand_has_nothing_to_remove = !PLUGIN_NAMESPACE::hand_removal_needed(nullptr, blade, blade) &&
+            !PLUGIN_NAMESPACE::hand_removal_needed(nullptr, nullptr, nullptr) &&
+            PLUGIN_NAMESPACE::hand_removal_needed(other, blade, blade) &&
+            PLUGIN_NAMESPACE::hand_removal_needed(blade, other, other) &&
+            !PLUGIN_NAMESPACE::hand_removal_needed(blade, nullptr, blade) &&
+            !PLUGIN_NAMESPACE::hand_removal_needed(other, other, blade);
+        // The equip loop must be satisfied by the entry the engine did NOT name.
+        const bool satisfied_from_the_other_entry =
+            PLUGIN_NAMESPACE::hand_object_equipped(blade, blade, nullptr, blade) &&
+            PLUGIN_NAMESPACE::hand_object_equipped(blade, blade, blade, nullptr) &&
+            PLUGIN_NAMESPACE::hand_object_equipped(other, nullptr, other, nullptr);
+        // ... and one-handed items must not borrow the other hand's state.
+        const bool one_handed_stays_per_entry = !PLUGIN_NAMESPACE::hand_object_equipped(sword, nullptr, nullptr, sword) &&
+            !PLUGIN_NAMESPACE::hand_object_equipped(sword, other, other, sword);
+        return keeps_the_weapon && still_removes_others && empty_hand_has_nothing_to_remove &&
+            satisfied_from_the_other_entry && one_handed_stays_per_entry;
+    }
+
     bool oar_binary_profile_rejects_mismatches()
     {
-        namespace profile = PLUGIN_NAMESPACE::oar::profile_3_2_1;
-        const bool official = profile::matches(profile::Timestamp, profile::Image_Size, profile::Pdb_Guid,
-            profile::Pdb_Age, profile::Evaluate_Prefix, profile::Numeric_Prefix);
-        auto damaged = profile::Evaluate_Prefix;
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        const auto accepts_own = [](oar::BinaryProfile const& profile)
+        {
+            return oar::matches(profile, profile.timestamp, profile.image_size, profile.pdb_guid, profile.pdb_age,
+                profile.evaluate_prefix, profile.numeric_prefix);
+        };
+        bool verified = true;
+        for (auto const& profile : oar::Profiles)
+            verified = verified && accepts_own(profile);
+
+        auto damaged = oar::Profile_3_1_6.evaluate_prefix;
         damaged[0] ^= 1;
-        return official && !profile::matches(profile::Timestamp, profile::Image_Size, profile::Pdb_Guid,
-            profile::Pdb_Age, damaged, profile::Numeric_Prefix);
+        const bool rejects_damage = !oar::matches(oar::Profile_3_1_6, oar::Profile_3_1_6.timestamp,
+            oar::Profile_3_1_6.image_size, oar::Profile_3_1_6.pdb_guid, oar::Profile_3_1_6.pdb_age,
+            damaged, oar::Profile_3_1_6.numeric_prefix);
+
+        // The two verified builds share Evaluate's bytes but not GetValue's, so a profile must
+        // reject the other build's identity even before the byte comparison runs.
+        const bool rejects_other_build = !oar::matches(oar::Profile_3_2_1, oar::Profile_3_1_6.timestamp,
+            oar::Profile_3_1_6.image_size, oar::Profile_3_1_6.pdb_guid, oar::Profile_3_1_6.pdb_age,
+            oar::Profile_3_1_6.evaluate_prefix, oar::Profile_3_1_6.numeric_prefix);
+
+        return verified && rejects_damage && rejects_other_build;
     }
 
     bool animation_mapping_preserves_track_identity()
@@ -423,7 +514,9 @@ int main()
     const bool assembly = assembly_gate_measures_allocated_slots();
     const bool track_identity = animation_mapping_preserves_track_identity();
     const bool shape_clear = empty_source_clears_body_shape();
+    const bool two_handed = two_handed_weapon_keeps_one_hand_state();
     const bool oar_scope = oar_preview_scope_is_isolated();
+    const bool oar_projection = oar_projection_scope_covers_every_clip();
     const bool oar_binary = oar_binary_profile_rejects_mismatches();
     const bool alpha_order = figure_transparency_draw_order();
     const bool alpha_state = figure_material_state_is_restored();
@@ -432,9 +525,10 @@ int main()
         placement ? "PASS" : "FAIL", mapping ? "PASS" : "FAIL", framing ? "PASS" : "FAIL",
         ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL", assembly ? "PASS" : "FAIL",
         track_identity ? "PASS" : "FAIL", shape_clear ? "PASS" : "FAIL");
-    std::printf("OAR preview scope: %s\nOAR binary identity: %s\n", oar_scope ? "PASS" : "FAIL", oar_binary ? "PASS" : "FAIL");
+    std::printf("OAR preview scope: %s\nOAR projection scope: %s\nOAR binary identity: %s\n",
+        oar_scope ? "PASS" : "FAIL", oar_projection ? "PASS" : "FAIL", oar_binary ? "PASS" : "FAIL");
     std::printf("figure transparency order: %s\nfigure material state: %s\n", alpha_order ? "PASS" : "FAIL", alpha_state ? "PASS" : "FAIL");
-    std::printf("D3D constant buffer ranges: %s\n", d3d_ranges ? "PASS" : "FAIL");
+    std::printf("D3D constant buffer ranges: %s\ntwo-handed hand state: %s\n", d3d_ranges ? "PASS" : "FAIL", two_handed ? "PASS" : "FAIL");
     return placement && mapping && framing && ledger && necessity && bound && assembly && track_identity && shape_clear &&
-        oar_scope && oar_binary && alpha_order && alpha_state && d3d_ranges ? 0 : 1;
+        two_handed && oar_scope && oar_projection && oar_binary && alpha_order && alpha_state && d3d_ranges ? 0 : 1;
 }

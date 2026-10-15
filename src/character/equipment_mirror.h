@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include "RE/B/BGSEquipSlot.h"
+#include "RE/T/TESObjectWEAP.h"
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -118,5 +121,70 @@ struct EquipmentAmmo
 // engine picks an actor's current ammo from its own inventory, so a residual stack - the record's
 // own starting arrows - would otherwise decide the quiver the figure wears.
 [[nodiscard]] EquipmentAmmo equipment_sync_ammo(RE::Actor& a_target, RE::Actor& a_source);
+
+// The hand reconcile's two questions, as pure decisions (the driver's hand poll owns the engine
+// calls, mirroring and pruning share the rule). A TWO-HANDED weapon is reported in whichever hand
+// entry the engine last touched, and the reading flips between polls, so it counts as held from
+// either entry. Comparing the entries one by one unequipped and re-equipped the same weapon every
+// frame - and let the prune take that weapon away while the hand poll was putting it back - until
+// the engine crashed inside BipedAnim with a null biped object (2026-10-15 22:45:27, BiPolar Blade).
+[[nodiscard]] inline bool hand_item_is_wanted(RE::TESBoundObject* a_held, RE::TESBoundObject* a_wanted,
+    RE::TESBoundObject* a_two_handed)
+{
+    return a_held != nullptr && (a_held == a_wanted || a_held == a_two_handed);
+}
+
+// The removal loop's question: "is there something in this hand the figure must take off?" An EMPTY
+// hand has nothing to take off even when the player does hold something - the equip loop adds that
+// below - so a false here must not fall through to UnequipObject/RemoveItem on a null item, which
+// crashed inside the inlined form-type check (2026-10-15 23:02:27, "Crimson Tide", puppet_driver
+// slot_for dereferencing the null held while the equip poll ran from the first dressing).
+[[nodiscard]] inline bool hand_removal_needed(RE::TESBoundObject* a_held, RE::TESBoundObject* a_wanted,
+    RE::TESBoundObject* a_two_handed)
+{
+    return a_held != nullptr && !hand_item_is_wanted(a_held, a_wanted, a_two_handed);
+}
+
+[[nodiscard]] inline bool hand_object_equipped(RE::TESBoundObject* a_object, RE::TESBoundObject* a_two_handed,
+    RE::TESBoundObject* a_this_entry, RE::TESBoundObject* a_other_entry)
+{
+    return a_this_entry == a_object || (a_object == a_two_handed && a_other_entry == a_object);
+}
+
+// Whether the object is a weapon the engine holds with BOTH hands. Decided from the weapon's own
+// animation type - the data the engine itself drives its two-handed behaviour from. The equip slot
+// is deliberately NOT consulted: DEFAULT_OBJECT::kEitherHandEquip is the ONE-HANDED either-hand slot
+// (vanilla 0x00013f44), while every vanilla two-handed melee weapon and bow carries the two-handed
+// slot 0x00013f45, so a slot comparison against the default object never matched and the reconcile
+// kept fighting the engine's own recording until it died inside BipedAnim (2026-10-15 23:22 churn,
+// 23:55:47 crash, Dwarven Battleaxe). Staves are excluded on purpose: vanilla carries them on
+// one-hand slots. This install also legitimately equips such weapons into the LEFT-hand entry, and
+// the pair rules below accept them from either entry accordingly.
+[[nodiscard]] inline bool hand_weapon_occupies_both_hands(RE::TESBoundObject* a_object)
+{
+    const RE::TESObjectWEAP* const weapon = a_object ? a_object->As<RE::TESObjectWEAP>() : nullptr;
+    if (!weapon)
+        return false;
+    switch (weapon->GetWeaponType())
+    {
+    case RE::WEAPON_TYPE::kTwoHandSword:
+    case RE::WEAPON_TYPE::kTwoHandAxe:
+    case RE::WEAPON_TYPE::kBow:
+    case RE::WEAPON_TYPE::kCrossbow:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// The source's both-hands weapon, if either hand entry reports one: the caller normalises the pair
+// with it (and uses it for the two rules above) so a flip between entries is not read as a change.
+[[nodiscard]] inline RE::TESBoundObject* hand_two_handed_weapon(RE::TESBoundObject* a_right,
+    RE::TESBoundObject* a_left)
+{
+    if (hand_weapon_occupies_both_hands(a_right))
+        return a_right;
+    return hand_weapon_occupies_both_hands(a_left) ? a_left : nullptr;
+}
 
 PLUGIN_NAMESPACE_END

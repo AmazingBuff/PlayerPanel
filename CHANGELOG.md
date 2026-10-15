@@ -4,21 +4,95 @@
 
 ### Added
 
-- A dedicated `src/oar` integration module for the Nexus OAR 3.2.1 binary. It verifies the
+- A dedicated `src/oar` integration module for the Nexus OAR binary. It verifies the
   DLL/PDB build identity and entry bytes before installing preview-scoped condition and
   numeric graph-variable hooks. Audited queries retain source identity/equipment while
   projecting supported standing-preview state; unsupported conditions are reported.
-  Animation selection and the rendering backend are not switched by this addition.
+
+- OAR build profiles: the module now carries a verified profile for Open Animation
+  Replacer 3.1.6 (the build installed in the test environment) beside the 3.2.1 one, and
+  installs on whichever profile matches the loaded DLL's plugin version, PE
+  timestamp/image size, CodeView identity and both entry bytes. The 3.1.6 RVAs and field
+  offsets were read from the installed DLL and its PDB and confirmed by disassembly;
+  the public condition API header is byte-identical between the two builds, and
+  `Conditions.h` only gained a new condition class, so no interface the module calls
+  changed. A refused install now names the rejected version fields.
+
+- Preview projection for OAR's own decisions: `ScopedEvaluation` gained a `kProjected`
+  mode (unknown conditions keep the engine's answer instead of making the query
+  unsupported) and a null-clip scope that covers every clip of the scoped source. The
+  puppet's paused graph step now runs inside that scope, so OAR's replacement decision
+  for the figure is evaluated with the standing preview while identity and equipment stay
+  the figure's. The panel reports `evaluated`/`overridden` counts, where a zero
+  `evaluated` means the hook was not reached rather than that nothing was evaluated.
+
+- Projection evidence instrumentation (F11): every projected answer is compared against the
+  engine's own answer for that same evaluation, and the disagreements are tallied per
+  condition, so `differing` and `top=[Name D/M, ...]` state directly whether the projection
+  changed an input OAR decides on (a standing figure at rest is expected to differ rarely).
+  F11 switches the projection arm; both arms record the clips they produced and the log
+  prints `SCOPY OAR ab projected-clips=[...] plain-clips=[...] sets-equal=yes|no`, which
+  answers "did the projection change the selection" without the operator timing anything.
+  Game-tested on `oar-316`: hooks installed on 3.1.6, 186272 evaluations / 26877 overrides
+  over 2640 paused steps, zero crashes; the figure stayed in its standing idle, which the
+  differential now attributes to the engine's answers already being standing values.
 
 ### Fixed
+
+- A two-handed weapon on the figure could crash the game (crash 2026-10-15 22:45:27, "BiPolar Blade",
+  `BipedAnim` reading a null biped object). The hand reconcile compared each hand entry separately,
+  but the engine reports a two-handed weapon in whichever entry it last touched and the reading flips
+  between polls: the entry the player does not use for it read as "something to take off", so the
+  figure was unequipped and re-equipped every frame (104 reactions in ~4 s of log), and the prune
+  took the same weapon away while the hand poll was putting it back. The pair is now normalised with
+  the two-handed weapon (both entries hold it), the removal and equip rules ask "is this item held"
+  instead of "does this entry hold it", the prune is held off on a frame where the source's own hand
+  reading just moved, and the strip takes a weapon reported in both entries away once. A churn guard
+  bounds the damage a future logic gap can do: more than four hand actions in ten polls holds the
+  hand reconcile off for ninety polls and says so, instead of hammering the equip manager every
+  frame. New regression `two-handed hand state`.
+
+- The first game test of that fix crashed on the first dressing instead (crash 2026-10-15
+  23:02:27, "Crimson Tide", `CharacterPanel-scopy-2h-fix` build): the removal loop now asks
+  `hand_removal_needed`, and an EMPTY hand has nothing to take off even when the player holds a
+  weapon - the equip loop adds it below. The replaced guard asked "is the wanted item held", which
+  an empty hand answers no, and falling through put the null item into `slot_for`'s inlined
+  form-type check (`cmp byte ptr [rbx+0x1A], 0x29`, offset 0x1A is `TESForm::formType`, 0x29 is
+  Weapon) at the `UnequipObject` call, with `RemoveItem(nullptr, ...)` waiting right behind it.
+  `slot_for` now also tolerates a null object, mirroring `hand_two_handed_weapon`. The regression
+  test `two-handed hand state` covers the removal decision, including the empty-hand case. Fixed
+  build: `CharacterPanel-scopy-2h-fix2-f63f41ca49+dirty-cl94faaed0c6-20261015T151620Z` (DLL SHA-256
+  `aa343c0bd5c5ace6904aaaa3cede639a2e81a8bd7a7f2b7c1273c12dac8b2dff`), deployed to
+  `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` and hash-verified; game validation pending.
+
+- The 2h-fix2 game test still churned and then crashed (2026-10-15 23:55:47, "Dwarven Battleaxe",
+  engine `BipedAnim` null on a re-issued equip), because the both-hands DETECTION never fired for
+  any two-handed weapon: it compared `GetEquipSlot()` against `DEFAULT_OBJECT::kEitherHandEquip`,
+  but that default object is the ONE-HANDED either-hand slot (vanilla 0x00013f44), while every
+  vanilla two-handed melee weapon and bow carries the two-handed slot 0x00013f45 (measured across
+  all 2484 Skyrim.esm WEAP records: types 5/6/7 use 0x13f45 exclusively). The un-normalised pair
+  kept reading as "take it off this hand / put it on the other" while the engine - and this
+  install, which also legitimately equips two-handed weapons into the left-hand entry - recorded
+  the weapon wherever it last touched it. Detection now reads the weapon's animation type
+  (`kTwoHandSword`/`kTwoHandAxe`/`kBow`/`kCrossbow`; staves excluded - vanilla carries them on
+  one-hand slots), the normalised pair is invariant under the entry flip so the reconcile does not
+  act on it at all, the both-hands weapon is equipped ONCE through its own two-handed slot from the
+  first pass (the left pass is skipped), and the equip check accepts it from either entry. The
+  hand the weapon sits in is left as the engine recorded it, and no hand-specific animation is
+  forced for the left-hand state - the draw-state push only says "a weapon is held". Fixed build:
+  `CharacterPanel-scopy-2h-fix3-f63f41ca49+dirty-cl94faaed0c6-20261015T161051Z` (DLL SHA-256
+  `8e29ce5aac60b3cb300cb4465414a7041c3fd63291180e7a67980a9484264194`), deployed and hash-verified;
+  game validation pending.
 
 - UBE transparency trial (`ube-alpha1`): both figure sources now draw opaque/cutout geometry before
   sorted alpha surfaces, read alpha testing from each mesh's NiAlphaProperty, and request native
   per-geometry blend setup. Blended surfaces use read-only depth. The studio restores the engine's
   material-state cache and all VS/PS constant-buffer bindings, including D3D11.1 subranges.
-  Both Release configurations and 14 local checks pass, including a WARP check of constant-buffer
-  subrange restoration. The mesh-sized brow/eye-shadow black patches still require in-game validation;
-  package identity and reproduction steps are recorded in `docs/ube-transparency-test-2026-10-15.md`.
+  Both Release configurations and local checks pass, including a WARP check of constant-buffer
+  subrange restoration. **Game result: the brow and eye-shadow mesh-sized black patches are gone and
+  the makeup renders correctly (user-confirmed 2026-10-15); rotation, head-equipment changes and the
+  post-panel game view remain unconfirmed.** Package identity and reproduction steps are recorded in
+  `docs/ube-transparency-test-2026-10-15.md`.
 
 - Review fixes (2026-10-15): non-identity animation bindings now keep track and bone indices
   separate and sample only the animation's real track count. Recapturing a graph invalidates

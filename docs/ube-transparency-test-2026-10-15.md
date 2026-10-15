@@ -49,6 +49,8 @@ manifest；测试时以日志中的 `ube-alpha1` 身份为准。
 
 ## 测试包身份
 
+### 首次交付包（`6e5ac99` 工作区修改，2026-10-15）
+
 | 项目 | 首次交付包的值 |
 | --- | --- |
 | 构建身份 | `CharacterPanel-scopy-ube-alpha1-6e5ac99190+dirty-cl94faaed0c6-20261015T105057Z` |
@@ -59,9 +61,30 @@ manifest；测试时以日志中的 `ube-alpha1` 身份为准。
 | PDB SHA-256 | `d445cd63bc48f3d1474c9883fb6a33802049fcbba88462ed469dabddf873c5c5` |
 | ZIP SHA-256 | `874b0890b373659f31285e669c3957e723db9b071dbb8ec96a4183413efa082b` |
 
+首次交付包不在当前 `dist/`，其源码改动已由提交 `f63f41c` 固化。
+
+### 重建包（干净 HEAD `f63f41c`，2026-10-15，游戏验证用）
+
+源码与首次交付包一致（同一提交），从干净 HEAD 全量重建。离线复用既有 vcpkg 安装目录
+与 hde64 源（`code-maintenance.md` 的离线配方）；`snapshot_transform` 14 项检查全部通过；
+zip 内 DLL/PDB 与构建产物、manifest 三方哈希一致。
+
+| 项目 | 重建包的值 |
+| --- | --- |
+| 构建身份 | `CharacterPanel-scopy-ube-alpha1-f63f41ca49-cl94faaed0c6-20261015T133841Z` |
+| 目标环境 | Skyrim AE 1.6.1170 / SKSE 2.2.6 |
+| 配置 | Release，`CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON` |
+| DLL SHA-256 | `fb3869788b7bc9c9b324887d4539b9a01514c0077a1a56995721e63882e54741` |
+| PDB SHA-256 | `88e88c2f957d231c8047aa9f7469c5b5f499667e706a5dbea2d9daea31e9ddb7` |
+| ZIP SHA-256 | `d3bca9afef0268f4412cbf0206458e1f1303dda6bcaba2ada44390646ee8e054` |
+
+**重建包的 DLL 与 PDB 已部署至 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` 并校验一致**（替换了
+此前滞留的 AFP10g 时代旧构建，旧构建不含透明修复与 OAR hook）。游戏内测试以本表身份为准；
+日志首行出现 `ube-alpha1` 即为本次构建。
+
 已检查压缩包内 DLL／PDB 的校验值与构建产物、manifest 一致。`+dirty` 表示打包当时包含
 尚未提交的本轮修复；提交源码后仍保留原包记录，不把原包标记成由后续提交重新构建。
-以后重新构建的包应记录自己的身份和校验值。
+以后重新构建的包应记录自己的身份和校验值（重建包记录见上表）。
 
 ## 复现构建与本地检查
 
@@ -90,6 +113,15 @@ UBE 材质。其他 11 项既有检查保留，新增 3 项检查的名称为 `f
    `FIGURE transparency ... blended=... tested=... render-flags=0x204` 可确认新路径已执行。
 
 判据：黑块消失、透明边缘与正常游戏中的角色一致，同时没有缺面、穿透或退出面板后的状态污染。
-当前尚无本轮游戏测试日志／画面，不将这个判据记为已通过。
+
+**游戏内结果（2026-10-15 晚，用户确认）**：眉毛／眼周等妆容区域的 mesh 轮廓黑块**消失，妆容正常**。
+证据日志 [log-archive/CharacterPanel-20261015-2157.log](../log-archive/CharacterPanel-20261015-2157.log)：
+整段会话每次面板绘制都打印
+`FIGURE transparency geometries=36 blended=12 tested=22 render-flags=0x204 depth=opaque-write/alpha-read`
+（新路径确实在执行），`SCOPY COMPOSITE … match=1` 合成心跳连续，零崩溃；面板绘制走 R01 直绘
+（`SCOPY R01 identity actor=ff006918 … verified=1`）。
+判据中的**黑块消失**一项记为通过；**转动检查、背包内换头部装备再重开面板、退出面板后游戏画面**
+这三项本轮没有单独确认，不记为已通过。
+
 透明 mesh 的内部三角形排序、折射和第三方 OIT 专属流程不由本轮实现；若仍有异常，需结合
 具体材质和实际绘制状态继续定位。

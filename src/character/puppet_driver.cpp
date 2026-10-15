@@ -10,6 +10,9 @@
 #include "character/scene_graph_copy.h"
 #include "character/snapshot_transform.h"
 
+#include "oar/context.h"
+#include "oar/hooks.h"
+
 #include "RE/A/Actor.h"
 #include "RE/B/BSAnimationGraphManager.h"
 #include "RE/B/BSFadeNode.h"
@@ -70,10 +73,21 @@ namespace
 
     constexpr std::uint32_t Digest_Ticks = 30;
 
+    // How often the panel reports what OAR decided inside the preview scope. Every condition OAR
+    // evaluates for the figure while the panel steps its graph lands in these counters, so a zero
+    // run is evidence the hook is not reached rather than an absence of decisions.
+    constexpr std::uint32_t Oar_Report_Ticks = 60;
+
     // The worn body set is re-read at this cadence once the world runs; the paused panel reads it
     // every frame. Both are flag tests over an inventory list, but the paused case is the one the
     // player is looking at while changing gear.
     constexpr std::uint32_t Worn_Poll_Period = 30;
+
+    // The hand reconcile's churn guard (see poll_equipment). More actions than the limit inside the
+    // window means the state is not settling; the poll then holds itself off for the cooloff.
+    constexpr std::uint32_t Hand_Churn_Window = 10;
+    constexpr std::uint32_t Hand_Churn_Limit = 4;
+    constexpr std::uint32_t Hand_Churn_Cooloff = 90;
 
     // How often the panel re-asserts the player's body shape on the puppet. OBody shapes an actor
     // whenever its 3D loads - including a shell it has already processed - and the player can change
@@ -189,6 +203,15 @@ void PuppetDriver::set_tick_enabled(bool a_enabled)
 void PuppetDriver::request_step()
 {
     m_step_requested.store(true, std::memory_order_release);
+}
+
+void PuppetDriver::set_projection(bool a_enabled)
+{
+    if (m_projection.exchange(a_enabled, std::memory_order_acq_rel) == a_enabled)
+        return;
+    logger::info("SCOPY OAR projection {} ({}); the other arm keeps recording its clips for the comparison",
+        a_enabled ? "on" : "off",
+        a_enabled ? "OAR decides for the figure as a standing preview" : "OAR decides with the engine's own state");
 }
 
 void PuppetDriver::set_force_generate(bool a_enabled)
@@ -343,7 +366,22 @@ void PuppetDriver::tick(bool paused)
             update.unk2A ? 1 : 0);
     }
     // Camera, post-animation functor and force-generation flag mirror the engine update block.
-    puppet->UpdateAnimationGraphManager(update);
+    // OAR decides a replacement inside its own clip-activate hook, which this call runs on this
+    // thread, so the projection covers the figure's whole decision pass: identity and equipment stay
+    // the puppet's (it wears the player's), while the state predicates answer as a standing figure.
+    oar::PreviewState preview;
+    preview.weapon_drawn = m_right_form != 0 || m_left_form != 0;
+    if (projection())
+    {
+        oar::ScopedEvaluation scope(puppet, nullptr, preview, oar::ScopeMode::kProjected, &m_oar_tally);
+        puppet->UpdateAnimationGraphManager(update);
+        m_oar_evaluated += scope.evaluated();
+        m_oar_overridden += scope.overrides();
+    }
+    else
+    {
+        puppet->UpdateAnimationGraphManager(update);
+    }
     ++m_manual_ticks;
 
     poll_equipment(*puppet, true);
@@ -369,11 +407,79 @@ void PuppetDriver::tick(bool paused)
             {
                 time = live_clip_time(running[i].generator);
                 index = running[i].generator->animationBindingIndex;
+                // Each arm records what it produced, so the comparison needs no operator timing.
+                std::vector<std::uint16_t>& observed = projection() ? m_projected_clips : m_plain_clips;
+                if (std::ranges::find(observed, index) == observed.end())
+                    observed.push_back(index);
             }
             line += fmt::format("{}{}#{}({:.2f}s)", line.empty() ? "" : "; ", running[i].name, index, time);
         }
         logger::info("SCOPY PUPPET digest ticks={} step={:.4f} clips={} [{}]", m_manual_ticks, step, running.size(), line);
     }
+
+    if (m_manual_ticks % Oar_Report_Ticks == 0)
+    {
+        logger::info("SCOPY OAR project ticks={} hooks={} mode={} evaluated={} overridden={} differing={} top=[{}]",
+            m_manual_ticks, oar::hooks_ready() ? "installed" : "absent",
+            projection() ? "projected" : "plain", m_oar_evaluated, m_oar_overridden,
+            oar_differing(), oar_tally_summary());
+        if (!m_projection_reported && !m_projected_clips.empty() && !m_plain_clips.empty())
+        {
+            m_projection_reported = true;
+            logger::info("SCOPY OAR ab projected-clips=[{}] plain-clips=[{}] sets-equal={}",
+                oar_clip_list(m_projected_clips), oar_clip_list(m_plain_clips),
+                oar_clip_sets_equal() ? "yes" : "no");
+        }
+    }
+}
+
+std::uint32_t PuppetDriver::oar_differing() const
+{
+    std::uint32_t total = 0;
+    for (auto const& [name, tally] : m_oar_tally)
+    {
+        (void)name;
+        total += tally.differing;
+    }
+    return total;
+}
+
+std::string PuppetDriver::oar_tally_summary() const
+{
+    std::vector<std::pair<std::string const*, oar::ConditionTally const*>> ranked;
+    ranked.reserve(m_oar_tally.size());
+    for (auto const& entry : m_oar_tally)
+        ranked.emplace_back(&entry.first, &entry.second);
+    std::ranges::sort(ranked, [](auto const& a, auto const& b)
+    {
+        return a.second->differing != b.second->differing ? a.second->differing > b.second->differing
+                                                          : *a.first < *b.first;
+    });
+    std::string summary;
+    for (std::size_t i = 0; i < ranked.size() && i < 4; ++i)
+    {
+        summary += fmt::format("{}{} {}/{}", summary.empty() ? "" : ", ", *ranked[i].first,
+            ranked[i].second->differing, ranked[i].second->overrides);
+    }
+    return summary;
+}
+
+std::string PuppetDriver::oar_clip_list(std::vector<std::uint16_t> const& a_clips)
+{
+    std::string list;
+    for (std::size_t i = 0; i < a_clips.size() && i < 8; ++i)
+        list += fmt::format("{}{}", list.empty() ? "" : ",", a_clips[i]);
+    return list;
+}
+
+bool PuppetDriver::oar_clip_sets_equal() const
+{
+    if (m_projected_clips.size() != m_plain_clips.size())
+        return false;
+    return std::ranges::all_of(m_projected_clips, [this](std::uint16_t a_index)
+    {
+        return std::ranges::find(m_plain_clips, a_index) != m_plain_clips.end();
+    });
 }
 
 void PuppetDriver::spawn()
@@ -616,6 +722,34 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
     if (!player)
         return;
 
+    // The source's hands are read first, and a BOTH-HANDS weapon (two-handed melee, bows and
+    // crossbows - the engine's own animation types for weapons held with both hands) is normalised
+    // into BOTH entries: the engine - and this install, which also legitimately equips such weapons
+    // into the left-hand entry - reports it in whichever entry it last touched, and the reading
+    // flips between polls. The per-entry form of this loop unequipped and re-equipped the same
+    // weapon every frame (the 2026-10-15 23:22 churn) and the engine died inside BipedAnim on the
+    // re-issued equips (2026-10-15 23:55:47, Dwarven Battleaxe). The normalised pair is invariant
+    // under the flip, so the reconcile does not act on it at all; the hand the weapon sits in is
+    // accepted as the engine recorded it, and no hand-specific animation is forced for the
+    // left-hand state - the draw-state push below only says "a weapon is held".
+    const RE::InventoryEntryData* const hands[2] = { player->GetEquippedEntryData(false), player->GetEquippedEntryData(true) };
+    RE::TESBoundObject* const wanted[2] = {
+        hands[0] ? hands[0]->object : nullptr,
+        hands[1] ? hands[1]->object : nullptr,
+    };
+    RE::TESBoundObject* const two_handed = hand_two_handed_weapon(wanted[0], wanted[1]);
+    std::uint32_t forms[2] = {
+        wanted[0] ? wanted[0]->GetFormID() : 0,
+        wanted[1] ? wanted[1]->GetFormID() : 0,
+    };
+    if (two_handed)
+        forms[0] = forms[1] = two_handed->GetFormID();
+    const bool right_changed = forms[0] != m_right_form;
+    const bool left_changed = forms[1] != m_left_form;
+    const bool hands_moved = right_changed || left_changed;
+    m_right_form = forms[0];
+    m_left_form = forms[1];
+
     // AFP10f: anything the player is not using leaves the figure's inventory outright. Equipping the
     // player's set is not enough on its own - the engine equips best-fit gear from an actor's own
     // inventory and this figure has no AI to decide otherwise, so a carried-but-unwanted item comes
@@ -624,15 +758,27 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
     //
     // The two cadence counters are independent (see the members): a shared one let the worn sync's
     // reset keep this threshold permanently unreachable while the world ran.
+    //
+    // A prune on a frame where the source's own hand reading just moved can take away the very weapon
+    // the hand poll is about to equip (observed: the BiPolar Blade pruned while being mirrored, the
+    // hand poll re-adding it on the next frame); such an attempt is counted instead, and the next
+    // stable frame prunes.
     if (a_every_frame || ++m_prune_poll_frames >= Worn_Poll_Period)
     {
-        m_prune_poll_frames = 0;
-        const EquipmentPrune prune = equipment_prune(puppet, *player);
-        if (prune.changed())
+        if (hands_moved)
         {
-            logger::info("SCOPY PUPPET pruned removed={} of={} sample=[{}]",
-                prune.removed, prune.considered, prune.sample);
-            SceneGraphCopy::instance().note_world_change("world-equipment");
+            ++m_prune_held;
+        }
+        else
+        {
+            m_prune_poll_frames = 0;
+            const EquipmentPrune prune = equipment_prune(puppet, *player);
+            if (prune.changed())
+            {
+                logger::info("SCOPY PUPPET pruned removed={} of={} held={} sample=[{}]",
+                    prune.removed, prune.considered, m_prune_held, prune.sample);
+                SceneGraphCopy::instance().note_world_change("world-equipment");
+            }
         }
     }
 
@@ -664,23 +810,17 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
         }
     }
 
-    const RE::InventoryEntryData* const hands[2] = { player->GetEquippedEntryData(false), player->GetEquippedEntryData(true) };
-    RE::TESBoundObject* const wanted[2] = {
-        hands[0] ? hands[0]->object : nullptr,
-        hands[1] ? hands[1]->object : nullptr,
-    };
-    const std::uint32_t forms[2] = {
-        wanted[0] ? wanted[0]->GetFormID() : 0,
-        wanted[1] ? wanted[1]->GetFormID() : 0,
-    };
-    const bool right_changed = forms[0] != m_right_form;
-    const bool left_changed = forms[1] != m_left_form;
-    m_right_form = forms[0];
-    m_left_form = forms[1];
-
     RE::ActorEquipManager* const equip_manager = RE::ActorEquipManager::GetSingleton();
     if (!equip_manager)
         return;
+
+    // The churn guard's cooloff: the reconcile already failed to settle, so leaving the hands alone
+    // for a bounded window is what keeps a logic gap from hammering the engine.
+    if (m_hand_cooloff > 0)
+    {
+        --m_hand_cooloff;
+        return;
+    }
 
     const RE::BGSDefaultObjectManager* const defaults = RE::BGSDefaultObjectManager::GetSingleton();
     if (!defaults)
@@ -689,25 +829,45 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
         defaults->GetObject<RE::BGSEquipSlot>(RE::DEFAULT_OBJECT::kRightHandEquip),
         defaults->GetObject<RE::BGSEquipSlot>(RE::DEFAULT_OBJECT::kLeftHandEquip),
     };
-    RE::BGSEquipSlot* const both_hands = defaults->GetObject<RE::BGSEquipSlot>(RE::DEFAULT_OBJECT::kEitherHandEquip);
-    if (!slots[0] || !slots[1] || !both_hands)
+    if (!slots[0] || !slots[1])
         return;
-    const auto slot_for = [&](RE::TESBoundObject* object, int hand)
+    // The equip slot handed to the engine. A BOTH-HANDS weapon is equipped through its OWN
+    // two-handed slot (vanilla 0x00013f45), which is what the engine's normal equip path passes;
+    // the "either hand" default object is the ONE-HANDED either-hand slot and must not decide this.
+    // One-handed items keep the hand's right/left default slot, which is what put them in the
+    // correct hand before.
+    const auto slot_for = [&](const RE::TESBoundObject* object, int hand)
     {
-        const RE::TESObjectWEAP* const weapon = object->As<RE::TESObjectWEAP>();
-        return weapon && weapon->GetEquipSlot() == both_hands ? both_hands : slots[hand];
+        const RE::TESObjectWEAP* const weapon = object ? object->As<RE::TESObjectWEAP>() : nullptr;
+        if (object == two_handed && weapon)
+        {
+            RE::BGSEquipSlot* const own = weapon->GetEquipSlot();
+            if (own)
+                return own;
+        }
+        return slots[hand];
     };
 
     std::uint32_t hand_equipped = 0;
     std::uint32_t hand_removed = 0;
 
+    const auto entry_object = [&](bool a_left)
+    {
+        const RE::InventoryEntryData* const entry = puppet.GetEquippedEntryData(a_left);
+        return entry ? entry->object : nullptr;
+    };
+
     // Finish both removals before equipping: swapping hands must not delete the other hand's item.
     for (int hand = 0; hand < 2; ++hand)
     {
         const bool left = hand == 1;
-        RE::InventoryEntryData* const held_entry = puppet.GetEquippedEntryData(left);
-        RE::TESBoundObject* const held = held_entry && held_entry->object ? held_entry->object : nullptr;
-        if (!held || held == wanted[hand])
+        RE::TESBoundObject* const held = entry_object(left);
+        // A two-handed weapon sits in whichever entry the engine chose, so that entry is not
+        // "something the player does not have there". An EMPTY hand has nothing to take off either -
+        // asking "is the wanted item held" of an empty hand answers no, and the old guard let that
+        // fall into UnequipObject/RemoveItem with a null item, where the inlined form-type check
+        // dereferenced the null (crash 2026-10-15 23:02:27, "Crimson Tide", first dressing).
+        if (!hand_removal_needed(held, wanted[hand], two_handed))
             continue;
 
         equip_manager->UnequipObject(&puppet, held, nullptr, 1, slot_for(held, hand), false, true, false, true);
@@ -725,19 +885,45 @@ void PuppetDriver::poll_equipment(RE::Actor& puppet, bool a_every_frame){
         RE::TESBoundObject* const object = wanted[hand];
         if (!object)
             continue;
+        // A both-hands weapon is equipped ONCE, from the first pass: the engine fills both hands
+        // from the weapon's own slot, and this install's engine also legitimately records such a
+        // weapon in the LEFT-hand entry - which the equipped check below accepts from either entry.
+        // A second call from the left pass is what re-issued the equip and re-queued the model on
+        // every poll until the engine died inside BipedAnim (2026-10-15 23:55:47, Dwarven Battleaxe).
+        if (object == two_handed && hand == 1)
+            continue;
         const RE::BGSEquipSlot* const slot = slot_for(object, hand);
-        const std::int32_t needed = wanted[0] == wanted[1] && slot != both_hands ? 2 : 1;
+        const std::int32_t needed = wanted[0] == wanted[1] && object != two_handed ? 2 : 1;
         RE::InventoryChanges* const changes = puppet.GetInventoryChanges(false);
         const std::int32_t carried = changes ? changes->GetItemCount(object) : 0;
         if (carried < needed)
             puppet.AddObjectToContainer(object, nullptr, needed - carried, nullptr);
 
-        const RE::InventoryEntryData* const held = puppet.GetEquippedEntryData(hand == 1);
-        if (!held || held->object != object)
+        // For a two-handed weapon the question is "is it equipped", not "does this entry hold it":
+        // the engine may report it in the other hand's entry.
+        const bool equipped = hand_object_equipped(object, two_handed, entry_object(hand == 1), entry_object(hand == 0));
+        if (!equipped)
         {
             equip_manager->EquipObject(&puppet, object, nullptr, 1, slot, false, true, false, true);
             ++hand_equipped;
         }
+    }
+
+    // Safety net: a reconcile that keeps acting every frame is not converging, and re-issuing the
+    // equip call on that cadence is what turned the 2026-10-15 loop into a crash. The hand poll holds
+    // itself off for a bounded window and reports it; the semantic fixes above are what make this
+    // unreachable in the two-handed case.
+    m_hand_actions += hand_equipped + hand_removed;
+    if (++m_hand_window >= Hand_Churn_Window)
+    {
+        if (m_hand_actions > Hand_Churn_Limit)
+        {
+            logger::warn("SCOPY PUPPET hand reconcile churning actions={} in {} polls (holding the hand poll off for {} polls)",
+                m_hand_actions, m_hand_window, Hand_Churn_Cooloff);
+            m_hand_cooloff = Hand_Churn_Cooloff;
+        }
+        m_hand_window = 0;
+        m_hand_actions = 0;
     }
 
     const char* pushed = "none";

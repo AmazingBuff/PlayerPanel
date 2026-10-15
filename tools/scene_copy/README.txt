@@ -3,16 +3,50 @@ CharacterPanel scene-copy / AFP development package
 Use this package's CharacterPanel.dll and PDB together. Read build-manifest.json
 and SCOPY BUILD to confirm build identity, source baseline, runtime and hashes.
 
-2026-10-15 UBE transparency trial (ube-alpha1): both figure sources now use native
+2026-10-15 two-handed weapon fix: a two-handed weapon on the figure could crash the game
+(crash 2026-10-15 22:45:27, BiPolar Blade, BipedAnim reading a null biped object). The
+engine reports a two-handed weapon in whichever hand entry it last touched and the
+reading flips, so the per-entry hand reconcile unequipped and re-equipped it every frame
+and the prune took it away while the hand poll put it back. The hand pair is now
+normalised with the two-handed weapon, both hand rules ask "is this item held" instead of
+"does this entry hold it", the prune is held off on a frame where the source's hand
+reading just moved, and a churn guard (more than four hand actions in ten polls) holds the
+hand reconcile off for ninety polls with a `hand reconcile churning` line instead of
+hammering the equip manager. New local check `two-handed hand state`.
+
+2026-10-15 OAR condition hooks and preview projection: the plugin carries a
+verified binary profile for Open Animation Replacer 3.1.6 (the build installed
+here) next to the earlier 3.2.1 one, and installs its two condition hooks only
+when the loaded DLL's plugin version, PE timestamp/image size, CodeView identity
+and both entry bytes all agree (`OAR 3.1.6 hooks installed: ...`; a refusal names
+the rejected version fields). While the paused panel steps the figure's
+behaviour graph, that step runs inside a projected preview scope, so OAR's own
+replacement decision for the figure is evaluated as a standing preview: identity
+and equipment stay the puppet's (it wears the player's), the state predicates
+answer as standing.
+
+  F11: the projection's on/off arm. The panel reports in both arms:
+       `SCOPY OAR project ticks=... hooks=... mode=... evaluated=N overridden=M
+       differing=D top=[Name D/M, ...]`, where `evaluated` counts the condition
+       evaluations the projection saw, `overridden` those it answered, and
+       `differing` those whose answer disagreed with the engine's own answer for
+       that SAME evaluation - the direct measure of "the projection changed an
+       input OAR decides on". Once both arms produced clips the log adds
+       `SCOPY OAR ab projected-clips=[...] plain-clips=[...] sets-equal=yes|no`;
+       `sets-equal=no` is the direct evidence that the projection changed the
+       selection. A standing figure at rest is expected to show `differing` near
+       zero - that is what "no visible change" looks like in the numbers, not a
+       failure. Selection, animation loading, variant session isolation,
+       transition playback and figure re-equipping are still OAR's own; this
+       module only changes the state its evaluation sees. Notes: docs/oar-hooks.md.
+
+2026-10-15 UBE transparency trial (ube-alpha1): both figure sources use native
 per-mesh alpha blending/testing, opaque-before-alpha order and read-only depth
-for blended surfaces. The test package is named
-CharacterPanel-scopy-ube-alpha1-1.2.1.zip. Check the same UBE brows, eye shadows,
-lashes and hair that showed black mesh-sized patches, rotate the figure, change
-head equipment, then close/reopen the panel and check the normal game view.
-The log reports `FIGURE transparency ... render-flags=0x204` on audited draws.
-Local builds and 14 checks pass, including WARP constant-buffer range restoration;
-the actual black-patch fix remains a game-validation result. Return the log and
-same-angle images if it persists. Full notes: docs/ube-transparency-test-2026-10-15.md.
+for blended surfaces. Game result: the brow/eye-shadow mesh-sized black patches
+are gone (makeup renders correctly, user-confirmed); rotation, head-equipment
+changes and the post-panel game view are still unconfirmed. The log reports
+`FIGURE transparency ... render-flags=0x204` on audited draws. Full notes:
+docs/ube-transparency-test-2026-10-15.md.
 
 Current controls:
   F7: capture/audit player third-person 3D in paused InventoryMenu; draw starts off.
@@ -29,6 +63,7 @@ Current controls:
       moment the inventory opens - no capture, no key press; F6 switches to the
       detached copied graph instead. The puppet path falls back to the copy and
       logs the reason whenever it cannot draw.
+  F11: OAR projection on/off (see the OAR block above). Default on.
 
 2026-10-15 review fixes: new games request the puppet as well as loaded saves;
 parking compares the CURRENT reference position, and dressing waits for binding
