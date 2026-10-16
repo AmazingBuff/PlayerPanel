@@ -78,12 +78,24 @@ namespace
     // snapshot is valid the panel keeps it as the drawn answer. Any equip/unequip event bumps the
     // revision — the caller treats a revision newer than the open edge as "the player acted inside
     // the menu" and falls back to the live read.
-    bool panel_drawn_state(RE::Actor& actor)
+    // The panel figure must answer for the stance the player ENTERED the inventory with, not the
+    // menu-time stance: the engine freezes weaponState while the menu is up, so a live read says
+    // drawn=false for a player who walked in mid-combat with a weapon out (oar-idle2 report,
+    // problem 2). oar-idle3 report refinement: the menu-time weaponState is frozen EVEN for a
+    // player who equips a weapon inside the menu, so the drawn answer needs three inputs —
+    //   1. the entering-stance snapshot (weaponState sampled on the menu-open rising edge),
+    //   2. combat: a combat player holding a weapon shows the weapon stance even if the
+    //      weaponState bit says sheathed (combat, "武器在手即持械"; empty hands + combat stays
+    //      the unarmed fighting idle through the form rule below),
+    //   3. the live read, which still wins for an explicit sheathe/draw the engine did process.
+    bool panel_drawn_state(RE::Actor& actor, oar::WeaponForm form)
     {
+        if (actor.IsWeaponDrawn())
+            return true;
         const PanelMonitor::StanceSnapshot snapshot = PanelMonitor::instance().stance_at_open();
-        if (!snapshot.valid)
-            return actor.IsWeaponDrawn();
-        return snapshot.drawn || actor.IsWeaponDrawn();
+        if (snapshot.valid && snapshot.drawn)
+            return true;
+        return form != oar::WeaponForm::kNone && actor.IsInCombat();
     }
 
     RE::BSTSmartPointer<RE::BShkbAnimationGraph> source_graph(RE::Actor& source)
@@ -309,17 +321,17 @@ namespace
         std::uint64_t generation = 0;
     };
 
-    // The panel-aware equipment read: the entering-stance snapshot answers `drawn` (see
+    // The panel-aware equipment read: the entering-stance snapshot and combat answer `drawn` (see
     // panel_drawn_state), everything else is live. All equality checks against an AnimationSet's
     // recorded equipment go through this, so the snapshot stance stays self-consistent.
     EquipmentState panel_equipment(RE::Actor& actor)
     {
         EquipmentState state = equipment_state(actor);
-        state.drawn = panel_drawn_state(actor);
-        // An empty-hands reading wins over the entering-stance snapshot: the player unequipped the
-        // weapon inside the menu, and a drawn answer with no weapon form would query the unarmed
-        // family as a drawn stance.
-        if (state.form == oar::WeaponForm::kNone)
+        state.drawn = panel_drawn_state(actor, state.form);
+        // The player unequipping inside the menu wins over the entering-stance snapshot — but a
+        // COMBAT player with empty hands keeps the drawn answer: form kNone + drawn queries the
+        // unarmed fighting family (h2h_idle), which is exactly the "空手战斗" stance.
+        if (state.form == oar::WeaponForm::kNone && !actor.IsInCombat())
             state.drawn = false;
         return state;
     }

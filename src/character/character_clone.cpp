@@ -738,16 +738,17 @@ void CharacterClone::pose()
             return;  // the animation bridge calibrates after it first writes the idle
         }
 
-        // Steady state: apply the calibrated placement verbatim. No per-frame solving, no
-        // measurement — the root is frozen, animations move the joints above it freely.
+        // Steady state: apply the calibrated root and cascade the whole tree through the engine.
+        // No per-frame solving and no manual world rewrite — the cascade is authoritative for
+        // every node, animated or not, so a weapon parented under a driven hand bone follows the
+        // animation instead of being pinned back to its captured world each frame
+        // (oar-idle3 report problem 2). previousWorld is synced for the skin pass's motion blur
+        // bookkeeping only.
         m_graph_object->local = m_calibrated_root;
+        m_graph_object->UpdateDownwardPass(update_data, 0);
+        m_graph_object->UpdateWorldBound();
         for (const SnapshotNode& node : m_snapshot_nodes)
-        {
-            node.object->world = m_calibrated_delta * node.world;
             node.object->previousWorld = node.object->world;
-            node.object->worldBound.center = m_calibrated_delta * node.bound.center;
-            node.object->worldBound.radius = std::abs(m_calibrated_delta.scale) * node.bound.radius;
-        }
         return;
     }
 
@@ -895,6 +896,24 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
             logger::info("Clone draw frame={} passes={} lights={} physics-driver=none",
                 m_draw_frames, stats.drawn, stats.inject_lights);
 #endif
+            // Weapon attachment follow-up (oar-idle3 report problem 2): does the attachment node
+            // ride its parent bone once the idle drives the skeleton, or is it pinned? Parent
+            // world vs node world distance answers it in one line.
+            RE::BSVisit::TraverseScenegraphObjects(p_root, [&](RE::NiAVObject* object)
+            {
+                const char* const name = object->name.c_str();
+                if (!name || std::strstr(name, "Weapon") != name)
+                    return RE::BSVisit::BSVisitControl::kContinue;
+                if (const RE::NiAVObject* parent = object->parent)
+                {
+                    const RE::NiPoint3 world = object->world.translate;
+                    const RE::NiPoint3 parent_world = parent->world.translate;
+                    logger::info("SCOPY WEAPON node='{}' parent='{}' world=({:.1f},{:.1f},{:.1f}) parent=({:.1f},{:.1f},{:.1f})",
+                        name, parent->name.c_str() ? parent->name.c_str() : "(null)",
+                        world.x, world.y, world.z, parent_world.x, parent_world.y, parent_world.z);
+                }
+                return RE::BSVisit::BSVisitControl::kContinue;
+            });
         }
     }
 
