@@ -368,6 +368,7 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
     out.tracks.reserve(bindings.size());
     out.nodes.assign(bindings.size(), nullptr);
     size_t resolved = 0;
+    std::string unresolved;
     for (size_t i = 0; i < bindings.size(); ++i)
     {
         out.tracks.push_back(bindings[i].track);
@@ -376,7 +377,14 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
             continue;
         const auto found = copy_by_name.find(bone_name);
         if (found == copy_by_name.end() || found->second == &copy_root)
+        {
+            // The unresolved set is the evidence that decides whether weapon attachment bones
+            // ride the clip at all (oar-idle3 report problem 2): sample a few names, not just
+            // the count.
+            if (unresolved.size() < 160)
+                unresolved.append(fmt::format("{}{} ", unresolved.empty() ? "" : "|", bone_name));
             continue;
+        }
         out.nodes[i] = found->second;
         ++resolved;
     }
@@ -385,7 +393,8 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
         logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-copy-nodes clip='{}' tracks={}", clip_name, bindings.size());
         return false;
     }
-    out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={}", bindings.size(), resolved, bone_nodes, pose_count);
+    out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={} unresolved='{}'",
+        bindings.size(), resolved, bone_nodes, pose_count, unresolved);
     return true;
 }
 

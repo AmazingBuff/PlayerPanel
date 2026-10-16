@@ -74,6 +74,12 @@ namespace
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
                 SceneGraphCopy::instance().process_requests();
 #endif
+                // The entering weapon stance lives on the last unpaused world frame: the engine
+                // clears weaponState before the menu event and freezes it for the menu session,
+                // so this per-frame observation is the only honest "武器已在手上" read.
+                if (!paused)
+                    if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
+                        PanelMonitor::instance().observe_stance(player->IsWeaponDrawn());
 
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
                 // AFP1: A0 is taken before anything advances this frame, so the report after the
