@@ -49,6 +49,36 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第二轮判读与信号换源（2026-10-17 凌晨，提交 `8671eba`）
+
+上机（01:13 会话，构建 `5567507d40`）判读：三问题仍在。两个决定性证据：
+
+1. **`weaponState` 在菜单事件前已被引擎清除**——用户"武器在手开包"的全会话 drawn 仍 0 次
+   true，三源判定里的实时/快照两个源都死于同一冻结；上一轮"事件先于收鞘"的时序假设**证伪**。
+2. **`SCOPY WEAPON` 行揭示挂点结构**：武器模型节点挂在 `WeaponSword` 下、其父是
+   `MOV WeaponSwordDefault`（收鞘动画挂点骨架）——武器被钉在**收鞘挂点**上跟着收鞘骨动。
+   引擎的"武器到手"是 biped 的 hand-attach 切换，隔离副本不跑这套。
+
+修复（信号换源，提交 `8671eba`）：
+
+- **进入姿态 = 最后一个未暂停世界帧的 weaponState**：`PanelMonitor::observe_stance()` 由
+  渲染钩子每帧（非暂停）写入；菜单事件不再采样任何东西（时序上已经输了）。用户定义的
+  "战斗状态 = 武器已在手上"由此诚实回答——出鞘状态进包，最后一个世界帧的读数就是 drawn=true。
+- **武器跟随的证据先行**：`asset ready` 行的 coverage 现在列出**未解析轨道骨名**（最多 8 个）
+  ——决定 MOV 手部挂点骨是否随 equip 动画被 key。三种可能：在轨道里且已解析（动画自己会
+  移挂点，问题 2 应自愈）；在轨道里但解析失败（修名字匹配）；根本不在轨道里（下一轮做
+  hand-attach 重挂）。
+
+包身份 `CharacterPanel-scopy-oar-idle3-8671ebacaf-cl94faaed0c6-20261016T172604Z`，DLL
+SHA-256 `385695d1…`，已部署校验。
+
+### 上机判读（第二轮）
+
+1. 出鞘状态开包 → `phase=idle form=… drawn=true`（`observe_stance` 生效）；
+2. `asset ready ... unresolved='…'` 行——若出现 `MOV Weapon`/`WeaponSword` 字样即挂点骨随
+   动画，看解析是否命中；若差集只有 `x_`/`NPC` 杂骨 → 挂点不在动画里，问题 2 走 hand-attach 重挂；
+3. transition 后回武器 idle 的判据同前一轮。
+
 ## 战斗姿态与武器跟随（2026-10-17，用户三问，提交 `5567507`）
 
 上机判读（00:45–00:48 会话）：①校准摆位成立（`calibrated` 每捕获 1 条、radius 27.8 稳定）；
