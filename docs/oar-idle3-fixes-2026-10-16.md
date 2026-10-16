@@ -49,6 +49,28 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 战斗姿态与武器跟随（2026-10-17，用户三问，提交 `5567507`）
+
+上机判读（00:45–00:48 会话）：①校准摆位成立（`calibrated` 每捕获 1 条、radius 27.8 稳定）；
+②全会话 `drawn=true` **0 次**；③equip transition 正常播放但武器几何钉在捕获位置。
+
+| # | 用户报告 | 根因 | 修复 |
+| --- | --- | --- | --- |
+| 1 | 战斗状态开包不播持械 idle（含空手战斗） | `weaponState` 位在背包菜单会话内**冻结**——进入快照只覆盖"出鞘状态进包"，战斗中收鞘开包、或菜单内换装后的玩家，三个 drawn 来源（实时/快照）全是 false | drawn = `weaponState ‖ 进入快照 ‖ (战斗中 && 手上有武器)`；空手 + 战斗保持 drawn=true（form kNone + drawn 查 h2h_idle 族 = 空手战斗姿态） |
+| 2 | equip 动作播放时武器不动 | 稳态 `pose()` 每帧把手写世界（`delta × 捕获世界`）盖回全树，然后动画才级联骨架——挂点节点每帧先被钉回捕获位置 | 稳态分支删掉手写世界循环，只设校准根 + `UpdateDownwardPass` 级联——级联对全部节点权威，武器作为被驱动手骨的子树自然跟随；新增 `SCOPY WEAPON` 观测行（挂点 world vs 父骨 world，120 帧节拍） |
+| 3 | transition 后直接回站立 idle | drawn=false 使武器族 idle 层（channel=2）从未装载，transition 完成后没有武器 idle 可回 | 由 ①连带解决：drawn 正确后武器 idle 随集合装载，transition 完成即回武器 idle |
+
+包身份 `CharacterPanel-scopy-oar-idle3-5567507d40-cl94faaed0c6-20261016T170950Z`，DLL
+SHA-256 `a2f23db9…`，已部署校验。单测 33/33。
+
+### 上机判读
+
+1. 问题 1：战斗中持单手剑+法术开包 → `phase=idle form=… drawn=true`，channel=2/3 出现
+   `1hm_idle`/`MRh_Idle` 族查询；空手战斗 → form=none + drawn=true 查 h2h_idle；
+2. 问题 2：equip 播放期间武器跟随手部移动；`SCOPY WEAPON` 行的 node world 应随 parent
+   world 变化（差值恒定 = 跟随成立；node world 恒定 = 仍被钉死，需下一层）；
+3. 问题 3：transition 完成后 `phase=idle form=<武器族>` 且 driver 是武器 idle 而非 MT_Idle。
+
 ## 校准摆位：以站立 idle 为定位标准（2026-10-17，用户方案，提交 `2f5ed1f`）
 
 用户指出此前 recentre 方向对但机制弱：定位基准仍是"捕获姿态的包围盒中心"——跳跃捕获
