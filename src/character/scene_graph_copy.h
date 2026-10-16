@@ -51,6 +51,10 @@ private:
     bool m_draw_enabled;
     bool m_cap_logged;
     bool m_open_pending = false;
+    // One re-center per capture: armed when the idle first writes nodes, consumed by the next
+    // pose(). Re-arming per animated frame (the first version) re-solved the placement against
+    // a moving bound every frame and dragged the figure (oar-idle3 hotfix).
+    bool m_recentre_armed = false;
     EquipmentRefreshGate m_equipment_refresh;
     bool m_was_open = false;
     PanelAnimation m_panel_animation;

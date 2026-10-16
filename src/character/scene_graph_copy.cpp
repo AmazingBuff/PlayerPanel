@@ -452,9 +452,14 @@ void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
         const std::size_t written = m_panel_animation.advance(*clone.graph());
         // First frame the idle actually drove joints: the snapshot placement was solved for the
         // capture-time pose (possibly a jump), so ask for the one-shot re-center against the
-        // standing idle's own bound (oar-idle2 problem 1).
-        if (written > 0)
+        // standing idle's own bound (oar-idle2 problem 1). Armed once per capture; the clone
+        // consumes the request exactly once. (oar-idle3 hotfix: re-arming on every animated
+        // frame re-solved the placement against a moving bound and dragged the figure.)
+        if (written > 0 && !m_recentre_armed)
+        {
+            m_recentre_armed = true;
             clone.request_recentre();
+        }
     }
 }
 
@@ -551,6 +556,7 @@ void SceneGraphCopy::capture(bool equipment_changed)
     }
     // Snapshot the native clone's captured worlds without re-running facegen, Havok or SMP.
     m_draw_enabled = false;
+    m_recentre_armed = false;
     retire(std::move(m_snapshot));
     m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root));
     logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F2=mark F4=drive", m_capture_id, removed_controllers, removed_collisions);

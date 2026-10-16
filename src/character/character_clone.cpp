@@ -733,6 +733,9 @@ void CharacterClone::pose()
             // The idle now drives the joints, so the body's measured bound is the pose the panel
             // will actually show — re-center once against the anchor (oar-idle2 problem 1: a
             // figure captured mid-jump kept the jump's crouched center and sat too low).
+            // UpdateDownwardPass cascades the whole tree correctly; writing node worlds by hand
+            // here (a first version did) shattered every non-animated descendant — skin matrices
+            // collapsed and the figure shrank into a white silhouette (oar-idle3 hotfix).
             m_graph_object->UpdateDownwardPass(update_data, 0);
             m_graph_object->UpdateWorldBound();
             const SkinnedBound posed = measure_skinned_bound(m_graph_object.get());
@@ -743,11 +746,6 @@ void CharacterClone::pose()
                 m_graph_object->local.translate.z += anchor.z - posed.center.z;
                 m_graph_object->UpdateDownwardPass(update_data, 0);
                 m_graph_object->UpdateWorldBound();
-                for (const SnapshotNode& node : m_snapshot_nodes)
-                {
-                    node.object->world = m_graph_object->world * node.object->local;
-                    node.object->previousWorld = node.object->world;
-                }
                 logger::info("SCOPY FRAME recentre offset=({:.1f},{:.1f},{:.1f}) radius={:.1f}",
                     anchor.x - posed.center.x, anchor.y - posed.center.y, anchor.z - posed.center.z, posed.radius);
             }
