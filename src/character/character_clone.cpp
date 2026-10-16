@@ -484,7 +484,7 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_sta
 CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph) :
     m_clone(nullptr), m_clone_state(CloneState::e_ready), m_graph_object(std::move(graph)),
     m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0),
-    m_is_snapshot(true), m_draw_frames(0)
+    m_is_snapshot(true), m_draw_frames(0), m_recentre_pending(true)
 {
     restore_fade(m_graph_object.get());
     const size_t pruned = prune_effect_objects(m_graph_object.get());
@@ -713,43 +713,40 @@ void CharacterClone::pose()
 
     if (m_is_snapshot)
     {
-        RE::NiTransform placement;
-        placement.translate = anchor;
-        placement.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, 0.0f);
-        placement.scale = Studio_Figure_Scale;
-        const RE::NiTransform delta = snapshot_delta(m_snapshot_root_world, placement, m_snapshot_center, anchor);
-        m_graph_object->local = delta * m_snapshot_root_world;
-
-        // Preserve captured SMP world poses; do not run copied controllers or Actor callbacks.
-        for (const SnapshotNode& node : m_snapshot_nodes)
-        {
-            node.object->world = delta * node.world;
-            node.object->previousWorld = node.object->world;
-            node.object->worldBound.center = delta * node.bound.center;
-            node.object->worldBound.radius = std::abs(delta.scale) * node.bound.radius;
-        }
         if (m_recentre_pending)
         {
-            // The idle now drives the joints, so the body's measured bound is the pose the panel
-            // will actually show — re-center once against the anchor (oar-idle2 problem 1: a
-            // figure captured mid-jump kept the jump's crouched center and sat too low).
-            // UpdateDownwardPass cascades the whole tree correctly; writing node worlds by hand
-            // here (a first version did) shattered every non-animated descendant — skin matrices
-            // collapsed and the figure shrank into a white silhouette (oar-idle3 hotfix).
-            m_graph_object->UpdateDownwardPass(update_data, 0);
-            m_graph_object->UpdateWorldBound();
-            const SkinnedBound posed = measure_skinned_bound(m_graph_object.get());
-            if (posed.valid)
+            // Calibration pass (user design, oar-idle3): the placement must not be solved against
+            // the CAPTURED pose — a jump center sits high and a sneak center low, which parks the
+            // standing figure off the anchor. Instead the raw placement puts the captured graph in
+            // camera space, the standing idle writes its first frame over it, and the calibration
+            // below measures THAT body and freezes the correction into the root. Every later frame
+            // and every other animation replays on this fixed root without measuring anything.
+            RE::NiTransform raw_placement;
+            raw_placement.translate = anchor;
+            raw_placement.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, 0.0f);
+            raw_placement.scale = Studio_Figure_Scale;
+            const RE::NiTransform delta = snapshot_delta(m_snapshot_root_world, raw_placement, m_snapshot_center, anchor);
+            m_graph_object->local = delta * m_snapshot_root_world;
+            m_calibrated_delta_base = delta;
+            for (const SnapshotNode& node : m_snapshot_nodes)
             {
-                m_graph_object->local.translate.x += anchor.x - posed.center.x;
-                m_graph_object->local.translate.y += anchor.y - posed.center.y;
-                m_graph_object->local.translate.z += anchor.z - posed.center.z;
-                m_graph_object->UpdateDownwardPass(update_data, 0);
-                m_graph_object->UpdateWorldBound();
-                logger::info("SCOPY FRAME recentre offset=({:.1f},{:.1f},{:.1f}) radius={:.1f}",
-                    anchor.x - posed.center.x, anchor.y - posed.center.y, anchor.z - posed.center.z, posed.radius);
+                node.object->world = delta * node.world;
+                node.object->previousWorld = node.object->world;
+                node.object->worldBound.center = delta * node.bound.center;
+                node.object->worldBound.radius = std::abs(delta.scale) * node.bound.radius;
             }
-            m_recentre_pending = false;
+            return;  // the animation bridge calibrates after it first writes the idle
+        }
+
+        // Steady state: apply the calibrated placement verbatim. No per-frame solving, no
+        // measurement — the root is frozen, animations move the joints above it freely.
+        m_graph_object->local = m_calibrated_root;
+        for (const SnapshotNode& node : m_snapshot_nodes)
+        {
+            node.object->world = m_calibrated_delta * node.world;
+            node.object->previousWorld = node.object->world;
+            node.object->worldBound.center = m_calibrated_delta * node.bound.center;
+            node.object->worldBound.radius = std::abs(m_calibrated_delta.scale) * node.bound.radius;
         }
         return;
     }
@@ -775,6 +772,52 @@ void CharacterClone::pose()
 
     m_graph_object->UpdateDownwardPass(update_data, 0);
     m_graph_object->UpdateWorldBound();
+}
+
+void CharacterClone::calibrate_from_posed_bound()
+{
+    if (!m_graph_object)
+        return;
+    // The animation bridge just wrote the standing idle's first frame over the raw placement.
+    // Measure THAT body and freeze the correction: the placement standard becomes the idle's
+    // own bound center, identical no matter what pose the player was captured in (user design,
+    // oar-idle3). UpdateDownwardPass cascades the whole tree correctly; node worlds are never
+    // rewritten by hand here (the white-silhouette hotfix lesson stands).
+    RE::NiUpdateData update_data{ 0.0f, RE::NiUpdateData::Flag::kDirty };
+    m_graph_object->UpdateDownwardPass(update_data, 0);
+    m_graph_object->UpdateWorldBound();
+    const SkinnedBound posed = measure_skinned_bound(m_graph_object.get());
+    if (!posed.valid)
+    {
+        // No measurable body yet (bare-skeleton race): drop the request; the capture's own
+        // center stays the baseline rather than freezing a garbage correction.
+        m_recentre_pending = false;
+        logger::warn("SCOPY FRAME calibration skipped: no measurable skinned bound");
+        return;
+    }
+    const RE::NiPoint3 offset{ m_anchor.x - posed.center.x, m_anchor.y - posed.center.y,
+        m_anchor.z - posed.center.z };
+    m_calibrated_root = m_graph_object->local;
+    m_calibrated_root.translate.x += offset.x;
+    m_calibrated_root.translate.y += offset.y;
+    m_calibrated_root.translate.z += offset.z;
+    RE::NiTransform correction;
+    correction.translate = offset;
+    correction.rotate.SetEulerAnglesXYZ(0.0f, 0.0f, 0.0f);
+    correction.scale = 1.0f;
+    m_calibrated_delta = correction * m_calibrated_delta_base;
+    m_recentre_pending = false;
+    // Re-pose right away: the calibration runs inside the draw window between pose() and pass
+    // submission, so the correction lands on the FIRST visible frame. The cascade from the new
+    // root is authoritative for every node (animated locals and captured locals alike) — the
+    // steady-state manual rewrite of captured worlds would clobber the just-written idle here.
+    m_graph_object->local = m_calibrated_root;
+    m_graph_object->UpdateDownwardPass(update_data, 0);
+    m_graph_object->UpdateWorldBound();
+    for (const SnapshotNode& node : m_snapshot_nodes)
+        node.object->previousWorld = node.object->world;
+    logger::info("SCOPY FRAME calibrated offset=({:.1f},{:.1f},{:.1f}) radius={:.1f}",
+        offset.x, offset.y, offset.z, posed.radius);
 }
 
 bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target)

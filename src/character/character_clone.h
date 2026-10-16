@@ -29,13 +29,20 @@ public:
     // The detached graph drawn in the studio.
     [[nodiscard]] RE::NiAVObject* graph() const { return m_graph_object.get(); }
 
-    // One-shot framing re-center request (see m_recentre_pending). Snapshot clones only; the
+    // One-shot framing calibration request (see m_recentre_pending). Snapshot clones only; the
     // Actor route re-centers from its own measured bound every pose already.
     void request_recentre()
     {
         if (m_is_snapshot)
             m_recentre_pending = true;
     }
+    [[nodiscard]] bool recentre_pending() const { return m_recentre_pending; }
+
+    // The calibration (user design, oar-idle3): measure the posed figure's skinned bound (the
+    // standing idle has just written its first frame over the raw placement) and freeze the
+    // correction into the root. Steady-state pose() then replays this root verbatim, so every
+    // animation — jump captures, sneaks, transitions — shares one placement standard.
+    void calibrate_from_posed_bound();
 private:
     enum class CloneState : uint8_t
     {
@@ -82,11 +89,15 @@ private:
     RE::NiTransform m_snapshot_root_world;
     RE::NiPoint3 m_snapshot_center;
     std::vector<SnapshotNode> m_snapshot_nodes;
-    // One-shot re-centering after the panel animation first drives the snapshot graph: the
-    // captured center reflects the pose at capture time (a jump or sneak), and posing the idle
-    // over it lands the figure off the anchor (oar-idle2 problem 1). Set by the animation
-    // bridge once it has actually written nodes; consumed by the next pose().
+    // One-shot placement calibration: armed when the idle first writes nodes, consumed by the
+    // next pose() (which switches to the raw placement the calibration measures against).
     bool m_recentre_pending = false;
+    // The frozen calibrated placement: every steady-state frame applies these verbatim.
+    // m_calibrated_delta_base is the raw capture-space delta the calibration pass posed with;
+    // calibrate_from_posed_bound composes the measured offset on top of it.
+    RE::NiTransform m_calibrated_root;
+    RE::NiTransform m_calibrated_delta;
+    RE::NiTransform m_calibrated_delta_base;
 };
 
 PLUGIN_NAMESPACE_END

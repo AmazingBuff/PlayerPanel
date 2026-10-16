@@ -450,15 +450,15 @@ void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
     if (m_snapshot.get() == &clone && clone.graph())
     {
         const std::size_t written = m_panel_animation.advance(*clone.graph());
-        // First frame the idle actually drove joints: the snapshot placement was solved for the
-        // capture-time pose (possibly a jump), so ask for the one-shot re-center against the
-        // standing idle's own bound (oar-idle2 problem 1). Armed once per capture; the clone
-        // consumes the request exactly once. (oar-idle3 hotfix: re-arming on every animated
-        // frame re-solved the placement against a moving bound and dragged the figure.)
-        if (written > 0 && !m_recentre_armed)
+        // Calibration (user design, oar-idle3): the FIRST frame the idle writes joints, measure
+        // that standing body and freeze the placement root from it. The capture-time pose (a
+        // jump center high, a sneak center low) never becomes the placement standard. The clone
+        // answers which pass it wants through recentre_pending; arming stays one-shot per
+        // capture (m_recentre_armed is reset by capture()).
+        if (written > 0 && !m_recentre_armed && clone.recentre_pending())
         {
+            clone.calibrate_from_posed_bound();
             m_recentre_armed = true;
-            clone.request_recentre();
         }
     }
 }
