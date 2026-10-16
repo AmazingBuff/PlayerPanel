@@ -49,6 +49,21 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## hotfix：首帧正常随后缩成白色剪影（2026-10-16 深夜，提交 `9276a40`）
+
+上机发现：面板人物首帧大小正常，第二帧起缩成小的白色剪影。根因在 oar-idle3 的重居中块：
+
+1. **重复武装**：`animate_at_base_pose` 每帧动画写入后都置位重居中请求（日志 2873 次），
+   不是设计的一次；
+2. **手写世界循环砸烂蒙皮**：重居中块里用 `root_world * node.local` 逐节点重写世界——
+   该式只对根的直接子节点成立，**孙子节点丢失中间骨骼变换**，所有非动画后代（衣甲）的
+   蒙皮矩阵坍缩 → 几何缩成一簇（变小）+ 法线垃圾（白剪影）。首帧正常是因为该块尚未跑过。
+
+修复：删掉手写循环（`UpdateDownwardPass` 的级联本来就正确）；武装改为每次 capture 严格
+一次（`m_recentre_armed`，capture 时复位）。包身份
+`CharacterPanel-scopy-oar-idle3-9276a408c7-cl94faaed0c6-20261016T160914Z`，DLL SHA-256
+`966d8bd8…`，已部署校验。判读：`recentre` 行每次捕获恰好出现 1 次，人物不再缩小/发白。
+
 ## 上机判读表
 
 1. **问题 1**：跳跃/潜行进包 → 日志出现 `SCOPY FRAME recentre offset=…`，面板人物站位居中；
