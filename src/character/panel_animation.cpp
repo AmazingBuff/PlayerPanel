@@ -88,14 +88,15 @@ namespace
     //      weaponState bit says sheathed (combat, "武器在手即持械"; empty hands + combat stays
     //      the unarmed fighting idle through the form rule below),
     //   3. the live read, which still wins for an explicit sheathe/draw the engine did process.
+    // The user's definition, final form (three in-game rounds proved every weaponState-based
+    // read loses to the engine's menu freeze): "holding a weapon" is decided by the HAND SLOT,
+    // not by any drawn bit. A player who carries a weapon in a hand shows that weapon family's
+    // stance; empty hands show the plain standing idle (or the h2h family while the unarmed
+    // bases are present). weaponState and its frame-observed ghost are retired from the rule.
     bool panel_drawn_state(RE::Actor& actor, oar::WeaponForm form)
     {
-        if (actor.IsWeaponDrawn())
-            return true;
-        const PanelMonitor::StanceSnapshot snapshot = PanelMonitor::instance().stance_at_open();
-        if (snapshot.valid && snapshot.drawn)
-            return true;
-        return form != oar::WeaponForm::kNone && actor.IsInCombat();
+        (void)actor;
+        return form != oar::WeaponForm::kNone;
     }
 
     RE::BSTSmartPointer<RE::BShkbAnimationGraph> source_graph(RE::Actor& source)
@@ -327,12 +328,10 @@ namespace
     EquipmentState panel_equipment(RE::Actor& actor)
     {
         EquipmentState state = equipment_state(actor);
+        // Hand slot decides the stance: a weapon in a hand = the weapon family's idle; empty
+        // hands = the plain standing idle (the kNone drawn answer the transition block may pass
+        // for a sheathed swap still queries the h2h/MT bases correctly).
         state.drawn = panel_drawn_state(actor, state.form);
-        // The player unequipping inside the menu wins over the entering-stance snapshot — but a
-        // COMBAT player with empty hands keeps the drawn answer: form kNone + drawn queries the
-        // unarmed fighting family (h2h_idle), which is exactly the "空手战斗" stance.
-        if (state.form == oar::WeaponForm::kNone && !actor.IsInCombat())
-            state.drawn = false;
         return state;
     }
 

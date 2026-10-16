@@ -375,12 +375,36 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
         const char* const bone_name = skeleton->bones[bindings[i].bone].name.c_str();
         if (!bone_name)
             continue;
-        const auto found = copy_by_name.find(bone_name);
+        auto found = copy_by_name.find(bone_name);
         if (found == copy_by_name.end() || found->second == &copy_root)
         {
-            // The unresolved set is the evidence that decides whether weapon attachment bones
-            // ride the clip at all (oar-idle3 report problem 2): sample a few names, not just
-            // the count.
+            // Animation-skeleton attachment bones carry the GENERIC name ("Weapon", "Quiver",
+            // "Shield"); the NIF layer carries one node per variant ("WeaponSword", "WeaponAxe",
+            // …). The in-game unresolved set proved equip clips DO key these bones — without the
+            // alias the weapon stays pinned at its captured spot while the hands animate
+            // (oar-idle3 report problem 2, unresolved='x_…|Shield|Weapon|Quiver'). Match the
+            // longest variant node carrying the bone as a prefix; ties fall to the first hit
+            // (unordered_map order), which is fine — one carried weapon per slot.
+            if (bone_name == "Weapon" || bone_name == "Quiver" || bone_name == "Shield")
+            {
+                const size_t prefix = std::strlen(bone_name);
+                RE::NiAVObject* best = nullptr;
+                size_t best_length = 0;
+                for (const auto& [name, node] : copy_by_name)
+                {
+                    if (name.size() > prefix && name.starts_with(bone_name) && name.size() > best_length)
+                    {
+                        best = node;
+                        best_length = name.size();
+                    }
+                }
+                if (best)
+                {
+                    out.nodes[i] = best;
+                    ++resolved;
+                    continue;
+                }
+            }
             if (unresolved.size() < 160)
                 unresolved.append(fmt::format("{}{} ", unresolved.empty() ? "" : "|", bone_name));
             continue;
