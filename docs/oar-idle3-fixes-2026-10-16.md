@@ -49,6 +49,33 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 校准摆位：以站立 idle 为定位标准（2026-10-17，用户方案，提交 `2f5ed1f`）
+
+用户指出此前 recentre 方向对但机制弱：定位基准仍是"捕获姿态的包围盒中心"——跳跃捕获
+中心偏高（面板人物偏下）、潜行捕获偏低（偏上），recentre 只是事后补偿。正确做法：
+**先用站立 idle 自身算一次包围盒作为标准，把根冻结到这个标准上，之后所有动作共用。**
+
+实现（快照路线 `pose()` 两阶段）：
+
+1. **校准期**（新快照的最初几帧）：`m_recentre_pending` 置位（快照构造函数默认 armed），
+   `pose()` 只做 raw 摆放（捕获姿态进相机系，`m_calibrated_delta_base` 记下这个 delta），
+   不做任何以捕获中心为基准的求解；
+2. **校准**：动画桥（`animate_at_base_pose`）在 idle **首次写入关节**的当帧调
+   `calibrate_from_posed_bound()`——实测此刻（站立 idle）的蒙皮包围盒，把
+   `锚点 − 校准中心` 折进根，冻结为 `m_calibrated_root` / `m_calibrated_delta`。
+   日志 `SCOPY FRAME calibrated offset=… radius=…`，每次捕获恰一条；
+3. **稳态**：之后每帧 `pose()` 直接套用冻结根，零测量零求解——跳跃、潜行、换装过渡、
+   后续捕获都在同一条标准上播放，位置与进入姿态彻底解耦。
+
+工程细节：校准当帧用引擎级联（`UpdateDownwardPass`）从新根重摆——校准时动画已写入
+local，手动重写捕获世界会把 idle 砸掉（白剪影教训在同一窗口复现过）；校准失败（裸骨架
+竞态无可测包围盒）时丢弃请求、保留捕获基准，不冻结垃圾修正。包身份
+`CharacterPanel-scopy-oar-idle3-2f5ed1fd19-cl94faaed0c6-20261016T164203Z`，DLL SHA-256
+`4bf88ab7…`，已部署校验。
+
+判读：跳跃/潜行/游泳进包人物位置一致（与站立进包完全相同）；`calibrated` 行每次捕获
+1 条，`radius` ≈ 28（站立 idle 的量级，不再是捕获姿态的 67–94 波动）。
+
 ## hotfix：首帧正常随后缩成白色剪影（2026-10-16 深夜，提交 `9276a40`）
 
 上机发现：面板人物首帧大小正常，第二帧起缩成小的白色剪影。根因在 oar-idle3 的重居中块：
