@@ -9,6 +9,8 @@
 
 #include "character/animation_source.h"
 #include "character/character_clone.h"
+#include "character/figure_audit.h"
+#include "character/equipment_mirror.h"
 #include "character/snapshot_transform.h"
 #include "panel/panel.h"
 
@@ -341,54 +343,70 @@ void SceneGraphCopy::process_requests()
         if (m_snapshot)
             logger::info("SCOPY RELEASE reason=session-boundary capture={}", m_capture_id);
         retire(std::move(m_snapshot));
-        m_idle.reset();
-        m_clip.reset();
+        m_panel_animation.reset();
+        m_open_pending = false;
+        m_equipment_refresh.reset(PanelMonitor::instance().equipment_revision());
+        m_was_open = false;
         m_draw_enabled = false;
         m_seen_generation = generation;
         m_command.store(Command::e_none, std::memory_order_release);
         return;
     }
 
-    // Each visit to the panel starts the animation from its beginning. The engine is paused while the
-    // inventory is up, so the studio's clocks are the only thing moving the figure, and letting their
-    // time carry across a close and a reopen is what makes it resume mid-step instead of starting over.
-    // The flag comes from the menu event rather than from an edge watched here: this function does run
-    // every rendered frame, but the event is the authority on the menu's own state either way.
-    //
-    // The copy-route decision (2026-10-15): the panel shows the detached copy of the player's real
-    // 3D - the capture carries every body-morph and outfit-transform state the mods gave the player,
-    // so no per-plugin compatibility is needed and the route needs no display Actor. Every panel
-    // open therefore recaptures (the player's visible outfit may have changed since the last visit)
-    // and enables the draw on success; F7/F8 stay as the manual overrides. A not-yet-paused open
-    // falls through to the queued-command path below, which carries the same paused-panel validation.
-    // This block runs AFTER the generation boundary above, so a recapture can never be dropped by it.
-    if (PanelMonitor::instance().consume_panel_opened())
+    RE::PlayerCharacter* const source = RE::PlayerCharacter::GetSingleton();
+    RE::NiAVObject* const source_root = source ? source->Get3D(false) : nullptr;
+    std::uint64_t equipment = PanelMonitor::instance().equipment_revision();
+    if (source)
     {
-        m_clip.restart();
-        m_idle.restart();
-        // The standing window is armed on the open edge and OAR evaluates over the frames that
-        // follow, so the capture WAITS for the window to finish before it reads the selection -
-        // capturing on the open frame itself reads an empty window and always falls back to the
-        // running clip (2026-10-16 log: every capture reported pick=running-clip).
-        m_open_pending = true;
-        logger::info("SCOPY ANIM restart at panel open capture={} driver={} (capture waits for the standing window)",
-            m_capture_id, animation_driver());
+        for (RE::FormID item : equipment_hand_ids(*source))
+            equipment = (equipment ^ item) * 1099511628211ULL;
+        equipment = (equipment ^ (source->IsWeaponDrawn() ? 1 : 0)) * 1099511628211ULL;
+        equipment ^= reinterpret_cast<std::uintptr_t>(source_root);
     }
-
-    if (m_open_pending)
+    const bool open = PanelMonitor::instance().is_menu_open();
+    if (!open)
     {
-        if (oar::standing_window_open())
-            return;
+        if (m_was_open)
+            m_panel_animation.reset();
         m_open_pending = false;
-        if (ui && ui->GameIsPaused() && !ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
+        m_equipment_refresh.reset(equipment);
+    }
+    m_was_open = open;
+    if (PanelMonitor::instance().consume_panel_opened() && open)
+    {
+        m_panel_animation.reset();
+        m_open_pending = true;
+        m_equipment_refresh.reset(equipment);
+    }
+    if (open && ui && ui->GameIsPaused() && !ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
+    {
+        if (source)
+            m_panel_animation.observe_equipment(*source, equipment);
+        const std::uint64_t signature = source_root && m_equipment_refresh.needs_sample(equipment)
+            ? figure_measure_assembly(*source_root).signature() : 0;
+        const bool equipment_ready = m_equipment_refresh.sample(equipment, signature);
+        if (m_open_pending || equipment_ready)
         {
+            const bool changed = !m_open_pending;
+            const bool was_drawing = m_draw_enabled;
+            m_open_pending = false;
+            CharacterClone const* const previous = m_snapshot.get();
             m_isolation.census_pre("capture");
-            capture();
+            capture(changed);
             m_isolation.census_post("capture");
-            if (m_snapshot)
-                m_draw_enabled = true;
-            logger::info("SCOPY AUTO recaptured at panel open capture={} draw={} driver={}",
-                m_capture_id, m_draw_enabled ? 1 : 0, animation_driver());
+            if (m_snapshot.get() == previous)
+            {
+                if (changed)
+                    m_equipment_refresh.retry();
+                else
+                    m_open_pending = true;
+            }
+            m_draw_enabled = changed ? was_drawing : m_snapshot != nullptr;
+        }
+        if (m_snapshot)
+        {
+            if (RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton())
+                m_panel_animation.tick(*player, *m_snapshot->graph());
         }
     }
     const Command command = m_command.exchange(Command::e_none, std::memory_order_acq_rel);
@@ -424,50 +442,24 @@ void SceneGraphCopy::process_requests()
 
 std::string SceneGraphCopy::animation_driver() const
 {
-    if (!m_driver_note.empty())
-        return m_driver_note;
-    if (m_clip.ready())
-        return m_clip.name();
-    return "procedural-idle";
+    return m_panel_animation.name();
 }
 
 void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
 {
-    if (m_snapshot.get() != &clone)
-        return;
-    RE::NiAVObject* const root = clone.graph();
-    if (!root)
-        return;
-    // The driver chain, strongest first: the puppet's live graph (real OAR decisions, HKX38),
-    // the clip the engine handed over at capture, then the procedural idle for a body with
-    // neither. Each stage serves the frame or hands it down, and the log names the winner.
-    if (std::string puppet_note = PuppetDriver::instance().drive(*root); !puppet_note.empty())
-    {
-        m_driver_note = std::move(puppet_note);
-        return;
-    }
-    if (m_clip.ready())
-    {
-        m_clip.advance(*root);
-        m_driver_note = fmt::format("clip:{}", m_clip.name());
-        return;
-    }
-    m_idle.advance(*root);
-    m_driver_note = "procedural-idle";
+    if (m_snapshot.get() == &clone && clone.graph())
+        m_panel_animation.advance(*clone.graph());
 }
 
 CharacterClone* SceneGraphCopy::drawable() const
 {
-    return m_draw_enabled ? m_snapshot.get() : nullptr;
+    return m_draw_enabled && m_panel_animation.ready() ? m_snapshot.get() : nullptr;
 }
 
-void SceneGraphCopy::capture()
+void SceneGraphCopy::capture(bool equipment_changed)
 {
-    m_draw_enabled = false;
-    retire(std::move(m_snapshot));
     // Re-select the target on the graph this capture produces: the cached one now points into the
     // parked copy the panel no longer draws. The idle's joints are the same kind of per-graph state.
-    m_idle.reset();
     ++m_capture_id;
     RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
     RE::NiPointer<RE::NiAVObject> source(player ? player->Get3D(false) : nullptr);
@@ -551,66 +543,13 @@ void SceneGraphCopy::capture()
         property->controllers = nullptr;
     }
     // Snapshot the native clone's captured worlds without re-running facegen, Havok or SMP.
+    m_draw_enabled = false;
+    retire(std::move(m_snapshot));
     m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root));
     logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F2=mark F4=drive", m_capture_id, removed_controllers, removed_collisions);
-    ClipPlayback clip;
-    std::string mapping;
-    std::string coverage;
-    // The pose the player was in at capture, logged beside the clip so a reader can tell which
-    // stance the sampled animation belongs to (the panel answers OAR as a standing figure in the
-    // player's weapon form - state-idle v3 - so the clip's own name is not the whole story).
-    std::string state_note;
-    if (const RE::ActorState* const state = player->AsActorState())
-    {
-        state_note = fmt::format("sneaking={} swimming={} sitting={} weapon-drawn={} attack={} knock={} life={}",
-            state->IsSneaking() ? 1 : 0,
-            state->IsSwimming() ? 1 : 0,
-            state->IsSitting() ? 1 : 0,
-            state->IsWeaponDrawn() ? 1 : 0,
-            static_cast<std::uint32_t>(state->GetAttackState()),
-            static_cast<std::uint32_t>(state->GetKnockState()),
-            static_cast<std::uint32_t>(state->GetLifeState()));
-    }
-    // The clip the panel plays: OAR's own selection from the standing window armed at the
-    // inventory-open edge (state-idle v3) - a STANDING figure in the player's weapon stance, taken
-    // from a real decision instead of replaying whatever the player happened to be doing. With no
-    // decision seen (OAR not installed, or no replacement evaluated in the window), the running
-    // clip serves and the pick says so.
-    const char* pick = "running-clip";
-    RE::hkbClipGenerator const* generator = oar::selected_clip().generator;
-    if (generator && resolve_clip_playback(*player, *root, generator, clip, mapping, coverage))
-        pick = "oar-standing-window";
-    else if (resolve_clip_playback(*player, *root, pick_running_clip(*player), clip, mapping, coverage))
-        pick = "running-clip";
-    if (!clip.name.empty())
-    {
-        logger::info("SCOPY ANIM captured clip='{}' pick={} mapping={} coverage={} state[{}]", clip.name, pick, mapping, coverage, state_note);
-        m_clip.set_clip(std::move(clip));
-        oar::clear_selected_clip();
-    }
-    else
-        m_clip.reset();
-
-    // The ACTIVE query (state-idle v3): ask OAR itself what it would choose for a base clip with
-    // the standing answers in force, instead of waiting for the engine to activate one - the
-    // paused panel has no evaluation in flight (2026-10-16: window hits=0). Log-only this round:
-    // the line says whether OAR returns a replacement for the standing stance at all, which is
-    // what the copy will play once the returned animation is resolved.
-    if (oar::query_supported() && player)
-    {
-        if (RE::hkbClipGenerator const* const base = generator ? generator : pick_running_clip(*player))
-        {
-            std::uint32_t candidates = 0;
-            std::uint32_t with_replacements = 0;
-            oar::arm_standing_window(2);
-            void* const replacement = oar::query_replacement(*player,
-                const_cast<RE::hkbClipGenerator&>(*base), base->animationBindingIndex, candidates, with_replacements);
-            oar::arm_standing_window(0);
-            logger::info("SCOPY OAR query base={} clip='{}' candidates={} with-replacements={} replacement=0x{:x}",
-                base->animationBindingIndex, clip.name, candidates, with_replacements,
-                reinterpret_cast<std::uintptr_t>(replacement));
-        }
-    }
+    m_panel_animation.prepare(*player, *root, equipment_changed);
+    logger::info("SCOPY ANIM capture={} driver={} equipment-change={} (standing bases; independent preview query)",
+        m_capture_id, m_panel_animation.name(), equipment_changed);
     for (RE::NiAVObject* object : copy_inventory.objects)
         if (object->AsGeometry())
             logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());

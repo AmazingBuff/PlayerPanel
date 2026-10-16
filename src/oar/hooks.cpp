@@ -3,14 +3,20 @@
 #include "oar/api/OpenAnimationReplacer-ConditionTypes.h"
 #include "oar/binary_profile.h"
 #include "oar/policy.h"
+#include "oar/preview_clip.h"
+
+#include "RE/H/hkbCharacterStringData.h"
 
 #include <Windows.h>
 #include <detours/detours.h>
 
 #include <atomic>
+#include <bit>
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <shared_mutex>
+#include <vector>
 
 PLUGIN_NAMESPACE_BEGIN
 namespace oar
@@ -24,24 +30,52 @@ namespace oar
         Evaluate s_evaluate = nullptr;
         NumericValue s_numeric = nullptr;
         std::atomic_bool s_ready = false;
-        // The standing-window state (see hooks.h): armed on the inventory-open edge, ticked down
-        // once per rendered frame. Both thunks read it on whatever thread OAR evaluates on.
-        std::atomic<std::uint32_t> s_standing_frames = 0;
-        std::atomic<WeaponForm> s_standing_form{ WeaponForm::kNone };
-        std::atomic<RE::hkbClipGenerator const*> s_selected = nullptr;
-        // The active-query chain (see binary_profile.h): resolved only when the build's query
-        // entries carry the bytes the profile recorded, so an unverified build never runs one.
         using GetSingleton = void* (*)();
         using ForEachProjectData = void (*)(void const*, std::function<void(RE::hkbCharacterStringData*, void*)> const&);
         using GetReplacements = void* (*)(void const*, std::uint16_t);
         using EvaluateReplacements = void* (*)(void const*, RE::TESObjectREFR*, RE::hkbClipGenerator*);
+        using GetIndex = std::uint16_t (*)(void const*, void*&);
+        using EvaluateSet = bool (*)(void const*, RE::TESObjectREFR*, RE::hkbClipGenerator*, void*, bool);
+        using EvaluateReplacement = bool (*)(void const*, RE::TESObjectREFR*, RE::hkbClipGenerator*);
+        using Parent = void const* (*)(void const*);
+        using ReplaceOnLoop = bool (*)(void const*);
         GetSingleton s_get_singleton = nullptr;
         ForEachProjectData s_for_each_project_data = nullptr;
         GetReplacements s_get_replacements = nullptr;
         EvaluateReplacements s_evaluate_replacements = nullptr;
-        // Diagnostics only: how many evaluations the window actually saw, so the log can say
-        // whether the open edge produced an OAR decision at all.
-        std::atomic<std::uint32_t> s_window_hits = 0;
+        GetIndex s_get_index = nullptr;
+        EvaluateSet s_evaluate_set = nullptr;
+        EvaluateReplacement s_evaluate_replacement = nullptr;
+        Parent s_parent_submod = nullptr;
+        Parent s_parent_mod = nullptr;
+        ReplaceOnLoop s_replace_on_loop = nullptr;
+        std::atomic_bool s_query_ready = false;
+
+        struct QueryFrame
+        {
+            QueryFrame(ScopedEvaluation& evaluation, QuerySession& session, AnimationSelection& result,
+                std::uint64_t identity, AnimationSelection const* refresh_selection = nullptr) :
+                scope(evaluation), variants(session), output(result), key(identity),
+                refresh(refresh_selection),
+                previous(std::exchange(current, this)) {}
+            ~QueryFrame() { current = previous; }
+            inline static thread_local QueryFrame* current = nullptr;
+            ScopedEvaluation& scope;
+            QuerySession& variants;
+            AnimationSelection& output;
+            std::uint64_t key;
+            AnimationSelection const* refresh;
+            void const* selected = nullptr;
+            std::uint16_t index = 0xFFFF;
+            QueryFrame* previous;
+
+            void reject(std::string reason)
+            {
+                ++output.rejected;
+                if (output.diagnostic.empty())
+                    output.diagnostic = std::move(reason);
+            }
+        };
 
         struct Frame
         {
@@ -64,6 +98,65 @@ namespace oar
             return value;
         }
 
+        bool readable(void const* object, std::size_t size)
+        {
+            if (!object || size > 16 * 1024 * 1024)
+                return false;
+            std::uintptr_t cursor = reinterpret_cast<std::uintptr_t>(object);
+            if (cursor > std::numeric_limits<std::uintptr_t>::max() - size)
+                return false;
+            const std::uintptr_t end = cursor + size;
+            while (cursor < end)
+            {
+                MEMORY_BASIC_INFORMATION info{};
+                if (!VirtualQuery(reinterpret_cast<void const*>(cursor), &info, sizeof(info)) ||
+                    info.State != MEM_COMMIT || (info.Protect & (PAGE_GUARD | PAGE_NOACCESS)) != 0)
+                    return false;
+                const std::uintptr_t next = reinterpret_cast<std::uintptr_t>(info.BaseAddress) + info.RegionSize;
+                if (next <= cursor)
+                    return false;
+                cursor = std::min(next, end);
+            }
+            return true;
+        }
+
+        template <class T>
+        std::span<T const> native_vector(void const* object, std::size_t offset)
+        {
+            const std::uintptr_t first = read_at<std::uintptr_t>(object, offset);
+            const std::uintptr_t last = read_at<std::uintptr_t>(object, offset + sizeof(void*));
+            if (last < first || (last - first) % sizeof(T) != 0 || (last - first) / sizeof(T) > 65535)
+                return {};
+            if (first == last)
+                return {};
+            if (!readable(reinterpret_cast<void const*>(first), last - first))
+                return {};
+            return { reinterpret_cast<T const*>(first), (last - first) / sizeof(T) };
+        }
+
+        std::string asset_name(RE::hkStringPtr const& name)
+        {
+            std::string result;
+            char const* text = name.c_str();
+            std::size_t verified = 0;
+            for (std::size_t i = 0; text && i < 1024; ++i)
+            {
+                if (i >= verified)
+                {
+                    if (readable(text + i, 64))
+                        verified = i + 64;
+                    else if (readable(text + i, 1))
+                        verified = i + 1;
+                    else
+                        return {};
+                }
+                if (text[i] == '\0')
+                    return result;
+                result.push_back(text[i]);
+            }
+            return {};
+        }
+
         std::string_view condition_name(Condition const& condition, RE::BSString& storage)
         {
             storage = condition.GetName();
@@ -82,6 +175,61 @@ namespace oar
             return nullptr;
         }
 
+        template <class T>
+        T const* named_component(Condition const& condition, std::string_view wanted)
+        {
+            for (std::uint32_t i = 0; i < condition.GetNumComponents(); ++i)
+            {
+                auto const* const item = condition.GetComponent(i);
+                if (!item || item->GetType() != T::CONDITION_COMPONENT_TYPE)
+                    continue;
+                const RE::BSString name = item->GetName();
+                if (name.c_str() && wanted == name.c_str())
+                    return static_cast<T const*>(item);
+            }
+            return nullptr;
+        }
+
+        std::optional<bool> random_condition(Condition const& condition, RE::TESObjectREFR* source,
+            void* submod, ScopedEvaluation& scope)
+        {
+            QueryFrame* const query = QueryFrame::current;
+            auto const* const state = component<::Conditions::IConditionStateComponent>(condition);
+            auto const* const minimum = named_component<::Conditions::INumericConditionComponent>(condition, "Minimum random value");
+            auto const* const maximum = named_component<::Conditions::INumericConditionComponent>(condition, "Maximum random value");
+            auto const* const value = named_component<::Conditions::INumericConditionComponent>(condition, "Numeric value");
+            auto const* const comparison = component<::Conditions::IComparisonConditionComponent>(condition);
+            if (!query || !state || !minimum || !maximum || !value || !comparison)
+            {
+                scope.reject("random condition requires the verified component layout and panel session");
+                return false;
+            }
+            const auto data_scope = state->GetStateDataScope();
+            if ((state->GetAllowedDataScopes() & data_scope) == ::Conditions::StateDataScope::kNone ||
+                (data_scope != ::Conditions::StateDataScope::kLocal && data_scope != ::Conditions::StateDataScope::kSubMod))
+            {
+                scope.reject("random condition scope is not Local or Submod");
+                return false;
+            }
+            const bool local = data_scope == ::Conditions::StateDataScope::kLocal;
+            if (!local && !submod)
+            {
+                scope.reject("random condition submod unavailable");
+                return false;
+            }
+            const StateKey key{ local ? DataScope::e_local : DataScope::e_submod,
+                local ? query->key : reinterpret_cast<std::uint64_t>(submod) };
+            const auto random = query->variants.selection.random(key, reinterpret_cast<std::uint64_t>(&condition),
+                query->key, state->ShouldResetOnLoopOrEcho(), minimum->GetNumericValue(source), maximum->GetNumericValue(source));
+            const float requested = value->GetNumericValue(source);
+            if (!random || !std::isfinite(requested))
+            {
+                scope.reject("random condition has invalid numeric bounds/value");
+                return false;
+            }
+            return comparison->GetComparisonResult(*random, requested);
+        }
+
         std::optional<bool> compare(Condition const& condition, float value, RE::TESObjectREFR* source,
             ScopedEvaluation& scope)
         {
@@ -95,45 +243,93 @@ namespace oar
             return comparison->GetComparisonResult(value, numeric->GetNumericValue(source));
         }
 
+        int equipped_type(RE::TESForm const* form)
+        {
+            if (!form)
+                return 0;
+            if (RE::TESObjectWEAP const* weapon = form->As<RE::TESObjectWEAP>())
+            {
+                const int type = static_cast<int>(weapon->GetWeaponType());
+                if (type < 0 || type > 9)
+                    return -1;
+                return weapon->GetWeaponType() == RE::WEAPON_TYPE::kTwoHandAxe &&
+                    weapon->HasKeywordString("WeapTypeWarhammer") ? 10 : type;
+            }
+            if (form->IsArmor())
+                return 11;
+            if (RE::SpellItem const* spell = form->As<RE::SpellItem>())
+            {
+                switch (spell->GetAssociatedSkill())
+                {
+                case RE::ActorValue::kAlteration: return 12;
+                case RE::ActorValue::kIllusion: return 13;
+                case RE::ActorValue::kDestruction: return 14;
+                case RE::ActorValue::kConjuration: return 15;
+                case RE::ActorValue::kRestoration: return 16;
+                default: return -1;
+                }
+            }
+            if (form->Is(RE::FormType::Scroll))
+                return 17;
+            return form->Is(RE::FormType::Light) ? 18 : -1;
+        }
+
+        std::optional<bool> equipment_condition(Condition const& condition, std::string_view name,
+            RE::TESObjectREFR* source, ScopedEvaluation& scope)
+        {
+            if (!scope.state().hand_override)
+                return std::nullopt;
+            if (name == "IsEquippedHasEnchantment" || name == "IsEquippedHasEnchantmentWithKeyword" ||
+                name == "HasBoundWeaponEquipped")
+            {
+                scope.reject("previous equipment instance state requires an explicit adapter");
+                return false;
+            }
+            if (name != "IsEquipped" && name != "IsEquippedType" && name != "IsEquippedHasKeyword")
+                return std::nullopt;
+            const auto* hand = component<::Conditions::IBoolConditionComponent>(condition);
+            if (!hand)
+            {
+                scope.reject("equipment hand component unavailable");
+                return false;
+            }
+            const std::uint32_t id = (*scope.state().hand_override)[hand->GetBoolValue() ? 1 : 0];
+            RE::TESForm const* const form = id ? RE::TESForm::LookupByID(id) : nullptr;
+            if (id && !form)
+            {
+                scope.reject("previous equipment form no longer available");
+                return false;
+            }
+            if (name == "IsEquipped")
+            {
+                const auto* expected = component<::Conditions::IFormConditionComponent>(condition);
+                return expected && expected->IsValid() && expected->GetTESFormValue() == form;
+            }
+            if (name == "IsEquippedHasKeyword")
+            {
+                const auto* keyword = component<::Conditions::IKeywordConditionComponent>(condition);
+                RE::BGSKeywordForm const* keywords = form ? form->As<RE::BGSKeywordForm>() : nullptr;
+                return keyword && keywords && keyword->HasKeyword(keywords);
+            }
+            const auto* numeric = component<::Conditions::INumericConditionComponent>(condition);
+            if (!numeric)
+            {
+                scope.reject("equipment type component unavailable");
+                return false;
+            }
+            const float requested = numeric->GetNumericValue(source);
+            if (!std::isfinite(requested) || requested < -128.0f || requested > 127.0f)
+            {
+                scope.reject("invalid equipment type value");
+                return false;
+            }
+            return equipped_type(form) == static_cast<std::int8_t>(requested);
+        }
+
         bool evaluate_thunk(Condition const* condition, RE::TESObjectREFR* source,
             RE::hkbClipGenerator* clip, void* submod)
         {
             ScopedEvaluation* const scope = ScopedEvaluation::current();
-            // The standing-window pre-condition (state-idle v3): armed on the INVENTORY-OPEN edge,
-            // while the world is still advancing and OAR is evaluating for the player. Every pose
-            // condition OAR asks in that window is answered for a STANDING figure in the player's
-            // weapon stance, so the replacement OAR decides on is that stance's idle - played in
-            // the panel whether or not this session ever ran it. The generator under evaluation is
-            // filed as the selection; the window's own expiry (or a close) drops the flag and the
-            // engine's original path answers again.
-            if (!scope && standing_window_open() && source && source->IsPlayerRef())
-            {
-                s_selected.store(clip, std::memory_order_release);
-                if (s_window_hits.fetch_add(1, std::memory_order_relaxed) == 0)
-                    logger::info("SCOPY OAR window hit clip=0x{:x} form={}", reinterpret_cast<std::uintptr_t>(clip),
-                        weapon_form_name(standing_weapon_form()));
-                RE::BSString window_storage;
-                const std::string_view name = condition_name(*condition, window_storage);
-                PreviewState const standing{
-                    .weapon_drawn = weapon_form_is_drawn(standing_weapon_form())
-                };
-                if (std::optional<bool> const answer = standing_predicate(name, standing))
-                {
-                    return finish_predicate(*answer, condition->IsDisabled(), condition->IsNegated());
-                }
-                if (name == "IsEquippedType")
-                {
-                    if (const auto type = weapon_form_type(standing_weapon_form()))
-                    {
-                        const auto* const comparison = component<::Conditions::IComparisonConditionComponent>(*condition);
-                        const auto* const numeric = component<::Conditions::INumericConditionComponent>(*condition);
-                        if (comparison && numeric)
-                            return finish_predicate(comparison->GetComparisonResult(*type, *type),
-                                condition->IsDisabled(), condition->IsNegated());
-                    }
-                }
-                return s_evaluate(condition, source, clip, submod);
-            }
             if (!scope)
                 return s_evaluate(condition, source, clip, submod);
             Frame frame(source, clip);
@@ -148,7 +344,13 @@ namespace oar
 
             RE::BSString storage;
             const std::string_view name = condition_name(*condition, storage);
-            std::optional<bool> value = standing_predicate(name, scope->state());
+            if (name == "HasGraphVariable" && QueryFrame::current)
+                return s_evaluate(condition, source, clip, submod);
+            std::optional<bool> value = equipment_condition(*condition, name, source, *scope);
+            if (name == "Random" && QueryFrame::current)
+                value = random_condition(*condition, source, submod, *scope);
+            if (!value)
+                value = standing_predicate(name, scope->state());
             if (!value)
             {
                 if (const auto number = standing_value(name))
@@ -193,7 +395,12 @@ namespace oar
                 const bool projected_value = finish_predicate(*value, false, condition->IsNegated());
                 // The engine's own answer for the SAME evaluation is the only direct measure of
                 // "this projection changed an input OAR decides on"; asking it costs one call.
-                const bool differs = projected && s_evaluate(condition, source, clip, submod) != projected_value;
+                bool differs = false;
+                if (projected)
+                {
+                    UnprojectedEvaluation original;
+                    differs = s_evaluate(condition, source, clip, submod) != projected_value;
+                }
                 scope->note_override(name, differs);
                 return projected_value;
             }
@@ -228,7 +435,12 @@ namespace oar
             const float value = found->second;
             // Same differential as the predicate path: the engine's own read of this variable is
             // what OAR would have decided on without the projection.
-            const bool differs = scope->mode() == ScopeMode::kProjected && s_numeric(numeric, source) != value;
+            bool differs = false;
+            if (scope->mode() == ScopeMode::kProjected)
+            {
+                UnprojectedEvaluation original;
+                differs = s_numeric(numeric, source) != value;
+            }
             scope->note_override(name, differs);
             switch (read_at<std::int32_t>(numeric, Graph_Type_Offset))
             {
@@ -263,7 +475,8 @@ namespace oar
             RE::BSString storage;
             const auto name = condition_name(condition, storage);
             if (!standing_predicate(name, scope.state()) && !standing_value(name) &&
-                name != "HasGraphVariable" && name != "IsMovementDirection" && name != "IsCombatState" && !forwards_source(name))
+                name != "HasGraphVariable" && name != "IsMovementDirection" && name != "IsCombatState" &&
+                !(name == "Random" && QueryFrame::current) && !forwards_source(name))
             {
                 scope.reject(fmt::format("unsupported preview condition: {}", name));
                 return false;
@@ -290,6 +503,164 @@ namespace oar
                     return false;
                 }
             }
+            return true;
+        }
+
+        std::optional<std::uint16_t> choose_index(void const* replacement, QueryFrame& query)
+        {
+            const std::uint8_t tag = read_at<std::uint8_t>(replacement, Replacement_Tag_Offset);
+            if (tag == 0)
+            {
+                void* unused_variant = nullptr;
+                query.output.variants.reset();
+                query.output.variant = {};
+                query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
+                query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
+                return s_get_index(replacement, unused_variant);
+            }
+            if (tag != 1)
+                return std::nullopt;
+            static_assert(sizeof(std::shared_mutex) == 8);
+            auto* mutex = reinterpret_cast<std::shared_mutex*>(
+                const_cast<std::uint8_t*>(static_cast<std::uint8_t const*>(replacement)) + Variant_Lock_Offset);
+            const std::shared_lock lock(*mutex);
+            const std::uint8_t mode = read_at<std::uint8_t>(replacement, 0x78);
+            if (mode > 1)
+                return std::nullopt;
+            const auto active = native_vector<void*>(replacement, 0x30);
+            const auto sequence = native_vector<void*>(replacement, 0x48);
+            const auto random = native_vector<void*>(replacement, 0x60);
+            const auto cumulative = native_vector<float>(replacement, 0x80);
+            if (active.empty())
+                return std::nullopt;
+            const auto entries = [&](std::span<void* const> variants)
+            {
+                std::vector<VariantEntry> result;
+                for (void const* variant : variants)
+                {
+                    if (!readable(variant, 0x2A))
+                    {
+                        result.clear();
+                        break;
+                    }
+                    const std::uint16_t index = read_at<std::uint16_t>(variant, 0);
+                    result.push_back({ index, read_at<std::uint8_t>(variant, 0x29) != 0 });
+                }
+                return result;
+            };
+            VariantOptions options;
+            options.sequence = entries(mode == 1 ? active : sequence);
+            const std::vector<VariantEntry> random_entries = entries(random);
+            if (options.sequence.size() != (mode == 1 ? active.size() : sequence.size()) ||
+                random_entries.size() != random.size())
+                return std::nullopt;
+            for (VariantEntry const& variant : random_entries)
+                options.random.push_back(variant.index);
+            options.cumulative.assign(cumulative.begin(), cumulative.end());
+            options.sequential = mode == 1;
+            options.reset_on_loop = read_at<std::uint8_t>(replacement, 0x21) != 0;
+            options.share_history = read_at<std::uint8_t>(replacement, 0x22) != 0;
+            void const* const submod = s_parent_submod(replacement);
+            void const* const mod = submod ? s_parent_mod(submod) : nullptr;
+            const std::uint32_t data_scope = read_at<std::uint32_t>(replacement, 0x98);
+            switch (data_scope)
+            {
+            case 1: options.key = { DataScope::e_local, query.key, reinterpret_cast<std::uint64_t>(mod) }; break;
+            case 2: options.key = { DataScope::e_submod, reinterpret_cast<std::uint64_t>(submod) }; break;
+            case 4: options.key = { DataScope::e_replacer_mod, reinterpret_cast<std::uint64_t>(mod) }; break;
+            default: return std::nullopt;
+            }
+            if (!submod || !mod)
+                return std::nullopt;
+            const bool keep_current = query.refresh && query.refresh->clip_key == query.key &&
+                query.refresh->replacement_key == reinterpret_cast<std::uint64_t>(replacement) &&
+                std::ranges::any_of(active, [&](void const* entry)
+                {
+                    return readable(entry, sizeof(std::uint16_t)) &&
+                        read_at<std::uint16_t>(entry, 0) == query.refresh->index;
+                });
+            const std::optional<VariantPick> pick = keep_current ? std::optional{ query.refresh->variant } :
+                query.variants.selection.variant(options, query.key);
+            if (!pick || pick->index == 0xFFFF)
+                return std::nullopt;
+            query.output.variants = std::move(options);
+            query.output.variant = *pick;
+            query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
+            query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
+            return pick->index;
+        }
+
+        bool evaluate_set_thunk(void const* set, RE::TESObjectREFR* source, RE::hkbClipGenerator* clip,
+            void* submod, bool trace)
+        {
+            QueryFrame* const query = QueryFrame::current;
+            ScopedEvaluation* const outer = ScopedEvaluation::current();
+            if (!query || !outer || !outer->matches(source, clip))
+                return s_evaluate_set(set, source, clip, submod, trace);
+            ScopedEvaluation candidate(source, clip, outer->state(), ScopeMode::kAudited);
+            bool result = true;
+            {
+                // ConditionSet starts with MSVC shared_mutex, then vector<unique_ptr<ICondition>>.
+                // Both builds' EvaluateAll lock that mutex and walk +8/+16; verified in the DLLs.
+                const std::shared_lock lock(*const_cast<std::shared_mutex*>(
+                    static_cast<std::shared_mutex const*>(set)));
+                const auto entries = native_vector<Condition*>(set, Condition_Entries_Offset);
+                if (entries.empty() && read_at<std::uintptr_t>(set, 8) != read_at<std::uintptr_t>(set, 16))
+                {
+                    candidate.reject("condition-set entries are unreadable");
+                    result = false;
+                }
+                for (Condition const* condition : entries)
+                {
+                    if (!condition || !audit(*condition, candidate))
+                    {
+                        result = false;
+                        break;
+                    }
+                }
+                if (result)
+                {
+                    for (Condition const* condition : entries)
+                    {
+                        if (!condition->Evaluate(source, clip, submod))
+                        {
+                            result = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            outer->absorb(candidate);
+            if (!candidate.supported())
+            {
+                query->reject(candidate.diagnostic());
+                // Nested AND/TARGET/PLAYER sets may sit below a negation or OR. Their unsupported
+                // reads must veto the enclosing candidate, while the query may try the next one.
+                if (outer != &query->scope)
+                    outer->reject(candidate.diagnostic());
+            }
+            return result && candidate.supported();
+        }
+
+        bool evaluate_replacement_thunk(void const* replacement, RE::TESObjectREFR* source,
+            RE::hkbClipGenerator* clip)
+        {
+            if (!s_evaluate_replacement(replacement, source, clip))
+                return false;
+            QueryFrame* const query = QueryFrame::current;
+            ScopedEvaluation* const scope = ScopedEvaluation::current();
+            if (!query || !scope || !scope->matches(source, clip))
+                return true;
+            // OAR's AnimationReplacements still holds its read lock here. Copy the chosen index
+            // before returning to its loop; no ReplacementAnimation/Variant pointer escapes.
+            const auto selected = choose_index(replacement, *query);
+            if (!selected || *selected == 0xFFFF)
+            {
+                query->reject("replacement has no usable preview variant");
+                return false;
+            }
+            query->selected = replacement;
+            query->index = *selected;
             return true;
         }
 
@@ -328,87 +699,156 @@ namespace oar
         }
     }
 
-    void arm_standing_window(std::uint32_t a_frames)
-    {
-        s_standing_frames.store(a_frames, std::memory_order_release);
-        clear_selected_clip();
-    }
+    bool query_supported() { return s_query_ready.load(std::memory_order_acquire); }
 
-    void tick_standing_window()
+    RE::hkbCharacterStringData* character_strings(RE::hkbCharacter const& character)
     {
-        std::uint32_t left = s_standing_frames.load(std::memory_order_acquire);
-        while (left != 0 && !s_standing_frames.compare_exchange_weak(left, left - 1,
-            std::memory_order_acq_rel, std::memory_order_acquire))
-        {
-        }
-        if (left == 1)
-        {
-            // The window just closed: report what it saw, so a fallback in the panel's capture can
-            // be told apart from a window that never ran.
-            logger::info("SCOPY OAR window closed hits={} selected={}", s_window_hits.load(std::memory_order_relaxed),
-                s_selected.load(std::memory_order_acquire) != nullptr ? 1 : 0);
-            s_window_hits.store(0, std::memory_order_relaxed);
-        }
-    }
-
-    bool standing_window_open()
-    {
-        return s_standing_frames.load(std::memory_order_acquire) != 0;
-    }
-
-    void set_standing_weapon_form(WeaponForm a_form)
-    {
-        s_standing_form.store(a_form, std::memory_order_release);
-    }
-
-    WeaponForm standing_weapon_form()
-    {
-        return s_standing_form.load(std::memory_order_acquire);
-    }
-
-    SelectedClip selected_clip()
-    {
-        return SelectedClip{ s_selected.load(std::memory_order_acquire) };
-    }
-
-    void clear_selected_clip()
-    {
-        s_selected.store(nullptr, std::memory_order_release);
-    }
-
-    bool query_supported()
-    {
-        return s_get_singleton && s_for_each_project_data && s_get_replacements && s_evaluate_replacements;
-    }
-
-    void* query_replacement(RE::TESObjectREFR& a_source, RE::hkbClipGenerator& a_clip, std::uint16_t a_base_index,
-        std::uint32_t& a_candidates, std::uint32_t& a_with_replacements)
-    {
-        a_candidates = 0;
-        a_with_replacements = 0;
-        if (!query_supported())
+        if (!readable(&character, Character_Setup_Offset + sizeof(void*)))
             return nullptr;
-        void* const singleton = s_get_singleton();
-        if (!singleton)
+        void const* const setup = read_at<void*>(std::addressof(character), Character_Setup_Offset);
+        if (!readable(setup, Setup_Data_Offset + sizeof(void*)))
             return nullptr;
-        void* found = nullptr;
-        // The project datas are walked until one of them produces a replacement for the base index
-        // whose conditions hold; the conditions run through the hooks above, so the standing
-        // answers are in force for the whole decision.
-        std::function<void(RE::hkbCharacterStringData*, void*)> visit =
-            [&](RE::hkbCharacterStringData*, void* a_project_data)
+        void const* const data = read_at<void*>(setup, Setup_Data_Offset);
+        if (!readable(data, Character_String_Data_Offset + sizeof(void*)))
+            return nullptr;
+        auto* const strings = read_at<RE::hkbCharacterStringData*>(data, Character_String_Data_Offset);
+        return readable(strings, sizeof(*strings)) ? strings : nullptr;
+    }
+
+    AnimationSelection query_animation(RE::TESObjectREFR& source, RE::hkbCharacter& character,
+        std::span<std::string_view const> bases, PreviewState state, QuerySession& session,
+        QueryRequest const& request)
+    {
+        AnimationSelection result;
+        for (auto const& [name, value] : state.graph_variables)
+        {
+            (void)name;
+            if (!std::isfinite(value))
             {
-                if (found || !a_project_data)
+                result.diagnostic = "preview graph values must be finite";
+                return result;
+            }
+        }
+        RE::hkbCharacterStringData* const wanted = character_strings(character);
+        if (!wanted)
+        {
+            result.diagnostic = "character string data unavailable";
+            return result;
+        }
+        const auto decide = [&](void const* project)
+        {
+            const auto& animation_names = wanted->animationNames;
+            if (animation_names.size() <= 0 || animation_names.size() > 65535 ||
+                !readable(animation_names.data(), static_cast<std::size_t>(animation_names.size()) * sizeof(RE::hkStringPtr)))
+            {
+                result.diagnostic = "animation name table unavailable";
+                return;
+            }
+            const auto names = session.names(wanted, animation_names.data(), static_cast<std::size_t>(animation_names.size()),
+                [&](std::size_t i) { return asset_name(animation_names[static_cast<int>(i)]); });
+            const auto base = find_base_animation(names, bases);
+            if (!base)
+            {
+                result.diagnostic = "standing base animation not present in this project";
+                return;
+            }
+            result.found = true;
+            result.base_index = *base;
+            result.index = *base;
+            result.name = names[*base];
+            result.base_name = result.name;
+            result.clip_key = (reinterpret_cast<std::uint64_t>(wanted) * 1099511628211ULL) ^
+                (static_cast<std::uint64_t>(*base) << 16) ^ request.channel;
+            AnimationSelection const* const current = request.current;
+            const bool same_clip = current && current->clip_key == result.clip_key;
+            if (request.event == QueryEvent::e_activate || !same_clip)
+                session.selection.activate(result.clip_key);
+            if (request.event == QueryEvent::e_loop && same_clip)
+            {
+                const LoopDecision decision = idle_loop_decision(current->reevaluate_on_loop,
+                    current->variants.has_value(), current->variants &&
+                        session.selection.in_sequence(*current->variants, result.clip_key));
+                if (decision != LoopDecision::e_continue_variants)
+                    session.selection.loop(result.clip_key);
+                if (decision != LoopDecision::e_recheck)
+                {
+                    result = *current;
+                    result.evaluated = result.overrides = result.rejected = 0;
+                    result.diagnostic = decision == LoopDecision::e_continue_variants ?
+                        "continue current variants" : "loop reevaluation disabled";
+                    if (result.variants)
+                    {
+                        const auto pick = session.selection.variant(*result.variants, result.clip_key);
+                        if (pick && pick->index < names.size())
+                        {
+                            result.variant = *pick;
+                            result.index = pick->index;
+                            result.name = names[pick->index];
+                        }
+                        else
+                        {
+                            result.index = result.base_index;
+                            result.name = result.base_name;
+                            result.replaced = false;
+                            result.replacement_key = 0;
+                            result.variants.reset();
+                            result.variant = {};
+                            result.reevaluate_on_loop = true;
+                            result.diagnostic = "cached variants unavailable; standing base";
+                        }
+                    }
                     return;
-                ++a_candidates;
-                void* const replacements = s_get_replacements(a_project_data, a_base_index);
-                if (!replacements)
-                    return;
-                ++a_with_replacements;
-                found = s_evaluate_replacements(replacements, std::addressof(a_source), std::addressof(a_clip));
-            };
-        s_for_each_project_data(singleton, visit);
-        return found;
+                }
+            }
+            if (!project || !query_supported())
+                return;
+            PreviewClip preview;
+            preview.initialize(*base, result.name, true);
+            ScopedEvaluation scope(&source, preview.get(), state, ScopeMode::kAudited);
+            QueryFrame frame(scope, session, result,
+                result.clip_key, request.event == QueryEvent::e_refresh && same_clip ? current : nullptr);
+            if (void* const replacements = s_get_replacements(project, *base))
+            {
+                void* const selected = s_evaluate_replacements(replacements, &source, preview.get());
+                if (selected && selected == frame.selected && frame.index < names.size())
+                {
+                    result.index = frame.index;
+                    result.name = names[frame.index];
+                    result.replaced = true;
+                }
+                else
+                {
+                    result.replacement_key = 0;
+                    result.variants.reset();
+                    result.variant = {};
+                    result.reevaluate_on_loop = true;
+                }
+            }
+            result.evaluated = scope.evaluated();
+            result.overrides = scope.overrides();
+        };
+        if (query_supported())
+        {
+            bool visited = false;
+            std::function<void(RE::hkbCharacterStringData*, void*)> visit =
+                [&](RE::hkbCharacterStringData* strings, void* project)
+                {
+                    if (!visited && strings == wanted)
+                    {
+                        visited = true;
+                        decide(project);
+                    }
+                };
+            if (void const* singleton = s_get_singleton())
+                s_for_each_project_data(singleton, visit);
+            if (!visited)
+                decide(nullptr);
+        }
+        else
+        {
+            decide(nullptr);
+        }
+        return result;
     }
 
     bool install_hooks()
@@ -442,6 +882,25 @@ namespace oar
         const auto base = reinterpret_cast<std::uintptr_t>(module);
         s_evaluate = reinterpret_cast<Evaluate>(base + profile->evaluate_rva);
         s_numeric = reinterpret_cast<NumericValue>(base + profile->numeric_rva);
+        const auto image = std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(module), profile->image_size);
+        const bool query_verified = matches_query(profile->query, image);
+        if (query_verified)
+        {
+            const auto address = [&](QueryFunction function)
+            {
+                return base + profile->query.entries[static_cast<std::size_t>(function)].rva;
+            };
+            s_get_singleton = reinterpret_cast<GetSingleton>(address(QueryFunction::e_singleton));
+            s_for_each_project_data = reinterpret_cast<ForEachProjectData>(address(QueryFunction::e_projects));
+            s_get_replacements = reinterpret_cast<GetReplacements>(address(QueryFunction::e_replacements));
+            s_evaluate_replacements = reinterpret_cast<EvaluateReplacements>(address(QueryFunction::e_evaluate));
+            s_get_index = reinterpret_cast<GetIndex>(address(QueryFunction::e_index));
+            s_evaluate_set = reinterpret_cast<EvaluateSet>(address(QueryFunction::e_conditions));
+            s_evaluate_replacement = reinterpret_cast<EvaluateReplacement>(address(QueryFunction::e_replacement_condition));
+            s_parent_submod = reinterpret_cast<Parent>(address(QueryFunction::e_parent_submod));
+            s_parent_mod = reinterpret_cast<Parent>(address(QueryFunction::e_parent_mod));
+            s_replace_on_loop = reinterpret_cast<ReplaceOnLoop>(address(QueryFunction::e_replace_on_loop));
+        }
         LONG result = DetourTransactionBegin();
         if (result != NO_ERROR)
         {
@@ -455,6 +914,10 @@ namespace oar
             result = DetourAttach(reinterpret_cast<PVOID*>(&s_evaluate), reinterpret_cast<PVOID>(&evaluate_thunk));
         if (result == NO_ERROR)
             result = DetourAttach(reinterpret_cast<PVOID*>(&s_numeric), reinterpret_cast<PVOID>(&numeric_thunk));
+        if (result == NO_ERROR && query_verified)
+            result = DetourAttach(reinterpret_cast<PVOID*>(&s_evaluate_set), reinterpret_cast<PVOID>(&evaluate_set_thunk));
+        if (result == NO_ERROR && query_verified)
+            result = DetourAttach(reinterpret_cast<PVOID*>(&s_evaluate_replacement), reinterpret_cast<PVOID>(&evaluate_replacement_thunk));
         if (result != NO_ERROR)
             DetourTransactionAbort();
         else
@@ -467,19 +930,7 @@ namespace oar
             return false;
         }
         s_ready.store(true, std::memory_order_release);
-        // The active-query chain: an entry that is zero, or whose bytes do not match what the
-        // profile recorded, leaves the query unarmed - the two condition hooks keep working.
-        QueryProfile const& query = profile->query;
-        const auto image = std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(module), profile->image_size);
-        const bool complete = std::ranges::all_of(query.entries, [](QueryEntry const& a_entry) { return a_entry.rva != 0; });
-        const std::array<std::uint8_t, 16> unused_guid{};
-        if (complete && matches_query(query, 0, 0, unused_guid, 0, image))
-        {
-            s_get_singleton = reinterpret_cast<GetSingleton>(base + query.entries[0].rva);
-            s_for_each_project_data = reinterpret_cast<ForEachProjectData>(base + query.entries[1].rva);
-            s_get_replacements = reinterpret_cast<GetReplacements>(base + query.entries[2].rva);
-            s_evaluate_replacements = reinterpret_cast<EvaluateReplacements>(base + query.entries[3].rva);
-        }
+        s_query_ready.store(query_verified, std::memory_order_release);
         logger::info("OAR {}.{}.{} hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query {}",
             profile->version[0], profile->version[1], profile->version[2],
             query_supported() ? "available" : "unavailable for this build");

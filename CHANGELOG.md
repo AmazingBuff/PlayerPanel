@@ -4,6 +4,22 @@
 
 ### Changed
 
+- Panel idle selection and fast weapon changes (`oar-idle2`, 2026-10-16): support preview-local
+  Random conditions, cached weighted variants, sequence/PlayOnce history committed on playback,
+  and loop reevaluation settings. Each idle layer follows its own cycle. Equipment changes replace
+  older pending requests immediately; the newest loaded target interrupts from the visible pose,
+  and stale transitions cannot return to an old weapon idle. Retain unchanged clips and clocks on
+  refresh. Three additional OAR getters are verified for both versions; no additional detours or
+  display Actor are introduced. Game verification remains pending.
+
+- Independent panel animation (`oar-preview1`, 2026-10-16): replace the global standing window and
+  captured-running-clip fallback with exact-project, standing-base OAR queries on private clips.
+  Correct the 3.1.6 evaluation RVA (the old address was GetReplacements), provide verified query
+  profiles for 3.1.6 and 3.2.1, and guard candidates against unsupported conditions. The copy route
+  loads its own bindings, owns variant state, coalesces gear refreshes and returns from finite weapon
+  transitions to standing idle. Earlier window/captured-clip entries below describe superseded builds.
+  Game validation of this new chain remains pending.
+
 - Display route: the panel now draws the DETACHED COPY of the player's real third-person 3D, and
   no display puppet is spawned any more (the copy-route decision, 2026-10-15). The copy carries
   every body-morph and outfit-transform state other mods gave the player (OBody, outfit plugins),

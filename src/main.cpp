@@ -50,7 +50,7 @@ namespace
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             PLUGIN_NAMESPACE::InputManager::install();
 
-            logger::info("SCOPY BUILD {} runtime={} mode=scene-copy-primary display=detached-copy(puppet-spawn-off) animation=puppet-clip/captured-clip/procedural-idle cbpc=not-registered smp=not-registered hotkeys=F7-recapture F8-draw F2-mark F4-drive F6-r01-diagnostic", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
+            logger::info("SCOPY BUILD {} runtime={} mode=scene-copy-primary display=detached-copy(puppet-spawn-off) animation=isolated-OAR-query/standing-base cbpc=not-registered smp=not-registered hotkeys=F7-recapture F8-draw F2-mark F4-drive F6-r01-diagnostic", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
 
 #endif
             break;

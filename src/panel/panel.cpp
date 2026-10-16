@@ -4,6 +4,9 @@
 
 #include "panel/panel.h"
 
+#include "RE/S/ScriptEventSourceHolder.h"
+#include "RE/T/TESEquipEvent.h"
+
 PLUGIN_NAMESPACE_BEGIN
 
 RE::BSEventNotifyControl PanelMonitor::MenuSink::ProcessEvent(const RE::MenuOpenCloseEvent* event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) noexcept
@@ -40,6 +43,21 @@ void PanelMonitor::install()
         ui->AddEventSink(&m_menu_sink);
         logger::info("Menu sink installed");
     }
+    if (RE::ScriptEventSourceHolder* events = RE::ScriptEventSourceHolder::GetSingleton())
+        events->AddEventSink(&m_equipment_sink);
+}
+
+RE::BSEventNotifyControl PanelMonitor::EquipmentSink::ProcessEvent(RE::TESEquipEvent const* event,
+    RE::BSTEventSource<RE::TESEquipEvent>*) noexcept
+{
+    if (event && event->actor && event->actor->IsPlayerRef())
+        instance().m_equipment_revision.fetch_add(1, std::memory_order_release);
+    return RE::BSEventNotifyControl::kContinue;
+}
+
+std::uint64_t PanelMonitor::equipment_revision() const
+{
+    return m_equipment_revision.load(std::memory_order_acquire);
 }
 
 bool PanelMonitor::is_menu_open() const

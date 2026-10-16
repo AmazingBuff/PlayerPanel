@@ -23,11 +23,6 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
-    // How many rendered frames the standing window stays armed after the inventory opens (see the
-    // arm site): OAR's evaluation for the player lands in the first frames the menu is coming up,
-    // and a bounded window keeps the pre-condition from ever leaking into the running world.
-    constexpr std::uint32_t Standing_Window_Frames = 8;
-
     class PassMerger
     {
     public:
@@ -77,24 +72,7 @@ namespace
                 RE::UI* ui = RE::UI::GetSingleton();
                 const bool paused = !ui || ui->GameIsPaused();
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-                // The standing window is armed BEFORE the copy's requests run: the capture reads the
-                // window's selection, so arming it after process_requests() would always read empty
-                // (the 2026-10-16 log: every capture fell back to running-clip). The rising edge is
-                // read here, not consumed - the menu event belongs to the copy's animation restart.
-                static bool s_was_panel_open = false;
-                const bool panel_now = PanelMonitor::instance().is_menu_open();
-                if (panel_now && !s_was_panel_open)
-                {
-                    if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
-                        oar::set_standing_weapon_form(equipment_weapon_form(*player));
-                    oar::arm_standing_window(Standing_Window_Frames);
-                }
-                s_was_panel_open = panel_now;
-                if (!panel_now)
-                    oar::arm_standing_window(0);
-
                 SceneGraphCopy::instance().process_requests();
-                oar::tick_standing_window();
 #endif
 
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT

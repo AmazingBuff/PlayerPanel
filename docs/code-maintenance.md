@@ -2,13 +2,13 @@
 
 更新日期：2026-10-16（面板站立 idle 的 OAR 主动查询链；此前：copy-primary 显示路由、审查修复、OAR 条件 hook 与投影接入、UBE 透明材质试修、双手武器对账修复）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
 
-> **下一步工作从这里开始**：[面板站立 idle：OAR 主动查询链交接](oar-standing-idle-handover.md)
-> ——需求、已实现部分（站立判定 + 背包打开窗口 + 主动查询链）、实测证据、当前唯一的索引语义阻塞
-> 与修法、以及修完之后的动画接入步骤，全部在该文。
+> **当前动作链入口**：[idle 选择与快速换装：oar-idle2](oar-preview-query-2026-10-16.md)。
+> 全局窗口和运行 clip 回退已移除。新链路接入站立基础片段、原角色身份、独立 clip／变体／
+> 时钟、独立概率／变体状态、各层循环与最新装备打断；外观仍等待装配稳定。旧交接文档保留为历史探针，本轮游戏行为待验证。
 
 ## 范围
 
-此前清理删除已退役的调查工具、骨骼／缓存探针、经验轨道求解器及验证用测试矩阵，保留现有预览行为与 AFP 最终姿态诊断。AFP9 保留覆盖对账审计与 R01 同 Actor 直绘；AFP10 的体型同步只处理 OBody 键。FaceGen 表情、SMP／CBPC、双人物与安全回收仍未实现。
+场景复制配置当前从玩家实际第三人称图取得外观，由独立 OAR 查询及绑定采样提供动作，不创建展示 Actor。默认配置和 AFP 傀儡诊断仍保留；下文 2026-10-15 的 Actor 装配／体型同步修复针对这些旧路线。FaceGen 表情、独立 SMP／CBPC、双人物与安全回收仍未实现。
 
 ## 审查修复（2026-10-15）
 
@@ -25,7 +25,7 @@
 ## UBE 透明材质试修（ube-alpha1）
 
 复制图和傀儡自身 3D 都通过共用的 `draw_figure_passes()` 绘制。本轮针对眉毛、眼周阴影的
-mesh 轮廓黑块补齐透明处理；**实现和本地验证已完成，黑块是否消失仍待用户在游戏中验证**。
+mesh 轮廓黑块补齐透明处理；**2026-10-16 用户在另一台电脑确认面板人物渲染完全正常**。
 
 - 从每个 mesh 的 `NiAlphaProperty` 读取 alpha test 开关，使用 `0x204` 让引擎按原材质设置
   混合与裁剪阈值；不再把菜单 pass 的 `0x200` 和 `passEnum & 0x40` 当作通用材质状态。
@@ -36,9 +36,8 @@ mesh 轮廓黑块补齐透明处理；**实现和本地验证已完成，黑块�
 - VS／PS 常量缓冲保存覆盖全部 14 槽；D3D11.1 额外保留每个绑定的偏移和长度。
   WARP 离屏回归验证高槽位、完整缓冲与子范围的实际恢复。
 
-默认与实验两种 Release 配置均构建通过；既有 `snapshot_transform` 入口现在包含 16 项检查，
-其中透明顺序、材质缓存恢复和 WARP 缓冲范围三项为透明轮新增，OAR 投影作用域与双手武器手部
-模型为后续新增。测试包身份、校验值、复现命令和游戏
+透明轮的默认与实验两种 Release 配置均构建通过；透明顺序、材质缓存恢复和 WARP 缓冲范围
+三项为该轮新增。后续 OAR 与手部修复继续扩展同一个测试入口，当前共 31 项。透明包身份、校验值、复现命令和游戏
 判据见 [UBE 透明材质验证](ube-transparency-test-2026-10-15.md)。透明 mesh 内部三角形排序、
 折射和第三方 OIT 专属流程不属于本轮实现。
 游戏内结果：眉毛／眼周黑块消失、妆容正常（用户确认）——见该测试单的"游戏内结果"节。
@@ -47,27 +46,30 @@ mesh 轮廓黑块补齐透明处理；**实现和本地验证已完成，黑块�
 
 | 模块 | 职责与入口 |
 | --- | --- |
-| [oar/hooks.h/.cpp](../src/oar/hooks.h) | Nexus OAR 的条件与数字图变量 hook；对 3.1.6（测试环境实际安装）与 3.2.1 各持一份经核对的 DLL/PDB profile，版本与入口字节全对才安装。两种作用域：`kAudited`（调用方持候选树，未知条件＝不成立）与 `kProjected`（包裹引擎自身求值，未知条件保留引擎答案）。投影每次改写答案时同时取引擎原答案比对，按条件名计入 `OverrideTally`（`differing` 的直接来源）。[证据及限制](oar-hooks.md)。 |
+| [oar/hooks.h/.cpp](../src/oar/hooks.h) | 对 3.1.6／3.2.1 核对 DLL 身份和入口；主路径按精确 project、站立基础索引主动查询，在独立 clip 内审计及投影条件，候选／变体指针不越过原生读锁。全局窗口已删除。`kProjected` 及原答案差异统计仅供旧傀儡诊断。见[当前证据与限制](oar-preview-query-2026-10-16.md)。 |
+| [oar/query_policy.h](../src/oar/query_policy.h) / [preview_clip.h](../src/oar/preview_clip.h) | 原版动作目录匹配、目录缓存、面板变体状态和独立原生 clip／context 载体；不依赖历史播放样本。 |
+| [oar/selection_state.h](../src/oar/selection_state.h) | 面板内 Random 缓存、变体权重／序列／PlayOnce、作用域共享与循环重评规则；选择提议和播放提交分开，不写世界角色状态。 |
 | [main.cpp](../src/main.cpp) | SKSE 初始化、消息、渲染安装和存档会话边界；不再转储引擎映像。 |
-| [panel.cpp](../src/panel/panel.cpp) | 菜单状态、预览请求和打开通知。 |
+| [panel.cpp](../src/panel/panel.cpp) | 菜单状态、预览请求、打开通知和玩家装备事件修订号。 |
 | [renderer.cpp](../src/render/renderer.cpp) | 渲染回调、D3D 状态保护、摄影棚目标及合成；按构建选项选择当前后端。 |
 | [character_manager.cpp](../src/character/character_manager.cpp) / [character_clone.cpp](../src/character/character_clone.cpp) | 默认路线通过 Actor 装配装备／3D，再摘出图绘制；`pose()` 负责摄影棚取景。该路线不等于尚待验证的“保留 Actor 与 3D 绑定后直绘”。 |
-| [scene_graph_copy.cpp](../src/character/scene_graph_copy.cpp) | F7 捕获、来源／副本审计、隔离观测、旧图停放；`animate_at_base_pose()` 在取景之后驱动显示副本。 |
-| [animation_source.cpp](../src/character/animation_source.cpp) | 从 typed `activeNodes` 读取运行 clip；`pick_running_clip()` 选最强 control，`resolve_clip_playback()` 解析现有 binding，`play_animation_clip()` 采样并写节点。捕获时也复用这条路径，不再扫描模板、registry 或任意对象窗口。 |
+| [scene_graph_copy.cpp](../src/character/scene_graph_copy.cpp) | 打开及装备稳定后自动捕获、F7 手动捕获、来源／副本审计和旧图停放。失败保留上一接受图；`animate_at_base_pose()` 在取景后调用独立播放，不使用世界当前 clip 回退。 |
+| [panel_animation.cpp](../src/character/panel_animation.cpp) / [panel_animation_policy.h](../src/character/panel_animation_policy.h) | 各 idle 层独立循环、有限切换、当前姿态混合和最新请求代次。装备变化立即作废旧提议，稳定后换外观；重捕获重绑活动／待装载节点，保留同一动作的进度。 |
+| [animation_source.cpp](../src/character/animation_source.cpp) | `resolve_binding_playback()` 持有 binding 强引用，按 track→bone 采样到当前显示树；ClipPlayer 支持循环及单次播放。activeNodes／运行 clip 读取保留给旧诊断，主显示路径不调用。 |
 | [puppet_driver.cpp](../src/character/puppet_driver.cpp) | 存档会话内的傀儡装配、泊位、暂停图推进和装备同步；`drive()` 为显示副本供给 clip 姿态。AFP10：装配窗口改为"普查就绪即泊位"且窗口内 fade 归零（不可感知）；穿着整套 worn body items；`apply_body_shape()` 把玩家体型同步到傀儡。AFP10g：spawn 处断掉副本记录的自带套装（容器清空 + 双 outfit 置空），prune/worn 各持独立节奏计数器，箭袋对账到玩家当前弹药。OAR 投影：暂停帧的手动推图包在 `ScopedEvaluation(kProjected)` 里，OAR 对傀儡的整轮替换决策按站立预览求值（证据行 `SCOPY OAR project`）。手部对账按"物品是否被持有"（双手武器归一化）并带 churn 刹车，见不变量 32／33。 |
 | [equipment_mirror.h/.cpp](../src/character/equipment_mirror.h) | AFP10 共用件：biped 身体槽位的 worn 集合读取、整套穿上、以及无状态对账（多则补、少则卸）。复制图的 `mirror_worn_equipment` 也走这一份，槽位表只有一处。手部武器不在此列（驱动器自己的手部轮询 + draw/sheathe）。AFP10g：槽位表补全（kHair/kModBack/kModMisc1/2/kModPelvis*，kShield 归手部轮询、FX01 排除），`equipment_sync_ammo` 把傀儡当前弹药对账到玩家的，prune 的弹药豁免收窄为"玩家的当前弹药"。双手武器：`hand_two_handed_weapon()`／`hand_item_is_wanted()`／`hand_object_equipped()` 是手部对账的单一判据来源，strip 对两处都报的同一件物品只卸一次。 |
 | [body_shape.h/.cpp](../src/character/body_shape.h) | AFP10 体型同步：本地镜像 skee64 的 `IBodyMorphInterface`（SKSE 接口交换 `BodyMorph`），先比较后写入，写前清掉 OBody 派给傀儡的随机预设；版本低于镜像布局时拒绝调用。 |
-| [idle_driver.cpp](../src/character/idle_driver.cpp) / [snapshot_transform.h](../src/character/snapshot_transform.h) | 现有程序 idle fallback、取景变换和子树更新；不再包含测试用蒙皮缓存写入或距离测量。 |
-| [final_pose_probe.cpp](../src/character/final_pose_probe.cpp) / [final_pose_apply.cpp](../src/character/final_pose_apply.cpp) | 最终输出读取、索引校准、独立真值比较、暂停写入和强制生成诊断；当前写入傀儡。实验配置 F6 默认开启，优先显示傀儡自身 3D；关闭或直绘不可用时走复制图。AFP9：apply 同帧对账（output/attempted/written/unreachable/unprocessed），缺口变化时点名并按 palette 分类（必要骨不跳过）。 |
+| [idle_driver.cpp](../src/character/idle_driver.cpp) / [snapshot_transform.h](../src/character/snapshot_transform.h) | 旧 Actor 路线的程序 idle、取景变换和子树更新；独立 OAR 主路径不回退程序 idle。 |
+| [final_pose_probe.cpp](../src/character/final_pose_probe.cpp) / [final_pose_apply.cpp](../src/character/final_pose_apply.cpp) | 保留最终输出读取、索引校准、独立真值比较、暂停写入和强制生成诊断。F6 默认关闭且当前不创建傀儡；AFP9 的 output/attempted/written/unreachable/unprocessed 对账只适用于启用旧诊断的情形。 |
 | [figure_audit.h/.cpp](../src/character/figure_audit.h) | AFP9 共享审计件：skin palette 读取（只收集指针、绝不解引用槽位；引擎从未渲染的图记 unbound-palette）、碰撞辅助体过滤的蒙皮包围盒、取景 placement 解算、槽位必要性分类（palette 成员 → Weapon* 附着 → helper）。AFP10 另收编装配普查 `FigureAssembly`／`figure_measure_assembly()`（几何/skin/已分配槽位/绑定数与稳定签名），复制图的落定门与傀儡的泊位门共用它。 |
 | [puppet_draw.h/.cpp](../src/character/puppet_draw.h) | AFP9 R01 直绘：F6 开关；傀儡 `Get3D(false)` 根 + 共用 figure_passes 缝；临时取景（保存/恢复根 local + world/worldBound 对账）；固定骨集 A4/A5 采样；不可用时回退复制图并告警。 |
 | [isolation_watch.cpp](../src/character/isolation_watch.cpp) | 来源与 NPC 的观测、装备变更重新设基线及会话判读；不是全骨骼／全部物理隔离已通过的证明。 |
 | [figure_passes.cpp](../src/render/studio/figure_passes.cpp) | 两条来源共用的按材质分类、引擎 pass 生成、灯光临时替换与提交；读取原 alpha 属性，原生混合设置使用 `0x204`。 |
 | [figure_draw_order.h](../src/render/studio/figure_draw_order.h) / [figure_pipeline_state.h](../src/render/studio/figure_pipeline_state.h) | 实体／透明阶段排序及 No Sorter 边界；逐 pass 的引擎材质状态准备和作用域退出恢复。 |
 | [d3d11_util.h/.cpp](../src/render/dx11/d3d11_util.h) | D3D 设备绑定保护与离屏目标；VS／PS 保存全部常量缓冲槽，并在支持 D3D11.1 时保留绑定子范围。 |
-| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | 变换／姿态／装配等九项、OAR 预览作用域／投影作用域／二进制身份三项、透明排序／材质恢复／WARP 缓冲范围三项、双手武器手部模型一项，共 16 项；仍使用 `snapshot_transform` 这个 CTest 入口。 |
+| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | `snapshot_transform` 内共 31 项本地检查，新增 Random 缓存、权重与共享状态、PlayOnce 提交、循环决策、最新请求、各层周期及中断混合。不执行游戏内 detour 或装卸。 |
 
-实验配置使用复制图显示时的每帧顺序：请求／会话处理 → AFP A0 → 傀儡图推进 → AFP 校准或应用 → AFP mark → 副本 `pose()` → 傀儡 clip／捕获 clip／程序 idle → 引擎蒙皮与 draw → 合成。
+实验配置使用复制图显示时的主顺序：请求／会话与装备稳定处理 → 查询及装载轮询 → 副本 `pose()` → 独立绑定采样／切换与过渡 → 引擎蒙皮与 draw → 合成。AFP 及傀儡推图保留为旁路诊断。
 
 AFP 写入与复制图显示是两条不同的路径；不得把 AFP 应用后的节点自比较标记为直绘通过。
 两种显示来源的提交阶段现在共用“实体／镂空 → 排序透明 → 恢复状态 → 合成”的顺序。
@@ -86,7 +88,7 @@ cmake --build build --config Release --target CharacterPanel
 场景复制与 AFP 开发配置：
 
 ```powershell
-cmake --preset Release -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_PROBE_REVISION=ube-alpha1
+cmake --preset Release -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_PROBE_REVISION=oar-idle2
 cmake --build build-scopy --config Release --target CharacterPanel CharacterPanelCopyMathTest
 ctest --test-dir build-scopy -C Release -R '^snapshot_transform$' --output-on-failure
 cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPackage
@@ -96,21 +98,23 @@ cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPacka
 
 | 控制 | 当前行为 |
 | --- | --- |
-| 面板打开 | 自动重捕获玩家第三人称 3D 并显示（copy-primary，2026-10-15）：复制图携带 OBody／幻化等插件给玩家的全部变形状态，无需逐插件兼容；不再 spawn 展示傀儡。动作 = 捕获时引擎交付的 clip（OAR 决策结果），回退程序 idle；OAR 换装动画 hook 是下一工作包。 |
+| 面板打开 | 自动重捕获玩家第三人称 3D；站立基础片段准备好才显示。动作由独立 OAR 查询与播放提供，换装稳定后刷新外观并有限过渡回 idle，不再 spawn 展示傀儡。 |
 | F7 | 暂停背包中手动重新捕获并审计玩家第三人称 3D；替换前一副本（面板打开时已自动捕获，此键保留为手动覆盖）。 |
 | F8 | 切换当前已接受副本的显示。 |
 | F2 | 一次 AFP mark：输出、校准、来源对照、相机与目标网格状态；A2 行含 AFP9 覆盖对账与审计点名。 |
 | F4 | AFP 驱动档位：`auto → off → tick → tick+apply → tick+apply+force → step`。**默认 `auto`**：暂停帧强制 generate（面板才有姿态可写），运行世界不强制（映射证明需要未被引擎强制过的帧）。单步为一次 1/60 秒。 |
 | F6 | R01 直绘诊断开关（**默认关**，copy-primary 起傀儡不再 spawn）：有傀儡时开 = 面板画傀儡自身 3D；关 = 复制图。不可用时回退复制图并告警。 |
-| F11 | OAR 投影开关（**默认开**）：开 = 傀儡图决策按站立预览求值；关 = OAR 用引擎自身状态决策。两条臂各自记录产生过的 clip，日志给 `SCOPY OAR ab … sets-equal=`；投影每次改写同时比对引擎原答案，`differing`／`top=` 报差异。 |
+| F11 | 旧傀儡诊断的 OAR 投影开关（默认开），保留 A/B clip 与原答案差异统计；不关闭独立查询的预览隔离。 |
 
 F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe stage 没有控制入口。生命周期边界仍由重捕获／读档／主菜单处理。F4 的冻结／推进针对傀儡图与最终姿态应用，不等于冻结独立时钟运行的显示副本。
 
 `CHARACTER_PANEL_SCENE_COPY_EXPERIMENT` 默认为 OFF。删除 `CHARACTER_PANEL_BUILD_PROBE`、`CHARACTER_PANEL_S2_PROBE`、M0 probe/proto targets；旧 cache 可能仍列出历史变量，但当前构建已不消费它们。`CHARACTER_PANEL_PROBE_REVISION` 保留为兼容的构建身份／包 manifest 标记，与已删除探针无关。
 
 场景复制包包含 DLL、PDB、身份与 SHA-256 manifest、当前包 README，输出在 `dist`；打包不部署。
-当前透明材质试修包为 `CharacterPanel-scopy-ube-alpha1-1.2.1.zip`，首次交付包从 `6e5ac99+dirty`
-构建；提交源码不会追写该包身份，核对时应以其清单和 [已记录的校验值](ube-transparency-test-2026-10-15.md#测试包身份) 为准。
+当前动作验证包为 `CharacterPanel-scopy-oar-idle2-1.2.1.zip`，入口与检查见[本轮记录](oar-preview-query-2026-10-16.md)。
+上一轮 `oar-preview1` 包保留，不覆盖。
+透明轮的历史包 `CharacterPanel-scopy-ube-alpha1-1.2.1.zip` 身份保留于[其测试单](ube-transparency-test-2026-10-15.md#测试包身份)。
+提交源码不会追写既有包身份，核对时以各包清单和记录为准。
 如果为了复用依赖而传入 MSBuild 的 `BuildProjectReferences=false`，须先显式构建 `CharacterPanel`
 再运行打包目标，避免只打包旧 DLL。AFP10 的既有部署记录保留在对应测试单与 Changelog。
 
@@ -132,7 +136,7 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 4. AFP 每帧重新查当前树，保留已验证映射和必要的 bone-table fallback；不跨帧缓存目标节点。当前映射覆盖和双缓冲策略没有在本轮修复。
 5. typed clip resolver 保留 table 与 `identity-unverified` fallback；table 的轨道编号和骨骼编号现已分开，非 identity 的索引关系有本地回归。空表映射、clip 混合与任意 OAR 动作仍需游戏证明。
 6. 旧图仍通过 `snapshot.release()` 停放，原有释放崩溃没有修复。12 项仅限制 bookkeeping；更早指针被移除时内存仍泄漏。不要进行无限重捕获压力测试，也不要把无崩溃称为回收通过。
-7. 物理、脸部表情、OBody 以外的体型来源、尸体卸装刷新及双人物后端路由仍是后续工作。
+7. 独立物理、脸部表情、傀儡路线 OBody 以外的体型适配、尸体卸装刷新及双人物后端路由仍是后续工作；当前复制图直接取得来源已有外观。
 8. 傀儡 clip 绑定在 generator 或目标 root 切换时重建；重捕获不再沿用旧 root 的节点缓存。重复捕获后的显示持续性仍需游戏验证，不等于旧图安全回收已通过。
 9. AFP9 红线：覆盖审计只点名分类、不扩写 98 槽之外的姿态（`Weapon*` 槽盲写会把武器写出正确位置）；R01 直绘不改写根 local 以外的树数据、不移动 Actor 引用、不动相机、不解除暂停，取景失败与关闭出口同样恢复。
 10. **`NiSkinInstance::bones` 的槽位只能比较指针**：不保证是可读节点（AFP9 首测崩溃：`figure_audit.cpp` 读槽位名字，`cmp [rcx], r12b` @ 0x1010，见 [AFP9 verdict 1](afp9-verdict-2026-10-13.md)）。遍历 palettes 的代码不得读名字、不得解引用、不得调用虚函数。
@@ -167,16 +171,13 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 常量缓冲范围、OAR 两种作用域的匹配面与差值计数、双手武器手部模型；不恢复已退役的重型探针矩阵。
 16 项本地检查通过不等于游戏验收通过。
 
-游戏 PC 仍需 smoke：F7/F8 捕获及显示；确认 driver 为傀儡 clip、捕获 clip 或原 fallback；在运行世界完成 AFP 校准，再暂停使用 F2/F4 比较输出及 apply；验证没有改变来源与 NPC。AFP9 增判据：A2 行对账恒等式（written+unreachable+unprocessed=output-slots）与审计点名；F6 开时 R01 身份行（root/graph/generation 同源）、A5vsA4 max-rot≈0、restore 对账 ok=1、关面板回世界无副作用。本地构建与 CTest 不能代替这些结果。后续直绘、过渡和覆盖工作依据 [AFP 后续验证单](afp-next-validation-and-paused-gaps-2026-10-13.md) 与 [AFP9 测试单](afp9-coverage-and-direct-draw-test-2026-10-13.md)；场景后端规则依据 [路由文档](display-backend-routing-2026-10-13.md)。
+游戏 PC 当前 smoke 以[独立 OAR 测试单](oar-preview-query-2026-10-16.md#验证与上机)为准：不同世界行为下开包仍站立、各种武器 idle、有限换装动作及最终 idle、关闭／读档和来源无副作用。AFP9 的旧对账、F2/F4/F6 判据仍见 [AFP 后续验证单](afp-next-validation-and-paused-gaps-2026-10-13.md) 与 [AFP9 测试单](afp9-coverage-and-direct-draw-test-2026-10-13.md)；它们不替代本轮链路验证。
 
-修改 engine 入口、ABI、钩子、所有权或物理接口需要独立设计与游戏验证。本轮 OAR 工作新增了一份
-经核对的 3.1.6 profile 并把暂停推图包进投影作用域——**没有新增第三个引擎钩子**（仍是既有的
-`ConditionBase::Evaluate` 与 `NumericValue::GetValue`），也没有改变图回收策略；其判据与限制见
-[OAR hook 文档](oar-hooks.md)。双手武器修复只动换装对账与 prune 的时机，同样没有新钩子，
-判据见不变量 32／33。维护代码时同步本文、README、CMake、包 README 与 Changelog。
-透明材质回归的黑块消失一项已由用户确认（见 [ube-alpha1 测试单](ube-transparency-test-2026-10-15.md) 的"游戏内结果"节），
-转动／换装／退出面板三项仍待确认；双手武器修复需要一次实测（同一把双手武器换装后不再出现
-`hand reconcile churning` 行、不再崩溃）。
+修改 engine 入口、ABI、钩子、所有权或物理接口需要二进制证据与游戏验证。本轮在原有条件和
+数字值 hook 之外新增 OAR ConditionSet／ReplacementAnimation 守卫，两版入口独立核实；
+独立资源租约与节点重绑也已接入。本地检查不等于实际 detour／引擎装卸验证，限制见[本轮记录](oar-preview-query-2026-10-16.md)。
+旧图回收策略未改变。维护代码时同步本文、README、包 README 与 Changelog。
+UBE 渲染已由用户在另一台电脑确认正常；本轮仍需确认新动作链下的换装、开关面板和读档。
 
 ## 历史证据
 

@@ -3,6 +3,28 @@ CharacterPanel scene-copy / AFP development package
 Use this package's CharacterPanel.dll and PDB together. Read build-manifest.json
 and SCOPY BUILD to confirm build identity, source baseline, runtime and hashes.
 
+Current trial: oar-idle2 (2026-10-16). Panel-only Random conditions and weighted
+variants retain/reset their results per loop settings. Sequential and PlayOnce
+history advances when a proposed asset starts, not when a cancelled query runs.
+Each idle layer follows its own cycle. A newer weapon target cancels older
+pending requests and interrupts an unfinished transition from the displayed pose;
+an old completion must never return to an old weapon's idle. Check query channel /
+generation, equipment target / stale proposal, phase and transition completion.
+Test A -> B -> C/D before B finishes, mixed-duration idle layers, existing Random
+and sequence packs, slow loading and recapture during a transition. Return the log,
+manifest and pictures. Source notes: docs/oar-preview-query-2026-10-16.md.
+
+Previous trial: oar-preview1 (2026-10-16). The copy queries OAR 3.1.6/3.2.1 on an
+independent clip and loads standing bases. The global eight-frame window and
+current-player-clip fallback are gone. Check SCOPY PANEL query / asset ready /
+phase lines. Test sneaking, jumping, swimming and mounted opens, then drawn-weapon
+and armor changes. Finite weapon transitions return to idle; armor changes refresh
+the copy with a short pose transition. Return the log, manifest and pictures.
+Current notes: docs/oar-preview-query-2026-10-16.md. Older rounds below are history.
+F11 only controls the retained puppet diagnostic, not the copy's query isolation.
+Only normal bindings are accepted; unsupported conditions/assets fall back to an
+eligible candidate or standing base. Native loading and detours need game testing.
+
 2026-10-15 two-handed weapon fix: a two-handed weapon on the figure could crash the game
 (crash 2026-10-15 22:45:27, BiPolar Blade, BipedAnim reading a null biped object). The
 engine reports a two-handed weapon in whichever hand entry it last touched and the
@@ -59,11 +81,10 @@ Current controls:
       tick+apply, tick+apply+force, step - are the diagnostic instrument, and the
       two adjacent `apply` states A/B force-generation alone. Step advances the
       puppet once by 1/60 second. F3 stays with the other mod that owns it.
-  F6: direct draw toggle, ON by default. The panel shows the puppet's OWN 3D the
-      moment the inventory opens - no capture, no key press; F6 switches to the
-      detached copied graph instead. The puppet path falls back to the copy and
-      logs the reason whenever it cannot draw.
-  F11: OAR projection on/off (see the OAR block above). Default on.
+  F6: retained puppet direct-draw diagnostic, OFF by default; the current copy
+      route does not spawn a puppet.
+  F11: retained puppet OAR projection on/off. Default on. It does not disable
+       independent-query isolation in the current copy route.
 
 2026-10-15 review fixes: new games request the puppet as well as loaded saves;
 parking compares the CURRENT reference position, and dressing waits for binding

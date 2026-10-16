@@ -5,6 +5,7 @@
 #pragma once
 
 #include "RE/H/hkQsTransform.h"
+#include "RE/H/hkaAnimationBinding.h"
 #include "RE/N/NiAVObject.h"
 #include "RE/N/NiMatrix3.h"
 #include "RE/N/NiTransform.h"
@@ -22,6 +23,7 @@
 
 namespace RE
 {
+    class BShkbAnimationGraph;
     class TESObjectREFR;
     class hkaAnimation;
 }
@@ -117,10 +119,11 @@ struct AnimationTrackBinding
     return bindings;
 }
 
-// Borrowed animation and node references are used only while their source session is live.
+// The binding retains its animation; node references belong to the current display graph.
 struct ClipPlayback
 {
     RE::hkaAnimation* animation;
+    RE::hkRefPtr<RE::hkaAnimationBinding> binding_owner;
     std::string name;
     float duration;
     std::vector<std::uint16_t> tracks;  // animation track indices, never skeleton bone indices
@@ -137,6 +140,9 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
 [[nodiscard]] RE::hkbClipGenerator const* pick_idle_running_clip(RE::TESObjectREFR& source);
 bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
     ClipPlayback& out, std::string& out_mapping, std::string& out_coverage);
+bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
+    RE::hkaAnimationBinding* binding, std::string const& name, ClipPlayback& out,
+    std::string& mapping, std::string& coverage);
 [[nodiscard]] float live_clip_time(RE::hkbClipGenerator const* generator);
 
 [[nodiscard]] bool clip_generator_is_live(void const* object);
@@ -153,13 +159,19 @@ class ClipPlayer
 {
 public:
     void reset();
-    void set_clip(ClipPlayback clip);
+    void set_clip(ClipPlayback clip, bool loop = true);
+    void retarget(ClipPlayback clip);
     // Puts the studio clock back to zero, so the next frame draws the clip from its beginning. The
     // inventory pauses the engine and the studio owns the clock, so without this the figure resumes
     // wherever the last visit left it.
     void restart();
     [[nodiscard]] bool ready() const { return m_clip.valid(); }
     [[nodiscard]] std::string const& name() const { return m_clip.name; }
+    [[nodiscard]] bool finished() const { return ready() && !m_loop && m_time >= std::max(m_clip.duration, 0.05f); }
+    [[nodiscard]] std::uint64_t cycles() const
+    {
+        return ready() && m_loop ? static_cast<std::uint64_t>(m_time / std::max(m_clip.duration, 0.05f)) : 0;
+    }
 
     // Advances the clock and writes one frame of the clip; returns the nodes written.
     size_t advance(RE::NiAVObject& copy_root);
@@ -168,6 +180,7 @@ private:
     ClipPlayback m_clip{};
     double m_time = 0.0;
     std::chrono::steady_clock::time_point m_last_tick{};
+    bool m_loop = true;
 };
 
 PLUGIN_NAMESPACE_END

@@ -7,6 +7,9 @@
 #include "character/equipment_mirror.h"
 #include "character/figure_audit.h"
 #include "character/snapshot_transform.h"
+#include "character/panel_animation_policy.h"
+#include "oar/query_policy.h"
+#include "oar/preview_clip.h"
 #include "oar/binary_profile.h"
 #include "oar/policy.h"
 #include "render/dx11/d3d11_util.h"
@@ -19,9 +22,363 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <limits>
 
 namespace
 {
+    bool preview_carrier_preserves_native_node_fields()
+    {
+        PLUGIN_NAMESPACE::oar::PreviewClip carrier;
+        carrier.initialize_native(0x1000, 77, "Animations\\MT_Idle.hkx", true);
+        RE::hkbClipGenerator const* const native = carrier.get();
+        const bool fields = native->id == 0xFFFF && native->cloneState == RE::hkbNode::CloneState::kDefault &&
+            std::string_view(native->name.c_str()) == "Animations\\MT_Idle.hkx" &&
+            std::string_view(native->animationName.c_str()) == "Animations\\MT_Idle.hkx" &&
+            native->animationBindingIndex == 77 && native->playbackSpeed == 1.0f &&
+            native->mode == RE::hkbClipGenerator::PlaybackMode::kModeLooping && carrier.user_data() == 0;
+        PLUGIN_NAMESPACE::oar::PreviewContext context(nullptr, nullptr);
+        const auto* bytes = reinterpret_cast<std::uint8_t const*>(&context.get());
+        return fields && std::all_of(bytes, bytes + sizeof(RE::hkbContext), [](std::uint8_t value) { return value == 0; });
+    }
+
+    bool equipment_refresh_waits_for_the_latest_assembly()
+    {
+        PLUGIN_NAMESPACE::EquipmentRefreshGate gate;
+        gate.reset(1);
+        if (gate.sample(1, 10) || gate.sample(2, 10) || gate.sample(2, 10) ||
+            gate.sample(3, 20) || gate.sample(3, 20) || gate.sample(3, 30) ||
+            gate.sample(3, 30) || gate.sample(3, 30) || !gate.sample(3, 30) || gate.sample(3, 30))
+            return false;
+        gate.retry();
+        if (gate.sample(3, 30) || gate.sample(3, 30) || gate.sample(3, 30) || !gate.sample(3, 30))
+            return false;
+        gate.reset(4);
+        return !gate.sample(4, 30);
+    }
+
+    bool oar_query_profiles_fail_closed()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        for (oar::BinaryProfile const& profile : oar::Profiles)
+        {
+            std::vector<std::uint8_t> image(profile.image_size);
+            for (oar::QueryEntry const& entry : profile.query.entries)
+                std::copy(entry.prefix.begin(), entry.prefix.end(), image.begin() + entry.rva);
+            if (!oar::matches_query(profile.query, image))
+                return false;
+            for (oar::QueryEntry const& entry : profile.query.entries)
+            {
+                image[entry.rva] ^= 1;
+                if (oar::matches_query(profile.query, image))
+                    return false;
+                image[entry.rva] ^= 1;
+            }
+            oar::QueryProfile missing = profile.query;
+            missing.entries[0].rva = 0;
+            if (oar::matches_query(missing, image))
+                return false;
+            missing.entries[0].rva = std::numeric_limits<std::uintptr_t>::max();
+            if (oar::matches_query(missing, image))
+                return false;
+        }
+        return true;
+    }
+
+    bool standing_catalog_does_not_use_live_or_replacement_names()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        const std::vector<std::string> project{
+            "Animations\\SneakMTIdle.hkx",
+            "Animations\\OpenAnimationReplacer\\Author\\MT_Idle.hkx",
+            "animations/MT_IDLE.hkx", "Animations\\1hm_idle.hkx", "Animations\\JumpLand.hkx" };
+        const std::array<std::string_view, 1> wanted{ "Animations\\MT_Idle.hkx" };
+        const auto idle = oar::find_base_animation(project, wanted);
+        const std::vector<std::string> other{ project[0], project[1], project[4] };
+        oar::QuerySession session;
+        int reads = 0;
+        const auto first = session.names(&project, project.data(), project.size(), [&](std::size_t i)
+        {
+            ++reads;
+            return project[i];
+        });
+        const std::size_t count = first.size();
+        (void)session.names(&project, project.data(), project.size(), [&](std::size_t i)
+        {
+            ++reads;
+            return project[i];
+        });
+        (void)session.names(&other, other.data(), other.size(), [&](std::size_t i)
+        {
+            ++reads;
+            return other[i];
+        });
+        return idle && *idle == 2 && !oar::find_base_animation(other, wanted) && count == project.size() &&
+            reads == static_cast<int>(project.size() + other.size());
+    }
+
+    bool preview_variants_are_local_and_bounded()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        oar::SelectionState preview(123);
+        oar::SelectionState other(123);
+        oar::VariantOptions options;
+        options.key = { oar::DataScope::e_local, 1, 10 };
+        options.sequential = true;
+        options.sequence = { { 17 }, { 19 } };
+        const auto first = preview.variant(options, 1);
+        const auto cancelled = preview.variant(options, 1);
+        if (!first || !cancelled || first->index != 17 || cancelled->index != 17)
+            return false;
+        preview.commit(options, *first, 1);
+        const auto second = preview.variant(options, 1);
+        const auto isolated = other.variant(options, 1);
+        if (!second || second->index != 19 || !isolated || isolated->index != 17)
+            return false;
+        preview.commit(options, *second, 1);
+        if (preview.variant(options, 1)->index != 17)
+            return false;
+        preview.reset();
+        if (preview.variant(options, 1)->index != 17)
+            return false;
+        options.sequential = false;
+        options.sequence = { { 17, true }, { 19, true } };
+        options.random = { 21, 23 };
+        options.cumulative = { 0.0f, 1.0f };
+        preview.reset();
+        for (std::uint16_t expected : std::array<std::uint16_t, 3>{ 17, 19, 23 })
+        {
+            const auto pick = preview.variant(options, 1);
+            if (!pick || pick->index != expected)
+                return false;
+            preview.commit(options, *pick, 1);
+        }
+        options.sequence.clear();
+        options.cumulative = { 0.8f, 0.3f };
+        if (preview.variant(options, 1))
+            return false;
+        options.random.clear();
+        return !preview.variant(options, 1);
+    }
+
+    bool preview_random_conditions_cache_and_reset()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        oar::SelectionState preview(123);
+        oar::SelectionState other(123);
+        const oar::StateKey local{ oar::DataScope::e_local, 1 };
+        const oar::StateKey shared{ oar::DataScope::e_submod, 40 };
+        const auto first = preview.random(local, 9, 1, true, 0.0f, 1.0f);
+        if (!first || preview.random(local, 9, 1, true, 0.0f, 1.0f) != first ||
+            other.random(local, 9, 1, true, 0.0f, 1.0f) != first)
+            return false;
+        preview.loop(2);
+        if (preview.random(local, 9, 1, true, 0.0f, 1.0f) != first)
+            return false;
+        preview.loop(1);
+        if (preview.random(local, 9, 1, true, 0.0f, 1.0f) == first)
+            return false;
+        const auto kept = preview.random(local, 10, 1, false, 0.0f, 1.0f);
+        preview.loop(1);
+        if (!kept || preview.random(local, 10, 1, false, 0.0f, 1.0f) != kept)
+            return false;
+        const auto common = preview.random(shared, 11, 1, true, 0.0f, 1.0f);
+        if (!common || preview.random(shared, 11, 2, true, 0.0f, 1.0f) != common)
+            return false;
+        preview.loop(2);
+        if (preview.random(shared, 11, 1, true, 0.0f, 1.0f) == common)
+            return false;
+        return !preview.random(local, 12, 1, true, 2.0f, 1.0f) &&
+            !preview.random(local, 12, 1, true, 0.0f, std::numeric_limits<float>::infinity());
+    }
+
+    bool preview_variant_weights_and_shared_state()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        oar::SelectionState preview(123);
+        oar::VariantOptions options;
+        options.key = { oar::DataScope::e_local, 1, 10 };
+        options.random = { 7, 9 };
+        options.cumulative = { 0.25f, 1.0f };
+        std::size_t low = 0;
+        for (std::size_t i = 0; i < 10000; ++i)
+        {
+            const auto pick = preview.variant(options, 1);
+            const auto cached = preview.variant(options, 1);
+            if (!pick || !cached || pick->index != cached->index)
+                return false;
+            low += pick->index == 7 ? 1 : 0;
+            preview.commit(options, *pick, 1);
+            preview.loop(1);
+        }
+        if (low < 2300 || low > 2700)
+            return false;
+        oar::SelectionState shared(123);
+        options.key = { oar::DataScope::e_submod, 20 };
+        options.random.clear();
+        options.cumulative.clear();
+        for (std::uint16_t i = 0; i < 64; ++i)
+        {
+            options.random.push_back(i);
+            options.cumulative.push_back(static_cast<float>(i + 1) / 64.0f);
+        }
+        const auto first = shared.variant(options, 1);
+        if (!first)
+            return false;
+        shared.commit(options, *first, 1);
+        const auto follower = shared.variant(options, 2);
+        if (!follower || follower->index != first->index)
+            return false;
+        shared.commit(options, *follower, 2);
+        shared.loop(2);
+        if (shared.variant(options, 2)->index != first->index)
+            return false;
+        shared.loop(1);
+        const auto rerolled = shared.variant(options, 2);
+        if (!rerolled || rerolled->index == first->index || rerolled->index != shared.variant(options, 1)->index)
+            return false;
+        options.key.owner = 30;
+        options.reset_on_loop = false;
+        const auto kept = shared.variant(options, 1);
+        if (!kept)
+            return false;
+        shared.commit(options, *kept, 1);
+        for (int i = 0; i < 10; ++i)
+        {
+            shared.loop(1);
+            if (shared.variant(options, 1)->index != kept->index)
+                return false;
+        }
+        return true;
+    }
+
+    bool preview_play_once_history_is_committed_on_start()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        oar::SelectionState preview(123);
+        oar::VariantOptions options;
+        options.key = { oar::DataScope::e_submod, 20 };
+        options.share_history = true;
+        options.sequence = { { 11, true }, { 12, true } };
+        options.random = { 13 };
+        options.cumulative = { 1.0f };
+        const auto cancelled = preview.variant(options, 1);
+        if (!cancelled || cancelled->index != 11 || preview.variant(options, 1)->index != 11)
+            return false;
+        preview.commit(options, *cancelled, 1);
+        const auto other = preview.variant(options, 2);
+        if (!other || other->index != 12)
+            return false;
+        preview.commit(options, *other, 2);
+        return preview.variant(options, 1)->index == 13;
+    }
+
+    bool idle_loops_respect_sequence_and_recheck_flags()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        oar::SelectionState preview(123);
+        oar::VariantOptions options;
+        options.key = { oar::DataScope::e_local, 1, 10 };
+        options.sequential = true;
+        options.sequence = { { 11 }, { 12 }, { 13 } };
+        if (oar::idle_loop_decision(true, true, preview.in_sequence(options, 1)) != oar::LoopDecision::e_recheck)
+            return false;
+        for (int i = 0; i < 2; ++i)
+        {
+            const auto pick = preview.variant(options, 1);
+            if (!pick)
+                return false;
+            preview.commit(options, *pick, 1);
+            if (oar::idle_loop_decision(true, true, preview.in_sequence(options, 1)) != oar::LoopDecision::e_continue_variants)
+                return false;
+        }
+        preview.commit(options, *preview.variant(options, 1), 1);
+        return !preview.in_sequence(options, 1) &&
+            oar::idle_loop_decision(false, true, false) == oar::LoopDecision::e_continue_variants &&
+            oar::idle_loop_decision(false, false, false) == oar::LoopDecision::e_keep;
+    }
+
+    bool latest_weapon_request_rejects_stale_loads()
+    {
+        PLUGIN_NAMESPACE::LatestAnimationRequest latest;
+        if (!latest.observe(10))
+            return false;
+        const std::uint64_t a = latest.generation();
+        latest.observe(20);
+        const std::uint64_t b = latest.generation();
+        latest.observe(30);
+        const std::uint64_t c = latest.generation();
+        if (latest.accepts(a) || latest.accepts(b) || !latest.accepts(c) || latest.observe(30))
+            return false;
+        latest.observe(10);
+        return !latest.accepts(a) && !latest.accepts(c) && latest.accepts(latest.generation());
+    }
+
+    bool idle_layers_keep_independent_cycles()
+    {
+        PLUGIN_NAMESPACE::IdleCycleGate body;
+        PLUGIN_NAMESPACE::IdleCycleGate weapon;
+        return !body.crossed(0, true) && !weapon.crossed(0, true) && body.crossed(1, true) &&
+            !weapon.crossed(0, true) && !body.crossed(1, true) && weapon.crossed(1, true) &&
+            !body.crossed(2, false) && !body.crossed(2, true) && body.crossed(3, true);
+    }
+
+    bool interrupted_pose_blend_starts_from_the_visible_pose()
+    {
+        RE::NiTransform first;
+        first.translate = { 0.0f, 0.0f, 0.0f };
+        first.scale = 1.0f;
+        first.rotate = PLUGIN_NAMESPACE::ni_matrix_from_quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+        RE::NiTransform second = first;
+        second.translate.x = 20.0f;
+        second.scale = 2.0f;
+        second.rotate = PLUGIN_NAMESPACE::ni_matrix_from_quaternion(0.0f, 0.0f, 1.0f, 0.0f);
+        const RE::NiTransform visible = PLUGIN_NAMESPACE::blend_panel_pose(first, second, 0.4f);
+        RE::NiTransform latest = first;
+        latest.translate.x = -10.0f;
+        const RE::NiTransform start = PLUGIN_NAMESPACE::blend_panel_pose(visible, latest, 0.0f);
+        const RE::NiTransform end = PLUGIN_NAMESPACE::blend_panel_pose(visible, latest, 1.0f);
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < 3; ++column)
+                if (std::abs(start.rotate.entry[row][column] - visible.rotate.entry[row][column]) > 0.00001f)
+                    return false;
+        return std::abs(start.translate.x - 8.0f) < 0.00001f &&
+            std::abs(start.scale - 1.4f) < 0.00001f && std::abs(end.translate.x + 10.0f) < 0.00001f;
+    }
+
+    bool preview_original_answers_suspend_projection()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        auto* source = reinterpret_cast<RE::TESObjectREFR*>(0x1000);
+        auto* preview_clip = reinterpret_cast<RE::hkbClipGenerator*>(0x2000);
+        auto* world_clip = reinterpret_cast<RE::hkbClipGenerator*>(0x3000);
+        oar::PreviewState state;
+        oar::ScopedEvaluation preview(source, preview_clip, state);
+        if (!preview.matches(source, preview_clip) || preview.matches(source, world_clip))
+            return false;
+        {
+            oar::UnprojectedEvaluation original;
+            if (oar::ScopedEvaluation::current())
+                return false;
+        }
+        return oar::ScopedEvaluation::current() == &preview;
+    }
+
+    bool panel_transition_returns_to_a_standing_idle()
+    {
+        using namespace PLUGIN_NAMESPACE;
+        const std::array<std::string_view, 7> body{ "NPC Pelvis [Pelv]", "NPC Spine1 [Spn1]", "NPC Head [Head]",
+            "NPC L Thigh [LThg]", "NPC R Thigh [RThg]", "NPC L Calf [LClf]", "NPC R Calf [RClf]" };
+        return panel_phase(false, true, false) == PanelAnimationPhase::e_loading &&
+            panel_phase(true, true, false) == PanelAnimationPhase::e_transition &&
+            panel_phase(true, true, true) == PanelAnimationPhase::e_idle &&
+            panel_phase(true, false, false) == PanelAnimationPhase::e_idle &&
+            covers_standing_body(body) && !covers_standing_body(std::span(body).first(6)) &&
+            panel_idle_bases(oar::WeaponForm::kBow) != panel_idle_bases(oar::WeaponForm::kTwoHanded) &&
+            panel_idle_bases(oar::WeaponForm::kCrossbow) != panel_idle_bases(oar::WeaponForm::kBow) &&
+            oar::weapon_form_from_hands(oar::HandKind::kBow, oar::HandKind::kEmpty) == oar::WeaponForm::kBow &&
+            oar::weapon_form_from_hands(oar::HandKind::kEmpty, oar::HandKind::kCrossbow) == oar::WeaponForm::kCrossbow;
+    }
+
     bool d3d_constant_buffer_ranges_are_restored()
     {
         REX::W32::ComPtr<REX::W32::ID3D11Device> device;
@@ -277,7 +634,8 @@ namespace
             oar::standing_predicate("IsAttacking", standing) == false &&
             oar::standing_predicate("IsRunning", standing) == false &&
             oar::standing_predicate("IsInAir", standing) == false &&
-            oar::standing_predicate("IsOnMount", standing) == false;
+            oar::standing_predicate("IsOnMount", standing) == false &&
+            oar::standing_predicate("MOUNT", standing) == false;
         const bool weapon_state_passes_through =
             oar::standing_predicate("IsWeaponDrawn", standing) == false &&
             oar::standing_predicate("IsWeaponDrawn", drawn) == true;
@@ -295,12 +653,7 @@ namespace
             oar::weapon_form_from_hands(HK::kStaff, HK::kEmpty) == oar::WeaponForm::kStaff &&
             oar::weapon_form_from_hands(HK::kTorch, HK::kEmpty) == oar::WeaponForm::kTorch &&
             oar::weapon_form_from_hands(HK::kEmpty, HK::kEmpty) == oar::WeaponForm::kNone;
-        // Only a real form draws the weapon: the panel answers IsWeaponDrawn from it.
-        const bool drawn_matches_form =
-            oar::weapon_form_is_drawn(oar::WeaponForm::kNone) == false &&
-            oar::weapon_form_is_drawn(oar::WeaponForm::kOneHanded) &&
-            oar::weapon_form_is_drawn(oar::WeaponForm::kTwoHanded);
-        return pose_is_standing && weapon_state_passes_through && forms_split && drawn_matches_form;
+        return pose_is_standing && weapon_state_passes_through && forms_split;
     }
 
     bool oar_binary_profile_rejects_mismatches()
@@ -561,6 +914,20 @@ int main()
     const bool alpha_order = figure_transparency_draw_order();
     const bool alpha_state = figure_material_state_is_restored();
     const bool d3d_ranges = d3d_constant_buffer_ranges_are_restored();
+    const bool query_profiles = oar_query_profiles_fail_closed();
+    const bool standing_catalog = standing_catalog_does_not_use_live_or_replacement_names();
+    const bool local_variants = preview_variants_are_local_and_bounded();
+    const bool original_answers = preview_original_answers_suspend_projection();
+    const bool panel_transitions = panel_transition_returns_to_a_standing_idle();
+    const bool gear_refresh = equipment_refresh_waits_for_the_latest_assembly();
+    const bool carrier_layout = preview_carrier_preserves_native_node_fields();
+    const bool random_conditions = preview_random_conditions_cache_and_reset();
+    const bool variant_weights = preview_variant_weights_and_shared_state();
+    const bool play_once = preview_play_once_history_is_committed_on_start();
+    const bool idle_recheck = idle_loops_respect_sequence_and_recheck_flags();
+    const bool latest_weapon = latest_weapon_request_rejects_stale_loads();
+    const bool idle_cycles = idle_layers_keep_independent_cycles();
+    const bool blend_interrupt = interrupted_pose_blend_starts_from_the_visible_pose();
     std::printf("snapshot placement: %s\nfinal pose index order: %s\nr01 framing delta: %s\ncoverage ledger: %s\nslot necessity: %s\nfigure bound union: %s\nassembly gate: %s\nanimation track identity: %s\nempty source body shape: %s\n",
         placement ? "PASS" : "FAIL", mapping ? "PASS" : "FAIL", framing ? "PASS" : "FAIL",
         ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL", assembly ? "PASS" : "FAIL",
@@ -570,6 +937,16 @@ int main()
     std::printf("figure transparency order: %s\nfigure material state: %s\n", alpha_order ? "PASS" : "FAIL", alpha_state ? "PASS" : "FAIL");
     std::printf("D3D constant buffer ranges: %s\ntwo-handed hand state: %s\npanel pose answer: %s\n",
         d3d_ranges ? "PASS" : "FAIL", two_handed ? "PASS" : "FAIL", panel_pose ? "PASS" : "FAIL");
+    std::printf("OAR query profile rejection: %s\nstanding animation catalog: %s\npreview variant isolation: %s\noriginal answer isolation: %s\npanel transition contract: %s\n",
+        query_profiles ? "PASS" : "FAIL", standing_catalog ? "PASS" : "FAIL", local_variants ? "PASS" : "FAIL",
+        original_answers ? "PASS" : "FAIL", panel_transitions ? "PASS" : "FAIL");
+    std::printf("equipment assembly debounce: %s\n", gear_refresh ? "PASS" : "FAIL");
+    std::printf("preview native carrier layout: %s\n", carrier_layout ? "PASS" : "FAIL");
+    std::printf("preview Random cache: %s\nvariant weights and shared state: %s\nPlayOnce commit on start: %s\nidle loop decision flags: %s\nlatest weapon request: %s\nindependent idle cycles: %s\ninterrupted pose blend: %s\n",
+        random_conditions ? "PASS" : "FAIL", variant_weights ? "PASS" : "FAIL", play_once ? "PASS" : "FAIL",
+        idle_recheck ? "PASS" : "FAIL", latest_weapon ? "PASS" : "FAIL", idle_cycles ? "PASS" : "FAIL", blend_interrupt ? "PASS" : "FAIL");
     return placement && mapping && framing && ledger && necessity && bound && assembly && track_identity && shape_clear &&
-        two_handed && oar_scope && oar_projection && oar_binary && alpha_order && alpha_state && d3d_ranges && panel_pose ? 0 : 1;
+        two_handed && oar_scope && oar_projection && oar_binary && alpha_order && alpha_state && d3d_ranges && panel_pose &&
+        query_profiles && standing_catalog && local_variants && original_answers && panel_transitions && gear_refresh && carrier_layout &&
+        random_conditions && variant_weights && play_once && idle_recheck && latest_weapon && idle_cycles && blend_interrupt ? 0 : 1;
 }

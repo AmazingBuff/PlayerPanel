@@ -320,70 +320,25 @@ RE::hkbClipGenerator const* pick_idle_running_clip(RE::TESObjectREFR& source)
     return best;
 }
 
-bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
-    ClipPlayback& out, std::string& out_mapping, std::string& out_coverage)
+bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
+    RE::hkaAnimationBinding* binding, std::string const& clip_name, ClipPlayback& out,
+    std::string& out_mapping, std::string& out_coverage)
 {
-    if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
-    {
-        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=generator-lost");
+    if (!binding || !readable(binding, sizeof(*binding)) || !looks_like_object(binding))
         return false;
-    }
-
-    const char* const raw_name = generator->animationName.c_str();
-    const std::string clip_name = raw_name ? raw_name : "";
-    const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
-    if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
-    {
-        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-live-control clip='{}'", clip_name);
-        return false;
-    }
-
-    const RE::hkaAnimationBinding* const binding = generator->binding;
-    if (!binding || !readable(binding, sizeof(RE::hkaAnimationBinding)) || !looks_like_object(binding))
-    {
-        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-live-binding clip='{}'", clip_name);
-        return false;
-    }
     RE::hkaAnimation* const animation = binding->animation.get();
-    if (!animation || !readable(animation, sizeof(RE::hkaAnimation)) || !looks_like_object(animation))
-    {
-        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-animation clip='{}'", clip_name);
+    if (!animation || !readable(animation, sizeof(*animation)) || !looks_like_object(animation))
         return false;
-    }
     const std::int32_t track_count = animation->numberOfTransformTracks;
-    if (track_count <= 0 || track_count > Max_Tracks_Read || !animation_data_is_present(animation))
-    {
-        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=animation-data clip='{}' tracks={}", clip_name, track_count);
+    if (track_count <= 0 || track_count > Max_Tracks_Read || !animation_data_is_present(animation) ||
+        !std::isfinite(animation->duration) || animation->duration <= 0.0f)
         return false;
-    }
-
-    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
-    const RE::hkaSkeleton* skeleton = nullptr;
-    std::uint32_t bone_nodes = 0;
-    std::uint32_t pose_count = 0;
-    if (source.GetAnimationGraphManager(manager) && manager)
-    {
-        for (const RE::BSTSmartPointer<RE::BShkbAnimationGraph>& holder : manager->graphs)
-        {
-            RE::BShkbAnimationGraph* const graph = holder.get();
-            if (!graph || !graph->holder || !graph->rootNode)
-                continue;
-            if (static_cast<const RE::TESObjectREFR*>(graph->holder) != &source)
-                continue;
-            skeleton = graph->characterInstance.setup.get()
-                ? graph->characterInstance.setup->animationSkeleton.get()
-                : nullptr;
-            bone_nodes = static_cast<std::uint32_t>(graph->boneNodes.size());
-            pose_count = static_cast<std::uint32_t>(std::max(graph->characterInstance.numPoseLocal, 0));
-            break;
-        }
-    }
+    RE::hkaSkeleton const* const skeleton = graph.characterInstance.setup
+        ? graph.characterInstance.setup->animationSkeleton.get() : nullptr;
     if (!skeleton || skeleton->bones.empty())
-    {
-        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-animation-skeleton clip='{}'", clip_name);
         return false;
-    }
-
+    const std::uint32_t bone_nodes = static_cast<std::uint32_t>(graph.boneNodes.size());
+    const std::uint32_t pose_count = static_cast<std::uint32_t>(std::max(graph.characterInstance.numPoseLocal, 0));
     // Empty replacement tables retain the existing unverified identity fallback.
     const RE::hkArray<std::int16_t>& table = binding->transformTrackToBoneIndices;
     std::span<std::int16_t const> track_table;
@@ -407,6 +362,7 @@ bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
     const NameIndex copy_by_name = index_nodes_by_name(copy_root);
     out = ClipPlayback{};
     out.animation = animation;
+    out.binding_owner.reset(binding);
     out.name = clip_name;
     out.duration = animation->duration;
     out.tracks.reserve(bindings.size());
@@ -433,6 +389,24 @@ bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
     return true;
 }
 
+bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
+    ClipPlayback& out, std::string& out_mapping, std::string& out_coverage)
+{
+    if (!generator || !readable(generator, sizeof(*generator)) || !looks_like_object(generator))
+        return false;
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+    if (!source.GetAnimationGraphManager(manager) || !manager)
+        return false;
+    for (RE::BSTSmartPointer<RE::BShkbAnimationGraph> const& graph : manager->graphs)
+    {
+        if (graph && graph->holder == &source && graph->rootNode &&
+            resolve_binding_playback(*graph, copy_root, generator->binding,
+                guarded_string(generator->animationName), out, out_mapping, out_coverage))
+            return true;
+    }
+    return false;
+}
+
 float live_clip_time(RE::hkbClipGenerator const* generator)
 {
     if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
@@ -451,10 +425,17 @@ void ClipPlayer::reset()
     m_last_tick = std::chrono::steady_clock::now();
 }
 
-void ClipPlayer::set_clip(ClipPlayback clip)
+void ClipPlayer::set_clip(ClipPlayback clip, bool loop)
 {
     m_clip = std::move(clip);
+    m_loop = loop;
     m_time = 0.0;
+    m_last_tick = std::chrono::steady_clock::now();
+}
+
+void ClipPlayer::retarget(ClipPlayback clip)
+{
+    m_clip = std::move(clip);
     m_last_tick = std::chrono::steady_clock::now();
 }
 
@@ -473,7 +454,7 @@ size_t ClipPlayer::advance(RE::NiAVObject& copy_root)
     const double step = std::min(std::chrono::duration<double>(now - m_last_tick).count(), Max_Clip_Step_Seconds);
     m_last_tick = now;
     m_time += std::max(step, 0.0);
-    return play_animation_clip(m_clip, static_cast<float>(m_time), copy_root);
+    return play_animation_clip(m_clip, static_cast<float>(m_time), copy_root, m_loop);
 }
 
 PLUGIN_NAMESPACE_END

@@ -9,6 +9,7 @@
 #include "oar/policy.h"
 
 #include <cstdint>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,7 @@ void equipment_collect_worn(RE::Actor& a_actor, std::vector<RE::TESBoundObject*>
 // changes the idle OAR selects for it. Both hands are read, because the engine reports a
 // two-handed weapon - and a bow - in whichever hand entry it last touched.
 [[nodiscard]] oar::WeaponForm equipment_weapon_form(RE::Actor& a_actor);
+[[nodiscard]] std::array<RE::FormID, 2> equipment_hand_ids(RE::Actor& actor);
 
 // Puts everything `a_source` wears onto `a_target`. Used for the puppet's initial dressing, before
 // its figure is parked out of the world: the engine re-derives a biped change asynchronously, and

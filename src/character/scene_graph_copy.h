@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "character/animation_source.h"
-#include "character/idle_driver.h"
+#include "character/panel_animation.h"
+#include "character/panel_animation_policy.h"
 #include "character/isolation_watch.h"
 
 #include <string>
@@ -39,7 +39,7 @@ private:
 
     SceneGraphCopy();
     ~SceneGraphCopy();
-    void capture();
+    void capture(bool equipment_changed = false);
     void retire(std::unique_ptr<CharacterClone> snapshot);
     void log_parked() const;
 
@@ -50,11 +50,10 @@ private:
     uint32_t m_capture_id;
     bool m_draw_enabled;
     bool m_cap_logged;
-    // A panel open whose capture is still waiting for the OAR standing window to finish.
     bool m_open_pending = false;
-    IdleDriver m_idle;
-    ClipPlayer m_clip;
-    std::string m_driver_note;
+    EquipmentRefreshGate m_equipment_refresh;
+    bool m_was_open = false;
+    PanelAnimation m_panel_animation;
     std::unique_ptr<CharacterClone> m_snapshot;
     // Retired snapshots deliberately remain alive until process exit.
     std::vector<CharacterClone*> m_parked;

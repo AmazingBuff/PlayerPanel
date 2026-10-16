@@ -9,9 +9,7 @@
 PLUGIN_NAMESPACE_BEGIN
 namespace oar
 {
-    // The weapon form whose idle the panel's standing figure shows (state-idle v3, 2026-10-15):
-    // the panel figure always stands, so the only pose question OAR answers for it is the weapon
-    // stance. Unknown forms stay kNone - a standing figure with nothing legible in its hands.
+    // Animation family only. The source actor's draw state is read independently of its equipment.
     enum class WeaponForm : std::uint8_t
     {
         kNone = 0,   // nothing drawn / nothing legible: the plain standing idle
@@ -22,7 +20,9 @@ namespace oar
         kMagic,   // a hand holds a spell
         kStaff,
         kTorch,
-        kShield   // a shield (or other hand-worn armour) with no weapon
+        kShield,
+        kCrossbow,
+        kTwoHandedAxe
     };
 
     [[nodiscard]] inline std::string_view weapon_form_name(WeaponForm a_form)
@@ -38,6 +38,8 @@ namespace oar
         case WeaponForm::kStaff: return "staff";
         case WeaponForm::kTorch: return "torch";
         case WeaponForm::kShield: return "shield";
+        case WeaponForm::kCrossbow: return "crossbow";
+        case WeaponForm::kTwoHandedAxe: return "2hw";
         default: return "?";
         }
     }
@@ -50,15 +52,24 @@ namespace oar
     {
         kEmpty = 0,
         kOneHandedWeapon,
-        kTwoHandedWeapon,  // two-handed melee, bow or crossbow
+        kTwoHandedWeapon,
         kStaff,
         kSpell,
         kTorch,
-        kShield
+        kShield,
+        kBow,
+        kCrossbow,
+        kTwoHandedAxe
     };
 
     [[nodiscard]] inline WeaponForm weapon_form_from_hands(HandKind a_right, HandKind a_left)
     {
+        if (a_right == HandKind::kBow || a_left == HandKind::kBow)
+            return WeaponForm::kBow;
+        if (a_right == HandKind::kCrossbow || a_left == HandKind::kCrossbow)
+            return WeaponForm::kCrossbow;
+        if (a_right == HandKind::kTwoHandedAxe || a_left == HandKind::kTwoHandedAxe)
+            return WeaponForm::kTwoHandedAxe;
         if (a_right == HandKind::kTwoHandedWeapon || a_left == HandKind::kTwoHandedWeapon)
             return WeaponForm::kTwoHanded;
         if (a_right == HandKind::kStaff || a_left == HandKind::kStaff)
@@ -76,38 +87,6 @@ namespace oar
         return WeaponForm::kNone;
     }
 
-    // Whether a form draws the weapon: the panel's figure only ever "holds" the stance, and
-    // IsWeaponDrawn is the condition OAR asks for a drawn idle.
-    [[nodiscard]] inline bool weapon_form_is_drawn(WeaponForm a_form)
-    {
-        return a_form != WeaponForm::kNone;
-    }
-
-    // OAR's equipment-type condition (IsEquippedType) reads a numeric weapon type: 0 one-handed,
-    // 1 two-handed, 2 bow/crossbow, 3 staff, 4 spell/torch/shield variants. The panel's standing
-    // figure answers with the form the player actually holds.
-    [[nodiscard]] inline std::optional<float> weapon_form_type(WeaponForm a_form)
-    {
-        switch (a_form)
-        {
-        case WeaponForm::kOneHanded:
-        case WeaponForm::kDualWield:
-        case WeaponForm::kShield:
-            return 0.0f;  // one-handed family
-        case WeaponForm::kTwoHanded:
-            return 1.0f;
-        case WeaponForm::kBow:
-            return 2.0f;
-        case WeaponForm::kStaff:
-            return 3.0f;
-        case WeaponForm::kMagic:
-        case WeaponForm::kTorch:
-            return 4.0f;
-        default:
-            return std::nullopt;  // nothing legible: keep OAR's own answer
-        }
-    }
-
     [[nodiscard]] inline std::optional<bool> standing_predicate(std::string_view name, PreviewState const& state)
     {
         if (name == "IsWeaponDrawn")
@@ -116,7 +95,7 @@ namespace oar
             "IsAttacking", "IsRunning", "IsSneaking", "IsSprinting", "IsInAir", "IsInCombat",
             "IsBlocking", "IsOnMount", "IsRiding", "IsRidingHasKeyword", "IsBeingRidden",
             "IsBeingRiddenBy", "IsSwimming", "IsStaggered", "IsTalking", "IsGreetingPlayer",
-            "IsInScene", "IsInSpecifiedScene", "IsDoingFavor", "IsOnStairs"
+            "IsInScene", "IsInSpecifiedScene", "IsDoingFavor", "IsOnStairs", "MOUNT"
         };
         if (std::ranges::find(inactive, name) != std::end(inactive))
             return false;
@@ -136,7 +115,7 @@ namespace oar
     [[nodiscard]] inline bool forwards_source(std::string_view name)
     {
         constexpr std::string_view names[] = {
-            "OR", "AND", "XOR", "PRESET", "TARGET", "PLAYER", "MOUNT",
+            "OR", "AND", "XOR", "PRESET", "TARGET", "PLAYER",
             "IsForm", "IsActorBase", "IsRace", "IsFemale", "IsChild", "IsUnique", "IsClass",
             "IsVoiceType", "IsPlayerTeammate", "IsInFaction", "FactionRank", "HasKeyword",
             "HasPerk", "HasSpell", "HasMagicEffect", "HasMagicEffectWithKeyword",

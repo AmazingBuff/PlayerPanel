@@ -133,10 +133,13 @@ oar::WeaponForm equipment_weapon_form(RE::Actor& a_actor)
             switch (weapon->GetWeaponType())
             {
             case RE::WEAPON_TYPE::kTwoHandSword:
-            case RE::WEAPON_TYPE::kTwoHandAxe:
-            case RE::WEAPON_TYPE::kBow:
-            case RE::WEAPON_TYPE::kCrossbow:
                 return oar::HandKind::kTwoHandedWeapon;
+            case RE::WEAPON_TYPE::kTwoHandAxe:
+                return oar::HandKind::kTwoHandedAxe;
+            case RE::WEAPON_TYPE::kBow:
+                return oar::HandKind::kBow;
+            case RE::WEAPON_TYPE::kCrossbow:
+                return oar::HandKind::kCrossbow;
             case RE::WEAPON_TYPE::kStaff:
                 return oar::HandKind::kStaff;
             default:
@@ -153,6 +156,17 @@ oar::WeaponForm equipment_weapon_form(RE::Actor& a_actor)
     };
 
     return oar::weapon_form_from_hands(kind(a_actor.GetEquippedObject(false)), kind(a_actor.GetEquippedObject(true)));
+}
+
+std::array<RE::FormID, 2> equipment_hand_ids(RE::Actor& actor)
+{
+    RE::TESForm* const right = actor.GetEquippedObject(false);
+    RE::TESForm* const left = actor.GetEquippedObject(true);
+    RE::TESBoundObject* const both = hand_two_handed_weapon(right ? right->As<RE::TESObjectWEAP>() : nullptr,
+        left ? left->As<RE::TESObjectWEAP>() : nullptr);
+    if (both)
+        return { both->GetFormID(), both->GetFormID() };
+    return { right ? right->GetFormID() : 0, left ? left->GetFormID() : 0 };
 }
 
 std::uint32_t equipment_equip_all_worn(RE::Actor& a_target, RE::Actor& a_source)

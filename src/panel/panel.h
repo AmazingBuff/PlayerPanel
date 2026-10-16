@@ -17,6 +17,7 @@ public:
     // its animation clocks on this, and it must not depend on seeing the close as well: the render-side
     // hook that would observe it does not run in every frame, while the menu event always arrives.
     bool consume_panel_opened();
+    [[nodiscard]] std::uint64_t equipment_revision() const;
 private:
     class MenuSink final : public RE::BSTEventSink<RE::MenuOpenCloseEvent>
     {
@@ -25,6 +26,12 @@ private:
             const RE::MenuOpenCloseEvent* event,
             RE::BSTEventSource<RE::MenuOpenCloseEvent>*) noexcept override;
     };
+    class EquipmentSink final : public RE::BSTEventSink<RE::TESEquipEvent>
+    {
+    public:
+        RE::BSEventNotifyControl ProcessEvent(RE::TESEquipEvent const* event,
+            RE::BSTEventSource<RE::TESEquipEvent>*) noexcept override;
+    };
 private:
     PanelMonitor();
     ~PanelMonitor();
@@ -32,6 +39,8 @@ private:
     std::atomic_bool m_panel_open;
     std::atomic_bool m_panel_opened;
     MenuSink m_menu_sink;
+    EquipmentSink m_equipment_sink;
+    std::atomic_uint64_t m_equipment_revision{ 0 };
 };
 
 PLUGIN_NAMESPACE_END

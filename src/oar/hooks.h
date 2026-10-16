@@ -2,10 +2,17 @@
 
 #include "oar/context.h"
 #include "oar/policy.h"
+#include "oar/query_policy.h"
 
 namespace Conditions
 {
     class ICondition;
+}
+
+namespace RE
+{
+    class hkbCharacter;
+    class hkbCharacterStringData;
 }
 
 PLUGIN_NAMESPACE_BEGIN
@@ -22,38 +29,36 @@ namespace oar
     bool install_hooks();
     [[nodiscard]] bool hooks_ready();
 
-    // The standing-window pre-condition (state-idle v3, 2026-10-15, user): it is armed on the
-    // INVENTORY-OPEN edge, not while the panel is already up - at that moment the world is still
-    // advancing and OAR is evaluating for the player, so the panel can hook one real decision and
-    // take the clip OAR selects for a STANDING figure in the player's weapon stance. Closing the
-    // panel, or simply letting the window run out, drops the flag: the engine's original path
-    // answers again and nothing in the world is driven.
-    void arm_standing_window(std::uint32_t a_frames);
-    void tick_standing_window();
-    [[nodiscard]] bool standing_window_open();
-
-    // The weapon stance the standing figure answers with: the form the player holds.
-    void set_standing_weapon_form(WeaponForm a_form);
-    [[nodiscard]] WeaponForm standing_weapon_form();
-
-    // What OAR chose during the window: the clip generator it was evaluating, kept as a handle the
-    // copy re-resolves through the full chain (never dereferenced here). Empty when the window saw
-    // no decision, in which case the running clip serves.
-    struct SelectedClip
+    struct AnimationSelection
     {
-        RE::hkbClipGenerator const* generator = nullptr;
+        bool found = false;
+        bool replaced = false;
+        std::uint16_t base_index = 0xFFFF;
+        std::uint16_t index = 0xFFFF;
+        std::string base_name;
+        std::string name;
+        std::string diagnostic;
+        std::uint32_t evaluated = 0;
+        std::uint32_t overrides = 0;
+        std::uint32_t rejected = 0;
+        std::uint64_t clip_key = 0;
+        std::uint64_t replacement_key = 0;
+        bool reevaluate_on_loop = true;
+        std::optional<VariantOptions> variants;
+        VariantPick variant;
     };
-    [[nodiscard]] SelectedClip selected_clip();
-    void clear_selected_clip();
-
-    // The ACTIVE query (see binary_profile.h): asks OAR what it would choose for this actor and
-    // base clip RIGHT NOW, instead of waiting for the engine to activate a clip - the paused panel
-    // has no evaluation in flight (2026-10-16 log: hits=0). The conditions inside OAR's own
-    // decision run through the hooks above, so the standing answers are in force while it decides.
-    // The returned pointer is OAR's object, never dereferenced here.
+    enum class QueryEvent { e_activate, e_refresh, e_loop };
+    struct QueryRequest
+    {
+        std::uint32_t channel = 0;
+        QueryEvent event = QueryEvent::e_activate;
+        AnimationSelection const* current = nullptr;
+    };
     [[nodiscard]] bool query_supported();
-    void* query_replacement(RE::TESObjectREFR& a_source, RE::hkbClipGenerator& a_clip,
-        std::uint16_t a_base_index, std::uint32_t& a_candidates, std::uint32_t& a_with_replacements);
+    [[nodiscard]] RE::hkbCharacterStringData* character_strings(RE::hkbCharacter const& character);
+    [[nodiscard]] AnimationSelection query_animation(RE::TESObjectREFR& source, RE::hkbCharacter& character,
+        std::span<std::string_view const> bases, PreviewState state, QuerySession& session,
+        QueryRequest const& request = {});
 
     // Evaluates an audited condition tree. Selection/loading/playback are separate responsibilities.
     [[nodiscard]] EvaluationResult evaluate_condition(::Conditions::ICondition const& condition,

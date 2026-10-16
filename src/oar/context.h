@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -19,6 +21,7 @@ namespace oar
     {
         bool weapon_drawn = false;
         std::unordered_map<std::string, float> graph_variables;
+        std::optional<std::array<std::uint32_t, 2>> hand_override;
     };
 
     enum class ScopeMode
@@ -66,6 +69,11 @@ namespace oar
         [[nodiscard]] std::string const& diagnostic() const { return m_diagnostic; }
         [[nodiscard]] std::uint32_t evaluated() const { return m_evaluated; }
         [[nodiscard]] std::uint32_t overrides() const { return m_overrides; }
+        void absorb(ScopedEvaluation const& child)
+        {
+            m_evaluated += child.m_evaluated;
+            m_overrides += child.m_overrides;
+        }
         void note_evaluated() { ++m_evaluated; }
         void note_override(std::string_view name, bool differs)
         {
@@ -84,6 +92,7 @@ namespace oar
         }
 
     private:
+        friend class UnprojectedEvaluation;
         inline static thread_local ScopedEvaluation* s_current = nullptr;
         RE::TESObjectREFR* m_source;
         RE::hkbClipGenerator* m_clip;
@@ -94,6 +103,17 @@ namespace oar
         std::string m_diagnostic;
         std::uint32_t m_evaluated = 0;
         std::uint32_t m_overrides = 0;
+    };
+
+    class UnprojectedEvaluation final
+    {
+    public:
+        UnprojectedEvaluation() : m_previous(std::exchange(ScopedEvaluation::s_current, nullptr)) {}
+        ~UnprojectedEvaluation() { ScopedEvaluation::s_current = m_previous; }
+        UnprojectedEvaluation(UnprojectedEvaluation const&) = delete;
+        UnprojectedEvaluation& operator=(UnprojectedEvaluation const&) = delete;
+    private:
+        ScopedEvaluation* m_previous;
     };
 }
 PLUGIN_NAMESPACE_END
