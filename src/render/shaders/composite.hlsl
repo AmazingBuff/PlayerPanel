@@ -9,11 +9,9 @@
 // (no vertex buffers, no input layout): the vertex shader places the
 // corners from a one-float4 constant buffer holding the panel rect
 // in NDC (x0, yBottom, x1, yTop), the pixel shader samples the
-// studio target opaquely. Drawn at DrawInterfaceStart entry into
-// whatever target is bound, BEFORE the original menu draw — the
-// PRD §2 order (panel under other UI). Only the state the quad
-// actually sets is saved and restored; the engine rebinds the rest
-// for its own draws.
+// studio target opaquely. The post-interface hook explicitly selects
+// the framebuffer. The studio image already uses the menu material
+// output encoding; this pass performs no additional tone mapping.
 
 cbuffer PanelCB : register(b0)
 {
@@ -55,7 +53,5 @@ float4 ps_main(PS_IN ps_in) : SV_Target
     // the target width, centered — the figure keeps its world proportions.
     ps_in.uv.x = 0.5 + (ps_in.uv.x - 0.5) * g_flags.y;
     float3 c = g_tex.Sample(g_samp, ps_in.uv).rgb;
-    if (g_flags.x > 0.5)
-        c = c / (1.0 + c);
     return float4(c, 1.0);
 }

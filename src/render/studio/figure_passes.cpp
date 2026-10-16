@@ -6,6 +6,7 @@
 
 #include "render/studio/figure_draw_order.h"
 #include "render/studio/figure_pipeline_state.h"
+#include "render/community_shaders/view.h"
 
 #include "RE/B/BSBatchRenderer.h"
 #include "RE/B/BSGeometry.h"
@@ -23,14 +24,34 @@ PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
+    class AccumulatorScope
+    {
+    public:
+        explicit AccumulatorScope(RE::BSShaderAccumulator* accumulator) :
+            m_previous(RE::BSShaderAccumulator::GetCurrentAccumulator())
+        {
+            RE::BSShaderAccumulator::SetCurrentAccumulator(accumulator);
+        }
+        ~AccumulatorScope() { RE::BSShaderAccumulator::SetCurrentAccumulator(m_previous); }
+        AccumulatorScope(AccumulatorScope const&) = delete;
+        AccumulatorScope& operator=(AccumulatorScope const&) = delete;
+    private:
+        RE::BSShaderAccumulator* m_previous;
+    };
+
     // One pass, with the studio rig swapped in around it and the pass's own light bookkeeping put
     // back afterwards. Mutating the pass is mutating engine state (the pass objects are shared), so
     // every field written here is restored before the call returns.
-    void submit_pass(RE::BSRenderPass* a_pass, bool a_alpha_test, bool a_inject_lights, RE::BSLight** a_light_slots, std::size_t a_light_count)
+    void submit_pass(RE::BSRenderPass* a_pass, bool a_alpha_test, bool a_inject_lights, FigurePassRequest const& request)
     {
+        RE::BSLight** const a_light_slots = request.light_slots;
+        const std::size_t a_light_count = request.light_count;
         RE::BSLight** saved_scene_lights = nullptr;
         std::uint8_t saved_num_lights = 0;
         std::uint8_t saved_shadow_lights = 0;
+        RE::NiPointer<RE::NiLight> saved_slot_zero;
+        bool saved_point = false;
+        bool saved_ambient = false;
         if (a_inject_lights)
         {
             saved_scene_lights = a_pass->sceneLights;
@@ -40,6 +61,19 @@ namespace
             a_pass->numLights = static_cast<std::uint8_t>(a_light_count);
             a_pass->numShadowLights = 0;
             a_pass->sceneLights = a_light_slots;
+
+            if (request.directional_light)
+            {
+                // Slot 0 is reserved for the directional light in native Lighting and CS LLF.
+                // Borrow only our own shell, and put its ledger-facing point light back afterwards.
+                auto& slot = *a_light_slots[0];
+                saved_slot_zero = slot.light;
+                saved_point = slot.pointLight;
+                saved_ambient = slot.ambientLight;
+                slot.light.reset(request.directional_light);
+                slot.pointLight = false;
+                slot.ambientLight = false;
+            }
 
             for (std::size_t i = 0; i < a_light_count; ++i)
             {
@@ -59,6 +93,12 @@ namespace
 
         if (a_inject_lights)
         {
+            if (request.directional_light)
+            {
+                a_light_slots[0]->light = std::move(saved_slot_zero);
+                a_light_slots[0]->pointLight = saved_point;
+                a_light_slots[0]->ambientLight = saved_ambient;
+            }
             a_pass->sceneLights = saved_scene_lights;
             a_pass->numLights = saved_num_lights;
             a_pass->numShadowLights = saved_shadow_lights;
@@ -74,7 +114,9 @@ FigurePassStats draw_figure_passes(FigurePassRequest const& a_request)
 
     RE::BSGraphics::RendererShadowState::FLAT_RUNTIME_DATA& shadow =
         RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData();
+    AccumulatorScope accumulator_scope(a_request.accumulator);
     FigurePipelineState pipeline_state(shadow);
+    community_shaders::View cs_view(a_request);
     shadow.stateUpdateFlags.reset(RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
     REX::W32::D3D11_VIEWPORT viewport{
@@ -92,7 +134,7 @@ FigurePassStats draw_figure_passes(FigurePassRequest const& a_request)
 
     constexpr float clear_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     a_request.context->ClearRenderTargetView(rtv, clear_color);
-    a_request.context->ClearDepthStencilView(a_request.target->dsv(), REX::W32::D3D11_CLEAR_DEPTH | REX::W32::D3D11_CLEAR_STENCIL, 1.0f, 0);
+    a_request.context->ClearDepthStencilView(a_request.target->dsv(), REX::W32::D3D11_CLEAR_DEPTH, 1.0f, 0);
 
     // Injection engages only when every slot of the rig is ledger-served; otherwise the passes draw
     // with whatever lights the accumulator already carried.
@@ -139,27 +181,60 @@ FigurePassStats draw_figure_passes(FigurePassRequest const& a_request)
 
     // Pass lists belong to their shader property/accumulator. Generate and consume one geometry at
     // a time after ordering; do not retain pass pointers across another GetRenderPasses call.
-    for (FigureGeometry const& item : geometries)
+    enum class Phase { e_all, e_deferred, e_forward };
+    auto const draw = [&](Phase phase)
     {
-        const RE::BSGeometry::GEOMETRY_RUNTIME_DATA& geom_rt = item.geometry->GetGeometryRuntimeData();
-        if (const RE::BSShaderProperty::RenderPassArray* pass_array = geom_rt.shaderProperty->GetRenderPasses(item.geometry, std::to_underlying(RE::BSShaderAccumulator::RENDER_MODE::kNormal), a_request.accumulator))
+        for (FigureGeometry const& item : geometries)
         {
-            for (RE::BSRenderPass* pass = pass_array->head; pass; pass = pass->next)
+            if (phase == Phase::e_deferred && item.alpha_blend)
+                continue;
+            if (cs_view.active() && phase != Phase::e_deferred)
+                cs_view.begin_forward(item.alpha_blend);
+            const RE::BSGeometry::GEOMETRY_RUNTIME_DATA& geom_rt = item.geometry->GetGeometryRuntimeData();
+            if (const RE::BSShaderProperty::RenderPassArray* pass_array = geom_rt.shaderProperty->GetRenderPasses(item.geometry, std::to_underlying(RE::BSShaderAccumulator::RENDER_MODE::kNormal), a_request.accumulator))
             {
-                if (pass->geometry != item.geometry || !pass->shader)
-                    continue;
-                // Diagnostics only - never gate the draw on rendererData: the engine's
-                // SetupAndDrawPass lazily creates the device buffers (run 95), and a gate here would
-                // remove the only caller that could ever initialize them (run 52).
-                if (!geom_rt.rendererData)
-                    ++stats.renderer_data_null;
-                pipeline_state.prepare(viewport, item.alpha_blend, item.alpha_test,
-                    geom_rt.shaderProperty->flags.any(RE::BSShaderProperty::EShaderPropertyFlag::kTwoSided));
-                submit_pass(pass, item.alpha_test, stats.inject_lights, a_request.light_slots, a_request.light_count);
-                ++stats.drawn;
+                for (RE::BSRenderPass* pass = pass_array->head; pass; pass = pass->next)
+                {
+                    if (pass->geometry != item.geometry || !pass->shader)
+                        continue;
+                    const bool material_pass = !item.alpha_blend && pass->shader->shaderType == RE::BSShader::Type::Lighting;
+                    if ((phase == Phase::e_deferred && !material_pass) || (phase == Phase::e_forward && material_pass))
+                        continue;
+                    // Diagnostics only - never gate the draw on rendererData: the engine's
+                    // SetupAndDrawPass lazily creates the device buffers (run 95), and a gate here would
+                    // remove the only caller that could ever initialize them (run 52).
+                    if (!geom_rt.rendererData)
+                        ++stats.renderer_data_null;
+                    pipeline_state.prepare(viewport, item.alpha_blend, item.alpha_test,
+                        geom_rt.shaderProperty->flags.any(RE::BSShaderProperty::EShaderPropertyFlag::kTwoSided));
+                    if (cs_view.active())
+                        cs_view.before_pass();
+                    submit_pass(pass, item.alpha_test, stats.inject_lights, a_request);
+                    if (cs_view.active())
+                        cs_view.after_pass();
+                    ++stats.drawn;
+                }
             }
         }
+    };
+    if (cs_view.active())
+    {
+        cs_view.begin_deferred();
+        draw(Phase::e_deferred);
+        if (cs_view.resolve())
+            draw(Phase::e_forward);
+        else
+        {
+            // CS can compile a newly encountered material asynchronously. A partial GBuffer must
+            // never be composited as if it were a complete material view.
+            a_request.context->ClearRenderTargetView(rtv, clear_color);
+            a_request.context->ClearDepthStencilView(a_request.target->dsv(), REX::W32::D3D11_CLEAR_DEPTH, 1.0f, 0);
+            stats.drawn = stats.renderer_data_null = 0;
+            draw(Phase::e_all);
+        }
     }
+    else
+        draw(Phase::e_all);
 
     if (a_request.check_render_target)
         logger::info("FIGURE transparency geometries={} blended={} tested={} render-flags=0x204 depth=opaque-write/alpha-read",

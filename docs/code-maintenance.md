@@ -1,6 +1,6 @@
 # 当前代码维护说明
 
-更新日期：2026-10-16（面板站立 idle 的 OAR 主动查询链；此前：copy-primary 显示路由、审查修复、OAR 条件 hook 与投影接入、UBE 透明材质试修、双手武器对账修复）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
+更新日期：2026-10-16（CS 独立材质视图与引擎路径验证／回退决策；面板站立 idle 的 OAR 主动查询链；此前：copy-primary 显示路由、审查修复、OAR 条件 hook 与投影接入、UBE 透明材质试修、双手武器对账修复）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
 
 > **当前动作链入口**：[idle 选择与快速换装：oar-idle2](oar-preview-query-2026-10-16.md)。
 > 全局窗口和运行 clip 回退已移除。新链路接入站立基础片段、原角色身份、独立 clip／变体／
@@ -44,6 +44,10 @@ mesh 轮廓黑块补齐透明处理；**2026-10-16 用户在另一台电脑确�
 
 ## 当前模块与数据流
 
+CS 1.9.1 材质视图试验（`cs-view1`）在两种来源共用的提交阶段接入独立材质缓冲、原生 SSS 和原生材质合成；相机、摄影棚灯、反射环境及深度属于面板。完整版本身份、恢复边界、显存开销和游戏检查见 [Community Shaders](community-shaders.md)。本地验证通过，游戏结果待回传。
+
+后续渲染路线按 [引擎路径验证与回退](engine-render-path-validation-2026-10-16.md) 执行：先关闭手动 CS 补偿做原生入口对照，必要阶段、资源归属与世界恢复全部通过后再考虑替换；不满足或证据不足就保留当前 `cs-view1`。本次只记录验证计划，没有切换运行后端或新增诊断开关。
+
 | 模块 | 职责与入口 |
 | --- | --- |
 | [oar/hooks.h/.cpp](../src/oar/hooks.h) | 对 3.1.6／3.2.1 核对 DLL 身份和入口；主路径按精确 project、站立基础索引主动查询，在独立 clip 内审计及投影条件，候选／变体指针不越过原生读锁。全局窗口已删除。`kProjected` 及原答案差异统计仅供旧傀儡诊断。见[当前证据与限制](oar-preview-query-2026-10-16.md)。 |
@@ -66,13 +70,16 @@ mesh 轮廓黑块补齐透明处理；**2026-10-16 用户在另一台电脑确�
 | [isolation_watch.cpp](../src/character/isolation_watch.cpp) | 来源与 NPC 的观测、装备变更重新设基线及会话判读；不是全骨骼／全部物理隔离已通过的证明。 |
 | [figure_passes.cpp](../src/render/studio/figure_passes.cpp) | 两条来源共用的按材质分类、引擎 pass 生成、灯光临时替换与提交；读取原 alpha 属性，原生混合设置使用 `0x204`。 |
 | [figure_draw_order.h](../src/render/studio/figure_draw_order.h) / [figure_pipeline_state.h](../src/render/studio/figure_pipeline_state.h) | 实体／透明阶段排序及 No Sorter 边界；逐 pass 的引擎材质状态准备和作用域退出恢复。 |
-| [d3d11_util.h/.cpp](../src/render/dx11/d3d11_util.h) | D3D 设备绑定保护与离屏目标；VS／PS 保存全部常量缓冲槽，并在支持 D3D11.1 时保留绑定子范围。 |
+| [community_shaders/view.cpp](../src/render/community_shaders/view.cpp) / [bridge.cpp](../src/render/community_shaders/bridge.cpp) | CS 1.9.1 独立材质视图、受版本保护的 State::Draw hook、私有 GBuffer／SSS／材质合成和 CPU/GPU 上下文恢复。 |
+| [community_shaders/binary_profile.h](../src/render/community_shaders/binary_profile.h) / [gpu_data.h](../src/render/community_shaders/gpu_data.h) | 官方 DLL/PDB 的入口、全局符号及 GPU 布局；更新上游前必须重新核对，不可只改版本号。 |
+| [d3d11_util.h/.cpp](../src/render/dx11/d3d11_util.h) | VS／PS／CS 保存全部常量缓冲、资源和采样器槽，另存计算 shader／UAV；D3D11.1 保留缓冲子范围。离屏目标支持浮点 UAV、可采样深度与只读 DSV。 |
 | [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | `snapshot_transform` 内共 31 项本地检查，新增 Random 缓存、权重与共享状态、PlayOnce 提交、循环决策、最新请求、各层周期及中断混合。不执行游戏内 detour 或装卸。 |
+| [render_state_test.cpp](../tests/render_state_test.cpp) / [native_sss_test.cpp](../tests/native_sss_test.cpp) / [native_material_test.cpp](../tests/native_material_test.cpp) | 五项离屏资源／绑定／编码／版本检查；可用官方包的实际 HLSL 执行另外十六项 SSS 与材质合成案例，不装载 CS DLL。 |
 
 实验配置使用复制图显示时的主顺序：请求／会话与装备稳定处理 → 查询及装载轮询 → 副本 `pose()` → 独立绑定采样／切换与过渡 → 引擎蒙皮与 draw → 合成。AFP 及傀儡推图保留为旁路诊断。
 
 AFP 写入与复制图显示是两条不同的路径；不得把 AFP 应用后的节点自比较标记为直绘通过。
-两种显示来源的提交阶段现在共用“实体／镂空 → 排序透明 → 恢复状态 → 合成”的顺序。
+两种显示来源的提交阶段共用“实体／镂空 → CS 材质处理（匹配版本可用时）→ 排序透明 → 恢复状态 → 合成”的顺序。
 
 ## 构建、控制与打包
 
@@ -88,9 +95,9 @@ cmake --build build --config Release --target CharacterPanel
 场景复制与 AFP 开发配置：
 
 ```powershell
-cmake --preset Release -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_PROBE_REVISION=oar-idle2
-cmake --build build-scopy --config Release --target CharacterPanel CharacterPanelCopyMathTest
-ctest --test-dir build-scopy -C Release -R '^snapshot_transform$' --output-on-failure
+cmake --preset Release -B build-scopy -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON -DCHARACTER_PANEL_PROBE_REVISION=cs-view1
+cmake --build build-scopy --config Release --target CharacterPanel CharacterPanelCopyMathTest CharacterPanelRenderTest
+ctest --test-dir build-scopy -C Release -R '^(snapshot_transform|render_state)$' --output-on-failure
 cmake --build build-scopy --config Release --target CharacterPanelSceneCopyPackage
 ```
 

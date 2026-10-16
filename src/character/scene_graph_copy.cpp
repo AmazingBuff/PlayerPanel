@@ -545,7 +545,7 @@ void SceneGraphCopy::capture(bool equipment_changed)
     // Snapshot the native clone's captured worlds without re-running facegen, Havok or SMP.
     m_draw_enabled = false;
     retire(std::move(m_snapshot));
-    m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root));
+    m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root), player);
     logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F2=mark F4=drive", m_capture_id, removed_controllers, removed_collisions);
     m_panel_animation.prepare(*player, *root, equipment_changed);
     logger::info("SCOPY ANIM capture={} driver={} equipment-change={} (standing bases; independent preview query)",

@@ -247,18 +247,33 @@ StudioLight::StudioLight() :
     RE::NiNode* light_node = RE::NiNode::Create();
     light_node->name = Studio_Light_Node_Name;
 
+    m_directional_light.reset(RE::NiDirectionalLight::Create());
+    m_directional_light->name = "CP_StudioDirectional";
+    auto& directional = m_directional_light->GetLightRuntimeData();
+    directional.diffuse = { 0.25f, 0.25f, 0.28f };
+    directional.ambient = { 0, 0, 0 };
+    directional.fade = 1.0f;
+    // Model +X points down and away from the camera. Columns form an orthonormal basis.
+    auto& rotation = m_directional_light->local.rotate;
+    rotation.entry[0][0] = 0; rotation.entry[0][1] = 1; rotation.entry[0][2] = 0;
+    rotation.entry[1][0] = -0.8f; rotation.entry[1][1] = 0; rotation.entry[1][2] = -0.6f;
+    rotation.entry[2][0] = -0.6f; rotation.entry[2][1] = 0; rotation.entry[2][2] = 0.8f;
+    light_node->AttachChild(m_directional_light.get());
+
     for (std::size_t i = 0; i < Studio_Light_Count; ++i)
     {
         RE::NiLight* light = nullptr;
         if (i == 0)
         {
-            // Slot 0: ambient base. A point light flagged
-            // ambient — the engine reads its ambient term.
+            // Reserve a normal, non-shadow shell in the light ledger. submit_pass temporarily
+            // supplies the detached directional source through it; AddLight must never register
+            // our directional source on the world scene, where it could replace the sun.
             RE::NiPointLight* amb = RE::NiPointLight::Create();
 
-            amb->name = "StudioAmbient";
+            amb->name = "CP_StudioDirectionalCarrier";
             RE::NiLight::LIGHT_RUNTIME_DATA& ard = amb->GetLightRuntimeData();
-            ard.diffuse = RE::NiColor(0.25f, 0.25f, 0.28f);
+            ard.diffuse = RE::NiColor(0.0f, 0.0f, 0.0f);
+            ard.ambient = { 0, 0, 0 };
             ard.radius = { 4096.0f, 4096.0f, 4096.0f };
             ard.fade = 1.0f;
             amb->SetLightAttenuation(4096.0f);
@@ -273,6 +288,7 @@ StudioLight::StudioLight() :
             // rig placement, fade 2.0 for headroom (v6.48).
             RE::NiLight::LIGHT_RUNTIME_DATA& rd = pt->GetLightRuntimeData();
             rd.diffuse = i == 1 ? RE::NiColor(1.0f, 0.96f, 0.90f) : RE::NiColor(0.70f, 0.80f, 1.0f);
+            rd.ambient = { 0, 0, 0 }; // CS uses ambient.red as packed light flags.
             rd.radius = { 4096.0f, 4096.0f, 4096.0f };
             rd.fade = 2.0f;
             pt->SetLightAttenuation(4096.0f);

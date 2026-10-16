@@ -11,6 +11,7 @@ PLUGIN_NAMESPACE_BEGIN
 
 bool create_vertex_shader(REX::W32::ID3D11Device* device, char const* source, char const* entry, char const* name, REX::W32::ID3D11VertexShader** shader, REX::W32::ID3DBlob** blob);
 bool create_pixel_shader(REX::W32::ID3D11Device* device, char const* source, char const* entry, char const* name, REX::W32::ID3D11PixelShader** shader);
+bool create_compute_shader(REX::W32::ID3D11Device* device, char const* source, char const* entry, char const* name, REX::W32::ID3D11ComputeShader** shader);
 bool render_target_dimensions(REX::W32::ID3D11RenderTargetView* target, uint32_t& width, uint32_t& height);
 
 class D3D11StateCapture
@@ -32,6 +33,8 @@ private:
     static constexpr uint32_t Vertex_Buffer_Count = 2;
     static constexpr uint32_t Class_Instance_Count = 256;
     static constexpr uint32_t Constant_Buffer_Count = REX::W32::D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
+    static constexpr uint32_t Resource_Count = REX::W32::D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT;
+    static constexpr uint32_t Sampler_Count = REX::W32::D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT;
 
     REX::W32::ID3D11DeviceContext* m_ref_context;
     REX::W32::ComPtr<REX::W32::ID3D11DeviceContext1> m_context1;
@@ -78,8 +81,28 @@ private:
     uint32_t m_vertex_cb_count[Constant_Buffer_Count];
     uint32_t m_pixel_cb_first[Constant_Buffer_Count];
     uint32_t m_pixel_cb_count[Constant_Buffer_Count];
-    REX::W32::ID3D11ShaderResourceView* m_pixel_srvs[3];
-    REX::W32::ID3D11SamplerState* m_pixel_sampler;
+    REX::W32::ID3D11ShaderResourceView* m_vertex_srvs[Resource_Count]{};
+    REX::W32::ID3D11ShaderResourceView* m_pixel_srvs[Resource_Count]{};
+    REX::W32::ID3D11ShaderResourceView* m_compute_srvs[Resource_Count]{};
+    REX::W32::ID3D11SamplerState* m_vertex_samplers[Sampler_Count]{};
+    REX::W32::ID3D11SamplerState* m_pixel_samplers[Sampler_Count]{};
+    REX::W32::ID3D11SamplerState* m_compute_samplers[Sampler_Count]{};
+    REX::W32::ID3D11ComputeShader* m_compute_shader{};
+    REX::W32::ID3D11ClassInstance* m_compute_instances[Class_Instance_Count]{};
+    uint32_t m_compute_instance_count = Class_Instance_Count;
+    REX::W32::ID3D11Buffer* m_compute_cbs[Constant_Buffer_Count]{};
+    uint32_t m_compute_cb_first[Constant_Buffer_Count]{};
+    uint32_t m_compute_cb_count[Constant_Buffer_Count]{};
+    REX::W32::ID3D11UnorderedAccessView* m_compute_uavs[Max_Unordered_Access_View_Count]{};
+};
+
+struct RenderTargetOptions
+{
+    REX::W32::DXGI_FORMAT color_format;
+    REX::W32::DXGI_FORMAT depth_format = REX::W32::DXGI_FORMAT_UNKNOWN;
+    bool unordered_access = false;
+    // Supported for D32_FLOAT: R32_TYPELESS texture, D32_FLOAT DSV, R32_FLOAT SRV.
+    bool readable_depth = false;
 };
 
 class RenderTarget
@@ -87,6 +110,7 @@ class RenderTarget
 public:
     // depth_format == DXGI_FORMAT_UNKNOWN: no depth target (colour-only scratch targets).
     RenderTarget(REX::W32::DXGI_FORMAT color_format, REX::W32::DXGI_FORMAT depth_format);
+    explicit RenderTarget(RenderTargetOptions options);
     ~RenderTarget();
     RenderTarget(RenderTarget const&) = delete;
     RenderTarget& operator=(RenderTarget const&) = delete;
@@ -97,7 +121,10 @@ public:
     [[nodiscard]] bool matches(REX::W32::ID3D11Device* device, uint32_t width, uint32_t height) const;
     [[nodiscard]] REX::W32::ID3D11RenderTargetView* rtv() const noexcept { return m_rtv; }
     [[nodiscard]] REX::W32::ID3D11DepthStencilView* dsv() const noexcept { return m_dsv; }
+    [[nodiscard]] REX::W32::ID3D11DepthStencilView* read_only_dsv() const noexcept { return m_read_only_dsv; }
     [[nodiscard]] REX::W32::ID3D11ShaderResourceView* srv() const noexcept { return m_srv; }
+    [[nodiscard]] REX::W32::ID3D11ShaderResourceView* depth_srv() const noexcept { return m_depth_srv; }
+    [[nodiscard]] REX::W32::ID3D11UnorderedAccessView* uav() const noexcept { return m_uav; }
     // The colour texture itself, for the forensic readback (evidence.cpp).
     [[nodiscard]] REX::W32::ID3D11Texture2D* texture() const noexcept { return m_texture; }
     [[nodiscard]] uint32_t width() const noexcept { return m_width; }
@@ -105,12 +132,17 @@ public:
 private:
     REX::W32::DXGI_FORMAT m_color_format;
     REX::W32::DXGI_FORMAT m_depth_format;
+    bool m_unordered_access;
+    bool m_readable_depth;
     REX::W32::ID3D11Device* m_ref_device;
     REX::W32::ID3D11Texture2D* m_texture;
     REX::W32::ID3D11Texture2D* m_depth_texture;
     REX::W32::ID3D11DepthStencilView* m_dsv;
     REX::W32::ID3D11RenderTargetView* m_rtv;
     REX::W32::ID3D11ShaderResourceView* m_srv;
+    REX::W32::ID3D11ShaderResourceView* m_depth_srv{};
+    REX::W32::ID3D11DepthStencilView* m_read_only_dsv{};
+    REX::W32::ID3D11UnorderedAccessView* m_uav{};
     uint32_t m_width;
     uint32_t m_height;
 };

@@ -457,8 +457,8 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_sta
     logger::info("Clone has been created at the player, from {} ({:08x})", actor->GetDisplayFullName(), actor->GetFormID());
 }
 
-CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph) :
-    m_clone(nullptr), m_clone_state(CloneState::e_ready), m_graph_object(std::move(graph)),
+CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph, RE::Actor* source) :
+    m_clone(nullptr), m_source(source), m_clone_state(CloneState::e_ready), m_graph_object(std::move(graph)),
     m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0),
     m_is_snapshot(true), m_draw_frames(0)
 {
@@ -759,6 +759,7 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
     // stays here is what only this route knows: the graph it detached, its anchor and placement.
     const FigurePassRequest request{
         .root = p_root,
+        .source = m_source,
         .accumulator = ui3d->unk10.get(),
         .camera = ui3d->camera.get(),
         .context = runtime.context,
@@ -766,6 +767,7 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
         .states = &states,
         .light_slots = StudioLight::instance().lights(),
         .light_count = Studio_Light_Count,
+        .directional_light = StudioLight::instance().directional_light(),
         .check_render_target = !m_om_check_logged,
     };
 

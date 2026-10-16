@@ -424,6 +424,7 @@ bool PuppetDraw::draw(RE::UI3DSceneManager const& a_ui3d, CommonStates const& a_
         .states = &a_states,
         .light_slots = StudioLight::instance().lights(),
         .light_count = Studio_Light_Count,
+        .directional_light = StudioLight::instance().directional_light(),
         .check_render_target = verbose,
     };
     const FigurePassStats stats = draw_figure_passes(request);

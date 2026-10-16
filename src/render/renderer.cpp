@@ -212,7 +212,9 @@ namespace
             return m_ready;
         }
     private:
-        PassMerger() : m_render_target(REX::W32::DXGI_FORMAT_R8G8B8A8_UNORM, REX::W32::DXGI_FORMAT_D32_FLOAT), m_last_drawn_frame(0), m_ready(false) {}
+        PassMerger() : m_render_target(RenderTargetOptions{
+            REX::W32::DXGI_FORMAT_R16G16B16A16_FLOAT, REX::W32::DXGI_FORMAT_D32_FLOAT, true, true }),
+            m_last_drawn_frame(0), m_ready(false) {}
 
     private:
         RenderTarget m_render_target;

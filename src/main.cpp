@@ -11,6 +11,7 @@
 #include "character/scene_graph_copy.h"
 #include "input/input.h"
 #include "oar/hooks.h"
+#include "render/community_shaders/view.h"
 
 namespace
 {
@@ -42,6 +43,7 @@ namespace
         {
         case SKSE::MessagingInterface::kPostPostLoad:
             (void)PLUGIN_NAMESPACE::oar::install_hooks();
+            (void)PLUGIN_NAMESPACE::community_shaders::install();
             break;
         case SKSE::MessagingInterface::kDataLoaded:
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();

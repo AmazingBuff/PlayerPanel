@@ -70,6 +70,18 @@ changes and the post-panel game view are still unconfirmed. The log reports
 `FIGURE transparency ... render-flags=0x204` on audited draws. Full notes:
 docs/ube-transparency-test-2026-10-15.md.
 
+2026-10-16 CS material trial (cs-view1): requires the verified official Community
+Shaders 1.9.1 DLL for the material backend. Private GBuffer, readable depth, native
+CS SSS (Separable/Burley), native material composite and a fixed studio reflection
+environment precede the existing transparent stage. No world history updates are
+dispatched. Watch for `CP-CS material view`, not just the hook-installed message.
+Local WARP and official shader checks passed; game rendering is unverified.
+Full version identities, scope and test steps: docs/community-shaders.md.
+Next: verify native engine stages with manual CS compensation disabled; if the
+candidate fails or evidence is inconclusive, retain this cs-view1 implementation.
+The engine-path diagnostics are planned, not included in this DLL. Decision and
+acceptance steps: docs/engine-render-path-validation-2026-10-16.md.
+
 Current controls:
   F7: capture/audit player third-person 3D in paused InventoryMenu; draw starts off.
   F8: toggle drawing of the accepted copied graph.

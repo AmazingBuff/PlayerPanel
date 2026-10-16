@@ -17,7 +17,7 @@ class CharacterClone
 {
 public:
     explicit CharacterClone(RE::Actor* actor);
-    explicit CharacterClone(RE::NiPointer<RE::NiAVObject> graph);
+    explicit CharacterClone(RE::NiPointer<RE::NiAVObject> graph, RE::Actor* source = nullptr);
     ~CharacterClone();
 
     // Actor mode advances assembly and detaches once; snapshots are already ready.

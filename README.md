@@ -25,6 +25,10 @@ reasons.
 
 ## Documentation
 
+- [Community Shaders material view](docs/community-shaders.md): CS 1.9.1 binary guard, private GBuffer/SSS/material composite, studio reflection and menu output encoding. Local GPU checks passed; the cs-view1 package still needs game verification.
+
+- [Engine rendering validation and fallback](docs/engine-render-path-validation-2026-10-16.md): first verify whether native engine stages can provide the required CS processing; retain the current cs-view1 implementation if verification fails or remains inconclusive. This is the next validation plan, not a newly implemented backend.
+
 - [Panel idle selection and fast weapon changes](docs/oar-preview-query-2026-10-16.md): verified OAR 3.1.6/3.2.1 queries, preview Random/variant state, per-layer idle cycles, continuous blending and latest-equipment interruption. The oar-idle2 package requires the scene-copy configuration; game verification is pending.
 
 - [UBE transparency trial](docs/ube-transparency-test-2026-10-15.md): material handling, package identity and local checks. The user confirmed correct rendering on another computer on 2026-10-16.

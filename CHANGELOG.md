@@ -4,6 +4,10 @@
 
 ### Changed
 
+- CS 1.9.1 studio materials (`cs-view1`): add a version-guarded view for both figure sources with private material/depth buffers, native skin scattering and material composite, studio lights/reflection and a subsequent transparent stage. Preserve float color, match menu output encoding and restore CS CPU/GPU state and material texture bindings. Both Release configurations and local GPU checks passed; game verification remains pending. See [test notes](docs/community-shaders.md).
+
+- Rendering follow-up: [verify the engine rendering path first](docs/engine-render-path-validation-2026-10-16.md), using native-only control groups and CPU/GPU evidence. Retain the current cs-view1 implementation if the candidate fails or cannot be confirmed; the candidate backend and diagnostic controls are not implemented in this commit.
+
 - Panel idle selection and fast weapon changes (`oar-idle2`, 2026-10-16): support preview-local
   Random conditions, cached weighted variants, sequence/PlayOnce history committed on playback,
   and loop reevaluation settings. Each idle layer follows its own cycle. Equipment changes replace

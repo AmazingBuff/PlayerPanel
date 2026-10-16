@@ -25,6 +25,7 @@ file(GLOB_RECURSE PLUGIN_HEADERS CONFIGURE_DEPENDS src/*.h)
 set(RENDER_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/render/shaders)
 set(RENDER_SHADER_EMBED
 	composite.hlsl:Composite
+	studio_encode.hlsl:StudioEncode
 )
 set(RENDER_SHADER_FILES "")
 foreach(RENDER_SHADER_ENTRY ${RENDER_SHADER_EMBED})
@@ -221,6 +222,16 @@ if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
 	target_precompile_headers(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h)
 	set_target_properties(CharacterPanelCopyMathTest PROPERTIES VS_GLOBAL_VCToolsVersion "14.44.35207")
 	add_test(NAME snapshot_transform COMMAND CharacterPanelCopyMathTest)
+
+	add_executable(CharacterPanelRenderTest tests/render_state_test.cpp tests/native_sss_test.cpp tests/native_material_test.cpp
+		src/render/dx11/d3d11_util.cpp ${GENERATED_SHADER_HEADER})
+	target_compile_features(CharacterPanelRenderTest PRIVATE cxx_std_23)
+	target_compile_definitions(CharacterPanelRenderTest PRIVATE CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=1 NOMINMAX)
+	target_include_directories(CharacterPanelRenderTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src)
+	target_link_libraries(CharacterPanelRenderTest PRIVATE CommonLibSSE::CommonLibSSE fmt::fmt spdlog::spdlog d3dcompiler)
+	target_precompile_headers(CharacterPanelRenderTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h)
+	set_target_properties(CharacterPanelRenderTest PROPERTIES VS_GLOBAL_VCToolsVersion "14.44.35207")
+	add_test(NAME render_state COMMAND CharacterPanelRenderTest)
 
 	# The runbook ships a test package instead of a bare DLL, so the manifest can
 	# carry the SHA-256 of both binaries and the exact baselines they came from.

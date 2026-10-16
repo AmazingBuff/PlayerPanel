@@ -12,11 +12,13 @@
 
 namespace RE
 {
+    class Actor;
     class BSLight;
     class BSRenderPass;
     class BSShaderAccumulator;
     class NiAVObject;
     class NiCamera;
+    class NiDirectionalLight;
 }
 
 PLUGIN_NAMESPACE_BEGIN
@@ -33,6 +35,8 @@ PLUGIN_NAMESPACE_BEGIN
 struct FigurePassRequest
 {
     RE::NiAVObject* root = nullptr;
+    // Used only to classify CS's original skin profile; never assigned as the copied graph's userData.
+    RE::Actor* source = nullptr;
     // The accumulator the passes are generated into (the UI3D one, ui3d->unk10). Its render mode and
     // its own camera decide how the figure projects.
     RE::BSShaderAccumulator* accumulator = nullptr;
@@ -45,6 +49,7 @@ struct FigurePassRequest
     // whatever the pass already carried.
     RE::BSLight** light_slots = nullptr;
     std::size_t light_count = 0;
+    RE::NiDirectionalLight* directional_light = nullptr;
     // Read the bound render target back after the batch, once. The caller owns the "once" decision
     // (its own flag), the seam owns the readback, because only the seam knows the batch has ended.
     bool check_render_target = false;

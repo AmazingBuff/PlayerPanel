@@ -21,6 +21,8 @@ public:
 
     RE::NiPointer<RE::NiNode> light_node();
     RE::BSLight** lights();
+    // A detached directional source for reserved pass slot 0. It is never registered as the world sun.
+    [[nodiscard]] RE::NiDirectionalLight* directional_light() const { return m_directional_light.get(); }
 
     // Pull the rig to the studio anchor and cascade it. Call inside the
     // draw window, before the passes are generated: the detached rig gets
@@ -52,6 +54,7 @@ private:
     // Renderer-facing slots: a non-null entry is always ledger-held and bound
     // to its NiLight as of the last refresh.
     RE::BSLight* m_lights[Studio_Light_Count];
+    RE::NiPointer<RE::NiDirectionalLight> m_directional_light;
 
     // Shell identity per slot. Address comparisons only; a recorded shell is
     // dereferenced solely after being re-fetched from the ledger that frame.
