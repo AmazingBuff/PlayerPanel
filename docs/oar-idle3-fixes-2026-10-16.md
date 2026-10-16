@@ -49,6 +49,30 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第三轮：手槽即姿态 + 挂点别名匹配（2026-10-17，用户澄清"战斗状态=武器在手"，提交 `cb556cf`）
+
+第二轮证据的两个决定性事实：
+
+1. `weaponState` 族信号**全部退役**：每帧未暂停观测写出的仍是 false——引擎在世界帧就该
+   是 drawn 的状态下读数依然失败（用户实测三连败）。用户的定义本就不需要它：
+   **"战斗状态 = 手槽装备着武器"**——`form=1h/2hw/bow` 行一直是对的，手槽读数从没错过。
+   最终规则：**手槽有武器 → drawn=true（对应武器族 idle）；手槽空 → 普通站立 idle**。
+2. `unresolved='x_…|Shield|Weapon|Quiver'` 实锤 **equip 动画确实 key 了挂点骨**——武器不跟
+   手的原因是**名字系统差一层**：动画骨架用通用名（`Weapon`），NIF 层用变体名
+   （`WeaponSword`/`WeaponAxe`/…），按名解析从未落点 → 挂点轨道被丢弃 → 武器钉死。
+   修复：这三个通用名解析失败时回退**最长前缀变体节点**（每槽实际只带一把，无歧义风险）。
+
+包身份 `CharacterPanel-scopy-oar-idle3-cb556cf390-cl94faaed0c6-20261016T173859Z`，DLL
+SHA-256 `7c52c779…`，已部署校验。
+
+### 上机判读（第三轮）
+
+1. 手槽有武器开包（不管此前出没出鞘）→ `phase=idle form=… drawn=true` + channel=2 武器族
+   idle；手槽空 → drawn=false + MT_Idle；
+2. equip 播放时武器跟手（挂点轨道落点后动画自己驱动 `Weapon` 骨）；`asset ready` 行
+   `resolved` 应从 93 升到 96（+Weapon/+Quiver/+Shield）；
+3. transition 播完回对应武器族 idle（drawn 正确后的连带效果）。
+
 ## 第二轮判读与信号换源（2026-10-17 凌晨，提交 `8671eba`）
 
 上机（01:13 会话，构建 `5567507d40`）判读：三问题仍在。两个决定性证据：
