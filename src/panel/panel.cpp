@@ -4,6 +4,7 @@
 
 #include "panel/panel.h"
 
+#include "RE/P/PlayerCharacter.h"
 #include "RE/S/ScriptEventSourceHolder.h"
 #include "RE/T/TESEquipEvent.h"
 
@@ -21,10 +22,20 @@ RE::BSEventNotifyControl PanelMonitor::MenuSink::ProcessEvent(const RE::MenuOpen
         {
             instance().m_panel_open.store(true, std::memory_order_relaxed);
             instance().m_panel_opened.store(true, std::memory_order_relaxed);
+            // Menu events arrive before the engine's own menu-time sheathe takes effect, so
+            // this is the entering stance. IsWeaponDrawn is a plain ActorState bit read, safe
+            // from the event thread (the sink that fills the equipment revision reads here too).
+            if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
+            {
+                const StanceSnapshot snapshot{ true, player->IsWeaponDrawn() };
+                instance().m_stance_at_open.store(snapshot.drawn, std::memory_order_relaxed);
+                instance().m_stance_valid.store(true, std::memory_order_release);
+            }
         }
         else
         {
             instance().m_panel_open.store(false, std::memory_order_relaxed);
+            instance().m_stance_valid.store(false, std::memory_order_release);
         }
     }
     return RE::BSEventNotifyControl::kContinue;
@@ -63,6 +74,13 @@ std::uint64_t PanelMonitor::equipment_revision() const
 bool PanelMonitor::is_menu_open() const
 {
     return m_panel_open.load(std::memory_order_acquire);
+}
+
+PanelMonitor::StanceSnapshot PanelMonitor::stance_at_open() const
+{
+    if (!m_stance_valid.load(std::memory_order_acquire))
+        return {};
+    return { true, m_stance_at_open.load(std::memory_order_relaxed) };
 }
 
 bool PanelMonitor::consume_panel_opened()

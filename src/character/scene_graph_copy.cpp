@@ -448,7 +448,14 @@ std::string SceneGraphCopy::animation_driver() const
 void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
 {
     if (m_snapshot.get() == &clone && clone.graph())
-        m_panel_animation.advance(*clone.graph());
+    {
+        const std::size_t written = m_panel_animation.advance(*clone.graph());
+        // First frame the idle actually drove joints: the snapshot placement was solved for the
+        // capture-time pose (possibly a jump), so ask for the one-shot re-center against the
+        // standing idle's own bound (oar-idle2 problem 1).
+        if (written > 0)
+            clone.request_recentre();
+    }
 }
 
 CharacterClone* SceneGraphCopy::drawable() const

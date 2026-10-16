@@ -379,6 +379,47 @@ namespace
             oar::weapon_form_from_hands(oar::HandKind::kEmpty, oar::HandKind::kCrossbow) == oar::WeaponForm::kCrossbow;
     }
 
+    bool panel_animation_state_keeps_stance_and_transition_contract()
+    {
+        using namespace PLUGIN_NAMESPACE;
+        // oar-idle3: a sheathed weapon swap is an equip transition, not a sheathe — the panel
+        // plays the new weapon's equip (problem 3), and the entering-stance snapshot keeps a
+        // drawn answer consistent against its own recorded equipment (problems 2).
+        const auto sword_to_sword = panel_transition_bases(oar::WeaponForm::kOneHanded, false);
+        const auto sheathe = panel_transition_bases(oar::WeaponForm::kOneHanded, true);
+        return !sword_to_sword.empty() && sword_to_sword.front() == "Animations\\1hm_equip.hkx" &&
+            !sheathe.empty() && sheathe.front() == "Animations\\1hm_unequip.hkx" &&
+            panel_transition_bases(oar::WeaponForm::kNone, true).empty();
+    }
+
+    bool project_name_catalogue_is_reused_across_sessions()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        const std::vector<std::string> project{
+            "Animations\\MT_Idle.hkx", "Animations\\1hm_idle.hkx", "Animations\\JumpLand.hkx" };
+        const std::array<std::string_view, 1> wanted{ "Animations\\MT_Idle.hkx" };
+        // A fresh session (what a panel open resets to) must answer from the process catalogue
+        // when a previous session already read the same table (oar-idle2 problem 5: the open
+        // frame rebuilt ~15k names on the main thread). Reads stay session-local on a miss.
+        oar::QuerySession cold;
+        std::size_t cold_reads = 0;
+        (void)cold.names(&project, project.data(), project.size(), [&](std::size_t i)
+        { ++cold_reads; return project[i]; });
+        oar::QuerySession warm;
+        std::size_t warm_reads = 0;
+        const auto names = warm.names(&project, project.data(), project.size(), [&](std::size_t i)
+        { ++warm_reads; return project[i]; });
+        const bool reused = warm_reads == 0 && names.size() == project.size() &&
+            oar::find_base_animation(names, wanted) && *oar::find_base_animation(names, wanted) == 0;
+        // A different owner (or a replaced table pointer — load boundary) rebuilds.
+        const std::vector<std::string> reloaded{ "Animations\\MT_Idle.hkx", "Animations\\SneakMTIdle.hkx" };
+        oar::QuerySession after_load;
+        std::size_t reload_reads = 0;
+        (void)after_load.names(&project, reloaded.data(), reloaded.size(), [&](std::size_t i)
+        { ++reload_reads; return reloaded[i]; });
+        return reused && reload_reads == reloaded.size();
+    }
+
     bool d3d_constant_buffer_ranges_are_restored()
     {
         REX::W32::ComPtr<REX::W32::ID3D11Device> device;
@@ -928,6 +969,8 @@ int main()
     const bool latest_weapon = latest_weapon_request_rejects_stale_loads();
     const bool idle_cycles = idle_layers_keep_independent_cycles();
     const bool blend_interrupt = interrupted_pose_blend_starts_from_the_visible_pose();
+    const bool stance_contract = panel_animation_state_keeps_stance_and_transition_contract();
+    const bool catalogue_reuse = project_name_catalogue_is_reused_across_sessions();
     std::printf("snapshot placement: %s\nfinal pose index order: %s\nr01 framing delta: %s\ncoverage ledger: %s\nslot necessity: %s\nfigure bound union: %s\nassembly gate: %s\nanimation track identity: %s\nempty source body shape: %s\n",
         placement ? "PASS" : "FAIL", mapping ? "PASS" : "FAIL", framing ? "PASS" : "FAIL",
         ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL", assembly ? "PASS" : "FAIL",
@@ -945,8 +988,11 @@ int main()
     std::printf("preview Random cache: %s\nvariant weights and shared state: %s\nPlayOnce commit on start: %s\nidle loop decision flags: %s\nlatest weapon request: %s\nindependent idle cycles: %s\ninterrupted pose blend: %s\n",
         random_conditions ? "PASS" : "FAIL", variant_weights ? "PASS" : "FAIL", play_once ? "PASS" : "FAIL",
         idle_recheck ? "PASS" : "FAIL", latest_weapon ? "PASS" : "FAIL", idle_cycles ? "PASS" : "FAIL", blend_interrupt ? "PASS" : "FAIL");
+    std::printf("stance and transition contract: %s\nproject catalogue reuse: %s\n",
+        stance_contract ? "PASS" : "FAIL", catalogue_reuse ? "PASS" : "FAIL");
     return placement && mapping && framing && ledger && necessity && bound && assembly && track_identity && shape_clear &&
         two_handed && oar_scope && oar_projection && oar_binary && alpha_order && alpha_state && d3d_ranges && panel_pose &&
         query_profiles && standing_catalog && local_variants && original_answers && panel_transitions && gear_refresh && carrier_layout &&
-        random_conditions && variant_weights && play_once && idle_recheck && latest_weapon && idle_cycles && blend_interrupt ? 0 : 1;
+        random_conditions && variant_weights && play_once && idle_recheck && latest_weapon && idle_cycles && blend_interrupt &&
+        stance_contract && catalogue_reuse ? 0 : 1;
 }

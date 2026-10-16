@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <cstddef>
 #include <string>
 
 namespace RE
@@ -27,7 +28,9 @@ public:
     void tick(RE::Actor& source, RE::NiAVObject& root);
     [[nodiscard]] bool ready() const;
     [[nodiscard]] std::string name() const;
-    void advance(RE::NiAVObject& root);
+    // Advances every ready clip against the graph; returns the number of nodes the strongest
+    // driver actually wrote this call (0 = nothing drove the figure yet).
+    std::size_t advance(RE::NiAVObject& root);
 
 private:
     class State;

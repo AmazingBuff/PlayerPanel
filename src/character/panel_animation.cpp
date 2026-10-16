@@ -9,6 +9,7 @@
 #include "character/panel_animation_policy.h"
 #include "oar/hooks.h"
 #include "oar/preview_clip.h"
+#include "panel/panel.h"
 
 #include "RE/A/AnimationFileManagerSingleton.h"
 #include "RE/B/BSAnimationGraphManager.h"
@@ -67,6 +68,22 @@ namespace
         RE::TESForm const* const left = actor.GetEquippedObject(true);
         return { hands[0], hands[1], equipment_weapon_form(actor), actor.IsWeaponDrawn(),
             right ? right->GetFormID() : 0, left ? left->GetFormID() : 0 };
+    }
+
+    // The panel figure must answer for the stance the player ENTERED the inventory with, not the
+    // menu-time stance: the engine sheathes the weapon while the menu is up, so a live read says
+    // drawn=false for the whole session even when the player walked in with the sword out
+    // (oar-idle2 report, problem 2: 168 queries, drawn=false in all of them, and no weapon idle
+    // ever queried). The menu sink samples the entering stance on the rising edge; while that
+    // snapshot is valid the panel keeps it as the drawn answer. Any equip/unequip event bumps the
+    // revision — the caller treats a revision newer than the open edge as "the player acted inside
+    // the menu" and falls back to the live read.
+    bool panel_drawn_state(RE::Actor& actor)
+    {
+        const PanelMonitor::StanceSnapshot snapshot = PanelMonitor::instance().stance_at_open();
+        if (!snapshot.valid)
+            return actor.IsWeaponDrawn();
+        return snapshot.drawn || actor.IsWeaponDrawn();
     }
 
     RE::BSTSmartPointer<RE::BShkbAnimationGraph> source_graph(RE::Actor& source)
@@ -213,7 +230,7 @@ namespace
                 session.selection.deactivate(m_selection.clip_key);
         }
         void update_selection(oar::AnimationSelection selection) { m_selection = std::move(selection); }
-        void advance(RE::NiAVObject& root) { m_player.advance(root); }
+        std::size_t advance(RE::NiAVObject& root) { return m_player.advance(root); }
 
     private:
         void queue()
@@ -292,6 +309,21 @@ namespace
         std::uint64_t generation = 0;
     };
 
+    // The panel-aware equipment read: the entering-stance snapshot answers `drawn` (see
+    // panel_drawn_state), everything else is live. All equality checks against an AnimationSet's
+    // recorded equipment go through this, so the snapshot stance stays self-consistent.
+    EquipmentState panel_equipment(RE::Actor& actor)
+    {
+        EquipmentState state = equipment_state(actor);
+        state.drawn = panel_drawn_state(actor);
+        // An empty-hands reading wins over the entering-stance snapshot: the player unequipped the
+        // weapon inside the menu, and a drawn answer with no weapon form would query the unarmed
+        // family as a drawn stance.
+        if (state.form == oar::WeaponForm::kNone)
+            state.drawn = false;
+        return state;
+    }
+
 }
 
 class PanelAnimation::State
@@ -359,7 +391,7 @@ public:
     {
         if (!graph)
             return;
-        const EquipmentState desired = equipment_state(source);
+        EquipmentState desired = panel_equipment(source);
         auto next = std::make_unique<AnimationSet>();
         next->equipment = desired;
         next->generation = latest.generation();
@@ -404,9 +436,20 @@ public:
         {
             const bool hands_changed = desired.right != active->equipment.right || desired.left != active->equipment.left ||
                 desired.drawn != active->equipment.drawn;
-            if (hands_changed && (desired.drawn || active->equipment.drawn))
+            // oar-idle2 report, problem 3: gating on "a hand holds something drawn" made sheathed
+            // weapon swaps (sword to sword inside the menu) never produce a transition. The weapon
+            // family changed whenever the form changed; play the switch for it too.
+            const bool form_changed = desired.form != active->equipment.form;
+            if (hands_changed && (desired.drawn || active->equipment.drawn || form_changed))
             {
-                const bool unequip = !desired.drawn || desired.form == oar::WeaponForm::kNone;
+                // oar-idle2 report, problem 3 (continued): a sheathed swap is "put A back, take B"
+                // — the engine plays the B equip in the world, so the panel plays an equip, not a
+                // sheathe. A true unequip keeps its meaning only when the weapon family went away
+                // (empty hands or the same form with nothing drawn anymore).
+                const bool sheathed_swap = !desired.drawn && !active->equipment.drawn && form_changed &&
+                    desired.form != oar::WeaponForm::kNone;
+                const bool unequip = sheathed_swap ? false :
+                    (!desired.drawn || desired.form == oar::WeaponForm::kNone);
                 const auto form = unequip ? active->equipment.form : desired.form;
                 std::vector<std::string_view> bases = panel_transition_bases(form, unequip);
                 const RE::FormID right_id = unequip ? active->equipment.raw_right : desired.raw_right;
@@ -467,7 +510,7 @@ public:
     {
         if (!root)
             return;
-        if (pending && (!latest.accepts(pending->generation) || pending->equipment != equipment_state(source)))
+        if (pending && (!latest.accepts(pending->generation) || pending->equipment != panel_equipment(source)))
         {
             logger::info("SCOPY PANEL discard stale equipment proposal generation={}", pending->generation);
             pending.reset();
@@ -633,13 +676,14 @@ std::string PanelAnimation::name() const
     return "panel-idle:" + (stance && stance->ready() ? stance->name() : m_state->active->idles[0]->name());
 }
 
-void PanelAnimation::advance(RE::NiAVObject& root)
+std::size_t PanelAnimation::advance(RE::NiAVObject& root)
 {
     if (!ready() || m_state->root != &root)
-        return;
+        return 0;
+    std::size_t written = 0;
     for (auto& idle : m_state->active->idles)
         if (idle && idle->ready())
-            idle->advance(root);
+            written += idle->advance(root);
     if (m_state->phase == PanelAnimationPhase::e_transition)
     {
         m_state->active->transition->advance(root);
@@ -670,13 +714,14 @@ void PanelAnimation::advance(RE::NiAVObject& root)
     m_state->root_fresh = false;
     RE::Actor* const source = m_state->graph->holder;
     const bool eligible = m_state->phase == PanelAnimationPhase::e_idle && !m_state->pending && source &&
-        m_state->latest.accepts(m_state->active->generation) && equipment_state(*source) == m_state->active->equipment;
+        m_state->latest.accepts(m_state->active->generation) && panel_equipment(*source) == m_state->active->equipment;
     for (std::size_t i = 0; i < m_state->active->idles.size(); ++i)
     {
         auto& idle = m_state->active->idles[i];
         if (idle && idle->ready() && idle->loop_boundary(eligible && !m_state->idle_pending[i]))
             m_state->next_idle(*source, i);
     }
+    return written;
 }
 
 PLUGIN_NAMESPACE_END

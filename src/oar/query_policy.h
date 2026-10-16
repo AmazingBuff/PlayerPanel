@@ -79,15 +79,72 @@ namespace oar
             {
                 m_owner = owner;
                 m_name_data = data;
+                // The catalogue is pure derived data of the source project's name table and
+                // outlives panel sessions: rebuilding it on the inventory-open frame walked
+                // ~15k entries on the main thread and stalled the panel for seconds
+                // (oar-idle2 report, problem 5). The session-local previous behaviour remains
+                // as the miss path; the process cache only removes the rebuild.
                 m_names.clear();
-                m_names.reserve(count);
-                for (std::size_t i = 0; i < count; ++i)
-                    m_names.push_back(read(i));
+                if (Catalogue const* const cached = project_catalogue(owner, data, count))
+                {
+                    m_names = cached->names;
+                }
+                else
+                {
+                    m_names.reserve(count);
+                    for (std::size_t i = 0; i < count; ++i)
+                        m_names.push_back(read(i));
+                    remember_catalogue(owner, data, count, m_names);
+                }
             }
             return m_names;
         }
 
     private:
+        struct Catalogue
+        {
+            void const* owner = nullptr;
+            void const* data = nullptr;
+            std::size_t count = 0;
+            std::vector<std::string> names;
+        };
+
+        // One live project per engine at a time per character rig; the table itself is
+        // engine-owned and only replaced at a load boundary, where a new pointer pair
+        // displaces the old entry. Sizes are bounded by design (1 entry per rig).
+        [[nodiscard]] static Catalogue const* project_catalogue(void const* owner, void const* data, std::size_t count)
+        {
+            for (Catalogue& entry : catalogues())
+            {
+                if (entry.owner == owner && entry.data == data && entry.count == count)
+                    return &entry;
+            }
+            return nullptr;
+        }
+
+        static void remember_catalogue(void const* owner, void const* data, std::size_t count,
+            std::vector<std::string> const& names)
+        {
+            for (Catalogue& entry : catalogues())
+            {
+                if (entry.owner == owner || entry.data == data)
+                {
+                    entry.owner = owner;
+                    entry.data = data;
+                    entry.count = count;
+                    entry.names = names;
+                    return;
+                }
+            }
+            catalogues().push_back({ owner, data, count, names });
+        }
+
+        static std::vector<Catalogue>& catalogues()
+        {
+            static std::vector<Catalogue> s_catalogues;
+            return s_catalogues;
+        }
+
         void const* m_owner = nullptr;
         void const* m_name_data = nullptr;
         std::vector<std::string> m_names;

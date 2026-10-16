@@ -18,6 +18,16 @@ public:
     // hook that would observe it does not run in every frame, while the menu event always arrives.
     bool consume_panel_opened();
     [[nodiscard]] std::uint64_t equipment_revision() const;
+    // The player's weapon stance as it was when the inventory OPENED. The engine sheathes the
+    // weapon while the menu is up, so reads after the open edge report sheathed for a player
+    // who entered the menu with the weapon drawn (oar-idle2 report, problem 2: every query of
+    // the session said drawn=false). Sampled by the menu sink on the rising edge only.
+    struct StanceSnapshot
+    {
+        bool valid = false;
+        bool drawn = false;
+    };
+    [[nodiscard]] StanceSnapshot stance_at_open() const;
 private:
     class MenuSink final : public RE::BSTEventSink<RE::MenuOpenCloseEvent>
     {
@@ -38,6 +48,8 @@ private:
 private:
     std::atomic_bool m_panel_open;
     std::atomic_bool m_panel_opened;
+    std::atomic_bool m_stance_valid{ false };
+    std::atomic_bool m_stance_at_open{ false };
     MenuSink m_menu_sink;
     EquipmentSink m_equipment_sink;
     std::atomic_uint64_t m_equipment_revision{ 0 };

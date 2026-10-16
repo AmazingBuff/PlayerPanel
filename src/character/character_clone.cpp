@@ -123,6 +123,25 @@ namespace
         return name && name[0] && figure_is_collision_helper(name);
     }
 
+    // Weapon attachment subtrees (WeaponSword/WeaponDagger/Quiver/Ammo under the skeleton). The
+    // figure_audit oracle already classes the Weapon* nodes as attachment outliers the animation
+    // does not drive (AFP8); their geometry rides wherever the captured pose parked them, so a
+    // bow or quiver drags the framing bound and the re-centering off the body — the oar-idle2
+    // report's bow/claw offset (problem 4). Framing measure only; the geometry still draws.
+    bool is_framing_attachment(RE::NiAVObject* object)
+    {
+        for (RE::NiAVObject* node = object; node; node = node->parent)
+        {
+            const char* const name = node->name.c_str();
+            if (!name || !name[0])
+                continue;
+            if (std::strstr(name, "Weapon") != nullptr || std::strstr(name, "Quiver") != nullptr ||
+                std::strstr(name, "Ammo") != nullptr)
+                return true;
+        }
+        return false;
+    }
+
     // A captured player graph carries more than the character: spell and ability visuals,
     // blood decals, script-spawned markers and the effect's own light are parented into it
     // and were never drawn by the world renderer, so their device buffers stay null and
@@ -227,6 +246,11 @@ namespace
             // and those sit far enough from the body to drag the bound and the centering off
             // it — which is what pushed the UBE figure out of frame.
             if (is_collision_helper(geometry->name.c_str()))
+                return RE::BSVisit::BSVisitControl::kContinue;
+            // Weapon attachment geometry (bow, quiver, claws on their Weapon* nodes) is the same
+            // class of framing pollution: carried at whatever offset the captured pose holds it,
+            // not part of the standing body the studio frames (oar-idle2 problem 4).
+            if (is_framing_attachment(geometry))
                 return RE::BSVisit::BSVisitControl::kContinue;
             const auto& wb = geometry->worldBound;
             union_sphere(out, wb.center, wb.radius);
@@ -682,6 +706,11 @@ void CharacterClone::pose()
     }
     m_anchor = anchor;
 
+    RE::NiUpdateData update_data{
+        0.0f,
+        RE::NiUpdateData::Flag::kDirty
+    };
+
     if (m_is_snapshot)
     {
         RE::NiTransform placement;
@@ -699,6 +728,31 @@ void CharacterClone::pose()
             node.object->worldBound.center = delta * node.bound.center;
             node.object->worldBound.radius = std::abs(delta.scale) * node.bound.radius;
         }
+        if (m_recentre_pending)
+        {
+            // The idle now drives the joints, so the body's measured bound is the pose the panel
+            // will actually show — re-center once against the anchor (oar-idle2 problem 1: a
+            // figure captured mid-jump kept the jump's crouched center and sat too low).
+            m_graph_object->UpdateDownwardPass(update_data, 0);
+            m_graph_object->UpdateWorldBound();
+            const SkinnedBound posed = measure_skinned_bound(m_graph_object.get());
+            if (posed.valid)
+            {
+                m_graph_object->local.translate.x += anchor.x - posed.center.x;
+                m_graph_object->local.translate.y += anchor.y - posed.center.y;
+                m_graph_object->local.translate.z += anchor.z - posed.center.z;
+                m_graph_object->UpdateDownwardPass(update_data, 0);
+                m_graph_object->UpdateWorldBound();
+                for (const SnapshotNode& node : m_snapshot_nodes)
+                {
+                    node.object->world = m_graph_object->world * node.object->local;
+                    node.object->previousWorld = node.object->world;
+                }
+                logger::info("SCOPY FRAME recentre offset=({:.1f},{:.1f},{:.1f}) radius={:.1f}",
+                    anchor.x - posed.center.x, anchor.y - posed.center.y, anchor.z - posed.center.z, posed.radius);
+            }
+            m_recentre_pending = false;
+        }
         return;
     }
 
@@ -708,10 +762,6 @@ void CharacterClone::pose()
 
     reset_root_to_bind_pose(m_graph_object.get(), m_bind_map_logged, m_bind_map_stall);
 
-    RE::NiUpdateData update_data{
-        0.0f, 
-        RE::NiUpdateData::Flag::kDirty
-    };
     m_graph_object->UpdateDownwardPass(update_data, 0);
     m_graph_object->UpdateWorldBound();
 

@@ -28,6 +28,14 @@ public:
     bool draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target);
     // The detached graph drawn in the studio.
     [[nodiscard]] RE::NiAVObject* graph() const { return m_graph_object.get(); }
+
+    // One-shot framing re-center request (see m_recentre_pending). Snapshot clones only; the
+    // Actor route re-centers from its own measured bound every pose already.
+    void request_recentre()
+    {
+        if (m_is_snapshot)
+            m_recentre_pending = true;
+    }
 private:
     enum class CloneState : uint8_t
     {
@@ -74,6 +82,11 @@ private:
     RE::NiTransform m_snapshot_root_world;
     RE::NiPoint3 m_snapshot_center;
     std::vector<SnapshotNode> m_snapshot_nodes;
+    // One-shot re-centering after the panel animation first drives the snapshot graph: the
+    // captured center reflects the pose at capture time (a jump or sneak), and posing the idle
+    // over it lands the figure off the anchor (oar-idle2 problem 1). Set by the animation
+    // bridge once it has actually written nodes; consumed by the next pose().
+    bool m_recentre_pending = false;
 };
 
 PLUGIN_NAMESPACE_END
