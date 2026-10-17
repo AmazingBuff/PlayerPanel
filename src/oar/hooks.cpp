@@ -593,6 +593,9 @@ namespace oar
             // flags — the in-game Start hit proved position-0 forward walking lands on the
             // entry move itself). Seek from the tail, and commit the history so the NEXT loop
             // recheck dwells here too.
+            logger::info("SCOPY PANEL seek gate reached={} flag={} seq={} pick-pos={} pick-idx={}",
+                true, query.seek_dwell, options.sequence.size(),
+                pick->position < options.sequence.size() ? pick->position : 0xFFFF, pick->index);
             if (query.seek_dwell && !options.sequence.empty())
             {
                 // The dwell position is the sequence's LAST member (Start→Loop authoring puts
