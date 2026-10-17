@@ -588,14 +588,16 @@ namespace oar
             if (!pick || pick->index == 0xFFFF)
                 return std::nullopt;
             // Landing MID-sequence: the world already played the entry moves (Equip, Start).
-            // Walk forward from the picked position to the first non-once member — the loop
-            // body the world would be dwelling on — and commit the history so the NEXT loop
-            // recheck dwells here too instead of resuming the skipped entry moves.
-            if (query.seek_dwell && !options.sequence.empty() && pick->position < options.sequence.size())
+            // The loop body the world dwells on is the sequence's TRAILING non-once member
+            // (Start→Loop authoring puts it last; the members may not even carry PlayOnce
+            // flags — the in-game Start hit proved position-0 forward walking lands on the
+            // entry move itself). Seek from the tail, and commit the history so the NEXT loop
+            // recheck dwells here too.
+            if (query.seek_dwell && !options.sequence.empty())
             {
                 for (std::size_t offset = 0; offset < options.sequence.size(); ++offset)
                 {
-                    const std::size_t position = (pick->position + offset) % options.sequence.size();
+                    const std::size_t position = (options.sequence.size() - 1 - offset) % options.sequence.size();
                     if (!options.sequence[position].once)
                     {
                         const VariantPick dwell{ options.sequence[position].index, position };
