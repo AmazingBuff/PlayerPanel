@@ -49,6 +49,21 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第十二轮：驻留位=序列最后一个成员（2026-10-17，提交 `cde4418`，部署待游戏退出）
+
+用户实测（15:56 会话，构建 `aa3bea861c`）：Start 段进包仍播 Start。第十一轮的历史反向
+读取**已生效**（drawn=true ✓、世界首选命中 `1hm_idle` replacement ✓），但 seek_dwell 仍落
+Start——**该包所有成员都勾了 PlayOnce**："从尾部找第一个非 once"的搜索一无所获，落回
+原始 pick（position 0 = Start）。
+
+修复：驻留位定义简化为**序列最后一个成员**（Start→Loop 编排的循环体必在尾部；与第四轮
+commit 驻留规则完全一致）。channel=3（手部 idle `MLh_Idle` 层）也补了 seek_dwell——它同路
+落在了 `Start\mlh_idle`。
+
+包身份 `CharacterPanel-scopy-oar-idle3-cde4418816-cl94faaed0c6-20261017T080655Z`。
+判读：Start/Equip/Unequip 段进包 → asset ready 名字应含 `**Loop**`（channel=2 与 3 都是）；
+换装接力（Equip→Start→Loop）不变。
+
 ## 第十一轮：进包姿态读整段历史（2026-10-17，提交 `aa3bea8`，部署待游戏退出）
 
 用户报告：Equip/Unequip/attack 段进包，面板播 MT_Idle。14:56 会话三个场景全部复现：
