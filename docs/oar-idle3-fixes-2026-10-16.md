@@ -49,6 +49,30 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第四轮：骨名 trim、sequence 驻留、crossfade 0.4s（2026-10-17，提交 `e10a459`）
+
+上机（01:45 会话，构建 `cb556cf390`）判读：**别名回退没有命中**（resolved 仍 93、
+unresolved 仍含 `Weapon`）——代码在部署包里，唯一解释是**骨名带隐藏空白**：差集里
+`x_NPC Translate [Pos ]` 实锤 Havok 命名惯例，`Weapon` 大概率同病，`== "Weapon"` 精确比较
+永远假。另两个新报告同轮定位：
+
+| # | 报告 | 根因 | 修复 |
+| --- | --- | --- | --- |
+| 1 | 武器仍不跟手 | 骨名隐藏空白使 `bone_name == "Weapon"` 恒假，别名分支从未执行 | 解析前 trim 骨名；差集打印加引号（`'Weapon '` 形态），本轮结果一锤定音 |
+| 2 | 面板播"攻击动作的循环" | OAR sequence（Start→Loop→Loop2）全部 once 播完后 `commit` 清历史回 0——面板每轮重播 Start（起手动作，观感即攻击）；OAR 世界侧语义是**驻留**尾部的循环体 | `commit` 全播完后 `next` 指向最后一个非 once 成员；仅纯 once 序列才回 0 |
+| 3 | equip→idle 几乎无过渡 | crossfade 0.15s 太短（引擎自己的 hand-off 在 0.3–0.5s 量级） | 0.15s → 0.4s |
+
+包身份 `CharacterPanel-scopy-oar-idle3-e10a459f4a-cl94faaed0c6-20261017T033230Z`，DLL
+SHA-256 `e171232c…`，已部署校验。
+
+### 上机判读（第四轮）
+
+1. `asset ready` 行：`resolved` 应 ≥96（Weapon/Quiver/Shield 三条挂点轨道落点）；若仍 93，
+   引号化的 unresolved 名字会直接暴露骨名真实形态——按它修下一层；
+2. 武器在 equip/idle 期间跟手移动；
+3. 面板 idle 循环不再回到起手/攻击类动作（Start 只在进包/换装后播一次）；
+4. equip 播完后 0.4s 平滑过渡到持械站立。
+
 ## 第三轮：手槽即姿态 + 挂点别名匹配（2026-10-17，用户澄清"战斗状态=武器在手"，提交 `cb556cf`）
 
 第二轮证据的两个决定性事实：
