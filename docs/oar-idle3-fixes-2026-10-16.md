@@ -49,6 +49,39 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第七轮：演示序列到手，面板切换按序实现（2026-10-17 下午，提交 `0872061`）
+
+序列记录仪首战告捷。用户实测（13:19–13:22）记录到游戏内完整的拔刀循环：
+
+```
+MT_Idle（收鞘站立）
+1HM_Equip.hkx（拔刀，约 1.1 s 一次性）
+MLh_Idle.hkx（持械 idle——左手法术持械姿态，循环）
+1HM_Unequip.hkx（收刀，约 1.1 s 一次性）
+MT_Idle（回收鞘站立）
+```
+
+两条直接产出：
+
+1. **进包姿态按名判定**：13:21:48.3 `1HM_Equip` → 13:21:48.8 开包 capture——**拔刀动画
+   播放中 weaponState 位还是 false**（kDrawing 不算 drawn），采样窗口比想象窄。新增
+   `observe_stance_from_clip()`：世界序列**最后稳定 idle** 是武器/手部 idle（含 "idle" 且
+   非 unarmed 基础族 MT_Idle/sneak/走跑跳）→ promoted drawn=true；false 方向仍由
+   weaponState 位独占。13:22:01–06 世界在播 MLh_Idle 时开包 → 面板 drawn=true。
+2. **切换动作换真名**：transition 基础名序列以实测拼写领头——`1HM_Equip`/`1HM_Unequip`
+   （原版大写 HM；此前一直猜写小写 `1hm_equip`，靠 find_base_animation 的大小写归一才
+   命中）。2HM/2HW/Bow/CrossBow 同步按原版命名惯例领头，小写保留同序列回退。
+
+包身份 `CharacterPanel-scopy-oar-idle3-0872061069-cl94faaed0c6-20261017T052809Z`，DLL
+SHA-256 见 manifest。**部署待游戏退出**（本会话末尾游戏仍在运行）。
+
+### 上机判读（第七轮）
+
+1. 拔刀后 1–2 秒内开包 → `phase=idle form=1h drawn=true`，driver=世界侧同款武器 idle
+   （`MLh_Idle`/对应族）；
+2. 背包内换武器 → transition 查询命中的名字应为 `1HM_Equip`（日志 asset ready 行）；
+3. 收鞘状态开包 → 仍站立 idle（false 方向未被破坏）。
+
 ## 第六轮：序列记录器，名称即接口（2026-10-17 下午，提交 `a3788b4`+`97d3ff49`）
 
 用户演示了一次拔刀→收刀全程，但日志里没有留下痕迹——世界帧观测只把"当前 idle 名"存在
