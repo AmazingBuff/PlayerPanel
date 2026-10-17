@@ -831,8 +831,14 @@ namespace oar
             PreviewClip preview;
             preview.initialize(*base, result.name, true);
             ScopedEvaluation scope(&source, preview.get(), state, ScopeMode::kAudited);
+            // keep_current (the refresh hand-off that preserves a running variant) must NOT
+            // fire on an activation: an e_activate query is re-opening the sequence from its
+            // first member, and a seek_dwell query is landing on its last member — both decide
+            // the variant fresh. Passing the still-loaded selection as refresh here is what
+            // pinned every re-query to the Start member it was already holding.
+            const bool allow_refresh = request.event == QueryEvent::e_refresh;
             QueryFrame frame(scope, session, result,
-                result.clip_key, request.event == QueryEvent::e_refresh && same_clip ? current : nullptr,
+                result.clip_key, allow_refresh && request.current ? request.current : nullptr,
                 request.seek_dwell);
             if (void* const replacements = s_get_replacements(project, *base))
             {
