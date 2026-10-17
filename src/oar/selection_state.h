@@ -176,6 +176,15 @@ namespace oar
             }
         }
 
+        // Landing mid-sequence (the panel equipped before opening the menu): pin the clip's
+        // sequence history to the picked dwell position, so the NEXT loop recheck stays here
+        // instead of resuming the entry moves the world already played.
+        void seek_dwell(StateKey const& key, std::uint64_t clip, VariantPick const& pick)
+        {
+            VariantState& state = m_variants[key];
+            state.histories[clip].next = pick.position;
+        }
+
         [[nodiscard]] bool in_sequence(VariantOptions const& options, std::uint64_t clip) const
         {
             const auto state = m_variants.find(options.key);

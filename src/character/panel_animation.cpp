@@ -374,10 +374,11 @@ public:
     }
 
     oar::AnimationSelection select(RE::Actor& source, std::span<std::string_view const> bases,
-        oar::PreviewState state, std::uint32_t channel, LoadedAsset const* current, oar::QueryEvent event)
+        oar::PreviewState state, std::uint32_t channel, LoadedAsset const* current, oar::QueryEvent event,
+        bool seek_dwell = false)
     {
         oar::AnimationSelection selected = oar::query_animation(source, graph->characterInstance, bases,
-            std::move(state), session, { channel, event, current ? &current->selection() : nullptr });
+            std::move(state), session, { channel, event, current ? &current->selection() : nullptr, seek_dwell });
         logger::info("SCOPY PANEL query channel={} generation={} project='{}' base={} index={} replaced={} evaluated={} overridden={} rejected={} name='{}' diagnostic='{}'",
             channel, latest.generation(),
             graph->projectName.c_str(), selected.base_index, selected.index, selected.replaced,
@@ -388,9 +389,9 @@ public:
     std::unique_ptr<LoadedAsset> asset(RE::Actor& source, std::span<std::string_view const> bases,
         oar::PreviewState state, bool loop, bool full_body, std::uint32_t channel,
         LoadedAsset const* current = nullptr, oar::QueryEvent event = oar::QueryEvent::e_refresh,
-        std::string_view weapon_hint = {})
+        std::string_view weapon_hint = {}, bool seek_dwell = false)
     {
-        oar::AnimationSelection selected = select(source, bases, std::move(state), channel, current, event);
+        oar::AnimationSelection selected = select(source, bases, std::move(state), channel, current, event, seek_dwell);
         return selected.found ? std::make_unique<LoadedAsset>(graph, std::move(selected), loop, full_body, weapon_hint) : nullptr;
     }
 
@@ -417,7 +418,12 @@ public:
         next->equipment = desired;
         next->generation = latest.generation();
         const std::array<std::string_view, 1> body{ "Animations\\MT_Idle.hkx" };
-        next->idles[0] = asset(source, body, preview_state(desired.drawn), true, true, 1, idle(0));
+        // The panel lands wherever the WORLD is in its own sequence (user direction: the world
+        // already played Equip→Start before the menu opened, so the panel shows the loop body
+        // the world is dwelling on) — every entering-panel idle query seeks the dwell position.
+        constexpr bool k_entering_panel = true;
+        next->idles[0] = asset(source, body, preview_state(desired.drawn), true, true, 1, idle(0),
+            oar::QueryEvent::e_activate, {}, k_entering_panel);
         if (desired.drawn)
         {
             std::vector<std::string_view> bases = panel_idle_bases(desired.form);
@@ -447,13 +453,13 @@ public:
             if (!world_bases.empty())
             {
                 next->idles[1] = asset(source, world_bases, preview_state(true), true, false, 2, idle(1),
-                    oar::QueryEvent::e_refresh, panel_weapon_node(desired.form));
+                    oar::QueryEvent::e_activate, panel_weapon_node(desired.form), k_entering_panel);
                 if (!next->idles[1])
                     logger::info("SCOPY PANEL world idle clip not resolvable, falling back to OAR bases: '{}'", observed);
             }
             if (!next->idles[1])
                 next->idles[1] = asset(source, bases, preview_state(true), true, false, 2, idle(1),
-                    oar::QueryEvent::e_refresh, panel_weapon_node(desired.form));
+                    oar::QueryEvent::e_activate, panel_weapon_node(desired.form), k_entering_panel);
             if (spell(left) && !prefer_left)
             {
                 const std::array<std::string_view, 1> left_idle{ "Animations\\MLh_Idle.hkx" };
@@ -658,6 +664,38 @@ public:
             idle_pending[index] = std::make_unique<LoadedAsset>(graph, std::move(selected), true, index == 0);
         }
     }
+
+    // A transition just finished (Equip/Unequip played out). The weapon family's sequence must
+    // restart from its FIRST member now — the game order is Equip → Start → Loop, and the idle
+    // layer re-querying with e_activate (sequence progress reset per clip_key deactivation)
+    // yields the Start member; its loop boundary then e_loops into the Loop member and dwells
+    // (the dwell fix). Without this the layer would keep whatever stale sequence position the
+    // previous activation left.
+    void restart_idle_after_transition(RE::Actor& source)
+    {
+        if (!active)
+            return;
+        for (std::size_t i = 0; i < active->idles.size(); ++i)
+        {
+            auto& idle = active->idles[i];
+            if (!idle || !idle->ready())
+                continue;
+            const std::array<std::string_view, 1> base{ idle->selection().base_name };
+            oar::AnimationSelection selected = select(source, base, preview_state(active->equipment.drawn),
+                static_cast<std::uint32_t>(i + 1), nullptr, oar::QueryEvent::e_activate);
+            if (!selected.found)
+                continue;
+            if (idle->same_choice(selected))
+            {
+                idle->update_selection(std::move(selected));
+                idle->accept(session, false);
+            }
+            else
+            {
+                idle_pending[i] = std::make_unique<LoadedAsset>(graph, std::move(selected), true, i == 0);
+            }
+        }
+    }
 };
 
 PanelAnimation::PanelAnimation() : m_state(std::make_unique<State>()) {}
@@ -732,6 +770,10 @@ std::size_t PanelAnimation::advance(RE::NiAVObject& root)
             m_state->phase = panel_phase(true, true, true);
             m_state->session.selection.deactivate(m_state->active->transition->selection().clip_key);
             logger::info("SCOPY PANEL transition complete -> idle");
+            // The game order is Equip → Start → Loop: restart the idle layers' sequences so the
+            // layer that just became current plays its Start member and dwells in its Loop.
+            if (RE::Actor* const source = m_state->graph->holder)
+                m_state->restart_idle_after_transition(*source);
         }
     }
     if (!m_state->blend_from.empty())

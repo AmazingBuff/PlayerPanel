@@ -54,9 +54,10 @@ namespace oar
         struct QueryFrame
         {
             QueryFrame(ScopedEvaluation& evaluation, QuerySession& session, AnimationSelection& result,
-                std::uint64_t identity, AnimationSelection const* refresh_selection = nullptr) :
+                std::uint64_t identity, AnimationSelection const* refresh_selection = nullptr,
+                bool seek_the_dwell = false) :
                 scope(evaluation), variants(session), output(result), key(identity),
-                refresh(refresh_selection),
+                refresh(refresh_selection), seek_dwell(seek_the_dwell),
                 previous(std::exchange(current, this)) {}
             ~QueryFrame() { current = previous; }
             inline static thread_local QueryFrame* current = nullptr;
@@ -65,6 +66,9 @@ namespace oar
             AnimationSelection& output;
             std::uint64_t key;
             AnimationSelection const* refresh;
+            // Landing MID-sequence (equipped before opening the menu): once-members are skipped
+            // for this activation and the pick lands on the trailing loop body.
+            bool seek_dwell = false;
             void const* selected = nullptr;
             std::uint16_t index = 0xFFFF;
             QueryFrame* previous;
@@ -583,6 +587,27 @@ namespace oar
                 query.variants.selection.variant(options, query.key);
             if (!pick || pick->index == 0xFFFF)
                 return std::nullopt;
+            // Landing MID-sequence: the world already played the entry moves (Equip, Start).
+            // Walk forward from the picked position to the first non-once member — the loop
+            // body the world would be dwelling on — and commit the history so the NEXT loop
+            // recheck dwells here too instead of resuming the skipped entry moves.
+            if (query.seek_dwell && !options.sequence.empty() && pick->position < options.sequence.size())
+            {
+                for (std::size_t offset = 0; offset < options.sequence.size(); ++offset)
+                {
+                    const std::size_t position = (pick->position + offset) % options.sequence.size();
+                    if (!options.sequence[position].once)
+                    {
+                        const VariantPick dwell{ options.sequence[position].index, position };
+                        query.variants.selection.seek_dwell(options.key, query.key, dwell);
+                        query.output.variants = std::move(options);
+                        query.output.variant = dwell;
+                        query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
+                        query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
+                        return dwell.index;
+                    }
+                }
+            }
             query.output.variants = std::move(options);
             query.output.variant = *pick;
             query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
@@ -806,7 +831,8 @@ namespace oar
             preview.initialize(*base, result.name, true);
             ScopedEvaluation scope(&source, preview.get(), state, ScopeMode::kAudited);
             QueryFrame frame(scope, session, result,
-                result.clip_key, request.event == QueryEvent::e_refresh && same_clip ? current : nullptr);
+                result.clip_key, request.event == QueryEvent::e_refresh && same_clip ? current : nullptr,
+                request.seek_dwell);
             if (void* const replacements = s_get_replacements(project, *base))
             {
                 void* const selected = s_evaluate_replacements(replacements, &source, preview.get());

@@ -53,6 +53,10 @@ namespace oar
         std::uint32_t channel = 0;
         QueryEvent event = QueryEvent::e_activate;
         AnimationSelection const* current = nullptr;
+        // e_activate with seek_dwell: the panel is landing MID-sequence (the player equipped
+        // before opening the menu — the world already played Equip and Start), so a replacement
+        // with a sequence skips its once-members and lands directly on the trailing loop body.
+        bool seek_dwell = false;
     };
     [[nodiscard]] bool query_supported();
     [[nodiscard]] RE::hkbCharacterStringData* character_strings(RE::hkbCharacter const& character);
