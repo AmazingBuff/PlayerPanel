@@ -155,8 +155,22 @@ namespace oar
                     return;
                 }
             }
+            // Every member played out. A sequence that ends on a non-once member (the usual
+            // Start → Loop authoring) DWELLS there in OAR: looping re-checks keep picking the
+            // loop body, never the entry move again (the in-game report showed the panel
+            // restarting the Start move every cycle — the "attack loop" look). Only a fully
+            // once-only sequence restarts from the top.
             if (options.sequential)
             {
+                for (std::size_t offset = 0; offset < options.sequence.size(); ++offset)
+                {
+                    const std::size_t position = (history.next + options.sequence.size() - 1 - offset) % options.sequence.size();
+                    if (!options.sequence[position].once)
+                    {
+                        history.next = position;
+                        return;
+                    }
+                }
                 history.played.clear();
                 history.next = 0;
             }

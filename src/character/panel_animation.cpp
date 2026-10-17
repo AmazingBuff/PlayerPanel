@@ -708,8 +708,11 @@ std::size_t PanelAnimation::advance(RE::NiAVObject& root)
     }
     if (!m_state->blend_from.empty())
     {
+        // 0.4s crossfade: the engine's own equip→idle blend is in this ballpark, and the 0.15s
+        // first version read as a hard cut between the sheathing gesture and the weapon stance
+        // (oar-idle3 report, second problem of the fourth round).
         const float weight = std::clamp(std::chrono::duration<float>(std::chrono::steady_clock::now() -
-            m_state->blend_start).count() / 0.15f, 0.0f, 1.0f);
+            m_state->blend_start).count() / 0.4f, 0.0f, 1.0f);
         for (auto const& [name, before] : m_state->blend_from)
         {
             const auto found = m_state->nodes.find(name);
