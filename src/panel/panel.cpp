@@ -73,21 +73,31 @@ bool PanelMonitor::is_menu_open() const
 PanelMonitor::StanceSnapshot PanelMonitor::stance_at_open() const
 {
     // The demonstrated sequence decides at READ time (sixth/seventh round direction: the name
-    // is the interface). The last world clip being a weapon/hand idle — idle-named but not the
-    // unarmed base family — means the weapon was in hand when the player walked into the menu,
-    // no matter what the weaponState bit's last write said. The bit keeps answering false for
-    // a sheathed entry; the name rule only promotes.
-    std::string lowered;
-    lowered.reserve(m_idle_clip.size());
-    for (unsigned char c : m_idle_clip)
-        lowered.push_back(static_cast<char>(std::tolower(c)));
-    const bool base_idle = lowered.find("mt_idle") != std::string::npos ||
-        lowered.find("sneakmtidle") != std::string::npos ||
-        lowered.find("mt_sprint") != std::string::npos || lowered.find("mt_walk") != std::string::npos ||
-        lowered.find("mt_run") != std::string::npos || lowered.find("mt_jump") != std::string::npos ||
-        lowered.find("mag_") != std::string::npos;
-    if (!m_idle_clip.empty() && lowered.find("idle") != std::string::npos && !base_idle)
+    // is the interface). Walk the recent clip history BACKWARDS: the last clip is often a
+    // transition/attack move with no "idle" in its name (1HM_Equip, 1HM_Unequip,
+    // BFCO_Attack1 — the tenth-round report), and the stance the player is entering is the
+    // stable idle BEFORE it. The first idle-named clip found from the tail answers; a
+    // weapon/hand idle (not the unarmed base family) promotes drawn=true. The weaponState bit
+    // keeps answering the sheathed side.
+    for (auto it = m_clip_history.rbegin(); it != m_clip_history.rend(); ++it)
+    {
+        std::string lowered;
+        lowered.reserve(it->size());
+        for (unsigned char c : *it)
+            lowered.push_back(static_cast<char>(std::tolower(c)));
+        if (lowered.find("idle") == std::string::npos)
+            continue;  // transition/attack/locomotion move — keep looking back
+        const bool base_idle = lowered.find("mt_idle") != std::string::npos ||
+            lowered.find("sneakmtidle") != std::string::npos ||
+            lowered.find("mt_sprint") != std::string::npos ||
+            lowered.find("mt_walk") != std::string::npos ||
+            lowered.find("mt_run") != std::string::npos ||
+            lowered.find("mt_jump") != std::string::npos ||
+            lowered.find("mag_") != std::string::npos;
+        if (base_idle)
+            break;  // reached the unarmed base idle: the sequence rooted in the sheathed stance
         return { true, true };
+    }
     if (!m_stance_valid.load(std::memory_order_acquire))
         return {};
     return { true, m_stance_at_open.load(std::memory_order_relaxed) };
@@ -115,6 +125,11 @@ void PanelMonitor::observe_idle_clip(std::string_view name, float weight)
     {
         logger::info("SCOPY WORLD clip '{}'", name);
         m_idle_clip.assign(name);
+        // Keep the recent order for the stance read: the last clip may be a transition/attack
+        // move whose "current stance" is the stable idle before it.
+        m_clip_history.emplace_back(m_idle_clip);
+        if (m_clip_history.size() > 8)
+            m_clip_history.erase(m_clip_history.begin());
     }
     // The engine's crossfade is the span the strongest clip weight spends below 1.0 between two
     // full-weight clips (oar-idle3 fifth round, problem 3: the panel's blend must match the
@@ -146,6 +161,23 @@ void PanelMonitor::observe_stance_from_clip()
     // one frame after that with menu_open still unset — the bit's last write would be false
     // even though the world spent the last seconds showing a weapon idle. Reading the recorded
     // clip name at decision time cannot lose that race.
+}
+
+std::string PanelMonitor::last_idle_clip() const
+{
+    // Same backward walk as the stance read: skip transition/attack/locomotion moves, answer
+    // with the first stable idle. The panel loads THIS clip as the weapon stance (OAR query by
+    // name) — mid-Equip entries land on the idle the world was entering, not a guessed base.
+    for (auto it = m_clip_history.rbegin(); it != m_clip_history.rend(); ++it)
+    {
+        std::string lowered;
+        lowered.reserve(it->size());
+        for (unsigned char c : *it)
+            lowered.push_back(static_cast<char>(std::tolower(c)));
+        if (lowered.find("idle") != std::string::npos)
+            return *it;
+    }
+    return {};
 }
 
 bool PanelMonitor::consume_panel_opened()

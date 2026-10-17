@@ -6,6 +6,7 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -38,7 +39,10 @@ public:
     // replacement and variant decisions are OAR's own, never ours. The weight argument serves
     // only the crossfade measurement (how long the engine blends), not any decision.
     void observe_idle_clip(std::string_view name, float weight);
-    [[nodiscard]] std::string const& last_idle_clip() const { return m_idle_clip; }
+    // The stable idle the player was entering with: the first idle-NAMED clip found walking
+    // the recent history backwards (the last clip is often Equip/Unequip/attack, which carry
+    // no "idle"). Empty when the recent history has no idle at all.
+    [[nodiscard]] std::string last_idle_clip() const;
     [[nodiscard]] float measured_crossfade_seconds() const { return m_crossfade_seconds; }
     // True exactly once for each time the inventory opens, however many callers ask. The studio restarts
     // its animation clocks on this, and it must not depend on seeing the close as well: the render-side
@@ -70,6 +74,12 @@ private:
     // World-frame animation observations. Written on unpaused frames only, read by the panel.
     // Plain members: the render hook and the panel tick both run on the main thread.
     std::string m_idle_clip;
+    // Recent clip history (chronological, capped). The stance read walks it backwards: when the
+    // LAST clip is a transition/attack move (1HM_Equip, BFCO_Attack1 — no "idle" in the name),
+    // the stance the player is ENTERING is the stable idle BEFORE it, which the last-clip rule
+    // misses entirely (the tenth-round report: Equip/Unequip/attack entries all answered
+    // standing).
+    std::vector<std::string> m_clip_history;
     float m_crossfade_seconds = 0.0f;
     // Crossfade measurement: the fade is the span between the frame the strongest idle weight
     // dropped below 1.0 and the frame it returned there.
