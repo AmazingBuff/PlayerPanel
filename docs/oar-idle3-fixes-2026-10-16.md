@@ -49,6 +49,45 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第五轮：世界侧观测主导（2026-10-17，提交 `3d18908`，待部署——游戏占用，退出后重试 cp）
+
+上机（11:47 会话，构建 `e10a459f4a`）判读，三项证据改写规则：
+
+1. **trim 生效、变体选错**：`unresolved=''`（空）、`resolved=95/96/103`——挂点轨道已全部
+   落点；但 `SCOPY WEAPON` 显示武器模型（`Weapon (formID)`）仍挂在 `WeaponSword` ←
+   `MOV WeaponSwordDefault`（收鞘 MOV 链）上不动——**最长前缀把 `Weapon` 骨解析到了错误
+   变体**（`WeaponSwordLeft`/`Weapon L Calf` 这类）。修复：`panel_weapon_node(form)` 按武器
+   形态给出**精确手部挂点名**（1h/2h→WeaponSword、2hw→WeaponAxe、bow→WeaponBow、
+   staff→WeaponStaff、crossbow→WeaponCrossbow），`resolve_binding_playback` 的 `Weapon` 骨
+   hint 优先、前缀回退；hint 经 `LoadedAsset` 贯通到 idle 与 transition 两路。
+2. **收鞘误播持械 idle**（用户报告 1）：手槽规则矫枉过正——挂腰/背的武器也在手槽。drawn
+   回归**世界帧观测**（`observe_stance`，出鞘进包=true、收鞘进包=false），非战斗挂武器
+   → 普通站立 idle。
+3. **最终 idle 应为游戏内真实动作**（用户报告 2）：面板武器 idle **首选世界侧实际在播的
+   idle clip**——渲染钩子每 10 个未暂停帧用 `strongest_idle_clip` 记录玩家最高权重 idle 的
+   名字，面板查到该名字直接装载（`find_base_animation` 同项目解析），OAR sequence 查询仅
+   回退；日志 `SCOPY PANEL world idle clip not resolvable` 标记回退路径。
+4. **过渡时长实测**（用户报告 3）：不再自选常数——观测玩家 idle 混合权重**低于 1.0 的持续
+   时间**（引擎 crossfade 的直接痕迹），面板混合用最近实测值（无数据回退 0.4s）；每次测得
+   打 `SCOPY PANEL measured world crossfade X.XXs`。
+
+包身份 `CharacterPanel-scopy-oar-idle3-3d18908b3a-cl94faaed0c6-20261017T041708Z`，DLL
+SHA-256 `185d9d98…`，PDB `cd65c166…`。**部署未完成：游戏运行中 DLL 被占用**——退出游戏后：
+
+```powershell
+Copy-Item dist\CharacterPanel-scopy-oar-idle3\SKSE\Plugins\CharacterPanel.dll,
+          dist\CharacterPanel-scopy-oar-idle3\SKSE\Plugins\CharacterPanel.pdb
+        E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\
+```
+
+### 上机判读（第五轮）
+
+1. `SCOPY PANEL measured world crossfade X.XXs` 行出现（过渡时长来源）；
+2. 出鞘状态开包：`phase=idle form=… drawn=true` 且 driver=**世界侧同款 idle**（日志
+   `panel-idle:<世界 clip 名>`）；收鞘开包：drawn=false + MT_Idle；
+3. equip/idle 期间武器跟手（hint 命中后 `Weapon` 轨道驱动正确变体；若仍不动，
+   `SCOPY WEAPON` 行的 node world 应随 parent 变化——把日志发我）。
+
 ## 第四轮：骨名 trim、sequence 驻留、crossfade 0.4s（2026-10-17，提交 `e10a459`）
 
 上机（01:45 会话，构建 `cb556cf390`）判读：**别名回退没有命中**（resolved 仍 93、
