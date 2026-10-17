@@ -387,8 +387,8 @@ namespace
         // drawn answer consistent against its own recorded equipment (problems 2).
         const auto sword_to_sword = panel_transition_bases(oar::WeaponForm::kOneHanded, false);
         const auto sheathe = panel_transition_bases(oar::WeaponForm::kOneHanded, true);
-        return !sword_to_sword.empty() && sword_to_sword.front() == "Animations\\1hm_equip.hkx" &&
-            !sheathe.empty() && sheathe.front() == "Animations\\1hm_unequip.hkx" &&
+        return !sword_to_sword.empty() && sword_to_sword.front() == "Animations\\1HM_Equip.hkx" &&
+            !sheathe.empty() && sheathe.front() == "Animations\\1HM_Unequip.hkx" &&
             panel_transition_bases(oar::WeaponForm::kNone, true).empty();
     }
 

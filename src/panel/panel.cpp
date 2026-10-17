@@ -122,6 +122,31 @@ void PanelMonitor::observe_idle_clip(std::string_view name, float weight)
     }
 }
 
+void PanelMonitor::observe_stance_from_clip()
+{
+    // The demonstrated sequence's last stable idle decides (see the header). The unarmed base
+    // family is everything whose file stem is the movement idle (MT_Idle/sneak variants); a
+    // weapon/hand idle (MLh_Idle, 1hm_idle, bow_idle, …) means the weapon is in hand. Called
+    // on the same world-frame cadence as observe_stance; a later read always wins.
+    const std::string& clip = m_idle_clip;
+    std::string lowered;
+    lowered.reserve(clip.size());
+    for (unsigned char c : clip)
+        lowered.push_back(static_cast<char>(std::tolower(c)));
+    const bool base_idle = lowered.find("mt_idle") != std::string::npos ||
+        lowered.find("sneakmtidle") != std::string::npos ||
+        lowered.find("mt_sprint") != std::string::npos || lowered.find("mt_walk") != std::string::npos ||
+        lowered.find("mt_run") != std::string::npos;
+    const bool weapon_idle = !clip.empty() && lowered.find("idle") != std::string::npos && !base_idle;
+    if (weapon_idle)
+    {
+        m_stance_at_open.store(true, std::memory_order_relaxed);
+        m_stance_valid.store(true, std::memory_order_release);
+    }
+    // A sheathed answer is NOT written here: the weaponState read (observe_stance) owns the
+    // false direction, this only promotes the stance when the world was showing a weapon idle.
+}
+
 bool PanelMonitor::consume_panel_opened()
 {
     return m_panel_opened.exchange(false, std::memory_order_acq_rel);

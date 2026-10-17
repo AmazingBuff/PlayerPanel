@@ -25,6 +25,12 @@ public:
     // engine's pre-menu sheathe). Sheathed entries answer the plain standing idle.
     void observe_stance(bool weapon_drawn);
     [[nodiscard]] StanceSnapshot stance_at_open() const;
+    // The name rule on top (user direction, sixth-round evidence): the demonstrated SEQUENCE's
+    // last stable idle decides the stance better than the weaponState bit — the bit is false
+    // while the draw animation is still playing (1HM_Equip spans it), so a player who draws and
+    // opens the menu within the animation reads sheathed. The last world clip being a weapon
+    // idle (an idle that is not the unarmed base family) is the honest "武器在手" answer.
+    void observe_stance_from_clip();
     // World-frame animation observation, OAR-style (user direction): the clip NAME is the only
     // interface. The observer logs every clip change the world side shows (the demonstration
     // recording the panel's weapon-switch order is authored from), and the panel loads a clip

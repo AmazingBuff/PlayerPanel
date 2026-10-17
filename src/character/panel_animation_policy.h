@@ -150,23 +150,28 @@ private:
     }
 }
 
+// The transition bases use the names the world-side sequence recorder captured from the
+// player's own demonstration (sixth round: MT_Idle → 1HM_Equip → MLh_Idle → 1HM_Unequip →
+// MT_Idle). Vanilla ships these as 1HM_/1HM_ (capital HM); the recorder saw exactly that.
+// The lowercase spellings stay as fallbacks in the same query — find_base_animation matches
+// case-insensitively, so both resolve; the real names go first.
 [[nodiscard]] inline std::vector<std::string_view> panel_transition_bases(oar::WeaponForm form, bool unequip)
 {
     using Form = oar::WeaponForm;
     switch (form)
     {
     case Form::kTwoHanded:
-        return unequip ? std::vector<std::string_view>{ "Animations\\2hm_unequip.hkx" } :
-            std::vector<std::string_view>{ "Animations\\2hm_equip.hkx" };
+        return unequip ? std::vector<std::string_view>{ "Animations\\2HM_Unequip.hkx", "Animations\\2hm_unequip.hkx" } :
+            std::vector<std::string_view>{ "Animations\\2HM_Equip.hkx", "Animations\\2hm_equip.hkx" };
     case Form::kTwoHandedAxe:
-        return unequip ? std::vector<std::string_view>{ "Animations\\2hw_unequip.hkx" } :
-            std::vector<std::string_view>{ "Animations\\2hw_equip.hkx" };
+        return unequip ? std::vector<std::string_view>{ "Animations\\2HW_Unequip.hkx", "Animations\\2hw_unequip.hkx" } :
+            std::vector<std::string_view>{ "Animations\\2HW_Equip.hkx", "Animations\\2hw_equip.hkx" };
     case Form::kBow:
-        return unequip ? std::vector<std::string_view>{ "Animations\\bow_unequip.hkx" } :
-            std::vector<std::string_view>{ "Animations\\bow_equip.hkx" };
+        return unequip ? std::vector<std::string_view>{ "Animations\\Bow_Unequip.hkx", "Animations\\bow_unequip.hkx" } :
+            std::vector<std::string_view>{ "Animations\\Bow_Equip.hkx", "Animations\\bow_equip.hkx" };
     case Form::kCrossbow:
-        return unequip ? std::vector<std::string_view>{ "Animations\\crossbow_unequip.hkx" } :
-            std::vector<std::string_view>{ "Animations\\crossbow_equip.hkx" };
+        return unequip ? std::vector<std::string_view>{ "Animations\\CrossBow_Unequip.hkx", "Animations\\crossbow_unequip.hkx" } :
+            std::vector<std::string_view>{ "Animations\\CrossBow_Equip.hkx", "Animations\\crossbow_equip.hkx" };
     case Form::kMagic:
         return unequip ? std::vector<std::string_view>{ "Animations\\MRh_Unequip.hkx", "Animations\\MLh_Unequip.hkx" } :
             std::vector<std::string_view>{ "Animations\\MRh_Equip.hkx", "Animations\\MLh_Equip.hkx" };
@@ -175,8 +180,8 @@ private:
             std::vector<std::string_view>{ "Animations\\StaffRight_Equip.hkx", "Animations\\1hm_equip.hkx" };
     case Form::kNone: return {};
     default:
-        return unequip ? std::vector<std::string_view>{ "Animations\\1hm_unequip.hkx" } :
-            std::vector<std::string_view>{ "Animations\\1hm_equip.hkx" };
+        return unequip ? std::vector<std::string_view>{ "Animations\\1HM_Unequip.hkx", "Animations\\1hm_unequip.hkx" } :
+            std::vector<std::string_view>{ "Animations\\1HM_Equip.hkx", "Animations\\1hm_equip.hkx" };
     }
 }
 

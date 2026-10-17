@@ -93,11 +93,14 @@ namespace
                             // OAR-style: the clip NAME is the interface — the strongest running
                             // clip of any name (draw/sheathe included) feeds the recorder, and
                             // the panel re-enters it through the OAR query path by name. No
-                            // weight decisions on our side.
+                            // weight decisions on our side. The demonstrated sequence's last
+                            // stable idle also promotes the entering stance (the weaponState
+                            // bit is false while the draw animation is still playing).
                             const RunningIdleSample sample = strongest_idle_clip(*player);
                             PanelMonitor::instance().observe_idle_clip(
                                 !sample.any_name.empty() ? sample.any_name : sample.name,
                                 sample.any_weight > 0.0f ? sample.any_weight : sample.weight);
+                            PanelMonitor::instance().observe_stance_from_clip();
                         }
                     }
                 }
