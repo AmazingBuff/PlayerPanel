@@ -92,8 +92,19 @@ namespace
     // round (world-frame reads beat both the menu-event read and the frozen menu-session bit).
     // Sheathed entries answer the plain standing idle — a weapon mounted at the hip or back is
     // NOT the drawn stance (fifth-round report problem 1).
+    // Did the player SWAP a weapon while the menu was open? An in-menu equip of a weapon puts
+    // it in the hand (game semantics: equipping draws it — the world plays the equip move and
+    // ends in the weapon stance), so the panel's figure holds it too and answers that family's
+    // idle. Recorded by request() when `changed` and the hand slot actually carries a weapon.
+    bool g_in_menu_swap_drawn = false;
+
     bool panel_drawn_state(RE::Actor& actor)
     {
+        // An in-menu weapon swap overrides every world-side read: the player's intent was "hold
+        // this weapon now" (fourteenth-round report: the panel played mt_idle after the equip
+        // move because the entering stance was sheathed).
+        if (g_in_menu_swap_drawn)
+            return true;
         const PanelMonitor::StanceSnapshot snapshot = PanelMonitor::instance().stance_at_open();
         if (snapshot.valid)
             return snapshot.drawn;
@@ -414,6 +425,15 @@ public:
         if (!graph)
             return;
         EquipmentState desired = panel_equipment(source);
+        // A hand-slot change while the menu is open = the player drew the new weapon inside the
+        // panel. From the next read on, the figure holds it (cleared with the panel session in
+        // PanelAnimation::reset).
+        if (changed && active && desired.form != oar::WeaponForm::kNone &&
+            (desired.right != active->equipment.right || desired.left != active->equipment.left))
+        {
+            g_in_menu_swap_drawn = true;
+            logger::info("SCOPY PANEL in-menu weapon swap -> the figure holds the new weapon");
+        }
         auto next = std::make_unique<AnimationSet>();
         next->equipment = desired;
         next->generation = latest.generation();
@@ -720,7 +740,11 @@ PanelAnimation::~PanelAnimation()
     // Engine leases are released by reset at live session boundaries, not during CRT teardown.
     (void)m_state.release();
 }
-void PanelAnimation::reset() { m_state = std::make_unique<State>(); }
+void PanelAnimation::reset()
+{
+    m_state = std::make_unique<State>();
+    g_in_menu_swap_drawn = false;  // a new panel session starts from the entering stance again
+}
 
 void PanelAnimation::observe_equipment(RE::Actor& source, std::uint64_t revision)
 {
