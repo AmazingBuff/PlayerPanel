@@ -10,6 +10,7 @@
 #include "studio/light.h"
 
 #include "panel/panel.h"
+#include "character/animation_source.h"
 #include "character/character_manager.h"
 #include "character/equipment_mirror.h"
 #include "character/final_pose_apply.h"
@@ -76,10 +77,24 @@ namespace
 #endif
                 // The entering weapon stance lives on the last unpaused world frame: the engine
                 // clears weaponState before the menu event and freezes it for the menu session,
-                // so this per-frame observation is the only honest "武器已在手上" read.
+                // so this per-frame observation is the only honest "武器已在手上" read. The
+                // idle-clip observation rides the same cadence (every 10th frame — the behavior
+                // graph walk costs a fraction of a millisecond) and feeds the panel's weapon-idle
+                // preference plus the measured crossfade.
                 if (!paused)
+                {
+                    static std::uint32_t s_observe_tick = 0;
+                    const bool idle_observed = ++s_observe_tick % 10 == 1;
                     if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
+                    {
                         PanelMonitor::instance().observe_stance(player->IsWeaponDrawn());
+                        if (idle_observed)
+                        {
+                            const RunningIdleSample sample = strongest_idle_clip(*player);
+                            PanelMonitor::instance().observe_idle_clip(sample.name, sample.weight);
+                        }
+                    }
+                }
 
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
                 // AFP1: A0 is taken before anything advances this frame, so the report after the

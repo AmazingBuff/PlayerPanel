@@ -320,9 +320,39 @@ RE::hkbClipGenerator const* pick_idle_running_clip(RE::TESObjectREFR& source)
     return best;
 }
 
+RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source)
+{
+    RunningIdleSample sample;
+    std::vector<ActiveClipEntry> running;
+    collect_running_clip_generators(source, running);
+    float best_weight = 0.0f;
+    for (const ActiveClipEntry& entry : running)
+    {
+        std::string lowered;
+        lowered.reserve(entry.name.size());
+        std::transform(entry.name.begin(), entry.name.end(), std::back_inserter(lowered),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (lowered.find("idle") == std::string::npos)
+            continue;
+        RE::hkbClipGenerator const* const generator = entry.generator;
+        if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
+            continue;
+        const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
+        if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
+            continue;
+        if (control->weight > best_weight)
+        {
+            best_weight = control->weight;
+            sample.name = entry.name;
+            sample.weight = control->weight;
+        }
+    }
+    return sample;
+}
+
 bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
     RE::hkaAnimationBinding* binding, std::string const& clip_name, ClipPlayback& out,
-    std::string& out_mapping, std::string& out_coverage)
+    std::string& out_mapping, std::string& out_coverage, std::string_view weapon_hint)
 {
     if (!binding || !readable(binding, sizeof(*binding)) || !looks_like_object(binding))
         return false;
@@ -397,17 +427,23 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
         {
             // Animation-skeleton attachment bones carry the GENERIC name ("Weapon", "Quiver",
             // "Shield"); the NIF layer carries one node per variant ("WeaponSword", "WeaponAxe",
-            // …). The in-game unresolved set proved equip clips DO key these bones — without the
-            // alias the weapon stays pinned at its captured spot while the hands animate
-            // (oar-idle3 report problem 2). Match the longest variant node carrying the bone as
-            // a prefix; ties fall to the first hit — one carried weapon per slot.
+            // …). The in-game evidence: trim alone resolved the tracks (resolved 95/96) but the
+            // longest-prefix pick landed on the WRONG variant (WeaponSwordLeft / Weapon L Calf)
+            // and the visible weapon never moved — the caller's weapon-form hint names the exact
+            // hand-attachment node ("WeaponSword", "WeaponBow", …). Hint first, then prefix.
             if (matches_attachment(bone_name))
             {
                 RE::NiAVObject* best = nullptr;
+                if (!weapon_hint.empty())
+                {
+                    const auto hinted = copy_by_name.find(weapon_hint);
+                    if (hinted != copy_by_name.end() && hinted->second != &copy_root)
+                        best = hinted->second;
+                }
                 size_t best_length = 0;
                 for (const auto& [name, node] : copy_by_name)
                 {
-                    if (name.size() > bone_name.size() && name.starts_with(bone_name) && name.size() > best_length)
+                    if (!best && name.size() > bone_name.size() && name.starts_with(bone_name) && name.size() > best_length)
                     {
                         best = node;
                         best_length = name.size();

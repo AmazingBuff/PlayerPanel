@@ -88,6 +88,34 @@ void PanelMonitor::observe_stance(bool weapon_drawn)
     }
 }
 
+void PanelMonitor::observe_idle_clip(std::string_view name, float weight)
+{
+    if (m_panel_open.load(std::memory_order_acquire))
+        return;  // world-frame observation only
+    if (!name.empty())
+        m_idle_clip.assign(name);
+    // The engine's crossfade is the span the strongest idle weight spends below 1.0 between two
+    // full-weight clips (oar-idle3 fifth round, problem 3: the panel's blend must match the
+    // game, not a picked constant). Frame-time integration over the below-full span.
+    constexpr float frame_seconds = 1.0f / 60.0f;  // world-frame cadence; a coarse clock is fine
+    if (weight < 0.999f)
+    {
+        m_fading = true;
+        m_fade_elapsed += frame_seconds;
+    }
+    else if (m_fading)
+    {
+        m_fading = false;
+        if (m_fade_elapsed > 0.05f && m_fade_elapsed < 2.0f)
+        {
+            m_crossfade_seconds = m_fade_elapsed;
+            logger::info("SCOPY PANEL measured world crossfade {:.2f}s (clip '{}')",
+                m_crossfade_seconds, m_idle_clip);
+        }
+        m_fade_elapsed = 0.0f;
+    }
+}
+
 bool PanelMonitor::consume_panel_opened()
 {
     return m_panel_opened.exchange(false, std::memory_order_acq_rel);

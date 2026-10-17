@@ -142,7 +142,7 @@ bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root,
     ClipPlayback& out, std::string& out_mapping, std::string& out_coverage);
 bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
     RE::hkaAnimationBinding* binding, std::string const& name, ClipPlayback& out,
-    std::string& mapping, std::string& coverage);
+    std::string& mapping, std::string& coverage, std::string_view weapon_hint = {});
 [[nodiscard]] float live_clip_time(RE::hkbClipGenerator const* generator);
 
 [[nodiscard]] bool clip_generator_is_live(void const* object);
@@ -154,6 +154,16 @@ struct ActiveClipEntry
 };
 
 void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out);
+
+// The world side's own answer for "which idle is playing": the strongest idle-named running
+// clip's name and blend weight. The panel prefers this clip for the weapon stance and measures
+// the engine crossfade from the weight history (oar-idle3 fifth round).
+struct RunningIdleSample
+{
+    std::string name;
+    float weight = 0.0f;
+};
+[[nodiscard]] RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source);
 
 class ClipPlayer
 {

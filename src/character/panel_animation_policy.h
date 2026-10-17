@@ -180,4 +180,26 @@ private:
     }
 }
 
+// The NIF-layer hand-attachment node the stance's Weapon animation bone drives. The animation
+// skeleton carries the GENERIC "Weapon" bone; the copy's NIF tree carries one variant per weapon
+// family. The in-game evidence: trimming alone resolved the tracks, but the longest-prefix pick
+// landed on the wrong variant (WeaponSwordLeft / Weapon L Calf) and the visible weapon never
+// moved. Vanilla skeleton names, verified against the in-game node census.
+[[nodiscard]] inline std::string_view panel_weapon_node(oar::WeaponForm form)
+{
+    using Form = oar::WeaponForm;
+    switch (form)
+    {
+    case Form::kTwoHandedAxe: return "WeaponAxe";
+    case Form::kBow: return "WeaponBow";
+    case Form::kCrossbow: return "WeaponCrossbow";
+    case Form::kStaff: return "WeaponStaff";
+    case Form::kTwoHanded: return "WeaponSword";
+    case Form::kOneHanded: return "WeaponSword";
+    case Form::kDualWield: return "WeaponSword";
+    case Form::kMagic: return "WeaponSword";
+    default: return "WeaponSword";
+    }
+}
+
 PLUGIN_NAMESPACE_END

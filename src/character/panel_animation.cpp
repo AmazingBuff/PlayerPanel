@@ -88,15 +88,16 @@ namespace
     //      weaponState bit says sheathed (combat, "武器在手即持械"; empty hands + combat stays
     //      the unarmed fighting idle through the form rule below),
     //   3. the live read, which still wins for an explicit sheathe/draw the engine did process.
-    // The user's definition, final form (three in-game rounds proved every weaponState-based
-    // read loses to the engine's menu freeze): "holding a weapon" is decided by the HAND SLOT,
-    // not by any drawn bit. A player who carries a weapon in a hand shows that weapon family's
-    // stance; empty hands show the plain standing idle (or the h2h family while the unarmed
-    // bases are present). weaponState and its frame-observed ghost are retired from the rule.
-    bool panel_drawn_state(RE::Actor& actor, oar::WeaponForm form)
+    // The entering-stance observation is the only drawn signal that survived every in-game
+    // round (world-frame reads beat both the menu-event read and the frozen menu-session bit).
+    // Sheathed entries answer the plain standing idle — a weapon mounted at the hip or back is
+    // NOT the drawn stance (fifth-round report problem 1).
+    bool panel_drawn_state(RE::Actor& actor)
     {
-        (void)actor;
-        return form != oar::WeaponForm::kNone;
+        const PanelMonitor::StanceSnapshot snapshot = PanelMonitor::instance().stance_at_open();
+        if (snapshot.valid)
+            return snapshot.drawn;
+        return actor.IsWeaponDrawn();
     }
 
     RE::BSTSmartPointer<RE::BShkbAnimationGraph> source_graph(RE::Actor& source)
@@ -136,8 +137,10 @@ namespace
     class LoadedAsset
     {
     public:
-        LoadedAsset(RE::BSTSmartPointer<RE::BShkbAnimationGraph> graph, oar::AnimationSelection selection, bool loop, bool full_body) :
-            m_graph(std::move(graph)), m_selection(std::move(selection)), m_loop(loop), m_full_body(full_body)
+        LoadedAsset(RE::BSTSmartPointer<RE::BShkbAnimationGraph> graph, oar::AnimationSelection selection, bool loop,
+            bool full_body, std::string_view weapon_hint = {}) :
+            m_graph(std::move(graph)), m_selection(std::move(selection)), m_loop(loop), m_full_body(full_body),
+            m_weapon_hint(weapon_hint)
         {
             m_behavior = m_graph->characterInstance.behaviorGraph;
             queue();
@@ -165,7 +168,7 @@ namespace
                     std::memcpy(&binding, static_cast<std::uint8_t const*>(entry) + 0x10, sizeof(binding));
                     std::string mapping;
                     std::string coverage;
-                    if (resolve_binding_playback(*m_graph, root, binding, m_selection.name, m_playback, mapping, coverage))
+                    if (resolve_binding_playback(*m_graph, root, binding, m_selection.name, m_playback, mapping, coverage, m_weapon_hint))
                     {
                         if (binding->blendHint != RE::hkaAnimationBinding::BlendHint::kNormal)
                         {
@@ -204,7 +207,7 @@ namespace
             std::string coverage;
             ClipPlayback rebound;
             if (resolve_binding_playback(*m_graph, root, m_playback.binding_owner.get(), m_selection.name,
-                    rebound, mapping, coverage))
+                    rebound, mapping, coverage, m_weapon_hint))
             {
                 m_playback = std::move(rebound);
                 m_player.retarget(m_playback);
@@ -305,6 +308,10 @@ namespace
         oar::AnimationSelection m_selection;
         bool m_loop;
         bool m_full_body;
+        // The exact hand-attachment variant this asset's Weapon bone resolves to ("WeaponSword",
+        // "WeaponBow", …). The longest-prefix alias landed on the wrong variant in-game and the
+        // visible weapon never moved (fifth-round report).
+        std::string m_weapon_hint;
         bool m_queued = false;
         bool m_failed = false;
         std::chrono::steady_clock::time_point m_started{};
@@ -328,10 +335,12 @@ namespace
     EquipmentState panel_equipment(RE::Actor& actor)
     {
         EquipmentState state = equipment_state(actor);
-        // Hand slot decides the stance: a weapon in a hand = the weapon family's idle; empty
-        // hands = the plain standing idle (the kNone drawn answer the transition block may pass
-        // for a sheathed swap still queries the h2h/MT bases correctly).
-        state.drawn = panel_drawn_state(actor, state.form);
+        state.drawn = panel_drawn_state(actor);
+        // The player unequipping inside the menu wins over the entering-stance snapshot — but a
+        // COMBAT player with empty hands keeps the drawn answer: form kNone + drawn queries the
+        // unarmed fighting family (h2h_idle), which is exactly the "空手战斗" stance.
+        if (state.form == oar::WeaponForm::kNone && !actor.IsInCombat())
+            state.drawn = false;
         return state;
     }
 
@@ -378,10 +387,11 @@ public:
 
     std::unique_ptr<LoadedAsset> asset(RE::Actor& source, std::span<std::string_view const> bases,
         oar::PreviewState state, bool loop, bool full_body, std::uint32_t channel,
-        LoadedAsset const* current = nullptr, oar::QueryEvent event = oar::QueryEvent::e_refresh)
+        LoadedAsset const* current = nullptr, oar::QueryEvent event = oar::QueryEvent::e_refresh,
+        std::string_view weapon_hint = {})
     {
         oar::AnimationSelection selected = select(source, bases, std::move(state), channel, current, event);
-        return selected.found ? std::make_unique<LoadedAsset>(graph, std::move(selected), loop, full_body) : nullptr;
+        return selected.found ? std::make_unique<LoadedAsset>(graph, std::move(selected), loop, full_body, weapon_hint) : nullptr;
     }
 
     LoadedAsset const* idle(std::size_t index) const { return active ? active->idles[index].get() : nullptr; }
@@ -426,7 +436,24 @@ public:
                 (desired.form == oar::WeaponForm::kStaff && staff(left) && !staff(right));
             if (prefer_left && bases.size() > 1)
                 std::swap(bases[0], bases[1]);
-            next->idles[1] = asset(source, bases, preview_state(true), true, false, 2, idle(1));
+            // The game's own answer first (fifth-round report problem 2): the world side showed a
+            // concrete idle clip for this stance on the last unpaused frames — prefer loading
+            // THAT clip by name (find_base_animation resolves it in the same project), and fall
+            // back to the OAR standing-base query only when the observation is empty.
+            std::vector<std::string_view> world_bases;
+            const std::string& observed = PanelMonitor::instance().last_idle_clip();
+            if (!observed.empty() && observed.find("idle") != std::string::npos)
+                world_bases.push_back(observed);
+            if (!world_bases.empty())
+            {
+                next->idles[1] = asset(source, world_bases, preview_state(true), true, false, 2, idle(1),
+                    oar::QueryEvent::e_refresh, panel_weapon_node(desired.form));
+                if (!next->idles[1])
+                    logger::info("SCOPY PANEL world idle clip not resolvable, falling back to OAR bases: '{}'", observed);
+            }
+            if (!next->idles[1])
+                next->idles[1] = asset(source, bases, preview_state(true), true, false, 2, idle(1),
+                    oar::QueryEvent::e_refresh, panel_weapon_node(desired.form));
             if (spell(left) && !prefer_left)
             {
                 const std::array<std::string_view, 1> left_idle{ "Animations\\MLh_Idle.hkx" };
@@ -474,7 +501,8 @@ public:
                     transition_state.hand_override = std::array<std::uint32_t, 2>{
                         active->equipment.raw_right, active->equipment.raw_left };
                 next->transition = asset(source, bases, std::move(transition_state), false, false, 4,
-                    nullptr, oar::QueryEvent::e_activate);
+                    nullptr, oar::QueryEvent::e_activate,
+                    panel_weapon_node(unequip ? active->equipment.form : desired.form));
             }
         }
         pending = std::move(next);
@@ -708,11 +736,13 @@ std::size_t PanelAnimation::advance(RE::NiAVObject& root)
     }
     if (!m_state->blend_from.empty())
     {
-        // 0.4s crossfade: the engine's own equip→idle blend is in this ballpark, and the 0.15s
-        // first version read as a hard cut between the sheathing gesture and the weapon stance
-        // (oar-idle3 report, second problem of the fourth round).
+        // The game's own crossfade length, measured from the player's idle-blend weights on the
+        // world frames (see PanelMonitor::observe_idle_clip). Falls back to 0.4s before any
+        // measurement landed.
+        const float fade = PanelMonitor::instance().measured_crossfade_seconds();
+        const float fade_seconds = fade > 0.05f ? fade : 0.4f;
         const float weight = std::clamp(std::chrono::duration<float>(std::chrono::steady_clock::now() -
-            m_state->blend_start).count() / 0.4f, 0.0f, 1.0f);
+            m_state->blend_start).count() / fade_seconds, 0.0f, 1.0f);
         for (auto const& [name, before] : m_state->blend_from)
         {
             const auto found = m_state->nodes.find(name);
