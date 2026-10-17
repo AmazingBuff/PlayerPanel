@@ -49,6 +49,24 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第十五轮：诊断行裁决 + 背包内换装=拔出该武器（2026-10-17 晚，提交 `f5f9ae2`，部署待游戏退出）
+
+诊断行（`SCOPY PANEL seek gate …`）在本轮报告窗口**零输出**——seek 分支根本没进入。
+拼接证据链：19:13 窗口 `phase=transition form=2hw drawn=false`（**收鞘状态换装**）→
+`drawn=false` 时 `request()` 不创建武器 idle 层 → transition 播完后
+`restart_idle_after_transition` 只重查已存在的身体层（返回 SDB 站立 idle）→ 面板播完
+2hw_equip 回 MT_Idle。seek gate 零输出是**收鞘路径的正常形态**（channel=1 的 SDB 站立
+replacement 无序列），不是 bug——**真正的缺口是 drawn 语义**。
+
+修复（游戏语义）：**背包内装备武器 = 把它拔出来**。`request(changed=true)` 检测到手槽
+武器变化时置 `g_in_menu_swap_drawn`（面板会话级，reset 清除），此后所有装备读数
+drawn=true——面板人物换上双手斧后：播 2hw_equip → Start → Loop 驻留 2hw_idle，不再回
+站立。
+
+包身份 `CharacterPanel-scopy-oar-idle3-f5f9ae24fb-cl94faaed0c6-20261017T112931Z`。
+判读：收鞘状态进包 → 站立 idle；**背包内换双手斧** → `SCOPY PANEL in-menu weapon swap`
+行 + transition（2hw_equip）+ 武器 idle 层出现（channel=2/3 查询）+ 2hw Loop 驻留。
+
 ## 第十四轮：过期 Start 跳过 + 序列重查的世界名优先（2026-10-17，提交 `b3ed4de`，部署待游戏退出）
 
 用户四问（16:28–16:30 会话，构建 `c9f7fa5` 部署版），日志对照后收敛为两个根因：
