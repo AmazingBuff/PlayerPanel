@@ -72,6 +72,22 @@ bool PanelMonitor::is_menu_open() const
 
 PanelMonitor::StanceSnapshot PanelMonitor::stance_at_open() const
 {
+    // The demonstrated sequence decides at READ time (sixth/seventh round direction: the name
+    // is the interface). The last world clip being a weapon/hand idle — idle-named but not the
+    // unarmed base family — means the weapon was in hand when the player walked into the menu,
+    // no matter what the weaponState bit's last write said. The bit keeps answering false for
+    // a sheathed entry; the name rule only promotes.
+    std::string lowered;
+    lowered.reserve(m_idle_clip.size());
+    for (unsigned char c : m_idle_clip)
+        lowered.push_back(static_cast<char>(std::tolower(c)));
+    const bool base_idle = lowered.find("mt_idle") != std::string::npos ||
+        lowered.find("sneakmtidle") != std::string::npos ||
+        lowered.find("mt_sprint") != std::string::npos || lowered.find("mt_walk") != std::string::npos ||
+        lowered.find("mt_run") != std::string::npos || lowered.find("mt_jump") != std::string::npos ||
+        lowered.find("mag_") != std::string::npos;
+    if (!m_idle_clip.empty() && lowered.find("idle") != std::string::npos && !base_idle)
+        return { true, true };
     if (!m_stance_valid.load(std::memory_order_acquire))
         return {};
     return { true, m_stance_at_open.load(std::memory_order_relaxed) };
@@ -124,27 +140,12 @@ void PanelMonitor::observe_idle_clip(std::string_view name, float weight)
 
 void PanelMonitor::observe_stance_from_clip()
 {
-    // The demonstrated sequence's last stable idle decides (see the header). The unarmed base
-    // family is everything whose file stem is the movement idle (MT_Idle/sneak variants); a
-    // weapon/hand idle (MLh_Idle, 1hm_idle, bow_idle, …) means the weapon is in hand. Called
-    // on the same world-frame cadence as observe_stance; a later read always wins.
-    const std::string& clip = m_idle_clip;
-    std::string lowered;
-    lowered.reserve(clip.size());
-    for (unsigned char c : clip)
-        lowered.push_back(static_cast<char>(std::tolower(c)));
-    const bool base_idle = lowered.find("mt_idle") != std::string::npos ||
-        lowered.find("sneakmtidle") != std::string::npos ||
-        lowered.find("mt_sprint") != std::string::npos || lowered.find("mt_walk") != std::string::npos ||
-        lowered.find("mt_run") != std::string::npos;
-    const bool weapon_idle = !clip.empty() && lowered.find("idle") != std::string::npos && !base_idle;
-    if (weapon_idle)
-    {
-        m_stance_at_open.store(true, std::memory_order_relaxed);
-        m_stance_valid.store(true, std::memory_order_release);
-    }
-    // A sheathed answer is NOT written here: the weaponState read (observe_stance) owns the
-    // false direction, this only promotes the stance when the world was showing a weapon idle.
+    // Kept for the log trail only — the decision moved to the read side (stance_at_open): the
+    // write-side order races the engine's own pre-menu sheathe. The open input clears the
+    // weaponState bit AND fires the menu event in the same frame, and the render hook can run
+    // one frame after that with menu_open still unset — the bit's last write would be false
+    // even though the world spent the last seconds showing a weapon idle. Reading the recorded
+    // clip name at decision time cannot lose that race.
 }
 
 bool PanelMonitor::consume_panel_opened()
