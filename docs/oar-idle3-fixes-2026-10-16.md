@@ -49,6 +49,30 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第十四轮：过期 Start 跳过 + 序列重查的世界名优先（2026-10-17，提交 `b3ed4de`，部署待游戏退出）
+
+用户四问（16:28–16:30 会话，构建 `c9f7fa5` 部署版），日志对照后收敛为两个根因：
+
+| # | 现象 | 根因 |
+| --- | --- | --- |
+| 2 | Attack 段进包 → Start | 历史反向第一条 idle 是 Start——但 attack 之前记录到的 Start **早已播完**（序列驻留 Loop），过期段被当成了落点 |
+| 3 | Unequip 段进包状态多变 | 同根：Unequip 前世界播到 Start 还是 Loop 随时机变化，反向命中谁就播谁 |
+| 4 | 背包内换装只有 Equip+Start | transition 后的重查用**基础名**（`1hm_idle`）——候选集撞上带第三方条件的 replacement，49 个候选全拒（`replaced=false`），回落原版 clip；Loop 没了 |
+| 1 | Equip 段进包 → MT_Idle | 该场景时间戳显示开包在 Equip **之前**（面板开着时世界冻结，Equip 段进包窗口 <1s 且极难操作）；16:30:11/18 两次真实 Equip 段进包 `drawn=true` ✓——规则已对，无需改动 |
+
+修复：
+
+1. `last_idle_clip()` 反向走时**跳过 Start 命名的成员**——Start 是一次性入口段，attack/
+   Unequip 之后它必然已过期；回答序列驻留的 Loop。整个历史只有入口段时回落普通 idle。
+   `stance_at_open()` 不变（Start 段进包武器在手，drawn=true 语义正确）。
+2. `restart_idle_after_transition()` **世界名优先**：bases 领头放世界侧记录的 idle 名（同
+   replacement 族，其条件集对该姿态已判真），基础名殿后；序列仍从第一成员重开
+   （e_activate → Start → Loop）。
+
+包身份 `CharacterPanel-scopy-oar-idle3-b3ed4de6cc-cl94faaed0c6-20261017T084619Z`。
+判读：attack/Unequip 段进包 → `idle **Loop**`；背包内换装 → equip 播完后出现 Start →
+Loop 接力且 asset ready `replaced=true`；Equip 段进包（<1s 窗口）→ 武器 idle。
+
 ## 第十三轮：keep_current 不再覆盖激活类查询（2026-10-17，提交 `c9f7fa5`，部署待游戏退出）
 
 用户替换 `cde4418` 后 Start 段进包**仍是 Start**（16:12 会话）。逐环排查：seek_dwell
