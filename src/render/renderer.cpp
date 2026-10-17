@@ -90,8 +90,12 @@ namespace
                         PanelMonitor::instance().observe_stance(player->IsWeaponDrawn());
                         if (idle_observed)
                         {
+                            // any_name records the FULL world clip order (draw/sheathe included);
+                            // the idle answer inside the sample still drives the stance rule.
                             const RunningIdleSample sample = strongest_idle_clip(*player);
-                            PanelMonitor::instance().observe_idle_clip(sample.name, sample.weight);
+                            PanelMonitor::instance().observe_idle_clip(
+                                sample.any_weight > 0.01f ? sample.any_name : sample.name,
+                                sample.any_weight > 0.01f ? sample.any_weight : sample.weight);
                         }
                     }
                 }

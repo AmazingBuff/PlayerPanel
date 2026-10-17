@@ -93,7 +93,16 @@ void PanelMonitor::observe_idle_clip(std::string_view name, float weight)
     if (m_panel_open.load(std::memory_order_acquire))
         return;  // world-frame observation only
     if (!name.empty())
-        m_idle_clip.assign(name);
+    {
+        // Log every clip CHANGE the world side shows — this is the recording of the player's
+        // own draw/sheathe demonstration (the panel's weapon-switch sequence is authored from
+        // exactly this order). One line per change, not per frame.
+        if (name != m_idle_clip)
+        {
+            logger::info("SCOPY WORLD clip '{}' weight={:.2f}", name, weight);
+            m_idle_clip.assign(name);
+        }
+    }
     // The engine's crossfade is the span the strongest idle weight spends below 1.0 between two
     // full-weight clips (oar-idle3 fifth round, problem 3: the panel's blend must match the
     // game, not a picked constant). Frame-time integration over the below-full span.

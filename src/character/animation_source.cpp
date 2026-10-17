@@ -326,21 +326,30 @@ RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source)
     std::vector<ActiveClipEntry> running;
     collect_running_clip_generators(source, running);
     float best_weight = 0.0f;
+    float best_any_weight = 0.0f;
     for (const ActiveClipEntry& entry : running)
     {
         std::string lowered;
         lowered.reserve(entry.name.size());
         std::transform(entry.name.begin(), entry.name.end(), std::back_inserter(lowered),
             [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        if (lowered.find("idle") == std::string::npos)
-            continue;
         RE::hkbClipGenerator const* const generator = entry.generator;
         if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
             continue;
         const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
         if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
             continue;
-        if (control->weight > best_weight)
+        // Two answers in one walk: the strongest IDLE (the panel's weapon-stance preference)
+        // and the strongest clip of ANY name (draw/sheathe/attack one-shots included) — the
+        // world-side sequence recorder needs the full order of the player's own demonstration,
+        // and those clips never carry "idle" in the name.
+        if (control->weight > best_any_weight)
+        {
+            best_any_weight = control->weight;
+            sample.any_name = entry.name;
+            sample.any_weight = control->weight;
+        }
+        if (lowered.find("idle") != std::string::npos && control->weight > best_weight)
         {
             best_weight = control->weight;
             sample.name = entry.name;

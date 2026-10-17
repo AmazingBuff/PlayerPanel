@@ -157,11 +157,15 @@ void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<Acti
 
 // The world side's own answer for "which idle is playing": the strongest idle-named running
 // clip's name and blend weight. The panel prefers this clip for the weapon stance and measures
-// the engine crossfade from the weight history (oar-idle3 fifth round).
+// the engine crossfade from the weight history (oar-idle3 fifth round). `any_name` is the
+// strongest clip REGARDLESS of name — the world-sequence recorder needs the draw/sheathe/
+// attack one-shots too, which never carry "idle".
 struct RunningIdleSample
 {
     std::string name;
     float weight = 0.0f;
+    std::string any_name;
+    float any_weight = 0.0f;
 };
 [[nodiscard]] RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source);
 
