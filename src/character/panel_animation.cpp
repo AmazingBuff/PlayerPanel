@@ -683,8 +683,21 @@ public:
             auto& idle = active->idles[i];
             if (!idle || !idle->ready())
                 continue;
-            const std::array<std::string_view, 1> base{ idle->selection().base_name };
-            oar::AnimationSelection selected = select(source, base, preview_state(active->equipment.drawn),
+            // The world-name preference first (fourteenth round, problem 4): the plain
+            // base-name query walked into replacements carrying third-party conditions the
+            // preview must reject, and the whole candidate set died to the vanilla clip
+            // (replaced=false). The world-side recorded idle name pinpoints the same
+            // replacement family — its condition set already answered true for this stance.
+            // The sequence still restarts at its first member (e_activate → Start → Loop).
+            std::vector<std::string_view> bases;
+            if (i > 0)
+            {
+                const std::string world_clip = PanelMonitor::instance().last_idle_clip();
+                if (!world_clip.empty())
+                    bases.push_back(world_clip);
+            }
+            bases.push_back(idle->selection().base_name);
+            oar::AnimationSelection selected = select(source, bases, preview_state(active->equipment.drawn),
                 static_cast<std::uint32_t>(i + 1), nullptr, oar::QueryEvent::e_activate);
             if (!selected.found)
                 continue;

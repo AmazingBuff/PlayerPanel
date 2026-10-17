@@ -165,19 +165,29 @@ void PanelMonitor::observe_stance_from_clip()
 
 std::string PanelMonitor::last_idle_clip() const
 {
-    // Same backward walk as the stance read: skip transition/attack/locomotion moves, answer
-    // with the first stable idle. The panel loads THIS clip as the weapon stance (OAR query by
-    // name) — mid-Equip entries land on the idle the world was entering, not a guessed base.
+    // Same backward walk as the stance read, with one sequence-semantics skip: a START-named
+    // idle is a one-shot entry member (Equip → Start → Loop). Once an attack or an Unequip has
+    // happened, the Start the walk meets first has already played out — the world was dwelling
+    // in the Loop by then (eleventh-round report: attack/Unequip entries landed on Start).
+    // Skip Start-named members and answer the Loop the sequence settled into; when the walk
+    // finds no Loop either (the sequence had not finished), the entry move itself is the best
+    // answer and falls through to the plain idle rule below.
+    std::string_view first_plain_idle;
     for (auto it = m_clip_history.rbegin(); it != m_clip_history.rend(); ++it)
     {
         std::string lowered;
         lowered.reserve(it->size());
         for (unsigned char c : *it)
             lowered.push_back(static_cast<char>(std::tolower(c)));
-        if (lowered.find("idle") != std::string::npos)
+        if (lowered.find("idle") == std::string::npos)
+            continue;
+        const bool start_member = lowered.find("start") != std::string::npos;
+        if (!start_member)
             return *it;
+        if (first_plain_idle.empty())
+            first_plain_idle = *it;  // remember the Start in case the whole history is entry moves
     }
-    return {};
+    return std::string(first_plain_idle);
 }
 
 bool PanelMonitor::consume_panel_opened()
