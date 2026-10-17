@@ -49,6 +49,26 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第十一轮：进包姿态读整段历史（2026-10-17，提交 `aa3bea8`，部署待游戏退出）
+
+用户报告：Equip/Unequip/attack 段进包，面板播 MT_Idle。14:56 会话三个场景全部复现：
+capture=4（attack 后）=5（1HM_Equip 中）=6（1HM_Unequip 中）全 `drawn=false`。
+
+根因：按名规则只看**最后一个** clip，而这三段的最后 clip（`1HM_Equip`/`1HM_Unequip`/
+`BFCO_Attack1`）名字里都没有 "idle"——姿态提升与世界 clip 首选双双不触发，回落站立
+idle。weaponState 位在开包帧已被引擎清掉，救不了。
+
+修复：记录器保留**最近 clip 历史**（8 条环形），两个读取都**从尾部反向**走：
+`stance_at_open()` 找到第一个 idle 命名 clip——武器 idle 提升 drawn=true、unarmed 基础
+族（MT_Idle/走跑跳/Mag_）确定收鞘侧并停止回溯；`last_idle_clip()` 返回同一个名字供
+面板首选装载（Equip 中进包 → 装载进包前世界在播的那个武器 idle）。查无 idle 才落回
+weaponState 位。
+
+包身份 `CharacterPanel-scopy-oar-idle3-aa3bea861c-cl94faaed0c6-20261017T070239Z`。
+判读：Equip/Unequip/attack 段进包 → `phase=idle form=… drawn=true` 且 driver=进包前世界
+在播的武器 idle；收鞘链（…→Unequip→MT_Idle 后进包）仍站立 idle（反向走先碰到 MT_Idle
+即停止）。
+
 ## 第十轮：seek_dwell 从尾部找驻留位（2026-10-17，提交 `cef8a66`，部署待游戏退出）
 
 用户实测（14:47 会话，构建 `12c38e7ee1`）：Start 段开包，面板仍播 Start（index 9038 =
