@@ -595,20 +595,19 @@ namespace oar
             // recheck dwells here too.
             if (query.seek_dwell && !options.sequence.empty())
             {
-                for (std::size_t offset = 0; offset < options.sequence.size(); ++offset)
-                {
-                    const std::size_t position = (options.sequence.size() - 1 - offset) % options.sequence.size();
-                    if (!options.sequence[position].once)
-                    {
-                        const VariantPick dwell{ options.sequence[position].index, position };
-                        query.variants.selection.seek_dwell(options.key, query.key, dwell);
-                        query.output.variants = std::move(options);
-                        query.output.variant = dwell;
-                        query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
-                        query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
-                        return dwell.index;
-                    }
-                }
+                // The dwell position is the sequence's LAST member (Start→Loop authoring puts
+                // the loop body last, PlayOnce flags or not — the in-game Start hit proved a
+                // fully-once sequence defeats the non-once search, and the commit-side dwell
+                // already rests on the trailing member). Pin the history there for the next
+                // loop recheck.
+                const std::size_t position = options.sequence.size() - 1;
+                const VariantPick dwell{ options.sequence[position].index, position };
+                query.variants.selection.seek_dwell(options.key, query.key, dwell);
+                query.output.variants = std::move(options);
+                query.output.variant = dwell;
+                query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
+                query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
+                return dwell.index;
             }
             query.output.variants = std::move(options);
             query.output.variant = *pick;

@@ -463,17 +463,20 @@ public:
             if (spell(left) && !prefer_left)
             {
                 const std::array<std::string_view, 1> left_idle{ "Animations\\MLh_Idle.hkx" };
-                next->idles[2] = asset(source, left_idle, preview_state(true), true, false, 3, idle(2));
+                next->idles[2] = asset(source, left_idle, preview_state(true), true, false, 3, idle(2),
+                    oar::QueryEvent::e_activate, {}, k_entering_panel);
             }
             else if (prefer_left && spell(right))
             {
                 const std::array<std::string_view, 1> right_idle{ "Animations\\MRh_Idle.hkx" };
-                next->idles[2] = asset(source, right_idle, preview_state(true), true, false, 3, idle(2));
+                next->idles[2] = asset(source, right_idle, preview_state(true), true, false, 3, idle(2),
+                    oar::QueryEvent::e_activate, {}, k_entering_panel);
             }
             else if (staff(left) && !prefer_left)
             {
                 const std::array<std::string_view, 1> left_idle{ "Animations\\StaffLeft_Idle.hkx" };
-                next->idles[2] = asset(source, left_idle, preview_state(true), true, false, 3, idle(2));
+                next->idles[2] = asset(source, left_idle, preview_state(true), true, false, 3, idle(2),
+                    oar::QueryEvent::e_activate, {}, k_entering_panel);
             }
         }
         if (changed && active)
