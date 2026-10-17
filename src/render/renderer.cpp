@@ -90,12 +90,14 @@ namespace
                         PanelMonitor::instance().observe_stance(player->IsWeaponDrawn());
                         if (idle_observed)
                         {
-                            // any_name records the FULL world clip order (draw/sheathe included);
-                            // the idle answer inside the sample still drives the stance rule.
+                            // OAR-style: the clip NAME is the interface — the strongest running
+                            // clip of any name (draw/sheathe included) feeds the recorder, and
+                            // the panel re-enters it through the OAR query path by name. No
+                            // weight decisions on our side.
                             const RunningIdleSample sample = strongest_idle_clip(*player);
                             PanelMonitor::instance().observe_idle_clip(
-                                sample.any_weight > 0.01f ? sample.any_name : sample.name,
-                                sample.any_weight > 0.01f ? sample.any_weight : sample.weight);
+                                !sample.any_name.empty() ? sample.any_name : sample.name,
+                                sample.any_weight > 0.0f ? sample.any_weight : sample.weight);
                         }
                     }
                 }

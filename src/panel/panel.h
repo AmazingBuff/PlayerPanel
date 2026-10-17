@@ -21,20 +21,16 @@ public:
 
     void install();
     bool is_menu_open() const;
-    // Per-frame last-known weapon stance, sampled on every UNPAUSED world frame by the render
-    // hook. The engine clears weaponState before the menu-open event fires (oar-idle3 verdict:
-    // the rising-edge snapshot read sheathed for a player who drew-then-opened), so the menu
-    // event cannot sample the entering stance; the last unpaused frame's read is the stance the
-    // player entered the menu with ("武器已在手上"). Sheathed entries stay sheathed — the panel
-    // answers a sheathed player with the plain standing idle (fifth-round report problem 1).
+    // World-frame weapon stance: the last unpaused read wins (the menu-event read loses to the
+    // engine's pre-menu sheathe). Sheathed entries answer the plain standing idle.
     void observe_stance(bool weapon_drawn);
-    // The entering stance: the last unpaused observation, valid once anything was observed.
     [[nodiscard]] StanceSnapshot stance_at_open() const;
-    // The running clip the world side showed on the last unpaused frames: name of the strongest
-    // idle-named clip and its blend weight. The panel prefers THIS clip for the weapon stance
-    // (fifth-round report problem 2: the game's own choice is the answer, the OAR sequence query
-    // is only the fallback), and the weight history measures the engine's crossfade length
-    // (problem 3): the fade is the span weight spends below 1.0 between two full-weight clips.
+    // World-frame animation observation, OAR-style (user direction): the clip NAME is the only
+    // interface. The observer logs every clip change the world side shows (the demonstration
+    // recording the panel's weapon-switch order is authored from), and the panel loads a clip
+    // by feeding that name back through the same OAR query path any standing base uses — index,
+    // replacement and variant decisions are OAR's own, never ours. The weight argument serves
+    // only the crossfade measurement (how long the engine blends), not any decision.
     void observe_idle_clip(std::string_view name, float weight);
     [[nodiscard]] std::string const& last_idle_clip() const { return m_idle_clip; }
     [[nodiscard]] float measured_crossfade_seconds() const { return m_crossfade_seconds; }
