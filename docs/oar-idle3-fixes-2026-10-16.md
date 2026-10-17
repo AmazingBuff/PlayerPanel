@@ -49,6 +49,22 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第十三轮：keep_current 不再覆盖激活类查询（2026-10-17，提交 `c9f7fa5`，部署待游戏退出）
+
+用户替换 `cde4418` 后 Start 段进包**仍是 Start**（16:12 会话）。逐环排查：seek_dwell
+传递链、驻留位计算全部正确——真凶是 **keep_current**：面板把当前已装载的 selection 作为
+`QueryRequest.current` 传给每次查询，`QueryFrame.refresh` 因此非空；已装载的武器 idle 恰是
+Start 成员，`keep_current` 三条件（clip_key 同、replacement 同、index 在 active 里）全中 →
+**直接返回 Start，seek_dwell 分支被完全绕过**。会话内第二次查询起必然如此——这解释了
+为什么第十/十二轮的两次修复"都没生效"：它们改的代码根本没被执行到。
+
+修复：`keep_current` 收窄为 **e_refresh 专属**（它的语义是"保持正在播的变体与时钟"）；
+e_activate（序列重开）与 seek_dwell（中途落驻留位）都是"重新决策变体"，refresh 一律不传。
+
+包身份 `CharacterPanel-scopy-oar-idle3-c9f7fa501f-cl94faaed0c6-20261017T081822Z`。
+判读：Start 段进包 → asset ready 名字含 `**Loop**`；**连续两次开包**（同会话第二次查询）
+也必须是 Loop——上一轮单次开包正确、第二次回 Start 的话就是这个门没关严。
+
 ## 第十二轮：驻留位=序列最后一个成员（2026-10-17，提交 `cde4418`，部署待游戏退出）
 
 用户实测（15:56 会话，构建 `aa3bea861c`）：Start 段进包仍播 Start。第十一轮的历史反向
