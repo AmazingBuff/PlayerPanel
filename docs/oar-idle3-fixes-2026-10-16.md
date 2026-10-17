@@ -49,6 +49,32 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第九轮：idle 序列完整接力 + 中段进包直接驻留（2026-10-17，提交 `12c38e7`，已部署 `fff8d090…`）
+
+用户对记录序列的理论解读：1hm 拔刀是**三段接力**——`1HM_Equip`（过渡）→ `1HM_Idle` 的
+**Start** 成员（入口，消化过渡残留）→ `1HM_Idle` 的 **Loop** 成员（驻留循环）。这正是 OAR
+sequence 机制的用途。两项实现：
+
+1. **transition 播完 → 序列重开**：Equip/Unequip 播完后 `restart_idle_after_transition()`
+   以 `e_activate` 重查各 idle 层（该 clip 的序列进度重置），拿到 Start 成员；Start 播到
+   循环边界走既有 `e_loop` 重查进 Loop 驻留。完整复刻游戏内 Equip→Start→Loop 顺序。
+2. **中段进包 seek_dwell**：拔刀/换装发生在开包**之前**时，世界的接力已进行到中段——
+   进包的 idle 查询带 `seek_dwell`（`QueryRequest` 新字段），replacement 的序列跳过
+   once 成员直接落在尾部循环体，`SelectionState::seek_dwell` 把历史钉在该位（下次循环
+   重评继续驻留，不会回头补播 Start）。Equip/Start/Unequip 任意段进包，面板都表现为
+   Loop 段 idle——与游戏内观察者视角一致。
+
+包身份 `CharacterPanel-scopy-oar-idle3-12c38e7ee1-cl94faaed0c6-20261017T063955Z`，DLL
+SHA-256 `fff8d090…`，已部署。
+
+### 上机判读（第九轮）
+
+1. 拔刀后进包（Equip 播放中）→ 面板**直接 Loop 段 idle**（无 Start 重播）；
+2. 背包内换武器 → equip 播完 → 日志出现 idle 层 e_activate 重查（Start 成员 index）→
+   Start 播一个循环边界 → e_loop 换 Loop 成员驻留；
+3. 收刀进包 → 站立 idle 驻留位；
+4. 无 Start 重播、无回卷循环（第四轮 dwell 修复的回归判据）。
+
 ## 第八轮：按名判定挪到读取侧（2026-10-17 傍晚，提交 `b5ebd0d`，已部署 `8cf6ca84…`）
 
 用户报告：持械进包面板仍站立 idle（第七轮的按名规则没生效）。13:33 会话日志：13:33:21
