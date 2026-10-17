@@ -49,6 +49,21 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第十轮：seek_dwell 从尾部找驻留位（2026-10-17，提交 `cef8a66`，部署待游戏退出）
+
+用户实测（14:47 会话，构建 `12c38e7ee1`）：Start 段开包，面板仍播 Start（index 9038 =
+`1hm Non-Combat idle Start`）。根因：seek_dwell 从 pick 位置**向前**找第一个非 once 成员，
+但该包的作者**没有勾 PlayOnce**（纯 sequential 顺序推进）——位置 0 的 Start 本身就是
+"非 once"，搜索原地停止。
+
+修复：**从序列尾部反向**找第一个非 once 成员——Start→Loop 编排的驻留位在尾部，与第四轮
+`commit` 驻留规则同一定位。once 标志齐备的包（尾部 Loop 勾了循环、Start 勾 PlayOnce）与
+不勾的包都落在 Loop。
+
+包身份 `CharacterPanel-scopy-oar-idle3-cef8a668a0-cl94faaed0c6-20261017T065302Z`。
+判读：Start 段/Equip 段/Unequip 段开包 → `asset ready` 的名字应含 `idle **Loop**`
+（不再是 Start）；换装后接力（e_activate 从 Start 起）不受影响。
+
 ## 第九轮：idle 序列完整接力 + 中段进包直接驻留（2026-10-17，提交 `12c38e7`，已部署 `fff8d090…`）
 
 用户对记录序列的理论解读：1hm 拔刀是**三段接力**——`1HM_Equip`（过渡）→ `1HM_Idle` 的
