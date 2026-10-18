@@ -185,6 +185,23 @@ namespace oar
             state.histories[clip].next = pick.position;
         }
 
+        // Accepting a dwell pick must NOT advance the sequence: the picked member is where the
+        // clip is meant to stay. Register the clip as active (loop()/keep_current read that) and
+        // clear the member's PlayOnce mark so the next loop re-check can pick it again. commit()
+        // would move "next" past it and replay the entry member on the following cycle (round 16).
+        void dwell(VariantOptions const& options, VariantPick const& pick, std::uint64_t clip)
+        {
+            deactivate(clip, &options.key);
+            VariantState& state = m_variants[options.key];
+            register_clip(state.active, clip);
+            History& history = state.histories[clip];
+            std::vector<bool>& flags = options.share_history ? state.shared_played : history.played;
+            if (pick.position < flags.size())
+                flags[pick.position] = false;
+            if (pick.position < options.sequence.size())
+                history.next = pick.position;
+        }
+
         [[nodiscard]] bool in_sequence(VariantOptions const& options, std::uint64_t clip) const
         {
             const auto state = m_variants.find(options.key);
@@ -232,6 +249,14 @@ namespace oar
             {
                 return entry.first.scope == DataScope::e_local && entry.first.owner == clip;
             });
+            // An activation restarts the sequence from its first member: forget this clip's
+            // progress for every scope, not only the local one, so a dwell landing or a PlayOnce
+            // mark cannot leak into the restart (round 16).
+            for (auto& [key, state] : m_variants)
+            {
+                (void)key;
+                state.histories.erase(clip);
+            }
         }
 
     private:

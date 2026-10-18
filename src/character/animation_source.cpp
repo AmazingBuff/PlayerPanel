@@ -327,6 +327,7 @@ RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source)
     collect_running_clip_generators(source, running);
     float best_weight = 0.0f;
     float best_any_weight = 0.0f;
+    float best_body_weight = 0.0f;
     for (const ActiveClipEntry& entry : running)
     {
         std::string lowered;
@@ -348,6 +349,20 @@ RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source)
             best_any_weight = control->weight;
             sample.any_name = entry.name;
             sample.any_weight = control->weight;
+            sample.any_index = generator->animationBindingIndex;
+            sample.any_time = std::isfinite(control->localTime) ? control->localTime : 0.0f;
+            sample.any_looping = generator->mode == RE::hkbClipGenerator::PlaybackMode::kModeLooping;
+        }
+        // The body-entry answer excludes hand idles: the entry action drives the whole body, and
+        // a hand-layer member out-weighing the still-blending body clips must not become it.
+        const bool hand_idle = lowered.find("mlh_") != std::string::npos || lowered.find("mrh_") != std::string::npos;
+        if (!hand_idle && control->weight > best_body_weight)
+        {
+            best_body_weight = control->weight;
+            sample.body_name = entry.name;
+            sample.body_index = generator->animationBindingIndex;
+            sample.body_time = std::isfinite(control->localTime) ? control->localTime : 0.0f;
+            sample.body_looping = generator->mode == RE::hkbClipGenerator::PlaybackMode::kModeLooping;
         }
         if (lowered.find("idle") != std::string::npos && control->weight > best_weight)
         {
@@ -449,13 +464,19 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
                     if (hinted != copy_by_name.end() && hinted->second != &copy_root)
                         best = hinted->second;
                 }
-                size_t best_length = 0;
-                for (const auto& [name, node] : copy_by_name)
+                if (!best)
                 {
-                    if (!best && name.size() > bone_name.size() && name.starts_with(bone_name) && name.size() > best_length)
+                    // Only the hint-less fallback walks the map. It really takes the LONGEST
+                    // prefix: the old `!best` guard stopped at the first map-order match, which
+                    // is how a generic Weapon bone ended up on WeaponSwordLeft (round 16).
+                    size_t best_length = 0;
+                    for (const auto& [name, node] : copy_by_name)
                     {
-                        best = node;
-                        best_length = name.size();
+                        if (name.size() > bone_name.size() && name.size() > best_length && name.starts_with(bone_name))
+                        {
+                            best = node;
+                            best_length = name.size();
+                        }
                     }
                 }
                 if (best)
@@ -518,11 +539,11 @@ void ClipPlayer::reset()
     m_last_tick = std::chrono::steady_clock::now();
 }
 
-void ClipPlayer::set_clip(ClipPlayback clip, bool loop)
+void ClipPlayer::set_clip(ClipPlayback clip, bool loop, double start_seconds)
 {
     m_clip = std::move(clip);
     m_loop = loop;
-    m_time = 0.0;
+    m_time = std::max(start_seconds, 0.0);
     m_last_tick = std::chrono::steady_clock::now();
 }
 
@@ -532,9 +553,9 @@ void ClipPlayer::retarget(ClipPlayback clip)
     m_last_tick = std::chrono::steady_clock::now();
 }
 
-void ClipPlayer::restart()
+void ClipPlayer::restart(double start_seconds)
 {
-    m_time = 0.0;
+    m_time = std::max(start_seconds, 0.0);
     m_last_tick = std::chrono::steady_clock::now();
 }
 

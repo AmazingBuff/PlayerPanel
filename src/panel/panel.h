@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -18,10 +19,22 @@ public:
         bool valid = false;
         bool drawn = false;
     };
+    // The clip the player was IN when the inventory opened — the world's own decision, recorded
+    // before the engine freezes the menu session. The panel replays it from local_time as its
+    // entry action and then hands over to the idle sequence (round 18). Consumed once by the
+    // first animation request of the session.
+    struct EntryAction
+    {
+        bool valid = false;
+        std::uint16_t index = 0xFFFF;
+        float local_time = 0.0f;
+        bool looping = false;
+    };
     static PanelMonitor& instance();
 
     void install();
     bool is_menu_open() const;
+    [[nodiscard]] EntryAction take_entry_action();
     // World-frame weapon stance: the last unpaused read wins (the menu-event read loses to the
     // engine's pre-menu sheathe). Sheathed entries answer the plain standing idle.
     void observe_stance(bool weapon_drawn);
@@ -81,10 +94,14 @@ private:
     // standing).
     std::vector<std::string> m_clip_history;
     float m_crossfade_seconds = 0.0f;
-    // Crossfade measurement: the fade is the span between the frame the strongest idle weight
-    // dropped below 1.0 and the frame it returned there.
+    // Crossfade measurement: the fade is the wall-clock span the strongest idle weight spends
+    // below full. The observation cadence is every 10th world frame, so the span is measured with
+    // a steady clock between observations — a fixed 1/60 s per sample measured the fade ~10x
+    // short (round 16).
+    std::chrono::steady_clock::time_point m_fade_sample{};
     float m_fade_elapsed = 0.0f;
     bool m_fading = false;
+    EntryAction m_entry_action;
     MenuSink m_menu_sink;
     EquipmentSink m_equipment_sink;
     std::atomic_uint64_t m_equipment_revision{ 0 };

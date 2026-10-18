@@ -588,11 +588,11 @@ namespace oar
             if (!pick || pick->index == 0xFFFF)
                 return std::nullopt;
             // Landing MID-sequence: the world already played the entry moves (Equip, Start).
-            // The loop body the world dwells on is the sequence's TRAILING non-once member
-            // (Start→Loop authoring puts it last; the members may not even carry PlayOnce
-            // flags — the in-game Start hit proved position-0 forward walking lands on the
-            // entry move itself). Seek from the tail, and commit the history so the NEXT loop
-            // recheck dwells here too.
+            // The loop body the world dwells on is the sequence's TRAILING member (Start→Loop
+            // authoring puts it last; the members may not even carry PlayOnce flags — the
+            // in-game Start hit proved position-0 forward walking lands on the entry move
+            // itself). Seek from the tail and mark the selection as a dwell: the playback accept
+            // path pins the history there instead of advancing past it (round 16).
             logger::info("SCOPY PANEL seek gate reached={} flag={} seq={} pick-pos={} pick-idx={}",
                 true, query.seek_dwell, options.sequence.size(),
                 pick->position < options.sequence.size() ? pick->position : 0xFFFF, pick->index);
@@ -608,6 +608,7 @@ namespace oar
                 query.variants.selection.seek_dwell(options.key, query.key, dwell);
                 query.output.variants = std::move(options);
                 query.output.variant = dwell;
+                query.output.dwell = true;
                 query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
                 query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
                 return dwell.index;
@@ -744,6 +745,20 @@ namespace oar
         return readable(strings, sizeof(*strings)) ? strings : nullptr;
     }
 
+    std::span<std::string const> animation_names(RE::hkbCharacter& character, QuerySession& session)
+    {
+        RE::hkbCharacterStringData* const wanted = character_strings(character);
+        if (!wanted)
+            return {};
+        const auto& table = wanted->animationNames;
+        const std::size_t count = static_cast<std::size_t>(table.size());
+        if (table.size() <= 0 || table.size() > 65535 ||
+            !readable(table.data(), count * sizeof(RE::hkStringPtr)))
+            return {};
+        return session.names(wanted, table.data(), count,
+            [&](std::size_t i) { return asset_name(table[static_cast<int>(i)]); });
+    }
+
     AnimationSelection query_animation(RE::TESObjectREFR& source, RE::hkbCharacter& character,
         std::span<std::string_view const> bases, PreviewState state, QuerySession& session,
         QueryRequest const& request)
@@ -840,9 +855,14 @@ namespace oar
             // the variant fresh. Passing the still-loaded selection as refresh here is what
             // pinned every re-query to the Start member it was already holding.
             const bool allow_refresh = request.event == QueryEvent::e_refresh;
+            // A loop re-check of a selection that landed mid-sequence re-seeks the dwell: a fresh
+            // replacement evaluation would otherwise pick from position 0 and the pin would be
+            // lost after one cycle (round 16).
+            const bool seek_the_dwell = request.seek_dwell ||
+                (request.event == QueryEvent::e_loop && request.current && request.current->dwell);
             QueryFrame frame(scope, session, result,
                 result.clip_key, allow_refresh && request.current ? request.current : nullptr,
-                request.seek_dwell);
+                seek_the_dwell);
             if (void* const replacements = s_get_replacements(project, *base))
             {
                 void* const selected = s_evaluate_replacements(replacements, &source, preview.get());

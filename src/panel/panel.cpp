@@ -4,6 +4,9 @@
 
 #include "panel/panel.h"
 
+#include "character/animation_source.h"
+#include "oar/query_policy.h"
+
 #include "RE/P/PlayerCharacter.h"
 #include "RE/S/ScriptEventSourceHolder.h"
 #include "RE/T/TESEquipEvent.h"
@@ -20,16 +23,38 @@ RE::BSEventNotifyControl PanelMonitor::MenuSink::ProcessEvent(const RE::MenuOpen
     {
         if (event->opening)
         {
+            // The open edge is the last chance to see the move the player is IN: the periodic
+            // world-frame recorder runs every 10th frame, so a short draw/sheathe move could be
+            // missed and the stance read would answer from the previous idle (round 17). Sample
+            // before the panel flag is set, so observe_idle_clip still accepts world frames.
+            if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
+            {
+                const RunningIdleSample sample = strongest_idle_clip(*player);
+                if (!sample.any_name.empty())
+                    instance().observe_idle_clip(sample.any_name,
+                        sample.any_weight > 0.0f ? sample.any_weight : sample.weight);
+                // The world's own decision for the entry action: the running binding and its
+                // phase, from the strongest clip that is NOT a hand idle (the entry drives the
+                // whole body). The panel replays it from that phase instead of re-asking OAR
+                // with a frozen menu state (round 18).
+                if (sample.body_index != 0xFFFF)
+                {
+                    instance().m_entry_action.valid = true;
+                    instance().m_entry_action.index = sample.body_index;
+                    instance().m_entry_action.local_time = sample.body_time;
+                    instance().m_entry_action.looping = sample.body_looping;
+                }
+            }
             instance().m_panel_open.store(true, std::memory_order_relaxed);
             instance().m_panel_opened.store(true, std::memory_order_relaxed);
-            // The entering stance is NOT sampled here: the engine clears weaponState before this
-            // event fires (oar-idle3 verdict — the rising-edge read reported sheathed for a
-            // drawn-then-opened player). observe_stance() holds the last unpaused world frame's
-            // read, which IS the entering stance.
+            // The weaponState BIT is not sampled here: the engine clears it before this event
+            // fires (oar-idle3 verdict — the rising-edge read reported sheathed for a
+            // drawn-then-opened player). The clip name recorded above decides the stance.
         }
         else
         {
             instance().m_panel_open.store(false, std::memory_order_relaxed);
+            instance().m_entry_action = {};  // a closed session never replays a stale entry move
         }
     }
     return RE::BSEventNotifyControl::kContinue;
@@ -73,31 +98,25 @@ bool PanelMonitor::is_menu_open() const
 PanelMonitor::StanceSnapshot PanelMonitor::stance_at_open() const
 {
     // The demonstrated sequence decides at READ time (sixth/seventh round direction: the name
-    // is the interface). Walk the recent clip history BACKWARDS: the last clip is often a
-    // transition/attack move with no "idle" in its name (1HM_Equip, 1HM_Unequip,
-    // BFCO_Attack1 — the tenth-round report), and the stance the player is entering is the
-    // stable idle BEFORE it. The first idle-named clip found from the tail answers; a
-    // weapon/hand idle (not the unarmed base family) promotes drawn=true. The weaponState bit
-    // keeps answering the sheathed side.
+    // is the interface). Walk the recent clip history BACKWARDS. A draw/sheathe move is
+    // decisive on its own: the engine clears weaponState before the menu event and freezes it
+    // for the whole menu session, so entering during 1HM_Equip used to answer sheathed (and show
+    // MT_Idle) while entering during 1HM_Unequip answered drawn (and showed a weapon idle) —
+    // round 17. An idle decides by family; anything else (attack, locomotion) keeps looking back.
     for (auto it = m_clip_history.rbegin(); it != m_clip_history.rend(); ++it)
     {
-        std::string lowered;
-        lowered.reserve(it->size());
-        for (unsigned char c : *it)
-            lowered.push_back(static_cast<char>(std::tolower(c)));
-        if (lowered.find("idle") == std::string::npos)
-            continue;  // transition/attack/locomotion move — keep looking back
-        const bool base_idle = lowered.find("mt_idle") != std::string::npos ||
-            lowered.find("sneakmtidle") != std::string::npos ||
-            lowered.find("mt_sprint") != std::string::npos ||
-            lowered.find("mt_walk") != std::string::npos ||
-            lowered.find("mt_run") != std::string::npos ||
-            lowered.find("mt_jump") != std::string::npos ||
-            lowered.find("mag_") != std::string::npos;
-        if (base_idle)
-            break;  // reached the unarmed base idle: the sequence rooted in the sheathed stance
-        return { true, true };
+        switch (oar::clip_stance(*it))
+        {
+        case oar::ClipStance::e_drawn:
+            return { true, true };
+        case oar::ClipStance::e_sheathed:
+            return { true, false };
+        case oar::ClipStance::e_undecided:
+            break;
+        }
     }
+    // No decisive clip in the recent history: the last unpaused weaponState read is the only
+    // remaining source.
     if (!m_stance_valid.load(std::memory_order_acquire))
         return {};
     return { true, m_stance_at_open.load(std::memory_order_relaxed) };
@@ -133,16 +152,24 @@ void PanelMonitor::observe_idle_clip(std::string_view name, float weight)
     }
     // The engine's crossfade is the span the strongest clip weight spends below 1.0 between two
     // full-weight clips (oar-idle3 fifth round, problem 3: the panel's blend must match the
-    // game, not a picked constant). Frame-time integration over the below-full span.
-    constexpr float frame_seconds = 1.0f / 60.0f;  // world-frame cadence; a coarse clock is fine
+    // game, not a picked constant). This observation runs every 10th world frame, so the span is
+    // integrated from the real steady-clock delta between samples — a fixed 1/60 s per sample
+    // measured the fade ~10x short (round 16).
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     if (weight < 0.999f)
     {
-        m_fading = true;
-        m_fade_elapsed += frame_seconds;
+        if (m_fading)
+            m_fade_elapsed += std::chrono::duration<float>(now - m_fade_sample).count();
+        else
+        {
+            m_fading = true;
+            m_fade_elapsed = 0.0f;
+        }
     }
     else if (m_fading)
     {
         m_fading = false;
+        m_fade_elapsed += std::chrono::duration<float>(now - m_fade_sample).count();
         if (m_fade_elapsed > 0.05f && m_fade_elapsed < 2.0f)
         {
             m_crossfade_seconds = m_fade_elapsed;
@@ -151,6 +178,7 @@ void PanelMonitor::observe_idle_clip(std::string_view name, float weight)
         }
         m_fade_elapsed = 0.0f;
     }
+    m_fade_sample = now;
 }
 
 void PanelMonitor::observe_stance_from_clip()
@@ -193,6 +221,15 @@ std::string PanelMonitor::last_idle_clip() const
 bool PanelMonitor::consume_panel_opened()
 {
     return m_panel_opened.exchange(false, std::memory_order_acq_rel);
+}
+
+PanelMonitor::EntryAction PanelMonitor::take_entry_action()
+{
+    // Consumed exactly once: the first animation request of the panel session replays the move
+    // the player was frozen in; later requests are equipment/recapture updates.
+    const EntryAction action = m_entry_action;
+    m_entry_action = {};
+    return action;
 }
 
 PanelMonitor::PanelMonitor() : m_panel_open(false), m_panel_opened(false)

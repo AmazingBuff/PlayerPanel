@@ -44,6 +44,9 @@ namespace oar
         std::uint64_t clip_key = 0;
         std::uint64_t replacement_key = 0;
         bool reevaluate_on_loop = true;
+        // Set when the query landed mid-sequence (seek_dwell): the playback accept path pins the
+        // sequence history at the picked member instead of advancing past it (round 16).
+        bool dwell = false;
         std::optional<VariantOptions> variants;
         VariantPick variant;
     };
@@ -60,6 +63,9 @@ namespace oar
     };
     [[nodiscard]] bool query_supported();
     [[nodiscard]] RE::hkbCharacterStringData* character_strings(RE::hkbCharacter const& character);
+    // The project's animation-name catalogue, read through the same guards the query uses. The
+    // panel uses it to find a pack's sequence siblings by name (round 17).
+    [[nodiscard]] std::span<std::string const> animation_names(RE::hkbCharacter& character, QuerySession& session);
     [[nodiscard]] AnimationSelection query_animation(RE::TESObjectREFR& source, RE::hkbCharacter& character,
         std::span<std::string_view const> bases, PreviewState state, QuerySession& session,
         QueryRequest const& request = {});

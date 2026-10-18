@@ -340,6 +340,9 @@ void SceneGraphCopy::process_requests()
     if (generation != m_seen_generation || (ui && ui->IsMenuOpen(RE::MainMenu::MENU_NAME)))
     {
         PuppetDriver::instance().release("session-boundary");
+        // A load rebuilds the project name table: the persisted sequence plans' member indexes
+        // no longer refer to the animations they were collected for (round 18).
+        m_panel_animation.invalidate_sequence_plans();
         if (m_snapshot)
             logger::info("SCOPY RELEASE reason=session-boundary capture={}", m_capture_id);
         retire(std::move(m_snapshot));
@@ -454,8 +457,10 @@ void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
         // that standing body and freeze the placement root from it. The capture-time pose (a
         // jump center high, a sneak center low) never becomes the placement standard. The clone
         // answers which pass it wants through recentre_pending; arming stays one-shot per
-        // capture (m_recentre_armed is reset by capture()).
-        if (written > 0 && !m_recentre_armed && clone.recentre_pending())
+        // capture (m_recentre_armed is reset by capture()). An entry action or a weapon
+        // transition postpones it: the placement standard must be the IDLE the move hands over
+        // to, not the move's own body (round 18).
+        if (written > 0 && !m_recentre_armed && clone.recentre_pending() && !m_panel_animation.transitioning())
         {
             clone.calibrate_from_posed_bound();
             m_recentre_armed = true;

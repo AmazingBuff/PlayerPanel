@@ -934,6 +934,109 @@ namespace
         return empty_is_not_ready && allocated_is_ready && declared_is_not_the_bar &&
             short_of_allocated && no_allocation && stable_signature && grew_signature;
     }
+
+    // Round 16: a mid-sequence landing (seek_dwell) must survive playback acceptance. commit()
+    // advanced "next" past the picked member, so the next loop re-check replayed the entry move
+    // (the Start/Loop alternation). The dwell accept path pins the member instead; an activation
+    // still restarts the sequence at its first member, for non-local scopes too.
+    bool preview_dwell_survives_accept_and_reactivation()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        oar::SelectionState preview(123);
+        oar::VariantOptions options;
+        options.key = { oar::DataScope::e_submod, 20 };
+        options.sequential = true;
+        options.share_history = true;
+        options.sequence = { { 11, true }, { 12, true } };  // all PlayOnce: the pack that defeated the search
+        const oar::VariantPick dwell{ 12, 1 };
+        preview.seek_dwell(options.key, 1, dwell);
+        preview.dwell(options, dwell, 1);
+        const auto first = preview.variant(options, 1);
+        if (!first || first->index != 12 || first->position != 1)
+            return false;
+        // A second dwell accept (the loop re-check's same choice) still lands on the same member.
+        preview.dwell(options, *first, 1);
+        const auto second = preview.variant(options, 1);
+        if (!second || second->index != 12)
+            return false;
+        // An activation forgets the progress for non-local scopes too and restarts at member 0.
+        preview.activate(1);
+        const auto restarted = preview.variant(options, 1);
+        return restarted && restarted->index == 11;
+    }
+
+    // Round 16: the frozen world clip may only drive the stance layer while it belongs to the
+    // stance's own idle family; a sheathed or previous-family name would otherwise override the
+    // family the panel just equipped.
+    bool panel_clip_family_matches_the_stance()
+    {
+        using PLUGIN_NAMESPACE::panel_clip_is_family;
+        using PLUGIN_NAMESPACE::oar::WeaponForm;
+        return panel_clip_is_family("Animations\\1hm_idle.hkx", WeaponForm::kOneHanded) &&
+            panel_clip_is_family("animations/1HM_IDLE.HKX", WeaponForm::kOneHanded) &&
+            panel_clip_is_family("Animations\\Female\\1hm_idle.hkx", WeaponForm::kOneHanded) &&
+            !panel_clip_is_family("Animations\\MT_Idle.hkx", WeaponForm::kTwoHandedAxe) &&
+            !panel_clip_is_family("Animations\\1hm_idle.hkx", WeaponForm::kBow) &&
+            panel_clip_is_family("Animations\\h2h_idle.hkx", WeaponForm::kNone);
+    }
+
+    // Round 17: entering during a draw/sheathe move must answer the stance that move produces.
+    // The engine clears weaponState before the menu event, so the old read answered sheathed
+    // during 1HM_Equip and drawn during 1HM_Unequip.
+    bool clip_stance_decides_the_entering_stance()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        return oar::clip_stance("Animations\\1HM_Equip.hkx") == oar::ClipStance::e_drawn &&
+            oar::clip_stance("Animations\\1hm_equip.hkx") == oar::ClipStance::e_drawn &&
+            oar::clip_stance("Animations\\1HM_Unequip.hkx") == oar::ClipStance::e_sheathed &&
+            oar::clip_stance("Animations\\Bow_Unequip.hkx") == oar::ClipStance::e_sheathed &&
+            oar::clip_stance("Animations\\1hm_idle.hkx") == oar::ClipStance::e_drawn &&
+            oar::clip_stance("Animations\\MLh_Idle.hkx") == oar::ClipStance::e_drawn &&
+            oar::clip_stance("Animations\\male\\MT_Idle.HKX") == oar::ClipStance::e_sheathed &&
+            oar::clip_stance("Animations\\MT_Jump.hkx") == oar::ClipStance::e_undecided;
+    }
+
+    // Round 18 verdict: the sequence plan collects the family in play order — the NON-COMBAT
+    // members never cross into the combat family (both live under one project folder), and the
+    // episode digits order Loop before Loop2.
+    bool idle_sequence_siblings_resolve_by_name()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        const std::vector<std::string> names{
+            "Animations\\MT_Idle.hkx",
+            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Start\\1hm_idle.hkx",
+            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop\\1hm_idle.hkx",
+            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop2\\1hm_idle.hkx",
+            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Combat idle Loop\\1hm_idle.hkx",
+            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Combat idle Start\\1hm_idle.hkx",
+            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 2hw Axe\\2hw Axe Non-Combat idle Loop\\2hw_idle.hkx"
+        };
+        const auto family = oar::collect_sequence_family(names, names[1]);
+        if (family.size() != 3 ||
+            family[0].index != 1 || family[1].index != 2 || family[2].index != 3 ||
+            family[0].token != oar::ClipSequenceToken::e_start ||
+            family[1].token != oar::ClipSequenceToken::e_loop ||
+            family[2].token != oar::ClipSequenceToken::e_loop ||
+            family[1].episode != 0 || family[2].episode != 2)
+            return false;
+        const auto combat = oar::collect_sequence_family(names, names[5]);
+        return combat.size() == 2 && combat[0].index == 5 && combat[1].index == 4;
+    }
+
+    // Round 18: the entry action replays the clip the player was IN. Only a draw, a sheathe or a
+    // sequence's Start member is worth mirroring; loops, other idles, locomotion and attacks are
+    // not (the panel still stands, and a Loop member has nothing left to play).
+    bool entry_action_kind_classifies_entry_moves()
+    {
+        namespace oar = PLUGIN_NAMESPACE::oar;
+        return oar::entry_action_kind("Animations\\1HM_Equip.hkx") == oar::EntryActionKind::e_equip &&
+            oar::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 2hw Axe\\2hw Axe Equip Base\\2hw_equip.hkx") == oar::EntryActionKind::e_equip &&
+            oar::entry_action_kind("Animations\\1HM_Unequip.hkx") == oar::EntryActionKind::e_unequip &&
+            oar::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Start\\1hm_idle.hkx") == oar::EntryActionKind::e_sequence_start &&
+            oar::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop\\1hm_idle.hkx") == oar::EntryActionKind::e_none &&
+            oar::entry_action_kind("Animations\\MT_Idle.hkx") == oar::EntryActionKind::e_none &&
+            oar::entry_action_kind("Animations\\MT_RunForward.hkx") == oar::EntryActionKind::e_none;
+    }
 }
 
 int main()
@@ -971,6 +1074,11 @@ int main()
     const bool blend_interrupt = interrupted_pose_blend_starts_from_the_visible_pose();
     const bool stance_contract = panel_animation_state_keeps_stance_and_transition_contract();
     const bool catalogue_reuse = project_name_catalogue_is_reused_across_sessions();
+    const bool dwell_pin = preview_dwell_survives_accept_and_reactivation();
+    const bool clip_family = panel_clip_family_matches_the_stance();
+    const bool stance_from_clip = clip_stance_decides_the_entering_stance();
+    const bool sequence_siblings = idle_sequence_siblings_resolve_by_name();
+    const bool entry_kind = entry_action_kind_classifies_entry_moves();
     std::printf("snapshot placement: %s\nfinal pose index order: %s\nr01 framing delta: %s\ncoverage ledger: %s\nslot necessity: %s\nfigure bound union: %s\nassembly gate: %s\nanimation track identity: %s\nempty source body shape: %s\n",
         placement ? "PASS" : "FAIL", mapping ? "PASS" : "FAIL", framing ? "PASS" : "FAIL",
         ledger ? "PASS" : "FAIL", necessity ? "PASS" : "FAIL", bound ? "PASS" : "FAIL", assembly ? "PASS" : "FAIL",
@@ -988,11 +1096,14 @@ int main()
     std::printf("preview Random cache: %s\nvariant weights and shared state: %s\nPlayOnce commit on start: %s\nidle loop decision flags: %s\nlatest weapon request: %s\nindependent idle cycles: %s\ninterrupted pose blend: %s\n",
         random_conditions ? "PASS" : "FAIL", variant_weights ? "PASS" : "FAIL", play_once ? "PASS" : "FAIL",
         idle_recheck ? "PASS" : "FAIL", latest_weapon ? "PASS" : "FAIL", idle_cycles ? "PASS" : "FAIL", blend_interrupt ? "PASS" : "FAIL");
-    std::printf("stance and transition contract: %s\nproject catalogue reuse: %s\n",
-        stance_contract ? "PASS" : "FAIL", catalogue_reuse ? "PASS" : "FAIL");
+    std::printf("stance and transition contract: %s\nproject catalogue reuse: %s\ndwell pin across accept: %s\nclip family gate: %s\nstance from clip: %s\nidle sequence siblings: %s\nentry action kind: %s\n",
+        stance_contract ? "PASS" : "FAIL", catalogue_reuse ? "PASS" : "FAIL",
+        dwell_pin ? "PASS" : "FAIL", clip_family ? "PASS" : "FAIL",
+        stance_from_clip ? "PASS" : "FAIL", sequence_siblings ? "PASS" : "FAIL",
+        entry_kind ? "PASS" : "FAIL");
     return placement && mapping && framing && ledger && necessity && bound && assembly && track_identity && shape_clear &&
         two_handed && oar_scope && oar_projection && oar_binary && alpha_order && alpha_state && d3d_ranges && panel_pose &&
         query_profiles && standing_catalog && local_variants && original_answers && panel_transitions && gear_refresh && carrier_layout &&
         random_conditions && variant_weights && play_once && idle_recheck && latest_weapon && idle_cycles && blend_interrupt &&
-        stance_contract && catalogue_reuse ? 0 : 1;
+        stance_contract && catalogue_reuse && dwell_pin && clip_family && stance_from_clip && sequence_siblings && entry_kind ? 0 : 1;
 }

@@ -5,12 +5,14 @@
 #pragma once
 
 #include "oar/policy.h"
+#include "oar/query_policy.h"
 
 #include "RE/N/NiQuaternion.h"
 #include "RE/N/NiTransform.h"
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 #include <string_view>
 #include <span>
 #include <vector>
@@ -148,6 +150,31 @@ private:
     case Form::kShield: return { "Animations\\1hm_idle.hkx" };
     default: return { "Animations\\h2h_idle.hkx", "Animations\\MT_Idle.hkx" };
     }
+}
+
+// Whether a recorded world clip belongs to the stance's own idle family. The world-side recorder
+// stores the clip generator's animationName; OAR replacements keep the BASE animation name (only
+// the binding index changes), so comparing the canonical paths against panel_idle_bases() is a
+// reliable "this idle was authored for the stance the panel is about to show" test. It keeps a
+// frozen pre-swap world clip from overriding the family the panel just equipped (round 16).
+[[nodiscard]] inline bool panel_clip_is_family(std::string_view clip, oar::WeaponForm form)
+{
+    std::string canonical = oar::canonical_animation_path(clip);
+    // Same gender-directory normalisation find_base_animation applies: a project may store the
+    // vanilla idle under Animations\Female\ / Animations\Male\.
+    for (std::string_view gender : { "animations\\female\\", "animations\\male\\" })
+    {
+        const std::size_t at = canonical.find(gender);
+        if (at != std::string::npos)
+            canonical.replace(at, gender.size(), "animations\\");
+    }
+    for (std::string_view base : panel_idle_bases(form))
+    {
+        const std::string wanted = oar::canonical_animation_path(base);
+        if (canonical == wanted || canonical.ends_with("\\" + wanted))
+            return true;
+    }
+    return false;
 }
 
 // The transition bases use the names the world-side sequence recorder captured from the

@@ -790,10 +790,12 @@ void CharacterClone::calibrate_from_posed_bound()
     const SkinnedBound posed = measure_skinned_bound(m_graph_object.get());
     if (!posed.valid)
     {
-        // No measurable body yet (bare-skeleton race): drop the request; the capture's own
-        // center stays the baseline rather than freezing a garbage correction.
+        // No measurable body yet (bare-skeleton race): drop the request but keep the raw
+        // placement as the steady-state root. An unset root is identity, which would park the
+        // figure at the world origin on the next pose() (round 16).
+        m_calibrated_root = m_graph_object->local;
         m_recentre_pending = false;
-        logger::warn("SCOPY FRAME calibration skipped: no measurable skinned bound");
+        logger::warn("SCOPY FRAME calibration skipped: no measurable skinned bound (raw placement kept)");
         return;
     }
     const RE::NiPoint3 offset{ m_anchor.x - posed.center.x, m_anchor.y - posed.center.y,

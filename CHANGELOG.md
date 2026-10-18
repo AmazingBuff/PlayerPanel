@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+### Fixed
+
+- Panel entry action mirroring (`oar-idle3`, round 18, 2026-10-17): the panel no longer re-asks
+  OAR what to play when the inventory opens. The clip the player was IN at the open edge (its
+  running binding index and local time) is recorded once and replayed from that phase as the
+  entry action — a draw continues as Equip → Start → Loop, a started sequence member hands over
+  to its Loop sibling, a sheathe lands on the standing idle. The sibling lookup matches the
+  sequence FAMILY (combat/non-combat variants under one project folder do not cross), the entry
+  sample excludes hand-layer clips, and a Start member without a registered Loop sibling dwells
+  instead of re-asking the frozen phase every cycle. Framing calibration waits for the idle the
+  move hands over to. Both Release configurations build; `snapshot_transform` 38 checks pass.
+  Game verification remains pending.
+
+- Panel idle sequence phase and entering stance (`oar-idle3`, round 17, 2026-10-17): decide the
+  entering stance from the draw/sheathe moves in the recent world clips (entering during
+  `1HM_Equip` used to answer sheathed and show MT_Idle; entering during `1HM_Unequip` used to
+  answer drawn and show a weapon idle), and let the panel advance a pack's sibling-folder idle
+  sequence by name (Start → Loop, and Equip → Start → Loop after an in-menu weapon swap) instead
+  of re-asking OAR, whose phase conditions are frozen on the paused source's magic effects. Packs
+  without the sibling layout keep the ordinary OAR path. Both Release configurations build;
+  `snapshot_transform` 37 checks pass. Game verification remains pending.
+
+- Panel animation scheduling (`oar-idle3`, round 16, 2026-10-17): record an in-menu weapon swap
+  before the request reads the equipment (the sheathed proposal was discarded as stale), use the
+  frozen world-clip preference only while it still belongs to the current weapon family, pin a
+  mid-sequence dwell across playback acceptance and restart sequence progress on activation for
+  every scope, integrate the measured crossfade with a real clock instead of a 10-frame-sampled
+  1/60 s step, carry the weapon attachment hint on the loop/transition re-queries and make the
+  prefix fallback truly longest, bound the name-catalogue cache, keep the raw placement when
+  calibration cannot measure, and stop a same-equipment recapture from discarding an in-flight
+  request. Both Release configurations build; `snapshot_transform` 35 checks pass. Game
+  verification remains pending.
+
 ### Changed
 
 - Panel idle selection and fast weapon changes (`oar-idle2`, 2026-10-16): support preview-local

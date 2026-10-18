@@ -166,6 +166,19 @@ struct RunningIdleSample
     float weight = 0.0f;
     std::string any_name;
     float any_weight = 0.0f;
+    // The strongest clip of ANY name is what the panel mirrors as its entry action: the index is
+    // the running binding (OAR replacement included) and the local time is the phase the source
+    // was frozen at when the inventory opened (round 18).
+    std::uint16_t any_index = 0xFFFF;
+    float any_time = 0.0f;
+    bool any_looping = false;
+    // The strongest clip that is NOT a hand idle (mlh_/mrh_): the entry action drives the whole
+    // body, and at the open edge a hand-layer member can out-weigh the still-blending body clip —
+    // the 00:04:32 session mirrored the hand Start as the full-body entry (round 18 verdict).
+    std::string body_name;
+    std::uint16_t body_index = 0xFFFF;
+    float body_time = 0.0f;
+    bool body_looping = false;
 };
 [[nodiscard]] RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source);
 
@@ -173,12 +186,14 @@ class ClipPlayer
 {
 public:
     void reset();
-    void set_clip(ClipPlayback clip, bool loop = true);
+    // start_seconds seeds the studio clock at the source clip's phase (the entry action), so the
+    // panel continues the world's own move instead of restarting it from zero.
+    void set_clip(ClipPlayback clip, bool loop = true, double start_seconds = 0.0);
     void retarget(ClipPlayback clip);
     // Puts the studio clock back to zero, so the next frame draws the clip from its beginning. The
     // inventory pauses the engine and the studio owns the clock, so without this the figure resumes
     // wherever the last visit left it.
-    void restart();
+    void restart(double start_seconds = 0.0);
     [[nodiscard]] bool ready() const { return m_clip.valid(); }
     [[nodiscard]] std::string const& name() const { return m_clip.name; }
     [[nodiscard]] bool finished() const { return ready() && !m_loop && m_time >= std::max(m_clip.duration, 0.05f); }
