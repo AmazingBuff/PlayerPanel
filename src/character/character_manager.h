@@ -6,6 +6,8 @@
 
 #include "character_clone.h"
 
+#include <cstdint>
+
 PLUGIN_NAMESPACE_BEGIN
 
 class CharacterManager
@@ -16,10 +18,17 @@ public:
     // Spawns one clone per actor, once per actor. The graph detach runs
     // separately, inside the render bracket (CharacterClone::detach_graph) —
     // it must not happen on the task thread: the render bracket is the only
-    // writer serialized with the world renderer job.
+    // writer serialized with the world renderer job. Every spawned actor is
+    // registered with the EquipmentMonitor, so its equip changes are counted
+    // and dispatched while the clone lives.
     void create_clones(const std::vector<RE::Actor*>& actors);
 
     std::shared_ptr<CharacterClone> get_clone(RE::Actor* actor);
+
+    // The actor's equip change count since it was spawned here (the player
+    // counts from session start - it is watched implicitly). 0 for an actor
+    // with no clone and no watch entry.
+    [[nodiscard]] std::uint64_t equipment_revision(const RE::Actor& actor) const;
 
     void clear_clones();
 private:

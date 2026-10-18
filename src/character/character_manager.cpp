@@ -4,6 +4,8 @@
 
 #include "character_manager.h"
 
+#include "equipment_monitor.h"
+
 #include "REX/W32/KERNEL32.h"
 
 PLUGIN_NAMESPACE_BEGIN
@@ -41,6 +43,14 @@ void CharacterManager::create_clones(const std::vector<RE::Actor*>& actors)
             }
         }
     }
+
+    // Watch every actor this manager accepted, so the equip stream (and any
+    // EquipmentMonitor observer) covers them for as long as the clone lives.
+    // The player is implicitly watched; try_emplace keeps already-watched
+    // actors' revisions intact across re-spawns.
+    for (RE::Actor* actor : actors)
+        if (actor)
+            EquipmentMonitor::instance().watch(*actor);
 }
 
 std::shared_ptr<CharacterClone> CharacterManager::get_clone(RE::Actor* actor)
@@ -52,13 +62,26 @@ std::shared_ptr<CharacterClone> CharacterManager::get_clone(RE::Actor* actor)
     return nullptr;
 }
 
+std::uint64_t CharacterManager::equipment_revision(const RE::Actor& actor) const
+{
+    return EquipmentMonitor::instance().revision(actor);
+}
+
 void CharacterManager::clear_clones()
 {
     // Called from the SKSE message handler (main thread): synchronous clear.
     // A detached graph is solely owned by its CharacterClone and freed here;
     // a not-yet-detached shell is engine-managed and reclaimed by the load.
-    std::lock_guard<std::mutex> lock(m_clones_mutex);
-    m_character_clones.clear();
+    {
+        std::lock_guard<std::mutex> lock(m_clones_mutex);
+        // Stop watching before dropping the clones: the references die with
+        // the load boundary, and the keys would otherwise linger in the
+        // monitor until the engine reuses the formID slot.
+        for (const auto& [actor, clone] : m_character_clones)
+            if (actor && !actor->IsPlayerRef())
+                EquipmentMonitor::instance().unwatch(*actor);
+        m_character_clones.clear();
+    }
 }
 
 CharacterManager::CharacterManager()
