@@ -2,13 +2,13 @@
 // Created by AmazingBuff on 2026/09/28.
 //
 
-#include "panel/panel.h"
+#include "panel/panel_monitor.h"
 
 #include "character/animation_source.h"
+#include "character/equipment_monitor.h"
 #include "oar/query_policy.h"
 
 #include "RE/P/PlayerCharacter.h"
-#include "RE/S/ScriptEventSourceHolder.h"
 #include "RE/T/TESEquipEvent.h"
 
 PLUGIN_NAMESPACE_BEGIN
@@ -73,16 +73,20 @@ void PanelMonitor::install()
         ui->AddEventSink(&m_menu_sink);
         logger::info("Menu sink installed");
     }
-    if (RE::ScriptEventSourceHolder* events = RE::ScriptEventSourceHolder::GetSingleton())
-        events->AddEventSink(&m_equipment_sink);
-}
-
-RE::BSEventNotifyControl PanelMonitor::EquipmentSink::ProcessEvent(RE::TESEquipEvent const* event,
-    RE::BSTEventSource<RE::TESEquipEvent>*) noexcept
-{
-    if (event && event->actor && event->actor->IsPlayerRef())
-        instance().m_equipment_revision.fetch_add(1, std::memory_order_release);
-    return RE::BSEventNotifyControl::kContinue;
+    // The equip stream lives in EquipmentMonitor now (per-actor watch); this
+    // sink only keeps the player-counted revision PanelMonitor has always
+    // answered, so the panel read sites keep their semantics. The observer is
+    // registered once per install; installs happen on every kDataLoaded, so
+    // clear previous registrations first.
+    EquipmentMonitor::instance().install();
+    EquipmentMonitor::instance().clear_observers();
+    EquipmentMonitor::instance().add_observer(
+        [](RE::TESObjectREFR& a_actor, const RE::TESEquipEvent&)
+        {
+            if (a_actor.IsPlayerRef())
+                instance().m_equipment_revision.fetch_add(1, std::memory_order_release);
+        });
+    logger::info("Equipment sink installed (via EquipmentMonitor)");
 }
 
 std::uint64_t PanelMonitor::equipment_revision() const

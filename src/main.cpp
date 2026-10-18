@@ -3,7 +3,7 @@
 //
 
 #include "character/character_manager.h"
-#include "panel/panel.h"
+#include "panel/panel_monitor.h"
 #include "render/renderer.h"
 #include "render/shader_manager.h"
 #include "render/studio/light.h"

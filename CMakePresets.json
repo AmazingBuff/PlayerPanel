@@ -58,6 +58,15 @@
       ],
       "name": "Release",
       "toolset": "v143,version=14.44.35207"
+    },
+    {
+      "name": "Release-scopy",
+      "inherits": "Release",
+      "binaryDir": "${sourceDir}/build-scopy",
+      "cacheVariables": {
+        "CHARACTER_PANEL_SCENE_COPY_EXPERIMENT": "ON",
+        "CHARACTER_PANEL_PROBE_REVISION": "oar-idle3"
+      }
     }
   ],
   "version": 3

@@ -12,7 +12,7 @@
 #include "character/figure_audit.h"
 #include "character/equipment_mirror.h"
 #include "character/snapshot_transform.h"
-#include "panel/panel.h"
+#include "panel/panel_monitor.h"
 
 #include <cmath>
 

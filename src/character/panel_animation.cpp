@@ -9,7 +9,7 @@
 #include "character/panel_animation_policy.h"
 #include "oar/hooks.h"
 #include "oar/preview_clip.h"
-#include "panel/panel.h"
+#include "panel/panel_monitor.h"
 
 #include "RE/A/AnimationFileManagerSingleton.h"
 #include "RE/B/BSAnimationGraphManager.h"

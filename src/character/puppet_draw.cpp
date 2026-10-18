@@ -9,7 +9,7 @@
 #include "character/figure_audit.h"
 #include "character/puppet_driver.h"
 #include "character/snapshot_transform.h"
-#include "panel/panel.h"
+#include "panel/panel_monitor.h"
 
 #include "render/evidence.h"
 #include "render/studio/figure_passes.h"

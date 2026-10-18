@@ -70,12 +70,9 @@ private:
             const RE::MenuOpenCloseEvent* event,
             RE::BSTEventSource<RE::MenuOpenCloseEvent>*) noexcept override;
     };
-    class EquipmentSink final : public RE::BSTEventSink<RE::TESEquipEvent>
-    {
-    public:
-        RE::BSEventNotifyControl ProcessEvent(RE::TESEquipEvent const* event,
-            RE::BSTEventSource<RE::TESEquipEvent>*) noexcept override;
-    };
+    // The TESEquipEvent sink moved to EquipmentMonitor (src/character), which
+    // watches ANY registered actor; PanelMonitor consumes that stream through
+    // an observer to keep the player-only equipment_revision semantics.
 private:
     PanelMonitor();
     ~PanelMonitor();
@@ -103,7 +100,6 @@ private:
     bool m_fading = false;
     EntryAction m_entry_action;
     MenuSink m_menu_sink;
-    EquipmentSink m_equipment_sink;
     std::atomic_uint64_t m_equipment_revision{ 0 };
 };
 

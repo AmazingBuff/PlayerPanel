@@ -9,7 +9,7 @@
 #include "pass/composite.h"
 #include "studio/light.h"
 
-#include "panel/panel.h"
+#include "panel/panel_monitor.h"
 #include "character/animation_source.h"
 #include "character/character_manager.h"
 #include "character/equipment_mirror.h"
