@@ -37,7 +37,7 @@ mesh 轮廓黑块补齐透明处理；**2026-10-16 用户在另一台电脑确�
   WARP 离屏回归验证高槽位、完整缓冲与子范围的实际恢复。
 
 透明轮的默认与实验两种 Release 配置均构建通过；透明顺序、材质缓存恢复和 WARP 缓冲范围
-三项为该轮新增。后续 OAR 与手部修复继续扩展同一个测试入口，当前共 31 项。透明包身份、校验值、复现命令和游戏
+三项为该轮新增。后续 OAR 与手部修复继续扩展同一个测试入口，当前共 38 项。透明包身份、校验值、复现命令和游戏
 判据见 [UBE 透明材质验证](ube-transparency-test-2026-10-15.md)。透明 mesh 内部三角形排序、
 折射和第三方 OIT 专属流程不属于本轮实现。
 游戏内结果：眉毛／眼周黑块消失、妆容正常（用户确认）——见该测试单的"游戏内结果"节。
@@ -67,7 +67,7 @@ mesh 轮廓黑块补齐透明处理；**2026-10-16 用户在另一台电脑确�
 | [figure_passes.cpp](../src/render/studio/figure_passes.cpp) | 两条来源共用的按材质分类、引擎 pass 生成、灯光临时替换与提交；读取原 alpha 属性，原生混合设置使用 `0x204`。 |
 | [figure_draw_order.h](../src/render/studio/figure_draw_order.h) / [figure_pipeline_state.h](../src/render/studio/figure_pipeline_state.h) | 实体／透明阶段排序及 No Sorter 边界；逐 pass 的引擎材质状态准备和作用域退出恢复。 |
 | [d3d11_util.h/.cpp](../src/render/dx11/d3d11_util.h) | D3D 设备绑定保护与离屏目标；VS／PS 保存全部常量缓冲槽，并在支持 D3D11.1 时保留绑定子范围。 |
-| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | `snapshot_transform` 内共 31 项本地检查，新增 Random 缓存、权重与共享状态、PlayOnce 提交、循环决策、最新请求、各层周期及中断混合。不执行游戏内 detour 或装卸。 |
+| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | `snapshot_transform` 内共 38 项本地检查，新增 Random 缓存、权重与共享状态、PlayOnce 提交、循环决策、最新请求、各层周期、中断混合、驻留位跨接受、武器族匹配、进包姿态、序列兄弟与入口动作分类。不执行游戏内 detour 或装卸。 |
 
 实验配置使用复制图显示时的主顺序：请求／会话与装备稳定处理 → 查询及装载轮询 → 副本 `pose()` → 独立绑定采样／切换与过渡 → 引擎蒙皮与 draw → 合成。AFP 及傀儡推图保留为旁路诊断。
 

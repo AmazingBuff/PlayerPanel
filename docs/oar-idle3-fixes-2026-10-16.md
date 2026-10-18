@@ -49,6 +49,211 @@
 | PDB SHA-256 | `ad4974f3…` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
 
+## 第十八轮：入口动作镜像（2026-10-17 深夜，工作区未提交；构建与单测通过，待上机）
+
+用户方向收敛：**不再让面板对"进包该播什么"做 OAR 重判**——原角色进包前正在播什么，面板就从那个动作的那个相位接着播，播完按 Equip→Start→Loop / Start→Loop / Unequip→站立 进 idle。这取代第十七轮"入口按 OAR 答案 + 兄弟目录补偿"的路线。
+
+机制：
+
+1. **开包沿取样**（`panel.cpp` 菜单事件）：`strongest_idle_clip()` 现在同时返回最强 clip 的
+   `animationBindingIndex`（运行中的 binding，OAR 替换件在内）与 `animationControl->localTime`
+   （相位）和 `mode`。菜单打开事件处一次性记录为 `PanelMonitor::EntryAction`（世界此刻冻结，
+   相位就是进包相位；周期采样每 10 帧会漏掉短过渡，事件沿取样不会）。
+2. **入口动作消费**（`PanelAnimation::request`）：会话第一次请求消费该记录；按项目名称表解析
+   出真实路径，`entry_action_kind()` 分类——`e_equip` / `e_unequip` / `e_sequence_start` 才镜像，
+   Loop 成员、其它 idle、移动/跳跃/攻击不镜像（面板仍然站立）。镜像 = 用该 index 构造
+   transition 槽的 `LoadedAsset`，`ClipPlayer` 以 `local_time` 为起始时钟（`set_clip/restart` 增加
+   起始时间参数；`accept` 的 restart 回到该相位而不是 0，装载落地不会把动作倒回第一帧）。
+3. **过渡结束的接力**（`restart_idle_after_transition`）：改用 `entry_action_kind(过渡名)` 判定——
+   `e_equip` → 该族 Start 兄弟 → Start→Loop（原第十七轮行为）；
+   `e_sequence_start` → 入口已播过 Start，直接落 **Loop** 兄弟，不再重播 Start；
+   `e_unequip` → 无武器层，站立 idle。
+4. **取景校准延后**（`PanelAnimation::transitioning()`）：入口动作/换装过渡播放期间不校准，
+   等 idle 接手后再以站立体冻结摆位标准（第 round15 的"以站立 idle 定位"在入口镜像下依然成立）。
+
+被取代/保留：第十七轮的 `clip_stance`（进包姿态）、`find_sequence_sibling`（Start/Loop 兄弟）
+保留；`next_idle` 的 Start→Loop 推进保留为兜底（入口取样失败时 OAR 仍可能答 Start）。背包内
+换装维持合成 Equip（真图/傀儡路线另行讨论）。
+
+验证：两个 Release 配置构建通过；`snapshot_transform` **38 项全过**，新增
+`entry action kind`。未打包、未部署、未提交；DLL SHA-256 `046A1B74…`
+（`build-scopy/Release`，23:55）。
+
+上机判读：
+
+- Equip 段进包 → `SCOPY PANEL entry action kind=1 index=… time=…`，面板人物从 Equip 的当前
+  相位继续播，播完 `sequence restart layer=1 -> Start`，随后 `sequence … loop` 驻留；
+- idle Start 段进包 → `kind=3`，Start 从原相位播完直接 `sequence restart layer=1 -> Loop`；
+- Unequip 段进包 → `kind=2`，播完收刀直接站立 idle；
+- Loop 段/移动中进包 → 无 `entry action` 行，行为与之前一致；
+- 回归：换装（合成 Equip）、随机/权重/顺序/PlayOnce 包、读档边界不受影响。
+
+### 第十八轮判读修正（同日，日志 00:02–00:05，DLL `85D3E3A6…`）
+
+入口镜像本身成立：`entry action kind=1/2/3` 分类正确、相位取样正确、Unequip 链路完整。三个新缺陷：
+
+1. **兄弟查找跨族**：`sequence layer=1 token='loop' -> '…1hm Combat idle Loop…'`——Combat 与
+   Non-Combat 子模同在 `Smooth Moveset - 1hm` 一个项目目录下，"同根 + 同文件名 + 以 loop 结尾"
+   三个条件全过，名字表里 Combat Loop 先命中。修复：`path_sequence_stem()` 取父目录剥掉
+   start/loop 标记与集数数字后的**族干**（`1hm non-combat idle`），兄弟必须同族干；
+   `1hm Combat idle *`、`1hm Pistol *` 从此不跨。
+2. **入口动作抓到手部层 clip**：capture=3 的 `kind=3 index=11610`（mlh Start）被当成全身入场
+   动作。修复：`strongest_idle_clip()` 增加 `body_*` 答案（排除 `mlh_`/`mrh_` 文件），入口取样
+   用它；`any_*` 仍供序列记录仪使用。
+3. **无 Loop 兄弟条目的层每循环重问 OAR**：手部层（mlh base）名称表只注册了 Start 成员，
+   `next_idle` 每次循环边界重查都答 Start（日志 channel=3 每 3.3s 一次）。修复：Start 成员在
+   名称表可用时**要么推进要么驻留**，不再回问冻结相位。
+
+修正后构建：DLL SHA-256 `5E5F560B…`（`build-scopy/Release`，00:21）；`snapshot_transform`
+38 项全过（兄弟用例加入 Combat/Non-Combat 跨族断言）。
+
+### 第二次判读修正（00:25 会话，DLL `5E5F560B…`）
+
+族干修复生效（不再跨到 Combat），但暴露了结构性限制：**项目名称表只注册装载过的成员**。
+本次会话世界只播到 Start 就暂停，`1hm Non-Combat idle Loop` 的路径不在名称表里，兄弟扫描
+只找到 Loop2（9041）——面板落在了 Loop2 而不是 Loop，且手部层（mlh base 无 Loop 注册）驻留
+Start。另一把 DAR 框架武器（`DynamicAnimationReplacer\...`）无 Start/Loop 目录，属正常路径。
+
+修正：**序列推进改为"排除 + 放宽 + 同族"的 OAR 重问**，不再依赖名称表完整性——
+
+1. `QueryRequest` 增加 `exclude_index`（刚播成员的 binding index，候选评估里直接拒绝）、
+   `relax_effects`（`PreviewState.relax_magic_effects`：HasMagicEffect/WithKeyword 无条件通过，
+   冻结的相位效果不再否决循环体候选）、`family_stem`（候选以 OAR 自身的
+   `ReplacementAnimation::_path`（0xA8，MSVC string，带守卫读取与合法性校验）的父目录族干
+   匹配，跨族候选直接拒绝）。
+2. `next_idle` 的 Start 成员：名称表兄弟优先（最便宜）；查不到就用上述重问；再不行驻留。
+3. `restart_idle_after_transition` 的 Start 入口：同样先名称表、再重问。
+4. DAR/无目录布局的武器：无 start/loop 族干，查询照旧按 OAR 答案循环，行为不变。
+
+修正后构建：DLL SHA-256 `B0F6DAC1…`（00:55）；38 项全过。
+
+### 第三次修正：播放列表模型（2026-10-18 凌晨，用户方向，DLL `E43B7EA4…` 01:37）
+
+用户指出：**序列播完直接驻留最后一个成员即可，不需要任何边界控制逻辑。** 正确——此前所有
+补丁（seek_dwell、族干、排除、放宽）都是在绕"每个循环边界重新问 OAR"这个实现选择，而 OAR
+的回答被冻结相位钉死。收敛为播放列表模型：
+
+1. `collect_sequence_family()`（纯函数，可测）：按入口成员的项目目录 + 文件名 + 族干收集全部
+   同族成员，按 Start → Loop → Loop2（族内按集数数字）排序。修一个真 bug：`clip_sequence_token`
+   不能吃裸目录名（它找最后一个分隔符），收集器内部改为按目录名结尾直接判定 token。
+2. `SequencePlan`（每 idle 层一个）：入口动作消费时构建——Equip 入口 = 全家族从第一个成员；
+   Start 入口 = 剔除 Start 后的剩余成员（入口已播过）；Loop 相位进包 = 无计划（OAR 答案驻留）；
+   Unequip = 无武器层。装备真变化重建计划，重捕获保留进度。
+3. **成员边界零 OAR 查询**：`next_idle` 对计划层只做"推进到下一个成员 / 驻留最后一个"；
+   `restart_idle_after_transition` 对计划层直接跳过。非计划层（变体包、DAR、单 clip）保留
+   原 OAR 循环重查。
+4. 本轮的排除/放宽/族干 OAR 查询机器整体拆除（未验证过即被更好方案取代）。
+
+残留：名称表只注册装载过的成员——世界没播到的 Loop 不在表里，计划会是 [Start, Loop2]、
+驻留 Loop2（同族循环体，视觉接近）。彻底补全需要枚举 OAR 的替换容器（读候选 `_path`），
+属一次性发现，待上机验证后再做。
+
+构建：DLL SHA-256 `E43B7EA4…`（01:37）；`snapshot_transform` 38 项全过（`entry action kind`
+不变，序列兄弟用例改为家族收集断言）。
+
+### 判读修正三：计划跨开包持久化（02:15 会话，DLL `5188B016…`）
+
+手部层停用后用户报告：`Start → Loop → Start → Loop → Loop…`——**多出的一轮 Start**。日志逐帧
+对齐后确认：播放列表在单次会话内完全正确（Start → Loop 驻留），多出的 Start 来自**每次关包
+`reset()` 都销毁 State、计划随之清零**，重开必然从头重播。修复：计划提升为进程级持久状态
+（`s_sequence_plans`），关包/重开**从当前成员续播**（通常直接落在循环体），仅在读档边界
+（名称表重建）失效；入口镜像仍播入场动作作为过渡衔接。计划起始位置语义：Equip 入口 → 家族
+首个成员；Start 入口 → 剔除 Start；无入口动作 → 进入世界冻结所在的成员。
+
+构建：DLL SHA-256 `1A855A1E…`（02:44）；38 项全过。
+
+### 播放列表判读（01:53 会话，DLL `E43B7EA4…`）：时长指纹排除装载错误，真凶是手部层
+
+`asset ready` 的 `duration=` 指纹：Equip 1.07s / Start 3.33s / **Loop 19.80s**——名称↔binding
+配对正确，装载的确实是 Loop 本体；播放列表推进（member=2/2 → Loop 驻留）也正确。但用户看到的
+仍是 `1hm Non-Combat idle Start` 的动作。
+
+**根因：手部层（i=2，mlh）整身覆盖。** 包内文件哈希证明 mlh 动画是全骨架导出（mlh Start
+30720 字节 ≈ 1hm Start 30912，每个成员 `tracks=99 resolved=95/96`——95 根骨骼可写），identity
+映射下手部层把 ~95 根骨骼全部重写，且**手部层在姿态写入顺序里排在 stance 层之后**。手部层的
+计划只有 [mlh Start]（mlh base 没有注册 Loop 成员）→ 永远驻留 mlh Start、3.33s 一循环；而
+作者给 mlh 导出的动作与 1hm Start 几乎相同（大小仅差 192 字节），视觉上无法区分——用户看到的
+"Start 段一直 loop"就是手部层的 mlh Start。驱动器日志报 stance 层 = Loop 与画面矛盾的原因
+即此：画面是最后写入的手部层。
+
+修复：手部层停用（`request()` 的左手/右手/法杖分支各留一行日志），左手姿态由 stance 层承担。
+后续如需恢复，前提是解决 mlh 全骨架导出的映射问题（按骨骼名白名单过滤写入，或取真实
+binding 表）。
+
+上机判读：Start/Equip 进包后应出现 `sequence advance layer=1 ...` 或 `sequence restart ... ->
+advanced`，且落点为 **Loop/Loop2 同族循环体**；若 `_path` 读取失败会看到族过滤未生效（跨族），
+需要回报日志。
+
+## 第十七轮：序列相位与进包姿态（2026-10-17 深夜，工作区未提交；构建与单测通过，待上机）
+
+上机日志（22:33–22:35，部署 = 第十六轮 DLL `01BA4B4F…`）复现四个报告，日志直接给出根因：
+
+- 22:33:38 在 `1HM_Equip` 进包：只查 channel=1（无武器层），`phase=idle form=1h drawn=false`——引擎在菜单事件前清掉 weaponState，而 `stance_at_open` 反向走历史时在 `MT_Idle`（基础 idle）处 `break` 回落到位读数。
+- 22:34:51 在 `1HM_Unequip` 进包：反向走到上一个 `1HM_Idle` 就提升 drawn=true，于是面板播武器 idle——与收鞘进包（MT_Idle）不一致。
+- 22:33:40 在 Start 段进包：channel=2 命中 `…1hm Non-Combat idle Start\1hm_idle.hkx`（index 9038），22:33:44 循环边界重查仍命中 9038——一直 loop Start。
+- 22:34:14 背包内换武器：Equip 播完后重查直接命中 `…idle Loop`（9035），Start 段缺失。
+- 全会话 `SCOPY PANEL seek gate` **零输出**：Smooth Moveset 的 Start/Loop/Loop2 是三个**独立 replacement**（`ReplacementAnimation::_index` 的 tag=0），不是 OAR variant；面板的 `SelectionState` 序列模型对它们根本不生效。
+
+真正的机制（本机 mod 配置证据）：三个 submod 的条件以 `HasMagicEffect`（Smooth Moveset.esp 的
+`mag_start on` / `mag_loop on`）区分相位；相位由动画自带的标注事件（`Smooth_loop`）经
+DynamicAnimationCasting 施法切换。面板离线采样动画、不触发事件，世界又在菜单里暂停，所以 OAR
+永远按**进包时**的相位回答：Start 段进包 → 永远 Start；Loop 相位下换装 → 永远 Loop（跳过 Start）。
+
+修复（两条独立的线）：
+
+1. **进包姿态按 equip/unequip 动作裁决**（`oar::clip_stance`）：反向走历史，`*_Unequip` → 收鞘、
+   `*_Equip` → 持械、武器/手部 idle → 持械、`MT_Idle`/潜行基础 idle → 收鞘；都没有才回落位读数。
+   菜单打开事件处再补采一次当前 clip（周期采样每 10 帧，短过渡可能被漏采）。
+   修报告 1（Equip 进包得到对应武器 idle 层）与报告 4（Unequip 进包不再误播武器 idle）。
+2. **面板自有序列推进（名称即接口）**（`oar::clip_sequence_token` / `find_sequence_sibling`）：
+   Start/Loop 是同一项目目录下的兄弟目录（`…\Smooth Moveset - 1hm\1hm Non-Combat idle Start\…`）。
+   Start 成员播完一个周期后，按名称找到同一项目下的 `Loop` 兄弟（精确 `loop` 优先于 `loop2`，
+   武器族不跨目录）并直接用该 index 装载；由名称装载的 Loop 成员不再回问 OAR（否则会被冻结的
+   Start 相位拽回去）。Equip 过渡结束时，武器/手部层同样先找该族 `Start` 兄弟再进 Start→Loop，
+   复刻游戏内 Equip→Start→Loop。包不采用这种目录布局时自动回落原 OAR 查询。
+3. 附带：`oar::animation_names()` 暴露项目名称表（同一会话缓存），新增 `SCOPY PANEL sequence …`
+   诊断行。
+
+验证：两个 Release 配置构建通过；`snapshot_transform` **37 项全过**，新增 `stance from clip`、
+`idle sequence siblings`。未打包、未部署、未提交；DLL SHA-256 `85D3E3A6…`（`build-scopy/Release`，22:55）。
+
+上机判读：
+
+- Equip 段进包 → `phase=idle form=… drawn=true` + channel=2 查询（武器 idle），不再只有 channel=1。
+- Unequip 段进包 → `drawn=false` + MT_Idle，与收鞘进包一致。
+- Start 段进包 → 先播 Start，随后出现 `SCOPY PANEL sequence layer=1 token='loop' -> '…idle Loop…'`。
+- 背包内换装 → `transition complete` 后出现 `sequence restart layer=1 -> Start '…'`，播完 Start 再进 Loop。
+- `seek gate` 零输出属正常（该包不用 OAR variant）。
+
+## 第十六轮：调度链审计修正（2026-10-17 晚，工作区未提交；构建与单测通过，待上机）
+
+来源：对动作调度链（`SceneGraphCopy::process_requests` → `PanelAnimation::request/poll/advance`
+→ OAR 查询 → `ClipPlayer`）的静态审计。第十五轮的“背包内装备 = 拔出该武器”按原代码路径
+仍不会生效，另有七处独立缺陷。
+
+| # | 根因 | 修复 |
+| --- | --- | --- |
+| 1 | `request()` 先读 `panel_equipment()` 再置 `g_in_menu_swap_drawn`：本次 proposal 仍按收鞘构建（无武器 idle 层），下一次 `poll()` 又因读数已变把整个 proposal 当“装备已变”丢弃 | 标志先于装备读取判定（手槽与 `active->equipment` 比较） |
+| 2 | 站姿层无条件首选“世界 clip 名”，该名在面板打开期间冻结在进包姿态；换装后把 `MT_Idle`/旧武器族当作新武器 idle | 新增 `panel_clip_is_family()`；世界名仅在“未发生背包内换装且属于当前武器族”时使用，`restart_idle_after_transition()` 同规则 |
+| 3 | `seek_dwell` 的序列钉在 `accept → commit` 时被推进覆盖，下一次循环回 Start | `AnimationSelection::dwell` + `SelectionState::dwell()`：落驻留位的接受不推进序列并清该成员 PlayOnce 标记；`activate()` 对所有作用域清掉该 clip 的进度（e_activate 真正从首成员重开）；e_loop 重查带 `current->dwell` 重新 seek |
+| 4 | crossfade 按 1/60 s × 每 10 帧一次采样积分，实测约为真值 1/10，面板混合随之过快 | 用 `steady_clock` 的实际采样间隔积分 |
+| 5 | 循环边界／过渡结束的重查丢掉武器挂点 hint；前缀回退因 `!best` 只命中 map 序第一个 | 两条重查补 `panel_weapon_node()`；前缀回退改为真正最长 |
+| 6 | 名称目录缓存只在指针相等时替换，读档后每次追加一张 ~15k 名称表 | 缓存上限 4 条，FIFO 淘汰 |
+| 7 | 校准失败（无可测蒙皮包围盒）未写 `m_calibrated_root`，下一帧根为 identity | 失败时保留 raw placement |
+| 8 | 同装备重捕获无条件重发 `request()`，固定丢弃装备事件刚发出的在途请求 | `prepare()` 仅在活动集／在途提案都不覆盖当前装备时请求 |
+
+验证：默认（Actor 路线）与 scene-copy 两个 Release 配置构建通过；`snapshot_transform`
+**35 项全过**，新增 `dwell pin across accept`、`clip family gate`。未打包、未部署、未提交。
+
+上机重点（判读行）：
+
+- 收鞘进包后背包内换双手斧：`in-menu weapon swap` 之后**不应**再出现
+  `discard stale equipment proposal`；`query channel=2` 的 base/name 应是 2hw 族，
+  `panel-idle:` 不再是 MT_Idle（根因 1／2）。
+- 中段进包：首个 `asset ready` 为 Loop 后，后续循环边界不应再换成 Start 名（根因 3）。
+- `measured world crossfade` 应在 0.2–0.6 s 量级（根因 4）。
+- 序列重启后 `SCOPY WEAPON` 的 node/parent 仍随手部变化（根因 5）。
+
 ## 第十五轮：诊断行裁决 + 背包内换装=拔出该武器（2026-10-17 晚，提交 `f5f9ae2`，部署待游戏退出）
 
 诊断行（`SCOPY PANEL seek gate …`）在本轮报告窗口**零输出**——seek 分支根本没进入。
