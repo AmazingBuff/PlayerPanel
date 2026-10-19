@@ -1,6 +1,12 @@
 //
 // Created by AmazingBuff on 2026/10/19.
 //
+#include <string_view>
+namespace Plugin
+{
+    inline constexpr std::string_view Plugin_Author = CHARACTER_PANEL_TEST_AUTHOR;
+}
+
 #ifndef PLUGIN_NAMESPACE_BEGIN
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }

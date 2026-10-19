@@ -2,6 +2,7 @@
 // Created by AmazingBuff on 2026/10/19.
 //
 #pragma once
+#include "base/def.h"
 #include "oar/selection_state.h"
 PLUGIN_NAMESPACE_BEGIN
 namespace animation
@@ -221,7 +222,7 @@ namespace animation
         {
             std::size_t operator()(RandomKey const& key) const
             {
-                return StateKeyHash{}(key.key) ^ static_cast<std::size_t>(key.condition * 1099511628211ULL);
+                return hash_combine(StateKeyHash{}(key.key), key.condition);
             }
         };
         struct RandomState

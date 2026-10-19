@@ -1,5 +1,7 @@
 #include "oar/hooks.h"
 
+#include "base/def.h"
+
 #include "oar/api/OpenAnimationReplacer-ConditionTypes.h"
 #include "oar/binary_profile.h"
 #include "oar/policy.h"
@@ -786,8 +788,10 @@ namespace oar
             result.name = names[*base];
             result.base_name = result.name;
             result.binding_name = result.name;
-            result.clip_key = (reinterpret_cast<std::uint64_t>(wanted) * 1099511628211ULL) ^
-                (static_cast<std::uint64_t>(*base) << 16) ^ request.channel;
+            size_t clip_key = Amazing_Hash;
+            clip_key = hash_combine(clip_key, wanted);
+            clip_key = hash_combine(clip_key, *base);
+            result.clip_key = hash_combine(clip_key, request.channel);
             if (!project || !query_supported())
                 return;
             PreviewClip preview;

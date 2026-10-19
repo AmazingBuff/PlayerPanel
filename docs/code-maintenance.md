@@ -19,6 +19,17 @@ The sole current preview backend is [SceneGraph](scene-graph.md); animation owne
 | [figure_passes.cpp](../src/render/studio/figure_passes.cpp), [figure_draw_order.h](../src/render/studio/figure_draw_order.h), [figure_pipeline_state.h](../src/render/studio/figure_pipeline_state.h) | existing material/pass submission and transparency/state restoration |
 | [d3d11_util.cpp](../src/render/dx11/d3d11_util.cpp) | render-target and device binding protection |
 
+## Runtime hash composition
+
+Custom process-local keys and fingerprints use [base/def.h](../src/base/def.h) `hash_combine`, starting from `Amazing_Hash`. The seed remains derived from `Plugin::Plugin_Author` by the supplied `hash_str`; do not duplicate the algorithm or hardcode a second seed. Combine logical fields individually in a fixed order, never raw struct bytes.
+
+- [StateKeyHash and condition RandomKeyHash](../src/oar/selection_state.h): owner → group → scope, then condition for the random key.
+- [Animation RandomKeyHash](../src/animation/variant_state.h): extend the same StateKeyHash with condition.
+- [query_animation](../src/oar/hooks.cpp): project/wanted pointer → base index → channel for `clip_key`.
+- [FigureAssembly::signature](../src/character/figure_audit.h): geometries → skinned → bound_nodes → alloc_slots, retaining the full `size_t` result.
+
+The dependency-light [animation test](../tests/animation_controller_test.cpp) receives `CHARACTER_PANEL_TEST_AUTHOR` from the existing `PROJECT_AUTHOR` in [CMake](../CMakeLists.txt), then uses the real helper. Production/math consumers retain generated Plugin metadata. Packaging SHA-256 checksums, Git/native identifiers, bit masks, PRNG seeds and the helper/bootstrap implementation keep their distinct semantics.
+
 ## Build, tests and controls
 
 Use the commands in [SceneGraph verification](scene-graph.md#verification). `Release` and compatibility `Release-scopy` compile the same source/backend; there is no runtime-route option. The installed VS2022/MSVC 14.44.35207 toolset and existing vcpkg dependencies remain unchanged. Native builds may need SDK access outside the sandbox and `VCPKG_MANIFEST_INSTALL=OFF` with the existing installed-package directory.

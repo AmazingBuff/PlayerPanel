@@ -210,6 +210,7 @@ target_precompile_headers(
 enable_testing()
 add_executable(CharacterPanelAnimationTest tests/animation_controller_test.cpp)
 target_compile_features(CharacterPanelAnimationTest PRIVATE cxx_std_23)
+target_compile_definitions(CharacterPanelAnimationTest PRIVATE CHARACTER_PANEL_TEST_AUTHOR="${PROJECT_AUTHOR}")
 target_include_directories(CharacterPanelAnimationTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_options(CharacterPanelAnimationTest PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG;/utf-8>)
 add_test(NAME animation_controller COMMAND CharacterPanelAnimationTest)

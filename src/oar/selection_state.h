@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "base/def.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -34,8 +36,10 @@ namespace oar
     {
         std::size_t operator()(StateKey const& key) const
         {
-            return static_cast<std::size_t>((key.owner * 1099511628211ULL) ^ key.group ^
-                static_cast<std::uint64_t>(key.scope));
+            size_t seed = Amazing_Hash;
+            seed = hash_combine(seed, key.owner);
+            seed = hash_combine(seed, key.group);
+            return hash_combine(seed, key.scope);
         }
     };
 
@@ -104,7 +108,7 @@ namespace oar
         {
             std::size_t operator()(RandomKey const& key) const
             {
-                return StateKeyHash{}(key.key) ^ static_cast<std::size_t>(key.condition * 1099511628211ULL);
+                return hash_combine(StateKeyHash{}(key.key), key.condition);
             }
         };
         struct RandomState

@@ -2,6 +2,7 @@
 // Created by AmazingBuff on 2026/10/13.
 //
 #pragma once
+#include "base/def.h"
 #include "RE/N/NiAVObject.h"
 #include <string_view>
 PLUGIN_NAMESPACE_BEGIN
@@ -22,9 +23,13 @@ struct FigureAssembly
     std::uint32_t skinned = 0;
     std::uint32_t alloc_slots = 0;
     std::uint32_t bound_nodes = 0;
-    [[nodiscard]] std::uint32_t signature() const
+    [[nodiscard]] size_t signature() const
     {
-        return geometries * 1000003u ^ skinned * 10007u ^ bound_nodes * 101u ^ alloc_slots;
+        size_t seed = Amazing_Hash;
+        seed = hash_combine(seed, geometries);
+        seed = hash_combine(seed, skinned);
+        seed = hash_combine(seed, bound_nodes);
+        return hash_combine(seed, alloc_slots);
     }
 };
 [[nodiscard]] FigureAssembly figure_measure_assembly(RE::NiAVObject& root);
