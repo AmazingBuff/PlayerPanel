@@ -156,7 +156,7 @@ namespace
         static const std::uintptr_t vtable = RE::hkbClipGenerator::VTABLE[0].address();
         return vtable;
     }
-}
+
 
 bool clip_generator_is_live(void const* object)
 {
@@ -165,6 +165,12 @@ bool clip_generator_is_live(void const* object)
         return false;
     return readable(object, sizeof(RE::hkbClipGenerator));
 }
+
+struct ActiveClipEntry
+{
+    RE::hkbClipGenerator const* generator;
+    std::string name;
+};
 
 void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out)
 {
@@ -191,6 +197,8 @@ void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<Acti
             out.push_back({ generator, guarded_string(generator->animationName) });
         }
     }
+
+}
 
 }
 
@@ -233,81 +241,11 @@ PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool l
     return result;
 }
 
-size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop)
-{
-    const PoseBuffer sampled = sample_animation_clip(clip, seconds, loop);
-    const NameIndex nodes = index_nodes_by_name(copy_root);
-    for (auto const& [name, local] : sampled)
-        if (auto found = nodes.find(name); found != nodes.end()) found->second->local = local;
-    recompute_subtree_worlds(copy_root, 0);
-    return sampled.size();
-}
-
-RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source)
-{
-    std::vector<ActiveClipEntry> running;
-    collect_running_clip_generators(source, running);
-    RE::hkbClipGenerator const* best = nullptr;
-    float best_weight = 0.0f;
-    for (const ActiveClipEntry& entry : running)
-    {
-        RE::hkbClipGenerator const* const generator = entry.generator;
-        if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
-            continue;
-        const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
-        if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
-            continue;
-        if (control->weight > best_weight)
-        {
-            best_weight = control->weight;
-            best = generator;
-        }
-    }
-    return best;
-}
-
-RE::hkbClipGenerator const* pick_idle_running_clip(RE::TESObjectREFR& source)
-{
-    std::vector<ActiveClipEntry> running;
-    collect_running_clip_generators(source, running);
-    RE::hkbClipGenerator const* best = nullptr;
-    float best_weight = 0.0f;
-    for (const ActiveClipEntry& entry : running)
-    {
-        // The state-idle preference (state-idle decision, 2026-10-15): the strongest running clip
-        // while MOVING is a locomotion cycle, but the panel wants the state's IDLE - the engine's
-        // own idle family is recognisable by name (sneakIdle, 1hm_idle, MTn_IdleHorse, the
-        // hand-idle family *Lh_Idle/*Rh_Idle the old classifier gap named). Attack and equip
-        // one-shots carry other names and lose. No idle-named clip running (e.g. mid-sprint)
-        // returns null and the caller falls back to the strongest clip, logging the pick.
-        std::string lowered;
-        lowered.reserve(entry.name.size());
-        std::transform(entry.name.begin(), entry.name.end(), std::back_inserter(lowered),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        if (lowered.find("idle") == std::string::npos)
-            continue;
-        RE::hkbClipGenerator const* const generator = entry.generator;
-        if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
-            continue;
-        const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
-        if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
-            continue;
-        if (control->weight > best_weight)
-        {
-            best_weight = control->weight;
-            best = generator;
-        }
-    }
-    return best;
-}
-
 RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source)
 {
     RunningIdleSample sample;
     std::vector<ActiveClipEntry> running;
     collect_running_clip_generators(source, running);
-    float best_weight = 0.0f;
-    float best_any_weight = 0.0f;
     float best_body_weight = 0.0f;
     for (const ActiveClipEntry& entry : running)
     {
@@ -321,19 +259,6 @@ RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source)
         const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
         if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
             continue;
-        // Two answers in one walk: the strongest IDLE (the panel's weapon-stance preference)
-        // and the strongest clip of ANY name (draw/sheathe/attack one-shots included) — the
-        // world-side sequence recorder needs the full order of the player's own demonstration,
-        // and those clips never carry "idle" in the name.
-        if (control->weight > best_any_weight)
-        {
-            best_any_weight = control->weight;
-            sample.any_name = entry.name;
-            sample.any_weight = control->weight;
-            sample.any_index = generator->animationBindingIndex;
-            sample.any_time = std::isfinite(control->localTime) ? control->localTime : 0.0f;
-            sample.any_looping = generator->mode == RE::hkbClipGenerator::PlaybackMode::kModeLooping;
-        }
         // The body-entry answer excludes hand idles: the entry action drives the whole body, and
         // a hand-layer member out-weighing the still-blending body clips must not become it.
         const bool hand_idle = lowered.find("mlh_") != std::string::npos || lowered.find("mrh_") != std::string::npos;
@@ -345,12 +270,7 @@ RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source)
             sample.body_time = std::isfinite(control->localTime) ? control->localTime : 0.0f;
             sample.body_looping = generator->mode == RE::hkbClipGenerator::PlaybackMode::kModeLooping;
         }
-        if (lowered.find("idle") != std::string::npos && control->weight > best_weight)
-        {
-            best_weight = control->weight;
-            sample.name = entry.name;
-            sample.weight = control->weight;
-        }
+
     }
     return sample;
 }
@@ -482,35 +402,6 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
     out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={} unresolved='{}'",
         bindings.size(), resolved, bone_nodes, pose_count, unresolved);
     return true;
-}
-
-bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
-    ClipPlayback& out, std::string& out_mapping, std::string& out_coverage)
-{
-    if (!generator || !readable(generator, sizeof(*generator)) || !looks_like_object(generator))
-        return false;
-    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
-    if (!source.GetAnimationGraphManager(manager) || !manager)
-        return false;
-    for (RE::BSTSmartPointer<RE::BShkbAnimationGraph> const& graph : manager->graphs)
-    {
-        if (graph && graph->holder == &source && graph->rootNode &&
-            resolve_binding_playback(*graph, copy_root, generator->binding,
-                guarded_string(generator->animationName), out, out_mapping, out_coverage))
-            return true;
-    }
-    return false;
-}
-
-float live_clip_time(RE::hkbClipGenerator const* generator)
-{
-    if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
-        return -1.0f;
-    const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
-    if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
-        return -1.0f;
-    const float time = control->localTime;
-    return std::isfinite(time) ? time : -1.0f;
 }
 
 PLUGIN_NAMESPACE_END

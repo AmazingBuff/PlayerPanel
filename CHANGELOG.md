@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Removed
+
+- Remove Actor-based preview creation, equipment mirroring and puppet diagnostics; use SceneGraph previews in every build.
+
 ### Fixed
 
 - Fix previews repeating an idle entry motion and keep animation requests isolated per actor.

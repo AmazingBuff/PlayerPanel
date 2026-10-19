@@ -64,8 +64,7 @@
       "inherits": "Release",
       "binaryDir": "${sourceDir}/build-scopy",
       "cacheVariables": {
-        "CHARACTER_PANEL_SCENE_COPY_EXPERIMENT": "ON",
-        "CHARACTER_PANEL_PROBE_REVISION": "oar-idle3"
+        "CHARACTER_PANEL_BUILD_LABEL": "scenegraph"
       }
     }
   ],

@@ -10,11 +10,11 @@ This module covers standing, weapon draw/sheathe and optional hand posture. It s
 
 ## Architecture
 
-`PanelMonitor` records InventoryMenu state and a revision. `CharacterManager::update` distributes lifecycle changes, samples each registered source and consumes equipment revisions inside the serialized render bracket. Event callbacks only increment watched actor revisions.
+`PanelMonitor` records InventoryMenu state and a revision. `CharacterManager::update` distributes lifecycle inputs and equipment revisions inside the serialized render bracket. Event callbacks only increment watched actor revisions.
 
-Each `CharacterClone` owns `MonitorState` and `animation::AnimationController`. Observation retains the actor handle, stance, clip index/local phase, equipment revision, source graph generation, request generation and dirty reason. Assembly state is separate. Replacing the detached display graph calls `replace_graph` and retargets the same controller; it preserves playback time and maps every node again.
+Each `SceneGraph` owns `MonitorState` and `animation::AnimationController`. Observation retains the actor handle, stance, clip index/local phase, equipment revision, source graph generation, request generation and dirty reason. Replacing the detached display graph calls `replace_graph` and retargets the same controller; it preserves playback time and maps every node again.
 
-OAR is a query boundary. It audits conditions and returns copied replacement, variant and candidate descriptors. The animation module plans ordered actions, owns accepted variant history and caller-local Random state, loads clip leases, advances only the visible stage, composes pose contributors/crossfade, then writes each skeleton node once. `SceneGraphCopy::capture` only copies/audits a supplied actor graph and parks retired allocations. Renderer pumps the manager and draws.
+OAR is a query boundary. It audits conditions and returns copied replacement, variant and candidate descriptors. The animation module plans ordered actions, owns accepted variant history and caller-local Random state, loads clip leases, advances only the visible stage, composes pose contributors/crossfade, then writes each skeleton node once. `SceneGraph::capture_graph` privately copies/audits its source graph; `retire_graph` parks retired allocations across preview lifetimes. Renderer pumps the manager and draws.
 
 ## Code map
 
@@ -25,9 +25,9 @@ OAR is a query boundary. It audits conditions and returns copied replacement, va
 | [controller.h](../src/animation/controller.h), [controller.cpp](../src/animation/controller.cpp) | `SourceObservation`, `AnimationController::request`, `retarget`, `poll`, `advance` |
 | [clip.h](../src/animation/clip.h), [clip.cpp](../src/animation/clip.cpp) | `ClipPlayback`, `resolve_binding_playback`, `sample_animation_clip`, `strongest_idle_clip` |
 | [pose.h](../src/animation/pose.h), [variant_state.h](../src/animation/variant_state.h) | pose blend, assembly settle gate, `SelectionState` |
-| [character_clone.h](../src/character/character_clone.h) | `CharacterClone::MonitorState`, `update_monitor`, `observe_source`, `schedule_animation`, `replace_graph` |
-| [character_manager.cpp](../src/character/character_manager.cpp) | `CharacterManager::install`, `EquipSink::ProcessEvent`, `update`, `release_clones` |
-| [scene_graph_copy.cpp](../src/character/scene_graph_copy.cpp) | `SceneGraphCopy::capture`, `retire` |
+| [scene_graph.h](../src/character/scene_graph.h) | `SceneGraph::MonitorState`, `update_monitor`, `observe_source`, `schedule_animation`, `replace_graph` |
+| [character_manager.cpp](../src/character/character_manager.cpp) | `CharacterManager::install`, `EquipSink::ProcessEvent`, `update`, `clear_previews` |
+| [scene_graph_capture.cpp](../src/character/scene_graph_capture.cpp) | private `SceneGraph::capture_graph`, `retire_graph` |
 | [hooks.h](../src/oar/hooks.h), [hooks.cpp](../src/oar/hooks.cpp) | `AnimationDescriptor`, `AnimationSelection`, `query_animation` |
 | [query_policy.h](../src/oar/query_policy.h), [selection_state.h](../src/oar/selection_state.h) | project catalogue, caller-owned condition Random state, copied variant metadata |
 | [panel_monitor.cpp](../src/panel/panel_monitor.cpp) | InventoryMenu state/revision only |
@@ -74,7 +74,7 @@ Native builds need access to the installed MSVC/Windows SDK. Existing installed 
 
 ## Safe modification
 
-Keep lifecycle/event observation in the manager, per-actor requests in the clone/controller and query ABI reads in OAR. Preserve loading leases, source handles, graph generation checks, latest-request checks and existing graph parking. Do not add fallback chains to compensate for unsupported metadata. Extend action planning rather than changing source actor graphs or emitting world events.
+Keep lifecycle/event observation in the manager, per-actor requests in the SceneGraph/controller and query ABI reads in OAR. Preserve loading leases, source handles, graph generation checks, latest-request checks and existing graph parking. Do not add fallback chains to compensate for unsupported metadata. Extend action planning rather than changing source actor graphs or emitting world events.
 
 ## Synchronized files
 
@@ -82,4 +82,4 @@ Keep the animation module, direct character/render/panel consumers, [CMakeLists.
 
 ## Related history
 
-The [2026-10-16 query report](oar-preview-query-2026-10-16.md) and [OAR hook report](oar-hooks.md) retain earlier experiments. Their process-global scheduler and Start-only dwell claims are historical and superseded by this document. Rendering, material handling, diagnostic puppet routes and the graph retirement policy remain governed by their existing documents.
+The [2026-10-16 query report](oar-preview-query-2026-10-16.md) and [OAR hook report](oar-hooks.md) retain earlier experiments. Their process-global scheduler and Start-only dwell claims are historical and superseded by this document. The sole preview owner is documented in [SceneGraph previews](scene-graph.md); Actor/puppet diagnostic routes are retired. Rendering and graph retirement retain their existing policies.

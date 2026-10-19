@@ -12,7 +12,6 @@ set(PROJECT_AUTHOR AmazingBuff)
 option(ENABLE_SKYRIM_SE "Enable support for Skyrim SE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
-option(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT "Use the manual, paused scene-graph-copy validation path." OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/packaging.cmake)
@@ -48,7 +47,7 @@ add_custom_command(
 set(VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/plugin.h)
 
 # Keep build identity and manifest provenance for game results returned from another machine.
-set(CHARACTER_PANEL_PROBE_REVISION "dev" CACHE STRING "Scene-copy build identity label (legacy option name)")
+set(CHARACTER_PANEL_BUILD_LABEL "scenegraph" CACHE STRING "SceneGraph build identity label")
 
 execute_process(
 	COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-parse --short=10 HEAD
@@ -92,7 +91,7 @@ else()
 endif()
 string(TIMESTAMP CHARACTER_PANEL_CONFIGURE_STAMP "%Y%m%dT%H%M%SZ" UTC)
 set(CHARACTER_PANEL_BUILD_IDENTITY
-	"CharacterPanel-scopy-${CHARACTER_PANEL_PROBE_REVISION}-${CHARACTER_PANEL_SOURCE_REVISION}${CHARACTER_PANEL_SOURCE_SUFFIX}-cl${CHARACTER_PANEL_COMMONLIB_REVISION}${CHARACTER_PANEL_COMMONLIB_SUFFIX}-${CHARACTER_PANEL_CONFIGURE_STAMP}"
+	"CharacterPanel-scenegraph-${CHARACTER_PANEL_BUILD_LABEL}-${CHARACTER_PANEL_SOURCE_REVISION}${CHARACTER_PANEL_SOURCE_SUFFIX}-cl${CHARACTER_PANEL_COMMONLIB_REVISION}${CHARACTER_PANEL_COMMONLIB_SUFFIX}-${CHARACTER_PANEL_CONFIGURE_STAMP}"
 )
 
 configure_file(
@@ -131,9 +130,6 @@ target_compile_features(
 	cxx_std_23
 )
 
-target_compile_definitions(CharacterPanel PRIVATE
-	CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=$<BOOL:${CHARACTER_PANEL_SCENE_COPY_EXPERIMENT}>
-)
 
 # Align the MSVC toolset with the one vcpkg uses for dependencies (spdlog).
 # CMake 3.31 drops the `version=` clause from CMAKE_GENERATOR_TOOLSET (the
@@ -211,42 +207,40 @@ target_precompile_headers(
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h
 )
 
-if(CHARACTER_PANEL_SCENE_COPY_EXPERIMENT)
-	enable_testing()
-    add_executable(CharacterPanelAnimationTest tests/animation_controller_test.cpp)
-    target_compile_features(CharacterPanelAnimationTest PRIVATE cxx_std_23)
-    target_include_directories(CharacterPanelAnimationTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-    target_compile_options(CharacterPanelAnimationTest PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG;/utf-8>)
-    add_test(NAME animation_controller COMMAND CharacterPanelAnimationTest)
-	add_executable(CharacterPanelCopyMathTest tests/snapshot_transform_test.cpp src/render/dx11/d3d11_util.cpp)
-	target_compile_features(CharacterPanelCopyMathTest PRIVATE cxx_std_23)
-	target_compile_definitions(CharacterPanelCopyMathTest PRIVATE CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=1 NOMINMAX)
-	target_include_directories(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src)
-	target_link_libraries(CharacterPanelCopyMathTest PRIVATE CommonLibSSE::CommonLibSSE fmt::fmt spdlog::spdlog)
-	target_precompile_headers(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h)
-	set_target_properties(CharacterPanelCopyMathTest PROPERTIES VS_GLOBAL_VCToolsVersion "14.44.35207")
-	add_test(NAME snapshot_transform COMMAND CharacterPanelCopyMathTest)
+enable_testing()
+add_executable(CharacterPanelAnimationTest tests/animation_controller_test.cpp)
+target_compile_features(CharacterPanelAnimationTest PRIVATE cxx_std_23)
+target_include_directories(CharacterPanelAnimationTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_options(CharacterPanelAnimationTest PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG;/utf-8>)
+add_test(NAME animation_controller COMMAND CharacterPanelAnimationTest)
+add_executable(CharacterPanelCopyMathTest tests/snapshot_transform_test.cpp src/render/dx11/d3d11_util.cpp)
+target_compile_features(CharacterPanelCopyMathTest PRIVATE cxx_std_23)
+target_compile_definitions(CharacterPanelCopyMathTest PRIVATE NOMINMAX)
+target_include_directories(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src)
+target_link_libraries(CharacterPanelCopyMathTest PRIVATE CommonLibSSE::CommonLibSSE fmt::fmt spdlog::spdlog)
+target_precompile_headers(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h)
+set_target_properties(CharacterPanelCopyMathTest PROPERTIES VS_GLOBAL_VCToolsVersion "14.44.35207")
+add_test(NAME snapshot_transform COMMAND CharacterPanelCopyMathTest)
 
-	# The runbook ships a test package instead of a bare DLL, so the manifest can
-	# carry the SHA-256 of both binaries and the exact baselines they came from.
-	# The packaging script reads both baselines at package time. The configuration
-	# resolves per build, because $<TARGET_FILE> follows --config.
-	add_custom_target(
-		CharacterPanelSceneCopyPackage
-		COMMAND
-		${CMAKE_COMMAND}
-		-DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
-		-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
-		-DPROJECT_VERSION=${PROJECT_VERSION}
-		-DCONFIGURATION=$<CONFIG>
-		-DBUILD_IDENTITY=${CHARACTER_PANEL_BUILD_IDENTITY}
-		-DPROBE_REVISION=${CHARACTER_PANEL_PROBE_REVISION}
-		-DDLL_PATH=$<TARGET_FILE:CharacterPanel>
-		-DPDB_PATH=$<TARGET_PDB_FILE:CharacterPanel>
-		-P
-		${CMAKE_CURRENT_SOURCE_DIR}/cmake/scene_copy_packaging.cmake
-		DEPENDS
-		CharacterPanel
-		VERBATIM
-	)
-endif()
+# The runbook ships a test package instead of a bare DLL, so the manifest can
+# carry the SHA-256 of both binaries and the exact baselines they came from.
+# The packaging script reads both baselines at package time. The configuration
+# resolves per build, because $<TARGET_FILE> follows --config.
+add_custom_target(
+	CharacterPanelSceneCopyPackage
+	COMMAND
+	${CMAKE_COMMAND}
+	-DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+	-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
+	-DPROJECT_VERSION=${PROJECT_VERSION}
+	-DCONFIGURATION=$<CONFIG>
+	-DBUILD_IDENTITY=${CHARACTER_PANEL_BUILD_IDENTITY}
+	-DPROBE_REVISION=${CHARACTER_PANEL_BUILD_LABEL}
+	-DDLL_PATH=$<TARGET_FILE:CharacterPanel>
+	-DPDB_PATH=$<TARGET_PDB_FILE:CharacterPanel>
+	-P
+	${CMAKE_CURRENT_SOURCE_DIR}/cmake/scene_copy_packaging.cmake
+	DEPENDS
+	CharacterPanel
+	VERBATIM
+)

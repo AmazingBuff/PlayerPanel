@@ -11,7 +11,6 @@
 #include "RE/N/NiTransform.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -134,49 +133,12 @@ struct ClipPlayback
 
 using PoseBuffer = std::vector<std::pair<std::string, RE::NiTransform>>;
 [[nodiscard]] PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop);
-size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop = true);
-[[nodiscard]] RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source);
-// The state-idle preference: the strongest running clip whose NAME carries the engine's idle
-// family marker ("idle", case-insensitive - covers sneakIdle, 1hm_idle and the hand-idle family),
-// or null when no idle-named clip is running (locomotion) and the caller should fall back.
-[[nodiscard]] RE::hkbClipGenerator const* pick_idle_running_clip(RE::TESObjectREFR& source);
-bool resolve_clip_playback(RE::TESObjectREFR& source, RE::NiAVObject& copy_root, RE::hkbClipGenerator const* generator,
-    ClipPlayback& out, std::string& out_mapping, std::string& out_coverage);
 bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
     RE::hkaAnimationBinding* binding, std::string const& name, ClipPlayback& out,
     std::string& mapping, std::string& coverage, std::string_view weapon_hint = {});
-[[nodiscard]] float live_clip_time(RE::hkbClipGenerator const* generator);
 
-[[nodiscard]] bool clip_generator_is_live(void const* object);
-
-struct ActiveClipEntry
-{
-    RE::hkbClipGenerator const* generator;
-    std::string name;
-};
-
-void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out);
-
-// The world side's own answer for "which idle is playing": the strongest idle-named running
-// clip's name and blend weight. The panel prefers this clip for the weapon stance and measures
-// the engine crossfade from the weight history (oar-idle3 fifth round). `any_name` is the
-// strongest clip REGARDLESS of name — the world-sequence recorder needs the draw/sheathe/
-// attack one-shots too, which never carry "idle".
 struct RunningIdleSample
 {
-    std::string name;
-    float weight = 0.0f;
-    std::string any_name;
-    float any_weight = 0.0f;
-    // The strongest clip of ANY name is what the panel mirrors as its entry action: the index is
-    // the running binding (OAR replacement included) and the local time is the phase the source
-    // was frozen at when the inventory opened (round 18).
-    std::uint16_t any_index = 0xFFFF;
-    float any_time = 0.0f;
-    bool any_looping = false;
-    // The strongest clip that is NOT a hand idle (mlh_/mrh_): the entry action drives the whole
-    // body, and at the open edge a hand-layer member can out-weigh the still-blending body clip —
-    // the 00:04:32 session mirrored the hand Start as the full-body entry (round 18 verdict).
     std::string body_name;
     std::uint16_t body_index = 0xFFFF;
     float body_time = 0.0f;

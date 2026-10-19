@@ -11,13 +11,6 @@
 
 #include "panel/panel_monitor.h"
 #include "character/character_manager.h"
-#include "character/equipment_mirror.h"
-#include "character/final_pose_apply.h"
-#include "character/final_pose_probe.h"
-#include "character/puppet_draw.h"
-#include "character/puppet_driver.h"
-#include "character/scene_graph_copy.h"
-#include "oar/hooks.h"
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -73,29 +66,11 @@ namespace
                 const bool paused = !ui || ui->GameIsPaused();
                 CharacterManager::instance().update(paused);
 
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-                // AFP1: A0 is taken before anything advances this frame, so the report after the
-                // drivers ticked can say whether our own tick is what moved the output (R02).
-                FinalPoseProbe::instance().sample_before_tick();
-                // R01 (AFP9): the studio placement must be in place BEFORE the puppet's graph update,
-                // because the skin state this frame's draw consumes is computed during that update -
-                // a transform applied after it reaches rigid attachments only (AFP9e measured the axe
-                // following and the skinned body not). end_frame() below restores what it borrowed.
-                PuppetDraw::instance().begin_frame();
-                // The scheduler's data source: lifecycle pump, and while the panel pauses the
-                // world this frame also drives the puppet's graph on the studio clock.
-                PuppetDriver::instance().tick(paused);
-                // AFP2: the application stage. It verifies the mapping while the world runs (the
-                // engine's own applied locals are the reference then) and writes while it is paused.
-                FinalPoseApply::instance().tick(paused);
-                // AFP1: the mark is consumed after the drivers ticked, so the sample describes the
-                // frame the panel is about to draw rather than the one before it.
-                FinalPoseProbe::instance().tick(paused);
-#endif
+
 
                 // Host audit: menuObjects[0] is engine-managed and rebuilt
                 // across menu/load transitions (runs 100-102). Nothing hangs
-                // under it anymore — the clone graph and the light rig are
+                // under it anymore — the preview graph and the light rig are
                 // both detached — so this only maps the rebuild triggers.
                 static RE::NiNode* s_last_host = nullptr;
                 RE::NiNode* const host = ui3d->menuObjects[0].get();
@@ -114,44 +89,12 @@ namespace
                 if (panel_open)
                 {
                     bool image_ready = false;
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-                    // R01 (AFP9): when enabled, the panel draws the puppet's OWN 3D instead of the
-                    // detached copy. The puppet path returns false (and says why) whenever it cannot
-                    // draw, and the copy below then serves exactly as before.
-                    //
-                    // The figure draw lives in ITS OWN state-capture scope, which ends before the
-                    // composite below: the capture restores the engine's render target at that point,
-                    // so the studio texture is no longer bound as an output when the composite binds
-                    // it as a sampler source (D3D11 silently unbinds a resource used as both - the
-                    // AFP9 black-panel bug).
+                    if (const auto graph = CharacterManager::instance().get_scene_graph(RE::PlayerCharacter::GetSingleton()))
                     {
                         D3D11StateCapture capture(context);
-                        if (!PuppetDraw::instance().draw(*ui3d, *m_common_states, m_render_target))
-                        {
-                            if (const std::shared_ptr<CharacterClone> clone = CharacterManager::instance().get_clone(RE::PlayerCharacter::GetSingleton());
-                                clone && clone->drawable())
-                            {
-                                // The S2 probe stages run inside draw(), between pose() and pass
-                                // generation (PRD 0.6 §6.3); calling it here would run before pose()
-                                // and be overwritten.
-                                image_ready = clone->draw(ui3d, *m_common_states, m_render_target);
-                            }
-                        }
-                        else
-                        {
-                            image_ready = true;
-                        }
+                        image_ready = graph->draw(ui3d, *m_common_states, m_render_target);
                     }
-#else
-                    // Draw even while the lights are still converging — the
-                    // per-pass injection engages only once every slot is
-                    // ledger-served (submit_pass checks the slots itself).
-                    if (const std::shared_ptr<CharacterClone> clone = CharacterManager::instance().get_clone(RE::PlayerCharacter::GetSingleton()))
-                    {
-                        D3D11StateCapture capture(context);
-                        image_ready = clone->draw(ui3d, *m_common_states, m_render_target);
-                    }
-#endif
+
 
                     if (image_ready)
                     {
@@ -171,11 +114,7 @@ namespace
                     }
                 }
 
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-                // R01 (AFP9): give the puppet's tree back exactly as begin_frame() borrowed it, on
-                // every path - drawn, fell back to the copy, or no panel frame at all.
-                PuppetDraw::instance().end_frame();
-#endif
+
             }
         }
 

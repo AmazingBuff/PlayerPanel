@@ -7,8 +7,6 @@
 #include "render/renderer.h"
 #include "render/shader_manager.h"
 #include "render/studio/light.h"
-#include "character/puppet_driver.h"
-#include "character/scene_graph_copy.h"
 #include "input/input.h"
 #include "oar/hooks.h"
 
@@ -29,11 +27,8 @@ namespace
         log->flush_on(Log_Level);
 
         spdlog::set_default_logger(std::move(log));
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
         spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [thread %t] %g(%#): [%^%l%$] %v"s);
-#else
-        spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
-#endif
+
     }
 
     void message_handler(SKSE::MessagingInterface::Message* message) noexcept
@@ -48,26 +43,15 @@ namespace
             PLUGIN_NAMESPACE::Renderer::install();
             PLUGIN_NAMESPACE::PanelMonitor::instance().install();
             PLUGIN_NAMESPACE::CharacterManager::instance().install();
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             PLUGIN_NAMESPACE::InputManager::install();
+            logger::info("SCENEGRAPH BUILD {} runtime={} backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture F8-toggle",
+                Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
 
-            logger::info("SCOPY BUILD {} runtime={} mode=scene-copy-primary display=detached-copy(puppet-spawn-off) animation=isolated-OAR-query/standing-base cbpc=not-registered smp=not-registered hotkeys=F7-recapture F8-draw F2-mark F4-drive F6-r01-diagnostic", Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
-
-#endif
             break;
         case SKSE::MessagingInterface::kPreLoadGame:
         case SKSE::MessagingInterface::kNewGame:
-            PLUGIN_NAMESPACE::CharacterManager::instance().clear_clones();
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-            PLUGIN_NAMESPACE::SceneGraphCopy::instance().reset_for_load();
-            PLUGIN_NAMESPACE::PuppetDriver::instance().request_release();
-            // The copy-route decision (2026-10-15): no display puppet is spawned any more. The
-            // panel draws the detached copy of the player's real 3D, which carries every
-            // body-morph and outfit-transform state the mods gave the player without any
-            // per-plugin compatibility work; the OAR decision for the figure reads the captured
-            // clip instead of a live puppet graph. request_spawn() stays available for the
-            // diagnostics that still want an actor, but nothing queues it on its own.
-#endif
+            PLUGIN_NAMESPACE::CharacterManager::instance().clear_previews();
+
             break;
         default:
             break;

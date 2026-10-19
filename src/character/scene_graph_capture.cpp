@@ -2,7 +2,7 @@
 // Created by AmazingBuff on 2026/10/08.
 //
 
-#include "character/scene_graph_copy.h"
+#include "character/scene_graph.h"
 
 
 #include "character/figure_audit.h"
@@ -38,7 +38,7 @@ namespace
     };
 
     // Recompute a subtree's world transforms by composing a world-space delta onto the captured
-    // worlds: apply_world_delta_downward lives in snapshot_transform.h, shared with the idle driver.
+    // worlds are copied without advancing source controllers.
 
     bool transform_drifted(const RE::NiTransform& lhs, const RE::NiTransform& rhs, float epsilon)
     {
@@ -256,62 +256,24 @@ namespace
     }
 }
 
-SceneGraphCopy& SceneGraphCopy::instance()
-{
-    static SceneGraphCopy s_instance;
-    return s_instance;
-}
-
-SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_capture_id(0), m_cap_logged(false) {}
-SceneGraphCopy::~SceneGraphCopy() = default;
-
-void SceneGraphCopy::retire(RE::NiPointer<RE::NiAVObject> graph)
+void SceneGraph::retire_graph(RE::NiPointer<RE::NiAVObject> graph)
 {
     if (!graph) return;
-    // Native teardown is unsafe. Retain an allocation independently of actor/controller lifetime.
-    m_parked.push_back(std::make_unique<RE::NiPointer<RE::NiAVObject>>(std::move(graph)).release());
-    log_parked();
-    if (m_parked.size() > Parked_Graph_Cap)
+    // Only bookkeeping is bounded. These retained references outlive every SceneGraph instance.
+    static std::vector<RE::NiPointer<RE::NiAVObject>*> s_parked_graphs;
+    static bool s_cap_logged = false;
+    static constexpr size_t s_parked_graph_cap = 12;
+    s_parked_graphs.push_back(std::make_unique<RE::NiPointer<RE::NiAVObject>>(std::move(graph)).release());
+    logger::info("SCOPY PARK actor={:08x} snapshots held alive for the process lifetime: {}", source_id(), s_parked_graphs.size());
+    if (s_parked_graphs.size() > s_parked_graph_cap)
     {
-        if (!m_cap_logged) logger::warn("SCOPY PARK cap reached; oldest graph remains allocated");
-        m_cap_logged = true;
-        m_parked.erase(m_parked.begin());
+        if (!s_cap_logged) logger::warn("SCOPY PARK cap reached; oldest graph remains allocated");
+        s_cap_logged = true;
+        s_parked_graphs.erase(s_parked_graphs.begin());
     }
 }
 
-void SceneGraphCopy::log_parked() const
-{
-    logger::info("SCOPY PARK snapshots held alive for the process lifetime: {}", m_parked.size());
-}
-
-void SceneGraphCopy::request(Command command)
-{
-    m_command.store(command, std::memory_order_release);
-}
-
-void SceneGraphCopy::note_world_change(char const* reason)
-{
-    m_isolation.end(reason);
-}
-
-void SceneGraphCopy::reset_for_load()
-{
-    m_command.store(Command::e_none, std::memory_order_release);
-    m_isolation.request_end();
-}
-
-SceneGraphCopy::Command SceneGraphCopy::take_command()
-{
-    return m_command.exchange(Command::e_none, std::memory_order_acq_rel);
-}
-
-void SceneGraphCopy::process_boundary(bool open)
-{
-    if (m_isolation.take_end_request()) m_isolation.end("load-boundary");
-    else if (!open && m_isolation.armed()) m_isolation.end("panel-closed");
-}
-
-RE::NiPointer<RE::NiAVObject> SceneGraphCopy::capture(RE::Actor& actor)
+RE::NiPointer<RE::NiAVObject> SceneGraph::capture_graph(RE::Actor& actor)
 {
     // Re-select the target on the graph this capture produces: the cached one now points into the
     // parked copy the panel no longer draws. The idle's joints are the same kind of per-graph state.

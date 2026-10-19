@@ -1,4 +1,4 @@
-# Package the opt-in scene-graph-copy test build. The manifest records both
+# Package the SceneGraph preview build (legacy target/package entry-point name). The manifest records both
 # binaries and the exact source baselines, so a result returned from another
 # machine can be tied to the DLL that produced it.
 if(NOT DEFINED DLL_PATH OR NOT EXISTS "${DLL_PATH}")
@@ -106,13 +106,12 @@ endif()
 string(TIMESTAMP build_timestamp "%Y-%m-%dT%H:%M:%SZ" UTC)
 # Each JSON SET call takes exactly one name/value pair and rewrites the variable.
 set(manifest "{}")
-string(JSON manifest SET "${manifest}" "experiment" "\"CharacterPanel-scopy\"")
+string(JSON manifest SET "${manifest}" "backend" "\"SceneGraph\"")
 string(JSON manifest SET "${manifest}" "probe_revision" "\"${PROBE_REVISION}\"")
 string(JSON manifest SET "${manifest}" "build_identity" "\"${BUILD_IDENTITY}\"")
 string(JSON manifest SET "${manifest}" "artifact" "\"CharacterPanel.dll\"")
 string(JSON manifest SET "${manifest}" "project_version" "\"${PROJECT_VERSION}\"")
 string(JSON manifest SET "${manifest}" "configuration" "\"${CONFIGURATION}\"")
-string(JSON manifest SET "${manifest}" "cmake_option_character_panel_scene_copy_experiment" "\"ON\"")
 string(JSON manifest SET "${manifest}" "sha256_dll" "\"${dll_hash}\"")
 string(JSON manifest SET "${manifest}" "sha256_pdb" "\"${pdb_hash}\"")
 string(JSON manifest SET "${manifest}" "source_baseline" "\"${SOURCE_BASELINE}\"")

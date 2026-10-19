@@ -21,15 +21,8 @@ namespace RE
 
 PLUGIN_NAMESPACE_BEGIN
 
-// Drawing one figure into the studio target, split away from who owns that figure.
-//
-// The scene-copy route draws a graph the plugin detached and owns; the same-Actor route (PRD 0.9
-// section 6.6) has to draw a graph the Actor still owns and the engine still animates. Everything the
-// batch itself needs is the same in both cases - bind the studio target, generate the passes from the
-// figure's own shader properties through the UI3D accumulator, submit them with the studio light rig
-// injected, and restore what the engine's ledger expects. Nothing below says where `root` came from,
-// whether it is hosted, or how it was placed; that is the caller's business, and it is the only thing
-// the two routes disagree about.
+// SceneGraph supplies the detached figure and placement. This batch owns only render-target
+// binding, material/pass submission, studio-light injection and engine state restoration.
 struct FigurePassRequest
 {
     RE::NiAVObject* root = nullptr;
@@ -68,7 +61,7 @@ struct FigurePassStats
 // around the batch. The returned statistics describe
 // the completed batch without exposing per-pass callbacks.
 //
-// The caller must already be inside a D3D state capture (CharacterClone's callers are): the viewport,
+// The caller must already be inside a D3D state capture (SceneGraph's callers are): the viewport,
 // render targets, depth/blend/rasterizer states this sets are restored by that capture, not here.
 [[nodiscard]] FigurePassStats draw_figure_passes(FigurePassRequest const& a_request);
 

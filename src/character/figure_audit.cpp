@@ -37,53 +37,9 @@ namespace
 
 }
 
-SkinPalette figure_skin_palette(RE::NiAVObject& a_root)
-{
-    // The palette array is allocated on demand (a 3BA skin measured 47 slots against 131 declared),
-    // so the walk is bounded by what the instance actually points at, never by the declared capacity.
-    constexpr std::uint32_t Max_Palette_Entries = 1024;
-
-    SkinPalette palette;
-    RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
-    {
-        if (!a_geometry || !readable(a_geometry, sizeof(RE::BSGeometry)))
-            return RE::BSVisit::BSVisitControl::kContinue;
-
-        const RE::NiSkinInstance* const skin = a_geometry->GetGeometryRuntimeData().skinInstance.get();
-        if (!skin || !skin->rootParent || !readable(skin, sizeof(RE::NiSkinInstance)))
-            return RE::BSVisit::BSVisitControl::kContinue;
-        ++palette.skinned;
-
-        const std::uint32_t declared = skin->allocatedSize;
-        RE::NiAVObject* const* const bones = skin->bones;
-        if (!bones || declared == 0 || declared > Max_Palette_Entries ||
-            !readable(bones, sizeof(RE::NiAVObject*) * static_cast<std::size_t>(declared)))
-            return RE::BSVisit::BSVisitControl::kContinue;
-
-        // Entries are collected as POINTERS and never dereferenced: the array can hold slots that
-        // are not readable nodes (the AFP9 crash read a "name" at 0x1010), and necessity is decided
-        // by membership of a node the caller resolved itself.
-        bool bound = false;
-        for (std::uint32_t i = 0; i < declared; ++i)
-        {
-            RE::NiAVObject* const node = bones[i];
-            if (!node)
-                continue;
-            bound = true;
-            ++palette.entries;
-            palette.nodes.insert(node);
-        }
-        if (bound)
-            ++palette.bound;
-        return RE::BSVisit::BSVisitControl::kContinue;
-    });
-    return palette;
-}
-
 FigureAssembly figure_measure_assembly(RE::NiAVObject& a_root)
 {
     FigureAssembly out;
-    std::unordered_set<RE::NiAVObject const*> seen_roots;
     RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
     {
         if (!a_geometry || !readable(a_geometry, sizeof(RE::BSGeometry)))
@@ -94,26 +50,19 @@ FigureAssembly figure_measure_assembly(RE::NiAVObject& a_root)
         if (!skin || !skin->rootParent || !readable(skin, sizeof(RE::NiSkinInstance)))
             return RE::BSVisit::BSVisitControl::kContinue;
         ++out.skinned;
-        if (seen_roots.insert(skin->rootParent).second)
-            ++out.roots;
         if (!skin->skinData)
         {
-            ++out.skin_data_null;
             return RE::BSVisit::BSVisitControl::kContinue;
         }
-        out.num_matrices += skin->numMatrices;
         const std::uint32_t capacity = skin->skinData->GetBoneCount();
-        out.bone_count += capacity;
         const std::uint32_t slots = std::min(capacity, skin->allocatedSize);
         out.alloc_slots += slots;
-        out.bound += std::min(skin->numMatrices, capacity);
 
         // Only pointer comparison here: a palette slot is not guaranteed to be a readable node
         // (the AFP9 crash read a name at 0x1010), so nothing below is dereferenced.
         RE::NiAVObject* const* const bones = skin->bones;
         if (!bones)
         {
-            ++out.bones_array_null;
             return RE::BSVisit::BSVisitControl::kContinue;
         }
         for (std::uint32_t i = 0; i < slots; ++i)
@@ -121,137 +70,6 @@ FigureAssembly figure_measure_assembly(RE::NiAVObject& a_root)
                 ++out.bound_nodes;
         return RE::BSVisit::BSVisitControl::kContinue;
     });
-    return out;
-}
-
-FigureBound figure_node_cloud_bound(RE::NiAVObject& a_root)
-{
-    std::vector<RE::NiPoint3> points;
-    RE::BSVisit::TraverseScenegraphObjects(&a_root, [&](RE::NiAVObject* a_object)
-    {
-        if (!a_object || !readable(a_object, sizeof(RE::NiAVObject)))
-            return RE::BSVisit::BSVisitControl::kContinue;
-        if (a_object->AsGeometry())
-            return RE::BSVisit::BSVisitControl::kContinue;   // the skeleton's extent, not the meshes'
-        if (figure_is_collision_helper(a_object->name.c_str()))
-            return RE::BSVisit::BSVisitControl::kContinue;
-        points.push_back(a_object->world.translate);
-        return RE::BSVisit::BSVisitControl::kContinue;
-    });
-
-    FigureBound out;
-    if (points.empty())
-        return out;
-
-    RE::NiPoint3 sum{};
-    for (RE::NiPoint3 const& point : points)
-        sum = sum + point;
-    const RE::NiPoint3 center = sum / static_cast<float>(points.size());
-    float radius = 0.0f;
-    for (RE::NiPoint3 const& point : points)
-        radius = std::max(radius, (point - center).Length());
-
-    out.center = center;
-    out.radius = radius;
-    out.valid = true;
-    return out;
-}
-
-FigureBound figure_skinned_bound(RE::NiAVObject& a_root)
-{
-    FigureBound out;
-    RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
-    {
-        if (!a_geometry || !readable(a_geometry, sizeof(RE::BSGeometry)))
-            return RE::BSVisit::BSVisitControl::kContinue;
-        if (!a_geometry->GetGeometryRuntimeData().skinInstance)
-            return RE::BSVisit::BSVisitControl::kContinue;
-        // Framing must follow the visible figure - the helper exclusion the clone route measured
-        // (3BA/UBE collision helpers drag the bound and the centering off the body).
-        if (figure_is_collision_helper(a_geometry->name.c_str()))
-            return RE::BSVisit::BSVisitControl::kContinue;
-        const RE::NiBound& bound = a_geometry->worldBound;
-        if (!out.valid)
-        {
-            out.center = bound.center;
-            out.radius = bound.radius;
-            out.valid = true;
-            return RE::BSVisit::BSVisitControl::kContinue;
-        }
-        const RE::NiPoint3 d = bound.center - out.center;
-        const float dist = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
-        if (out.radius >= bound.radius + dist)
-            return RE::BSVisit::BSVisitControl::kContinue;  // fully contained
-        if (bound.radius >= out.radius + dist)
-        {
-            out.center = bound.center;
-            out.radius = bound.radius;
-            return RE::BSVisit::BSVisitControl::kContinue;
-        }
-        const float merged = (dist + out.radius + bound.radius) * 0.5f;
-        const float t = dist > 1e-6f ? (merged - out.radius) / dist : 0.0f;
-        out.center = out.center + d * t;
-        out.radius = merged;
-        return RE::BSVisit::BSVisitControl::kContinue;
-    });
-    return out;
-}
-
-FigureBound figure_skeleton_bound(RE::NiAVObject& a_root)
-{
-    // The palette array can hold slots that are not readable nodes (the AFP9 crash read a name at
-    // 0x1010), so every entry is filtered through the set of nodes this tree actually contains before
-    // anything is read from it.
-    std::unordered_set<RE::NiAVObject const*> in_tree;
-    RE::BSVisit::TraverseScenegraphObjects(&a_root, [&](RE::NiAVObject* a_object)
-    {
-        if (a_object)
-            in_tree.insert(a_object);
-        return RE::BSVisit::BSVisitControl::kContinue;
-    });
-
-    std::vector<RE::NiPoint3> points;
-    std::unordered_set<RE::NiAVObject const*> seen;
-    RE::BSVisit::TraverseScenegraphGeometries(&a_root, [&](RE::BSGeometry* a_geometry)
-    {
-        if (!a_geometry || !readable(a_geometry, sizeof(RE::BSGeometry)))
-            return RE::BSVisit::BSVisitControl::kContinue;
-        const RE::NiSkinInstance* const skin = a_geometry->GetGeometryRuntimeData().skinInstance.get();
-        if (!skin || !skin->rootParent || !readable(skin, sizeof(RE::NiSkinInstance)))
-            return RE::BSVisit::BSVisitControl::kContinue;
-
-        constexpr std::uint32_t Max_Palette_Entries = 1024;
-        const std::uint32_t declared = skin->allocatedSize;
-        RE::NiAVObject* const* const bones = skin->bones;
-        if (!bones || declared == 0 || declared > Max_Palette_Entries ||
-            !readable(bones, sizeof(RE::NiAVObject*) * static_cast<std::size_t>(declared)))
-            return RE::BSVisit::BSVisitControl::kContinue;
-
-        for (std::uint32_t i = 0; i < declared; ++i)
-        {
-            RE::NiAVObject* const bone = bones[i];
-            if (!bone || !in_tree.contains(bone) || !seen.insert(bone).second)
-                continue;
-            points.push_back(bone->world.translate);
-        }
-        return RE::BSVisit::BSVisitControl::kContinue;
-    });
-
-    FigureBound out;
-    if (points.empty())
-        return out;
-
-    RE::NiPoint3 sum{};
-    for (RE::NiPoint3 const& point : points)
-        sum = sum + point;
-    const RE::NiPoint3 center = sum / static_cast<float>(points.size());
-    float radius = 0.0f;
-    for (RE::NiPoint3 const& point : points)
-        radius = std::max(radius, (point - center).Length());
-
-    out.center = center;
-    out.radius = radius;
-    out.valid = true;
     return out;
 }
 

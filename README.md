@@ -1,31 +1,31 @@
 # CharacterPanel
 
-C++23 SKSE character preview plugin with Actor-assembled and audited scene-copy
-rendering paths. Current source navigation, controls and limits live in
-[Code maintenance](docs/code-maintenance.md).
+C++23 SKSE character preview plugin using a persistent copied [SceneGraph](docs/scene-graph.md).
+The source Actor is read-only; every build uses this single backend.
 
 ```powershell
-cmake --preset Release -DCHARACTER_PANEL_SCENE_COPY_EXPERIMENT=OFF
-cmake --build build --config Release --target CharacterPanel
+cmake --preset Release
+cmake --build build --config Release --target CharacterPanel CharacterPanelAnimationTest CharacterPanelCopyMathTest
+ctest --test-dir build -C Release -R "^animation_controller$" --output-on-failure
 ```
 
-Set VCPKG_ROOT and use the existing Windows x64 VS2022 / MSVC 14.44.35207
-configuration. CommonLibSSE and manifest dependencies remain required. The DLL
-is build/Release/CharacterPanel.dll; metadata is generated in build/src/plugin.h.
-First-party source globbing uses CONFIGURE_DEPENDS.
-
-For the scene-copy / AFP configuration, configure build-scopy with
-CHARACTER_PANEL_SCENE_COPY_EXPERIMENT=ON. Its current keys are F7 capture,
-F8 draw, F2 mark, F4 drive and F6 (AFP9 R01 direct draw of the puppet's own 3D).
-The CharacterPanelSceneCopyPackage target packages binaries and their identity
-manifest without deploying them. Retired M0 and S2 probe targets are no longer
-built; historical runbooks below describe their recorded revisions. See the
-maintenance document for exact build/test commands and retained diagnostic
-reasons.
+Use the existing Windows x64 VS2022/MSVC 14.44.35207 and vcpkg configuration.
+The DLL is `build/Release/CharacterPanel.dll`; identity is generated in
+`build/src/plugin.h`. `Release-scopy` is a compatibility directory alias for the
+same backend. F7 queues recapture; F8 toggles display in a paused inventory.
 
 ## Documentation
 
-- [Actor animation previews](docs/animation.md): per-actor observation/controllers, explicit Equip → Start → Loop handover, descriptor-based idle families and single-write pose composition. Game verification remains pending.
+- [SceneGraph previews](docs/scene-graph.md): ownership, lifecycle, controls, safety and verification.
+- [Animation previews](docs/animation.md): independent requests, Equip → Start → Loop, accepted continuation and pose composition.
+- [Code maintenance](docs/code-maintenance.md): current source map, build/test guidance and rendering invariants.
+- [Package instructions](tools/scene_copy/README.txt): generated identity and manual game follow-up.
+
+## Historical reports
+
+The following reports describe their recorded revisions. Former source paths,
+Actor/puppet controls and validation status are historical; current controls and
+code navigation are in the documents above.
 
 - [Historical panel idle selection and fast weapon changes](docs/oar-preview-query-2026-10-16.md): verified OAR 3.1.6/3.2.1 queries, preview Random/variant state, per-layer idle cycles, continuous blending and latest-equipment interruption. The oar-idle2 package requires the scene-copy configuration; game verification is pending.
 
@@ -33,7 +33,6 @@ reasons.
 
 - [OAR hook history](docs/oar-hooks.md): binary identities and earlier diagnostics; current selection/playback behavior is described in the actor animation document above.
 
-- [Review fixes (2026-10-15)](docs/code-maintenance.md): separate animation tracks from skeleton indices, invalidate playback on recapture, reconcile complete OBody sets, preserve hand slots and dual-wield counts, retry animation verification while data is unavailable, and correct new-game spawning and assembly/parking boundaries. Local regression checks cover non-identity track mapping and clearing a stale body preset; game validation remains required.
 
 - [AFP10g round](docs/afp10-spawn-shape-dress-test-2026-10-14.md): the record's own kit is cut at the source (the duplicate's container cleared and both outfits nulled at spawn, the copy route's recipe), the prune's world-cadence branch works again (its old gate shared a counter the worn sync reset), the figure's quiver now follows the player's current ammo (`equipment_sync_ammo`), and the body-slot list covers wigs, capes, belts and misc attachments it used to skip.
 
@@ -63,7 +62,7 @@ reasons.
 
 - [AFP next validation and paused gaps](docs/afp-next-validation-and-paused-gaps-2026-10-13.md): PRD 0.10 review, 98→116 coverage, direct drawing and dual-output transitions; separate R08 physics, F00–F04 expressions and BM00–BM03 source body-deformation synchronization. New controls require a diagnostic build.
 
-- [AFP1 final-output test sheet](docs/scene-copy-afp1-final-output-test-2026-10-13.md): historical AFP1 output/placement evidence. Its original controls describe that revision; current controls are F2 mark and F4 drive, as listed in [Code maintenance](docs/code-maintenance.md).
+- [AFP1 final-output test sheet](docs/scene-copy-afp1-final-output-test-2026-10-13.md): historical AFP1 output/placement evidence. Its original controls describe that revision; current controls are in [SceneGraph previews](docs/scene-graph.md).
 
 - [AFP1 verdict](docs/afp1-verdict-2026-10-13.md): the first in-game result — the pose track is readable and animation-skeleton-ordered (105/109 bones within one degree), and the parked puppet's graph generates an output with a live but empty pose track, which re-reads HKX42's node freeze as "there was no output to propagate".
 

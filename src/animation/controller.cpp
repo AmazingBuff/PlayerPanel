@@ -5,7 +5,6 @@
 #include "animation/controller.h"
 
 #include "animation/clip.h"
-#include "character/equipment_mirror.h"
 #include "animation/pose.h"
 #include "oar/hooks.h"
 #include "oar/preview_clip.h"
