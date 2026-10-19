@@ -311,10 +311,23 @@ public:
         return result;
     }
 
-    void handover()
+    // A proposal handover blends from the pose that was visible (entry action, equipment swap).
+    // A handover BETWEEN stages of the same proposal does not: Start and Loop are authored as
+    // consecutive moves, and the engine plays them back to back. Blending them cross-fades the
+    // Start's last pose with the Loop's first, which the player sees as the two moves
+    // overlapping.
+    void handover(bool crossfade = true)
     {
-        blend_from = pose;
-        blend_seconds = 0.0;
+        if (crossfade)
+        {
+            blend_from = pose;
+            blend_seconds = 0.0;
+        }
+        else
+        {
+            blend_from.clear();
+            blend_seconds = 0.4;
+        }
         if (playback.current().clip.variants)
         {
             auto const& selection = playback.current().clip;
@@ -602,7 +615,7 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
     if (weight >= 1.0f) state.blend_from.clear();
     const double duration = std::max(static_cast<double>(asset.playback().duration), 0.05);
     const std::uint64_t before_cycle = static_cast<std::uint64_t>(state.playback.seconds() / duration);
-    if (state.playback.advance(delta, duration)) state.handover();
+    if (state.playback.advance(delta, duration)) state.handover(false);
     else if (state.playback.current().action.loop && !state.pending &&
         static_cast<std::uint64_t>(state.playback.seconds() / duration) != before_cycle)
     {

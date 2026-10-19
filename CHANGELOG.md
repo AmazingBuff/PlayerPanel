@@ -12,6 +12,10 @@
 
 ### Fixed
 
+- Do not cross-fade between stages of one idle sequence. Start and Loop are authored as
+  consecutive moves and the engine plays them back to back; blending the Start tail into the
+  Loop head made the two moves visibly overlap.
+
 - Fix preview placement drifting between actions: calibrate the copy root from the vanilla
   MT_Idle base at capture, before the action pose is written, instead of from whichever action
   first drove joints. An Equip/Start entry used to calibrate against the weapon Loop and a plain
