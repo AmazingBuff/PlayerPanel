@@ -2,7 +2,7 @@
 // Created by AmazingBuff on 2026/10/9.
 //
 
-#include "character/animation_source.h"
+#include "animation/clip.h"
 
 #include "character/snapshot_transform.h"
 
@@ -26,7 +26,6 @@
 #include <cmath>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -40,7 +39,6 @@ PLUGIN_NAMESPACE_BEGIN
 namespace
 {
     constexpr std::int32_t Max_Tracks_Read = 4096;
-    constexpr double Max_Clip_Step_Seconds = 0.1;
     constexpr size_t Max_String_Read = 128;
     constexpr size_t String_Guard_Window = 16;
 
@@ -170,13 +168,6 @@ bool clip_generator_is_live(void const* object)
 
 void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out)
 {
-    struct ClipIdentity
-    {
-        std::string name;
-    };
-
-    static std::unordered_map<const RE::hkbClipGenerator*, ClipIdentity> cache;
-
     RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
     if (!source.GetAnimationGraphManager(manager) || !manager)
         return;
@@ -197,37 +188,19 @@ void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<Acti
             if (!clip_generator_is_live(node))
                 continue;
             const auto* const generator = static_cast<const RE::hkbClipGenerator*>(node);
-            auto known = cache.find(generator);
-            if (known == cache.end())
-            {
-                const std::string name = guarded_string(generator->animationName);
-                known = cache.emplace(generator, ClipIdentity{ name }).first;
-            }
-            out.push_back({ generator, known->second.name });
+            out.push_back({ generator, guarded_string(generator->animationName) });
         }
     }
 
-    if (!out.empty())
-    {
-        std::unordered_set<const RE::hkbClipGenerator*> running;
-        running.reserve(out.size());
-        for (const ActiveClipEntry& entry : out)
-            running.insert(entry.generator);
-        std::erase_if(cache, [&](const auto& entry) { return running.find(entry.first) == running.end(); });
-    }
-    else
-    {
-        cache.clear();
-    }
 }
 
-size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop)
+PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop)
 {
     if (!clip.valid())
-        return 0;
+        return {};
 
     if (!animation_data_is_present(clip.animation))
-        return 0;
+        return {};
 
     const float length = clip.duration > 0.05f ? clip.duration : 0.05f;
     float looped = seconds;
@@ -242,11 +215,11 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
 
     const std::int32_t sample_count = clip.animation->numberOfTransformTracks;
     if (sample_count <= 0 || sample_count > Max_Tracks_Read)
-        return 0;
+        return {};
     std::vector<RE::hkQsTransform> sampled(static_cast<std::size_t>(sample_count));
     sample_tracks(*clip.animation, looped, static_cast<std::uint32_t>(sample_count), sampled.data(), nullptr, 0);
 
-    size_t written = 0;
+    PoseBuffer result;
     for (size_t i = 0; i < clip.tracks.size(); ++i)
     {
         RE::NiAVObject* const node = clip.nodes[i];
@@ -255,11 +228,19 @@ size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObje
         RE::NiTransform local = ni_local_from_pose(read_pose(sampled[clip.tracks[i]]));
         if (!std::isfinite(local.scale) || local.scale <= 0.0f)
             local.scale = node->local.scale;
-        node->local = local;
-        ++written;
+        result.emplace_back(node->name.c_str(), local);
     }
+    return result;
+}
+
+size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop)
+{
+    const PoseBuffer sampled = sample_animation_clip(clip, seconds, loop);
+    const NameIndex nodes = index_nodes_by_name(copy_root);
+    for (auto const& [name, local] : sampled)
+        if (auto found = nodes.find(name); found != nodes.end()) found->second->local = local;
     recompute_subtree_worlds(copy_root, 0);
-    return written;
+    return sampled.size();
 }
 
 RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source)
@@ -530,45 +511,6 @@ float live_clip_time(RE::hkbClipGenerator const* generator)
         return -1.0f;
     const float time = control->localTime;
     return std::isfinite(time) ? time : -1.0f;
-}
-
-void ClipPlayer::reset()
-{
-    m_clip = ClipPlayback{};
-    m_time = 0.0;
-    m_last_tick = std::chrono::steady_clock::now();
-}
-
-void ClipPlayer::set_clip(ClipPlayback clip, bool loop, double start_seconds)
-{
-    m_clip = std::move(clip);
-    m_loop = loop;
-    m_time = std::max(start_seconds, 0.0);
-    m_last_tick = std::chrono::steady_clock::now();
-}
-
-void ClipPlayer::retarget(ClipPlayback clip)
-{
-    m_clip = std::move(clip);
-    m_last_tick = std::chrono::steady_clock::now();
-}
-
-void ClipPlayer::restart(double start_seconds)
-{
-    m_time = std::max(start_seconds, 0.0);
-    m_last_tick = std::chrono::steady_clock::now();
-}
-
-size_t ClipPlayer::advance(RE::NiAVObject& copy_root)
-{
-    if (!m_clip.valid())
-        return 0;
-
-    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-    const double step = std::min(std::chrono::duration<double>(now - m_last_tick).count(), Max_Clip_Step_Seconds);
-    m_last_tick = now;
-    m_time += std::max(step, 0.0);
-    return play_animation_clip(m_clip, static_cast<float>(m_time), copy_root, m_loop);
 }
 
 PLUGIN_NAMESPACE_END

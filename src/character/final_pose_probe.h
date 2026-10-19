@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "character/animation_source.h"
+#include "animation/clip.h"
 #include "character/snapshot_transform.h"
 
 #include "RE/H/hkQsTransform.h"

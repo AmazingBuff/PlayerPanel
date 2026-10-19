@@ -120,42 +120,42 @@ void equipment_collect_worn(RE::Actor& a_actor, std::vector<RE::TESBoundObject*>
     collect_worn(a_actor, a_out);
 }
 
-oar::WeaponForm equipment_weapon_form(RE::Actor& a_actor)
+animation::WeaponForm equipment_weapon_form(RE::Actor& a_actor)
 {
     // Only the reading is engine work: which kind each hand carries. The form itself is decided by
-    // oar::weapon_form_from_hands, a pure rule the panel's regression covers.
-    const auto kind = [](RE::TESForm const* a_form) -> oar::HandKind
+    // animation::weapon_form_from_hands, a pure rule the panel's regression covers.
+    const auto kind = [](RE::TESForm const* a_form) -> animation::HandKind
     {
         if (!a_form)
-            return oar::HandKind::kEmpty;
+            return animation::HandKind::kEmpty;
         if (const RE::TESObjectWEAP* const weapon = a_form->As<RE::TESObjectWEAP>())
         {
             switch (weapon->GetWeaponType())
             {
             case RE::WEAPON_TYPE::kTwoHandSword:
-                return oar::HandKind::kTwoHandedWeapon;
+                return animation::HandKind::kTwoHandedWeapon;
             case RE::WEAPON_TYPE::kTwoHandAxe:
-                return oar::HandKind::kTwoHandedAxe;
+                return animation::HandKind::kTwoHandedAxe;
             case RE::WEAPON_TYPE::kBow:
-                return oar::HandKind::kBow;
+                return animation::HandKind::kBow;
             case RE::WEAPON_TYPE::kCrossbow:
-                return oar::HandKind::kCrossbow;
+                return animation::HandKind::kCrossbow;
             case RE::WEAPON_TYPE::kStaff:
-                return oar::HandKind::kStaff;
+                return animation::HandKind::kStaff;
             default:
-                return oar::HandKind::kOneHandedWeapon;
+                return animation::HandKind::kOneHandedWeapon;
             }
         }
         if (a_form->As<RE::TESObjectLIGH>())
-            return oar::HandKind::kTorch;
+            return animation::HandKind::kTorch;
         if (a_form->IsArmor())
-            return oar::HandKind::kShield;  // a shield is the only armour a hand equips
+            return animation::HandKind::kShield;  // a shield is the only armour a hand equips
         if (a_form->Is(RE::FormType::Spell) || a_form->Is(RE::FormType::Scroll) || a_form->Is(RE::FormType::Shout))
-            return oar::HandKind::kSpell;
-        return oar::HandKind::kEmpty;
+            return animation::HandKind::kSpell;
+        return animation::HandKind::kEmpty;
     };
 
-    return oar::weapon_form_from_hands(kind(a_actor.GetEquippedObject(false)), kind(a_actor.GetEquippedObject(true)));
+    return animation::weapon_form_from_hands(kind(a_actor.GetEquippedObject(false)), kind(a_actor.GetEquippedObject(true)));
 }
 
 std::array<RE::FormID, 2> equipment_hand_ids(RE::Actor& actor)

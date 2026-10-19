@@ -1,5 +1,16 @@
 # OAR 条件 hook（3.1.6 / 3.2.1）
 
+> Current query/playback boundary: [Actor animation previews](animation.md). The older projection/package sections below are historical.
+
+## Actor-animation ABI audit (2026-10-19)
+
+`AnimationReplacements::ForEachReplacementAnimation` is called through the existing DLL identity and entry-prefix gate. The native function owns the read lock; callers copy descriptors while its callback runs. It is RVA `0x1EB900` in 3.1.6 (prefix `48 89 5c 24 18 55 56 57 48 83 ec 40 48 8b 05 2d`) and `0x12D7B0` in 3.2.1 (same prefix ending `bd`). Profiles are in [binary_profile.h](../src/oar/binary_profile.h).
+
+Both PDB field lists confirm `ReplacementAnimation::_originalIndex=0xA8`, `_bDisabled=0xAA`, `_path=0xB0`, `_projectName=0xD0`, `_parentSubMod=0x108`, size 272. `Variant::_index=0`, `_filename=8`, `_bDisabled=0x28`, `_bPlayOnce=0x29`, size 56. Evidence: `llvm-pdbutil dump --types --type-index=0x4473 --type-index=0x42D3` for 3.1.6 and types `0x7A73` / `0x7899` for 3.2.1 against the provided DLL/PDB pairs. Earlier +0xA8 path hypotheses confuse the original index with the string; use +0xB0.
+
+The authoritative source pin `f4e7688b065175aff70aa523073857911e15aca3` registers replacement bindings at project construction and may hash-deduplicate their names. `AnimationDescriptor::path` therefore remains separate from `binding_name` and the actual loading `index`. Native variant metadata is copied under its variant read lock. Conditions and caller-owned Random evaluation stay in OAR; accepted variant history, Start/Loop folder compatibility, clocks and crossfade belong to animation. OAR's internal ActiveClip blending needs an active behavior graph; the pinned public API offers no detached offline blend entry point.
+
+
 > 当前入口：[oar-preview1 独立查询、播放及换装](oar-preview-query-2026-10-16.md)。
 > 下文投影及旧包为历轮记录；全局站立窗口已移除，两版主动查询入口已重新核对并接入。
 
@@ -161,7 +172,7 @@ PDB 用于开发核对；运行时只读取 DLL 自带的 CodeView 身份信息�
 | PDB SHA-256 | `47b37757ef343282f103f124fcd9f3ffdf625de87d65730c08ce464e5f203767` |
 | ZIP SHA-256 | `7691845cab1511272b71054fcdcdff7a14f372a578a03f0a112e8038e2fd6185` |
 
-**游戏内结果（2026-10-15 晚，[日志](../log-archive/CharacterPanel-20261015-2230-oar316.log)）**：
+**游戏内结果（2026-10-15 晚，日志（历史文件未随仓库提供：`../log-archive/CharacterPanel-20261015-2230-oar316.log`））**：
 
 - `OAR 3.1.6 hooks installed: …` —— 3.1.6 profile 被接受，不再 `refused`。
 - 2 640 步面板时间内累计 `evaluated=186272`、`overridden=26877`（约 70 次求值/步、10 次改写/步），
@@ -181,7 +192,7 @@ PDB 用于开发核对；运行时只读取 DLL 自带的 CodeView 身份信息�
 | DLL SHA-256 | `9d81e29d204bc932a3dff6dbc4a6a6adac84a22b55a975e5ec00cc20d2370582` |
 | ZIP SHA-256 | `e99483aa07d1fc400feb4b42fa61805f34d1ea0f0f199ab388c373347ef73b66` |
 
-**游戏内结果（2026-10-15 晚，[日志](../log-archive/CharacterPanel-20261015-2245-oar-ab-2hcrash.log)；
+**游戏内结果（2026-10-15 晚，日志（历史文件未随仓库提供：`../log-archive/CharacterPanel-20261015-2245-oar-ab-2hcrash.log`）；
 该会话末尾死于双手武器换装崩溃，与本模块无关，见不变量 32）**：
 
 - **投影改变了 OAR 的选片**：F11 切到 plain 臂后

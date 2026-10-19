@@ -7,7 +7,9 @@
 #include "character/equipment_mirror.h"
 #include "character/figure_audit.h"
 #include "character/snapshot_transform.h"
-#include "character/panel_animation_policy.h"
+#include "animation/pose.h"
+#include "animation/action.h"
+#include "animation/variant_state.h"
 #include "oar/query_policy.h"
 #include "oar/preview_clip.h"
 #include "oar/binary_profile.h"
@@ -26,6 +28,7 @@
 
 namespace
 {
+    namespace animation = PLUGIN_NAMESPACE::animation;
     bool preview_carrier_preserves_native_node_fields()
     {
         PLUGIN_NAMESPACE::oar::PreviewClip carrier;
@@ -119,8 +122,8 @@ namespace
     bool preview_variants_are_local_and_bounded()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
-        oar::SelectionState preview(123);
-        oar::SelectionState other(123);
+        animation::SelectionState preview(123);
+        animation::SelectionState other(123);
         oar::VariantOptions options;
         options.key = { oar::DataScope::e_local, 1, 10 };
         options.sequential = true;
@@ -163,8 +166,8 @@ namespace
     bool preview_random_conditions_cache_and_reset()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
-        oar::SelectionState preview(123);
-        oar::SelectionState other(123);
+        animation::SelectionState preview(123);
+        animation::SelectionState other(123);
         const oar::StateKey local{ oar::DataScope::e_local, 1 };
         const oar::StateKey shared{ oar::DataScope::e_submod, 40 };
         const auto first = preview.random(local, 9, 1, true, 0.0f, 1.0f);
@@ -194,7 +197,7 @@ namespace
     bool preview_variant_weights_and_shared_state()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
-        oar::SelectionState preview(123);
+        animation::SelectionState preview(123);
         oar::VariantOptions options;
         options.key = { oar::DataScope::e_local, 1, 10 };
         options.random = { 7, 9 };
@@ -212,7 +215,7 @@ namespace
         }
         if (low < 2300 || low > 2700)
             return false;
-        oar::SelectionState shared(123);
+        animation::SelectionState shared(123);
         options.key = { oar::DataScope::e_submod, 20 };
         options.random.clear();
         options.cumulative.clear();
@@ -254,7 +257,7 @@ namespace
     bool preview_play_once_history_is_committed_on_start()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
-        oar::SelectionState preview(123);
+        animation::SelectionState preview(123);
         oar::VariantOptions options;
         options.key = { oar::DataScope::e_submod, 20 };
         options.share_history = true;
@@ -275,12 +278,12 @@ namespace
     bool idle_loops_respect_sequence_and_recheck_flags()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
-        oar::SelectionState preview(123);
+        animation::SelectionState preview(123);
         oar::VariantOptions options;
         options.key = { oar::DataScope::e_local, 1, 10 };
         options.sequential = true;
         options.sequence = { { 11 }, { 12 }, { 13 } };
-        if (oar::idle_loop_decision(true, true, preview.in_sequence(options, 1)) != oar::LoopDecision::e_recheck)
+        if (animation::idle_loop_decision(true, true, preview.in_sequence(options, 1)) != animation::LoopDecision::e_recheck)
             return false;
         for (int i = 0; i < 2; ++i)
         {
@@ -288,38 +291,13 @@ namespace
             if (!pick)
                 return false;
             preview.commit(options, *pick, 1);
-            if (oar::idle_loop_decision(true, true, preview.in_sequence(options, 1)) != oar::LoopDecision::e_continue_variants)
+            if (animation::idle_loop_decision(true, true, preview.in_sequence(options, 1)) != animation::LoopDecision::e_continue_variants)
                 return false;
         }
         preview.commit(options, *preview.variant(options, 1), 1);
         return !preview.in_sequence(options, 1) &&
-            oar::idle_loop_decision(false, true, false) == oar::LoopDecision::e_continue_variants &&
-            oar::idle_loop_decision(false, false, false) == oar::LoopDecision::e_keep;
-    }
-
-    bool latest_weapon_request_rejects_stale_loads()
-    {
-        PLUGIN_NAMESPACE::LatestAnimationRequest latest;
-        if (!latest.observe(10))
-            return false;
-        const std::uint64_t a = latest.generation();
-        latest.observe(20);
-        const std::uint64_t b = latest.generation();
-        latest.observe(30);
-        const std::uint64_t c = latest.generation();
-        if (latest.accepts(a) || latest.accepts(b) || !latest.accepts(c) || latest.observe(30))
-            return false;
-        latest.observe(10);
-        return !latest.accepts(a) && !latest.accepts(c) && latest.accepts(latest.generation());
-    }
-
-    bool idle_layers_keep_independent_cycles()
-    {
-        PLUGIN_NAMESPACE::IdleCycleGate body;
-        PLUGIN_NAMESPACE::IdleCycleGate weapon;
-        return !body.crossed(0, true) && !weapon.crossed(0, true) && body.crossed(1, true) &&
-            !weapon.crossed(0, true) && !body.crossed(1, true) && weapon.crossed(1, true) &&
-            !body.crossed(2, false) && !body.crossed(2, true) && body.crossed(3, true);
+            animation::idle_loop_decision(false, true, false) == animation::LoopDecision::e_continue_variants &&
+            animation::idle_loop_decision(false, false, false) == animation::LoopDecision::e_keep;
     }
 
     bool interrupted_pose_blend_starts_from_the_visible_pose()
@@ -368,15 +346,11 @@ namespace
         using namespace PLUGIN_NAMESPACE;
         const std::array<std::string_view, 7> body{ "NPC Pelvis [Pelv]", "NPC Spine1 [Spn1]", "NPC Head [Head]",
             "NPC L Thigh [LThg]", "NPC R Thigh [RThg]", "NPC L Calf [LClf]", "NPC R Calf [RClf]" };
-        return panel_phase(false, true, false) == PanelAnimationPhase::e_loading &&
-            panel_phase(true, true, false) == PanelAnimationPhase::e_transition &&
-            panel_phase(true, true, true) == PanelAnimationPhase::e_idle &&
-            panel_phase(true, false, false) == PanelAnimationPhase::e_idle &&
-            covers_standing_body(body) && !covers_standing_body(std::span(body).first(6)) &&
-            panel_idle_bases(oar::WeaponForm::kBow) != panel_idle_bases(oar::WeaponForm::kTwoHanded) &&
-            panel_idle_bases(oar::WeaponForm::kCrossbow) != panel_idle_bases(oar::WeaponForm::kBow) &&
-            oar::weapon_form_from_hands(oar::HandKind::kBow, oar::HandKind::kEmpty) == oar::WeaponForm::kBow &&
-            oar::weapon_form_from_hands(oar::HandKind::kEmpty, oar::HandKind::kCrossbow) == oar::WeaponForm::kCrossbow;
+        return covers_standing_body(body) && !covers_standing_body(std::span(body).first(6)) &&
+            panel_idle_bases(animation::WeaponForm::kBow) != panel_idle_bases(animation::WeaponForm::kTwoHanded) &&
+            panel_idle_bases(animation::WeaponForm::kCrossbow) != panel_idle_bases(animation::WeaponForm::kBow) &&
+            animation::weapon_form_from_hands(animation::HandKind::kBow, animation::HandKind::kEmpty) == animation::WeaponForm::kBow &&
+            animation::weapon_form_from_hands(animation::HandKind::kEmpty, animation::HandKind::kCrossbow) == animation::WeaponForm::kCrossbow;
     }
 
     bool panel_animation_state_keeps_stance_and_transition_contract()
@@ -385,11 +359,11 @@ namespace
         // oar-idle3: a sheathed weapon swap is an equip transition, not a sheathe — the panel
         // plays the new weapon's equip (problem 3), and the entering-stance snapshot keeps a
         // drawn answer consistent against its own recorded equipment (problems 2).
-        const auto sword_to_sword = panel_transition_bases(oar::WeaponForm::kOneHanded, false);
-        const auto sheathe = panel_transition_bases(oar::WeaponForm::kOneHanded, true);
+        const auto sword_to_sword = panel_transition_bases(animation::WeaponForm::kOneHanded, false);
+        const auto sheathe = panel_transition_bases(animation::WeaponForm::kOneHanded, true);
         return !sword_to_sword.empty() && sword_to_sword.front() == "Animations\\1HM_Equip.hkx" &&
             !sheathe.empty() && sheathe.front() == "Animations\\1HM_Unequip.hkx" &&
-            panel_transition_bases(oar::WeaponForm::kNone, true).empty();
+            panel_transition_bases(animation::WeaponForm::kNone, true).empty();
     }
 
     bool project_name_catalogue_is_reused_across_sessions()
@@ -683,17 +657,17 @@ namespace
         // The form follows the two hands: a two-handed weapon or a bow owns the stance whichever
         // entry the engine named, two one-handed weapons are the dual stance, and a shield or a
         // spell beside a single one-handed weapon leaves it the one-handed stance.
-        using HK = oar::HandKind;
+        using HK = animation::HandKind;
         const bool forms_split =
-            oar::weapon_form_from_hands(HK::kTwoHandedWeapon, HK::kEmpty) == oar::WeaponForm::kTwoHanded &&
-            oar::weapon_form_from_hands(HK::kEmpty, HK::kTwoHandedWeapon) == oar::WeaponForm::kTwoHanded &&
-            oar::weapon_form_from_hands(HK::kOneHandedWeapon, HK::kOneHandedWeapon) == oar::WeaponForm::kDualWield &&
-            oar::weapon_form_from_hands(HK::kOneHandedWeapon, HK::kShield) == oar::WeaponForm::kOneHanded &&
-            oar::weapon_form_from_hands(HK::kOneHandedWeapon, HK::kSpell) == oar::WeaponForm::kOneHanded &&
-            oar::weapon_form_from_hands(HK::kSpell, HK::kSpell) == oar::WeaponForm::kMagic &&
-            oar::weapon_form_from_hands(HK::kStaff, HK::kEmpty) == oar::WeaponForm::kStaff &&
-            oar::weapon_form_from_hands(HK::kTorch, HK::kEmpty) == oar::WeaponForm::kTorch &&
-            oar::weapon_form_from_hands(HK::kEmpty, HK::kEmpty) == oar::WeaponForm::kNone;
+            animation::weapon_form_from_hands(HK::kTwoHandedWeapon, HK::kEmpty) == animation::WeaponForm::kTwoHanded &&
+            animation::weapon_form_from_hands(HK::kEmpty, HK::kTwoHandedWeapon) == animation::WeaponForm::kTwoHanded &&
+            animation::weapon_form_from_hands(HK::kOneHandedWeapon, HK::kOneHandedWeapon) == animation::WeaponForm::kDualWield &&
+            animation::weapon_form_from_hands(HK::kOneHandedWeapon, HK::kShield) == animation::WeaponForm::kOneHanded &&
+            animation::weapon_form_from_hands(HK::kOneHandedWeapon, HK::kSpell) == animation::WeaponForm::kOneHanded &&
+            animation::weapon_form_from_hands(HK::kSpell, HK::kSpell) == animation::WeaponForm::kMagic &&
+            animation::weapon_form_from_hands(HK::kStaff, HK::kEmpty) == animation::WeaponForm::kStaff &&
+            animation::weapon_form_from_hands(HK::kTorch, HK::kEmpty) == animation::WeaponForm::kTorch &&
+            animation::weapon_form_from_hands(HK::kEmpty, HK::kEmpty) == animation::WeaponForm::kNone;
         return pose_is_standing && weapon_state_passes_through && forms_split;
     }
 
@@ -942,7 +916,7 @@ namespace
     bool preview_dwell_survives_accept_and_reactivation()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
-        oar::SelectionState preview(123);
+        animation::SelectionState preview(123);
         oar::VariantOptions options;
         options.key = { oar::DataScope::e_submod, 20 };
         options.sequential = true;
@@ -971,7 +945,7 @@ namespace
     bool panel_clip_family_matches_the_stance()
     {
         using PLUGIN_NAMESPACE::panel_clip_is_family;
-        using PLUGIN_NAMESPACE::oar::WeaponForm;
+        using PLUGIN_NAMESPACE::animation::WeaponForm;
         return panel_clip_is_family("Animations\\1hm_idle.hkx", WeaponForm::kOneHanded) &&
             panel_clip_is_family("animations/1HM_IDLE.HKX", WeaponForm::kOneHanded) &&
             panel_clip_is_family("Animations\\Female\\1hm_idle.hkx", WeaponForm::kOneHanded) &&
@@ -986,14 +960,14 @@ namespace
     bool clip_stance_decides_the_entering_stance()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
-        return oar::clip_stance("Animations\\1HM_Equip.hkx") == oar::ClipStance::e_drawn &&
-            oar::clip_stance("Animations\\1hm_equip.hkx") == oar::ClipStance::e_drawn &&
-            oar::clip_stance("Animations\\1HM_Unequip.hkx") == oar::ClipStance::e_sheathed &&
-            oar::clip_stance("Animations\\Bow_Unequip.hkx") == oar::ClipStance::e_sheathed &&
-            oar::clip_stance("Animations\\1hm_idle.hkx") == oar::ClipStance::e_drawn &&
-            oar::clip_stance("Animations\\MLh_Idle.hkx") == oar::ClipStance::e_drawn &&
-            oar::clip_stance("Animations\\male\\MT_Idle.HKX") == oar::ClipStance::e_sheathed &&
-            oar::clip_stance("Animations\\MT_Jump.hkx") == oar::ClipStance::e_undecided;
+        return animation::clip_stance("Animations\\1HM_Equip.hkx") == animation::ClipStance::e_drawn &&
+            animation::clip_stance("Animations\\1hm_equip.hkx") == animation::ClipStance::e_drawn &&
+            animation::clip_stance("Animations\\1HM_Unequip.hkx") == animation::ClipStance::e_sheathed &&
+            animation::clip_stance("Animations\\Bow_Unequip.hkx") == animation::ClipStance::e_sheathed &&
+            animation::clip_stance("Animations\\1hm_idle.hkx") == animation::ClipStance::e_drawn &&
+            animation::clip_stance("Animations\\MLh_Idle.hkx") == animation::ClipStance::e_drawn &&
+            animation::clip_stance("Animations\\male\\MT_Idle.HKX") == animation::ClipStance::e_sheathed &&
+            animation::clip_stance("Animations\\MT_Jump.hkx") == animation::ClipStance::e_undecided;
     }
 
     // Round 18 verdict: the sequence plan collects the family in play order — the NON-COMBAT
@@ -1011,15 +985,15 @@ namespace
             "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Combat idle Start\\1hm_idle.hkx",
             "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 2hw Axe\\2hw Axe Non-Combat idle Loop\\2hw_idle.hkx"
         };
-        const auto family = oar::collect_sequence_family(names, names[1]);
+        const auto family = animation::collect_sequence_family(names, names[1]);
         if (family.size() != 3 ||
             family[0].index != 1 || family[1].index != 2 || family[2].index != 3 ||
-            family[0].token != oar::ClipSequenceToken::e_start ||
-            family[1].token != oar::ClipSequenceToken::e_loop ||
-            family[2].token != oar::ClipSequenceToken::e_loop ||
+            family[0].token != animation::ClipSequenceToken::e_start ||
+            family[1].token != animation::ClipSequenceToken::e_loop ||
+            family[2].token != animation::ClipSequenceToken::e_loop ||
             family[1].episode != 0 || family[2].episode != 2)
             return false;
-        const auto combat = oar::collect_sequence_family(names, names[5]);
+        const auto combat = animation::collect_sequence_family(names, names[5]);
         return combat.size() == 2 && combat[0].index == 5 && combat[1].index == 4;
     }
 
@@ -1029,13 +1003,13 @@ namespace
     bool entry_action_kind_classifies_entry_moves()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
-        return oar::entry_action_kind("Animations\\1HM_Equip.hkx") == oar::EntryActionKind::e_equip &&
-            oar::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 2hw Axe\\2hw Axe Equip Base\\2hw_equip.hkx") == oar::EntryActionKind::e_equip &&
-            oar::entry_action_kind("Animations\\1HM_Unequip.hkx") == oar::EntryActionKind::e_unequip &&
-            oar::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Start\\1hm_idle.hkx") == oar::EntryActionKind::e_sequence_start &&
-            oar::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop\\1hm_idle.hkx") == oar::EntryActionKind::e_none &&
-            oar::entry_action_kind("Animations\\MT_Idle.hkx") == oar::EntryActionKind::e_none &&
-            oar::entry_action_kind("Animations\\MT_RunForward.hkx") == oar::EntryActionKind::e_none;
+        return animation::entry_action_kind("Animations\\1HM_Equip.hkx") == animation::EntryActionKind::e_equip &&
+            animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 2hw Axe\\2hw Axe Equip Base\\2hw_equip.hkx") == animation::EntryActionKind::e_equip &&
+            animation::entry_action_kind("Animations\\1HM_Unequip.hkx") == animation::EntryActionKind::e_unequip &&
+            animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Start\\1hm_idle.hkx") == animation::EntryActionKind::e_sequence_start &&
+            animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop\\1hm_idle.hkx") == animation::EntryActionKind::e_none &&
+            animation::entry_action_kind("Animations\\MT_Idle.hkx") == animation::EntryActionKind::e_none &&
+            animation::entry_action_kind("Animations\\MT_RunForward.hkx") == animation::EntryActionKind::e_none;
     }
 }
 
@@ -1069,8 +1043,6 @@ int main()
     const bool variant_weights = preview_variant_weights_and_shared_state();
     const bool play_once = preview_play_once_history_is_committed_on_start();
     const bool idle_recheck = idle_loops_respect_sequence_and_recheck_flags();
-    const bool latest_weapon = latest_weapon_request_rejects_stale_loads();
-    const bool idle_cycles = idle_layers_keep_independent_cycles();
     const bool blend_interrupt = interrupted_pose_blend_starts_from_the_visible_pose();
     const bool stance_contract = panel_animation_state_keeps_stance_and_transition_contract();
     const bool catalogue_reuse = project_name_catalogue_is_reused_across_sessions();
@@ -1093,9 +1065,9 @@ int main()
         original_answers ? "PASS" : "FAIL", panel_transitions ? "PASS" : "FAIL");
     std::printf("equipment assembly debounce: %s\n", gear_refresh ? "PASS" : "FAIL");
     std::printf("preview native carrier layout: %s\n", carrier_layout ? "PASS" : "FAIL");
-    std::printf("preview Random cache: %s\nvariant weights and shared state: %s\nPlayOnce commit on start: %s\nidle loop decision flags: %s\nlatest weapon request: %s\nindependent idle cycles: %s\ninterrupted pose blend: %s\n",
+    std::printf("preview Random cache: %s\nvariant weights and shared state: %s\nPlayOnce commit on start: %s\nidle loop decision flags: %s\ninterrupted pose blend: %s\n",
         random_conditions ? "PASS" : "FAIL", variant_weights ? "PASS" : "FAIL", play_once ? "PASS" : "FAIL",
-        idle_recheck ? "PASS" : "FAIL", latest_weapon ? "PASS" : "FAIL", idle_cycles ? "PASS" : "FAIL", blend_interrupt ? "PASS" : "FAIL");
+        idle_recheck ? "PASS" : "FAIL", blend_interrupt ? "PASS" : "FAIL");
     std::printf("stance and transition contract: %s\nproject catalogue reuse: %s\ndwell pin across accept: %s\nclip family gate: %s\nstance from clip: %s\nidle sequence siblings: %s\nentry action kind: %s\n",
         stance_contract ? "PASS" : "FAIL", catalogue_reuse ? "PASS" : "FAIL",
         dwell_pin ? "PASS" : "FAIL", clip_family ? "PASS" : "FAIL",
@@ -1104,6 +1076,6 @@ int main()
     return placement && mapping && framing && ledger && necessity && bound && assembly && track_identity && shape_clear &&
         two_handed && oar_scope && oar_projection && oar_binary && alpha_order && alpha_state && d3d_ranges && panel_pose &&
         query_profiles && standing_catalog && local_variants && original_answers && panel_transitions && gear_refresh && carrier_layout &&
-        random_conditions && variant_weights && play_once && idle_recheck && latest_weapon && idle_cycles && blend_interrupt &&
+        random_conditions && variant_weights && play_once && idle_recheck && blend_interrupt &&
         stance_contract && catalogue_reuse && dwell_pin && clip_family && stance_from_clip && sequence_siblings && entry_kind ? 0 : 1;
 }

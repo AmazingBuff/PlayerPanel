@@ -10,7 +10,6 @@
 #include "studio/light.h"
 
 #include "panel/panel_monitor.h"
-#include "character/animation_source.h"
 #include "character/character_manager.h"
 #include "character/equipment_mirror.h"
 #include "character/final_pose_apply.h"
@@ -72,38 +71,7 @@ namespace
             {
                 RE::UI* ui = RE::UI::GetSingleton();
                 const bool paused = !ui || ui->GameIsPaused();
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-                SceneGraphCopy::instance().process_requests();
-#endif
-                // The entering weapon stance lives on the last unpaused world frame: the engine
-                // clears weaponState before the menu event and freezes it for the menu session,
-                // so this per-frame observation is the only honest "武器已在手上" read. The
-                // idle-clip observation rides the same cadence (every 10th frame — the behavior
-                // graph walk costs a fraction of a millisecond) and feeds the panel's weapon-idle
-                // preference plus the measured crossfade.
-                if (!paused)
-                {
-                    static std::uint32_t s_observe_tick = 0;
-                    const bool idle_observed = ++s_observe_tick % 10 == 1;
-                    if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
-                    {
-                        PanelMonitor::instance().observe_stance(player->IsWeaponDrawn());
-                        if (idle_observed)
-                        {
-                            // OAR-style: the clip NAME is the interface — the strongest running
-                            // clip of any name (draw/sheathe included) feeds the recorder, and
-                            // the panel re-enters it through the OAR query path by name. No
-                            // weight decisions on our side. The demonstrated sequence's last
-                            // stable idle also promotes the entering stance (the weaponState
-                            // bit is false while the draw animation is still playing).
-                            const RunningIdleSample sample = strongest_idle_clip(*player);
-                            PanelMonitor::instance().observe_idle_clip(
-                                !sample.any_name.empty() ? sample.any_name : sample.name,
-                                sample.any_weight > 0.0f ? sample.any_weight : sample.weight);
-                            PanelMonitor::instance().observe_stance_from_clip();
-                        }
-                    }
-                }
+                CharacterManager::instance().update(paused);
 
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
                 // AFP1: A0 is taken before anything advances this frame, so the report after the
@@ -142,20 +110,6 @@ namespace
                 if ((!lights_registered || !StudioLight::instance().refresh()) && ++s_warn_tick % 120 == 1)
                     logger::warn("Studio lights not fully served by the ledger yet");
 
-#if !CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
-                if (!paused)
-                {
-                    CharacterManager::instance().create_clones({RE::PlayerCharacter::GetSingleton()});
-
-                    // Advance the assembly gate on every unpaused frame: the
-                    // detach runs in this render bracket (serialized with the
-                    // world renderer job), so the figure is ready long before
-                    // the first panel open.
-                    if (const std::shared_ptr<CharacterClone> clone = CharacterManager::instance().get_clone(RE::PlayerCharacter::GetSingleton()))
-                        clone->detach_graph();
-                }
-
-#endif
                 const bool panel_open = PanelMonitor::instance().is_menu_open();
                 if (panel_open)
                 {
@@ -174,7 +128,8 @@ namespace
                         D3D11StateCapture capture(context);
                         if (!PuppetDraw::instance().draw(*ui3d, *m_common_states, m_render_target))
                         {
-                            if (CharacterClone* clone = SceneGraphCopy::instance().drawable())
+                            if (const std::shared_ptr<CharacterClone> clone = CharacterManager::instance().get_clone(RE::PlayerCharacter::GetSingleton());
+                                clone && clone->drawable())
                             {
                                 // The S2 probe stages run inside draw(), between pose() and pass
                                 // generation (PRD 0.6 §6.3); calling it here would run before pose()

@@ -4,15 +4,9 @@
 
 #include "character/scene_graph_copy.h"
 
-#include "character/puppet_driver.h"
-#include "oar/hooks.h"
 
-#include "character/animation_source.h"
-#include "character/character_clone.h"
 #include "character/figure_audit.h"
-#include "character/equipment_mirror.h"
 #include "character/snapshot_transform.h"
-#include "panel/panel_monitor.h"
 
 #include <cmath>
 
@@ -268,32 +262,21 @@ SceneGraphCopy& SceneGraphCopy::instance()
     return s_instance;
 }
 
-SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_generation(0), m_seen_generation(0), m_capture_id(0), m_draw_enabled(false), m_cap_logged(false) {}
-SceneGraphCopy::~SceneGraphCopy()
-{
-    // Never destroy a parked graph, not even at unload.
-    m_parked.clear();
-}
+SceneGraphCopy::SceneGraphCopy() : m_command(Command::e_none), m_capture_id(0), m_cap_logged(false) {}
+SceneGraphCopy::~SceneGraphCopy() = default;
 
-void SceneGraphCopy::retire(std::unique_ptr<CharacterClone> snapshot)
+void SceneGraphCopy::retire(RE::NiPointer<RE::NiAVObject> graph)
 {
-    if (!snapshot)
-        return;
-    // The allocation is intentionally not owned by anything that can destroy it: the
-    // snapshot itself and the graph it holds stay alive for the rest of the process.
-    m_parked.push_back(snapshot.release());
+    if (!graph) return;
+    // Native teardown is unsafe. Retain an allocation independently of actor/controller lifetime.
+    m_parked.push_back(std::make_unique<RE::NiPointer<RE::NiAVObject>>(std::move(graph)).release());
     log_parked();
-    if (m_parked.size() <= Parked_Graph_Cap)
-        return;
-    if (!m_cap_logged)
+    if (m_parked.size() > Parked_Graph_Cap)
     {
-        logger::warn("SCOPY PARK cap {} reached; the oldest graph stays parked (no destruction attempted)", Parked_Graph_Cap);
+        if (!m_cap_logged) logger::warn("SCOPY PARK cap reached; oldest graph remains allocated");
         m_cap_logged = true;
+        m_parked.erase(m_parked.begin());
     }
-    // Erasing the oldest pointer drops only the bookkeeping entry; its graph stays
-    // allocated on purpose, because no teardown path has proved safe.
-    m_parked.erase(m_parked.begin());
-    log_parked();
 }
 
 void SceneGraphCopy::log_parked() const
@@ -313,183 +296,38 @@ void SceneGraphCopy::note_world_change(char const* reason)
 
 void SceneGraphCopy::reset_for_load()
 {
-    PuppetDriver::instance().request_release();
     m_command.store(Command::e_none, std::memory_order_release);
-    // H05: an isolation session must not span a load. The render bracket is asked to fold it on
-    // its next frame, because this runs on the main thread while a census may be mid-read there.
     m_isolation.request_end();
-    m_generation.fetch_add(1, std::memory_order_acq_rel);
 }
 
-void SceneGraphCopy::process_requests()
+SceneGraphCopy::Command SceneGraphCopy::take_command()
 {
-    const uint32_t generation = m_generation.load(std::memory_order_acquire);
-    RE::UI* ui = RE::UI::GetSingleton();
-
-    // H05: the instrumented session only covers the paused panel. The close and the unpause arrive
-    // together, so the session folds on the first frame that no longer qualifies; a load boundary
-    // queues its own request from the main thread.
-    if (m_isolation.armed())
-    {
-        if (m_isolation.take_end_request())
-            m_isolation.end("load-boundary");
-        else if (!ui || !ui->GameIsPaused() || !PanelMonitor::instance().is_menu_open())
-            m_isolation.end("panel-closed");
-    }
-
-    if (generation != m_seen_generation || (ui && ui->IsMenuOpen(RE::MainMenu::MENU_NAME)))
-    {
-        PuppetDriver::instance().release("session-boundary");
-        // A load rebuilds the project name table: the persisted sequence plans' member indexes
-        // no longer refer to the animations they were collected for (round 18).
-        m_panel_animation.invalidate_sequence_plans();
-        if (m_snapshot)
-            logger::info("SCOPY RELEASE reason=session-boundary capture={}", m_capture_id);
-        retire(std::move(m_snapshot));
-        m_panel_animation.reset();
-        m_open_pending = false;
-        m_equipment_refresh.reset(PanelMonitor::instance().equipment_revision());
-        m_was_open = false;
-        m_draw_enabled = false;
-        m_seen_generation = generation;
-        m_command.store(Command::e_none, std::memory_order_release);
-        return;
-    }
-
-    RE::PlayerCharacter* const source = RE::PlayerCharacter::GetSingleton();
-    RE::NiAVObject* const source_root = source ? source->Get3D(false) : nullptr;
-    std::uint64_t equipment = PanelMonitor::instance().equipment_revision();
-    if (source)
-    {
-        for (RE::FormID item : equipment_hand_ids(*source))
-            equipment = (equipment ^ item) * 1099511628211ULL;
-        equipment = (equipment ^ (source->IsWeaponDrawn() ? 1 : 0)) * 1099511628211ULL;
-        equipment ^= reinterpret_cast<std::uintptr_t>(source_root);
-    }
-    const bool open = PanelMonitor::instance().is_menu_open();
-    if (!open)
-    {
-        if (m_was_open)
-            m_panel_animation.reset();
-        m_open_pending = false;
-        m_equipment_refresh.reset(equipment);
-    }
-    m_was_open = open;
-    if (PanelMonitor::instance().consume_panel_opened() && open)
-    {
-        m_panel_animation.reset();
-        m_open_pending = true;
-        m_equipment_refresh.reset(equipment);
-    }
-    if (open && ui && ui->GameIsPaused() && !ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
-    {
-        if (source)
-            m_panel_animation.observe_equipment(*source, equipment);
-        const std::uint64_t signature = source_root && m_equipment_refresh.needs_sample(equipment)
-            ? figure_measure_assembly(*source_root).signature() : 0;
-        const bool equipment_ready = m_equipment_refresh.sample(equipment, signature);
-        if (m_open_pending || equipment_ready)
-        {
-            const bool changed = !m_open_pending;
-            const bool was_drawing = m_draw_enabled;
-            m_open_pending = false;
-            CharacterClone const* const previous = m_snapshot.get();
-            m_isolation.census_pre("capture");
-            capture(changed);
-            m_isolation.census_post("capture");
-            if (m_snapshot.get() == previous)
-            {
-                if (changed)
-                    m_equipment_refresh.retry();
-                else
-                    m_open_pending = true;
-            }
-            m_draw_enabled = changed ? was_drawing : m_snapshot != nullptr;
-        }
-        if (m_snapshot)
-        {
-            if (RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton())
-                m_panel_animation.tick(*player, *m_snapshot->graph());
-        }
-    }
-    const Command command = m_command.exchange(Command::e_none, std::memory_order_acq_rel);
-    if (command == Command::e_none)
-        return;
-    if (!ui || !ui->GameIsPaused() || !PanelMonitor::instance().is_menu_open() || ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
-    {
-        logger::warn("SCOPY REQUEST rejected: open a paused InventoryMenu first");
-        return;
-    }
-    switch (command)
-    {
-    case Command::e_capture:
-        m_isolation.census_pre("capture");
-        capture();
-        m_isolation.census_post("capture");
-        break;
-    case Command::e_toggle_draw:
-        if (m_snapshot)
-        {
-            m_isolation.census_pre("draw-toggle");
-            m_draw_enabled = !m_draw_enabled;
-            logger::info("SCOPY DRAW-Toggle enabled={} capture={}", m_draw_enabled, m_capture_id);
-            m_isolation.census_post("draw-toggle");
-        }
-        else
-            logger::warn("SCOPY DRAW-TOGGLE rejected: no accepted snapshot (press F7 and inspect AUDIT)");
-        break;
-    default:
-        break;
-    }
+    return m_command.exchange(Command::e_none, std::memory_order_acq_rel);
 }
 
-std::string SceneGraphCopy::animation_driver() const
+void SceneGraphCopy::process_boundary(bool open)
 {
-    return m_panel_animation.name();
+    if (m_isolation.take_end_request()) m_isolation.end("load-boundary");
+    else if (!open && m_isolation.armed()) m_isolation.end("panel-closed");
 }
 
-void SceneGraphCopy::animate_at_base_pose(CharacterClone& clone)
-{
-    if (m_snapshot.get() == &clone && clone.graph())
-    {
-        const std::size_t written = m_panel_animation.advance(*clone.graph());
-        // Calibration (user design, oar-idle3): the FIRST frame the idle writes joints, measure
-        // that standing body and freeze the placement root from it. The capture-time pose (a
-        // jump center high, a sneak center low) never becomes the placement standard. The clone
-        // answers which pass it wants through recentre_pending; arming stays one-shot per
-        // capture (m_recentre_armed is reset by capture()). An entry action or a weapon
-        // transition postpones it: the placement standard must be the IDLE the move hands over
-        // to, not the move's own body (round 18).
-        if (written > 0 && !m_recentre_armed && clone.recentre_pending() && !m_panel_animation.transitioning())
-        {
-            clone.calibrate_from_posed_bound();
-            m_recentre_armed = true;
-        }
-    }
-}
-
-CharacterClone* SceneGraphCopy::drawable() const
-{
-    return m_draw_enabled && m_panel_animation.ready() ? m_snapshot.get() : nullptr;
-}
-
-void SceneGraphCopy::capture(bool equipment_changed)
+RE::NiPointer<RE::NiAVObject> SceneGraphCopy::capture(RE::Actor& actor)
 {
     // Re-select the target on the graph this capture produces: the cached one now points into the
     // parked copy the panel no longer draws. The idle's joints are the same kind of per-graph state.
     ++m_capture_id;
-    RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
-    RE::NiPointer<RE::NiAVObject> source(player ? player->Get3D(false) : nullptr);
+    RE::Actor* const player = &actor;
+    RE::NiPointer<RE::NiAVObject> source(actor.Get3D(false));
     if (!source || !source->AsNode() || !std::isfinite(source->world.scale) || std::abs(source->world.scale) < 0.0001f)
     {
         logger::warn("SCOPY FAILED capture={} reason=no-valid-third-person-root", m_capture_id);
-        return;
+        return {};
     }
     GraphInventory source_inventory{};
     if (!inventory_graph(source.get(), source_inventory))
     {
         logger::error("SCOPY FAILED capture={} reason=source-cycle-or-object-limit", m_capture_id);
-        return;
+        return {};
     }
     std::vector<RE::NiTransform> source_worlds;
     std::vector<RE::NiTransform> source_locals;
@@ -510,25 +348,25 @@ void SceneGraphCopy::capture(bool equipment_changed)
     if (!root || root == source.get() || root->parent)
     {
         logger::error("SCOPY FAILED capture={} reason=null-aliased-or-parented-root", m_capture_id);
-        return;
+        return {};
     }
     GraphInventory copy_inventory{};
     if (!inventory_graph(root, copy_inventory))
     {
         logger::error("SCOPY FAILED capture={} reason=copy-cycle-or-object-limit", m_capture_id);
-        return;
+        return {};
     }
     const SourceDiff diff = diff_source_graph(source.get(), source_inventory, source_worlds, source_locals, source_bounds, source_parent, player->Get3D(false) == source.get());
     if (!diff.same_object_set)
     {
         logger::error("SCOPY BLOCKED capture={} reason=source-object-set-differs (no pose or draw was performed)", m_capture_id);
-        return;
+        return {};
     }
     const bool accepted = audit_copy(source_inventory, copy_inventory);
     if (!accepted)
     {
         logger::error("SCOPY BLOCKED capture={} reason=isolation-audit (no pose or draw was performed)", m_capture_id);
-        return;
+        return {};
     }
     for (size_t i = 0; i < source_inventory.objects.size(); ++i)
     {
@@ -537,7 +375,7 @@ void SceneGraphCopy::capture(bool equipment_changed)
         if (original->name != target->name || std::strcmp(original->GetRTTI()->GetName(), target->GetRTTI()->GetName()) != 0)
         {
             logger::error("SCOPY BLOCKED capture={} reason=structural-correspondence index={} source-name='{}' copy-name='{}'", m_capture_id, i, original->name.c_str(), target->name.c_str());
-            return;
+            return {};
         }
     }
     size_t removed_controllers = 0;
@@ -559,18 +397,12 @@ void SceneGraphCopy::capture(bool equipment_changed)
         removed_controllers += property->controllers ? 1 : 0;
         property->controllers = nullptr;
     }
-    // Snapshot the native clone's captured worlds without re-running facegen, Havok or SMP.
-    m_draw_enabled = false;
-    m_recentre_armed = false;
-    retire(std::move(m_snapshot));
-    m_snapshot = std::make_unique<CharacterClone>(RE::NiPointer<RE::NiAVObject>(root));
-    logger::info("SCOPY READY capture={} controllers-removed={} collisions-removed={} draw=off actor-created=false F8=draw F2=mark F4=drive", m_capture_id, removed_controllers, removed_collisions);
-    m_panel_animation.prepare(*player, *root, equipment_changed);
-    logger::info("SCOPY ANIM capture={} driver={} equipment-change={} (standing bases; independent preview query)",
-        m_capture_id, m_panel_animation.name(), equipment_changed);
+    logger::info("SCOPY READY actor={:08x} capture={} controllers-removed={} collisions-removed={}",
+        actor.GetFormID(), m_capture_id, removed_controllers, removed_collisions);
     for (RE::NiAVObject* object : copy_inventory.objects)
         if (object->AsGeometry())
             logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());
+    return RE::NiPointer<RE::NiAVObject>(root);
 }
 
 PLUGIN_NAMESPACE_END

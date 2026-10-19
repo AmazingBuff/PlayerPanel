@@ -8,6 +8,8 @@
 #include "render/dx11/common_states.h"
 
 #include <chrono>
+#include "animation/controller.h"
+#include "animation/pose.h"
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -16,8 +18,35 @@ PLUGIN_NAMESPACE_BEGIN
 class CharacterClone
 {
 public:
-    explicit CharacterClone(RE::Actor* actor);
-    explicit CharacterClone(RE::NiPointer<RE::NiAVObject> graph);
+    explicit CharacterClone(RE::Actor* actor, bool snapshot = false);
+    struct MonitorState
+    {
+        RE::ActorHandle source;
+        animation::SourceObservation observed;
+        std::uint64_t equipment_revision = 0;
+        std::uint64_t request_generation = 0;
+        std::uint64_t source_graph_generation = 0;
+        RE::NiAVObject* source_root = nullptr;
+        void const* source_graph = nullptr;
+        std::string dirty_reason;
+        EquipmentRefreshGate refresh;
+        bool capture_pending = true;
+        bool session_active = false;
+        bool draw_enabled = true;
+    };
+    [[nodiscard]] MonitorState const& monitor() const { return m_monitor; }
+    [[nodiscard]] animation::AnimationController& animation_controller() { return m_animation; }
+    [[nodiscard]] bool update_source_graph(RE::Actor& source);
+    void observe_source(RE::Actor& source, bool opening);
+    void schedule_animation(RE::Actor& source, std::uint64_t revision, std::string reason);
+    void close_session();
+    void update_monitor(RE::Actor& source, std::uint64_t revision, bool paused, bool open, bool opening, bool closing, bool usable);
+    [[nodiscard]] bool capture_due(RE::Actor& source, std::uint64_t revision, bool manual);
+    void capture_result(bool accepted, bool opening);
+    void toggle_draw();
+    [[nodiscard]] bool drawable() const { return m_monitor.draw_enabled && m_animation.ready(); }
+    void replace_graph(RE::NiPointer<RE::NiAVObject> graph);
+
     ~CharacterClone();
 
     // Actor mode advances assembly and detaches once; snapshots are already ready.
@@ -53,6 +82,8 @@ private:
     };
 
 private:
+    MonitorState m_monitor;
+    animation::AnimationController m_animation;
     RE::NiPointer<RE::TESObjectREFR> m_clone;
     // The Actor this clone wraps: the dressing source. The dressing walks THIS actor's worn set,
     // not the player's - the manager may be handed any actor, and a hardcoded player source would

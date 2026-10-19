@@ -6,6 +6,9 @@
 #include "character/equipment_mirror.h"
 #include "character/figure_audit.h"
 #include "character/snapshot_transform.h"
+#include "animation/clip.h"
+#include "RE/B/BSAnimationGraphManager.h"
+#include "RE/B/BShkbAnimationGraph.h"
 
 #include "render/studio/figure_passes.h"
 #include "render/studio/light.h"
@@ -421,8 +424,15 @@ namespace
     // The per-pass submission this file used to own now lives in render/studio/figure_passes.cpp,
     // shared with the same-Actor route; what stayed here is only what is specific to a detached graph.
 }
-CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_state(CloneState::e_none), m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0), m_is_snapshot(false), m_draw_frames(0)
+CharacterClone::CharacterClone(RE::Actor* actor, bool snapshot) : m_clone(nullptr), m_clone_state(CloneState::e_none), m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0), m_is_snapshot(snapshot), m_draw_frames(0)
 {
+    m_source = actor;
+    m_monitor.source = actor->GetHandle();
+    if (snapshot)
+    {
+        m_clone_state.store(CloneState::e_ready, std::memory_order_release);
+        return;
+    }
     m_settle_last_geoms = 0;
     m_settle_last_skinned = 0;
     m_settle_stable = 0;
@@ -481,11 +491,16 @@ CharacterClone::CharacterClone(RE::Actor* actor) : m_clone(nullptr), m_clone_sta
     logger::info("Clone has been created at the player, from {} ({:08x})", actor->GetDisplayFullName(), actor->GetFormID());
 }
 
-CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph) :
-    m_clone(nullptr), m_clone_state(CloneState::e_ready), m_graph_object(std::move(graph)),
-    m_wait_frames(0), m_dressed(false), m_bind_map_logged(false), m_bind_map_stall(0),
-    m_is_snapshot(true), m_draw_frames(0), m_recentre_pending(true)
+void CharacterClone::replace_graph(RE::NiPointer<RE::NiAVObject> graph)
 {
+#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+    SceneGraphCopy::instance().retire(std::move(m_graph_object));
+#endif
+    m_graph_object = std::move(graph);
+    m_snapshot_nodes.clear();
+    m_is_snapshot = true;
+    m_recentre_pending = true;
+    m_draw_frames = 0;
     restore_fade(m_graph_object.get());
     const size_t pruned = prune_effect_objects(m_graph_object.get());
     m_snapshot_root_world = m_graph_object->world;
@@ -498,6 +513,143 @@ CharacterClone::CharacterClone(RE::NiPointer<RE::NiAVObject> graph) :
         m_snapshot_nodes.push_back({ object, object->world, object->worldBound });
         return RE::BSVisit::BSVisitControl::kContinue;
     });
+    m_animation.retarget(*m_graph_object);
+}
+
+bool CharacterClone::update_source_graph(RE::Actor& source)
+{
+    MonitorState& monitor = m_monitor;
+    RE::NiAVObject* const root = source.Get3D(false);
+    RE::BSTSmartPointer<RE::BSAnimationGraphManager> graphs;
+    void const* source_graph = nullptr;
+    if (source.GetAnimationGraphManager(graphs) && graphs)
+        for (auto const& graph : graphs->graphs)
+            if (graph && graph->holder == &source && graph->rootNode == root) { source_graph = graph.get(); break; }
+    if (monitor.source_root != root || monitor.source_graph != source_graph)
+    {
+        monitor.source_root = root;
+        monitor.source_graph = source_graph;
+        ++monitor.source_graph_generation;
+        monitor.dirty_reason = "source-graph";
+        monitor.capture_pending = true;
+        return true;
+    }
+    return false;
+}
+
+void CharacterClone::observe_source(RE::Actor& source, bool opening)
+{
+    MonitorState& monitor = m_monitor;
+    animation::SourceObservation& observation = monitor.observed;
+    (void)update_source_graph(source);
+    const RunningIdleSample sample = strongest_idle_clip(source);
+    if (!opening) observation.drawn = source.IsWeaponDrawn();
+    const animation::ClipStance stance = animation::clip_stance(sample.body_name);
+    if (stance != animation::ClipStance::e_undecided)
+        observation.drawn = stance == animation::ClipStance::e_drawn;
+    observation.form = equipment_weapon_form(source);
+    observation.hands = equipment_hand_ids(source);
+    RE::TESForm const* const right = source.GetEquippedObject(false);
+    RE::TESForm const* const left = source.GetEquippedObject(true);
+    observation.raw_hands = { right ? right->GetFormID() : 0, left ? left->GetFormID() : 0 };
+    const bool right_spell = right && (right->Is(RE::FormType::Spell) || right->Is(RE::FormType::Scroll));
+    const bool left_spell = left && (left->Is(RE::FormType::Spell) || left->Is(RE::FormType::Scroll));
+    RE::TESObjectWEAP const* const right_weapon = right ? right->As<RE::TESObjectWEAP>() : nullptr;
+    RE::TESObjectWEAP const* const left_weapon = left ? left->As<RE::TESObjectWEAP>() : nullptr;
+    observation.left_primary = (observation.form == animation::WeaponForm::kMagic && left_spell && !right_spell) ||
+        (observation.form == animation::WeaponForm::kStaff && left_weapon &&
+            left_weapon->GetWeaponType() == RE::WEAPON_TYPE::kStaff &&
+            (!right_weapon || right_weapon->GetWeaponType() != RE::WEAPON_TYPE::kStaff));
+    observation.clip_name = sample.body_name;
+    observation.clip_index = sample.body_index;
+    observation.clip_time = sample.body_time;
+    observation.clip_looping = sample.body_looping;
+    observation.source_graph_generation = monitor.source_graph_generation;
+}
+
+void CharacterClone::schedule_animation(RE::Actor& source, std::uint64_t revision, std::string reason)
+{
+    MonitorState& monitor = m_monitor;
+    if (reason == "equipment")
+    {
+        const auto previous_hands = monitor.observed.hands;
+        const bool drawn = monitor.observed.drawn;
+        observe_source(source, true);
+        monitor.observed.drawn = drawn;
+        if (previous_hands != monitor.observed.hands)
+            monitor.observed.drawn = monitor.observed.form != animation::WeaponForm::kNone || source.IsInCombat();
+    }
+    monitor.equipment_revision = revision;
+    monitor.observed.request_generation = ++monitor.request_generation;
+    monitor.observed.reason = std::move(reason);
+    monitor.dirty_reason.clear();
+    monitor.session_active = true;
+    m_animation.request(source, monitor.observed);
+    if (m_graph_object) m_animation.retarget(*m_graph_object);
+}
+
+void CharacterClone::close_session()
+{
+    if (m_monitor.session_active) m_animation.reset();
+    m_monitor.session_active = false;
+    m_monitor.capture_pending = true;
+    m_monitor.dirty_reason.clear();
+}
+
+void CharacterClone::update_monitor(RE::Actor& source, std::uint64_t revision,
+    bool paused, bool open, bool opening, bool closing, bool usable)
+{
+    if (!paused) observe_source(source, false);
+    if (!open)
+    {
+        if (closing) close_session();
+        m_monitor.refresh.reset(revision);
+#if !CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
+        if (!paused) detach_graph();
+#endif
+        return;
+    }
+    if (!usable) return;
+    if (opening)
+    {
+        close_session();
+        observe_source(source, true);
+        schedule_animation(source, revision, "panel-open");
+        m_monitor.refresh.reset(revision);
+    }
+    else if (revision != m_monitor.equipment_revision)
+    {
+        schedule_animation(source, revision, "equipment");
+        m_monitor.refresh.retry();
+    }
+    else if (update_source_graph(source))
+    {
+        observe_source(source, true);
+        schedule_animation(source, revision, "source-graph");
+    }
+}
+
+bool CharacterClone::capture_due(RE::Actor& source, std::uint64_t revision, bool manual)
+{
+    const bool sample = m_monitor.refresh.needs_sample(revision);
+    const bool settled = sample && m_monitor.refresh.sample(revision, figure_measure_assembly(*source.Get3D(false)).signature());
+    return m_monitor.capture_pending || settled || manual;
+}
+
+void CharacterClone::capture_result(bool accepted, bool opening)
+{
+    if (accepted)
+    {
+        m_monitor.capture_pending = false;
+        if (opening) m_monitor.draw_enabled = true;
+    }
+    else m_monitor.refresh.retry();
+}
+
+void CharacterClone::toggle_draw()
+{
+    m_monitor.draw_enabled = !m_monitor.draw_enabled;
+    logger::info("CharacterClone draw actor={:08x} enabled={}", m_source->GetFormID(), m_monitor.draw_enabled);
 }
 
 CharacterClone::~CharacterClone()
@@ -505,7 +657,8 @@ CharacterClone::~CharacterClone()
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
     // Native snapshot teardown remains unsafe. SceneGraphCopy parks the owning wrapper
     // without destroying it; this branch alone does not prevent automatic NiPointer destruction.
-    (void)m_graph_object.get();
+    m_animation.reset();
+    SceneGraphCopy::instance().retire(std::move(m_graph_object));
 #else
     // A detached graph is solely owned here; releasing the pointer frees it.
     // A not-yet-detached graph is still engine-managed through the shell, and
@@ -839,10 +992,9 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
 
     pose();
 
-#if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
     // Restore placement before applying animation; the draw must retain the resulting worlds.
-    SceneGraphCopy::instance().animate_at_base_pose(*this);
-#endif
+    const std::size_t written = m_animation.advance(*p_root);
+    if (written && m_is_snapshot && m_recentre_pending && !m_animation.transitioning()) calibrate_from_posed_bound();
 
     // Pull the detached light rig to the anchor and cascade it: the shader
     // reads NiLight::world.translate (v6.37) and this window is the only
@@ -893,7 +1045,7 @@ bool CharacterClone::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& 
             // configuration: naming it unconditionally is what broke the default (Actor-route) build.
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             logger::info("SCOPY DRAW frame={} passes={} lights={} animation-driver={} physics-driver=none",
-                m_draw_frames, stats.drawn, stats.inject_lights, SceneGraphCopy::instance().animation_driver());
+                m_draw_frames, stats.drawn, stats.inject_lights, m_animation.name());
 #else
             logger::info("Clone draw frame={} passes={} lights={} physics-driver=none",
                 m_draw_frames, stats.drawn, stats.inject_lights);

@@ -2,7 +2,8 @@
 
 更新日期：2026-10-16（面板站立 idle 的 OAR 主动查询链；此前：copy-primary 显示路由、审查修复、OAR 条件 hook 与投影接入、UBE 透明材质试修、双手武器对账修复）。本文是当前构建、模块和开发控制的入口；逐轮实验报告仍保留为历史证据。
 
-> **当前动作链入口**：[idle 选择与快速换装：oar-idle2](oar-preview-query-2026-10-16.md)。
+> **当前动作链入口**：[Actor animation previews](animation.md)。每个 clone 拥有独立观察和 controller，manager 统一处理事件／帧更新，OAR 只查询元数据；Start-only 交给稳定 idle。
+> **历史记录**：[idle 选择与快速换装：oar-idle2](oar-preview-query-2026-10-16.md)。
 > 全局窗口和运行 clip 回退已移除。新链路接入站立基础片段、原角色身份、独立 clip／变体／
 > 时钟、独立概率／变体状态、各层循环与最新装备打断；外观仍等待装配稳定。旧交接文档保留为历史探针，本轮游戏行为待验证。
 
@@ -37,7 +38,7 @@ mesh 轮廓黑块补齐透明处理；**2026-10-16 用户在另一台电脑确�
   WARP 离屏回归验证高槽位、完整缓冲与子范围的实际恢复。
 
 透明轮的默认与实验两种 Release 配置均构建通过；透明顺序、材质缓存恢复和 WARP 缓冲范围
-三项为该轮新增。后续 OAR 与手部修复继续扩展同一个测试入口，当前共 38 项。透明包身份、校验值、复现命令和游戏
+三项为该轮新增。后续 OAR 与手部修复继续扩展同一个测试入口，该轮历史记录为 38 项。透明包身份、校验值、复现命令和游戏
 判据见 [UBE 透明材质验证](ube-transparency-test-2026-10-15.md)。透明 mesh 内部三角形排序、
 折射和第三方 OIT 专属流程不属于本轮实现。
 游戏内结果：眉毛／眼周黑块消失、妆容正常（用户确认）——见该测试单的"游戏内结果"节。
@@ -47,19 +48,19 @@ mesh 轮廓黑块补齐透明处理；**2026-10-16 用户在另一台电脑确�
 | 模块 | 职责与入口 |
 | --- | --- |
 | [oar/hooks.h/.cpp](../src/oar/hooks.h) | 对 3.1.6／3.2.1 核对 DLL 身份和入口；主路径按精确 project、站立基础索引主动查询，在独立 clip 内审计及投影条件，候选／变体指针不越过原生读锁。全局窗口已删除。`kProjected` 及原答案差异统计仅供旧傀儡诊断。见[当前证据与限制](oar-preview-query-2026-10-16.md)。 |
-| [oar/query_policy.h](../src/oar/query_policy.h) / [preview_clip.h](../src/oar/preview_clip.h) | 原版动作目录匹配、目录缓存、面板变体状态和独立原生 clip／context 载体；不依赖历史播放样本。 |
-| [oar/selection_state.h](../src/oar/selection_state.h) | 面板内 Random 缓存、变体权重／序列／PlayOnce、作用域共享与循环重评规则；选择提议和播放提交分开，不写世界角色状态。 |
+| [oar/query_policy.h](../src/oar/query_policy.h) / [preview_clip.h](../src/oar/preview_clip.h) | 原版目录匹配、带 load generation 的纯目录缓存与独立 native carrier。 |
+| [oar/selection_state.h](../src/oar/selection_state.h) / [animation/variant_state.h](../src/animation/variant_state.h) | OAR 保存复制的变体元数据及调用方 Random 条件缓存；动画模块拥有接受后的变体／PlayOnce／循环历史。 |
 | [main.cpp](../src/main.cpp) | SKSE 初始化、消息、渲染安装和存档会话边界；不再转储引擎映像。 |
-| [panel.cpp](../src/panel/panel.cpp) | 菜单状态、预览请求、打开通知和玩家装备事件修订号。 |
+| [panel_monitor.cpp](../src/panel/panel_monitor.cpp) | 只记录 InventoryMenu 状态和修订号。 |
 | [renderer.cpp](../src/render/renderer.cpp) | 渲染回调、D3D 状态保护、摄影棚目标及合成；按构建选项选择当前后端。 |
-| [character_manager.cpp](../src/character/character_manager.cpp) / [character_clone.cpp](../src/character/character_clone.cpp) | 默认路线通过 Actor 装配装备／3D，再摘出图绘制；`pose()` 负责摄影棚取景。该路线不等于尚待验证的“保留 Actor 与 3D 绑定后直绘”。 |
-| [scene_graph_copy.cpp](../src/character/scene_graph_copy.cpp) | 打开及装备稳定后自动捕获、F7 手动捕获、来源／副本审计和旧图停放。失败保留上一接受图；`animate_at_base_pose()` 在取景后调用独立播放，不使用世界当前 clip 回退。 |
-| [panel_animation.cpp](../src/character/panel_animation.cpp) / [panel_animation_policy.h](../src/character/panel_animation_policy.h) | 各 idle 层独立循环、有限切换、当前姿态混合和最新请求代次。装备变化立即作废旧提议，稳定后换外观；重捕获重绑活动／待装载节点，保留同一动作的进度。 |
-| [animation_source.cpp](../src/character/animation_source.cpp) | `resolve_binding_playback()` 持有 binding 强引用，按 track→bone 采样到当前显示树；ClipPlayer 支持循环及单次播放。activeNodes／运行 clip 读取保留给旧诊断，主显示路径不调用。 |
+| [character_manager.cpp](../src/character/character_manager.cpp) / [character_clone.cpp](../src/character/character_clone.cpp) | Manager 注册 actor、记录装备修订并分发菜单／帧生命周期；每个 clone 的 `update_monitor` 决定观察和请求，controller 与 actor 记录在显示图替换时保留；`pose()` 负责取景。 |
+| [scene_graph_copy.cpp](../src/character/scene_graph_copy.cpp) | 对传入 actor 捕获、审计显示图及停放旧图；捕获时机由 CharacterManager 决定。 |
+| [animation/controller.cpp](../src/animation/controller.cpp) / [sequence.h](../src/animation/sequence.h) | 每个 actor 的请求、租约、明确动作序列和可见阶段时钟；图替换只重绑，姿态合成后一次写回。见 [animation](animation.md)。 |
+| [animation/clip.cpp](../src/animation/clip.cpp) | `resolve_binding_playback` 持有 binding，按 track→bone 映射；`sample_animation_clip` 返回姿态，不写骨骼；世界 clip 观察供 clone 和诊断使用。 |
 | [puppet_driver.cpp](../src/character/puppet_driver.cpp) | 存档会话内的傀儡装配、泊位、暂停图推进和装备同步；`drive()` 为显示副本供给 clip 姿态。AFP10：装配窗口改为"普查就绪即泊位"且窗口内 fade 归零（不可感知）；穿着整套 worn body items；`apply_body_shape()` 把玩家体型同步到傀儡。AFP10g：spawn 处断掉副本记录的自带套装（容器清空 + 双 outfit 置空），prune/worn 各持独立节奏计数器，箭袋对账到玩家当前弹药。OAR 投影：暂停帧的手动推图包在 `ScopedEvaluation(kProjected)` 里，OAR 对傀儡的整轮替换决策按站立预览求值（证据行 `SCOPY OAR project`）。手部对账按"物品是否被持有"（双手武器归一化）并带 churn 刹车，见不变量 32／33。 |
 | [equipment_mirror.h/.cpp](../src/character/equipment_mirror.h) | AFP10 共用件：biped 身体槽位的 worn 集合读取、整套穿上、以及无状态对账（多则补、少则卸）。复制图的 `mirror_worn_equipment` 也走这一份，槽位表只有一处。手部武器不在此列（驱动器自己的手部轮询 + draw/sheathe）。AFP10g：槽位表补全（kHair/kModBack/kModMisc1/2/kModPelvis*，kShield 归手部轮询、FX01 排除），`equipment_sync_ammo` 把傀儡当前弹药对账到玩家的，prune 的弹药豁免收窄为"玩家的当前弹药"。双手武器：`hand_two_handed_weapon()`／`hand_item_is_wanted()`／`hand_object_equipped()` 是手部对账的单一判据来源，strip 对两处都报的同一件物品只卸一次。 |
 | [body_shape.h/.cpp](../src/character/body_shape.h) | AFP10 体型同步：本地镜像 skee64 的 `IBodyMorphInterface`（SKSE 接口交换 `BodyMorph`），先比较后写入，写前清掉 OBody 派给傀儡的随机预设；版本低于镜像布局时拒绝调用。 |
-| [idle_driver.cpp](../src/character/idle_driver.cpp) / [snapshot_transform.h](../src/character/snapshot_transform.h) | 旧 Actor 路线的程序 idle、取景变换和子树更新；独立 OAR 主路径不回退程序 idle。 |
+| [snapshot_transform.h](../src/character/snapshot_transform.h) | 取景变换和子树更新；无调用者的程序 idle 已删除。 |
 | [final_pose_probe.cpp](../src/character/final_pose_probe.cpp) / [final_pose_apply.cpp](../src/character/final_pose_apply.cpp) | 保留最终输出读取、索引校准、独立真值比较、暂停写入和强制生成诊断。F6 默认关闭且当前不创建傀儡；AFP9 的 output/attempted/written/unreachable/unprocessed 对账只适用于启用旧诊断的情形。 |
 | [figure_audit.h/.cpp](../src/character/figure_audit.h) | AFP9 共享审计件：skin palette 读取（只收集指针、绝不解引用槽位；引擎从未渲染的图记 unbound-palette）、碰撞辅助体过滤的蒙皮包围盒、取景 placement 解算、槽位必要性分类（palette 成员 → Weapon* 附着 → helper）。AFP10 另收编装配普查 `FigureAssembly`／`figure_measure_assembly()`（几何/skin/已分配槽位/绑定数与稳定签名），复制图的落定门与傀儡的泊位门共用它。 |
 | [puppet_draw.h/.cpp](../src/character/puppet_draw.h) | AFP9 R01 直绘：F6 开关；傀儡 `Get3D(false)` 根 + 共用 figure_passes 缝；临时取景（保存/恢复根 local + world/worldBound 对账）；固定骨集 A4/A5 采样；不可用时回退复制图并告警。 |
@@ -67,7 +68,7 @@ mesh 轮廓黑块补齐透明处理；**2026-10-16 用户在另一台电脑确�
 | [figure_passes.cpp](../src/render/studio/figure_passes.cpp) | 两条来源共用的按材质分类、引擎 pass 生成、灯光临时替换与提交；读取原 alpha 属性，原生混合设置使用 `0x204`。 |
 | [figure_draw_order.h](../src/render/studio/figure_draw_order.h) / [figure_pipeline_state.h](../src/render/studio/figure_pipeline_state.h) | 实体／透明阶段排序及 No Sorter 边界；逐 pass 的引擎材质状态准备和作用域退出恢复。 |
 | [d3d11_util.h/.cpp](../src/render/dx11/d3d11_util.h) | D3D 设备绑定保护与离屏目标；VS／PS 保存全部常量缓冲槽，并在支持 D3D11.1 时保留绑定子范围。 |
-| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) | `snapshot_transform` 内共 38 项本地检查，新增 Random 缓存、权重与共享状态、PlayOnce 提交、循环决策、最新请求、各层周期、中断混合、驻留位跨接受、武器族匹配、进包姿态、序列兄弟与入口动作分类。不执行游戏内 detour 或装卸。 |
+| [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) / [animation_controller_test.cpp](../tests/animation_controller_test.cpp) | 旧回归入口本次仅重新编译，移除两项已淘汰 scheduler 的断言。当前动作链使用 `animation_controller` 的两项行为案例；不把本地测试视为实际 detour／引擎装卸验证。 |
 
 实验配置使用复制图显示时的主顺序：请求／会话与装备稳定处理 → 查询及装载轮询 → 副本 `pose()` → 独立绑定采样／切换与过渡 → 引擎蒙皮与 draw → 合成。AFP 及傀儡推图保留为旁路诊断。
 
@@ -162,7 +163,7 @@ F3 不再由本项目绑定；旧旋转、释放、idle toggle、S2/PuppetProbe 
 30. **箭袋 = 玩家当前弹药，必须独立对账**：拉弓时背上的箭袋模型由 **worn ammo**（当前弹药）渲染，既非 biped 槽也非手槽，两套镜像都不经过它；prune 的"全部弹药豁免"会让残留箭（记录自带的）成为引擎 best-fit 的唯一候选。规则 = `equipment_sync_ammo` 把傀儡当前弹药对账到玩家的（先装后卸、替换即删出库存），prune 的豁免收窄为"玩家的当前弹药进 keep 集"。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §11。
 31. **同一节奏的多个对账器不得共用一个"由别人递增、由别人清零"的计数器**：prune 的门读 `m_worn_poll_frames >= 30`，而该计数器只被 worn 块递增、且到达 30 的同一帧清零——门条件在世界运行期不可达，prune 从未在世界上跑过（`pruned` 行只在暂停期出现即判据）。规则：每个门自己递增自己清零（`a_every_frame || ++counter >= period` + 块内归零）。见 [AFP10 测试单](afp10-spawn-shape-dress-test-2026-10-14.md) §11。
 32. **双手武器占两只手，且引擎轮流把它报在任一手条目里**：`GetEquippedEntryData(false/true)` 对一把双手武器会在两次轮询间翻面，因此换装对账**不能逐条目比较**。按条目比较的后果实测过：另一只手的期望是"空" → 每帧 `UnequipObject` + 再 `EquipObject`（日志 `equipped=1 removed=1` 每 20 ms、4 秒 104 次反应），同时 prune 在读数瞬空的帧把这把武器从傀儡库存里删掉，最终引擎在 `BipedAnim` 读到空 biped 对象崩溃（[crash 2026-10-15 22:45:27](diagnostics/crash-2026-10-15-22-45-27.log)，BiPolar Blade / LegacyoftheDragonborn.esm）。现行规则：`hand_two_handed_weapon()` 归一出"哪把是双手武器"，`hand_item_is_wanted()`（卸装侧）与 `hand_object_equipped()`（装备侧）按"这件物品是否被持有"判断，手部签名用双手武器归一化以免翻面被读成换装，prune 在**来源手部读数刚变化的帧**不执行，`equipment_strip` 对两处都报的同一件物品只卸一次。
-33. **不收敛的对账必须有刹车**：这次崩溃的直接成因不是"比较写错"，而是**每帧重发引擎调用**（约 50 次/秒）把引擎不变量打崩。手部对账现在带 churn 门：10 帧窗口内超过 4 次装备/卸装动作即判不收敛，停手 90 帧并打 `hand reconcile churning actions=… in … polls`。语义修复负责让这条门保持不可达，门本身负责让下一个逻辑缺口退化成一行日志而不是一次崩溃。见 [本轮日志](../log-archive/CharacterPanel-20261015-2245-oar-ab-2hcrash.log)。
+33. **不收敛的对账必须有刹车**：这次崩溃的直接成因不是"比较写错"，而是**每帧重发引擎调用**（约 50 次/秒）把引擎不变量打崩。手部对账现在带 churn 门：10 帧窗口内超过 4 次装备/卸装动作即判不收敛，停手 90 帧并打 `hand reconcile churning actions=… in … polls`。语义修复负责让这条门保持不可达，门本身负责让下一个逻辑缺口退化成一行日志而不是一次崩溃。见 本轮日志（历史文件未随仓库提供：`../log-archive/CharacterPanel-20261015-2245-oar-ab-2hcrash.log`）。
 
 ## 验证与安全修改
 

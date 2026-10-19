@@ -32,6 +32,8 @@ namespace oar
         std::atomic_bool s_ready = false;
         using GetSingleton = void* (*)();
         using ForEachProjectData = void (*)(void const*, std::function<void(RE::hkbCharacterStringData*, void*)> const&);
+        using ForEachReplacement = void (*)(void const*, std::function<void(void*)> const&, bool);
+        ForEachReplacement s_for_each_replacement = nullptr;
         using GetReplacements = void* (*)(void const*, std::uint16_t);
         using EvaluateReplacements = void* (*)(void const*, RE::TESObjectREFR*, RE::hkbClipGenerator*);
         using GetIndex = std::uint16_t (*)(void const*, void*&);
@@ -54,21 +56,15 @@ namespace oar
         struct QueryFrame
         {
             QueryFrame(ScopedEvaluation& evaluation, QuerySession& session, AnimationSelection& result,
-                std::uint64_t identity, AnimationSelection const* refresh_selection = nullptr,
-                bool seek_the_dwell = false) :
-                scope(evaluation), variants(session), output(result), key(identity),
-                refresh(refresh_selection), seek_dwell(seek_the_dwell),
+                std::uint64_t identity, std::size_t names) : scope(evaluation), context(session), output(result), key(identity), name_count(names),
                 previous(std::exchange(current, this)) {}
             ~QueryFrame() { current = previous; }
             inline static thread_local QueryFrame* current = nullptr;
             ScopedEvaluation& scope;
-            QuerySession& variants;
+            QuerySession& context;
             AnimationSelection& output;
             std::uint64_t key;
-            AnimationSelection const* refresh;
-            // Landing MID-sequence (equipped before opening the menu): once-members are skipped
-            // for this activation and the pick lands on the trailing loop body.
-            bool seek_dwell = false;
+            std::size_t name_count;
             void const* selected = nullptr;
             std::uint16_t index = 0xFFFF;
             QueryFrame* previous;
@@ -205,7 +201,7 @@ namespace oar
             auto const* const comparison = component<::Conditions::IComparisonConditionComponent>(condition);
             if (!query || !state || !minimum || !maximum || !value || !comparison)
             {
-                scope.reject("random condition requires the verified component layout and panel session");
+                scope.reject("random condition requires the verified component layout and caller query context");
                 return false;
             }
             const auto data_scope = state->GetStateDataScope();
@@ -223,7 +219,7 @@ namespace oar
             }
             const StateKey key{ local ? DataScope::e_local : DataScope::e_submod,
                 local ? query->key : reinterpret_cast<std::uint64_t>(submod) };
-            const auto random = query->variants.selection.random(key, reinterpret_cast<std::uint64_t>(&condition),
+            const auto random = query->context.conditions.random(key, reinterpret_cast<std::uint64_t>(&condition),
                 query->key, state->ShouldResetOnLoopOrEcho(), minimum->GetNumericValue(source), maximum->GetNumericValue(source));
             const float requested = value->GetNumericValue(source);
             if (!random || !std::isfinite(requested))
@@ -510,17 +506,32 @@ namespace oar
             return true;
         }
 
-        std::optional<std::uint16_t> choose_index(void const* replacement, QueryFrame& query)
+        std::string native_string(void const* object, std::size_t offset)
         {
+            auto const* value = reinterpret_cast<std::string const*>(static_cast<std::uint8_t const*>(object) + offset);
+            if (!readable(value, sizeof(*value)) || value->size() > 4096 || !readable(value->data(), value->size()))
+                return {};
+            return *value;
+        }
+
+        std::optional<AnimationDescriptor> describe(void const* replacement, std::uint64_t key, std::size_t name_count)
+        {
+            if (!readable(replacement, 0xD0)) return std::nullopt;
+            AnimationDescriptor descriptor;
+            descriptor.path = native_string(replacement, Replacement_Path_Offset);
+            descriptor.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
+            descriptor.reevaluate_on_loop = s_replace_on_loop(replacement);
             const std::uint8_t tag = read_at<std::uint8_t>(replacement, Replacement_Tag_Offset);
             if (tag == 0)
             {
                 void* unused_variant = nullptr;
-                query.output.variants.reset();
-                query.output.variant = {};
-                query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
-                query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
-                return s_get_index(replacement, unused_variant);
+                descriptor.variants.reset();
+
+                descriptor.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
+                descriptor.reevaluate_on_loop = s_replace_on_loop(replacement);
+                descriptor.index = s_get_index(replacement, unused_variant);
+                if (descriptor.index >= name_count || descriptor.path.empty()) return std::nullopt;
+                return descriptor;
             }
             if (tag != 1)
                 return std::nullopt;
@@ -548,7 +559,10 @@ namespace oar
                         break;
                     }
                     const std::uint16_t index = read_at<std::uint16_t>(variant, 0);
-                    result.push_back({ index, read_at<std::uint8_t>(variant, 0x29) != 0 });
+                    const std::string filename = native_string(variant, Variant_Filename_Offset);
+                    if (index >= name_count || filename.empty()) { result.clear(); break; }
+                    result.push_back({ index, read_at<std::uint8_t>(variant, 0x29) != 0,
+                        descriptor.path + "\\" + filename });
                 }
                 return result;
             };
@@ -559,7 +573,10 @@ namespace oar
                 random_entries.size() != random.size())
                 return std::nullopt;
             for (VariantEntry const& variant : random_entries)
+            {
                 options.random.push_back(variant.index);
+                options.random_paths.push_back(variant.path);
+            }
             options.cumulative.assign(cumulative.begin(), cumulative.end());
             options.sequential = mode == 1;
             options.reset_on_loop = read_at<std::uint8_t>(replacement, 0x21) != 0;
@@ -569,55 +586,18 @@ namespace oar
             const std::uint32_t data_scope = read_at<std::uint32_t>(replacement, 0x98);
             switch (data_scope)
             {
-            case 1: options.key = { DataScope::e_local, query.key, reinterpret_cast<std::uint64_t>(mod) }; break;
+            case 1: options.key = { DataScope::e_local, key, reinterpret_cast<std::uint64_t>(mod) }; break;
             case 2: options.key = { DataScope::e_submod, reinterpret_cast<std::uint64_t>(submod) }; break;
             case 4: options.key = { DataScope::e_replacer_mod, reinterpret_cast<std::uint64_t>(mod) }; break;
             default: return std::nullopt;
             }
             if (!submod || !mod)
                 return std::nullopt;
-            const bool keep_current = query.refresh && query.refresh->clip_key == query.key &&
-                query.refresh->replacement_key == reinterpret_cast<std::uint64_t>(replacement) &&
-                std::ranges::any_of(active, [&](void const* entry)
-                {
-                    return readable(entry, sizeof(std::uint16_t)) &&
-                        read_at<std::uint16_t>(entry, 0) == query.refresh->index;
-                });
-            const std::optional<VariantPick> pick = keep_current ? std::optional{ query.refresh->variant } :
-                query.variants.selection.variant(options, query.key);
-            if (!pick || pick->index == 0xFFFF)
-                return std::nullopt;
-            // Landing MID-sequence: the world already played the entry moves (Equip, Start).
-            // The loop body the world dwells on is the sequence's TRAILING member (Start→Loop
-            // authoring puts it last; the members may not even carry PlayOnce flags — the
-            // in-game Start hit proved position-0 forward walking lands on the entry move
-            // itself). Seek from the tail and mark the selection as a dwell: the playback accept
-            // path pins the history there instead of advancing past it (round 16).
-            logger::info("SCOPY PANEL seek gate reached={} flag={} seq={} pick-pos={} pick-idx={}",
-                true, query.seek_dwell, options.sequence.size(),
-                pick->position < options.sequence.size() ? pick->position : 0xFFFF, pick->index);
-            if (query.seek_dwell && !options.sequence.empty())
-            {
-                // The dwell position is the sequence's LAST member (Start→Loop authoring puts
-                // the loop body last, PlayOnce flags or not — the in-game Start hit proved a
-                // fully-once sequence defeats the non-once search, and the commit-side dwell
-                // already rests on the trailing member). Pin the history there for the next
-                // loop recheck.
-                const std::size_t position = options.sequence.size() - 1;
-                const VariantPick dwell{ options.sequence[position].index, position };
-                query.variants.selection.seek_dwell(options.key, query.key, dwell);
-                query.output.variants = std::move(options);
-                query.output.variant = dwell;
-                query.output.dwell = true;
-                query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
-                query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
-                return dwell.index;
-            }
-            query.output.variants = std::move(options);
-            query.output.variant = *pick;
-            query.output.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
-            query.output.reevaluate_on_loop = s_replace_on_loop(replacement);
-            return pick->index;
+            if (!readable(active.front(), 2)) return std::nullopt;
+            descriptor.index = read_at<std::uint16_t>(active.front(), 0);
+            if (descriptor.index >= name_count || descriptor.path.empty()) return std::nullopt;
+            descriptor.variants = std::move(options);
+            return descriptor;
         }
 
         bool evaluate_set_thunk(void const* set, RE::TESObjectREFR* source, RE::hkbClipGenerator* clip,
@@ -683,14 +663,18 @@ namespace oar
                 return true;
             // OAR's AnimationReplacements still holds its read lock here. Copy the chosen index
             // before returning to its loop; no ReplacementAnimation/Variant pointer escapes.
-            const auto selected = choose_index(replacement, *query);
-            if (!selected || *selected == 0xFFFF)
+            const std::optional<AnimationDescriptor> descriptor = describe(replacement, query->key, query->name_count);
+            if (!descriptor || descriptor->index == 0xFFFF || descriptor->path.empty())
             {
-                query->reject("replacement has no usable preview variant");
+                query->reject("replacement metadata unavailable");
                 return false;
             }
+            query->output.name = descriptor->path;
+            query->output.variants = descriptor->variants;
+            query->output.replacement_key = descriptor->replacement_key;
+            query->output.reevaluate_on_loop = descriptor->reevaluate_on_loop;
             query->selected = replacement;
-            query->index = *selected;
+            query->index = descriptor->index;
             return true;
         }
 
@@ -801,82 +785,38 @@ namespace oar
             result.index = *base;
             result.name = names[*base];
             result.base_name = result.name;
+            result.binding_name = result.name;
             result.clip_key = (reinterpret_cast<std::uint64_t>(wanted) * 1099511628211ULL) ^
                 (static_cast<std::uint64_t>(*base) << 16) ^ request.channel;
-            AnimationSelection const* const current = request.current;
-            const bool same_clip = current && current->clip_key == result.clip_key;
-            if (request.event == QueryEvent::e_activate || !same_clip)
-                session.selection.activate(result.clip_key);
-            if (request.event == QueryEvent::e_loop && same_clip)
-            {
-                const LoopDecision decision = idle_loop_decision(current->reevaluate_on_loop,
-                    current->variants.has_value(), current->variants &&
-                        session.selection.in_sequence(*current->variants, result.clip_key));
-                if (decision != LoopDecision::e_continue_variants)
-                    session.selection.loop(result.clip_key);
-                if (decision != LoopDecision::e_recheck)
-                {
-                    result = *current;
-                    result.evaluated = result.overrides = result.rejected = 0;
-                    result.diagnostic = decision == LoopDecision::e_continue_variants ?
-                        "continue current variants" : "loop reevaluation disabled";
-                    if (result.variants)
-                    {
-                        const auto pick = session.selection.variant(*result.variants, result.clip_key);
-                        if (pick && pick->index < names.size())
-                        {
-                            result.variant = *pick;
-                            result.index = pick->index;
-                            result.name = names[pick->index];
-                        }
-                        else
-                        {
-                            result.index = result.base_index;
-                            result.name = result.base_name;
-                            result.replaced = false;
-                            result.replacement_key = 0;
-                            result.variants.reset();
-                            result.variant = {};
-                            result.reevaluate_on_loop = true;
-                            result.diagnostic = "cached variants unavailable; standing base";
-                        }
-                    }
-                    return;
-                }
-            }
             if (!project || !query_supported())
                 return;
             PreviewClip preview;
             preview.initialize(*base, result.name, true);
             ScopedEvaluation scope(&source, preview.get(), state, ScopeMode::kAudited);
-            // keep_current (the refresh hand-off that preserves a running variant) must NOT
-            // fire on an activation: an e_activate query is re-opening the sequence from its
-            // first member, and a seek_dwell query is landing on its last member — both decide
-            // the variant fresh. Passing the still-loaded selection as refresh here is what
-            // pinned every re-query to the Start member it was already holding.
-            const bool allow_refresh = request.event == QueryEvent::e_refresh;
-            // A loop re-check of a selection that landed mid-sequence re-seeks the dwell: a fresh
-            // replacement evaluation would otherwise pick from position 0 and the pin would be
-            // lost after one cycle (round 16).
-            const bool seek_the_dwell = request.seek_dwell ||
-                (request.event == QueryEvent::e_loop && request.current && request.current->dwell);
-            QueryFrame frame(scope, session, result,
-                result.clip_key, allow_refresh && request.current ? request.current : nullptr,
-                seek_the_dwell);
+            QueryFrame frame(scope, session, result, result.clip_key, names.size());
             if (void* const replacements = s_get_replacements(project, *base))
             {
+                std::function<void(void*)> copy = [&](void* replacement)
+                {
+                    if (read_at<std::uint8_t>(replacement, Replacement_Disabled_Offset) != 0) return;
+                    if (std::optional<AnimationDescriptor> descriptor = describe(replacement, result.clip_key, names.size()))
+                    {
+                        if (descriptor->index < names.size()) descriptor->binding_name = names[descriptor->index];
+                        result.candidates.push_back(std::move(*descriptor));
+                    }
+                };
+                s_for_each_replacement(replacements, copy, false);
                 void* const selected = s_evaluate_replacements(replacements, &source, preview.get());
                 if (selected && selected == frame.selected && frame.index < names.size())
                 {
                     result.index = frame.index;
-                    result.name = names[frame.index];
+                    result.binding_name = names[frame.index];
                     result.replaced = true;
                 }
                 else
                 {
                     result.replacement_key = 0;
                     result.variants.reset();
-                    result.variant = {};
                     result.reevaluate_on_loop = true;
                 }
             }
@@ -946,6 +886,7 @@ namespace oar
             {
                 return base + profile->query.entries[static_cast<std::size_t>(function)].rva;
             };
+            s_for_each_replacement = reinterpret_cast<ForEachReplacement>(address(QueryFunction::e_enumerate));
             s_get_singleton = reinterpret_cast<GetSingleton>(address(QueryFunction::e_singleton));
             s_for_each_project_data = reinterpret_cast<ForEachProjectData>(address(QueryFunction::e_projects));
             s_get_replacements = reinterpret_cast<GetReplacements>(address(QueryFunction::e_replacements));

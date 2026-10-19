@@ -6,7 +6,7 @@
 
 #include "RE/B/BGSEquipSlot.h"
 #include "RE/T/TESObjectWEAP.h"
-#include "oar/policy.h"
+#include "animation/action.h"
 
 #include <cstdint>
 #include <array>
@@ -45,7 +45,7 @@ void equipment_collect_worn(RE::Actor& a_actor, std::vector<RE::TESBoundObject*>
 // (state-idle v3): the panel figure always stands, so the weapon form is the only thing that
 // changes the idle OAR selects for it. Both hands are read, because the engine reports a
 // two-handed weapon - and a bow - in whichever hand entry it last touched.
-[[nodiscard]] oar::WeaponForm equipment_weapon_form(RE::Actor& a_actor);
+[[nodiscard]] animation::WeaponForm equipment_weapon_form(RE::Actor& a_actor);
 [[nodiscard]] std::array<RE::FormID, 2> equipment_hand_ids(RE::Actor& actor);
 
 // Puts everything `a_source` wears onto `a_target`. Used for the puppet's initial dressing, before

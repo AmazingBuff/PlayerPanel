@@ -4,7 +4,7 @@
 
 #include "character/isolation_watch.h"
 
-#include "character/animation_source.h"
+#include "animation/clip.h"
 #include "character/puppet_driver.h"
 
 #include "RE/B/BSAnimationGraphManager.h"

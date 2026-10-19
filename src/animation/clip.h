@@ -132,6 +132,8 @@ struct ClipPlayback
     [[nodiscard]] bool valid() const { return animation != nullptr && !tracks.empty() && tracks.size() == nodes.size(); }
 };
 
+using PoseBuffer = std::vector<std::pair<std::string, RE::NiTransform>>;
+[[nodiscard]] PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop);
 size_t play_animation_clip(ClipPlayback const& clip, float seconds, RE::NiAVObject& copy_root, bool loop = true);
 [[nodiscard]] RE::hkbClipGenerator const* pick_running_clip(RE::TESObjectREFR& source);
 // The state-idle preference: the strongest running clip whose NAME carries the engine's idle
@@ -181,35 +183,5 @@ struct RunningIdleSample
     bool body_looping = false;
 };
 [[nodiscard]] RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source);
-
-class ClipPlayer
-{
-public:
-    void reset();
-    // start_seconds seeds the studio clock at the source clip's phase (the entry action), so the
-    // panel continues the world's own move instead of restarting it from zero.
-    void set_clip(ClipPlayback clip, bool loop = true, double start_seconds = 0.0);
-    void retarget(ClipPlayback clip);
-    // Puts the studio clock back to zero, so the next frame draws the clip from its beginning. The
-    // inventory pauses the engine and the studio owns the clock, so without this the figure resumes
-    // wherever the last visit left it.
-    void restart(double start_seconds = 0.0);
-    [[nodiscard]] bool ready() const { return m_clip.valid(); }
-    [[nodiscard]] std::string const& name() const { return m_clip.name; }
-    [[nodiscard]] bool finished() const { return ready() && !m_loop && m_time >= std::max(m_clip.duration, 0.05f); }
-    [[nodiscard]] std::uint64_t cycles() const
-    {
-        return ready() && m_loop ? static_cast<std::uint64_t>(m_time / std::max(m_clip.duration, 0.05f)) : 0;
-    }
-
-    // Advances the clock and writes one frame of the clip; returns the nodes written.
-    size_t advance(RE::NiAVObject& copy_root);
-
-private:
-    ClipPlayback m_clip{};
-    double m_time = 0.0;
-    std::chrono::steady_clock::time_point m_last_tick{};
-    bool m_loop = true;
-};
 
 PLUGIN_NAMESPACE_END

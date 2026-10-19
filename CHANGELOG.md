@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Fix previews repeating an idle entry motion and keep animation requests isolated per actor.
+
 - Panel entry action mirroring (`oar-idle3`, round 18, 2026-10-17): the panel no longer re-asks
   OAR what to play when the inventory opens. The clip the player was IN at the open edge (its
   running binding index and local time) is recorded once and replayed from that phase as the

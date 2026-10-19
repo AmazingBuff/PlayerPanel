@@ -1,5 +1,7 @@
 # 面板 idle 选择与快速换装：oar-idle2
 
+> Historical experiment report. Current ownership, sequence rules and code navigation: [Actor animation previews](animation.md). The old process-global scheduler, catalogue-only sibling scan and indefinite Start-only dwell are superseded. Logical candidate paths come from native replacement metadata, separately from deduplicated binding names.
+
 日期：2026-10-16。源码基线：`526dddb`，本轮工作区修改在其之上。
 当前轮次：`oar-idle2`，在前一轮 `oar-preview1` 的工作区修改上继续实现。范围限定为站立
 idle 选择、连续过渡及快速换装打断；游戏行为仍待本轮验证。

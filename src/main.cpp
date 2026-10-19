@@ -47,6 +47,7 @@ namespace
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
             PLUGIN_NAMESPACE::Renderer::install();
             PLUGIN_NAMESPACE::PanelMonitor::instance().install();
+            PLUGIN_NAMESPACE::CharacterManager::instance().install();
 #if CHARACTER_PANEL_SCENE_COPY_EXPERIMENT
             PLUGIN_NAMESPACE::InputManager::install();
 

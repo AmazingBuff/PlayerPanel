@@ -25,11 +25,13 @@ reasons.
 
 ## Documentation
 
-- [Panel idle selection and fast weapon changes](docs/oar-preview-query-2026-10-16.md): verified OAR 3.1.6/3.2.1 queries, preview Random/variant state, per-layer idle cycles, continuous blending and latest-equipment interruption. The oar-idle2 package requires the scene-copy configuration; game verification is pending.
+- [Actor animation previews](docs/animation.md): per-actor observation/controllers, explicit Equip → Start → Loop handover, descriptor-based idle families and single-write pose composition. Game verification remains pending.
+
+- [Historical panel idle selection and fast weapon changes](docs/oar-preview-query-2026-10-16.md): verified OAR 3.1.6/3.2.1 queries, preview Random/variant state, per-layer idle cycles, continuous blending and latest-equipment interruption. The oar-idle2 package requires the scene-copy configuration; game verification is pending.
 
 - [UBE transparency trial](docs/ube-transparency-test-2026-10-15.md): material handling, package identity and local checks. The user confirmed correct rendering on another computer on 2026-10-16.
 
-- [OAR hook history](docs/oar-hooks.md): binary identities and earlier diagnostics; current selection/playback behavior is described in the independent-query document above.
+- [OAR hook history](docs/oar-hooks.md): binary identities and earlier diagnostics; current selection/playback behavior is described in the actor animation document above.
 
 - [Review fixes (2026-10-15)](docs/code-maintenance.md): separate animation tracks from skeleton indices, invalidate playback on recapture, reconcile complete OBody sets, preserve hand slots and dual-wield counts, retry animation verification while data is unavailable, and correct new-game spawning and assembly/parking boundaries. Local regression checks cover non-identity track mapping and clearing a stale body preset; game validation remains required.
 

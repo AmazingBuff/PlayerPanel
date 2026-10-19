@@ -1,52 +1,38 @@
 //
 // Created by AmazingBuff on 2026/10/6.
 //
-
 #pragma once
-
-#include "character_clone.h"
-
-#include <cstdint>
-
+#include "character/character_clone.h"
+#include "RE/T/TESEquipEvent.h"
 PLUGIN_NAMESPACE_BEGIN
-
 class CharacterManager
 {
 public:
     static CharacterManager& instance();
-
-    // Spawns one clone per actor, once per actor. The graph detach runs
-    // separately, inside the render bracket (CharacterClone::detach_graph) —
-    // it must not happen on the task thread: the render bracket is the only
-    // writer serialized with the world renderer job. Every spawned actor is
-    // registered with the EquipmentMonitor, so its equip changes are counted
-    // and dispatched while the clone lives.
-    void create_clones(const std::vector<RE::Actor*>& actors);
-
+    void install();
+    void create_clones(std::vector<RE::Actor*> const& actors);
     std::shared_ptr<CharacterClone> get_clone(RE::Actor* actor);
-
-    // The actor's equip change count since it was spawned here (the player
-    // counts from session start - it is watched implicitly). 0 for an actor
-    // with no clone and no watch entry.
-    [[nodiscard]] std::uint64_t equipment_revision(const RE::Actor& actor) const;
-
+    [[nodiscard]] std::uint64_t equipment_revision(RE::Actor const& actor) const;
+    void update(bool paused);
     void clear_clones();
 private:
-    enum class ManagerState : uint8_t
+    class EquipSink final : public RE::BSTEventSink<RE::TESEquipEvent>
     {
-        e_none,
-        e_create,
-        e_clear,
+    public:
+        RE::BSEventNotifyControl ProcessEvent(RE::TESEquipEvent const*,
+            RE::BSTEventSource<RE::TESEquipEvent>*) noexcept override;
     };
-private:
-    CharacterManager();
-    ~CharacterManager();
-
-private:
-    std::unordered_map<RE::Actor*, std::shared_ptr<CharacterClone>> m_character_clones;
-    // Guards the map: written from the render bracket (spawn) and the main
-    // thread (clear), read from the render bracket (get_clone).
+    void release_clones();
+    std::atomic_bool m_clear_requested{ false };
+    CharacterManager() = default;
+    ~CharacterManager() = default;
+    std::unordered_map<RE::FormID, std::shared_ptr<CharacterClone>> m_character_clones;
     mutable std::mutex m_clones_mutex;
+    mutable std::mutex m_events_mutex;
+    std::unordered_map<RE::FormID, std::uint64_t> m_revisions;
+    EquipSink m_equip_sink;
+    bool m_installed = false;
+    bool m_was_open = false;
+    std::uint64_t m_menu_revision = 0;
 };
-
 PLUGIN_NAMESPACE_END
