@@ -256,6 +256,11 @@ namespace
         std::vector<Stage> stages;
         std::vector<std::unique_ptr<LoadedAsset>> assets;
         std::unique_ptr<LoadedAsset> standing;
+        // The placement standard: the vanilla MT_Idle base, not its OAR replacement. The SDB
+        // SVFI pack answers with a different random variant per session ("Base Idle", "Both
+        // Hands Hip", "Left Hand Hip", "Right Hand Behind"), each a different pose, so
+        // calibrating on `standing` froze a different root every capture.
+        std::unique_ptr<LoadedAsset> calibration;
         bool refresh_continuation = false;
     };
 }
@@ -372,6 +377,9 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     if (clip_sequence_token(standing.name) == ClipSequenceToken::e_start ||
         (standing.variants && !standing.variants->sequence.empty())) standing = stable;
     proposal->standing = std::make_unique<LoadedAsset>(state.graph, standing, true, true, state.generation);
+    // Vanilla base, independent of the replacement above, so the calibration standard is the
+    // same pose in every session and for every action.
+    proposal->calibration = std::make_unique<LoadedAsset>(state.graph, stable, true, true, state.generation);
     const animation::WeaponForm form = observation.form;
     const EntryActionKind entry = entry_action_kind(observation.clip_name);
     if (observation.drawn && entry != EntryActionKind::e_unequip)
@@ -481,6 +489,7 @@ void AnimationController::retarget(RE::NiAVObject& root)
         if (proposal)
         {
             proposal->standing->rebind(root);
+            if (proposal->calibration) proposal->calibration->rebind(root);
             for (auto& asset : proposal->assets) asset->rebind(root);
         }
     state.last_tick = std::chrono::steady_clock::now();
@@ -501,6 +510,7 @@ void AnimationController::poll()
     }
     Proposal& proposal = *state.pending;
     proposal.standing->poll(*state.root);
+    if (proposal.calibration) proposal.calibration->poll(*state.root);
     if (proposal.standing->failed())
     {
         logger::warn("ANIMATION actor={:08x} request={} standing load unavailable; cancel proposal", state.actor_id, state.generation);
@@ -508,6 +518,9 @@ void AnimationController::poll()
         return;
     }
     bool loaded = proposal.standing->ready();
+    // Calibration may still be loading when the action is ready; it only gates the one-shot
+    // placement pass, so a failure drops the standard rather than the whole proposal.
+    if (proposal.calibration && proposal.calibration->failed()) proposal.calibration.reset();
     for (auto& asset : proposal.assets)
     {
         asset->poll(*state.root);
@@ -539,10 +552,26 @@ void AnimationController::poll()
 }
 
 bool AnimationController::ready() const { return m_state->active && m_state->playback.ready(); }
-bool AnimationController::transitioning() const { return ready() && !m_state->playback.current().action.loop; }
 std::string AnimationController::name() const
 {
     return ready() ? m_state->playback.current().clip.name : "animation-loading";
+}
+
+bool AnimationController::apply_standing_pose(RE::NiAVObject& root)
+{
+    State& state = *m_state;
+    if (!ready() || state.root != &root) return false;
+    // Without the node mapping the write below is a no-op and the calibration would measure the
+    // captured pose instead of the standing body.
+    if (state.nodes.empty()) return false;
+    LoadedAsset* standard = state.active->calibration ? state.active->calibration.get() : state.active->standing.get();
+    if (!standard || !standard->ready()) return false;
+    const PoseBuffer base = sample_animation_clip(standard->playback(), 0.0f, true);
+    if (base.empty()) return false;
+    for (auto const& [name, local] : base)
+        if (auto target = state.nodes.find(name); target != state.nodes.end()) target->second->local = local;
+    recompute_subtree_worlds(root, 0);
+    return true;
 }
 
 std::size_t AnimationController::advance(RE::NiAVObject& root)

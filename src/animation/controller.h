@@ -34,8 +34,11 @@ namespace animation
         void retarget(RE::NiAVObject& root);
         void poll();
         std::size_t advance(RE::NiAVObject& root);
+        // Writes the standing idle's first frame over the copy without advancing any clock.
+        // The placement calibration measures this pose, so the frozen root is the MT_Idle
+        // standard rather than whichever action happens to be displayed at capture.
+        bool apply_standing_pose(RE::NiAVObject& root);
         [[nodiscard]] bool ready() const;
-        [[nodiscard]] bool transitioning() const;
         [[nodiscard]] std::string name() const;
     private:
         class State;

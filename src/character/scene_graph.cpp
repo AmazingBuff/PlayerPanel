@@ -493,9 +493,19 @@ bool SceneGraph::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& stat
 
     pose();
 
-    // Restore placement before applying animation; the draw must retain the resulting worlds.
-    const std::size_t written = m_animation.advance(*p_root);
-    if (written && m_recentre_pending && !m_animation.transitioning()) calibrate_from_posed_bound();
+    // Calibration standard (user design): the standing MT_Idle base, never whichever action is
+    // on screen and never its OAR replacement. The previous path waited for the first
+    // non-transition action to write joints, so an Equip/Start entry calibrated against the
+    // weapon Loop and a plain entry against a random standing variant — every capture froze a
+    // different root and the figure jumped between actions. The anchor probe (2026-10-19)
+    // confirmed clips carry no root/pelvis translation; the COM pose is the authored difference
+    // and must not leak into placement.
+    if (m_recentre_pending && m_animation.apply_standing_pose(*p_root))
+        calibrate_from_posed_bound();
+
+    // The action write below replaces the calibration pose on this same frame; it must never
+    // reach the display.
+    (void)m_animation.advance(*p_root);
 
     // Pull the detached light rig to the anchor and cascade it: the shader
     // reads NiLight::world.translate (v6.37) and this window is the only

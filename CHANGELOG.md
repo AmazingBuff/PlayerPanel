@@ -12,6 +12,13 @@
 
 ### Fixed
 
+- Fix preview placement drifting between actions: calibrate the copy root from the vanilla
+  MT_Idle base at capture, before the action pose is written, instead of from whichever action
+  first drove joints. An Equip/Start entry used to calibrate against the weapon Loop and a plain
+  entry against a per-session random standing replacement, so every capture froze a different
+  root and the figure jumped between actions. The anchor probe showed clips carry no
+  root/pelvis translation; the COM difference is authored pose, not placement.
+
 - Fix previews repeating an idle entry motion and keep animation requests isolated per actor.
 
 - Panel entry action mirroring (`oar-idle3`, round 18, 2026-10-17): the panel no longer re-asks
