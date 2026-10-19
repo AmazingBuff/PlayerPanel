@@ -104,6 +104,14 @@ namespace animation
         return stages;
     }
 
+    // Stages that belong to one authored idle sequence: Start → Loop → Loop2. The engine blends
+    // between these members and cuts between unrelated moves, so the panel's stage crossfade
+    // follows the same rule (user observation, in game).
+    [[nodiscard]] inline bool idle_sequence_stage(ActionKind kind)
+    {
+        return kind == ActionKind::e_weapon_idle_start || kind == ActionKind::e_weapon_idle_loop;
+    }
+
     class PlaybackTimeline
     {
     public:
@@ -118,12 +126,16 @@ namespace animation
         [[nodiscard]] Stage const& current() const { return m_stages[m_position]; }
         [[nodiscard]] std::size_t position() const { return m_position; }
         [[nodiscard]] double seconds() const { return m_seconds; }
+        // The stage that was playing before the last handover, so the caller can decide whether
+        // the two belong to one authored sequence.
+        [[nodiscard]] ActionKind previous_action() const { return m_previous_action; }
         // The caller samples the current stage before handover. Loading a successor never ticks it.
         bool advance(double delta, double duration)
         {
             m_seconds += std::max(delta, 0.0);
             if (current().action.loop || m_seconds < std::max(duration, 0.05) || m_position + 1 == m_stages.size())
                 return false;
+            m_previous_action = current().action.kind;
             ++m_position;
             m_seconds = current().start_seconds;
             return true;
@@ -132,6 +144,7 @@ namespace animation
         std::vector<Stage> m_stages;
         std::size_t m_position = 0;
         double m_seconds = 0.0;
+        ActionKind m_previous_action = ActionKind::e_standing_idle;
     };
 
     [[nodiscard]] inline std::size_t resume_continuation(std::vector<Stage>& stages, PlaybackTimeline const& playback)

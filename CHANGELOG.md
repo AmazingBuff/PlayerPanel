@@ -12,9 +12,9 @@
 
 ### Fixed
 
-- Do not cross-fade between stages of one idle sequence. Start and Loop are authored as
-  consecutive moves and the engine plays them back to back; blending the Start tail into the
-  Loop head made the two moves visibly overlap.
+- Cross-fade only between members of one idle sequence. Start/Loop/Loop2 are authored to flow
+  into each other and the engine blends them, so the stage handover keeps the blend; unrelated
+  handovers (Equip → Start, a swap → the new idle) cut instead of blending across the seam.
 
 - Fix preview placement drifting between actions: calibrate the copy root from the vanilla
   MT_Idle base at capture, before the action pose is written, instead of from whichever action
