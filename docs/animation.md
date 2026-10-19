@@ -34,7 +34,20 @@ OAR is a query boundary. It audits conditions and returns copied replacement, va
 
 ## Interfaces
 
-Action prototypes are StandingIdle, Equip, optional WeaponIdleStart, WeaponIdleLoop, Unequip and optional HandIdle. Weapon forms parameterize base names; entry phase is an input snapshot. `SourceObservation` is the controller request input. `AnimationSelection::name` and descriptor `path` carry logical replacement paths; `binding_name` identifies the possibly deduplicated engine catalogue entry. `index` remains the actual loading index. No native candidate pointer escapes the read lock.
+[ActionKind and ActionPrototype](../src/animation/action.h) define the following stages. Weapon forms parameterize base names; entry phase is an input snapshot, not another action family.
+
+| ActionKind | Numeric value | Planned role |
+| --- | --- | --- |
+| `e_standing_idle` | 0 | stable standing body/idle |
+| `e_equip` | 1 | finite draw stage; observed entry resumes its sampled local phase |
+| `e_weapon_idle_start` | 2 | optional finite idle-entry member |
+| `e_weapon_idle_loop` | 3 | weapon idle member; only a stage explicitly marked loop may dwell |
+| `e_unequip` | 4 | finite sheathe stage, handing over to standing |
+| `e_hand_idle` | 5 | optional hand/finger-masked contribution; no separate hand layer enabled by default |
+
+[SourceObservation](../src/animation/controller.h) carries drawn state, weapon form/hands, source clip index/time, request generation, source graph generation and reason. A captured Equip resumes its own phase, then a full Start begins at handover, then Loop. Start or Loop entry resumes the matching sampled stage. Preloading successors never advances their clocks. `PlaybackTimeline` and `resume_continuation` in [sequence.h](../src/animation/sequence.h) keep accepted continuation at the phase currently visible when an appearance refresh finishes loading.
+
+`AnimationSelection::name` and descriptor `path` carry logical replacement paths; `binding_name` identifies the possibly deduplicated engine catalogue entry. `index` remains the actual loading index. No native candidate pointer escapes the read lock.
 
 `query_animation` may update only its caller's condition Random cache. It cannot seek, commit, dwell or advance playback. Variant selection/PlayOnce acceptance and loop reevaluation belong to the controller. The shared catalogue contains only copied project metadata and is invalidated at a load boundary through `QuerySession::invalidate_projects`.
 
@@ -60,17 +73,9 @@ No new dependencies. The runtime uses the existing Skyrim/CommonLib, Havok loade
 
 ## Tests and verification
 
-[animation_controller_test.cpp](../tests/animation_controller_test.cpp), target `CharacterPanelAnimationTest`, test `animation_controller`, contains exactly two focused cases: Equip phase through a sparse/aliased descriptor family to Start/Loop (including missing Loop handling), and independent actor request/Random/playback state with acceptance-time continuation and masked pose output. [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) remains a legacy compile target; its whole behavioral suite is not rerun for this change.
+The two preserved [animation cases](../tests/animation_controller_test.cpp) cover entry-phase/complete descriptor sequencing and independent latest-request/continuation/mask behavior. [Graph/math sources](../tests/snapshot_transform_test.cpp) retain earlier consumers. Current CMake does not register these test targets; they are reference material.
 
-```text
-cmake --preset Release
-cmake --build build --config Release --target CharacterPanel
-cmake --preset Release-scopy
-cmake --build build-scopy --config Release --target CharacterPanel CharacterPanelAnimationTest CharacterPanelCopyMathTest
-ctest --test-dir build-scopy -C Release -R "^animation_controller$" --output-on-failure
-```
-
-Native builds need access to the installed MSVC/Windows SDK. Existing installed vcpkg packages can be used with manifest installation disabled. No game is available here: local tests/builds do not establish game-time hooks, asynchronous loader behavior, graph lifetime or visual correctness. Verification results are recorded with the implementation result.
+[Build verification](build.md#verification-and-limits) records the prior native results and separates them from current build-only checks and unverified Skyrim hooks, native loading, visuals and lifetime behavior. [Debugging navigation](code-maintenance.md#debugging-navigation) maps request/asset/stage/cancellation/retarget logs to their owners.
 
 ## Safe modification
 
@@ -78,7 +83,7 @@ Keep lifecycle/event observation in the manager, per-actor requests in the Scene
 
 ## Synchronized files
 
-Keep the animation module, direct character/render/panel consumers, [CMakeLists.txt](../CMakeLists.txt), both test entry points, [README](../README.md), [Changelog](../CHANGELOG.md), [maintenance map](code-maintenance.md), [OAR query history](oar-preview-query-2026-10-16.md) and [ABI history](oar-hooks.md) synchronized.
+Keep the animation module, direct character/render/panel consumers, [CMakeLists.txt](../CMakeLists.txt), both test entry points, [README](../README.md), [Changelog](../CHANGELOG.md), [maintenance map](code-maintenance.md), [build guide](build.md), [OAR query history](oar-preview-query-2026-10-16.md) and [ABI history](oar-hooks.md) synchronized.
 
 ## Related history
 

@@ -16,6 +16,21 @@ The preview shows standing weapon posture and existing equipment/appearance. It 
 
 Animation remains a separate module: OAR returns copied query metadata; animation owns sequences, leases, clocks, variant history and pose composition. See [animation previews](animation.md).
 
+```mermaid
+flowchart LR
+    Menu[Inventory menu] --> Panel[PanelMonitor]
+    Panel --> Manager[CharacterManager]
+    Equip[Equipment events] --> Manager
+    Manager -->|frame and revision| Graph[SceneGraph per actor]
+    Input[F7 / F8 intent] --> Graph
+    Graph -->|request / retarget / poll / advance| Animation[AnimationController]
+    Animation -->|read-only query| OAR[OAR metadata and conditions]
+    Animation -->|compose and apply pose| Tree[Owned copied tree]
+    Graph -->|private capture / audits| Tree
+    Tree --> Draw[Studio draw and composite]
+```
+
+
 ## Code map
 
 | Path | Entry points |
@@ -42,7 +57,7 @@ There are no Actor spawning, dressing, inventory synchronization, body-morph cop
 
 Native capture, lease release, pose writes and graph replacement stay in the render/update bracket. Input callbacks never clone or animate. Animation requests, Random/variant history and source/display generations stay per source actor. A graph replacement retargets before its old nodes are retired. Source graph audits reject aliased writable state; copying never advances or writes the source actor's graph.
 
-Rendering retains geometry filtering, attachment transforms, standing-pose calibration, material submission and D3D binding restoration. Copied graphs remain detached from engine menu roots. Retired copied trees deliberately remain parked: function-static bookkeeping holds raw pointers to retained native references, so destroying a SceneGraph cannot release them. Only bookkeeping is capped; there is no new native teardown mechanism.
+Rendering retains geometry filtering, attachment transforms, standing-pose calibration, material submission and D3D binding restoration. Copied graphs remain detached from engine menu roots. Retired copied trees deliberately remain parked: function-static bookkeeping holds raw pointers to retained native references, so destroying a SceneGraph cannot release them. The twelve-entry cap limits bookkeeping only; retained native allocations are not bounded by it and may accumulate across captures and preview lifetimes. There is no safe native teardown mechanism here.
 
 ## Failure modes
 
@@ -54,19 +69,9 @@ Existing C++23, VS2022/MSVC 14.44.35207, Windows SDK, CommonLibSSE, SKSE, OAR an
 
 ## Verification
 
-Both presets build exactly the same backend; `Release-scopy` is a compatibility build-directory name. Tests are available in both directories.
+[Build](build.md) documents the single Release target, pinned setup, generated outputs and configure-time identity. Prior native evidence and its limits are recorded in [Build verification](build.md#verification-and-limits). Retained test sources are reference material, not current build entry points.
 
-```text
-cmake --preset Release
-cmake --build build --config Release --target CharacterPanel CharacterPanelAnimationTest CharacterPanelCopyMathTest
-cmake --preset Release-scopy
-cmake --build build-scopy --config Release --target CharacterPanel CharacterPanelAnimationTest CharacterPanelCopyMathTest
-ctest --test-dir build -C Release -R "^animation_controller$" --output-on-failure
-```
-
-[animation_controller_test.cpp](../tests/animation_controller_test.cpp) retains the two focused cases for Equip phase/descriptor sequences and actor request/continuation/mask isolation. [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp) retains current geometry, track, rendering and query consumers; obsolete Actor/probe cases were retired. Its target is compiled, without expanding this change's behavioral test budget.
-
-Local builds and structural checks do not verify game-time hooks, asynchronous loading, visual output, framing or native lifetime behavior. No game runtime is available here. The existing [package runbook](../tools/scene_copy/README.txt) describes manual follow-up.
+Build/source checks establish compilation and structural consistency, not game-time hook, loader, framing, visual or lifetime behavior. [Maintenance](code-maintenance.md#debugging-navigation) maps actual logs and the two existing representative runtime follow-up categories. No Skyrim runtime is available here.
 
 ## Safe modification
 
@@ -74,9 +79,9 @@ Keep registry/event distribution in CharacterManager and per-preview decisions i
 
 ## Synchronized files
 
-Synchronize the SceneGraph implementation (including private capture), manager and direct input/main/renderer consumers, [animation guidance](animation.md), [maintenance map](code-maintenance.md), [README](../README.md), [Changelog](../CHANGELOG.md), build presets/generated identity, [packaging script](../cmake/scene_copy_packaging.cmake) and [package instructions](../tools/scene_copy/README.txt).
+Synchronize the SceneGraph implementation (including private capture), manager and direct input/main/renderer consumers, [animation guidance](animation.md), [maintenance map](code-maintenance.md), [README](../README.md), [Changelog](../CHANGELOG.md), [build guidance](build.md), [CMake presets](../CMakePresets.json), generated identity, [shader embedding](../cmake/embed_shaders.cmake), [version resource](../cmake/version.rc.in) and [build/runtime notes](../tools/scene_copy/README.txt).
 
-The generated identity always starts with `CharacterPanel-scenegraph-` and includes the configured label, source/CommonLib revisions, dirty state and configure timestamp. `CharacterPanelSceneCopyPackage` is a compatibility target name for this sole backend; its manifest records `backend: SceneGraph`. Packaging does not deploy to the game.
+The generated identity always starts with `CharacterPanel-scenegraph-` and includes the configured label, source/CommonLib revisions, dirty state and configure timestamp. The DLL target/output name remains CharacterPanel / CharacterPanel.dll. No package or install target is generated.
 
 ## Related history
 

@@ -1,34 +1,41 @@
-CharacterPanel — SceneGraph preview
+CharacterPanel — SceneGraph runtime notes
 
-Every build uses the same copied-SceneGraph backend. Release-scopy and
-CharacterPanelSceneCopyPackage remain compatibility entry-point names.
-No second Actor, equipment mirroring or live-Actor diagnostic route exists.
+Build setup and pinned dependencies: docs/build.md
+Current architecture/actions: docs/scene-graph.md and docs/animation.md
+Log navigation and hash conventions: docs/code-maintenance.md
+Archived controls/results/proposals: docs/history.md
 
-Controls (paused InventoryMenu):
-  F7  Queue recapture of the source graph.
-  F8  Toggle the copied preview display.
-Input only queues intent; capture, retarget and animation run in the serialized
-render/update bracket. Other historical diagnostic controls have been removed.
-
-Build:
+Current build (repository root, prepared toolchain):
   cmake --preset Release
-  cmake --build build --config Release --target CharacterPanel
-The optional Release-scopy preset uses build-scopy for the same implementation.
-Existing VS2022/MSVC 14.44.35207, CommonLibSSE and vcpkg dependencies are required.
+  cmake --build --preset Release
 
-Package identity:
-  The load banner contains CharacterPanel-scenegraph- followed by the configured
-  label, source/CommonLib revisions, dirty state and configure timestamp.
-  The compatibility package target records this exact identity, DLL/PDB SHA-256,
-  source baselines and backend: SceneGraph in build-manifest.json.
-  Packaging does not deploy files. Match a returned log to that manifest.
+Release is the only configure/build preset. CharacterPanel is the sole first-party
+DLL target. Outputs are build/Release/CharacterPanel.dll and its matching PDB.
+CommonLibSSE and normal CMake generation/build utility projects remain required.
+There are no current test/package/install/compatibility entry points. Test source
+is retained as reference; older passing tests are not a current CMake test route.
 
-Manual game follow-up (not verified by local builds):
-  Check inventory entry during Equip, Start and Loop; sheathe to standing;
-  rapid equipment changes; F7 without a playback rewind; F8; close/reopen and
-  load boundaries; appearance, weapon attachment, framing and transparency.
-  Confirm source actors remain visually and behaviorally unchanged.
+Controls in a paused InventoryMenu:
+  F7  Queue recapture.
+  F8  Toggle display.
+Input queues intent; capture/retarget/animation run in the serialized bracket.
+The source Actor is read-only; no second Actor is created.
 
-Retired copied graphs intentionally remain parked because safe native teardown
-is unresolved. Animation hook/loader, visual and graph-lifetime behavior still
-requires a Skyrim runtime. See docs/scene-graph.md and docs/animation.md.
+Identity and logs:
+  CharacterPanel.log is written under SKSE::log::log_directory(), not a fixed
+  machine path. Start with SCENEGRAPH BUILD, then correlate actor/request/capture
+  fields in CharacterManager equipment, ANIMATION, SCOPY and SceneGraph draw lines.
+  The build identity is generated at configure time. A later commit does not
+  refresh an existing header/DLL: configure then build when preparing a binary
+  for that commit, and keep its exact DLL/PDB pair together.
+
+Two representative game follow-up categories (not verified locally):
+  1. Entry/equipment continuation: Equip/Start/Loop entry, sheathe to standing,
+     rapid equipment changes and an unchanged source actor.
+  2. Copied-graph presentation/lifetime: F7 phase preservation, F8, close/reopen/
+     load boundaries, appearance, attachments, framing and transparency.
+
+Retirement bookkeeping is capped; retained native graph memory is not. Safe
+teardown remains unresolved. Local build/document checks do not prove game-time
+hooks, native loading, visual output or lifetime behavior. Prior local evidence
+and its limits are recorded centrally in docs/build.md.

@@ -1,72 +1,39 @@
 {
+  "version": 3,
   "configurePresets": [
     {
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": {
-          "type": "STRING",
-          "value": "Release"
-        }
-      },
-      "errors": {
-        "deprecated": true
-      },
-      "hidden": true,
-      "name": "cmake-dev",
-      "warnings": {
-        "deprecated": true,
-        "dev": true
-      }
-    },
-    {
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": {
-          "type": "STRING",
-          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-        }
-      },
-      "hidden": true,
-      "name": "vcpkg"
-    },
-    {
-      "cacheVariables": {
-        "CMAKE_MSVC_RUNTIME_LIBRARY": {
-          "type": "STRING",
-          "value": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
-        },
-        "VCPKG_TARGET_TRIPLET": {
-          "type": "STRING",
-          "value": "x64-windows-static-md"
-        }
-      },
-      "hidden": true,
-      "name": "windows"
-    },
-    {
+      "name": "Release",
+      "generator": "Visual Studio 17 2022",
       "architecture": {
         "strategy": "set",
         "value": "x64"
       },
+      "toolset": "v143,version=14.44.35207",
+      "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "/EHsc /MP /W4 /WX"
+        "CMAKE_CONFIGURATION_TYPES": "Release",
+        "CMAKE_CXX_FLAGS": "/EHsc /MP /W4 /WX",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
       },
-      "generator": "Visual Studio 17 2022",
-      "inherits": [
-        "cmake-dev",
-        "vcpkg",
-        "windows"
-      ],
-      "name": "Release",
-      "toolset": "v143,version=14.44.35207"
-    },
-    {
-      "name": "Release-scopy",
-      "inherits": "Release",
-      "binaryDir": "${sourceDir}/build-scopy",
-      "cacheVariables": {
-        "CHARACTER_PANEL_BUILD_LABEL": "scenegraph"
+      "warnings": {
+        "deprecated": true,
+        "dev": true
+      },
+      "errors": {
+        "deprecated": true
       }
     }
   ],
-  "version": 3
+  "buildPresets": [
+    {
+      "name": "Release",
+      "configurePreset": "Release",
+      "configuration": "Release",
+      "targets": [
+        "CharacterPanel"
+      ]
+    }
+  ]
 }

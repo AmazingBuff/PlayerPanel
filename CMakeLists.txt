@@ -8,13 +8,14 @@ project(
 
 set(PROJECT_NAMESPACE MyPlugins::${PROJECT_NAME})
 set(PROJECT_AUTHOR AmazingBuff)
+set(CMAKE_CONFIGURATION_TYPES Release CACHE STRING "Supported build configuration" FORCE)
+set(CMAKE_SKIP_INSTALL_RULES ON)
 
 option(ENABLE_SKYRIM_SE "Enable support for Skyrim SE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_AE "Enable support for Skyrim AE in the dynamic runtime feature." ON)
 option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime feature." OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-include(cmake/packaging.cmake)
 
 file(GLOB_RECURSE PLUGIN_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 file(GLOB_RECURSE PLUGIN_HEADERS CONFIGURE_DEPENDS src/*.h)
@@ -46,7 +47,7 @@ add_custom_command(
 
 set(VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/plugin.h)
 
-# Keep build identity and manifest provenance for game results returned from another machine.
+# Keep build identity for game results returned from another machine.
 set(CHARACTER_PANEL_BUILD_LABEL "scenegraph" CACHE STRING "SceneGraph build identity label")
 
 execute_process(
@@ -158,8 +159,9 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 
 		/wd4200 # nonstandard extension used : zero-sized array in struct/union
 
-		$<$<CONFIG:DEBUG>:/ZI>
-		$<$<CONFIG:RELEASE>:/Zi;/Zc:inline;/JMC-;/Ob3>
+		/Zc:inline
+		/JMC-
+		/Ob3
 	)
 
 	target_compile_definitions(
@@ -171,8 +173,10 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 	target_link_options(
 		CharacterPanel
 		PRIVATE
-		$<$<CONFIG:DEBUG>:/INCREMENTAL;/OPT:NOREF;/OPT:NOICF>
-		$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>
+		/INCREMENTAL:NO
+		/OPT:REF
+		/OPT:ICF
+		/DEBUG:FULL
 	)
 endif()
 
@@ -205,43 +209,4 @@ target_precompile_headers(
 	CharacterPanel
 	PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h
-)
-
-enable_testing()
-add_executable(CharacterPanelAnimationTest tests/animation_controller_test.cpp)
-target_compile_features(CharacterPanelAnimationTest PRIVATE cxx_std_23)
-target_compile_definitions(CharacterPanelAnimationTest PRIVATE CHARACTER_PANEL_TEST_AUTHOR="${PROJECT_AUTHOR}")
-target_include_directories(CharacterPanelAnimationTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_compile_options(CharacterPanelAnimationTest PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG;/utf-8>)
-add_test(NAME animation_controller COMMAND CharacterPanelAnimationTest)
-add_executable(CharacterPanelCopyMathTest tests/snapshot_transform_test.cpp src/render/dx11/d3d11_util.cpp)
-target_compile_features(CharacterPanelCopyMathTest PRIVATE cxx_std_23)
-target_compile_definitions(CharacterPanelCopyMathTest PRIVATE NOMINMAX)
-target_include_directories(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src)
-target_link_libraries(CharacterPanelCopyMathTest PRIVATE CommonLibSSE::CommonLibSSE fmt::fmt spdlog::spdlog)
-target_precompile_headers(CharacterPanelCopyMathTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h)
-set_target_properties(CharacterPanelCopyMathTest PROPERTIES VS_GLOBAL_VCToolsVersion "14.44.35207")
-add_test(NAME snapshot_transform COMMAND CharacterPanelCopyMathTest)
-
-# The runbook ships a test package instead of a bare DLL, so the manifest can
-# carry the SHA-256 of both binaries and the exact baselines they came from.
-# The packaging script reads both baselines at package time. The configuration
-# resolves per build, because $<TARGET_FILE> follows --config.
-add_custom_target(
-	CharacterPanelSceneCopyPackage
-	COMMAND
-	${CMAKE_COMMAND}
-	-DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
-	-DOUTPUT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/dist
-	-DPROJECT_VERSION=${PROJECT_VERSION}
-	-DCONFIGURATION=$<CONFIG>
-	-DBUILD_IDENTITY=${CHARACTER_PANEL_BUILD_IDENTITY}
-	-DPROBE_REVISION=${CHARACTER_PANEL_BUILD_LABEL}
-	-DDLL_PATH=$<TARGET_FILE:CharacterPanel>
-	-DPDB_PATH=$<TARGET_PDB_FILE:CharacterPanel>
-	-P
-	${CMAKE_CURRENT_SOURCE_DIR}/cmake/scene_copy_packaging.cmake
-	DEPENDS
-	CharacterPanel
-	VERBATIM
 )

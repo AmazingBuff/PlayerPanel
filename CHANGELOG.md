@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Change CMake to one Release DLL target and remove test, packaging and legacy preset entry points.
+
 ### Removed
 
 - Remove Actor-based preview creation, equipment mirroring and puppet diagnostics; use SceneGraph previews in every build.
