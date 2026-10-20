@@ -87,7 +87,7 @@ namespace animation
     }
 
 
-    enum class ActionKind : std::uint8_t { e_standing_idle, e_weapon_idle };
+    enum class ActionKind : std::uint8_t { e_standing_idle, e_weapon_idle, e_equip, e_unequip };
     struct ActionPrototype
     {
         ActionKind kind;
@@ -103,14 +103,53 @@ namespace animation
     case Form::kOneHanded: return { "Animations\\1hm_idle.hkx" };
     case Form::kTwoHanded: return { "Animations\\2hm_idle.hkx" };
     case Form::kTwoHandedAxe: return { "Animations\\2hw_idle.hkx", "Animations\\2hm_idle.hkx" };
-    case Form::kBow: return { "Animations\\bow_idle.hkx" };
-    case Form::kCrossbow: return { "Animations\\crossbow_idle.hkx", "Animations\\bow_idle.hkx" };
-    case Form::kDualWield: return { "Animations\\dw1hm_idle.hkx", "Animations\\1hm_idle.hkx" };
+    // Vanilla "held" names, taken from the engine's own animation-name table (OAR log
+    // "original animation" lines); the first round of this backend used invented names
+    // (bow_idle/crossbow_idle/torch/dual) that are absent from the table, so the proposal
+    // could not be built at all and the panel stayed empty for those families.
+    case Form::kBow: return { "Animations\\Bow_IdleHeld.hkx" };
+    case Form::kCrossbow: return { "Animations\\DLC01\\CrossBow_IdleHeld.hkx", "Animations\\Bow_IdleHeld.hkx" };
+    case Form::kDualWield: return { "Animations\\DW1HM1HMIdle.hkx", "Animations\\1hm_idle.hkx" };
     case Form::kMagic: return { "Animations\\MRh_Idle.hkx", "Animations\\MLh_Idle.hkx" };
     case Form::kStaff: return { "Animations\\StaffRight_Idle.hkx", "Animations\\StaffLeft_Idle.hkx" };
-    case Form::kTorch: return { "Animations\\MT_IdleTorch.hkx", "Animations\\1hm_idle.hkx" };
+    case Form::kTorch: return { "Animations\\TOR_Idle.hkx", "Animations\\1hm_idle.hkx" };
     case Form::kShield: return { "Animations\\1hm_idle.hkx" };
-    default: return { "Animations\\h2h_idle.hkx" };
+    default: return { "Animations\\H2H_Idle.hkx", "Animations\\MT_Idle.hkx" };
+    }
+}
+
+// The world-side draw/sheathe move for the stance. Same naming rule as the idle table: exact
+// engine names, with the pre-canonical lowercase variants kept as fallbacks for packs that
+// registered their own copies. A one-shot transition is played before the idle after an
+// in-inventory equipment change (the world shows Equip -> Start -> Loop; the panel has no
+// Start/Loop playlist, so the transition hands over to the OAR-selected loop idle).
+[[nodiscard]] inline std::vector<std::string_view> panel_transition_bases(animation::WeaponForm form, bool unequip)
+{
+    using Form = animation::WeaponForm;
+    switch (form)
+    {
+    case Form::kTwoHanded:
+        return unequip ? std::vector<std::string_view>{ "Animations\\2HM_Unequip.hkx", "Animations\\2hc_unequip.hkx" }
+                       : std::vector<std::string_view>{ "Animations\\2HM_Equip.hkx", "Animations\\2hc_equip.hkx" };
+    case Form::kTwoHandedAxe:
+        return unequip ? std::vector<std::string_view>{ "Animations\\2HW_Unequip.hkx", "Animations\\2hw_unequip.hkx" }
+                       : std::vector<std::string_view>{ "Animations\\2HW_Equip.hkx", "Animations\\2hw_equip.hkx" };
+    case Form::kBow:
+        return unequip ? std::vector<std::string_view>{ "Animations\\Bow_Unequip.hkx", "Animations\\bow_unequip.hkx" }
+                       : std::vector<std::string_view>{ "Animations\\Bow_Equip.hkx", "Animations\\bow_equip.hkx" };
+    case Form::kCrossbow:
+        return unequip ? std::vector<std::string_view>{ "Animations\\DLC01\\CrossBow_Unequip.hkx", "Animations\\crossbow_unequip.hkx" }
+                       : std::vector<std::string_view>{ "Animations\\DLC01\\CrossBow_Equip.hkx", "Animations\\crossbow_equip.hkx" };
+    case Form::kMagic:
+        return unequip ? std::vector<std::string_view>{ "Animations\\MRh_Unequip.hkx", "Animations\\MLh_Unequip.hkx" }
+                       : std::vector<std::string_view>{ "Animations\\MRh_Equip.hkx", "Animations\\MLh_Equip.hkx" };
+    case Form::kStaff:
+        return unequip ? std::vector<std::string_view>{ "Animations\\StaffRight_Unequip.hkx", "Animations\\1hm_unequip.hkx" }
+                       : std::vector<std::string_view>{ "Animations\\StaffRight_Equip.hkx", "Animations\\1hm_equip.hkx" };
+    case Form::kNone: return {};
+    default:
+        return unequip ? std::vector<std::string_view>{ "Animations\\1HM_Unequip.hkx", "Animations\\1hm_unequip.hkx" }
+                       : std::vector<std::string_view>{ "Animations\\1HM_Equip.hkx", "Animations\\1hm_equip.hkx" };
     }
 }
 

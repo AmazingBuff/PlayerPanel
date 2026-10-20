@@ -199,3 +199,45 @@ node world 应随父骨变化）。
 的兼容边界决定下一实现工作包：IED placement 查询适配器（装备动作分支）、
 战斗 Start/Loop 分支、安全回收或性能测量。未通过 → 保留日志与 PDB，先修当前缺陷，
 不进入新工作包。
+
+## 6. 第二轮修复（2026-10-20 22:30，待上机）
+
+第一轮实测暴露的三个问题及本轮改动：
+
+1. **弓开包无面板（扩散到弩/火把/双持/空手）**：`panel_idle_bases` 使用了引擎动画名表
+   不存在的臆造名（`bow_idle.hkx`、`crossbow_idle.hkx`、`MT_IdleTorch.hkx`、`dw1hm_idle.hkx`、
+   `h2h_idle.hkx`）。`find_base_animation` 失败后 `queue()` 不建立提案 → `ready()` 恒假 →
+   `drawable()` 假 → 不合成 → 面板整块消失（截图 1）。现改为引擎原名：`Bow_IdleHeld.hkx`、
+   `DLC01\CrossBow_IdleHeld.hkx`、`TOR_Idle.hkx`、`DW1HM1HMIdle.hkx`、`H2H_Idle.hkx`；
+   并新增“族基名缺失 → MT_Idle 兜底”，任何族缺名都不再空白。
+2. **背包内换装直接跳到 idle**：新增 equip/unequip 一次性过渡。`reason='equipment'` 且装备
+   变化时先播 `panel_transition_bases()`（装备=Equip、卸下=Unequip、同族换武器按 Equip），
+   时钟到边界后由既有 `queue_idle()` 接回 idle；开包沿仍直接进 idle（没有世界过渡可镜像）。
+3. **idle 是原版而非 OAR**：DAC 准备失败时不再强制 `direct`，仍向 OAR 查询（源角色自身
+   效果）：能选中替换件就用，否则才落基名。第一轮日志显示全部 33 条原生规则被拒、
+   `DAC snapshot effects=0 scope=0`；本轮给 `copy_rule` 的每个被拒法术加详细字段行
+   （`vmad/delivery/casting/cost/perk/effects/type`），用于精确定位为何 `Smooth_loop`
+   （0x80A/0x810/0x82E）整条被拒。
+
+| 项目 | 值 |
+| --- | --- |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-9f943e12c8+dirty-cl94faaed0c6-20261020T143009Z` |
+| DLL SHA-256 | `6B16DABDF0F53EF1F0B1598588BECFF0D2A486C8F14C4E0B216F21C69C3C3759` |
+| PDB SHA-256 | `A95A5555CFF62D5F48ED42E419183EA2A10F39B3BAA014E67E867028380B8654` |
+| 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步） |
+| 本地回归 | Release 配置/构建通过；`animation_controller_test` 2/2 通过 |
+
+第二轮判读：
+
+- **弓（开包）**：`goal=non-combat-idle family=bow` → `state=… path='Animations\Bow_IdleHeld.hkx'`
+  → `asset ready … replaced=true|false` → 面板出现（不再空白）。
+- **背包内换到弓**：`ANIMATION … transition=equip form=bow` → `asset ready … path='Animations\Bow_Equip.hkx'`
+  （或 OAR 替换件）→ `handover action=2 …` → 过渡结束后 `goal=… family=bow` →
+  `asset ready … Bow_IdleHeld.hkx`。这就是与游戏世界一致的 Equip → Idle。
+- **卸下武器**：`transition=unequip form=…` → `…Unequip.hkx` → 随后 `MT_Idle`。
+- **OAR 最终 idle**：若出现 `native idle goal unavailable; querying OAR without preparation`
+  且随后 `asset ready … replaced=true`，说明 OAR 选中的替换件已经生效；`replaced=false`
+  则把同请求的 `state=`/`diagnostic=` 行发回。
+- **DAC 诊断**：启动后每个被拒法术一行 `DAC native spell … rejected: … (vmad=… delivery=…
+  casting=… cost=… perk=… effects=… type=…)`；把 `event='Smooth_loop'` 对应的三行
+  （`sp_loop on` / `sp_combat off` / `sp_combat_loop off`）发回，即可定位预检误拒的字段。

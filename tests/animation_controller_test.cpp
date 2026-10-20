@@ -45,6 +45,15 @@ void default_equipment_idle_waits_for_native_goal_and_keeps_entry_snapshot()
     const auto baseline = actor.effects;
     assert(!target.direct && target.drawn() && target.form == animation::WeaponForm::kOneHanded);
     assert(target.bases().front() == "Animations\\1hm_idle.hkx");
+    // Vanilla animation-name spellings (OAR "original animation" table): the first backend
+    // round invented bow_idle/crossbow_idle/MT_IdleTorch/dw1hm_idle names, which the engine
+    // table does not contain, so those families produced no proposal and no panel.
+    assert(panel_idle_bases(animation::WeaponForm::kBow).front() == "Animations\\Bow_IdleHeld.hkx");
+    assert(panel_idle_bases(animation::WeaponForm::kCrossbow).front() == "Animations\\DLC01\\CrossBow_IdleHeld.hkx");
+    assert(panel_idle_bases(animation::WeaponForm::kTorch).front() == "Animations\\TOR_Idle.hkx");
+    assert(panel_idle_bases(animation::WeaponForm::kDualWield).front() == "Animations\\DW1HM1HMIdle.hkx");
+    assert(panel_transition_bases(animation::WeaponForm::kOneHanded, false).front() == "Animations\\1HM_Equip.hkx");
+    assert(panel_transition_bases(animation::WeaponForm::kBow, true).front() == "Animations\\Bow_Unequip.hkx");
     dac::SessionCore session;
     dac::IdlePreparation goal;
     session.request(1);
@@ -61,7 +70,7 @@ void default_equipment_idle_waits_for_native_goal_and_keeps_entry_snapshot()
     goal.finish(2, actor.ready());
     assert(goal.status(2) == dac::IdleReadiness::e_ready);
     const auto empty = animation::idle_target(animation::WeaponForm::kNone, false, setting);
-    assert(empty.empty() && !empty.direct && empty.drawn() && empty.bases().front() == "Animations\\h2h_idle.hkx");
+    assert(empty.empty() && !empty.direct && empty.drawn() && empty.bases().front() == "Animations\\H2H_Idle.hkx");
     session.begin(actor.effects);
     session.request(3);
     assert(goal.start(3, true) == dac::IdleWork::e_observe && goal.status(3) == dac::IdleReadiness::e_pending);

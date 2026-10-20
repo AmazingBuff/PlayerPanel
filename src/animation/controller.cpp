@@ -415,6 +415,12 @@ public:
         if (!selected.found)
         {
             logger::warn("ANIMATION actor={:08x} request={} idle base/query unavailable diagnostic='{}'", actor_id, generation, selected.diagnostic);
+            // A missing family base must not blank the panel: the previous behaviour returned
+            // without a proposal, so `ready()` stayed false and the studio draw never composited.
+            // Fall back to the standing base (one level only; direct avoids a recursion loop).
+            if (!direct)
+                queue(source, { "Animations\\MT_Idle.hkx" }, { ActionKind::e_standing_idle, WeaponForm::kNone, true },
+                    preview_state(false), reason, true, activation, reusable);
             return;
         }
         proposal->stage = { action, selected };
@@ -478,8 +484,14 @@ public:
             const dac::IdleReadiness readiness = session->idle_readiness(generation);
             if (readiness == dac::IdleReadiness::e_pending || readiness == dac::IdleReadiness::e_none)
             { waiting_goal = true; waiting_reason = reason; return; }
-            direct = readiness == dac::IdleReadiness::e_failed;
-            if (direct) base_fallback = true;
+            if (readiness == dac::IdleReadiness::e_failed)
+            {
+                // Native preparation is unavailable. Query OAR against the source's own effects
+                // anyway: a real replacement is still the authored idle, and the query itself
+                // falls back to the base when its conditions do not hold. The old path forced
+                // `direct` here, which skipped the query entirely and always showed vanilla.
+                logger::warn("ANIMATION actor={:08x} request={} native idle goal unavailable; querying OAR without preparation", actor_id, generation);
+            }
         }
         waiting_goal = false;
         std::vector<std::string_view> bases = target.direct || (direct && target.empty()) ?
@@ -520,6 +532,7 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     state.session = &session;
     const IdleTarget target = idle_target(observation.form, observation.left_primary, unarmed_idle_setting());
     const bool equipment_changed = !state.has_observation || state.observed.hands != observation.hands || state.target != target;
+    const WeaponForm previous_form = state.has_observation ? state.observed.form : WeaponForm::kNone;
     state.actor_id = source.GetFormID();
     state.source_handle = source.GetHandle();
     state.generation = observation.request_generation;
@@ -536,6 +549,27 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     if (!equipment_changed && state.active) state.active->generation = state.generation;
     std::unique_ptr<Proposal> loading = std::move(state.pending);
     state.idle_due = false;
+
+    // An in-inventory equipment change plays the world's draw/sheathe move once, then hands
+    // over to the idle (the boundary in advance() queues the idle). Opening the panel keeps the
+    // immediate-idle behaviour: there is no world transition to mirror at that edge.
+    if (equipment_changed && observation.reason == "equipment")
+    {
+        const bool unequip = target.empty();
+        const WeaponForm form = unequip ? previous_form : target.form;
+        const std::vector<std::string_view> bases = panel_transition_bases(form, unequip);
+        const auto names = oar::animation_names(state.graph->characterInstance, state.query);
+        if (!bases.empty() && oar::find_base_animation(names, bases))
+        {
+            logger::info("ANIMATION actor={:08x} request={} transition={} form={}", state.actor_id, state.generation,
+                unequip ? "unequip" : "equip", weapon_form_name(form));
+            state.queue(source, bases, { unequip ? ActionKind::e_unequip : ActionKind::e_equip, form, false },
+                preview_state(!unequip), ChoiceReason::e_request, unequip, false, loading.get());
+            return;
+        }
+        logger::warn("ANIMATION actor={:08x} request={} transition base unavailable form={}; idle only", state.actor_id,
+            state.generation, weapon_form_name(form));
+    }
     state.queue_idle(source, equipment_changed ? ChoiceReason::e_request : ChoiceReason::e_refresh, loading.get());
     if (state.waiting_goal) state.pending = std::move(loading);
 }
@@ -607,7 +641,10 @@ void AnimationController::poll()
     if (proposal.calibration && proposal.calibration->failed()) proposal.calibration.reset();
     if (!proposal.standing->ready() || !proposal.asset->ready()) return;
     // Loader fallback metadata describes the actual retained binding, not the rejected choice.
-    if (proposal.stage.clip.replaced && !proposal.asset->selection().replaced) state.base_fallback = true;
+    // A one-shot transition must not pin the idle to the base: its fallback is about that move,
+    // while the following idle still deserves the query.
+    if (proposal.stage.action.kind != ActionKind::e_equip && proposal.stage.action.kind != ActionKind::e_unequip &&
+        proposal.stage.clip.replaced && !proposal.asset->selection().replaced) state.base_fallback = true;
     proposal.stage.clip = proposal.asset->selection();
     if (state.base_fallback || (state.target.empty() && !proposal.stage.clip.replaced)) proposal.direct = true;
     state.blend_duration = 0.0;

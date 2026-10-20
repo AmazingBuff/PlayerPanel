@@ -6,6 +6,7 @@
 #include "RE/B/BSAnimationGraphEvent.h"
 #include "RE/E/Effect.h"
 #include "RE/E/EffectSetting.h"
+#include "RE/S/SpellItem.h"
 #include <Windows.h>
 #include <cstring>
 
@@ -65,6 +66,21 @@ namespace
         }
         return false;
     }
+    void log_rejected_spell(RE::MagicItem const& magic, std::string const& reason)
+    {
+        RE::SpellItem const* const spell = magic.As<RE::SpellItem>();
+        if (!spell)
+        {
+            logger::warn("DAC native spell {:08x} is not a SpellItem (reason: {})", magic.GetFormID(), reason);
+            return;
+        }
+        char const* const name = spell->GetFullName();
+        logger::warn("DAC native spell {:08x} '{}' rejected: {} (vmad={} delivery={} casting={} cost={} perk={} effects={} type={})",
+            spell->GetFormID(), name ? name : "", reason, spell->HasVMAD(),
+            static_cast<int>(spell->data.delivery), static_cast<int>(spell->data.castingType), spell->data.costOverride,
+            static_cast<void const*>(spell->data.castingPerk), spell->effects.size(),
+            static_cast<int>(spell->data.spellType));
+    }
     RuleScope copy_rule(void const* trigger)
     {
         static_assert(sizeof(RE::BSFixedString) == 8);
@@ -98,7 +114,11 @@ namespace
         {
             std::string reason;
             if (!spell || !restorable_spell(*spell, reason))
-            { result.rejection = spell ? std::move(reason) : "native spell pointer unavailable"; continue; }
+            {
+                if (spell) log_rejected_spell(*spell, reason);
+                result.rejection = spell ? std::move(reason) : "native spell pointer unavailable";
+                continue;
+            }
             result.spells.push_back(spell->GetFormID());
             for (RE::Effect const* effect : spell->effects)
                 if (effect->baseEffect->data.flags.any(RE::EffectSetting::EffectSettingData::Flag::kDispelWithKeywords))
