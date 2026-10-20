@@ -2,107 +2,94 @@
 
 ## Purpose
 
-Continue a standing preview from the source actor's observed entry phase, then hand over to a stable idle. Equip enters at its sampled local time, hands over to a complete Start, and reaches Loop. A missing Loop cannot turn Start into an indefinite idle.
+Continue the source Actor's observed draw/sheathe or idle phase, dispatch accepted HKX annotation events through native DAC, and ask OAR for replacements using the Actor's actual effects. Folder labels do not define playback order: Loop2 remains an alternative chosen by conditions and priority.
 
 ## Scope and non-goals
 
-This module covers standing, weapon draw/sheathe and optional hand posture. It supports independent actor records internally. It adds no multi-actor UI, movement/attack mirroring, world animation events, physics integration or safe native graph teardown. Optional hand contributors use an explicit hand/finger mask; no separate hand layer is enabled by default.
+The module covers detached standing, weapon draw/sheathe and optional hand posture, with independent clocks/history per controller. It does not create an Actor, drive the original behavior graph, simulate magic, parse DAC TOML, mirror locomotion/attacks or change native graph retirement. Original Actor marker effects are temporarily borrowed by [dac::Session](dac.md), which restores captured entry effects on inventory close; equipment and unrelated gameplay state remain outside that transaction.
 
 ## Architecture
 
-`PanelMonitor` records InventoryMenu state and a revision. `CharacterManager::update` distributes lifecycle inputs and equipment revisions inside the serialized render bracket. Event callbacks only increment watched actor revisions.
+`PanelMonitor` observes InventoryMenu only. `CharacterManager` owns equipment revisions and distributes source/lifecycle inputs inside the serialized render bracket. Each `SceneGraph` owns one `AnimationController` and one `dac::Session`. Appearance/source graph recapture retargets pose nodes without reseeding the inventory entry effect snapshot.
 
-Each `SceneGraph` owns `MonitorState` and `animation::AnimationController`. Observation retains the actor handle, stance, clip index/local phase, equipment revision, source graph generation, request generation and dirty reason. Replacing the detached display graph calls `replace_graph` and retargets the same controller; it preserves playback time and maps every node again.
-
-OAR is a query boundary. It audits conditions and returns copied replacement, variant and candidate descriptors. The animation module plans ordered actions, owns accepted variant history and caller-local Random state, loads clip leases, advances only the visible stage, composes pose contributors/crossfade, then writes each skeleton node once. `SceneGraph::capture_graph` privately copies/audits its source graph; `retire_graph` parks retired allocations across preview lifetimes. Renderer pumps the manager and draws.
+Accepted playback owns one `EventClock`. Its annotations enqueue native DAC-only processing through the session's serialized UI task queue. Native effect observations publish revisions; OAR queries read actual source Actor effects, while retaining the existing standing/equipment/identity condition policy. The controller owns copied choice metadata, staged Random/variant history, asynchronous clip leases, current request/state acceptance and pose composition.
 
 ## Code map
 
 | Path | Stable entry point |
 | --- | --- |
-| [action.h](../src/animation/action.h) | `ActionKind`, `ActionPrototype`, folder compatibility rules |
-| [sequence.h](../src/animation/sequence.h) | `idle_sequence`, `PlaybackTimeline`, `resume_continuation`, `RequestGeneration`, `BoneMask`, `compose_contributor` |
-| [controller.h](../src/animation/controller.h), [controller.cpp](../src/animation/controller.cpp) | `SourceObservation`, `AnimationController::request`, `retarget`, `poll`, `advance` |
-| [clip.h](../src/animation/clip.h), [clip.cpp](../src/animation/clip.cpp) | `ClipPlayback`, `resolve_binding_playback`, `sample_animation_clip`, `strongest_idle_clip` |
-| [pose.h](../src/animation/pose.h), [variant_state.h](../src/animation/variant_state.h) | pose blend, assembly settle gate, `SelectionState` |
-| [scene_graph.h](../src/character/scene_graph.h) | `SceneGraph::MonitorState`, `update_monitor`, `observe_source`, `schedule_animation`, `replace_graph` |
-| [character_manager.cpp](../src/character/character_manager.cpp) | `CharacterManager::install`, `EquipSink::ProcessEvent`, `update`, `clear_previews` |
-| [scene_graph_capture.cpp](../src/character/scene_graph_capture.cpp) | private `SceneGraph::capture_graph`, `retire_graph` |
-| [hooks.h](../src/oar/hooks.h), [hooks.cpp](../src/oar/hooks.cpp) | `AnimationDescriptor`, `AnimationSelection`, `query_animation` |
-| [query_policy.h](../src/oar/query_policy.h), [selection_state.h](../src/oar/selection_state.h) | project catalogue, caller-owned condition Random state, copied variant metadata |
-| [panel_monitor.cpp](../src/panel/panel_monitor.cpp) | InventoryMenu state/revision only |
+| [action.h](../src/animation/action.h) | `ActionKind`, `entry_action_kind`, engine base-name families |
+| [event_clock.h](../src/animation/event_clock.h), [event_clock.cpp](../src/animation/event_clock.cpp) | `EventClock`, `Annotation`, `clip_annotations` |
+| [controller.h](../src/animation/controller.h), [controller.cpp](../src/animation/controller.cpp) | `SourceObservation`, `AnimationController::request`, `poll`, `advance`, `retarget`, `apply_standing_pose` |
+| [sequence.h](../src/animation/sequence.h), [variant_state.h](../src/animation/variant_state.h) | current `Stage`, pose masks/composition and accepted `SelectionState` |
+| [clip.h](../src/animation/clip.h), [clip.cpp](../src/animation/clip.cpp) | `ClipPlayback`, retained binding ownership, mapping and detached pose samples |
+| [session.h](../src/dac/session.h), [session.cpp](../src/dac/session.cpp) | native event tasks, revision observation and inventory transaction lifecycle |
+| [hooks.h](../src/oar/hooks.h), [hooks.cpp](../src/oar/hooks.cpp) | `AnimationSelection`, copied query-only replacement metadata and source effect conditions |
+| [scene_graph.h](../src/character/scene_graph.h) | SceneGraph-owned animation/session and source observation |
+| [animation_controller_test.cpp](../tests/animation_controller_test.cpp) | the two focused transaction/event cases |
 
 ## Interfaces
 
-[ActionKind and ActionPrototype](../src/animation/action.h) define the following stages. Weapon forms parameterize base names; entry phase is an input snapshot, not another action family.
+`SourceObservation` supplies stance, hands/form, source binding index/time, request/source-graph generations and reason. Engine clip filenames identify known idle/draw/sheathe families; mod folder names never define transition roles, looping or successors.
 
-| ActionKind | Numeric value | Planned role |
+| ActionKind | Value | Role |
 | --- | --- | --- |
-| `e_standing_idle` | 0 | stable standing body/idle |
-| `e_equip` | 1 | finite draw stage; observed entry resumes its sampled local phase |
-| `e_weapon_idle_start` | 2 | optional finite idle-entry member |
-| `e_weapon_idle_loop` | 3 | weapon idle member; only a stage explicitly marked loop may dwell |
-| `e_unequip` | 4 | finite sheathe stage, handing over to standing |
-| `e_hand_idle` | 5 | optional hand/finger-masked contribution; no separate hand layer enabled by default |
+| `e_standing_idle` | 0 | standing idle |
+| `e_equip` | 1 | finite draw |
+| `e_weapon_idle` | 2 | condition-selected idle |
+| `e_unequip` | 3 | finite sheathe |
+| `e_hand_idle` | 4 | optional masked hand/finger contribution |
 
-[SourceObservation](../src/animation/controller.h) carries drawn state, weapon form/hands, source clip index/time, request generation, source graph generation and reason. A captured Equip resumes its own phase, then a full Start begins at handover, then Loop. Start or Loop entry resumes the matching sampled stage. Preloading successors never advances their clocks. `PlaybackTimeline` and `resume_continuation` in [sequence.h](../src/animation/sequence.h) keep accepted continuation at the phase currently visible when an appearance refresh finishes loading.
+`AnimationController::request` also receives its SceneGraph's `dac::Session`. The session receives the latest request generation immediately; obsolete queued equipment events cannot mutate a later request. Appearance-only changes adopt the generation for future accepted-clip events while rejecting already queued old events.
 
-`AnimationSelection::name` and descriptor `path` carry logical replacement paths; `binding_name` identifies the possibly deduplicated engine catalogue entry. `index` remains the actual loading index. No native candidate pointer escapes the read lock.
+Selection logical `name`/descriptor `path` remain separate from actual loading `index`/`binding_name`. Copied interruptibility, replace-on-loop, blend durations and native variant/PlayOnce/Random metadata survive only as values, never dereferenceable native candidate pointers.
 
-`query_animation` may update only its caller's condition Random cache. It cannot seek, commit, dwell or advance playback. Variant selection/PlayOnce acceptance and loop reevaluation belong to the controller. The shared catalogue contains only copied project metadata and is invalidated at a load boundary through `QuerySession::invalidate_projects`.
+## Event timing and native state
 
-## Ordered Start/Loop playback
+`clip_annotations` reads retained `hkaAnimation::annotationTracks`, validates times once and stable-sorts them chronologically. `EventClock` dispatches each crossed occurrence once, including zero/end boundaries and loop wrap. Fresh clips may emit zero-time events. A source-phase resume skips annotations through the observed time. Compatible refreshes and retarget preserve clock/cursor.
 
-`idle_sequence` first uses a nonempty native variant sequence. It plans against a copy of the actor's accepted `SelectionState` history, skipping consumed PlayOnce members and following the metadata's sequence/random policy. A sequential final member repeats only when it is not PlayOnce; a selected random member is a loop stage. A native sequence with no repeating member appends the stable standing idle. Planning does not commit the live history: `State::handover` commits each accepted stage.
+Only current accepted playback emits events. Loading, vanilla calibration/standing underlay and outgoing fades never replay annotations. Event intervals consume remaining frame time; finite completion and loop boundaries keep the existing semantics. Delta remains clamped to 0–0.1 seconds. Observed draw/sheathe resumes its recorded phase; typed equipment requests begin at zero. Idle is queried at actual finite completion, rather than preplanned before draw events have run.
 
-Without native sequence metadata, the folder adapter uses logical candidate paths. `collect_sequence_family` requires a case-insensitive match of filename, root above the member folder, and member-folder stem after stripping Start/Loop and episode digits. It sorts Start before Loop, then by numeric episode and catalogue index. For `Start → Loop → Loop2`, Start and Loop are finite and only Loop2 repeats. A Start-only family, or a lone Start with no supported Loop metadata, finishes and hands over to the vanilla stable standing idle with a diagnostic. An anchor with no sequence marker or family becomes a repeating idle.
+Native DAC is asynchronous relative to render sampling. Call completion and actual effect visibility are distinct: `Session::observe` publishes real native effect changes through a revision on SKSE UI tasks. Interruptible idles may requery when that revision changes; noninterruptible idles wait for a boundary. Pending choices recheck revisions before acceptance and retain a compatible in-flight lease. An event at 2.5 seconds can change eligibility before clip end when the paused engine applies the native effects; no synthetic marker state is manufactured to hide delayed application.
 
-At `panel-open`, `AnimationController::request` uses the recorded binding index and local time. Equip or Unequip is prepended at that sampled time; Equip then hands over to the planned Start at zero, while Unequip hands over to standing. If the observed index matches a planned Start or Loop member, earlier members are removed and that member resumes at the observed time. If there is no match and the observed entry is not Start, planning skips to the repeating stage. A nonmatching Start entry retains the planned entry sequence. An equipment-change request instead queries a finite draw/sheathe transition at zero. An appearance refresh uses `resume_continuation` at acceptance to preserve the currently visible matching stage and time, or resume at the loop if it cannot match.
+At loop boundaries, retain OAR replace-on-loop and native sequence/PlayOnce/Random scope semantics. Same-replacement interrupt or appearance queries preserve the accepted variant/history. Native choices are proposed from copied state and committed only at acceptance/permitted boundaries. No Start → Loop → Loop2 playlist exists.
 
-`poll` preloads the proposal's stage assets, then starts one active `PlaybackTimeline`; successors have zero start time unless explicitly observed or continued. `advance` samples the current stage at its stored time, combines it over the standing contribution, writes the pose, then advances the timeline by the frame delta (clamped to 0–0.1 seconds). A finite stage hands over when its clock reaches its duration (minimum 0.05 seconds); the successor begins at its own start time without carrying excess time. Loading a successor never runs its clock. A loop-marked stage stays current and samples cyclically; fixed native sequential choices stay there, while other loops can reevaluate conditions/variants at cycle boundaries. A changed choice loads a new proposal, and a folder-family loop recheck skips its entry stages.
+## Pose mixing and placement
 
-## Restored pose mixing and placement
+The outgoing asset remains alive and its pose advances while the incoming clip is sampled. Local fades use copied OAR interrupt/loop durations, including zero; native variant policy can suppress a between-variant fade. Event dispatch for the outgoing clip stops at handover.
 
-Every accepted proposal and finite-stage handover calls the same `State::handover`: it copies the last composed pose into `blend_from` and resets `blend_seconds` to zero. Over the next 0.4 seconds, `advance` blends that frozen outgoing snapshot toward each newly sampled incoming pose, then clears the snapshot. The outgoing clip does not continue advancing during the fade. This applies uniformly to Equip → Start, Start → Loop and other handovers; it is not an overlap of two running clips or an OAR blend operation.
-
-The two continuity experiments (`1b77db4` and `f897391`) are reverted. Their cut/conditional-fade policies changed mixing, not sequence order or clocks. The retained `fc8c7ba` fix separately calibrates placement from vanilla MT_Idle before the action write; see [SceneGraph invariants](scene-graph.md#invariants). The rollback restores the earlier mixing policy and does not establish a game-time continuity fix or root cause.
-
-This sequence is a local playlist of offline pose samples. OAR supplies copied metadata and condition results; the panel does not fire the world's animation events or advance its behavior graph. Local ordering and snapshot fades do not prove how the active world graph blends these moves.
+This is detached pose composition, not OAR's native ActiveClip blender. It does not reproduce ActiveClip loop lookahead or end-relative incoming seek; incoming clips start at zero unless explicitly resuming the source phase. Calibration remains independent vanilla MT_Idle at zero through `apply_standing_pose`, before the current action write. Neither a native effect event nor replacement selection changes placement.
 
 ## Invariants and compatibility
 
-- Only a current actor request generation may accept pending resources. Requests and random/variant histories never cross actors.
-- Preloaded successors have no running clock. Handover starts a successor at zero unless it is the explicitly observed entry stage.
-- Native OAR sequence metadata takes precedence. Otherwise the explicit folder adapter requires the same root, filename and Start/Loop stem. Logical candidates preserve a Loop even when the engine registers it under an unrelated hash-deduplicated name.
-- Only explicit loop stages dwell. Start-only families finish and hand over to a stable non-Start standing idle with a diagnostic.
-- Non-mirrored attack/locomotion entries enter an idle loop. Unequip finishes in standing. Appearance revisions refresh conditions without inventing a weapon draw; unchanged choices preserve phase.
-- Retargeting clears all old node mappings; pose contributors are combined before one skeleton write. A hand mask admits only the chosen side's hand/finger nodes.
-- Crossfade is local pose composition. OAR's internal ActiveClip blending requires an active behavior graph; the pinned public API has no detached offline blend entry point.
+Only current request/source generations and native effect revisions can accept new resources. Accepted playback stays visible while a replacement loads. Same-equipment refresh reevaluates current conditions without inventing draw motion and preserves matching clocks. Source graph replacement resets graph-specific playback safely while preserving the independent menu transaction.
 
-## Failure modes
+Clocks, accepted history and native session snapshots remain per Actor record. SceneGraph owns the display; PanelMonitor stays inventory-only. The original Actor graph/transforms are read-only; the only approved original-Actor mutations are bounded native DAC marker casts and effect restoration. Existing rendering, attachments, calibration and parked graph retirement remain unchanged.
 
-Missing projects/bases leave the preview loading. Rejected replacement bindings fall back to their base; unsupported additive bindings and incomplete standing coverage are diagnosed. Failed sequence assets hand over to standing. New requests discard older proposals and unload their leases. An expired source handle releases its actor record; temporary missing 3D suspends the session while retaining the actor record. Load boundaries queue controller/resource release in the serialized bracket and invalidate project metadata.
+## Failure modes and logs
 
-Graph audits may reject a recapture, in which case the last accepted graph remains. Retired graph allocations intentionally remain parked because safe native destruction is unresolved. Event logs report actor ID, request/reason, action/path/index, handover, cancellation/load failure and graph retarget; they do not log each frame or bone.
+Missing/mismatched native DAC disables phase-event processing once and leaves preview playback available. Unsupported native rules or unrelated keyword collisions reject the entire preview event. The [DAC document](dac.md) defines exact profile/restoration failures and `MISMATCH` logs.
+
+Missing bases/projects retain loading or accepted playback. Concrete binding rejection retains the existing base fallback and clears rejected replacement policy. Failed proposals keep the old visible clip. ABI mismatches refuse OAR queries under unchanged identity/prefix gates. Logs identify actor/request/source generation, choice/state revision/path/index/reason, annotation/time, asset failure, handover/blend and retarget; native snapshot/event/revision/restore logs are under DAC. No frame/bone spam is added.
 
 ## Dependencies
 
-No new dependencies. The runtime uses the existing Skyrim/CommonLib, Havok loader, SKSE logger and audited OAR 3.1.6/3.2.1 profiles. See [OAR ABI evidence](oar-hooks.md). OAR's authoritative source pin is `f4e7688b065175aff70aa523073857911e15aca3`. Private ABI reads require profile identity and prefix matches.
+Existing Skyrim/CommonLib/Havok/SKSE and audited OAR 3.1.6/3.2.1 remain. Native event support requires the supported original DAC NG Plus binary described in [dac.md](dac.md#original-binary-compatibility-and-provenance). CharacterPanel has no tomlplusplus runtime link or parser. No DAC rebuild or tomlplusplus package is required. See [build setup](build.md).
+
+## Smooth Moveset support boundary
+
+The [canonical compatibility boundary](dac.md#smooth-moveset-compatibility-boundary) separates the core non-combat phase prerequisites from IED-dependent equipment branches and the TDM-effect OR combat-state branch. The core event/native-DAC/query mechanism does not imply complete pack coverage. IED placement conditions still need an explicit preview query adapter, even when IED and its provider are installed. The current standing projection answers `IsCombatState` with zero, so source world combat alone does not enable that OR alternative. No IED or combat-policy behavior is changed here.
 
 ## Tests and verification
 
-The two preserved [animation cases](../tests/animation_controller_test.cpp) cover entry-phase/complete descriptor sequencing and independent latest-request/continuation/mask behavior. [Graph/math sources](../tests/snapshot_transform_test.cpp) retain earlier consumers. Current CMake does not register these test targets; they are reference material.
+Exactly two direct-compiled [cases](../tests/animation_controller_test.cpp) use production `SessionCore`/`EventClock` with a narrow fake engine backend: entry/event/close restoration preserving unrelated/equipment state; and stale requests, close/reopen, load/reset and independent sessions. They do not execute native DAC/OAR/Skyrim effect creation. [Retained graph/math sources](../tests/snapshot_transform_test.cpp) remain outside CMake and are not part of this task's executed cases.
 
-[Build verification](build.md#verification-and-limits) records the prior native results and separates them from current build-only checks and unverified Skyrim hooks, native loading, visuals and lifetime behavior. [Debugging navigation](code-maintenance.md#debugging-navigation) maps request/asset/stage/cancellation/retarget logs to their owners.
+[Build verification](build.md#verification-and-limits) documents the CharacterPanel build and original-binary maintenance inspector. No local Skyrim process exists: paused native effect application/expiration, close restoration visibility/order, hooks, visuals and native lifetime remain unverified.
 
 ## Safe modification
 
-Keep lifecycle/event observation in the manager, per-actor requests in the SceneGraph/controller and query ABI reads in OAR. Preserve loading leases, source handles, graph generation checks, latest-request checks and existing graph parking. Do not add fallback chains to compensate for unsupported metadata. Extend action planning rather than changing source actor graphs or emitting world events.
+Keep all DAC native metadata/safety, transaction capture/restoration and UI/task lifecycle inside src/dac. Animation owns only annotation clocks, resource/history acceptance, queries and poses. Preserve loader leases, request/revision guards, vanilla calibration and graph parking. Do not reintroduce effect projections, a parser/emulator fallback, folder ordering or original graph event dispatch.
 
-## Synchronized files
+## Synchronized files and related history
 
-Keep the animation module, direct character/render/panel consumers, [CMakeLists.txt](../CMakeLists.txt), both test entry points, [README](../README.md), [Changelog](../CHANGELOG.md), [maintenance map](code-maintenance.md), [build guide](build.md), [OAR query history](oar-preview-query-2026-10-16.md) and [ABI history](oar-hooks.md) synchronized.
-
-## Related history
-
-The [2026-10-16 query report](oar-preview-query-2026-10-16.md) and [OAR hook report](oar-hooks.md) retain earlier experiments. Their process-global scheduler and Start-only dwell claims are historical and superseded by this document. The sole preview owner is documented in [SceneGraph previews](scene-graph.md); Actor/puppet diagnostic routes are retired. Rendering and graph retirement retain their existing policies.
+Maintain this document with [dac.md](dac.md), [README](../README.md), [Changelog](../CHANGELOG.md), [build](build.md), [OAR hooks](oar-hooks.md), [SceneGraph](scene-graph.md), [maintenance](code-maintenance.md), [runtime notes](../tools/scene_copy/README.txt), implementation and focused test consumers. Earlier virtual markers/folder playlists and Actor/puppet experiments in [historical reports](history.md) are superseded. The retained calibration fix and native graph retirement policy remain independent.

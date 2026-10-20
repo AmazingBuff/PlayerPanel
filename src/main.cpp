@@ -9,6 +9,7 @@
 #include "render/studio/light.h"
 #include "input/input.h"
 #include "oar/hooks.h"
+#include "dac/session.h"
 
 namespace
 {
@@ -39,6 +40,7 @@ namespace
             (void)PLUGIN_NAMESPACE::oar::install_hooks();
             break;
         case SKSE::MessagingInterface::kDataLoaded:
+            PLUGIN_NAMESPACE::dac::install();
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
             PLUGIN_NAMESPACE::Renderer::install();
             PLUGIN_NAMESPACE::PanelMonitor::instance().install();
@@ -50,6 +52,7 @@ namespace
             break;
         case SKSE::MessagingInterface::kPreLoadGame:
         case SKSE::MessagingInterface::kNewGame:
+            PLUGIN_NAMESPACE::dac::reset_world();
             PLUGIN_NAMESPACE::CharacterManager::instance().clear_previews();
 
             break;

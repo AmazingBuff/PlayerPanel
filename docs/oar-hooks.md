@@ -8,7 +8,25 @@
 
 Both PDB field lists confirm `ReplacementAnimation::_originalIndex=0xA8`, `_bDisabled=0xAA`, `_path=0xB0`, `_projectName=0xD0`, `_parentSubMod=0x108`, size 272. `Variant::_index=0`, `_filename=8`, `_bDisabled=0x28`, `_bPlayOnce=0x29`, size 56. Evidence: `llvm-pdbutil dump --types --type-index=0x4473 --type-index=0x42D3` for 3.1.6 and types `0x7A73` / `0x7899` for 3.2.1 against the provided DLL/PDB pairs. Earlier +0xA8 path hypotheses confuse the original index with the string; use +0xB0.
 
-The authoritative source pin `f4e7688b065175aff70aa523073857911e15aca3` registers replacement bindings at project construction and may hash-deduplicate their names. `AnimationDescriptor::path` therefore remains separate from `binding_name` and the actual loading `index`. Native variant metadata is copied under its variant read lock. Conditions and caller-owned Random evaluation stay in OAR; accepted variant history, Start/Loop folder compatibility, clocks and crossfade belong to animation. OAR's internal ActiveClip blending needs an active behavior graph; the pinned public API offers no detached offline blend entry point.
+The authoritative source pin `f4e7688b065175aff70aa523073857911e15aca3` registers replacement bindings at project construction and may hash-deduplicate their names. `AnimationDescriptor::path` therefore remains separate from `binding_name` and the actual loading `index`. Native variant metadata is copied under its variant read lock. Conditions and caller-owned Random evaluation stay in OAR; accepted variant history, annotation clocks and local crossfade belong to animation; native processing and session restoration belong to [DAC](dac.md). OAR's internal ActiveClip blending needs an active behavior graph; the pinned public API offers no detached offline blend entry point.
+
+
+## Native Actor effects and copied metadata (2026-10-20)
+
+`HasMagicEffect` and `HasMagicEffectWithKeyword` now follow OAR's ordinary source Actor evaluation, including its own Active effects only/disabled/negated semantics. The independent effect projection was removed. [dac::Session](dac.md) dispatches accepted preview events through the exact native DAC-only handler and restores captured marker effects on inventory close; all DAC transaction logic stays outside OAR. Existing source/clip evaluation scoping and standing/equipment/identity policy remain.
+
+Smooth Moveset's [compatibility boundary](dac.md#smooth-moveset-compatibility-boundary) documents remaining query limits. `audit` rejects enabled third-party conditions with `third-party condition requires an explicit preview adapter`; installing IED and OpenAnimationReplacer-IEDConditionExtensions alone does not bypass that gate. Equipment placement branches need an explicit IED query adapter. The combat Start/Loop configs use TDM effect `0x804` OR `IsCombatState == 1`; `evaluate_thunk` currently projects the latter to zero, while ordinary source effects remain native reads.
+
+The existing version/PE/CodeView/evaluate/numeric gates remain unchanged. `matches_query` additionally gates these copied-metadata getters:
+
+| Function | 3.1.6 RVA | 3.2.1 RVA | 16-byte prefix |
+| --- | --- | --- | --- |
+| `GetInterruptible(void const*)` | `0x1E2980` | `0x124830` | `48 8b 81 08 01 00 00 0f b6 80 62 01 00 00 c3 cc` |
+| `GetCustomBlendTime(void const*, ActiveClip*, int32, bool, bool)` | `0x1E24F0` | `0x1243A0` | `48 89 5c 24 08 48 89 74 24 10 57 48 83 ec 20 41` |
+
+`describe` invokes the blend getter with null ActiveClip and `checkWithinSequence=false`, copying interrupt (type 0) and loop (type 1) durations under the existing replacement query locks. The audited null path bypasses ActiveClip state reads in both binaries. `VariantOptions::blend_between` copies the confirmed variant flag at `+0x20` under the variant read lock. No new guessed private offsets or retained native pointers are introduced. Rejected/base selections clear replacement policy.
+
+The animation controller uses these values for its own advancing-pose fade, including zero duration. It does not invoke OAR's native blender or reproduce ActiveClip's loop lookahead/end-relative incoming seek. Upstream semantic references are pinned at `f4e7688b065175aff70aa523073857911e15aca3` (3.2.1) and `0c1c8b38a5323b9e26df41ff9d10ce801b984a45` (3.1.6); they are reference evidence, not linked/copied implementation. No Skyrim runtime validation is claimed.
 
 
 > 当前入口：[oar-preview1 独立查询、播放及换装](oar-preview-query-2026-10-16.md)。

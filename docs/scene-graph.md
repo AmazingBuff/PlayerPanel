@@ -6,7 +6,7 @@ SceneGraph is the sole character-preview backend. It copies a source actor's exi
 
 ## Scope and non-goals
 
-The preview shows standing weapon posture and existing equipment/appearance. It keeps the committed Equip → Start → Loop and phase-continuation behavior. This change adds no movement/attack mirroring, multi-actor UI, physics registration, FaceGen controller, shader/material work or safe graph destruction. The source Actor is a read-only input; native `NiObject::Clone` copies its graph.
+The preview shows standing weapon posture and existing equipment/appearance. Animation follows accepted HKX events, native DAC marker effects and current OAR conditions while retaining observed entry phase. This change adds no movement/attack mirroring, multi-actor UI, physics registration, FaceGen controller, shader/material work or safe graph destruction. The source graph/transforms stay read-only; native `NiObject::Clone` copies its graph. [dac::Session](dac.md) temporarily borrows only controlled original-Actor marker effects and restores them at the UI close boundary.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ The preview shows standing weapon posture and existing equipment/appearance. It 
 
 `SceneGraph` implements graph copying, source/copy audits and retirement privately in `scene_graph_capture.cpp`. `SceneGraph::replace_graph` rebuilds placement/node data and retargets the same controller while the previous tree is still retained, then parks it. Graph replacement preserves animation clocks. The renderer calls manager update and the selected SceneGraph's draw method inside D3D state-capture scopes. It cannot switch to an Actor or puppet backend.
 
-Animation remains a separate module: OAR returns copied query metadata; animation owns sequences, leases, clocks, variant history and pose composition. See [animation previews](animation.md).
+Animation remains a separate module: OAR returns copied query metadata; animation owns annotation clocks, leases, accepted variant history and pose composition. SceneGraph separately owns a native DAC session, whose inventory entry snapshot survives appearance/equipment/source-graph retarget. See [animation previews](animation.md).
 
 ```mermaid
 flowchart LR
@@ -59,7 +59,7 @@ Native capture, lease release, pose writes and graph replacement stay in the ren
 
 Rendering retains geometry filtering, attachment transforms, standing-pose calibration, material submission and D3D binding restoration. Copied graphs remain detached from engine menu roots. Retired copied trees deliberately remain parked: function-static bookkeeping holds raw pointers to retained native references, so destroying a SceneGraph cannot release them. The twelve-entry cap limits bookkeeping only; retained native allocations are not bounded by it and may accumulate across captures and preview lifetimes. There is no safe native teardown mechanism here.
 
-Placement calibration normally uses the vanilla MT_Idle standard: `AnimationController::apply_standing_pose` samples the independent base calibration asset at time zero, and `SceneGraph::draw` calls `calibrate_from_posed_bound` before writing the current action on the same frame. Calibration waits while that asset is pending. If its lease fails, the existing fallback uses the accepted standing asset, which may be a replacement; Equip and Start do not supply the calibration pose. The continuity rollback preserves this placement fix and its fallback. [Ordered playback and restored pose mixing](animation.md#ordered-startloop-playback) describe the separate animation policy.
+Placement calibration normally uses the vanilla MT_Idle standard: `AnimationController::apply_standing_pose` samples the independent base calibration asset at time zero, and `SceneGraph::draw` calls `calibrate_from_posed_bound` before writing the current action on the same frame. Calibration waits while that asset is pending. If its lease fails, the standing underlay is also the vanilla base; action poses never supply calibration. [Event timing and dynamic selection](animation.md#event-timing-and-native-state) describes the separate animation policy.
 
 ## Failure modes
 
@@ -67,11 +67,11 @@ Unavailable source 3D suspends the session. Failed capture/audit retains the las
 
 ## Dependencies
 
-Existing C++23, VS2022/MSVC 14.44.35207, Windows SDK, CommonLibSSE, SKSE, OAR and the installed vcpkg dependencies remain required. No new dependency or ABI profile was added. Source actor handles and hand/form/clip reads remain necessary inputs. Source Actor creation or mutation is not a dependency.
+Existing C++23, VS2022/MSVC 14.44.35207, Windows SDK, CommonLibSSE, SKSE, OAR and the installed vcpkg dependencies remain required. The existing gated OAR metadata getters remain. Native phase processing uses the supported original DAC binary and UI-session transaction described in [DAC compatibility](dac.md#original-binary-compatibility-and-provenance). No DAC rebuild or tomlplusplus dependency remains. Source actor handles and hand/form/clip reads remain necessary inputs. No source Actor is created; only the documented DAC marker transaction may temporarily mutate its effects.
 
 ## Verification
 
-[Build](build.md) documents the single Release target, pinned setup, generated outputs and configure-time identity. Prior native evidence and its limits are recorded in [Build verification](build.md#verification-and-limits). Retained test sources are reference material, not current build entry points.
+[Build](build.md) documents the single Release target, pinned setup, generated outputs and configure-time identity. Prior native evidence and its limits are recorded in [Build verification](build.md#verification-and-limits). The two animation cases compile directly as documented there; no CMake test target is added.
 
 Build/source checks establish compilation and structural consistency, not game-time hook, loader, framing, visual or lifetime behavior. [Maintenance](code-maintenance.md#debugging-navigation) maps actual logs and the two existing representative runtime follow-up categories. No Skyrim runtime is available here.
 

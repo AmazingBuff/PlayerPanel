@@ -1,105 +1,108 @@
 //
-// Created by AmazingBuff on 2026/10/19.
+// Created by AmazingBuff on 2026/10/20.
 //
-#include <string_view>
-namespace Plugin
-{
-    inline constexpr std::string_view Plugin_Author = CHARACTER_PANEL_TEST_AUTHOR;
-}
-
-#ifndef PLUGIN_NAMESPACE_BEGIN
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
-#endif
-#include "animation/sequence.h"
-#include "animation/variant_state.h"
+#include "animation/event_clock.h"
+#include "dac/session_core.h"
 #include <cassert>
 #include <iostream>
 
 using namespace test_plugin;
-
-void equip_phase_hands_over_to_complete_descriptor_sequence()
+namespace
 {
-    oar::AnimationSelection stable;
-    stable.found = true;
-    stable.index = stable.base_index = 1;
-    stable.name = stable.base_name = "Animations\\MT_Idle.hkx";
-    oar::AnimationSelection anchor = stable;
-    anchor.index = 42;
-    anchor.name = "Animations\\OpenAnimationReplacer\\pack\\Sword idle Start\\1hm_idle.hkx";
-    // Hash deduplication registered the Loop under another name; descriptors retain both paths.
-    anchor.candidates = {
-        { 42, anchor.name, "alias.hkx" },
-        { 7, "Animations\\OpenAnimationReplacer\\pack\\Sword idle Loop\\1hm_idle.hkx", "other-pack.hkx" }
+    struct FakeEngine
+    {
+        std::vector<dac::EffectValue> effects;
+        int equipment = 7;
+        int restored = 0;
+        std::vector<dac::EffectValue> capture() const
+        {
+            std::vector<dac::EffectValue> result;
+            for (auto const& effect : effects) if (effect.spell < 100) result.push_back(effect);
+            return result;
+        }
+        void native_phase()
+        {
+            std::erase_if(effects, [](auto const& effect) { return effect.spell == 1; });
+            effects.push_back({ .spell = 2, .effect = 22 });
+        }
+        void restore(dac::Restoration const& transaction)
+        {
+            ++restored;
+            std::erase_if(effects, [&](auto const& effect)
+            { return std::ranges::find(transaction.spells, effect.spell) != transaction.spells.end(); });
+            effects.insert(effects.end(), transaction.baseline.begin(), transaction.baseline.end());
+        }
     };
-    std::string diagnostic;
-    std::vector<animation::Stage> stages = animation::idle_sequence(anchor, stable, animation::WeaponForm::kOneHanded, diagnostic);
-    assert(stages.size() == 2 && stages[1].clip.index == 7);
-    auto equip = animation::direct_selection(stable, 8, "Animations\\1HM_Equip.hkx");
-    stages.insert(stages.begin(), { { animation::ActionKind::e_equip, animation::WeaponForm::kOneHanded, false }, equip, 0.75 });
-    animation::PlaybackTimeline playback;
-    playback.start(stages);
-    assert(playback.seconds() == 0.75);
-    assert(!playback.advance(0.2, 1.0));
-    assert(playback.advance(0.1, 1.0));
-    assert(playback.current().action.kind == animation::ActionKind::e_weapon_idle_start && playback.seconds() == 0.0);
-    assert(playback.advance(1.0, 1.0));
-    assert(playback.current().clip.index == 7 && playback.current().action.loop && playback.seconds() == 0.0);
-    assert(!playback.advance(3.0, 1.0));
-    // A missing explicit Loop must hand over to the stable idle, never dwell in Start.
-    anchor.candidates.resize(1);
-    stages = animation::idle_sequence(anchor, stable, animation::WeaponForm::kOneHanded, diagnostic);
-    assert(!diagnostic.empty() && stages.back().action.kind == animation::ActionKind::e_standing_idle);
-    assert(!stages.front().action.loop && stages.back().clip.index == stable.index);
 }
 
-void latest_actor_request_preserves_other_actor_playback_and_masked_pose()
+void entry_snapshot_restores_native_phase_and_preserves_equipment()
 {
-    animation::RequestGeneration actor_a;
-    animation::RequestGeneration actor_b;
-    const auto stale_a = actor_a.next();
-    const auto current_b = actor_b.next();
-    const auto newest_a = actor_a.next();
-    assert(!actor_a.accepts(stale_a) && actor_a.accepts(newest_a) && actor_b.accepts(current_b));
-    oar::AnimationSelection idle;
-    idle.found = true;
-    idle.index = 3;
-    animation::PlaybackTimeline playback_b;
-    playback_b.start({ { { animation::ActionKind::e_weapon_idle_loop, animation::WeaponForm::kOneHanded, true }, idle, 0.4 } });
-    assert(!playback_b.advance(0.2, 1.0));
-    const double phase_b = playback_b.seconds();
-    animation::PlaybackTimeline playback_a;
-    const std::vector<animation::Stage> pending_a{
-        { { animation::ActionKind::e_equip, animation::WeaponForm::kOneHanded, false }, idle, 0.5 },
-        { { animation::ActionKind::e_weapon_idle_loop, animation::WeaponForm::kOneHanded, true }, idle, 0.0 }
+    const dac::EffectValue entry{ .spell=1, .effect=11, .caster=5, .source=6, .casting_source=3,
+        .inactive=true, .magnitude=0.0f, .duration=30.0f, .elapsed=4.5f, .dual=true };
+    FakeEngine actor{ { entry, { .spell=101, .effect=1001 } } };
+    dac::SessionCore session;
+    session.request(1);
+    session.begin(actor.capture());
+    const dac::EventTicket ticket = session.ticket();
+    animation::EventClock clock;
+    clock.start({ {0.0,"entry"}, {2.5,"phase"}, {3.333333,"end"} },3.333333,0.0,false);
+    int events=0;
+    const auto event = [&](animation::Annotation const& annotation)
+    {
+        ++events;
+        if (annotation.event=="phase" && session.accepts(ticket))
+        {
+            session.touch({1,2}); // native literal spell plus keyword-affected original group
+            actor.native_phase();
+        }
     };
-    playback_a.start(pending_a);
-    assert(playback_a.advance(0.6, 1.0));
-    assert(!playback_a.advance(0.3, 1.0));
-    // The old proposal finished loading after A handed over; acceptance follows its current phase.
-    auto accepted_a = pending_a;
-    const std::size_t skipped = animation::resume_continuation(accepted_a, playback_a);
-    assert(skipped == 1 && accepted_a.front().action.loop && accepted_a.front().start_seconds == playback_a.seconds());
-    oar::ConditionRandomState random_a(17), random_b(23);
-    const oar::StateKey key{ oar::DataScope::e_local, 3, 0 };
-    const auto before_b = random_b.random(key, 4, 3, true, 0.0f, 1.0f);
-    (void)random_a.random(key, 4, 3, true, 0.0f, 1.0f);
-    random_a.loop(3);
-    (void)actor_a.next();
-    assert(playback_b.seconds() == phase_b && random_b.random(key, 4, 3, true, 0.0f, 1.0f) == before_b);
-    std::unordered_map<std::string, float> pose_a, pose_b;
-    const std::vector<std::pair<std::string, float>> body{ { "NPC Pelvis [Pelv]", 10.0f }, { "NPC L Hand [LHnd]", 2.0f } };
-    const std::vector<std::pair<std::string, float>> hand{ { "NPC Pelvis [Pelv]", 99.0f }, { "NPC L Hand [LHnd]", 5.0f } };
-    animation::compose_contributor(pose_b, std::span(body), animation::BoneMask::e_full_body);
-    animation::compose_contributor(pose_a, std::span(body), animation::BoneMask::e_full_body);
-    animation::compose_contributor(pose_a, std::span(hand), animation::BoneMask::e_left_hand);
-    assert(pose_a.at("NPC Pelvis [Pelv]") == 10.0f && pose_a.at("NPC L Hand [LHnd]") == 5.0f);
-    assert(pose_b.at("NPC L Hand [LHnd]") == 2.0f);
+    clock.advance(2.5,true,[](double){},event,[]{});
+    assert(events==2 && actor.capture().front().spell==2 && clock.seconds()==2.5);
+    actor.equipment=9;
+    session.begin(actor.capture()); // appearance/retarget cannot replace the immutable entry
+    const auto closing=session.close();
+    assert(closing && !session.accepts(ticket));
+    actor.restore(*closing);
+    assert(actor.capture()==std::vector<dac::EffectValue>{entry});
+    assert(actor.effects.front().spell==101 && actor.equipment==9 && actor.restored==1);
+    assert(!session.close());
 }
 
+void stale_events_and_old_worlds_cannot_restore_over_new_sessions()
+{
+    FakeEngine actor_a{{{.spell=1,.effect=11}}}, actor_b{{{.spell=3,.effect=33}}};
+    dac::SessionCore first,second;
+    first.request(1); second.request(1);
+    first.begin(actor_a.capture()); second.begin(actor_b.capture());
+    const auto old=first.ticket(), other=second.ticket();
+    actor_a.restore(*first.close());
+    first.begin(actor_a.capture()); first.request(2);
+    assert(!first.accepts(old) && second.accepts(other));
+    const auto obsolete_request=first.ticket();
+    first.request(3);
+    assert(!first.accepts(obsolete_request));
+    const auto current=first.ticket();
+    animation::EventClock resumed;
+    resumed.start({{0.1,"past"},{2.5,"future"}},3.333333,0.5,true);
+    int events=0;
+    resumed.advance(2.0,false,[](double){},[&](animation::Annotation const& event)
+    {
+        ++events;
+        assert(event.event=="future");
+        if(first.accepts(current)) { first.touch({1,2}); actor_a.native_phase(); }
+    },[]{});
+    assert(events==1 && actor_a.capture().front().spell==2);
+    first.reset(); // PreLoadGame/NewGame discards, never restores old values
+    assert(!first.accepts(current) && !first.close() && actor_a.restored==1);
+    assert(second.accepts(other) && actor_b.capture().front().spell==3 && actor_b.restored==0);
+    second.touch({3}); actor_b.restore(*second.close());
+    assert(actor_b.capture().front().effect==33 && actor_b.restored==1);
+}
 int main()
 {
-    equip_phase_hands_over_to_complete_descriptor_sequence();
-    latest_actor_request_preserves_other_actor_playback_and_masked_pose();
-    std::cout << "2 animation behavior cases passed\n";
+    entry_snapshot_restores_native_phase_and_preserves_equipment();
+    stale_events_and_old_worlds_cannot_restore_over_new_sessions();
+    std::cout<<"2 native-session transaction/event cases passed\n";
 }

@@ -53,6 +53,9 @@ namespace oar
         Parent s_parent_submod = nullptr;
         Parent s_parent_mod = nullptr;
         ReplaceOnLoop s_replace_on_loop = nullptr;
+        ReplaceOnLoop s_interruptible = nullptr;
+        using BlendTime = float (*)(void const*, void*, std::int32_t, bool, bool);
+        BlendTime s_blend_time = nullptr;
         std::atomic_bool s_query_ready = false;
 
         struct QueryFrame
@@ -523,6 +526,12 @@ namespace oar
             descriptor.path = native_string(replacement, Replacement_Path_Offset);
             descriptor.replacement_key = reinterpret_cast<std::uint64_t>(replacement);
             descriptor.reevaluate_on_loop = s_replace_on_loop(replacement);
+            descriptor.interruptible = s_interruptible(replacement);
+            // Null ActiveClip and checkWithinSequence=false are audited for both binaries.
+            descriptor.interrupt_blend = s_blend_time(replacement, nullptr, 0, false, false);
+            descriptor.loop_blend = s_blend_time(replacement, nullptr, 1, false, false);
+            if (!std::isfinite(descriptor.interrupt_blend) || descriptor.interrupt_blend < 0.0f ||
+                !std::isfinite(descriptor.loop_blend) || descriptor.loop_blend < 0.0f) return std::nullopt;
             const std::uint8_t tag = read_at<std::uint8_t>(replacement, Replacement_Tag_Offset);
             if (tag == 0)
             {
@@ -581,6 +590,7 @@ namespace oar
             }
             options.cumulative.assign(cumulative.begin(), cumulative.end());
             options.sequential = mode == 1;
+            options.blend_between = read_at<std::uint8_t>(replacement, 0x20) != 0;
             options.reset_on_loop = read_at<std::uint8_t>(replacement, 0x21) != 0;
             options.share_history = read_at<std::uint8_t>(replacement, 0x22) != 0;
             void const* const submod = s_parent_submod(replacement);
@@ -675,6 +685,9 @@ namespace oar
             query->output.variants = descriptor->variants;
             query->output.replacement_key = descriptor->replacement_key;
             query->output.reevaluate_on_loop = descriptor->reevaluate_on_loop;
+            query->output.interruptible = descriptor->interruptible;
+            query->output.interrupt_blend = descriptor->interrupt_blend;
+            query->output.loop_blend = descriptor->loop_blend;
             query->selected = replacement;
             query->index = descriptor->index;
             return true;
@@ -822,6 +835,9 @@ namespace oar
                     result.replacement_key = 0;
                     result.variants.reset();
                     result.reevaluate_on_loop = true;
+                    result.interruptible = false;
+                    result.interrupt_blend = 0.0f;
+                    result.loop_blend = 0.0f;
                 }
             }
             result.evaluated = scope.evaluated();
@@ -899,6 +915,8 @@ namespace oar
             s_evaluate_set = reinterpret_cast<EvaluateSet>(address(QueryFunction::e_conditions));
             s_evaluate_replacement = reinterpret_cast<EvaluateReplacement>(address(QueryFunction::e_replacement_condition));
             s_parent_submod = reinterpret_cast<Parent>(address(QueryFunction::e_parent_submod));
+            s_interruptible = reinterpret_cast<ReplaceOnLoop>(address(QueryFunction::e_interruptible));
+            s_blend_time = reinterpret_cast<BlendTime>(address(QueryFunction::e_blend_time));
             s_parent_mod = reinterpret_cast<Parent>(address(QueryFunction::e_parent_mod));
             s_replace_on_loop = reinterpret_cast<ReplaceOnLoop>(address(QueryFunction::e_replace_on_loop));
         }

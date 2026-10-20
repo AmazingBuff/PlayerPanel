@@ -4,9 +4,13 @@
 
 ### Changed
 
-- Restore the uniform 0.4-second preview pose crossfade after reverting the two sequence
-  continuity experiments; retain vanilla MT_Idle placement calibration. This rollback does
-  not establish a fix for the reported continuity problem.
+- Change preview phases to follow accepted animation events and original DAC marker effects,
+  restoring controlled source effects when the inventory closes.
+- Use the supported original DAC NG Plus binary unchanged; require no DAC rebuild or runtime PDB.
+- Blend advancing outgoing and incoming poses using copied OAR durations while retaining
+  vanilla MT_Idle placement calibration.
+- Document pending IED placement-condition support and the current combat-branch limits;
+  game-time and full-pack compatibility remain unverified.
 
 - Change CMake to one Release DLL target and remove test, packaging and legacy preset entry points.
 
@@ -25,7 +29,7 @@
 
 - Fix previews repeating an idle entry motion and keep animation requests isolated per actor.
 
-- Panel entry action mirroring (`oar-idle3`, round 18, 2026-10-17): the panel no longer re-asks
+- Historical panel entry action mirroring (folder ordering superseded above; `oar-idle3`, round 18, 2026-10-17): the panel no longer re-asks
   OAR what to play when the inventory opens. The clip the player was IN at the open edge (its
   running binding index and local time) is recorded once and replayed from that phase as the
   entry action — a draw continues as Equip → Start → Loop, a started sequence member hands over
@@ -36,7 +40,7 @@
   move hands over to. Both Release configurations build; `snapshot_transform` 38 checks pass.
   Game verification remains pending.
 
-- Panel idle sequence phase and entering stance (`oar-idle3`, round 17, 2026-10-17): decide the
+- Historical idle sequence phase and entering stance (folder ordering superseded above; `oar-idle3`, round 17, 2026-10-17): decide the
   entering stance from the draw/sheathe moves in the recent world clips (entering during
   `1HM_Equip` used to answer sheathed and show MT_Idle; entering during `1HM_Unequip` used to
   answer drawn and show a weapon idle), and let the panel advance a pack's sibling-folder idle

@@ -7,6 +7,9 @@
 #include <memory>
 namespace RE { class Actor; class NiAVObject; }
 PLUGIN_NAMESPACE_BEGIN
+namespace dac { class Session; }
+PLUGIN_NAMESPACE_END
+PLUGIN_NAMESPACE_BEGIN
 namespace animation
 {
     struct SourceObservation
@@ -30,7 +33,7 @@ namespace animation
         AnimationController();
         ~AnimationController();
         void reset();
-        void request(RE::Actor& source, SourceObservation const& observation);
+        void request(RE::Actor& source, SourceObservation const& observation, dac::Session& session);
         void retarget(RE::NiAVObject& root);
         void poll();
         std::size_t advance(RE::NiAVObject& root);

@@ -2,6 +2,7 @@ CharacterPanel — SceneGraph runtime notes
 
 Build setup and pinned dependencies: docs/build.md
 Current architecture/actions: docs/scene-graph.md and docs/animation.md
+Native DAC dependency/session/restore: docs/dac.md
 Log navigation and hash conventions: docs/code-maintenance.md
 Archived controls/results/proposals: docs/history.md
 
@@ -12,14 +13,16 @@ Current build (repository root, prepared toolchain):
 Release is the only configure/build preset. CharacterPanel is the sole first-party
 DLL target. Outputs are build/Release/CharacterPanel.dll and its matching PDB.
 CommonLibSSE and normal CMake generation/build utility projects remain required.
-There are no current test/package/install/compatibility entry points. Test source
-is retained as reference; older passing tests are not a current CMake test route.
+There are no CMake test/package/install/compatibility entry points. The two
+animation event/effect cases compile directly with MSVC; see docs/build.md.
 
 Controls in a paused InventoryMenu:
   F7  Queue recapture.
   F8  Toggle display.
 Input queues intent; capture/retarget/animation run in the serialized bracket.
-The source Actor is read-only; no second Actor is created.
+The source Actor graph/transforms stay read-only; native DAC temporarily changes
+controlled marker effects and restores their inventory entry values at close.
+No second Actor is created.
 
 Identity and logs:
   CharacterPanel.log is written under SKSE::log::log_directory(), not a fixed
@@ -29,9 +32,29 @@ Identity and logs:
   refresh an existing header/DLL: configure then build when preparing a binary
   for that commit, and keep its exact DLL/PDB pair together.
 
+Accepted HKX annotations enqueue SKSE UI tasks that call the profiled original native
+DAC-only handler on the source Actor. CharacterPanel does not parse DAC TOML or
+emulate effects. OAR reads actual Actor effects; UI close invalidates queued events
+and synchronously restores the immutable entry snapshot. See docs/dac.md for the
+supported original DLL and offline PDB/profile inspection, unsupported-event checks and runtime limits.
+The original DAC installation stays untouched; update only CharacterPanel.dll.
+No DAC source/build/patch route or tomlplusplus dependency remains.
+Folder Start/Loop names do not schedule successors. Local fades advance both
+poses using copied native durations; calibration stays vanilla MT_Idle. Snapshot,
+call completion, observed effect revision and checked restoration are separate logs.
+
+Smooth compatibility: docs/dac.md#smooth-moveset-compatibility-boundary.
+Core non-combat phases use OAR, supported original DAC and the pack's own ESP,
+TOML, HKX/configs with existing Skyrim/SKSE prerequisites. IED placement branches
+still need an explicit preview query adapter; provider installation alone is not
+enough. The unsupported-third-party diagnostic is a query-adapter limit, not
+missing DAC state. Combat Start/Loop use the TDM-effect OR combat-state clause;
+this preview currently projects combat state to zero. Full pack/game validation
+remains pending.
+
 Two representative game follow-up categories (not verified locally):
-  1. Entry/equipment continuation: Equip/Start/Loop entry, sheathe to standing,
-     rapid equipment changes and an unchanged source actor.
+  1. Entry/equipment continuation: draw/idle/sheathe phase entry, sheathe to standing,
+     rapid equipment changes and restored marker state with unrelated equipment/buffs intact.
   2. Copied-graph presentation/lifetime: F7 phase preservation, F8, close/reopen/
      load boundaries, appearance, attachments, framing and transparency.
 

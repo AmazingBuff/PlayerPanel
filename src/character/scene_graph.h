@@ -3,6 +3,7 @@
 //
 #pragma once
 #include "animation/controller.h"
+#include "dac/session.h"
 #include "animation/pose.h"
 #include "render/dx11/d3d11_util.h"
 #include "render/dx11/common_states.h"
@@ -62,6 +63,7 @@ private:
         RE::NiBound bound;
     };
     MonitorState m_monitor;
+    dac::Session m_dac;
     animation::AnimationController m_animation;
     RE::FormID m_source_id;
     std::uint32_t m_capture_id = 0;

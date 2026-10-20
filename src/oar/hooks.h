@@ -44,6 +44,9 @@ namespace oar
         std::uint64_t clip_key = 0;
         std::uint64_t replacement_key = 0;
         bool reevaluate_on_loop = true;
+        bool interruptible = false;
+        float interrupt_blend = 0.0f;
+        float loop_blend = 0.0f;
         VariantPick variant;
         std::string binding_name;
         std::optional<VariantOptions> variants;
@@ -56,6 +59,9 @@ namespace oar
         std::string binding_name;
         std::uint64_t replacement_key = 0;
         bool reevaluate_on_loop = true;
+        bool interruptible = false;
+        float interrupt_blend = 0.0f;
+        float loop_blend = 0.0f;
         std::optional<VariantOptions> variants;
     };
     struct QueryRequest

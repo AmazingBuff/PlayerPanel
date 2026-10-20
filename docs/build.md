@@ -6,7 +6,7 @@ Build the current Windows DLL from this checkout. Release is the only configure/
 
 ## Scope and non-goals
 
-This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade dependencies, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
+This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
 
 ## Dependencies and checkout
 
@@ -26,7 +26,7 @@ Set `VCPKG_ROOT` to your existing, ready-to-use vcpkg directory containing `scri
 $env:VCPKG_ROOT = '<your-vcpkg-root>'
 ```
 
-Replace the placeholder with your local path. [CMakePresets.json](../CMakePresets.json) reads that environment variable and requests Windows x64, the `v143,version=14.44.35207` toolset, `MultiThreadedDLL`, and `x64-windows-static-md`. [vcpkg.json](../vcpkg.json) owns package dependencies and their baseline. A normal configure uses that manifest; this guide does not supply a separate bootstrap or dependency-upgrade procedure.
+Replace the placeholder with your local path. [CMakePresets.json](../CMakePresets.json) reads that environment variable and requests Windows x64, the `v143,version=14.44.35207` toolset, `MultiThreadedDLL`, and `x64-windows-static-md`. [vcpkg.json](../vcpkg.json) owns package dependencies and their baseline. The unused tomlplusplus item is removed; no DAC build or runtime TOML parser is required. [Original DAC compatibility](dac.md#original-binary-compatibility-and-provenance) is checked against the untouched supplied binary. A normal configure uses that manifest; this guide does not supply a separate bootstrap or dependency-upgrade procedure.
 
 ## Build interface
 
@@ -90,13 +90,24 @@ A warning that installation rules were specified while `CMAKE_SKIP_INSTALL_RULES
 
 ## Verification and limits
 
+The stock-binary adaptation uses only the matching and mismatched offline inspector cases described in [DAC verification](dac.md#verification-and-limits). The retained transaction cases below belong to the earlier native-session change and were not rerun for this compatibility-only update.
+
+The native DAC session change uses exactly two direct-compiled behavior cases, without adding any CMake test/project target. From an x64 VS2022 developer shell initialized with MSVC 14.44.35207:
+
+```powershell
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/animation_controller_test.cpp /Fo:build/animation_controller_test.obj /Fe:build/animation_controller_test.exe
+./build/animation_controller_test.exe
+```
+
+These exercise the production transaction core and annotation clock, entry restoration and independent epoch/lifetime state. They do not execute native DAC/OAR or Skyrim effect creation. The separate [offline original-binary inspector](dac.md#dependencies-and-offline-inspection) checks paired symbols without building, modifying or executing DAC. Run `cmake --preset Release` and `cmake --build --preset Release` for the DLL separately. If a reused cache has `VCPKG_MANIFEST_INSTALL=OFF`, install the manifest's packages with the existing vcpkg root first (for example `vcpkg install --triplet x64-windows-static-md --x-install-root=build/vcpkg_installed`), or reenable normal manifest installation. Preserve the baseline and installed triplet.
+
 Prior local native evidence on 2026-10-19:
 
 - Before test-target removal, production, standalone animation and math targets built, and the two selected animation behavior cases passed.
 - After consolidation, the Release preset configured/built the DLL. Its SKSE load/query/version exports, matching PDB, embedded identity, Release-only graph and required CommonLib/CMake utility projects were checked.
 - Documentation/source checks cover links, history parity and unchanged inputs; they are separate from native execution and runtime validation.
 
-The retained [animation](../tests/animation_controller_test.cpp) and [graph/math](../tests/snapshot_transform_test.cpp) test sources are reference material, not current CMake targets. Earlier test results do not imply that current CMake still builds them. No Skyrim runtime is available here: native loading, hooks, visuals, framing and graph lifetime remain unverified. See [debugging navigation](code-maintenance.md#debugging-navigation) and [SceneGraph](scene-graph.md).
+The [animation cases](../tests/animation_controller_test.cpp) use the direct command above; retained [graph/math](../tests/snapshot_transform_test.cpp) checks remain outside CMake. Earlier test results do not imply that current CMake builds either source. No Skyrim runtime is available here: native loading, hooks, visuals, framing and graph lifetime remain unverified. See [debugging navigation](code-maintenance.md#debugging-navigation) and [SceneGraph](scene-graph.md).
 
 ## Safe modification
 

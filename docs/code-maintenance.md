@@ -11,7 +11,9 @@ The sole current preview backend is [SceneGraph](scene-graph.md); animation owne
 | [scene_graph_capture.cpp](../src/character/scene_graph_capture.cpp) | private SceneGraph native copy, writable-isolation audits and process-lifetime retirement |
 | [equipment_state.cpp](../src/character/equipment_state.cpp) | read-only hand/form observations |
 | [figure_audit.cpp](../src/character/figure_audit.cpp), [snapshot_transform.h](../src/character/snapshot_transform.h) | appearance-settle signature, collision filtering, placement and subtree math |
-| [animation/controller.cpp](../src/animation/controller.cpp), [sequence.h](../src/animation/sequence.h) | isolated requests/leases, sequences, accepted continuation, visible-stage clocks and composed poses |
+| [animation/controller.cpp](../src/animation/controller.cpp), [sequence.h](../src/animation/sequence.h) | isolated requests/leases, current-state choices, accepted continuation, event clocks and composed poses |
+| [animation/event_clock.h](../src/animation/event_clock.h), [event_clock.cpp](../src/animation/event_clock.cpp) | retained HKX annotation timing; no DAC rules or effect emulation |
+| [dac/session.cpp](../src/dac/session.cpp), [native.cpp](../src/dac/native.cpp), [effects.cpp](../src/dac/effects.cpp) | UI task/menu epochs, original native DAC handler/loaded metadata, marker-scope preflight and engine snapshot restoration |
 | [animation/clip.cpp](../src/animation/clip.cpp) | source clip observation, track→bone mapping and detached pose samples |
 | [oar/hooks.cpp](../src/oar/hooks.cpp) | verified query-only OAR condition/candidate/variant boundary |
 | [panel_monitor.cpp](../src/panel/panel_monitor.cpp) | InventoryMenu state and revision only |
@@ -28,13 +30,15 @@ Custom process-local keys and fingerprints use [base/def.h](../src/base/def.h) `
 - [query_animation](../src/oar/hooks.cpp): project/wanted pointer → base index → channel for `clip_key`.
 - [FigureAssembly::signature](../src/character/figure_audit.h): geometries → skinned → bound_nodes → alloc_slots, retaining the full `size_t` result.
 
-The preserved [animation test source](../tests/animation_controller_test.cpp) retains its test-only `CHARACTER_PANEL_TEST_AUTHOR` metadata bridge as reference material, but is no longer configured or built by CMake. Production retains generated Plugin metadata from the existing `PROJECT_AUTHOR`. Packaging SHA-256 checksums in historical records, Git/native identifiers, bit masks, PRNG seeds and the helper/bootstrap implementation keep their distinct semantics.
+The [animation test source](../tests/animation_controller_test.cpp) compiles the production transaction core and annotation clock directly, without the generated author metadata or a CMake target. Production retains generated Plugin metadata from `PROJECT_AUTHOR`. Packaging SHA-256 checksums in historical records, Git/native identifiers, bit masks, PRNG seeds and the helper/bootstrap implementation keep their distinct semantics.
 
 ## Build, verification and controls
 
 [Build guidance](build.md) owns the pinned checkout/toolchain, one Release preset, installed-dependency reuse, outputs and configure-time identity. The supported commands are `cmake --preset Release` followed by `cmake --build --preset Release`; the output is `build/Release/CharacterPanel.dll` with a matching PDB.
 
-F7 queues recapture and F8 toggles display in a paused inventory. Current CMake does not expose test, package, install or compatibility entry points. Preserved [animation](../tests/animation_controller_test.cpp) and [graph/math](../tests/snapshot_transform_test.cpp) sources are reference material. Prior native results and their limits are recorded in [Build verification](build.md#verification-and-limits); build evidence does not establish game-time correctness.
+[DAC maintenance](dac.md#dependencies-and-offline-inspection) uses `src/dac/inspect_binary.py` against untouched original DLL/PDB inputs. Python/LLVM are offline tooling only; keep the original DAC installation and replace only CharacterPanel.dll.
+
+F7 queues recapture and F8 toggles display in a paused inventory. Current CMake does not expose test, package, install or compatibility entry points. The two [animation](../tests/animation_controller_test.cpp) cases compile directly through [the build guide](build.md#verification-and-limits); retained [graph/math](../tests/snapshot_transform_test.cpp) checks have no CMake target. Prior native results and their limits are recorded in [Build verification](build.md#verification-and-limits); build evidence does not establish game-time correctness.
 
 ## Debugging navigation
 
@@ -46,24 +50,27 @@ F7 queues recapture and F8 toggles display in a paused inventory. Current CMake 
 | `CharacterManager watch` / `CharacterManager lifetime boundary` | [character_manager.cpp](../src/character/character_manager.cpp): delimit the source record whose revisions/requests are being followed |
 | `CharacterManager equipment actor=… revision=… equipped=…` | [character_manager.cpp](../src/character/character_manager.cpp), `EquipSink::ProcessEvent`: verify the source actor's equipment event reached the registry |
 | `ANIMATION actor=… request=… reason=… source-generation=…` | [controller.cpp](../src/animation/controller.cpp), `AnimationController::request`: identify the per-actor request and source generation |
-| `ANIMATION` asset ready/rejected, path/index, stage/action, cancel/discard stale proposal, graph retarget/time | [controller.cpp](../src/animation/controller.cpp), `poll`, `advance`, `retarget`: follow selection, accepted loads, handovers and phase preservation; group by actor/request |
+| `ANIMATION` asset ready/rejected, path/index, choice/state revision, action/handover/blend, stale proposal, graph retarget/time | [controller.cpp](../src/animation/controller.cpp), `poll`, `advance`, `retarget`: follow selection, accepted loads, handovers and phase preservation; group by actor/request |
 | `SCOPY BEGIN`, `SOURCE-DIFF`, `AUDIT`, `CENSUS`, `READY`, `FAILED`, `BLOCKED` | [scene_graph_capture.cpp](../src/character/scene_graph_capture.cpp), private `capture_graph`: follow capture ID, correspondence/isolation and rejection reasons |
 | `SCOPY PARK` with actor/count or cap warning | private `retire_graph`: tracks retained allocations; the cap limits bookkeeping only and does not bound retained native memory |
 | `SCOPY FRAME`, `SceneGraph draw`, `SceneGraph actor=… draw unavailable` | [scene_graph.cpp](../src/character/scene_graph.cpp): framing/calibration, toggle state, target binding and absence of render passes |
 | `OAR hooks unavailable/refused`, `OAR … hooks installed` | [hooks.cpp](../src/oar/hooks.cpp), `install_hooks`: distinguish verified query availability from a rejected/unavailable native profile |
+| `DAC snapshot`, native event/revision, rejection, `DAC restore ... result=matched|MISMATCH` | [session.cpp](../src/dac/session.cpp), [effects.cpp](../src/dac/effects.cpp): follow immutable inventory entry, native state visibility and checked close restoration |
 
-In query lines, `action` is the caller's query channel (initial standing query 1, weapon idle query 2, transition query 4; loop rechecks also use 2). In stage lines it is the numeric [ActionKind](../src/animation/action.h); use the [action table](animation.md#interfaces) to interpret the stage.
+`choice` records request/interrupt/boundary/appearance-refresh reasons (0/1/2/3). Handover `action` is the numeric [ActionKind](../src/animation/action.h); see [the action table](animation.md#interfaces). Native DAC diagnostics report exact profile compatibility, unsupported event scope and snapshot/restore result. Annotation logs include event/time; native call completion and actual observed effect revisions are separate. See `native_rules`, `Session::dispatch`, `capture_effects`, `restore_effects` and `AnimationController::advance`.
+
+If a candidate reports `third-party condition requires an explicit preview adapter`, consult the [Smooth support boundary](dac.md#smooth-moveset-compatibility-boundary). IED placement-query support is pending; the provider's installation does not bypass `audit`. Do not diagnose that message as missing DAC state or bypass the condition. Combat configs also retain the documented TDM-effect OR combat-state requirement and current combat-zero projection.
 
 Game follow-up remains two representative categories, not a new test matrix:
 
-1. **Entry/equipment continuation:** inventory entry during Equip/Start/Loop, sheathe to standing and rapid equipment changes; correlate actor/request/stage logs and confirm the source actor remains unchanged.
+1. **Entry/equipment continuation:** inventory entry during draw, idle phases or sheathe, sheathe to standing and rapid equipment changes; correlate actor/request/event/effect/handover logs and confirm controlled source effects restore and unrelated equipment/buffs remain intact.
 2. **Copied-graph presentation/lifetime:** F7 without phase rewind, F8, close/reopen/load boundaries, appearance, attachments, framing and transparency; correlate capture/audit/park and draw logs.
 
 These categories remain unverified without a Skyrim runtime. No new diagnostic code or per-frame tracing is implied.
 
 ## Safety and rendering invariants
 
-- Source actors are read-only. Native `NiObject::Clone` copies a scene graph, not an Actor or base record.
+- Source graphs/transforms remain read-only. Native `NiObject::Clone` copies a scene graph, not an Actor. The scoped [native DAC transaction](dac.md) temporarily changes only controlled source effects and restores them at close.
 - Event/input callbacks record revisions/intents. Capture, resource release, retarget and pose writes run in the serialized bracket.
 - Replacing a graph keeps its SceneGraph/controller record and playback phase. Retarget precedes retirement of old nodes.
 - Retired graph allocations stay parked. Safe native teardown remains unresolved.

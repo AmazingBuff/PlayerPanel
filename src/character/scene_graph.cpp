@@ -176,7 +176,7 @@ namespace
 
 }
 
-SceneGraph::SceneGraph(RE::Actor& source)
+SceneGraph::SceneGraph(RE::Actor& source) : m_dac(source)
 {
     m_monitor.source = source.GetHandle();
     m_source_id = source.GetFormID();
@@ -315,7 +315,7 @@ void SceneGraph::schedule_animation(RE::Actor& source, std::uint64_t revision, s
     monitor.observed.reason = std::move(reason);
     monitor.dirty_reason.clear();
     monitor.session_active = true;
-    m_animation.request(source, monitor.observed);
+    m_animation.request(source, monitor.observed, m_dac);
     if (m_graph_object) m_animation.retarget(*m_graph_object);
 }
 

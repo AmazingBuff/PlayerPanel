@@ -784,43 +784,14 @@ namespace
             animation::clip_stance("Animations\\MT_Jump.hkx") == animation::ClipStance::e_undecided;
     }
 
-    // Round 18 verdict: the sequence plan collects the family in play order — the NON-COMBAT
-    // members never cross into the combat family (both live under one project folder), and the
-    // episode digits order Loop before Loop2.
-    bool idle_sequence_siblings_resolve_by_name()
-    {
-        namespace oar = PLUGIN_NAMESPACE::oar;
-        const std::vector<std::string> names{
-            "Animations\\MT_Idle.hkx",
-            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Start\\1hm_idle.hkx",
-            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop\\1hm_idle.hkx",
-            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop2\\1hm_idle.hkx",
-            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Combat idle Loop\\1hm_idle.hkx",
-            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Combat idle Start\\1hm_idle.hkx",
-            "data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 2hw Axe\\2hw Axe Non-Combat idle Loop\\2hw_idle.hkx"
-        };
-        const auto family = animation::collect_sequence_family(names, names[1]);
-        if (family.size() != 3 ||
-            family[0].index != 1 || family[1].index != 2 || family[2].index != 3 ||
-            family[0].token != animation::ClipSequenceToken::e_start ||
-            family[1].token != animation::ClipSequenceToken::e_loop ||
-            family[2].token != animation::ClipSequenceToken::e_loop ||
-            family[1].episode != 0 || family[2].episode != 2)
-            return false;
-        const auto combat = animation::collect_sequence_family(names, names[5]);
-        return combat.size() == 2 && combat[0].index == 5 && combat[1].index == 4;
-    }
-
-    // Round 18: the entry action replays the clip the player was IN. Only a draw, a sheathe or a
-    // sequence's Start member is worth mirroring; loops, other idles, locomotion and attacks are
-    // not (the panel still stands, and a Loop member has nothing left to play).
+    // Engine draw/sheathe names define entry moves; idle folder labels stay neutral.
     bool entry_action_kind_classifies_entry_moves()
     {
         namespace oar = PLUGIN_NAMESPACE::oar;
         return animation::entry_action_kind("Animations\\1HM_Equip.hkx") == animation::EntryActionKind::e_equip &&
             animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 2hw Axe\\2hw Axe Equip Base\\2hw_equip.hkx") == animation::EntryActionKind::e_equip &&
             animation::entry_action_kind("Animations\\1HM_Unequip.hkx") == animation::EntryActionKind::e_unequip &&
-            animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Start\\1hm_idle.hkx") == animation::EntryActionKind::e_sequence_start &&
+            animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Start\\1hm_idle.hkx") == animation::EntryActionKind::e_none &&
             animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop\\1hm_idle.hkx") == animation::EntryActionKind::e_none &&
             animation::entry_action_kind("Animations\\MT_Idle.hkx") == animation::EntryActionKind::e_none &&
             animation::entry_action_kind("Animations\\MT_RunForward.hkx") == animation::EntryActionKind::e_none;
@@ -856,7 +827,6 @@ int main()
     passed = preview_dwell_survives_accept_and_reactivation() && passed;
     passed = panel_clip_family_matches_the_stance() && passed;
     passed = clip_stance_decides_the_entering_stance() && passed;
-    passed = idle_sequence_siblings_resolve_by_name() && passed;
     passed = entry_action_kind_classifies_entry_moves() && passed;
     std::printf("SceneGraph retained checks: %s\n", passed ? "PASS" : "FAIL");
     return passed ? 0 : 1;

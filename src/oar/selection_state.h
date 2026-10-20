@@ -54,6 +54,7 @@ namespace oar
     {
         StateKey key;
         bool sequential = false;
+        bool blend_between = false;
         bool reset_on_loop = true;
         bool share_history = false;
         std::vector<VariantEntry> sequence;
