@@ -241,3 +241,49 @@ node world 应随父骨变化）。
 - **DAC 诊断**：启动后每个被拒法术一行 `DAC native spell … rejected: … (vmad=… delivery=…
   casting=… cost=… perk=… effects=… type=…)`；把 `event='Smooth_loop'` 对应的三行
   （`sp_loop on` / `sp_combat off` / `sp_combat_loop off`）发回，即可定位预检误拒的字段。
+
+## 7. 第三轮修复（2026-10-20 23:00，待上机）
+
+第二轮日志给出了决定性证据：**66 个原生规则法术全部 `vmad=true`**，而
+`Smooth Moveset.esp` 的 SPEL/MGEF 记录里没有任何 VMAD 子记录（记录 flags=0，未压缩）。
+`TESForm::HasVMAD()` 是 SKSE 的 VM 句柄启发式，对"被脚本引用"的法术也会返回 true，
+用它做"记录自带 VMAD"的判据是假阳性——这正是 DAC 全部规则被拒的原因。
+
+本轮改动：
+
+1. **移除 VMAD 门槛**（`restorable_spell` 的 spell 与 MGEF 两处）：其余惰性自目标标记子集
+   检查（self、Constant/FAF、零耗、无 perk、无效果条件/范围/关联形态、非敌对、零基础耗）
+   全部保留。预期规则被接受，`DAC native spell … rejected` 行消失。
+2. **三阶段相位时机**：装备变化请求不再强制 `Smooth_loop` 准备（开包沿仍准备）。Equip
+   过渡播放时，其标注（`BeginWeaponDraw`/`weaponDraw`）经 DAC 施放 `start on`（0x809）
+   → 边界后的 idle 查询得到 **Start** 成员；Start 的 `Smooth_loop` 标注施放 `loop on`
+   （0x80A）→ 再下一个边界查询得到 **Loop**。即世界里的 Equip → Start → Loop。
+3. **Start 一次性**：按文件夹名（`… idle start` / `start`）识别 Start 成员，`loop=false`
+   播一次后由边界重新查询；不再把 Start 当循环体驻留。这修掉"在 Equip→Start 阶段直接用
+   Start 做 idle loop"。
+4. **武器挂点**：捕获时记录每个挂载件的原鞘挂点（`WeaponSword`/`WeaponAxe`/… 父节点）
+   与本地变换；Equip 过渡在 `weaponDraw` 事件之前把武器留在鞘位，事件后挂回手部；
+   Unequip 反向。复制图没有 behavior graph，这是用动画自己的 `weaponDraw` 时点复刻
+   "先从腰/背取武器，再拿在手里"。
+
+| 项目 | 值 |
+| --- | --- |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-a3dea5e07f+dirty-cl94faaed0c6-20261020T145855Z` |
+| DLL SHA-256 | `486CEBFEE9E75EB64CF7631A1021DFC6F2836A2732CAB3B55AB47BFDB776A33A` |
+| PDB SHA-256 | `E06C50FE4F419B2FF952A596E8B831DB3CC05F7DBC2E30E5780B2D95BFA09977` |
+| 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步） |
+| 本地回归 | Release 配置/构建通过；`animation_controller_test` 2/2 通过 |
+
+第三轮判读：
+
+- **DAC 恢复**：不再出现 `DAC native spell … rejected`；出现
+  `DAC actor=… Smooth_loop preparation requested` 后应为 `ready`（而非 `failed`）；
+  `DAC snapshot … effects=N scope=M` 的 `scope` 应大于 0。
+- **三阶段**：背包内换武器后依次出现
+  `transition=equip` → `event='weaponDraw' time=…` → `goal=…` 后的
+  `state=… path='… idle Start …'`（`replaced=true`）→ `sequence start one-shot path='…'`
+  → `event='Smooth_loop'` → 下一个边界 `state=… path='… idle Loop …'`。
+- **武器挂点**：Equip 过渡的前半段武器在鞘位（腰/背），`weaponDraw` 时点之后才出现在手里；
+  若仍一开播就在手上，把该过渡的 `weaponDraw` 时间与 `SCOPY HELD` 行发回。
+- 若仍见 `Smooth_loop preparation failed: …`，把该行与 `DAC native spell` 行发回
+  （可能是事件级 `event_scope` 的新拒绝原因，例如无关效果的关键词冲突）。

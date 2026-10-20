@@ -36,6 +36,10 @@ namespace animation
         // standard rather than whichever action happens to be displayed at capture.
         bool apply_standing_pose(RE::NiAVObject& root);
         [[nodiscard]] bool ready() const;
+        // True while an equip transition has not reached its weaponDraw handoff (or an unequip
+        // transition has passed its sheathe handoff). The copy's mapped weapon is parked at its
+        // sheath node during that window.
+        [[nodiscard]] bool weapon_sheathed() const;
         [[nodiscard]] std::string name() const;
     private:
         class State;

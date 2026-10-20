@@ -417,6 +417,20 @@ void SceneGraph::pose()
         node.object->previousWorld = node.object->world;
 }
 
+void SceneGraph::apply_weapon_mount(bool sheathed)
+{
+    for (HeldCopyMount& mount : m_held_mounts)
+    {
+        if (!mount.model || !mount.hand) continue;
+        RE::NiNode* const wanted = sheathed && mount.sheath_parent ? mount.sheath_parent : mount.hand;
+        if (mount.model->parent == wanted) continue;
+        RE::NiPointer<RE::NiAVObject> retained(mount.model);
+        if (mount.model->parent) mount.model->parent->DetachChild(mount.model);
+        wanted->AttachChild(mount.model, true);
+        mount.model->local = mount.local;
+    }
+}
+
 void SceneGraph::calibrate_from_posed_bound()
 {
     if (!m_graph_object)
@@ -473,6 +487,9 @@ bool SceneGraph::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& stat
     if (!runtime.context || !runtime.forwarder)
         return false;
 
+    // Reparent the mapped gear before the pose cascade so the weapon parked on its sheath node
+    // is carried by that node's world, and the handoff attaches it to the (animated) hand.
+    apply_weapon_mount(m_animation.weapon_sheathed());
     pose();
 
     // Calibration standard (user design): the standing MT_Idle base, never whichever action is

@@ -64,7 +64,11 @@ bool restorable_spell(RE::MagicItem const& magic, std::string& reason)
 {
     RE::SpellItem const* spell = magic.As<RE::SpellItem>();
     using Casting = RE::MagicSystem::CastingType;
-    if (!spell || spell->data.delivery != RE::MagicSystem::Delivery::kSelf || spell->HasVMAD() ||
+    // VMAD is deliberately not tested: TESForm::HasVMAD() is the SKSE VM-handle heuristic and
+    // returns true for script-REFERENCED forms. The 2026-10-20 game log showed vmad=true for all
+    // 66 native rule spells, while the Smooth Moveset spell and MGEF records contain no VMAD
+    // subrecord at all; gating on it rejected every Smooth rule and disabled phase preparation.
+    if (!spell || spell->data.delivery != RE::MagicSystem::Delivery::kSelf ||
         (spell->data.castingType != Casting::kConstantEffect && spell->data.castingType != Casting::kFireAndForget) ||
         spell->data.costOverride != 0 || spell->data.castingPerk || spell->effects.empty() ||
         (spell->data.spellType != RE::MagicSystem::SpellType::kSpell && spell->data.spellType != RE::MagicSystem::SpellType::kAbility))
@@ -76,7 +80,7 @@ bool restorable_spell(RE::MagicItem const& magic, std::string& reason)
         auto const& data = base->data;
         const bool marker = data.archetype == RE::EffectArchetype::kScript ||
             ((data.archetype == RE::EffectArchetype::kValueModifier || data.archetype == RE::EffectArchetype::kPeakValueModifier) && item->effectItem.magnitude == 0.0f);
-        if (!marker || base->IsHostile() || data.numCounterEffects != 0 || base->HasVMAD() || base->conditions.head || item->conditions.head || item->effectItem.area ||
+        if (!marker || base->IsHostile() || data.numCounterEffects != 0 || base->conditions.head || item->conditions.head || item->effectItem.area ||
             data.baseCost != 0.0f || data.associatedForm || data.projectileBase || data.explosion || data.equipAbility ||
             (data.castingType != Casting::kConstantEffect && data.castingType != Casting::kFireAndForget) ||
             data.delivery != RE::MagicSystem::Delivery::kSelf)

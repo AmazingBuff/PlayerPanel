@@ -17,8 +17,9 @@ namespace
     }
 }
 void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> originals,
-    std::span<RE::NiAVObject* const> copies)
+    std::span<RE::NiAVObject* const> copies, std::vector<HeldCopyMount>* mounts)
 {
+    if (mounts) mounts->clear();
     const auto& biped = source.GetBiped(false);
     std::array<RE::TESForm*, 2> hands{ source.GetEquippedObject(false), source.GetEquippedObject(true) };
     std::unordered_set<RE::NiAVObject*> held;
@@ -85,12 +86,15 @@ void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> ori
         {
             RE::NiPointer<RE::NiAVObject> retained(model);
             const RE::NiTransform local = model->local;
+            RE::NiNode* const sheath_parent = model->parent;
             if (model->parent != target)
             {
                 if (model->parent) model->parent->DetachChild(model);
                 target->AttachChild(model, true);
                 model->local = local;
             }
+            if (mounts && sheath_parent && sheath_parent != target)
+                mounts->push_back({ model, target, sheath_parent, local });
             target->SetAppCulled(false);
             model->SetAppCulled(false);
             RE::BSVisit::TraverseScenegraphObjects(model, [](RE::NiAVObject* object)

@@ -308,6 +308,7 @@ public:
     double blend_seconds = 0.0;
     double blend_duration = 0.0;
     double outgoing_seconds = 0.0;
+    double handoff_seconds = 0.0;
     bool idle_due = false;
 
     oar::AnimationSelection select(RE::Actor& source, std::span<std::string_view const> bases,
@@ -404,7 +405,7 @@ public:
         else selected = select(source, bases, preview, *proposal, channel, activation);
         const auto binding_names = oar::animation_names(graph->characterInstance, query);
         if (selected.index < binding_names.size()) selected.binding_name = binding_names[selected.index];
-        if (target.empty() && !direct && (!selected.found || !selected.replaced))
+        if (target.empty() && !direct && action.kind != ActionKind::e_unequip && (!selected.found || !selected.replaced))
         {
             base_fallback = true;
             logger::warn("ANIMATION actor={:08x} request={} unarmed replacement unavailable; direct MT_Idle fallback", actor_id, generation);
@@ -423,7 +424,16 @@ public:
                     preview_state(false), reason, true, activation, reusable);
             return;
         }
-        proposal->stage = { action, selected };
+        // Smooth's Start members are one-shot entry stages: play them once and let the boundary
+        // re-query (its annotation switches the phase markers to loop), instead of looping them.
+        ActionPrototype effective = action;
+        if ((action.kind == ActionKind::e_weapon_idle || action.kind == ActionKind::e_standing_idle) &&
+            panel_clip_is_sequence_start(selected.name))
+        {
+            effective.loop = false;
+            logger::info("ANIMATION actor={:08x} request={} sequence start one-shot path='{}'", actor_id, generation, selected.name);
+        }
+        proposal->stage = { effective, selected };
         if (active && reason != ChoiceReason::e_request && active->stage.action.kind == action.kind && active->direct == direct &&
             selected.index == active->stage.clip.index && selected.replacement_key == active->stage.clip.replacement_key)
         {
@@ -468,7 +478,7 @@ public:
         standard.base_name = standard.name = standard.binding_name = names[*base];
         proposal->standing = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
         proposal->calibration = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
-        proposal->asset = std::make_unique<LoadedAsset>(graph, selected, action.loop,
+        proposal->asset = std::make_unique<LoadedAsset>(graph, selected, effective.loop,
             action.kind == ActionKind::e_standing_idle, generation,
             target.empty() && !direct ? std::optional<oar::AnimationSelection>(standard) : std::nullopt);
         logger::info("ANIMATION actor={:08x} request={} state={} choice={} path='{}' index={} diagnostic='{}'",
@@ -482,8 +492,11 @@ public:
         if (!direct)
         {
             const dac::IdleReadiness readiness = session->idle_readiness(generation);
-            if (readiness == dac::IdleReadiness::e_pending || readiness == dac::IdleReadiness::e_none)
+            if (readiness == dac::IdleReadiness::e_pending)
             { waiting_goal = true; waiting_reason = reason; return; }
+            // e_none means no preparation was requested for this generation (the equipment-
+            // change follow-up deliberately lets the equip clip's annotations set the phase);
+            // query now instead of waiting for a preparation that will never start.
             if (readiness == dac::IdleReadiness::e_failed)
             {
                 // Native preparation is unavailable. Query OAR against the source's own effects
@@ -545,7 +558,11 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     if (!state.graph) { state.pending.reset(); return; }
     logger::info("ANIMATION actor={:08x} request={} reason='{}' source-generation={} equipment-target={}", state.actor_id,
         state.generation, observation.reason, state.source_generation, weapon_form_name(target.form));
-    if (!target.direct && !state.base_fallback) session.prepare_idle(state.generation, !equipment_changed && !new_lifetime);
+    // Panel-open forces the observed loop phase; an equipment change must NOT, or the equip
+    // clip's own Start markers (cast by its annotations) are overwritten by loop markers before
+    // the Start member can be selected, which skips the world's Equip -> Start -> Loop order.
+    if (!target.direct && !state.base_fallback && observation.reason != "equipment")
+        session.prepare_idle(state.generation, !equipment_changed && !new_lifetime);
     if (!equipment_changed && state.active) state.active->generation = state.generation;
     std::unique_ptr<Proposal> loading = std::move(state.pending);
     state.idle_due = false;
@@ -564,7 +581,7 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
             logger::info("ANIMATION actor={:08x} request={} transition={} form={}", state.actor_id, state.generation,
                 unequip ? "unequip" : "equip", weapon_form_name(form));
             state.queue(source, bases, { unequip ? ActionKind::e_unequip : ActionKind::e_equip, form, false },
-                preview_state(!unequip), ChoiceReason::e_request, unequip, false, loading.get());
+                preview_state(!unequip), ChoiceReason::e_request, false, false, loading.get());
             return;
         }
         logger::warn("ANIMATION actor={:08x} request={} transition base unavailable form={}; idle only", state.actor_id,
@@ -663,7 +680,12 @@ void AnimationController::poll()
     const auto& selection = state.active->stage.clip;
     if (selection.variants) state.variants.commit(*selection.variants, selection.variant, selection.clip_key);
     const ClipPlayback& clip = state.active->asset->playback();
-    state.clock.start(clip_annotations(*clip.animation), std::max(static_cast<double>(clip.duration), 0.05),
+    auto annotations = clip_annotations(*clip.animation);
+    state.handoff_seconds = std::max(static_cast<double>(clip.duration), 0.05) * 0.5;
+    for (const Annotation& annotation : annotations)
+        if (annotation.event == "weaponDraw" || annotation.event == "weaponSheathe")
+        { state.handoff_seconds = annotation.time; break; }
+    state.clock.start(std::move(annotations), std::max(static_cast<double>(clip.duration), 0.05),
         0.0, false);
     state.blend_seconds = 0.0;
     state.idle_due = false;
@@ -676,6 +698,16 @@ void AnimationController::poll()
 
 bool AnimationController::ready() const { return m_state->active && m_state->active->asset->ready(); }
 std::string AnimationController::name() const { return ready() ? m_state->active->stage.clip.name : "animation-loading"; }
+
+bool AnimationController::weapon_sheathed() const
+{
+    State const& state = *m_state;
+    if (!state.active) return false;
+    const ActionKind kind = state.active->stage.action.kind;
+    if (kind == ActionKind::e_equip) return state.clock.seconds() < state.handoff_seconds;
+    if (kind == ActionKind::e_unequip) return state.clock.seconds() >= state.handoff_seconds;
+    return false;
+}
 
 bool AnimationController::apply_standing_pose(RE::NiAVObject& root)
 {

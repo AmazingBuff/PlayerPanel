@@ -5,6 +5,7 @@
 #include "animation/controller.h"
 #include "dac/session.h"
 #include "animation/pose.h"
+#include "character/held_equipment.h"
 #include "render/dx11/d3d11_util.h"
 #include "render/dx11/common_states.h"
 PLUGIN_NAMESPACE_BEGIN
@@ -55,6 +56,7 @@ private:
     void replace_graph(RE::NiPointer<RE::NiAVObject> graph);
     void pose();
     void calibrate_from_posed_bound();
+    void apply_weapon_mount(bool sheathed);
     [[nodiscard]] bool drawable() const { return m_usable && m_monitor.draw_enabled && m_graph_object && m_animation.ready(); }
     struct SnapshotNode
     {
@@ -76,6 +78,7 @@ private:
     RE::NiTransform m_snapshot_root_world;
     RE::NiPoint3 m_snapshot_center;
     std::vector<SnapshotNode> m_snapshot_nodes;
+    std::vector<HeldCopyMount> m_held_mounts;
     bool m_recentre_pending = false;
     RE::NiTransform m_calibrated_root;
 };

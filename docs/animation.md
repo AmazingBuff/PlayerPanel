@@ -34,7 +34,7 @@ The production `IdleTarget` selects family and direct/query mode. Queried idles 
 
 None of these paths reseeds the original inventory entry snapshot.
 
-Missing DAC/Smooth, unsafe tags or a two-second observation timeout yield a stable direct base fallback. Armed requests use their equipped family's base, never MT_Idle merely because the source was sheathed. Empty-hand queries without a usable replacement, including condition rejection or failed replacement loading, use direct MT_Idle instead of vanilla combat-looking fists. Once retained, the direct fallback is stable across compatible refreshes until equipment changes or the graph/controller lifetime resets. No generic protocol is inferred for other movesets.
+Missing DAC/Smooth, unsafe tags or a two-second observation timeout do not force the vanilla base: OAR is still queried against the source's actual effects, and a base selection is the last resort. Armed requests use their equipped family's base, never MT_Idle merely because the source was sheathed. Empty-hand queries without a usable replacement, including condition rejection or failed replacement loading, use direct MT_Idle instead of vanilla combat-looking fists. Once retained, the direct fallback is stable across compatible refreshes until equipment changes or the graph/controller lifetime resets. No generic protocol is inferred for other movesets.
 
 ## Code map
 
@@ -61,7 +61,7 @@ Logical selection paths remain separate from loading index/binding name. Native 
 
 `clip_annotations` reads retained HKX annotations, validates times and stable-sorts them. `EventClock` dispatches crossed occurrences once, including zero/end/loop boundaries. Only accepted queried playback emits native events. Loading, direct base modes/fallbacks, calibration, standing underlay and outgoing fades do not dispatch. Compatible refresh and retarget preserve clock/cursor; frame delta remains clamped to 0-0.1 seconds.
 
-SKSE UI observations publish actual native effect revisions; function return is not readiness. OAR reads real source effects. Pending choices recheck revisions and retain compatible leases. Interruptible idles may requery on changes. Loop boundaries retain native replacement/sequence/PlayOnce/Random scope semantics; same-replacement appearance/interrupt checks preserve accepted variant/history. No Start/Loop/Loop2 folder playlist exists.
+SKSE UI observations publish actual native effect revisions; function return is not readiness. OAR reads real source effects. Pending choices recheck revisions and retain compatible leases. Interruptible idles may requery on changes. Loop boundaries retain native replacement/sequence/PlayOnce/Random scope semantics; same-replacement appearance/interrupt checks preserve accepted variant/history. A Start folder member is detected by name, played once with the loop flag off, and the following boundary re-queries (so Equip -> Start -> Loop is preserved); there is no folder playlist.
 
 ## Pose mixing and placement
 
