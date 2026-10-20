@@ -1,6 +1,6 @@
 # CharacterPanel
 
-C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), with independent animation state per source actor. Native DAC temporarily owns bounded phase effects on the source Actor during inventory, and the entry effects are restored at close. No second Actor is created.
+C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), with equipment-driven non-combat idles independent of source world actions. Native DAC temporarily owns bounded phase effects on the source Actor during inventory, and the entry effects are restored at close. No second Actor is created.
 
 With the pinned checkout and toolchain prepared as described in [Build](docs/build.md):
 
@@ -19,6 +19,8 @@ Release is the only configure/build preset; CharacterPanel is the sole first-par
 - [Historical reports](docs/history.md): complete archived report/requirements index.
 - [Runtime notes](tools/scene_copy/README.txt): compact controls and game follow-up.
 
+Empty hands default to an unarmed non-combat loop. Set `UnarmedIdle=mt_idle` under `[Animation]` in `Data/SKSE/Plugins/CharacterPanel.ini` for direct vanilla standing; copy the [sample INI](config/CharacterPanel.ini) and restart the game. Equipped gear is held only in the copy; source draw/equipment/graph state stays read-only. See [idle/config policy](docs/animation.md#configuration).
+
 Smooth Moveset support is bounded: the [core phase prerequisites and remaining IED/combat branches](docs/dac.md#smooth-moveset-compatibility-boundary) are documented separately. Installing IED and its condition provider alone does not enable the pending placement-condition adapter; complete equipment-action/pack coverage is not established.
 
-Local native build evidence exists; current CMake exposes no test/package/install route. Earlier two-case animation results are historical validation. Skyrim hook/loader/visual/lifetime behavior remains unverified; see [verification limits](docs/build.md#verification-and-limits).
+Local native build evidence exists; current CMake exposes no test/package/install route. Two current direct-compiled policy/preparation cases pass; earlier native binary checks remain separate evidence. Skyrim hook/loader/visual/lifetime behavior remains unverified; see [verification limits](docs/build.md#verification-and-limits).

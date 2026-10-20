@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Let the actual Dynamic Animation Casting plugin process preview annotation events against the source Actor during InventoryMenu, then restore the captured animation-marker effect state when the inventory closes. SceneGraph remains the sole preview display owner. CharacterPanel no longer parses DAC TOML or emulates magic effects.
+Let the actual Dynamic Animation Casting plugin prepare an equipment-driven non-combat idle and process accepted preview annotation events against the source Actor during InventoryMenu, then restore the captured animation-marker effect state when the inventory closes. SceneGraph remains the sole preview display owner. CharacterPanel no longer parses DAC TOML or emulates magic effects.
 
 ## Scope and non-goals
 
@@ -22,6 +22,18 @@ Each `SceneGraph` owns a `dac::Session`. A coordinator keeps weak registrations;
 6. PreLoadGame/NewGame invalidate world/menu epochs and discard old-world snapshots before CharacterManager releases previews. They never restore old values onto a newly loaded Actor with the same form ID. Actor handles also prevent form-ID reuse from identifying a different live source.
 
 Recapture, appearance/equipment changes, source graph replacement and temporary display hiding do not recapture or close the DAC transaction. They still update animation requests and pose-node mappings. Actor deletion/record retirement invalidates future events; a retained cleanup task restores only while the original world and Actor handle remain valid.
+
+## Non-combat idle goal preparation
+
+`Session::prepare_idle` supports the supplied Smooth package's literal `Smooth_loop` protocol: loop-on, combat-off and combat-loop-off spells pass through the original native handler and the same whole-tag safety preflight as annotations. This explicit package goal is not generic phase inference or a reimplemented cast. Native filters still decide what applies.
+
+The transaction captures entry effects first. `smooth_idle_goal` derives expected persistent on-effect identities from native-loaded literal Spell/Ability records' constant casting types and off-keyword clearance from instantaneous dispel records. No form IDs, TOML parser or virtual markers are introduced. `idle_goal_ready` observes actual non-dispelled effects: required on-markers must be active and matching off-keyword effects absent. Call completion alone cannot publish a candidate.
+
+`IdlePreparation` exposes current-request pending/ready/failed progress. Each preparation request queues at most one native cast. An unchanged compatible refresh of a ready goal queues observation only. Refresh while preparation is pending starts one attempt for the newer generation; stale queued work is rejected. Retained compatible clip leases wait behind this gate, then pass the current query/generation/revision checks before acceptance. A failed goal not yet consumed by the controller may likewise receive a new attempt on a newer request; once the controller retains its direct fallback, compatible refresh skips preparation until equipment changes or its graph/controller lifetime resets.
+
+Coalesced UI observation invalidates readiness if markers disappear. Missing session/tag support, unsafe rules or a two-second observation timeout yields the stable base fallback rather than an automatic preparation/query/recast loop. Direct empty-hand MT_Idle bypasses preparation and annotation dispatch. These choices never replace the original entry snapshot; only the controlled effect groups actually touched are restored at UI close.
+
+Existing world/menu/request checks immediately before mutation reject obsolete work. UI close still restores original groups synchronously. Paused goal application/cleanup and restore visibility remain game-only evidence.
 
 ## Original binary compatibility and provenance
 
@@ -49,13 +61,13 @@ Missing or mismatched original DAC disables native phase events with one diagnos
 
 ## Smooth Moveset compatibility boundary
 
-For the core non-combat idle Start/Loop phase mechanism, install the project's existing Skyrim/SKSE prerequisites, OAR, the supported original DAC binary above, and Smooth Moveset's own `Smooth Moveset.esp`, `SmoothMoveset.toml`, HKX files and OAR configs. No additional sequence-control plugin is needed for that mechanism. HKX annotations drive native DAC marker changes, and OAR conditions/priority select the eligible idle; folder names never schedule a playlist. This does not establish support for every equipment action or branch in the pack.
+For the core equipment-driven non-combat idle goal, install the project's existing Skyrim/SKSE prerequisites, OAR, the supported original DAC binary above, and Smooth Moveset's own `Smooth Moveset.esp`, `SmoothMoveset.toml`, HKX files and OAR configs. No additional sequence-control plugin is needed for that mechanism. The known Smooth_loop event prepares real markers before OAR selects the eligible idle; accepted annotations maintain native state; folder names never schedule a playlist. This does not establish support for every equipment action or branch in the pack.
 
 | Branch | Config requirement | Current preview boundary |
 | --- | --- | --- |
-| Core non-combat idle phases | Smooth annotations, DAC rules/ESP markers and OAR conditions | Event/native-state/query mechanism is implemented; game-time behavior remains unverified. The 16 supported DAC rule records are not proof of complete OAR branch coverage. |
+| Core non-combat idle phases | Smooth annotations, DAC rules/ESP markers and OAR conditions | Smooth_loop preparation and observed-readiness gating are implemented; game-time behavior remains unverified. The 16 supported DAC rule records are not proof of complete OAR branch coverage. |
 | Equipment placement | `IED_GearNodeEquippedPlacementHint` from `OpenAnimationReplacer-IEDConditionExtensions`, required version `1.0.0.0` | Pending an explicit IED condition-query adapter. Installing IED and its provider alone does not make these candidates supported. |
-| Combat idle Start and Loop | `HasMagicEffect(TrueDirectionalMovement.esp\|0x804, Active effects only=false)` **OR** `IsCombatState == 1`, in addition to the other Smooth conditions | The current standing preview projects `IsCombatState` to zero. World combat alone therefore cannot satisfy this alternative in the preview; the TDM effect branch may satisfy the OR if its actual source effect is present. |
+| Combat idle Start and Loop | `HasMagicEffect(TrueDirectionalMovement.esp\|0x804, Active effects only=false)` **OR** `IsCombatState == 1`, in addition to the other Smooth conditions | The current standing preview projects `IsCombatState` to zero. World combat alone therefore cannot satisfy this alternative in the preview; the TDM effect branch may satisfy the OR if present, but this panel deliberately clears Smooth combat markers for its non-combat goal. |
 
 IED placement is used by substantial equipment branches, including `1hm Equip Base` and `1hm Non-Combat Equip Base` with placement ID `<= 1`; back-weapon variants use `== 2`. It is not merely a cosmetic optional condition. The current [OAR audit](../src/oar/hooks.cpp), `audit`, rejects every enabled condition with a nonempty required-plugin name using `third-party condition requires an explicit preview adapter`. No IED adapter exists in the current policy. That diagnostic identifies an unsupported condition-query path, not missing DAC phase state; do not bypass the condition or treat installing the provider as the implementation fix.
 
@@ -78,16 +90,17 @@ The pinned SDK declares `IPostCreationModification`'s destructor without definin
 | Path | Entry point |
 | --- | --- |
 | [session.h](../src/dac/session.h), [session.cpp](../src/dac/session.cpp) | `Session`, `install`, `reset_world`, private MenuSink and UI-task lifetime |
+| [idle_goal.h](../src/dac/idle_goal.h) | `IdlePreparation`, `IdleReadiness`, current-request progress |
 | [session_core.h](../src/dac/session_core.h) | `SessionCore`, `EventTicket`, `EffectValue`, `Restoration` |
 | [native.h](../src/dac/native.h), [native.cpp](../src/dac/native.cpp) | `native_rules`, `native_dispatch`, exact identity and metadata preflight |
 | [native_profile.h](../src/dac/native_profile.h) | generated exact binary identity, entry prefixes and field offsets |
-| [effects.h](../src/dac/effects.h), [effects.cpp](../src/dac/effects.cpp) | `entry_scope`, `capture_effects`, `event_scope`, `restore_effects`, `effect_signature` |
+| [effects.h](../src/dac/effects.h), [effects.cpp](../src/dac/effects.cpp) | `entry_scope`, `capture_effects`, `event_scope`, `restore_effects`, `effect_signature`, `smooth_idle_goal`, `idle_goal_ready` |
 | [inspect_binary.py](../src/dac/inspect_binary.py) | read-only original DLL/PDB pairing, symbols/layouts and offline profile evidence |
 | [MIT-DAC.txt](../src/dac/MIT-DAC.txt) | upstream MIT notice |
 
 ## Interfaces and failure modes
 
-`Session::request` publishes the current animation generation; `dispatch` queues a literal annotation tag, `observe` coalesces native effect observation, and `revision` exposes only completed actual-state observations. `install` registers the private inventory lifecycle sink; `reset_world` invalidates old-world snapshots and queued work before their display records are released. The engine-free `SessionCore` owns immutable entry values and close/reset ticket invalidation.
+`prepare_idle` queues or observes the known goal; `idle_readiness` exposes observed progress. `Session::request` publishes the current animation generation; `dispatch` queues a literal annotation tag, `observe` coalesces native effect observation, and `revision` exposes only completed actual-state observations. `install` registers the private inventory lifecycle sink; `reset_world` invalidates old-world snapshots and queued work before their display records are released. The engine-free `SessionCore` owns immutable entry values and close/reset ticket invalidation.
 
 An unavailable profile leaves phase events disabled, without a parser fallback. Unsupported native rule scope and newly unrelated keyword collisions reject a whole event once. Missing original caster/source records, failed AddTarget/callback completion or a differing logical effect list produce restoration `MISMATCH`; no synthetic events or saved effect-pointer attachment are used to hide it.
 
@@ -111,7 +124,7 @@ Only original bytes and paired symbols establish compatibility. A maintainer mus
 
 This compatibility change ran exactly two offline inspector cases: the supplied original DLL/PDB reproduced the profile and authoritative inspection; a known mismatched PDB was rejected before any new header was emitted. Original archive/DLL/PDB hashes remained unchanged. No original DAC was built or executed. CharacterPanel's Release configure/build remains the native compile check.
 
-The retained [transaction cases](../tests/animation_controller_test.cpp) and annotation/session behavior are frozen for this binary adaptation and were not rerun. Prior transaction evidence is separate from these two tool cases. See [build guidance](build.md#verification-and-limits).
+The current [two policy/preparation cases](../tests/animation_controller_test.cpp) use production policy/progress/transaction types and a narrow fake Actor boundary for default and direct MT_Idle behavior. They do not execute native dispatch, magic or parenting APIs. Prior paired/mismatched inspector evidence is separate and is not rerun for this policy change. See [build guidance](build.md#verification-and-limits).
 
 No game is installed here: live profile acceptance, paused activation/expiration, synchronous AddTarget/dispel ordering, restoration visibility before world animation, hooks, visuals and native lifetime remain unverified. Inspect `DAC snapshot`, event/native revision, rejected-event and `DAC restore ... result=matched|MISMATCH` logs with the matching CharacterPanel binary. A native call-completed line is distinct from an observed effect revision.
 

@@ -135,15 +135,6 @@ using PoseBuffer = std::vector<std::pair<std::string, RE::NiTransform>>;
 [[nodiscard]] PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop);
 bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
     RE::hkaAnimationBinding* binding, std::string const& name, ClipPlayback& out,
-    std::string& mapping, std::string& coverage, std::string_view weapon_hint = {});
-
-struct RunningIdleSample
-{
-    std::string body_name;
-    std::uint16_t body_index = 0xFFFF;
-    float body_time = 0.0f;
-    bool body_looping = false;
-};
-[[nodiscard]] RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source);
+    std::string& mapping, std::string& coverage);
 
 PLUGIN_NAMESPACE_END

@@ -351,18 +351,7 @@ namespace
             animation::weapon_form_from_hands(animation::HandKind::kEmpty, animation::HandKind::kCrossbow) == animation::WeaponForm::kCrossbow;
     }
 
-    bool panel_animation_state_keeps_stance_and_transition_contract()
-    {
-        using namespace PLUGIN_NAMESPACE;
-        // oar-idle3: a sheathed weapon swap is an equip transition, not a sheathe — the panel
-        // plays the new weapon's equip (problem 3), and the entering-stance snapshot keeps a
-        // drawn answer consistent against its own recorded equipment (problems 2).
-        const auto sword_to_sword = panel_transition_bases(animation::WeaponForm::kOneHanded, false);
-        const auto sheathe = panel_transition_bases(animation::WeaponForm::kOneHanded, true);
-        return !sword_to_sword.empty() && sword_to_sword.front() == "Animations\\1HM_Equip.hkx" &&
-            !sheathe.empty() && sheathe.front() == "Animations\\1HM_Unequip.hkx" &&
-            panel_transition_bases(animation::WeaponForm::kNone, true).empty();
-    }
+
 
     bool project_name_catalogue_is_reused_across_sessions()
     {
@@ -753,49 +742,7 @@ namespace
         return restarted && restarted->index == 11;
     }
 
-    // Round 16: the frozen world clip may only drive the stance layer while it belongs to the
-    // stance's own idle family; a sheathed or previous-family name would otherwise override the
-    // family the panel just equipped.
-    bool panel_clip_family_matches_the_stance()
-    {
-        using PLUGIN_NAMESPACE::panel_clip_is_family;
-        using PLUGIN_NAMESPACE::animation::WeaponForm;
-        return panel_clip_is_family("Animations\\1hm_idle.hkx", WeaponForm::kOneHanded) &&
-            panel_clip_is_family("animations/1HM_IDLE.HKX", WeaponForm::kOneHanded) &&
-            panel_clip_is_family("Animations\\Female\\1hm_idle.hkx", WeaponForm::kOneHanded) &&
-            !panel_clip_is_family("Animations\\MT_Idle.hkx", WeaponForm::kTwoHandedAxe) &&
-            !panel_clip_is_family("Animations\\1hm_idle.hkx", WeaponForm::kBow) &&
-            panel_clip_is_family("Animations\\h2h_idle.hkx", WeaponForm::kNone);
-    }
 
-    // Round 17: entering during a draw/sheathe move must answer the stance that move produces.
-    // The engine clears weaponState before the menu event, so the old read answered sheathed
-    // during 1HM_Equip and drawn during 1HM_Unequip.
-    bool clip_stance_decides_the_entering_stance()
-    {
-        namespace oar = PLUGIN_NAMESPACE::oar;
-        return animation::clip_stance("Animations\\1HM_Equip.hkx") == animation::ClipStance::e_drawn &&
-            animation::clip_stance("Animations\\1hm_equip.hkx") == animation::ClipStance::e_drawn &&
-            animation::clip_stance("Animations\\1HM_Unequip.hkx") == animation::ClipStance::e_sheathed &&
-            animation::clip_stance("Animations\\Bow_Unequip.hkx") == animation::ClipStance::e_sheathed &&
-            animation::clip_stance("Animations\\1hm_idle.hkx") == animation::ClipStance::e_drawn &&
-            animation::clip_stance("Animations\\MLh_Idle.hkx") == animation::ClipStance::e_drawn &&
-            animation::clip_stance("Animations\\male\\MT_Idle.HKX") == animation::ClipStance::e_sheathed &&
-            animation::clip_stance("Animations\\MT_Jump.hkx") == animation::ClipStance::e_undecided;
-    }
-
-    // Engine draw/sheathe names define entry moves; idle folder labels stay neutral.
-    bool entry_action_kind_classifies_entry_moves()
-    {
-        namespace oar = PLUGIN_NAMESPACE::oar;
-        return animation::entry_action_kind("Animations\\1HM_Equip.hkx") == animation::EntryActionKind::e_equip &&
-            animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 2hw Axe\\2hw Axe Equip Base\\2hw_equip.hkx") == animation::EntryActionKind::e_equip &&
-            animation::entry_action_kind("Animations\\1HM_Unequip.hkx") == animation::EntryActionKind::e_unequip &&
-            animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Start\\1hm_idle.hkx") == animation::EntryActionKind::e_none &&
-            animation::entry_action_kind("data\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Smooth Moveset - 1hm\\1hm Non-Combat idle Loop\\1hm_idle.hkx") == animation::EntryActionKind::e_none &&
-            animation::entry_action_kind("Animations\\MT_Idle.hkx") == animation::EntryActionKind::e_none &&
-            animation::entry_action_kind("Animations\\MT_RunForward.hkx") == animation::EntryActionKind::e_none;
-    }
 }
 
 int main()
@@ -813,7 +760,6 @@ int main()
     passed = interrupted_pose_blend_starts_from_the_visible_pose() && passed;
     passed = preview_original_answers_suspend_projection() && passed;
     passed = panel_transition_returns_to_a_standing_idle() && passed;
-    passed = panel_animation_state_keeps_stance_and_transition_contract() && passed;
     passed = project_name_catalogue_is_reused_across_sessions() && passed;
     passed = d3d_constant_buffer_ranges_are_restored() && passed;
     passed = figure_transparency_draw_order() && passed;
@@ -825,9 +771,6 @@ int main()
     passed = animation_mapping_preserves_track_identity() && passed;
     passed = snapshot_placement_preserves_subtree() && passed;
     passed = preview_dwell_survives_accept_and_reactivation() && passed;
-    passed = panel_clip_family_matches_the_stance() && passed;
-    passed = clip_stance_decides_the_entering_stance() && passed;
-    passed = entry_action_kind_classifies_entry_moves() && passed;
     std::printf("SceneGraph retained checks: %s\n", passed ? "PASS" : "FAIL");
     return passed ? 0 : 1;
 }

@@ -88,18 +88,22 @@ Generator/toolset discovery errors require the stated VS2022/MSVC installation. 
 
 A warning that installation rules were specified while `CMAKE_SKIP_INSTALL_RULES` is enabled can come from retained dependency declarations; it does not add an install target to this project. Follow actual configure/build exit results.
 
+## Animation configuration
+
+Copy [config/CharacterPanel.ini](../config/CharacterPanel.ini) to `Data/SKSE/Plugins/CharacterPanel.ini` alongside CharacterPanel.dll. Under `[Animation]`, `UnarmedIdle=non_combat_loop` is the default; `mt_idle` chooses direct vanilla MT_Idle only when hands contain no displayable equipped item. Missing files retain the default; invalid values warn/default. Restart the game after changes. Existing SimpleIni handles loading at DataLoaded; no new dependency, MCM or reload control is required. Calibration always stays vanilla MT_Idle. See the [exact option table](animation.md#configuration); the visible direct-base option does not change the independent zero-time calibration.
+
 ## Verification and limits
 
-The stock-binary adaptation uses only the matching and mismatched offline inspector cases described in [DAC verification](dac.md#verification-and-limits). The retained transaction cases below belong to the earlier native-session change and were not rerun for this compatibility-only update.
+The stock-binary adaptation previously verified matching and mismatched offline inspector cases described in [DAC verification](dac.md#verification-and-limits); those are reused evidence. The current idle policy uses the two focused cases below.
 
-The native DAC session change uses exactly two direct-compiled behavior cases, without adding any CMake test/project target. From an x64 VS2022 developer shell initialized with MSVC 14.44.35207:
+The equipment idle policy uses exactly two direct-compiled behavior cases, without adding any CMake test/project target. From an x64 VS2022 developer shell initialized with MSVC 14.44.35207:
 
 ```powershell
 cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/animation_controller_test.cpp /Fo:build/animation_controller_test.obj /Fe:build/animation_controller_test.exe
 ./build/animation_controller_test.exe
 ```
 
-These exercise the production transaction core and annotation clock, entry restoration and independent epoch/lifetime state. They do not execute native DAC/OAR or Skyrim effect creation. The separate [offline original-binary inspector](dac.md#dependencies-and-offline-inspection) checks paired symbols without building, modifying or executing DAC. Run `cmake --preset Release` and `cmake --build --preset Release` for the DLL separately. If a reused cache has `VCPKG_MANIFEST_INSTALL=OFF`, install the manifest's packages with the existing vcpkg root first (for example `vcpkg install --triplet x64-windows-static-md --x-install-root=build/vcpkg_installed`), or reenable normal manifest installation. Preserve the baseline and installed triplet.
+These exercise production INI value parsing/idle targets, current preparation progress, marker-loss invalidation, immutable entry restoration and stale request/close rejection. They do not execute native DAC/OAR or Skyrim effect creation. The separate [offline original-binary inspector](dac.md#dependencies-and-offline-inspection) checks paired symbols without building, modifying or executing DAC. Run `cmake --preset Release` and `cmake --build --preset Release` for the DLL separately. If a reused cache has `VCPKG_MANIFEST_INSTALL=OFF`, install the manifest's packages with the existing vcpkg root first (for example `vcpkg install --triplet x64-windows-static-md --x-install-root=build/vcpkg_installed`), or reenable normal manifest installation. Preserve the baseline and installed triplet.
 
 Prior local native evidence on 2026-10-19:
 

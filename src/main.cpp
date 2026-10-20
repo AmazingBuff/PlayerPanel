@@ -10,6 +10,7 @@
 #include "input/input.h"
 #include "oar/hooks.h"
 #include "dac/session.h"
+#include "animation/settings.h"
 
 namespace
 {
@@ -40,6 +41,7 @@ namespace
             (void)PLUGIN_NAMESPACE::oar::install_hooks();
             break;
         case SKSE::MessagingInterface::kDataLoaded:
+            PLUGIN_NAMESPACE::animation::load_settings();
             PLUGIN_NAMESPACE::dac::install();
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
             PLUGIN_NAMESPACE::Renderer::install();

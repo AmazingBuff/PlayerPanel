@@ -39,8 +39,6 @@ PLUGIN_NAMESPACE_BEGIN
 namespace
 {
     constexpr std::int32_t Max_Tracks_Read = 4096;
-    constexpr size_t Max_String_Read = 128;
-    constexpr size_t String_Guard_Window = 16;
 
     using NameIndex = std::unordered_map<std::string_view, RE::NiAVObject*>;
 
@@ -116,89 +114,6 @@ namespace
         animation.SamplePartialTracks(time, count, out, float_count, float_out, nullptr);
     }
 
-    std::string guarded_string(RE::hkStringPtr const& value)
-    {
-        const char* const text = value.c_str();
-        if (!text)
-            return "-";
-        std::string out;
-        size_t verified = 0;
-        for (size_t i = 0; i < Max_String_Read; ++i)
-        {
-            if (i >= verified)
-            {
-                const size_t span = std::min(String_Guard_Window, Max_String_Read - i);
-                if (readable(text + i, span))
-                {
-                    verified = i + span;
-                }
-                else if (readable(text + i, 1))
-                {
-                    verified = i + 1;  // a string can legitimately end at a page edge; keep going byte-wise
-                }
-                else
-                {
-                    return "-";
-                }
-            }
-            const char character = text[i];
-            if (character == '\0')
-                return out.empty() ? "-" : out;
-            if (static_cast<unsigned char>(character) < 0x20 || static_cast<unsigned char>(character) > 0x7e)
-                return "-";
-            out += character;
-        }
-        return out.empty() ? "-" : out + "...";
-    }
-
-    std::uintptr_t clip_generator_vtable()
-    {
-        static const std::uintptr_t vtable = RE::hkbClipGenerator::VTABLE[0].address();
-        return vtable;
-    }
-
-
-bool clip_generator_is_live(void const* object)
-{
-    if (!object || !readable(object, sizeof(void*)) ||
-        *static_cast<const std::uintptr_t*>(object) != clip_generator_vtable())
-        return false;
-    return readable(object, sizeof(RE::hkbClipGenerator));
-}
-
-struct ActiveClipEntry
-{
-    RE::hkbClipGenerator const* generator;
-    std::string name;
-};
-
-void collect_running_clip_generators(RE::TESObjectREFR& source, std::vector<ActiveClipEntry>& out)
-{
-    RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
-    if (!source.GetAnimationGraphManager(manager) || !manager)
-        return;
-
-    for (std::uint32_t i = 0; i < manager->graphs.size(); ++i)
-    {
-        RE::BShkbAnimationGraph* const graph = manager->graphs[i].get();
-        if (!graph || !graph->holder || static_cast<RE::TESObjectREFR*>(graph->holder) != &source)
-            continue;
-        RE::hkbBehaviorGraph* const behavior = graph->characterInstance.behaviorGraph.get();
-        if (!behavior || !behavior->activeNodes)
-            continue;
-
-        // Read the live typed activation list; inactive template generators carry no usable control.
-        for (const RE::hkbNodeInfo& info : *behavior->activeNodes)
-        {
-            auto* const node = static_cast<const void*>(info.nodeClone);
-            if (!clip_generator_is_live(node))
-                continue;
-            const auto* const generator = static_cast<const RE::hkbClipGenerator*>(node);
-            out.push_back({ generator, guarded_string(generator->animationName) });
-        }
-    }
-
-}
 
 }
 
@@ -241,43 +156,9 @@ PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool l
     return result;
 }
 
-RunningIdleSample strongest_idle_clip(RE::TESObjectREFR& source)
-{
-    RunningIdleSample sample;
-    std::vector<ActiveClipEntry> running;
-    collect_running_clip_generators(source, running);
-    float best_body_weight = 0.0f;
-    for (const ActiveClipEntry& entry : running)
-    {
-        std::string lowered;
-        lowered.reserve(entry.name.size());
-        std::transform(entry.name.begin(), entry.name.end(), std::back_inserter(lowered),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        RE::hkbClipGenerator const* const generator = entry.generator;
-        if (!generator || !readable(generator, sizeof(RE::hkbClipGenerator)) || !looks_like_object(generator))
-            continue;
-        const RE::hkaDefaultAnimationControl* const control = generator->animationControl.get();
-        if (!control || !readable(control, sizeof(RE::hkaAnimationControl)) || !looks_like_object(control))
-            continue;
-        // The body-entry answer excludes hand idles: the entry action drives the whole body, and
-        // a hand-layer member out-weighing the still-blending body clips must not become it.
-        const bool hand_idle = lowered.find("mlh_") != std::string::npos || lowered.find("mrh_") != std::string::npos;
-        if (!hand_idle && control->weight > best_body_weight)
-        {
-            best_body_weight = control->weight;
-            sample.body_name = entry.name;
-            sample.body_index = generator->animationBindingIndex;
-            sample.body_time = std::isfinite(control->localTime) ? control->localTime : 0.0f;
-            sample.body_looping = generator->mode == RE::hkbClipGenerator::PlaybackMode::kModeLooping;
-        }
-
-    }
-    return sample;
-}
-
 bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
     RE::hkaAnimationBinding* binding, std::string const& clip_name, ClipPlayback& out,
-    std::string& out_mapping, std::string& out_coverage, std::string_view weapon_hint)
+    std::string& out_mapping, std::string& out_coverage)
 {
     if (!binding || !readable(binding, sizeof(*binding)) || !looks_like_object(binding))
         return false;
@@ -336,10 +217,6 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
             name.remove_suffix(1);
         return name;
     };
-    const auto matches_attachment = [](std::string_view bone)
-    {
-        return bone == "Weapon" || bone == "Quiver" || bone == "Shield";
-    };
     for (size_t i = 0; i < bindings.size(); ++i)
     {
         out.tracks.push_back(bindings[i].track);
@@ -347,46 +224,13 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
         if (!bone_raw)
             continue;
         const std::string_view bone_name = trimmed(bone_raw);
-        auto found = copy_by_name.find(bone_name);
+        std::string_view target_name = bone_name;
+        if (bone_name == "Weapon") target_name = "WEAPON";
+        else if (bone_name == "Shield") target_name = "SHIELD";
+        else if (bone_name == "Quiver") target_name = "QUIVER";
+        auto found = copy_by_name.find(target_name);
         if (found == copy_by_name.end() || found->second == &copy_root)
         {
-            // Animation-skeleton attachment bones carry the GENERIC name ("Weapon", "Quiver",
-            // "Shield"); the NIF layer carries one node per variant ("WeaponSword", "WeaponAxe",
-            // …). The in-game evidence: trim alone resolved the tracks (resolved 95/96) but the
-            // longest-prefix pick landed on the WRONG variant (WeaponSwordLeft / Weapon L Calf)
-            // and the visible weapon never moved — the caller's weapon-form hint names the exact
-            // hand-attachment node ("WeaponSword", "WeaponBow", …). Hint first, then prefix.
-            if (matches_attachment(bone_name))
-            {
-                RE::NiAVObject* best = nullptr;
-                if (!weapon_hint.empty())
-                {
-                    const auto hinted = copy_by_name.find(weapon_hint);
-                    if (hinted != copy_by_name.end() && hinted->second != &copy_root)
-                        best = hinted->second;
-                }
-                if (!best)
-                {
-                    // Only the hint-less fallback walks the map. It really takes the LONGEST
-                    // prefix: the old `!best` guard stopped at the first map-order match, which
-                    // is how a generic Weapon bone ended up on WeaponSwordLeft (round 16).
-                    size_t best_length = 0;
-                    for (const auto& [name, node] : copy_by_name)
-                    {
-                        if (name.size() > bone_name.size() && name.size() > best_length && name.starts_with(bone_name))
-                        {
-                            best = node;
-                            best_length = name.size();
-                        }
-                    }
-                }
-                if (best)
-                {
-                    out.nodes[i] = best;
-                    ++resolved;
-                    continue;
-                }
-            }
             if (unresolved.size() < 160)
                 unresolved.append(fmt::format("{}'{:.60}' ", unresolved.empty() ? "" : "|", bone_name));
             continue;

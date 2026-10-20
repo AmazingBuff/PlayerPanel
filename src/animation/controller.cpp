@@ -5,6 +5,7 @@
 #include "animation/controller.h"
 
 #include "animation/clip.h"
+#include "animation/settings.h"
 #include "animation/pose.h"
 #include "oar/hooks.h"
 #include "oar/preview_clip.h"
@@ -73,7 +74,7 @@ namespace
         return fallback;
     }
 
-    oar::PreviewState preview_state(bool drawn, bool equipping = false, bool unequipping = false)
+    oar::PreviewState preview_state(bool drawn)
     {
         oar::PreviewState state;
         state.weapon_drawn = drawn;
@@ -81,8 +82,8 @@ namespace
                  "IsSprinting", "IsSwimming", "bInJumpState", "IsInAir", "IsAttacking", "IsBlocking" })
             state.graph_variables.emplace(name, 0.0f);
         state.graph_variables.emplace("WeaponDrawn", drawn ? 1.0f : 0.0f);
-        state.graph_variables.emplace("IsEquipping", equipping ? 1.0f : 0.0f);
-        state.graph_variables.emplace("IsUnequipping", unequipping ? 1.0f : 0.0f);
+        state.graph_variables.emplace("IsEquipping", 0.0f);
+        state.graph_variables.emplace("IsUnequipping", 0.0f);
         return state;
     }
 
@@ -90,9 +91,9 @@ namespace
     {
     public:
         LoadedAsset(RE::BSTSmartPointer<RE::BShkbAnimationGraph> graph, oar::AnimationSelection selection, bool loop,
-            bool full_body, std::uint64_t generation, std::string_view weapon_hint = {}) :
+            bool full_body, std::uint64_t generation, std::optional<oar::AnimationSelection> fallback = {}) :
             m_graph(std::move(graph)), m_selection(std::move(selection)), m_loop(loop), m_full_body(full_body),
-            m_weapon_hint(weapon_hint), m_actor_id(m_graph->holder->GetFormID()), m_generation(generation)
+            m_fallback(std::move(fallback)), m_actor_id(m_graph->holder->GetFormID()), m_generation(generation)
         {
             m_behavior = m_graph->characterInstance.behaviorGraph;
             queue();
@@ -120,7 +121,7 @@ namespace
                     std::memcpy(&binding, static_cast<std::uint8_t const*>(entry) + 0x10, sizeof(binding));
                     std::string mapping;
                     std::string coverage;
-                    if (resolve_binding_playback(*m_graph, root, binding, m_selection.name, m_playback, mapping, coverage, m_weapon_hint))
+                    if (resolve_binding_playback(*m_graph, root, binding, m_selection.name, m_playback, mapping, coverage))
                     {
                         if (binding->blendHint != RE::hkaAnimationBinding::BlendHint::kNormal)
                         {
@@ -159,7 +160,7 @@ namespace
             std::string coverage;
             ClipPlayback rebound;
             if (resolve_binding_playback(*m_graph, root, m_playback.binding_owner.get(), m_selection.name,
-                    rebound, mapping, coverage, m_weapon_hint))
+                    rebound, mapping, coverage))
             {
                 m_playback = std::move(rebound);
 
@@ -217,7 +218,13 @@ namespace
             logger::warn("ANIMATION actor={:08x} request={} asset rejected index={} path='{}' reason={}",
                 m_actor_id, m_generation, m_selection.index, m_selection.name, reason);
             release();
-            if (m_selection.index != m_selection.base_index)
+            if (m_fallback && m_selection.index != m_fallback->index)
+            {
+                m_selection = std::move(*m_fallback);
+                m_fallback.reset();
+                queue();
+            }
+            else if (m_selection.index != m_selection.base_index)
             {
                 m_selection.index = m_selection.base_index;
                 m_selection.name = m_selection.base_name;
@@ -242,10 +249,7 @@ namespace
         oar::AnimationSelection m_selection;
         bool m_loop;
         bool m_full_body;
-        // The exact hand-attachment variant this asset's Weapon bone resolves to ("WeaponSword",
-        // "WeaponBow", …). The longest-prefix alias landed on the wrong variant in-game and the
-        // visible weapon never moved (fifth-round report).
-        std::string m_weapon_hint;
+        std::optional<oar::AnimationSelection> m_fallback;
         RE::FormID m_actor_id;
         std::uint64_t m_generation;
 
@@ -270,10 +274,7 @@ namespace
         SelectionState history;
         oar::ConditionRandomState conditions;
         ChoiceReason reason = ChoiceReason::e_request;
-        bool resume = false;
-        std::optional<std::array<std::uint32_t, 2>> hands;
-        std::vector<std::string> bases;
-        oar::PreviewState preview;
+        bool direct = false;
     };
 }
 
@@ -286,6 +287,10 @@ public:
     std::uint64_t source_generation = 0;
     SourceObservation observed;
     bool has_observation = false;
+    IdleTarget target{ WeaponForm::kNone, false, false };
+    bool waiting_goal = false;
+    ChoiceReason waiting_reason = ChoiceReason::e_request;
+    bool base_fallback = false;
     RE::BSTSmartPointer<RE::BShkbAnimationGraph> graph;
     RE::NiAVObject* root = nullptr;
     oar::QuerySession query;
@@ -347,7 +352,7 @@ public:
     }
 
     void queue(RE::Actor& source, std::vector<std::string_view> bases, ActionPrototype action,
-        oar::PreviewState preview, ChoiceReason reason, double start = 0.0, bool resume = false,
+        oar::PreviewState preview, ChoiceReason reason, bool direct = false,
         bool activation = false, Proposal* reusable = nullptr)
     {
         auto proposal = std::make_unique<Proposal>();
@@ -357,10 +362,7 @@ public:
         proposal->conditions = query.conditions;
         if (activation) proposal->conditions.reset();
         proposal->reason = reason;
-        proposal->resume = resume;
-        proposal->hands = preview.hand_override;
-        proposal->preview = preview;
-        for (std::string_view base : bases) proposal->bases.emplace_back(base);
+        proposal->direct = direct;
         const bool continuing_sequence = reason == ChoiceReason::e_boundary && active && active->stage.clip.variants &&
             variants.in_sequence(*active->stage.clip.variants, active->stage.clip.clip_key);
         if (reason == ChoiceReason::e_boundary && active && !continuing_sequence)
@@ -368,11 +370,22 @@ public:
             proposal->conditions.loop(active->stage.clip.clip_key);
             proposal->history.loop(active->stage.clip.clip_key);
         }
-        const std::uint32_t channel = action.kind == ActionKind::e_equip || action.kind == ActionKind::e_unequip ? 4 : 2;
+        const std::uint32_t channel = 2;
         oar::AnimationSelection selected;
         const bool native_boundary = reason == ChoiceReason::e_boundary && active && active->stage.action.loop &&
             (!active->stage.clip.reevaluate_on_loop || continuing_sequence);
-        if (native_boundary)
+        if (direct)
+        {
+            const auto names = oar::animation_names(graph->characterInstance, query);
+            const std::optional<std::uint16_t> base = oar::find_base_animation(names, bases);
+            if (base)
+            {
+                selected.found = true;
+                selected.base_index = selected.index = *base;
+                selected.base_name = selected.name = selected.binding_name = names[*base];
+            }
+        }
+        else if (native_boundary)
         {
             selected = active->stage.clip;
             if (selected.variants)
@@ -389,66 +402,23 @@ public:
                 }
         }
         else selected = select(source, bases, preview, *proposal, channel, activation);
-        if (!selected.found) return;
-        if (resume && observed.clip_index != 0xFFFF)
-        {
-            // Match copied descriptors, including actual native variant membership, so a source
-            // phase resume retains the selected replacement's interrupt/loop policy.
-            bool matched = false;
-            for (oar::AnimationDescriptor const& descriptor : selected.candidates)
-            {
-                const bool variant = descriptor.variants &&
-                    (std::ranges::any_of(descriptor.variants->sequence, [&](oar::VariantEntry const& value) { return value.index == observed.clip_index; }) ||
-                     std::ranges::find(descriptor.variants->random, observed.clip_index) != descriptor.variants->random.end());
-                if (descriptor.index != observed.clip_index && !variant) continue;
-                matched = true;
-                selected.replacement_key = descriptor.replacement_key;
-                selected.replaced = true;
-                selected.interruptible = descriptor.interruptible;
-                selected.interrupt_blend = descriptor.interrupt_blend;
-                selected.loop_blend = descriptor.loop_blend;
-                selected.reevaluate_on_loop = descriptor.reevaluate_on_loop;
-                selected.variants = descriptor.variants;
-                selected.name = descriptor.path;
-                if (selected.variants)
-                {
-                    const auto& sequence = selected.variants->sequence;
-                    const auto member = std::ranges::find_if(sequence, [&](oar::VariantEntry const& value) { return value.index == observed.clip_index; });
-                    if (member != sequence.end())
-                    {
-                        selected.variant = { member->index, static_cast<std::size_t>(member - sequence.begin()) };
-                        selected.name = member->path;
-                        for (std::size_t i = 0; i < selected.variant.position; ++i)
-                            proposal->history.commit(*selected.variants, { sequence[i].index, i }, selected.clip_key);
-                    }
-                    else
-                    {
-                        const auto at = std::ranges::find(selected.variants->random, observed.clip_index);
-                        selected.variant = { observed.clip_index };
-                        if (at != selected.variants->random.end()) selected.name = selected.variants->random_paths[static_cast<std::size_t>(at - selected.variants->random.begin())];
-                    }
-                }
-                break;
-            }
-            if (!matched)
-            {
-                selected = direct_selection(selected, observed.clip_index, observed.clip_name);
-                selected.replaced = false;
-            }
-            const auto names = oar::animation_names(graph->characterInstance, query);
-            if (observed.clip_index < names.size())
-            {
-                selected.index = observed.clip_index;
-                selected.binding_name = names[selected.index];
-                // Source index can be the base or a replacement not admitted by our audited
-                // query. Its binding remains usable, but no unmatched replacement policy leaks.
-                if (!selected.replaced) selected.name = selected.binding_name;
-            }
-        }
         const auto binding_names = oar::animation_names(graph->characterInstance, query);
         if (selected.index < binding_names.size()) selected.binding_name = binding_names[selected.index];
-        proposal->stage = { action, selected, start };
-        if (active && reason != ChoiceReason::e_request && active->stage.action.kind == action.kind &&
+        if (target.empty() && !direct && (!selected.found || !selected.replaced))
+        {
+            base_fallback = true;
+            logger::warn("ANIMATION actor={:08x} request={} unarmed replacement unavailable; direct MT_Idle fallback", actor_id, generation);
+            queue(source, { "Animations\\MT_Idle.hkx" }, { ActionKind::e_standing_idle, WeaponForm::kNone, true },
+                preview_state(false), reason, true, activation, reusable);
+            return;
+        }
+        if (!selected.found)
+        {
+            logger::warn("ANIMATION actor={:08x} request={} idle base/query unavailable diagnostic='{}'", actor_id, generation, selected.diagnostic);
+            return;
+        }
+        proposal->stage = { action, selected };
+        if (active && reason != ChoiceReason::e_request && active->stage.action.kind == action.kind && active->direct == direct &&
             selected.index == active->stage.clip.index && selected.replacement_key == active->stage.clip.replacement_key)
         {
             // Reaching a boundary accepts native history even when the next member is identical;
@@ -479,8 +449,6 @@ public:
             proposal->asset->refresh_selection(selected);
             proposal->standing = std::move(reusable->standing);
             proposal->calibration = std::move(reusable->calibration);
-            proposal->stage.start_seconds = reusable->stage.start_seconds;
-            proposal->resume = reusable->resume;
             pending = std::move(proposal);
             return;
         }
@@ -495,19 +463,32 @@ public:
         proposal->standing = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
         proposal->calibration = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
         proposal->asset = std::make_unique<LoadedAsset>(graph, selected, action.loop,
-            action.kind == ActionKind::e_standing_idle, generation, panel_weapon_node(action.form));
+            action.kind == ActionKind::e_standing_idle, generation,
+            target.empty() && !direct ? std::optional<oar::AnimationSelection>(standard) : std::nullopt);
         logger::info("ANIMATION actor={:08x} request={} state={} choice={} path='{}' index={} diagnostic='{}'",
             actor_id, generation, session->revision(), static_cast<int>(reason), selected.name, selected.index, selected.diagnostic);
         pending = std::move(proposal);
     }
 
-    void queue_idle(RE::Actor& source, ChoiceReason reason)
+    void queue_idle(RE::Actor& source, ChoiceReason reason, Proposal* reusable = nullptr)
     {
-        std::vector<std::string_view> bases = observed.drawn ? panel_idle_bases(observed.form) : std::vector<std::string_view>{ "Animations\\MT_Idle.hkx" };
-        if (observed.left_primary && bases.size() > 1) std::swap(bases[0], bases[1]);
-        queue(source, std::move(bases), { observed.drawn ? ActionKind::e_weapon_idle : ActionKind::e_standing_idle,
-            observed.form, true }, preview_state(observed.drawn), reason, 0.0, false,
-            active && !active->stage.action.loop);
+        bool direct = target.direct || base_fallback;
+        if (!direct)
+        {
+            const dac::IdleReadiness readiness = session->idle_readiness(generation);
+            if (readiness == dac::IdleReadiness::e_pending || readiness == dac::IdleReadiness::e_none)
+            { waiting_goal = true; waiting_reason = reason; return; }
+            direct = readiness == dac::IdleReadiness::e_failed;
+            if (direct) base_fallback = true;
+        }
+        waiting_goal = false;
+        std::vector<std::string_view> bases = target.direct || (direct && target.empty()) ?
+            std::vector<std::string_view>{ "Animations\\MT_Idle.hkx" } : target.bases();
+        const bool plain = target.direct || (direct && target.empty());
+        logger::info("ANIMATION actor={:08x} request={} goal=non-combat-idle family={} direct={} drawn={}",
+            actor_id, generation, weapon_form_name(target.form), direct, !plain);
+        queue(source, std::move(bases), { plain ? ActionKind::e_standing_idle : ActionKind::e_weapon_idle,
+            target.form, true }, preview_state(!plain), reason, direct, reason == ChoiceReason::e_request, reusable);
     }
 
 
@@ -537,66 +518,26 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     }
     State& state = *m_state;
     state.session = &session;
-    const SourceObservation previous = state.observed;
-    const bool weapon_changed = state.has_observation && (previous.hands != observation.hands ||
-        previous.form != observation.form || previous.drawn != observation.drawn);
+    const IdleTarget target = idle_target(observation.form, observation.left_primary, unarmed_idle_setting());
+    const bool equipment_changed = !state.has_observation || state.observed.hands != observation.hands || state.target != target;
     state.actor_id = source.GetFormID();
     state.source_handle = source.GetHandle();
     state.generation = observation.request_generation;
     state.source_generation = observation.source_graph_generation;
     state.observed = observation;
+    state.target = target;
+    if (equipment_changed) state.base_fallback = false;
     state.has_observation = true;
     state.graph = std::move(graph);
     if (!state.graph) { state.pending.reset(); return; }
-    logger::info("ANIMATION actor={:08x} request={} reason='{}' source-generation={}", state.actor_id,
-        state.generation, observation.reason, state.source_generation);
-    if (!weapon_changed && state.active)
-    {
-        state.active->generation = state.generation;
-        std::unique_ptr<Proposal> loading = std::move(state.pending);
-        Proposal const& intent = loading ? *loading : *state.active;
-        const ActionPrototype action = intent.stage.action;
-        const oar::PreviewState preview = intent.preview;
-        std::vector<std::string> owned_bases = intent.bases;
-        std::vector<std::string_view> bases;
-        for (std::string const& base : owned_bases) bases.push_back(base);
-        state.queue(source, std::move(bases), action, preview, loading ? loading->reason : ChoiceReason::e_refresh,
-            loading ? loading->stage.start_seconds : 0.0, loading && loading->resume,
-            loading && loading->reason == ChoiceReason::e_request, loading.get());
-        logger::info("ANIMATION actor={:08x} request={} appearance requery keeps local clock/effects until acceptance", state.actor_id, state.generation);
-        return;
-    }
-    state.pending.reset();
+    logger::info("ANIMATION actor={:08x} request={} reason='{}' source-generation={} equipment-target={}", state.actor_id,
+        state.generation, observation.reason, state.source_generation, weapon_form_name(target.form));
+    if (!target.direct && !state.base_fallback) session.prepare_idle(state.generation, !equipment_changed && !new_lifetime);
+    if (!equipment_changed && state.active) state.active->generation = state.generation;
+    std::unique_ptr<Proposal> loading = std::move(state.pending);
     state.idle_due = false;
-    const EntryActionKind entry = entry_action_kind(observation.clip_name);
-    if (observation.reason == "panel-open" && observation.clip_index != 0xFFFF &&
-        (entry != EntryActionKind::e_none || panel_clip_is_family(observation.clip_name, observation.form)))
-    {
-        const bool transition = entry != EntryActionKind::e_none;
-        std::vector<std::string_view> bases = transition ? panel_transition_bases(observation.form, entry == EntryActionKind::e_unequip) :
-            (observation.drawn ? panel_idle_bases(observation.form) : std::vector<std::string_view>{ "Animations\\MT_Idle.hkx" });
-        const ActionKind kind = entry == EntryActionKind::e_equip ? ActionKind::e_equip : entry == EntryActionKind::e_unequip ?
-            ActionKind::e_unequip : observation.drawn ? ActionKind::e_weapon_idle : ActionKind::e_standing_idle;
-        state.queue(source, std::move(bases), { kind, observation.form, !transition },
-            preview_state(transition || observation.drawn, entry == EntryActionKind::e_equip, entry == EntryActionKind::e_unequip),
-            ChoiceReason::e_request, observation.clip_time, true, true);
-    }
-    else if (observation.reason == "equipment" && weapon_changed)
-    {
-        const bool unequip = !observation.drawn || observation.form == WeaponForm::kNone;
-        const WeaponForm form = unequip ? previous.form : observation.form;
-        std::vector<std::string_view> bases = panel_transition_bases(form, unequip);
-        if (unequip ? previous.left_primary : observation.left_primary)
-        {
-            if (form == WeaponForm::kMagic && bases.size() > 1) std::swap(bases[0], bases[1]);
-            if (form == WeaponForm::kStaff) bases.front() = unequip ? "Animations\\StaffLeft_Unequip.hkx" : "Animations\\StaffLeft_Equip.hkx";
-        }
-        oar::PreviewState preview = preview_state(true, !unequip, unequip);
-        if (unequip) preview.hand_override = previous.raw_hands;
-        state.queue(source, std::move(bases), { unequip ? ActionKind::e_unequip : ActionKind::e_equip, form, false },
-            std::move(preview), ChoiceReason::e_request, 0.0, false, true);
-    }
-    else state.queue_idle(source, ChoiceReason::e_request);
+    state.queue_idle(source, equipment_changed ? ChoiceReason::e_request : ChoiceReason::e_refresh, loading.get());
+    if (state.waiting_goal) state.pending = std::move(loading);
 }
 
 void AnimationController::retarget(RE::NiAVObject& root)
@@ -635,25 +576,21 @@ void AnimationController::poll()
             if (state.active && state.active->stage.action.loop && state.active->stage.clip.interruptible) state.idle_due = true;
         }
     }
-    if (!state.root || !state.pending) return;
-    if (state.pending->generation != state.generation) { state.pending.reset(); return; }
-    if (state.pending->reason == ChoiceReason::e_refresh && state.active && !state.active->stage.action.loop && state.clock.finished())
+    if (state.waiting_goal)
     {
         const auto source = state.source_handle.get();
-        if (source) state.queue_idle(*source, ChoiceReason::e_boundary);
-        else state.pending.reset();
-        return;
+        if (source) state.queue_idle(*source, state.waiting_reason, state.pending.get());
+        if (state.waiting_goal) return;
     }
+    if (!state.root || !state.pending) return;
+    if (state.pending->generation != state.generation) { state.pending.reset(); return; }
     if (state.pending->effect_revision != state.session->revision())
     {
         const auto source = state.source_handle.get();
         if (!source) { state.pending.reset(); return; }
         // Rebuild the exact typed intent against the new snapshot; accepted playback continues.
         std::unique_ptr<Proposal> old = std::move(state.pending);
-        std::vector<std::string_view> bases;
-        for (std::string const& base : old->bases) bases.push_back(base);
-        state.queue(*source, std::move(bases), old->stage.action, old->preview, old->reason,
-            old->stage.start_seconds, old->resume, old->reason == ChoiceReason::e_request, old.get());
+        state.queue_idle(*source, old->reason, old.get());
         return;
     }
     Proposal& proposal = *state.pending;
@@ -670,7 +607,9 @@ void AnimationController::poll()
     if (proposal.calibration && proposal.calibration->failed()) proposal.calibration.reset();
     if (!proposal.standing->ready() || !proposal.asset->ready()) return;
     // Loader fallback metadata describes the actual retained binding, not the rejected choice.
+    if (proposal.stage.clip.replaced && !proposal.asset->selection().replaced) state.base_fallback = true;
     proposal.stage.clip = proposal.asset->selection();
+    if (state.base_fallback || (state.target.empty() && !proposal.stage.clip.replaced)) proposal.direct = true;
     state.blend_duration = 0.0;
     if (state.active)
     {
@@ -688,7 +627,7 @@ void AnimationController::poll()
     if (selection.variants) state.variants.commit(*selection.variants, selection.variant, selection.clip_key);
     const ClipPlayback& clip = state.active->asset->playback();
     state.clock.start(clip_annotations(*clip.animation), std::max(static_cast<double>(clip.duration), 0.05),
-        state.active->stage.start_seconds, state.active->resume);
+        0.0, false);
     state.blend_seconds = 0.0;
     state.idle_due = false;
     state.last_tick = std::chrono::steady_clock::now();
@@ -729,10 +668,10 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
         [&](Annotation const& annotation)
         {
             logger::info("ANIMATION actor={:08x} request={} event='{}' time={:.3f}", state.actor_id, state.generation, annotation.event, annotation.time);
-            state.session->dispatch(annotation.event, state.active->generation);
+            if (!state.active->direct) state.session->dispatch(annotation.event, state.active->generation);
         },
         [&]() { state.idle_due = true; reason = ChoiceReason::e_boundary; });
-    if (state.idle_due && source && !state.pending)
+    if (state.idle_due && source && !state.pending && !state.waiting_goal)
     {
         state.queue_idle(*source, reason);
         state.idle_due = false;
@@ -742,8 +681,7 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
     const PoseBuffer base = sample_animation_clip(state.active->standing->playback(), static_cast<float>(state.base_seconds), true);
     compose_contributor(state.pose, std::span(base), BoneMask::e_full_body);
     const PoseBuffer current = sample_animation_clip(state.active->asset->playback(), static_cast<float>(state.clock.seconds()), state.active->stage.action.loop);
-    const BoneMask mask = state.active->stage.action.kind == ActionKind::e_hand_idle ? BoneMask::e_left_hand : BoneMask::e_full_body;
-    compose_contributor(state.pose, std::span(current), mask);
+    compose_contributor(state.pose, std::span(current), BoneMask::e_full_body);
     if (state.outgoing)
     {
         state.outgoing_seconds += delta;

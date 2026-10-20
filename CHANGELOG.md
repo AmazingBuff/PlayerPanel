@@ -4,7 +4,10 @@
 
 ### Changed
 
-- Change preview phases to follow accepted animation events and original DAC marker effects,
+- Change inventory previews to equipped non-combat idles independent of world actions and sheathing.
+- Add an empty-hand choice between the default unarmed non-combat loop and direct vanilla MT_Idle.
+- Hold equipped gear in the copied hands regardless of world sheathing, preserving source state.
+- Prepare the known Smooth non-combat loop through original DAC and wait for observed markers,
   restoring controlled source effects when the inventory closes.
 - Use the supported original DAC NG Plus binary unchanged; require no DAC rebuild or runtime PDB.
 - Blend advancing outgoing and incoming poses using copied OAR durations while retaining

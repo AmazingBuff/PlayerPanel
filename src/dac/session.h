@@ -2,6 +2,7 @@
 // Created by AmazingBuff on 2026/10/20.
 //
 #pragma once
+#include "dac/idle_goal.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -20,6 +21,8 @@ namespace dac
         Session& operator=(Session const&) = delete;
         void request(std::uint64_t generation);
         void dispatch(std::string event, std::uint64_t generation);
+        void prepare_idle(std::uint64_t generation, bool retain_ready);
+        [[nodiscard]] IdleReadiness idle_readiness(std::uint64_t generation) const;
         void observe();
         [[nodiscard]] std::uint64_t revision() const;
         class State;

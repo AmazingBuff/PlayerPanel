@@ -6,6 +6,7 @@
 
 
 #include "character/figure_audit.h"
+#include "character/held_equipment.h"
 #include "character/snapshot_transform.h"
 
 #include <cmath>
@@ -359,6 +360,7 @@ RE::NiPointer<RE::NiAVObject> SceneGraph::capture_graph(RE::Actor& actor)
         removed_controllers += property->controllers ? 1 : 0;
         property->controllers = nullptr;
     }
+    hold_copy_equipment(actor, source_inventory.objects, copy_inventory.objects);
     logger::info("SCOPY READY actor={:08x} capture={} controllers-removed={} collisions-removed={}",
         actor.GetFormID(), m_capture_id, removed_controllers, removed_collisions);
     for (RE::NiAVObject* object : copy_inventory.objects)

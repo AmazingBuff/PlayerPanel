@@ -14,7 +14,6 @@ namespace animation
     {
         ActionPrototype action;
         oar::AnimationSelection clip;
-        double start_seconds = 0.0;
     };
 
     [[nodiscard]] inline oar::AnimationSelection direct_selection(oar::AnimationSelection const& base,

@@ -3,106 +3,101 @@
 //
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
-#include "animation/event_clock.h"
+#include "animation/idle_policy.h"
+#include "dac/idle_goal.h"
 #include "dac/session_core.h"
+#include <array>
 #include <cassert>
 #include <iostream>
-
 using namespace test_plugin;
 namespace
 {
-    struct FakeEngine
+    struct FakeActor
     {
         std::vector<dac::EffectValue> effects;
         int equipment = 7;
-        int restored = 0;
-        std::vector<dac::EffectValue> capture() const
+        bool drawn = false;
+        std::string world_clip = "1HM_Equip";
+        void native_loop()
         {
-            std::vector<dac::EffectValue> result;
-            for (auto const& effect : effects) if (effect.spell < 100) result.push_back(effect);
-            return result;
-        }
-        void native_phase()
-        {
-            std::erase_if(effects, [](auto const& effect) { return effect.spell == 1; });
+            std::erase_if(effects, [](dac::EffectValue const& effect) { return effect.spell == 1; });
             effects.push_back({ .spell = 2, .effect = 22 });
         }
-        void restore(dac::Restoration const& transaction)
+        bool ready() const
         {
-            ++restored;
-            std::erase_if(effects, [&](auto const& effect)
-            { return std::ranges::find(transaction.spells, effect.spell) != transaction.spells.end(); });
-            effects.insert(effects.end(), transaction.baseline.begin(), transaction.baseline.end());
+            return std::ranges::any_of(effects, [](dac::EffectValue const& effect) { return effect.effect == 22; }) &&
+                std::ranges::none_of(effects, [](dac::EffectValue const& effect) { return effect.effect == 11; });
+        }
+        void restore(dac::Restoration const& restoration)
+        {
+            std::erase_if(effects, [&](dac::EffectValue const& effect)
+            { return std::ranges::find(restoration.spells, effect.spell) != restoration.spells.end(); });
+            effects.insert(effects.end(), restoration.baseline.begin(), restoration.baseline.end());
         }
     };
 }
-
-void entry_snapshot_restores_native_phase_and_preserves_equipment()
+void default_equipment_idle_waits_for_native_goal_and_keeps_entry_snapshot()
 {
-    const dac::EffectValue entry{ .spell=1, .effect=11, .caster=5, .source=6, .casting_source=3,
-        .inactive=true, .magnitude=0.0f, .duration=30.0f, .elapsed=4.5f, .dual=true };
-    FakeEngine actor{ { entry, { .spell=101, .effect=1001 } } };
+    const auto setting = animation::parse_unarmed_idle("non_combat_loop").value();
+    const auto target = animation::idle_target(animation::weapon_form_from_hands(
+        animation::HandKind::kOneHandedWeapon, animation::HandKind::kShield), false, setting);
+    FakeActor actor{{{.spell = 1, .effect = 11, .elapsed = 4.5f}}};
+    const auto baseline = actor.effects;
+    assert(!target.direct && target.drawn() && target.form == animation::WeaponForm::kOneHanded);
+    assert(target.bases().front() == "Animations\\1hm_idle.hkx");
     dac::SessionCore session;
+    dac::IdlePreparation goal;
     session.request(1);
-    session.begin(actor.capture());
-    const dac::EventTicket ticket = session.ticket();
-    animation::EventClock clock;
-    clock.start({ {0.0,"entry"}, {2.5,"phase"}, {3.333333,"end"} },3.333333,0.0,false);
-    int events=0;
-    const auto event = [&](animation::Annotation const& annotation)
-    {
-        ++events;
-        if (annotation.event=="phase" && session.accepts(ticket))
-        {
-            session.touch({1,2}); // native literal spell plus keyword-affected original group
-            actor.native_phase();
-        }
-    };
-    clock.advance(2.5,true,[](double){},event,[]{});
-    assert(events==2 && actor.capture().front().spell==2 && clock.seconds()==2.5);
-    actor.equipment=9;
-    session.begin(actor.capture()); // appearance/retarget cannot replace the immutable entry
-    const auto closing=session.close();
-    assert(closing && !session.accepts(ticket));
-    actor.restore(*closing);
-    assert(actor.capture()==std::vector<dac::EffectValue>{entry});
-    assert(actor.effects.front().spell==101 && actor.equipment==9 && actor.restored==1);
-    assert(!session.close());
+    session.begin(actor.effects);
+    const auto old = session.ticket();
+    assert(goal.start(1, false) == dac::IdleWork::e_dispatch);
+    assert(goal.status(1) == dac::IdleReadiness::e_pending && !actor.ready());
+    session.request(2);
+    assert(goal.start(2, false) == dac::IdleWork::e_dispatch && !session.accepts(old));
+    goal.finish(1, true);
+    assert(goal.status(2) == dac::IdleReadiness::e_pending);
+    session.touch({1, 2});
+    actor.native_loop();
+    goal.finish(2, actor.ready());
+    assert(goal.status(2) == dac::IdleReadiness::e_ready);
+    const auto empty = animation::idle_target(animation::WeaponForm::kNone, false, setting);
+    assert(empty.empty() && !empty.direct && empty.drawn() && empty.bases().front() == "Animations\\h2h_idle.hkx");
+    session.begin(actor.effects);
+    session.request(3);
+    assert(goal.start(3, true) == dac::IdleWork::e_observe && goal.status(3) == dac::IdleReadiness::e_pending);
+    goal.finish(3, actor.ready());
+    assert(goal.status(3) == dac::IdleReadiness::e_ready);
+    goal.finish(3, false);
+    assert(goal.status(3) == dac::IdleReadiness::e_failed);
+    actor.restore(*session.close());
+    assert(actor.effects == baseline && actor.equipment == 7 && !actor.drawn && actor.world_clip == "1HM_Equip");
 }
-
-void stale_events_and_old_worlds_cannot_restore_over_new_sessions()
+void direct_empty_idle_rejects_old_preparation_after_request_and_close()
 {
-    FakeEngine actor_a{{{.spell=1,.effect=11}}}, actor_b{{{.spell=3,.effect=33}}};
-    dac::SessionCore first,second;
-    first.request(1); second.request(1);
-    first.begin(actor_a.capture()); second.begin(actor_b.capture());
-    const auto old=first.ticket(), other=second.ticket();
-    actor_a.restore(*first.close());
-    first.begin(actor_a.capture()); first.request(2);
-    assert(!first.accepts(old) && second.accepts(other));
-    const auto obsolete_request=first.ticket();
-    first.request(3);
-    assert(!first.accepts(obsolete_request));
-    const auto current=first.ticket();
-    animation::EventClock resumed;
-    resumed.start({{0.1,"past"},{2.5,"future"}},3.333333,0.5,true);
-    int events=0;
-    resumed.advance(2.0,false,[](double){},[&](animation::Annotation const& event)
-    {
-        ++events;
-        assert(event.event=="future");
-        if(first.accepts(current)) { first.touch({1,2}); actor_a.native_phase(); }
-    },[]{});
-    assert(events==1 && actor_a.capture().front().spell==2);
-    first.reset(); // PreLoadGame/NewGame discards, never restores old values
-    assert(!first.accepts(current) && !first.close() && actor_a.restored==1);
-    assert(second.accepts(other) && actor_b.capture().front().spell==3 && actor_b.restored==0);
-    second.touch({3}); actor_b.restore(*second.close());
-    assert(actor_b.capture().front().effect==33 && actor_b.restored==1);
+    const auto setting = animation::parse_unarmed_idle("mt_idle").value();
+    const auto target = animation::idle_target(animation::WeaponForm::kNone, false, setting);
+    assert(target.direct && !target.drawn());
+    assert(!animation::parse_unarmed_idle("unknown"));
+    dac::SessionCore session;
+    dac::IdlePreparation goal;
+    FakeActor actor{{{.spell = 1, .effect = 11}}};
+    session.request(1); session.begin(actor.effects);
+    const auto queued = session.ticket();
+    assert(goal.start(1, false) == dac::IdleWork::e_dispatch);
+    session.request(2);
+    int native_calls = 0;
+    if (session.accepts(queued)) { ++native_calls; actor.native_loop(); }
+    const std::string visible(target.bases().front());
+    const std::string calibration = "Animations\\MT_Idle.hkx";
+    assert(visible == calibration && native_calls == 0 && actor.effects.front().effect == 11);
+    (void)session.close();
+    assert(!session.accepts(queued));
+    if (session.accepts(queued)) { ++native_calls; actor.native_loop(); }
+    assert(native_calls == 0 && target.direct);
 }
 int main()
 {
-    entry_snapshot_restores_native_phase_and_preserves_equipment();
-    stale_events_and_old_worlds_cannot_restore_over_new_sessions();
-    std::cout<<"2 native-session transaction/event cases passed\n";
+    default_equipment_idle_waits_for_native_goal_and_keeps_entry_snapshot();
+    direct_empty_idle_rejects_old_preparation_after_request_and_close();
+    std::cout << "2 panel idle policy/native preparation cases passed\n";
 }

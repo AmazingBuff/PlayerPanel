@@ -43,7 +43,7 @@ private:
         bool draw_enabled = true;
     };
     bool update_source_graph(RE::Actor& source);
-    void observe_source(RE::Actor& source, bool opening);
+    void observe_source(RE::Actor& source);
     void schedule_animation(RE::Actor& source, std::uint64_t revision, std::string reason);
     void close_session();
     void update_monitor(RE::Actor& source, std::uint64_t revision, bool paused, bool open, bool opening, bool closing, bool usable);

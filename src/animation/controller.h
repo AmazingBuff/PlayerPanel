@@ -14,15 +14,9 @@ namespace animation
 {
     struct SourceObservation
     {
-        bool drawn = false;
         bool left_primary = false;
         animation::WeaponForm form = animation::WeaponForm::kNone;
         std::array<std::uint32_t, 2> hands{};
-        std::array<std::uint32_t, 2> raw_hands{};
-        std::string clip_name;
-        std::uint16_t clip_index = 0xFFFF;
-        double clip_time = 0.0;
-        bool clip_looping = false;
         std::uint64_t request_generation = 0;
         std::uint64_t source_graph_generation = 0;
         std::string reason;

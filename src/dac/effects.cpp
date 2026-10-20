@@ -181,6 +181,53 @@ bool event_scope(RE::Actor& actor, std::string_view event, std::vector<RuleScope
     return reason.empty();
 }
 
+bool smooth_idle_goal(std::vector<RuleScope> const& rules, IdleGoal& goal, std::string& reason)
+{
+    bool matched = false;
+    for (RuleScope const& rule : rules)
+        if (rule.event == "Smooth_loop")
+        {
+            matched = true;
+            if (!rule.rejection.empty()) { reason = rule.rejection; return false; }
+            for (std::uint32_t id : rule.spells)
+            {
+                RE::SpellItem const* spell = RE::TESForm::LookupByID<RE::SpellItem>(id);
+                if (!spell) { reason = "Smooth_loop spell unavailable"; return false; }
+                for (RE::Effect const* effect : spell->effects)
+                {
+                    RE::EffectSetting const& base = *effect->baseEffect;
+                    if (spell->data.castingType == RE::MagicSystem::CastingType::kConstantEffect &&
+                        base.data.castingType == RE::MagicSystem::CastingType::kConstantEffect)
+                        include(goal.on_effects, base.GetFormID());
+                    else if (base.data.flags.any(RE::EffectSetting::EffectSettingData::Flag::kDispelWithKeywords))
+                        for (std::uint32_t i = 0; i < base.numKeywords; ++i)
+                            if (base.keywords[i]) include(goal.off_keywords, base.keywords[i]->GetFormID());
+                }
+            }
+        }
+    if (!matched || goal.on_effects.empty()) { reason = "Smooth_loop persistent marker protocol unavailable"; return false; }
+    return true;
+}
+
+bool idle_goal_ready(RE::Actor& actor, IdleGoal const& goal)
+{
+    std::vector<std::uint32_t> present;
+    bool clear = true;
+    actor.AsMagicTarget()->VisitActiveEffects([&](RE::ActiveEffect* active)
+    {
+        if (!active || active->flags.any(RE::ActiveEffect::Flag::kDispelled) ||
+            !active->effect || !active->effect->baseEffect) return RE::BSContainer::ForEachResult::kContinue;
+        RE::EffectSetting const& base = *active->effect->baseEffect;
+        if (contains(goal.on_effects, base.GetFormID()))
+        {
+            if (!active->flags.any(RE::ActiveEffect::Flag::kInactive)) include(present, base.GetFormID());
+        }
+        else if (matches_keywords(base, goal.off_keywords)) clear = false;
+        return RE::BSContainer::ForEachResult::kContinue;
+    });
+    return clear && std::ranges::all_of(goal.on_effects, [&](std::uint32_t id) { return contains(present, id); });
+}
+
 bool restore_effects(RE::Actor& actor, Restoration const& restoration)
 {
     std::vector<EffectValue> current = capture_effects(actor, restoration.spells);
