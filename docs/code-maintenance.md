@@ -68,7 +68,7 @@ Game follow-up remains two representative categories, not a new test matrix:
 1. **Equipment idle policy:** verify the same non-combat equipped target during world draw/attack/move/sheathe, both empty-hand INI choices and rapid equipment changes; correlate actor/request/event/effect/handover logs and confirm controlled source effects restore and unrelated equipment/buffs remain intact.
 2. **Copied-graph presentation/lifetime:** F7 without compatible-loop rewind, F8, close/reopen/load boundaries, appearance, attachments, framing and transparency; correlate capture/audit/park and draw logs.
 
-These categories remain unverified without a Skyrim runtime. No new diagnostic code or per-frame tracing is implied.
+These categories remain unverified without a Skyrim runtime. No new diagnostic code or per-frame tracing is implied. The current round's concrete checklist, expected log lines and result table are in the [equipment idle/DAC test sheet](equipment-idle-dac-test-2026-10-20.md).
 
 ## Safety and rendering invariants
 
