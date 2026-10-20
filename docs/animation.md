@@ -51,6 +51,24 @@ OAR is a query boundary. It audits conditions and returns copied replacement, va
 
 `query_animation` may update only its caller's condition Random cache. It cannot seek, commit, dwell or advance playback. Variant selection/PlayOnce acceptance and loop reevaluation belong to the controller. The shared catalogue contains only copied project metadata and is invalidated at a load boundary through `QuerySession::invalidate_projects`.
 
+## Ordered Start/Loop playback
+
+`idle_sequence` first uses a nonempty native variant sequence. It plans against a copy of the actor's accepted `SelectionState` history, skipping consumed PlayOnce members and following the metadata's sequence/random policy. A sequential final member repeats only when it is not PlayOnce; a selected random member is a loop stage. A native sequence with no repeating member appends the stable standing idle. Planning does not commit the live history: `State::handover` commits each accepted stage.
+
+Without native sequence metadata, the folder adapter uses logical candidate paths. `collect_sequence_family` requires a case-insensitive match of filename, root above the member folder, and member-folder stem after stripping Start/Loop and episode digits. It sorts Start before Loop, then by numeric episode and catalogue index. For `Start → Loop → Loop2`, Start and Loop are finite and only Loop2 repeats. A Start-only family, or a lone Start with no supported Loop metadata, finishes and hands over to the vanilla stable standing idle with a diagnostic. An anchor with no sequence marker or family becomes a repeating idle.
+
+At `panel-open`, `AnimationController::request` uses the recorded binding index and local time. Equip or Unequip is prepended at that sampled time; Equip then hands over to the planned Start at zero, while Unequip hands over to standing. If the observed index matches a planned Start or Loop member, earlier members are removed and that member resumes at the observed time. If there is no match and the observed entry is not Start, planning skips to the repeating stage. A nonmatching Start entry retains the planned entry sequence. An equipment-change request instead queries a finite draw/sheathe transition at zero. An appearance refresh uses `resume_continuation` at acceptance to preserve the currently visible matching stage and time, or resume at the loop if it cannot match.
+
+`poll` preloads the proposal's stage assets, then starts one active `PlaybackTimeline`; successors have zero start time unless explicitly observed or continued. `advance` samples the current stage at its stored time, combines it over the standing contribution, writes the pose, then advances the timeline by the frame delta (clamped to 0–0.1 seconds). A finite stage hands over when its clock reaches its duration (minimum 0.05 seconds); the successor begins at its own start time without carrying excess time. Loading a successor never runs its clock. A loop-marked stage stays current and samples cyclically; fixed native sequential choices stay there, while other loops can reevaluate conditions/variants at cycle boundaries. A changed choice loads a new proposal, and a folder-family loop recheck skips its entry stages.
+
+## Restored pose mixing and placement
+
+Every accepted proposal and finite-stage handover calls the same `State::handover`: it copies the last composed pose into `blend_from` and resets `blend_seconds` to zero. Over the next 0.4 seconds, `advance` blends that frozen outgoing snapshot toward each newly sampled incoming pose, then clears the snapshot. The outgoing clip does not continue advancing during the fade. This applies uniformly to Equip → Start, Start → Loop and other handovers; it is not an overlap of two running clips or an OAR blend operation.
+
+The two continuity experiments (`1b77db4` and `f897391`) are reverted. Their cut/conditional-fade policies changed mixing, not sequence order or clocks. The retained `fc8c7ba` fix separately calibrates placement from vanilla MT_Idle before the action write; see [SceneGraph invariants](scene-graph.md#invariants). The rollback restores the earlier mixing policy and does not establish a game-time continuity fix or root cause.
+
+This sequence is a local playlist of offline pose samples. OAR supplies copied metadata and condition results; the panel does not fire the world's animation events or advance its behavior graph. Local ordering and snapshot fades do not prove how the active world graph blends these moves.
+
 ## Invariants and compatibility
 
 - Only a current actor request generation may accept pending resources. Requests and random/variant histories never cross actors.

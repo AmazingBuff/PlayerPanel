@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Restore the uniform 0.4-second preview pose crossfade after reverting the two sequence
+  continuity experiments; retain vanilla MT_Idle placement calibration. This rollback does
+  not establish a fix for the reported continuity problem.
+
 - Change CMake to one Release DLL target and remove test, packaging and legacy preset entry points.
 
 ### Removed
@@ -11,10 +15,6 @@
 - Remove Actor-based preview creation, equipment mirroring and puppet diagnostics; use SceneGraph previews in every build.
 
 ### Fixed
-
-- Cross-fade only between members of one idle sequence. Start/Loop/Loop2 are authored to flow
-  into each other and the engine blends them, so the stage handover keeps the blend; unrelated
-  handovers (Equip → Start, a swap → the new idle) cut instead of blending across the seam.
 
 - Fix preview placement drifting between actions: calibrate the copy root from the vanilla
   MT_Idle base at capture, before the action pose is written, instead of from whichever action

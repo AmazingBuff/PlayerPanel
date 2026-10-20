@@ -311,22 +311,10 @@ public:
         return result;
     }
 
-    // The engine blends between members of one authored idle sequence (Start handing into Loop)
-    // and cuts between unrelated moves (Equip → Start, a swap → the new idle). The panel's stage
-    // crossfade follows the same rule; `same_sequence` is true only for a Start/Loop → Loop
-    // handover. A new proposal (entry or equipment) always blends from the visible pose.
-    void handover(bool same_sequence = false)
+    void handover()
     {
-        if (same_sequence)
-        {
-            blend_from = pose;
-            blend_seconds = 0.0;
-        }
-        else
-        {
-            blend_from.clear();
-            blend_seconds = 0.4;
-        }
+        blend_from = pose;
+        blend_seconds = 0.0;
         if (playback.current().clip.variants)
         {
             auto const& selection = playback.current().clip;
@@ -614,12 +602,7 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
     if (weight >= 1.0f) state.blend_from.clear();
     const double duration = std::max(static_cast<double>(asset.playback().duration), 0.05);
     const std::uint64_t before_cycle = static_cast<std::uint64_t>(state.playback.seconds() / duration);
-    if (state.playback.advance(delta, duration))
-    {
-        const ActionKind previous = state.playback.previous_action();
-        const ActionKind next = state.playback.current().action.kind;
-        state.handover(idle_sequence_stage(previous) && idle_sequence_stage(next));
-    }
+    if (state.playback.advance(delta, duration)) state.handover();
     else if (state.playback.current().action.loop && !state.pending &&
         static_cast<std::uint64_t>(state.playback.seconds() / duration) != before_cycle)
     {
