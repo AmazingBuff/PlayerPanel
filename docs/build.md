@@ -137,6 +137,18 @@ cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/ied_condition_adapter_test.
 
 The [cases](../tests/ied_condition_adapter_test.cpp) exercise the production [admission/guarded native dispatch](../src/oar/ied_conditions.h): the representative native-preservation scenario covers equipped-placement false, left/right comparison, negation and disabled behavior, plus the zero-component SDS shield-setting false and negation; a historical-hand scope rejects before any native read. These remain two cases. They use narrow provider fakes and do not execute Skyrim, IED, SDS or the supplied DLL. The normal Release configure/build separately compiles the real OAR/SDK integration; no CMake test target or dependency is added. The [three-condition reference](oar-hooks.md#native-ied-placement-conditions-2026-10-21) records exact provider/schema versions, provider-side SDS prerequisites and archive/DLL provenance. Real OAR/SDS registration, paused IED hint freshness, native evaluation, missing-provider fallback and visuals remain game-only follow-up.
 
+### Fixed base index verification
+
+In the same x64 MSVC 14.44.35207 developer shell, with assertions enabled:
+
+```powershell
+New-Item -ItemType Directory -Force build/fixed-base-index-cache | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/base_animation_cache_test.cpp /Fobuild/fixed-base-index-cache/base_animation_cache_test.obj /Febuild/fixed-base-index-cache/base_animation_cache_test.exe
+./build/fixed-base-index-cache/base_animation_cache_test.exe
+```
+
+Exactly two [shared cases](../tests/base_animation_cache_cases.h) compile the production sparse resolver/cache: finite originals amid 15,000 replacements with alias/exact/left-primary precedence and reuse across menu sessions; project/table/count/load invalidation with missing originals, standing fallback availability and actual selected-index names. The fixture supplies author metadata for the existing hash helper. No new CMake target/dependency is added. The [retained graph/math driver](../tests/snapshot_transform_test.cpp) now shares these definitions instead of obsolete whole-catalogue APIs; its unrelated cases were not run. Normal Release configure/build checks real SDK/OAR integration separately. [Preparation timing/readiness](animation.md#fixed-base-indices-and-project-readiness), native loader/hook behavior, game lifetime and actual hitch reduction remain unverified without Skyrim; DAC preflight, Clone and first asset/GPU use are unchanged.
+
 ## Safe modification
 
 Keep target/preset changes synchronized, preserve required dependencies/generation and inspect the actual generated solution after removing entry points. Old generated project files are not supported routes. Do not delete archives or unrelated build-directory contents as a substitute for checking the current target graph.

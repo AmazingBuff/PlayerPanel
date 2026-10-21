@@ -78,6 +78,7 @@ void CharacterManager::update(bool paused)
         if (!m_scene_graphs.empty()) release_previews();
         return;
     }
+    if (ui && ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME)) return;
     register_actors({ RE::PlayerCharacter::GetSingleton() });
     const bool open = PanelMonitor::instance().is_menu_open();
     const std::uint64_t menu_revision = PanelMonitor::instance().revision();

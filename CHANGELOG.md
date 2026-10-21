@@ -10,6 +10,8 @@
 
 ### Changed
 
+- Cache only fixed preview base-action indices per ready animation project before inventory,
+  and read selected replacement binding names on demand instead of copying the expanded catalogue.
 - Change inventory previews to equipped non-combat idles independent of world actions and sheathing.
 - Add an empty-hand choice between the default unarmed non-combat loop and direct vanilla MT_Idle.
 - Hold equipped gear in the copied hands regardless of world sheathing, preserving source state.

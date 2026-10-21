@@ -9,6 +9,8 @@
 #include "oar/preview_clip.h"
 
 #include "RE/H/hkbCharacterStringData.h"
+#include "RE/H/hkbAnimationBindingSet.h"
+#include "RE/H/hkbCharacterSetup.h"
 
 #include <Windows.h>
 #include <detours/detours.h>
@@ -16,6 +18,7 @@
 #include <atomic>
 #include <bit>
 #include <cmath>
+#include <chrono>
 #include <cstring>
 #include <limits>
 #include <shared_mutex>
@@ -770,18 +773,71 @@ namespace oar
         return readable(strings, sizeof(*strings)) ? strings : nullptr;
     }
 
-    std::span<std::string const> animation_names(RE::hkbCharacter& character, QuerySession& session)
+    namespace
     {
-        RE::hkbCharacterStringData* const wanted = character_strings(character);
-        if (!wanted)
-            return {};
-        const auto& table = wanted->animationNames;
-        const std::size_t count = static_cast<std::size_t>(table.size());
-        if (table.size() <= 0 || table.size() > 65535 ||
-            !readable(table.data(), count * sizeof(RE::hkStringPtr)))
-            return {};
-        return session.names(wanted, table.data(), count,
-            [&](std::size_t i) { return asset_name(table[static_cast<int>(i)]); });
+        struct ReadyAnimationTable
+        {
+            RE::hkbCharacterStringData* owner;
+            std::span<RE::hkStringPtr const> names;
+        };
+
+        std::optional<ReadyAnimationTable> ready_animation_table(RE::hkbCharacter& character)
+        {
+            RE::hkbCharacterStringData* const strings = character_strings(character);
+            if (!strings || !character.behaviorGraph) return std::nullopt;
+            const auto& names = strings->animationNames;
+            const std::size_t count = static_cast<std::size_t>(names.size());
+            RE::hkbAnimationBindingSet const* bindings = character.animationBindingSet.get();
+            if (!bindings) bindings = character.setup->animationBindingSet.get();
+            // OAR extends names before LoadClips builds bindings. A published graph whose
+            // binding set covers the table is observed only on the serialized UI update.
+            if (names.size() <= 0 || names.size() > 65535 || !readable(bindings, sizeof(*bindings)) ||
+                bindings->bindings.size() < names.size() || !readable(names.data(), count * sizeof(RE::hkStringPtr)))
+                return std::nullopt;
+            return ReadyAnimationTable{ strings, { names.data(), count } };
+        }
+
+        BaseAnimationProject const& prepare_bases(ReadyAnimationTable const& table, std::string_view stage)
+        {
+            const std::chrono::steady_clock::time_point started = std::chrono::steady_clock::now();
+            const BaseAnimationCache::Preparation prepared = QuerySession::projects().prepare(
+                { table.owner, table.names.data(), table.names.size() }, [&](std::size_t i)
+                {
+                    // Published hkStringPtr storage stays borrowed for this synchronous pass only.
+                    char const* const text = table.names[i].c_str();
+                    return text ? std::string_view(text) : std::string_view{};
+                });
+            BaseAnimationProject const& project = *prepared.project;
+            if (prepared.initialized)
+                logger::info("OAR bases stage={} project={} table={} requested={} resolved={} missing={} elapsed_ms={:.3f}",
+                    stage, static_cast<void const*>(table.owner), table.names.size(), project.requested(), project.resolved(),
+                    project.requested() - project.resolved(),
+                    std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count());
+            return project;
+        }
+    }
+
+    bool prepare_base_animations(RE::hkbCharacter& character, std::string_view stage)
+    {
+        const std::optional<ReadyAnimationTable> table = ready_animation_table(character);
+        if (!table) return false;
+        (void)prepare_bases(*table, stage);
+        return true;
+    }
+
+    std::optional<BaseAnimation> base_animation(RE::hkbCharacter& character,
+        std::span<std::string_view const> candidates)
+    {
+        const std::optional<ReadyAnimationTable> table = ready_animation_table(character);
+        return table ? prepare_bases(*table, "menu-fallback").find(candidates) : std::nullopt;
+    }
+
+    std::string animation_binding_name(RE::hkbCharacter& character, std::uint16_t index)
+    {
+        const std::optional<ReadyAnimationTable> table = ready_animation_table(character);
+        if (!table) return {};
+        return BaseAnimationCache::binding_name(table->names.size(), index,
+            [&](std::size_t i) { return asset_name(table->names[i]); });
     }
 
     AnimationSelection query_animation(RE::TESObjectREFR& source, RE::hkbCharacter& character,
@@ -806,54 +862,53 @@ namespace oar
         }
         const auto decide = [&](void const* project)
         {
-            const auto& animation_names = wanted->animationNames;
-            if (animation_names.size() <= 0 || animation_names.size() > 65535 ||
-                !readable(animation_names.data(), static_cast<std::size_t>(animation_names.size()) * sizeof(RE::hkStringPtr)))
+            const std::optional<ReadyAnimationTable> table = ready_animation_table(character);
+            if (!table)
             {
                 result.diagnostic = "animation name table unavailable";
                 return;
             }
-            const auto names = session.names(wanted, animation_names.data(), static_cast<std::size_t>(animation_names.size()),
-                [&](std::size_t i) { return asset_name(animation_names[static_cast<int>(i)]); });
-            const auto base = find_base_animation(names, bases);
+            const std::size_t name_count = table->names.size();
+            const std::optional<BaseAnimation> base = prepare_bases(*table, "menu-fallback").find(bases);
             if (!base)
             {
                 result.diagnostic = "standing base animation not present in this project";
                 return;
             }
             result.found = true;
-            result.base_index = *base;
-            result.index = *base;
-            result.name = names[*base];
+            result.base_index = base->index;
+            result.index = base->index;
+            result.name = base->name;
             result.base_name = result.name;
             result.binding_name = result.name;
             size_t clip_key = Amazing_Hash;
             clip_key = hash_combine(clip_key, wanted);
-            clip_key = hash_combine(clip_key, *base);
+            clip_key = hash_combine(clip_key, base->index);
             result.clip_key = hash_combine(clip_key, request.channel);
             if (!project || !query_supported())
                 return;
             PreviewClip preview;
-            preview.initialize(*base, result.name, true);
+            preview.initialize(base->index, result.name, true);
             ScopedEvaluation scope(&source, preview.get(), state, ScopeMode::kAudited);
-            QueryFrame frame(scope, session, result, result.clip_key, names.size());
-            if (void* const replacements = s_get_replacements(project, *base))
+            QueryFrame frame(scope, session, result, result.clip_key, name_count);
+            if (void* const replacements = s_get_replacements(project, base->index))
             {
                 std::function<void(void*)> copy = [&](void* replacement)
                 {
                     if (read_at<std::uint8_t>(replacement, Replacement_Disabled_Offset) != 0) return;
-                    if (std::optional<AnimationDescriptor> descriptor = describe(replacement, result.clip_key, names.size()))
+                    if (std::optional<AnimationDescriptor> descriptor = describe(replacement, result.clip_key, name_count))
                     {
-                        if (descriptor->index < names.size()) descriptor->binding_name = names[descriptor->index];
+                        descriptor->binding_name = BaseAnimationCache::binding_name(name_count, descriptor->index,
+                            [&](std::size_t i) { return asset_name(table->names[i]); });
                         result.candidates.push_back(std::move(*descriptor));
                     }
                 };
                 s_for_each_replacement(replacements, copy, false);
                 void* const selected = s_evaluate_replacements(replacements, &source, preview.get());
-                if (selected && selected == frame.selected && frame.index < names.size())
+                if (selected && selected == frame.selected && frame.index < name_count)
                 {
                     result.index = frame.index;
-                    result.binding_name = names[frame.index];
+                    result.binding_name = asset_name(table->names[frame.index]);
                     result.replaced = true;
                 }
                 else

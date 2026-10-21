@@ -24,6 +24,23 @@ The source Actor graph/transforms stay read-only; native DAC temporarily changes
 controlled marker effects and restores their inventory entry values at close.
 No second Actor is created.
 
+Fixed idle/equip/unequip base indices derive from action.h aliases for all eleven
+weapon families, including MT_Idle calibration/fallback. Nonpaused noninventory
+observation prewarms through the existing third-person graph resolver only after
+published graph/behavior/skeleton and covering binding data are ready; DLL load
+alone is too early. LoadingMenu observation is skipped. One borrowed-name table
+pass retains only finite matches and missing aliases; no expanded catalogue or
+session copies remain. World release and changed table owner/address/count
+invalidate reuse. A late-ready menu fallback is logged, without waiting.
+OAR bases stage=world-prewarm|menu-fallback reports table/requested/resolved/
+missing counts and elapsed_ms once per initialization. Warm queries keep native
+OAR/variant choices and fetch actual selected binding names by index, including
+deduplicated aliases. Missing bases keep the existing standing fallback policy.
+See docs/animation.md#fixed-base-indices-and-project-readiness and the two direct
+cache cases in docs/build.md#fixed-base-index-verification. DAC preflight, Clone/
+audits and first asset/GPU use are separate unchanged costs. Hitch reduction and
+actual prewarm publication timing remain unmeasured in game.
+
 Identity and logs:
   CharacterPanel.log is written under SKSE::log::log_directory(), not a fixed
   machine path. Start with SCENEGRAPH BUILD, then correlate actor/request/capture

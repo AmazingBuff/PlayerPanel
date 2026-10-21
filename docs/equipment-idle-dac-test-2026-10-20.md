@@ -372,3 +372,40 @@ SDS 条件通过 provider 现有接口读取真实来源 Actor 的 `GetShieldOnB
 | 暂停时 IED 刷新、缺失 provider 回退、实际装备动作/外观 | 待上机 |
 
 Combat-zero 投影及非战斗目标保持原边界；不宣称完整 Smooth/IED/SDS 包兼容。
+
+## 10. 固定基础动作索引预热（2026-10-21，待上机）
+
+前面各轮保留历史结果。本轮改为从 `action.h` 既有别名派生有限 idle/equip/unequip 集合，
+覆盖十一类武器及 MT_Idle 校准/回退，不硬编码数字索引。每个已就绪项目只借用名称表扫描一遍，
+复制有限匹配项并记录缺失，不再缓存 OAR 扩展全表或为每个菜单会话复制全表。
+OAR 原生条件、变体/历史与真实绑定索引保持原有选择；去重别名按实际选中索引读绑定名。
+
+预热在非暂停、非背包的来源第三人称图观察时进行，要求已发布图/behavior/骨架及覆盖名称表的
+binding set；单纯 DLL 载入或 OAR 项目登记不算就绪。LoadingMenu 期间不观察旧图；世界释放
+清空缓存，名称表 owner/地址/数量变化重新解析。未就绪只重试元数据，不求值条件或调用
+DAC/IED；若到开包才就绪，允许同一有限解析的 `menu-fallback`，没有等待循环。
+原有 DAC 脚本附件、IED/SDS 边界与限制不变。
+
+本地仅运行 [两项固定缓存用例](build.md#fixed-base-index-verification)，覆盖 15,000 个替换名称
+中的原始动作优先级/共享复用，以及项目/表/读档失效、缺失项和选中索引名称。
+它们没有运行 Skyrim；完整 retained graph/math driver 未执行。
+
+沿用现有两类上机核验，追加首次开包的日志时序观察（尚未执行）：
+
+- 保留实际 DLL/PDB 与 `SCENEGRAPH BUILD`。进入存档后、首次开包前查找
+  `OAR bases stage=world-prewarm project=... table=... requested=... resolved=... missing=... elapsed_ms=...`。
+  核对 requested/resolved 是有限基础动作集合，table 是引擎全表数量；同一表后续开包不应重复初始化。
+  如仅出现 `stage=menu-fallback`，记录图/表何时就绪，不能仅凭 DLL 已加载判断预热失败原因。
+- 关包重开、读档或图/表更换后核对复用/重新初始化；确认换装、左右手、校准、缺失动作回退与
+  OAR 真实选片保持原表现。原始图与装备保持只读，标记事务仍按既有 DAC 规则恢复。
+- 分别记录首次整个菜单卡住的时长与预热耗时。DAC 文件预检、人物 Clone/审计、动画资源和 GPU
+  首次使用成本未修改，不能把初始化日志或本地构建通过当作“卡顿已消失”的游戏证据。
+
+| 项目 | 当前证据 |
+| --- | --- |
+| 有限解析、优先级、复用、失效与选中索引名称 | 两项本地生产策略用例通过 |
+| 真实来源项目发布/预热时机、原生选片和读档生命周期 | 待上机 |
+| 首次菜单卡顿实际改善及剩余成本占比 | 未测量 |
+
+规范与所有权见 [动作缓存](animation.md#fixed-base-indices-and-project-readiness) 与
+[OAR 载入边界](oar-hooks.md#fixed-base-metadata-2026-10-21)。

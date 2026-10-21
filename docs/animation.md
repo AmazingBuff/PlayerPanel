@@ -40,7 +40,8 @@ Missing DAC/Smooth, unsafe tags or a two-second observation timeout do not force
 
 | Path | Stable entry point |
 | --- | --- |
-| [action.h](../src/animation/action.h), [idle_policy.h](../src/animation/idle_policy.h) | `weapon_form_from_hands`, `panel_idle_bases`, `IdleTarget`, `idle_target`, `parse_unarmed_idle` |
+| [action.h](../src/animation/action.h), [idle_policy.h](../src/animation/idle_policy.h) | `weapon_form_from_hands`, `panel_idle_bases`, `panel_transition_bases`, `panel_base_animation_names`, `IdleTarget`, `idle_target`, `parse_unarmed_idle` |
+| [base_animation_cache.h](../src/oar/base_animation_cache.h), [query_policy.h](../src/oar/query_policy.h) | `BaseAnimationCache`, `BaseAnimationProject`, project-only sparse metadata and session-only conditions |
 | [settings.h](../src/animation/settings.h), [settings.cpp](../src/animation/settings.cpp) | `load_settings`, `unarmed_idle_setting` |
 | [controller.h](../src/animation/controller.h), [controller.cpp](../src/animation/controller.cpp) | `SourceObservation`, `AnimationController::request`, `poll`, `advance`, `retarget`, `apply_standing_pose` |
 | [event_clock.h](../src/animation/event_clock.h), [event_clock.cpp](../src/animation/event_clock.cpp) | `EventClock`, `Annotation`, `clip_annotations` |
@@ -48,7 +49,8 @@ Missing DAC/Smooth, unsafe tags or a two-second observation timeout do not force
 | [clip.h](../src/animation/clip.h), [clip.cpp](../src/animation/clip.cpp) | `ClipPlayback`, retained binding ownership, track mapping and detached samples |
 | [session.h](../src/dac/session.h), [idle_goal.h](../src/dac/idle_goal.h) | `Session::prepare_idle`, `idle_readiness`, `IdlePreparation` |
 | [held_equipment.cpp](../src/character/held_equipment.cpp) | `hold_copy_equipment`, owned-copy hand mounting |
-| [hooks.cpp](../src/oar/hooks.cpp) | copied OAR metadata and actual source-effect conditions |
+| [hooks.cpp](../src/oar/hooks.cpp) | `prepare_base_animations`, `base_animation`, `animation_binding_name`, native OAR metadata and actual source-effect conditions |
+| [base_animation_cache_test.cpp](../tests/base_animation_cache_test.cpp), [base_animation_cache_cases.h](../tests/base_animation_cache_cases.h) | two focused sparse-cache behavior cases shared with the retained driver |
 | [animation_controller_test.cpp](../tests/animation_controller_test.cpp) | two policy/preparation/transaction cases |
 
 ## Interfaces
@@ -56,6 +58,35 @@ Missing DAC/Smooth, unsafe tags or a two-second observation timeout do not force
 `ActionKind::e_standing_idle` (0) selects plain standing; `e_weapon_idle` (1) selects an equipped/unarmed family idle. All current targets loop. Movement/combat conditions remain projected inactive; panel-drawn comes from the target. Source equipment and identity remain actual reads.
 
 Logical selection paths remain separate from loading index/binding name. Native interruptibility, replace-on-loop, blend durations and variant/PlayOnce/Random metadata remain copied values. Request generation immediately rejects obsolete queued mutations. Compatible refresh adopts the current generation only for future accepted events; changed equipment does not authorize the old clip's events.
+
+## Fixed base indices and project readiness
+
+`panel_base_animation_names` derives the finite registry from the existing `panel_idle_bases` and `panel_transition_bases` aliases for all eleven weapon families. It includes H2H/MT_Idle, one/two-handed, axe, bow/crossbow, dual wield, magic, staff, torch and shield, with equip/unequip aliases and vanilla MT_Idle calibration/fallback. Numeric binding indices are discovered from each project's actual table. Canonical slash/case matching, exact-before-gender/suffix matching within a candidate, ordered alias priority and left-primary idle order remain intact. OAR/DAR replacement folders cannot supply original bases.
+
+Names identify the original action during initialization; they do not replace the native OAR lookup key at playback. The stages use different inputs:
+
+| Stage | Inputs and result | Implementation |
+| --- | --- | --- |
+| Initialize project metadata | Fixed original names → that actual project's original binding indices and names. Indices are neither hardcoded numbers nor global IDs; table replacement/world release invalidates them. | [BaseAnimationProject::resolve](../src/oar/base_animation_cache.h) |
+| Locate native candidates | Matching string-data project + original binding index → that original action's OAR replacement candidates. | [query_animation](../src/oar/hooks.cpp), `s_get_replacements(project, base->index)` |
+| Evaluate and choose | Source Actor, preview clip and scoped preview/condition context → eligible native replacement; accepted local variant/history policy then chooses its member. Project/index alone is insufficient for full evaluation. | `s_evaluate_replacements`, `ScopedEvaluation` in [hooks.cpp](../src/oar/hooks.cpp); `AnimationController::State::select` in [controller.cpp](../src/animation/controller.cpp) |
+| Load and report | Selected binding index addresses the engine binding; fetch its actual indexed name separately from the logical replacement path. Names remain in carrier/loading metadata and diagnostics. | `animation_binding_name`; [PreviewClip::initialize_native](../src/oar/preview_clip.h); `LoadedAsset::queue` |
+
+`PreviewClip` retains the name in native carrier fields alongside the binding index; removing the expanded catalogue does not erase all names. Hash-deduplicated replacements can have different logical paths but share one actual binding index/name. The existing [two cache cases](../tests/base_animation_cache_cases.h) verify the sparse mapping, reuse/invalidation and actual selected-index names; [their build entry](build.md#fixed-base-index-verification) remains unchanged.
+
+`AnimationController::prepare_base_indices` reuses the retained third-person `source_graph` resolver during `SceneGraph::update_monitor` outside paused inventory. OAR DLL loading alone is too early: preparation waits for a published source graph with behavior/skeleton and a binding set covering the animation-name table. The [OAR loading boundary](oar-hooks.md#fixed-base-metadata-2026-10-21) explains this check. Unavailable metadata retries on later observations without recording missing originals, advancing a graph, evaluating conditions, changing Random/history or calling DAC/IED. LoadingMenu observations are skipped after lifetime clearing so an old graph cannot refill the cache during a load.
+
+On a cache miss, `BaseAnimationProject::resolve` scans the engine table **once**, borrowing each name for that synchronous pass and using bounded scratch normalization. It copies only finite matched base names and retains missing-key status. No expanded owned catalogue or session copy survives. Up to four projects share sparse metadata keyed by string-data owner, array address and count; a changed owner/table/count rebuilds, and existing world-release invalidation clears all projects even if addresses are reused. Borrowed strings never escape the pass. Warm base/missing lookups do not reread the table.
+
+If a project becomes ready only after opening inventory, the same finite resolver initializes on demand, logging `stage=menu-fallback`; there is no wait loop. Normal preparation logs `OAR bases stage=world-prewarm` once per cached project/table, with table/requested/resolved/missing counts and elapsed milliseconds. Missing family bases retain the existing next-alias/standing-base policy; absent MT_Idle retains the existing unavailable/accepted-playback behavior. OAR absence or an unmatched project still permits the direct base policy.
+
+Native replacement selection remains per query. Descriptors, accepted variants and deduplicated aliases retain the actual binding name read at the requested index through `animation_binding_name`, independently of their logical path; the loader addresses the selected binding by index. This change removes full-table ownership, per-name guarded reads and repeated scans/session copies; it still performs one initialization scan. DAC file preflight, scene-graph Clone/audits and first asset/GPU use remain separate, unchanged costs. No game-time stall reduction has been measured here.
+
+### Custom weapons and new behavior entries
+
+A custom weapon that uses an existing engine weapon family and replaces that family's existing idle/equip entries through OAR uses the same cached originals. [equipment_weapon_form](../src/character/equipment_state.cpp) reads the equipped engine type; [panel_idle_bases and panel_transition_bases](../src/animation/action.h) choose the family aliases. For example, a custom one-handed sword's OAR idle replacements still sit behind the existing one-handed original entry. Native eligibility must still use conditions supported by the preview adapter; an unrelated third-party condition can reject a candidate. This is a compatibility boundary, not a guarantee for every custom moveset or skeleton.
+
+The current **33 canonical original-name keys include aliases**. They do not limit the number of OAR replacements, variants or custom weapon records behind those entries. A mod introducing an independent behavior/clip entry outside the mapped families requires an explicit family/base mapping before the panel can request it. The old full-table catalogue also used the same action-family policy; storing every name did not discover or schedule new families automatically.
 
 ## Event timing and native state
 
@@ -82,6 +113,8 @@ Logs identify setting, actor/request/goal/family, preparation requested/ready/fa
 Existing Skyrim/SKSE/CommonLib/Havok, audited OAR and supported original DAC remain. INI parsing uses existing SimpleIni. No new package, DAC rebuild, TOML parser or UI is required. See [build/config setup](build.md).
 
 Exactly two direct-compiled [cases](../tests/animation_controller_test.cpp) exercise production policy/parser/preparation/transaction types with a narrow fake Actor boundary: default equipped-to-empty goal convergence/current tickets/entry restoration, and direct MT_Idle rejecting stale work after request/close. The first also checks ready-to-marker-loss invalidation. [Retained graph/math checks](../tests/snapshot_transform_test.cpp) are not executed for this change. Release compilation/static ownership review do not execute native detach/attach or magic APIs.
+
+The separate [two sparse-cache cases](../tests/base_animation_cache_cases.h) exercise production resolution/cache policy amid 15,000 replacement names and project/table/load invalidation, including missing originals and selected-index names. See [direct compilation](build.md#fixed-base-index-verification). The retained graph/math driver shares these case definitions after removal of obsolete catalogue APIs; its other checks were not run for this change.
 
 No Skyrim runtime is installed here. Paused preparation/restore timing, dual/bow/custom-skeleton held geometry, scabbards, visuals and native lifetime remain unverified.
 

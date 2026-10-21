@@ -26,6 +26,7 @@ namespace animation
     public:
         AnimationController();
         ~AnimationController();
+        static void prepare_base_indices(RE::Actor& source);
         void reset();
         void request(RE::Actor& source, SourceObservation const& observation, dac::Session& session);
         void retarget(RE::NiAVObject& root);

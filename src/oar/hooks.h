@@ -70,8 +70,10 @@ namespace oar
     };
     [[nodiscard]] bool query_supported();
     [[nodiscard]] RE::hkbCharacterStringData* character_strings(RE::hkbCharacter const& character);
-    // Copied binding catalogue; logical replacement paths are returned separately in descriptors.
-    [[nodiscard]] std::span<std::string const> animation_names(RE::hkbCharacter& character, QuerySession& session);
+    [[nodiscard]] bool prepare_base_animations(RE::hkbCharacter& character, std::string_view stage);
+    [[nodiscard]] std::optional<BaseAnimation> base_animation(RE::hkbCharacter& character,
+        std::span<std::string_view const> candidates);
+    [[nodiscard]] std::string animation_binding_name(RE::hkbCharacter& character, std::uint16_t index);
     [[nodiscard]] AnimationSelection query_animation(RE::TESObjectREFR& source, RE::hkbCharacter& character,
         std::span<std::string_view const> bases, PreviewState state, QuerySession& session,
         QueryRequest const& request = {});

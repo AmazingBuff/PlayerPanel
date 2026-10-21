@@ -8,7 +8,7 @@
 #include "animation/clip.h"
 #include "animation/action.h"
 #include "animation/variant_state.h"
-#include "oar/query_policy.h"
+#include "base_animation_cache_cases.h"
 #include "oar/preview_clip.h"
 #include "oar/binary_profile.h"
 #include "oar/policy.h"
@@ -85,37 +85,6 @@ namespace
         return true;
     }
 
-    bool standing_catalog_does_not_use_live_or_replacement_names()
-    {
-        namespace oar = PLUGIN_NAMESPACE::oar;
-        const std::vector<std::string> project{
-            "Animations\\SneakMTIdle.hkx",
-            "Animations\\OpenAnimationReplacer\\Author\\MT_Idle.hkx",
-            "animations/MT_IDLE.hkx", "Animations\\1hm_idle.hkx", "Animations\\JumpLand.hkx" };
-        const std::array<std::string_view, 1> wanted{ "Animations\\MT_Idle.hkx" };
-        const auto idle = oar::find_base_animation(project, wanted);
-        const std::vector<std::string> other{ project[0], project[1], project[4] };
-        oar::QuerySession session;
-        int reads = 0;
-        const auto first = session.names(&project, project.data(), project.size(), [&](std::size_t i)
-        {
-            ++reads;
-            return project[i];
-        });
-        const std::size_t count = first.size();
-        (void)session.names(&project, project.data(), project.size(), [&](std::size_t i)
-        {
-            ++reads;
-            return project[i];
-        });
-        (void)session.names(&other, other.data(), other.size(), [&](std::size_t i)
-        {
-            ++reads;
-            return other[i];
-        });
-        return idle && *idle == 2 && !oar::find_base_animation(other, wanted) && count == project.size() &&
-            reads == static_cast<int>(project.size() + other.size());
-    }
 
     bool preview_variants_are_local_and_bounded()
     {
@@ -353,33 +322,6 @@ namespace
 
 
 
-    bool project_name_catalogue_is_reused_across_sessions()
-    {
-        namespace oar = PLUGIN_NAMESPACE::oar;
-        const std::vector<std::string> project{
-            "Animations\\MT_Idle.hkx", "Animations\\1hm_idle.hkx", "Animations\\JumpLand.hkx" };
-        const std::array<std::string_view, 1> wanted{ "Animations\\MT_Idle.hkx" };
-        // A fresh session (what a panel open resets to) must answer from the process catalogue
-        // when a previous session already read the same table (oar-idle2 problem 5: the open
-        // frame rebuilt ~15k names on the main thread). Reads stay session-local on a miss.
-        oar::QuerySession cold;
-        std::size_t cold_reads = 0;
-        (void)cold.names(&project, project.data(), project.size(), [&](std::size_t i)
-        { ++cold_reads; return project[i]; });
-        oar::QuerySession warm;
-        std::size_t warm_reads = 0;
-        const auto names = warm.names(&project, project.data(), project.size(), [&](std::size_t i)
-        { ++warm_reads; return project[i]; });
-        const bool reused = warm_reads == 0 && names.size() == project.size() &&
-            oar::find_base_animation(names, wanted) && *oar::find_base_animation(names, wanted) == 0;
-        // A different owner (or a replaced table pointer — load boundary) rebuilds.
-        const std::vector<std::string> reloaded{ "Animations\\MT_Idle.hkx", "Animations\\SneakMTIdle.hkx" };
-        oar::QuerySession after_load;
-        std::size_t reload_reads = 0;
-        (void)after_load.names(&project, reloaded.data(), reloaded.size(), [&](std::size_t i)
-        { ++reload_reads; return reloaded[i]; });
-        return reused && reload_reads == reloaded.size();
-    }
 
     bool d3d_constant_buffer_ranges_are_restored()
     {
@@ -751,7 +693,7 @@ int main()
     passed = preview_carrier_preserves_native_node_fields() && passed;
     passed = equipment_refresh_waits_for_the_latest_assembly() && passed;
     passed = oar_query_profiles_fail_closed() && passed;
-    passed = standing_catalog_does_not_use_live_or_replacement_names() && passed;
+    passed = PLUGIN_NAMESPACE::tests::fixed_bases_resolve_once_across_menu_sessions() && passed;
     passed = preview_variants_are_local_and_bounded() && passed;
     passed = preview_random_conditions_cache_and_reset() && passed;
     passed = preview_variant_weights_and_shared_state() && passed;
@@ -760,7 +702,7 @@ int main()
     passed = interrupted_pose_blend_starts_from_the_visible_pose() && passed;
     passed = preview_original_answers_suspend_projection() && passed;
     passed = panel_transition_returns_to_a_standing_idle() && passed;
-    passed = project_name_catalogue_is_reused_across_sessions() && passed;
+    passed = PLUGIN_NAMESPACE::tests::project_replacement_and_load_reset_refresh_sparse_indices() && passed;
     passed = d3d_constant_buffer_ranges_are_restored() && passed;
     passed = figure_transparency_draw_order() && passed;
     passed = figure_material_state_is_restored() && passed;

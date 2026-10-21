@@ -3,6 +3,8 @@
 //
 #pragma once
 #include <cstdint>
+#include <algorithm>
+#include <span>
 #include <string_view>
 #include <vector>
 PLUGIN_NAMESPACE_BEGIN
@@ -151,6 +153,28 @@ namespace animation
         return unequip ? std::vector<std::string_view>{ "Animations\\1HM_Unequip.hkx", "Animations\\1hm_unequip.hkx" }
                        : std::vector<std::string_view>{ "Animations\\1HM_Equip.hkx", "Animations\\1hm_equip.hkx" };
     }
+}
+
+[[nodiscard]] inline std::span<std::string_view const> panel_base_animation_names()
+{
+    static const std::vector<std::string_view> s_names = []
+    {
+        std::vector<std::string_view> names;
+        const auto append = [&](std::vector<std::string_view> const& bases)
+        {
+            for (std::string_view base : bases)
+                if (std::ranges::find(names, base) == names.end()) names.push_back(base);
+        };
+        for (std::uint8_t value = 0; value <= static_cast<std::uint8_t>(animation::WeaponForm::kTwoHandedAxe); ++value)
+        {
+            const animation::WeaponForm form = static_cast<animation::WeaponForm>(value);
+            append(panel_idle_bases(form));
+            append(panel_transition_bases(form, false));
+            append(panel_transition_bases(form, true));
+        }
+        return names;
+    }();
+    return s_names;
 }
 
 PLUGIN_NAMESPACE_END

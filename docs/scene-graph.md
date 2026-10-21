@@ -53,6 +53,8 @@ flowchart LR
 
 There are no Actor spawning, dressing, inventory synchronization, body-morph copying or live-graph diagnostic controls. Removed diagnostic hotkeys have no active handlers.
 
+Outside paused inventory, `SceneGraph::update_monitor` also asks `AnimationController::prepare_base_indices` to prepare the [finite base-action cache](animation.md#fixed-base-indices-and-project-readiness) through the existing third-person graph resolver. This observes metadata only: no clip/graph advancement, condition/Random/history evaluation, DAC/IED call or source mutation. Preparation waits for published graph/behavior/skeleton and covering binding data, then scans the engine names once while copying only matched finite originals. LoadingMenu updates return before observing old source graphs. Existing `CharacterManager::release_previews` clears project metadata at world boundaries; table identity/count changes also rebuild. A late-ready project may initialize on the menu path with an explicit diagnostic. Capture/Clone and first-use resource costs remain separate and unchanged.
+
 ## Invariants
 
 Native capture, lease release, pose writes and graph replacement stay in the render/update bracket. Input callbacks never clone or animate. Animation requests, Random/variant history and source/display generations stay per source actor. A graph replacement retargets before its old nodes are retired. Source graph audits reject aliased writable state; copying never advances or writes the source actor's graph.

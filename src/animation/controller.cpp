@@ -347,8 +347,7 @@ public:
                 result.replacement_key = 0;
             }
         }
-        const std::span<std::string const> names = oar::animation_names(graph->characterInstance, query);
-        if (result.index < names.size()) result.binding_name = names[result.index];
+        result.binding_name = oar::animation_binding_name(graph->characterInstance, result.index);
         return result;
     }
 
@@ -377,13 +376,12 @@ public:
             (!active->stage.clip.reevaluate_on_loop || continuing_sequence);
         if (direct)
         {
-            const auto names = oar::animation_names(graph->characterInstance, query);
-            const std::optional<std::uint16_t> base = oar::find_base_animation(names, bases);
+            const std::optional<oar::BaseAnimation> base = oar::base_animation(graph->characterInstance, bases);
             if (base)
             {
                 selected.found = true;
-                selected.base_index = selected.index = *base;
-                selected.base_name = selected.name = selected.binding_name = names[*base];
+                selected.base_index = selected.index = base->index;
+                selected.base_name = selected.name = selected.binding_name = base->name;
             }
         }
         else if (native_boundary)
@@ -403,8 +401,7 @@ public:
                 }
         }
         else selected = select(source, bases, preview, *proposal, channel, activation);
-        const auto binding_names = oar::animation_names(graph->characterInstance, query);
-        if (selected.index < binding_names.size()) selected.binding_name = binding_names[selected.index];
+        selected.binding_name = oar::animation_binding_name(graph->characterInstance, selected.index);
         if (target.empty() && !direct && action.kind != ActionKind::e_unequip && (!selected.found || !selected.replaced))
         {
             base_fallback = true;
@@ -460,13 +457,12 @@ public:
             return;
         }
         const std::array<std::string_view, 1> standing_bases{ "Animations\\MT_Idle.hkx" };
-        const auto names = oar::animation_names(graph->characterInstance, query);
-        const std::optional<std::uint16_t> base = oar::find_base_animation(names, standing_bases);
+        const std::optional<oar::BaseAnimation> base = oar::base_animation(graph->characterInstance, standing_bases);
         if (!base) return;
         oar::AnimationSelection standard;
         standard.found = true;
-        standard.base_index = standard.index = *base;
-        standard.base_name = standard.name = standard.binding_name = names[*base];
+        standard.base_index = standard.index = base->index;
+        standard.base_name = standard.name = standard.binding_name = base->name;
         proposal->standing = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
         proposal->calibration = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
         proposal->asset = std::make_unique<LoadedAsset>(graph, selected, action.loop,
@@ -518,6 +514,12 @@ void AnimationController::reset()
     m_state = std::make_unique<State>();
 }
 
+void AnimationController::prepare_base_indices(RE::Actor& source)
+{
+    const RE::BSTSmartPointer<RE::BShkbAnimationGraph> graph = source_graph(source);
+    if (graph) (void)oar::prepare_base_animations(graph->characterInstance, "world-prewarm");
+}
+
 void AnimationController::request(RE::Actor& source, SourceObservation const& observation, dac::Session& session)
 {
     session.request(observation.request_generation);
@@ -566,8 +568,7 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
         const bool unequip = target.empty();
         const WeaponForm form = unequip ? previous_form : target.form;
         const std::vector<std::string_view> bases = panel_transition_bases(form, unequip);
-        const auto names = oar::animation_names(state.graph->characterInstance, state.query);
-        if (!bases.empty() && oar::find_base_animation(names, bases))
+        if (!bases.empty() && oar::base_animation(state.graph->characterInstance, bases))
         {
             logger::info("ANIMATION actor={:08x} request={} transition={} form={}", state.actor_id, state.generation,
                 unequip ? "unequip" : "equip", weapon_form_name(form));

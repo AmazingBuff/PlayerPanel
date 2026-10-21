@@ -313,6 +313,7 @@ void SceneGraph::update_monitor(RE::Actor& source, std::uint64_t revision,
     bool paused, bool open, bool opening, bool closing, bool usable)
 {
     if (!paused) observe_source(source);
+    if (!paused && !open) animation::AnimationController::prepare_base_indices(source);
     if (!open)
     {
         if (closing) close_session();
