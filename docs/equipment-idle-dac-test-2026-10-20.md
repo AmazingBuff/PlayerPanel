@@ -409,3 +409,160 @@ DAC/IED；若到开包才就绪，允许同一有限解析的 `menu-fallback`，
 
 规范与所有权见 [动作缓存](animation.md#fixed-base-indices-and-project-readiness) 与
 [OAR 载入边界](oar-hooks.md#fixed-base-metadata-2026-10-21)。
+
+## 11. 本次构建与部署身份（2026-10-21，待上机）
+
+覆盖 §8（脚本附件预检）、§9（IED placement）、§10（固定基础索引预热）三项待上机判据，
+以及 T01–T12 回归；尚未上机。
+
+| 项目 | 值 |
+| --- | --- |
+| 源码 | `oar-idle3` @ `7847e70`（工作树干净；`log-archive/` 通过 `.git/info/exclude` 本地排除） |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-7847e70152-cl94faaed0c6-20261021T134044Z` |
+| DLL SHA-256 | `3A8B1F035F504F5C1E7CDD4D3C84B221345E58E9A8B0E20B464B60A72F0D9BB8` |
+| PDB SHA-256 | `9FC79509BA5BE2B2C3CED685E6A4DB278667765A557A41DB0940A05B61A86497` |
+| 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
+| 旧构建备份 | `dist\deploy-backup-20261020-5d5c510a\`（round-3 `FF33FE8C…`） |
+| 本地回归 | 四项直编译用例 8/8 通过（dac_script_attachment / animation_controller / ied_condition_adapter / base_animation_cache），见 [构建说明](build.md#verification-and-limits) |
+| INI | `UnarmedIdle=non_combat_loop`（默认，`mods` 侧 `SKSE\Plugins\CharacterPanel.ini`） |
+
+## 12. 三项修复（2026-10-21 23:13，待上机）
+
+2026-10-21 晚间上机判读（第 11 节构建）得出三个根因并修复：
+
+1. **PRESET 条件支持（弩/火把选片）**：Gunslicer Crossbow 分支与 Malignis/Ashe
+   `Idle_Torch` 分支都挂在 OAR 命名预设后（`Gunslicer_Base` = IsFemale+IsActorBase；
+   `Malignis_Base` = OR(IsFemale/IsPlayerTeammate/非 IsChild)），面板审计曾把 kPreset
+   组件一概拒绝 → 候选出局 → 弩落原版 `crossbow_idleheld`。现按 kMulti 同样遍历
+   `ConditionPresetComponent::ForEachCondition` 的展开条件并逐项审计；kCustom 仍拒绝。
+2. **火把独立姿态**：世界收鞘+火把时火把 idle 变体挂在 mt_idle 族（`IsEquippedType 18,
+   Left hand=true` 条件），面板此前把"单手+火把"归入 1h → 永远查不到。现火把在任一手
+   即 `form=kTorch`（优先于单手），idle 基改为 `MT_Idle` 优先、`TOR_Idle` 兜底；
+   盾/法术仍算单手（未动）。
+3. **Start→Loop 标记判据对齐**：`idle_goal_ready` 原要求"off 关键词无效果在场"，
+   而 `mag_loop off`(0x806) 与 `mag_loop on`(0x802) 共享关键词 0x812（且 off 为常驻
+   kRecover），世界残留会拉死判据 → 17/17 超时。OAR Loop 分支本身只查
+   `HasMagicEffect(0x802)`，现就绪只要求 on 标记在场（非 dispelled/kInactive），
+   失败时打 `Smooth_loop goal markers diagnostic=` 行（on 缺席/inactive、off 持有者）。
+
+| 项目 | 值 |
+| --- | --- |
+| 源码 | `oar-idle3` @ `7847e70`+dirty（PRESET 遍历、火把姿态、标记判据三处修改，未提交） |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-7847e70152+dirty-cl94faaed0c6-20261021T151249Z` |
+| DLL SHA-256 | `5211814C6EEF1918CA9F68AB3BB6EAF3458239EB98AE586BD2207A80BE3D65C8` |
+| PDB SHA-256 | `D635267D7DD23BBA5CCFC4DB261D723F2D8C93FC1F9389FE537C1F9B371EE1C6` |
+| 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步校验） |
+| 旧构建备份 | `dist\deploy-backup-20261021-7847e70a\`（第 11 节干净构建 `3A8B1F03…`） |
+| 本地回归 | 四项直编译用例 8/8 通过（含新增火把姿态断言） |
+
+上机判据（重启游戏后）：
+
+- **弩**：装弩开包 → `state=… path='…Gunslicer…crossbow_idleheld.hkx' replaced=true`（不再是
+  `DLC01\crossbow_idleheld` + `custom condition` 诊断）；equip 过渡同理走 Gunslicer。
+- **火把**：单手剑+火把（收鞘或持械皆可）→ `equipment-target=torch` →
+  `goal=… family=torch` → `path='…Idle_Torch\female\_variants_mt_idle\…' replaced=true`。
+- **Start→Loop**：开包等 ≥8 秒 → `Smooth_loop preparation ready`（不再是 timed out）→
+  Start 后边界 `…idle Loop… replaced=true`；若仍失败，把
+  `Smooth_loop goal markers diagnostic=` 行原样发回（on absent/inactive、off-holder 明细）。
+- 回归：弓/1h/法术/空手/双持选片与关包 restore `result=matched` 不回退。
+
+## 13. 探针构建（2026-10-21 23:36，待上机）
+
+第 12 节构建的上机判读：PRESET/火把分类/准备判据三项生效（`preparation ready` 全过、
+面板开启路径直达 Loop、`equipment-target=torch` 成立），但四个新问题待收口：
+
+1. Start→Loop 仅剩换装路径：Start 播放中 `Smooth_loop` 标注施法已落地（revision 跳变），
+   边界重查仍选 Start；Loop 分支唯一可能被压的条件是 `HasMagicEffect(804) negated`。
+2. 火把：mt_idle 查询胜者是 SVFI 基础 idle（priority 900001 ≫ 火把分支 74995），需确认
+   OAR 优先级方向与火把分支是否进入候选集。
+3. 弩：Gunslicer 替换件已选中，但人物有上下位移（疑剪辑自带骨盆位移，待专门探针）。
+4. 盾：盾-only 换装过渡走原版 `1hm_equip`，且有被拒的 IED 候选（unsupported IED）。
+
+本轮加两个只读探针：goal 查询前输出 `smooth markers='…'`（源角色 Smooth 标记 local id，
+`!`=inactive）；选片后输出 `oar walk base=… winner=… candidates='…'`（求值顺序全候选）。
+
+| 项目 | 值 |
+| --- | --- |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-7847e70152+dirty-cl94faaed0c6-20261021T153619Z` |
+| DLL SHA-256 | `B6A61DA2991A2D46F09F079A7CF36FA19B045ADA53AEAFFC893D7F6AEC91BD47` |
+| 部署 | 待游戏退出后覆盖（第 12 节构建 `5211814C…` 仍在游戏中） |
+
+## 14. 探针判读与三项修复（2026-10-22 00:11，待上机）
+
+探针构建上机判读（第 13 节身份，会话 23:55–00:03）：
+
+- **火把路由正确**：`TOR_Idle`(0x63e) 基被查询，7 个火把候选在列，用户确认画面正常。
+- **Start→Loop 的阻断条件找到**：装备过渡后 `weaponDraw` 施法把 **`mag_combat on`(0x3804)
+  挂上**，而 Smooth 的 Loop 分支要求 `HasMagicEffect(0x804) negated`——Loop 被排除，只剩
+  Start；Start 剪辑 0.1s 的 `Smooth_NonCombat` 标注驱散战斗标记（标记场翻为 0x3808）、
+  2.5s 的 `Smooth_loop` 标注才挂 `mag_loop on`(0x3802)。用户测试在 2 秒内就卸下武器，
+  边界重查从未同时看到"战斗关 + 循环开"。
+- **盾**：Smooth 的 `1hm Shield Equip Base` 条件为 `AND(IsEquippedType(1,right),
+  IsEquippedType(11,left))`——**必须剑+盾**；只有盾时世界中同样没有该分支可匹配。
+
+本轮修复：
+
+1. **火把+武器的 Equip/Unequip**：站立形态保持 torch，但过渡动作改按**变化的那只手**取形
+   （火把变化→无过渡；武器变化→对应族过渡），不再让火把吞掉武器拔/收刀动作。
+2. **弩上下位移**：站姿标定骨盆高度（`apply_standing_pose` 捕获），每帧姿态合成后把
+   `NPC Pelvis [Pelv]` 的局部 Y 钳回标定值——移植剪辑的骨盆位移不再把人物带出画面。
+
+| 项目 | 值 |
+| --- | --- |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-7847e70152+dirty-cl94faaed0c6-20261021T161117Z` |
+| DLL SHA-256 | `C196986DDCE60B7135580568E3408EF3925F28E1F6F68D11195572E6EDB1B8FF` |
+| 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步） |
+| 本地回归 | 四项直编译用例 8/8 通过 |
+
+上机判读（探针仍在，日志会带 `smooth markers=` 与 `oar walk=`）：
+
+- **Start→Loop 受控测试**：装备单手武器后**什么都不做等 ≥10 秒**；看 Start 之后边界查询
+  时 `smooth markers` 是否含 `0x3802`（loop on）且不含 `0x3804`（combat on），以及是否转入
+  `…idle Loop`。快速换装（<2.5s）永远到不了平滑链的循环段，这是剪辑标注时序，不是缺陷。
+- **火把+武器**：持火把时拔/收单手武器，应播对应族的 Equip/Unequip；换火把本身无过渡。
+- **弩**：装弩开包，人物应不再上下漂出画面。
+- **盾**：只有盾时走 1HM Equip（与 Smooth 条件一致）；**剑+盾**时应播
+  `Smooth Moveset - 1hm Shield\1hm Shield Equip Base`。
+
+## 15. IED 条件放宽（2026-10-22 00:16，待上机）
+
+用户指出盾装行为不应只对齐 Smooth：其他动作包也支持盾装，OAR 能选中就应当可用。根因是
+审计器把 IED 提供方（`OpenAnimationReplacer-IEDConditionExtensions`）的**未知条件**一律
+拒绝（`unsupported IED preview condition`），把使用其它 IED 条件的盾装候选挡在门外。
+
+修改：IED 提供方的条件全部只读源角色真实装备/IED 配置，与预览原生转发的引擎谓词同类，
+因此**未知 IED 条件不再排除，保留原生求值答案**；三个已知 placement/SDS 条件的 schema
+校验、provider 版本校验与历史手装备拒绝保持不变。
+
+查证：所有盾装包的替换目标都是 `1hm_equip.hkx`/`1hm_unequip.hkx`（与面板过渡基一致），
+因此放宽后由 OAR 原生条件决定胜者，无需新增基名。
+
+| 项目 | 值 |
+| --- | --- |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-7847e70152+dirty-cl94faaed0c6-20261021T161634Z` |
+| DLL SHA-256 | `14E07C20B50A333B47C54EFECA300B8E64BF3FA7F888E7F47DFD0964274A5FD8` |
+| 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步） |
+| 本地回归 | 四项直编译用例 8/8 通过 |
+
+上机判读：装盾（单独或与武器一起）开包，`state=` 行应显示盾装包的替换路径（`replaced=true`）
+而非 `Animations\1hm_equip.hkx`；若仍为原版，把该请求的 `oar walk` 行发回（列出全部候选与胜者）。
+
+## 16. 骨盆钳制回退与双侧动作日志（2026-10-22 00:30）
+
+用户反馈骨盆钳制引入了其他问题，已**完全回退**（`advance` 不再改骨盆 Y）。按用户要求，火把/
+盾/Start→Loop 三项暂停修复，先加可对照的日志：
+
+- **世界侧**（每次开包，源角色自身行为图）：`ANIMATION WORLD actor=… request=… clips=` 后接
+  每个激活剪辑生成器的 `original='<animationName>' index=<绑定索引> replaced='<OAR 替换路径>'
+  t=<localTime>`（未替换时 `replaced=''`）。`index` 越过原表条目且 `replaced` 非空即为 OAR
+  已替换；多剪辑以空格分隔。
+- **面板侧**：`state=` 行新增 `base='<原始动画名>'`（原为仅 `path='<替换路径>'`）。
+- 保留既有探针：`smooth markers=`（Smooth 标记场）与 `oar walk=`（候选顺序与胜者）。
+
+| 项目 | 值 |
+| --- | --- |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-7847e70152+dirty-cl94faaed0c6-20261021T163022Z` |
+| DLL SHA-256 | `74184056A474C076620502D3C0DF6DB6501B8359893F62334C885AEA196B999B` |
+| 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步） |
+| 本地回归 | 四项直编译用例 8/8 通过 |
+| 遗留 | 上一轮的 IED 未知条件放宽仍在（第 15 节），日志会显示其效果 |

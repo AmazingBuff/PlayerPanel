@@ -35,8 +35,12 @@ namespace oar
         const std::string_view name = storage.c_str() ? storage.c_str() : "";
         const bool equipped = name == "IED_GearNodeEquippedPlacementHint";
         const bool shield = name == "SDS_IsShieldOnBackEnabled";
+        // Every condition the IED provider registers reads the source actor's own equipment and
+        // IED configuration, exactly like the engine predicates the preview forwards natively, so
+        // an unfamiliar IED condition keeps its native answer instead of being excluded: shield
+        // and placement packs branch on several of them beyond the three schemas audited below.
         if (!equipped && name != "IED_GearNodePlacementHint" && !shield)
-            return "unsupported IED preview condition";
+            return {};
         if (condition.GetRequiredVersion().pack() != Ied_Condition_Version || condition.GetNumComponents() != (shield ? 0u : 3u))
             return "unsupported IED placement condition schema/version";
         if (shield)

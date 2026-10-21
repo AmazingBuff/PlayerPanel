@@ -70,9 +70,13 @@ namespace
         const bool expired = status == IdleReadiness::e_ready ||
             std::chrono::steady_clock::now() - state.goal_started > std::chrono::seconds(2);
         if (!ready && !expired) return;
+        const std::string diagnostic = ready ? std::string{} : idle_goal_diagnostic(actor, state.goal);
         std::lock_guard lock(state.mutex);
         if (!state.core.accepts(ticket)) return;
         state.preparation.finish(ticket.request, ready);
+        if (!ready)
+            logger::info("DAC actor={:08x} request={} Smooth_loop goal markers diagnostic='{}'", state.id,
+                ticket.request, diagnostic);
         logger::info("DAC actor={:08x} request={} Smooth_loop preparation {}", state.id, ticket.request, ready ? "ready" : status == IdleReadiness::e_ready ? "failed: goal markers changed" : "failed: marker observation timed out");
     }
     void observe_now(Session::State& state, RE::Actor& actor)
@@ -303,5 +307,10 @@ void Session::observe()
     });
 }
 std::uint64_t Session::revision() const { return m_state->revision.load(); }
+std::string Session::smooth_markers() const
+{
+    const auto actor = m_state->source.get();
+    return actor ? smooth_marker_report(*actor) : std::string{};
+}
 }
 PLUGIN_NAMESPACE_END

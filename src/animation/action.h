@@ -47,8 +47,10 @@ namespace animation
 
     // The panel's standing figure answers with the form the two hands carry: a two-handed weapon or
     // a bow occupies both hands (the engine reports it in whichever entry it last touched, so both
-    // are read), two one-handed weapons are the dual stance, and a lone one-handed weapon with a
-    // shield, torch or spell in the other hand is still the one-handed stance.
+    // are read), two one-handed weapons are the dual stance, a torch in either hand is its own
+    // stance (the world's standing idles branch on it while sheathed, so the panel must too), and
+    // a lone one-handed weapon with a shield or spell in the other hand is still the one-handed
+    // stance.
     enum class HandKind : std::uint8_t
     {
         kEmpty = 0,
@@ -75,14 +77,14 @@ namespace animation
             return WeaponForm::kTwoHanded;
         if (a_right == HandKind::kStaff || a_left == HandKind::kStaff)
             return WeaponForm::kStaff;
+        if (a_right == HandKind::kTorch || a_left == HandKind::kTorch)
+            return WeaponForm::kTorch;
         if (a_right == HandKind::kOneHandedWeapon && a_left == HandKind::kOneHandedWeapon)
             return WeaponForm::kDualWield;
         if (a_right == HandKind::kOneHandedWeapon || a_left == HandKind::kOneHandedWeapon)
             return WeaponForm::kOneHanded;
         if (a_right == HandKind::kSpell || a_left == HandKind::kSpell)
             return WeaponForm::kMagic;
-        if (a_right == HandKind::kTorch || a_left == HandKind::kTorch)
-            return WeaponForm::kTorch;
         if (a_right == HandKind::kShield || a_left == HandKind::kShield)
             return WeaponForm::kShield;
         return WeaponForm::kNone;
@@ -114,7 +116,11 @@ namespace animation
     case Form::kDualWield: return { "Animations\\DW1HM1HMIdle.hkx", "Animations\\1hm_idle.hkx" };
     case Form::kMagic: return { "Animations\\MRh_Idle.hkx", "Animations\\MLh_Idle.hkx" };
     case Form::kStaff: return { "Animations\\StaffRight_Idle.hkx", "Animations\\StaffLeft_Idle.hkx" };
-    case Form::kTorch: return { "Animations\\TOR_Idle.hkx", "Animations\\1hm_idle.hkx" };
+    case Form::kTorch:
+        // The world's standing graph routes a held torch to the TOR_Idle clip, and the torch-aware
+        // packs branch there (Malignis/Ashe Idle_Torch under their torch conditions); the idle
+        // query takes the first base it finds, so TOR_Idle alone is the faithful route.
+        return { "Animations\\TOR_Idle.hkx" };
     case Form::kShield: return { "Animations\\1hm_idle.hkx" };
     default: return { "Animations\\H2H_Idle.hkx", "Animations\\MT_Idle.hkx" };
     }
@@ -149,6 +155,7 @@ namespace animation
         return unequip ? std::vector<std::string_view>{ "Animations\\StaffRight_Unequip.hkx", "Animations\\1hm_unequip.hkx" }
                        : std::vector<std::string_view>{ "Animations\\StaffRight_Equip.hkx", "Animations\\1hm_equip.hkx" };
     case Form::kNone: return {};
+    case Form::kTorch: return {}; // a torch equip has no equip move of its own; go straight to the torch idle
     default:
         return unequip ? std::vector<std::string_view>{ "Animations\\1HM_Unequip.hkx", "Animations\\1hm_unequip.hkx" }
                        : std::vector<std::string_view>{ "Animations\\1HM_Equip.hkx", "Animations\\1hm_equip.hkx" };

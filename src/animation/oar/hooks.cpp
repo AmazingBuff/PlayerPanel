@@ -9,6 +9,8 @@
 #include "animation/oar/preview_clip.h"
 
 #include "RE/H/hkbCharacterStringData.h"
+#include "RE/H/hkbBehaviorGraph.h"
+#include "RE/H/hkbNodeInfo.h"
 #include "RE/H/hkbAnimationBindingSet.h"
 #include "RE/H/hkbCharacterSetup.h"
 
@@ -517,7 +519,11 @@ namespace oar
             for (std::uint32_t i = 0; i < condition.GetNumComponents(); ++i)
             {
                 auto* const item = condition.GetComponent(i);
-                if (item && item->GetType() == ComponentType::kMulti)
+                // A kPreset component is OAR's own named-preset expansion (ConditionPresetComponent
+                // derives from IMultiConditionComponent and ForEachCondition walks the expanded
+                // conditions), so its children are audited like any multi condition; a kCustom
+                // component is third-party data the preview cannot vouch for.
+                if (item && (item->GetType() == ComponentType::kMulti || item->GetType() == ComponentType::kPreset))
                 {
                     auto* const multi = static_cast<::Conditions::IMultiConditionComponent*>(item);
                     multi->ForEachCondition([&](std::unique_ptr<Condition>& child)
@@ -530,9 +536,9 @@ namespace oar
                     if (!scope.supported())
                         return false;
                 }
-                else if (item && (item->GetType() == ComponentType::kCustom || item->GetType() == ComponentType::kPreset))
+                else if (item && item->GetType() == ComponentType::kCustom)
                 {
-                    scope.reject("custom/preset component requires an explicit preview adapter");
+                    scope.reject("custom condition component requires an explicit preview adapter");
                     return false;
                 }
             }
@@ -946,6 +952,66 @@ namespace oar
             decide(nullptr);
         }
         return result;
+    }
+
+    std::string world_clip_report(RE::hkbCharacter& character)
+    {
+        if (!query_supported()) return {};
+        RE::hkbCharacterStringData* const strings = character_strings(character);
+        RE::hkbBehaviorGraph* const behavior = character.behaviorGraph.get();
+        if (!strings || !behavior) return {};
+        RE::NodeList* const active = behavior->activeNodes;
+        if (!active || !readable(active, sizeof(*active)) || active->size() == 0 || active->size() > 4096 ||
+            !readable(active->data(), active->size() * sizeof(RE::hkbNodeInfo))) return {};
+        void* project = nullptr;
+        std::function<void(RE::hkbCharacterStringData*, void*)> visit =
+            [&](RE::hkbCharacterStringData* a_strings, void* a_project)
+            {
+                if (!project && a_strings == strings) project = a_project;
+            };
+        if (void const* singleton = s_get_singleton())
+            s_for_each_project_data(singleton, visit);
+        std::string report;
+        for (std::size_t i = 0; i < active->size(); ++i)
+        {
+            RE::hkbNode* const node = active->data()[i].nodeClone;
+            if (!node || !readable(node, 0x48)) continue;
+            if (*reinterpret_cast<std::uintptr_t const*>(node) != RE::hkbClipGenerator::VTABLE[0].address()) continue;
+            auto* const clip = reinterpret_cast<RE::hkbClipGenerator*>(node);
+            char const* const original = clip->animationName.c_str();
+            if (!original || !*original) continue;
+            std::string replacement;
+            if (project)
+            {
+                // The original index must come from the full name table: the prewarmed alias set
+                // only covers the panel's fixed bases, so a world clip such as Bow_Equip.hkx would
+                // never resolve through it and the replacement lookup would silently stay empty.
+                std::uint16_t original_index = 0xFFFF;
+                const auto& names = strings->animationNames;
+                const RE::hkStringPtr* const entries = names.data();
+                const std::size_t count = static_cast<std::size_t>(names.size());
+                for (std::size_t n = 0; entries && n < count && n < 0xFFFF; ++n)
+                {
+                    if (asset_name(entries[n]) == original) { original_index = static_cast<std::uint16_t>(n); break; }
+                }
+                if (original_index != 0xFFFF && original_index != clip->animationBindingIndex)
+                {
+                    if (void* const replacements = s_get_replacements(project, original_index))
+                    {
+                        std::function<void(void*)> match = [&](void* a_replacement)
+                        {
+                            if (!replacement.empty() || !a_replacement) return;
+                            const std::optional<AnimationDescriptor> descriptor = describe(a_replacement, 0, names.size());
+                            if (descriptor && descriptor->index == clip->animationBindingIndex) replacement = descriptor->path;
+                        };
+                        s_for_each_replacement(replacements, match, false);
+                    }
+                }
+            }
+            report += fmt::format("{}|original='{}' index={} replaced='{}' t={:.2f}",
+                report.empty() ? "" : " ", original, clip->animationBindingIndex, replacement, clip->localTime);
+        }
+        return report;
     }
 
     bool install_hooks()

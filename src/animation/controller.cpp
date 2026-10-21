@@ -24,6 +24,8 @@
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbCharacterSetup.h"
 #include "RE/N/NiQuaternion.h"
+#include "RE/T/TESObjectLIGH.h"
+#include "RE/T/TESObjectWEAP.h"
 
 #include <algorithm>
 #include <array>
@@ -468,8 +470,20 @@ public:
         proposal->asset = std::make_unique<LoadedAsset>(graph, selected, action.loop,
             action.kind == ActionKind::e_standing_idle, generation,
             target.empty() && !direct ? std::optional<oar::AnimationSelection>(standard) : std::nullopt);
-        logger::info("ANIMATION actor={:08x} request={} state={} choice={} path='{}' index={} diagnostic='{}'",
-            actor_id, generation, session->revision(), static_cast<int>(reason), selected.name, selected.index, selected.diagnostic);
+        logger::info("ANIMATION actor={:08x} request={} state={} choice={} base='{}' path='{}' index={} diagnostic='{}'",
+            actor_id, generation, session->revision(), static_cast<int>(reason), selected.base_name, selected.name, selected.index, selected.diagnostic);
+        if (!selected.candidates.empty())
+        {
+            std::string walk;
+            for (auto const& candidate : selected.candidates)
+            {
+                const std::size_t slash = candidate.path.find_last_of('\\');
+                walk += fmt::format(" {:04x}/{}", candidate.index,
+                    candidate.path.substr(slash == std::string::npos ? 0 : slash + 1));
+            }
+            logger::info("ANIMATION actor={:08x} request={} oar walk base={:04x} winner={:04x} replaced={} candidates='{}'",
+                actor_id, generation, selected.base_index, selected.index, selected.replaced, walk);
+        }
         pending = std::move(proposal);
     }
 
@@ -497,6 +511,10 @@ public:
         std::vector<std::string_view> bases = target.direct || (direct && target.empty()) ?
             std::vector<std::string_view>{ "Animations\\MT_Idle.hkx" } : target.bases();
         const bool plain = target.direct || (direct && target.empty());
+        // Temporary probe: the marker field is what OAR's Smooth branches read through
+        // HasMagicEffect, so every goal query records it alongside the selection.
+        logger::info("ANIMATION actor={:08x} request={} smooth markers='{}'",
+            actor_id, generation, session ? session->smooth_markers() : std::string{});
         logger::info("ANIMATION actor={:08x} request={} goal=non-combat-idle family={} direct={} drawn={}",
             actor_id, generation, weapon_form_name(target.form), direct, !plain);
         queue(source, std::move(bases), { plain ? ActionKind::e_standing_idle : ActionKind::e_weapon_idle,
@@ -539,6 +557,7 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     const IdleTarget target = idle_target(observation.form, observation.left_primary, unarmed_idle_setting());
     const bool equipment_changed = !state.has_observation || state.observed.hands != observation.hands || state.target != target;
     const WeaponForm previous_form = state.has_observation ? state.observed.form : WeaponForm::kNone;
+    const std::array<RE::FormID, 2> previous_hands = state.has_observation ? state.observed.hands : std::array<RE::FormID, 2>{};
     state.actor_id = source.GetFormID();
     state.source_handle = source.GetHandle();
     state.generation = observation.request_generation;
@@ -551,6 +570,9 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     if (!state.graph) { state.pending.reset(); return; }
     logger::info("ANIMATION actor={:08x} request={} reason='{}' source-generation={} equipment-target={}", state.actor_id,
         state.generation, observation.reason, state.source_generation, weapon_form_name(target.form));
+    if (observation.reason == "panel-open")
+        logger::info("ANIMATION WORLD actor={:08x} request={} clips={}", state.actor_id, state.generation,
+            oar::world_clip_report(state.graph->characterInstance));
     // Panel-open forces the observed loop phase; an equipment change must NOT, or the equip
     // clip's own Start markers (cast by its annotations) are overwritten by loop markers before
     // the Start member can be selected, which skips the world's Equip -> Start -> Loop order.
@@ -565,8 +587,47 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     // immediate-idle behaviour: there is no world transition to mirror at that edge.
     if (equipment_changed && observation.reason == "equipment")
     {
-        const bool unequip = target.empty();
-        const WeaponForm form = unequip ? previous_form : target.form;
+        bool unequip = target.empty();
+        WeaponForm form = unequip ? previous_form : target.form;
+        // A torch beside a weapon must not swallow the weapon hand's draw/sheathe move: the
+        // standing form stays torch, so the transition follows whichever hand changed instead
+        // (a torch change itself has no move). Shield-only and left-hand gear fall through the
+        // same read, which keeps their one-handed equip move.
+        if (form == WeaponForm::kTorch)
+        {
+            const auto kind_of = [](RE::FormID a_id) -> WeaponForm
+            {
+                const RE::TESForm* item = a_id ? RE::TESForm::LookupByID(a_id) : nullptr;
+                if (!item) return WeaponForm::kNone;
+                if (item->As<RE::TESObjectLIGH>()) return WeaponForm::kTorch;
+                if (const RE::TESObjectWEAP* const weapon = item->As<RE::TESObjectWEAP>())
+                {
+                    switch (weapon->GetWeaponType())
+                    {
+                    case RE::WEAPON_TYPE::kBow: return WeaponForm::kBow;
+                    case RE::WEAPON_TYPE::kCrossbow: return WeaponForm::kCrossbow;
+                    case RE::WEAPON_TYPE::kTwoHandSword: return WeaponForm::kTwoHanded;
+                    case RE::WEAPON_TYPE::kTwoHandAxe: return WeaponForm::kTwoHandedAxe;
+                    case RE::WEAPON_TYPE::kStaff: return WeaponForm::kStaff;
+                    default: return WeaponForm::kOneHanded;
+                    }
+                }
+                if (item->IsArmor()) return WeaponForm::kShield;
+                if (item->Is(RE::FormType::Spell) || item->Is(RE::FormType::Scroll) || item->Is(RE::FormType::Shout))
+                    return WeaponForm::kMagic;
+                return WeaponForm::kNone;
+            };
+            WeaponForm changed_form = WeaponForm::kNone;
+            bool changed_unequip = false;
+            for (std::size_t hand = 0; hand < 2; ++hand)
+            {
+                if (previous_hands[hand] == observation.hands[hand]) continue;
+                if (observation.hands[hand]) changed_form = kind_of(observation.hands[hand]);
+                else { changed_form = kind_of(previous_hands[hand]); changed_unequip = true; }
+            }
+            form = changed_form == WeaponForm::kTorch ? WeaponForm::kNone : changed_form;
+            if (form != WeaponForm::kNone) unequip = changed_unequip;
+        }
         const std::vector<std::string_view> bases = panel_transition_bases(form, unequip);
         if (!bases.empty() && oar::base_animation(state.graph->characterInstance, bases))
         {

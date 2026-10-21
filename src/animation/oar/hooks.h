@@ -70,6 +70,11 @@ namespace oar
     };
     [[nodiscard]] bool query_supported();
     [[nodiscard]] RE::hkbCharacterStringData* character_strings(RE::hkbCharacter const& character);
+    // Diagnostic: every active clip generator in the character's own behavior graph, as
+    // "original='<animationName>' index=<binding index> replaced='<OAR replacement path>' t=<localTime>".
+    // The original name is what the graph authored; a binding index past the original entry and a
+    // replacement path mean OAR swapped that clip for the panel's run.
+    [[nodiscard]] std::string world_clip_report(RE::hkbCharacter& character);
     [[nodiscard]] bool prepare_base_animations(RE::hkbCharacter& character, std::string_view stage);
     [[nodiscard]] std::optional<BaseAnimation> base_animation(RE::hkbCharacter& character,
         std::span<std::string_view const> candidates);

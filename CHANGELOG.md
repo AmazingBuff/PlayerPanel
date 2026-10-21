@@ -7,8 +7,25 @@
 - Add audited native IED equipped-weapon placement, gear-node placement and SDS shield-on-back
   queries for current source equipment/configuration, preserving native comparisons and false
   results with the supplied condition provider.
+- Audit OAR named-preset conditions by traversing the expanded preset conditions like multi
+  conditions, so packs that gate branches through `PRESET` (e.g. Gunslicer crossbow,
+  Malignis/Ashe torch idles) reach preview selection instead of falling to vanilla bases.
+- Log the world clips active at panel open (original name, binding index and OAR replacement
+  path), the panel selection's original base beside its replacement path, the source's Smooth
+  marker field and the candidate walk of each goal query.
 
 ### Changed
+
+- Keep unfamiliar IED-provider conditions on their native answer instead of excluding the
+  candidates: they read the source actor's own equipment and placement like the engine
+  predicates the preview already forwards, and shield/placement packs branch on several.
+- Make the torch its own stance even beside a one-handed weapon and query the world's TOR_Idle
+  route; an equipment transition follows whichever hand changed, so a weapon's draw/sheathe
+  move is no longer swallowed while the torch keeps the standing form.
+- Answer Smooth non-combat preparation readiness by the engine's own question (on markers
+  present) instead of also demanding a keyword-free field, because the off markers carry the
+  same dispel keyword as their on counterparts; failed preparations log which markers are
+  absent, inactive or holding the keyword.
 
 - Cache only fixed preview base-action indices per ready animation project before inventory,
   and read selected replacement binding names on demand instead of copying the expanded catalogue.

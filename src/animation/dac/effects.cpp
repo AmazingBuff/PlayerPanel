@@ -232,20 +232,70 @@ bool smooth_idle_goal(std::vector<RuleScope> const& rules, IdleGoal& goal, std::
 bool idle_goal_ready(RE::Actor& actor, IdleGoal const& goal)
 {
     std::vector<std::uint32_t> present;
-    bool clear = true;
+    actor.AsMagicTarget()->VisitActiveEffects([&](RE::ActiveEffect* active)
+    {
+        if (!active || active->flags.any(RE::ActiveEffect::Flag::kDispelled) ||
+            !active->effect || !active->effect->baseEffect) return RE::BSContainer::ForEachResult::kContinue;
+        RE::EffectSetting const& base = *active->effect->baseEffect;
+        if (contains(goal.on_effects, base.GetFormID()) && !active->flags.any(RE::ActiveEffect::Flag::kInactive))
+            include(present, base.GetFormID());
+        return RE::BSContainer::ForEachResult::kContinue;
+    });
+    // OAR's own Smooth branches ask HasMagicEffect for the on markers only. The off MGEFs carry
+    // the same dispel keyword as their on counterparts, so demanding a keyword-free field here
+    // holds the preparation hostage to residues the engine's own conditions would already clear;
+    // readiness follows the engine's question instead.
+    return std::ranges::all_of(goal.on_effects, [&](std::uint32_t id) { return contains(present, id); });
+}
+
+std::string idle_goal_diagnostic(RE::Actor& actor, IdleGoal const& goal)
+{
+    std::vector<std::uint32_t> present, inactive, holders;
     actor.AsMagicTarget()->VisitActiveEffects([&](RE::ActiveEffect* active)
     {
         if (!active || active->flags.any(RE::ActiveEffect::Flag::kDispelled) ||
             !active->effect || !active->effect->baseEffect) return RE::BSContainer::ForEachResult::kContinue;
         RE::EffectSetting const& base = *active->effect->baseEffect;
         if (contains(goal.on_effects, base.GetFormID()))
-        {
-            if (!active->flags.any(RE::ActiveEffect::Flag::kInactive)) include(present, base.GetFormID());
-        }
-        else if (matches_keywords(base, goal.off_keywords)) clear = false;
+            include(active->flags.any(RE::ActiveEffect::Flag::kInactive) ? inactive : present, base.GetFormID());
+        else if (matches_keywords(base, goal.off_keywords)) include(holders, base.GetFormID());
         return RE::BSContainer::ForEachResult::kContinue;
     });
-    return clear && std::ranges::all_of(goal.on_effects, [&](std::uint32_t id) { return contains(present, id); });
+    std::string report;
+    for (std::uint32_t id : goal.on_effects)
+        if (!contains(present, id)) report += fmt::format(" on {:08X} {}", id, contains(inactive, id) ? "inactive" : "absent");
+    for (std::uint32_t id : holders) report += fmt::format(" off-holder {:08X}", id);
+    return report;
+}
+
+std::string smooth_marker_report(RE::Actor& actor)
+{
+    // Smooth's phase protocol lives in these markers: the OAR branches read them through
+    // HasMagicEffect, so the panel's probe reports exactly what those conditions see.
+    std::vector<std::pair<std::uint32_t, bool>> found; // file-local id -> every instance inactive
+    actor.AsMagicTarget()->VisitActiveEffects([&](RE::ActiveEffect* active)
+    {
+        if (!active || active->flags.any(RE::ActiveEffect::Flag::kDispelled) ||
+            !active->effect || !active->effect->baseEffect) return RE::BSContainer::ForEachResult::kContinue;
+        RE::EffectSetting const& base = *active->effect->baseEffect;
+        RE::TESFile const* file = base.GetFile();
+        if (!file || !file->fileName || _stricmp(file->fileName, "Smooth Moveset.esp") != 0)
+            return RE::BSContainer::ForEachResult::kContinue;
+        const std::uint32_t local = base.GetFormID() & 0xFFFFFF;
+        const bool inactive = active->flags.any(RE::ActiveEffect::Flag::kInactive);
+        for (auto& [id, flag] : found)
+            if (id == local) { flag = flag && inactive; return RE::BSContainer::ForEachResult::kContinue; }
+        found.emplace_back(local, inactive);
+        return RE::BSContainer::ForEachResult::kContinue;
+    });
+    std::ranges::sort(found, [](auto const& a, auto const& b) { return a.first < b.first; });
+    std::string report;
+    for (auto const& [id, inactive] : found)
+    {
+        report += report.empty() ? "" : ",";
+        report += fmt::format("{:02X}{}", id, inactive ? "!" : "");
+    }
+    return report;
 }
 
 bool restore_effects(RE::Actor& actor, Restoration const& restoration)
