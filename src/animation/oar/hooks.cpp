@@ -1,12 +1,12 @@
-#include "oar/hooks.h"
+#include "animation/oar/hooks.h"
 
 #include "base/def.h"
 
-#include "oar/api/OpenAnimationReplacer-ConditionTypes.h"
-#include "oar/binary_profile.h"
-#include "oar/ied_conditions.h"
-#include "oar/policy.h"
-#include "oar/preview_clip.h"
+#include "animation/oar/api/OpenAnimationReplacer-ConditionTypes.h"
+#include "animation/oar/binary_profile.h"
+#include "animation/oar/ied_conditions.h"
+#include "animation/oar/policy.h"
+#include "animation/oar/preview_clip.h"
 
 #include "RE/H/hkbCharacterStringData.h"
 #include "RE/H/hkbAnimationBindingSet.h"

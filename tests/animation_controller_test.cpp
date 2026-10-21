@@ -4,8 +4,8 @@
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
 #include "animation/idle_policy.h"
-#include "dac/idle_goal.h"
-#include "dac/session_core.h"
+#include "animation/dac/idle_goal.h"
+#include "animation/dac/session_core.h"
 #include <array>
 #include <cassert>
 #include <iostream>

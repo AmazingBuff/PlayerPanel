@@ -3,7 +3,7 @@
 //
 #pragma once
 #include "base/def.h"
-#include "oar/selection_state.h"
+#include "animation/oar/selection_state.h"
 PLUGIN_NAMESPACE_BEGIN
 namespace animation
 {

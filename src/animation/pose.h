@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "oar/policy.h"
+#include "animation/oar/policy.h"
 #include "animation/action.h"
 
 #include "RE/N/NiQuaternion.h"

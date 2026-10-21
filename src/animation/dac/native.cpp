@@ -1,8 +1,8 @@
 //
 // Created by AmazingBuff on 2026/10/20.
 //
-#include "dac/native.h"
-#include "dac/native_profile.h"
+#include "animation/dac/native.h"
+#include "animation/dac/native_profile.h"
 #include "RE/B/BSAnimationGraphEvent.h"
 #include "RE/E/Effect.h"
 #include "RE/E/EffectSetting.h"

@@ -2,7 +2,7 @@
 // Created by AmazingBuff on 2026/10/20.
 //
 #pragma once
-#include "dac/effects.h"
+#include "animation/dac/effects.h"
 namespace RE { class Actor; }
 PLUGIN_NAMESPACE_BEGIN
 namespace dac

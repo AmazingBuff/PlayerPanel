@@ -2,7 +2,7 @@
 // Created by AmazingBuff on 2026/10/20.
 //
 #pragma once
-#include "dac/session_core.h"
+#include "animation/dac/session_core.h"
 #include <string>
 #include <string_view>
 namespace RE { class Actor; class MagicItem; }

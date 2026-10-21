@@ -1,8 +1,8 @@
 //
 // Created by AmazingBuff on 2026/10/20.
 //
-#include "dac/effects.h"
-#include "dac/script_attachment.h"
+#include "animation/dac/effects.h"
+#include "animation/dac/script_attachment.h"
 #include "base/def.h"
 #include "RE/A/ActiveEffect.h"
 #include "RE/E/Effect.h"

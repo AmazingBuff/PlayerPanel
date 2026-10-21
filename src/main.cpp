@@ -8,8 +8,8 @@
 #include "render/shader_manager.h"
 #include "render/studio/light.h"
 #include "input/input.h"
-#include "oar/hooks.h"
-#include "dac/session.h"
+#include "animation/oar/hooks.h"
+#include "animation/dac/session.h"
 #include "animation/settings.h"
 
 namespace

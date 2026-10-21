@@ -13,7 +13,7 @@ Release is the only configure/build preset; CharacterPanel is the sole first-par
 
 - [Build](docs/build.md): VS2022/MSVC, pinned submodule/vcpkg setup, artifacts and configure-time identity.
 - [SceneGraph](docs/scene-graph.md): preview ownership, capture/retarget, framing and lifetime constraints.
-- [Animation](docs/animation.md): event timing, actual Actor effect queries, native variant decisions and pose composition.
+- [Animation](docs/animation.md): owns the nested `src/animation/oar` and `src/animation/dac` integrations, event timing, native queries/variants and pose composition.
 - [Fixed base indices](docs/animation.md#fixed-base-indices-and-project-readiness): prepare per-project idle/equip indices before inventory; native query stages and the [custom-weapon boundary](docs/animation.md#custom-weapons-and-new-behavior-entries).
 - [OAR and native IED/SDS queries](docs/oar-hooks.md#native-ied-placement-conditions-2026-10-21): three audited native predicates, provider/schema requirements and runtime limits.
 - [Native DAC](docs/dac.md): original binary/profile, [winning MGEF script-attachment preflight](docs/dac.md#marker-script-attachment-preflight), inventory snapshots, UI tasks and close restoration.

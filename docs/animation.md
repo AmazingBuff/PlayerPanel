@@ -26,6 +26,8 @@ A missing file uses the default; an invalid value logs one warning and uses the 
 
 `CharacterManager` distributes equipment revisions and menu/lifetime inputs. Each `SceneGraph` owns an `AnimationController` and `dac::Session`. `SourceObservation` carries equipped family/primary side, hand IDs, request/source-graph generations and reason. It contains no world clip, binding index/time or draw state. The source graph still supplies skeleton/bindings.
 
+The animation module contains both integrations: [src/animation/oar](../src/animation/oar/hooks.h) owns native OAR queries and [src/animation/dac](../src/animation/dac/session.h) owns the marker transaction. This directory ownership retains the existing `oar` and `dac` namespaces and runtime boundaries. Production callers and offline tests include these headers from the configured `src` root, using `animation/oar/...` and `animation/dac/...`; see the [build/include convention](build.md#architecture-and-generated-outputs).
+
 The production `IdleTarget` selects family and direct/query mode. Queried idles wait for `Session::prepare_idle` to establish the known Smooth `Smooth_loop` goal through real native casts and actual observed markers. Native DAC owns matching/filters/keyword dispel. Refresh behavior depends on the current goal state:
 
 - An unchanged compatible target whose goal is already ready queues an observation-only check, preserving matching accepted clock/variant without recasting.
@@ -41,15 +43,15 @@ Missing DAC/Smooth, unsafe tags or a two-second observation timeout do not force
 | Path | Stable entry point |
 | --- | --- |
 | [action.h](../src/animation/action.h), [idle_policy.h](../src/animation/idle_policy.h) | `weapon_form_from_hands`, `panel_idle_bases`, `panel_transition_bases`, `panel_base_animation_names`, `IdleTarget`, `idle_target`, `parse_unarmed_idle` |
-| [base_animation_cache.h](../src/oar/base_animation_cache.h), [query_policy.h](../src/oar/query_policy.h) | `BaseAnimationCache`, `BaseAnimationProject`, project-only sparse metadata and session-only conditions |
+| [base_animation_cache.h](../src/animation/oar/base_animation_cache.h), [query_policy.h](../src/animation/oar/query_policy.h) | `BaseAnimationCache`, `BaseAnimationProject`, project-only sparse metadata and session-only conditions |
 | [settings.h](../src/animation/settings.h), [settings.cpp](../src/animation/settings.cpp) | `load_settings`, `unarmed_idle_setting` |
 | [controller.h](../src/animation/controller.h), [controller.cpp](../src/animation/controller.cpp) | `SourceObservation`, `AnimationController::request`, `poll`, `advance`, `retarget`, `apply_standing_pose` |
 | [event_clock.h](../src/animation/event_clock.h), [event_clock.cpp](../src/animation/event_clock.cpp) | `EventClock`, `Annotation`, `clip_annotations` |
 | [sequence.h](../src/animation/sequence.h), [variant_state.h](../src/animation/variant_state.h) | `Stage`, pose composition and accepted `SelectionState` |
 | [clip.h](../src/animation/clip.h), [clip.cpp](../src/animation/clip.cpp) | `ClipPlayback`, retained binding ownership, track mapping and detached samples |
-| [session.h](../src/dac/session.h), [idle_goal.h](../src/dac/idle_goal.h) | `Session::prepare_idle`, `idle_readiness`, `IdlePreparation` |
+| [session.h](../src/animation/dac/session.h), [idle_goal.h](../src/animation/dac/idle_goal.h) | `Session::prepare_idle`, `idle_readiness`, `IdlePreparation` |
 | [held_equipment.cpp](../src/character/held_equipment.cpp) | `hold_copy_equipment`, owned-copy hand mounting |
-| [hooks.cpp](../src/oar/hooks.cpp) | `prepare_base_animations`, `base_animation`, `animation_binding_name`, native OAR metadata and actual source-effect conditions |
+| [hooks.cpp](../src/animation/oar/hooks.cpp) | `prepare_base_animations`, `base_animation`, `animation_binding_name`, native OAR metadata and actual source-effect conditions |
 | [base_animation_cache_test.cpp](../tests/base_animation_cache_test.cpp), [base_animation_cache_cases.h](../tests/base_animation_cache_cases.h) | two focused sparse-cache behavior cases shared with the retained driver |
 | [animation_controller_test.cpp](../tests/animation_controller_test.cpp) | two policy/preparation/transaction cases |
 
@@ -67,10 +69,10 @@ Names identify the original action during initialization; they do not replace th
 
 | Stage | Inputs and result | Implementation |
 | --- | --- | --- |
-| Initialize project metadata | Fixed original names → that actual project's original binding indices and names. Indices are neither hardcoded numbers nor global IDs; table replacement/world release invalidates them. | [BaseAnimationProject::resolve](../src/oar/base_animation_cache.h) |
-| Locate native candidates | Matching string-data project + original binding index → that original action's OAR replacement candidates. | [query_animation](../src/oar/hooks.cpp), `s_get_replacements(project, base->index)` |
-| Evaluate and choose | Source Actor, preview clip and scoped preview/condition context → eligible native replacement; accepted local variant/history policy then chooses its member. Project/index alone is insufficient for full evaluation. | `s_evaluate_replacements`, `ScopedEvaluation` in [hooks.cpp](../src/oar/hooks.cpp); `AnimationController::State::select` in [controller.cpp](../src/animation/controller.cpp) |
-| Load and report | Selected binding index addresses the engine binding; fetch its actual indexed name separately from the logical replacement path. Names remain in carrier/loading metadata and diagnostics. | `animation_binding_name`; [PreviewClip::initialize_native](../src/oar/preview_clip.h); `LoadedAsset::queue` |
+| Initialize project metadata | Fixed original names → that actual project's original binding indices and names. Indices are neither hardcoded numbers nor global IDs; table replacement/world release invalidates them. | [BaseAnimationProject::resolve](../src/animation/oar/base_animation_cache.h) |
+| Locate native candidates | Matching string-data project + original binding index → that original action's OAR replacement candidates. | [query_animation](../src/animation/oar/hooks.cpp), `s_get_replacements(project, base->index)` |
+| Evaluate and choose | Source Actor, preview clip and scoped preview/condition context → eligible native replacement; accepted local variant/history policy then chooses its member. Project/index alone is insufficient for full evaluation. | `s_evaluate_replacements`, `ScopedEvaluation` in [hooks.cpp](../src/animation/oar/hooks.cpp); `AnimationController::State::select` in [controller.cpp](../src/animation/controller.cpp) |
+| Load and report | Selected binding index addresses the engine binding; fetch its actual indexed name separately from the logical replacement path. Names remain in carrier/loading metadata and diagnostics. | `animation_binding_name`; [PreviewClip::initialize_native](../src/animation/oar/preview_clip.h); `LoadedAsset::queue` |
 
 `PreviewClip` retains the name in native carrier fields alongside the binding index; removing the expanded catalogue does not erase all names. Hash-deduplicated replacements can have different logical paths but share one actual binding index/name. The existing [two cache cases](../tests/base_animation_cache_cases.h) verify the sparse mapping, reuse/invalidation and actual selected-index names; [their build entry](build.md#fixed-base-index-verification) remains unchanged.
 
@@ -120,6 +122,6 @@ No Skyrim runtime is installed here. Paused preparation/restore timing, dual/bow
 
 ## Safe modification and synchronized history
 
-Keep Smooth goal derivation/observation and transaction authority in src/dac; equipment policy/settings/leases/history in animation; copy attachment ownership in character. Preserve vanilla calibration, source audits, current tickets and graph parking. Do not add source graph events, virtual effects, parser fallbacks or folder playlists.
+Keep Smooth goal derivation/observation and transaction authority in src/animation/dac; equipment policy/settings/leases/history in animation; copy attachment ownership in character. Preserve vanilla calibration, source audits, current tickets and graph parking. Do not add source graph events, virtual effects, parser fallbacks or folder playlists.
 
 Synchronize this document, [DAC](dac.md), [README](../README.md), [Changelog](../CHANGELOG.md), [build](build.md), [OAR hooks](oar-hooks.md), [SceneGraph](scene-graph.md), [maintenance](code-maintenance.md), [runtime notes](../tools/scene_copy/README.txt), sample INI and code/tests. World-phase continuation is superseded by equipment-only idle policy; dated [reports](history.md) retain their recorded behavior.

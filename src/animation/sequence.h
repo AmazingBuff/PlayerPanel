@@ -4,7 +4,7 @@
 #pragma once
 #include "animation/action.h"
 #include "animation/variant_state.h"
-#include "oar/hooks.h"
+#include "animation/oar/hooks.h"
 #include <unordered_map>
 
 PLUGIN_NAMESPACE_BEGIN

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "oar/context.h"
-#include "oar/policy.h"
-#include "oar/query_policy.h"
+#include "animation/oar/context.h"
+#include "animation/oar/policy.h"
+#include "animation/oar/query_policy.h"
 
 namespace Conditions
 {

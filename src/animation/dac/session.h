@@ -2,7 +2,7 @@
 // Created by AmazingBuff on 2026/10/20.
 //
 #pragma once
-#include "dac/idle_goal.h"
+#include "animation/dac/idle_goal.h"
 #include <cstdint>
 #include <memory>
 #include <string>

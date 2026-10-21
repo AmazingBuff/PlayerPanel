@@ -9,4 +9,4 @@ GPL-3.0. The original declarations and comments are retained.
 Only the condition/component ABI is consumed. No upstream implementation or
 upstream build system is linked into CharacterPanel. Binary provenance and
 the supported preview-evaluation boundary are documented in
-[OAR hooks](../../../docs/oar-hooks.md).
+[OAR hooks](../../../../docs/oar-hooks.md).

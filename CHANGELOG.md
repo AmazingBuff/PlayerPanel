@@ -138,7 +138,7 @@
   `b504d7665084fe94e66e36936177a3c7672de34e64a9736a9ce2c23cd255a2f6`), deployed and hash-verified;
   game validation pending (sneak/swim/combat opens, mid-locomotion opens).
 
-- A dedicated `src/oar` integration module for the Nexus OAR binary. It verifies the
+- A dedicated `src/animation/oar` integration module for the Nexus OAR binary. It verifies the
   DLL/PDB build identity and entry bytes before installing preview-scoped condition and
   numeric graph-variable hooks. Audited queries retain source identity/equipment while
   projecting supported standing-preview state; unsupported conditions are reported.

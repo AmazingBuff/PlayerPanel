@@ -3,7 +3,7 @@
 //
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
-#include "dac/script_attachment.cpp"
+#include "animation/dac/script_attachment.cpp"
 #include <cassert>
 #include <iostream>
 #include <span>

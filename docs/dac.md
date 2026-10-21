@@ -4,6 +4,8 @@
 
 Let the actual Dynamic Animation Casting plugin prepare an equipment-driven non-combat idle and process accepted preview annotation events against the source Actor during InventoryMenu, then restore the captured animation-marker effect state when the inventory closes. SceneGraph remains the sole preview display owner. CharacterPanel no longer parses DAC TOML or emulates magic effects.
 
+The integration and offline inspector live under [src/animation/dac](../src/animation/dac/session.h), alongside the [OAR integration](oar-hooks.md) within animation. The `dac` namespace, native profile and external plugin installation remain unchanged.
+
 ## Scope and non-goals
 
 This transaction covers bounded, self-targeted inert marker spells. It does not roll back inventory, equipment, Actor values, arbitrary scripts, projectiles or general magic gameplay. It does not create an Actor, advance the original behavior graph, send synthetic draw/sheathe events, or change rendering/calibration/graph retirement.
@@ -72,7 +74,7 @@ For the core equipment-driven non-combat idle goal, install the project's existi
 
 IED placement is used by substantial equipment branches, including `1hm Equip Base` and `1hm Non-Combat Equip Base` with placement ID `<= 1`; back-weapon variants use `== 2`. The [native IED/SDS adapter](oar-hooks.md#native-ied-placement-conditions-2026-10-21) admits only the three predicates above and leaves left/right, node, comparison, shield settings and negation to the provider's original `Evaluate`. Smooth source configs contain 53 equipped-placement, 154 gear-node-placement and 32 SDS shield-setting occurrences; counts are static evidence, not successful selection. A native false remains false. Missing/mismatched providers, unknown names/schema and `hand_override` reject; unrelated third-party conditions retain `third-party condition requires an explicit preview adapter`. These diagnostics concern the query boundary, not missing DAC phase state. Install IED and the original provider separately, with SDS prerequisites for its shield branch; PlayerPanel neither bypasses conditions nor supplies factories. Successful registration, native reads and hint freshness while paused still need game verification.
 
-The TDM predicate is an OR branch, not a universal prerequisite for the core non-combat phase path, and the two predicates are not both required. [Current query policy](../src/oar/hooks.cpp), `evaluate_thunk`, supplies the combat-zero projection. These are static/config and implementation boundaries: native effect visibility while paused, restoration, visuals and complete pack compatibility still require game validation.
+The TDM predicate is an OR branch, not a universal prerequisite for the core non-combat phase path, and the two predicates are not both required. [Current query policy](../src/animation/oar/hooks.cpp), `evaluate_thunk`, supplies the combat-zero projection. These are static/config and implementation boundaries: native effect visibility while paused, restoration, visuals and complete pack compatibility still require game validation.
 
 ## Controlled scope and restoration
 
@@ -100,16 +102,16 @@ The pinned SDK declares `IPostCreationModification`'s destructor without definin
 
 | Path | Entry point |
 | --- | --- |
-| [session.h](../src/dac/session.h), [session.cpp](../src/dac/session.cpp) | `Session`, `install`, `reset_world`, private MenuSink and UI-task lifetime |
-| [idle_goal.h](../src/dac/idle_goal.h) | `IdlePreparation`, `IdleReadiness`, current-request progress |
-| [session_core.h](../src/dac/session_core.h) | `SessionCore`, `EventTicket`, `EffectValue`, `Restoration` |
-| [native.h](../src/dac/native.h), [native.cpp](../src/dac/native.cpp) | `native_rules`, `native_dispatch`, exact identity and metadata preflight |
-| [native_profile.h](../src/dac/native_profile.h) | generated exact binary identity, entry prefixes and field offsets |
-| [effects.h](../src/dac/effects.h), [effects.cpp](../src/dac/effects.cpp) | `restorable_spell`, last-contributor SDK adapter, `entry_scope`, `capture_effects`, `event_scope`, `restore_effects`, `effect_signature`, `smooth_idle_goal`, `idle_goal_ready` |
-| [script_attachment.h](../src/dac/script_attachment.h), [script_attachment.cpp](../src/dac/script_attachment.cpp) | `ScriptAttachment`, `read_script_attachment`, `permits_script_attachment`, `ScriptAttachmentCache::inspect` |
+| [session.h](../src/animation/dac/session.h), [session.cpp](../src/animation/dac/session.cpp) | `Session`, `install`, `reset_world`, private MenuSink and UI-task lifetime |
+| [idle_goal.h](../src/animation/dac/idle_goal.h) | `IdlePreparation`, `IdleReadiness`, current-request progress |
+| [session_core.h](../src/animation/dac/session_core.h) | `SessionCore`, `EventTicket`, `EffectValue`, `Restoration` |
+| [native.h](../src/animation/dac/native.h), [native.cpp](../src/animation/dac/native.cpp) | `native_rules`, `native_dispatch`, exact identity and metadata preflight |
+| [native_profile.h](../src/animation/dac/native_profile.h) | generated exact binary identity, entry prefixes and field offsets |
+| [effects.h](../src/animation/dac/effects.h), [effects.cpp](../src/animation/dac/effects.cpp) | `restorable_spell`, last-contributor SDK adapter, `entry_scope`, `capture_effects`, `event_scope`, `restore_effects`, `effect_signature`, `smooth_idle_goal`, `idle_goal_ready` |
+| [script_attachment.h](../src/animation/dac/script_attachment.h), [script_attachment.cpp](../src/animation/dac/script_attachment.cpp) | `ScriptAttachment`, `read_script_attachment`, `permits_script_attachment`, `ScriptAttachmentCache::inspect` |
 | [dac_script_attachment_test.cpp](../tests/dac_script_attachment_test.cpp) | `script_free_markers_dispatch_despite_vm_handle`, `scripted_winning_override_rejects_without_running_instance` |
-| [inspect_binary.py](../src/dac/inspect_binary.py) | read-only original DLL/PDB pairing, symbols/layouts and offline profile evidence |
-| [MIT-DAC.txt](../src/dac/MIT-DAC.txt) | upstream MIT notice |
+| [inspect_binary.py](../src/animation/dac/inspect_binary.py) | read-only original DLL/PDB pairing, symbols/layouts and offline profile evidence |
+| [MIT-DAC.txt](../src/animation/dac/MIT-DAC.txt) | upstream MIT notice |
 
 ## Interfaces and failure modes
 
@@ -126,7 +128,7 @@ The root project retains one CharacterPanel Release target/preset and its existi
 Maintainers can inspect read-only original files with the Python standard library and existing LLVM readers. From the repository root:
 
 ```powershell
-python src/dac/inspect_binary.py --dll "<original-folder>/loki_DynamicAnimationCasting.dll" --pdb "<original-folder>/loki_DynamicAnimationCasting.pdb" --header src/dac/native_profile.h --evidence build/dac-stock-validation/inspection
+python src/animation/dac/inspect_binary.py --dll "<original-folder>/loki_DynamicAnimationCasting.dll" --pdb "<original-folder>/loki_DynamicAnimationCasting.pdb" --header src/animation/dac/native_profile.h --evidence build/dac-stock-validation/inspection
 cmake --preset Release
 cmake --build --preset Release
 ```

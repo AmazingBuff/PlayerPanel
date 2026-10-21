@@ -22,11 +22,11 @@
 
 | 模块 | 行为 |
 | --- | --- |
-| `src/oar/policy.h` | 判定面：`standing_predicate`/`standing_value`（潜行/游泳/攻击/移动/骑乘/格挡等判否）、`WeaponForm` 与 `weapon_form_from_hands`（双手/弓占双手；双单手=双持；单手+盾/法术/火把仍算单手）、`weapon_form_type`（IsEquippedType 数值） |
-| `src/oar/hooks.h/.cpp` | 站立窗口（`arm_standing_window`/`tick_standing_window`/`standing_window_open`、`set_standing_weapon_form`、`selected_clip`）；两个 thunk 在窗口内按站立回答并把被求值生成器记为选中；**主动查询**：`query_supported()`/`query_replacement()` |
+| `src/animation/oar/policy.h` | 判定面：`standing_predicate`/`standing_value`（潜行/游泳/攻击/移动/骑乘/格挡等判否）、`WeaponForm` 与 `weapon_form_from_hands`（双手/弓占双手；双单手=双持；单手+盾/法术/火把仍算单手）、`weapon_form_type`（IsEquippedType 数值） |
+| `src/animation/oar/hooks.h/.cpp` | 站立窗口（`arm_standing_window`/`tick_standing_window`/`standing_window_open`、`set_standing_weapon_form`、`selected_clip`）；两个 thunk 在窗口内按站立回答并把被求值生成器记为选中；**主动查询**：`query_supported()`/`query_replacement()` |
 | `src/render/renderer.cpp` | 背包打开**上升沿**武装窗口（读边沿、不 consume 菜单事件），每帧 tick，面板关闭即清零；`Standing_Window_Frames = 8` |
 | `src/character/scene_graph_copy.cpp` | 面板打开时**等窗口结束**再捕获（`m_open_pending`）；捕获后 log-only 调用一次主动查询；捕获日志带 `state[sneaking=… swimming=… weapon-drawn=… attack=… knock=… life=…]` |
-| `src/oar/binary_profile.h` | `QueryProfile` + `matches_query`：四条查询入口的 RVA 与入口字节，**任一条缺失或字节不符则整个查询不启用**（3.2.1 无 PDB → 查询停用，两个条件 hook 照常） |
+| `src/animation/oar/binary_profile.h` | `QueryProfile` + `matches_query`：四条查询入口的 RVA 与入口字节，**任一条缺失或字节不符则整个查询不启用**（3.2.1 无 PDB → 查询停用，两个条件 hook 照常） |
 
 ### 2.1 查询链（3.1.6 已核对，安装版 DLL 时间戳 `0x6A40292A`、镜像 `0x3B3000`）
 

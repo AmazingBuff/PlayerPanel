@@ -3,7 +3,7 @@
 //
 #include "character/character_manager.h"
 #include "panel/panel_monitor.h"
-#include "oar/query_policy.h"
+#include "animation/oar/query_policy.h"
 #include "RE/S/ScriptEventSourceHolder.h"
 PLUGIN_NAMESPACE_BEGIN
 // Native resources are released only by serialized lifetime updates, never CRT teardown.

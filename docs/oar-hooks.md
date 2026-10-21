@@ -2,9 +2,11 @@
 
 > Current query/playback boundary: [Actor animation previews](animation.md). The older projection/package sections below are historical.
 
+The integration lives under [src/animation/oar](../src/animation/oar/hooks.h), including its unchanged [upstream ABI headers](../src/animation/oar/api/README.md). Its namespace remains `oar`; native behavior and binary profiles are unchanged by this organization.
+
 ## Fixed base metadata (2026-10-21)
 
-[BaseAnimationCache](../src/oar/base_animation_cache.h) owns bounded per-project original-action metadata derived from [action.h](../src/animation/action.h), `panel_base_animation_names`; [QuerySession](../src/oar/query_policy.h) retains only isolated condition state. [hooks.cpp](../src/oar/hooks.cpp), `ready_animation_table` and `prepare_bases`, validate the table boundary once per access, scan it once on initialization using borrowed published engine strings and copy only finite matches. Warm queries and missing aliases do not rescan or copy the expanded table.
+[BaseAnimationCache](../src/animation/oar/base_animation_cache.h) owns bounded per-project original-action metadata derived from [action.h](../src/animation/action.h), `panel_base_animation_names`; [QuerySession](../src/animation/oar/query_policy.h) retains only isolated condition state. [hooks.cpp](../src/animation/oar/hooks.cpp), `ready_animation_table` and `prepare_bases`, validate the table boundary once per access, scan it once on initialization using borrowed published engine strings and copy only finite matches. Warm queries and missing aliases do not rescan or copy the expanded table.
 
 Prewarming is metadata-only after the existing third-person graph resolver observes a published graph/behavior/skeleton and `bindings.size() >= animationNames.size()`. At the pinned OAR revision `f4e7688b065175aff70aa523073857911e15aca3`, [Hooks.cpp, HavokHooks::LoadClips](https://github.com/ersh1/OpenAnimationReplacer/blob/f4e7688b065175aff70aa523073857911e15aca3/src/Hooks.cpp) calls `CreateReplacementAnimations` before the original engine loader creates bindings from the expanded names; `CreateSynchronizedClips` may add further binding entries. The guard therefore uses coverage rather than equality, and does not require replacement project registration when OAR is absent/unmatched. Pinned CommonLib's `hkbAnimationBindingSet::bindings` and `hkbCharacter`/`hkbCharacterSetup` provide the existing typed read boundary. A DLL-loaded or merely registered OAR project does not establish readiness. Missing metadata retries without permanent negative entries or a wait loop. Real publication/thread timing remains a game check.
 
@@ -12,7 +14,7 @@ The sparse identity includes the string-data owner, array address/count; world r
 
 Initialization resolves original names into indices for each actual project/table. In `query_animation`, string-data identity selects the native project, then `s_get_replacements(project, base->index)` locates its candidates by original binding index. Full selection additionally calls `s_evaluate_replacements` with the source Actor and preview clip inside `ScopedEvaluation`; project/index alone does not provide condition answers. The existing native functions, projected context, supported-condition audit and accepted variant/history semantics remain authoritative. See the [stage-by-stage data flow](animation.md#fixed-base-indices-and-project-readiness).
 
-`animation_binding_name` fetches only requested indices, including variant picks and hash-deduplicated aliases; logical replacement paths remain distinct from actual engine binding names. Names are still retained in [PreviewClip::initialize_native](../src/oar/preview_clip.h) carrier fields, loading metadata and logs alongside indices. The selected index addresses the engine binding. No new hooks/profiles, OAR-result cache or shared condition/history state is added. `OAR bases stage=world-prewarm|menu-fallback` reports once per initialization the total table count, finite requested/resolved/missing counts and elapsed time. DAC preflight, Clone/audits and first asset/GPU use remain unchanged, and no measured hitch elimination is claimed.
+`animation_binding_name` fetches only requested indices, including variant picks and hash-deduplicated aliases; logical replacement paths remain distinct from actual engine binding names. Names are still retained in [PreviewClip::initialize_native](../src/animation/oar/preview_clip.h) carrier fields, loading metadata and logs alongside indices. The selected index addresses the engine binding. No new hooks/profiles, OAR-result cache or shared condition/history state is added. `OAR bases stage=world-prewarm|menu-fallback` reports once per initialization the total table count, finite requested/resolved/missing counts and elapsed time. DAC preflight, Clone/audits and first asset/GPU use remain unchanged, and no measured hitch elimination is claimed.
 
 The 33 canonical keys describe original entry aliases, not a replacement-count limit. Custom weapons reusing existing engine families/OAR entry points can use these indices when their conditions are supported. Independent new behavior/clip entries require an explicit family/base mapping; the old full-table catalogue did not discover new action families either. [Custom-weapon boundaries](animation.md#custom-weapons-and-new-behavior-entries) and the existing [two-case verification](build.md#fixed-base-index-verification) explain the scope without claiming complete game/moveset compatibility.
 
@@ -28,7 +30,7 @@ The audited preview query admits exactly three conditions from `OpenAnimationRep
 
 The complete Smooth source-config scan found 53 equipped-placement, 154 gear-node-placement and 32 `SDS_IsShieldOnBackEnabled` occurrences. These counts identify the pack's used predicates; they do not establish registration or actual selection. The SDS predicate reads `GetShieldOnBackEnabled(actor)` through the provider's existing SDS interface. Its branch needs the provider's own successful SDS interface/condition registration and prerequisites; SDS is not a universal prerequisite for the core non-combat phase goal. No SDS setting or substitute interface is implemented here.
 
-[ied_conditions.h](../src/oar/ied_conditions.h), `ied_condition_rejection` and `evaluate_ied_condition`, own admission and guarded dispatch. [hooks.cpp](../src/oar/hooks.cpp), `audit`, checks the complete tree before any native custom `Evaluate`, including overrides that bypass OAR's base detour. `evaluate_set_thunk` and `evaluate_condition` keep a `Frame` around native evaluation so root custom numeric components use the existing preview graph projection. `evaluate_thunk` forwards admitted provider predicates through its original trampoline without recursively calling their virtual `Evaluate`. No IED state, Actor equipment or graph state is written.
+[ied_conditions.h](../src/animation/oar/ied_conditions.h), `ied_condition_rejection` and `evaluate_ied_condition`, own admission and guarded dispatch. [hooks.cpp](../src/animation/oar/hooks.cpp), `audit`, checks the complete tree before any native custom `Evaluate`, including overrides that bypass OAR's base detour. `evaluate_set_thunk` and `evaluate_condition` keep a `Frame` around native evaluation so root custom numeric components use the existing preview graph projection. `evaluate_thunk` forwards admitted provider predicates through its original trampoline without recursively calling their virtual `Evaluate`. No IED state, Actor equipment or graph state is written.
 
 The provider's own `Evaluate` retains the source reference, left/right or gear-node selection, comparison operator, shield configuration, disabled and negation semantics. A native false remains a supported false; it does not trigger a forced match. These are native IED/SDS queries for **current source equipment/configuration**. Any `PreviewState::hand_override`, unknown provider condition name, schema/version mismatch, unavailable/mismatched provider or unrelated third-party condition is rejected before native dispatch. Historical equipment has no synthetic hint. Existing TARGET/PLAYER reference routing stays native; preview numeric projection remains restricted to the scoped source/clip. No Actor, IED or SDS state is mutated.
 
@@ -42,7 +44,7 @@ The two [focused admission/dispatch cases](../tests/ied_condition_adapter_test.c
 
 ## Actor-animation ABI audit (2026-10-19)
 
-`AnimationReplacements::ForEachReplacementAnimation` is called through the existing DLL identity and entry-prefix gate. The native function owns the read lock; callers copy descriptors while its callback runs. It is RVA `0x1EB900` in 3.1.6 (prefix `48 89 5c 24 18 55 56 57 48 83 ec 40 48 8b 05 2d`) and `0x12D7B0` in 3.2.1 (same prefix ending `bd`). Profiles are in [binary_profile.h](../src/oar/binary_profile.h).
+`AnimationReplacements::ForEachReplacementAnimation` is called through the existing DLL identity and entry-prefix gate. The native function owns the read lock; callers copy descriptors while its callback runs. It is RVA `0x1EB900` in 3.1.6 (prefix `48 89 5c 24 18 55 56 57 48 83 ec 40 48 8b 05 2d`) and `0x12D7B0` in 3.2.1 (same prefix ending `bd`). Profiles are in [binary_profile.h](../src/animation/oar/binary_profile.h).
 
 Both PDB field lists confirm `ReplacementAnimation::_originalIndex=0xA8`, `_bDisabled=0xAA`, `_path=0xB0`, `_projectName=0xD0`, `_parentSubMod=0x108`, size 272. `Variant::_index=0`, `_filename=8`, `_bDisabled=0x28`, `_bPlayOnce=0x29`, size 56. Evidence: `llvm-pdbutil dump --types --type-index=0x4473 --type-index=0x42D3` for 3.1.6 and types `0x7A73` / `0x7899` for 3.2.1 against the provided DLL/PDB pairs. Earlier +0xA8 path hypotheses confuse the original index with the string; use +0xB0.
 
@@ -76,8 +78,8 @@ The animation controller uses these values for its own advancing-pose fade, incl
 
 ## 范围与入口
 
-实现位于 [src/oar](../src/oar/hooks.h)，对 Nexus 主文件 **3.1.6**（测试环境实际安装的版本）与
-**3.2.1** 各持一份经核对的二进制 profile（[binary_profile.h](../src/oar/binary_profile.h)）。
+实现位于 [src/animation/oar](../src/animation/oar/hooks.h)，对 Nexus 主文件 **3.1.6**（测试环境实际安装的版本）与
+**3.2.1** 各持一份经核对的二进制 profile（[binary_profile.h](../src/animation/oar/binary_profile.h)）。
 只有装载版本的 SKSE 版本号、PE 时间戳／映像大小、CodeView 身份与两个入口字节**全部**对得上，
 才以该 profile 的地址安装。`main.cpp` 在 `kPostPostLoad` 调用 `oar::install_hooks()`；
 OAR 未加载、无 profile 匹配或安装失败时 `hooks_ready()` 为 false，日志给出拒绝原因与被拒版本。
@@ -137,7 +139,7 @@ SCOPY OAR project ticks=… hooks=installed|absent mode=projected|plain evaluate
 ## 已实现的状态覆盖
 
 - 潜行、腾空、奔跑、冲刺、游泳、骑乘、攻击、格挡、对话和交互等内置谓词使用站立展示状态。
-  实际名称清单见 [policy.h](../src/oar/policy.h)。`IsWeaponDrawn` 由预览状态提供。
+  实际名称清单见 [policy.h](../src/animation/oar/policy.h)。`IsWeaponDrawn` 由预览状态提供。
 - 当前速度、浸没量、坐睡状态与攻击状态的比较使用零值；战斗状态和静止方向按状态 0 求相等。
   仍由 OAR 自己的 comparison component 处理比较运算，不把比较条件一律当作 false。
 - `PreviewState::graph_variables` 表示该预览实例完整的变量表；`HasGraphVariable` 判断变量是否存在，
@@ -212,7 +214,7 @@ CodeView 记录偏移直接读文件核对（`RSDS` + 16 字节 + age）。
 另从 PDB 定位并读取了 126 个原生 Condition 虚表，其 Evaluate 槽均指向 `0x68640`。
 第三方 DLL 自带的 `CustomCondition::Evaluate` 不属于这项基础 hook 证明；当前仅上文三项 IED/SDS 原生只读条件经过额外入口审计后放行，其余预先拒绝。
 
-入口前 16 字节在 [binary_profile.h](../src/oar/binary_profile.h) 保存，两份 profile 各存一份。
+入口前 16 字节在 [binary_profile.h](../src/animation/oar/binary_profile.h) 保存，两份 profile 各存一份。
 运行时同时核对 SKSE 插件版本、PE timestamp／image size、CodeView GUID／age 和两个入口字节，
 全部成立后才以一个 Detours transaction 按该 profile 的地址安装；安装成功打印
 `OAR <版本> hooks installed: …`，被拒时打印拒绝原因与被拒版本的四个字段。

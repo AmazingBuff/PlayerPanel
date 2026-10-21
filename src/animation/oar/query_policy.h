@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "oar/base_animation_cache.h"
-#include "oar/selection_state.h"
+#include "animation/oar/base_animation_cache.h"
+#include "animation/oar/selection_state.h"
 
 PLUGIN_NAMESPACE_BEGIN
 namespace oar

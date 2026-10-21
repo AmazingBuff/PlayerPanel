@@ -5,7 +5,7 @@
 #pragma once
 
 #include "animation/idle_policy.h"
-#include "oar/query_policy.h"
+#include "animation/oar/query_policy.h"
 
 PLUGIN_NAMESPACE_BEGIN
 namespace tests

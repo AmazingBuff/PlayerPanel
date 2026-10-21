@@ -1,9 +1,9 @@
 //
 // Created by AmazingBuff on 2026/10/20.
 //
-#include "dac/session.h"
-#include "dac/native.h"
-#include "dac/session_core.h"
+#include "animation/dac/session.h"
+#include "animation/dac/native.h"
+#include "animation/dac/session_core.h"
 #include "RE/M/MagicCaster.h"
 #include "RE/M/MenuOpenCloseEvent.h"
 #include <mutex>
