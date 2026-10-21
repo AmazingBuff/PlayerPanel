@@ -424,16 +424,7 @@ public:
                     preview_state(false), reason, true, activation, reusable);
             return;
         }
-        // Smooth's Start members are one-shot entry stages: play them once and let the boundary
-        // re-query (its annotation switches the phase markers to loop), instead of looping them.
-        ActionPrototype effective = action;
-        if ((action.kind == ActionKind::e_weapon_idle || action.kind == ActionKind::e_standing_idle) &&
-            panel_clip_is_sequence_start(selected.name))
-        {
-            effective.loop = false;
-            logger::info("ANIMATION actor={:08x} request={} sequence start one-shot path='{}'", actor_id, generation, selected.name);
-        }
-        proposal->stage = { effective, selected };
+        proposal->stage = { action, selected };
         if (active && reason != ChoiceReason::e_request && active->stage.action.kind == action.kind && active->direct == direct &&
             selected.index == active->stage.clip.index && selected.replacement_key == active->stage.clip.replacement_key)
         {
@@ -478,7 +469,7 @@ public:
         standard.base_name = standard.name = standard.binding_name = names[*base];
         proposal->standing = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
         proposal->calibration = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
-        proposal->asset = std::make_unique<LoadedAsset>(graph, selected, effective.loop,
+        proposal->asset = std::make_unique<LoadedAsset>(graph, selected, action.loop,
             action.kind == ActionKind::e_standing_idle, generation,
             target.empty() && !direct ? std::optional<oar::AnimationSelection>(standard) : std::nullopt);
         logger::info("ANIMATION actor={:08x} request={} state={} choice={} path='{}' index={} diagnostic='{}'",

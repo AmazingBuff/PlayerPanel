@@ -2,10 +2,7 @@
 // Created by AmazingBuff on 2026/10/19.
 //
 #pragma once
-#include <algorithm>
-#include <cctype>
 #include <cstdint>
-#include <string>
 #include <string_view>
 #include <vector>
 PLUGIN_NAMESPACE_BEGIN
@@ -98,22 +95,6 @@ namespace animation
         bool loop;
     };
 }
-// Smooth's Start / Loop are separate replacement projects (not OAR variants), so the only
-// available signal that an idle layer is a one-shot entry stage is its folder name. A Start
-// member must play once and hand over; playing it as the looping idle is the "Start used as
-// loop" defect reported on 2026-10-20.
-[[nodiscard]] inline bool panel_clip_is_sequence_start(std::string_view clip)
-{
-    std::string path(clip);
-    std::ranges::transform(path, path.begin(), [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
-    const std::size_t slash = path.find_last_of("\\/");
-    if (slash == std::string::npos) return false;
-    const std::string folder = path.substr(0, slash);
-    const std::size_t previous = folder.find_last_of("\\/");
-    const std::string_view name = previous == std::string::npos ? std::string_view(folder) : std::string_view(folder).substr(previous + 1);
-    return name == "start" || name.ends_with(" idle start") || name.ends_with(" idle start2");
-}
-
 [[nodiscard]] inline std::vector<std::string_view> panel_idle_bases(animation::WeaponForm form)
 {
     using Form = animation::WeaponForm;

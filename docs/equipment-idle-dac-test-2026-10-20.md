@@ -258,9 +258,10 @@ node world 应随父骨变化）。
    过渡播放时，其标注（`BeginWeaponDraw`/`weaponDraw`）经 DAC 施放 `start on`（0x809）
    → 边界后的 idle 查询得到 **Start** 成员；Start 的 `Smooth_loop` 标注施放 `loop on`
    （0x80A）→ 再下一个边界查询得到 **Loop**。即世界里的 Equip → Start → Loop。
-3. **Start 一次性**：按文件夹名（`… idle start` / `start`）识别 Start 成员，`loop=false`
-   播一次后由边界重新查询；不再把 Start 当循环体驻留。这修掉"在 Equip→Start 阶段直接用
-   Start 做 idle loop"。
+3. **不做名字调度**：Start/Stop 的推进完全由剪辑自带标注（经 DAC 施放相位法术）与 OAR 的
+   相位条件驱动；循环边界本来就重新查询 OAR，Start 的 `Smooth_loop` 标注在边界前 0.3s
+   触发（2.033s / 2.33s，第二轮日志实测），因此边界查询自然落到 Loop。没有按文件夹名
+   强制 Start 一次性，也没有 playlist。
 4. **武器挂点**：捕获时记录每个挂载件的原鞘挂点（`WeaponSword`/`WeaponAxe`/… 父节点）
    与本地变换；Equip 过渡在 `weaponDraw` 事件之前把武器留在鞘位，事件后挂回手部；
    Unequip 反向。复制图没有 behavior graph，这是用动画自己的 `weaponDraw` 时点复刻
@@ -268,9 +269,9 @@ node world 应随父骨变化）。
 
 | 项目 | 值 |
 | --- | --- |
-| 构建身份 | `CharacterPanel-scenegraph-scenegraph-a3dea5e07f+dirty-cl94faaed0c6-20261020T145855Z` |
-| DLL SHA-256 | `486CEBFEE9E75EB64CF7631A1021DFC6F2836A2732CAB3B55AB47BFDB776A33A` |
-| PDB SHA-256 | `E06C50FE4F419B2FF952A596E8B831DB3CC05F7DBC2E30E5780B2D95BFA09977` |
+| 构建身份 | `CharacterPanel-scenegraph-scenegraph-5d5c510017+dirty-cl94faaed0c6-20261020T151757Z` |
+| DLL SHA-256 | `FF33FE8CBF5FE4443679ABA66D0A70BD3A39707F082365047E797344B288EA54` |
+| PDB SHA-256 | `AD1B15038EF6C2463123219549E932CB046F03975294B5982A478906167EC29E` |
 | 部署 | `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（DLL+PDB 已同步） |
 | 本地回归 | Release 配置/构建通过；`animation_controller_test` 2/2 通过 |
 
@@ -281,8 +282,10 @@ node world 应随父骨变化）。
   `DAC snapshot … effects=N scope=M` 的 `scope` 应大于 0。
 - **三阶段**：背包内换武器后依次出现
   `transition=equip` → `event='weaponDraw' time=…` → `goal=…` 后的
-  `state=… path='… idle Start …'`（`replaced=true`）→ `sequence start one-shot path='…'`
-  → `event='Smooth_loop'` → 下一个边界 `state=… path='… idle Loop …'`。
+  `state=… path='… idle Start …'`（`replaced=true`）→ `event='Smooth_loop'`
+  → 下一个边界 `state=… path='… idle Loop …'`。Start 段驻留超过一个循环体即说明
+  `Smooth_loop` 的 DAC 施法没有落地（把该事件前后的 `DAC actor=… event='Smooth_loop'`
+  行发回）。
 - **武器挂点**：Equip 过渡的前半段武器在鞘位（腰/背），`weaponDraw` 时点之后才出现在手里；
   若仍一开播就在手上，把该过渡的 `weaponDraw` 时间与 `SCOPY HELD` 行发回。
 - 若仍见 `Smooth_loop preparation failed: …`，把该行与 `DAC native spell` 行发回
