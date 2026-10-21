@@ -94,9 +94,21 @@ Copy [config/CharacterPanel.ini](../config/CharacterPanel.ini) to `Data/SKSE/Plu
 
 ## Verification and limits
 
-The stock-binary adaptation previously verified matching and mismatched offline inspector cases described in [DAC verification](dac.md#verification-and-limits); those are reused evidence. The current idle policy uses the two focused cases below.
+The stock-binary adaptation previously verified matching and mismatched offline inspector cases described in [DAC verification](dac.md#verification-and-limits); those are reused evidence. The current attachment change uses exactly two focused cases; earlier idle-policy evidence is separate.
 
-The equipment idle policy uses exactly two direct-compiled behavior cases, without adding any CMake test/project target. From an x64 VS2022 developer shell initialized with MSVC 14.44.35207:
+From the repository root in an x64 VS2022 developer shell initialized with MSVC 14.44.35207:
+
+```powershell
+New-Item -ItemType Directory -Force build/dac-script-attachments | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/dac_script_attachment_test.cpp /Fobuild/dac-script-attachments/dac_script_attachment_test.obj /Febuild/dac-script-attachments/dac_script_attachment_test.exe
+./build/dac-script-attachments/dac_script_attachment_test.exe
+```
+
+Keep assertions enabled; do not add `NDEBUG`. The [attachment cases](../tests/dac_script_attachment_test.cpp) compile the production [scanner/cache/decision](../src/dac/script_attachment.cpp) in the test translation unit without Skyrim or another CMake target. Fixture files stay under the ignored output directory. A script-free two-effect marker with absent/empty VMAD is admitted despite a simulated VM handle; a scripted overriding MGEF is rejected before simulated dispatch without a running script, even after the base file was cached. These are the two cases selected for this change. The normal Release configure/build above separately compiles the SDK adapter into the DLL.
+
+Runtime inspection supports standard uncompressed MGEF records and VMAD version 5/object formats 1 or 2. Compressed target records, unsupported or malformed metadata and unavailable files reject affected events. Actual `GetFile()` provenance, SDK master/full/light remapping and virtual filesystem visibility require game verification. Offline tests do not execute the native DAC handler, paused effect activation or restoration; see [attachment semantics](dac.md#marker-script-attachment-preflight) and the [dated follow-up](equipment-idle-dac-test-2026-10-20.md#8-脚本附件预检复核2026-10-21待上机).
+
+The earlier equipment idle policy has two direct-compiled behavior cases, without adding any CMake test/project target. Its separate reproduction command is:
 
 ```powershell
 cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/animation_controller_test.cpp /Fo:build/animation_controller_test.obj /Fe:build/animation_controller_test.exe
@@ -112,6 +124,18 @@ Prior local native evidence on 2026-10-19:
 - Documentation/source checks cover links, history parity and unchanged inputs; they are separate from native execution and runtime validation.
 
 The [animation cases](../tests/animation_controller_test.cpp) use the direct command above; retained [graph/math](../tests/snapshot_transform_test.cpp) checks remain outside CMake. Earlier test results do not imply that current CMake builds either source. No Skyrim runtime is available here: native loading, hooks, visuals, framing and graph lifetime remain unverified. See [debugging navigation](code-maintenance.md#debugging-navigation) and [SceneGraph](scene-graph.md).
+
+### IED condition verification
+
+The native IED adapter has a separate two-case verification command in the same x64 MSVC 14.44.35207 developer shell, with assertions enabled:
+
+```powershell
+New-Item -ItemType Directory -Force build/ied-condition-adapter | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/ied_condition_adapter_test.cpp /Fobuild/ied-condition-adapter/ied_condition_adapter_test.obj /Febuild/ied-condition-adapter/ied_condition_adapter_test.exe
+./build/ied-condition-adapter/ied_condition_adapter_test.exe
+```
+
+The [cases](../tests/ied_condition_adapter_test.cpp) exercise the production [admission/guarded native dispatch](../src/oar/ied_conditions.h): the representative native-preservation scenario covers equipped-placement false, left/right comparison, negation and disabled behavior, plus the zero-component SDS shield-setting false and negation; a historical-hand scope rejects before any native read. These remain two cases. They use narrow provider fakes and do not execute Skyrim, IED, SDS or the supplied DLL. The normal Release configure/build separately compiles the real OAR/SDK integration; no CMake test target or dependency is added. The [three-condition reference](oar-hooks.md#native-ied-placement-conditions-2026-10-21) records exact provider/schema versions, provider-side SDS prerequisites and archive/DLL provenance. Real OAR/SDS registration, paused IED hint freshness, native evaluation, missing-provider fallback and visuals remain game-only follow-up.
 
 ## Safe modification
 

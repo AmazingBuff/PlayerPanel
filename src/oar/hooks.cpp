@@ -4,6 +4,7 @@
 
 #include "oar/api/OpenAnimationReplacer-ConditionTypes.h"
 #include "oar/binary_profile.h"
+#include "oar/ied_conditions.h"
 #include "oar/policy.h"
 #include "oar/preview_clip.h"
 
@@ -57,6 +58,19 @@ namespace oar
         using BlendTime = float (*)(void const*, void*, std::int32_t, bool, bool);
         BlendTime s_blend_time = nullptr;
         std::atomic_bool s_query_ready = false;
+
+        std::optional<uint32_t> ied_provider_version()
+        {
+            static const std::optional<uint32_t> s_version = []() -> std::optional<uint32_t>
+            {
+                HMODULE const module = GetModuleHandleW(L"OpenAnimationReplacer-IEDConditionExtensions.dll");
+                SKSE::PluginInfo const* const info = SKSE::GetPluginInfo(Ied_Provider.data());
+                if (!module || !info)
+                    return std::nullopt;
+                return info->version;
+            }();
+            return s_version;
+        }
 
         struct QueryFrame
         {
@@ -347,6 +361,14 @@ namespace oar
             if (condition->IsDisabled())
                 return true;
 
+            const RE::BSString provider = condition->GetRequiredPluginName();
+            if (!projected && provider.c_str() && *provider.c_str())
+            {
+                return evaluate_ied_condition(*condition, ied_provider_version(), scope->state().hand_override.has_value(),
+                    [&] { return s_evaluate(condition, source, clip, submod); },
+                    [&](std::string_view reason) { scope->reject(std::string(reason)); });
+            }
+
             RE::BSString storage;
             const std::string_view name = condition_name(*condition, storage);
             if (name == "HasGraphVariable" && QueryFrame::current)
@@ -474,8 +496,11 @@ namespace oar
             const RE::BSString provider = condition.GetRequiredPluginName();
             if (provider.c_str() && *provider.c_str())
             {
-                scope.reject("third-party condition requires an explicit preview adapter");
-                return false;
+                const std::string_view reason = ied_condition_rejection(condition, ied_provider_version(),
+                    scope.state().hand_override.has_value());
+                if (!reason.empty())
+                    scope.reject(std::string(reason));
+                return reason.empty();
             }
             RE::BSString storage;
             const auto name = condition_name(condition, storage);
@@ -642,6 +667,7 @@ namespace oar
                 }
                 if (result)
                 {
+                    Frame frame(source, clip);
                     for (Condition const* condition : entries)
                     {
                         if (!condition->Evaluate(source, clip, submod))
@@ -950,6 +976,13 @@ namespace oar
         }
         s_ready.store(true, std::memory_order_release);
         s_query_ready.store(query_verified, std::memory_order_release);
+        const std::optional<uint32_t> ied_version = ied_provider_version();
+        if (!ied_version)
+            logger::info("OAR IED placement adapter: provider unavailable; native registration unverified");
+        else if (*ied_version != Ied_Provider_Version)
+            logger::info("OAR IED placement adapter: provider version mismatch ({:08X}); requires embedded 1.0.2.0", *ied_version);
+        else
+            logger::info("OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified");
         logger::info("OAR {}.{}.{} hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query {}",
             profile->version[0], profile->version[1], profile->version[2],
             query_supported() ? "available" : "unavailable for this build");
@@ -970,6 +1003,7 @@ namespace oar
                 return { false, false, 0, "preview graph values must be finite" };
         }
         ScopedEvaluation scope(&source, &preview_clip, state);
+        Frame frame(&source, &preview_clip);
         const bool matched = audit(condition, scope) && condition.Evaluate(&source, &preview_clip, parent_submod);
         return { matched && scope.supported(), scope.supported(), scope.overrides(), scope.diagnostic() };
     }

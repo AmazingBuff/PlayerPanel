@@ -2,6 +2,30 @@
 
 > Current query/playback boundary: [Actor animation previews](animation.md). The older projection/package sections below are historical.
 
+## Native IED placement conditions (2026-10-21)
+
+The audited preview query admits exactly three conditions from `OpenAnimationReplacer-IEDConditionExtensions`, with loaded provider version **1.0.2.0** (`0x01000020`) and required condition version **1.0.0.0**. The supplied archive is labelled **1.0.3**; its embedded SKSE version is 1.0.2.0. Admission uses module/SKSE metadata cached at PostPostLoad hook installation, then checks the exact ordered public component signature:
+
+| Condition | Components (type / name) |
+| --- | --- |
+| `IED_GearNodeEquippedPlacementHint` | Bool / `Left hand`; Comparison / `Comparison`; Numeric / `Weapon placement ID` |
+| `IED_GearNodePlacementHint` | Numeric / `Gear node ID`; Comparison / `Comparison`; Numeric / `Weapon placement ID` |
+| `SDS_IsShieldOnBackEnabled` | No components; native source Actor shield-on-back setting |
+
+The complete Smooth source-config scan found 53 equipped-placement, 154 gear-node-placement and 32 `SDS_IsShieldOnBackEnabled` occurrences. These counts identify the pack's used predicates; they do not establish registration or actual selection. The SDS predicate reads `GetShieldOnBackEnabled(actor)` through the provider's existing SDS interface. Its branch needs the provider's own successful SDS interface/condition registration and prerequisites; SDS is not a universal prerequisite for the core non-combat phase goal. No SDS setting or substitute interface is implemented here.
+
+[ied_conditions.h](../src/oar/ied_conditions.h), `ied_condition_rejection` and `evaluate_ied_condition`, own admission and guarded dispatch. [hooks.cpp](../src/oar/hooks.cpp), `audit`, checks the complete tree before any native custom `Evaluate`, including overrides that bypass OAR's base detour. `evaluate_set_thunk` and `evaluate_condition` keep a `Frame` around native evaluation so root custom numeric components use the existing preview graph projection. `evaluate_thunk` forwards admitted provider predicates through its original trampoline without recursively calling their virtual `Evaluate`. No IED state, Actor equipment or graph state is written.
+
+The provider's own `Evaluate` retains the source reference, left/right or gear-node selection, comparison operator, shield configuration, disabled and negation semantics. A native false remains a supported false; it does not trigger a forced match. These are native IED/SDS queries for **current source equipment/configuration**. Any `PreviewState::hand_override`, unknown provider condition name, schema/version mismatch, unavailable/mismatched provider or unrelated third-party condition is rejected before native dispatch. Historical equipment has no synthetic hint. Existing TARGET/PLAYER reference routing stays native; preview numeric projection remains restricted to the scoped source/clip. No Actor, IED or SDS state is mutated.
+
+`OAR IED placement adapter` logs distinguish unavailable, mismatched and available metadata at hook installation. Query diagnostics distinguish provider failure, unsupported IED name/schema/version, historical-hand scope and unrelated third-party rejection. Available metadata does **not** establish successful OAR factory registration. PlayerPanel does not create factories, rebuild the provider or repair registration; install the original provider and its IED prerequisites separately. A rejected candidate follows the existing OAR next-candidate/base policy.
+
+Provenance: user-supplied `Open Animation Replacer - IED conditions-98308-1-0-3-1693587943.zip`, archive SHA-256 `e46bcb8087f4f95ce59ae0d4aa1ea16fcf38d348f5b957d4eb0b2792a7935a0a`; its unchanged `SKSE/Plugins/OpenAnimationReplacer-IEDConditionExtensions.dll`, SHA-256 `8669298ea4e640e2ac7867ecdf29be59b7e2f56014831b11b99a14bdb5b3b698`. Offline PE inspection reads exported `SKSEPlugin_Version` at RVA `0xFD030`; no provider DLL was executed or modified here.
+
+Primary semantic references: the provider author's [Conditions.h](https://github.com/SlavicPotato/OpenAnimationReplacer-IEDConditionExtensions/blob/master/src/Conditions.h) and [Conditions.cpp](https://github.com/SlavicPotato/OpenAnimationReplacer-IEDConditionExtensions/blob/master/src/Conditions.cpp), retrieved 2026-10-21 (source tree version 1.0.1; binary source revision unknown). The pinned OAR [API request implementation](https://github.com/ersh1/OpenAnimationReplacer/blob/f4e7688b065175aff70aa523073857911e15aca3/src/main.cpp) supports interface V2/V3; this is distinct from condition-object `ConditionAPIVersion` V3/V4. The supplied DLL requests interface V2. These facts alone do not verify live registration or message ordering. No provider implementation was copied.
+
+The two [focused admission/dispatch cases](../tests/ied_condition_adapter_test.cpp) and [Release build instructions](build.md#ied-condition-verification) are local evidence. Real provider registration, native evaluation, IED hint refresh while paused, appearance and missing-provider fallback in Skyrim remain unverified. Use the [dated game follow-up](equipment-idle-dac-test-2026-10-20.md#9-ied-placement-适配2026-10-21待上机); loading the DLL is insufficient evidence of a matching condition.
+
 ## Actor-animation ABI audit (2026-10-19)
 
 `AnimationReplacements::ForEachReplacementAnimation` is called through the existing DLL identity and entry-prefix gate. The native function owns the read lock; callers copy descriptors while its callback runs. It is RVA `0x1EB900` in 3.1.6 (prefix `48 89 5c 24 18 55 56 57 48 83 ec 40 48 8b 05 2d`) and `0x12D7B0` in 3.2.1 (same prefix ending `bd`). Profiles are in [binary_profile.h](../src/oar/binary_profile.h).
@@ -17,7 +41,7 @@ The authoritative source pin `f4e7688b065175aff70aa523073857911e15aca3` register
 
 Animation now requests equipment-driven non-combat idles with panel-drawn=true regardless of world draw/action. Native Smooth_loop goal readiness precedes queried choices. Direct empty-hand MT_Idle bypasses OAR replacements and marker dispatch; its calibration remains an independent vanilla base. [Policy/configuration](animation.md#configuration) and [DAC preparation](dac.md#non-combat-idle-goal-preparation) own these decisions; this query adapter remains unchanged.
 
-Smooth Moveset's [compatibility boundary](dac.md#smooth-moveset-compatibility-boundary) documents remaining query limits. `audit` rejects enabled third-party conditions with `third-party condition requires an explicit preview adapter`; installing IED and OpenAnimationReplacer-IEDConditionExtensions alone does not bypass that gate. Equipment placement branches need an explicit IED query adapter. The combat Start/Loop configs use TDM effect `0x804` OR `IsCombatState == 1`; `evaluate_thunk` currently projects the latter to zero, while ordinary source effects remain native reads.
+Smooth Moveset's [compatibility boundary](dac.md#smooth-moveset-compatibility-boundary) documents remaining query limits. The [three native IED/SDS predicates](#native-ied-placement-conditions-2026-10-21) are admitted only within their current-source/schema/version boundary; other enabled third-party conditions still require an explicit adapter. The combat Start/Loop configs use TDM effect `0x804` OR `IsCombatState == 1`; `evaluate_thunk` currently projects the latter to zero, while ordinary source effects remain native reads.
 
 The existing version/PE/CodeView/evaluate/numeric gates remain unchanged. `matches_query` additionally gates these copied-metadata getters:
 
@@ -110,7 +134,7 @@ SCOPY OAR project ticks=… hooks=installed|absent mode=projected|plain evaluate
 - 身份、种族、性别、阵营、已确认装备及允许的环境条件使用原始 OAR 求值。
 - 内置条件的 disabled／negated 语义保留；AND／OR／XOR 由 OAR 原实现组合。
 
-求值前审计整棵条件树。第三方条件、自定义／preset component、Random、IdleTime 及其他未列入
+求值前审计整棵条件树。除上文当前 IED 白名单外，第三方条件、自定义／preset component、Random、IdleTime 及其他未列入
 支持清单的条件会明确拒绝，不以原角色真实行为代替预览状态。最大审计深度为 64。
 这是有界支持范围，并非任意 OAR 动作包通用兼容。新增适配应扩充策略和验证，不能直接放行未知条件。
 
@@ -172,7 +196,7 @@ CodeView 记录偏移直接读文件核对（`RSDS` + 16 字节 + age）。
 `llvm-pdbutil dump -publics -section-headers` 的段偏移结合 DLL PE section 得到以上 RVA；
 `llvm-objdump` 反汇编核对签名与实参使用，未按源码行号或其他版本猜地址。
 另从 PDB 定位并读取了 126 个原生 Condition 虚表，其 Evaluate 槽均指向 `0x68640`。
-第三方 DLL 自带的 `CustomCondition::Evaluate` 不属于这项证明，因此在受支持查询入口中预先拒绝。
+第三方 DLL 自带的 `CustomCondition::Evaluate` 不属于这项基础 hook 证明；当前仅上文三项 IED/SDS 原生只读条件经过额外入口审计后放行，其余预先拒绝。
 
 入口前 16 字节在 [binary_profile.h](../src/oar/binary_profile.h) 保存，两份 profile 各存一份。
 运行时同时核对 SKSE 插件版本、PE timestamp／image size、CodeView GUID／age 和两个入口字节，

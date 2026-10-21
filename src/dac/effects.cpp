@@ -2,12 +2,14 @@
 // Created by AmazingBuff on 2026/10/20.
 //
 #include "dac/effects.h"
+#include "dac/script_attachment.h"
 #include "base/def.h"
 #include "RE/A/ActiveEffect.h"
 #include "RE/E/Effect.h"
 #include "RE/E/EffectSetting.h"
 #include "RE/M/MagicTarget.h"
 #include "RE/S/SpellItem.h"
+#include "RE/T/TESFile.h"
 #include <tuple>
 
 PLUGIN_NAMESPACE_BEGIN
@@ -24,6 +26,19 @@ namespace
         for (std::uint32_t i = 0; i < effect.numKeywords; ++i)
             if (effect.keywords[i] && contains(keywords, effect.keywords[i]->GetFormID())) return true;
         return false;
+    }
+    AttachmentResult script_attachment(RE::EffectSetting const& effect)
+    {
+        RE::TESFile const* file = effect.GetFile();
+        if (!file || (effect.GetFormID() >> 24) == 0xFF)
+            return { ScriptAttachment::e_unavailable, "MGEF has no contributing plugin definition" };
+        static ScriptAttachmentCache s_attachments;
+        return s_attachments.inspect(std::filesystem::path(file->path) / file->fileName, effect.GetFormID(), file,
+            [file](std::uint32_t raw_id)
+            {
+                if ((raw_id >> 24) > file->masterCount) return std::uint32_t(0);
+                return file->GetRuntimeFormID(raw_id);
+            });
     }
     void sort_effects(std::vector<EffectValue>& values)
     {
@@ -64,10 +79,6 @@ bool restorable_spell(RE::MagicItem const& magic, std::string& reason)
 {
     RE::SpellItem const* spell = magic.As<RE::SpellItem>();
     using Casting = RE::MagicSystem::CastingType;
-    // VMAD is deliberately not tested: TESForm::HasVMAD() is the SKSE VM-handle heuristic and
-    // returns true for script-REFERENCED forms. The 2026-10-20 game log showed vmad=true for all
-    // 66 native rule spells, while the Smooth Moveset spell and MGEF records contain no VMAD
-    // subrecord at all; gating on it rejected every Smooth rule and disabled phase preparation.
     if (!spell || spell->data.delivery != RE::MagicSystem::Delivery::kSelf ||
         (spell->data.castingType != Casting::kConstantEffect && spell->data.castingType != Casting::kFireAndForget) ||
         spell->data.costOverride != 0 || spell->data.castingPerk || spell->effects.empty() ||
@@ -85,6 +96,11 @@ bool restorable_spell(RE::MagicItem const& magic, std::string& reason)
             (data.castingType != Casting::kConstantEffect && data.castingType != Casting::kFireAndForget) ||
             data.delivery != RE::MagicSystem::Delivery::kSelf)
         { reason = "effect is outside the inert self-marker restoration subset"; return false; }
+        if (!permits_script_attachment(script_attachment(*base), reason))
+        {
+            reason = fmt::format("effect {:08x} definition: {}", base->GetFormID(), reason);
+            return false;
+        }
     }
     return true;
 }

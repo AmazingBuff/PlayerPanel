@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- Add audited native IED equipped-weapon placement, gear-node placement and SDS shield-on-back
+  queries for current source equipment/configuration, preserving native comparisons and false
+  results with the supplied condition provider.
+
 ### Changed
 
 - Change inventory previews to equipped non-combat idles independent of world actions and sheathing.
@@ -12,7 +18,7 @@
 - Use the supported original DAC NG Plus binary unchanged; require no DAC rebuild or runtime PDB.
 - Blend advancing outgoing and incoming poses using copied OAR durations while retaining
   vanilla MT_Idle placement calibration.
-- Document pending IED placement-condition support and the current combat-branch limits;
+- Document the three-condition IED/SDS query boundary and the current combat-branch limits;
   game-time and full-pack compatibility remain unverified.
 
 - Change CMake to one Release DLL target and remove test, packaging and legacy preset entry points.
@@ -22,6 +28,10 @@
 - Remove Actor-based preview creation, equipment mirroring and puppet diagnostics; use SceneGraph previews in every build.
 
 ### Fixed
+
+- Reject DAC marker effects with attached scripts by inspecting their contributing MGEF definitions,
+  without mistaking VM handles for script attachments. Reject unavailable or unsupported definitions
+  before dispatch, including compressed target records, and keep override provenance in the cache.
 
 - Fix preview placement drifting between actions: calibrate the copy root from the vanilla
   MT_Idle base at capture, before the action pose is written, instead of from whichever action

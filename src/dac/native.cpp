@@ -75,8 +75,8 @@ namespace
             return;
         }
         char const* const name = spell->GetFullName();
-        logger::warn("DAC native spell {:08x} '{}' rejected: {} (vmad={} delivery={} casting={} cost={} perk={} effects={} type={})",
-            spell->GetFormID(), name ? name : "", reason, spell->HasVMAD(),
+        logger::warn("DAC native spell {:08x} '{}' rejected: {} (delivery={} casting={} cost={} perk={} effects={} type={})",
+            spell->GetFormID(), name ? name : "", reason,
             static_cast<int>(spell->data.delivery), static_cast<int>(spell->data.castingType), spell->data.costOverride,
             static_cast<void const*>(spell->data.castingPerk), spell->effects.size(),
             static_cast<int>(spell->data.spellType));

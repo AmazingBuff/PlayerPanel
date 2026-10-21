@@ -290,3 +290,85 @@ node world 应随父骨变化）。
   若仍一开播就在手上，把该过渡的 `weaponDraw` 时间与 `SCOPY HELD` 行发回。
 - 若仍见 `Smooth_loop preparation failed: …`，把该行与 `DAC native spell` 行发回
   （可能是事件级 `event_scope` 的新拒绝原因，例如无关效果的关键词冲突）。
+
+## 8. 脚本附件预检复核（2026-10-21，待上机）
+
+第 6、7 节保留当时的日志、判断和构建信息。本节修正其中对 `HasVMAD()` 和验证范围的解释，
+不把第三轮“待上机”改成已通过。
+
+`TESForm::HasVMAD()` 的实际实现只检查 VM 对象句柄是否为空。`true` 不能证明记录附带脚本，
+也不能仅凭该值确定句柄为何存在。因此当时 66 个条目全部为 true 足以解释旧门槛全部误拒，
+但“被脚本引用”不是已经验证的具体原因。直接移除该门槛解决误拒，却没有建立真正的无脚本边界。
+
+当前修复在 `restorable_spell` 中核验每个 MGEF 的最后贡献插件定义，供规则复制和关键词碰撞
+范围共同使用。独立只读文件流扫描标准顶层 MGEF 记录，通过 SDK 映射原始 ID 的 master、
+完整插件与轻量插件索引；不碰引擎文件游标，不调用 `HasVMAD()` 或枚举运行中的脚本实例。
+无 VMAD，或 VMAD v5、object format 1/2 且仅含脚本数为零的六字节头，才通过附件检查；
+脚本数大于零拒绝整个事件。原有 self、零耗、非敌对等标记限制继续有效。
+
+无贡献插件、动态形态、文件打不开、记录缺失、边界/格式损坏、deleted/ignored 以及目标记录
+被压缩，均报告 unavailable 并拒绝，不能按“没找到脚本”放行。当前不解压 MGEF。
+成功分类按运行时 ID 与贡献文件身份缓存；覆盖补丁不能复用原插件的 script-free 结果。
+仓库原始 Smooth ESP 的 19 个 SPEL、19 个 MGEF 无 VMAD、未压缩，仅代表该源文件。
+
+本地仅选两项离线行为用例，见 [构建说明](build.md#verification-and-limits)：生产扫描器/缓存/
+放行逻辑接受具有模拟 VM 句柄的无脚本标记（含 absent/empty VMAD）；脚本覆盖记录在没有运行中
+脚本实例时仍于模拟派发前被拒绝。它们不调用游戏的 SDK 文件选择/ID 映射或虚拟文件系统。
+
+上机检查（尚未执行，需记录实际 DLL/PDB 身份）：
+
+- 使用实际载入顺序核对 Smooth 标记的最后贡献记录及其 VMAD/压缩状态。确认模组管理器环境
+  中贡献文件可见，完整/轻量插件与 master 引用均匹配实际 MGEF；若被拒，保留
+  `DAC native spell ... rejected` 的效果 ID 和具体原因，不能用改回 `HasVMAD()` 绕过。
+- 对无脚本原包观察 `scope>0`、preparation ready、真实 Loop 路径和关包 restore 结果；
+  在隔离测试配置中，给同一 MGEF 添加有脚本的最终覆盖，确认没有运行实例时也先拒绝对应
+  整个事件，不发生原生派发。不要改写仓库原始资源或日常存档来取得该证据。
+
+`native call completed` 只证明函数返回。Start 重复仍需分别检查标注、真实效果可见性和 OAR
+边界重查，不能直接断言施法未落地。`restore ... result=matched` 只比较受控效果快照值，
+不证明 Papyrus 状态或任意副作用回滚。运行时改定义、暂停期施法、恢复可见性仍未验证。
+规范以 [DAC 文档](dac.md#marker-script-attachment-preflight) 为准。
+
+## 9. IED placement 适配（2026-10-21，待上机）
+
+前面各轮保持历史记录。本节新增当前 IED 查询边界，未把本地构建或 DLL 可见性当作游戏验证。
+
+当前支持 `OpenAnimationReplacer-IEDConditionExtensions` 的
+`IED_GearNodeEquippedPlacementHint`、`IED_GearNodePlacementHint` 与
+`SDS_IsShieldOnBackEnabled`，条件版本为 1.0.0.0。placement 的三个基础 component
+逐项核对类型、名称和顺序；SDS 必须无 component。全量 Smooth 来源 config 扫描分别有
+53、154、32 处，数量不代表原生注册或选片已成功。用户提供的压缩包标签为 1.0.3，DLL 导出的
+实际 SKSE 版本为 **1.0.2.0**；运行时按后者核验，不按文件名推断。原始 ZIP/DLL 保持不变，
+来源及 SHA-256 见 [适配说明](oar-hooks.md#native-ied-placement-conditions-2026-10-21)。
+
+原生 `Evaluate` 继续处理左/右手或 gear node、比较、盾背配置、disabled 和 negated；false 不能强制改成 true。
+SDS 条件通过 provider 现有接口读取真实来源 Actor 的 `GetShieldOnBackEnabled` 设置，
+需要 provider 自己完成 SDS interface/condition 注册并满足分支前置依赖；SDS 不是核心非战斗
+阶段的普遍必要依赖。本适配不提供 SDS 接口或合成设置。
+仅查询当前来源角色装备/IED 配置，`hand_override` 历史装备、未知条件、非兼容 schema/version
+和缺失/不匹配 provider 均拒绝。其余第三方条件仍不放行。未重建、注册工厂、安装或修改 provider。
+
+本地 [两个行为用例](build.md#ied-condition-verification) 验证原生结果保留（同一代表场景含 SDS
+零 component 的 false 与 negation），以及历史装备作用域
+在原生读取前被拒绝；它们不验证游戏 IED API。先前 DAC 脚本附件规则与限制继续有效。
+
+沿用既有两类上机核验，在装备选片类别中追加以下观察；尚未执行：
+
+- 保留实际 CharacterPanel DLL/PDB 与 `SCENEGRAPH BUILD`，核对 IED/SDS/provider 自身载入、
+  OAR 条件注册日志和 `OAR IED placement adapter`。后者只证明模块/版本可见，不能证明
+  OAR 已创建对应条件。盾背分支另核对 provider 的 SDS 注册与真实设置。若配置被报告为
+  无效/缺失条件，先确认原生注册，不能伪造工厂绕过。
+- 使用现有腰/背武器分支核对左右手的原生 placement 值与比较结果；`<= 1`、`== 2` 的
+  真实 false 应保留，候选应由既有 OAR 次选/基础动作处理。背包暂停后换装备再观察 IED
+  hint 是否及时刷新；过期 hint 是待判定的运行时限制，当前没有合成值或强制刷新。
+- 在隔离测试配置中缺失 provider 或使用未支持条件时，核对 provider/第三方拒绝原因与
+  既有次选/基础动作处理，不能把它归因于 DAC 施法失败。恢复配置后重新启动核验，
+  不修改原始资源或日常存档取得证据。历史手装备没有 IED 查询保证。
+
+| 项目 | 当前证据 |
+| --- | --- |
+| 原生配置与 false 保留、历史作用域拒绝 | 两项本地边界用例通过；窄 fake，非游戏 IED |
+| provider 工厂注册、实际 placement 求值 | 待上机 |
+| 暂停时 IED 刷新、缺失 provider 回退、实际装备动作/外观 | 待上机 |
+
+Combat-zero 投影及非战斗目标保持原边界；不宣称完整 Smooth/IED/SDS 包兼容。

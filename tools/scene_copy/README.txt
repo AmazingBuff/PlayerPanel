@@ -60,10 +60,20 @@ call completion, observed effect revision and checked restoration are separate l
 
 Smooth compatibility: docs/dac.md#smooth-moveset-compatibility-boundary.
 Core non-combat phases use OAR, supported original DAC and the pack's own ESP,
-TOML, HKX/configs with existing Skyrim/SKSE prerequisites. IED placement branches
-still need an explicit preview query adapter; provider installation alone is not
-enough. The unsupported-third-party diagnostic is a query-adapter limit, not
-missing DAC state. Combat Start/Loop use the TDM-effect OR combat-state clause;
+TOML, HKX/configs with existing Skyrim/SKSE prerequisites. The native IED adapter
+supports IED_GearNodeEquippedPlacementHint, IED_GearNodePlacementHint and
+SDS_IsShieldOnBackEnabled for current source equipment/configuration only, with
+required condition 1.0.0.0, exact component schemas (three for placement, zero for
+SDS) and provider embedded 1.0.2.0 (supplied archive label 1.0.3).
+Left/right, comparisons, negation and false results stay native. Historical-hand
+queries, unknown schemas/providers and missing/mismatched provider reject; the
+unsupported-third-party diagnostic remains a query-adapter limit, not missing
+DAC state. Original IED/provider installation is separate; loaded metadata does
+not prove OAR registration. The shield-setting branch needs provider-side SDS
+interface/condition registration and prerequisites; SDS is not universally needed
+for core non-combat phases. Paused IED hint refresh/native reads remain unverified.
+See docs/oar-hooks.md#native-ied-placement-conditions-2026-10-21 and the dated checklist.
+Combat Start/Loop use the TDM-effect OR combat-state clause;
 this preview currently projects combat state to zero. Full pack/game validation
 remains pending.
 
