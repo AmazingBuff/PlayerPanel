@@ -119,7 +119,7 @@ cmake --preset Release -DVCPKG_MANIFEST_INSTALL=OFF
 cmake --build --preset Release
 ```
 
-Prior drivers are not rerun for this diagnostic-only follow-up. Native rejection values, query timing and visual causes remain **UNVERIFIED** until the [correlated game procedure](diagnostics/display-issues-2026-10-22.md#8-2026-10-22-已报告问题的关联诊断) is executed. Synchronize controller/hooks, [diagnostic budget](../src/animation/diagnostic_trace.h), focused test, canonical animation/DAC/scene docs, config comments and Changelog.
+Prior drivers are not rerun for this diagnostic-only follow-up. Native rejection values, query timing and visual causes remain **UNVERIFIED** until the [current game procedure](diagnostics/display-issues-2026-10-22.md#9-2026-10-22-换装片源与站立谓词修复) is executed (the r2 session showed the transitions unchanged, so the r3 rows are the next evidence). Synchronize controller/hooks, [diagnostic budget](../src/animation/diagnostic_trace.h), focused test, canonical animation/DAC/scene docs, config comments and Changelog.
 
 ## Actor-animation ABI audit (2026-10-19)
 

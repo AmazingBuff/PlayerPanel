@@ -20,7 +20,7 @@ Default animation diagnostics report accepted panel mappings and paused-source W
 - [OAR and native IED/SDS queries](docs/oar-hooks.md#native-ied-placement-conditions-2026-10-21): three explicitly checked schemas, matched-provider forwarding, current-hand guards and runtime limits.
 - [Native DAC](docs/dac.md): original binary/profile, [winning MGEF script-attachment preflight](docs/dac.md#marker-script-attachment-preflight), inventory snapshots, UI tasks and close restoration.
 - [Maintenance and debugging](docs/code-maintenance.md): module/hash conventions and actual log navigation.
-- [Reported animation diagnostics](docs/diagnostics/display-issues-2026-10-22.md#8-2026-10-22-已报告问题的关联诊断): opt-in restart/repro procedure, four pose windows/twenty-four snapshots and one fixed fifteen-bone source snapshot per request.
+- [Reported animation diagnostics](docs/diagnostics/display-issues-2026-10-22.md#9-2026-10-22-换装片源与站立谓词修复): current handover for the shield/axe/torch/bow transition report, both archived session logs, the standing `IsMovementDirection` fix, the project-keyed rejection evidence and the next game procedure. The earlier [correlated-diagnostic budget](docs/diagnostics/display-issues-2026-10-22.md#8-2026-10-22-已报告问题的关联诊断) still defines the pose windows (four/twenty-four snapshots per request) and one fixed fifteen-bone source snapshot.
 - [Historical reports](docs/history.md): complete archived report/requirements index.
 - [Runtime notes](tools/scene_copy/README.txt): compact controls and game follow-up.
 

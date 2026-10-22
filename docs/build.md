@@ -121,7 +121,7 @@ cl /nologo /std:c++latest /EHsc /W4 /WX /I src "tests/$characterPanelDriver.cpp"
 & "./$characterPanelCheckDir/$characterPanelDriver.exe"
 ```
 
-There is no CMake test target or automatic game execution. For current torch/shield/Smooth/axe diagnosis, follow the [section-8 symptom procedure](diagnostics/display-issues-2026-10-22.md#8-2026-10-22-已报告问题的关联诊断), [accepted mapping semantics](animation.md#accepted-mappings-and-world-snapshots) and [debugging navigation](code-maintenance.md#debugging-navigation). Detailed tracing defaults false, requires a restart when enabled, and has request-wide four-window/twenty-four-snapshot pose caps plus one fixed fifteen-bone source snapshot. Native runtime, visual equivalence and performance remain unverified.
+There is no CMake test target or automatic game execution. For current torch/shield/Smooth/axe diagnosis, follow the [section-9 symptom procedure](diagnostics/display-issues-2026-10-22.md#9-2026-10-22-换装片源与站立谓词修复), [accepted mapping semantics](animation.md#accepted-mappings-and-world-snapshots) and [debugging navigation](code-maintenance.md#debugging-navigation). Detailed tracing defaults false, requires a restart when enabled, and has request-wide four-window/twenty-four-snapshot pose caps plus one fixed fifteen-bone source snapshot. Native runtime, visual equivalence and performance remain unverified.
 
 After committing, configure and build again to embed that commit's identity; this does not rerun behavioral coverage. Preserved unrelated untracked local sources can truthfully leave the identity `+dirty` even when tracked changes are committed. Do not stage or remove unrelated files just to change that marker.
 

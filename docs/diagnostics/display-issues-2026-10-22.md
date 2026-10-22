@@ -6,6 +6,7 @@
 > 含全部探针输出）。
 
 > 原始记录和前几版测试包说明保留；当前关联诊断、POSE 前缀与请求总预算见[第 8 节](#8-2026-10-22-已报告问题的关联诊断)，基础快速映射格式见第 7 节。
+> **当前入口是[第 9 节](#9-2026-10-22-换装片源与站立谓词修复)**：换装片源与站立谓词修复、两场已归档会话日志（`r1` `5ec8fcf99f`、`r2` `3617bf1f27`）、已部署的纯诊断包 `r3`（`a46e724`，尚无会话）与下一场上机判读顺序。
 
 ## 1. 需要修的三项显示问题（用户报告）
 
@@ -219,25 +220,34 @@ Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMove
 
 本轮只跑一个 engine-free 站立谓词检查（`IsMovementDirection` 对站立/drawn 均 false、`NOT` 分支为真、无关谓词不变），源码审查确认 `IsCombatState` 语义；保留的 [snapshot_transform_test.cpp](../../tests/snapshot_transform_test.cpp) 用例已同步断言但本轮未执行该驱动。原生条件、OAR 选片、加载、挂载、投影、视觉与性能仍 **UNVERIFIED**。
 
-### 上机步骤（`issue-trace-test-r2`，`DetailedAnimationTrace=true`）
+### r2 包的上机步骤（`DetailedAnimationTrace=true`，已完成）
 
 1. 保留右武器，装/卸左盾，确认 `ANIMATION PANEL` 的 `logical` 落在 `1hm Shield Non-Combat Equip Base` / 对应卸盾，而不是战斗变体。
 2. 装 axe（单手斧），确认 Equip 片源是 `Smooth Moveset - Axe` 的装卸动作；`OAR QUERY` 现在应为每类原因至少一行。
 3. torch 姿态本轮**未改**：仍走 `TOR_Idle` 单层，等下一包改为“武器形态 + 火把层”后再验。
 4. bow/crossbow 待同一修复的下一场会话验证；axe Start→Loop 不切换（`Smooth_loop` 已施法、边界重查仍 `accepted-same-asset`）仍是独立待查项。
 
-### r2 上机结果（2026-10-22 23:08 日志）
+这四条中**仅第 4 条部分成立**：r2 会话确实覆盖了弓/弩，但装卸片源没有改变（见下节）。
 
-归档 [CharacterPanel-issue-trace-r2-20261022-2307.log](CharacterPanel-issue-trace-r2-20261022-2307.log)：构建 `3617bf1f27`，12 请求、无错误、关包 `DAC restore … matched` 1 次。
+### r2 上机结果（2026-10-22 23:02–23:14 会话）
+
+归档 [CharacterPanel-issue-trace-r2-20261022-2314.log](CharacterPanel-issue-trace-r2-20261022-2314.log)：构建 `3617bf1f27`，12 请求、无错误、关包 `DAC restore … matched` 1 次（23:14:11，`spell-groups=3`）。
 
 - **`IsMovementDirection` 修复没有改变任何选片**：装盾仍是 `1hm Shield Equip Base`（战斗变体）、卸盾仍是 `Gunslicer … Sword_and_Shield`、斧装仍是 `Gunslicer … Sword\1hm_equip`、弓/弩也仍是 Gunslicer。按 `req=10` 的证据（`Smooth Moveset - 1hm\1hm Equip Base` 83030020 压过 Gunslicer `Sword` 800002）确认 **OAR 优先级是数值越大越优先**；因此非战斗变体（83031024/83030324）没赢，只能是它们仍被判为不合格。要么 OR 门里的 `IsMovementDirection` 分支没有走到本模块的谓词（原生答案仍是"移动中"），要么另有条件先失败。
 - **去重日志生效**：RaySense 每查询只占 2 行，其余条件（IED placement hints、IsSneaking、OR、HasMagicEffect、CurrentMovementSpeed 等）都出现了；但每条查询仍有 15–64 条被省略，且签名只有 condition、没有项目文件夹，所以 Smooth 斧/盾候选的具体拒绝原因仍看不到。
 - **torch 得到世界侧实证**：`request=12` 的 WORLD 快照里源角色同时有 `Animations\Tor_1HMPose.hkx(1590)` 与 `1hm Non-Combat idle Start(8978)`，而面板同一请求只查 `TOR_Idle` 并落到 base 1598。也就是说世界是"武器身体 idle + 火把手臂层"，面板是"整身 TOR_Idle"——与用户描述一致，下一包按"武器形态 + 火把层"改。
 - axe 的 Start→Loop 仍未发生（Start 9053，无 Loop handoff）。
 
-### r3 诊断（2026-10-22 深夜）
+### r3 诊断（2026-10-22 深夜，构建 `a46e724`，已部署未上机）
 
 1. 拒绝签名改为 **项目文件夹 + 原因**，上限 48 行/查询；这样 `Smooth Moveset - Axe`/`- 1hm Shield` 的候选会以项目名出现在拒绝行里。
 2. 新增 `OAR COND … movement-direction=seen answered=yes|no` 一行/查询：区分"谓词答了 false"与"该条件根本没走到本模块的钩子"（若没走到，原生答案会保留，`NOT` 分支依旧为假）。
 3. 本轮**不改**任何选片或姿态行为；torch 姿态改动仍待下一包。
+
+部署身份：`CharacterPanel-scenegraph-scenegraph-a46e724cc0-cl94faaed0c6-20261022T151801Z`，DLL SHA-256 `7ef034b1…`。**截至 2026-10-23 00:15 尚无 r3 会话日志**（最新运行时日志停在 r2 会话的 23:14:11）。下一场只需复现装/卸左盾、换单手斧、换弓/弩；判读顺序为：
+
+1. 每查询的 `OAR COND movement-direction=seen answered=…` —— `seen=no` 表示条件未到钩子（要改钩子覆盖），`seen=yes` 而选片不变表示问题在别的条件。
+2. `OAR QUERY … rejected-candidate='…\Smooth Moveset - Axe\…'` —— 项目名现在会出现在拒绝行，直接给出该包落选的原因。
+3. 若两项都指向 IED placement 条件，则下一包转入 IED 侧（装备挂点与查询时机），而不是继续改谓词。
+4. torch 仍未改："武器形态 + 火把层"是下一个功能包；世界侧基线为 `Tor_1HMPose`(1590) + 武器 idle。
 
