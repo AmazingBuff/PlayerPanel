@@ -4,6 +4,7 @@
 #include "animation/dac/session.h"
 #include "animation/dac/native.h"
 #include "animation/dac/session_core.h"
+#include "animation/settings.h"
 #include "RE/M/MagicCaster.h"
 #include "RE/M/MenuOpenCloseEvent.h"
 #include <mutex>
@@ -30,6 +31,7 @@ public:
     std::atomic<std::uint64_t> revision{0};
     std::atomic_bool observation_queued{false};
     std::atomic_bool retired{false};
+    std::atomic<std::uint64_t> diagnostic_request{0};
     std::unordered_set<std::string> rejected;
 };
 namespace
@@ -50,6 +52,13 @@ namespace
     }
     bool current(std::uint64_t world, std::uint64_t menu)
     { return g_open.load() && g_world.load() == world && g_menu.load() == menu; }
+    void trace_outcome(Session::State const& state, std::uint64_t request, std::string_view event,
+        std::string_view outcome, std::string_view reason)
+    {
+        if (animation::detailed_animation_trace())
+            logger::info("DAC TRACE actor={:08x} request={} current-request={} event='{}' outcome={} reason='{}'",
+                state.id, request, state.diagnostic_request.load(), event, outcome, reason);
+    }
     std::uint64_t session_epoch(Session::State& state)
     {
         std::lock_guard lock(state.mutex);
@@ -88,6 +97,9 @@ namespace
             state.signature = signature;
             state.revision.fetch_add(1);
             logger::info("DAC actor={:08x} epoch={} native-effect revision={}", state.id, session_epoch(state), state.revision.load());
+            if (animation::detailed_animation_trace())
+                logger::info("DAC OBSERVED actor={:08x} request={} revision={} markers='{}' cause=effect-signature-change",
+                    state.id, state.diagnostic_request.load(), state.revision.load(), smooth_marker_report(actor));
         }
     }
     bool begin(Session::State& state, std::uint64_t world, std::uint64_t menu)
@@ -202,37 +214,59 @@ void Session::request(std::uint64_t generation)
 {
     std::lock_guard lock(m_state->mutex);
     m_state->core.request(generation);
+    m_state->diagnostic_request.store(generation);
 }
 namespace
 {
     bool dispatch_now(Session::State& state, std::uint64_t world, std::uint64_t menu,
         std::uint64_t generation, std::string const& event)
     {
-        if (!current(world, menu) || state.retired.load() || !begin(state, world, menu)) return false;
+        if (!current(world, menu) || state.retired.load() || !begin(state, world, menu))
+        {
+            trace_outcome(state, generation, event, "skipped", "menu/world/retired/session-begin gate");
+            return false;
+        }
         const auto actor = state.source.get();
         auto const* rules = native_rules();
-        if (!actor || !rules) return false;
+        if (!actor || !rules)
+        {
+            trace_outcome(state, generation, event, "skipped", "source/rules unavailable");
+            return false;
+        }
         std::vector<std::uint32_t> touched;
         std::string reason;
         if (!event_scope(*actor, event, *rules, state.controlled, touched, reason))
         {
             if (!reason.empty() && state.rejected.insert(event).second)
                 logger::warn("DAC actor={:08x} event='{}' rejected: {}", state.id, event, reason);
+            trace_outcome(state, generation, event, "skipped", reason.empty() ? std::string_view("whole-event safety/no-match gate") : std::string_view(reason));
             return false;
         }
         RE::MagicCaster* instant = actor->GetMagicCaster(RE::MagicSystem::CastingSource::kInstant);
-        if (!instant) return false;
+        if (!instant)
+        {
+            trace_outcome(state, generation, event, "skipped", "instant caster unavailable");
+            return false;
+        }
         {
             std::lock_guard lock(state.mutex);
             EventTicket ticket = state.core.ticket();
             ticket.request = generation;
-            if (!current(world, menu) || state.retired.load() || !state.core.accepts(ticket)) return false;
+            if (!current(world, menu) || state.retired.load() || !state.core.accepts(ticket))
+            {
+                trace_outcome(state, generation, event, "skipped", "final menu/world/retired/epoch/request-ticket gate");
+                return false;
+            }
             state.core.touch(touched);
         }
         const bool dual = instant->GetIsDualCasting();
+        const std::uint64_t observed_before = animation::detailed_animation_trace() ? state.revision.load() : 0;
         native_dispatch(*actor, event);
         instant->SetDualCasting(dual);
         observe_now(state, *actor);
+        if (animation::detailed_animation_trace() && observed_before == state.revision.load())
+            logger::info("DAC OBSERVED actor={:08x} request={} revision={} markers='{}' cause=native-dispatch-no-revision-change",
+                state.id, generation, state.revision.load(), smooth_marker_report(*actor));
         logger::info("DAC actor={:08x} epoch={} request={} event='{}' native call completed revision={}", state.id,
             session_epoch(state), generation, event, state.revision.load());
         return true;
@@ -241,6 +275,7 @@ namespace
 void Session::dispatch(std::string event, std::uint64_t generation)
 {
     const std::uint64_t world = g_world.load(), menu = g_menu.load();
+    trace_outcome(*m_state, generation, event, "queued", "annotation UI task");
     SKSE::GetTaskInterface()->AddUITask([state = m_state, world, menu, generation, event = std::move(event)]
     { (void)dispatch_now(*state, world, menu, generation, event); });
 }
@@ -251,12 +286,21 @@ void Session::prepare_idle(std::uint64_t generation, bool retain_ready)
         std::lock_guard lock(m_state->mutex);
         work = m_state->preparation.start(generation, retain_ready);
     }
-    if (work == IdleWork::e_none) return;
+    if (work == IdleWork::e_none)
+    {
+        trace_outcome(*m_state, generation, "Smooth_loop", "skipped", "preparation has no new work");
+        return;
+    }
     logger::info("DAC actor={:08x} request={} Smooth_loop preparation requested", m_state->id, generation);
     const std::uint64_t world = g_world.load(), menu = g_menu.load();
+    trace_outcome(*m_state, generation, "Smooth_loop", "queued", work == IdleWork::e_dispatch ? "preparation dispatch UI task" : "preparation observe-only UI task");
     SKSE::GetTaskInterface()->AddUITask([state = m_state, world, menu, generation, work]
     {
-        if (!current(world, menu) || state->retired.load()) return;
+        if (!current(world, menu) || state->retired.load())
+        {
+            trace_outcome(*state, generation, "Smooth_loop", "skipped", "preparation menu/world/retired gate");
+            return;
+        }
         bool prepared = begin(*state, world, menu);
         IdleGoal goal;
         std::string reason;
@@ -267,7 +311,11 @@ void Session::prepare_idle(std::uint64_t generation, bool retain_ready)
             std::lock_guard lock(state->mutex);
             EventTicket ticket = state->core.ticket();
             ticket.request = generation;
-            if (!state->core.accepts(ticket)) return;
+            if (!state->core.accepts(ticket))
+            {
+                trace_outcome(*state, generation, "Smooth_loop", "skipped", "preparation epoch/request-ticket gate");
+                return;
+            }
             state->goal = std::move(goal);
             state->goal_ticket = ticket;
             state->goal_started = std::chrono::steady_clock::now();
@@ -278,6 +326,7 @@ void Session::prepare_idle(std::uint64_t generation, bool retain_ready)
         {
             const auto actor = state->source.get();
             if (actor) observe_now(*state, *actor);
+            else trace_outcome(*state, generation, "Smooth_loop", "skipped", "observe-only source unavailable");
         }
         if (!prepared)
         {

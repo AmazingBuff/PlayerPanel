@@ -4,18 +4,26 @@
 
 ### Added
 
+- Add opt-in request-correlated OAR, load, annotation/DAC, capture/calibration and mount evidence
+  for reported torch/shield phase differences and the one-shot axe equip flash; no visual fix is claimed.
+- Bound common body/arm/gear pose diagnostics to four windows and twenty-four snapshots per request,
+  with one fixed source-bone snapshot from the existing capture pass.
 - Add audited native IED equipped-weapon placement, gear-node placement and SDS shield-on-back
   queries for current source equipment/configuration, preserving native comparisons and false
   results with the supplied condition provider.
 - Audit OAR named-preset conditions by traversing the expanded preset conditions like multi
   conditions, so packs that gate branches through `PRESET` (e.g. Gunslicer crossbow,
   Malignis/Ashe torch idles) reach preview selection instead of falling to vanilla bases.
-- Log the world clips active at panel open (original name, binding index and OAR replacement
-  path), the panel selection's original base beside its replacement path, the source's Smooth
-  marker field and the candidate walk of each goal query.
+- Log event-driven world clip snapshots and final accepted panel base/logical/variant/bound
+  mappings; expose source Smooth markers and bounded candidate rejection detail only with
+  detailed tracing enabled.
 
 ### Changed
 
+- Report world mappings through OAR's current-clip API and accepted panel mappings by final binding
+  index, removing logging-only full-table reverse scans and all-candidate copies.
+- Buffer ordinary information logs with periodic flushing and keep verbose animation/geometry
+  diagnostics opt-in through `DetailedAnimationTrace=false`; warnings/errors still flush immediately.
 - Keep unfamiliar IED-provider conditions on their native answer instead of excluding the
   candidates: they read the source actor's own equipment and placement like the engine
   predicates the preview already forwards, and shield/placement packs branch on several.
@@ -48,6 +56,12 @@
 
 ### Fixed
 
+- Fix torch preview candidates being rejected solely for the core current-weather flag condition,
+  preserving OAR's native weather answer and negation.
+- Fix left-shield removal with a retained right weapon selecting Equip instead of Unequip; retain
+  the former core equipment query context while its shield transition loads.
+- Fix mixed-case Smooth annotation tags being rejected before native DAC processing; preserve
+  whole-event safety checks and the original event spelling passed to DAC.
 - Reject DAC marker effects with attached scripts by inspecting their contributing MGEF definitions,
   without mistaking VM handles for script attachments. Reject unavailable or unsupported definitions
   before dispatch, including compressed target records, and keep override provenance in the cache.

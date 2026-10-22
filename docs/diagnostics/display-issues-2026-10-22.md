@@ -5,6 +5,8 @@
 > （会话构建 `CharacterPanel-scenegraph-scenegraph-7847e70152+dirty-cl94faaed0c6-20261021T164147Z`，
 > 含全部探针输出）。
 
+> 原始记录和前几版测试包说明保留；当前关联诊断、POSE 前缀与请求总预算见[第 8 节](#8-2026-10-22-已报告问题的关联诊断)，基础快速映射格式见第 7 节。
+
 ## 1. 需要修的三项显示问题（用户报告）
 
 | # | 操作 | 现象 |
@@ -24,12 +26,12 @@
 
 ## 2. 日志里怎么找证据
 
-日志在 `Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel.log`（每次会话覆盖，
-退出游戏后复制到本目录归档）。关键行：
+日志文件是运行时 `SKSE::log::log_directory()` 目录中的 `CharacterPanel.log`（每次会话覆盖，
+退出游戏后复制到本目录归档）。先确认实际运行时路径，不猜某台机器的用户目录。关键行：
 
 | 行 | 含义 |
 | --- | --- |
-| `ANIMATION WORLD actor=… request=N clips=…` | **开包瞬间世界侧**所有激活剪辑：`original='<引擎动画名>' index=<绑定索引> replaced='<OAR 替换路径>' t=<播放时间>`；`replaced=''` 表示未替换 |
+| `ANIMATION WORLD actor=… request=N clips=…` | 历史构建的**开包瞬间世界侧**激活剪辑：`original='<引擎动画名>' index=<绑定索引> replaced='<OAR 替换路径>' t=<播放时间>`；旧 `replaced=''` 只代表未解析出逻辑替换路径，**不能证明原版播放**。当前构建的实际绑定、官方 API 与 paused-source 字段见第 7 节；第 6 节保留上一测试包格式 |
 | `ANIMATION … request=N state=… base='<原始动画名>' path='<替换路径>' index=…` | **面板侧**选中结果：`base` 是查询的原始动画，`path` 是 OAR 替换件（未替换时为原始名） |
 | `ANIMATION … request=N oar walk base=… winner=… replaced=… candidates='…'` | 该基的全部候选（按 OAR 求值顺序）与胜者，用于判断"为什么没选到某个包" |
 | `ANIMATION … request=N smooth markers='…'` | 源角色身上的 Smooth 标记场（local id，`!`=inactive）：`0x3801` start on、`0x3802` loop on、`0x3804` combat on、`0x3806` loop off、`0x3808` combat off |
@@ -42,7 +44,7 @@
 定位方式（PowerShell）：
 
 ```powershell
-$log='C:\Users\AmazingBuff\Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel.log'
+$log = '<runtime-SKSE-log-directory>/CharacterPanel.log' # Replace with the actual runtime log path.
 Select-String -Path $log -Pattern 'transition=equip form=(axe|bow|crossbow)' -Context 0,12
 Select-String -Path $log -Pattern 'request=<N> (state=|handover|asset ready|SCOPY FRAME|SCOPY HELD)'
 ```
@@ -65,3 +67,136 @@ Select-String -Path $log -Pattern 'request=<N> (state=|handover|asset ready|SCOP
 2. 第 1 项优先查取景标定的重入（装备过渡期间是否重复 calibrate 或 radius 用了不同基）。
 3. 第 2 项优先查 bow 替换件的轨道解析与弓挂点。
 4. 第 3 项先确认位移来源（骨盆 vs 根 vs 挂点）再改，不要回到钳制方案。
+
+## 5. 2026-10-22 实现跟进与待上机标准
+
+用户后续明确：**axe 只在刚装备时发生一次扩大再复原**，不是每两秒重复；bow、crossbow 本轮暂缓。以上原始问题、猜测与归档日志保留为历史，不能把当时的推测当作根因。
+
+### 已确认的事件预检缺陷
+
+归档日志共有五次 `Smooth_Loop` 标注（axe/bow），没有一次同拼写的 `native call completed`。`event_scope` 原来把 `std::string` 与标注精确比较，而原生 `BSFixedString` 的 string-view 比较采用等长加 `_strnicmp`。本次让 `event_scope`、`smooth_idle_goal` 共用同样的大小写无关比较；原始标注拼写仍直接交给原生 DAC。所有同名大小写变体都要走整事件安全检查，任何不安全规则仍拒绝整个事件。未修改 DAC 二进制、规则或 HKX。
+
+离线仅跑 [dac_event_match_test.cpp](../../tests/dac_event_match_test.cpp) 两例：`Smooth_Loop` 匹配 `Smooth_loop`，`Smooth_Loop_off` 不匹配。它们执行生产比较器；整事件拒绝、原样传递与请求/菜单保护经代码审查保留，**没有离线执行引擎预检或原生施法**。上机须分别确认调用完成、实际标记变化与 Loop 胜者，不能只看一条调用日志。
+
+### Smooth axe 原始归档的离线事实
+
+输入是用户 Downloads 的 `Smooth Moveset - OAR-149713-1-5-1756381509.zip`；只读分析 `Smooth Moveset - 2hw Axe` 内实际选中的 Equip、非战斗 Start、非战斗 Loop，未改写源文件。
+
+| 剪辑 | 原始 HKX SHA-256 |
+| --- | --- |
+| `2hw Axe Equip Base/2hw_equip.hkx` | `ac478c26fd966b876a49223d8e23d66f9f72092e64d155e022e481e414cd945d` |
+| `2hw Axe Non-Combat idle Start/2hw_idle.hkx` | `5ba8c0d4029acca6415ef85bcab29a51cb094327f999a3a9e72ed78ef030db12` |
+| `2hw Axe Non-Combat idle Loop/2hw_idle.hkx` | `68383131d5de52b7452b62113cf00bbc7848465b941142d9305242e9f15466a2` |
+
+- 三个剪辑均有 99 条变换轨，所有 scale mask 都是 identity，前四轨也都是 identity。不能据此说所有轨道平移为零，更不能据此证明运行时骨骼映射正确。
+- track 4 有显著原始平移。Equip 的范围为 X `[-0.804576, 5.323094]`、Y `[-20.519398, -1.990397]`、Z `[45.883026, 67.648140]`；Start 为 X `[-4.457511, 0.293181]`、Y `[-10.350513, 2.720211]`、Z `[53.552467, 67.373474]`，均为源局部坐标单位。
+- 三个文件的映射表为空，`originalSkeletonName` 为 `NPC Root [Root]`。**源 track 4、43 的语义骨名仍未知**；不能把它们直接称为骨盆、COM 或 Weapon。当前加载器继续使用原有 `identity-unverified` 回退，本轮只记录它实际采用的目标骨索引/名称。
+- 平移通道的端点/中点采样中，只有 track 4、43 的变化超过 `0.05`；其余轨道的局部平移在三剪辑间近乎相同。解析消耗 Equip `19856/19856`、Start `9792/9792`、Loop `12936/12944` 字节（Loop 尾部有对齐填充）。这不是完整源骨架或渲染验证。
+- Equip 末端与 Start 起点的 track 4 平移在约 `0.0003` 内衔接，Start 末端与 Loop 起点也如此。Start 自己从末端回到开头时却约跳变 `(-0.4045, -6.2652, -13.8210)`。旧日志的 Start 每两秒重复标注与丢失 Loop 标记一致；这是独立的阶段问题，**不能用来解释用户澄清的一次性装备闪变**。
+
+### 新探针怎么读
+
+历史第 2 节的 `FRAME` 表述需更正：`SCOPY FRAME` 是捕获/标定时的证据，并非逐帧包围时间序列。旧 request 6 的标定半径 `28.2`、offset `(1.5,-2.4,-0.2)` 与邻近请求一致；已有取景代码固定 scale `0.35`，标定只修正平移。这些都不足以排除首帧投影变化。
+
+request 6 首次 Equip handover 是 `00:46:40.992`，`00:46:41.074` 又发生 graph retarget（约 82 ms 后，剪辑时钟 `0.05`）。重点比较这段换图、标定和混合，不预先认定是根缩放、原始平移或相机变化。
+
+[控制器探针说明](../animation.md#bounded-axe-pose-and-projection-evidence-2026-10-22)定义精确字段：仅已接受的 axe 剪辑在 handover/retarget 启动新 probe，立即记录图指针和根 local/world；之后最多十二次，在 `0/.016/.033/.066/.100/.200/.500/1/1.5/2/3/4` 秒附近记录，4.1 秒后停止，漏过的时间槽不补打。兼容刷新或循环边界不重置探针。
+
+`AXE MAP` 报告 track 0–4/43 与关键身体目标节点的真实索引/骨名/复制节点；`AXE POSE` 给出 clip-time、wraps、当前/退出剪辑和混合权重；`AXE NODE` 分别给出输入采样 local、最终 local/world 以及有效的引擎投影。平移为游戏坐标单位、缩放为比率、旋转为 x/y/z/w 四元数。`AXE CAMERA` 给出 UI3D 相机指针、world、原始 frustum 和 port 宽高；`screen-port-xyz` 的 z 是引擎投影返回值，**不是线性深度**，x/y 也不是最终合成像素。缺节点或无效投影明确输出 missing/unavailable。不要从矩阵某行猜深度方向。
+
+### 待上机验收（axe 视觉仍 UNVERIFIED）
+
+1. 使用同一构建身份的本地 Release DLL/PDB，自行在测试环境安装后记录完整日志；本轮只生成本地文件，没有部署。
+2. 在背包内换 axe，保留第一帧到四秒的日志，尤其 handover 与每次 retarget 周围的 `AXE PROBE/POSE/NODE/CAMERA/MAP`、捕获和 `FRAME calibrated`。用 actor/request/probe/graph 指针和时间对齐；开包直接 idle 与换装路径不要混为一组。
+3. 比较扩大前后的根 local/world scale、输入采样与最终身体变换、混合进度、相机/frustum、头脚投影间距。确认实际 track 4/43 目标；identity 回退的日志只说明采用了什么映射，不能证明源顺序正确。若闪变未被采到，不能宣称根因已排除。
+4. 确认原样 `Smooth_Loop` 到达原生 DAC、loop-on 实际生效、OAR 从 Start 选到真实 Loop；关包还需 `DAC restore ... result=matched`。调用完成本身不是效果或视觉成功。
+5. 记录一次性扩大是否仍发生，附对应画面/时间与完整日志后再决定视觉修正。本轮没有改采样、骨骼映射、姿态、缩放、放置、相机或资源，没有根/骨盆钳制；bow/crossbow 和内存退休仍在本轮范围外。
+
+## 6. 2026-10-22 torch/shield 查询跟进
+
+用户追加报告 torch/shield 的世界与面板差异，并明确 **shield 差异在装备/卸下过程，不是站姿**。前一节的 DAC 大小写修复、axe 限定探针和测试包保留；bow/crossbow 仍暂缓。
+
+### 两处已确认的窄缺陷
+
+- 旧 request 34/35/37/38/39/40/41 的 TOR_Idle 候选被 `CurrentWeatherHasFlag` 拒绝，退到原版索引 `1598`。该 core 条件只读当前天气标志；现在通过既有 native source forwarding 求值，保留 false/negation，不强制天气条件成立。仍可能因其它原生条件选不到某个 torch 包。
+- 保留右手武器、只卸下左手盾牌时，旧逻辑用 `target.empty()` 判定方向，目标仍非空便误选 Equip。现在仅在一手武器形态、右手不变、实际左盾从空到有/从有到空时纠正方向；卸盾选 `1HM_Unequip`，装备盾仍是 Equip。旧 torch-hand 与其它形态策略保留。
+- 卸盾通过既有 `hand_override` 向三种 core 装备条件提供先前手中 form ID；同一个盾牌动作在加载中遇到 effect revision 改变时，保留原 action/preview 再查询。后续 idle 不继承历史手部。**历史 IED 仍拒绝**，因此需要旧 IED 放置提示的卸盾分支仍可能退到基本 Unequip，不能宣称全包动作一致。
+
+### 旧日志不能证明的事
+
+归档没有 world torch 快照。world request 3 的 `9037`、request 44 的 `10985` 与面板已知替换索引相同，旧 `replaced=''` 不能据此判原版。request 42 曾成功选中 Smooth `1hm Shield Equip Base` 索引 `8905`，随后 shield Start `9044`，不能笼统归因为 IED 一概不可用。并行的 `DW_ShieldAdjustment` 只有激活节点记录，没有权重/掩码，不能据此证明面板缺少有效层，更不能直接补一层。
+
+### 新日志与上机步骤（视觉仍 UNVERIFIED）
+
+[OAR 跟进说明](../oar-hooks.md#torchshield-query-follow-up-2026-10-22)与[动作策略](../animation.md#torch-weather-and-left-shield-transitions-2026-10-22)定义字段与边界。
+
+1. 使用新的独立 torch-shield 本地测试包；旧 `smooth-loop-axe-test-r2` 保留未覆盖。本轮没有部署、提交或推送。
+2. 背包内装备 torch，记录选片、`OAR QUERY` 与 WORLD 行；确认不再因 `CurrentWeatherHasFlag` unsupported 被拒。真正天气条件为 false 时不应强行通过。世界快照是 `snapshot=paused-source`，附 reason、当前双手和真实 drawn；它不是已完成换装后的稳定世界动作。
+3. 保持同一右手一手武器，先装备左盾，再单独卸盾。确认分别 `transition=equip query-hands=current` 与 `transition=unequip query-hands=previous`，卸盾基名为 `1HM_Unequip`。对照完整动作与加载/效果修订日志，确认没有提前被 idle 替换；原生效果时序仍需上机证据。
+4. 每个 WORLD clip 都保留 `original/index/t` 并新增 `original-index/bound/lookup`。`bound` 是当前绑定索引的实际资产；`replaced` 是另行解析的逻辑路径。`lookup=base` 才表示正面匹配到原始索引，`replacement` 为无歧义解析，`unresolved` 或 `unresolved-ambiguous` 保留真实绑定但不猜结论。比较画面时也须对齐阶段和时间。
+5. `OAR QUERY rejected-candidate` 给出完整候选路径与 provider/condition 拒绝原因，每查询为 unsupported/metadata 保留八条，普通原生 false 另有两条额度，之后最多一行报各自省略数量。普通 false 不会挤掉后面的不支持详情。`first-query-rejection` 可能属于较早失败的候选，不能当成最终胜者的失败原因。原生 false 另标为 native conditions/eligibility false，不能误读为不支持。
+6. 若盾牌/火把画面仍不一致，保存完整日志与世界/面板阶段对应的画面，再讨论下一步。原生天气/IED 求值、卸盾期间历史选择、暂停状态时序及世界/面板视觉一致性都尚未验证；本次没有改挂载、左右臂掩码、叠层图、资产、相机或源角色。
+
+本轮只运行 [torch_shield_policy_test.cpp](../../tests/torch_shield_policy_test.cpp) 两个 engine-free case：天气走源读取且无常量投影、保留右武器的左盾装卸与历史查询上下文。不执行原生天气/IED、加载刷新时序或游戏视觉；先前 DAC/axe/IED/cache driver 不重跑。
+
+## 7. 2026-10-22 低开销映射日志跟进
+
+本节替代上一 torch-shield 测试包的全表逆向查名及 `original-index/lookup/replaced` 日志格式；前文原始证据和两个旧测试包保留。旧归档 request 1/2 从请求到 WORLD 构造结束约 `7295/7284 ms`，request 3/44 三个剪辑约 `22040/22133 ms`，符合约每剪辑 7.3 秒的日志构造成本。这定位到一项重大开销，不是完整 profiler 或 FPS 测量。
+
+### 当前格式与开销边界
+
+- WORLD 在开包/换装请求时对真实世界 active clip 调用官方 OAR Animations V1 API；只在既有 3.1.6/3.2.1 profile 安装成功后动态请求一次可选接口。保留原始 `animationName` 为 `original`、当前索引和直接读取的 `bound`。不逆扫动画名表、不枚举全部替换、不建立全表缓存，不推进世界图或重新求值条件。
+- `oar-api=available oar-result=replacement` 是正面的当前替换信息；`empty-unknown`、`unavailable-unknown` 明确表示未知。OAR 返回的 `oar-path/project/variant/submod/mod` 分开记录，不拼出一个声称唯一的别名。空响应不能证明原版；实际绑定名也可能是 hash 去重别名。面板 PreviewClip 不注册到此 API。
+- 默认面板日志为 `ANIMATION PANEL ... accepted`：加载/回退完成后的最终 handover 或已接受的同资产复用才发布。含原始基、选中逻辑路径、variant index/position 或 none、实际 index/bound、base/replacement 状态。未加载/失败 proposal 不是播放记录。相同请求中重复选中相同映射不重复打印，新请求或有效映射变化仍打印。
+- 移除全部候选复制和 `oar walk`，即便详细日志开启也不恢复。实际选择/历史需要的当前候选与 variant 元数据保留，有限原始动作预热不变。API 可能扫描当前替换的 variant 并复制若干字符串；不是无成本或全局 O(1) 保证。
+- `build-ms` 是日志调用前、源线程内的快照/映射构造耗时，不含日志磁盘写入/flush、总开包延迟或后续渲染，不能当作 FPS。WORLD 仍是 `paused-source`，带 reason/current hands/真实 drawn，不是换装完成后的稳定世界动画。
+
+### 新包测试步骤（性能与视觉仍 UNVERIFIED）
+
+1. 使用新的独立 `animation-map-test-r1` 包，核对构建身份。旧 `smooth-loop-axe-test-r2`、`torch-shield-test-r1` 不覆盖。本轮没有部署、暂存、提交或推送。
+2. 常规测试先保持 `[Diagnostics] DetailedAnimationTrace=false`，重启游戏。开包并依次做需要比较的 torch 装备、右武器不变的左盾装备/卸下；退出后保存完整日志。普通 info 约每秒 flush，警告/错误立即 flush，实时看文件可能延迟一小段；flush 线程只处理 sink，没有引擎工作。
+3. 对齐 actor/request/reason、WORLD 的 source clip 时间及真实手部状态、PANEL accepted 的 action/clip-time。检查原始基、OAR 返回逻辑信息、当前绑定与接受后的面板 variant；不要把空 API、共享绑定或暂停世界的不同阶段误判为原版/错片。
+4. 比较 WORLD `build-ms` 与上述旧构造间隙，但另行记录体感开包等待/画面卡顿；仅凭 build-ms 不能宣称总卡顿已消失或 FPS 改善。等待资产时没有 PANEL accepted 新行是正常的；回退后须显示实际已接受基/绑定，相同请求重复 loop 不应刷相同映射，新请求应重新发布。
+5. 只有需要第 5/6 节的 axe 或候选细节时，将 `DetailedAnimationTrace=true` 后重启再复现。此时启用限定 axe pose/map、标注 info、Smooth marker 构造、限定拒绝候选、proposal 路径和捕获 geometry 列表；实际 DAC 分发、条件、隔离审计、警告/错误不受开关影响。axe 仍按原十二槽/4.1 秒上限；unsupported/metadata 与原生 false 仍各自八/两条额度。
+6. 若 API 不可用/空、盾牌历史 IED 回退或视觉仍不同，保留事实状态和画面/完整日志后再判断。原生 API 调用、运行时性能、torch/shield/axe 视觉一致性均尚未验证；不据此追加叠层、根/骨盆钳制、资产或相机修正。
+
+本轮只运行 [animation_mapping_test.cpp](../../tests/animation_mapping_test.cpp) 两例：接受后的同绑定不同逻辑别名/新请求发布、相同 loop 合并；五万条表中只读取选中名称一次。旧测试不重跑。详见[当前映射说明](../animation.md#accepted-mappings-and-world-snapshots)、[官方 API 与时序](../oar-hooks.md#low-overhead-mapping-and-opt-in-traces-2026-10-22)和[配置样本](../../config/CharacterPanel.ini)。
+
+## 8. 2026-10-22 已报告问题的关联诊断
+
+本节新增诊断，不宣称视觉根因或修复已证实。前三个测试包与历史日志保留；正常 PANEL/WORLD 快速映射、默认关闭的 DetailedAnimationTrace 和约每秒 info flush 均不变。
+
+### 设置、限额与关联 ID
+
+使用新的独立 `issue-trace-test-r1` 包，先核对构建身份。在 `[Diagnostics]` 设置 `DetailedAnimationTrace=true` 后重启。关闭/缺省时仍输出权威 accepted PANEL/WORLD 和必要审计，新增名字匹配、格式化、骨骼/投影、成功挂载细节均跳过；实际分发/条件/隔离检查不受开关影响。info 可能约一秒后才在文件中可见，警告/错误立即 flush；日志 timer 不执行引擎工作。
+
+`request` 表示最新请求，`accepted-request` 表示当前仍显示的接受剪辑所属代，`asset-request` 表示 loader 最初创建请求。新请求加载期间旧剪辑仍可见，不能把三者混为一谈。用 actor/request、probe epoch、copy graph 指针关联捕获 ID；源 snapshot 明确为 paused-source，可能与面板不同阶段。
+
+原 `AXE PROBE/MAP/POSE/CAMERA/NODE` 迁移为 `POSE PROBE/MAP/SAMPLE/CAMERA/NODE`，附 profile。axe、torch/盾牌手臂、火把旁武器装卸及其移除后的单手 idle、generic bow/crossbow 共用同一预算：**每请求最多四个窗口、二十四次姿态快照**。每窗口仍是 `0/.016/.033/.066/.1/.2/.5/1/1.5/2/3/4` 秒的十二槽，4.1 秒过期，漏槽不补打。限额跨 handover/retarget 保留，只随新请求复位；相同接受 loop 不重新开启窗口。拒绝开启/离开支持 profile 会停止旧窗口，避免用旧时间/epoch 记录新图或新剪辑；每请求最多一条预算耗尽通知。
+
+身体固定请求十五个实际名字：原 root/COM/pelvis/spine/head/feet 七个，加左右 Clavicle `[LClv]/[RClv]`、UpperArm `[LUar]/[RUar]`、Forearm `[LLar]/[RLar]`、Hand `[LHnd]/[RHnd]` 八个。缺失明确打印；target skeleton 来自实际 asset 保留的图并检查索引，不从较新的 pending 图猜骨名。identity-unverified 仍未知源语义，track 4/43 不命名为某个身体/装备骨。POSE 的输入 sampled local、最终 local/world 和 camera/projection 延续原单位；z 投影不是线性深度。
+
+`SCOPY SOURCE-SNAPSHOT/SOURCE-NODE` 每请求最多一次，复用既有捕获 transform pass 保存的十五骨源 local/world/parent，不新增遍历。缺节点为 missing，实际无名对象为 `<unnamed>`，无父节点为 `<none>`。它发生在 Clone 前，不是稳定世界姿态或所有骨骼同时采样的证明。
+
+### 每个问题按哪条证据链读
+
+| 症状 | 同请求优先对齐的实际记录 | 不能据此推断 |
+| --- | --- | --- |
+| torch/盾牌世界与面板分支不同 | WORLD 实际绑定/OAR 字段与可选 node/mode/flags/speed/at-end → ANIMATION QUERY 的 bases、源/投影 hands/drawn、action/reason/revision → OAR QUERY 拒绝 → PANEL accepted | 空 API 不是原版；激活节点不是有效叠层/权重 |
+| 左盾 Equip/Unequip 错时或中途消失 | QUERY → DECISION pending-choice/reuse/refresh/cancel/waiting-goal → LOAD target/standing/calibration 与 asset-request/queue-to-ready → REBIND → accepted → HANDOFF → MOUNT-MAP/MOUNT-SWITCH | load ready 不等于正在显示；不能凭旧 accepted 代说新请求已播放 |
+| Smooth Start 不进 Loop | ANNOTATION 的 dispatch/direct 决定 → DAC TRACE queued → skipped 或 native completed → DAC OBSERVED 实际 markers/revision → EFFECT-REV/PENDING-REV → 下一次 QUERY/PANEL accepted | native completed 不是标记就绪；revision 变化不证明一定由某一事件造成 |
+| 刚装备 axe 一次扩大再复原 | CAPTURE-DUE/CAPTURE 的实际原因、old/new graph → SOURCE-SNAPSHOT → GRAPH/PLACEMENT/CALIBRATION 的原有 anchor/offset/radius/root → HANDOFF/MOUNT-SWITCH → 最早 POSE slots 和投影 | 重复 Start 不是已证实闪变原因；缺样/耗尽不能排除某原因 |
+| generic bow/crossbow 手臂/挂点 | 同一 POSE arm/source/mount 路径；保存实际所选绑定、local/world、父节点 | 本轮未取得/分析缺失 HKX，也不修资源或猜源骨顺序 |
+
+OAR root-false 只记录原有一次 Evaluate 的 **ROOT EvaluateAll 顶层首个 false**，带 name/provider/negated。OR/TARGET 等只说明该顶层条件实际 false，不猜内部哪个叶子是最终原因；未观察到 root false 时明确说 native eligibility/other cause unknown。metadata 只在既有两条 native-false 额度内采集，unsupported/metadata 八条额度独立，保留省略汇总。不额外 Evaluate/GetCurrent/比较源答案、不改变 supported/false/negation。
+
+DECISION 只记录实际状态变化/决定，waiting 不逐 poll 刷屏。PENDING-REV 使用原有读取的 proposal/observed/current 值；历史盾牌 override 不泄漏至后续 idle。HANDOFF 报现有阈值来自首个 weaponDraw/weaponSheathe 还是 duration-midpoint，不改时间。DAC skipped 标签可为诚实的组合 gate；没有重入锁内 session_epoch/marker 读取，没有新增任务/施法，routine observe 失败保持安静以免逐帧刷屏。
+
+### 上机与验证边界
+
+1. 每次只复现一类问题：先保留右武器装/卸左盾，再 torch 及其旁边武器装卸，最后 axe 刚装备闪变。保存完整日志与操作/画面时刻，至少覆盖请求、加载接受和最早 pose 窗口；无需调整动画/相机/根骨。
+2. 核对请求/接受代、graph/capture、相位/时间后再比较源与面板。检查窗口是否耗尽、节点/投影是否缺失；不要把不同坐标背景或暂停世界的不同阶段当作同一状态。
+3. 确认关包仍有原有 `DAC restore ... result=matched|MISMATCH`，但恢复是否对世界可见仍需实际观察。若仍不同，提交原始日志/画面后再决定修复；本轮没有新增层/掩码、条件强制、源写入、资源或取景修正。
+4. 正常使用可恢复 `DetailedAnimationTrace=false` 并重启。前三包不覆盖，没有部署、暂存、提交或推送。
+
+本轮仅跑 [diagnostic_trace_test.cpp](../../tests/diagnostic_trace_test.cpp) 一例 engine-free 请求预算行为，覆盖重复开窗、四窗口/二十四快照上限、同请求不复位、新请求复位、拒绝停止旧窗、漏槽和过期。原生条件/UI 任务/加载/挂载/投影/性能/视觉全部 **UNVERIFIED**。规范入口：[动作与预算](../animation.md#correlating-reported-issues)、[顶层条件观测](../oar-hooks.md#correlated-rejection-evidence-2026-10-22)、[DAC 证据](../dac.md#opt-in-annotation-and-marker-evidence)、[捕获/放置/挂载](../scene-graph.md#opt-in-capture-placement-and-mount-evidence)。

@@ -5,6 +5,8 @@
 #include "animation/controller.h"
 
 #include "animation/clip.h"
+#include "animation/diagnostic_trace.h"
+#include "animation/mapping_report.h"
 #include "animation/settings.h"
 #include "animation/pose.h"
 #include "animation/oar/hooks.h"
@@ -23,9 +25,14 @@
 #include "RE/H/hkbAnimationBindingSet.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbCharacterSetup.h"
+#include "RE/H/hkaBone.h"
+#include "RE/H/hkaSkeleton.h"
+#include "RE/N/NiCamera.h"
 #include "RE/N/NiQuaternion.h"
 #include "RE/T/TESObjectLIGH.h"
+#include "RE/T/TESObjectARMO.h"
 #include "RE/T/TESObjectWEAP.h"
+#include "RE/U/UI3DSceneManager.h"
 
 #include <algorithm>
 #include <array>
@@ -42,6 +49,26 @@ namespace animation
 {
 namespace
 {
+    std::string_view action_name(ActionKind kind)
+    {
+        switch (kind)
+        {
+        case ActionKind::e_standing_idle: return "standing-idle";
+        case ActionKind::e_weapon_idle: return "weapon-idle";
+        case ActionKind::e_equip: return "equip";
+        case ActionKind::e_unequip: return "unequip";
+        }
+        return "unknown";
+    }
+
+    std::string transform_report(RE::NiTransform const& transform)
+    {
+        const RE::NiQuaternion rotation(transform.rotate);
+        return fmt::format("t=({:.4f},{:.4f},{:.4f}) qxyzw=({:.4f},{:.4f},{:.4f},{:.4f}) s={:.6f}",
+            transform.translate.x, transform.translate.y, transform.translate.z,
+            rotation.x, rotation.y, rotation.z, rotation.w, transform.scale);
+    }
+
     bool readable(void const* address, std::size_t size)
     {
         if (!address)
@@ -93,9 +120,9 @@ namespace
     {
     public:
         LoadedAsset(RE::BSTSmartPointer<RE::BShkbAnimationGraph> graph, oar::AnimationSelection selection, bool loop,
-            bool full_body, std::uint64_t generation, std::optional<oar::AnimationSelection> fallback = {}) :
+            bool full_body, std::uint64_t generation, std::optional<oar::AnimationSelection> fallback = {}, std::string_view role = "target") :
             m_graph(std::move(graph)), m_selection(std::move(selection)), m_loop(loop), m_full_body(full_body),
-            m_fallback(std::move(fallback)), m_actor_id(m_graph->holder->GetFormID()), m_generation(generation)
+            m_fallback(std::move(fallback)), m_actor_id(m_graph->holder->GetFormID()), m_generation(generation), m_role(role)
         {
             m_behavior = m_graph->characterInstance.behaviorGraph;
             queue();
@@ -146,6 +173,10 @@ namespace
                         logger::info("ANIMATION actor={:08x} request={} asset ready index={} base={} replaced={} duration={:.2f} path='{}' mapping={} {}",
                             m_actor_id, m_generation, m_selection.index, m_selection.base_index, m_selection.replaced,
                             m_playback.duration, m_selection.name, mapping, coverage);
+                        if (detailed_animation_trace())
+                            logger::info("ANIMATION LOAD actor={:08x} asset-request={} role={} outcome=ready graph={} index={} path='{}' queue-to-ready-ms={:.3f}",
+                                m_actor_id, m_generation, m_role, static_cast<void*>(&root), m_selection.index, m_selection.name,
+                                std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - m_started).count());
                         return;
                     }
                 }
@@ -154,10 +185,15 @@ namespace
                 fallback("animation load timed out");
         }
 
-        void rebind(RE::NiAVObject& root)
+        void rebind(RE::NiAVObject& root, std::uint64_t request)
         {
             if (!m_playback.binding_owner)
+            {
+                if (detailed_animation_trace())
+                    logger::info("ANIMATION REBIND actor={:08x} request={} asset-request={} role={} graph={} index={} outcome=no-retained-binding",
+                        m_actor_id, request, m_generation, m_role, static_cast<void*>(&root), m_selection.index);
                 return;
+            }
             std::string mapping;
             std::string coverage;
             ClipPlayback rebound;
@@ -173,6 +209,10 @@ namespace
 
                 m_playback = {};
             }
+            if (detailed_animation_trace())
+                logger::info("ANIMATION REBIND actor={:08x} request={} asset-request={} role={} graph={} index={} path='{}' outcome={} mapping={} coverage='{}'",
+                    m_actor_id, request, m_generation, m_role, static_cast<void*>(&root), m_selection.index, m_selection.name,
+                    m_playback.valid() ? "ready" : "failed-cleared", mapping, coverage);
         }
 
         void refresh_selection(oar::AnimationSelection selection) { m_selection = std::move(selection); }
@@ -180,6 +220,9 @@ namespace
         [[nodiscard]] bool failed() const { return m_failed; }
         [[nodiscard]] ClipPlayback const& playback() const { return m_playback; }
         [[nodiscard]] oar::AnimationSelection const& selection() const { return m_selection; }
+        [[nodiscard]] RE::hkaSkeleton const* diagnostic_skeleton() const
+        { return m_graph->characterInstance.setup ? m_graph->characterInstance.setup->animationSkeleton.get() : nullptr; }
+        [[nodiscard]] RE::BShkbAnimationGraph const* diagnostic_graph() const { return m_graph.get(); }
 
     private:
         void queue()
@@ -192,6 +235,9 @@ namespace
                 loader->Queue(context.get(), m_carrier.get(), nullptr);
                 m_queued = true;
                 m_started = std::chrono::steady_clock::now();
+                if (detailed_animation_trace())
+                    logger::info("ANIMATION LOAD actor={:08x} asset-request={} role={} outcome=queued index={} path='{}' loop={}",
+                        m_actor_id, m_generation, m_role, m_selection.index, m_selection.name, m_loop);
             }
             else
             {
@@ -219,6 +265,10 @@ namespace
         {
             logger::warn("ANIMATION actor={:08x} request={} asset rejected index={} path='{}' reason={}",
                 m_actor_id, m_generation, m_selection.index, m_selection.name, reason);
+            if (detailed_animation_trace())
+                logger::info("ANIMATION LOAD actor={:08x} asset-request={} role={} outcome=fallback index={} path='{}' reason='{}' target={}",
+                    m_actor_id, m_generation, m_role, m_selection.index, m_selection.name, reason,
+                    m_fallback ? "explicit-base" : m_selection.index != m_selection.base_index ? "original-base" : "unavailable");
             release();
             if (m_fallback && m_selection.index != m_fallback->index)
             {
@@ -254,6 +304,7 @@ namespace
         std::optional<oar::AnimationSelection> m_fallback;
         RE::FormID m_actor_id;
         std::uint64_t m_generation;
+        std::string_view m_role;
 
         bool m_queued = false;
         bool m_failed = false;
@@ -265,6 +316,17 @@ namespace
 
 
     enum class ChoiceReason { e_request, e_interrupt, e_boundary, e_refresh };
+    std::string_view choice_reason_name(ChoiceReason reason)
+    {
+        switch (reason)
+        {
+        case ChoiceReason::e_request: return "request";
+        case ChoiceReason::e_interrupt: return "interrupt";
+        case ChoiceReason::e_boundary: return "boundary";
+        case ChoiceReason::e_refresh: return "refresh";
+        }
+        return "unknown";
+    }
     struct Proposal
     {
         std::uint64_t generation = 0;
@@ -277,6 +339,7 @@ namespace
         oar::ConditionRandomState conditions;
         ChoiceReason reason = ChoiceReason::e_request;
         bool direct = false;
+        std::optional<oar::PreviewState> shield_transition_preview;
     };
 }
 
@@ -312,13 +375,156 @@ public:
     double outgoing_seconds = 0.0;
     double handoff_seconds = 0.0;
     bool idle_due = false;
+    std::chrono::steady_clock::time_point pose_probe_started{};
+    PoseTraceBudget pose_budget;
+    std::string_view pose_profile;
+    bool trace_torch_request = false;
+    std::uint64_t pose_probe_epoch = 0;
+    std::uint32_t pose_probe_wraps = 0;
+    MappingPublication mapping_publication;
+
+    void trace_decision(std::string_view decision, std::string_view reason, Proposal const* subject)
+    {
+        if (!detailed_animation_trace()) return;
+        logger::info("ANIMATION DECISION actor={:08x} request={} accepted-request={} decision={} reason={} graph={} subject-request={} subject-action={} subject-index={} subject-path='{}' subject-effect-revision={} accepted-index={} accepted-path='{}'",
+            actor_id, generation, active ? active->generation : 0, decision, reason, static_cast<void*>(root),
+            subject ? subject->generation : 0, subject ? action_name(subject->stage.action.kind) : "none",
+            subject ? subject->stage.clip.index : 0xFFFF, subject ? subject->stage.clip.name : "",
+            subject ? subject->effect_revision : 0, active ? active->stage.clip.index : 0xFFFF, active ? active->stage.clip.name : "");
+    }
+
+    void trace_probe_limit()
+    {
+        if (pose_budget.exhausted_notice())
+            logger::info("POSE BUDGET actor={:08x} request={} accepted-request={} graph={} outcome=exhausted windows={} samples={} limit=4-windows/24-samples",
+                actor_id, generation, active ? active->generation : 0, static_cast<void*>(root), pose_budget.windows(), pose_budget.samples());
+    }
+
+    void publish_mapping()
+    {
+        if (!active || !active->asset->ready()) return;
+        const auto started = std::chrono::steady_clock::now();
+        const oar::AnimationSelection& clip = active->stage.clip;
+        const AcceptedMapping mapping{
+            clip.base_name, clip.replaced ? clip.name : "", oar::animation_binding_name(graph->characterInstance, clip.index),
+            clip.base_index, clip.index, clip.variant.index, clip.variant.position, static_cast<int>(active->stage.action.kind), clip.replaced
+        };
+        if (!mapping_publication.accept(generation, mapping)) return;
+        const std::string variant = clip.variants ? fmt::format("index={} position={}", mapping.variant_index, mapping.variant_position) : "none";
+        const double build_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
+        logger::info("ANIMATION PANEL actor={:08x} request={} accepted action={} original='{}' base-index={} logical='{}' variant='{}' index={} bound='{}' status={} clip-time={:.3f} blend={:.3f} build-ms={:.3f}",
+            actor_id, generation, mapping.action, mapping.original, mapping.base_index, mapping.logical,
+            variant, mapping.index, mapping.bound.empty() ? "<unavailable>" : mapping.bound,
+            mapping.replaced ? "replacement" : "base", clock.seconds(), blend_duration, build_ms);
+    }
+
+    void begin_pose_probe(std::string_view reason)
+    {
+        pose_budget.stop();
+        pose_profile = {};
+        if (!detailed_animation_trace() || !active || !active->asset->ready()) return;
+        const WeaponForm form = active->stage.action.form;
+        if (form == WeaponForm::kTwoHandedAxe) pose_profile = "axe";
+        else if (form == WeaponForm::kTorch || form == WeaponForm::kShield || form == WeaponForm::kBow || form == WeaponForm::kCrossbow)
+            pose_profile = weapon_form_name(form);
+        else if (form == WeaponForm::kOneHanded)
+        {
+            RE::TESObjectARMO const* const shield = observed.hands[1] ? RE::TESForm::LookupByID<RE::TESObjectARMO>(observed.hands[1]) : nullptr;
+            if (trace_torch_request) pose_profile = "torch-arms";
+            else if (active->shield_transition_preview || (shield && shield->IsShield())) pose_profile = "shield-arms";
+        }
+        if (pose_profile.empty()) return;
+        if (!pose_budget.arm(generation)) { pose_profile = {}; trace_probe_limit(); return; }
+        pose_probe_started = std::chrono::steady_clock::now();
+        pose_probe_wraps = 0;
+        ++pose_probe_epoch;
+        const ClipPlayback& clip = active->asset->playback();
+        const RE::hkaAnimationBinding& binding = *clip.binding_owner;
+        const RE::hkaSkeleton* const skeleton = active->asset->diagnostic_skeleton();
+        logger::info("POSE PROBE actor={:08x} request={} accepted-request={} probe={} profile={} begin={} graph={} path='{}' clip-time={:.4f} root-local=[{}] root-world=[{}] translation-units=game scale=ratio",
+            actor_id, generation, active->generation, pose_probe_epoch, pose_profile, reason, static_cast<void*>(root), clip.name, clock.seconds(),
+            transform_report(root->local), transform_report(root->world));
+        logger::info("POSE MAP actor={:08x} request={} probe={} graph={} target-skeleton-owner-graph={} path='{}' original-skeleton='{}' mapping={}",
+            actor_id, generation, pose_probe_epoch, static_cast<void*>(root),
+            static_cast<void const*>(active->asset->diagnostic_graph()), clip.name,
+            binding.originalSkeletonName.c_str() ? binding.originalSkeletonName.c_str() : "<missing>",
+            binding.transformTrackToBoneIndices.empty() ? "identity-unverified" : "table");
+        for (std::size_t i = 0; i < clip.tracks.size(); ++i)
+        {
+            const std::uint16_t track = clip.tracks[i];
+            const std::int32_t bone = binding.transformTrackToBoneIndices.empty() ? track : binding.transformTrackToBoneIndices[track];
+            const char* const raw_name = skeleton && bone >= 0 && bone < skeleton->bones.size() ? skeleton->bones[bone].name.c_str() : "<unavailable>";
+            const RE::NiAVObject* const node = clip.nodes[i];
+            const std::string_view node_name = node && node->name.c_str() ? node->name.c_str() : "<missing>";
+            if (track > 4 && track != 43 && std::ranges::find(Trace_Body_Nodes, node_name) == Trace_Body_Nodes.end()) continue;
+            logger::info("POSE MAP actor={:08x} request={} probe={} track={} target-bone={} target-name='{}' copy-node={} copy-name='{}'",
+                actor_id, generation, pose_probe_epoch, track, bone, raw_name ? raw_name : "<missing>",
+                static_cast<void const*>(node), node_name);
+        }
+    }
+
+    void trace_pose(PoseBuffer const& incoming, std::chrono::steady_clock::time_point now)
+    {
+        if (!detailed_animation_trace() || pose_profile.empty()) return;
+        const double elapsed = std::chrono::duration<double>(now - pose_probe_started).count();
+        const std::optional<std::size_t> slot = pose_budget.sample(elapsed);
+        if (!slot) { if (elapsed > 4.1) pose_profile = {}; trace_probe_limit(); return; }
+        const std::size_t sample = *slot;
+        const double weight = outgoing ? std::min(blend_seconds / blend_duration, 1.0) : 1.0;
+        logger::info("POSE SAMPLE actor={:08x} request={} accepted-request={} probe={} profile={} sample={} graph={} elapsed-wall={:.4f} clip-time={:.4f} loop={} wraps={} path='{}' outgoing='{}' outgoing-time={:.4f} blend-time={:.4f} blend-duration={:.4f} incoming-weight={:.4f}",
+            actor_id, generation, active->generation, pose_probe_epoch, pose_profile, sample, static_cast<void*>(root), elapsed, clock.seconds(),
+            active->stage.action.loop, pose_probe_wraps, active->stage.clip.name,
+            outgoing ? outgoing->stage.clip.name : "", outgoing_seconds, blend_seconds, blend_duration, weight);
+        const RE::UI3DSceneManager* const ui3d = RE::UI3DSceneManager::GetSingleton();
+        RE::NiCamera* const camera = ui3d ? ui3d->camera.get() : nullptr;
+        if (camera)
+        {
+            const RE::NiCamera::RUNTIME_DATA2& data = camera->GetRuntimeData2();
+            const RE::NiFrustum& frustum = data.viewFrustum;
+            logger::info("POSE CAMERA actor={:08x} request={} probe={} sample={} camera={} world=[{}] frustum-lrtbnf=({:.4f},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}) ortho={} port-width-height=({:.4f},{:.4f})",
+                actor_id, generation, pose_probe_epoch, sample, static_cast<void*>(camera), transform_report(camera->world),
+                frustum.fLeft, frustum.fRight, frustum.fTop, frustum.fBottom, frustum.fNear, frustum.fFar,
+                frustum.bOrtho, data.port.GetWidth(), data.port.GetHeight());
+        }
+        else logger::info("POSE CAMERA actor={:08x} request={} probe={} sample={} camera=missing", actor_id, generation, pose_probe_epoch, sample);
+        const auto trace_node = [&](std::string_view requested, RE::NiAVObject const* node)
+        {
+            if (!node)
+            {
+                logger::info("POSE NODE actor={:08x} request={} probe={} sample={} requested='{}' node=missing",
+                    actor_id, generation, pose_probe_epoch, sample, requested);
+                return;
+            }
+            const std::string_view name = node->name.c_str() ? node->name.c_str() : "";
+            const auto authored = std::ranges::find_if(incoming, [&](auto const& entry) { return entry.first == name; });
+            float x = 0.0f, y = 0.0f, z = 0.0f;
+            const bool projected = camera && camera->WorldPtToScreenPt3(node->world.translate, x, y, z, 1e-5f) &&
+                std::isfinite(x) && std::isfinite(y) && std::isfinite(z);
+            logger::info("POSE NODE actor={:08x} request={} probe={} sample={} requested='{}' name='{}' node={} incoming-local=[{}] local=[{}] world=[{}] screen-port-xyz=[{}]",
+                actor_id, generation, pose_probe_epoch, sample, requested, name, static_cast<void const*>(node),
+                authored == incoming.end() ? "unmapped" : transform_report(authored->second),
+                transform_report(node->local), transform_report(node->world),
+                projected ? fmt::format("{:.6f},{:.6f},{:.6f}", x, y, z) : "unavailable");
+        };
+        trace_node("copy-root", root);
+        for (std::string_view name : Trace_Body_Nodes)
+        {
+            const auto found = nodes.find(std::string(name));
+            trace_node(name, found == nodes.end() ? nullptr : found->second);
+        }
+        const ClipPlayback& clip = active->asset->playback();
+        for (std::size_t i = 0; i < clip.tracks.size(); ++i)
+            if (clip.tracks[i] == 4 || clip.tracks[i] == 43)
+                trace_node(clip.tracks[i] == 4 ? "track-4-target" : "track-43-target", clip.nodes[i]);
+        trace_probe_limit();
+    }
 
     oar::AnimationSelection select(RE::Actor& source, std::span<std::string_view const> bases,
         oar::PreviewState preview, Proposal& proposal, std::uint32_t channel, bool activation)
     {
         std::swap(query.conditions, proposal.conditions);
         oar::AnimationSelection result = oar::query_animation(source, graph->characterInstance, bases,
-            std::move(preview), query, { channel });
+            std::move(preview), query, { channel, generation });
         std::swap(query.conditions, proposal.conditions);
         if (activation) proposal.history.activate(result.clip_key);
         // An interrupt checks replacement eligibility, not the next member of an accepted sequence.
@@ -355,7 +561,7 @@ public:
 
     void queue(RE::Actor& source, std::vector<std::string_view> bases, ActionPrototype action,
         oar::PreviewState preview, ChoiceReason reason, bool direct = false,
-        bool activation = false, Proposal* reusable = nullptr)
+        bool activation = false, Proposal* reusable = nullptr, bool shield_transition = false)
     {
         auto proposal = std::make_unique<Proposal>();
         proposal->generation = generation;
@@ -365,6 +571,20 @@ public:
         if (activation) proposal->conditions.reset();
         proposal->reason = reason;
         proposal->direct = direct;
+        if (shield_transition) proposal->shield_transition_preview = preview;
+        if (detailed_animation_trace())
+        {
+            const RE::TESForm* const right = source.GetEquippedObject(false);
+            const RE::TESForm* const left = source.GetEquippedObject(true);
+            const auto hands = preview.hand_override.value_or(std::array<std::uint32_t, 2>{});
+            std::string requested_bases;
+            for (std::string_view base : bases) requested_bases += fmt::format("{}{}", requested_bases.empty() ? "" : "|", base);
+            logger::info("ANIMATION QUERY actor={:08x} request={} accepted-request={} pending-action={} reason={} target={} bases='{}' source-hands=({:08x},{:08x}) source-drawn={} projected-drawn={} hand-override={} override-hands=({:08x},{:08x}) IsEquipping={} IsUnequipping={} effect-revision={} accepted-path='{}'",
+                actor_id, generation, active ? active->generation : 0, action_name(action.kind), choice_reason_name(reason), weapon_form_name(target.form),
+                requested_bases, right ? right->GetFormID() : 0, left ? left->GetFormID() : 0, source.IsWeaponDrawn(), preview.weapon_drawn,
+                preview.hand_override.has_value(), hands[0], hands[1], preview.graph_variables.at("IsEquipping"), preview.graph_variables.at("IsUnequipping"),
+                proposal->effect_revision, active ? active->stage.clip.name : "");
+        }
         const bool continuing_sequence = reason == ChoiceReason::e_boundary && active && active->stage.clip.variants &&
             variants.in_sequence(*active->stage.clip.variants, active->stage.clip.clip_key);
         if (reason == ChoiceReason::e_boundary && active && !continuing_sequence)
@@ -424,6 +644,7 @@ public:
             return;
         }
         proposal->stage = { action, selected };
+        trace_decision("pending-choice", choice_reason_name(reason), proposal.get());
         if (active && reason != ChoiceReason::e_request && active->stage.action.kind == action.kind && active->direct == direct &&
             selected.index == active->stage.clip.index && selected.replacement_key == active->stage.clip.replacement_key)
         {
@@ -446,6 +667,8 @@ public:
             active->generation = generation;
             idle_due = false;
             pending.reset();
+            trace_decision("accepted-same-asset", choice_reason_name(reason), active.get());
+            publish_mapping();
             return;
         }
         if (reusable && reusable->stage.action.kind == action.kind &&
@@ -456,6 +679,7 @@ public:
             proposal->standing = std::move(reusable->standing);
             proposal->calibration = std::move(reusable->calibration);
             pending = std::move(proposal);
+            trace_decision("reuse-pending-load", choice_reason_name(reason), pending.get());
             return;
         }
         const std::array<std::string_view, 1> standing_bases{ "Animations\\MT_Idle.hkx" };
@@ -465,25 +689,14 @@ public:
         standard.found = true;
         standard.base_index = standard.index = base->index;
         standard.base_name = standard.name = standard.binding_name = base->name;
-        proposal->standing = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
-        proposal->calibration = std::make_unique<LoadedAsset>(graph, standard, true, true, generation);
+        proposal->standing = std::make_unique<LoadedAsset>(graph, standard, true, true, generation, std::nullopt, "standing");
+        proposal->calibration = std::make_unique<LoadedAsset>(graph, standard, true, true, generation, std::nullopt, "calibration");
         proposal->asset = std::make_unique<LoadedAsset>(graph, selected, action.loop,
             action.kind == ActionKind::e_standing_idle, generation,
             target.empty() && !direct ? std::optional<oar::AnimationSelection>(standard) : std::nullopt);
-        logger::info("ANIMATION actor={:08x} request={} state={} choice={} base='{}' path='{}' index={} diagnostic='{}'",
-            actor_id, generation, session->revision(), static_cast<int>(reason), selected.base_name, selected.name, selected.index, selected.diagnostic);
-        if (!selected.candidates.empty())
-        {
-            std::string walk;
-            for (auto const& candidate : selected.candidates)
-            {
-                const std::size_t slash = candidate.path.find_last_of('\\');
-                walk += fmt::format(" {:04x}/{}", candidate.index,
-                    candidate.path.substr(slash == std::string::npos ? 0 : slash + 1));
-            }
-            logger::info("ANIMATION actor={:08x} request={} oar walk base={:04x} winner={:04x} replaced={} candidates='{}'",
-                actor_id, generation, selected.base_index, selected.index, selected.replaced, walk);
-        }
+        if (detailed_animation_trace())
+            logger::info("ANIMATION actor={:08x} request={} proposal state={} choice={} base='{}' path='{}' index={} first-query-rejection='{}'",
+                actor_id, generation, session->revision(), static_cast<int>(reason), selected.base_name, selected.name, selected.index, selected.diagnostic);
         pending = std::move(proposal);
     }
 
@@ -494,7 +707,10 @@ public:
         {
             const dac::IdleReadiness readiness = session->idle_readiness(generation);
             if (readiness == dac::IdleReadiness::e_pending)
-            { waiting_goal = true; waiting_reason = reason; return; }
+            {
+                if (!waiting_goal) trace_decision("waiting-goal-enter", choice_reason_name(reason), pending.get());
+                waiting_goal = true; waiting_reason = reason; return;
+            }
             // e_none means no preparation was requested for this generation (the equipment-
             // change follow-up deliberately lets the equip clip's annotations set the phase);
             // query now instead of waiting for a preparation that will never start.
@@ -507,14 +723,15 @@ public:
                 logger::warn("ANIMATION actor={:08x} request={} native idle goal unavailable; querying OAR without preparation", actor_id, generation);
             }
         }
+        if (waiting_goal) trace_decision("waiting-goal-leave", choice_reason_name(reason), pending.get());
         waiting_goal = false;
         std::vector<std::string_view> bases = target.direct || (direct && target.empty()) ?
             std::vector<std::string_view>{ "Animations\\MT_Idle.hkx" } : target.bases();
         const bool plain = target.direct || (direct && target.empty());
-        // Temporary probe: the marker field is what OAR's Smooth branches read through
-        // HasMagicEffect, so every goal query records it alongside the selection.
-        logger::info("ANIMATION actor={:08x} request={} smooth markers='{}'",
-            actor_id, generation, session ? session->smooth_markers() : std::string{});
+        // Opt-in marker evidence reads the same actual effects as OAR's HasMagicEffect.
+        if (detailed_animation_trace())
+            logger::info("ANIMATION actor={:08x} request={} smooth markers='{}'",
+                actor_id, generation, session ? session->smooth_markers() : std::string{});
         logger::info("ANIMATION actor={:08x} request={} goal=non-combat-idle family={} direct={} drawn={}",
             actor_id, generation, weapon_form_name(target.form), direct, !plain);
         queue(source, std::move(bases), { plain ? ActionKind::e_standing_idle : ActionKind::e_weapon_idle,
@@ -561,6 +778,8 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     state.actor_id = source.GetFormID();
     state.source_handle = source.GetHandle();
     state.generation = observation.request_generation;
+    state.pose_budget.request(state.generation);
+    state.trace_torch_request = target.form == WeaponForm::kTorch || previous_form == WeaponForm::kTorch;
     state.source_generation = observation.source_graph_generation;
     state.observed = observation;
     state.target = target;
@@ -570,9 +789,15 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     if (!state.graph) { state.pending.reset(); return; }
     logger::info("ANIMATION actor={:08x} request={} reason='{}' source-generation={} equipment-target={}", state.actor_id,
         state.generation, observation.reason, state.source_generation, weapon_form_name(target.form));
-    if (observation.reason == "panel-open")
-        logger::info("ANIMATION WORLD actor={:08x} request={} clips={}", state.actor_id, state.generation,
-            oar::world_clip_report(state.graph->characterInstance));
+    if (observation.reason == "panel-open" || observation.reason == "equipment")
+    {
+        const auto started = std::chrono::steady_clock::now();
+        const std::string report = oar::world_clip_report(state.graph->characterInstance);
+        const double build_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
+        logger::info("ANIMATION WORLD actor={:08x} request={} snapshot=paused-source reason='{}' hands=({:08x},{:08x}) drawn={} build-ms={:.3f} clips={}",
+            state.actor_id, state.generation, observation.reason, observation.hands[0], observation.hands[1],
+            source.IsWeaponDrawn(), build_ms, report);
+    }
     // Panel-open forces the observed loop phase; an equipment change must NOT, or the equip
     // clip's own Start markers (cast by its annotations) are overwritten by loop markers before
     // the Start member can be selected, which skips the world's Equip -> Start -> Loop order.
@@ -589,6 +814,18 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     {
         bool unequip = target.empty();
         WeaponForm form = unequip ? previous_form : target.form;
+        std::optional<ShieldTransition> shield_transition;
+        if (target.form == WeaponForm::kOneHanded)
+        {
+            const auto is_shield = [](RE::FormID id)
+            {
+                const RE::TESObjectARMO* const armor = id ? RE::TESForm::LookupByID<RE::TESObjectARMO>(id) : nullptr;
+                return armor && armor->IsShield();
+            };
+            shield_transition = left_shield_transition(previous_hands, observation.hands,
+                is_shield(previous_hands[1]), is_shield(observation.hands[1]));
+            if (shield_transition) unequip = shield_transition->kind == ActionKind::e_unequip;
+        }
         // A torch beside a weapon must not swallow the weapon hand's draw/sheathe move: the
         // standing form stays torch, so the transition follows whichever hand changed instead
         // (a torch change itself has no move). Shield-only and left-hand gear fall through the
@@ -631,10 +868,13 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
         const std::vector<std::string_view> bases = panel_transition_bases(form, unequip);
         if (!bases.empty() && oar::base_animation(state.graph->characterInstance, bases))
         {
-            logger::info("ANIMATION actor={:08x} request={} transition={} form={}", state.actor_id, state.generation,
-                unequip ? "unequip" : "equip", weapon_form_name(form));
+            oar::PreviewState preview = preview_state(!unequip);
+            if (shield_transition) preview.hand_override = shield_transition->hand_override;
+            logger::info("ANIMATION actor={:08x} request={} transition={} form={} query-hands={} previous=({:08x},{:08x}) current=({:08x},{:08x})",
+                state.actor_id, state.generation, unequip ? "unequip" : "equip", weapon_form_name(form),
+                preview.hand_override ? "previous" : "current", previous_hands[0], previous_hands[1], observation.hands[0], observation.hands[1]);
             state.queue(source, bases, { unequip ? ActionKind::e_unequip : ActionKind::e_equip, form, false },
-                preview_state(!unequip), ChoiceReason::e_request, false, false, loading.get());
+                std::move(preview), ChoiceReason::e_request, false, false, loading.get(), shield_transition.has_value());
             return;
         }
         logger::warn("ANIMATION actor={:08x} request={} transition base unavailable form={}; idle only", state.actor_id,
@@ -658,13 +898,14 @@ void AnimationController::retarget(RE::NiAVObject& root)
     for (Proposal* proposal : { state.active.get(), state.pending.get(), state.outgoing.get() })
         if (proposal)
         {
-            proposal->standing->rebind(root);
-            if (proposal->calibration) proposal->calibration->rebind(root);
-            proposal->asset->rebind(root);
+            proposal->standing->rebind(root, state.generation);
+            if (proposal->calibration) proposal->calibration->rebind(root, state.generation);
+            proposal->asset->rebind(root, state.generation);
         }
     state.last_tick = std::chrono::steady_clock::now();
     logger::info("ANIMATION actor={:08x} request={} graph retarget={} time={:.2f}", state.actor_id,
         state.generation, static_cast<void*>(&root), state.clock.seconds());
+    state.begin_pose_probe("retarget");
 }
 
 void AnimationController::poll()
@@ -676,6 +917,10 @@ void AnimationController::poll()
         const std::uint64_t revision = state.session->revision();
         if (revision != state.observed_effect_revision)
         {
+            if (detailed_animation_trace())
+                logger::info("ANIMATION EFFECT-REV actor={:08x} request={} accepted-request={} previous={} current={}",
+                    state.actor_id, state.generation, state.active ? state.active->generation : 0, state.observed_effect_revision, revision);
+            state.trace_decision("effect-revision", "observed-native-effects", state.active.get());
             state.observed_effect_revision = revision;
             if (state.active && state.active->stage.action.loop && state.active->stage.clip.interruptible) state.idle_due = true;
         }
@@ -687,14 +932,31 @@ void AnimationController::poll()
         if (state.waiting_goal) return;
     }
     if (!state.root || !state.pending) return;
-    if (state.pending->generation != state.generation) { state.pending.reset(); return; }
-    if (state.pending->effect_revision != state.session->revision())
+    if (state.pending->generation != state.generation)
+    {
+        state.trace_decision("cancel-pending", "stale-request", state.pending.get());
+        state.pending.reset(); return;
+    }
+    const std::uint64_t current_effect_revision = state.session->revision();
+    if (state.pending->effect_revision != current_effect_revision)
     {
         const auto source = state.source_handle.get();
-        if (!source) { state.pending.reset(); return; }
+        if (!source)
+        {
+            state.trace_decision("cancel-pending", "effect-refresh-no-source", state.pending.get());
+            state.pending.reset(); return;
+        }
+        if (detailed_animation_trace())
+            logger::info("ANIMATION PENDING-REV actor={:08x} request={} accepted-request={} proposal={} observed={} current={}",
+                state.actor_id, state.generation, state.active ? state.active->generation : 0,
+                state.pending->effect_revision, state.observed_effect_revision, current_effect_revision);
         // Rebuild the exact typed intent against the new snapshot; accepted playback continues.
         std::unique_ptr<Proposal> old = std::move(state.pending);
-        state.queue_idle(*source, old->reason, old.get());
+        state.trace_decision("refresh-pending", old->shield_transition_preview ? "effect-revision-retain-shield-intent" : "effect-revision-requery-idle", old.get());
+        if (old->shield_transition_preview)
+            state.queue(*source, panel_transition_bases(old->stage.action.form, old->stage.action.kind == ActionKind::e_unequip),
+                old->stage.action, *old->shield_transition_preview, old->reason, old->direct, false, old.get(), true);
+        else state.queue_idle(*source, old->reason, old.get());
         return;
     }
     Proposal& proposal = *state.pending;
@@ -703,12 +965,17 @@ void AnimationController::poll()
     proposal.asset->poll(*state.root);
     if (proposal.standing->failed() || proposal.asset->failed())
     {
+        state.trace_decision("cancel-pending", "target-or-standing-load-failed", state.pending.get());
         logger::warn("ANIMATION actor={:08x} request={} load failed path='{}'; visible playback retained", state.actor_id,
             state.generation, proposal.stage.clip.name);
         state.pending.reset();
         return;
     }
-    if (proposal.calibration && proposal.calibration->failed()) proposal.calibration.reset();
+    if (proposal.calibration && proposal.calibration->failed())
+    {
+        state.trace_decision("drop-calibration", "calibration-load-failed", state.pending.get());
+        proposal.calibration.reset();
+    }
     if (!proposal.standing->ready() || !proposal.asset->ready()) return;
     // Loader fallback metadata describes the actual retained binding, not the rejected choice.
     // A one-shot transition must not pin the idle to the base: its fallback is about that move,
@@ -735,21 +1002,31 @@ void AnimationController::poll()
     const ClipPlayback& clip = state.active->asset->playback();
     auto annotations = clip_annotations(*clip.animation);
     state.handoff_seconds = std::max(static_cast<double>(clip.duration), 0.05) * 0.5;
+    const char* handoff_source = "duration-midpoint";
     for (const Annotation& annotation : annotations)
         if (annotation.event == "weaponDraw" || annotation.event == "weaponSheathe")
-        { state.handoff_seconds = annotation.time; break; }
+        {
+            state.handoff_seconds = annotation.time;
+            handoff_source = annotation.event == "weaponDraw" ? "weaponDraw" : "weaponSheathe";
+            break;
+        }
     state.clock.start(std::move(annotations), std::max(static_cast<double>(clip.duration), 0.05),
         0.0, false);
     state.blend_seconds = 0.0;
     state.idle_due = false;
     state.last_tick = std::chrono::steady_clock::now();
     if (state.blend_duration == 0.0) state.outgoing.reset();
-    logger::info("ANIMATION actor={:08x} request={} handover action={} path='{}' index={} time={:.3f} blend={:.3f}",
-        state.actor_id, state.generation, static_cast<int>(state.active->stage.action.kind), selection.name, selection.index,
-        state.clock.seconds(), state.blend_duration);
+    state.trace_decision("accepted-handover", choice_reason_name(state.active->reason), state.active.get());
+    if (detailed_animation_trace())
+        logger::info("ANIMATION HANDOFF actor={:08x} request={} accepted-request={} action={} index={} path='{}' handoff-seconds={:.4f} source={} duration={:.4f}",
+            state.actor_id, state.generation, state.active->generation, action_name(state.active->stage.action.kind), selection.index,
+            selection.name, state.handoff_seconds, handoff_source, clip.duration);
+    state.publish_mapping();
+    state.begin_pose_probe("handover");
 }
 
 bool AnimationController::ready() const { return m_state->active && m_state->active->asset->ready(); }
+std::uint64_t AnimationController::diagnostic_accepted_request() const { return m_state->active ? m_state->active->generation : 0; }
 std::string AnimationController::name() const { return ready() ? m_state->active->stage.clip.name : "animation-loading"; }
 
 bool AnimationController::weapon_sheathed() const
@@ -789,10 +1066,20 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
         [](double) {},
         [&](Annotation const& annotation)
         {
-            logger::info("ANIMATION actor={:08x} request={} event='{}' time={:.3f}", state.actor_id, state.generation, annotation.event, annotation.time);
+            if (detailed_animation_trace())
+                logger::info("ANIMATION ANNOTATION actor={:08x} request={} accepted-request={} action={} index={} path='{}' event='{}' annotation-time={:.3f} clip-time={:.3f} loop={} decision={}",
+                    state.actor_id, state.generation, state.active->generation, action_name(state.active->stage.action.kind), state.active->stage.clip.index,
+                    state.active->stage.clip.name, annotation.event, annotation.time, state.clock.seconds(), state.active->stage.action.loop,
+                    state.active->direct ? "direct-no-dispatch" : "queue-native-DAC");
             if (!state.active->direct) state.session->dispatch(annotation.event, state.active->generation);
         },
-        [&]() { state.idle_due = true; reason = ChoiceReason::e_boundary; });
+        [&]()
+        {
+            state.idle_due = true;
+            reason = ChoiceReason::e_boundary;
+            if (!state.pose_profile.empty() && state.active->stage.action.loop) ++state.pose_probe_wraps;
+            state.trace_decision("boundary", "accepted-clock-boundary", state.active.get());
+        });
     if (state.idle_due && source && !state.pending && !state.waiting_goal)
     {
         state.queue_idle(*source, reason);
@@ -817,6 +1104,7 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
     for (auto const& [name, local] : state.pose)
         if (auto target = state.nodes.find(name); target != state.nodes.end()) target->second->local = local;
     recompute_subtree_worlds(root, 0);
+    state.trace_pose(current, now);
     return state.pose.size();
 }
 }

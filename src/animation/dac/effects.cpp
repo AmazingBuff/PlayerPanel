@@ -2,6 +2,7 @@
 // Created by AmazingBuff on 2026/10/20.
 //
 #include "animation/dac/effects.h"
+#include "animation/dac/event_match.h"
 #include "animation/dac/script_attachment.h"
 #include "base/def.h"
 #include "RE/A/ActiveEffect.h"
@@ -173,7 +174,7 @@ bool event_scope(RE::Actor& actor, std::string_view event, std::vector<RuleScope
     std::vector<std::uint32_t> keywords;
     bool matched = false;
     for (RuleScope const& rule : rules)
-        if (rule.event == event)
+        if (event_matches(rule.event, event))
         {
             matched = true;
             if (!rule.rejection.empty()) { reason = rule.rejection; return false; }
@@ -205,7 +206,7 @@ bool smooth_idle_goal(std::vector<RuleScope> const& rules, IdleGoal& goal, std::
 {
     bool matched = false;
     for (RuleScope const& rule : rules)
-        if (rule.event == "Smooth_loop")
+        if (event_matches(rule.event, "Smooth_loop"))
         {
             matched = true;
             if (!rule.rejection.empty()) { reason = rule.rejection; return false; }

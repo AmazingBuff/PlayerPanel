@@ -2,13 +2,21 @@
 // Created by AmazingBuff on 2026/10/20.
 //
 #include "character/held_equipment.h"
+#include "animation/settings.h"
 #include "RE/B/BipedAnim.h"
 #include "RE/B/BSVisit.h"
 #include "RE/T/TESObjectWEAP.h"
+#include "RE/N/NiQuaternion.h"
 #include <array>
 PLUGIN_NAMESPACE_BEGIN
 namespace
 {
+    const char* trace_object_name(RE::NiAVObject const* object)
+    {
+        if (!object) return "<none>";
+        const char* const name = object->name.c_str();
+        return name && *name ? name : "<unnamed>";
+    }
     bool both_hands(RE::TESObjectWEAP const& weapon)
     {
         const RE::WEAPON_TYPE type = weapon.GetWeaponType();
@@ -17,7 +25,7 @@ namespace
     }
 }
 void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> originals,
-    std::span<RE::NiAVObject* const> copies, std::vector<HeldCopyMount>* mounts)
+    std::span<RE::NiAVObject* const> copies, std::vector<HeldCopyMount>* mounts, HeldDiagnosticIds ids)
 {
     if (mounts) mounts->clear();
     const auto& biped = source.GetBiped(false);
@@ -45,6 +53,7 @@ void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> ori
         const std::string_view target_name = bow || hand == 1 || form->IsArmor() ? "SHIELD" : "WEAPON";
         RE::NiNode* target = mount(target_name);
         RE::NiAVObject* model = nullptr;
+        RE::NiAVObject* source_model = nullptr;
         bool ambiguous = false;
         if (biped)
         {
@@ -55,6 +64,7 @@ void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> ori
                 if (!candidate || held.contains(candidate)) return;
                 if (model && model != candidate) ambiguous = true;
                 model = candidate;
+                source_model = part.partClone.get();
             };
             if (form->IsArmor())
             {
@@ -74,6 +84,7 @@ void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> ori
                     if (held.contains(candidate)) continue;
                     if (model && model != candidate) ambiguous = true;
                     model = candidate;
+                    source_model = original;
                 }
         }
         if (!target || !model || ambiguous || model == target)
@@ -87,6 +98,16 @@ void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> ori
             RE::NiPointer<RE::NiAVObject> retained(model);
             const RE::NiTransform local = model->local;
             RE::NiNode* const sheath_parent = model->parent;
+            if (animation::detailed_animation_trace())
+            {
+                const RE::NiQuaternion rotation(local.rotate);
+                logger::info("SCOPY MOUNT-MAP actor={:08x} request={} accepted-request={} capture={} graph={} form={:08x} side={} source-model={} source-name='{}' copy-model={} copy-name='{}' previous-parent={} previous-name='{}' target-parent={} target-name='{}' retained-local-t=({:.4f},{:.4f},{:.4f}) qxyzw=({:.4f},{:.4f},{:.4f},{:.4f}) s={:.6f}",
+                    source.GetFormID(), ids.request, ids.accepted_request, ids.capture, static_cast<void*>(copies.front()), form->GetFormID(),
+                    hand == 0 ? "right" : "left", static_cast<void*>(source_model), trace_object_name(source_model),
+                    static_cast<void*>(model), trace_object_name(model), static_cast<void*>(sheath_parent), trace_object_name(sheath_parent),
+                    static_cast<void*>(target), trace_object_name(target), local.translate.x, local.translate.y, local.translate.z,
+                    rotation.x, rotation.y, rotation.z, rotation.w, local.scale);
+            }
             if (model->parent != target)
             {
                 if (model->parent) model->parent->DetachChild(model);

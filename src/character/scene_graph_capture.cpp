@@ -4,18 +4,29 @@
 
 #include "character/scene_graph.h"
 
+#include "animation/settings.h"
+#include "animation/diagnostic_trace.h"
 
 #include "character/figure_audit.h"
 #include "character/held_equipment.h"
 #include "character/snapshot_transform.h"
 
 #include <cmath>
+#include <limits>
+#include "RE/N/NiQuaternion.h"
 
 PLUGIN_NAMESPACE_BEGIN
 
 namespace
 {
     constexpr size_t Max_Graph_Objects = 16384;
+
+    const char* trace_object_name(RE::NiAVObject const* object)
+    {
+        if (!object) return "<none>";
+        const char* const name = object->name.c_str();
+        return name && *name ? name : "<unnamed>";
+    }
 
     // The source graph can be re-driven between the copy and the re-read (the paused
     // world still runs animation and physics), so per-node transforms are compared with
@@ -295,11 +306,49 @@ RE::NiPointer<RE::NiAVObject> SceneGraph::capture_graph(RE::Actor& actor)
     std::vector<RE::NiTransform> source_worlds;
     std::vector<RE::NiTransform> source_locals;
     std::vector<RE::NiBound> source_bounds;
+    const bool trace_source = animation::detailed_animation_trace() && m_source_snapshot_request != m_monitor.request_generation;
+    std::array<std::size_t, animation::Trace_Body_Nodes.size()> trace_indices;
+    if (trace_source) trace_indices.fill(std::numeric_limits<std::size_t>::max());
     for (RE::NiAVObject* object : source_inventory.objects)
     {
+        if (trace_source)
+        {
+            const std::string_view name = object->name.c_str() ? object->name.c_str() : "";
+            const auto found = std::ranges::find(animation::Trace_Body_Nodes, name);
+            if (found != animation::Trace_Body_Nodes.end())
+            {
+                const std::size_t slot = static_cast<std::size_t>(found - animation::Trace_Body_Nodes.begin());
+                if (trace_indices[slot] == std::numeric_limits<std::size_t>::max()) trace_indices[slot] = source_locals.size();
+            }
+        }
         source_worlds.push_back(object->world);
         source_locals.push_back(object->local);
         source_bounds.push_back(object->worldBound);
+    }
+    if (trace_source)
+    {
+        m_source_snapshot_request = m_monitor.request_generation;
+        logger::info("SCOPY SOURCE-SNAPSHOT actor={:08x} request={} accepted-request={} capture={} graph={} snapshot=paused-source phase=before-clone nodes=15 translation-units=game scale=ratio rotation=qxyzw",
+            source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id, static_cast<void*>(source.get()));
+        for (std::size_t slot = 0; slot < trace_indices.size(); ++slot)
+        {
+            const std::size_t index = trace_indices[slot];
+            if (index == std::numeric_limits<std::size_t>::max())
+            {
+                logger::info("SCOPY SOURCE-NODE actor={:08x} request={} capture={} requested='{}' node=missing",
+                    source_id(), m_monitor.request_generation, m_capture_id, animation::Trace_Body_Nodes[slot]);
+                continue;
+            }
+            RE::NiAVObject const* const object = source_inventory.objects[index];
+            const RE::NiTransform& local = source_locals[index];
+            const RE::NiTransform& world = source_worlds[index];
+            const RE::NiQuaternion local_q(local.rotate), world_q(world.rotate);
+            logger::info("SCOPY SOURCE-NODE actor={:08x} request={} capture={} requested='{}' node={} name='{}' parent={} parent-name='{}' local-t=({:.4f},{:.4f},{:.4f}) local-qxyzw=({:.4f},{:.4f},{:.4f},{:.4f}) local-s={:.6f} world-t=({:.4f},{:.4f},{:.4f}) world-qxyzw=({:.4f},{:.4f},{:.4f},{:.4f}) world-s={:.6f}",
+                source_id(), m_monitor.request_generation, m_capture_id, animation::Trace_Body_Nodes[slot], static_cast<void const*>(object), trace_object_name(object),
+                static_cast<void*>(object->parent), trace_object_name(object->parent),
+                local.translate.x, local.translate.y, local.translate.z, local_q.x, local_q.y, local_q.z, local_q.w, local.scale,
+                world.translate.x, world.translate.y, world.translate.z, world_q.x, world_q.y, world_q.z, world_q.w, world.scale);
+        }
     }
     RE::NiNode* const source_parent = source->parent;
     logger::info("SCOPY BEGIN capture={} actor={:08x} source={} parent={} nodes={} geoms={} api=NiObject::Clone id=68835/70187", m_capture_id, player->GetFormID(),
@@ -360,12 +409,14 @@ RE::NiPointer<RE::NiAVObject> SceneGraph::capture_graph(RE::Actor& actor)
         removed_controllers += property->controllers ? 1 : 0;
         property->controllers = nullptr;
     }
-    hold_copy_equipment(actor, source_inventory.objects, copy_inventory.objects, &m_held_mounts);
+    hold_copy_equipment(actor, source_inventory.objects, copy_inventory.objects, &m_held_mounts,
+        { m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id });
     logger::info("SCOPY READY actor={:08x} capture={} controllers-removed={} collisions-removed={}",
         actor.GetFormID(), m_capture_id, removed_controllers, removed_collisions);
-    for (RE::NiAVObject* object : copy_inventory.objects)
-        if (object->AsGeometry())
-            logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());
+    if (animation::detailed_animation_trace())
+        for (RE::NiAVObject* object : copy_inventory.objects)
+            if (object->AsGeometry())
+                logger::info("SCOPY GEOMETRY capture={} name='{}' type='{}'", m_capture_id, object->name.c_str() ? object->name.c_str() : "", object->GetRTTI()->GetName());
     return RE::NiPointer<RE::NiAVObject>(root);
 }
 

@@ -69,6 +69,9 @@ private:
     animation::AnimationController m_animation;
     RE::FormID m_source_id;
     std::uint32_t m_capture_id = 0;
+    std::uint64_t m_source_snapshot_request = UINT64_MAX;
+    const char* m_trace_capture_reason = "pending";
+    bool m_trace_raw_placement = false;
     std::atomic<Command> m_command{ Command::e_none };
     bool m_usable = false;
     RE::NiPointer<RE::NiAVObject> m_graph_object;

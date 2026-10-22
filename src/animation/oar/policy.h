@@ -45,7 +45,7 @@ namespace oar
             "IsEquippedShout", "IsWorn", "IsWornHasKeyword", "IsWornInSlot", "IsWornInSlotHasKeyword",
             "IsEquippedHasEnchantment", "IsEquippedHasEnchantmentWithKeyword", "HasBoundWeaponEquipped",
             "Level", "CompareValues", "Scale", "Height", "Weight", "InventoryCount", "InventoryWeight",
-            "CurrentWeather", "CurrentGameTime", "IsInInterior", "IsInLocation", "IsParentCell",
+            "CurrentWeather", "CurrentWeatherHasFlag", "CurrentGameTime", "IsInInterior", "IsInLocation", "IsParentCell",
             "IsWorldSpace", "IsMenuOpen", "IsReplacerEnabled"
         };
         return std::ranges::find(names, name) != std::end(names);

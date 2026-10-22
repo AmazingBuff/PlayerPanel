@@ -6,15 +6,31 @@
 #include "character/figure_audit.h"
 #include "character/snapshot_transform.h"
 #include "animation/clip.h"
+#include "animation/settings.h"
 #include "render/studio/figure_passes.h"
 #include "render/studio/light.h"
 #include "RE/B/BSAnimationGraphManager.h"
 #include "RE/B/BShkbAnimationGraph.h"
+#include "RE/N/NiQuaternion.h"
 PLUGIN_NAMESPACE_BEGIN
 namespace
 {
     constexpr float Studio_Figure_Scale = 0.35f;
     constexpr float Studio_Depth = 485.0f;
+
+    const char* trace_object_name(RE::NiAVObject const* object)
+    {
+        if (!object) return "<none>";
+        const char* const name = object->name.c_str();
+        return name && *name ? name : "<unnamed>";
+    }
+
+    std::string trace_transform(RE::NiTransform const& transform)
+    {
+        const RE::NiQuaternion rotation(transform.rotate);
+        return fmt::format("t=({:.4f},{:.4f},{:.4f}) qxyzw=({:.4f},{:.4f},{:.4f},{:.4f}) s={:.6f}",
+            transform.translate.x, transform.translate.y, transform.translate.z, rotation.x, rotation.y, rotation.z, rotation.w, transform.scale);
+    }
 
     struct SkinnedBound
     {
@@ -217,6 +233,10 @@ bool SceneGraph::update(PreviewFrame const& frame, std::uint64_t revision)
     {
         RE::NiPointer<RE::NiAVObject> graph = capture_graph(*source);
         const bool accepted = graph != nullptr;
+        if (animation::detailed_animation_trace())
+            logger::info("SCOPY CAPTURE actor={:08x} request={} accepted-request={} capture={} reason={} outcome={} old-graph={} new-graph={}",
+                source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id, m_trace_capture_reason,
+                accepted ? "accepted" : "rejected", static_cast<void*>(m_graph_object.get()), static_cast<void*>(graph.get()));
         if (accepted) replace_graph(std::move(graph));
         capture_result(accepted, frame.opening);
     }
@@ -229,6 +249,11 @@ void SceneGraph::replace_graph(RE::NiPointer<RE::NiAVObject> graph)
 {
     RE::NiPointer<RE::NiAVObject> previous = std::move(m_graph_object);
     m_graph_object = std::move(graph);
+    m_trace_raw_placement = false;
+    if (animation::detailed_animation_trace())
+        logger::info("SCOPY GRAPH actor={:08x} request={} accepted-request={} capture={} reason={} old-graph={} new-graph={} calibration=requested root-local=[{}] root-world=[{}]",
+            source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id, m_trace_capture_reason,
+            static_cast<void*>(previous.get()), static_cast<void*>(m_graph_object.get()), trace_transform(m_graph_object->local), trace_transform(m_graph_object->world));
     m_snapshot_nodes.clear();
     m_recentre_pending = true;
     restore_fade(m_graph_object.get());
@@ -344,6 +369,13 @@ bool SceneGraph::capture_due(RE::Actor& source, std::uint64_t revision, bool man
 {
     const bool sample = m_monitor.refresh.needs_sample(revision);
     const bool settled = sample && m_monitor.refresh.sample(revision, figure_measure_assembly(*source.Get3D(false)).signature());
+    if (animation::detailed_animation_trace() && (m_monitor.capture_pending || settled || manual))
+    {
+        m_trace_capture_reason = manual ? "manual" : m_monitor.capture_pending ? "capture-pending" : "equipment-settled";
+        logger::info("SCOPY CAPTURE-DUE actor={:08x} request={} accepted-request={} next-capture={} request-reason='{}' reason={} pending={} sampled={} settled={} manual={} revision={} graph={}",
+            source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id + 1, m_monitor.observed.reason,
+            m_trace_capture_reason, m_monitor.capture_pending, sample, settled, manual, revision, static_cast<void*>(m_graph_object.get()));
+    }
     return m_monitor.capture_pending || settled || manual;
 }
 
@@ -402,6 +434,13 @@ void SceneGraph::pose()
             node.object->worldBound.center = delta * node.bound.center;
             node.object->worldBound.radius = std::abs(delta.scale) * node.bound.radius;
         }
+        if (animation::detailed_animation_trace() && !m_trace_raw_placement)
+        {
+            m_trace_raw_placement = true;
+            logger::info("SCOPY PLACEMENT actor={:08x} request={} accepted-request={} capture={} graph={} phase=raw-before-standing-calibration anchor=({:.4f},{:.4f},{:.4f}) captured-root=[{}] applied-root=[{}] world-root=[{}]",
+                source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id, static_cast<void*>(m_graph_object.get()),
+                anchor.x, anchor.y, anchor.z, trace_transform(m_snapshot_root_world), trace_transform(m_graph_object->local), trace_transform(m_graph_object->world));
+        }
         return;  // the animation bridge calibrates after it first writes the idle
     }
 
@@ -425,6 +464,11 @@ void SceneGraph::apply_weapon_mount(bool sheathed)
         if (!mount.model || !mount.hand) continue;
         RE::NiNode* const wanted = sheathed && mount.sheath_parent ? mount.sheath_parent : mount.hand;
         if (mount.model->parent == wanted) continue;
+        if (animation::detailed_animation_trace())
+            logger::info("SCOPY MOUNT-SWITCH actor={:08x} request={} accepted-request={} capture={} graph={} model={} name='{}' previous-parent={} previous-name='{}' target-parent={} target-name='{}' sheathed={} retained-local=[{}]",
+                source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id, static_cast<void*>(m_graph_object.get()),
+                static_cast<void*>(mount.model), trace_object_name(mount.model), static_cast<void*>(mount.model->parent),
+                trace_object_name(mount.model->parent), static_cast<void*>(wanted), trace_object_name(wanted), sheathed, trace_transform(mount.local));
         RE::NiPointer<RE::NiAVObject> retained(mount.model);
         if (mount.model->parent) mount.model->parent->DetachChild(mount.model);
         wanted->AttachChild(mount.model, true);
@@ -453,6 +497,10 @@ void SceneGraph::calibrate_from_posed_bound()
         m_calibrated_root = m_graph_object->local;
         m_recentre_pending = false;
         logger::warn("SCOPY FRAME calibration skipped: no measurable skinned bound (raw placement kept)");
+        if (animation::detailed_animation_trace())
+            logger::info("SCOPY CALIBRATION actor={:08x} request={} accepted-request={} capture={} graph={} outcome=unmeasurable-raw-kept root=[{}] anchor=({:.4f},{:.4f},{:.4f})",
+                source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id, static_cast<void*>(m_graph_object.get()),
+                trace_transform(m_calibrated_root), m_anchor.x, m_anchor.y, m_anchor.z);
         return;
     }
     const RE::NiPoint3 offset{ m_anchor.x - posed.center.x, m_anchor.y - posed.center.y,
@@ -473,6 +521,11 @@ void SceneGraph::calibrate_from_posed_bound()
         node.object->previousWorld = node.object->world;
     logger::info("SCOPY FRAME calibrated offset=({:.1f},{:.1f},{:.1f}) radius={:.1f}",
         offset.x, offset.y, offset.z, posed.radius);
+    if (animation::detailed_animation_trace())
+        logger::info("SCOPY CALIBRATION actor={:08x} request={} accepted-request={} capture={} graph={} outcome=applied anchor=({:.4f},{:.4f},{:.4f}) offset=({:.4f},{:.4f},{:.4f}) radius={:.4f} local-root=[{}] world-root=[{}]",
+            source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id, static_cast<void*>(m_graph_object.get()),
+            m_anchor.x, m_anchor.y, m_anchor.z, offset.x, offset.y, offset.z, posed.radius,
+            trace_transform(m_graph_object->local), trace_transform(m_graph_object->world));
 }
 
 bool SceneGraph::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& states, const RenderTarget& render_target)

@@ -30,7 +30,6 @@ namespace animation
         result.reevaluate_on_loop = true;
         result.variant = {};
         result.variants.reset();
-        result.candidates.clear();
         return result;
     }
 

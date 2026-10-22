@@ -98,7 +98,34 @@ Copy [config/CharacterPanel.ini](../config/CharacterPanel.ini) to `Data/SKSE/Plu
 
 ## Verification and limits
 
-The stock-binary adaptation previously verified matching and mismatched offline inspector cases described in [DAC verification](dac.md#verification-and-limits); those are reused evidence. The current attachment change uses exactly two focused cases; earlier idle-policy evidence is separate.
+### Current animation checks (2026-10-22)
+
+The completed animation changes have four narrowly scoped engine-free drivers. Each ran for its own implementation change; documentation/commit finalization reuses those passing results and does not run a new suite or add cases. The normal Release build separately compiles the real SDK integrations.
+
+| Driver | Recorded cases and observable boundary | Not covered |
+| --- | --- | --- |
+| [dac_event_match_test.cpp](../tests/dac_event_match_test.cpp) | **2**: mixed-case Smooth loop tag matches; loop-off remains distinct using the production comparator. | Engine Actor preflight/native DAC execution; whole-event checks and original spelling are source-reviewed. |
+| [torch_shield_policy_test.cpp](../tests/torch_shield_policy_test.cpp) | **2**: weather goes through source forwarding without a projected constant; left-shield equip/remove retains the right weapon and correct former-hand query context. | Native weather/provider answers, pending-load timing or visual equivalence. |
+| [animation_mapping_test.cpp](../tests/animation_mapping_test.cpp) | **2**: accepted alias/variant changes and new requests publish while identical loops coalesce; one selected read at index 40,000 in a 50,000-name table. | Actual current-world OAR API, loader fallback timing or game performance. |
+| [diagnostic_trace_test.cpp](../tests/diagnostic_trace_test.cpp) | **1** coherent request-budget case: window/sample caps, rearming, denial stopping stale windows, same/new request behavior, skipped slots and expiry. | Native conditions, UI tasks, capture/mount/calibration/projection or visuals. |
+
+To reproduce only the relevant driver, use the repository root in an x64 VS2022 developer shell initialized with MSVC 14.44.35207, and keep assertions enabled (no `NDEBUG`). Set the driver name to one table entry without `.cpp`:
+
+```powershell
+$characterPanelDriver = 'dac_event_match_test' # Or one of the other three table entries.
+$characterPanelCheckDir = 'build/investigation-20261022'
+New-Item -ItemType Directory -Force $characterPanelCheckDir | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src "tests/$characterPanelDriver.cpp" "/Fo$characterPanelCheckDir/$characterPanelDriver.obj" "/Fe$characterPanelCheckDir/$characterPanelDriver.exe"
+& "./$characterPanelCheckDir/$characterPanelDriver.exe"
+```
+
+There is no CMake test target or automatic game execution. For current torch/shield/Smooth/axe diagnosis, follow the [section-8 symptom procedure](diagnostics/display-issues-2026-10-22.md#8-2026-10-22-已报告问题的关联诊断), [accepted mapping semantics](animation.md#accepted-mappings-and-world-snapshots) and [debugging navigation](code-maintenance.md#debugging-navigation). Detailed tracing defaults false, requires a restart when enabled, and has request-wide four-window/twenty-four-snapshot pose caps plus one fixed fifteen-bone source snapshot. Native runtime, visual equivalence and performance remain unverified.
+
+After committing, configure and build again to embed that commit's identity; this does not rerun behavioral coverage. Preserved unrelated untracked local sources can truthfully leave the identity `+dirty` even when tracked changes are committed. Do not stage or remove unrelated files just to change that marker.
+
+### Earlier attachment and idle-policy evidence
+
+The earlier stock-binary adaptation verified matching and mismatched offline inspector cases described in [DAC verification](dac.md#verification-and-limits). The dated 2026-10-21 attachment change used the following two focused cases; these and the older idle-policy/IED/cache checks below remain separate historical verification entries, not the current four-driver list.
 
 From the repository root in an x64 VS2022 developer shell initialized with MSVC 14.44.35207:
 
@@ -108,13 +135,14 @@ cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/dac_script_attachment_test.
 ./build/dac-script-attachments/dac_script_attachment_test.exe
 ```
 
-Keep assertions enabled; do not add `NDEBUG`. The [attachment cases](../tests/dac_script_attachment_test.cpp) compile the production [scanner/cache/decision](../src/animation/dac/script_attachment.cpp) in the test translation unit without Skyrim or another CMake target. Fixture files stay under the ignored output directory. A script-free two-effect marker with absent/empty VMAD is admitted despite a simulated VM handle; a scripted overriding MGEF is rejected before simulated dispatch without a running script, even after the base file was cached. These are the two cases selected for this change. The normal Release configure/build above separately compiles the SDK adapter into the DLL.
+Keep assertions enabled; do not add `NDEBUG`. The [attachment cases](../tests/dac_script_attachment_test.cpp) compile the production [scanner/cache/decision](../src/animation/dac/script_attachment.cpp) in the test translation unit without Skyrim or another CMake target. Fixture files stay under the ignored output directory. A script-free two-effect marker with absent/empty VMAD is admitted despite a simulated VM handle; a scripted overriding MGEF is rejected before simulated dispatch without a running script, even after the base file was cached. These were the two cases selected for that attachment change. The normal Release configure/build above separately compiles the SDK adapter into the DLL.
 
 Runtime inspection supports standard uncompressed MGEF records and VMAD version 5/object formats 1 or 2. Compressed target records, unsupported or malformed metadata and unavailable files reject affected events. Actual `GetFile()` provenance, SDK master/full/light remapping and virtual filesystem visibility require game verification. Offline tests do not execute the native DAC handler, paused effect activation or restoration; see [attachment semantics](dac.md#marker-script-attachment-preflight) and the [dated follow-up](equipment-idle-dac-test-2026-10-20.md#8-脚本附件预检复核2026-10-21待上机).
 
 The earlier equipment idle policy has two direct-compiled behavior cases, without adding any CMake test/project target. Its separate reproduction command is:
 
 ```powershell
+New-Item -ItemType Directory -Force build | Out-Null
 cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/animation_controller_test.cpp /Fo:build/animation_controller_test.obj /Fe:build/animation_controller_test.exe
 ./build/animation_controller_test.exe
 ```

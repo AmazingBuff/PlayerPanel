@@ -3,10 +3,12 @@
 #include "base/def.h"
 
 #include "animation/oar/api/OpenAnimationReplacer-ConditionTypes.h"
+#include "animation/oar/api/OpenAnimationReplacerAPI-Animations.h"
 #include "animation/oar/binary_profile.h"
 #include "animation/oar/ied_conditions.h"
 #include "animation/oar/policy.h"
 #include "animation/oar/preview_clip.h"
+#include "animation/settings.h"
 
 #include "RE/H/hkbCharacterStringData.h"
 #include "RE/H/hkbBehaviorGraph.h"
@@ -40,8 +42,8 @@ namespace oar
         std::atomic_bool s_ready = false;
         using GetSingleton = void* (*)();
         using ForEachProjectData = void (*)(void const*, std::function<void(RE::hkbCharacterStringData*, void*)> const&);
-        using ForEachReplacement = void (*)(void const*, std::function<void(void*)> const&, bool);
-        ForEachReplacement s_for_each_replacement = nullptr;
+        OAR_API::Animations::IAnimationsInterface* s_animations = nullptr;
+        static_assert(sizeof(OAR_API::Animations::ReplacementAnimationInfo) == 0x50);
         using GetReplacements = void* (*)(void const*, std::uint16_t);
         using EvaluateReplacements = void* (*)(void const*, RE::TESObjectREFR*, RE::hkbClipGenerator*);
         using GetIndex = std::uint16_t (*)(void const*, void*&);
@@ -80,7 +82,7 @@ namespace oar
         struct QueryFrame
         {
             QueryFrame(ScopedEvaluation& evaluation, QuerySession& session, AnimationSelection& result,
-                std::uint64_t identity, std::size_t names) : scope(evaluation), context(session), output(result), key(identity), name_count(names),
+                std::uint64_t identity, std::size_t names, std::uint64_t request) : scope(evaluation), context(session), output(result), key(identity), name_count(names), diagnostic_request(request),
                 previous(std::exchange(current, this)) {}
             ~QueryFrame() { current = previous; }
             inline static thread_local QueryFrame* current = nullptr;
@@ -89,13 +91,19 @@ namespace oar
             AnimationSelection& output;
             std::uint64_t key;
             std::size_t name_count;
+            std::uint64_t diagnostic_request;
             void const* selected = nullptr;
             std::uint16_t index = 0xFFFF;
+            std::string candidate_rejection;
+            std::string root_false;
+            std::uint32_t candidate_rejections = 0;
+            std::uint32_t native_false_rejections = 0;
             QueryFrame* previous;
 
             void reject(std::string reason)
             {
                 ++output.rejected;
+                if (animation::detailed_animation_trace() && candidate_rejection.empty()) candidate_rejection = reason;
                 if (output.diagnostic.empty())
                     output.diagnostic = std::move(reason);
             }
@@ -185,6 +193,16 @@ namespace oar
         {
             storage = condition.GetName();
             return storage.c_str() ? storage.c_str() : "";
+        }
+
+        std::string condition_diagnostic(Condition const& condition, std::string_view reason)
+        {
+            if (!animation::detailed_animation_trace()) return std::string(reason);
+            const RE::BSString provider = condition.GetRequiredPluginName();
+            RE::BSString storage;
+            const std::string_view name = condition_name(condition, storage);
+            return fmt::format("provider='{}' condition='{}': {}",
+                provider.c_str() && *provider.c_str() ? provider.c_str() : "core", name, reason);
         }
 
         template <class T>
@@ -371,7 +389,7 @@ namespace oar
             {
                 return evaluate_ied_condition(*condition, ied_provider_version(), scope->state().hand_override.has_value(),
                     [&] { return s_evaluate(condition, source, clip, submod); },
-                    [&](std::string_view reason) { scope->reject(std::string(reason)); });
+                    [&](std::string_view reason) { scope->reject(condition_diagnostic(*condition, reason)); });
             }
 
             RE::BSString storage;
@@ -438,7 +456,7 @@ namespace oar
             }
             if (projected || forwards_source(name))
                 return s_evaluate(condition, source, clip, submod);
-            scope->reject(fmt::format("unsupported preview condition: {}", name));
+            scope->reject(condition_diagnostic(*condition, "unsupported preview condition"));
             return false;
         }
 
@@ -504,7 +522,7 @@ namespace oar
                 const std::string_view reason = ied_condition_rejection(condition, ied_provider_version(),
                     scope.state().hand_override.has_value());
                 if (!reason.empty())
-                    scope.reject(std::string(reason));
+                    scope.reject(condition_diagnostic(condition, reason));
                 return reason.empty();
             }
             RE::BSString storage;
@@ -513,7 +531,7 @@ namespace oar
                 name != "HasGraphVariable" && name != "IsMovementDirection" && name != "IsCombatState" &&
                 !(name == "Random" && QueryFrame::current) && !forwards_source(name))
             {
-                scope.reject(fmt::format("unsupported preview condition: {}", name));
+                scope.reject(condition_diagnostic(condition, "unsupported preview condition"));
                 return false;
             }
             for (std::uint32_t i = 0; i < condition.GetNumComponents(); ++i)
@@ -538,7 +556,7 @@ namespace oar
                 }
                 else if (item && item->GetType() == ComponentType::kCustom)
                 {
-                    scope.reject("custom condition component requires an explicit preview adapter");
+                    scope.reject(condition_diagnostic(condition, "custom condition component requires an explicit preview adapter"));
                     return false;
                 }
             }
@@ -682,6 +700,10 @@ namespace oar
                         if (!condition->Evaluate(source, clip, submod))
                         {
                             result = false;
+                            if (animation::detailed_animation_trace() && outer == &query->scope &&
+                                query->native_false_rejections < 2 && query->root_false.empty())
+                                query->root_false = fmt::format("{} negated={} result=false scope=root-top-level",
+                                    condition_diagnostic(*condition, "actual first false"), condition->IsNegated());
                             break;
                         }
                     }
@@ -702,19 +724,36 @@ namespace oar
         bool evaluate_replacement_thunk(void const* replacement, RE::TESObjectREFR* source,
             RE::hkbClipGenerator* clip)
         {
-            if (!s_evaluate_replacement(replacement, source, clip))
-                return false;
             QueryFrame* const query = QueryFrame::current;
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             if (!query || !scope || !scope->matches(source, clip))
-                return true;
+                return s_evaluate_replacement(replacement, source, clip);
+            query->candidate_rejection.clear();
+            query->root_false.clear();
+            const auto rejected = [&](std::string_view reason, bool unsupported)
+            {
+                if (animation::detailed_animation_trace())
+                {
+                    const bool log = unsupported ? ++query->candidate_rejections <= 8 : ++query->native_false_rejections <= 2;
+                    if (log)
+                        logger::info("OAR QUERY actor={:08x} request={} clip-key={:016x} base={} rejection={} rejected-candidate='{}' reason='{}' root-false='{}'",
+                            source->GetFormID(), query->diagnostic_request, query->key, query->output.base_index,
+                            unsupported ? "unsupported-or-metadata" : "native-false",
+                            native_string(replacement, Replacement_Path_Offset), reason,
+                            unsupported ? "not-a-native-false" : query->root_false.empty() ? "unobserved; native eligibility/other cause unknown" : query->root_false);
+                }
+                return false;
+            };
+            if (!s_evaluate_replacement(replacement, source, clip))
+                return rejected(query->candidate_rejection.empty() ? std::string_view("native conditions or eligibility returned false") : std::string_view(query->candidate_rejection),
+                    !query->candidate_rejection.empty());
             // OAR's AnimationReplacements still holds its read lock here. Copy the chosen index
             // before returning to its loop; no ReplacementAnimation/Variant pointer escapes.
             const std::optional<AnimationDescriptor> descriptor = describe(replacement, query->key, query->name_count);
             if (!descriptor || descriptor->index == 0xFFFF || descriptor->path.empty())
             {
                 query->reject("replacement metadata unavailable");
-                return false;
+                return rejected("replacement metadata unavailable", true);
             }
             query->output.name = descriptor->path;
             query->output.variants = descriptor->variants;
@@ -840,10 +879,15 @@ namespace oar
 
     std::string animation_binding_name(RE::hkbCharacter& character, std::uint16_t index)
     {
-        const std::optional<ReadyAnimationTable> table = ready_animation_table(character);
-        if (!table) return {};
-        return BaseAnimationCache::binding_name(table->names.size(), index,
-            [&](std::size_t i) { return asset_name(table->names[i]); });
+        RE::hkbCharacterStringData* const strings = character_strings(character);
+        if (!strings) return {};
+        const auto& names = strings->animationNames;
+        if (names.size() <= 0 || names.size() > 65535 || !names.data()) return {};
+        return BaseAnimationCache::binding_name(static_cast<std::size_t>(names.size()), index, [&](std::size_t i)
+        {
+            RE::hkStringPtr const* const entry = names.data() + i;
+            return readable(entry, sizeof(*entry)) ? asset_name(*entry) : std::string{};
+        });
     }
 
     AnimationSelection query_animation(RE::TESObjectREFR& source, RE::hkbCharacter& character,
@@ -896,20 +940,9 @@ namespace oar
             PreviewClip preview;
             preview.initialize(base->index, result.name, true);
             ScopedEvaluation scope(&source, preview.get(), state, ScopeMode::kAudited);
-            QueryFrame frame(scope, session, result, result.clip_key, name_count);
+            QueryFrame frame(scope, session, result, result.clip_key, name_count, request.diagnostic_request);
             if (void* const replacements = s_get_replacements(project, base->index))
             {
-                std::function<void(void*)> copy = [&](void* replacement)
-                {
-                    if (read_at<std::uint8_t>(replacement, Replacement_Disabled_Offset) != 0) return;
-                    if (std::optional<AnimationDescriptor> descriptor = describe(replacement, result.clip_key, name_count))
-                    {
-                        descriptor->binding_name = BaseAnimationCache::binding_name(name_count, descriptor->index,
-                            [&](std::size_t i) { return asset_name(table->names[i]); });
-                        result.candidates.push_back(std::move(*descriptor));
-                    }
-                };
-                s_for_each_replacement(replacements, copy, false);
                 void* const selected = s_evaluate_replacements(replacements, &source, preview.get());
                 if (selected && selected == frame.selected && frame.index < name_count)
                 {
@@ -929,6 +962,11 @@ namespace oar
             }
             result.evaluated = scope.evaluated();
             result.overrides = scope.overrides();
+            if (animation::detailed_animation_trace() && (frame.candidate_rejections > 8 || frame.native_false_rejections > 2))
+                logger::info("OAR QUERY actor={:08x} request={} clip-key={:016x} base={} further-unsupported-or-metadata={} further-native-false={}",
+                    source.GetFormID(), request.diagnostic_request, result.clip_key, result.base_index,
+                    frame.candidate_rejections > 8 ? frame.candidate_rejections - 8 : 0,
+                    frame.native_false_rejections > 2 ? frame.native_false_rejections - 2 : 0);
         };
         if (query_supported())
         {
@@ -956,21 +994,11 @@ namespace oar
 
     std::string world_clip_report(RE::hkbCharacter& character)
     {
-        if (!query_supported()) return {};
-        RE::hkbCharacterStringData* const strings = character_strings(character);
         RE::hkbBehaviorGraph* const behavior = character.behaviorGraph.get();
-        if (!strings || !behavior) return {};
+        if (!behavior) return {};
         RE::NodeList* const active = behavior->activeNodes;
         if (!active || !readable(active, sizeof(*active)) || active->size() == 0 || active->size() > 4096 ||
             !readable(active->data(), active->size() * sizeof(RE::hkbNodeInfo))) return {};
-        void* project = nullptr;
-        std::function<void(RE::hkbCharacterStringData*, void*)> visit =
-            [&](RE::hkbCharacterStringData* a_strings, void* a_project)
-            {
-                if (!project && a_strings == strings) project = a_project;
-            };
-        if (void const* singleton = s_get_singleton())
-            s_for_each_project_data(singleton, visit);
         std::string report;
         for (std::size_t i = 0; i < active->size(); ++i)
         {
@@ -979,37 +1007,20 @@ namespace oar
             if (*reinterpret_cast<std::uintptr_t const*>(node) != RE::hkbClipGenerator::VTABLE[0].address()) continue;
             auto* const clip = reinterpret_cast<RE::hkbClipGenerator*>(node);
             char const* const original = clip->animationName.c_str();
-            if (!original || !*original) continue;
-            std::string replacement;
-            if (project)
-            {
-                // The original index must come from the full name table: the prewarmed alias set
-                // only covers the panel's fixed bases, so a world clip such as Bow_Equip.hkx would
-                // never resolve through it and the replacement lookup would silently stay empty.
-                std::uint16_t original_index = 0xFFFF;
-                const auto& names = strings->animationNames;
-                const RE::hkStringPtr* const entries = names.data();
-                const std::size_t count = static_cast<std::size_t>(names.size());
-                for (std::size_t n = 0; entries && n < count && n < 0xFFFF; ++n)
-                {
-                    if (asset_name(entries[n]) == original) { original_index = static_cast<std::uint16_t>(n); break; }
-                }
-                if (original_index != 0xFFFF && original_index != clip->animationBindingIndex)
-                {
-                    if (void* const replacements = s_get_replacements(project, original_index))
-                    {
-                        std::function<void(void*)> match = [&](void* a_replacement)
-                        {
-                            if (!replacement.empty() || !a_replacement) return;
-                            const std::optional<AnimationDescriptor> descriptor = describe(a_replacement, 0, names.size());
-                            if (descriptor && descriptor->index == clip->animationBindingIndex) replacement = descriptor->path;
-                        };
-                        s_for_each_replacement(replacements, match, false);
-                    }
-                }
-            }
-            report += fmt::format("{}|original='{}' index={} replaced='{}' t={:.2f}",
-                report.empty() ? "" : " ", original, clip->animationBindingIndex, replacement, clip->localTime);
+            const std::string bound = animation_binding_name(character, clip->animationBindingIndex);
+            OAR_API::Animations::ReplacementAnimationInfo info;
+            if (s_animations) info = s_animations->GetCurrentReplacementAnimationInfo(clip);
+            const auto text = [](RE::BSString const& value) { return value.c_str() ? value.c_str() : ""; };
+            const bool replaced = *text(info.animationPath) != '\0';
+            report += fmt::format("{}|original='{}' index={} bound='{}' oar-api={} oar-result={} oar-path='{}' oar-project='{}' oar-variant='{}' oar-submod='{}' oar-mod='{}' t={:.2f}",
+                report.empty() ? "" : " ", original && *original ? original : "<missing>", clip->animationBindingIndex,
+                bound.empty() ? "<unavailable>" : bound, s_animations ? "available" : "unavailable",
+                replaced ? "replacement" : s_animations ? "empty-unknown" : "unavailable-unknown", text(info.animationPath), text(info.projectName),
+                text(info.variantFilename), text(info.subModName), text(info.modName), clip->localTime);
+            if (animation::detailed_animation_trace())
+                report += fmt::format(" node='{}' mode={} flags=0x{:02x} speed={:.4f} at-end={}",
+                    clip->name.c_str() ? clip->name.c_str() : "<missing>", static_cast<int>(clip->mode.get()),
+                    clip->flags, clip->playbackSpeed, clip->atEnd);
         }
         return report;
     }
@@ -1053,7 +1064,6 @@ namespace oar
             {
                 return base + profile->query.entries[static_cast<std::size_t>(function)].rva;
             };
-            s_for_each_replacement = reinterpret_cast<ForEachReplacement>(address(QueryFunction::e_enumerate));
             s_get_singleton = reinterpret_cast<GetSingleton>(address(QueryFunction::e_singleton));
             s_for_each_project_data = reinterpret_cast<ForEachProjectData>(address(QueryFunction::e_projects));
             s_get_replacements = reinterpret_cast<GetReplacements>(address(QueryFunction::e_replacements));
@@ -1095,6 +1105,11 @@ namespace oar
             logger::error("OAR hook transaction failed ({})", result);
             return false;
         }
+        const auto request_animations = reinterpret_cast<OAR_API::Animations::_RequestPluginAPI_Animations>(
+            GetProcAddress(module, "RequestPluginAPI_Animations"));
+        if (request_animations)
+            s_animations = request_animations(OAR_API::Animations::InterfaceVersion::V1, Plugin::Plugin_Name.data(), Plugin::Plugin_Version);
+        logger::info("OAR Animations V1 mapping API {}", s_animations ? "available" : "unavailable; world replacement identity remains unknown");
         s_ready.store(true, std::memory_order_release);
         s_query_ready.store(query_verified, std::memory_order_release);
         const std::optional<uint32_t> ied_version = ied_provider_version();

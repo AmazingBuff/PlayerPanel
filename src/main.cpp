@@ -26,9 +26,10 @@ namespace
         std::shared_ptr<spdlog::logger> log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
 
         log->set_level(Log_Level);
-        log->flush_on(Log_Level);
+        log->flush_on(spdlog::level::warn);
 
         spdlog::set_default_logger(std::move(log));
+        spdlog::flush_every(std::chrono::seconds(1));
         spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [thread %t] %g(%#): [%^%l%$] %v"s);
 
     }

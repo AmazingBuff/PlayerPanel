@@ -3,6 +3,7 @@
 //
 #pragma once
 #include "animation/action.h"
+#include <array>
 #include <optional>
 #include <utility>
 PLUGIN_NAMESPACE_BEGIN
@@ -34,5 +35,20 @@ namespace animation
     };
     [[nodiscard]] inline IdleTarget idle_target(WeaponForm form, bool left_primary, UnarmedIdle setting)
     { return { form, left_primary, form == WeaponForm::kNone && setting == UnarmedIdle::e_mt_idle }; }
+
+    struct ShieldTransition
+    {
+        ActionKind kind;
+        std::optional<std::array<std::uint32_t, 2>> hand_override;
+    };
+    [[nodiscard]] inline std::optional<ShieldTransition> left_shield_transition(
+        std::array<std::uint32_t, 2> const& previous, std::array<std::uint32_t, 2> const& current,
+        bool previous_left_shield, bool current_left_shield)
+    {
+        if (previous[0] == 0 || previous[0] != current[0] || previous[1] == current[1]) return std::nullopt;
+        if (previous_left_shield && current[1] == 0) return ShieldTransition{ ActionKind::e_unequip, previous };
+        if (current_left_shield && previous[1] == 0) return ShieldTransition{ ActionKind::e_equip, std::nullopt };
+        return std::nullopt;
+    }
 }
 PLUGIN_NAMESPACE_END

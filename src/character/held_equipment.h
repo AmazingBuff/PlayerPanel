@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <span>
+#include <cstdint>
 #include <vector>
 #include "RE/N/NiTransform.h"
 namespace RE { class Actor; class NiAVObject; class NiNode; }
@@ -18,6 +19,12 @@ struct HeldCopyMount
     RE::NiNode* sheath_parent = nullptr;
     RE::NiTransform local{};
 };
+struct HeldDiagnosticIds
+{
+    std::uint64_t request;
+    std::uint64_t accepted_request;
+    std::uint32_t capture;
+};
 void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> originals,
-    std::span<RE::NiAVObject* const> copies, std::vector<HeldCopyMount>* mounts = nullptr);
+    std::span<RE::NiAVObject* const> copies, std::vector<HeldCopyMount>* mounts = nullptr, HeldDiagnosticIds ids = {});
 PLUGIN_NAMESPACE_END

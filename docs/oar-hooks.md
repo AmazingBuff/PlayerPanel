@@ -20,7 +20,7 @@ The 33 canonical keys describe original entry aliases, not a replacement-count l
 
 ## Native IED placement conditions (2026-10-21)
 
-The audited preview query admits exactly three conditions from `OpenAnimationReplacer-IEDConditionExtensions`, with loaded provider version **1.0.2.0** (`0x01000020`) and required condition version **1.0.0.0**. The supplied archive is labelled **1.0.3**; its embedded SKSE version is 1.0.2.0. Admission uses module/SKSE metadata cached at PostPostLoad hook installation, then checks the exact ordered public component signature:
+The preview query explicitly audits three condition schemas from `OpenAnimationReplacer-IEDConditionExtensions`, with loaded provider version **1.0.2.0** (`0x01000020`) and required condition version **1.0.0.0** for those schemas. The supplied archive is labelled **1.0.3**; its embedded SKSE version is 1.0.2.0. Admission uses module/SKSE metadata cached at PostPostLoad hook installation, then checks the exact ordered public component signature:
 
 | Condition | Components (type / name) |
 | --- | --- |
@@ -32,9 +32,9 @@ The complete Smooth source-config scan found 53 equipped-placement, 154 gear-nod
 
 [ied_conditions.h](../src/animation/oar/ied_conditions.h), `ied_condition_rejection` and `evaluate_ied_condition`, own admission and guarded dispatch. [hooks.cpp](../src/animation/oar/hooks.cpp), `audit`, checks the complete tree before any native custom `Evaluate`, including overrides that bypass OAR's base detour. `evaluate_set_thunk` and `evaluate_condition` keep a `Frame` around native evaluation so root custom numeric components use the existing preview graph projection. `evaluate_thunk` forwards admitted provider predicates through its original trampoline without recursively calling their virtual `Evaluate`. No IED state, Actor equipment or graph state is written.
 
-The provider's own `Evaluate` retains the source reference, left/right or gear-node selection, comparison operator, shield configuration, disabled and negation semantics. A native false remains a supported false; it does not trigger a forced match. These are native IED/SDS queries for **current source equipment/configuration**. Any `PreviewState::hand_override`, unknown provider condition name, schema/version mismatch, unavailable/mismatched provider or unrelated third-party condition is rejected before native dispatch. Historical equipment has no synthetic hint. Existing TARGET/PLAYER reference routing stays native; preview numeric projection remains restricted to the scoped source/clip. No Actor, IED or SDS state is mutated.
+The provider's own `Evaluate` retains the source reference, left/right or gear-node selection, comparison operator, shield configuration, disabled and negation semantics. A native false remains a supported false; it does not trigger a forced match. These are native IED/SDS queries for **current source equipment/configuration**. Other condition names from this same supported provider retain their existing native current-source answer; their individual component schema/required version is not covered by the three explicit checks. The exact provider/version/current-hand guards still apply to every name. Any `PreviewState::hand_override`, mismatch in an explicitly checked schema/version, unavailable/mismatched provider or unrelated third-party condition is rejected before native dispatch. Historical equipment has no synthetic hint. Existing TARGET/PLAYER reference routing stays native; preview numeric projection remains restricted to the scoped source/clip. No Actor, IED or SDS state is mutated.
 
-`OAR IED placement adapter` logs distinguish unavailable, mismatched and available metadata at hook installation. Query diagnostics distinguish provider failure, unsupported IED name/schema/version, historical-hand scope and unrelated third-party rejection. Available metadata does **not** establish successful OAR factory registration. PlayerPanel does not create factories, rebuild the provider or repair registration; install the original provider and its IED prerequisites separately. A rejected candidate follows the existing OAR next-candidate/base policy.
+`OAR IED placement adapter` logs distinguish unavailable, mismatched and available metadata at hook installation. Query diagnostics distinguish provider failure, unsupported schema/version, historical-hand scope and unrelated third-party rejection. Available metadata does **not** establish successful OAR factory registration. PlayerPanel does not create factories, rebuild the provider or repair registration; install the original provider and its IED prerequisites separately. A rejected candidate follows the existing OAR next-candidate/base policy.
 
 Provenance: user-supplied `Open Animation Replacer - IED conditions-98308-1-0-3-1693587943.zip`, archive SHA-256 `e46bcb8087f4f95ce59ae0d4aa1ea16fcf38d348f5b957d4eb0b2792a7935a0a`; its unchanged `SKSE/Plugins/OpenAnimationReplacer-IEDConditionExtensions.dll`, SHA-256 `8669298ea4e640e2ac7867ecdf29be59b7e2f56014831b11b99a14bdb5b3b698`. Offline PE inspection reads exported `SKSEPlugin_Version` at RVA `0xFD030`; no provider DLL was executed or modified here.
 
@@ -42,9 +42,88 @@ Primary semantic references: the provider author's [Conditions.h](https://github
 
 The two [focused admission/dispatch cases](../tests/ied_condition_adapter_test.cpp) and [Release build instructions](build.md#ied-condition-verification) are local evidence. Real provider registration, native evaluation, IED hint refresh while paused, appearance and missing-provider fallback in Skyrim remain unverified. Use the [dated game follow-up](equipment-idle-dac-test-2026-10-20.md#9-ied-placement-适配2026-10-21待上机); loading the DLL is insufficient evidence of a matching condition.
 
+## Torch/shield query follow-up (2026-10-22)
+
+The archived TOR_Idle failures include the core `CurrentWeatherHasFlag` predicate. [policy.h](../src/animation/oar/policy.h), `forwards_source`, now admits that name through the existing native callback. The pinned OAR implementation, [CurrentWeatherHasFlagCondition::EvaluateImpl](https://github.com/ersh1/OpenAnimationReplacer/blob/f4e7688b065175aff70aa523073857911e15aca3/src/Conditions.cpp), reads `Sky.currentWeather` flags; absence/native false and native negation are preserved. No weather projection, blanket unknown-condition admission or new ABI entry is introduced.
+
+[hooks.cpp](../src/animation/oar/hooks.cpp), `condition_diagnostic`, includes provider and condition name in unsupported core/provider evidence. With detailed tracing enabled, the existing `QueryFrame` records candidate rejection detail; `evaluate_replacement_thunk` reserves eight full-path details per query for unsupported/metadata failures, plus a separate two for native false. It reports both suppressed counts in at most one final line. Ordinary native false cannot hide later unsupported details by exhausting their budget. A supported native false is labelled `native conditions or eligibility returned false`, not an unsupported adapter failure. The query's first aggregate rejection may coexist with a successfully selected later candidate; traced proposals call it `first-query-rejection` to avoid blaming that winner.
+
+The first torch/shield package read the indexed binding independently, but still reverse-scanned the full table and described replacement members for logical lookup. That expensive diagnostic implementation and its `lookup/replaced/original-index` fields are superseded by [the official current-clip API mapping below](#low-overhead-mapping-and-opt-in-traces-2026-10-22). Empty replacement metadata remains inconclusive. This diagnostic never advances the graph, evaluates new conditions, picks variants or alters panel selection.
+
+WORLD rows at panel-open/equipment requests explicitly say `snapshot=paused-source` and include request reason, current hand IDs and actual source drawn state. They can precede or trail a native equipment transition; they are not a settled post-change reference animation. The archived log has no world torch snapshot. Its world request 3 index `9037` and request 44 index `10985` already equal known panel replacement indices despite empty historical `replaced` strings. Request 42 also selected Smooth shield Equip `8905` then Start `9044`, so that log does not establish blanket IED failure. A parallel `DW_ShieldAdjustment` node has no recorded weights/masks and is not proof of a missing displayed layer.
+
+The [shield policy](animation.md#torch-weather-and-left-shield-transitions-2026-10-22) corrects removal direction and uses previous hand IDs for historical **core** equipment reads only; pending effect-revision refresh retains that shield action/context. Historical IED remains rejected and may produce a basic Unequip fallback. No source mutation, new Actor, layered graph reconstruction, preselected-winner cache or generic compatibility expansion is added.
+
+Exactly [two focused cases](../tests/torch_shield_policy_test.cpp) exercise the production weather policy and coherent shield equip/remove context. From an MSVC 14.44 x64 developer prompt at the repository root:
+
+```powershell
+New-Item -ItemType Directory -Force build/investigation-20261022 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/torch_shield_policy_test.cpp /Fobuild/investigation-20261022/torch_shield_policy_test.obj /Febuild/investigation-20261022/torch_shield_policy_test.exe
+./build/investigation-20261022/torch_shield_policy_test.exe
+cmake --preset Release -DVCPKG_MANIFEST_INSTALL=OFF
+cmake --build --preset Release
+```
+
+Existing DAC/axe/IED/cache drivers are not rerun for this follow-up. Native weather/provider answers, pending-load timing, diagnostic values, transition appearance and world/panel equivalence remain **UNVERIFIED** pending the [dated game procedure](diagnostics/display-issues-2026-10-22.md#6-2026-10-22-torchshield-查询跟进). Keep docs/animation.md, this document, the dated handover, [README](../README.md), [Changelog](../CHANGELOG.md), policy/helper/controller and focused test synchronized.
+
+## Low-overhead mapping and opt-in traces (2026-10-22)
+
+`world_clip_report` now uses the official optional Animations V1 interface on actual active world `hkbClipGenerator` objects. `install_hooks` requests `RequestPluginAPI_Animations(V1, ...)` once after the existing verified profile/hook installation succeeds and retains only the module-owned interface pointer. The [unmodified public header and provenance](../src/animation/oar/api/README.md) are pinned to OAR `f4e7688b065175aff70aa523073857911e15aca3`; its public return layout/vtable slot were checked against both supported 3.1.6 and 3.2.1 DLL/PDB pairs. No additional private address, hook or hard dependency is added; other versions remain outside the current gate.
+
+The official [GetCurrentReplacementAnimationInfo implementation](https://github.com/ersh1/OpenAnimationReplacer/blob/f4e7688b065175aff70aa523073857911e15aca3/src/ModAPI.cpp) reads the accepted ActiveClip replacement, with active-map locking and any member lookup confined to that replacement. It does not reevaluate conditions, advance Random/variants or clear state. CharacterPanel does not call state-clearing methods or register/activate synthetic panel clips. API absence, missing ActiveClip and empty replacement information are not proof of vanilla.
+
+Each WORLD clip retains raw authored `original`, active `index`, direct actual `bound` and source `t`. OAR-supplied `oar-path/project/variant/submod/mod` are reported separately, without concatenating a supposedly unique path under hash deduplication. `oar-api=available` plus `oar-result=replacement` is positive information; `empty-unknown` or `unavailable-unknown` explicitly preserves uncertainty. Missing bound metadata says `<unavailable>`. The old reverse name lookup/project traversal/descriptor enumeration is removed. `animation_binding_name` uses `BaseAnimationCache::binding_name` for one bounded selected-entry read, validates that entry and its string, and does not weaken functional `ready_animation_table` or finite base prewarming.
+
+Panel `ANIMATION PANEL ... accepted` comes from final handover metadata after load/fallback, or the existing same-asset acceptance branch. `State::publish_mapping` reads the actual accepted index directly; it never asks the current-world API about PreviewClip. The [small publication policy](../src/animation/mapping_report.h), `MappingPublication::accept`, suppresses identical mappings within a request while retaining changes/new requests, including two logical aliases sharing a bound index. Proposed/failed assets are not published as playing. `AnimationSelection::candidates` and `oar walk` are removed; only descriptors/variants required by actual selection/history remain.
+
+These are schematic field examples, **not captured game results**:
+
+```text
+ANIMATION WORLD ... snapshot=paused-source reason='equipment' hands=(...) drawn=false build-ms=... clips=|original='Animations\TOR_Idle.hkx' index=... bound='...' oar-api=available oar-result=replacement oar-path='...' oar-project='...' oar-variant='...' oar-submod='...' oar-mod='...' t=...
+ANIMATION WORLD ... index=... bound='...' oar-api=available oar-result=empty-unknown oar-path='' ...
+ANIMATION PANEL ... accepted action=1 original='Animations\TOR_Idle.hkx' base-index=... logical='...' variant='index=... position=...' index=... bound='...' status=replacement clip-time=... blend=... build-ms=...
+ANIMATION PANEL ... accepted ... logical='' variant='none' ... status=base ...
+```
+
+Snapshots are event-driven at panel-open/equipment, not a continuous world monitor. They retain `paused-source`, reason, current hand IDs and actual source drawn state. `build-ms` times source-side snapshot/publication construction before logging; it excludes disk writes, periodic flush and later render work, so it is neither total inventory latency nor FPS. The archived request-to-WORLD gaps were about 7.3 seconds per clip (roughly 22 seconds for three), localizing a major logging cost without a complete profiler claim. The full-name scans/candidate copies and per-info flushes are removed, but live performance improvement and visual equality remain **UNVERIFIED**.
+
+The existing settings loader reads `[Diagnostics] DetailedAnimationTrace=false` once at DataLoaded; restart after changing [CharacterPanel.ini](../config/CharacterPanel.ini). Default mapping stays on. `true` enables the bounded axe mapping/pose probes, annotation info, Smooth marker construction, bounded candidate rejection detail/summary, proposal paths and capture geometry listings. Guards precede expensive formatting/traversal. Actual dispatch, native conditions, audits and warning/error paths are unchanged. The synchronous logger retains buffered info with approximately one-second sink flushing and immediate warning/error flushing; only sink flushing runs on that timer, with no engine work or new async logging architecture. Recently buffered info may not yet appear in a live file view.
+
+The [two focused cases](../tests/animation_mapping_test.cpp) cover accepted alias/new-request publication with loop coalescing and exactly one selected read amid 50,000 names. From an MSVC 14.44 x64 developer prompt:
+
+```powershell
+New-Item -ItemType Directory -Force build/investigation-20261022 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/animation_mapping_test.cpp /Fobuild/investigation-20261022/animation_mapping_test.obj /Febuild/investigation-20261022/animation_mapping_test.exe
+./build/investigation-20261022/animation_mapping_test.exe
+cmake --preset Release -DVCPKG_MANIFEST_INSTALL=OFF
+cmake --build --preset Release
+```
+
+No older driver or game/API call is executed by these cases. The [latest comparison procedure](diagnostics/display-issues-2026-10-22.md#7-2026-10-22-低开销映射日志跟进) distinguishes construction timing from disk/FPS and keeps API-empty, fallback, paused-world and visual limits explicit. Synchronize policy/controller/hooks, settings/config, public-header provenance, focused test, canonical docs, [SceneGraph](scene-graph.md), README and Changelog.
+
+## Correlated rejection evidence (2026-10-22)
+
+With `DetailedAnimationTrace=true`, `QueryRequest::diagnostic_request` enters only `QueryFrame` logging. It is excluded from channel, clip-key hashing, Random state and accepted history. Every candidate rejection/suppression row identifies actor/request/base/clip key; [controller input records](animation.md#correlating-reported-issues) provide attempted bases, source versus projected hands/drawn state, action/reason and effect revision.
+
+For a genuinely rejected ordinary native candidate, `evaluate_set_thunk` records the first false condition in its **root top-level EvaluateAll set**, using the result of the existing single `condition->Evaluate(...)`. `outer == &query->scope` excludes nested sets. Name/provider/negated metadata is captured only while the two-native-false detail allowance remains and printed only if that candidate ultimately rejects. `root-false` explicitly says `scope=root-top-level result=false`; an OR/TARGET/PRESET entry is a top-level condition, not a reconstructed failing leaf. If no root false was observed, the row says native eligibility/other cause unknown. These observations never set `ScopedEvaluation::diagnostic`, convert ordinary false into unsupported, call `GetCurrent`, rerun Evaluate or compare against an extra native/source result. The existing eight unsupported/metadata plus two native-false detail quotas and one suppression summary remain unchanged.
+
+Optional WORLD detail appends only declared `hkbNode::name` and `hkbClipGenerator` mode/flags/playbackSpeed/atEnd fields to the existing actual-world mapping. Mode and flags are raw declared values; no opaque `hkbNodeInfo` weights/masks are read, and active nodes do not prove weighted visible contribution. Default API/direct-binding mapping remains on and unchanged, with no reverse scan, all-candidate copy, extra graph query or condition evaluation.
+
+The [single engine-free request-budget case](../tests/diagnostic_trace_test.cpp) does not execute conditions, API callbacks or the game. Source review verifies one Evaluate call and the root-boundary/quotas separately. From an MSVC 14.44 x64 developer prompt at the repository root:
+
+```powershell
+New-Item -ItemType Directory -Force build/investigation-20261022 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/diagnostic_trace_test.cpp /Fobuild/investigation-20261022/diagnostic_trace_test.obj /Febuild/investigation-20261022/diagnostic_trace_test.exe
+./build/investigation-20261022/diagnostic_trace_test.exe
+cmake --preset Release -DVCPKG_MANIFEST_INSTALL=OFF
+cmake --build --preset Release
+```
+
+Prior drivers are not rerun for this diagnostic-only follow-up. Native rejection values, query timing and visual causes remain **UNVERIFIED** until the [correlated game procedure](diagnostics/display-issues-2026-10-22.md#8-2026-10-22-已报告问题的关联诊断) is executed. Synchronize controller/hooks, [diagnostic budget](../src/animation/diagnostic_trace.h), focused test, canonical animation/DAC/scene docs, config comments and Changelog.
+
 ## Actor-animation ABI audit (2026-10-19)
 
-`AnimationReplacements::ForEachReplacementAnimation` is called through the existing DLL identity and entry-prefix gate. The native function owns the read lock; callers copy descriptors while its callback runs. It is RVA `0x1EB900` in 3.1.6 (prefix `48 89 5c 24 18 55 56 57 48 83 ec 40 48 8b 05 2d`) and `0x12D7B0` in 3.2.1 (same prefix ending `bd`). Profiles are in [binary_profile.h](../src/animation/oar/binary_profile.h).
+The binary profiles retain the audited `AnimationReplacements::ForEachReplacementAnimation` entry as identity/provenance evidence; current mapping/query logging no longer calls it or copies an all-candidate catalogue. Actual selection uses the existing EvaluateConditions path: `evaluate_replacement_thunk` copies metadata only for a native-eligible candidate before returning to OAR's selection loop, while OAR retains its selection read lock. The historical enumeration entry is RVA `0x1EB900` in 3.1.6 (prefix `48 89 5c 24 18 55 56 57 48 83 ec 40 48 8b 05 2d`) and `0x12D7B0` in 3.2.1 (same prefix ending `bd`); these are not an active logging-enumeration route. Profiles remain in [binary_profile.h](../src/animation/oar/binary_profile.h).
 
 Both PDB field lists confirm `ReplacementAnimation::_originalIndex=0xA8`, `_bDisabled=0xAA`, `_path=0xB0`, `_projectName=0xD0`, `_parentSubMod=0x108`, size 272. `Variant::_index=0`, `_filename=8`, `_bDisabled=0x28`, `_bPlayOnce=0x29`, size 56. Evidence: `llvm-pdbutil dump --types --type-index=0x4473 --type-index=0x42D3` for 3.1.6 and types `0x7A73` / `0x7899` for 3.2.1 against the provided DLL/PDB pairs. Earlier +0xA8 path hypotheses confuse the original index with the string; use +0xB0.
 
@@ -57,7 +136,7 @@ The authoritative source pin `f4e7688b065175aff70aa523073857911e15aca3` register
 
 Animation now requests equipment-driven non-combat idles with panel-drawn=true regardless of world draw/action. Native Smooth_loop goal readiness precedes queried choices. Direct empty-hand MT_Idle bypasses OAR replacements and marker dispatch; its calibration remains an independent vanilla base. [Policy/configuration](animation.md#configuration) and [DAC preparation](dac.md#non-combat-idle-goal-preparation) own these decisions; this query adapter remains unchanged.
 
-Smooth Moveset's [compatibility boundary](dac.md#smooth-moveset-compatibility-boundary) documents remaining query limits. The [three native IED/SDS predicates](#native-ied-placement-conditions-2026-10-21) are admitted only within their current-source/schema/version boundary; other enabled third-party conditions still require an explicit adapter. The combat Start/Loop configs use TDM effect `0x804` OR `IsCombatState == 1`; `evaluate_thunk` currently projects the latter to zero, while ordinary source effects remain native reads.
+Smooth Moveset's [compatibility boundary](dac.md#smooth-moveset-compatibility-boundary) documents remaining query limits. The [three explicit IED/SDS schemas and matched-provider forwarding](#native-ied-placement-conditions-2026-10-21) retain their exact provider/current-hand guards; unrelated providers still require an explicit adapter. The combat Start/Loop configs use TDM effect `0x804` OR `IsCombatState == 1`; `evaluate_thunk` currently projects the latter to zero, while ordinary source effects remain native reads.
 
 The existing version/PE/CodeView/evaluate/numeric gates remain unchanged. `matches_query` additionally gates these copied-metadata getters:
 
@@ -150,9 +229,9 @@ SCOPY OAR project ticks=… hooks=installed|absent mode=projected|plain evaluate
 - 身份、种族、性别、阵营、已确认装备及允许的环境条件使用原始 OAR 求值。
 - 内置条件的 disabled／negated 语义保留；AND／OR／XOR 由 OAR 原实现组合。
 
-求值前审计整棵条件树。除上文当前 IED 白名单外，第三方条件、自定义／preset component、Random、IdleTime 及其他未列入
-支持清单的条件会明确拒绝，不以原角色真实行为代替预览状态。最大审计深度为 64。
-这是有界支持范围，并非任意 OAR 动作包通用兼容。新增适配应扩充策略和验证，不能直接放行未知条件。
+以下保留当时投影原型的审计记录：未列入当时支持清单的第三方条件、自定义／preset component、Random、IdleTime 等会明确拒绝，
+不以原角色真实行为代替预览状态；最大审计深度为 64。当前 PRESET/Random 与匹配 IED 提供方的处理以文首各节为准，
+并非这里历史清单的全量复用。当前支持仍有明确边界，不代表任意 OAR 动作包通用兼容。
 
 ## 下载包与二进制证据
 
@@ -212,7 +291,7 @@ CodeView 记录偏移直接读文件核对（`RSDS` + 16 字节 + age）。
 `llvm-pdbutil dump -publics -section-headers` 的段偏移结合 DLL PE section 得到以上 RVA；
 `llvm-objdump` 反汇编核对签名与实参使用，未按源码行号或其他版本猜地址。
 另从 PDB 定位并读取了 126 个原生 Condition 虚表，其 Evaluate 槽均指向 `0x68640`。
-第三方 DLL 自带的 `CustomCondition::Evaluate` 不属于这项基础 hook 证明；当前仅上文三项 IED/SDS 原生只读条件经过额外入口审计后放行，其余预先拒绝。
+第三方 DLL 自带的 `CustomCondition::Evaluate` 不属于这项历史基础 hook 证明；当前匹配 IED 提供方的三项显式 schema 检查及其它名称原生转发见文首，不能从这里推断所有未知名称一律拒绝。
 
 入口前 16 字节在 [binary_profile.h](../src/animation/oar/binary_profile.h) 保存，两份 profile 各存一份。
 运行时同时核对 SKSE 插件版本、PE timestamp／image size、CodeView GUID／age 和两个入口字节，
