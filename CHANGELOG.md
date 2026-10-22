@@ -25,6 +25,10 @@
   unsupported and two native-false details: a pack whose replacements all share one condition
   (RaySense cover animations) used to consume the budget before a later folder's reason appeared,
   which is why the first correlated log could not explain the wrong equip clip.
+- Key those rejection details by OAR project folder as well as cause (forty-eight rows), and add one
+  `OAR COND … movement-direction=seen answered=…` row per query: the r2 log showed every transition
+  still selecting the same clips, so the next session has to distinguish a condition that was
+  answered by the standing predicate from one the hook never saw.
 - Answer `IsMovementDirection` as a standing predicate: OAR's numeric component carries the
   requested direction, not the actor's motion, so the old read answered true for direction 0 and
   made Smooth's `NOT IsMovementDirection(0)` arm permanently false. Standing figures now answer

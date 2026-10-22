@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <atomic>
 #include <bit>
+#include <cctype>
 #include <cmath>
 #include <chrono>
 #include <cstring>
@@ -102,6 +103,8 @@ namespace oar
             std::uint32_t native_false_rejections = 0;
             std::uint32_t candidate_logged = 0;
             std::uint32_t native_false_logged = 0;
+            bool movement_seen = false;
+            bool movement_answered = false;
             QueryFrame* previous;
 
             void reject(std::string reason)
@@ -398,6 +401,13 @@ namespace oar
 
             RE::BSString storage;
             const std::string_view name = condition_name(*condition, storage);
+            if (name == "IsMovementDirection" && QueryFrame::current)
+            {
+                // Decides "was this condition evaluated at all" for the standing-answer fix:
+                // an OR(HasMagicEffect, NOT IsMovementDirection(0)) branch that never reaches
+                // this hook would keep its native answer no matter what policy.h says.
+                QueryFrame::current->movement_seen = true;
+            }
             if (name == "HasGraphVariable" && QueryFrame::current)
                 return s_evaluate(condition, source, clip, submod);
             std::optional<bool> value = equipment_condition(*condition, name, source, *scope);
@@ -450,6 +460,8 @@ namespace oar
             }
             if (value)
             {
+                if (name == "IsMovementDirection" && QueryFrame::current)
+                    QueryFrame::current->movement_answered = true;
                 const bool projected_value = finish_predicate(*value, false, condition->IsNegated());
                 // The engine's own answer for the SAME evaluation is the only direct measure of
                 // "this projection changed an input OAR decides on"; asking it costs one call.
@@ -577,6 +589,23 @@ namespace oar
             if (!readable(value, sizeof(*value)) || value->size() > 4096 || !readable(value->data(), value->size()))
                 return {};
             return *value;
+        }
+
+        // The project folder is the first path component under the OAR animation root; it is what
+        // identifies "which pack" a rejected candidate belongs to. Diagnostics only.
+        std::string replacement_project(std::string_view path)
+        {
+            constexpr std::string_view marker = "openanimationreplacer\\";
+            std::string lowered(path);
+            std::ranges::transform(lowered, lowered.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            const std::size_t at = lowered.rfind(marker);
+            if (at == std::string::npos)
+                return "other";
+            const std::size_t start = at + marker.size();
+            if (start >= path.size())
+                return "other";
+            const std::size_t end = path.find('\\', start);
+            return std::string(path.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
         }
 
         std::optional<AnimationDescriptor> describe(void const* replacement, std::uint64_t key, std::size_t name_count)
@@ -742,17 +771,19 @@ namespace oar
             {
                 if (animation::detailed_animation_trace())
                 {
-                    // One detail line per DISTINCT cause, not per candidate. A pack whose whole
-                    // replacement set shares one condition (RaySense's cover animations share
-                    // RaySense_Obstacle) used to consume every slot before a later folder such as
-                    // "Smooth Moveset - Axe/Axe Non-combat Equip Base" was reached, which is how
-                    // the equip-clip mismatch stayed unexplained. The total counters still count
-                    // every rejection so the suppression summary stays truthful.
-                    std::string const signature = unsupported
+                    // One detail line per DISTINCT (project folder, cause), not per candidate. A
+                    // pack whose whole replacement set shares one condition (RaySense's cover
+                    // animations share RaySense_Obstacle) used to consume every slot before a
+                    // later folder such as "Smooth Moveset - Axe/Axe Non-combat Equip Base" was
+                    // reached. The project folder stays in the signature because "which pack lost
+                    // and why" is the question, and two packs can fail the same condition. The
+                    // total counters still count every rejection so the summary stays truthful.
+                    const std::string path = native_string(replacement, Replacement_Path_Offset);
+                    std::string const signature = replacement_project(path) + "|" + (unsupported
                         ? (query->candidate_rejection.empty() ? std::string(reason) : query->candidate_rejection)
-                        : (query->root_false.empty() ? std::string(reason) : query->root_false);
+                        : (query->root_false.empty() ? std::string(reason) : query->root_false));
                     const bool novel = std::ranges::find(query->rejection_signatures, signature) == query->rejection_signatures.end();
-                    const bool log = novel && query->rejection_signatures.size() < 24;
+                    const bool log = novel && query->rejection_signatures.size() < 48;
                     if (unsupported) ++query->candidate_rejections; else ++query->native_false_rejections;
                     if (log)
                     {
@@ -761,7 +792,7 @@ namespace oar
                         logger::info("OAR QUERY actor={:08x} request={} clip-key={:016x} base={} rejection={} rejected-candidate='{}' reason='{}' root-false='{}'",
                             source->GetFormID(), query->diagnostic_request, query->key, query->output.base_index,
                             unsupported ? "unsupported-or-metadata" : "native-false",
-                            native_string(replacement, Replacement_Path_Offset), reason,
+                            path, reason,
                             unsupported ? "not-a-native-false" : query->root_false.empty() ? "unobserved; native eligibility/other cause unknown" : query->root_false);
                     }
                 }
@@ -990,6 +1021,10 @@ namespace oar
                     source.GetFormID(), request.diagnostic_request, result.clip_key, result.base_index,
                     frame.candidate_rejections > frame.candidate_logged ? frame.candidate_rejections - frame.candidate_logged : 0,
                     frame.native_false_rejections > frame.native_false_logged ? frame.native_false_rejections - frame.native_false_logged : 0);
+            if (animation::detailed_animation_trace() && frame.movement_seen)
+                logger::info("OAR COND actor={:08x} request={} clip-key={:016x} base={} movement-direction=seen answered={}",
+                    source.GetFormID(), request.diagnostic_request, result.clip_key, result.base_index,
+                    frame.movement_answered ? "yes" : "no");
         };
         if (query_supported())
         {

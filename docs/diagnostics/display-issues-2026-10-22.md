@@ -226,3 +226,18 @@ Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMove
 3. torch 姿态本轮**未改**：仍走 `TOR_Idle` 单层，等下一包改为“武器形态 + 火把层”后再验。
 4. bow/crossbow 待同一修复的下一场会话验证；axe Start→Loop 不切换（`Smooth_loop` 已施法、边界重查仍 `accepted-same-asset`）仍是独立待查项。
 
+### r2 上机结果（2026-10-22 23:08 日志）
+
+归档 [CharacterPanel-issue-trace-r2-20261022-2307.log](CharacterPanel-issue-trace-r2-20261022-2307.log)：构建 `3617bf1f27`，12 请求、无错误、关包 `DAC restore … matched` 1 次。
+
+- **`IsMovementDirection` 修复没有改变任何选片**：装盾仍是 `1hm Shield Equip Base`（战斗变体）、卸盾仍是 `Gunslicer … Sword_and_Shield`、斧装仍是 `Gunslicer … Sword\1hm_equip`、弓/弩也仍是 Gunslicer。按 `req=10` 的证据（`Smooth Moveset - 1hm\1hm Equip Base` 83030020 压过 Gunslicer `Sword` 800002）确认 **OAR 优先级是数值越大越优先**；因此非战斗变体（83031024/83030324）没赢，只能是它们仍被判为不合格。要么 OR 门里的 `IsMovementDirection` 分支没有走到本模块的谓词（原生答案仍是"移动中"），要么另有条件先失败。
+- **去重日志生效**：RaySense 每查询只占 2 行，其余条件（IED placement hints、IsSneaking、OR、HasMagicEffect、CurrentMovementSpeed 等）都出现了；但每条查询仍有 15–64 条被省略，且签名只有 condition、没有项目文件夹，所以 Smooth 斧/盾候选的具体拒绝原因仍看不到。
+- **torch 得到世界侧实证**：`request=12` 的 WORLD 快照里源角色同时有 `Animations\Tor_1HMPose.hkx(1590)` 与 `1hm Non-Combat idle Start(8978)`，而面板同一请求只查 `TOR_Idle` 并落到 base 1598。也就是说世界是"武器身体 idle + 火把手臂层"，面板是"整身 TOR_Idle"——与用户描述一致，下一包按"武器形态 + 火把层"改。
+- axe 的 Start→Loop 仍未发生（Start 9053，无 Loop handoff）。
+
+### r3 诊断（2026-10-22 深夜）
+
+1. 拒绝签名改为 **项目文件夹 + 原因**，上限 48 行/查询；这样 `Smooth Moveset - Axe`/`- 1hm Shield` 的候选会以项目名出现在拒绝行里。
+2. 新增 `OAR COND … movement-direction=seen answered=yes|no` 一行/查询：区分"谓词答了 false"与"该条件根本没走到本模块的钩子"（若没走到，原生答案会保留，`NOT` 分支依旧为假）。
+3. 本轮**不改**任何选片或姿态行为；torch 姿态改动仍待下一包。
+
