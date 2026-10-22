@@ -546,6 +546,13 @@ namespace
             oar::standing_predicate("IsInAir", standing) == false &&
             oar::standing_predicate("IsOnMount", standing) == false &&
             oar::standing_predicate("MOUNT", standing) == false;
+        // A standing figure moves in no direction. OAR's numeric component holds the REQUESTED
+        // direction, so this predicate (not a numeric read) is what makes the Smooth
+        // `NOT IsMovementDirection(0)` arm true and the Non-Combat Equip/Unequip variants
+        // reachable for every direction, including the 0 the packs ask about.
+        const bool movement_is_standing =
+            oar::standing_predicate("IsMovementDirection", standing) == false &&
+            oar::standing_predicate("IsMovementDirection", drawn) == false;
         const bool weapon_state_passes_through =
             oar::standing_predicate("IsWeaponDrawn", standing) == false &&
             oar::standing_predicate("IsWeaponDrawn", drawn) == true;
@@ -563,7 +570,7 @@ namespace
             animation::weapon_form_from_hands(HK::kStaff, HK::kEmpty) == animation::WeaponForm::kStaff &&
             animation::weapon_form_from_hands(HK::kTorch, HK::kEmpty) == animation::WeaponForm::kTorch &&
             animation::weapon_form_from_hands(HK::kEmpty, HK::kEmpty) == animation::WeaponForm::kNone;
-        return pose_is_standing && weapon_state_passes_through && forms_split;
+        return pose_is_standing && movement_is_standing && weapon_state_passes_through && forms_split;
     }
 
     bool oar_binary_profile_rejects_mismatches()

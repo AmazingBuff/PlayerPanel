@@ -19,6 +19,7 @@
 #include <Windows.h>
 #include <detours/detours.h>
 
+#include <algorithm>
 #include <atomic>
 #include <bit>
 #include <cmath>
@@ -96,8 +97,11 @@ namespace oar
             std::uint16_t index = 0xFFFF;
             std::string candidate_rejection;
             std::string root_false;
+            std::vector<std::string> rejection_signatures;
             std::uint32_t candidate_rejections = 0;
             std::uint32_t native_false_rejections = 0;
+            std::uint32_t candidate_logged = 0;
+            std::uint32_t native_false_logged = 0;
             QueryFrame* previous;
 
             void reject(std::string reason)
@@ -407,8 +411,13 @@ namespace oar
                 {
                     value = compare(*condition, *number, source, *scope);
                 }
-                else if (name == "IsMovementDirection" || name == "IsCombatState")
+                else if (name == "IsCombatState")
                 {
+                    // The numeric component holds the REQUESTED state, not the actor's state; the
+                    // standing preview is out of combat, so only state 0 answers true. The panel
+                    // clears Smooth's combat markers and projects combat state to zero, which is
+                    // the same contract. IsMovementDirection is answered by standing_predicate
+                    // instead - its component carries a direction, never the actor's motion.
                     const auto* const numeric = component<::Conditions::INumericConditionComponent>(*condition);
                     if (!numeric)
                     {
@@ -416,8 +425,7 @@ namespace oar
                     }
                     else
                     {
-                        const float requested = numeric->GetNumericValue(source);
-                        value = name == "IsCombatState" ? std::trunc(requested) == 0.0f : requested == 0.0f;
+                        value = std::trunc(numeric->GetNumericValue(source)) == 0.0f;
                     }
                 }
                 else if (name == "HasGraphVariable")
@@ -701,7 +709,7 @@ namespace oar
                         {
                             result = false;
                             if (animation::detailed_animation_trace() && outer == &query->scope &&
-                                query->native_false_rejections < 2 && query->root_false.empty())
+                                query->native_false_logged < 12 && query->root_false.empty())
                                 query->root_false = fmt::format("{} negated={} result=false scope=root-top-level",
                                     condition_diagnostic(*condition, "actual first false"), condition->IsNegated());
                             break;
@@ -734,13 +742,28 @@ namespace oar
             {
                 if (animation::detailed_animation_trace())
                 {
-                    const bool log = unsupported ? ++query->candidate_rejections <= 8 : ++query->native_false_rejections <= 2;
+                    // One detail line per DISTINCT cause, not per candidate. A pack whose whole
+                    // replacement set shares one condition (RaySense's cover animations share
+                    // RaySense_Obstacle) used to consume every slot before a later folder such as
+                    // "Smooth Moveset - Axe/Axe Non-combat Equip Base" was reached, which is how
+                    // the equip-clip mismatch stayed unexplained. The total counters still count
+                    // every rejection so the suppression summary stays truthful.
+                    std::string const signature = unsupported
+                        ? (query->candidate_rejection.empty() ? std::string(reason) : query->candidate_rejection)
+                        : (query->root_false.empty() ? std::string(reason) : query->root_false);
+                    const bool novel = std::ranges::find(query->rejection_signatures, signature) == query->rejection_signatures.end();
+                    const bool log = novel && query->rejection_signatures.size() < 24;
+                    if (unsupported) ++query->candidate_rejections; else ++query->native_false_rejections;
                     if (log)
+                    {
+                        query->rejection_signatures.push_back(signature);
+                        if (unsupported) ++query->candidate_logged; else ++query->native_false_logged;
                         logger::info("OAR QUERY actor={:08x} request={} clip-key={:016x} base={} rejection={} rejected-candidate='{}' reason='{}' root-false='{}'",
                             source->GetFormID(), query->diagnostic_request, query->key, query->output.base_index,
                             unsupported ? "unsupported-or-metadata" : "native-false",
                             native_string(replacement, Replacement_Path_Offset), reason,
                             unsupported ? "not-a-native-false" : query->root_false.empty() ? "unobserved; native eligibility/other cause unknown" : query->root_false);
+                    }
                 }
                 return false;
             };
@@ -962,11 +985,11 @@ namespace oar
             }
             result.evaluated = scope.evaluated();
             result.overrides = scope.overrides();
-            if (animation::detailed_animation_trace() && (frame.candidate_rejections > 8 || frame.native_false_rejections > 2))
+            if (animation::detailed_animation_trace() && (frame.candidate_rejections > frame.candidate_logged || frame.native_false_rejections > frame.native_false_logged))
                 logger::info("OAR QUERY actor={:08x} request={} clip-key={:016x} base={} further-unsupported-or-metadata={} further-native-false={}",
                     source.GetFormID(), request.diagnostic_request, result.clip_key, result.base_index,
-                    frame.candidate_rejections > 8 ? frame.candidate_rejections - 8 : 0,
-                    frame.native_false_rejections > 2 ? frame.native_false_rejections - 2 : 0);
+                    frame.candidate_rejections > frame.candidate_logged ? frame.candidate_rejections - frame.candidate_logged : 0,
+                    frame.native_false_rejections > frame.native_false_logged ? frame.native_false_rejections - frame.native_false_logged : 0);
         };
         if (query_supported())
         {

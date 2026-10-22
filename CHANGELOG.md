@@ -20,6 +20,16 @@
 
 ### Changed
 
+- Publish one `OAR QUERY` candidate rejection per distinct cause (first provider/condition/root-false
+  signature, at most twenty-four) plus one suppression line, instead of the first eight
+  unsupported and two native-false details: a pack whose replacements all share one condition
+  (RaySense cover animations) used to consume the budget before a later folder's reason appeared,
+  which is why the first correlated log could not explain the wrong equip clip.
+- Answer `IsMovementDirection` as a standing predicate: OAR's numeric component carries the
+  requested direction, not the actor's motion, so the old read answered true for direction 0 and
+  made Smooth's `NOT IsMovementDirection(0)` arm permanently false. Standing figures now answer
+  false for every direction, which reaches the `Non-Combat Equip/Unequip Base` variants the world
+  plays while the weapon is sheathed. `IsCombatState` keeps its requested-state read.
 - Report world mappings through OAR's current-clip API and accepted panel mappings by final binding
   index, removing logging-only full-table reverse scans and all-candidate copies.
 - Buffer ordinary information logs with periodic flushing and keep verbose animation/geometry
@@ -56,6 +66,10 @@
 
 ### Fixed
 
+- Fix in-inventory shield, axe and bow/crossbow equip/unequip showing a combat-variant clip (or
+  another pack's clip) while the world plays the sheathed `Non-Combat` variant: the standing
+  `IsMovementDirection` answer was always true, so every non-combat transition branch was rejected
+  during a transition (reported 2026-10-22; the axe symptom was the equip clip's own root motion).
 - Fix torch preview candidates being rejected solely for the core current-weather flag condition,
   preserving OAR's native weather answer and negation.
 - Fix left-shield removal with a retained right weapon selecting Equip instead of Unequip; retain

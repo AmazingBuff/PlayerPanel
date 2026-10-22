@@ -109,6 +109,8 @@ The completed animation changes have four narrowly scoped engine-free drivers. E
 | [animation_mapping_test.cpp](../tests/animation_mapping_test.cpp) | **2**: accepted alias/variant changes and new requests publish while identical loops coalesce; one selected read at index 40,000 in a 50,000-name table. | Actual current-world OAR API, loader fallback timing or game performance. |
 | [diagnostic_trace_test.cpp](../tests/diagnostic_trace_test.cpp) | **1** coherent request-budget case: window/sample caps, rearming, denial stopping stale windows, same/new request behavior, skipped slots and expiry. | Native conditions, UI tasks, capture/mount/calibration/projection or visuals. |
 
+The 2026-10-22 standing-predicate fix ([`IsMovementDirection`](../src/animation/oar/policy.h)) ran one direct-compiled engine-free check: the predicate answers false for a standing and a drawn preview, the negated `NOT` arm is true (Smooth's non-combat gate), and unrelated predicates are unchanged. Its assertion also exists in [snapshot_transform_test.cpp](../tests/snapshot_transform_test.cpp), but that retained graph/math driver was not executed for this change — it needs the generated CommonLib headers. Release compilation and source review do not execute OAR conditions, selection or visuals.
+
 To reproduce only the relevant driver, use the repository root in an x64 VS2022 developer shell initialized with MSVC 14.44.35207, and keep assertions enabled (no `NDEBUG`). Set the driver name to one table entry without `.cpp`:
 
 ```powershell

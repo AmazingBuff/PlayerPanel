@@ -200,3 +200,29 @@ DECISION 只记录实际状态变化/决定，waiting 不逐 poll 刷屏。PENDI
 4. 正常使用可恢复 `DetailedAnimationTrace=false` 并重启。前三包不覆盖，没有部署、暂存、提交或推送。
 
 本轮仅跑 [diagnostic_trace_test.cpp](../../tests/diagnostic_trace_test.cpp) 一例 engine-free 请求预算行为，覆盖重复开窗、四窗口/二十四快照上限、同请求不复位、新请求复位、拒绝停止旧窗、漏槽和过期。原生条件/UI 任务/加载/挂载/投影/性能/视觉全部 **UNVERIFIED**。规范入口：[动作与预算](../animation.md#correlating-reported-issues)、[顶层条件观测](../oar-hooks.md#correlated-rejection-evidence-2026-10-22)、[DAC 证据](../dac.md#opt-in-annotation-and-marker-evidence)、[捕获/放置/挂载](../scene-graph.md#opt-in-capture-placement-and-mount-evidence)。
+
+## 9. 2026-10-22 换装片源与站立谓词修复
+
+第 8 节诊断包（`issue-trace-test-r1`，构建 `5ec8fcf99f`）上机回传后，用户按现象确认：axe 是 Equip 动作中的"位置拉近"；torch 与世界的持火把动作不一致；shield 的装卸用了一手武器原始动作；bow/crossbow 同类。归档日志 [CharacterPanel-issue-trace-r1-20261022-2231.log](CharacterPanel-issue-trace-r1-20261022-2231.log)（17 请求、17 捕获、5 次 `DAC restore … matched`、无崩溃）。
+
+### 日志能证明的三件事
+
+1. **axe 装卸片源不是 Smooth 的斧动作**：`request=15` 接受 `Gunslicer Animations OAR\Sword\1hm_equip.hkx`（index 8908，优先级 800002），而 Smooth 的 `Axe Equip/Non-combat Equip Base`（83030320/83030324）未被选中；候选拒绝日志的旧额度（8 条 unsupported、2 条 native-false）被 RaySense 封面动画占满，斧装动作的拒绝原因没有出现。
+2. **torch 没有装卸动作**：`request=9 transition base unavailable form=none; idle only`（`panel_transition_bases` 对 torch 返回空），面板直接跳 `tor_idle`（base 1598）；世界同一时刻同时有 `MT_Idle`（含 SVFI 替换）与 `Tor_Idle(1598)` 两层，此外 `Malignis Animations\Idle_Torch` 替换的是 female `mt_idle`，显示端从不查询。候选方面：2 个 SDB 灯笼包因 `IsInInterior` 取反后为 false（室内，正确），5 个 Ashe 包因 `core::WindAngleDifference` 不支持被拒。
+3. **shield 选中战斗变体**：装卸方向正确（`query-hands=current/previous`），但接受 `1hm Shield Equip Base`（8940）与 `Sword_and_Shield` 卸盾（9503），而非 `1hm Shield Non-Combat Equip Base`。同请求标记为 `243801,243804,243806,…`（无 loop 标记 243802）。
+
+### 已确认缺陷与修复
+
+Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMovementDirection(0) )`。旧实现在 [hooks.cpp](../../src/animation/oar/hooks.cpp) 里用 `INumericConditionComponent::GetNumericValue(source) == 0` 回答 `IsMovementDirection`——该组件装的是**请求方向参数**（`Direction: 0.0`），不是角色运动，因此恒为真，`NOT …` 恒假；换装瞬间 loop 标记尚未施法，OR 整体为假，非战斗装卸变体全部被拒，只能落到战斗变体或其它包的动作。修复把 `IsMovementDirection` 改为 [policy.h](../../src/animation/oar/policy.h) 的站立谓词（站立图在任何方向都不移动 → false）；`IsCombatState` 保留数值读取（其组件即请求状态，站立图在状态 0）。
+
+同一轮把 `OAR QUERY` 候选证据从"前 8/2 条"改为**按不同原因去重**（首见 provider/condition/root-false 签名，至多 24 条）+ 一条省略计数，避免单一包的重复条件挤掉后续文件夹的原因。
+
+本轮只跑一个 engine-free 站立谓词检查（`IsMovementDirection` 对站立/drawn 均 false、`NOT` 分支为真、无关谓词不变），源码审查确认 `IsCombatState` 语义；保留的 [snapshot_transform_test.cpp](../../tests/snapshot_transform_test.cpp) 用例已同步断言但本轮未执行该驱动。原生条件、OAR 选片、加载、挂载、投影、视觉与性能仍 **UNVERIFIED**。
+
+### 上机步骤（`issue-trace-test-r2`，`DetailedAnimationTrace=true`）
+
+1. 保留右武器，装/卸左盾，确认 `ANIMATION PANEL` 的 `logical` 落在 `1hm Shield Non-Combat Equip Base` / 对应卸盾，而不是战斗变体。
+2. 装 axe（单手斧），确认 Equip 片源是 `Smooth Moveset - Axe` 的装卸动作；`OAR QUERY` 现在应为每类原因至少一行。
+3. torch 姿态本轮**未改**：仍走 `TOR_Idle` 单层，等下一包改为“武器形态 + 火把层”后再验。
+4. bow/crossbow 待同一修复的下一场会话验证；axe Start→Loop 不切换（`Smooth_loop` 已施法、边界重查仍 `accepted-same-asset`）仍是独立待查项。
+
