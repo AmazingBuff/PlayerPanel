@@ -4,6 +4,8 @@
 
 The [canonical six-gate experiment](independent-behavior-graph.md) records the source ownership/API audit and all pass/stop criteria. `[Diagnostics] BehaviorGraphProbe=false` is a separate, restart-required setting. When enabled, `AnimationController::request` calls [observe_source_baseline](../src/animation/behavior_graph/ownership_probe.cpp) while retaining the actual source graph: fixed member identities/counts/flags only, at most sixteen grouped lines per actor/request, no graph or bone traversal and no engine mutation/evaluation. Pointer identities become integer values; no engine reference escapes. SDK-layout assumptions and non-atomic snapshots are explicit in the log. Disabled requests do not traverse or format probe data.
 
+`[Experiment] IndependentGraph=off|construct|load` is the default-off implementation of the [G1 contract](independent-behavior-graph.md#g1-实验契约2026-10-23-设计未实现): once per process, on the first paused panel-open request, it constructs one `holder=nullptr` graph through the audited native factory and, in `load` mode, calls the audited loader with a copy of the source project name. It logs at most 24 `INDEPENDENT GRAPH` rows, releases by reference count and never activates, advances, drives or writes any graph; it is implemented and deployed but has not run.
+
 This collects a source baseline, with `candidate=none construction=unverified gate1=not-passed`; it creates or advances no independent graph and changes no existing playback. G1 remains NOT PASSED; G2–G6 remain NOT STARTED/LOCKED. HKX37 demonstrated paused driving of a second Actor, with equip, complete mapping and teardown limits; it did not establish the current no-second-Actor design. That round did not run the game, so only [offline checks and a manual collection package](build.md#behavior-graph-baseline-checks-2026-10-23) were available; the later [G1 binary audit](behavior-graph-construction-audit.md) also used an unpacked copy only.
 
 ## Equipment context and torch composition (2026-10-23)
@@ -35,6 +37,9 @@ UnarmedIdle=non_combat_loop
 [Diagnostics]
 DetailedAnimationTrace=false
 BehaviorGraphProbe=false
+
+[Experiment]
+IndependentGraph=off
 ```
 
 The accepted values are lowercase and affect empty hands only:

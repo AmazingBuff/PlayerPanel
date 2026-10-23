@@ -4,6 +4,7 @@
 
 #include "animation/controller.h"
 
+#include "animation/behavior_graph/independent_graph.h"
 #include "animation/behavior_graph/ownership_probe.h"
 #include "animation/clip.h"
 #include "animation/diagnostic_trace.h"
@@ -855,6 +856,8 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     if (!state.graph) { state.pending.reset(); return; }
     if (behavior_graph_probe())
         behavior_graph::observe_source_baseline(*state.graph, state.actor_id, state.generation, state.source_generation);
+    if (observation.reason == "panel-open")
+        behavior_graph::run_independent_graph_experiment(*state.graph, state.actor_id, state.generation, state.source_generation);
     logger::info("ANIMATION actor={:08x} request={} reason='{}' source-generation={} equipment-target={}", state.actor_id,
         state.generation, observation.reason, state.source_generation, weapon_form_name(target.form));
     if (observation.reason == "panel-open" || observation.reason == "equipment")
