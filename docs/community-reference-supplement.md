@@ -97,4 +97,4 @@
 
 本轮引用的是公开网页可见的分支源码，未固定提交哈希。正式复用前需固定版本、核对接口与许可，并区分源码和发布资产；本文没有复制第三方实现，也没有认定这些项目已在本项目目标组合下兼容。
 
-相关文档：[PRD](player-panel-prd.md)、[M0 诊断](m0-diagnostics.md)、[用户采集报告](m0-capture-report-2026-09-28.md)、[累积器原型试验](m0-proto.md)。后两者保留试验过程，本文不把其中未经独立核实的推断升级为已验证接口。
+相关文档：[PRD](player-panel-prd.md)、[M0 诊断](history-rendering.md#m0)、[用户采集报告](history-rendering.md#m0)、[累积器原型试验](history-rendering.md#m0)。这些旧试验已归并为渲染总结，原件见[来源索引](history-sources.md)；本文不把其中未经独立核实的推断升级为已验证接口。

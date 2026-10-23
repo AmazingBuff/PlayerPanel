@@ -1,6 +1,6 @@
 # Code maintenance
 
-The sole current preview backend is [SceneGraph](scene-graph.md); animation ownership and phase rules are documented in [animation previews](animation.md). Dated reports linked below remain historical evidence for their recorded revisions.
+The sole current preview backend is [SceneGraph](scene-graph.md); animation ownership and phase rules are documented in [animation previews](animation.md). Superseded reports/logs are consolidated in the historical summaries and remain recoverable from the fixed Git baseline.
 
 The [independent behavior graph validation](independent-behavior-graph.md) is an investigation, not an additional backend. `BehaviorGraphProbe=false` independently gates [ownership_probe.cpp](../src/animation/behavior_graph/ownership_probe.cpp), `behavior_graph::observe_source_baseline`, called only by `AnimationController::request` with a retained graph. `BEHAVIOR GRAPH` rows are fixed source identities/counts/flags (at most sixteen per actor/request), value-only, non-atomic and dependent on current SDK layouts. No payload, graph, actor or bone-tree scan, engine dispatch, construction or retained engine reference is permitted. Missing and uncollected values cannot prove isolation. Settings load once; restart after toggling. Keep configuration, canonical experiment, animation/OAR/build guides, README and Changelog synchronized when changing the field set or boundary.
 
@@ -85,7 +85,7 @@ Game follow-up remains two representative categories, not a new test matrix:
 1. **Equipment idle policy:** verify the same non-combat equipped target during world draw/attack/move/sheathe, both empty-hand INI choices and rapid equipment changes; correlate actor/request/event/effect/handover logs and confirm controlled source effects restore and unrelated equipment/buffs remain intact.
 2. **Copied-graph presentation/lifetime:** F7 without compatible-loop rewind, F8, close/reopen/load boundaries, appearance, attachments, framing and transparency; correlate capture/audit/park and draw logs.
 
-These categories remain unverified without a Skyrim runtime. Use the [current reported-issue procedure](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机) for torch/shield phases, Smooth transitions and the one-shot axe flash. The [2026-10-20 equipment idle/DAC sheet](equipment-idle-dac-test-2026-10-20.md) remains dated historical evidence rather than the current diagnostic format.
+These categories remain unverified without a Skyrim runtime. Use the [current reported-issue procedure](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机) for torch/shield phases, Smooth transitions and the one-shot axe flash. The [historical equipment idle/DAC summary](history-animation.md#dac-ied) preserves earlier findings; original test sheets are recovered through [the source index](history-sources.md).
 
 ## Safety and rendering invariants
 
@@ -101,4 +101,4 @@ These categories remain unverified without a Skyrim runtime. Use the [current re
 
 The [complete historical index](history.md) keeps past controls, outcomes and proposals separate from current guidance.
 
-[UBE transparency](ube-transparency-test-2026-10-15.md), [OAR ABI](oar-hooks.md), [OAR query experiments](oar-preview-query-2026-10-16.md), [AFP summary](afp-summary-2026-10-13.md), [S2 probes](s2-anim-probe-evidence-2026-10-09.md), [M0 handoff](m0-handoff.md) and [graph-copy validation](scene-graph-copy-validation.md) retain their recorded results. Their former source paths and hotkeys are historical; removed product code remains available through Git history. Evidence archives and old packages were not deleted.
+[Rendering history](history-rendering.md) owns UBE, M0, StudioHome and graph-copy findings; [animation history](history-animation.md) owns OAR query, AFP and S2/HKX findings. Current ABI guidance stays in [OAR](oar-hooks.md). The 144 superseded docs/logs were consolidated and removed after review; source-by-source provenance and recovery from commit 719c90b are in [history sources](history-sources.md). Current r1/r2 logs, engine metadata and TSLOT tools remain in place. Former source paths/hotkeys are historical; old build packages outside this documentation cleanup are unchanged.

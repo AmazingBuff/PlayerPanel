@@ -677,7 +677,7 @@
   a figure the paused world never rendered simply does not have.
 
 - Report AFP1's first in-game verdict and give its one blocker a lever
-  ([verdict](docs/afp1-verdict-2026-10-13.md)). The pose track is readable and
+  ([verdict](docs/history-animation.md#final-output)). The pose track is readable and
   fully validated in game (`reason=ok`, 116 elements, 0x30 elements, data at
   `tracks+448`), and its index order is the **animation skeleton** bridged by
   exact bone name: 105 of 109 comparable bones land inside one degree, against

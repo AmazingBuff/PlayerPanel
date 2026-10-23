@@ -4,7 +4,7 @@ Build setup and pinned dependencies: docs/build.md
 Current architecture/actions: docs/scene-graph.md and docs/animation.md
 Native DAC dependency/session/restore: docs/dac.md
 Log navigation and hash conventions: docs/code-maintenance.md
-Archived controls/results/proposals: docs/history.md
+Historical research summaries/source recovery: docs/history.md and docs/history-sources.md
 
 Current build (repository root, prepared toolchain):
   cmake --preset Release

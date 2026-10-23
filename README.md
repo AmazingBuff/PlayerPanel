@@ -23,7 +23,7 @@ Default animation diagnostics report accepted panel mappings and paused-source W
 - [Native DAC](docs/dac.md): original binary/profile, [winning MGEF script-attachment preflight](docs/dac.md#marker-script-attachment-preflight), inventory snapshots, UI tasks and close restoration.
 - [Maintenance and debugging](docs/code-maintenance.md): module/hash conventions and actual log navigation.
 - [Reported animation diagnostics](docs/diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机): current handover for the shield/axe/torch/bow transition report, both archived session logs, previous-hand removal context, one-handed body plus left torch arm, corrected direction-0 semantics, raw XYZ scales and parameterized rejection evidence and the next game procedure. The earlier [correlated-diagnostic budget](docs/diagnostics/display-issues-2026-10-22.md#8-2026-10-22-已报告问题的关联诊断) still defines the pose windows (four/twenty-four snapshots per request) and one fixed fifteen-bone source snapshot.
-- [Historical reports](docs/history.md): complete archived report/requirements index.
+- [Historical research](docs/history.md): rendering/animation summaries and a per-source index for recovering 144 superseded reports/logs from the committed baseline.
 - [Runtime notes](tools/scene_copy/README.txt): compact controls and game follow-up.
 
 Empty hands default to an unarmed non-combat loop. Set `UnarmedIdle=mt_idle` under `[Animation]` in `Data/SKSE/Plugins/CharacterPanel.ini` for direct vanilla standing; copy the [sample INI](config/CharacterPanel.ini) and restart the game. Equipped gear is held only in the copy; source draw/equipment/graph state stays read-only. See [idle/config policy](docs/animation.md#configuration).

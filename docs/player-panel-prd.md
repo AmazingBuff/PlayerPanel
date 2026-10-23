@@ -15,9 +15,11 @@
 
 本文件是 PlayerPanel 后续开发的产品需求基线。读者包括产品设计、插件实现与游戏内验证人员。文中“必须”描述验收要求，不代表现有代码已经实现。
 
+历史导航更新（2026-10-23）：逐轮实验报告与旧日志已归并为[渲染总结](history-rendering.md)和[动画总结](history-animation.md)。本文的需求与验收条款继续保留；详细操作、旧回传模板和原始证据按[来源索引](history-sources.md)从固定 Git 提交恢复。当前实现与独立行为图进度分别见[SceneGraph](scene-graph.md)和[六关验证](independent-behavior-graph.md)，不以本 PRD 的历史阶段状态代替当前台账。
+
 本轮新增需求属于产品的后续扩展范围，不扩大正在验证的 M0 工作包。第 9 节区分用户已提出的目标、设计建议与待定事项；设计建议尚不构成实施决策。
 
-本次确定从第一阶段直接验证世界画面与面板共存，不采用“背包期间用摄影棚替代世界画面，再改成双视图”的路线。工作区原有[独立角色面板 PRD](../../docs/independent-character-panel-prd.md)保留为历史参考；与本文件冲突的渲染路线和阶段安排以本文件为准。[Stage-0 记录](stage0-spike.md)属于早期试验材料，不构成本方案通过验证的证据。
+本次确定从第一阶段直接验证世界画面与面板共存，不采用“背包期间用摄影棚替代世界画面，再改成双视图”的路线。工作区原有[独立角色面板 PRD](../../docs/independent-character-panel-prd.md)保留为历史参考；与本文件冲突的渲染路线和阶段安排以本文件为准。[Stage-0 记录](history-rendering.md#m0)属于早期试验材料，不构成本方案通过验证的证据。
 
 ## 1. 产品目标与术语
 
@@ -241,11 +243,11 @@ M0 的通过证据必须是可重复的双视图画面与状态隔离结果。�
 - 跟踪点在旋转轴上或与 pivot 重合时，位置不变可能完全符合数学预期；不得仅凭 `moved=0` 认定探针无效、骨架不同或路线不可行。
 - 未找到公开接口，只能限定当前版本与接口范围。CPU 蒙皮、自制物理和 Actor 承载仍是待评估选择，没有被本轮证明为唯一方案。
 
-相关记录：[S0 回传](scene-graph-copy-results-2026-10-08.md)、[S2 原始证据索引](s2-anim-probe-evidence-2026-10-09.md)、[HKX28 样本里程碑](s2-animation-milestone-2026-10-11.md)、[HKX36 隔离结果](scene-copy-h05-isolation-test-2026-10-11.md)、[HKX40 结果](scene-copy-diagnose-test-2026-10-12.md)、[HKX42 结果](scene-copy-solver-test-2026-10-12.md)、[HKX44 待测](scene-copy-solver3-test-2026-10-12.md)、[S2/S3 方案](s2-s3-plan.md)。
+相关记录：[S0 回传](history-rendering.md#scene-copy)、[S2 原始证据索引](history-animation.md#pose-probes)、[HKX28 样本里程碑](history-animation.md#hkx-mapping)、[HKX36 隔离结果](history-animation.md#isolation)、[HKX40 结果](history-animation.md#hkx-mapping)、[HKX42 结果](history-animation.md#hkx-mapping)、[HKX44 待测](history-animation.md#hkx-mapping)、[S2/S3 方案](history-animation.md#future)。
 
 ### 6.3 摆姿探针验收协议与已取得的证据
 
-详细执行与回传格式见 [2026-10-09 测试单与后续记录](scene-graph-copy-next-test-2026-10-09.md)。后续 S2P1–P4 已修正顺序并取得摆姿与画面随动证据；本节保留基础验收协议，不要求重复全部旧实验。HKX 取数协议保留在 §6.4，新 Actor 最终姿态路线以 §6.6 为准；GPU 内部绑定／消费细节仍不能由 CPU 转储直接证明。
+历史执行与实验要点见[摆姿探针总结](history-animation.md#pose-probes)，详细测试单和回传格式由[来源索引](history-sources.md)恢复。后续 S2P1–P4 已修正顺序并取得摆姿与画面随动证据；本节保留基础验收协议，不要求重复全部旧实验。HKX 取数协议保留在 §6.4，新 Actor 最终姿态路线以 §6.6 为准；GPU 内部绑定／消费细节仍不能由 CPU 转储直接证明。
 
 **准备条件**：固定源码提交、DLL／PDB SHA-256、实际 CommonLib checkout、游戏／SKSE、渲染与身体／骨架版本；选择一个确实出现在画面的身体或护甲 draw，确认目标骨骼在其有效权重／palette 中。测量修正后至少有一轮 CBBE 与一轮 UBE，先分别建立静态基线。
 
@@ -283,7 +285,7 @@ S3 必须分别证明 P 的 CBPC／SMP 注册、定向推进和注销。在没�
 以下取数步骤保留用于追溯与新增资源验收，不再把“尚无任何真实 HKX 数据”当作当前结论。
 同一 Actor 的最终姿态与直接绘制按 §6.6 验证；单 clip 的采样重放／经验映射求解不是该路线的显示驱动。
 
-详细准备与回传见 [HKX 下一工作包测试单](s2-hkx-next-work-package-2026-10-10.md)。本节是规划与验收要求，不表示新的代码、装载接口或采样对象已经实现／取得。
+历史准备与取数要点见[HKX 发现总结](history-animation.md#hkx-discovery)，原测试单及回传格式由[来源索引](history-sources.md)恢复。本节是规划与验收要求，不表示新的代码、装载接口或采样对象已经实现／取得。
 
 #### 已取得的结果与尚未关闭的问题
 
@@ -348,7 +350,7 @@ S3 必须分别证明 P 的 CBPC／SMP 注册、定向推进和注销。在没�
 
 本节限定为复制图候选；§6.6 采用同一 Actor 承载时，复用物理的定向更新、碰撞、同步与回收判据，按 Actor 的实际注册／节点绑定另行验证，不要求重复创建一份显示图。
 
-详细上机操作、对照条件、失败定位与回传模板见 [S3 独立物理游戏内测试单](s3-independent-physics-validation-2026-10-10.md)。
+历史独立物理方案与验收边界见[未执行方向总结](history-animation.md#future)；详细上机操作、对照条件、失败定位与回传模板由[来源索引](history-sources.md)恢复。
 本节纳入用户认可的验证方向，**尚未实现，不表示当前 DLL 已具备以下接口或控制项**。
 HKX 可加载和独立采样是完整方案的工作前提，其实际取数、持有与映射仍按 §6.4 验收。
 
@@ -441,11 +443,11 @@ V10 的“图保留时解绑”可先做；图析构必须与 S1 闭环。S1 未
 
 ### 6.6 优先验证候选：同一 Actor 的最终姿态应用与直接绘制
 
-游戏内操作、数值对照和回传模板见 [Actor 最终姿态／直接绘制测试单](actor-final-pose-validation-2026-10-12.md)。
+同 Actor 最终姿态方案与实验要点见[AFP 总结](history-animation.md#final-output)；游戏内操作、数值对照和回传模板由[来源索引](history-sources.md)恢复。
 本节是用户要求写入的验证方案，**不是已实现或已通过的新架构**；跨图 clip 重放的 HKX44 包不再上机（用户决定），其待测项留档。
 
-**2026-10-13 实现与证据更新**：AFP1–AFP8 已上机，详见 [AFP 总结](afp-summary-2026-10-13.md) 和
-[AFP8 复核](afp8-verdict-2026-10-13.md)。强制 generate 能在暂停时取得姿态，应用阶段已写 P 自身节点。
+**2026-10-13 实现与证据更新**：AFP1–AFP8 已上机，详见 [AFP 总结](history-animation.md#final-output) 和
+[AFP8 复核](history-animation.md#final-output)。强制 generate 能在暂停时取得姿态，应用阶段已写 P 自身节点。
 R02 和 R03 的输出／索引顺序有证据，R04 的节点应用取得局部正结果；R01 同 Actor 直绘及 A4／A5 尚未接通，不计端到端画面闭环。
 AFP8 标定 samples=98，暂停输出=116，written=92、unreachable=6；当前应用用 `min(已标定表长度, 当前输出数)`，
 新增 18 槽未被本轮写入。109/109 是应用后节点与输出的相符读数，不足以归因“全部由插件写入”。
@@ -527,7 +529,7 @@ R00–R05 成立且范围内外观可保持时，将同 Actor 直绘作为后续
 
 #### 2026-10-13 下一验证建议与用户观察
 
-详细步骤见 [AFP 后续验证与暂停物理／表情缺口](afp-next-validation-and-paused-gaps-2026-10-13.md)。
+历史后续方案与暂停物理／表情缺口见[未执行展示方向总结](history-rendering.md#future)，详细步骤由[来源索引](history-sources.md)恢复。
 
 1. 将映射身份与采样长度分开，按完整骨表维护名字／绑定，在同一帧记录输出／可达／写入／跳过各集合；点名 18 个未覆盖槽、6 个不可达项和 5 个武器附着 world 超差项，核对实际 skin 必要性。
 2. 接入 R01 同 Actor 直绘，补 A2→A4→A5 的同帧证据。相机字段为空只限制已调查入口，不证明所有相机适配都不可能；若采用临时展示变换，记录 Actor／骨架／包围盒／渲染状态恢复及 worker 屏障。
@@ -675,7 +677,7 @@ CommonLibSSE-NG 暴露的菜单场景、相机、动画和渲染提交接口可�
 
 ### 9.7 按使用场景保留两种展示后端（2026-10-13，用户决定）
 
-详细设计与后续验收见 [展示后端路由、交易与搜刮](display-backend-routing-2026-10-13.md)。
+历史后端路由、交易与搜刮方案要点见[展示方向总结](history-rendering.md#future)，详细设计与后续验收原件由[来源索引](history-sources.md)恢复。
 本节确认产品方向与选择规则，不表示非玩家来源、双人物或尸体刷新已经实现，也不改变当前 AFP／S1 优先级。
 
 | 展示对象 | 后端 | 更新规则 |

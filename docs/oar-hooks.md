@@ -56,7 +56,7 @@ Provenance: user-supplied `Open Animation Replacer - IED conditions-98308-1-0-3-
 
 Primary semantic references: the provider author's [Conditions.h](https://github.com/SlavicPotato/OpenAnimationReplacer-IEDConditionExtensions/blob/master/src/Conditions.h) and [Conditions.cpp](https://github.com/SlavicPotato/OpenAnimationReplacer-IEDConditionExtensions/blob/master/src/Conditions.cpp), retrieved 2026-10-21 (source tree version 1.0.1; binary source revision unknown). The pinned OAR [API request implementation](https://github.com/ersh1/OpenAnimationReplacer/blob/f4e7688b065175aff70aa523073857911e15aca3/src/main.cpp) supports interface V2/V3; this is distinct from condition-object `ConditionAPIVersion` V3/V4. The supplied DLL requests interface V2. These facts alone do not verify live registration or message ordering. No provider implementation was copied.
 
-The two [focused admission/dispatch cases](../tests/ied_condition_adapter_test.cpp) and [Release build instructions](build.md#ied-condition-verification) are local evidence. Real provider registration, native evaluation, IED hint refresh while paused, appearance and missing-provider fallback in Skyrim remain unverified. Use the [dated game follow-up](equipment-idle-dac-test-2026-10-20.md#9-ied-placement-适配2026-10-21待上机); loading the DLL is insufficient evidence of a matching condition.
+The two [focused admission/dispatch cases](../tests/ied_condition_adapter_test.cpp) and [Release build instructions](build.md#ied-condition-verification) are local evidence. Real provider registration, native evaluation, IED hint refresh while paused, appearance and missing-provider fallback in Skyrim remain unverified. See the [historical follow-up summary](history-animation.md#dac-ied), with original procedures recoverable through [the source index](history-sources.md); loading the DLL is insufficient evidence of a matching condition.
 
 ## Torch/shield query follow-up (2026-10-22)
 
@@ -166,7 +166,7 @@ The existing version/PE/CodeView/evaluate/numeric gates remain unchanged. `match
 The animation controller uses these values for its own advancing-pose fade, including zero duration. It does not invoke OAR's native blender or reproduce ActiveClip's loop lookahead/end-relative incoming seek. Upstream semantic references are pinned at `f4e7688b065175aff70aa523073857911e15aca3` (3.2.1) and `0c1c8b38a5323b9e26df41ff9d10ce801b984a45` (3.1.6); they are reference evidence, not linked/copied implementation. No Skyrim runtime validation is claimed.
 
 
-> 当前入口：[oar-preview1 独立查询、播放及换装](oar-preview-query-2026-10-16.md)。
+> 历史查询/换装方案见[OAR 实验总结](history-animation.md#oar)，详细原件由[来源索引](history-sources.md)从 Git 恢复；当前查询和播放规范见[动画](animation.md)。
 > 下文投影及旧包为历轮记录；全局站立窗口已移除，两版主动查询入口已重新核对并接入。
 
 更新日期：2026-10-15（第二轮：3.1.6 profile 与投影作用域接入）。
@@ -375,7 +375,7 @@ zip 内 DLL/PDB 与构建产物、manifest 三方哈希一致，且与已部署�
 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` 的 DLL 相同（当前部署 = 2h-fix）。
 
 崩溃、根因与规则见 [维护说明不变量 32／33](code-maintenance.md) 与
-[crash 日志](diagnostics/crash-2026-10-15-22-45-27.log)。
+[历史崩溃总结](history-animation.md#oar)；原始 crash 日志由[来源索引](history-sources.md)从 Git 恢复。
 
 两份包的 zip 内 DLL/PDB 与构建产物、manifest 三方哈希一致；DLL 与 PDB 均已部署到
 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` 并校验一致（当前部署 = oar-ab）。

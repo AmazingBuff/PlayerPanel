@@ -111,4 +111,4 @@ The generated identity always starts with `CharacterPanel-scenegraph-` and inclu
 
 ## Related history
 
-The animation ownership checkpoint is commit `a00745a`. Dated [OAR query](oar-preview-query-2026-10-16.md), [graph-copy validation](scene-graph-copy-validation.md), [AFP](afp-summary-2026-10-13.md) and [M0](m0-handoff.md) reports are historical evidence. Their deleted source paths and old hotkeys describe their recorded revisions, not current controls.
+The animation ownership checkpoint is commit `a00745a`. Historical summaries cover [OAR queries](history-animation.md#oar), [graph-copy validation](history-rendering.md#scene-copy), [AFP](history-animation.md#final-output) and [M0](history-rendering.md#m0). The superseded reports/logs are recoverable through [the source index](history-sources.md); their former code paths and hotkeys describe recorded revisions, not current controls.
