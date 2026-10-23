@@ -35,7 +35,7 @@
 | `ANIMATION WORLD actor=… request=N clips=…` | 历史构建的**开包瞬间世界侧**激活剪辑：`original='<引擎动画名>' index=<绑定索引> replaced='<OAR 替换路径>' t=<播放时间>`；旧 `replaced=''` 只代表未解析出逻辑替换路径，**不能证明原版播放**。当前构建的实际绑定、官方 API 与 paused-source 字段见第 7 节；第 6 节保留上一测试包格式 |
 | `ANIMATION … request=N state=… base='<原始动画名>' path='<替换路径>' index=…` | **面板侧**选中结果：`base` 是查询的原始动画，`path` 是 OAR 替换件（未替换时为原始名） |
 | `ANIMATION … request=N oar walk base=… winner=… replaced=… candidates='…'` | 该基的全部候选（按 OAR 求值顺序）与胜者，用于判断"为什么没选到某个包" |
-| `ANIMATION … request=N smooth markers='…'` | 源角色身上的 Smooth 标记场（local id，`!`=inactive）：`0x3801` start on、`0x3802` loop on、`0x3804` combat on、`0x3806` loop off、`0x3808` combat off |
+| `ANIMATION … request=N smooth markers='…'` | 源角色身上的 Smooth 标记场（旧文编号含轻插件索引，非规范 local id；见第 10 节，`!`=inactive）：`0x3801` start on、`0x3802` loop on、`0x3804` combat on、`0x3806` loop off、`0x3808` combat off |
 | `DAC … event='…' native call completed` / `native-effect` | DAC 原生施法与效果签名变化 |
 | `ANIMATION … event='Smooth_loop|Smooth_NonCombat|weaponDraw' time=…` | 剪辑标注触发与施法时点 |
 | `SCOPY FRAME calibrated offset=… radius=…` / `SCOPY FRAME … center=… radius=…` | 取景标定与实时包围（判断第 1 项的"扩大"是 radius 还是 scale 引起） |
@@ -212,7 +212,7 @@ DECISION 只记录实际状态变化/决定，waiting 不逐 poll 刷屏。PENDI
 2. **torch 没有装卸动作**：`request=9 transition base unavailable form=none; idle only`（`panel_transition_bases` 对 torch 返回空），面板直接跳 `tor_idle`（base 1598）；世界同一时刻同时有 `MT_Idle`（含 SVFI 替换）与 `Tor_Idle(1598)` 两层，此外 `Malignis Animations\Idle_Torch` 替换的是 female `mt_idle`，显示端从不查询。候选方面：2 个 SDB 灯笼包因 `IsInInterior` 取反后为 false（室内，正确），5 个 Ashe 包因 `core::WindAngleDifference` 不支持被拒。
 3. **shield 选中战斗变体**：装卸方向正确（`query-hands=current/previous`），但接受 `1hm Shield Equip Base`（8940）与 `Sword_and_Shield` 卸盾（9503），而非 `1hm Shield Non-Combat Equip Base`。同请求标记为 `243801,243804,243806,…`（无 loop 标记 243802）。
 
-### 已确认缺陷与修复
+### 当时的谓词判断与修改（方向语义错误，已由第 10 节纠正）
 
 Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMovementDirection(0) )`。旧实现在 [hooks.cpp](../../src/animation/oar/hooks.cpp) 里用 `INumericConditionComponent::GetNumericValue(source) == 0` 回答 `IsMovementDirection`——该组件装的是**请求方向参数**（`Direction: 0.0`），不是角色运动，因此恒为真，`NOT …` 恒假；换装瞬间 loop 标记尚未施法，OR 整体为假，非战斗装卸变体全部被拒，只能落到战斗变体或其它包的动作。修复把 `IsMovementDirection` 改为 [policy.h](../../src/animation/oar/policy.h) 的站立谓词（站立图在任何方向都不移动 → false）；`IsCombatState` 保留数值读取（其组件即请求状态，站立图在状态 0）。
 
@@ -231,14 +231,14 @@ Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMove
 
 ### r2 上机结果（2026-10-22 23:02–23:14 会话）
 
-归档 [CharacterPanel-issue-trace-r2-20261022-2314.log](CharacterPanel-issue-trace-r2-20261022-2314.log)：构建 `3617bf1f27`，12 请求、无错误、关包 `DAC restore … matched` 1 次（23:14:11，`spell-groups=3`）。
+归档 [CharacterPanel-issue-trace-r2-20261022-2314.log](CharacterPanel-issue-trace-r2-20261022-2314.log)：构建 `3617bf1f27`，12 请求、无错误、关包 `DAC restore … matched` 2 次（包括 23:14:11 的 `spell-groups=3`）。
 
 - **`IsMovementDirection` 修复没有改变任何选片**：装盾仍是 `1hm Shield Equip Base`（战斗变体）、卸盾仍是 `Gunslicer … Sword_and_Shield`、斧装仍是 `Gunslicer … Sword\1hm_equip`、弓/弩也仍是 Gunslicer。按 `req=10` 的证据（`Smooth Moveset - 1hm\1hm Equip Base` 83030020 压过 Gunslicer `Sword` 800002）确认 **OAR 优先级是数值越大越优先**；因此非战斗变体（83031024/83030324）没赢，只能是它们仍被判为不合格。要么 OR 门里的 `IsMovementDirection` 分支没有走到本模块的谓词（原生答案仍是"移动中"），要么另有条件先失败。
 - **去重日志生效**：RaySense 每查询只占 2 行，其余条件（IED placement hints、IsSneaking、OR、HasMagicEffect、CurrentMovementSpeed 等）都出现了；但每条查询仍有 15–64 条被省略，且签名只有 condition、没有项目文件夹，所以 Smooth 斧/盾候选的具体拒绝原因仍看不到。
 - **torch 得到世界侧实证**：`request=12` 的 WORLD 快照里源角色同时有 `Animations\Tor_1HMPose.hkx(1590)` 与 `1hm Non-Combat idle Start(8978)`，而面板同一请求只查 `TOR_Idle` 并落到 base 1598。也就是说世界是"武器身体 idle + 火把手臂层"，面板是"整身 TOR_Idle"——与用户描述一致，下一包按"武器形态 + 火把层"改。
 - axe 的 Start→Loop 仍未发生（Start 9053，无 Loop handoff）。
 
-### r3 诊断（2026-10-22 深夜，构建 `a46e724`，已部署未上机）
+### r3 诊断（历史方案，未得到上机验证；2026-10-22 深夜，构建 `a46e724`，已部署未上机）
 
 1. 拒绝签名改为 **项目文件夹 + 原因**，上限 48 行/查询；这样 `Smooth Moveset - Axe`/`- 1hm Shield` 的候选会以项目名出现在拒绝行里。
 2. 新增 `OAR COND … movement-direction=seen answered=yes|no` 一行/查询：区分"谓词答了 false"与"该条件根本没走到本模块的钩子"（若没走到，原生答案会保留，`NOT` 分支依旧为假）。
@@ -246,8 +246,26 @@ Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMove
 
 部署身份：`CharacterPanel-scenegraph-scenegraph-a46e724cc0-cl94faaed0c6-20261022T151801Z`，DLL SHA-256 `7ef034b1…`。**截至 2026-10-23 00:15 尚无 r3 会话日志**（最新运行时日志停在 r2 会话的 23:14:11）。下一场只需复现装/卸左盾、换单手斧、换弓/弩；判读顺序为：
 
-1. 每查询的 `OAR COND movement-direction=seen answered=…` —— `seen=no` 表示条件未到钩子（要改钩子覆盖），`seen=yes` 而选片不变表示问题在别的条件。
+1. 每查询的 `OAR COND movement-direction=seen answered=…` —— 旧 r3 实际只在 seen 时输出，不能由缺行推出 `seen=no` 或钩子缺失；当前显式 flags 见第 10 节，`seen=yes` 而选片不变表示问题在别的条件。
 2. `OAR QUERY … rejected-candidate='…\Smooth Moveset - Axe\…'` —— 项目名现在会出现在拒绝行，直接给出该包落选的原因。
 3. 若两项都指向 IED placement 条件，则下一包转入 IED 侧（装备挂点与查询时机），而不是继续改谓词。
 4. torch 仍未改："武器形态 + 火把层"是下一个功能包；世界侧基线为 `Tor_1HMPose`(1590) + 武器 idle。
 
+
+## 10. 2026-10-23 装备上下文与火把分层修复（待上机）
+
+当前代码修复：所有实际 Unequip 查询使用之前的双手 ID，效果修订重查保留原过渡动作/上下文；下一 idle 才用当前装备。IED 历史查询按依赖放行：已核对 SDS 设置、显式 gear node；equipped hint 仅允许其请求手未变化。改变的手及未知历史谓词仍拒绝，原生 false 保留。
+
+右手单手武器＋左火把使用武器 body idle＋独立查询加载的 Tor_1HMPose 左臂层，覆盖左锁骨、上臂、前臂、手指；不覆盖根/躯干/腿/右臂。只装卸火把不触发右手武器装卸；只卸右手武器而保留火把时，过渡仍保留火把层。torch-only 仍走 TOR_Idle。加载/基础片缺失会明确记录 body-only 回退，不能当作视觉等价。pending/reuse/refresh/retarget/same-asset/outgoing 路径均携带层所有权；当前只做源码审查，游戏时序未验证。
+
+方向语义纠正：OAR 3.1.6 实际 DLL/PDB 和上游 enum 均为 0=None，1=Forward。站立时方向 0 为 true，其它为 false，NOT 仅应用一次。第 9 节的“全部 false 即可放行 Smooth”判断错误；保留原历史结果，不再以该说法判断选片。r2 装盾接受索引为 8938，卸盾为 9496；共两次 restore matched，日志文件保持原样。
+
+诊断补齐：当前或刚卸下的单手斧/双手斧均可触发相同请求预算；POSE SCALE 输出原始 Havok x/y/z，POSE MAP 保持真实轨道/目标标识及 identity-unverified。转换仍用 x，未猜测修正弓/弩缩放。每个详细查询都有 movement-seen/answered=yes|no；候选拒绝带自身 flags、条件 GetArgument、root-false 与 observed false leaf。leaf 可以只是 OR 的一个 false 分支，不等于候选落选根因。上限仍为 48 条/查询，姿态仍为 4 窗/24 快照/请求，源骨骼快照仍仅 15 点。
+
+旧 Smooth 标记报告以 formID & 0xFFFFFF 输出，因此 243801/243802 等字符串含轻插件的部分索引，不能当作 literal local 0x243802/0x3802；已知配置 loop 本地 ID 为 0x802。新条件参数证据用于比对实际效果，不能从旧字符串推断 FormID 不匹配。
+
+本轮仅运行 [animation_repair_test.cpp](../../tests/animation_repair_test.cpp) 的两个 engine-free 场景，分别覆盖装备移除/IED/方向规则和火把路由/完整左臂合成/移除。未执行旧驱动或完整套件；另做 Release 构建及有界源码/链接核查。具体命令见 [build.md](../build.md#animation-repair-checks-2026-10-23)。未部署，游戏选片、原生 IED、异步加载/重定向、遮罩实际资产、画面及性能仍 UNVERIFIED。
+
+下一轮同一次开包流程：保留右武器卸左盾→卸右武器，核对 query-hands=previous 与具体 IED 拒绝；单手斧观察 Equip→Start→Loop 的候选条件与前几帧 POSE SCALE/MAP；装备左火把并只卸火把，检查 ANIMATION TORCH composed/body-only、左臂与身体及移除残留；保留火把再卸右武器检查过渡；切弓/弩保存对应 raw-xyz。F7 重捕获与快速换装同时核对 graph/request，关包检查 DAC restore matched。保存 DLL 构建身份、完整日志及短视频；看不到/预算耗尽须注明，不算成功。
+
+本地交付包：`build/animation-repair-20261023/CharacterPanel-animation-repair-20261023.zip`，内含新 DLL、匹配 PDB、中文测试说明及 manifest；未部署。构建身份 `CharacterPanel-scenegraph-scenegraph-7de3b9f9cf+dirty-cl94faaed0c6-20261023T063440Z` 为 configure-time 身份，dirty 工作树后续增量构建以哈希区分：DLL SHA-256 `ba844250bd43e6a5e6e473242a3a3678aa2439c0781254f7d762f752b1532a3a`；PDB SHA-256 `12984e676854f0cd13e1ad066760e8f980110a6b1b00b901d83ea0ffdfb93931`。配对 GUID `{748DB13E-5AAA-4883-8283-751805A36ED4}`、Age `74` 已一致核对。

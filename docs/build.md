@@ -96,9 +96,32 @@ A warning that installation rules were specified while `CMAKE_SKIP_INSTALL_RULES
 
 Copy [config/CharacterPanel.ini](../config/CharacterPanel.ini) to `Data/SKSE/Plugins/CharacterPanel.ini` alongside CharacterPanel.dll. Under `[Animation]`, `UnarmedIdle=non_combat_loop` is the default; `mt_idle` chooses direct vanilla MT_Idle only when hands contain no displayable equipped item. Missing files retain the default; invalid values warn/default. Restart the game after changes. Existing SimpleIni handles loading at DataLoaded; no new dependency, MCM or reload control is required. Calibration always stays vanilla MT_Idle. See the [exact option table](animation.md#configuration); the visible direct-base option does not change the independent zero-time calibration.
 
+## Animation repair checks (2026-10-23)
+
+Exactly two current engine-free scenarios in [animation_repair_test.cpp](../tests/animation_repair_test.cpp) use production `transition_hands`, `left_shield_transition`, `ied_condition_rejection`/`evaluate_ied_condition`, `standing_movement_direction`, route/cache helpers and `compose_contributor`:
+
+- `equipment_removal_preserves_query_hands_and_native_ied_boundary`: shield then weapon removal contexts, native false for an unchanged requested hand, rejection before native read for a changed hand, direction-0 standing/negation.
+- `one_handed_torch_composes_complete_left_arm_and_removes_cleanly`: one-handed body plus cached Tor_1HMPose route, complete left arm mask while body/right arm/legs remain, and body restoration after removal.
+
+Run from the repository root in the existing x64 VS2022 developer environment (`vcvarsall.bat x64 -vcvars_ver=14.44`, installed toolset 14.44.35207). Keep assertions enabled; do not define NDEBUG:
+
+```powershell
+New-Item -ItemType Directory -Force build/animation-repair-20261023 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/animation_repair_test.cpp /Fobuild/animation-repair-20261023/animation_repair_test.obj /Febuild/animation-repair-20261023/animation_repair_test.exe
+./build/animation-repair-20261023/animation_repair_test.exe
+cmake --preset Release
+cmake --build --preset Release
+```
+
+The two scenarios passed. The same torch-routing regression compiled against baseline action.h exits 1 as expected (whole-body torch selected), using an explicit exit rather than an assertion dialog. Release configure/build passed using the existing installed packages and cache (`VCPKG_MANIFEST_INSTALL=OFF`), without dependency changes. The first sandboxed build was denied access to installed Windows SDK metadata by MSBuild (MSB4184); the same authorized local build succeeded with SDK read access. Existing /Ob2→/Ob3 override warnings remain. `git diff --check`, bounded relative-link/symbol/source checks and preserved unrelated-file hashes are separate checks. No older driver or full suite is rerun; retained obsolete assertions are updated for current policy only.
+
+Source review covers typed transition effect-refresh, pending reuse/cancel, arm readiness/retarget/same-asset/outgoing composition, raw XYZ sampling and trace caps. The scenarios do not execute `AnimationController`, the game loader, OAR/IED hooks, DAC, camera or rendering. Native condition answers, asynchronous timing, complete-left-arm coverage against installed HKX assets, source isolation at runtime, Smooth Start/Loop, axe flash and bow/crossbow scale causes remain UNVERIFIED. No clamp or guessed mapping was added. The final DLL/PDB pair matches CodeView/PDB GUID `{748DB13E-5AAA-4883-8283-751805A36ED4}`, age 74; hashes and configure-time identity are in the package manifest and dated handover. The new DLL/PDB is copied only to the ignored `build/animation-repair-20261023/test-package` for manual review; no install/package target or game deployment runs. Follow the [current handover](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机).
+
 ## Verification and limits
 
 ### Current animation checks (2026-10-22)
+
+Historical check selection for that dated change; current repair scope is the two scenarios above.
 
 The completed animation changes have four narrowly scoped engine-free drivers. Each ran for its own implementation change; documentation/commit finalization reuses those passing results and does not run a new suite or add cases. The normal Release build separately compiles the real SDK integrations.
 
@@ -121,7 +144,7 @@ cl /nologo /std:c++latest /EHsc /W4 /WX /I src "tests/$characterPanelDriver.cpp"
 & "./$characterPanelCheckDir/$characterPanelDriver.exe"
 ```
 
-There is no CMake test target or automatic game execution. For current torch/shield/Smooth/axe diagnosis, follow the [section-9 symptom procedure](diagnostics/display-issues-2026-10-22.md#9-2026-10-22-换装片源与站立谓词修复), [accepted mapping semantics](animation.md#accepted-mappings-and-world-snapshots) and [debugging navigation](code-maintenance.md#debugging-navigation). Detailed tracing defaults false, requires a restart when enabled, and has request-wide four-window/twenty-four-snapshot pose caps plus one fixed fifteen-bone source snapshot. Native runtime, visual equivalence and performance remain unverified.
+There is no CMake test target or automatic game execution. For current torch/shield/Smooth/axe diagnosis, follow the [section-9 symptom procedure](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机), [accepted mapping semantics](animation.md#accepted-mappings-and-world-snapshots) and [debugging navigation](code-maintenance.md#debugging-navigation). Detailed tracing defaults false, requires a restart when enabled, and has request-wide four-window/twenty-four-snapshot pose caps plus one fixed fifteen-bone source snapshot. Native runtime, visual equivalence and performance remain unverified.
 
 After committing, configure and build again to embed that commit's identity; this does not rerun behavioral coverage. Preserved unrelated untracked local sources can truthfully leave the identity `+dirty` even when tracked changes are committed. Do not stage or remove unrelated files just to change that marker.
 
@@ -169,7 +192,7 @@ cl /nologo /std:c++latest /EHsc /W4 /WX /I src tests/ied_condition_adapter_test.
 ./build/ied-condition-adapter/ied_condition_adapter_test.exe
 ```
 
-The [cases](../tests/ied_condition_adapter_test.cpp) exercise the production [admission/guarded native dispatch](../src/animation/oar/ied_conditions.h): the representative native-preservation scenario covers equipped-placement false, left/right comparison, negation and disabled behavior, plus the zero-component SDS shield-setting false and negation; a historical-hand scope rejects before any native read. These remain two cases. They use narrow provider fakes and do not execute Skyrim, IED, SDS or the supplied DLL. The normal Release configure/build separately compiles the real OAR/SDK integration; no CMake test target or dependency is added. The [three-condition reference](oar-hooks.md#native-ied-placement-conditions-2026-10-21) records exact provider/schema versions, provider-side SDS prerequisites and archive/DLL provenance. Real OAR/SDS registration, paused IED hint freshness, native evaluation, missing-provider fallback and visuals remain game-only follow-up.
+The [cases](../tests/ied_condition_adapter_test.cpp) exercise the production [admission/guarded native dispatch](../src/animation/oar/ied_conditions.h): the representative native-preservation scenario covers equipped-placement false, left/right comparison, negation and disabled behavior, plus the zero-component SDS shield-setting false and negation; a changed or unproven historical requested-hand scope rejects before any native read. These remain two cases. They use narrow provider fakes and do not execute Skyrim, IED, SDS or the supplied DLL. The normal Release configure/build separately compiles the real OAR/SDK integration; no CMake test target or dependency is added. The [three-condition reference](oar-hooks.md#native-ied-placement-conditions-2026-10-21) records exact provider/schema versions, provider-side SDS prerequisites and archive/DLL provenance. Real OAR/SDS registration, paused IED hint freshness, native evaluation, missing-provider fallback and visuals remain game-only follow-up.
 
 ### Fixed base index verification
 

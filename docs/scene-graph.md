@@ -53,6 +53,8 @@ flowchart LR
 
 There are no Actor spawning, dressing, inventory synchronization, body-morph copying or live-graph diagnostic controls. Removed diagnostic hotkeys have no active handlers.
 
+`SceneGraph::observe_source` also records left torch presence independently of the body family for the [one-handed body/arm composition](animation.md#equipment-context-and-torch-composition-2026-10-23). Retarget rebinds the owned arm layer alongside body/standing/calibration for pending, active and outgoing proposals. Source equipment/transform/framing policy does not change.
+
 Outside paused inventory, `SceneGraph::update_monitor` also asks `AnimationController::prepare_base_indices` to prepare the [finite base-action cache](animation.md#fixed-base-indices-and-project-readiness) through the existing third-person graph resolver. This observes metadata only: no clip/graph advancement, condition/Random/history evaluation, DAC/IED call or source mutation. Preparation waits for published graph/behavior/skeleton and covering binding data, then scans the engine names once while copying only matched finite originals. LoadingMenu updates return before observing old source graphs. Existing `CharacterManager::release_previews` clears project metadata at world boundaries; table identity/count changes also rebuild. A late-ready project may initialize on the menu path with an explicit diagnostic. Capture/Clone and first-use resource costs remain separate and unchanged.
 
 ## Invariants
@@ -81,7 +83,7 @@ At most once per request, `SCOPY SOURCE-SNAPSHOT/SOURCE-NODE` records the shared
 
 Join graph pointers/capture IDs to `POSE PROBE/SAMPLE` and [ANIMATION HANDOFF](animation.md#correlating-reported-issues), whose source is an observed weaponDraw/weaponSheathe annotation or the unchanged duration midpoint. The common [request-budgeted probe](animation.md#bounded-axe-pose-and-projection-evidence-2026-10-22) uses post-composition copy transforms/projection; the source snapshot and copy can represent different phases and coordinate contexts. No layer weight/mask or source-track bone semantic is inferred. Missing names, budget exhaustion or a missed transient must remain inconclusive.
 
-Default-off tracing skips source-name matching and all new formatting/projection/successful mount detail. Capture isolation/source audits and their handling remain unconditional, as do actual mounting, calibration, animation dispatch and normal accepted mappings. Native parent operations, render timing and all reported visual causes remain **UNVERIFIED**; see the [current symptom procedure](diagnostics/display-issues-2026-10-22.md#9-2026-10-22-换装片源与站立谓词修复).
+Default-off tracing skips source-name matching and all new formatting/projection/successful mount detail. Capture isolation/source audits and their handling remain unconditional, as do actual mounting, calibration, animation dispatch and normal accepted mappings. Native parent operations, render timing and all reported visual causes remain **UNVERIFIED**; see the [current symptom procedure](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机).
 
 ## Failure modes
 

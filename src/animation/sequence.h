@@ -33,13 +33,15 @@ namespace animation
         return result;
     }
 
-    enum class BoneMask : std::uint8_t { e_full_body, e_left_hand, e_right_hand };
+    enum class BoneMask : std::uint8_t { e_full_body, e_left_hand, e_right_hand, e_left_arm };
     [[nodiscard]] inline bool bone_allowed(BoneMask mask, std::string_view name)
     {
         if (mask == BoneMask::e_full_body) return true;
-        const std::string_view side = mask == BoneMask::e_left_hand ? "NPC L " : "NPC R ";
+        const std::string_view side = mask == BoneMask::e_left_hand || mask == BoneMask::e_left_arm ? "NPC L " : "NPC R ";
         return name.starts_with(side) && (name.find("Finger") != std::string_view::npos ||
-            name.find("Hand") != std::string_view::npos);
+            name.find("Hand") != std::string_view::npos || (mask == BoneMask::e_left_arm &&
+                (name.find("Clavicle") != std::string_view::npos || name.find("UpperArm") != std::string_view::npos ||
+                 name.find("Forearm") != std::string_view::npos)));
     }
 
     template<class T>

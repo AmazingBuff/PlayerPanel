@@ -105,6 +105,9 @@ namespace oar
             std::uint32_t native_false_logged = 0;
             bool movement_seen = false;
             bool movement_answered = false;
+            bool candidate_movement_seen = false;
+            bool candidate_movement_answered = false;
+            std::string first_false;
             QueryFrame* previous;
 
             void reject(std::string reason)
@@ -206,10 +209,12 @@ namespace oar
         {
             if (!animation::detailed_animation_trace()) return std::string(reason);
             const RE::BSString provider = condition.GetRequiredPluginName();
+            const RE::BSString argument = condition.GetArgument();
             RE::BSString storage;
             const std::string_view name = condition_name(condition, storage);
-            return fmt::format("provider='{}' condition='{}': {}",
-                provider.c_str() && *provider.c_str() ? provider.c_str() : "core", name, reason);
+            return fmt::format("provider='{}' condition='{}' argument='{}': {}",
+                provider.c_str() && *provider.c_str() ? provider.c_str() : "core", name,
+                argument.c_str() ? argument.c_str() : "", reason);
         }
 
         template <class T>
@@ -237,6 +242,28 @@ namespace oar
                     return static_cast<T const*>(item);
             }
             return nullptr;
+        }
+
+        std::string_view ied_rejection(Condition const& condition, ScopedEvaluation const& scope,
+            RE::TESObjectREFR* source)
+        {
+            const std::optional<uint32_t> version = ied_provider_version();
+            const std::string_view schema = ied_condition_rejection(condition, version, false);
+            if (!schema.empty() || !scope.state().hand_override) return schema;
+            std::optional<bool> unchanged;
+            const RE::BSString name = condition.GetName();
+            if (name.c_str() && std::string_view(name.c_str()) == "IED_GearNodeEquippedPlacementHint")
+            {
+                auto const* const hand = static_cast<::Conditions::IBoolConditionComponent const*>(condition.GetComponent(0));
+                const bool left = hand->GetBoolValue();
+                RE::Actor* const actor = source ? source->As<RE::Actor>() : nullptr;
+                if (actor)
+                {
+                    RE::TESForm const* const item = actor->GetEquippedObject(left);
+                    unchanged = (*scope.state().hand_override)[left ? 1 : 0] == (item ? item->GetFormID() : 0);
+                }
+            }
+            return ied_condition_rejection(condition, version, true, unchanged);
         }
 
         std::optional<bool> random_condition(Condition const& condition, RE::TESObjectREFR* source,
@@ -394,19 +421,18 @@ namespace oar
             const RE::BSString provider = condition->GetRequiredPluginName();
             if (!projected && provider.c_str() && *provider.c_str())
             {
-                return evaluate_ied_condition(*condition, ied_provider_version(), scope->state().hand_override.has_value(),
-                    [&] { return s_evaluate(condition, source, clip, submod); },
-                    [&](std::string_view reason) { scope->reject(condition_diagnostic(*condition, reason)); });
+                const std::string_view reason = ied_rejection(*condition, *scope, source);
+                if (reason.empty()) return s_evaluate(condition, source, clip, submod);
+                scope->reject(condition_diagnostic(*condition, reason));
+                return false;
             }
 
             RE::BSString storage;
             const std::string_view name = condition_name(*condition, storage);
             if (name == "IsMovementDirection" && QueryFrame::current)
             {
-                // Decides "was this condition evaluated at all" for the standing-answer fix:
-                // an OR(HasMagicEffect, NOT IsMovementDirection(0)) branch that never reaches
-                // this hook would keep its native answer no matter what policy.h says.
                 QueryFrame::current->movement_seen = true;
+                QueryFrame::current->candidate_movement_seen = true;
             }
             if (name == "HasGraphVariable" && QueryFrame::current)
                 return s_evaluate(condition, source, clip, submod);
@@ -421,13 +447,8 @@ namespace oar
                 {
                     value = compare(*condition, *number, source, *scope);
                 }
-                else if (name == "IsCombatState")
+                else if (name == "IsCombatState" || name == "IsMovementDirection")
                 {
-                    // The numeric component holds the REQUESTED state, not the actor's state; the
-                    // standing preview is out of combat, so only state 0 answers true. The panel
-                    // clears Smooth's combat markers and projects combat state to zero, which is
-                    // the same contract. IsMovementDirection is answered by standing_predicate
-                    // instead - its component carries a direction, never the actor's motion.
                     const auto* const numeric = component<::Conditions::INumericConditionComponent>(*condition);
                     if (!numeric)
                     {
@@ -435,7 +456,8 @@ namespace oar
                     }
                     else
                     {
-                        value = std::trunc(numeric->GetNumericValue(source)) == 0.0f;
+                        const float requested = numeric->GetNumericValue(source);
+                        value = name == "IsMovementDirection" ? standing_movement_direction(requested) : std::trunc(requested) == 0.0f;
                     }
                 }
                 else if (name == "HasGraphVariable")
@@ -461,7 +483,10 @@ namespace oar
             if (value)
             {
                 if (name == "IsMovementDirection" && QueryFrame::current)
+                {
                     QueryFrame::current->movement_answered = true;
+                    QueryFrame::current->candidate_movement_answered = true;
+                }
                 const bool projected_value = finish_predicate(*value, false, condition->IsNegated());
                 // The engine's own answer for the SAME evaluation is the only direct measure of
                 // "this projection changed an input OAR decides on"; asking it costs one call.
@@ -472,10 +497,19 @@ namespace oar
                     differs = s_evaluate(condition, source, clip, submod) != projected_value;
                 }
                 scope->note_override(name, differs);
+                if (!projected_value && QueryFrame::current && QueryFrame::current->native_false_logged < 12 && animation::detailed_animation_trace() &&
+                    QueryFrame::current->first_false.empty())
+                    QueryFrame::current->first_false = condition_diagnostic(*condition, "observed false projected leaf; may be an OR arm");
                 return projected_value;
             }
             if (projected || forwards_source(name))
-                return s_evaluate(condition, source, clip, submod);
+            {
+                const bool result = s_evaluate(condition, source, clip, submod);
+                if (!result && QueryFrame::current && QueryFrame::current->native_false_logged < 12 &&
+                    animation::detailed_animation_trace() && QueryFrame::current->first_false.empty())
+                    QueryFrame::current->first_false = condition_diagnostic(*condition, "observed false native leaf; may be an OR arm");
+                return result;
+            }
             scope->reject(condition_diagnostic(*condition, "unsupported preview condition"));
             return false;
         }
@@ -527,7 +561,7 @@ namespace oar
             return 0.0f;
         }
 
-        bool audit(Condition const& condition, ScopedEvaluation& scope, unsigned depth = 0)
+        bool audit(Condition const& condition, ScopedEvaluation& scope, RE::TESObjectREFR* source, unsigned depth = 0)
         {
             if (depth > 64)
             {
@@ -539,8 +573,7 @@ namespace oar
             const RE::BSString provider = condition.GetRequiredPluginName();
             if (provider.c_str() && *provider.c_str())
             {
-                const std::string_view reason = ied_condition_rejection(condition, ied_provider_version(),
-                    scope.state().hand_override.has_value());
+                const std::string_view reason = ied_rejection(condition, scope, source);
                 if (!reason.empty())
                     scope.reject(condition_diagnostic(condition, reason));
                 return reason.empty();
@@ -568,7 +601,7 @@ namespace oar
                     {
                         if (!child)
                             scope.reject("null condition in preview tree");
-                        return child && audit(*child, scope, depth + 1)
+                        return child && audit(*child, scope, source, depth + 1)
                             ? RE::BSVisit::BSVisitControl::kContinue : RE::BSVisit::BSVisitControl::kStop;
                     });
                     if (!scope.supported())
@@ -723,7 +756,7 @@ namespace oar
                 }
                 for (Condition const* condition : entries)
                 {
-                    if (!condition || !audit(*condition, candidate))
+                    if (!condition || !audit(*condition, candidate, source))
                     {
                         result = false;
                         break;
@@ -767,6 +800,9 @@ namespace oar
                 return s_evaluate_replacement(replacement, source, clip);
             query->candidate_rejection.clear();
             query->root_false.clear();
+            query->first_false.clear();
+            query->candidate_movement_seen = false;
+            query->candidate_movement_answered = false;
             const auto rejected = [&](std::string_view reason, bool unsupported)
             {
                 if (animation::detailed_animation_trace())
@@ -789,11 +825,12 @@ namespace oar
                     {
                         query->rejection_signatures.push_back(signature);
                         if (unsupported) ++query->candidate_logged; else ++query->native_false_logged;
-                        logger::info("OAR QUERY actor={:08x} request={} clip-key={:016x} base={} rejection={} rejected-candidate='{}' reason='{}' root-false='{}'",
+                        logger::info("OAR QUERY actor={:08x} request={} clip-key={:016x} base={} rejection={} rejected-candidate='{}' reason='{}' root-false='{}' first-false='{}' movement-seen={} movement-answered={}",
                             source->GetFormID(), query->diagnostic_request, query->key, query->output.base_index,
                             unsupported ? "unsupported-or-metadata" : "native-false",
                             path, reason,
-                            unsupported ? "not-a-native-false" : query->root_false.empty() ? "unobserved; native eligibility/other cause unknown" : query->root_false);
+                            unsupported ? "not-a-native-false" : query->root_false.empty() ? "unobserved; native eligibility/other cause unknown" : query->root_false,
+                            query->first_false, query->candidate_movement_seen ? "yes" : "no", query->candidate_movement_answered ? "yes" : "no");
                     }
                 }
                 return false;
@@ -949,12 +986,22 @@ namespace oar
         QueryRequest const& request)
     {
         AnimationSelection result;
+        bool movement_seen = false;
+        bool movement_answered = false;
+        const auto report_movement = [&]
+        {
+            if (animation::detailed_animation_trace())
+                logger::info("OAR COND actor={:08x} request={} clip-key={:016x} base={} movement-seen={} movement-answered={}",
+                    source.GetFormID(), request.diagnostic_request, result.clip_key, result.base_index,
+                    movement_seen ? "yes" : "no", movement_answered ? "yes" : "no");
+        };
         for (auto const& [name, value] : state.graph_variables)
         {
             (void)name;
             if (!std::isfinite(value))
             {
                 result.diagnostic = "preview graph values must be finite";
+                report_movement();
                 return result;
             }
         }
@@ -962,6 +1009,7 @@ namespace oar
         if (!wanted)
         {
             result.diagnostic = "character string data unavailable";
+            report_movement();
             return result;
         }
         const auto decide = [&](void const* project)
@@ -1021,10 +1069,8 @@ namespace oar
                     source.GetFormID(), request.diagnostic_request, result.clip_key, result.base_index,
                     frame.candidate_rejections > frame.candidate_logged ? frame.candidate_rejections - frame.candidate_logged : 0,
                     frame.native_false_rejections > frame.native_false_logged ? frame.native_false_rejections - frame.native_false_logged : 0);
-            if (animation::detailed_animation_trace() && frame.movement_seen)
-                logger::info("OAR COND actor={:08x} request={} clip-key={:016x} base={} movement-direction=seen answered={}",
-                    source.GetFormID(), request.diagnostic_request, result.clip_key, result.base_index,
-                    frame.movement_answered ? "yes" : "no");
+            movement_seen = frame.movement_seen;
+            movement_answered = frame.movement_answered;
         };
         if (query_supported())
         {
@@ -1047,6 +1093,7 @@ namespace oar
         {
             decide(nullptr);
         }
+        report_movement();
         return result;
     }
 
@@ -1198,7 +1245,7 @@ namespace oar
         }
         ScopedEvaluation scope(&source, &preview_clip, state);
         Frame frame(&source, &preview_clip);
-        const bool matched = audit(condition, scope) && condition.Evaluate(&source, &preview_clip, parent_submod);
+        const bool matched = audit(condition, scope, &source) && condition.Evaluate(&source, &preview_clip, parent_submod);
         return { matched && scope.supported(), scope.supported(), scope.overrides(), scope.diagnostic() };
     }
 }

@@ -15,6 +15,7 @@ namespace animation
     struct SourceObservation
     {
         bool left_primary = false;
+        bool left_torch = false;
         animation::WeaponForm form = animation::WeaponForm::kNone;
         std::array<std::uint32_t, 2> hands{};
         std::uint64_t request_generation = 0;

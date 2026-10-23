@@ -26,14 +26,10 @@
   (RaySense cover animations) used to consume the budget before a later folder's reason appeared,
   which is why the first correlated log could not explain the wrong equip clip.
 - Key those rejection details by OAR project folder as well as cause (forty-eight rows), and add one
-  `OAR COND … movement-direction=seen answered=…` row per query: the r2 log showed every transition
+  `OAR COND … movement-seen=yes|no movement-answered=yes|no` row per query: the r2 log showed every transition
   still selecting the same clips, so the next session has to distinguish a condition that was
   answered by the standing predicate from one the hook never saw.
-- Answer `IsMovementDirection` as a standing predicate: OAR's numeric component carries the
-  requested direction, not the actor's motion, so the old read answered true for direction 0 and
-  made Smooth's `NOT IsMovementDirection(0)` arm permanently false. Standing figures now answer
-  false for every direction, which reaches the `Non-Combat Equip/Unequip Base` variants the world
-  plays while the weapon is sheathed. `IsCombatState` keeps its requested-state read.
+- Correct standing `IsMovementDirection` semantics: direction 0 means None and answers true; other directions answer false, with negation applied once. Preserve authored Smooth gates and combat-state behavior.
 - Report world mappings through OAR's current-clip API and accepted panel mappings by final binding
   index, removing logging-only full-table reverse scans and all-candidate copies.
 - Buffer ordinary information logs with periodic flushing and keep verbose animation/geometry
@@ -41,9 +37,7 @@
 - Keep unfamiliar IED-provider conditions on their native answer instead of excluding the
   candidates: they read the source actor's own equipment and placement like the engine
   predicates the preview already forwards, and shield/placement packs branch on several.
-- Make the torch its own stance even beside a one-handed weapon and query the world's TOR_Idle
-  route; an equipment transition follows whichever hand changed, so a weapon's draw/sheathe
-  move is no longer swallowed while the torch keeps the standing form.
+- Keep torch-only idles on TOR_Idle and combine a right one-handed weapon body idle with an independently selected left torch arm pose. Torch-only equipment changes do not replay the right weapon draw/sheathe move.
 - Answer Smooth non-combat preparation readiness by the engine's own question (on markers
   present) instead of also demanding a keyword-free field, because the off markers carry the
   same dispel keyword as their on counterparts; failed preparations log which markers are
@@ -70,10 +64,8 @@
 
 ### Fixed
 
-- Fix in-inventory shield, axe and bow/crossbow equip/unequip showing a combat-variant clip (or
-  another pack's clip) while the world plays the sheathed `Non-Combat` variant: the standing
-  `IsMovementDirection` answer was always true, so every non-combat transition branch was rejected
-  during a transition (reported 2026-10-22; the axe symptom was the equip clip's own root motion).
+- Fix preview equipment-removal context and combine one-handed weapon idles with a torch arm layer; improve bounded animation diagnosis.
+- Preserve typed transitions across effect refresh and admit only proven historical IED dependencies. Remaining Smooth selection, axe flash and bow/crossbow visuals require game verification.
 - Fix torch preview candidates being rejected solely for the core current-weather flag condition,
   preserving OAR's native weather answer and negation.
 - Fix left-shield removal with a retained right weapon selecting Equip instead of Unequip; retain

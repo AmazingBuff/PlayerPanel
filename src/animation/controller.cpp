@@ -335,11 +335,14 @@ namespace
         std::unique_ptr<LoadedAsset> asset;
         std::unique_ptr<LoadedAsset> standing;
         std::unique_ptr<LoadedAsset> calibration;
+        std::unique_ptr<LoadedAsset> torch;
+        std::optional<oar::AnimationSelection> torch_clip;
+        double torch_seconds = 0.0;
         SelectionState history;
         oar::ConditionRandomState conditions;
         ChoiceReason reason = ChoiceReason::e_request;
         bool direct = false;
-        std::optional<oar::PreviewState> shield_transition_preview;
+        std::optional<oar::PreviewState> transition_preview;
     };
 }
 
@@ -379,6 +382,8 @@ public:
     PoseTraceBudget pose_budget;
     std::string_view pose_profile;
     bool trace_torch_request = false;
+    bool trace_axe_request = false;
+    bool trace_shield_request = false;
     std::uint64_t pose_probe_epoch = 0;
     std::uint32_t pose_probe_wraps = 0;
     MappingPublication mapping_publication;
@@ -424,14 +429,14 @@ public:
         pose_profile = {};
         if (!detailed_animation_trace() || !active || !active->asset->ready()) return;
         const WeaponForm form = active->stage.action.form;
-        if (form == WeaponForm::kTwoHandedAxe) pose_profile = "axe";
+        if (trace_axe_request || form == WeaponForm::kTwoHandedAxe) pose_profile = "axe";
         else if (form == WeaponForm::kTorch || form == WeaponForm::kShield || form == WeaponForm::kBow || form == WeaponForm::kCrossbow)
             pose_profile = weapon_form_name(form);
         else if (form == WeaponForm::kOneHanded)
         {
             RE::TESObjectARMO const* const shield = observed.hands[1] ? RE::TESForm::LookupByID<RE::TESObjectARMO>(observed.hands[1]) : nullptr;
             if (trace_torch_request) pose_profile = "torch-arms";
-            else if (active->shield_transition_preview || (shield && shield->IsShield())) pose_profile = "shield-arms";
+            else if (trace_shield_request || (shield && shield->IsShield())) pose_profile = "shield-arms";
         }
         if (pose_profile.empty()) return;
         if (!pose_budget.arm(generation)) { pose_profile = {}; trace_probe_limit(); return; }
@@ -470,6 +475,19 @@ public:
         const std::optional<std::size_t> slot = pose_budget.sample(elapsed);
         if (!slot) { if (elapsed > 4.1) pose_profile = {}; trace_probe_limit(); return; }
         const std::size_t sample = *slot;
+        const auto trace_scale = [&](LoadedAsset const& asset, double seconds, bool loop, std::string_view role)
+        {
+            std::vector<SampledScale> scales;
+            (void)sample_animation_clip(asset.playback(), static_cast<float>(seconds), loop, &scales);
+            for (SampledScale const& raw : scales)
+                if (raw.track <= 4 || raw.track == 43 || std::ranges::find(Trace_Body_Nodes, raw.name) != Trace_Body_Nodes.end())
+                    logger::info("POSE SCALE actor={:08x} request={} probe={} sample={} role={} path='{}' track={} node='{}' raw-xyz=({:.6f},{:.6f},{:.6f}) conversion=scale-x",
+                        actor_id, generation, pose_probe_epoch, sample, role, asset.playback().name, raw.track, raw.name,
+                        raw.xyz[0], raw.xyz[1], raw.xyz[2]);
+        };
+        trace_scale(*active->asset, clock.seconds(), active->stage.action.loop, "body");
+        if (active->torch && active->torch->ready()) trace_scale(*active->torch, active->torch_seconds, true, "torch-arm");
+        if (outgoing && outgoing->asset->ready()) trace_scale(*outgoing->asset, outgoing_seconds, outgoing->stage.action.loop, "outgoing-body");
         const double weight = outgoing ? std::min(blend_seconds / blend_duration, 1.0) : 1.0;
         logger::info("POSE SAMPLE actor={:08x} request={} accepted-request={} probe={} profile={} sample={} graph={} elapsed-wall={:.4f} clip-time={:.4f} loop={} wraps={} path='{}' outgoing='{}' outgoing-time={:.4f} blend-time={:.4f} blend-duration={:.4f} incoming-weight={:.4f}",
             actor_id, generation, active->generation, pose_probe_epoch, pose_profile, sample, static_cast<void*>(root), elapsed, clock.seconds(),
@@ -528,12 +546,14 @@ public:
         std::swap(query.conditions, proposal.conditions);
         if (activation) proposal.history.activate(result.clip_key);
         // An interrupt checks replacement eligibility, not the next member of an accepted sequence.
-        if (active && (proposal.reason == ChoiceReason::e_interrupt || proposal.reason == ChoiceReason::e_refresh) &&
-            result.replacement_key == active->stage.clip.replacement_key && result.base_index == active->stage.clip.base_index)
+        const oar::AnimationSelection* const accepted = !active ? nullptr : channel == 3 ?
+            (active->torch_clip ? &*active->torch_clip : nullptr) : &active->stage.clip;
+        if (accepted && (proposal.reason == ChoiceReason::e_interrupt || proposal.reason == ChoiceReason::e_refresh) &&
+            result.replacement_key == accepted->replacement_key && result.base_index == accepted->base_index)
         {
-            result.variant = active->stage.clip.variant;
-            result.index = active->stage.clip.index;
-            result.name = active->stage.clip.name;
+            result.variant = accepted->variant;
+            result.index = accepted->index;
+            result.name = accepted->name;
         }
         else if (result.variants)
         {
@@ -561,7 +581,7 @@ public:
 
     void queue(RE::Actor& source, std::vector<std::string_view> bases, ActionPrototype action,
         oar::PreviewState preview, ChoiceReason reason, bool direct = false,
-        bool activation = false, Proposal* reusable = nullptr, bool shield_transition = false)
+        bool activation = false, Proposal* reusable = nullptr)
     {
         auto proposal = std::make_unique<Proposal>();
         proposal->generation = generation;
@@ -571,7 +591,8 @@ public:
         if (activation) proposal->conditions.reset();
         proposal->reason = reason;
         proposal->direct = direct;
-        if (shield_transition) proposal->shield_transition_preview = preview;
+        if (action.kind == ActionKind::e_equip || action.kind == ActionKind::e_unequip)
+            proposal->transition_preview = preview;
         if (detailed_animation_trace())
         {
             const RE::TESForm* const right = source.GetEquippedObject(false);
@@ -644,9 +665,24 @@ public:
             return;
         }
         proposal->stage = { action, selected };
+        if (observed.left_torch && action.form == WeaponForm::kOneHanded)
+        {
+            oar::AnimationSelection torch = select(source, panel_torch_arm_bases(), preview_state(true), *proposal, 3, activation);
+            if (torch.found) proposal->torch_clip = std::move(torch);
+            else logger::warn("ANIMATION TORCH actor={:08x} request={} outcome=body-only reason=arm-base-unavailable diagnostic='{}'",
+                actor_id, generation, torch.diagnostic);
+        }
+        const auto same_torch = [](Proposal const& first, Proposal const& second)
+        {
+            if (first.torch_clip.has_value() != second.torch_clip.has_value()) return false;
+            return !first.torch_clip || (first.torch_clip->index == second.torch_clip->index &&
+                first.torch_clip->replacement_key == second.torch_clip->replacement_key);
+        };
         trace_decision("pending-choice", choice_reason_name(reason), proposal.get());
-        if (active && reason != ChoiceReason::e_request && active->stage.action.kind == action.kind && active->direct == direct &&
-            selected.index == active->stage.clip.index && selected.replacement_key == active->stage.clip.replacement_key)
+        if (active && active->asset->ready() && active->standing->ready() &&
+            (!active->torch_clip || (active->torch && active->torch->ready())) &&
+            reason != ChoiceReason::e_request && active->stage.action.kind == action.kind && active->direct == direct &&
+            selected.index == active->stage.clip.index && selected.replacement_key == active->stage.clip.replacement_key && same_torch(*active, *proposal))
         {
             // Reaching a boundary accepts native history even when the next member is identical;
             // an interrupt against the same replacement leaves accepted history untouched.
@@ -662,9 +698,15 @@ public:
                 variants = std::move(proposal->history);
                 query.conditions = std::move(proposal->conditions);
                 if (selected.variants) variants.commit(*selected.variants, selected.variant, selected.clip_key);
+                if (proposal->torch_clip && proposal->torch_clip->variants)
+                    variants.commit(*proposal->torch_clip->variants, proposal->torch_clip->variant, proposal->torch_clip->clip_key);
                 active->stage.clip = std::move(selected);
             }
             active->generation = generation;
+            active->effect_revision = proposal->effect_revision;
+            active->transition_preview = std::move(proposal->transition_preview);
+            active->torch_clip = std::move(proposal->torch_clip);
+            if (active->torch && active->torch_clip) active->torch->refresh_selection(*active->torch_clip);
             idle_due = false;
             pending.reset();
             trace_decision("accepted-same-asset", choice_reason_name(reason), active.get());
@@ -678,6 +720,14 @@ public:
             proposal->asset->refresh_selection(selected);
             proposal->standing = std::move(reusable->standing);
             proposal->calibration = std::move(reusable->calibration);
+            if (same_torch(*reusable, *proposal))
+            {
+                proposal->torch = std::move(reusable->torch);
+                proposal->torch_seconds = reusable->torch_seconds;
+                if (proposal->torch && proposal->torch_clip) proposal->torch->refresh_selection(*proposal->torch_clip);
+            }
+            else if (proposal->torch_clip)
+                proposal->torch = std::make_unique<LoadedAsset>(graph, *proposal->torch_clip, true, false, generation, std::nullopt, "torch-arm");
             pending = std::move(proposal);
             trace_decision("reuse-pending-load", choice_reason_name(reason), pending.get());
             return;
@@ -694,6 +744,11 @@ public:
         proposal->asset = std::make_unique<LoadedAsset>(graph, selected, action.loop,
             action.kind == ActionKind::e_standing_idle, generation,
             target.empty() && !direct ? std::optional<oar::AnimationSelection>(standard) : std::nullopt);
+        if (proposal->torch_clip)
+        {
+            proposal->torch = std::make_unique<LoadedAsset>(graph, *proposal->torch_clip, true, false, generation, std::nullopt, "torch-arm");
+            if (active && same_torch(*active, *proposal)) proposal->torch_seconds = active->torch_seconds;
+        }
         if (detailed_animation_trace())
             logger::info("ANIMATION actor={:08x} request={} proposal state={} choice={} base='{}' path='{}' index={} first-query-rejection='{}'",
                 actor_id, generation, session->revision(), static_cast<int>(reason), selected.base_name, selected.name, selected.index, selected.diagnostic);
@@ -779,7 +834,17 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     state.source_handle = source.GetHandle();
     state.generation = observation.request_generation;
     state.pose_budget.request(state.generation);
-    state.trace_torch_request = target.form == WeaponForm::kTorch || previous_form == WeaponForm::kTorch;
+    state.trace_torch_request = observation.left_torch || state.observed.left_torch ||
+        target.form == WeaponForm::kTorch || previous_form == WeaponForm::kTorch;
+    const auto is_axe = [](RE::FormID id)
+    {
+        RE::TESObjectWEAP const* const weapon = id ? RE::TESForm::LookupByID<RE::TESObjectWEAP>(id) : nullptr;
+        return weapon && (weapon->GetWeaponType() == RE::WEAPON_TYPE::kOneHandAxe ||
+            weapon->GetWeaponType() == RE::WEAPON_TYPE::kTwoHandAxe);
+    };
+    state.trace_axe_request = is_axe(observation.hands[0]) || is_axe(observation.hands[1]) ||
+        is_axe(previous_hands[0]) || is_axe(previous_hands[1]);
+    state.trace_shield_request = false;
     state.source_generation = observation.source_graph_generation;
     state.observed = observation;
     state.target = target;
@@ -801,7 +866,10 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     // Panel-open forces the observed loop phase; an equipment change must NOT, or the equip
     // clip's own Start markers (cast by its annotations) are overwritten by loop markers before
     // the Start member can be selected, which skips the world's Equip -> Start -> Loop order.
-    if (!target.direct && !state.base_fallback && observation.reason != "equipment")
+    const bool transition_in_progress = !equipment_changed &&
+        ((state.pending && state.pending->transition_preview) ||
+            (state.active && state.active->transition_preview && !state.clock.finished()));
+    if (!target.direct && !state.base_fallback && observation.reason != "equipment" && !transition_in_progress)
         session.prepare_idle(state.generation, !equipment_changed && !new_lifetime);
     if (!equipment_changed && state.active) state.active->generation = state.generation;
     std::unique_ptr<Proposal> loading = std::move(state.pending);
@@ -825,12 +893,9 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
             shield_transition = left_shield_transition(previous_hands, observation.hands,
                 is_shield(previous_hands[1]), is_shield(observation.hands[1]));
             if (shield_transition) unequip = shield_transition->kind == ActionKind::e_unequip;
+            state.trace_shield_request = shield_transition.has_value();
         }
-        // A torch beside a weapon must not swallow the weapon hand's draw/sheathe move: the
-        // standing form stays torch, so the transition follows whichever hand changed instead
-        // (a torch change itself has no move). Shield-only and left-hand gear fall through the
-        // same read, which keeps their one-handed equip move.
-        if (form == WeaponForm::kTorch)
+        if (state.trace_torch_request)
         {
             const auto kind_of = [](RE::FormID a_id) -> WeaponForm
             {
@@ -859,8 +924,12 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
             for (std::size_t hand = 0; hand < 2; ++hand)
             {
                 if (previous_hands[hand] == observation.hands[hand]) continue;
-                if (observation.hands[hand]) changed_form = kind_of(observation.hands[hand]);
-                else { changed_form = kind_of(previous_hands[hand]); changed_unequip = true; }
+                const WeaponForm current = kind_of(observation.hands[hand]);
+                const WeaponForm previous = kind_of(previous_hands[hand]);
+                if (current == WeaponForm::kTorch && (previous == WeaponForm::kNone || previous == WeaponForm::kTorch)) continue;
+                if (previous == WeaponForm::kTorch && current == WeaponForm::kNone) continue;
+                if (current != WeaponForm::kNone && current != WeaponForm::kTorch) changed_form = current;
+                else { changed_form = previous; changed_unequip = true; }
             }
             form = changed_form == WeaponForm::kTorch ? WeaponForm::kNone : changed_form;
             if (form != WeaponForm::kNone) unequip = changed_unequip;
@@ -869,18 +938,26 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
         if (!bases.empty() && oar::base_animation(state.graph->characterInstance, bases))
         {
             oar::PreviewState preview = preview_state(!unequip);
-            if (shield_transition) preview.hand_override = shield_transition->hand_override;
+            preview.hand_override = transition_hands(unequip ? ActionKind::e_unequip : ActionKind::e_equip, previous_hands);
             logger::info("ANIMATION actor={:08x} request={} transition={} form={} query-hands={} previous=({:08x},{:08x}) current=({:08x},{:08x})",
                 state.actor_id, state.generation, unequip ? "unequip" : "equip", weapon_form_name(form),
                 preview.hand_override ? "previous" : "current", previous_hands[0], previous_hands[1], observation.hands[0], observation.hands[1]);
             state.queue(source, bases, { unequip ? ActionKind::e_unequip : ActionKind::e_equip, form, false },
-                std::move(preview), ChoiceReason::e_request, false, false, loading.get(), shield_transition.has_value());
+                std::move(preview), ChoiceReason::e_request, false, false, loading.get());
             return;
         }
         logger::warn("ANIMATION actor={:08x} request={} transition base unavailable form={}; idle only", state.actor_id,
             state.generation, weapon_form_name(form));
     }
-    state.queue_idle(source, equipment_changed ? ChoiceReason::e_request : ChoiceReason::e_refresh, loading.get());
+    Proposal* const retained_transition = loading && loading->transition_preview ? loading.get() :
+        state.active && state.active->transition_preview && !state.clock.finished() ? state.active.get() : nullptr;
+    if (!equipment_changed && retained_transition)
+    {
+        const ActionPrototype action = retained_transition->stage.action;
+        state.queue(source, panel_transition_bases(action.form, action.kind == ActionKind::e_unequip), action,
+            *retained_transition->transition_preview, ChoiceReason::e_refresh, retained_transition->direct, false, loading.get());
+    }
+    else state.queue_idle(source, equipment_changed ? ChoiceReason::e_request : ChoiceReason::e_refresh, loading.get());
     if (state.waiting_goal) state.pending = std::move(loading);
 }
 
@@ -901,6 +978,7 @@ void AnimationController::retarget(RE::NiAVObject& root)
             proposal->standing->rebind(root, state.generation);
             if (proposal->calibration) proposal->calibration->rebind(root, state.generation);
             proposal->asset->rebind(root, state.generation);
+            if (proposal->torch) proposal->torch->rebind(root, state.generation);
         }
     state.last_tick = std::chrono::steady_clock::now();
     logger::info("ANIMATION actor={:08x} request={} graph retarget={} time={:.2f}", state.actor_id,
@@ -952,10 +1030,10 @@ void AnimationController::poll()
                 state.pending->effect_revision, state.observed_effect_revision, current_effect_revision);
         // Rebuild the exact typed intent against the new snapshot; accepted playback continues.
         std::unique_ptr<Proposal> old = std::move(state.pending);
-        state.trace_decision("refresh-pending", old->shield_transition_preview ? "effect-revision-retain-shield-intent" : "effect-revision-requery-idle", old.get());
-        if (old->shield_transition_preview)
+        state.trace_decision("refresh-pending", old->transition_preview ? "effect-revision-retain-transition-intent" : "effect-revision-requery-idle", old.get());
+        if (old->transition_preview)
             state.queue(*source, panel_transition_bases(old->stage.action.form, old->stage.action.kind == ActionKind::e_unequip),
-                old->stage.action, *old->shield_transition_preview, old->reason, old->direct, false, old.get(), true);
+                old->stage.action, *old->transition_preview, old->reason, old->direct, false, old.get());
         else state.queue_idle(*source, old->reason, old.get());
         return;
     }
@@ -963,6 +1041,19 @@ void AnimationController::poll()
     proposal.standing->poll(*state.root);
     if (proposal.calibration) proposal.calibration->poll(*state.root);
     proposal.asset->poll(*state.root);
+    if (proposal.torch)
+    {
+        proposal.torch->poll(*state.root);
+        if (proposal.torch->failed())
+        {
+            logger::warn("ANIMATION TORCH actor={:08x} request={} outcome=body-only reason=arm-load-failed path='{}'",
+                state.actor_id, state.generation, proposal.torch->selection().name);
+            proposal.torch.reset();
+            proposal.torch_clip.reset();
+        }
+        else if (!proposal.torch->ready()) return;
+        else proposal.torch_clip = proposal.torch->selection();
+    }
     if (proposal.standing->failed() || proposal.asset->failed())
     {
         state.trace_decision("cancel-pending", "target-or-standing-load-failed", state.pending.get());
@@ -995,10 +1086,21 @@ void AnimationController::poll()
     state.outgoing_seconds = state.clock.seconds();
     state.outgoing = std::move(state.active);
     state.active = std::move(state.pending);
+    const bool retain_body_clock = state.outgoing && state.active->stage.action.loop && state.outgoing->stage.action.loop &&
+        state.active->stage.action.kind == state.outgoing->stage.action.kind &&
+        state.active->stage.clip.index == state.outgoing->stage.clip.index &&
+        state.active->stage.clip.replacement_key == state.outgoing->stage.clip.replacement_key &&
+        (state.active->torch_clip.has_value() || state.outgoing->torch_clip.has_value());
+    if (state.outgoing && state.active->torch_clip && state.outgoing->torch_clip &&
+        state.active->torch_clip->index == state.outgoing->torch_clip->index &&
+        state.active->torch_clip->replacement_key == state.outgoing->torch_clip->replacement_key)
+        state.active->torch_seconds = state.outgoing->torch_seconds;
     state.variants = std::move(state.active->history);
     state.query.conditions = std::move(state.active->conditions);
     const auto& selection = state.active->stage.clip;
     if (selection.variants) state.variants.commit(*selection.variants, selection.variant, selection.clip_key);
+    if (state.active->torch_clip && state.active->torch_clip->variants)
+        state.variants.commit(*state.active->torch_clip->variants, state.active->torch_clip->variant, state.active->torch_clip->clip_key);
     const ClipPlayback& clip = state.active->asset->playback();
     auto annotations = clip_annotations(*clip.animation);
     state.handoff_seconds = std::max(static_cast<double>(clip.duration), 0.05) * 0.5;
@@ -1010,13 +1112,17 @@ void AnimationController::poll()
             handoff_source = annotation.event == "weaponDraw" ? "weaponDraw" : "weaponSheathe";
             break;
         }
-    state.clock.start(std::move(annotations), std::max(static_cast<double>(clip.duration), 0.05),
-        0.0, false);
+    if (!retain_body_clock)
+        state.clock.start(std::move(annotations), std::max(static_cast<double>(clip.duration), 0.05), 0.0, false);
     state.blend_seconds = 0.0;
     state.idle_due = false;
     state.last_tick = std::chrono::steady_clock::now();
     if (state.blend_duration == 0.0) state.outgoing.reset();
     state.trace_decision("accepted-handover", choice_reason_name(state.active->reason), state.active.get());
+    if (state.active->torch_clip)
+        logger::info("ANIMATION TORCH actor={:08x} request={} outcome=composed body='{}' arm='{}' index={} mask=left-arm time={:.3f}",
+            state.actor_id, state.generation, state.active->stage.clip.name, state.active->torch_clip->name,
+            state.active->torch_clip->index, state.active->torch_seconds);
     if (detailed_animation_trace())
         logger::info("ANIMATION HANDOFF actor={:08x} request={} accepted-request={} action={} index={} path='{}' handoff-seconds={:.4f} source={} duration={:.4f}",
             state.actor_id, state.generation, state.active->generation, action_name(state.active->stage.action.kind), selection.index,
@@ -1025,7 +1131,11 @@ void AnimationController::poll()
     state.begin_pose_probe("handover");
 }
 
-bool AnimationController::ready() const { return m_state->active && m_state->active->asset->ready(); }
+bool AnimationController::ready() const
+{
+    return m_state->active && m_state->active->asset->ready() && m_state->active->standing->ready() &&
+        (!m_state->active->torch || m_state->active->torch->ready());
+}
 std::uint64_t AnimationController::diagnostic_accepted_request() const { return m_state->active ? m_state->active->generation : 0; }
 std::string AnimationController::name() const { return ready() ? m_state->active->stage.clip.name : "animation-loading"; }
 
@@ -1091,12 +1201,28 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
     compose_contributor(state.pose, std::span(base), BoneMask::e_full_body);
     const PoseBuffer current = sample_animation_clip(state.active->asset->playback(), static_cast<float>(state.clock.seconds()), state.active->stage.action.loop);
     compose_contributor(state.pose, std::span(current), BoneMask::e_full_body);
+    state.active->torch_seconds += delta;
+    if (state.active->torch && state.active->torch->ready())
+    {
+        const PoseBuffer arm = sample_animation_clip(state.active->torch->playback(), static_cast<float>(state.active->torch_seconds), true);
+        compose_contributor(state.pose, std::span(arm), BoneMask::e_left_arm);
+    }
     if (state.outgoing)
     {
         state.outgoing_seconds += delta;
         state.blend_seconds += delta;
         const float weight = static_cast<float>(std::min(state.blend_seconds / state.blend_duration, 1.0));
-        const PoseBuffer before = sample_animation_clip(state.outgoing->asset->playback(), static_cast<float>(state.outgoing_seconds), state.outgoing->stage.action.loop);
+        std::unordered_map<std::string, RE::NiTransform> before;
+        const PoseBuffer previous_base = sample_animation_clip(state.outgoing->standing->playback(), static_cast<float>(state.base_seconds), true);
+        compose_contributor(before, std::span(previous_base), BoneMask::e_full_body);
+        const PoseBuffer previous_body = sample_animation_clip(state.outgoing->asset->playback(), static_cast<float>(state.outgoing_seconds), state.outgoing->stage.action.loop);
+        compose_contributor(before, std::span(previous_body), BoneMask::e_full_body);
+        state.outgoing->torch_seconds += delta;
+        if (state.outgoing->torch && state.outgoing->torch->ready())
+        {
+            const PoseBuffer arm = sample_animation_clip(state.outgoing->torch->playback(), static_cast<float>(state.outgoing->torch_seconds), true);
+            compose_contributor(before, std::span(arm), BoneMask::e_left_arm);
+        }
         for (auto const& [name, local] : before)
             if (auto incoming = state.pose.find(name); incoming != state.pose.end()) incoming->second = blend_panel_pose(local, incoming->second, weight);
         if (weight >= 1.0f) state.outgoing.reset();

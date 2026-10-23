@@ -41,6 +41,11 @@ namespace animation
         ActionKind kind;
         std::optional<std::array<std::uint32_t, 2>> hand_override;
     };
+    [[nodiscard]] inline std::optional<std::array<std::uint32_t, 2>> transition_hands(
+        ActionKind kind, std::array<std::uint32_t, 2> const& previous)
+    {
+        return kind == ActionKind::e_unequip ? std::optional(previous) : std::nullopt;
+    }
     [[nodiscard]] inline std::optional<ShieldTransition> left_shield_transition(
         std::array<std::uint32_t, 2> const& previous, std::array<std::uint32_t, 2> const& current,
         bool previous_left_shield, bool current_left_shield)

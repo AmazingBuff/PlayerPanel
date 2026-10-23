@@ -48,7 +48,7 @@ namespace animation
     // The panel's standing figure answers with the form the two hands carry: a two-handed weapon or
     // a bow occupies both hands (the engine reports it in whichever entry it last touched, so both
     // are read), two one-handed weapons are the dual stance, a torch in either hand is its own
-    // stance (the world's standing idles branch on it while sheathed, so the panel must too), and
+    // stance, except a right one-handed weapon with a left torch composes a separate arm pose, and
     // a lone one-handed weapon with a shield or spell in the other hand is still the one-handed
     // stance.
     enum class HandKind : std::uint8_t
@@ -77,6 +77,8 @@ namespace animation
             return WeaponForm::kTwoHanded;
         if (a_right == HandKind::kStaff || a_left == HandKind::kStaff)
             return WeaponForm::kStaff;
+        if (a_right == HandKind::kOneHandedWeapon && a_left == HandKind::kTorch)
+            return WeaponForm::kOneHanded;
         if (a_right == HandKind::kTorch || a_left == HandKind::kTorch)
             return WeaponForm::kTorch;
         if (a_right == HandKind::kOneHandedWeapon && a_left == HandKind::kOneHandedWeapon)
@@ -162,6 +164,12 @@ namespace animation
     }
 }
 
+[[nodiscard]] inline std::span<std::string_view const> panel_torch_arm_bases()
+{
+    static constexpr std::string_view s_names[]{ "Animations\\Tor_1HMPose.hkx" };
+    return s_names;
+}
+
 [[nodiscard]] inline std::span<std::string_view const> panel_base_animation_names()
 {
     static const std::vector<std::string_view> s_names = []
@@ -179,6 +187,7 @@ namespace animation
             append(panel_transition_bases(form, false));
             append(panel_transition_bases(form, true));
         }
+        for (std::string_view base : panel_torch_arm_bases()) names.push_back(base);
         return names;
     }();
     return s_names;

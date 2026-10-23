@@ -79,11 +79,13 @@ Smooth compatibility: docs/dac.md#smooth-moveset-compatibility-boundary.
 Core non-combat phases use OAR, supported original DAC and the pack's own ESP,
 TOML, HKX/configs with existing Skyrim/SKSE prerequisites. The native IED adapter
 supports IED_GearNodeEquippedPlacementHint, IED_GearNodePlacementHint and
-SDS_IsShieldOnBackEnabled for current source equipment/configuration only, with
+SDS_IsShieldOnBackEnabled for current source equipment/configuration, with
 required condition 1.0.0.0, exact component schemas (three for placement, zero for
 SDS) and provider embedded 1.0.2.0 (supplied archive label 1.0.3).
-Left/right, comparisons, negation and false results stay native. Historical-hand
-queries, unknown schemas/providers and missing/mismatched provider reject; the
+Left/right, comparisons, negation and false results stay native. Historical settings
+and explicit-node predicates are allowed; equipped hints require an unchanged requested
+hand. Changed-hand/unknown historical predicates, unknown checked schemas/providers
+and missing/mismatched providers reject; the
 unsupported-third-party diagnostic remains a query-adapter limit, not missing
 DAC state. Original IED/provider installation is separate; loaded metadata does
 not prove OAR registration. The shield-setting branch needs provider-side SDS

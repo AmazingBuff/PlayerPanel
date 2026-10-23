@@ -125,7 +125,7 @@ namespace
             [&] { return condition.Evaluate(source); },
             [&](std::string_view reason) { diagnostic = reason; });
         assert(!matched && condition.native_reads() == 0);
-        assert(diagnostic == "IED placement does not support historical-hand preview queries");
+        assert(diagnostic == "IED equipped placement hint does not support a changed historical hand");
     }
 }
 

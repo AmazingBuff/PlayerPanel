@@ -11,6 +11,7 @@
 #include "RE/N/NiTransform.h"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -132,7 +133,14 @@ struct ClipPlayback
 };
 
 using PoseBuffer = std::vector<std::pair<std::string, RE::NiTransform>>;
-[[nodiscard]] PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop);
+struct SampledScale
+{
+    std::string name;
+    std::uint16_t track;
+    std::array<float, 3> xyz;
+};
+[[nodiscard]] PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop,
+    std::vector<SampledScale>* raw_scales = nullptr);
 bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
     RE::hkaAnimationBinding* binding, std::string const& name, ClipPlayback& out,
     std::string& mapping, std::string& coverage);

@@ -19,7 +19,8 @@ namespace oar
 
     template <class Condition>
     [[nodiscard]] std::string_view ied_condition_rejection(Condition const& condition,
-        std::optional<uint32_t> provider_version, bool hand_override)
+        std::optional<uint32_t> provider_version, bool hand_override,
+        std::optional<bool> requested_hand_unchanged = std::nullopt)
     {
         const auto provider = condition.GetRequiredPluginName();
         if (!provider.c_str() || Ied_Provider != provider.c_str())
@@ -28,19 +29,12 @@ namespace oar
             return "IED placement provider unavailable";
         if (*provider_version != Ied_Provider_Version)
             return "IED placement provider version mismatch (requires embedded 1.0.2.0)";
-        if (hand_override)
-            return "IED placement does not support historical-hand preview queries";
-
         const auto storage = condition.GetName();
         const std::string_view name = storage.c_str() ? storage.c_str() : "";
         const bool equipped = name == "IED_GearNodeEquippedPlacementHint";
         const bool shield = name == "SDS_IsShieldOnBackEnabled";
-        // Every condition the IED provider registers reads the source actor's own equipment and
-        // IED configuration, exactly like the engine predicates the preview forwards natively, so
-        // an unfamiliar IED condition keeps its native answer instead of being excluded: shield
-        // and placement packs branch on several of them beyond the three schemas audited below.
         if (!equipped && name != "IED_GearNodePlacementHint" && !shield)
-            return {};
+            return hand_override ? "unknown IED condition does not support historical-hand preview queries" : "";
         if (condition.GetRequiredVersion().pack() != Ied_Condition_Version || condition.GetNumComponents() != (shield ? 0u : 3u))
             return "unsupported IED placement condition schema/version";
         if (shield)
@@ -60,14 +54,17 @@ namespace oar
             if (component->GetType() != expected || !component_name.c_str() || expected_name != component_name.c_str())
                 return "unsupported IED placement condition schema/version";
         }
+        if (hand_override && equipped && !requested_hand_unchanged.value_or(false))
+            return "IED equipped placement hint does not support a changed historical hand";
         return {};
     }
 
     template <class Condition, class Native, class Reject>
     [[nodiscard]] bool evaluate_ied_condition(Condition const& condition,
-        std::optional<uint32_t> provider_version, bool hand_override, Native&& native, Reject&& reject)
+        std::optional<uint32_t> provider_version, bool hand_override, Native&& native, Reject&& reject,
+        std::optional<bool> requested_hand_unchanged = std::nullopt)
     {
-        const std::string_view reason = ied_condition_rejection(condition, provider_version, hand_override);
+        const std::string_view reason = ied_condition_rejection(condition, provider_version, hand_override, requested_hand_unchanged);
         if (!reason.empty())
         {
             std::forward<Reject>(reject)(reason);

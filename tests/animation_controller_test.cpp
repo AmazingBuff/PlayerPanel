@@ -52,11 +52,9 @@ void default_equipment_idle_waits_for_native_goal_and_keeps_entry_snapshot()
     assert(panel_idle_bases(animation::WeaponForm::kCrossbow).front() == "Animations\\DLC01\\CrossBow_IdleHeld.hkx");
     assert(panel_idle_bases(animation::WeaponForm::kTorch).front() == "Animations\\TOR_Idle.hkx");
     assert(panel_transition_bases(animation::WeaponForm::kTorch, false).empty());
-    // The torch is its own stance even beside a one-handed weapon: the world's standing graph
-    // routes a held torch to the TOR_Idle clip (the torch-aware packs branch there), so the
-    // panel queries that route instead of the one-handed idles.
+    // A right one-handed weapon retains its body idle beside a separately sampled left torch.
     assert(animation::weapon_form_from_hands(
-        animation::HandKind::kOneHandedWeapon, animation::HandKind::kTorch) == animation::WeaponForm::kTorch);
+        animation::HandKind::kOneHandedWeapon, animation::HandKind::kTorch) == animation::WeaponForm::kOneHanded);
     assert(animation::weapon_form_from_hands(
         animation::HandKind::kTorch, animation::HandKind::kOneHandedWeapon) == animation::WeaponForm::kTorch);
     assert(animation::weapon_form_from_hands(

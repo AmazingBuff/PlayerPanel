@@ -13,24 +13,20 @@ namespace oar
     {
         if (name == "IsWeaponDrawn")
             return state.weapon_drawn;
-        // The preview figure stands still, so every locomotion/state predicate answers false.
-        // IsMovementDirection belongs here: OAR's numeric component carries the REQUESTED
-        // direction ("Direction", normally 0 = forward), not the actor's motion, so reading that
-        // component can never answer "is the actor moving that way". Answering false is also what
-        // the Smooth non-combat branches need - they add
-        // `OR( HasMagicEffect(loop marker), NOT IsMovementDirection(0) )`, and a standing figure
-        // satisfies the negated arm, which is how the panel reaches the Non-Combat Equip/Unequip
-        // variants the world plays while the weapon is sheathed.
         constexpr std::string_view inactive[] = {
             "IsAttacking", "IsRunning", "IsSneaking", "IsSprinting", "IsInAir", "IsInCombat",
             "IsBlocking", "IsOnMount", "IsRiding", "IsRidingHasKeyword", "IsBeingRidden",
             "IsBeingRiddenBy", "IsSwimming", "IsStaggered", "IsTalking", "IsGreetingPlayer",
-            "IsInScene", "IsInSpecifiedScene", "IsDoingFavor", "IsOnStairs", "MOUNT",
-            "IsMovementDirection"
+            "IsInScene", "IsInSpecifiedScene", "IsDoingFavor", "IsOnStairs", "MOUNT"
         };
         if (std::ranges::find(inactive, name) != std::end(inactive))
             return false;
         return std::nullopt;
+    }
+
+    [[nodiscard]] inline bool standing_movement_direction(float requested)
+    {
+        return requested == 0.0f;
     }
 
     [[nodiscard]] inline std::optional<float> standing_value(std::string_view name)

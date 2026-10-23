@@ -302,6 +302,7 @@ void SceneGraph::observe_source(RE::Actor& source)
     observation.hands = equipment_hand_ids(source);
     RE::TESForm const* const right = source.GetEquippedObject(false);
     RE::TESForm const* const left = source.GetEquippedObject(true);
+    observation.left_torch = left && left->Is(RE::FormType::Light);
     const bool right_spell = right && (right->Is(RE::FormType::Spell) || right->Is(RE::FormType::Scroll));
     const bool left_spell = left && (left->Is(RE::FormType::Spell) || left->Is(RE::FormType::Scroll));
     RE::TESObjectWEAP const* const right_weapon = right ? right->As<RE::TESObjectWEAP>() : nullptr;

@@ -117,7 +117,7 @@ namespace
 
 }
 
-PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop)
+PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop, std::vector<SampledScale>* raw_scales)
 {
     if (!clip.valid())
         return {};
@@ -148,6 +148,12 @@ PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool l
         RE::NiAVObject* const node = clip.nodes[i];
         if (!node || static_cast<size_t>(clip.tracks[i]) >= sampled.size())
             continue;
+        if (raw_scales)
+        {
+            alignas(16) float scale[4];
+            _mm_store_ps(scale, sampled[clip.tracks[i]].scale.quad);
+            raw_scales->push_back({ node->name.c_str(), clip.tracks[i], { scale[0], scale[1], scale[2] } });
+        }
         RE::NiTransform local = ni_local_from_pose(read_pose(sampled[clip.tracks[i]]));
         if (!std::isfinite(local.scale) || local.scale <= 0.0f)
             local.scale = node->local.scale;
