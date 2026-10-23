@@ -1,5 +1,11 @@
 # OAR 条件 hook（3.1.6 / 3.2.1）
 
+## Independent graph investigation (2026-10-23)
+
+The [six-gate validation](independent-behavior-graph.md) owns the experiment and current G1 NOT PASSED / G2–G6 NOT STARTED state. The new default-off `BehaviorGraphProbe` logs only source member identities/counts/flags; it neither calls OAR evaluation nor adds a native hook. Existing `PreviewContext`/`PreviewClip` remain query/load carriers.
+
+At fixed OAR 3.1.6 revision `0c1c8b38a5323b9e26df41ff9d10ce801b984a45`, `GetReplacementAnimation(hkbCharacter*,...)` derives the outer graph and holder; graph-variable/weapon-drawn conditions can read the Actor. Clip identity alone does not isolate Actor/ref/submod Random, sequence or PlayOnce history, graph event sinks or source-manager callbacks. Future G4 must demonstrate sentinel read provenance, controlled world-history comparisons and own-only teardown; no independent factory, context bridge or playback is implemented here. See the canonical document's source references and [bounded build evidence](build.md#behavior-graph-baseline-checks-2026-10-23).
+
 ## Historical hand and direction boundary (2026-10-23)
 
 The exact IED provider/embedded-version and three ordered schema guards below remain. Historical queries admit checked `SDS_IsShieldOnBackEnabled` (source settings) and `IED_GearNodePlacementHint` (explicit node). Checked `IED_GearNodeEquippedPlacementHint` retains the native answer only if its requested hand's form ID equals the source's current hand. A changed requested hand and unknown historical provider predicates reject before native evaluation. Current-source unfamiliar IED names retain prior behavior. Native false/disabled/negation are preserved; no historical hint or placement is fabricated. [ied_conditions.h](../src/animation/oar/ied_conditions.h), `ied_condition_rejection`, owns schema/history policy; `ied_rejection` in [hooks.cpp](../src/animation/oar/hooks.cpp) reads the verified Bool component only after schema admission.

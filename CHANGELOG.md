@@ -4,6 +4,7 @@
 
 ### Added
 
+- Add opt-in source behavior graph ownership baselines and a six-gate independent graph validation procedure; independent graph construction and playback remain unverified.
 - Add opt-in request-correlated OAR, load, annotation/DAC, capture/calibration and mount evidence
   for reported torch/shield phase differences and the one-shot axe equip flash; no visual fix is claimed.
 - Bound common body/arm/gear pose diagnostics to four windows and twenty-four snapshots per request,

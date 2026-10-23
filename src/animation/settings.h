@@ -9,5 +9,6 @@ namespace animation
     void load_settings();
     [[nodiscard]] UnarmedIdle unarmed_idle_setting();
     [[nodiscard]] bool detailed_animation_trace();
+    [[nodiscard]] bool behavior_graph_probe();
 }
 PLUGIN_NAMESPACE_END

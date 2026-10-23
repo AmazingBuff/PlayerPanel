@@ -1,5 +1,11 @@
 # Actor animation previews
 
+## Independent behavior graph validation (2026-10-23)
+
+The [canonical six-gate experiment](independent-behavior-graph.md) records the source ownership/API audit and all pass/stop criteria. `[Diagnostics] BehaviorGraphProbe=false` is a separate, restart-required setting. When enabled, `AnimationController::request` calls [observe_source_baseline](../src/animation/behavior_graph/ownership_probe.cpp) while retaining the actual source graph: fixed member identities/counts/flags only, at most sixteen grouped lines per actor/request, no graph or bone traversal and no engine mutation/evaluation. Pointer identities become integer values; no engine reference escapes. SDK-layout assumptions and non-atomic snapshots are explicit in the log. Disabled requests do not traverse or format probe data.
+
+This collects a source baseline, with `candidate=none construction=unverified gate1=not-passed`; it creates or advances no independent graph and changes no existing playback. G1 remains NOT PASSED; G2–G6 remain NOT STARTED/LOCKED. HKX37 demonstrated paused driving of a second Actor, with equip, complete mapping and teardown limits; it did not establish the current no-second-Actor design. This machine has no Skyrim installation, so only [offline checks and a manual collection package](build.md#behavior-graph-baseline-checks-2026-10-23) are available.
+
 ## Equipment context and torch composition (2026-10-23)
 
 Every selected Unequip uses the previous normalized hand IDs through `transition_hands`; Equip and the next idle use current hands. A proposal retains its typed transition action and preview state across effect-revision refresh. Compatible request refresh also retains an unfinished transition instead of replacing it with idle, and does not prepare a new idle goal over that transition. Finished transitions hand over normally. No source equipment is written. Historical instance-state reads remain unsupported; the [bounded IED rules](oar-hooks.md#historical-hand-and-direction-boundary-2026-10-23) allow only proven dependencies.
@@ -28,6 +34,7 @@ UnarmedIdle=non_combat_loop
 
 [Diagnostics]
 DetailedAnimationTrace=false
+BehaviorGraphProbe=false
 ```
 
 The accepted values are lowercase and affect empty hands only:
