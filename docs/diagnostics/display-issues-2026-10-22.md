@@ -269,3 +269,20 @@ Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMove
 下一轮同一次开包流程：保留右武器卸左盾→卸右武器，核对 query-hands=previous 与具体 IED 拒绝；单手斧观察 Equip→Start→Loop 的候选条件与前几帧 POSE SCALE/MAP；装备左火把并只卸火把，检查 ANIMATION TORCH composed/body-only、左臂与身体及移除残留；保留火把再卸右武器检查过渡；切弓/弩保存对应 raw-xyz。F7 重捕获与快速换装同时核对 graph/request，关包检查 DAC restore matched。保存 DLL 构建身份、完整日志及短视频；看不到/预算耗尽须注明，不算成功。
 
 本地交付包：`build/animation-repair-20261023/CharacterPanel-animation-repair-20261023.zip`，内含新 DLL、匹配 PDB、中文测试说明及 manifest；未部署。构建身份 `CharacterPanel-scenegraph-scenegraph-7de3b9f9cf+dirty-cl94faaed0c6-20261023T063440Z` 为 configure-time 身份，dirty 工作树后续增量构建以哈希区分：DLL SHA-256 `ba844250bd43e6a5e6e473242a3a3678aa2439c0781254f7d762f752b1532a3a`；PDB SHA-256 `12984e676854f0cd13e1ad066760e8f980110a6b1b00b901d83ea0ffdfb93931`。配对 GUID `{748DB13E-5AAA-4883-8283-751805A36ED4}`、Age `74` 已一致核对。
+
+2026-10-23 22:48 部署（替代上文交付包）：把干净 HEAD `5ef6f05` 的 Release 构建直接部署到 MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。构建身份 `CharacterPanel-scenegraph-scenegraph-5ef6f0520e-cl94faaed0c6-20261023T135552Z`（干净树 configure，含 `a9a0a20` 修复与 `719c90b` 探针；两个 engine-free 场景在该树上通过）。DLL SHA-256 `DF76F76398E3A27AEB2A598539DAEC8FE80929DDC11B7E62FB16F1F9262CF10C`（1,187,328 字节）；PDB SHA-256 `F73CC97FDFFEDB5C86F9FA44C594D77E7AA1322C4B3059ABE41D945D76B79B9B`（34,598,912 字节），同一次链接产出。部署前 r3（a46e724，DLL SHA-256 `7EF034B1…`）已备份到 `dist/deploy-backup-20261023-a46e724/`（DLL/PDB/INI）。INI 更新为 `DetailedAnimationTrace=true` 且 `BehaviorGraphProbe=true`：本次会话除上段 §10 清单外，同时收集 `BEHAVIOR GRAPH` 源基线行（每 actor/request 最多 16 条，见 [G1](../independent-behavior-graph.md#g1-二进制静态审计2026-10-23)）；若只要动画清单日志，可把后者改回 false 并重启。日志位置 `Documents\My Games\Skyrim Special Edition\SKSE\CharacterPanel.log`，会话结束后交回完整日志与构建身份行。
+
+<a id="r4-session"></a>
+### r4 上机结果（2026-10-23 22:53–23:00 会话，构建 `5ef6f0520e`）
+
+归档 [CharacterPanel-animation-repair-20261023-2253.log](CharacterPanel-animation-repair-20261023-2253.log)（7,431,793 字节、22,986 行、19 请求、无崩溃无错误；19 条警告中 13 条为 Smooth Exhaustion/规则的 DAC 预检拒绝，属设计内过滤）。会话干净收尾：`DAC restore … matched` 共 5 次（epoch=2/4/6/8/10，最后一次 `baseline=0 spell-groups=3`），`Panel menu opening=false` 后 lifetime reset。判据逐项：
+
+1. **盾（query-hands/Non-Combat）**：卸盾接受 `Smooth Moveset - 1hm Shield\1hm Shield Non-combat Equip Base\1hm_unequip.hkx`（9515），idle 落 `1hm Shield Non-Combat idle Start/Loop`（9013/8992）——r2 的“卸盾用 Gunslicer”已翻案。装备方向接受 `1hm Shield Equip Base`（8920）：request=2 的 base=22 拒绝列表完整（远未到 48 上限）且**不含**任何 Shield Non-Combat 装备候选，即该包没有非战斗装备片，`1hm Shield Equip Base` 是唯一装备片——不是 r2 的战斗变体 bug。
+2. **斧（idle/Start→Loop）**：idle 接受 `Smooth Moveset - Axe\Axe Non-Combat idle Start`（8985）——r1/r2 的“斧 idle 落 Gunslicer/战斗变体”已翻案。Start→Loop 不切换由包内容解释：全部查询中 `Smooth Moveset - Axe` 只出现 `Axe Combat idle Loop` 与 `Axe Non-Combat idle Start` 两个文件夹，**不存在非战斗 Loop**，边界重查无 Loop 候选可选。
+3. **斧/弓/弩装备方向落 Gunslicer**：request=7（base=22）、13（base=393）的拒绝列表中均无 Smooth Axe/Bow 装备候选——这些包不替换 `1hm_equip`/`bow_equip`，Gunslicer 获胜是安装包内容的真实结果，不是选片 bug。
+4. **axe flash 根因（raw-xyz 证据）**：request=7 的 Gunslicer `Sword\1hm_equip.hkx` 在 `NPC Root [Root]` 上有 x=1.213338→1.197217、`NPC COM [COM ]` 上 x=0.823950→0.835038 的纯 x 轴缩放轨道（双手 0.9 等比），即“位置拉近”来自该片的 Root/COM x 缩放动画；非 1.0 采样共 417 行，集中在 req=7（48）/13（129）/14（96）。仍未添加任何 clamp 或修正——是否修正属产品决定。弓/弩的极端缩放同样取得 raw 证据（req=13/14）。
+5. **火把分层**：req=8/10/11/12/18/19 均 `ANIMATION TORCH outcome=composed … arm='Animations\tor_1hmpose.hkx' mask=left-arm`，无 body-only 回退；req=8 只装火把触发 `transition base unavailable form=none; idle only` 且未重放武器装备（“只装卸火把不触发右手武器装卸”验证通过）；req=11 卸斧过渡 `body='Animations\1hm_unequip.hkx' arm=tor_1hmpose` ——保留火把卸右武器时左臂层保持。**只卸火把**方向本会话未覆盖。
+6. **F7/换装**：req=14 的 `reason=manual` 重捕获 `outcome=accepted`（capture=15，old→new graph）；快速换装期间 graph/request 链一致，`SCOPY PARK cap reached; oldest graph remains allocated` 出现一次（已知资源积累限制）。
+7. **2H 斧**：req=15–18 装备/idle/卸载全部落 `Smooth Moveset - 2hw Axe`（Equip Base 10334 / Non-Combat idle Start 10341 / Non-combat 卸载 10395），无缩放异常。
+
+遗留：axe/bow/crossbow 的装备方向若要 Smooth 动作需补包或改查询预期（当前为内容事实）；axe 非战斗 Loop 不存在；只卸火把未覆盖；`SCOPY PARK` 资源积累仍开放。`BEHAVIOR GRAPH` 基线结果与判读见 [G1 文档](../independent-behavior-graph.md#g1-源基线2026-10-23-会话)。

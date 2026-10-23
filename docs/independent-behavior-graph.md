@@ -109,6 +109,16 @@ BehaviorGraphProbe=true
 
 仍未完成：项目加载、`hkbCharacter` setup/绑定、Activate/Update/Generate/Deactivate、事件路由与共享资源范围。G1 判定保持 **NOT PASSED**；下一步是定位加载/链接入口并取得运行证据，而不是调用构造。
 
+## G1 源基线（2026-10-23 会话）
+
+同日晚间会话（[r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session)，构建 `5ef6f0520e`、`BehaviorGraphProbe=true`）取得第一份真实目标游戏源基线：**19/19 请求、228 行、单 actor 00000014、无 missing/异常行**。关键事实（request=1 块）：
+
+- `group=container outer-behavior` 与 `group=character behavior` 为**同一指针**（0x29b73b0d900）——源图上外层容器 `behaviorGraph` 与 `hkbCharacter.behaviorGraph` 确认同址。
+- 多个 CommonLib 声明的可选成员在真实源图上**确实为空**：`world`、`character.controllerDriver`、`raycastInterface`、`setup.animationBindingSet`、`setup.unscaledAnimationSkeleton`、`behavior.rootGeneratorClone`、`state-machine-templates`、`uniqueIDPool/jobs/allPartitionMemory`（0/0）。`root=BSFadeNode`、`project-db`、`setup.skeleton/data/mirroredSkeleton` 非空。
+- 规模：`pose-count=116`、`animation-bones=116`、`bone entries=116`、`foot-ik=1`、`variable-mode=0`；`flags active=true linked=false update-active=false state-changed=true`；`critical-section` 指向模块外静态地址（仅记录，归属未解析）。
+
+这些是未来候选图必须逐项对照的**源坐标**，同时证实二进制审计的声明来源可靠（声明为可选的字段在真实图上可为空）。它仍只描述源图：候选构造、加载/链接与隔离证据仍缺，G1 维持 NOT PASSED。
+
 ## 执行台账与后续证据
 
 | 日期/项目 | 实际结果 | 仍缺少 |
@@ -117,10 +127,11 @@ BehaviorGraphProbe=true
 | G1 静态审计 | 已核对当前声明与固定 OAR 源；候选入口存在但原生协议未核实 | 无新 Actor 的创建/链接/深层所有权/停用销毁证据 |
 | G1 二进制审计 | 2026-10-23 在解包后的 1.6.1170 镜像上确认五种构造实现、holder 传参与配对销毁；构造不加载项目、不登记 manager。见[审计记录](behavior-graph-construction-audit.md) | 项目加载/链接/激活入口、`hkbCharacter` setup、事件路由、共享资源范围 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
+| G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | 候选构造/加载/隔离证据仍未执行 |
 | G1 判定 | **NOT PASSED** | 无独立候选；只有源基线不能过关 |
 | G2–G6 | **NOT STARTED / LOCKED** | 必须先逐关通过；两个行为实验均未执行 |
 
-本轮按“不启动游戏”执行：未部署、未启动、未注入任何进程。实测本机存在 AE 1.6.1170 安装（`E:\SteamLibrary\steamapps\common\Skyrim Special Edition`）与 MO2 实例 `E:\SkyrimAE`，但二进制审计只读取 exe 副本并对其解包，游戏内证据仍缺。可复现审计记录存于 `build/g1-audit-20261023/` 及任务记录。下一步先在镜像上定位项目加载/链接入口（或用运行基准确认），取得充分证据并通过第一关评审、修订实现契约后，再谈原生构造/驱动验证；当前停点是加载/链接协议未知，而不是“能否分配”。
+本轮按“不启动游戏”执行：未部署、未启动、未注入任何进程。实测本机存在 AE 1.6.1170 安装（`E:\SteamLibrary\steamapps\common\Skyrim Special Edition`）与 MO2 实例 `E:\SkyrimAE`，但二进制审计只读取 exe 副本并对其解包；同日晚间的部署会话另取得源基线（见台账），候选构造/加载证据仍缺。可复现审计记录存于 `build/g1-audit-20261023/` 及任务记录。下一步先在镜像上定位项目加载/链接入口（或用运行基准确认），取得充分证据并通过第一关评审、修订实现契约后，再谈原生构造/驱动验证；当前停点是加载/链接协议未知，而不是“能否分配”。
 
 ## 维护约束
 
