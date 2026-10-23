@@ -47,7 +47,7 @@ OAR 隔离还包括图外状态：图变量和 `IsWeaponDrawn` 可通过 Actor �
 
 先确认目标游戏版本下的创建入口、分配器、链接顺序、holder/manager 容器要求、停用与销毁入口，再创建一个离屏候选。逐项记录源与候选的对象身份、运行状态归属、共享资源理由、事件接收者、引用/登记/任务数量与逆序销毁结果。源只读基线只提供之后对照的坐标。
 
-通过：完整原生装配成功，可写状态独立，获准共享资源有证据；没有源 manager/Actor 副作用；逆序销毁回到基线。失败：别名跨入可写状态、必须借用源输出、无可核实配对释放。**当前未通过；静态所有权审计、1.6.1170 二进制构造/销毁审计与源基线采集准备完成，加载/链接/激活未证实。**
+通过：完整原生装配成功，可写状态独立，获准共享资源有证据；没有源 manager/Actor 副作用；逆序销毁回到基线。失败：别名跨入可写状态、必须借用源输出、无可核实配对释放。**当前未通过；离线审计（构造/销毁/加载/共享语义）与源基线采集已完成，运行期装配/隔离与激活未证实；[G1 实验契约](#g1-实验契约2026-10-23-设计未实现)已设计、未实现、未运行。**
 
 ### G2：原版暂停期单边推进
 
@@ -80,6 +80,47 @@ G1 通过后，在无 OAR 的原版基线只推进候选图。使用固定记录
 记录创建前/运行中/销毁后的实例、运行节点、资源引用、事件 sink、OAR 登记、任务和输出数量。重复会话、快速换装、重捕获、关闭背包、读档；旧任务带会话代数失效，先停止工作再逆序解除回调和资源。
 
 通过：计数回到基线，没有源状态漂移或持续积累。崩溃未出现不能代替清理证据。当前未执行。
+
+## G1 实验契约（2026-10-23 设计，未实现）
+
+本契约把[二进制审计](behavior-graph-construction-audit.md)的构造/销毁/加载/共享语义转成可执行的 G1 运行实验：只做"构造 → 装载 → 对照 → 逆序销毁"，不激活、不推进、不写源图、不挂 OAR。实现前不得运行；实现只允许出现在下述边界内。
+
+### 实验分级（前一级通过前不得进入下一级）
+
+| 级 | 动作 | 目的 | 停止条件 |
+| --- | --- | --- | --- |
+| G1a | 自持 holder（槽位语义见下）+ `holder=nullptr` 构造空壳，然后只经引用计数释放 | 在运行中验证工厂与配对销毁、无源副作用 | 构造返回空/崩溃、源基线漂移、释放后计数不回 |
+| G1b | G1a + 调用加载 63585（项目名取源图 `projectName` +0x1F0） | 验证候选能完成原生装配（behaviorGraph/character/setup/rootNode） | 返回空、装配字段缺失、需要写源图、注册表计数不回 |
+| G1c | G1b + 以源 Actor 作为 holder 重建一次对照 | 仅在 G1b 通过且后续需要源上下文时量化别名 | G1b 未通过；出现可写状态同址 |
+
+### 候选 holder 与调用边界
+
+- G1a/G1b 使用插件自有的 `IAnimationGraphManagerHolder` 子类（vtable 自持；槽位 02/03 返回 false、05 执行原生工厂、06/07 返回 true、08 返回 true、0A 返回 0、0B 空）——语义对齐审计中 `Simple` 路径的默认实现，holder 字段传 `nullptr`。理由：审计证明引擎自身以 `holder=null` 构造（Simple/Weapon）且该路径不向源 Actor 注册事件 sink/通道。
+- 工厂实现必须复刻审计模板：`MemoryManager::Allocate(0x250, 0x10, true)`（68115）→ 构造 `BShkbAnimationGraph`（63555，签名 `this/holder/bool`，审计所得）→ 引用计数智能指针赋值；不得自行拼装成员。释放只允许丢弃最后一个 `BSTSmartPointer` 引用，禁止手动调用删除析构或 `Deallocate`。
+- 加载只调用 63585（参数按审计推断 `graph/项目名/bool`；第二实参在 63585 内先交给 69488 解析，形态未定——若 `BSFixedString*` 不成立，改用静态空对象 `0x1acbcc0` 走默认解析，与编排者 0x54ba10 的 cmov 缺省一致）；不得调用 63844/63845/63847 或任何 `hkbCharacter` 成员函数，除非先以只读日志确认。
+- 禁止：Activate/Update/Generate/Deactivate、图变量写入、图事件、OAR 求值/`ActiveClip`、DAC、创建 Actor/REFR、写 `+0x1F0/+0x1F8/+0x200/+0x208/+0x218`。
+- 新设置 `[Experiment] IndependentGraph=off|construct|load`，默认 off，重启生效，独立于 `DetailedAnimationTrace`/`BehaviorGraphProbe`；新模块 `src/animation/behavior_graph/independent_graph.{h,cpp}`，不新增目标/依赖。
+
+### 观测与预算
+
+每级最多 24 行 `INDEPENDENT GRAPH`：候选 `graph/character/setup/behaviorGraph/projectDBData/projectName/rootNode/variableValueSet/activeNodes/generatorOutputs/eventQueue` 的地址、计数与标志；构造前、构造后、销毁后的源基线各一次（复用 `BehaviorGraphProbe` 的固定字段）；全局注册表计数（单例 `0x315c950` → 数组 `+0x1F8` → 计数 `+0x30`，AE-only 审计地址）前后各一次——该探测为可选，若实现风险高可跳过，但报告必须注明未观测。只读、无指针逃逸、无线程间共享状态。
+
+### 预注册判定（不得事后放宽）
+
+通过（全部满足）：
+
+1. **装配完整**：G1b 后 `behaviorGraph`、`projectDBData`、`projectName`、`rootNode`、`character.setup` 均非空。
+2. **可写状态独立**：候选 `graph/character/activeNodes/variableValueSet/generatorOutputs/eventQueue` 与源**不同址**。
+3. **共享资源可解释**：五个 hkRefPtr 字段与 `projectDBData`/行为数据与源**同址**（引用计数 +1 属预期，不计漂移）。
+4. **源基线不变**：构造前 ≡ 构造后 ≡ 销毁后（12 行字段地址/计数/标志全等）。
+5. **逆序销毁**：候选指针全部释放，注册表计数回落到构造前，无崩溃/断言。
+6. **无侧效应**：源 manager 的图数量不变；OAR 活动查询与 `ActiveClip` 回调未对候选触发；无新增 Actor/REFR。
+
+失败（任一）：可写状态同址、源基线漂移、注册表计数不回落、构造/装载返回空或崩溃、必须写源图才能完成。崩溃未出现不能替代清理证据。
+
+### 停止与回退
+
+任一失败/未知：保留日志与构建身份行，把设置改回 off 重启，不进入下一级，不做"调整判据后重试"。装备变化后重建源基线；F7 重捕获不得叠加构造。G1 通过前 G2–G6 保持锁定，本契约不定义推进/激活。
 
 ## 当前采集器与操作
 
@@ -128,6 +169,7 @@ BehaviorGraphProbe=true
 | G1 二进制审计 | 2026-10-23 在解包后的 1.6.1170 镜像上确认五种构造实现、holder 传参与配对销毁；构造不加载项目、不登记 manager。见[审计记录](behavior-graph-construction-audit.md) | 激活/更新入口、事件路由、无新 Actor 复用、共享资源范围 |
 | G1 加载链定位 | 2026-10-23 续审计：编排者 32881/32882/32893/32902 → 加载 63585 → 项目解析 63844 → 行为图装载 63845 → SetupAnimEventSinks → manager 挂接，见[审计记录](behavior-graph-construction-audit.md#项目加载与链接入口2026-10-23-续审计) | 候选 holder 复用条件、运行期隔离、激活与事件路由 |
 | G1 共享语义 | 2026-10-23 三轮：BG 实例每次新建（58340/58374）、字段经 hkRefPtr 共享容器数据（57010/57011 加减引用）、`hkbSymbolIdMap` 新建、完成对象登记全局表，见[审计记录](behavior-graph-construction-audit.md#加载链共享语义细读2026-10-23-三轮) | 运行中共享数据的写时隔离（`variableValueSet` 等）仍属 G1 运行判据 |
+| G1 实验契约 | 2026-10-23 设计 G1a/G1b/G1c 分级、候选 holder、调用边界、24 行观测预算与预注册判据，见[实验契约](#g1-实验契约2026-10-23-设计未实现) | 实现、`[Experiment] IndependentGraph` 设置与真机运行 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | 候选构造/加载/隔离证据仍未执行 |
 | G1 判定 | **NOT PASSED** | 无独立候选；只有源基线不能过关 |

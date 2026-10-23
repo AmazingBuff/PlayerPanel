@@ -4,6 +4,7 @@
 
 ### Added
 
+- Add a G1 runtime experiment contract for the independent behavior graph: three stages (construct / construct+load / source-holder control), a self-owned holder with Simple-equivalent slots, factory and loader call boundaries, a 24-line observation budget and pre-registered pass/fail criteria. Designed only; no setting, code or run exists yet.
 - Add a 1.6.1170 binary audit of `ConstructAnimationGraph`: five engine implementations share one allocator/build/assign template, REFR holders versus null holders, no project loading or manager registration, and a paired aligned destructor; a follow-up pass locates the loading chain (orchestrators 32881/32882/32893/32902 → loader 63585 → resolver 63844 → behavior-graph load 63845) and shows a fresh graph instance per load over refcount-shared project data (hkRefPtr assign helpers 57010/57011, hkbSymbolIdMap rebuilt). Activation, event routing, runtime isolation and no-Actor reuse remain unproven; G1 is still not passed.
 - Add opt-in source behavior graph ownership baselines and a six-gate independent graph validation procedure; independent graph construction and playback remain unverified.
 - Add opt-in request-correlated OAR, load, annotation/DAC, capture/calibration and mount evidence
