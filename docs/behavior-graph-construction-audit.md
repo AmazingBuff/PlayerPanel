@@ -1,6 +1,6 @@
 # 行为图构造与销毁的二进制审计（2026-10-23）
 
-更新：2026-10-23。对零售 SkyrimSE 1.6.1170 的**已解包副本**做静态审计，核实 `ConstructAnimationGraph` 的分配、构造、holder 关系与配对销毁。结论：**构造/所有权/销毁配对已取得二进制证据；项目加载、链接、激活/更新与 OAR 上下文仍未证实，G1 仍未通过。**
+更新：2026-10-23（含续审计）。对零售 SkyrimSE 1.6.1170 的**已解包副本**做静态审计，核实 `ConstructAnimationGraph` 的分配、构造、holder 关系与配对销毁，并定位其后的项目加载/链接链路。结论：**构造/所有权/销毁配对与项目加载/链接链路均已取得二进制证据；激活/更新、事件路由与"无新 Actor 复用"仍未证实，G1 仍未通过。**
 
 本文只记录已读出的指令事实和可复现步骤，不把地址相等、函数可反汇编或构造成功当作独立图可用。G1 的通过/停止判据仍由[六关验证](independent-behavior-graph.md#六道关卡)拥有。
 
@@ -108,10 +108,32 @@ return *a_out != nullptr
 
 仍未证实、因此 G1 不能通过的：
 
-1. **项目加载**：谁把 `projectDBData`/`behaviorGraph`/`projectName`/`rootNode` 写进图、按什么顺序、是否依赖 `BSAnimationGraphManager` 或 race 数据，本次审计没有定位到实现。构造只给空壳。
+1. ~~项目加载~~ → 已定位（见下节"项目加载与链接入口"），但**复用到无新 Actor 的候选图**仍是运行问题。
 2. **链接与激活**：`hkbBehaviorGraph` 的 Activate/Update/Generate/Deactivate 入口、`hkbCharacter` setup/绑定集的建立、事件 sink 的注册，均未证明可在“无新 Actor”的条件下完成。
 3. **候选 holder 的选择**：若传源 Actor，OAR/IED 条件会读到源角色（别名风险）；若传空，`rootNode` 仍是空的，OAR 的兜底会失效；若给复制 `rootNode` 一个 userData 指向源 REFR，等于把源身份带进候选图。三种选择都需要运行证据。
 4. **共享资源**：`.text` 层只能证明分配/释放配对；行为项目、`hkbCharacterSetup`、绑定集、`hkbBehaviorGraph` 是共享还是深拷贝，仍需逐项核对。
+
+## 项目加载与链接入口（2026-10-23 续审计）
+
+续审计定位到构造之后的加载/链接协议（同一解包镜像，方法相同）。编排者与加载函数：
+
+- **编排者**：`0x54ba10`（地址库 id 32893），与 `0x54b390`（32881）、`0x54b460`（32882）、`0x54c4d0`（32902）同属 holder 辅助簇（Simple 的 Construct 实现在 0x54e8f0）。它遍历一张行为图描述符表（第二实参 `r15`：`+0x18` 条数、`+0x8` 数组基址、每项 `0x118` 字节、`+0x108` 可选项目名指针），对每项执行：
+  1. `call qword ptr [holderVtbl + 0x28]` —— **虚 slot 5 ConstructAnimationGraph** 得到空壳图（rcx=holder、rdx=&out）；
+  2. `call [vtbl+0x30]`（Unk_06）取 bool 作为第三实参；
+  3. 项目名 = 表项 `+0x108`，缺省指向 `.rdata` 静态对象 `0x1acbcc0`（值为 0）；
+  4. `call 0xbb0800`（**id 63585**，通用 `BShkbAnimationGraph` 加载函数，6,752 字节）；
+  5. `call [vtbl+0x38]`（Unk_07）、`call [vtbl+0x40]`（**SetupAnimEventSinks**，rdx=新图）；失败走 `[vtbl+0x48]`（Unk_09）。
+  循环结束后 `MemoryManager::Allocate(0xB8)` 分配 `BSAnimationGraphManager`（AE 尺寸），调 `0xba3690`（id 63354）构造，再 `CreateAnimationChannels`（slot 0x50）、`0xba40f0`（63360）、`PostCreateAnimationGraphManager`（slot 0x58）、`0x54c290`（32900）、`0xba3a50`（63356）；图与 manager 的挂接落在 63360/32900/63356 之一，未逐条区分。
+- **加载函数 63585（0xbb0800）** 的填写顺序（`r13`=图、第二实参=项目描述、第三实参=bool）：
+  1. `call 0xbc1b10`（**id 63844**，593 字节；内部先 `call 63889` 构造解析器对象再走其虚 `+0x18`）——解析项目，实参含 `&graph->characterInstance`(+0xC0)、`&graph->unk1F8`(+0x1F8)、`&graph->projectName`(+0x1F0)；返回句柄（空则跳错误路径）。
+  2. `graph->projectDBData (+0x200) = graph->unk1F8->field28->虚fn11()`（两级解引用后调 vtable 槽 11）。
+  3. `call 0xba8360`（id 63455，返回 bool）校验/初始化 projectDBData。
+  4. 栈上构造 `hkbCharacter`（0xabcf20），`call 0xabdbd0`（id 58464）把项目句柄绑到该 character。
+  5. `call 0xbc1d70`（**id 63845**，1,126 字节）——装载并返回 **hkbBehaviorGraph\***，经智能指针赋值；
+  6. 主路径 `mov [graph+0x208], rdi` 写入 `behaviorGraph`（0xbb0b36；0xbb216f/0xbb21f0 为失败/重载路径的写入）。
+  `projectName`(+0x1F0)、`rootNode`(+0x218) 的具体填写点在 63585 后半段，未逐条核实；`boneNodes`/骨架绑定在 63845 内部。
+
+**对 G1 的影响**：链接协议已定位到指令级——"构造空壳 → 63585 按项目名装载 → SetupAnimEventSinks → manager 挂接"。因此"谁加载"不再是未知数；未决问题收窄为：① 该链路在**无新 Actor 的候选 holder** 上能否复用（`holder=nullptr` 走 Simple 路径时 `unk_06/SetupAnimEventSinks` 等虚调用全部打在 Simple holder 上）；② 63844/63845 是否共享或复制行为项目（G1 共享资源判据）；③ 激活/更新/事件路由。地址库 ID：编排者 32881/32882/32893/32902，加载 63585，项目解析 63844，行为图装载 63845，校验 63455，character 绑定 58464，manager 构造 63354/63356/63360。
 
 ## 对设计契约的影响
 
@@ -137,11 +159,15 @@ python build/g1-audit-20261023/build_maps.py
 python build/g1-audit-20261023/structure_scan.py
 python build/g1-audit-20261023/vtable_slot_scan.py 0x2f6f70 0x69d520 0x74e1f0 0x54e8f0 0x54eea0
 
-# 4. 构造/销毁实现
+# 4. 构造/销毁/加载实现
 python build/g1-audit-20261023/disasm_func.py 0x2f6f70
 python build/g1-audit-20261023/disasm_func.py 0xbad070
 python build/g1-audit-20261023/disasm_func.py 0xbad2c0
 python build/g1-audit-20261023/disasm_func.py 0xbbcf30
+python build/g1-audit-20261023/disasm_func.py 0x54ba10   # 编排者 32893
+python build/g1-audit-20261023/disasm_func.py 0xbb0800   # 加载 63585
+python build/g1-audit-20261023/disasm_func.py 0xbc1b10   # 项目解析 63844
+python build/g1-audit-20261023/disasm_func.py 0xbc1d70   # 行为图装载 63845
 ```
 
 脚本只读 PE/versionlib，不加载模块、不调用引擎；`analysis.json` 由 `build_maps.py` 从 versionlib 生成。反汇编注释中的函数名来自 CommonLibSSE 头文件的 `RELOCATION_ID` 标签，未标名者保持 ID/地址。
