@@ -4,6 +4,7 @@
 
 ### Added
 
+- Add a 1.6.1170 binary audit of `ConstructAnimationGraph`: five engine implementations share one allocator/build/assign template, REFR holders versus null holders, no project loading or manager registration, and a paired aligned destructor. Project loading, linking and activation remain unidentified; G1 is still not passed.
 - Add opt-in source behavior graph ownership baselines and a six-gate independent graph validation procedure; independent graph construction and playback remain unverified.
 - Add opt-in request-correlated OAR, load, annotation/DAC, capture/calibration and mount evidence
   for reported torch/shield phase differences and the one-shot axe equip flash; no visual fix is claimed.

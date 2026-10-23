@@ -176,11 +176,11 @@ IED的原生false必须保留。提供方压缩包标签1.0.3而嵌入版本1.0.
 <a id="graph-validation"></a>
 ## 独立行为图：当前可行性关卡
 
-无第二Actor、复用行为项目的候选图，目的在于让原状态机自己激活节点，而非继续手写所有入口。`ConstructAnimationGraph`已有声明（holder虚函数slot05及多个override），应称“待核实入口”，不能写“SDK没有工厂”。但至今未核实目标AE无Actor创建、资源链接、容器/holder、停用及配对销毁协议；不能直接拷内存或调用试错。
+无第二Actor、复用行为项目的候选图，目的在于让原状态机自己激活节点，而非继续手写所有入口。`ConstructAnimationGraph`已有声明（holder虚函数slot05及多个override）。2026-10-23的[二进制审计](behavior-graph-construction-audit.md)在AE 1.6.1170上确认了五种实现、holder传参（REFR自身或空）与配对销毁，但项目加载、链接、`hkbCharacter` setup及激活入口仍未定位；不能直接拷内存或调用试错。
 
 OAR会从hkbCharacter反查BShkbAnimationGraph/Actor；图变量、drawn等可能经Actor读取，Random/顺序/PlayOnce状态和事件sink还在图外。图指针不同不等于条件上下文、历史、回调独立。候选阶段变量须用哨兵验证实际读谁；清理不能抹源Actor历史；输出事件先只收集，DAC隔离后再接。
 
-目前只有静态对象归属审计及默认关闭`BehaviorGraphProbe`，每actor/request最多16分组行，role=source-baseline/candidate=none；没有创建、链接、Activate/Update/Generate、图变量写入或事件。**源基线不能证明隔离。G1 NOT PASSED，G2–G6 NOT STARTED/LOCKED。** 用户确认本机暂未安装Skyrim，保留的`CharacterPanel-engine-text.txt`是历史dump元数据，不是游戏可执行文件或已验证工厂协议。
+目前只有静态对象归属审计、1.6.1170构造/销毁二进制审计及默认关闭`BehaviorGraphProbe`，每actor/request最多16分组行，role=source-baseline/candidate=none；没有创建、链接、Activate/Update/Generate、图变量写入或事件。**源基线不能证明隔离。G1 NOT PASSED，G2–G6 NOT STARTED/LOCKED。** 本机实际存在AE 1.6.1170安装与MO2实例，但本轮未部署、未启动游戏；保留的`CharacterPanel-engine-text.txt`是历史dump元数据，不是游戏可执行文件或已验证工厂协议。
 
 下一步门槛与台账仅由[独立行为图文档](independent-behavior-graph.md)维护：先构造/所有权/销毁，再原版单边推进，再图原生Equip→Idle→Unequip，再OAR上下文/历史隔离，之后完整贡献层姿态，最后重复生命周期。首批只两场景，前关未过后关不开；历史第二Actor正证据既不能忽略，也不能替新G1过关。
 

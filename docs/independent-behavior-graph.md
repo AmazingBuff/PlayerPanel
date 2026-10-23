@@ -33,7 +33,7 @@
 | setup 的 mirroredSkeleton、criticalSection、绑定集 | 不可因位于 setup 就假定不可变 | 镜像缓存、锁和运行绑定更新的真实所有权 |
 | `hkRefVariant` payload / 未知成员 | 所有权未核实 | 本轮只取已声明包装器里的指针身份，不解引用 payload 或遍历未知结构 |
 
-`IAnimationGraphManagerHolder::ConstructAnimationGraph` 已声明为虚函数（slot 05），`TESObjectREFR`、`SimpleAnimationGraphManagerHolder`、`WeaponAnimationGraphManagerHolder` 有 override。它们是**待核实的入口候选**：目前没有证明可在无新 Actor 的条件下独立构造、如何分配/链接、是否改写 holder/manager、如何停用及成对销毁。不能写成“SDK 没有工厂声明”，也不能直接调用尝试。`BSAnimationGraphManager::QueryAnimations` 的现有 relocation 包含 AE=0，不能作为 AE 1.6.1170 可调用证据。
+`IAnimationGraphManagerHolder::ConstructAnimationGraph` 已声明为虚函数（slot 05），`TESObjectREFR`、`SimpleAnimationGraphManagerHolder`、`WeaponAnimationGraphManagerHolder` 有 override。2026-10-23 的[二进制静态审计](behavior-graph-construction-audit.md)在 AE 1.6.1170 上确认：五种引擎实现共用同一模板（`MemoryManager::Allocate(0x250, 0x10, true)` → `BShkbAnimationGraph` 构造 → `BSTSmartPointer` 赋值），holder 由调用者传入（REFR/Actor 传自身，Simple/Weapon 传空），构造不写 holder/manager、不登记全局表；引用计数经删除析构成对释放。**仍未定位**项目加载、链接、激活/更新与 `rootNode` 建立，所以不能把“可构造”当作独立图可用，也不能直接调用尝试。`BSAnimationGraphManager::QueryAnimations` 的现有 relocation 包含 AE=0，不能作为 AE 1.6.1170 可调用证据。
 
 `hkbNode` / `hkbBehaviorGraph` 的 Activate、Update、Generate、Deactivate 声明只能说明运行接口存在；未完成实例装配时禁止调用。裸 `hkbCharacter` 也不满足 OAR 从其反查 `BShkbAnimationGraph` 容器和 holder 的假设。
 
@@ -47,7 +47,7 @@ OAR 隔离还包括图外状态：图变量和 `IsWeaponDrawn` 可通过 Actor �
 
 先确认目标游戏版本下的创建入口、分配器、链接顺序、holder/manager 容器要求、停用与销毁入口，再创建一个离屏候选。逐项记录源与候选的对象身份、运行状态归属、共享资源理由、事件接收者、引用/登记/任务数量与逆序销毁结果。源只读基线只提供之后对照的坐标。
 
-通过：完整原生装配成功，可写状态独立，获准共享资源有证据；没有源 manager/Actor 副作用；逆序销毁回到基线。失败：别名跨入可写状态、必须借用源输出、无可核实配对释放。**当前未通过；仅静态审计与源基线采集准备完成。**
+通过：完整原生装配成功，可写状态独立，获准共享资源有证据；没有源 manager/Actor 副作用；逆序销毁回到基线。失败：别名跨入可写状态、必须借用源输出、无可核实配对释放。**当前未通过；静态所有权审计、1.6.1170 二进制构造/销毁审计与源基线采集准备完成，加载/链接/激活未证实。**
 
 ### G2：原版暂停期单边推进
 
@@ -98,17 +98,29 @@ BehaviorGraphProbe=true
 
 此 API 不调用构造、Activate/Update/Generate/Deactivate、变量写入、图事件、OAR 求值、DAC、效果或 Actor 分配。它只观察源基线，不负责新图创建与清理，也不能单独证明源无漂移。若启用后异常，保留日志/版本信息，改回 false 并重启；不再推进后续关卡。
 
+## G1 二进制静态审计（2026-10-23）
+
+零售 1.6.1170 的 `.text` 被 SteamStub 3.1 加密，审计在只读副本的解包镜像上进行（镜像 SHA-256 `843823C115DBC56B5E9740350DB49170CC4EEA013A79513B7FD066DEEC719A2B`；完整方法、地址与命令见[审计记录](behavior-graph-construction-audit.md)）。已确认的只有构造/析构的所有权事实：
+
+- 五种 `ConstructAnimationGraph` 实现共用同一模板：`MemoryManager::Allocate(0x250, 0x10, true)` → `BShkbAnimationGraph::BShkbAnimationGraph(graph, holder, flag)` → `BSTSmartPointer` 赋值。holder 为 `this-0x38`（REFR/Actor/PlayerCharacter）或 `nullptr`（Simple/Weapon）；flag 在 Actor 上由 `race->data.flags` 第 7 位取反（CommonLib 标注 `kFlies`，语义未证），PlayerCharacter 固定为 0。
+- 构造只写 vtable、引用计数、两个事件源、`hkbCharacter`（+0xC0）与 holder（+0x210）；`projectName`/`projectDBData`/`behaviorGraph`/`rootNode` 全部置空。不加载项目、不登记 manager、不挂 sink、不设置 `rootNode`。
+- 删除析构 `0xbbcf30` → 真正析构 `0xbad2c0` → `MemoryManager::Deallocate(ptr, true)`，与分配参数配对；对已加载的 `behaviorGraph` 有拆除动作（槽位 7 + 释放 `generatorOutputs`/`rootNode`/fade controllers）。
+- OAR 从 `graph->holder` 取 REFR，空时退回 `rootNode` 再取；候选图的 holder/rootNode 选择因此直接决定 OAR 读到谁。
+
+仍未完成：项目加载、`hkbCharacter` setup/绑定、Activate/Update/Generate/Deactivate、事件路由与共享资源范围。G1 判定保持 **NOT PASSED**；下一步是定位加载/链接入口并取得运行证据，而不是调用构造。
+
 ## 执行台账与后续证据
 
 | 日期/项目 | 实际结果 | 仍缺少 |
 | --- | --- | --- |
 | 2026-10-23 既有修复提交 | `a9a0a20883803bd5295aff9f2ac4e7edf5474cf8`，先提交再开始本文 | 本实验不重写该提交或旧测试包 |
 | G1 静态审计 | 已核对当前声明与固定 OAR 源；候选入口存在但原生协议未核实 | 无新 Actor 的创建/链接/深层所有权/停用销毁证据 |
+| G1 二进制审计 | 2026-10-23 在解包后的 1.6.1170 镜像上确认五种构造实现、holder 传参与配对销毁；构造不加载项目、不登记 manager。见[审计记录](behavior-graph-construction-audit.md) | 项目加载/链接/激活入口、`hkbCharacter` setup、事件路由、共享资源范围 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 判定 | **NOT PASSED** | 无独立候选；只有源基线不能过关 |
 | G2–G6 | **NOT STARTED / LOCKED** | 必须先逐关通过；两个行为实验均未执行 |
 
-用户已确认本机暂未安装 Skyrim；本轮按无游戏环境执行，不等待安装路径、不安装或启动游戏。可复现审计与构建/包身份记录存于 `build/independent-behavior-graph-20261023/` 及任务记录。下一步可继续离线核实目标版本的 `ConstructAnimationGraph` 调用前提、私有资源链接及配对销毁；未来有测试环境时再取得源基线日志。入口与生命周期协议取得充分证据、完成第一关评审并修订实现契约后，继续原生构造/驱动验证；当前停点是技术证据不足和无游戏环境。
+本轮按“不启动游戏”执行：未部署、未启动、未注入任何进程。实测本机存在 AE 1.6.1170 安装（`E:\SteamLibrary\steamapps\common\Skyrim Special Edition`）与 MO2 实例 `E:\SkyrimAE`，但二进制审计只读取 exe 副本并对其解包，游戏内证据仍缺。可复现审计记录存于 `build/g1-audit-20261023/` 及任务记录。下一步先在镜像上定位项目加载/链接入口（或用运行基准确认），取得充分证据并通过第一关评审、修订实现契约后，再谈原生构造/驱动验证；当前停点是加载/链接协议未知，而不是“能否分配”。
 
 ## 维护约束
 

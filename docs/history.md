@@ -14,7 +14,7 @@
 | 复制显示图、取景、装备与生命周期 | [SceneGraph](scene-graph.md) |
 | 播放器、OAR查询、DAC原生事件 | [Animation](animation.md)、[OAR](oar-hooks.md)、[DAC](dac.md) |
 | 在用问题与下一场上机 | [诊断交接第10节](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机)；[r1原始日志](diagnostics/CharacterPanel-issue-trace-r1-20261022-2231.log)、[r2原始日志](diagnostics/CharacterPanel-issue-trace-r2-20261022-2314.log) |
-| 独立图可行性与实际进度 | [六关验证](independent-behavior-graph.md)：G1未通过，G2–G6未开始/锁定 |
+| 独立图可行性与实际进度 | [六关验证](independent-behavior-graph.md)：G1未通过，G2–G6未开始/锁定；[1.6.1170 构造/销毁二进制审计](behavior-graph-construction-audit.md)：构造与配对销毁已证，加载/链接未定位 |
 | 工程约束、产品要求和研究来源 | [维护](code-maintenance.md)、[PRD](player-panel-prd.md)、[社区参考](community-reference-supplement.md) |
 
 两份当前raw日志、engine-text元数据和三个TSLOT分析工具保留原位。它们分别是未决问题原始证据、历史引擎dump信息与分析入口。当前行为与操作以在用文档为准，本轮未执行游戏实验。
