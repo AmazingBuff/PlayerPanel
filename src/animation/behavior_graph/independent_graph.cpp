@@ -627,6 +627,16 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     const float weight = *reinterpret_cast<const float*>(bytes + 0x38);
                                     return fmt::format("{} +32={:#06x} +38={:.3f}", dump, track, weight);
                                 };
+                                const auto driver_state = [](RE::hkbRagdollDriver const* driver) {
+                                    if (!driver)
+                                        return std::string("null");
+                                    const std::uintptr_t base = reinterpret_cast<std::uintptr_t>(driver);
+                                    const std::uintptr_t array = *reinterpret_cast<const std::uintptr_t*>(base + 0x10);
+                                    const std::int32_t count = *reinterpret_cast<const std::int32_t*>(base + 0x18);
+                                    const std::uintptr_t inner = array ? *reinterpret_cast<const std::uintptr_t*>(array) : 0;
+                                    const std::uintptr_t bones = inner ? *reinterpret_cast<const std::uintptr_t*>(inner + 0x10) : 0;
+                                    return fmt::format("{:#x} arr={:#x} count={} bones={:#x}", base, array, count, bones);
+                                };
                                 logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=gates src-world={:#x} src-ragdoll={:#x} cand-world={:#x} cand-ragdoll={:#x} src-gen0[{}] cand-gen0[{}]",
                                     actor_id, request,
                                     address(source_graph.physicsWorld),
@@ -635,6 +645,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     address(candidate->characterInstance.ragdollDriver.get()),
                                     element_head(source_graph.generatorOutputs[0]),
                                     element_head(candidate->generatorOutputs[0]));
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=driver src[{}] cand[{}]",
+                                    actor_id, request,
+                                    driver_state(source_graph.characterInstance.ragdollDriver.get()),
+                                    driver_state(candidate->characterInstance.ragdollDriver.get()));
                             }
                             char const* const inject_candidates[] = { "WeapEquip", "SprintStart", "FootLeft", "FootRight" };
                             std::int32_t chosen_id = -1;

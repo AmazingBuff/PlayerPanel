@@ -238,6 +238,15 @@ G2 v7 判读后为事件注入判别（G3 前提）做的定向补审。全部�
 5. **事件名不在 exe**：`WeaponDraw`/`MT_Idle` 等字符串在全部节区零命中——事件名来自行为项目数据，运行期由 ProjectDBData 的名字→id 映射解析（[CommonLib 声明](../extern/CommonLibSSE/include/RE/B/BShkbAnimationGraph.h)：`unk70`(+0x70) 与 `unkA0`(+0xA0) 两张 `BSTHashMap<char*, i32>`，注释明确 `unkA0` 为 anim event 处理所读；`unkD0`(+0xD0) 全部事件名表，与续审计七 63583 的名字来源吻合）。**BSTHashMap 内联布局**（63639 实测）：表项数 `+0xC`（u32）、**链尾哨兵 `+0x18`（桶与链尾均指向哨兵而非空——v8 首轮崩溃即误用空停机所致）**、桶数组 `+0x28`，表项 0x18 步长 `{char* name, i32 id, next*}`。**63773（图 vtable 槽 13，0xbbd6b0）= 名字→id 查询**（哈希 + 桶链内联遍历，miss 返回 −1）。**运行期事实记录（v8 三轮）**：dbdump 解码确证两张表的 CLib 布局正确（哨兵 `+0x18` 同为模块静态地址、计数 1024/16384 均 2 的幂、桶为堆指针）——但桶链含**墓碑/释放态表项**，其键字段是垃圾字节；引擎查表一律**指针比较**（与驻留串指针相等，从不解引用键），CommonLib 侧按内容 strcmp 的遍历必崩（两轮崩溃的真正根因，非布局错误）。`db+0xD0` 数组（9379 项，全程安全）是动画/剪辑名表，不含 `MT_Idle`/`MoveStart` 等事件名。**插件侧事件→id 的正源 = 行为图自带字符串数据**：`hkbBehaviorGraphData(+0x78 stringData)->eventNames(+0x10)`，Havok 原生 `hkArray<hkStringPtr>`（指针低位为 managed 标志，读取需掩 `&~1`），**事件 id 即数组下标**，平行数组 `eventInfos(+0x40)` 与状态机事件转移映射同键控此 id 空间（[CommonLib 声明](../extern/CommonLibSSE/include/RE/H/hkbBehaviorGraphData.h)）。
 6. **槽 2（63621，0xbb6c60，857 B）= 每帧输出重置/ragdoll 更新**，开头两道门：`physicsWorld(+0x238)` 为空 **或** `character.ragdollDriver(+0x30)`（即 `graph+0xF0`，[CommonLib hkbCharacter 声明](../extern/CommonLibSSE/include/RE/H/hkbCharacter.h)）为空 → 整体跳过。门内：63584 → **重置 `generatorOutputs[0]` 元素（`+0x32` word=0、`+0x38` f32=1.0，即 63581 采样器读的轨道偏移/权重）** → physicsWorld vtable 槽 40 → 控制器链表遍历。**候选两门皆空 → 连输出元素重置都未发生**——v7 元素哈希冻结与此吻合，构成注入判别失败时的下一假设（输出绑定门）。
 
+## 绑定循环的骨骼映射语义与 vtable 澄清（2026-10-24 续审计九）
+
+v10 判读后对"绑定循环计数来源"的定向补审。全部指令级事实：
+
+1. **主 vtable 槽位澄清**：0x19881f8（最终主 vtable；构造序 = 0x1988180 基类先写、0x19881f8 于 bad16b 覆盖，槽 0 = 删除析构 0xbbcf30 与 G1 审计吻合）的有效槽位为 00–0D；此前引用的"槽 0E/0x11 = 0xbaad80/0xbaae00"是 dump 越界垃圾，**槽 +0x58 = 槽 0B = 63630（0xbb7e30，0x436 B）**。
+2. **63630 = 驱动的骨骼映射提供者**：门 = `ragdollDriver(character+0x30)` 非空（58286 锁）+ `physicsWorld` 经其 vtable 槽 40 getter 得 hkpWorld 非空 + `[driver+0x10]→[rax]→[+0x10]` 非空；**计数 = `[driver+0x18]`（hkArray 计数）**，表项 **0x58 步长**（hkbBone 类结构）；每次调用以 count×8 构建暂存与 `{count|0x80000000, ptr}` 描述符。63602 对图槽 2（63621）的调用循环遍历的就是这些**逐骨骼条目**——是骨骼级输出绑定路径，不是"当前动画"列表（v10 归因再修正）。
+3. **与 v9 证据自洽**：源元素 `+32=0x0074`（=116 骨数）即逐骨骼绑定写入的轨道变换数；候选驱动对象存在（装载链自建）但 `[driver+0x10]` 骨数组为空 → 63630 计数 0 → 绑定循环零次 → 元素字段从未被写。**v10 的 world 借用让 63630 的两道门全部通过,但计数仍来自空的骨数组——借用无效的完整解释**。
+4. **骨数组填充方未定位**：装载链（63949 setup 自建 → 63950 → 63946 → 63846 绑定）listing 内无 `character+0x30` 驱动骨数组的初始化；嫌疑范围 = 字符级激活簇（0xabd630 一带）、编排尾链 63356（0xba3a50）、hkbCharacter 簇（0xaea12b）。骨数组初始化大概率以 `setup.animationSkeleton` 为输入（hkbAnimatedSkeleton::init 类语义）——待续审计十。
+
 ## 对设计契约的影响
 
 - 构造 API **不是**“独立图可用”的证据；它只证明“可以分配并初始化空壳，且能按引用计数成对释放”。
