@@ -5,6 +5,8 @@
 
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/H/hkbBehaviorGraph.h"
+#include "RE/H/hkbBehaviorGraphData.h"
+#include "RE/H/hkbBehaviorGraphStringData.h"
 #include "RE/H/hkbCharacter.h"
 #include "RE/H/hkbCharacterSetup.h"
 #include "RE/H/hkbContext.h"
@@ -17,6 +19,7 @@
 #include "animation/settings.h"
 
 #include <chrono>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -34,12 +37,27 @@ namespace
     // the graph-level 63586 wrapper skips; 58329 is hkbBehaviorGraph::Update
     // (vtable slot 5); 58315 fills an hkbContext from a character; 63589 is the
     // engine's post-update sampling entry (gates: setup/animationSkeleton/behaviorGraph
-    // non-null, graph activated; reads the current-animation word at graph+0x240 and
-    // calls the 63581 sampler that copies the generated pose track into poseLocal).
+    // non-null, graph activated; the sampler copies [graph+0x240] transform tracks —
+    // the LOD-scaled sample count, 116 up close — into poseLocal).
     constexpr std::uint64_t CharacterActivatorID = 58453;
     constexpr std::uint64_t BehaviorGraphUpdateID = 58329;
     constexpr std::uint64_t ContextBuilderID = 58315;
     constexpr std::uint64_t SamplingEntryID = 63589;
+    // v7 generation pipeline (per-frame pipeline audit, 2026-10-24): 63602 is the
+    // ENGINE's per-graph frame pipeline — it collects events, runs the generation
+    // traversal (65149→65232→65237) that fills generatorOutputs, performs a zero-dt
+    // update through 63587 and drains the event queue (63583). Bare 58329 updates
+    // never generate, which is why drive v1–v6 produced no output. The engine hosts
+    // each pass on a stack shell graph constructed and destroyed by 63555/63556
+    // (notification-center slot 5, 0xbacc90).
+    constexpr std::uint64_t GraphDestructorID = 63556;
+    constexpr std::uint64_t FramePipelineID = 63602;
+    // v8 event injection (dispatch-chain audit, 2026-10-24): 58377 is the ENGINE's
+    // event-triggered-transition dispatch — hkbBehaviorGraph vtable slot 6's callee;
+    // Update's own tail and the batch dispatcher (0xab313e) route queued events
+    // through it. Signature (behavior, ctx, event*) with a 24-byte hkbEvent
+    // {u32 id, u32 pad, hkRefPtr payload, hkbNode* sender}; only id/payload are read.
+    constexpr std::uint64_t EventDispatchID = 58377;
     // Pre-registered G2 drive budget: 120 fixed steps of 1/60 s (2 simulated seconds).
     constexpr std::uint32_t DriveSteps = 120;
     constexpr float DriveTimestep = 1.0f / 60.0f;
@@ -55,7 +73,12 @@ namespace
         void* animation_cache);
     using behavior_updater_t = void (*)(RE::hkbBehaviorGraph*, const RE::hkbContext*, float);
     using sampling_entry_t = void (*)(RE::BShkbAnimationGraph*, std::uint8_t* mode_byte);
-    using update_wrapper_t = bool (*)(RE::BShkbAnimationGraph*, void* record);
+    // 63556 is the engine's real BShkbAnimationGraph destructor, applied directly to
+    // stack temporaries by the engine's own slot-5 helper; 63602 runs one per-graph
+    // frame pipeline pass with the shell as scratch holder.
+    using graph_destructor_t = void (*)(RE::BShkbAnimationGraph*);
+    using frame_pipeline_t = void (*)(RE::BShkbAnimationGraph* shell, RE::BShkbAnimationGraph* target);
+    using event_dispatch_t = void (*)(RE::hkbBehaviorGraph*, const RE::hkbContext*, void const*);
 
     struct Identity
     {
@@ -81,6 +104,34 @@ namespace
     std::uintptr_t address(void const* pointer)
     {
         return reinterpret_cast<std::uintptr_t>(pointer);
+    }
+
+    // Event-name lookup over the behavior graph's OWN string data
+    // (hkbBehaviorGraphData::stringData->eventNames): a plain Havok hkArray of
+    // hkStringPtr where the EVENT ID IS THE ARRAY INDEX — the same id space the
+    // parallel eventInfos array and the state-machine event-transition maps key
+    // on. hkStringPtr carries a managed flag in the pointer's low bit, so it is
+    // masked before use. The ProjectDBData hash maps stay unwalked: the dbdump
+    // proved their layout, but their bucket chains hold tombstone entries whose
+    // key bytes are garbage — the engine only ever pointer-compares keys there.
+    std::int32_t lookup_event_id_in_graph(const RE::hkbBehaviorGraphData& data, char const* const name)
+    {
+        const RE::hkbBehaviorGraphStringData* const strings = data.stringData.get();
+        if (!strings)
+            return -1;
+        const auto& event_names = strings->eventNames;
+        const std::int32_t count = static_cast<std::int32_t>(event_names.size());
+        if (!event_names.data() || count <= 0 || count > 0x8000)
+            return -1;
+        for (std::int32_t id = 0; id < count; ++id)
+        {
+            const std::uintptr_t ptr =
+                reinterpret_cast<std::uintptr_t>(event_names[static_cast<std::size_t>(id)].data()) & ~1ull;
+            const char* const entry = reinterpret_cast<const char*>(ptr);
+            if (entry && std::strcmp(entry, name) == 0)
+                return id;
+        }
+        return -1;
     }
 
     Identity identify(RE::BShkbAnimationGraph const& graph)
@@ -428,7 +479,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                     new RE::BSTSmartPointer<RE::BShkbAnimationGraph>(candidate);
                 }
 
-                if (loaded && mode == IndependentGraphMode::drive)
+                if (loaded && (mode == IndependentGraphMode::drive || mode == IndependentGraphMode::inject))
                 {
                     // G2 drive contract (v2): the ENGINE's character-level activator
                     // 58453 — it allocates the pose buffer from setup.animationSkeleton
@@ -513,16 +564,148 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 format_gen_dump(candidate->generatorOutputs[1]));
                         };
                         log_state_probe("activate");
+                        if (mode == IndependentGraphMode::inject)
+                        {
+                            // G2 v8 contract (v8d revision): resolve the pre-registered
+                            // names through the behavior graph's OWN event-name array
+                            // (id = index, the state-machine transition id space), log a
+                            // bounded sample of real event names as evidence, then ONE
+                            // dispatch of the first resolved name through the engine's
+                            // event-triggered-transition entry (58377) before the first
+                            // pipeline step.
+                            const std::uintptr_t project_db = reinterpret_cast<std::uintptr_t>(candidate->projectDBData);
+                            std::string db_dump;
+                            for (std::size_t offset = 0x60; project_db && offset < 0xE8; offset += 8)
+                                db_dump += fmt::format("{:016x}", *reinterpret_cast<const std::uint64_t*>(project_db + offset));
+                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=dbdump db={:#x} qwords[60..e8]={}",
+                                actor_id, request, project_db, db_dump);
+                            const RE::hkbBehaviorGraphData* const graph_data = behavior ? behavior->data.get() : nullptr;
+                            const RE::hkbBehaviorGraphStringData* const graph_strings =
+                                graph_data ? graph_data->stringData.get() : nullptr;
+                            std::string sample;
+                            if (graph_strings && graph_strings->eventNames.data())
+                            {
+                                const std::int32_t total = static_cast<std::int32_t>(graph_strings->eventNames.size());
+                                for (std::int32_t i = 0; i < total && i < 16; ++i)
+                                {
+                                    const char* const entry = graph_strings->eventNames[static_cast<std::size_t>(i)].c_str();
+                                    if (entry && *entry)
+                                        sample += fmt::format("'{}',", entry);
+                                }
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=events count={} first={}",
+                                    actor_id, request, total, sample);
+                            }
+                            else
+                            {
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=events count=0 first=",
+                                    actor_id, request);
+                            }
+                            // v8e: names pre-registered from the v8d phase=events evidence row (the graph's
+                            // own event table — Skyrim-level anim-event names like MT_Idle/MoveStart/
+                            // WeaponDraw are NOT graph events). WeapEquip leads: it is the equip-chain
+                            // entry the G3 first batch (one-handed Equip->Idle->Unequip) needs.
+                            // v9 gates row (read-only): the slot-2 output-reset gates
+                            // (physicsWorld at graph+0x238 and the character's ragdoll
+                            // driver at +0x30) decide the v8e attribution — a LIVING
+                            // source actor most likely has no ragdoll driver either, and
+                            // if the source shows the same empty gates while still
+                            // producing poses, the slot-2 hypothesis is falsified. The
+                            // element head comparison shows what a bound output element
+                            // looks like on the source versus the untouched candidate.
+                            {
+                                const auto element_head = [](RE::hkbGeneratorOutput const* output) {
+                                    if (!output)
+                                        return std::string("null");
+                                    const void* const element = *reinterpret_cast<void* const*>(output);
+                                    if (!element)
+                                        return std::string("elem0");
+                                    const auto* const bytes = static_cast<const std::uint8_t*>(element);
+                                    std::string dump;
+                                    for (std::size_t i = 0; i < 16; ++i)
+                                        dump += fmt::format("{:02x}", bytes[i]);
+                                    const std::uint16_t track = *reinterpret_cast<const std::uint16_t*>(bytes + 0x32);
+                                    const float weight = *reinterpret_cast<const float*>(bytes + 0x38);
+                                    return fmt::format("{} +32={:#06x} +38={:.3f}", dump, track, weight);
+                                };
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=gates src-world={:#x} src-ragdoll={:#x} cand-world={:#x} cand-ragdoll={:#x} src-gen0[{}] cand-gen0[{}]",
+                                    actor_id, request,
+                                    address(source_graph.physicsWorld),
+                                    address(source_graph.characterInstance.ragdollDriver.get()),
+                                    address(candidate->physicsWorld),
+                                    address(candidate->characterInstance.ragdollDriver.get()),
+                                    element_head(source_graph.generatorOutputs[0]),
+                                    element_head(candidate->generatorOutputs[0]));
+                            }
+                            char const* const inject_candidates[] = { "WeapEquip", "SprintStart", "FootLeft", "FootRight" };
+                            std::int32_t chosen_id = -1;
+                            char const* chosen_name = nullptr;
+                            for (char const* const name : inject_candidates)
+                            {
+                                const std::int32_t resolved = graph_data ? lookup_event_id_in_graph(*graph_data, name) : -1;
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=event-lookup name='{}' id={} source=graph-events",
+                                    actor_id, request, name, resolved);
+                                if (resolved >= 0 && !chosen_name)
+                                {
+                                    chosen_id = resolved;
+                                    chosen_name = name;
+                                }
+                            }
+                            if (chosen_name)
+                            {
+                                struct InjectedEvent
+                                {
+                                    std::uint32_t id;
+                                    std::uint32_t pad;
+                                    void* payload;
+                                    void* sender;
+                                };
+                                InjectedEvent event{ static_cast<std::uint32_t>(chosen_id), 0, nullptr, nullptr };
+                                static REL::Relocation<event_dispatch_t> event_dispatch{ REL::ID(EventDispatchID) };
+                                event_dispatch(behavior, context, &event);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=inject event='{}' id={} result=dispatched",
+                                    actor_id, request, chosen_name, chosen_id);
+                            }
+                            else
+                            {
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=skip reason=no-known-event",
+                                    actor_id, request);
+                            }
+                        }
                         const std::uint8_t mode_byte = 0;
                         static REL::Relocation<sampling_entry_t> sampling_entry{ REL::ID(SamplingEntryID) };
                         static REL::Relocation<behavior_updater_t> behavior_update{ REL::ID(BehaviorGraphUpdateID) };
+                        static REL::Relocation<frame_pipeline_t> frame_pipeline{ REL::ID(FramePipelineID) };
+                        static REL::Relocation<graph_destructor_t> shell_destroy{ REL::ID(GraphDestructorID) };
+                        // Stack storage for the per-pass scratch shell, exactly like the
+                        // engine's slot-5 helper hosts its 63602 pass on a stack graph.
+                        alignas(0x10) std::uint8_t shell_storage[sizeof(RE::BShkbAnimationGraph)]{};
+                        // v10: borrow the source's physics world for the drive duration
+                        // only — the gates row proved the candidate lacks exactly this
+                        // one field (its ragdoll driver already exists) and slot 2's
+                        // shared-world touch is just the [vtable 40] getter (a pure
+                        // read) plus a release-disabled assertion stub; everything else
+                        // in the unlocked body is candidate-local. Restored to null
+                        // right after the loop.
+                        candidate->physicsWorld = source_graph.physicsWorld;
+                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=borrow world={:#x}",
+                            actor_id, request, address(source_graph.physicsWorld));
+                        auto* const shell = reinterpret_cast<RE::BShkbAnimationGraph*>(shell_storage);
                         for (std::uint32_t step = 0; behavior && step < DriveSteps; ++step)
                         {
+                            // Engine per-frame recipe (slot-5 helper 0xbacc90): one 63602
+                            // pass per graph per tick — the generation traversal writes
+                            // generatorOutputs, then a zero-dt update runs and the event
+                            // queue drains. The shell is constructed and destroyed each
+                            // pass with the engine's own ctor/dtor pair; both are only
+                            // valid on empty graphs, which the shell always is.
+                            construct(shell, nullptr, false);
+                            frame_pipeline(shell, candidate_base);
+                            shell_destroy(shell);
                             // The engine requests per-frame children re-activation by
                             // setting graph+0x12E = 1 before every update (63602's tail
-                            // does exactly this for each subscribed graph); Update's
-                            // internal gate skips its 60079 activation walk otherwise,
-                            // which is why the first drive rounds produced no output.
+                            // does exactly this for each subscribed graph, and its own
+                            // zero-dt update consumed the flag again); Update's internal
+                            // gate skips its 60079 activation walk otherwise.
                             *reinterpret_cast<std::uint8_t*>(address(behavior) + 0x12E) = 1;
                             behavior_update(behavior, context, DriveTimestep);
                             // The sampling entry reads the sample-transform count at
@@ -538,8 +721,11 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 log_state_probe("60");
                             }
                         }
+                        candidate->physicsWorld = nullptr;
                         candidate_pose_end = format_pose_hash(candidate->characterInstance);
                         log_state_probe("120");
+                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pipeline steps={} shell=pairs world-restored=true",
+                            actor_id, request, DriveSteps);
 
                         const std::string source_pose_after = format_pose_hash(source_graph.characterInstance);
                         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=drive-done steps={} dt={:.6f} source-pose-before={} source-pose-after={} candidate-pose-0={} candidate-pose-60={} candidate-pose-120={}",

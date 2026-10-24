@@ -20,7 +20,8 @@ namespace animation::behavior_graph
         off,
         construct,
         load,
-        drive
+        drive,
+        inject
     };
 
     [[nodiscard]] inline std::optional<IndependentGraphMode> parse_independent_graph(std::string_view value)
@@ -29,6 +30,7 @@ namespace animation::behavior_graph
         if (value == "construct") return IndependentGraphMode::construct;
         if (value == "load") return IndependentGraphMode::load;
         if (value == "drive") return IndependentGraphMode::drive;
+        if (value == "inject") return IndependentGraphMode::inject;
         return std::nullopt;
     }
 
@@ -39,6 +41,7 @@ namespace animation::behavior_graph
         case IndependentGraphMode::construct: return "construct";
         case IndependentGraphMode::load: return "load";
         case IndependentGraphMode::drive: return "drive";
+        case IndependentGraphMode::inject: return "inject";
         default: return "off";
         }
     }

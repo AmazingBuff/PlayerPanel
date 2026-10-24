@@ -1,0 +1,143 @@
+[22:16:41.609] [17576] [I] CharacterPanel v1-2-1-0
+[22:16:41.609] [17576] [I] CharacterPanel loaded
+[2026-10-24 22:16:41.608] [thread 17576] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(73): [info] CharacterPanel v1-2-1-0
+[22:17:03.657] [17576] [I] OAR Animations V1 mapping API available
+[22:17:03.657] [17576] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[22:17:03.657] [17576] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[22:17:42.839] [13664] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[22:17:42.839] [13664] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[22:17:42.839] [13664] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[22:17:42.839] [13664] [I] EXPERIMENT setting IndependentGraph=inject
+[22:17:42.840] [13664] [I] DAC native inventory lifecycle sink installed
+[22:17:42.844] [13664] [I] All shaders compiled
+[22:17:42.844] [13664] [I] Installed pre-UI renderer hook
+[22:17:42.844] [13664] [I] Panel menu sink installed
+[22:17:42.844] [13664] [I] CharacterManager equipment sink installed
+[22:17:42.844] [13664] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-scenegraph-440e7cf784+dirty-cl94faaed0c6-20261024T141115Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture F8-toggle
+[22:17:42.892] [37480] [I] Studio host changed: 0x0 -> 0x2122d7e6980 (paused=true)
+[22:17:42.892] [37480] [I] Studio light node has been created
+[22:17:42.892] [37480] [I] CP-LIGHT slot 0: registered, shell 0x2136d1df880 queued (ledger stays the authority)
+[22:17:42.892] [37480] [I] CP-LIGHT slot 1: registered, shell 0x2136d1df740 queued (ledger stays the authority)
+[22:17:42.892] [37480] [I] CP-LIGHT slot 2: registered, shell 0x2136d1df600 queued (ledger stays the authority)
+[22:17:42.892] [37480] [I] Studio lights registered on the ledger (scene=0x20847e66e80 -- ledger fetch will populate the slots)
+[22:17:42.892] [37480] [I] CP-LIGHT slot 0: ledger shell fetched 0x2136d1df880 (after 0 miss frames)
+[22:17:42.892] [37480] [I] CP-LIGHT slot 1: ledger shell fetched 0x2136d1df740 (after 0 miss frames)
+[22:17:42.892] [37480] [I] CP-LIGHT slot 2: ledger shell fetched 0x2136d1df600 (after 0 miss frames)
+[22:18:08.967] [17576] [I] DAC old-world sessions discarded world=2
+[22:18:09.282] [37480] [I] CP-LIGHT slot 0: ledger shell dropped
+[22:18:09.282] [37480] [I] CP-LIGHT slot 1: ledger shell dropped
+[22:18:09.282] [37480] [I] CP-LIGHT slot 2: ledger shell dropped
+[22:18:09.282] [37480] [W] Studio lights not fully served by the ledger yet
+[22:18:15.670] [37480] [W] Studio lights not fully served by the ledger yet
+[22:18:18.823] [37480] [I] CharacterManager watch actor=00000014
+[22:18:18.832] [37480] [I] OAR bases stage=world-prewarm project=0x211db20cc60 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.179
+[22:18:18.832] [37480] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x2136d1dfc40 filed to lightQueueAdd)
+[22:18:18.832] [37480] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x2136d1df240 filed to lightQueueAdd)
+[22:18:18.832] [37480] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x2136d1df100 filed to lightQueueAdd)
+[22:18:18.900] [37480] [I] CP-LIGHT slot 0: ledger shell fetched 0x2136d1dfc40 (after 1 miss frames)
+[22:18:18.900] [37480] [I] CP-LIGHT slot 1: ledger shell fetched 0x2136d1df240 (after 1 miss frames)
+[22:18:18.900] [37480] [I] CP-LIGHT slot 2: ledger shell fetched 0x2136d1df100 (after 1 miss frames)
+[22:18:29.799] [32376] [W] DAC native rule event='Reverse_On' unsupported for preview: native rule has non-restorable costs/chance/cooldown/target/dynamic casting
+[22:18:29.799] [32376] [W] DAC native spell fe0bb80a 'Exhaustion State Check' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=1 type=0)
+[22:18:29.799] [32376] [W] DAC native rule event='HitFrame' unsupported for preview: effect is outside the inert self-marker restoration subset
+[22:18:29.799] [32376] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[22:18:29.799] [32376] [W] DAC native rule event='MCO_WinOpen' unsupported for preview: effect is outside the inert self-marker restoration subset
+[22:18:29.799] [32376] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[22:18:29.799] [32376] [W] DAC native rule event='SBF_BlockStart' unsupported for preview: effect is outside the inert self-marker restoration subset
+[22:18:29.799] [32376] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[22:18:29.799] [32376] [W] DAC native rule event='SBF_NormalAttackStop' unsupported for preview: effect is outside the inert self-marker restoration subset
+[22:18:29.799] [32376] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[22:18:29.799] [32376] [W] DAC native rule event='SBF_PowerAttackStop' unsupported for preview: effect is outside the inert self-marker restoration subset
+[22:18:29.799] [32376] [W] DAC native spell fe0bb808 'Exhaustion State Dispell' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=1 type=0)
+[22:18:29.799] [32376] [W] DAC native rule event='FootRight' unsupported for preview: effect is outside the inert self-marker restoration subset
+[22:18:29.800] [32376] [I] DAC original NG Plus matched rules=33 handler=0x61fa0 stride=232
+[22:18:29.800] [32376] [I] DAC snapshot actor=00000014 epoch=1 effects=1 scope=19
+[22:18:29.800] [32376] [I] Panel menu opening=true revision=1
+[22:18:29.812] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=begin mode=inject runtime=1.6.1170.0 holder=nullptr factory=63555 loader=63585 third-arg=false
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 source-generation=1 role=source-baseline candidate=none construction=unverified gate1=not-passed layout=commonlib-declared runtime-layout-verified=no snapshot=non-atomic null-address=0x0 uncollected=unverified
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=container graph=0x216a0286480 holder=0x20812e32080 root=0x2155f780880 character=0x216a0286540 outer-behavior=0x21218279900 project-db=0x21217774400
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=character setup=0x2121768a2a0 behavior=0x21218279900 project=0x212177665a0 bindings=0x2121872aec0 event-queue=0x2121743ec30 world=0x0
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=drivers ragdoll=0x21217397c00 controller=0x0 foot-ik=0x2121768a3c0 hand-ik=0x2121743ec00 raycast=0x0 lod=-1 lod-tracks=-1
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=outputs world-from-model=0x2121743eba0 pose-local=0x21217584010 pose-count=116 delete-world=true delete-pose=true generator0=0x212173e1960 generator1=0x212173e1990
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=bones storage=0x2155e9e9600 entries=116 animation-bones=116 foot-ik=1
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=setup skeleton=0x211db435b10 unscaled-skeleton=0x0 bindings=0x0 data=0x211db2096d0 mirrored-skeleton=0x2121743eae0 critical-section=0x7ff72810a290
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=runtime root-generator=0x211d8e62c70 declared-root-clone=0x0 data=0x211d9877510 active-nodes=0x21217b1e640 variable-values=0x212182598c0 variable-mode=0
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=maps template-to-clone=0x212173e19a0 clone-to-template=0x212173e1980 listener-to-clone=0x212171811d0 active-template-to-index=0x212171812b0 active-child-indices=0x212171812c0 state-machine-templates=0x0
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=transitions global-data=0x21218b9ed80 random=0x212173e1970 event-map=0x21218c328d0 attribute-map=0x21218c32930 variable-map=0x21218c32960 property-map=0x21218c32840
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=storage ids=0x0/0 mirrored-ids=0x0/0 jobs=0x0/0 partitions=0x0/0 partition-info=0x0
+[22:18:29.812] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=flags active=true linked=false update-active=false state-changed=true intermediate-outputs=0 static-nodes=-30018 next-id=-30006
+[22:18:29.812] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=constructed graph=0x217609a1080 holder=0x0 root=0x0 behavior=0x0 project-db=0x0 project-name=0x7ffecd51b516
+[22:18:29.812] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=constructed setup=0x0 project=0x0 bindings=0x0 event-queue=0x21217c586c0 behavior-data=0x0 bones=0x0/0
+[22:18:29.812] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 compare-shell graph=different holder=different root=different character=different
+[22:18:29.812] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=race-fields sex=1 bg-model='Actors\Character\DefaultFemale.hkx' root-name='Actors\Character\Behaviors\0_Master.hkx' project-field='DefaultFemale' string-data-behavior-path='' source-project-name='DefaultFemale'
+[22:18:29.812] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=load-try 1/4 source=race-bg-model path='Actors\Character\DefaultFemale.hkx'
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=load try=1 outcome=accepted ms=9.307 behavior=0x212184b3a40 project-db=0x21217774400 project-name=0x20847e60a18 behavior-data=0x211d9877510 active-nodes=0x0 variable-values=0x0
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 compare-loaded project-db=same project=same setup=different bindings=same behavior-data=same active-nodes=different variable-values=different
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 source-generation=1 role=source-baseline candidate=none construction=unverified gate1=not-passed layout=commonlib-declared runtime-layout-verified=no snapshot=non-atomic null-address=0x0 uncollected=unverified
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=container graph=0x216a0286480 holder=0x20812e32080 root=0x2155f780880 character=0x216a0286540 outer-behavior=0x21218279900 project-db=0x21217774400
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=character setup=0x2121768a2a0 behavior=0x21218279900 project=0x212177665a0 bindings=0x2121872aec0 event-queue=0x2121743ec30 world=0x0
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=drivers ragdoll=0x21217397c00 controller=0x0 foot-ik=0x2121768a3c0 hand-ik=0x2121743ec00 raycast=0x0 lod=-1 lod-tracks=-1
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=outputs world-from-model=0x2121743eba0 pose-local=0x21217584010 pose-count=116 delete-world=true delete-pose=true generator0=0x212173e1960 generator1=0x212173e1990
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=bones storage=0x2155e9e9600 entries=116 animation-bones=116 foot-ik=1
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=setup skeleton=0x211db435b10 unscaled-skeleton=0x0 bindings=0x0 data=0x211db2096d0 mirrored-skeleton=0x2121743eae0 critical-section=0x7ff72810a290
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=runtime root-generator=0x211d8e62c70 declared-root-clone=0x0 data=0x211d9877510 active-nodes=0x21217b1e640 variable-values=0x212182598c0 variable-mode=0
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=maps template-to-clone=0x212173e19a0 clone-to-template=0x212173e1980 listener-to-clone=0x212171811d0 active-template-to-index=0x212171812b0 active-child-indices=0x212171812c0 state-machine-templates=0x0
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=transitions global-data=0x21218b9ed80 random=0x212173e1970 event-map=0x21218c328d0 attribute-map=0x21218c32930 variable-map=0x21218c32960 property-map=0x21218c32840
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=storage ids=0x0/0 mirrored-ids=0x0/0 jobs=0x0/0 partitions=0x0/0 partition-info=0x0
+[22:18:29.822] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=flags active=true linked=false update-active=false state-changed=true intermediate-outputs=0 static-nodes=-30018 next-id=-30006
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pre-activate activated=false source-drift=n/a active-nodes=0x0/0 maps=0x0,0x0 variable-values=0x0 flag=0 children-flag=0 root-generator=0x211d8e62c70 behavior-data=0x211d9877510 generator0=0x21217b1e4f0 generator1=0x21217b1ea50 pose-local=0x0/0 setup-skeleton=0x211db435b10 setup-data=0x211db2096d0 setup-mirrored=0x2121743eae0
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=activated activated=true source-drift=none active-nodes=0x21217b1ea30/97 maps=0x21217b1e620,0x21217b1e890 variable-values=0x212184b5e40 flag=1 children-flag=0 root-generator=0x211d8e62c70 behavior-data=0x211d9877510 generator0=0x21217b1e4f0 generator1=0x21217b1ea50 pose-local=0x2121790c010/116 setup-skeleton=0x211db435b10 setup-data=0x211db2096d0 setup-mirrored=0x2121743eae0
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=probe step=activate src-anim=0074 cand-anim=0000 active[count=97 hash=f20b319f25b3cb93] vars[words=652 hash=893b33fda31f6434] gen0=402eaeee1102000001000000ffffffff gen0elem=hash=1bf6fe4de713c489 gen1=301d16ea110200000100000000000000
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=dbdump db=0x21217774400 qwords[60..e8]=0000021656538b8000000000000001dc00000000000000000000040000000000000002a20000017400007ff7287a24840000000000000000000002139638de400000000000000000000040000000000000002f1a00001b5e00007ff7287a2484000000000000000000000216e2e97dc000000216fb84b70000000000000024a300000000000024a3
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=events count=8223 first='FootLeft','FootRight','WeapEquip','na_MRh_BeginCast_Event','MRh_Cast_State_to_MRh_Readied_State','MRh_Standing_Cast_State_to_MRh_Moving_Cast_State','MRh_SpellReady_Event','MRh_SpellRelease_Event','MRh_Equipped_Event','MRh_SpellFire_Event','MLh_SpellReady_Event','MLh_SpellRelease_Event','SprintStart','SprintStop','na_MLH_BeginCast_Event','1HM_Unequip',
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='MT_Idle' id=-1 source=graph-events
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='MoveStart' id=-1 source=graph-events
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='WeaponDraw' id=-1 source=graph-events
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='SyncForward' id=-1 source=graph-events
+[22:18:29.822] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=skip reason=no-known-event
+[22:18:29.823] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=probe step=60 src-anim=0074 cand-anim=0074 active[count=97 hash=b1f33bf3ee1681c3] vars[words=652 hash=04f23bda1f8a8211] gen0=402eaeee1102000001000000ffffffff gen0elem=hash=1bf6fe4de713c489 gen1=301d16ea110200000100000000000000
+[22:18:29.823] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=probe step=120 src-anim=0074 cand-anim=0074 active[count=97 hash=e8de38008791bf03] vars[words=652 hash=04f23bda1f8a8211] gen0=402eaeee1102000001000000ffffffff gen0elem=hash=1bf6fe4de713c489 gen1=301d16ea110200000100000000000000
+[22:18:29.823] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pipeline steps=120 shell=pairs
+[22:18:29.823] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=drive-done steps=120 dt=0.016667 source-pose-before=bb9d9a8d3e7245f3 source-pose-after=bb9d9a8d3e7245f3 candidate-pose-0=bc160a8c2b3a5a58 candidate-pose-60=bc160a8c2b3a5a58 candidate-pose-120=bc160a8c2b3a5a58
+[22:18:29.823] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=post-drive activated=true source-drift=none active-nodes=0x21217b1e2e0/97 maps=0x21217b1e620,0x21217b1e890 variable-values=0x212184b5e40 flag=1 children-flag=0 root-generator=0x211d8e62c70 behavior-data=0x211d9877510 generator0=0x21217b1e4f0 generator1=0x21217b1ea50 pose-local=0x2121790c010/116 setup-skeleton=0x211db435b10 setup-data=0x211db2096d0 setup-mirrored=0x2121743eae0
+[22:18:29.823] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=retained source-drift=none registry-probe=unavailable
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 source-generation=1 role=source-baseline candidate=none construction=unverified gate1=not-passed layout=commonlib-declared runtime-layout-verified=no snapshot=non-atomic null-address=0x0 uncollected=unverified
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=container graph=0x216a0286480 holder=0x20812e32080 root=0x2155f780880 character=0x216a0286540 outer-behavior=0x21218279900 project-db=0x21217774400
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=character setup=0x2121768a2a0 behavior=0x21218279900 project=0x212177665a0 bindings=0x2121872aec0 event-queue=0x2121743ec30 world=0x0
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=drivers ragdoll=0x21217397c00 controller=0x0 foot-ik=0x2121768a3c0 hand-ik=0x2121743ec00 raycast=0x0 lod=-1 lod-tracks=-1
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=outputs world-from-model=0x2121743eba0 pose-local=0x21217584010 pose-count=116 delete-world=true delete-pose=true generator0=0x212173e1960 generator1=0x212173e1990
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=bones storage=0x2155e9e9600 entries=116 animation-bones=116 foot-ik=1
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=setup skeleton=0x211db435b10 unscaled-skeleton=0x0 bindings=0x0 data=0x211db2096d0 mirrored-skeleton=0x2121743eae0 critical-section=0x7ff72810a290
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=runtime root-generator=0x211d8e62c70 declared-root-clone=0x0 data=0x211d9877510 active-nodes=0x21217b1e640 variable-values=0x212182598c0 variable-mode=0
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=maps template-to-clone=0x212173e19a0 clone-to-template=0x212173e1980 listener-to-clone=0x212171811d0 active-template-to-index=0x212171812b0 active-child-indices=0x212171812c0 state-machine-templates=0x0
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=transitions global-data=0x21218b9ed80 random=0x212173e1970 event-map=0x21218c328d0 attribute-map=0x21218c32930 variable-map=0x21218c32960 property-map=0x21218c32840
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=storage ids=0x0/0 mirrored-ids=0x0/0 jobs=0x0/0 partitions=0x0/0 partition-info=0x0
+[22:18:29.823] [17576] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=flags active=true linked=false update-active=false state-changed=true intermediate-outputs=0 static-nodes=-30018 next-id=-30006
+[22:18:29.823] [17576] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=end constructed=true loaded=true assembly=true separated=true source-stable=true retained=true
+[22:18:29.823] [17576] [I] ANIMATION actor=00000014 request=1 reason='panel-open' source-generation=1 equipment-target=1h
+[22:18:29.835] [17576] [I] ANIMATION WORLD actor=00000014 request=1 snapshot=paused-source reason='panel-open' hands=(560c2a4c,00043324) drawn=false build-ms=11.984 clips=|original='Animations\male\MT_Idle.HKX' index=12221 bound='data\meshes\actors\character\animations\OpenAnimationReplacer\SDB SVFI\SVFI 1 Base Idle\female\mt_idle.hkx' oar-api=available oar-result=replacement oar-path='data\meshes\actors\character\animations\OpenAnimationReplacer\SDB SVFI\SVFI 1 Base Idle\female\mt_idle.hkx' oar-project='DefaultFemale' oar-variant='' oar-submod='Idle 1' oar-mod='Seamless Varied Feminine Idles' t=2.02
+[22:18:29.835] [17576] [I] DAC actor=00000014 request=1 Smooth_loop preparation requested
+[22:18:29.836] [17576] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x2155f780880 parent=0x2153622bc80 nodes=1851 geoms=123 api=NiObject::Clone id=68835/70187
+[22:18:29.838] [17576] [I] SCOPY CLONE-RETURN capture=1 copy=0x2176091ba00
+[22:18:29.839] [17576] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1851 skin-bones=886
+[22:18:29.839] [17576] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[22:18:29.839] [17576] [I] SCOPY CENSUS source-nodes=1851 copy-nodes=1851 source-geoms=123 copy-geoms=123 source-skins=60 copy-skins=60 source-dynamic=10 copy-dynamic=10
+[22:18:29.839] [17576] [I] SCOPY HELD actor=00000014 attached=1 missing=0 source-graph=read-only
+[22:18:29.839] [17576] [I] SCOPY READY actor=00000014 capture=1 controllers-removed=118 collisions-removed=19
+[22:18:29.840] [17576] [I] SCOPY FRAME actor=00000014 skinned-bound valid=true radius=78.8 center=(1247.8,9638.1,-108.5) graph-bound radius=286.1 scale=0.35 pruned-nodes=71
+[22:18:29.840] [17576] [I] ANIMATION actor=00000014 request=1 graph retarget=0x2176091ba00 time=0.00
+[22:18:29.845] [17576] [I] DAC actor=00000014 request=1 Smooth_loop preparation ready
+[22:18:29.845] [17576] [I] DAC actor=00000014 epoch=1 native-effect revision=2
+[22:18:29.845] [17576] [I] DAC actor=00000014 epoch=1 request=1 event='Smooth_loop' native call completed revision=2
+[22:18:29.850] [17576] [I] ANIMATION actor=00000014 request=1 goal=non-combat-idle family=1h direct=false drawn=true
+[22:18:29.861] [17576] [I] ANIMATION actor=00000014 request=1 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[22:18:29.863] [17576] [I] ANIMATION actor=00000014 request=1 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[22:18:29.868] [17576] [I] ANIMATION actor=00000014 request=1 asset ready index=9037 base=23 replaced=true duration=19.80 path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[22:18:29.870] [17576] [I] ANIMATION PANEL actor=00000014 request=1 accepted action=1 original='Animations\1hm_idle.hkx' base-index=23 logical='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' variant='none' index=9037 bound='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' status=replacement clip-time=0.000 blend=0.000 build-ms=1.504
+[22:18:29.871] [17576] [I] SCOPY FRAME calibrated offset=(-0.6,-2.8,0.6) radius=28.3
+[22:18:29.876] [17576] [I] FIGURE transparency geometries=47 blended=14 tested=25 render-flags=0x204 depth=opaque-write/alpha-read
+[22:18:29.876] [17576] [I] SceneGraph draw OM check: bound=0x21321d2d9e0 studio=0x21321d2d9e0 match=true
+[22:18:29.876] [17576] [I] SCOPY COMPOSITE src=0x21300e980a8 bound=0x21300e980a8 match=1 draws=1
+[22:18:55.180] [17576] [I] DAC restore actor=00000014 epoch=2 baseline=0 spell-groups=3 result=matched
+[22:18:55.180] [17576] [I] Panel menu opening=false revision=2
+[22:18:55.193] [17576] [I] ANIMATION actor=00000014 request=1 lifetime reset

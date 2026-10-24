@@ -207,6 +207,37 @@ G2 首轮"激活成功但无可观测前进"的归因审计。全部指令级事
 4. **绑定链辨析**：58464（0xabdbd0）实为"置 `character.behaviorGraph(+0x58)`"（AddRef/Release 配对）+ raycast 接口循环（0xabdc1d..0xabdc68，`raycastInterface` 为空直接返回）——**不含 pose 分配**。其调用者：63585（栈上加载用 character ×2）、**63847（0xbc2390：从容器建 hkbBehaviorGraph 实例后把实例绑到 ARG1 character）**、0xaea12b（×2，hkbCharacter 簇）。63847 的 ARG1 是否为嵌入 character、以及候选 `setup.animationSkeleton` 的填充点（63846→63950→63947 链）未逐条核实——留待运行期判读。
 5. **G2 v2 修正**：激活改调**字符级激活 58453**（0xabd630，运行期守卫 `setup.animationSkeleton == 0` 时记录 `skip=setup-skeleton-missing` 干净结束；v2 运行证实骨架非空、AllocatePose 生效）。**续审计六补遗（G2 v2/v3 判读后）**：① Update（58329）全函数确认无任何 poseLocal 写入（位移枚举完整覆盖：图字段仅 activeNodes 与 +0x12E 门）；② 其 per-node 主循环有 `[node+0x30] flags&1` 与 `[entry+0x85]` 两道门；③ **采样器 = 63581（0xbafda0）**：读 `generatorOutputs[0]`（一元素数组头）的元素、按元素 +0x32/+0x34 的 pose 轨道偏移以 57148 按 `count×0x30` 拷入 GetOrAllocatePose（58458）返回的 poseLocal；④ **采样入口 = 63589（0xbb2a40）**：门为 setup/animationSkeleton/behaviorGraph 非空 + `+0x12C` 已激活（候选全过），但 63581 以 `[graph+0x240]`（当前动画索引 word，63587 每帧从管理器记录写入）为 0 时跳过；⑤ 虚表槽 6 = 向活动节点派发事件（58377），58429 = 单 float 写入，均非输出请求。**G2 v4**：驱动循环每步 Update 后将 `[source+0x240]` 镜像到候选（同一张图 + 共享绑定集下引擎本会写同值）并调 63589 完成采样。
 
+## 管理器每帧管线与记录全解（2026-10-24 续审计七）
+
+G2 六轮迭代后为“动画选择机制设计”做的定向补审。全部指令级事实（同一解包镜像，listing 已存 `listings/`）：
+
+1. **63587（0xbb2370，1444 B）更新包装器全解**，签名 `(graph, record, ?)`，record 实际布局：
+   - `+0x00` **f32 timestep**（驱动两处：渐变计时器递减、Update 的 xmm 实参）；
+   - `+0x08` 回调函数指针、`+0x10` 回调实参——Update 后且 `graph+0x243 == 0` 时调用一次；
+   - `+0x18` 世界变换/位置指针（移动距离→渐变计时缩放；也传入 63575）；
+   - `+0x28` **u16 id**、`+0x2a` u8（非 0 = 跳过选择）、`+0x2b/+0x2c` u8、`+0x2e` u8（直写 `graph+0x249`）。**记录里没有任何动画身份字段。**
+   - 入口即 `graph+0x240 = 0`、`+0x245/+0x246 = 1`；双计时器 `+0x1e8/+0x1ec -= dt`；选择路径（`+0x2a==0` 且活动计时器到期且 ≠ −FLT_MAX）调 **63575** 写 `+0x240` 并清 `+0x245/+0x246`（该帧**跳过 Update**）；渐变块管理 `+0x220/+0x228`（当前/上一渐变控制器）与渐变控制器数组（元素 0x10 B，含 `+0x12` word、`+0x18` dword、`+0x1c` 标志）；
+   - **Update 仅在 `+0x245==1 && +0x246==1` 时执行**：58315 自建 ctx（character=`graph+0xC0`，world=`physicsWorld(+0x238)` vtable 槽 40 或 0）→ `behaviorGraph` vtable 槽 5（xmm=dt）→ 回调 → **63583(graph, ctx, 第三实参)** → TLS 槽 0x768 换入 0x3a 再还原（分配器域）→ 尾部 58429（多字段非空门）。
+2. **63575（0xbaf880，487 B）= LOD 采样数解析器，不是动画选择器**：`out` 字节 + 返回 word；基数 = `min(record+0x28 id, [graph+0x170])`；`rootNode(+0x218)` 与 record 变换的距离² 按 `1/[root+0x78]²` 缩放后查阈值表 `[graph+0x190]`（计数 `+0x1a0`，元素 `{f32 阈值, u16 采样数, u8 标志}` 步长 8，最后一个命中项生效）；rootNode 为空走 `[graph+0x160]` 表的 0x80 步长回退路径。**`[graph+0x240]` 的语义至此完全闭合：按角色到相机距离衰减的采样变换数（近满 116、远衰减），与动画身份无关。**
+3. **63583（0xbb0460，678 B）= 事件排空 + 名字簿记**：队列 = `ctx.eventQueue(+0x18)`，空则回退 `character.eventQueue(+0x80)`；`graph+0x243 != 0` 时仅清游标（`[eq+0xC]/[eq+0x14]=0`）；否则每调用**最多排空 5 个事件**（59324 取 24 B 表项）；**第三实参为 0 时整个注册块被跳过（静态证实无害路径）**；每个事件经重映射表（`[r9+0x10]` 表或 57195）得动画索引，越界（≥ `[projectDBData(+0x200)+0xE0]`）即跳过；名字取自 `[projectDBData+0xD0][idx]`（步长 8），经 `BSFixedString::Set`（69162）写进第三实参的 16 B 名字对数组（基址 `+0x08`）——纯簿记，v6 崩溃的唯一原因是第三实参非法（`+0x10` 为 0 时 `[r9+0x10]` 解引用崩）。
+4. **63602（0xbb4c50，6280 B）= 每帧图管线**，签名 `(临时壳, 目标图)`（graph_helper 的调用形态；文首 r13=rcx=临时壳，bb5a7f 重绑定 `r13=[rbp+0x3b0]`=解析出的目标图——此前"63602(临时图, 订阅图)"的实参方向记录以本节为准）：头部 TLS 换域 + `临时壳+0x243=1`；从**目标图 vtable**（槽 2/0x10/0x30/0x38/0x58）收集事件；栈上构造 **12 指针 scratch 记录**（`rbp+0x140..0x198` → 本帧局部容器对象）；尾序：**65149(&目标图->characterInstance(+0xC0), 记录) → `目标behaviorGraph+0x12E = 1` → 63587(目标图, 栈记录, 0) → `目标图+0x243 = 0` → 63584(目标图)** → 容器析构收尾（63689/63696–63701/32600）。
+5. **65149（0xc24c50，95 B）**：门 = `characterInstance.behaviorGraph(+0x58)` 非空；栈上构 `{dt=0 f32; 字节 1,1,1; +0x08=1; +0x09 word=0; +0x0B=1; +0x10 vtable=0x1992da8; +0x18 记录}` 后调 **65232**。
+6. **65232（0xc28af0，443 B）**：门 = behaviorGraph 非空且（`+0x12C` 已激活或 `[struct+9]` 强制位）；速率 = 强制 ? 1.0 : **0.04**；**scratch 计数 = `[behaviorGraph+0x128]`（word）× 速率向上取 2 的幂**；scrap heap（68088）分配 计数×0x18 并清零首 8 字节；调 **65237（0xc28f30，4250 B）**（局部 ctx、struct、`{vtable, 记录}`、behaviorGraph，栈上另传 `{1.0, 1.0, 强制位, 0}` 与 `{计数, 魔数 0xefbeadde/0x41993508, heap, 数组}`）。
+7. **65237 = 生成遍历引擎**：以 behaviorGraph vtable 槽 1 身份 + 哈希表 + RTTI 常量单例（58554/58639/58650/58666/58672/58675/58901/58927/62942/62956/62959，各为 `lea rax,[rip+X]; ret` 型身份取值）分派存储域；沿 `[bg+0x58]` 子数组 / `[bg+0x60]` 子数递归，按节点权重（`+0x80/+0x84` 混合时长、`+0x5a` 标志、`+0x5b`→58448 缓动）累计；引用生成器分支经 **65238** 解析子图（58554→`[bg+0x80]`；58901→59405/59372 索引；58666→`[bg+0x48][字节+0x58]` 钳制；58636→`[bg+0x50]` 等）；clip 生成器分支走 `[rbx+0x60]` 子生成器权重循环；生成结果经接口 vtable（`{0x1992da8, 12 指针记录}`：`+0x20` 报告节点输出尺寸→16 B 对齐 scratch、`+0x40` 查询、`+0x48` 写出 `{ptr,count}`）写进本帧 scratch；缓冲经 TLS arena（`[0x31b14d4]`→0x174f440）分配、57041/0x2019838 vtable 槽 4 释放。**裸 Update（58329）完全不含该遍历——G2 v1–v6“零生成产物”的最终根因即候选从未执行任何生成遍历，而非缺“管理器动画选择”。**
+8. **引擎自建 63587 记录全零**（r14d 于 bb60ac 清零后至尾未再赋值）：`{dt=0, 回调=0, 实参=0, 变换=0, id=0, 标志 +0x2a=1/+0x2b=1/+0x2c=1/+0x2e=1}`，第三实参 = 0——slot-5 管线是**零 dt 再生成节拍**：65237 生成本帧输出、63587 零推进 Update、63583 排空事件。
+9. **graph_helper（0xbacc90，70 B）= 通知中心槽 5 的每图处理**：栈上 `63555(&壳, 0, 0)` → `63602(&壳, 订阅图)` → `63556(&壳)`——空壳构造/真析构直接配对（不经智能指针），即 v7 要复刻的引擎配方。
+
+## 事件派发链与槽 2 输出门（2026-10-24 续审计八）
+
+G2 v7 判读后为事件注入判别（G3 前提）做的定向补审。全部指令级事实（同一解包镜像）：
+
+1. **事件派发原语 = 58377（0xab58a0，hkbBehaviorGraph vtable 槽 6 的落体）**，签名 `(behavior, ctx, event*)`，event 为 hkbEvent（24 B：`+0x00` u32 id、`+0x08` hkRefPtr payload；58377 只读这两项）。流程：暂存并清零 `ctx+0x30` 字节 → 取 `ctx.eventQueue(+0x18)`，空则回退 `character.eventQueue(+0x80)`（与 Update/63583 同一队列）→ 遍历 activeNodes（0x90 步长）：跳过 `[entry+0x84]` 置位项；取 `[entry+0x60]` 状态机与 `[entry+0x58]` 节点 → 写队列游标（`[eq+0x18]=[sm+0xB8]`、`[eq+0x20]=1`）→ 以 57195 在 `[sm+0xB8]` 的事件→转移映射中查 id，命中（≠−1）则调节点 vtable `+0x30` 或 59310 **触发状态转移（激活新状态/生成器）**。
+2. **槽 6 桩 = 0xab1f30（0x33 B）**：`ctx.behavior(+8) == 0` 时把 24 B 事件拷栈转调 58377，非空直接返回——[续审计五](#激活与推进入口g2-前提2026-10-24-续审计五)的"短路径"模式又一例；58315 自建的裸 context（behavior=0）恰好走派发路径。**Update（58329）尾部即经此桩派发队列事件**（完整反汇编 0xab1f59 落在 58329 函数体内）。
+3. **批量派发器 = 0xab313e（0xC8 B，无直接调用者——经虚表/内部跳转进入）**：从环形队列逐项 pop（`[q+0xC]` 读游标、`[q+0x8]` 容量回绕、`[q+0x14]` 计数递减——与 59324 同一 ring 读取），经 `[q+0x18]` 映射表重映射 id（`[q+0x20]` 标志选择 57195 查 `[q+0x20]` 表或 `[q+0x10]` dword 表），逐个调 58377(behavior, ctx, &event)。**"入队 + Update"与"直调 58377"都是引擎原生路径。**
+4. **59324（0xad60a0，.pdata 截断为 16 B）= 队列批量搬移**：锁内分配临时数组、按 `[q+0xC]`/`[q+0x8]` 环形拷出、逐项递减 `[q+0x14]`——63583 的取件器。队列环形布局至此闭合：`[q+0x00]` 表项数组、`[q+0x08]` 容量、`[q+0xC]` 读游标、`[q+0x14]` 待处理计数。
+5. **事件名不在 exe**：`WeaponDraw`/`MT_Idle` 等字符串在全部节区零命中——事件名来自行为项目数据，运行期由 ProjectDBData 的名字→id 映射解析（[CommonLib 声明](../extern/CommonLibSSE/include/RE/B/BShkbAnimationGraph.h)：`unk70`(+0x70) 与 `unkA0`(+0xA0) 两张 `BSTHashMap<char*, i32>`，注释明确 `unkA0` 为 anim event 处理所读；`unkD0`(+0xD0) 全部事件名表，与续审计七 63583 的名字来源吻合）。**BSTHashMap 内联布局**（63639 实测）：表项数 `+0xC`（u32）、**链尾哨兵 `+0x18`（桶与链尾均指向哨兵而非空——v8 首轮崩溃即误用空停机所致）**、桶数组 `+0x28`，表项 0x18 步长 `{char* name, i32 id, next*}`。**63773（图 vtable 槽 13，0xbbd6b0）= 名字→id 查询**（哈希 + 桶链内联遍历，miss 返回 −1）。**运行期事实记录（v8 三轮）**：dbdump 解码确证两张表的 CLib 布局正确（哨兵 `+0x18` 同为模块静态地址、计数 1024/16384 均 2 的幂、桶为堆指针）——但桶链含**墓碑/释放态表项**，其键字段是垃圾字节；引擎查表一律**指针比较**（与驻留串指针相等，从不解引用键），CommonLib 侧按内容 strcmp 的遍历必崩（两轮崩溃的真正根因，非布局错误）。`db+0xD0` 数组（9379 项，全程安全）是动画/剪辑名表，不含 `MT_Idle`/`MoveStart` 等事件名。**插件侧事件→id 的正源 = 行为图自带字符串数据**：`hkbBehaviorGraphData(+0x78 stringData)->eventNames(+0x10)`，Havok 原生 `hkArray<hkStringPtr>`（指针低位为 managed 标志，读取需掩 `&~1`），**事件 id 即数组下标**，平行数组 `eventInfos(+0x40)` 与状态机事件转移映射同键控此 id 空间（[CommonLib 声明](../extern/CommonLibSSE/include/RE/H/hkbBehaviorGraphData.h)）。
+6. **槽 2（63621，0xbb6c60，857 B）= 每帧输出重置/ragdoll 更新**，开头两道门：`physicsWorld(+0x238)` 为空 **或** `character.ragdollDriver(+0x30)`（即 `graph+0xF0`，[CommonLib hkbCharacter 声明](../extern/CommonLibSSE/include/RE/H/hkbCharacter.h)）为空 → 整体跳过。门内：63584 → **重置 `generatorOutputs[0]` 元素（`+0x32` word=0、`+0x38` f32=1.0，即 63581 采样器读的轨道偏移/权重）** → physicsWorld vtable 槽 40 → 控制器链表遍历。**候选两门皆空 → 连输出元素重置都未发生**——v7 元素哈希冻结与此吻合，构成注入判别失败时的下一假设（输出绑定门）。
+
 ## 对设计契约的影响
 
 - 构造 API **不是**“独立图可用”的证据；它只证明“可以分配并初始化空壳，且能按引用计数成对释放”。
@@ -269,6 +300,27 @@ python build/g1-audit-20261023/disasm_func.py 0xbb2270   # 63586 激活包装器
 python build/g1-audit-20261023/disasm_func.py 0xbb2370   # 63587 引擎级更新包装器
 python build/g1-audit-20261023/disasm_func.py 0xab1890   # Update 桩 58329
 # 0xab0a60(58315 InitContext) 无 .pdata，raw 反汇编。
+
+# 9. 管理器每帧管线与记录全解（2026-10-24 续审计七）
+python build/g1-audit-20261023/disasm_func.py 0xbb2370   # 63587 更新包装器（记录布局全解）
+python build/g1-audit-20261023/disasm_func.py 0xbaf880   # 63575 LOD 采样数解析器
+python build/g1-audit-20261023/disasm_func.py 0xbb0460   # 63583 事件排空 + 名字簿记
+python build/g1-audit-20261023/disasm_func.py 0xbb4c50   # 63602 每帧图管线
+python build/g1-audit-20261023/disasm_func.py 0xc24c50   # 65149 帧记录薄包装
+python build/g1-audit-20261023/disasm_func.py 0xc28af0   # 65232 生成准备（scratch 分配）
+python build/g1-audit-20261023/disasm_func.py 0xc28f30   # 65237 生成遍历引擎
+python build/g1-audit-20261023/disasm_func.py 0xc29fd0   # 65238 引用生成器解析
+python build/g1-audit-20261023/disasm_func.py 0xbacc90   # 通知中心槽 5 每图处理
+# 58554/58639 等 RTTI 身份单例无 .pdata，raw 反汇编（lea rax,[rip+X]; ret）。
+
+# 10. 事件派发链与槽 2 输出门（2026-10-24 续审计八）
+python build/g1-audit-20261023/disasm_func.py 0xab58a0   # 58377 事件→转移派发原语
+python build/g1-audit-20261023/disasm_func.py 0xab1f30   # 槽 6 桩（ctx.behavior==0 转调 58377）
+python build/g1-audit-20261023/disasm_func.py 0xab313e   # 队列批量派发器
+python build/g1-audit-20261023/disasm_func.py 0xad60a0   # 59324 队列批量搬移（.pdata 截断，raw 补充）
+python build/g1-audit-20261023/disasm_func.py 0xbb6c60   # 槽 2（63621）输出重置/ragdoll 更新（双门）
+python build/g1-audit-20261023/disasm_func.py 0xbb8c70   # 63639 按名读变量（unk70 布局证据）
+python build/g1-audit-20261023/disasm_func.py 0xbbd6b0   # 63773 名字→id 查询（vtable 槽 13）
 ```
 
 脚本只读 PE/versionlib，不加载模块、不调用引擎；`analysis.json` 由 `build_maps.py` 从 versionlib 生成。反汇编注释中的函数名来自 CommonLibSSE 头文件的 `RELOCATION_ID` 标签，未标名者保持 ID/地址。
