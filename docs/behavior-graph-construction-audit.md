@@ -1,6 +1,6 @@
 # 行为图构造与销毁的二进制审计（2026-10-23）
 
-更新：2026-10-23（含续审计）。对零售 SkyrimSE 1.6.1170 的**已解包副本**做静态审计，核实 `ConstructAnimationGraph` 的分配、构造、holder 关系与配对销毁，并定位其后的项目加载/链接链路。结论：**构造/所有权/销毁配对与项目加载/链接链路均已取得二进制证据；激活/更新、事件路由与"无新 Actor 复用"仍未证实，G1 仍未通过。**
+更新：2026-10-23（含续审计）；2026-10-24 续审计二确定加载函数 63585 的第二实参形态与拒绝路径，续审计三确定扩展名剥离（69489）、setup 自建（63949）与描述符名字来源链，续审计四定位已装载图析构的崩溃（Deactivate 读空 activeNodes），续审计五（G2 前提）确定激活/推进入口。对零售 SkyrimSE 1.6.1170 的**已解包副本**做静态审计，核实 `ConstructAnimationGraph` 的分配、构造、holder 关系与配对销毁，并定位其后的项目加载/链接链路。结论：**构造/所有权/销毁配对、项目加载/链接链路、第二实参形态、激活入口（引擎配方 63586 + Activate 自分配 activeNodes）均已取得二进制证据；Update 推进细节与事件路由仍未逐条核实，G1 已 PASSED（修订判据），G2 设计中。**
 
 本文只记录已读出的指令事实和可复现步骤，不把地址相等、函数可反汇编或构造成功当作独立图可用。G1 的通过/停止判据仍由[六关验证](independent-behavior-graph.md#六道关卡)拥有。
 
@@ -147,6 +147,66 @@ return *a_out != nullptr
 
 **结论（静态层面）**：引擎自身加载第二个行为图时的语义正是"实例新建、行为数据引用共享"——与独立图设计想要的资源模型一致。但"共享数据在运行中是否安全（写时隔离、variableValueSet 独立性）"仍属 G1 运行判据，静态证据不能替代。
 
+## 第二实参形态与拒绝路径（2026-10-24 续审计二）
+
+G1b 运行实测 63585 返回 false（0.166 ms、无装配、无源漂移）后，对同一解包镜像续审计，回答两个问题：**第二实参的真实形态**与**拒绝发生在哪、有什么副作用**。全部结论为指令级事实：
+
+1. **第二实参是 `const char*`（完整项目路径），不是 `BSFixedString*`**。63585 序言把 rdx 存入 rdi（bb0837），随后原样作为第一实参传给 69488：`mov rcx, rdi; call 0xcfc5b0`（bb08a9/bb08ac）。
+2. **69488（0xcfc5b0，354 B）= 路径拆分**。69492（0xcfcba0，25 B）实参为空返回 -1，非空尾落进紧随其后的扫描器（0xcfcbb9 起，.pdata 只记 7 字节）：在实参的本地副本里**从后向前**找最后一个 `\`（0x5c）或 `/`（0x2f），返回其下标或 -1。69488 按该下标把路径拆成（目录，文件名）写入两个 SSO 字符串：**0x118 字节对象，内联 260 B（0x104）缓冲在对象基址、缓冲指针 +0x108、长度 +0x110（word）、容量 +0x112（word）**——正是编排者描述符表表项（0x118 B、+0x108 "名字指针"）的同一类型。无分隔符 → 目录为空、文件名=整串；返回 bool。
+3. **63844（0xbc1b10，593 B）的实参布局**：rcx=目录段、rdx=文件名段（均为 SSO 串缓冲指针，bb08bf–bb08da 取自 69488 的两个栈对象，空时用静态空串 0x1acbcc0）、r8=`&characterInstance`(+0xC0)、r9=`&unk1F8`(+0x1F8)、arg5=`&projectName`(+0x1F0)（=63844 帧内 [rbp+0x2B0]）、arg6=16 字节清零栈结构（=[rbp+0x2B8]，bc1c43 的读取与之互证）。
+4. **解析与查表**：63844 构造解析器对象（63889，vtable `0x19892a8`），走槽位 3（0xbc4d30，1142 B）：69487 把实参拼为 `目录 + [目录自身不以分隔符结尾时补 '\'] + 文件名`（0xcfc4cc–0xcfc598；目录 ≤1 字符或以分隔符结尾则不补）；69490（0xcfc8c0，357 B）规范化——`/`→`\`（cfc96a）、解析 `.\` 与 `..\` 段（cfc8f8–cfc957）、**无大小写折叠**；然后对全局注册表单例 `0x31b6580` 查表。返回句柄；`句柄==0` 或 `[句柄+0x20]==0` → 63844 返回 0（bc1b9f/bc1ba9 → bc1d34）。
+5. **63844 成功路径**：句柄经 hkRefPtr 存入 `character+0x60`（= graph+0x120；bc1bb7–bc1bc5，57010/57011 配对）；调 63884（&unk1F8）、63949；读 `character+0x50 → +0x40 → +0x98` 链（任一为空 → 返回 0）；69489 处理文件名段后，**69161 从文件名段构造 `BSFixedString`，69167 赋给 `graph->projectName`(+0x1F0)（bc1cd7–bc1d01）**，69164 析构临时串，63951 收尾。即 **projectName 的值 = 第二实参路径的文件名段**；63585 本体从不写 +0x1F0（全函数唯一引用是 bb08de 取地址）。⇒ 源图的 projectName 是"文件名段"（如 `0_master.hkx` 形态），**不是完整路径，不能原样回传**。
+6. **拒绝路径（63844 返回 0 → 0xbb21a9）**：释放 graph+0x120（若非空，57011）并置空 → `58464(&characterInstance, 0)` 解绑 → `58285([graph+0xF0], 0)` → 释放 graph+0x208 behaviorGraph（若非空）→ [rsp+0x70] 句柄若非空续处理 → 置空两个栈上 SSO 串、对象析构、恢复线程局部守护字（gs 段变址 +0x768；序言保存旧值、写 0x3a，尾声恢复，bb0840–bb0863/bb2235–bb223e）→ 返回 r14b=0（序言 bb083d 置 0）。**对空壳图上述引用全为 null，整条路径是空操作、只返回 false——与 G1b 实测（source-drift=none、0.166 ms、无崩溃、projectName 未被写）逐项吻合。** 63455 失败的第二错误路径（0xbb2100）走 63456/59484/58460/63847 的重载清理，未逐条展开。
+7. **编排者实参来源**（0x54ba10 @54bb11–54bb2c）：rdx = 表项 +0x108 缓冲指针，缺省静态空串 0x1acbcc0；**r8d = holder->Unk_06()（vtable +0x30）的返回值——第三实参随 holder 而异，不是常量**；rcx = 新构造的图。
+
+**对 G1b 失败的解释**：实验传的是 `BSFixedString*`（对象地址）。69488 把 BSFixedString 头 8 字节（指向引用计数串数据的指针）当路径内容扫描，得到在首个 0 字节截断的无意义"文件名"、目录为空；合并、规范化后查表必然失配 → 句柄 0 → 拒绝路径返回 false。0.166 ms 与"拆分+查表即返"一致。**这是纯粹的实参形态错误，不涉及未定义行为或源图副作用。**
+
+**修正后的调用契约（供实验契约修订）**：第二实参应为 NUL 结尾、含分隔符的**完整项目路径** `const char*`（`/` 或 `\` 皆可，规范化统一为 `\`）；成功后 projectName=文件名段。候选值来源：源图 character 的 projectData 链内项目路径串（hkbProjectStringData 一类）为首选；仅传 `源.projectName`（文件名段、无目录）时合并结果为裸文件名，能否命中注册表**未证**。69487 补分隔符所用静态（0x17ABFA8 间接对象）未逐字节解析，不影响上述修正。
+
+**仍未决**：解析器槽位 3 的查表键比较细节（大小写规则、是否要求完整路径）未逐条核实；激活/更新/事件路由仍未定位；G1 判定不变，G2–G6 保持锁定。
+
+## 加载取值与前置链的续审计三（2026-10-24，G1b v2 复盘）
+
+G1b v2（以 `stringData->behaviorPath + projectName` 重建路径调用 63585）仍被拒（0.289 ms）。`load-args` 行首次记录所传内容，暴露三项事实并引出下列指令级结论：
+
+1. **源项目的 `stringData->behaviorPath` 为空，`projectName` = `DefaultFemale`**（无扩展名、无目录）——v2 传出的合成键就是裸 `DefaultFemale`，仍查表失配。
+2. **69489（0xcfc720，397 B）剥离扩展名**：对文件名段从后向前找最后一个 `.`（cfc7bd 的 0x2e 比较），只把前缀写入 `projectName`（cfc7de 的 13274 长度截断）。因此 `projectName` 是"文件名段去扩展名"，**注册表键本身仍含扩展名与目录段**——裸 `DefaultFemale` 与引擎键必然不同。
+3. **63844 的 `character.setup → +0x40 → +0x98` 检查不是调用方前置条件**：紧邻其前的 63949（0xbc91e0，296 B）自行为 character 创建 setup——经 hkMemoryRouter 分配 0x58 字节、59477 构造、写入 `[&characterInstance+0x50]`（bc92c1–bc92cf 的 Release/AddRef 配对），再调 60112 初始化。即引擎自己的"先 Construct 后 63585"流程同样以 setup=0 的空壳进入 63844，检查在绑定后必然通过。**G1b v2 的拒绝因此收窄为纯粹查表失配**（若句柄命中，后续链会被 63949 自行建立）。
+4. **描述符表名字的来源**：编排者 0x54ba10 的调用者之一 0x2f69f0（REFR 簇）在栈上构造 2 个 0x118 表项（68162，表项尺寸实参 0x118），再由 REFR 主 vtable（0x17ae180）槽位 114（0x2f63e0，340 B）填充：经类型键 `0x3284b30`（BSS，运行期初始化，静态不可读）二分查找（70510，0xd26490）取得组件，BSFixedString 拷贝其 `+0x18` 串，按 13274 写入表项（先置空 +0x108/+0x110 再赋值）。名字原文来自该组件，**无前缀拼接**；`TESModel::model` 在 +0x08、`BGSBehaviorGraphModel` 尺寸 0x28，`found+0x18` 与二者均不吻合，静态层面无法把该组件落到具体 TESRace 字段。CommonLibSSE 声明的 TESRace 候选字段：`behaviorGraphs[SEXES::kTotal]`(+0x1E8，BGSBehaviorGraphModel)、`rootBehaviorGraphNames[2]`(+0x238)、`behaviorGraphProjectNames[2]`(+0x248)。
+
+**结论与下一步**：G1b v2 拒绝 = 注册表键失配（键含目录段与扩展名，而 `stringData->behaviorPath` 为空、`projectName` 已被剥扩展名，二者都无法重组出引擎键）。取值来源需运行期证据：G1b v3 在 `race-fields` 行只读记录三个 TESRace 候选字段与 stringData 的内容，并按预注册优先级顺序尝试（≤4 次、首次成功即停、失败尝试对空壳为已证实的无副作用操作）。G1 判定不变，G2–G6 保持锁定。
+
+## 已装载图析构的崩溃定位（2026-10-24 续审计四）
+
+G1b v3 运行（构建 `…20261024T054649Z`）：**第一个候选 `race->behaviorGraphs[sex].model` = `Actors\Character\DefaultFemale.hkx` 一次装载成功**（`outcome=accepted ms=8.729`，装配字段全非空，`project-db/project/bindings/behavior-data` 与源同址），但智能指针释放（析构链）崩溃。Crash Logger（`crash-2026-10-24-14-25-34.log`）与解包镜像反汇编把崩溃逐帧归因：
+
+1. **崩溃指令**：`SkyrimSE.exe+0xAB1FC3`：`movsxd r15, dword ptr [rax+0x08]`，`rax=0`（读 `0x8`）。位于 0xab1f9c..0xab1fd0 叶函数，其前置指令 `mov rax, [rcx+0x98]`——**rcx = 已装载的 hkbBehaviorGraph（"0_Master.hkb"），+0x98 = `activeNodes`（NodeList\*），本次为 NULL**（与实验日志 `active-nodes=0x0` 一致），随后读 NodeList 计数（+0x8）越界。
+2. **调用链**（Crash Logger 三帧，与静态审计互证）：智能指针作用域退出（independent_graph.cpp:280）→ 删除析构 0xbbcf30 → 真析构 0xbad2c0 → `behaviorGraph(+0x208)` 非空时构造 `hkbContext`（58315，以 `&characterInstance` 为源）并**调用 `hkbBehaviorGraph::Deactivate`（vtable 槽位 7 = 0xab1f70，CommonLib 声明槽 7 为 Deactivate）** → 0xab1fb4 读空 `activeNodes` → 0xab1fc3 崩溃。
+3. **引擎语义**：`hkbBehaviorGraph::Deactivate` 无条件读取 `activeNodes` 的计数——引擎自身生命周期里，被销毁的图都先经过激活（`activeNodes` 在 Activate 时分配），**"装载后未激活直接销毁"不在引擎支持的生命周期内**。这不是我们的调用协议错误，而是 G1 契约"装载 → 对照 → 逆序销毁"里销毁一环的前提（不激活而销毁）与引擎设计冲突。
+
+**对 G1 的影响**：装载判据（装配完整、共享资源同址、setup 由 63949 自建）已在运行期成立；销毁判据失败的原因不是泄漏或别名，而是"未激活图无安全销毁路径"。G1 仍 NOT PASSED；销毁证据的取得方式需要方案评审（激活后销毁属 G2 及之后的生命周期，或修订 G1 的销毁判据定义）。激活/更新入口本身仍未审计。
+
+## 激活与推进入口（G2 前提，2026-10-24 续审计五）
+
+G1 通过后为 G2（暂停期单边推进）做的前提审计。全部指令级事实（同一解包镜像）：
+
+1. **`hkbContext`（0x50 B，[CommonLib 声明](../extern/CommonLibSSE/include/RE/H/hkbContext.h)）**：+0x00 `character`、+0x08 `behavior`、+0x10 `nodeToIndexMap`、+0x18 `eventQueue`、+0x20 `sharedEventQueue`、+0x28 `generatorOutputListener`、+0x30 `eventTriggeredTransition`、+0x38 `world`、+0x40 `attachmentManager`、+0x48 `animationCache`。
+2. **context 构造助手 58315（0xab0a60，无 .pdata）**：`InitContext(ctx, character, world, attachmentManager, animationCache)`——只写 `ctx.character = character`、四个入参字段（world/attachmentManager/animationCache）并把 **`behavior`/nodeToIndexMap/eventQueue/sharedEventQueue/generatorOutputListener 全部置空**。因此经它构造的 context 走 Activate/Deactivate/Update 的**短路径**（三个虚函数的桩都以 `cmp [ctx+8], 0` 分流）。
+3. **`hkbBehaviorGraph::Activate` = vtable `0x1941450` 槽位 4 = 58328（0xab1780，短桩 + 落体 0xab17a3..0xab187a）**。短路径（`ctx.behavior == 0`）依次：`data(+0x88)` 非空时调 58346（0xab32b0）；经 hkMemoryRouter 分配三个 0x10 字节 NodeList 并初始化——**`activeNodes`(+0x98)**{0,0,0x80000000}、**`activeNodeTemplateToIndexMap`(+0xA0)**{0,0,0xffffffff}、**`activeNodesChildrenIndices`(+0xA8)**{0,0,0x80000000}（CommonLib 命名吻合）；置 `[this+0x12C] = 1`（激活标志）；调 **60079（0xb0fb70，子图激活遍历）**(this, ctx, 0)；最后 `ctx.behavior = 0` 收尾。**G1b 崩溃缺失的 `activeNodes` 正是 Activate 自行分配的**；前置仅要求 `data` 非空（候选已满足）。`variableValueSet`(+0xD8) 的分配点未在短路径出现（在 60079 内部或长路径 0xab18c0，留待 G2 运行期/细读确认）。长路径（`ctx.behavior` 非空，0xab187a → 0xab18c0，0x4F8 B）调用同一次 60079，语义差异未逐条展开。
+4. **引擎激活配方 = 63586（0xbb2270，236 B）**：单参 `graph`。检查 `behaviorGraph(+0x208)` 非空（空则返回 false）→ 置 `[graph+0x244] = 1` → `physicsWorld(+0x238)` 非空时取其 vtable 槽位 40 作为 world 实参（空则 0）→ **58315(ctx, `&graph->characterInstance`, world, 0)** → `behaviorGraph->vtbl[4](ctx)`（Activate）→ 复位 character `eventQueue` 的游标字段（`[eq+0xC]=0`、`[eq+0x14]=0`）→ `[graph+0x244] = 0` → 返回 true。**零自建结构**：context 完全来自图自身字段。唯一调用者 = **63356（0xba3a50）**——编排者 manager 挂接尾链的最后一步；候选图绕过了该链，这就是它未激活的原因。
+5. **`hkbBehaviorGraph::Update` = 槽位 5 = 58329（0xab1890）**，签名 `(this, ctx, xmm2 = timestep)`；短路径取 `ctx.eventQueue(+0x18)`，为空则回退 `character.eventQueue(+0x80)`。引擎级图更新包装器 **63587（0xbb2370，1444 B）** 签名为 `(graph, 更新记录, ?)`——第二实参是管理器更新记录（读 `[rec+8]/[rec+0x10]/[rec+0x28/0x2a/0x2c]` 等），不是裸 float；候选图无 manager，直接复用 63587 需要先构造该记录。63625（0xbb7130）为图级同步辅助（先调 BShkbAnimationGraph vtable 槽 5），非干净推进入口。
+6. **G2 可行性结论**：**激活 = 对候选单次调用引擎自己的 63586**——无自建 context、无管理器依赖（physicsWorld 为空有显式分支），是激活的既定引擎入口。推进：候选无 manager 更新记录，G2 需在"自建 context（58315）+ 直调槽位 5 传 timestep"与"构造 63587 的更新记录"之间做设计选择（前者调用面最小，倾向前者）；Update 对 `variableValueSet`/rootGenerator 的具体消费路径在 G2 契约设计时以 60079/58329 细读补充。G2 仍需先按六关程序设计其预注册判据（固定时间步、源差分采集、禁混装备操作）。
+
+## 姿态写入链与字符级激活（2026-10-24 续审计六）
+
+G2 首轮"激活成功但无可观测前进"的归因审计。全部指令级事实：
+
+1. **`hkbBehaviorGraph::Update`（58329）短路径**（0xab1890..0xab1f19，含长路径跳板 0xab1f19）：取 `ctx.eventQueue(+0x18)`（空则回退 `character.eventQueue(+0x80)`）→ 一段 hkMemoryRouter/rdtsc 性能打点 → **`cmp byte [graph+0x12E],0`**：非 0 才调 60079（子图重激活遍历；Activate 只写了 +0x12C，+0x12E 语义未定）→ 读 `activeNodes(+0x98)` 计数 → **58383（0xab6ad0）**(this, ctx, xmm1=timestep, r8=帧缓冲) → 逐活动节点更新循环 → 尾部再次 +0x12E 检查/60079 与逐节点收尾。**Update 内没有任何 `character.poseLocal(+0x90)` 写入**。
+2. **pose 分配器 = 58466（0xabdc90，0x76 B）**：守卫 `character.poseLocal == 0`；读 `setup(+0x50)->animationSkeleton(+0x20)`，以 `[skeleton+0x30]` 为骨骼数写 `numPoseLocal(+0x98)`，按 `count×0x30` 经 hkMemoryRouter 分配缓冲写 `poseLocal(+0x90)`，用 `skeleton+0x38/+0x40` 的绑姿态数据填充（57148），最后置 `deletePoseLocal(+0x9D) = 1`（与源基线 `delete-pose=true` 吻合）。**`setup.animationSkeleton` 为空时该函数会空指针崩溃——调用方必须保证前置**。
+3. **字符级激活 = 0xabd630（119 B，地址库无 id）**：守卫 `behaviorGraph(+0x58)` 非空且 **`behaviorGraph->+0x12C == 0`（未激活）** → **先调 58466 分配 pose 缓冲** → 以 58315 建 context（world/attachment 取自 `character.raycastInterface(+0x78)` 的 +0x130/+0x138，为空则 0）→ `behaviorGraph vtbl[4]` Activate。0xabd6b0 为带附加实参的变体。0xabd930 = `GetOrAllocatePose`（返回 poseLocal，空则分配）。**引擎的激活顺序是"先 pose 缓冲、后 Activate"——G2 首轮用的图级 63586 绕过了 pose 分配，这就是候选无姿态输出的根因。**
+4. **绑定链辨析**：58464（0xabdbd0）实为"置 `character.behaviorGraph(+0x58)`"（AddRef/Release 配对）+ raycast 接口循环（0xabdc1d..0xabdc68，`raycastInterface` 为空直接返回）——**不含 pose 分配**。其调用者：63585（栈上加载用 character ×2）、**63847（0xbc2390：从容器建 hkbBehaviorGraph 实例后把实例绑到 ARG1 character）**、0xaea12b（×2，hkbCharacter 簇）。63847 的 ARG1 是否为嵌入 character、以及候选 `setup.animationSkeleton` 的填充点（63846→63950→63947 链）未逐条核实——留待运行期判读。
+5. **G2 v2 修正**：激活改调**字符级激活 58453**（0xabd630，运行期守卫 `setup.animationSkeleton == 0` 时记录 `skip=setup-skeleton-missing` 干净结束；v2 运行证实骨架非空、AllocatePose 生效）。**续审计六补遗（G2 v2/v3 判读后）**：① Update（58329）全函数确认无任何 poseLocal 写入（位移枚举完整覆盖：图字段仅 activeNodes 与 +0x12E 门）；② 其 per-node 主循环有 `[node+0x30] flags&1` 与 `[entry+0x85]` 两道门；③ **采样器 = 63581（0xbafda0）**：读 `generatorOutputs[0]`（一元素数组头）的元素、按元素 +0x32/+0x34 的 pose 轨道偏移以 57148 按 `count×0x30` 拷入 GetOrAllocatePose（58458）返回的 poseLocal；④ **采样入口 = 63589（0xbb2a40）**：门为 setup/animationSkeleton/behaviorGraph 非空 + `+0x12C` 已激活（候选全过），但 63581 以 `[graph+0x240]`（当前动画索引 word，63587 每帧从管理器记录写入）为 0 时跳过；⑤ 虚表槽 6 = 向活动节点派发事件（58377），58429 = 单 float 写入，均非输出请求。**G2 v4**：驱动循环每步 Update 后将 `[source+0x240]` 镜像到候选（同一张图 + 共享绑定集下引擎本会写同值）并调 63589 完成采样。
+
 ## 对设计契约的影响
 
 - 构造 API **不是**“独立图可用”的证据；它只证明“可以分配并初始化空壳，且能按引用计数成对释放”。
@@ -180,6 +240,35 @@ python build/g1-audit-20261023/disasm_func.py 0x54ba10   # 编排者 32893
 python build/g1-audit-20261023/disasm_func.py 0xbb0800   # 加载 63585
 python build/g1-audit-20261023/disasm_func.py 0xbc1b10   # 项目解析 63844
 python build/g1-audit-20261023/disasm_func.py 0xbc1d70   # 行为图装载 63845
+
+# 5. 第二实参形态与拒绝路径（2026-10-24 续审计二）
+python build/g1-audit-20261023/disasm_func.py 0xcfc5b0   # 69488 路径拆分
+python build/g1-audit-20261023/disasm_func.py 0xcfcba0   # 69492 分隔符扫描桩（尾落入 0xcfcbb9）
+python build/g1-audit-20261023/disasm_func.py 0x199640   # 13274 SSO 串 assign
+python build/g1-audit-20261023/disasm_func.py 0xbc1b10   # 63844 项目解析
+python build/g1-audit-20261023/disasm_func.py 0xbc6310   # 63889 解析器构造（vtable 0x19892a8）
+python build/g1-audit-20261023/disasm_func.py 0xbc4d30   # 解析器槽位 3 查表
+python build/g1-audit-20261023/disasm_func.py 0xcfc8c0   # 69490 路径规范化
+# 0xcfcbb9 扫描器与 0xcfc490(69487) 拼接的函数体超出 .pdata 记录，用 capstone 从 RVA 原始反汇编（见任务记录脚本）。
+
+# 6. 加载取值与前置链（2026-10-24 续审计三）
+python build/g1-audit-20261023/disasm_func.py 0xcfc720   # 69489 扩展名剥离
+python build/g1-audit-20261023/disasm_func.py 0xbc91e0   # 63949 project→character 绑定 + setup 自建
+python build/g1-audit-20261023/disasm_func.py 0x2f63e0   # REFR vtable 槽位 114 描述符填充
+python build/g1-audit-20261023/disasm_func.py 0x5418a0   # 32715 名字取值（类型键 0x3284b30 二分查找 70510）
+python build/g1-audit-20261023/disasm_func.py 0x2f69f0   # 编排者调用者：栈上 2×0x118 表项构造
+
+# 7. 已装载图析构的崩溃定位（2026-10-24 续审计四）
+python build/g1-audit-20261023/disasm_func.py 0xbad2c0   # 真析构（behaviorGraph 非空 → Deactivate）
+python build/g1-audit-20261023/disasm_func.py 0xab1f70   # hkbBehaviorGraph::Deactivate（vtable 槽位 7）
+# 0xab1f9c 叶函数与 0xab0a60(58315 hkbContext 构造) 超出 .pdata，用 capstone 从 RVA 原始反汇编。
+
+# 8. 激活与推进入口（2026-10-24 续审计五，G2 前提）
+python build/g1-audit-20261023/disasm_func.py 0xab1780   # Activate 桩（真身 0xab17a3 落体，raw）
+python build/g1-audit-20261023/disasm_func.py 0xbb2270   # 63586 激活包装器
+python build/g1-audit-20261023/disasm_func.py 0xbb2370   # 63587 引擎级更新包装器
+python build/g1-audit-20261023/disasm_func.py 0xab1890   # Update 桩 58329
+# 0xab0a60(58315 InitContext) 无 .pdata，raw 反汇编。
 ```
 
 脚本只读 PE/versionlib，不加载模块、不调用引擎；`analysis.json` 由 `build_maps.py` 从 versionlib 生成。反汇编注释中的函数名来自 CommonLibSSE 头文件的 `RELOCATION_ID` 标签，未标名者保持 ID/地址。

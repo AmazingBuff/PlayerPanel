@@ -2,7 +2,7 @@
 
 ## Independent graph investigation (2026-10-23)
 
-The [six-gate validation](independent-behavior-graph.md) owns the experiment and current G1 NOT PASSED / G2–G6 NOT STARTED state. The new default-off `BehaviorGraphProbe` logs only source member identities/counts/flags; it neither calls OAR evaluation nor adds a native hook. Existing `PreviewContext`/`PreviewClip` remain query/load carriers.
+The [six-gate validation](independent-behavior-graph.md) owns the experiment and current G1 PASSED (revised criteria) / G2 in-progress state (six drive iterations mapped the drive chain; animation selection returned to design). The new default-off `BehaviorGraphProbe` logs only source member identities/counts/flags; it neither calls OAR evaluation nor adds a native hook. Existing `PreviewContext`/`PreviewClip` remain query/load carriers.
 
 At fixed OAR 3.1.6 revision `0c1c8b38a5323b9e26df41ff9d10ce801b984a45`, `GetReplacementAnimation(hkbCharacter*,...)` derives the outer graph and holder; graph-variable/weapon-drawn conditions can read the Actor. Clip identity alone does not isolate Actor/ref/submod Random, sequence or PlayOnce history, graph event sinks or source-manager callbacks. Future G4 must demonstrate sentinel read provenance, controlled world-history comparisons and own-only teardown; no independent factory, context bridge or playback is implemented here. See the canonical document's source references and [bounded build evidence](build.md#behavior-graph-baseline-checks-2026-10-23).
 
