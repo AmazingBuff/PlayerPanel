@@ -247,6 +247,187 @@ v10 判读后对"绑定循环计数来源"的定向补审。全部指令级事�
 3. **与 v9 证据自洽**：源元素 `+32=0x0074`（=116 骨数）即逐骨骼绑定写入的轨道变换数；候选驱动对象存在（装载链自建）但 `[driver+0x10]` 骨数组为空 → 63630 计数 0 → 绑定循环零次 → 元素字段从未被写。**v10 的 world 借用让 63630 的两道门全部通过,但计数仍来自空的骨数组——借用无效的完整解释**。
 4. **骨数组填充方未定位**：装载链（63949 setup 自建 → 63950 → 63946 → 63846 绑定）listing 内无 `character+0x30` 驱动骨数组的初始化；嫌疑范围 = 字符级激活簇（0xabd630 一带）、编排尾链 63356（0xba3a50）、hkbCharacter 簇（0xaea12b）。骨数组初始化大概率以 `setup.animationSkeleton` 为输入（hkbAnimatedSkeleton::init 类语义）——待续审计十。
 
+## 骨骼提供者真身与填充链（2026-10-24 续审计十）
+
+对续审计九遗留"骨数组填充方未定位"的定向补审。三个嫌疑全部排除（58453 只是 hkbContext 构造 + `[this+0x58]` 对象 vtable 槽 4；63356 是遍历图数组逐个调 63586 的激活包装；0xaea12b 是更大函数的冷块），改走 RTTI→构造→调用者路线。全部指令级事实：
+
+1. **63630 的"骨骼提供者"真身 = hkaRagdollInstance**：`rcx=[this+0xF0]` 正是内嵌 `characterInstance`（+0xC0）的 `ragdollDriver`（+0x30）字段——即 BShkbAnimationGraph+0xF0；58286（0xaac8e0）是纯 getter `return [rcx+0x88]` = `hkbRagdollDriver::ragdoll`（CommonLib 布局 +0x88，整类 0xD0 经析构 fallback 证认）。续审计九第 2/3 条把 58286 的返回值当成"驱动"本身——**字段偏移（+0x10 表/+0x18 计数）正确、对象错位一层**：表/计数属于 hkaRagdollInstance 的 `rigidBodies`（hkArray 于实例 +0x10：`{data +0x10, size +0x18, capacity +0x1C}`，CommonLib hkArrayBase 成员序 data→size→capacity），`movsxd [rdi+0x18]` 读的就是 size。循环逐**刚体**做 world 重注册（61305 移出旧 world / 61304 挂入本图 world）并逐骨分配 0x58 输出记录、经 57049 注册 `{count|0x80000000, ptr}` 描述符——与 v9 源证据自洽：源 gen0 元素 `+32=0x74`（116）= 逐骨绑定写成的轨道变换数 = 源 rigidBodies.size。
+2. **续审计九部署的 `phase=driver` 观测行读错对象**：它读 hkbRagdollDriver+0x10/+0x18——那里是 blend-out float 与 world-from-model 模式字节。该构建从未上机取证（23:33 启动未到插件加载即退出，日志仍为 22:45 的 v10 会话），v11 已把读链修正为 driver+0x88 → 实例 → {+0x10 表, +0x18 计数}（并补记 driver+0x80 的 character 回指）。
+3. **RTTI 链证认**（`ragdoll_rtti_scan.py`）：hkbRagdollDriver vtable = 0x1941210、hkaRagdollInstance vtable = 0x198a290（类型描述符 → COL → vtable[-1]；此镜像槽位与 COL 引用以完整 VA 存储，RTTI 内部指针才是 RVA）。hkbRagdollDriver 构造 = 0xaac560（58280，raw 无 .pdata）：`(this, character→+0x80, bool→+0x1C)`，**+0x88（ragdoll）置 null**；唯一创建包装 = 58449（0xabcf20），调用者 = 构造 0xbad070（G1 审计的 BShkbAnimationGraph 构造，0xbad17c）、装载 63585（0xbb0800，0xbb09c1）与 63870（0xbc44e0）。hkaRagdollInstance 主构造 = 64145（0xbd6b20）：`{+0x10 刚体表引用, +0x20 约束引用, +0x30 映射引用, +0x40 骨架}`，实例 0x48 字节；关键调用者 = **63952（0xbc9a80）**。
+4. **63870（0xbc44e0）= 引擎完整角色装配**（审计三曾以 `proj_63870` 留档未解码；无直接调用者，属上层编排回调）：69488 路径拆分 → 63889 解析器 → **58449 先建驱动** → **63949（插件装载链调用的项目→角色绑定，实参携带该驱动捆绑）** → 若项目布娃娃数据存在（`[[setup+0x40]+0x40]+0x98 ≠ 0`）→ **63952 建实例**（内部经 57621/60157 名字查找取骨架 `[数据+0x40]`，按 0x48 分配并 64145 构造）→ **58285（0xaac7b0）= hkbRagdollDriver::SetRagdoll**：AddReference(新)、按旧值引用语义换出、`[driver+0x88]=新`。
+5. **候选缺口定论**：候选的驱动来自构造 0xbad070，+0x88 恒为 null——装载链止步 63949，从未执行 63870 的 63952 尾链；v10 的"骨数组空"精确化为 **ragdoll 实例缺失**。候选侧正解（G3+）= 以候选自身项目数据重放 63870 尾链（63952 实参重构：`rcx`、`rdx=[布娃娃数据+0x20]`、`r8=解析器`、`r9=驱动捆绑`）；v11 先以源实例受控借用判别（契约见实验文档）。**运行期勘误（2026-10-25 v11 driver 行）**：本条"+0x88 恒 null、计数 0"的静态推论被证伪——候选经装载子链（63585 下游，填充点待审计十一回溯）**本就持有 18 体 ragdoll 实例**（源同为 18 体；0x74=116 是 numPoseLocal 动画骨数而非 rigidBodies 数，第 1 条"116=逐骨绑定轨道数"的推断同误）；绑定循环计数从来非零，v10"循环零次"归因失效，元素字段写入者改由审计十一的 store 扫描定位。填充链证认（63870/63952/58285）本身仍成立。
+
+## 槽 2 真身与元素字段写入链（2026-10-25 续审计十一）
+
+v11 判据②后的定向补审，目标 = 源元素 `+32=0x74/+38=1.000` 的写入者与 63602 槽 2 调用块的真实门。全部指令级事实：
+
+1. **元素字段语义落定**：hkbGeneratorOutput（output+0x00）→ `Tracks`{0x10 主头 + 0x10 步长 `TrackHeader`{capacity+0, numData+2, dataOffset+4, elementSizeBytes+6, onFraction+8, flags+0xC, type+0xD}}——v9 证据字段 +0x32/+0x38 即 **kPose 轨道（StandardTracks=2）的 numData/onFraction**；0x74=116=numPoseLocal（动画骨数），与 rigidBodies（18）无关。
+2. **槽 2（63621）= BSIRagdollDriver::AddRagdollToWorld，且就是 +32/+38 的写入者**：三门（world/驱动/实例）通过后，头部无条件写 `[tracks+0x32]=0` 与 `[tracks+0x38]=1.0f`（0x3f800000），函数体逐刚体 `hkpEntity::Activate`×2 + 变换回填 + 64157 挂世界、尾调自身槽 6/槽 0xA。源侧 +38=1.0 即出自此；+32=116 由后续别的路径回填（生成/绑定侧，待下一轮 store 扫描定位）。**候选 +38=0.0 ⇒ 槽 2 从未在候选上执行**（v10/v11 的 120 次管线遍历都没触发它）。
+3. **63630 勘误（续审计九/十的"出参"读法）**：63630 全程不写 rdx（全函数零处 `[rdx]` 写入）；计数经 **EAX 返回**（`eax=[rbp-0x30]`，刚体循环累计，scratch 未增长时归零）。"槽 0x58 出参"实为调用点把 rdx 指向计数槽但被忽略；调用点随后比较的是**先前写入该槽的别的值**。
+4. **63602 槽 2 调用块的真实门 = 63643 的返回值**：调用序列 `[rbp-0x54]=edi → 槽 0xB（副作用）→ r8d=[rbp-0x54] 调 63643(graph, &buf, count) → [rbp-0x7c]=edi（63643 返回）→ 槽 0xB（副作用）→ cmp [rbp-0x7c],0；jbe 跳过整个槽 0xC + 槽 2 块`。63643 = 把**槽 0xC（63631）**取到的对象逐个插入每帧哈希（63650）并返回结果——续审计九被否的"管理器侧当前动画列表"直觉在此复活为 63602 帧内的等价物；槽 0xC 读 `[graph+0x200]`（projectDBData）的 **+0x170/+0x178 对象对**（按 bool 实参选择，存入 graph+0x110，续接 `[所选+0x28]→[+0x10]` 与实例骨架 `[ragdoll+0x40]`）。候选侧该链未满足 ⇒ 槽 2 不被 63602 触发。
+5. **主 vtable（0x19881f8）全表**：00=63758（删除析构）、01=63620、**02=63621（AddRagdollToWorld）**、03=63622（RemoveRagdollFromWorld）、04=63623、05=63624、06=63625、07=63626、08=63627、09=63628、0A=63629、0B=63630、0C=63631、0D=63632（有效槽位 00–0D，与续审计九一致；0E/0x11 等为表后垃圾）。
+6. **v12 设计依据**：三门在 v10 借用下已全过、候选自有 18 体实例 ⇒ 直调 63621（候选）绕开 63602 内部门（与 58453/58377 同一直调纪律）；驱动后调 63622（槽 3）对称移除，在 world 恢复 null 之前完成。判据见实验文档。
+
+## 采样入口五道门与 numData 写入者（2026-10-25 续审计十二）
+
+v12 判据②后的定向补审，目标 = 源 `+32=0x74`（kPose numData）的回填者。全部指令级事实：
+
+1. **numData 写入者 = 63568（0xbae860）**：`hkbContext` 经 58315（实参 = `&characterInstance(+0xC0)`、world、0）构建 → 重置全部轨道头（onFraction=0、flags&=~1、flags&6 时 numData=0——与 63621/63587/58376 同一清零惯用法）→ **`[tracks+0x32] = word [graph+0x240]`**（numAnimBones；插件每步镜像的正是这个字段）→ dl≠0 分支续走重路径（58390/58343/63573/63581/63564/58458/63856）。**候选从未执行它。**
+2. **63568 的唯一调用者 = 63589（0xbb2a40，插件每步调用的采样入口）**，且深藏在其**五道门**之后：①`[graph+0x110] ≠ 0`；②`[[graph+0x110]+0x20] ≠ 0`；③`[graph+0x208]`（behaviorGraph）非空；④`[behaviorGraph+0x12c] ≠ 0`；⑤按 `[graph+0x246]` 分支——非零走 63568（dl=模式字节），零走 63581（0xbafda0，`edx=[graph+0x240]`）+ 63564。**候选的 63589 每一步都在第①道门直接返回**——采样从未发生。
+3. **`[graph+0x110]` 的唯一填充者 = 槽 0xC（63631）**：从 `[graph+0x200]`（projectDBData）的 **+0x170/+0x178 对象对**按 dl 选择（dl=0 选 +0x178，cmove 语义），AddReference 后存入 +0x110（旧值释放），续走 `[所选+0x28]→[+0x10]` 引用与 `[ragdoll+0x40]` 骨架。引擎只在与槽 2 相同的 63643 门后调用它——候选从未触发，+0x110 恒 null。**审计十一的 63643 门与审计十二的 63589 门①是同一缺口的两张脸：候选缺 `graph+0x110` 这一次装配。**
+4. **v13 设计依据**：候选具备 63631 的全部前置（驱动/实例非空、projectDBData 非空），直调一次槽 0xC（dl=false，+0x110 仍空则 dl=true 重试）即可填充；此后每步的 63589 过门①，按 63568/63581 分支真正采样，numData 应被写为 0x74。判据见实验文档。
+
+## 63587 全配方与 0x246 分岔（2026-10-25 续审计十三）
+
+v13 判据②后的定向补审，起点 = 候选 `[graph+0x246]=0` 使采样入口走 63581 分支。全部指令级事实：
+
+1. **`[graph+0x245]`/`[graph+0x246]`/`[graph+0x240]` 的每帧写入者 = 63587（引擎级更新包装器）**：序言过四门（与 63589 同款：+0x110/[[+0x110]+0x20]/+0x208/[[+0x208]+0x12c]）后 `[graph+0x249]=record+0x2e`（footIK）、`[graph+0x240]=0`、**`word [graph+0x245]=0x101`（245=1、246=1）**、interpolationTimeOffsets(+0x1E8) 推进。此后分岔：**Path B**（interpolationTimeOffsets > -MAXFLT）写 `[graph+0x245]=0`、经 63575 计算 `[graph+0x240]=numAnimBones`、**`[graph+0x246]=0`**；**Path A**（≤ -MAXFLT）**互换 generatorOutputs[0]↔[1]（+0x220/+0x228 双缓冲交换）**并走轨道重置（含 `[tracks+0x32]=0`）。构造器 0xbad070 也写 0x246（初值）。
+2. **63587 = 引擎完整每帧配方**（调用序）：63575/63864/63564 簿记 → world getter → **58315 建 hkbContext** → 58290 → **63761 preupdate** → 77924 锁 → **虚槽 `[+0x28]` 与间接 `call rbp`（真正的行为更新）** → **63583 事件排空** → **58429 位姿应用**。插件的 v7 配方（裸 58329 + 镜像 + 63589）只复刻了其中一部分。
+3. **63602 尾部自带 63587 调用**（0xbb63b8）：对目标图 r13（含 `[r13+0x208]` 非空门、`[行为图+0x12E]=1` 引擎自写），以栈上记录 `{float dt@+0x00（63602 内为 0）, 字节模式 +0x2a..+0x2e = 1,1,1,0,1（footIK@+0x2e=1）}` 调 `63587(r13, &record, 0)`。**候选在插件 120 次管线遍历中是否实际收到该调用未知**——观测到的 246=0 与“收到且走 Path B”和“从未收到（构造初值）”都相容。**续审计十四补注**：该记录的 `mov dword [rsp+0x6b], 0x1000101` + `mov byte [rsp+0x6a], 1` 把 +0x2A..+0x2E 写成 1,1,1,0,1，+0x2A=1 意味着引擎自身的这次调用也恒走 Path A（见续审计十四 Q1-1）；且“走 Path B”一词在续审计十三的原义（245 被清 0）已被续审计十四的 record+0x2A 分岔修正取代。
+4. **v14 设计依据**：纯取证——第一次管线调用后立即只读记录 0x240/0x245/0x246/0x249 与双缓冲两槽（+0x220/+0x228）的轨道字段，裁决“63602 尾部是否在候选上跑 63587”；据此 v15 二选一：收到 → 缺口在 63587 内部条件，未收到 → 以引擎记录布局直调 63587 替换裸 58329。
+
+## 63587 内部条件与位姿最后一公里（2026-10-25 续审计十四）
+
+v15 判据②后的定向补审，目标 = 四个由 v15 运行提出的问题：Q1（Path A/B 分岔与 +0x1E8 生命周期）、Q2（双缓冲语义：交换与内容写入如何区分）、Q3（绑定后的 kPose 轨道到 `poseLocal` 的写入路径与门前最后一程，优先）、Q4（58429 位姿应用的角色）。全部指令级事实（本节随分析增量落盘）：
+
+**Q1（Path A/B 与 +0x1E8 生命周期）**：
+
+1. **0x246 分岔的真实条件不是“> -MAXFLT”本身，而是两个 float 的相对大小**。序言推进（0xbb23f9–0xbb2435）：`xmm9 = record[0x00]`（dt）→ `xmm7 = [graph+0x1E8]`（t[0]）`-= xmm9` → 回写 `+0x1E8`；`xmm8 = [graph+0x1EC]`（t[1]）`-= xmm9` → 回写 `+0x1EC`；`ebp = comiss(xmm8, xmm7) 的 setbe`（t[1] ≤ t[0] 时 bpl=1，0x1E8 侧被选中；否则 0x1EC 侧被选中）。分岔判定（0xbb245b）：`cmp byte [record+0x2A], 0` —— **`record+0x2A`（63602 记录里 = 1）非零直接走 Path A**；为零才进入 Path B 前置评估（0xbb2461–0xbb2485）：先 `comiss(xmm8, xmm7)` 选出“较大者”下标 eax，再 `comiss(0, [graph+eax])` 与 `comiss(-MAXFLT(0xFF7FFFFF @0x177ae08), [graph+选中])`——**仅当“较大的那个 t”满足 0 ≤ t < MAXFLT 时写 `[graph+0x245]=0` 并走 Path B**；否则落到 Path A。即：**Path B ⇔ record+0x2A==0 且 max(t0,t1) ∈ [0, MAXFLT)；否则 Path A**。审计十三的“≤ -MAXFLT ⇒ Path A”是它的必要侧（两 t 皆 -MAXFLT 时 max 不满足上界条件 → Path A），但“> -MAXFLT ⇒ Path B”不成立——record+0x2A=1（v15 直调记录、63602 尾部记录同款）**无条件 Path A**，无论 t 如何。
+2. **Path B 体**（0xbb2487–0xbb24b7）：`[graph+0x245]=0` → `ax = [record+0x28]`（u16 → 栈 0x20）→ `r9=&[栈+8]（=1，后面 cmov 语义用）`→ `r8d=[record+0x2C]`（模式字节，v15=1）→ `rdx=[record+0x18]` → `63575(graph, rdx, r8d, r9, 栈0x20)` → `word [graph+0x240]=ax（63575 返回的 numAnimBones）` → `[graph+0x246]=0` → jmp 收尾。**Path A 体**（0xbb24bc–0xbb24d8）：`rcx=[graph+0x228]`、`rax=[graph+0x220]` → `[0x228]=rax`、`[0x220]=rcx` —— **纯指针交换，无任何内容拷贝**；随后读 `[rdx+0x18]`（record+0x18，v15 为 null → 0xbb24dc je 0xbb2662 直接收尾）。
+3. **交换后的簿记重置块**（0xbb252b–0xbb2662，`[record+0x18]` 非空才可达）：距离/增益启发（`[graph+0x218]` rootNode、`[graph+0xF0]` 驱动 +0xF0 等参与 xmm2 计算）+ 63864 调用 → t 侧推进（0xbb264d `movss [graph+ebp*4+0x1E8], xmm1`）或钳制；`[record+0x18]` 为空时（v15 每步）此块跳过。**0xbb2662 起的公共尾**：`cmova rbx, r14` 选较大 t 下标 → `xmm0 = -(较大 t)` 与 `minss xmm9(dt)` → 新 t[1 侧] = max(0, min(-t较大, dt))（0xbb266a–0xbb2689）；当 xmm9 ≥ 0（0xbb267f jae）落到 0xbb268b：**`[graph+0x1E8]=0`（dword）、`[graph+0x1EC]=0xFF7FFFFF（-MAXFLT 常量）`** —— 即**每次 Path A 都把 t0 归零、t1 归 -MAXFLT**（冷启动形态），随后重置 `[graph+0x228]` 所指（交换后的写槽）的轨道：逐轨道 `[+0x18]=0`、`and [+0x1C], ~1`、flags&6 时 `[+0x12]=0`，**尾写 `word [tracks+0x32]=0`**（0xbb26f5）。此块即是 v15 第 0 步观测到 out0 `+38=1.000→0.000` 被消费的指令级机制：**槽 2 写在 `[0x220]` 槽（v14 借用态后的读槽），Path A 交换后 63587 把旧读槽换到 `[0x228]` 并由重置循环逐轨道清其 onFraction（`[rcx+rax+0x18]` = 轨道记录 +0x08 = onFraction，0xbb26c0）、flags 与 numData——交换 + 复位共同解释 out0/out1 双双读 0.000，v15 判读的“被交换消费”成立**。
+4. **+0x1E8 的全部写入点（本函数内）**：序言 `-= dt`（两槽，0xbb241f/0xbb2435）；0xbb2650（簿记块内 t 侧推进）；0xbb2685 后 0xbb268b 的归零/复位。`[record+0x18]` 恒空（v15 与 63602 尾部记录均如此）时每步实际路径 = 序言减 dt → Path A 交换 → 0xbb2662 公共尾 →（t 已为 0）0xbb268b 复位 t0=0/t1=-MAXFLT。**首次超 -MAXFLT 的机制由此静态可证：复位块本身把 t0 写 0** —— 冷启动图第一次进入 63587 即 t0=0 ∈ [0, MAXFLT)；但 record+0x2A=1 使 Path B 永不被选，t 的取值只影响 ebp 选侧与公共尾钳制，**不改变 Path A/B 的选择**。“Path A 自身的处理推进 +0x1E8”（鸡生蛋问题）的答案：**推进存在（序言减 dt + 公共尾复位），但复位的值固定为 {0, -MAXFLT}，不累积**；若无复位块（xmm9<0 分支）则 t[1 侧] = max(0, min(-t较大, dt)) 单调推进。运行期实际留在 t0/t1 的值（v15 的 120 步）：**UNVERIFIED**（插件未观测该字段；以上为静态可执行路径推演）。
+5. **对 v15 的解释**：插件记录 +0x2A=1 → **120 步全部 Path A**——每步交换一次 `[0x220]`↔`[0x228]`，每步把交换后写槽的 `numData`（+0x32）清 0；观测 `num-anim=0x0`（0x240 未被 Path B 重算，仅插件镜像自写 0x74）与 `w245=0x101`（序言写、Path B 的 0xbb2487 清 245 分支从未执行）与此**完全一致**。63602 尾部记录 +0x2A 同为 1（0xbb63a0 `mov dword [rsp+0x6b], 0x1000101` 覆盖 +0x6b..+0x6e = 2A..2D）——**引擎自己的零 dt 更新也永远走 Path A**。
+
+**Q2（双缓冲语义）**：
+
+1. **每步采样入口读 `[0x220]` 槽**：63589 分支体（0xbb2ac3）以 `edx = word [graph+0x240]` 调 63581；63581 内所有轨道读取都走 `r8 = [graph+0x220]`（0xbafde3）与 `[0x228]`（0xbafec8 插值读取）；63568 同样读 `[+0x220]`（0xbae8c9）。**63587 Path A 交换后，上一步的写槽变成本步的读槽**——采样读到的正是上一步结束时的写槽内容。
+2. **交换与内容写入在 `gen0elem` 哈希下的区分**：gen0elem 哈希只读 `[0x220]` 槽元素头 0x100 字节的 FNV。`09335c48…`→`33583b62…`（60 步起稳定至 120 步）的解读：若只是指针交换，哈希会在两个稳定值间交替（交换 ↔ 内容不变）；观测是**一次阶跃后恒定** → `[0x220]` 槽内容被真实写入并保持稳定（65237 生成的产物见 Q3）→ **存在内容写入，不只是交换**。写时序与逐槽内容恒等性的最终裁决需运行期逐槽哈希，**UNVERIFIED**。
+3. **`tracks-end[0] +32=0x74` 的写入者 = 插件自写 0x240 镜像驱动的 63568（仅第 0 步执行）**：`[0x220]` 槽 +0x32 的写入者只有三类——(a) 63587 复位块 `word [tracks+0x32]=0`（0xbb26f5，作用于交换后的 `[0x228]` 槽）；(b) **63568 的 `word [rdx+0x32]=ax`（0xbae91e）**，`ax = word [graph+0x240]`（0xbae917）——即插件每步自写的 0x74 镜像；(c) 63581 体内（0xbb0395/0xbb03f3），写的是 `[0x228]` 槽且 v15 每步 dl=0 不走该函数。63568 只在 63589 的 `[graph+0x246]≠0` 分支被调（0xbb2ab0）：第 0 步 post-update1 时 b246=1 → 采样走 63568，`[0x220]` 槽 numData 被写 0x74；其后每步 63587 把 b246 复位 0、采样走 63581。**120 步偶数次交换后第 0 步写入过的槽恰回到 `[0x220]`，且其后无复位覆盖 → `tracks-end +32=0x74` 与“63568 只跑过第 0 步”完全相容**；每步槽内容演化序列 UNVERIFIED（静态只能给出相容路径）。
+4. **probe 区分结论**：现在的 probe 只看 `[0x220]`；要区分“对象交换”与“内容写入”应同时记录两槽指针值 + 逐槽元素哈希——交换步 = 指针对调而哈希随之对调；内容写入步 = 某槽哈希独立变化而指针不动。v15 现有数据（单槽哈希一次阶跃 + 双槽 +32/+38 字段行）已排除“纯交换无内容”假设，但逐槽指针与逐槽哈希未在运行期采集，最终形态 **UNVERIFIED**。
+
+**Q3（到 poseLocal 的最后一程，优先问题）**：
+
+1. **63568 不拷贝变换数据**：全函数对 `[0x220]` 槽只写轨道头（复位惯用法 + `[+0x32]=numAnimBones`，0xbae917–0xbae91e），随后 `dl≠0` 分支走生成请求重路径（65198/64231/58390/58343 → 63573 → 63581 → 63564 → 63856），`dl=0` 直接跳 0xbaeb81。`[0x220]` 槽元素的变换数据区（`dataOffset` 指向的 0x30 字节/骨数据）**没有任何来自 63568 自身的写入**。63573（`[graph+0x242]≠0` 门 + 0x110/+0x20 引用链）也只做 hkRefPtr 引用计数与 63814 调用，无轨道数据写入。
+2. **63581 分支体（v15 每步实际路径，dl=0）**：读 t0/t1（0xbafe1b–0xbafe23）→ 58315 建 hkbContext（0xbafe48）→ 门与前置（0xbafa66–0xbafed9：两槽 `[[0x220]]+4>2`/`[+0x38]>0` 与 `[[0x228]]+4>2`/`[+0x38]>0`、t 比较）→ **`[graph+0x158]≤0` 或两槽 numData≠0 时先调 63771（0xbafef8/0xbaff17，`hkbBehaviorGraph::Activate` 系）** → `63666(graph, ctx, [0x208], 0)`（0xbaff68）→ `[rsp+0x40]` 取一个输出 → **63582(graph, interpAmount, out, `r9w = word [graph+0x240]`)（0xbaff91）**。**63582 才是把生成器输出落到 `[0x228]`（写槽）轨道的函数**：其头部读 `[0x228]`/`[0x220]` 两槽的 numData 取 min（0xbb0351–0xbb038d）、`r9w = word [graph+0x240]` 再钳 min（0xbb0389）、**`word [rsi+0x32]=0`（0xbb0395，先清写槽 numData）** → 调 59303（0xbb03ad，两槽指针 + interpAmount + min 计数）→ **64112（0xbb03ee）逐轨道混合两读/写槽数据** → 写回 `word [rsi+0x32]=bp`（0xbb03f3，写槽数量 = min(0x240, 两槽 numData)）、`[+0x38]=1.0f`（0xbb03fa，写槽 onFraction）、并按 0x30 字节步长 **`rep stosd` 清零写槽数据区尾部**（0xbb041a–0xbb042b，`numData*0x30` 之后到两槽较大者）。**注意 63582 只在 63581 的 dl≠0 分支被调**（0xbafda0 内 0xbafecf jbe→0xbb0106 跳过；`r13b = 63564 返回值`，0xbaff4d `test r13b,r13b jne 0xbb02e3`——63564 真时直接跳过整个采样块）——v15 候选上 63564 返回什么 **UNVERIFIED**（63564 = 0xbae3d0，读 `[graph+0x208]` 与行为图状态的谓词；若为真，63581 实际什么都不采样）。
+3. **变换数据区的写入者 = 65237 生成遍历的输出落点，经 63602 管线**：63602 对目标图调用其生成器栈并最终写 `[0x220]`/`[0x228]` 槽的轨道数据（63582 的 64112 混合循环 / 59303），**插件每步只调了 63602(shell) 而从未对候选自身的生成器栈直接产出**；v15 日志 `phase=post-pipeline1` 的两槽字段全零 + gen0elem 哈希在 60 步后阶跃 → **管线遍历对候选确实产生了内容写入**（65237 遍历候选行为图生成输出、写入某个槽），但写入的变换数据是否到达 poseLocal 取决于下述门。**65237 在什么条件下让数据区保持零**：65237 遍历行为图节点，只有激活的生成器（activeNodes）产出；v15 活动节点数演化（97→125→111）说明遍历本身在跑，但其输出槽的 numData 被每步 63587 复位清零——**管线写入与 63587 复位在每步内竞争，静态无法裁决写入发生在复位前还是后（UNVERIFIED）**。
+4. **63581 的 poseLocal 应用调用 = 58423（0xab7f30..0xab7f95，size 0x65）**：63581 在自己的门后调 **58423（0xbb006f/0xbb01df，`58423([graph+0x100], &ctx(rbp-0x60), [rsp+0x30], 0)`）**——候选上把它与 poseLocal 关联的是 58423 头部链 `rax=[rdx]（ctx）→ r9=[rax+0x50] → r13=[r9+0x40] → r13=[r13+0x88]`（0xab7f5b–0xab7f6c）；**该 +0x88 对象与 hkbCharacter.poseLocal 的对应性未逐指令证实**（58423 的 .pdata 范围只有 0x65 字节，其后 0xab7f95 起是另一函数——先前“全函数 ~0x1E00 字节”是越界读；本体只含门 + 前置拷贝，重活在其调用的下游）。58423 本体的前置门（0xab7f54–0xab7f89）：`byte [rcx+0x4A]==0`（+0x100 对象的标志字节，非零跳 0xab9d54 直接返回）、`[[r8]]+4 > 0xB`（输出轨道数 > 11）、`[r9+0x40]+0x88 ≠ 0`——任一失败即空返回。63581 调 58423 前自己的门（0xbb0040–0xbb0076）：`word [graph+0x240]≠0`、`byte [graph+0x249]≠0`（footIK 模式）、全局字节 `[0x2022530]≠0`（镜像实测 = 1）、`[graph+0x218]≠0`（rootNode，v15 借用期非空）。**门后还有 58427（0xab9df0，`[graph+0x100]` 每步空路径 0xbb007d/0xbb0253；本体为 `[+0x18]` 计数循环头部）与 57148（0xa8bba0，`mov r8d,r8d; jmp 0x153cf3c` 的 memcpy/移位桩，63581 尾部 0xbb00b8 `ebx = numData*3*16` 调它搬运采样块）**。58423 体量与内部 poseLocal 写循环为后续工作，本轮只落定它在链上的位置与门集。
+5. **v15 的完整静态链条与残余门**：每步序列 = 63587（Path A：交换、复位写槽 numData、复位 b246、复位 t）→ 插件写 `[0x240]=0x74` → 63589：门①–④过（+0x110/[[+0x110]+0x20]/+0x208/[[+0x208]+0x12c] 全非空，v13 已证）→ b246=0 → 63581 分支 → 63564 谓词（**值 UNVERIFIED**）→ 若假：63666 + 63582（写槽混合、onFraction=1.0、numData=min(0x74, 读槽数据量)）→ 57148 复制 → 58423（poseLocal 应用，需 `[ctx+0x50]+0x88` 链与轨道数门）。**poseLocal 保持绑姿的最小门集（静态可名命）**：(G1) 63564 谓词每步为真 → 63581 在 0xbaff4d 提前跳出，什么都不写（与观测 onFraction/numData 演化仍发生的证据冲突，除非演化全部来自 63602 管线侧）；(G2) 63666 返回的输出为空/`[rsp+0x40]` 槽元素头 `[+0x14]` 偏移（0xbaffa2 `movsx rdx, word [rcx+0x14]`）使 63582 混合到错误基址——静态不可裁决；(G3) **58423 的 `[+0x4A]`/`[+0x88]`/轨道数门在候选上失败**——`[graph+0x100]` 对象（激活上下文，v15 借用期非空）的 `+0x88`（与 driver+0x88 = hkaRagdollInstance 同型引用）在候选上从未被填充链（63952/58285）写到（审计十：候选装载子链止步 63949，+0x88 由 63870 尾链填充——**但 v11 已证候选 +0x88 非 null**，此门应在候选上过）；(G4) **63602 管线侧的变换数据从未进入 63581 读到的 `[0x220]` 槽**——v15 的 post-pipeline1 全零 + 每步 63587 先交换再复位，若 65237 的产物写入发生在 63587 复位之前的旧读槽（第 k 步写入、第 k+1 步被读），则管线侧每步的产物在下一步被读——**v15 的 gen0elem 阶跃（60 步起）与 numData 演化说明产物在流动，poseLocal 仍冻结的最后一门收敛为 63581 块内的 63564/63666/63582/58423 链上的一个未决环节，静态证据不足以在三/四者间裁决；逐项运行期判据（记录 63564 返回值、63666 输出指针、63582 后两槽 numData、58423 门变量）是 v16 仪器的直接输入**。
+6. 58429 的角色见 Q4；v16 需开的门汇总在本节末尾的“收束”小节。
+
+**Q4（58429 位姿应用）**：
+
+1. **58429 是一个双指令叶子**（0xab9eb0，无 .pdata 条目，非函数起点——`.pdata` 中前一个函数止于 0xab9ea5，58429 地址落在无 unwind 信息的空隙里；`disasm_func.py` 报 "no .pdata function"，需裸地址反汇编）：`movss dword ptr [rcx+0x4C], xmm1` → `ret`。**它只写一个 float，参数由调用点的 xmm1 传入**。v14 契约/审计十三的“58429 位姿应用”读法由此**降级为单 float 写入桩**。
+2. **调用点语义**：63587 内 0xbb28bb（`xmm1 = record[0]` dt 后）调 58429，`rcx = [graph+0x100]`、`rdx = [graph+0xC0]`（hkbCharacter）；前置门（0xbb2882–0xbb28b9）：全局字节 `[0x2022530]`（实测 = 1）、`[[graph+0x110]+0x40]` 非空、`[[…]+0x88]` 非空、`[graph+0x100]` 非空、`[graph+0x218]`（rootNode）非空。写入目标 `[rcx+0x4C]` 是 `[graph+0x100]` 对象的 +0x4C 字段——**不是 poseLocal 的任何偏移（poseLocal = hkbCharacter+0x90，numPoseLocal = +0x98）**。
+3. **结论**：58429 把 dt（或调用点最近一次写入 xmm1 的标量，静态读数为 `record[0]` 即 dt）写进 `[graph+0x100] 对象+0x4C`，属于 **`+0x100` 上下文对象的时间/权重簿记**，与 63589→63581→58423 的 poseLocal 应用链**无数据关系**；审计十三把它列为“位姿应用”是**对包装器调用序的过读**（58429 由 63587 尾部调用，但写的只是 `+0x100` 对象的 +0x4C 标量，不触碰 hkbCharacter 的位姿数组）。它在候选上可达性：候选 +0x110 非 null（v13 证）、`[[0x110]+0x40]` 与 `[+0x88]`、`[0x100]`、rootNode 在 v15 借用期均非空 → **门应通过、每步 63587 尾部都会执行一次**（但 58429 前面的 0xbb2882 全局字节门实测 = 1，同样通过）；其副作用仅为一个 float 字段推进，不影响姿态。**实际每步是否执行 UNVERIFIED**（静态门判定之外无运行期证据，但与 v15 无异常一致）。
+
+**收束（v16 须开的门——证据命名，非设计）**：
+
+- 引擎链上 poseLocal 的唯一静态写入者是 **63589 → 63581 → 58423**（v15 每步已过 63589 前四门、b246 复位后走 63581 分支）；63587 内的 58429 与 poseLocal 无关（Q4-2）。
+- v15 观测（numData=0x74 回填、onFraction=1.0、元素运动）与“姿态绑姿冻结”并存的**剩余门候选（按静态证据强度排序）**：
+  1. **63564 谓词**（0xbae3d0）：每步为真则 63581 在 0xbaff4d 全跳采样块——与“onFraction/numData 有演化”矛盾，除非演化全来自 63602 管线侧（63582 的写槽写入也在 63602 遍历内发生）——**最优先仪器化**（一次返回值记录即可裁决）。
+  2. **63666 输出 → 63582 混合基址**：`[out+0x14]` 偏移语义（0xbaffa2）与 59303/64112 混合循环的实际落槽未逐指令解读——若混合基址错误，写槽数据被 63587 复位吞掉而 poseLocal 不动。
+  3. **58423 门**（`[+0x4A]`/轨道数>11/`[+0x88]`）：候选 `[graph+0x100]` 对象的标志与 `+0x88` 引用在 v15 借用态下的实际值 **UNVERIFIED**——一次只读 dump 即可裁决。
+  4. **63602 管线产物与 63587 复位的步内时序**：65237 产物写入（若有）发生在每步 63587 交换/复位之前还是之后，决定下一步采样读到的是产物还是全零——逐槽指针 + 逐槽哈希序列可裁决（Q2-4 的 probe 扩展）。
+- 运行期不可静态裁决的值（+0x1E8 内容、63564 返回、63666 输出、58423 门变量、逐槽内容序列）全部 **UNVERIFIED**，均为 v16 直接仪器输入。
+
+### 审计十四新增复现命令
+
+```powershell
+cd E:\SkyrimTools\Proj\CharacterPanel\build\g1-audit-20261023
+# Q1：63587 全函数（Path A/B、+0x1E8、交换、复位块）
+python disasm_func.py 0xbb2370 > listings/audit14_wrapper_63587.txt
+# Q2/Q3：采样入口 63589、numData 写入者 63568、采样分支 63581、应用链 58423/58427/57148/63582
+python disasm_func.py 0xbb2a40 > listings/audit14_sample_63589.txt
+python disasm_func.py 0xbae860 > listings/audit14_writer_63568.txt
+python disasm_func.py 0xbafda0 > listings/audit14_branch_63581.txt
+python disasm_func.py 0xab7f30 > listings/audit14_58423.txt
+python disasm_func.py 0xab9df0 > listings/audit14_58427.txt
+python disasm_func.py 0xbb0320 > listings/audit14_63582.txt
+# Q4：58429 是双指令叶子（无 .pdata 条目，裸地址）
+python -c "import sys; sys.path.insert(0,'.'); import disasm_func as df; from capstone import *; md=Cs(CS_ARCH_X86,CS_MODE_64); [print(f'  {i.address:#x}: {i.bytes.hex():<16} {i.mnemonic:<8} {i.op_str}') for i in md.disasm(df.bytes_at(0xab9eb0,0x10),0xab9eb0)]"
+# 调用者反查（63589/63568/63581/63587 的全部直接调用点）
+python callers_scan.py 0xbb2a40
+python callers_scan.py 0xbae860
+python callers_scan.py 0xbafda0
+python callers_scan.py 0xbb2370
+# 63602 尾部 63587 调用块（record +0x2A..+0x2E = 1,1,1,0,1 的写入）
+# 见 listings/audit14_63602_tail.txt（0xbb6340..0xbb63bd 窗口）
+# 全局字节 [0x2022530] 实测值（63587 内 0xbb2882 与 63581 内 0xbb0053/0xbb017c 共用的门）
+python -c "import sys; sys.path.insert(0,'.'); import disasm_func as df; print(hex(df.BLOB[df.rva_to_off(0x2022530)]))"   # -> 0x1
+```
+
+## 63564 谓词真值条件与 63581 采样入口约定（2026-10-25 续审计十五）
+
+v16 判据①（`phase=pred step=0/60 r=0x01`）落定后的定向补审，目标 = v17 设计所需的四个问题：Q1（63564 真值条件与活体 actor 的为假条件）、Q2（63589 → 63581 调用约定的完整实参）、Q3（63581 采样块前的自有门）、Q4（管理器 0xba3dd5 调用点的真实 63587 记录语义）。全部指令级事实（同一解包镜像）：
+
+**Q1（63564 谓词真值条件）**——0xbae3d0..0xbae431，0x61 B（listings/audit14_63564.txt）：
+
+1. **按序七出口**：序言 `push rbx; sub rsp,0x20` 后唯一被测链是五级非空链 + 一处竞态重查——
+   - ①`cmp qword [rcx+0x238], 0`（0xbae3d6）→ `je 0xbae429`（physicsWorld 空 → 假）；
+   - ②`mov rcx,[rcx+0xF0]; test rcx,rcx`（0xbae3e3–0xbae3ed）→ `je`（ragdollDriver 空 → 假；`graph+0xF0` = 内嵌 characterInstance 的 ragdollDriver 字段，审计八已锁）；
+   - ③`call 58286`（0xbae3ef）→ `test rax,rax` → `je`（驱动实例空 → 假）。58286 = `mov rax,[rcx+0x88]; ret` 两条指令的纯 getter（0xaac8e0，裸窗口核过）= `hkbRagdollDriver::ragdoll`（CommonLib `hkbRagdollDriver` +0x88）；
+   - ④重读 `[rbx+0xF0]` 并重测空（0xbae3f9–0xbae403，driver 竞态空 → 假）+ 第二次 58286（0xbae409）——同一 getter 的编译器重取，不引入新条件；
+   - ⑤`rax = [rax+0x10]`（0xbae40e）= hkaRagdollInstance 的 `rigidBodies` hkArray 首成员 data 指针（CommonLib `hkaRagdollInstance` +0x10：`{data +0x10, size +0x18, cap +0x1C}`）；`rcx = [rax]`（0xbae412）= `rigidBodies[0]`（第一个 `hkpRigidBody*`）→ `test` → `je`（首刚体空 → 假）；
+   - ⑥`cmp qword [rcx+0x10], 0`（0xbae41a）→ `je`（首刚体的 `hkpWorldObject::world`（CommonLib hkpWorldObject 首成员 +0x10）为空——刚体未注册进任何物理世界 → 假）；
+   - 全过 → `mov al,1`（0xbae421）真。
+2. **语义命名**：谓词 = 「图自身 ragdoll 实例的首个刚体当前注册在物理世界里（且 world/driver/实例/首刚体四级链接完好）」。0x61 字节体内**没有任何数值比较**：audit 10 嫌疑的 `driver+0x10`（CommonLib 布局 = `ragdollBlendOutTime` float，紧邻 +0x14 `worldFromModelModeData` 模式字节）在该函数里只被当作 `rigidBodies` 的 data 指针读取，其数值（blend-out 时长/模式字节）不是判据——**嫌疑在结构上证伪**。附带推论：若 `rigidBodies.data == 0`（实例未分配数组），0xbae412 的 `mov rcx,[rax]` 是空指针解引用（崩溃而非返回假）——候选 `r=0x01` 同时证明该 data 指针在 pred 时刻可读非空。
+3. **活体 actor 的为假条件**：world/driver/实例/首刚体全非空的活图上，唯一结构性为假出口 = **路径⑥（`rigidBodies[0]->world == 0`，0xbae41a→0xbae429）**——即 ragdoll 刚体未挂入物理世界（活体运动学角色的常态：hkbRagdollDriver 的 `autoAddRemoveRagdollToWorld`/blend-out 语义下，刚体仅在 ragdoll 控制器活动期进 world；可对照 63621 AddRagdollToWorld 的入口名与审计十一的写入链）。健康活体图与候选的判别字段因此命名 = **`rigidBodies[0]->world`（hkpWorldObject+0x10）**。活体上其余为假出口按静态证据强度排序（不可裁决运行期值，UNVERIFIED）：②路径④（driver 二次空测——纯竞态重查，非健康态）；③路径③（实例空——无 ragdoll 实例的驱动）。
+4. **候选翻假条件（显式字段值）**：`[graph+0x238]=0`（路径①）、`[graph+0xF0]=0`（路径②）、`[driver+0x88]=0`（路径③）、`rigidBodies[0]=0`（路径⑤）、**`rigidBodies[0]->world=0`（路径⑥——候选上唯一不破坏链条的翻假值）**。v16 `r=0x01` 反证：借用窗口内候选的 body[0]->world 非 null（世界借用 + 每步 63621 AddRagdollToWorld 或装载子链的 world 注册使然）。各指针的具体运行期值 UNVERIFIED（静态不可观测）。
+
+**Q2（63589 → 63581 调用约定）**——调用点 0xbb2ac3–0xbb2aca（listings/audit14_sample_63589.txt）：
+
+1. 调用点序列：`mov rdi, rcx`（0xbb2a5c，graph 存入 rdi，全程未再改写）→ 四门 → b246 测试（0xbb2ab0）→ **`movzx edx, word [rcx+0x240]`（0xbb2ac3）→ `call 63581`（0xbafda0）**。完整约定 = **两个活实参：(rcx = graph, edx = word[graph+0x240] u16)**，无栈实参。其余寄存器在 63581 内首次使用前一律先被覆写（listing 逐条核过）：`r15d ← dx`（0xbafdd3，只取低 16 位）、`rsi ← rcx`（0xbafdd7）、入口即 `call 63564`（只吃 rcx，0xbafdda）、`r8/r9` 来自 `[rsi+0x220]`（0xbafde3–0xbafdea）、`xmm0` 首次从内存装载（0xbafdf2）——r8/r9/r10/r11/xmm0–3 无一从入口值读取。
+2. 插件 `sampling_entry(candidate, &mode_byte)`（= 63589(rcx=candidate, rdx=&mode_byte)）到 63581 的映射：arg0（candidate）原样成为 63581 的 rcx；**arg1（&mode_byte）在 b246=0 分支不被读取**——它只在 63568 分支被 `movzx edx, byte [rdx]`（0xbb2ab9）解引用为 dl；63581 的 edx 是图字段 `[0x240]`，与插件的 mode 字节无关（audit 14 已录 `edx = word [graph+0x240]`，本条补全其余寄存器皆死与无栈实参）。
+
+**Q3（63581 采样块前的自有门）**——listings/audit14_branch_63581.txt；除 audit 14 已列的 0xbaff4d 谓词门外，入口到采样块（63666 @0xbaff68）之间还有：
+
+1. **无门的双解引用（前置条件，非分支）**：0xbafde3–0xbafdf2 读 `[[graph+0x220]]` 元素并 `movsx r8, word [r9+0x14]`、从 `[r9+r8]` 拷 0x30 字节进栈——`[0x220]` 或其元素为空时是崩溃不是返回。
+2. **门①**：`test r15w,r15w`（0xbafe11）——edx（word[0x240]）为零 → 跳 0xbb02c0（58427 + 视谓词再 63569），不采样。
+3. **门②/③**：`[[0x220]]+4` dword > 2 且元素 `+0x38` float > 0.0（0xbafe66–0xbafe86）；`[[0x228]]+4` > 2 且 `+0x38` > 0.0（0xbafe8c–0xbafead）——任一失败 → 0xbb0106（写 `[0x230]=1.0f` 后走 58427/63569 尾链）。
+4. **门④/⑤**：t 值对（0xbafeb3–0xbafed9）：选中的较大 t 必须 ≥ 0（0xbafec5 `comiss xmm0(0), [rsi+edi]; ja bail`）、另一 t 必须 < 0（0xbafed5 `comiss xmm0, [rsi+rbx]; jbe bail`）——63587 Path A 复位后的 {t0=0, t1=-MAXFLT} 恰好双过（0 ≤ 0 不跳、0 > -MAXFLT 跳向通过侧）。
+5. **条件调用**：`[graph+0x158] > 0` 且某槽 numData==0 时先 63771（0xbafef8/0xbaff17，hkbBehaviorGraph::Activate 系）。
+6. 谓词门 0xbaff4d 位于以上各门之后；且 0xbaff2d–0xbaff45 在谓词测试**之前**写 `[graph+0x230]/[0x234]`（插值权重簿记）——即使 pred=真 提前跳出，这两个 float 也已被写。
+7. **直调可行性结论**：插件可以以 (rcx = candidate, edx = word[candidate+0x240]) 直调 63581（绕过 63589 的 b246 分岔）——两实参均为图内字段/既有镜像值，插件可重构，无外部依赖。静态副作用边界：门前 0x30 字节栈拷、`[0x230]/[0x234]` 写、条件 63771、numData==0 时的 58427/63569 路径、入口 63564 调用本身；谓词为真时采样块整块跳过（与 v16 观测一致）。运行期实际副作用幅度 UNVERIFIED（静态只给出路径有界性）。
+
+**Q4（0xba3dd5 调用点的真实记录）**——0xba3dd5 落在 0xba3c50（63358，947 B，listings/audit15_manager_0xba3c50.txt）：
+
+1. **调用点本身不构造记录**：`mov rdx, r13`（0xba3dcf）——记录 = 0xba3c50 的入口 rdx 原样透传（函数体内无任何对 r13 指向记录字段的写）；`r8 = [rbp-0x30] 或 0`（esi == [rdi+0xB0] 时 `cmovne` 选 0，0xba3dc1–0xba3dcb，第三实参二选一）、`rcx = [rbx]`（图容器数组元素）。
+2. **记录的两个真实生产者**：
+   - **0x54c130（32898，0xAD B）**：栈上构造 `{+0x00 dt = xmm1 实参；+0x08..+0x27 全 0（回调 +0x08/+0x10、世界变换指针 +0x18 全空）；+0x28 u16 id = 0；+0x2A = 0；+0x2B = 1；+0x2C = 1；+0x2E = 1}`（`mov dword [rsp+0x50], 0x1000000` → 字节 +0x28=0,+0x29=0,+0x2A=0,+0x2B=1；`mov word [rsp+0x54], 1` → +0x2C=1；`mov byte [rsp+0x56], 1` → +0x2E=1）→ `0xba3c50(graph, &record)`（0x54c1a6）。**+0x2A=0 → Path B 语义**（63575 LOD 采样数解析器在位、`[0x240]` 重算、0x245/0x246 清零——audit 14 Q1 的分岔表）。
+   - **63602 尾部（0xbb6340..0xbb63bd，audit 14 已录）**：+0x2A=1（`mov dword [rsp+0x6b], 0x1000101`）→ Path A——slot-5 管线（65149 帧记录）专用的零 dt 再生成节拍配方，与 v15 插件复刻同款。
+   - 另有 0x54c1f0（32900，0x8C B）把**自己的入口 rdx 原样透传**给 0xba3c50（0x54c23b–0x54c243），7 个上游调用点（0x2f7330/0x2f78b0/0x5b0da0/0x5c8020/0x5d5da0/0x7393a0/0x7e5990）各自供记录，其值 UNVERIFIED（未逐点展开）。
+3. **每帧命名生产者**：0x9693b0（0x47 B 薄包装）先以静态 `.data` float（`[rip→0x31cc28c]`）为 dt 调 0x54c130 一次，再对 `[rdi+0x28]` 数组逐元素以同一 dt 各调一次；0x9694c0 以 **xmm1 = 0.0**（xorps）调 0x54c130（零 dt）后做 TLS 帧率检查。两者全部经 0x54c130 → **每帧管理器路径的 +0x2A 恒为 0**。
+4. **结论**：引擎自身的每帧 63587 记录走 **Path B（+0x2A=0）**——真实帧上 `[graph+0x246]` 被 63587 清零、63589 的 0x246 分岔按 63581 分支执行；+0x2A=1 是 63602 尾部零 dt 管线记录的专用值（该管线本就不采样）。因此「Path B 语义的记录（+0x2A=0）或等价的 [graph+0x246]=0 状态」复现的是引擎原生每帧序，不是插件发明。audit 7 第 1 条「+0x2a u8（非 0 = 跳过选择）」由 0x54c1f0 入口 `cmp byte [rdx+0x2A], bl; jne`（0x54c21a，非零直接跳过 vtable 槽 0x70 的选择询问）逐字证实。记录其余字节来源（0x54c130 版）：+0x28 u16 id = 0 静态零（Path B 里 63575 的基数 `min(id, [graph+0x170])` 退化为只看 `[graph+0x170]`）；+0x2C mode = 1（63575 的 r8d 模式实参）；+0x18 指针 = 0（空 → 63587 簿记重置块跳过，与 v15 插件记录同构）；dt = 上层 xmm1（0x9694c0 为 0.0、0x9693b0 为静态 .data 值，数值本身 UNVERIFIED——`.data` 段无文件数据）。
+
+**收束（v17 须安排的事实清单——证据命名，非设计）**：
+
+1. **谓词翻假**：候选上唯一不破坏链条的字段翻转 = `rigidBodies[0]->world == 0`（或等价地：pred 求值时刻让 world/driver/实例任一前级链接为空）；数值型 blend-out/模式字节不是判据（Q1-2 结构上证伪）。
+2. **采样到达**：b246=0 时 63589 自动走 63581 分支（v13 证实）；直调 63581 只需 (rcx=candidate, edx=word[0x240]) 两实参（Q2）；63581 自身门（edx≠0、双槽 +4>2/+0x38>0、t 对）在 63587 Path A 复位后的图状态上静态全过（Q3-4）。
+3. **引擎原生序**：每帧管理器记录 = 0x54c130 版（+0x2A=0、id=0、mode=1、transform=null、dt=上层传入）→ Path B；63602 尾部 +0x2A=1 记录是 slot-5 零 dt 管线专用，不是每帧采样配方（Q4-3/4）。
+4. **仍未决（运行期判据）**：即便谓词翻假且 63581 被到达，58423 前置（[[+0x110]+0x40] 与 [+0x88]、[+0x100]、[+0x218]）在候选上的实际值、63666 输出与 63582 混合落槽仍 UNVERIFIED——v16 `g3-gates` 行测的是插件 58315 自建 ctx（链全空），63581 在 0xbafe48 自建 ctx 的链内容仍无运行期样本；这是 v17 仪器的直接输入。
+
+### 审计十五新增复现命令
+
+```powershell
+cd E:\SkyrimTools\Proj\CharacterPanel\build\g1-audit-20261023
+# Q1：63564 全函数（真值条件链）与 58286 纯 getter
+python disasm_func.py 0xbae3d0 > listings/audit14_63564.txt
+# Q2：采样入口 63589（调用点）与采样分支 63581（签名/浮点寄存器）
+python disasm_func.py 0xbb2a40 > listings/audit14_sample_63589.txt
+python disasm_func.py 0xbafda0 > listings/audit14_branch_63581.txt
+# Q4：管理器 63587 调用点（0xba3dd5 落在 0xba3c50 内）与两个调用方记录构造方
+python disasm_func.py 0xba3c50 > listings/audit15_manager_0xba3c50.txt
+python disasm_func.py 0x54c130
+python disasm_func.py 0x54c1f0
+python disasm_func.py 0x9693b0
+# Q4：三个记录生产者的完整调用者反查
+python callers_scan.py 0xba3c50
+python callers_scan.py 0x54c130
+python callers_scan.py 0x54c1f0
+# 58286 纯 getter（两条指令，裸窗口）
+python -c "import sys; sys.path.insert(0,'.'); import disasm_func as df; from capstone import *; md=Cs(CS_ARCH_X86,CS_MODE_64); [print(f'  {i.address:#x}: {i.bytes.hex():<16} {i.mnemonic:<8} {i.op_str}') for i in md.disasm(df.bytes_at(0xaac8e0,8),0xaac8e0)]"
+```
+
 ## 对设计契约的影响
 
 - 构造 API **不是**“独立图可用”的证据；它只证明“可以分配并初始化空壳，且能按引用计数成对释放”。
@@ -330,6 +511,32 @@ python build/g1-audit-20261023/disasm_func.py 0xad60a0   # 59324 队列批量搬
 python build/g1-audit-20261023/disasm_func.py 0xbb6c60   # 槽 2（63621）输出重置/ragdoll 更新（双门）
 python build/g1-audit-20261023/disasm_func.py 0xbb8c70   # 63639 按名读变量（unk70 布局证据）
 python build/g1-audit-20261023/disasm_func.py 0xbbd6b0   # 63773 名字→id 查询（vtable 槽 13）
+
+# 11. 骨骼提供者真身与填充链（2026-10-24 续审计十）
+python build/g1-audit-20261023/ragdoll_rtti_scan.py
+python build/g1-audit-20261023/disasm_func.py 0xbc44e0   # 63870 完整装配（驱动→63949→63952 尾链）
+python build/g1-audit-20261023/disasm_func.py 0xbc9a80   # 63952 hkaRagdollInstance 构建
+python build/g1-audit-20261023/disasm_func.py 0xaac7b0   # 58285 hkbRagdollDriver::SetRagdoll
+python build/g1-audit-20261023/disasm_func.py 0xbd6b20   # 64145 hkaRagdollInstance 构造
+python build/g1-audit-20261023/disasm_func.py 0xabcf20   # 58449 hkbRagdollDriver 创建包装
+# 0xaac560（58280 hkbRagdollDriver 构造）与 58286 getter 无 .pdata，raw 反汇编（ragdoll_rtti_scan.py 定位、capstone 直读）。
+
+# 12. 槽 2 真身与元素字段写入链（2026-10-25 续审计十一）
+python build/g1-audit-20261023/disasm_func.py 0xbb6c60   # 63621 槽 2 = AddRagdollToWorld（+32/+38 写入者）
+python build/g1-audit-20261023/disasm_func.py 0xbb8f90   # 63643 当前动画哈希构建（槽 2 块的门）
+python build/g1-audit-20261023/disasm_func.py 0xbb8270   # 63631 槽 0xC（projectDBData +0x170/+0x178 对象对）
+python build/g1-audit-20261023/disasm_func.py 0xbb4c50   # 63602（槽 2 调用块上下文：bb5a90–bb5b26）
+# 位移式轨道头 store 扫描（output_track_scan.py）噪声大（栈槽/通用 +0x18 族误命中）；锚定 63621 后直读即得写入者。
+
+# 13. 采样入口五道门与 numData 写入者（2026-10-25 续审计十二）
+python build/g1-audit-20261023/disasm_func.py 0xbae860   # 63568 numData 写入者（[tracks+0x32]=[graph+0x240]）
+python build/g1-audit-20261023/disasm_func.py 0xbb2a40   # 63589 采样入口（五道门，首门 graph+0x110）
+python build/g1-audit-20261023/disasm_func.py 0xbb8270   # 63631 槽 0xC（+0x110 的唯一填充者）
+python build/g1-audit-20261023/disasm_func.py 0xbafda0   # 63581 采样另一分支（[graph+0x246]=0 时）
+
+# 14. 63587 全配方与 0x246 分岔（2026-10-25 续审计十三）
+python build/g1-audit-20261023/disasm_func.py 0xbb2370   # 63587 引擎级更新包装器（全配方 + 0x245/0x246/0x240 写入者）
+python build/g1-audit-20261023/disasm_func.py 0xbb4c50   # 63602 尾部 63587 调用点（bb62ae–bb63bd，栈记录布局）
 ```
 
 脚本只读 PE/versionlib，不加载模块、不调用引擎；`analysis.json` 由 `build_maps.py` 从 versionlib 生成。反汇编注释中的函数名来自 CommonLibSSE 头文件的 `RELOCATION_ID` 标签，未标名者保持 ID/地址。

@@ -31,18 +31,21 @@ namespace
     // AE address-library ids from the 1.6.1170 audit; the experiment is gated to AE.
     constexpr std::uint64_t GraphConstructorID = 63555;
     constexpr std::uint64_t GraphLoaderID = 63585;
-    // G2 drive entries (activation/update audit, 2026-10-24): 58453 is the ENGINE's
+    // G2 drive entries (activation/update audits, 2026-10-24): 58453 is the ENGINE's
     // character-level activator — it allocates the pose buffer from
     // setup.animationSkeleton (58466) BEFORE calling hkbBehaviorGraph::Activate, which
-    // the graph-level 63586 wrapper skips; 58329 is hkbBehaviorGraph::Update
-    // (vtable slot 5); 58315 fills an hkbContext from a character; 63589 is the
-    // engine's post-update sampling entry (gates: setup/animationSkeleton/behaviorGraph
-    // non-null, graph activated; the sampler copies [graph+0x240] transform tracks —
-    // the LOD-scaled sample count, 116 up close — into poseLocal).
+    // the graph-level 63586 wrapper skips; 58315 fills an hkbContext from a character.
     constexpr std::uint64_t CharacterActivatorID = 58453;
-    constexpr std::uint64_t BehaviorGraphUpdateID = 58329;
     constexpr std::uint64_t ContextBuilderID = 58315;
-    constexpr std::uint64_t SamplingEntryID = 63589;
+    // v17 (audit 15): the per-step sampling goes through a DIRECT 63581 call in place
+    // of the 63589 entry. 63589's own b246 test (0xbb2ab0) routed every step to the
+    // 63568 header back-fill while the 63564 predicate stayed true (v16), so the
+    // entry's fork is retired with the v17 recipe. 63581's convention (audit 15 Q2,
+    // call site 0xbb2ac3) is exactly two live arguments — rcx = graph and
+    // edx = word [graph+0x240] — with every other register dead at first use; the
+    // plugin mirrors [graph+0x240] = numPoseLocal before the call each step (since
+    // v7), so the mirrored word equals the engine's own second argument.
+    constexpr std::uint64_t SamplingBranchID = 63581;
     // v7 generation pipeline (per-frame pipeline audit, 2026-10-24): 63602 is the
     // ENGINE's per-graph frame pipeline — it collects events, runs the generation
     // traversal (65149→65232→65237) that fills generatorOutputs, performs a zero-dt
@@ -58,6 +61,64 @@ namespace
     // through it. Signature (behavior, ctx, event*) with a 24-byte hkbEvent
     // {u32 id, u32 pad, hkRefPtr payload, hkbNode* sender}; only id/payload are read.
     constexpr std::uint64_t EventDispatchID = 58377;
+    // Audit 11: vtable slots 2/3 of the final main vtable (0x19881f8) are
+    // BSIRagdollDriver::AddRagdollToWorld / RemoveRagdollFromWorld (63621/63622).
+    // 63621's head is the writer of the pose-track evidence fields — it stores
+    // [tracks+0x32]=0 and [tracks+0x38]=1.0f right after the world/driver/instance
+    // gates — and its body activates the ragdoll's rigid bodies into the graph's
+    // physics world. 63602 reaches it only behind a gate whose provider (63643)
+    // fills a per-frame current-animations hash, a path the candidate never
+    // satisfies; v12 calls the slot directly with the candidate's own instance.
+    constexpr std::uint64_t AddRagdollToWorldID = 63621;
+    constexpr std::uint64_t RemoveRagdollFromWorldID = 63622;
+    // Audit 12: slot 0xC (63631) picks one of the projectDBData +0x170/+0x178
+    // objects (dl selects the pair member) and stores it at graph+0x110 — the
+    // first gate of the sampling entry 63589, without which it returns before
+    // reaching 63568, the writer of the kPose track's numData
+    // ([tracks+0x32] = word [graph+0x240]).
+    constexpr std::uint64_t AnimationDataProviderID = 63631;
+    // Audit 13: 63587 is the engine's complete per-frame update recipe (ctx
+    // build 58315, preupdate 63761, the behavior update through indirect
+    // calls, event drain 63583, pose apply 58429, and the numAnimBones/
+    // 0x245=0x101/0x246 + generatorOutputs-swap bookkeeping). The v14 row
+    // (post-pipeline1) adjudicated branch ②: all its bookkeeping stayed zero
+    // and both double-buffer slots carried only the plugin's own slot-2 write,
+    // so 63602's tail never ran 63587 on the candidate. v15 replaces the bare
+    // 58329 with a DIRECT 63587 call using 63602's own stack-record layout
+    // (its 0xbb63b8 tail): zero-initialized ≥0x30 bytes, float dt@+0x00 and
+    // bytes +0x2a..+0x2e = 1,1,1,0,1 (footIK@+0x2e); the third argument is 0.
+    // The engine hosts each record on the stack per call, so v15 builds it
+    // fresh inside the drive loop each step. 63587's prologue gates (+0x110 /
+    // [[+0x110]+0x20] / +0x208 / [[+0x208]+0x12c]) may still block on the
+    // candidate — that outcome is pre-registered as the v15 ③ criterion and
+    // points at the +0x208 gate-chain audit.
+    // v17 (audit 15 Q4): the v15 record (+0x2a=1) copied 63602's tail — a slot-5
+    // zero-dt pipeline special, not the engine's per-frame recipe. The manager's
+    // real per-frame record is built by 0x54c130 (32898) as {float dt@+0x00;
+    // +0x08..+0x27 zero; u16 +0x28 id = 0; byte +0x2A = 0; byte +0x2B = 1;
+    // byte +0x2C = 1; byte +0x2E = 1} (moves: dword [rsp+0x50]=0x1000000,
+    // word [rsp+0x54]=1, byte [rsp+0x56]=1) — +0x2A=0 is Path B: no slot swap,
+    // no track reset, 0x246 cleared, [0x240] recomputed via 63575. The drive
+    // record switches to that byte map.
+    constexpr std::uint64_t EngineUpdateWrapperID = 63587;
+    // v16 (audit 14, the poseLocal last mile): 63564 is the sampling-block predicate
+    // 63581 calls first thing (0xbafdda, with the same rcx/rdx 63581 itself received —
+    // rdx = word [graph+0x240], provably dead in the callee) and consumes as
+    // `test r13b, r13b` at 0xbaff4d; nonzero skips the whole sampling block. Its
+    // 0x61-byte body only reads graph+0x238 (physicsWorld) and +0xF0 (ragdollDriver),
+    // walks driver+0x88 (58286 = `mov rax,[rcx+0x88]; ret`, a pure getter) to the
+    // instance's rigidBodies first entry and returns a byte in AL — no writes, no
+    // bookkeeping. Direct-called observation-only at steps 0/60 to adjudicate gate G1.
+    // v17 (audit 15 Q1): the predicate is a pure five-level non-empty chain
+    // (physicsWorld → ragdollDriver → driver+0x88 instance → rigidBodies[0] → that
+    // body's hkpWorldObject::world at +0x10, no numeric comparison); on a healthy
+    // living actor it returns false exactly on `rigidBodies[0]->world == 0` — the
+    // only non-chain-breaking flip on the candidate. v17 therefore moves the slot-3
+    // call (RemoveRagdollFromWorld) to right after the slot-2 call, before the
+    // drive loop: slot 2's per-body world registration is undone while the borrow
+    // is still in place, `rigidBodies[0]->world` is null at every sampling moment,
+    // and 63564 returns false (v12 proved slot 3 leaves the track headers intact).
+    constexpr std::uint64_t PosePredicateID = 63564;
     // Pre-registered G2 drive budget: 120 fixed steps of 1/60 s (2 simulated seconds).
     constexpr std::uint32_t DriveSteps = 120;
     constexpr float DriveTimestep = 1.0f / 60.0f;
@@ -71,14 +132,26 @@ namespace
     using character_activator_t = void (*)(RE::hkbCharacter*);
     using context_builder_t = void (*)(RE::hkbContext*, RE::hkbCharacter*, void* world, void* attachment_manager,
         void* animation_cache);
-    using behavior_updater_t = void (*)(RE::hkbBehaviorGraph*, const RE::hkbContext*, float);
-    using sampling_entry_t = void (*)(RE::BShkbAnimationGraph*, std::uint8_t* mode_byte);
     // 63556 is the engine's real BShkbAnimationGraph destructor, applied directly to
     // stack temporaries by the engine's own slot-5 helper; 63602 runs one per-graph
     // frame pipeline pass with the shell as scratch holder.
     using graph_destructor_t = void (*)(RE::BShkbAnimationGraph*);
     using frame_pipeline_t = void (*)(RE::BShkbAnimationGraph* shell, RE::BShkbAnimationGraph* target);
+    using ragdoll_world_op_t = bool (*)(RE::BShkbAnimationGraph*);
+    using animation_data_provider_t = void (*)(RE::BShkbAnimationGraph*, bool);
     using event_dispatch_t = void (*)(RE::hkbBehaviorGraph*, const RE::hkbContext*, void const*);
+    // v15 (audit 13): 63587(graph, record, 0) — the engine's per-frame update
+    // wrapper; record is 63602's tail stack layout, at least 0x30 bytes.
+    using engine_update_wrapper_t = void (*)(RE::BShkbAnimationGraph*, void*, std::uintptr_t);
+    // v16 (audit 14): 63564's full 0x61-byte body only reads the graph
+    // (+0x238 physicsWorld, +0xF0 ragdollDriver) and the instance's rigidBodies
+    // first entry through the pure 58286 getter; it returns a byte in AL and
+    // never writes memory, so the convention carries one alive pointer.
+    using pose_predicate_t = std::uint8_t (*)(RE::BShkbAnimationGraph const*);
+    // v17 (audit 15 Q2/Q3): 63581 — the sampling block 63589's b246=0 branch
+    // reaches. Two live arguments (rcx = graph, edx = word [graph+0x240]); every
+    // other register is overwritten before first use, so the call is bounded.
+    using sampling_branch_t = void (*)(RE::BShkbAnimationGraph*, std::uint16_t);
 
     struct Identity
     {
@@ -627,15 +700,25 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     const float weight = *reinterpret_cast<const float*>(bytes + 0x38);
                                     return fmt::format("{} +32={:#06x} +38={:.3f}", dump, track, weight);
                                 };
+                                // Audit 10 corrected the provider object: 63630 (graph
+                                // vtable slot 0xB) takes the driver at [graph+0xF0]
+                                // (characterInstance.ragdollDriver), returns its
+                                // hkaRagdollInstance from +0x88 (the 58286 getter), and
+                                // counts rigidBodies there — hkArray at instance+0x10:
+                                // {data +0x10, size +0x18, capacity +0x1C}. The v9-era
+                                // reads at driver+0x10/+0x18 hit the blend-out float and
+                                // the world-from-model mode bytes and proved nothing.
                                 const auto driver_state = [](RE::hkbRagdollDriver const* driver) {
                                     if (!driver)
                                         return std::string("null");
                                     const std::uintptr_t base = reinterpret_cast<std::uintptr_t>(driver);
-                                    const std::uintptr_t array = *reinterpret_cast<const std::uintptr_t*>(base + 0x10);
-                                    const std::int32_t count = *reinterpret_cast<const std::int32_t*>(base + 0x18);
-                                    const std::uintptr_t inner = array ? *reinterpret_cast<const std::uintptr_t*>(array) : 0;
-                                    const std::uintptr_t bones = inner ? *reinterpret_cast<const std::uintptr_t*>(inner + 0x10) : 0;
-                                    return fmt::format("{:#x} arr={:#x} count={} bones={:#x}", base, array, count, bones);
+                                    const std::uintptr_t character = *reinterpret_cast<const std::uintptr_t*>(base + 0x80);
+                                    const std::uintptr_t instance = *reinterpret_cast<const std::uintptr_t*>(base + 0x88);
+                                    if (!instance)
+                                        return fmt::format("{:#x} char={:#x} ragdoll=null", base, character);
+                                    const std::uintptr_t bodies = *reinterpret_cast<const std::uintptr_t*>(instance + 0x10);
+                                    const std::int32_t count = *reinterpret_cast<const std::int32_t*>(instance + 0x18);
+                                    return fmt::format("{:#x} char={:#x} ragdoll={:#x} bodies={:#x} count={}", base, character, instance, bodies, count);
                                 };
                                 logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=gates src-world={:#x} src-ragdoll={:#x} cand-world={:#x} cand-ragdoll={:#x} src-gen0[{}] cand-gen0[{}]",
                                     actor_id, request,
@@ -685,9 +768,20 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     actor_id, request);
                             }
                         }
-                        const std::uint8_t mode_byte = 0;
-                        static REL::Relocation<sampling_entry_t> sampling_entry{ REL::ID(SamplingEntryID) };
-                        static REL::Relocation<behavior_updater_t> behavior_update{ REL::ID(BehaviorGraphUpdateID) };
+                        // v15: 63602's tail calls 63587(target, &record, 0) with the
+                        // stack record layout below; the direct call mirrors it (audit
+                        // 13, the 0xbb63b8 tail) in place of the bare slot-5 update.
+                        static REL::Relocation<engine_update_wrapper_t> engine_update{ REL::ID(EngineUpdateWrapperID) };
+                        // v16: 63564's convention carries one alive argument — the
+                        // candidate graph (audit14_branch_63581.txt calls it with the
+                        // exact rcx/rdx 63581 received and the callee never reads dx) —
+                        // and its whole 0x61-byte body is read-only, so the direct call
+                        // is bounded (R-01).
+                        static REL::Relocation<pose_predicate_t> pose_predicate{ REL::ID(PosePredicateID) };
+                        // v17: the per-step sampling goes through 63581 directly
+                        // (audit 15 Q2's two-live-argument convention), bypassing the
+                        // 63589 fork that routed every step to the 63568 branch.
+                        static REL::Relocation<sampling_branch_t> sampling_branch{ REL::ID(SamplingBranchID) };
                         static REL::Relocation<frame_pipeline_t> frame_pipeline{ REL::ID(FramePipelineID) };
                         static REL::Relocation<graph_destructor_t> shell_destroy{ REL::ID(GraphDestructorID) };
                         // Stack storage for the per-pass scratch shell, exactly like the
@@ -700,10 +794,152 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                         // read) plus a release-disabled assertion stub; everything else
                         // in the unlocked body is candidate-local. Restored to null
                         // right after the loop.
+                        // v11 dropped: the ragdoll-instance borrow proved non-load-bearing
+                        // — the corrected driver row showed both sides own an 18-body
+                        // instance, and borrowed or own the outputs stayed frozen.
+                        // v12 (audit 11): slot 2 (63621) is itself the writer of the
+                        // pose-track evidence fields ([tracks+0x32]=0, [tracks+0x38]=1.0f
+                        // right after its three gates) and its body is
+                        // BSIRagdollDriver::AddRagdollToWorld — per-body
+                        // hkpEntity::Activate plus 64157's add-to-world. The engine
+                        // reaches it inside 63602 only behind a gate whose provider
+                        // (63643) fills a per-frame current-animations hash from the
+                        // projectDBData pair (+0x170/+0x178 via slot 0xC), a path the
+                        // candidate never satisfies — which is why +38 stayed 0.0
+                        // through v10/v11 despite every gate of 63621 itself passing.
+                        // Bypass the internal gate with one direct slot-2 call (same
+                        // direct-call discipline as 58453/58377): candidate-own
+                        // ragdoll instance, borrowed world, engine-native body. Since
+                        // v17 the paired slot-3 removal follows immediately (see the
+                        // slot-2 call below) so the sampling-time predicate reads
+                        // false, and the post-loop call is an idempotent re-check.
+                        const auto pose_track_fields = [](RE::BShkbAnimationGraph const* graph) {
+                            const void* const output = graph->generatorOutputs[0];
+                            if (!output)
+                                return std::string("no-output");
+                            const auto* const tracks = *reinterpret_cast<void* const*>(output);
+                            if (!tracks)
+                                return std::string("no-tracks");
+                            const auto* const bytes = static_cast<const std::uint8_t*>(tracks);
+                            const std::uint16_t num_data = *reinterpret_cast<const std::uint16_t*>(bytes + 0x32);
+                            const float on_fraction = *reinterpret_cast<const float*>(bytes + 0x38);
+                            return fmt::format("+32={:#06x} +38={:.3f}", num_data, on_fraction);
+                        };
                         candidate->physicsWorld = source_graph.physicsWorld;
-                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=borrow world={:#x}",
+                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=borrow world={:#x} ragdoll=own",
                             actor_id, request, address(source_graph.physicsWorld));
+                        static REL::Relocation<ragdoll_world_op_t> add_ragdoll{ REL::ID(AddRagdollToWorldID) };
+                        static REL::Relocation<ragdoll_world_op_t> remove_ragdoll{ REL::ID(RemoveRagdollFromWorldID) };
+                        const std::string track_before = pose_track_fields(candidate.get());
+                        const bool slot2_added = add_ragdoll(candidate.get());
+                        // v17 (audit 15 Q1): the slot-3 removal follows slot 2
+                        // immediately, before the drive loop — slot 2's per-body world
+                        // registration is undone while the borrow is still in place, so
+                        // `rigidBodies[0]->world` is null at every later sampling moment
+                        // and the 63564 predicate returns false (v12 proved slot 3
+                        // leaves the track headers intact). The post-loop call below
+                        // stays as an idempotent re-check feeding the pipeline row.
+                        const bool slot3_removed = remove_ragdoll(candidate.get());
+                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=slot2 added={} removed={} tracks-before[{}] tracks-after[{}]",
+                            actor_id, request, slot2_added, slot3_removed, track_before, pose_track_fields(candidate.get()));
+                        // v13 (audit 12): the per-step sampling entry 63589 gates on
+                        // [graph+0x110] first; without it every step returned before
+                        // reaching 63568, the kPose numData writer. Fill it with one
+                        // direct slot-0xC call (dl=false picks +0x178; retry with true
+                        // for the +0x170 member only if the first leaves +0x110 null),
+                        // then the existing per-step sampling entry takes its real path.
+                        // 63631 also AddReference's the picked object and touches the
+                        // ragdoll skeleton — engine-native bookkeeping, called once.
+                        const auto animation_data_state = [&]() {
+                            const std::uintptr_t base = reinterpret_cast<std::uintptr_t>(candidate_base);
+                            const std::uintptr_t selected = *reinterpret_cast<const std::uintptr_t*>(base + 0x110);
+                            const std::uintptr_t sub = selected ? *reinterpret_cast<const std::uintptr_t*>(selected + 0x20) : 0;
+                            const unsigned branch = *reinterpret_cast<const std::uint8_t*>(base + 0x246);
+                            return fmt::format("110={:#x} sel+20={:#x} 246={}", selected, sub, branch);
+                        };
+                        static REL::Relocation<animation_data_provider_t> fill_animation_data{ REL::ID(AnimationDataProviderID) };
+                        const std::string data_before = animation_data_state();
+                        fill_animation_data(candidate.get(), false);
+                        if (!*reinterpret_cast<const std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(candidate_base) + 0x110))
+                            fill_animation_data(candidate.get(), true);
+                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=slot0c before[{}] after[{}]",
+                            actor_id, request, data_before, animation_data_state());
                         auto* const shell = reinterpret_cast<RE::BShkbAnimationGraph*>(shell_storage);
+                        // v15: the v14 post-pipeline1 fork evidence and the new
+                        // post-update1 row share one emitter (same field set:
+                        // 0x240/0x245/0x246/0x249 plus both double-buffer slots' track
+                        // fields); the phase name selects the row.
+                        const auto log_bookkeeping = [&](char const* phase) {
+                            const std::uintptr_t base = reinterpret_cast<std::uintptr_t>(candidate_base);
+                            const auto output_tracks = [&](std::size_t slot_index) {
+                                const void* const output = candidate->generatorOutputs[slot_index];
+                                if (!output)
+                                    return std::string("no-output");
+                                const auto* const tracks = *reinterpret_cast<void* const*>(output);
+                                if (!tracks)
+                                    return std::string("no-tracks");
+                                const auto* const bytes = static_cast<const std::uint8_t*>(tracks);
+                                return fmt::format("+32={:#06x} +38={:.3f}",
+                                    *reinterpret_cast<const std::uint16_t*>(bytes + 0x32),
+                                    *reinterpret_cast<const float*>(bytes + 0x38));
+                            };
+                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase={} num-anim={:#x} w245={:#x} b246={} b249={} out0[{}] out1[{}]",
+                                actor_id, request, phase,
+                                *reinterpret_cast<const std::uint16_t*>(base + 0x240),
+                                *reinterpret_cast<const std::uint16_t*>(base + 0x245),
+                                *reinterpret_cast<const std::uint8_t*>(base + 0x246),
+                                *reinterpret_cast<const std::uint8_t*>(base + 0x249),
+                                output_tracks(0), output_tracks(1));
+                        };
+                        // v16 gate-G3 evidence, one read-only row before the drive loop:
+                        // 58423's entry gates are byte [rcx+0x4A] (rcx = [graph+0x100]),
+                        // [[out]]+4 > 0xB and the ctx chain [ctx+0x50] → [+0x40] →
+                        // [+0x88] (0xab7f54..0xab7f89); the plugin's 58315-built context
+                        // backs the ctx side. No writes.
+                        const std::uintptr_t graph_base = reinterpret_cast<std::uintptr_t>(candidate_base);
+                        const std::uintptr_t gate_owner = *reinterpret_cast<const std::uintptr_t*>(graph_base + 0x100);
+                        const std::uintptr_t gate_flag =
+                            gate_owner ? *reinterpret_cast<const std::uint8_t*>(gate_owner + 0x4A) : 0;
+                        const std::uintptr_t chain_50 = context
+                            ? *reinterpret_cast<const std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(context) + 0x50)
+                            : 0;
+                        const std::uintptr_t chain_40 = chain_50
+                            ? *reinterpret_cast<const std::uintptr_t*>(chain_50 + 0x40)
+                            : 0;
+                        const std::uintptr_t chain_88 = chain_40
+                            ? *reinterpret_cast<const std::uintptr_t*>(chain_40 + 0x88)
+                            : 0;
+                        const auto ptr_field = [](std::uintptr_t const value) {
+                            return value ? fmt::format("{:#x}", value) : std::string("null");
+                        };
+                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=g3-gates g100={} flag4a={:#04x} ctx+50={} +40={} +88={}",
+                            actor_id, request, ptr_field(gate_owner), gate_flag,
+                            ptr_field(chain_50), ptr_field(chain_40), ptr_field(chain_88));
+                        // v16 gate-G4 evidence: the per-slot pointer/numData/onFraction
+                        // sequence over the double-buffer pair ([graph+0x220]/[0x228]).
+                        // n/f are the read slot's first output track header (+0x32 word,
+                        // +0x38 float), h is the 0x100-byte element-head FNV per slot;
+                        // the sampling path reads [0x220] after each Path-A swap.
+                        const auto log_slots = [&](std::uint32_t const step) {
+                            const auto slot_fields = [&](std::size_t const slot_index) {
+                                const void* const output = candidate->generatorOutputs[slot_index];
+                                if (!output)
+                                    return std::make_pair(std::string("null"), std::uint64_t{ 0 });
+                                const void* const element = *reinterpret_cast<void* const*>(output);
+                                if (!element)
+                                    return std::make_pair(std::string("null"), std::uint64_t{ 0 });
+                                const auto* const bytes = static_cast<const std::uint8_t*>(element);
+                                return std::make_pair(fmt::format("{:#x} n={:#06x} f={:.3f}",
+                                    reinterpret_cast<std::uintptr_t>(element),
+                                    *reinterpret_cast<const std::uint16_t*>(bytes + 0x32),
+                                    *reinterpret_cast<const float*>(bytes + 0x38)),
+                                    fnv1a_64(element, 0x100));
+                            };
+                            const auto [ptr0, hash0] = slot_fields(0);
+                            const auto [ptr1, hash1] = slot_fields(1);
+                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=slots step={} p0={} h0={:016x} p1={} h1={:016x}",
+                                actor_id, request, step, ptr0, hash0, ptr1, hash1);
+                        };
                         for (std::uint32_t step = 0; behavior && step < DriveSteps; ++step)
                         {
                             // Engine per-frame recipe (slot-5 helper 0xbacc90): one 63602
@@ -715,31 +951,106 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             construct(shell, nullptr, false);
                             frame_pipeline(shell, candidate_base);
                             shell_destroy(shell);
+                            if (step == 0)
+                            {
+                                // v14 (audit 13): read-only fork evidence — did 63602's
+                                // internal 63587 tail run on the candidate? Its prologue
+                                // writes word 0x245 = 0x101 (245=1, 246=1) and Path B
+                                // recomputes numAnimBones and resets 246; the outputs are
+                                // double-buffered (+0x220/+0x228 swapped by 63587), so
+                                // both slots' track fields are logged. (Adjudicated ②:
+                                // all zero, slots unchanged → 63587 never reached the
+                                // candidate, which is why v15 calls it directly.)
+                                log_bookkeeping("post-pipeline1");
+                            }
                             // The engine requests per-frame children re-activation by
                             // setting graph+0x12E = 1 before every update (63602's tail
                             // does exactly this for each subscribed graph, and its own
-                            // zero-dt update consumed the flag again); Update's internal
-                            // gate skips its 60079 activation walk otherwise.
+                            // zero-dt update consumed the flag again); the update's
+                            // internal gate skips its 60079 activation walk otherwise.
                             *reinterpret_cast<std::uint8_t*>(address(behavior) + 0x12E) = 1;
-                            behavior_update(behavior, context, DriveTimestep);
-                            // The sampling entry reads the sample-transform count at
-                            // graph+0x240 (the engine writes it per frame from the
-                            // manager record; for the same skeleton it is always
-                            // numPoseLocal).
+                            // v15: replace the bare 58329 update with the ENGINE's
+                            // per-frame wrapper 63587 — 63602's tail calls it exactly
+                            // like this (target graph, stack record, third argument 0)
+                            // and the v14 run proved the candidate never receives that
+                            // call. The record is 63602's tail layout (audit 13):
+                            // ≥0x30 bytes, zero-initialized, float dt at +0x00 and the
+                            // byte modes +0x2a..+0x2e = 1,1,1,0,1 (footIK at +0x2e);
+                            // the engine hosts each record on the stack per call, so it
+                            // is rebuilt fresh every step, with the drive's fixed 1/60 s
+                            // step as dt instead of 63602's zero.
+                            // v17 (audit 15 Q4): the record byte map switches to the
+                            // manager's real per-frame producer 0x54c130: +0x28 u16 id
+                            // stays 0 (zero-init), +0x2A = 0 (Path B — no slot swap, no
+                            // track reset, 0x246 cleared, [0x240] recomputed via
+                            // 63575), +0x2B = 1, +0x2C = 1, +0x2E = 1 (+0x2D stays 0;
+                            // the u16 write at rsp+0x54 covers only +0x2C/+0x2D). The
+                            // +0x2A=1 map of v15 was 63602's tail zero-dt special, not
+                            // the engine's per-frame recipe.
+                            alignas(8) std::uint8_t update_record[0x30]{};
+                            *reinterpret_cast<float*>(update_record) = DriveTimestep;
+                            update_record[0x2A] = 0;
+                            update_record[0x2B] = 1;
+                            update_record[0x2C] = 1;
+                            update_record[0x2E] = 1;
+                            engine_update(candidate_base, update_record, 0);
+                            if (step == 1 || step == 2)
+                                log_slots(step);
+                            if (step == 0)
+                            {
+                                // v15: the same field set immediately after the first
+                                // direct call — any 63587 bookkeeping (w245 ≠ 0, b246=1,
+                                // num-anim recomputed, slots swapped vs post-pipeline1)
+                                // proves the wrapper reached the candidate; all zero
+                                // means its prologue gates (+0x110 / [[+0x110]+0x20] /
+                                // +0x208 / [[+0x208]+0x12c]) blocked — pre-registered ③,
+                                // next audit = the +0x208 gate chain.
+                                log_bookkeeping("post-update1");
+                            }
+                            // v17: the mirror that feeds the sampler. The engine's
+                            // per-frame 63587 writes word [graph+0x240] from the
+                            // manager record via 63575 (Path B recomputes it); on the
+                            // recordless candidate the drive mirrors numPoseLocal
+                            // (0x74 for the same skeleton) into it each step, exactly
+                            // as since v7, and reads it back as the direct 63581
+                            // call's second argument (audit 15 Q2: edx = word
+                            // [graph+0x240]).
                             *reinterpret_cast<std::uint16_t*>(reinterpret_cast<std::uintptr_t>(candidate_base) + 0x240) =
                                 static_cast<std::uint16_t>(candidate->characterInstance.numPoseLocal);
-                            sampling_entry(candidate_base, const_cast<std::uint8_t*>(&mode_byte));
+                            // v16: direct 63564 predicate observation at steps 0/60,
+                            // immediately before the sampling block — the same call
+                            // 63581 makes first thing inside the block (same rcx the
+                            // sampler receives, rdx provably dead); a nonzero return
+                            // means 63581 skips the whole block at 0xbaff4d. The
+                            // read-only body keeps the call observation-only.
+                            if (step == 0 || step == 60)
+                            {
+                                const std::uint8_t predicate = pose_predicate(candidate_base);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pred step={} r={:#04x}",
+                                    actor_id, request, step, predicate);
+                                log_slots(step);
+                            }
+                            // v17: direct sampling-block call — 63581(candidate, word
+                            // [graph+0x240]) per audit 15 Q2; the mirrored field is
+                            // read at the call, after the mirror write above.
+                            sampling_branch(candidate_base,
+                                *reinterpret_cast<const std::uint16_t*>(reinterpret_cast<std::uintptr_t>(candidate_base) + 0x240));
                             if (step + 1 == DriveSteps / 2)
                             {
                                 candidate_pose_mid = format_pose_hash(candidate->characterInstance);
                                 log_state_probe("60");
                             }
                         }
+                        // v17: idempotent slot-3 re-check after the drive — the world
+                        // borrow is released right below, so nothing re-registers the
+                        // bodies afterwards; the call feeds the pipeline row only.
+                        const bool slot2_removed = remove_ragdoll(candidate.get());
                         candidate->physicsWorld = nullptr;
                         candidate_pose_end = format_pose_hash(candidate->characterInstance);
                         log_state_probe("120");
-                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pipeline steps={} shell=pairs world-restored=true",
-                            actor_id, request, DriveSteps);
+                        log_slots(120);
+                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pipeline steps={} shell=pairs world-restored=true ragdoll-removed={} tracks-end[{}]",
+                            actor_id, request, DriveSteps, slot2_removed, pose_track_fields(candidate.get()));
 
                         const std::string source_pose_after = format_pose_hash(source_graph.characterInstance);
                         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=drive-done steps={} dt={:.6f} source-pose-before={} source-pose-after={} candidate-pose-0={} candidate-pose-60={} candidate-pose-120={}",
