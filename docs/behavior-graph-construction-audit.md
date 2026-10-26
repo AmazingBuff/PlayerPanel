@@ -10,10 +10,11 @@
 - `slots n=uint16(element+0x32)`是kPose numData；`f=float(element+0x38)`是onFraction。原生门中的`DWORD(element+0x4)>2`是整体numTracks，三者不能互换。驱动前head `e022000015000000`的+4为0x15，不证明后续值；n=0不证明数量子门失败。
 - [v17](independent-behavior-graph.md#g2-v17-运行记录2026-10-26-会话谓词翻假达成与采样门23落定)仅在step0/60观测pred=0；slot2和post-pipeline1曾有f=1，post-update1两槽f=0，记录检查点继续为0。**v18 五阶段观测**（[运行记录](independent-behavior-graph.md#g2-v18-run)）把复位定位在本步 63602 之后、63587 返回之前：两槽 `numTracks(+0x4)=21` 全程满足数量门，`numData(+0x32)` 全程 0，onFraction 只有 step 0 pre-pipeline 的 slot 2 写入值 1.0，之后双槽全 0。不能说轨道头从未初始化，也不能说管线永不写头。
 - 63581直调到入口/门判定不等于63666/63582采样混合主体执行；0x100字节元素头哈希不等于完整变换载荷。实际生成数据、正确双槽、63581原生ctx与58423应用仍未知。
-- Path B需`record+0x2A==0`与`max(t0,t1)∈[0,MAXFLT)`同时满足。**v18 运行期**：`record+0x2A=0` 的配方下仍 120 步全 Path A（`w245=0x101 b246=1`、每步交换一次双槽），t 在首次 update 后恒为 `{0,-MAXFLT}`；序言先减 dt 使 fork 时 max(t0,t1)=-dt<0，`record+0x18` 恒空又使唯一 t 推进块不可达。这不是“所有正 dt 原生帧都不可能 Path B”的证明；真实原生记录的 t 填充与分支仍待观察。
-- 头部种子/时序是优先阻断假设，不是唯一已证根因。audit16拟查 Path B 的 t 填充、Path B 后 0x240/0x246/63568 的条件，以及门后 63666/63582/58423 链；63771/63870只是候选。受控播种若另行选择也只是因果实验，写116/1或哈希变化不能替代G2有意义idle/有效骨/源对照及后续生命周期验收。
+- Path B需`record+0x2A==0`、`t_larger ≥ 0` 与 `t_smaller > -MAXFLT`（严格；无上界，见[审计十六](#audit16)）。**v18 运行期**：`record+0x2A=0` 的配方下仍 120 步全 Path A（`w245=0x101 b246=1`、每步交换一次双槽），t 在首次 update 后恒为 `{0,-MAXFLT}`；序言先减 dt 使 fork 时 t_larger<0，`record+0x18` 恒空又使唯一 t 推进块不可达。这不是“所有正 dt 原生帧都不可能 Path B”的证明——原生帧靠 REFR 的 `ModifyAnimationUpdateData` 填 `optionalEyePosition` 后由 arm 块把 t 抬起来。
+- **审计十六**：`record` 就是 `BSAnimationUpdateData`（`+0x18=NiPoint3* optionalEyePosition`，唯一写入者是 REFR/Actor 的 vtable 槽 0x3C8）；arm 块（0xbb252b）以 `record+0x18 != 0`、`+0x2B != 0`、`[graph+0x248]==0` 等为门，成功时跳复位；63581 采样门要求双槽 `+4>2` **且 `+0x38>0`**、`t_larger ≥ 0`、`t_smaller < 0`；`f=1.0` 只由 63582 写（63568 只写 `+0x32`）；63575 的计数也依赖眼位。眼位是 v18 观测到的“每步 Path A + f 清零 + numData 0”的机器码解释，见[审计十六](#audit16)。
+- 头部种子/时序是优先阻断假设，不是唯一已证根因；审计十六后，眼位输入才是本配方缺的第一个上游量，`[graph+0x248]` 语义与 63666/63582/58423 门后链仍未取证。受控播种若另行选择也只是因果实验，写116/1或哈希变化不能替代G2有意义idle/有效骨/源对照及后续生命周期验收。
 
-下文按审计日期保留原指令记录和当时结论；涉及已过时判断以本节和各处后验注为准。92a3ed0文档澄清本身未新增运行证据；此后v18增加既有流程的只读观测，并于2026-10-26运行一次（30+1行，判读见[运行记录](independent-behavior-graph.md#g2-v18-run)），仍无新反汇编。
+下文按审计日期保留原指令记录和当时结论；涉及已过时判断以本节和各处后验注为准。92a3ed0文档澄清本身未新增运行证据；此后v18增加既有流程的只读观测并于2026-10-26运行一次（30+1行，判读见[运行记录](independent-behavior-graph.md#g2-v18-run)），审计十六（同日）补做了眼位/记录/分岔/采样门的机器码审计，见[审计十六](#audit16)。
 
 <a id="audit16-preparation"></a>
 ## 审计十六取证准备（2026-10-26，源码/日志时序）
@@ -326,7 +327,7 @@ v15 判据②后的定向补审，目标 = 四个由 v15 运行提出的问题�
 
 **Q1（Path A/B 与 +0x1E8 生命周期）**：
 
-1. **0x246 分岔的真实条件不是“> -MAXFLT”本身，而是两个 float 的相对大小**。序言推进（0xbb23f9–0xbb2435）：`xmm9 = record[0x00]`（dt）→ `xmm7 = [graph+0x1E8]`（t[0]）`-= xmm9` → 回写 `+0x1E8`；`xmm8 = [graph+0x1EC]`（t[1]）`-= xmm9` → 回写 `+0x1EC`；`ebp = comiss(xmm8, xmm7) 的 setbe`（t[1] ≤ t[0] 时 bpl=1，0x1E8 侧被选中；否则 0x1EC 侧被选中）。分岔判定（0xbb245b）：`cmp byte [record+0x2A], 0` —— **`record+0x2A`（63602 记录里 = 1）非零直接走 Path A**；为零才进入 Path B 前置评估（0xbb2461–0xbb2485）：先 `comiss(xmm8, xmm7)` 选出“较大者”下标 eax，再 `comiss(0, [graph+eax])` 与 `comiss(-MAXFLT(0xFF7FFFFF @0x177ae08), [graph+选中])`——**仅当“较大的那个 t”满足 0 ≤ t < MAXFLT 时写 `[graph+0x245]=0` 并走 Path B**；否则落到 Path A。即：**Path B ⇔ record+0x2A==0 且 max(t0,t1) ∈ [0, MAXFLT)；否则 Path A**。审计十三的“≤ -MAXFLT ⇒ Path A”是它的必要侧（两 t 皆 -MAXFLT 时 max 不满足上界条件 → Path A），但“> -MAXFLT ⇒ Path B”不成立——record+0x2A=1（v15 直调记录、63602 尾部记录同款）**无条件 Path A**，无论 t 如何。
+1. **0x246 分岔的真实条件不是“> -MAXFLT”本身，而是两个 float 的相对大小**。序言推进（0xbb23f9–0xbb2435）：`xmm9 = record[0x00]`（dt）→ `xmm7 = [graph+0x1E8]`（t[0]）`-= xmm9` → 回写 `+0x1E8`；`xmm8 = [graph+0x1EC]`（t[1]）`-= xmm9` → 回写 `+0x1EC`；`ebp = comiss(xmm8, xmm7) 的 setbe`（t[1] ≤ t[0] 时 bpl=1，0x1E8 侧被选中；否则 0x1EC 侧被选中）。分岔判定（0xbb245b）：`cmp byte [record+0x2A], 0` —— **`record+0x2A`（63602 记录里 = 1）非零直接走 Path A**；为零才进入 Path B 前置评估（0xbb2461–0xbb2485）：先 `comiss(xmm8, xmm7)` 选出“较大者”下标 eax，再 `comiss(0, [graph+eax])` 与 `comiss(-MAXFLT(0xFF7FFFFF @0x177ae08), [graph+选中])`——**仅当“较大的那个 t”满足 0 ≤ t < MAXFLT 时写 `[graph+0x245]=0` 并走 Path B**；否则落到 Path A。即：**Path B ⇔ record+0x2A==0 且 max(t0,t1) ∈ [0, MAXFLT)；否则 Path A**。审计十三的“≤ -MAXFLT ⇒ Path A”是它的必要侧（两 t 皆 -MAXFLT 时 max 不满足上界条件 → Path A），但“> -MAXFLT ⇒ Path B”不成立——record+0x2A=1（v15 直调记录、63602 尾部记录同款）**无条件 Path A**，无论 t 如何。**（2026-10-26 审计十六修正：第二条实际判据是“较小者 > -MAXFLT（严格）”，不是 `max(t0,t1) < MAXFLT` 上界；`{0,-MAXFLT}` 即使 dt=0 也不满足，见[审计十六](#audit16)。）**
 2. **Path B 体**（0xbb2487–0xbb24b7）：`[graph+0x245]=0` → `ax = [record+0x28]`（u16 → 栈 0x20）→ `r9=&[栈+8]（=1，后面 cmov 语义用）`→ `r8d=[record+0x2C]`（模式字节，v15=1）→ `rdx=[record+0x18]` → `63575(graph, rdx, r8d, r9, 栈0x20)` → `word [graph+0x240]=ax（63575 返回的 numAnimBones）` → `[graph+0x246]=0` → jmp 收尾。**Path A 体**（0xbb24bc–0xbb24d8）：`rcx=[graph+0x228]`、`rax=[graph+0x220]` → `[0x228]=rax`、`[0x220]=rcx` —— **纯指针交换，无任何内容拷贝**；随后读 `[rdx+0x18]`（record+0x18，v15 为 null → 0xbb24dc je 0xbb2662 直接收尾）。
 3. **交换后的簿记重置块**（0xbb252b–0xbb2662，`[record+0x18]` 非空才可达）：距离/增益启发（`[graph+0x218]` rootNode、`[graph+0xF0]` 驱动 +0xF0 等参与 xmm2 计算）+ 63864 调用 → t 侧推进（0xbb264d `movss [graph+ebp*4+0x1E8], xmm1`）或钳制；`[record+0x18]` 为空时（v15 每步）此块跳过。**0xbb2662 起的公共尾**：`cmova rbx, r14` 选较大 t 下标 → `xmm0 = -(较大 t)` 与 `minss xmm9(dt)` → 新 t[1 侧] = max(0, min(-t较大, dt))（0xbb266a–0xbb2689）；当 xmm9 ≥ 0（0xbb267f jae）落到 0xbb268b：**`[graph+0x1E8]=0`（dword）、`[graph+0x1EC]=0xFF7FFFFF（-MAXFLT 常量）`** —— 即**每次 Path A 都把 t0 归零、t1 归 -MAXFLT**（冷启动形态），随后重置 `[graph+0x228]` 所指（交换后的写槽）的轨道：逐轨道 `[+0x18]=0`、`and [+0x1C], ~1`、flags&6 时 `[+0x12]=0`，**尾写 `word [tracks+0x32]=0`**（0xbb26f5）。此块即是 v15 第 0 步观测到 out0 `+38=1.000→0.000` 被消费的指令级机制：**槽 2 写在 `[0x220]` 槽（v14 借用态后的读槽），Path A 交换后 63587 把旧读槽换到 `[0x228]` 并由重置循环逐轨道清其 onFraction（`[rcx+rax+0x18]` = 轨道记录 +0x08 = onFraction，0xbb26c0）、flags 与 numData——交换 + 复位共同解释 out0/out1 双双读 0.000，v15 判读的“被交换消费”成立**。
 4. **+0x1E8 的全部写入点（本函数内）**：序言 `-= dt`（两槽，0xbb241f/0xbb2435）；0xbb2650（簿记块内 t 侧推进）；0xbb2685 后 0xbb268b 的归零/复位。`[record+0x18]` 恒空（v15 与 63602 尾部记录均如此）时每步实际路径 = 序言减 dt → Path A 交换 → 0xbb2662 公共尾 →（t 已为 0）0xbb268b 复位 t0=0/t1=-MAXFLT。**首次超 -MAXFLT 的机制由此静态可证：复位块本身把 t0 写 0** —— 冷启动图第一次进入 63587 即 t0=0 ∈ [0, MAXFLT)；但 record+0x2A=1 使 Path B 永不被选，t 的取值只影响 ebp 选侧与公共尾钳制，**不改变 Path A/B 的选择**。“Path A 自身的处理推进 +0x1E8”（鸡生蛋问题）的答案：**推进存在（序言减 dt + 公共尾复位），但复位的值固定为 {0, -MAXFLT}，不累积**；若无复位块（xmm9<0 分支）则 t[1 侧] = max(0, min(-t较大, dt)) 单调推进。运行期实际留在 t0/t1 的值（v15 的 120 步）：**UNVERIFIED**（插件未观测该字段；以上为静态可执行路径推演）。**v18 后验**：`record+0x2A=0` 的配方下实测仍每步 Path A，t0/t1 在 step 0 pre-pipeline 为 `(-MAXFLT,-MAXFLT)`、首次 update 后恒为 `(0,-MAXFLT)`——与“序言先减 dt 使 fork 时 max(t0,t1)=-dt<0”推演一致；`record+0x18` 恒空使簿记块不可达，故 t 无法推进。见[运行记录](independent-behavior-graph.md#g2-v18-run)。
@@ -438,8 +439,8 @@ v16 判据①（`phase=pred step=0/60 r=0x01`）落定后的定向补审，目�
 **历史收束（v17前的事实清单与预期，后验勘误见[当前边界](#audit-current)）**：
 
 1. **谓词翻假**：候选上唯一不破坏链条的字段翻转 = `rigidBodies[0]->world == 0`（或等价地：pred 求值时刻让 world/driver/实例任一前级链接为空）；数值型 blend-out/模式字节不是判据（Q1-2 结构上证伪）。
-2. **采样到达**：b246=0 时 63589 自动走 63581 分支（v13 证实）；直调 63581 只需 (rcx=candidate, edx=word[0x240]) 两实参（Q2）；63581 自身门（edx≠0、双槽 +4>2/+0x38>0、t 对）在 63587 Path A 复位后的图状态上静态全过（Q3-4）。
-3. **引擎原生序**：每帧管理器记录 = 0x54c130 版（+0x2A=0、id=0、mode=1、transform=null、dt=上层传入）→ Path B；63602 尾部 +0x2A=1 记录是 slot-5 零 dt 管线专用，不是每帧采样配方（Q4-3/4）。
+2. **采样到达**：b246=0 时 63589 自动走 63581 分支（v13 证实）；直调 63581 只需 (rcx=candidate, edx=word[0x240]) 两实参（Q2）；63581 自身门（edx≠0、双槽 +4>2/+0x38>0、t 对）在 63587 Path A 复位后的图状态上静态全过（Q3-4）。**修正（2026-10-26 审计十六）**：该“静态全过”不成立——Path A 复位把双槽 `+0x38` 清 0，前两道门必失败；`t` 对那道门在 `{0,-MAXFLT}` 下确实通过，但不足以到达采样体。见[审计十六](#audit16)。
+3. **引擎原生序**：每帧管理器记录 = 0x54c130 版（+0x2A=0、id=0、mode=1、transform=null、dt=上层传入）→ Path B；63602 尾部 +0x2A=1 记录是 slot-5 零 dt 管线专用，不是每帧采样配方（Q4-3/4）。**修正（2026-10-26 审计十六）**：transform=null 使 fork 的 `t_smaller > -MAXFLT` 不满足，这条路径同样恒 Path A；Path B 需先由非空 `optionalEyePosition` 的 arm 块把 t 抬出复位值。见[审计十六](#audit16)。
 4. **仍未决（运行期判据）**：即便谓词翻假且 63581 被到达，58423 前置（[[+0x110]+0x40] 与 [+0x88]、[+0x100]、[+0x218]）在候选上的实际值、63666 输出与 63582 混合落槽仍 UNVERIFIED——v16 `g3-gates` 行测的是插件 58315 自建 ctx（链全空），63581 在 0xbafe48 自建 ctx 的链内容仍无运行期样本；这是 v17 仪器的直接输入。
 
 ### 审计十五新增复现命令
@@ -463,6 +464,75 @@ python callers_scan.py 0x54c1f0
 # 58286 纯 getter（两条指令，裸窗口）
 python -c "import sys; sys.path.insert(0,'.'); import disasm_func as df; from capstone import *; md=Cs(CS_ARCH_X86,CS_MODE_64); [print(f'  {i.address:#x}: {i.bytes.hex():<16} {i.mnemonic:<8} {i.op_str}') for i in md.disasm(df.bytes_at(0xaac8e0,8),0xaac8e0)]"
 ```
+
+<a id="audit16"></a>
+## 记录的 t/眼位输入、Path B 真条件与 63581 采样门（2026-10-26 审计十六）
+
+> 本节只读 1.6.1170 解包镜像（`SkyrimSE.original.exe.unpacked.exe`，SHA-256 `843823C1…`），所有地址为 RVA；运行期对齐见 [v18 运行记录](independent-behavior-graph.md#g2-v18-run)。它修正审计十四/十五的四处结论（下文标"修正"），并给出 v18 观测的机器码解释。
+
+**Q1 —— 那个 record 就是 `RE::BSAnimationUpdateData`，`+0x18` 是 `optionalEyePosition`**
+
+1. 引擎头 `RE/BSAnimationUpdateData.h`（submodule 固定提交）声明 size 0x30：`+0x00 deltaTime`、`+0x08 unkFunctionPtr`、`+0x10 refr`、**`+0x18 NiPoint3* optionalEyePosition`**、`+0x20 IPostAnimationChannelUpdateFunctor* updateFunctor`、`+0x28 flags(u16)`、`+0x2A..+0x2F` 六个 byte。逐字段与 63587/63575 的读取一致（`[rdx]`=dt、`[rdx+0x2A/2B/2C/2D/2E]`、`[rdx+0x28]`=word、`[rdx+0x18]`=位置指针）。
+2. 63587 全镜像只有两个直接调用点：`0xba3dd5`（落在 0xba3c50 的每图循环）与 `0xbb63b8`（0xbb4c50=63602 尾部，记录 `+0x2A=1`）。0xba3c50 又有两个入口：`0x54c130`（引擎每帧：`lea rdx,[rsp+0x28]`，`movdqu [rsp+0x38],0` 清零 `+0x10..+0x1F`、`dword [rsp+0x50]=0x01000000`、`word [rsp+0x54]=1`、`byte [rsp+0x56]=1`，**不调用槽 0x3C8**）与 `0x54c1f0`（外部记录透传；7 个调用点：`0x2f7517`、`0x2f7946`、`0x5b1249`、`0x5c8133`、`0x5d5e31`、`0x739437`、`0x7e5b60`）。
+3. 七个外部站点先自行构造同一形状：`movss [rec],dt`、`[rec+8]=回调`、`xorps xmm0,xmm0` + `movdqu [rec+0x10],xmm0`（**+0x18 恒 0**）、`[rec+0x20]=functor`、`dword [rec+0x28]=0x01000000`（+0x2A=0、+0x2B=1；`0x7e5b60` 为 `0x01010000`，即 +0x2A=1）、`word [rec+0x2C]=1`、`byte [rec+0x2E]=1`。其中 `0x2f7517`/`0x2f7946` 直接、`0x739437` 经 `0x2f6540` 包装，调用对象自己的 `call [vtable+0x3C8]` 让记录生效——这是唯一会补上眼位的一步；`0x5b1249`/`0x5c8133`/`0x5d5e31`/`0x7e5b60` 不调用该槽（`0x5c8133` 只调 `[vtable+0x1D8]`），它们的记录 `+0x18` 恒空。
+4. 在这些构造路径里 `+0x18` 的**唯一**写入者是 REFR 系的 `ModifyAnimationUpdateData`（vtable 槽 0x3C8 = 0x79；CommonLib 头 `Actor.h` “079”）：`TESObjectREFR` 槽 → `0x2f71a0`（`ret 0` 空桩）；`Actor` → `0x6a3750`；`PlayerCharacter` → `0x74e7a0`（仅是 `call 0x6a3750; ret`）。`0x6a3750` 依次写 `[rec+0x2C]`、`[rec+0x10]=Actor`、`[rec+0x08]=0x69f770`、**`[rec+0x18] = (0x649a90()? 眼/面节点+0xa0 : 0)`**（0x6a3822–0x6a383c）、`[rec+0x20]=Actor+0xE0`、`[rec+0x2D]`、`[rec+0x2A]`、`word [rec+0x28]=0`。
+5. **结论**：非空的 `record+0x18` 只可能来自真实 REFR/Actor 的这条 virtual。`0x54c130` 的引擎每帧路径自己也传 `+0x18=null`；候选图 `holder=nullptr` 既没有这条 virtual 可走，也不会进入 0x54c1f0 的 REFR 路径，插件自建记录恒为 null。
+
+**Q2 —— Path B 的真条件（修正审计十四 Q1-1 与审计十五 Q4-4）**
+
+0xbb23f9–0xbb2485 逐条：
+
+- 序言：`[graph+0x240]=0`、`word [graph+0x245]=0x101`、`t0 -= dt`、`t1 -= dt`（两槽都减并回写）。
+- `cmp byte [record+0x2A],0`；非零 → **Path A**（0xbb24bc）。
+- 为零时：`eax = (t1 > t0) ? 0x1EC : 0x1E8`（选中**较大**者）；`comiss 0,[t_larger]; ja → Path A` ⇒ 需 **t_larger ≥ 0**；`xmm0 = -MAXFLT`；`comiss -MAXFLT,[t_smaller]; jae → Path A` ⇒ 需 **t_smaller > -MAXFLT（严格大于）**。
+- 即 **Path B ⇔ `record+0x2A==0` 且 `t_larger ≥ 0` 且 `t_smaller > -MAXFLT`**。审计十四写的 “`max(t0,t1) ∈ [0, MAXFLT)`” 既漏了较小者条件、又加了一个代码里不存在的上界。
+- 直接后果：`{0,-MAXFLT}` 状态下即使 dt=0（fork 值 0 / -MAXFLT）仍走 Path A——较小者恰好等于 -MAXFLT，不满足严格大于。v18 记录里“dt=0 是唯一可静态满足形态”的提法作废；dt 不是杠杆。
+
+**Q3 —— 能把 t 抬出复位值的只有 Path A 内的“眼位推进块”（0xbb252b–0xbb265d）**
+
+1. 可达条件（0xbb24d8 起逐条）：`record+0x18 != 0`、`record+0x2A == 0`、`record+0x2B != 0`、`[graph+0x248] == 0`，并且 `record+0x2C == 0` 或（`[graph+0x220]` 槽 `+4>2` 且 `+0x38>0`）。
+2. 内容：`rootNode(+0x218)` 与 `record+0x18` 的距离²（再除以 `[root+0xF0]²`）→ 与 400²/800²/常数比较得出插值步长（`63864` 参与）→ `xmm1 = t_larger + step`。只有 `xmm1 > 1.25*dt` 才执行 `movss [graph + bp*4 + 0x1E8], xmm1`（0xbb2650，`bp` = 较小者下标），随后 `jmp 0xbb26fa` **跳过复位**。
+3. 复位块（0xbb2662–0xbb26f5）只在 `-t_larger ≥ 0`（t_larger ≤ 0）时执行：`t0=0`、`t1=-MAXFLT`，并逐轨道清 onFraction/flags、尾写 `[tracks+0x32]=0`。**arm 与复位互斥**：arm 成功的那帧不复位，未 arm 的帧把 t 打回复位值并清写槽。
+4. 与 v18 对应：`+0x18=null` 使 0xbb24dc 的 `test r8,r8; je 0xbb2662` 直接跳过 arm 块 → t 永远 `{0,-MAXFLT}` → 每帧 Path A 复位 → 双槽 `+0x38=0`、`+0x32=0`。
+
+**Q4 —— 采样门与“谁补数字/权重”（修正审计十五 Q3-4 的“静态全过”）**
+
+1. 管理器在 `0xba3f69` 调 `63589`；`[graph+0x246]` 分岔：非零 → `63568`（`[tracks+0x32]=word[graph+0x240]`，**不写 f**）；为零 → `63581`（`0xbb2ac3`，`edx=word[graph+0x240]`）。
+2. `63581` 的门（0xbafe66–0xbafed9，顺序可复核）：`[0x220]` 槽 `+4>2`、`+0x38>0`；`[0x228]` 槽 `+4>2`、`+0x38>0`；`t_larger ≥ 0`；`t_smaller < 0`。四者全过才到 `63564`（真则整块跳过，0xbaff4d）、`63666`、`63582`、输出拷贝、`58423`。
+3. `63582`（0xbb0320）：`bp = min(写槽 numData, 读槽 numData, 计数实参)`；先对**63666 返回的输出元素**（`rsi=[r14]`）写 `+0x32=0`（0xbb0395），混合（59303/64112）后写回同一元素 `+0x32=bp`（0xbb03f3）、`+0x38=1.0f`（0xbb03fa，`rax=[r14]`）。**f=1.0 的正常来源只有它**（另一个是 slot 2 的 ragdoll 写入，v18 已见）；`63568` 只回填 `+0x32`。
+4. 因此 v18 的 `+0x38=0` 就是第一/二道门失败点：`numData=0` 与 `f=0` 是同一链的两个结果，不是“从未初始化”，也不是 63568 回填失败（63568 从未被调用，f 也不归它管）。
+
+**Q5 —— 63575 的计数依赖眼位（Path B 之后 0x240 从哪来）**
+
+`0xbaf880`（63575，487 B）：基数 = `min(record+0x28, [graph+0x170])`；仅当 `[graph+0x218]`（rootNode）非零且 `record+0x2C` 非零时才置输出标志并按距离查阈值表；`record+0x18` 为空时跳过阈值表，返回 `min([[graph+0x110]+0x20]+0x30, [graph+0x170])`；rootNode 或 `record+0x2C` 为空则回退到 `[graph+0x160]` 表（0x80 步长）或直接返回受 `record+0x28` 限定的基数（该值为 0 时即 0）。**眼位同时决定 t 的 arm 与 0x240 的数值**，两者缺一都不产生有效采样。
+
+**对既有结论的修正**
+
+- 审计十五“每帧管理器记录（transform=null）→ Path B”错误：null 眼位使 fork 的 `t_smaller > -MAXFLT` 不成立，该路径同样恒 Path A；Path B 需要眼位先 arm。
+- 审计十五“63581 门在 Path A 复位后的图状态上静态全过”错误：复位把双槽 `+0x38` 清零，前两道门必失败；“t 对”那道门在 `{0,-MAXFLT}` 下确实通过，但不足以到达采样体。
+- 审计十四 Q1-1 的分岔条件缺“较小者 > -MAXFLT”，且多出上界；审计十四 Q1-3/4 的 arm 块只在 Path A 内、且以眼位为门，上文已按指令补全。
+
+### 审计十六新增复现命令
+
+```powershell
+cd E:\SkyrimTools\Proj\CharacterPanel\build\g1-audit-20261023
+python disasm_func.py 0xbaf880 > listings/audit16_63575.txt      # 63575 计数解析（眼位/阈值表）
+python disasm_func.py 0x54c130 > listings/audit16_frame_entry_54c130.txt
+python disasm_func.py 0x54c1f0 > listings/audit16_external_entry_54c1f0.txt
+python disasm_func.py 0x6a3750 > listings/audit16_actor_modify_update_data.txt  # 写 optionalEyePosition
+python callers_scan.py 0xbb2370 >  listings/audit16_callers.txt
+python callers_scan.py 0xba3c50 >> listings/audit16_callers.txt
+python callers_scan.py 0x54c130 >> listings/audit16_callers.txt
+python callers_scan.py 0x54c1f0 >> listings/audit16_callers.txt
+# 七个外部记录站点（记录构造窗口）
+python audit16_window.py 0x2f7517 0x90 0x10
+python audit16_window.py 0x7e5b60 0x80 0x10
+```
+
+### 审计十六限制
+
+静态结论只覆盖本镜像的可达调用图：`[graph+0x248]` 的语义、`[graph+0x160]` 回退表内容、63666 的输出选择内部、63582 的 59303/64112 混合细节、58423 各门在候选上的实际值仍 UNVERIFIED。`optionalEyePosition` 之外是否还有其它输入能 arm t，未被本条排除。
+
 
 ## 对设计契约的影响
 
