@@ -47,7 +47,7 @@ namespace animation::behavior_graph
     }
 
     // Runs at most once per process during a paused panel request. Never activates, drives or
-    // writes the source graph; the candidate is released through its reference count.
+    // writes the source graph; loaded candidates remain retained pending lifecycle proof.
     void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_graph,
         std::uint32_t actor_id, std::uint64_t request, std::uint64_t source_generation);
 }

@@ -18,7 +18,26 @@ BehaviorGraphProbe is a separate source-only 16-row observer. Its fixed
 candidate=none/gate1=not-passed label describes that row, not current G1 status.
 Header initialization/reset/refill is a first blocking hypothesis, not the
 proved only cause. n at +0x32 is numData; native numTracks is at +0x4. Sampling
-payload/context/application still need evidence; no audit16/v18 runs here.
+payload/context/application still need evidence. V18 implementation is ready for
+manual evidence collection; no new writer audit or v18 game run is claimed.
+V18: docs/independent-behavior-graph.md#g2-v18-frame-trace
+Only inject on exact AE1.6.1170 adds GRAPH FRAME schema=v18: 30 phase rows
+plus one summary, separate from old40/source rows. Raw pose hashes are checked
+after all completed samples but include padding and do not pass G2.
+The native recipe and repository off default are unchanged.
+
+V18 test handoff: docs/independent-behavior-graph.md#v18-handoff
+Current stop: package ready, first v18 game result pending; G2 has not passed.
+ZIP: CharacterPanel-behavior-graph-v18-frame-trace-20261026.zip
+SHA256: cd3645698693dafefc264b97cbee50a264ba82559b62afc96c6a18c43fbc4953
+DLL/PDB GUID {748DB13E-5AAA-4883-8283-751805A36ED4}, age77.
+The 92a3ed0+dirty package identity describes build time; a subsequent Git
+commit does not rewrite the existing package, manifest or loaded identity.
+Return the complete CharacterPanel.log, actual build identity/manifest and
+first-open/close/abnormal-event times. If rows are missing, retain runtime,
+actual INI, restart status and whether this process had already run the test.
+completed is a returned 63581-call count, not an effective-sampling count.
+Await and adjudicate new raw evidence before seeding or advancing other gates.
 
 Current build (repository root, prepared toolchain):
   cmake --preset Release

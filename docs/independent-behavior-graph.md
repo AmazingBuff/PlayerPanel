@@ -9,12 +9,12 @@
 | 关卡 | 截至 2026-10-26 的结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **NOT PASSED，最新为 v17** | 8.289 ms 装载成功，分配 116 项 pose，WeapEquip 已派发，活动节点 97→125→111、变量变化；候选 pose 在 0/60/120 步仍为 `bc160a8c2b3a5a58`，没有有意义的 idle 位姿运动。 |
+| G2 | **NOT PASSED，最新已运行版本为 v17** | 8.289 ms 装载成功，分配 116 项 pose，WeapEquip 已派发，活动节点 97→125→111、变量变化；候选 pose 在 0/60/120 步仍为 `bc160a8c2b3a5a58`，没有有意义的 idle 位姿运动。 |
 | G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
 
 [v17 原始记录](diagnostics/CharacterPanel-g2v17-native-20261026-0021.log)中源 pose 前后为 `7ac13b9170de9d2b`，11 个源快照分组相同；它只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`；产品仍使用装备驱动播放器。
 
-当前优先假设是**输出轨道头的初始化/重置/重新填充时序**，不是已证明唯一根因：槽 2 后及 `post-pipeline1` 已有 onFraction=1.0，`post-update1` 却变成双槽 0，之后记录检查点也为 0。63581 已直调到入口/门判定，63666/63582 采样混合主体、变换载荷及 58423 应用尚未证明执行。详细字段勘误、Path B 条件和未决项见 [v17 后验判读](#g2-v17-运行记录2026-10-26-会话谓词翻假达成与采样门23落定)；下一步是[有界审计问题](#next-audit)，本次没有实现 audit16/v18。
+当前优先假设是**输出轨道头的初始化/重置/重新填充时序**，不是已证明唯一根因：槽 2 后及 `post-pipeline1` 已有 onFraction=1.0，`post-update1` 却变成双槽 0，之后记录检查点也为 0。63581 已直调到入口/门判定，63666/63582 采样混合主体、变换载荷及 58423 应用尚未证明执行。详细字段勘误、Path B 条件和未决项见 [v17 后验判读](#g2-v17-运行记录2026-10-26-会话谓词翻假达成与采样门23落定)；下一步是[有界审计问题](#next-audit)，已实现[v18有界时序观测](#g2-v18-frame-trace)，尚无新机器码审计或v18运行结果。
 
 ## 目标与边界
 
@@ -575,6 +575,56 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 
 **当前归因**：输出头的初始化/重置/重新填充是优先阻断假设，63771/63870 尾链等仍是嫌疑，未确定唯一写入者。后续还须验证生成变换载荷、两个槽的正确写入顺序、63666/63582 返回、63581 原生 ctx 与 58423 下游应用。旧“单点化/最终精确形态”“管线从不写onFraction”“只需播种”结论证据不足，已由本段收窄；v17 契约保留原预测以便追溯。G2 **NOT PASSED**；不能把 gate G1（谓词）的突破与实验 G1、完整 G3 或 OAR 一致性混称。
 
+<a id="g2-v18-frame-trace"></a>
+## G2 v18 预注册观测契约（2026-10-26，尚无运行结果）
+
+目的：把[下一步问题](#next-audit)落实为有界时序取证包，保持 v17 驱动配方和验收不变。仅在 `IndependentGraph=inject` 且精确 AE 1.6.1170 时新增读取；其他模式和运行时没有新增 trace 读取/输出。未新增原生入口、REL ID、hook、种子写入或调用顺序调整。原有源对照、事件与保留机制不变；这不是新机器码写入者审计的完成，也不是 G2 修复。
+
+实现入口是[FrameTrace](../src/animation/behavior_graph/frame_trace.h)、[读取适配](../src/animation/behavior_graph/frame_trace.cpp)及[预算/进度策略](../src/animation/behavior_graph/frame_trace_policy.h)，由[既有驱动循环](../src/animation/behavior_graph/independent_graph.cpp)同步调用。状态只含值、掩码与计数，不跨原生调用保留引擎指针；每个快照重新取两槽元素地址。原始 v17 源码序为 **scratch construct → 63602 → scratch destroy → 既有0x12E写 → 63587 → 0x240镜像 → 63581**，新观察点包围该序而不改变它。
+
+### 行模式与预算
+
+新前缀 `GRAPH FRAME schema=v18`，带 actor/request、零基 `step`、`stage` 与 `completed`。`completed`仅表示已经返回的63581调用数；该入口可能在门前退出，因此不代表有效采样、骨骼写入或有意义动作。只选 step **0/1/2/59/60/119**，各至多五个阶段；重复/无效阶段及非选中步不输出，共最多 **30 条阶段行 + 1 条 summary**。原有最多40条 `INDEPENDENT GRAPH` 和源快照预算独立，不计入31条；缺行、缺槽仍是缺证据。
+
+| stage | 时点 | completed |
+| --- | --- | --- |
+| pre-pipeline | scratch/63602之前 | 此前已返回的63581调用数 |
+| post-pipeline | 63602及scratch配对销毁之后 | 同上 |
+| post-update | 63587返回之后 | 同上 |
+| pre-sample | 原有0x240镜像及既有谓词观测之后，63581之前 | 同上 |
+| post-sample | 63581返回且新进度观察完成之后 | 此轮已完成，正常为step+1 |
+
+阶段行字段：`numAnim`为graph+0x240字；`w245/b246/b249`为原有簿记；`t0/t1`为+0x1E8/+0x1EC的float值与原始32位hex（足够往返精度，时间含义依原审计，不当作clip时钟）；slot0/1分别报告实际元素身份、`numTracks=DWORD(+0x4)`、`numData=word(+0x32)`、`onFraction=float(+0x38)`及其原始bits。数目是计数、fraction无量纲，不把numData当整体轨道数。缺output/element明确标missing，不补零；不解析未知dataOffset或原生ctx。
+
+每次实际63581返回后均读候选现有poseLocal原始缓冲指纹（至多120次，无逐次日志），summary给出phase-rows/total-rows、completed、pose-available/missing、raw-hash-changes、first-changed-completed、baseline。变化数比较相邻**可用观察**，缺测间隙保留missing且不能确定变化真实发生时刻；first字段是首次观察到差异的完成步，回到baseline也会被计入。原始缓冲含padding，hash变化不是有意义骨运动，未变化也只限定这些观察。summary明确 `generator-payload=unobserved native-context=unobserved acceptance=unjudged`，没有自动通过判定。
+
+### 预注册判读与测试步骤
+
+1. 用独立包中的匹配DLL/PDB，核对构建身份；合并INI片段启用inject并重启，第一次暂停开包只运行一次。仓库默认仍off，不部署或覆盖旧包。
+2. 对齐actor/request/step和物理槽身份，检查**同一物理槽**在五个时点的numTracks/numData/fraction/t值，区分交换与清除。特别核对v17已见的“slot2/post-pipeline1 f=1 → post-update1 f=0”；不能据最终0反推从未初始化。
+3. 若数量门已满足而fraction在update后归零，优先追其复位/再填协议及原生正常源帧同阶段对照；若真实numTracks也异常，则把数量字段/元素身份单独交回审计。新数据只能定位观察边界之间的变化，不自动证明某条机器指令是唯一写入者。
+4. 若summary观察到raw哈希差异，仍须查有效变换、相位、数值、必要骨及源侧对照；若仍无差异，也不能越过未观测的生成载荷、63581原生ctx、63666/63582与58423下游应用。完整原生帧与写入者审计仍待执行，不能用候选轨迹替代。
+5. 保存完整日志与构建身份，确认原有source-stable/source-pose和受控恢复记录，再将INI回off并重启。G2仍需有意义原版idle、有效骨运动、源对照与后续生命周期证据；装载图仍保留，不能计为清理通过。
+
+离线验证仅[两个策略/进度案例](../tests/behavior_graph_frame_trace_test.cpp)和Release构建/包核验，命令与实际结果见[构建记录](build.md#v18-frame-trace-build)。本轮没有v18游戏日志，G1修订通过/G2未通过及G3–G6状态不变。
+
+<a id="v18-handoff"></a>
+## v18 测试交接与停点
+
+**当前停点：v18观测包待第一次上机回传，G2未通过；最新实际运行证据仍为v17。** 接下来以新原始结果补充判读，不预先实施播种、改驱动配方或推进后续关卡。测试操作见上节[预注册步骤](#g2-v18-frame-trace)及包内`README-测试步骤.md`。
+
+包文件：`build/behavior-graph-v18-trace-20261026/CharacterPanel-behavior-graph-v18-frame-trace-20261026.zip`；SHA-256 `cd3645698693dafefc264b97cbee50a264ba82559b62afc96c6a18c43fbc4953`。匹配DLL/PDB GUID `{748DB13E-5AAA-4883-8283-751805A36ED4}`、age77。完整二进制哈希、源文件身份与限制见包内`manifest.json`和[构建记录](build.md#v18-frame-trace-build)。
+
+实际包身份为`CharacterPanel-scenegraph-behavior-graph-v18-frame-trace-20261026-92a3ed071d+dirty-cl94faaed0c6-20261026T063108Z`。其中`92a3ed0+dirty`记录构建当时的工作区状态；随后Git提交不会改写已有DLL/PDB、ZIP、manifest或此身份。分析回传时以实际加载身份和包哈希为准，不能把较新的仓库提交号当作重新构建过的证明。
+
+回传清单：
+
+- 完整`CharacterPanel.log`，包含实际`SCENEGRAPH BUILD`身份、原有源对照/恢复行及新`GRAPH FRAME`，同时保留所使用包的manifest。
+- 首次开包、关包及异常发生时刻与操作；有崩溃时保留对应报告，不能用最后一条日志推断执行到达点。
+- 若新行缺失或不足，保留实际runtime版本、INI配置、是否重启、该进程此前是否已触发过实验，以及实际加载DLL的身份。实验每进程至多一次；缺行仍是不完整证据，不直接判失败原因。
+
+`completed`、头部字段或raw哈希变化都不自动通过G2。待新日志到达后，先按同一步号与物理槽身份比较五阶段，再决定下一个有界问题；原生写入者、生成载荷、内部ctx及应用/生命周期仍按既有判据待证。
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。
@@ -641,7 +691,7 @@ BehaviorGraphProbe=true
 | 方案 A 评审与 v4 实现 | 2026-10-24 采纳方案 A：销毁判据重定义（空壳销毁 + 装载图销毁移至 G2 生命周期）、v4 保留流程（永不释放的持有指针，每进程 ≤1 张泄漏）、v4 预注册判据（装载复现 + 装载后源基线全等 + 保留无崩溃 → G1 PASSED），见[方案 A 修订](#2026-10-24-方案-a-修订销毁判据经-g1b-v3-崩溃后评审)；构建身份 `…20261024T065321Z`（DLL SHA-256 `37C255DA…`）已部署 | **G1b v4 运行与判读（按修订判据完成 G1）**；G2 前提：激活/更新入口审计 |
 | G1b v4 运行与判读 | 2026-10-24 会话：装载复现（`accepted ms=8.797`）、装载后源基线独立 diff 全等、`retained=true` 无崩溃，同会话面板多轮开合正常，见[v4 运行记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)；INI 已收回 off | — |
 | **G1 判定** | **PASSED（2026-10-24，方案 A 修订判据）**——空壳配对销毁 + 两次装载成功（装配完整/共享同址/setup 自建）+ 装载后源基线全等 + 保留无崩溃，见[v4 记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话) | 注册表计数 UNVERIFIED；可写状态写隔离属 G2+；装载图销毁由 G2 生命周期取得 |
-| **G2 当前判定** | **NOT PASSED（v17，2026-10-26）**：116项pose仍冻结，状态/变量演化不等于idle运动；[v17记录](#g2-v17-运行记录2026-10-26-会话谓词翻假达成与采样门23落定) | 先审输出头初始化/重置/再填充及双槽顺序，再验证采样载荷/context/应用；未实现audit16/v18 |
+| **G2 当前判定** | **NOT PASSED（v17，2026-10-26）**：116项pose仍冻结，状态/变量演化不等于idle运动；[v17记录](#g2-v17-运行记录2026-10-26-会话谓词翻假达成与采样门23落定) | 先审输出头初始化/重置/再填充及双槽顺序，再验证采样载荷/context/应用；v18取证包已实现待运行，原生写入者审计待证 |
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
@@ -654,10 +704,10 @@ BehaviorGraphProbe=true
 
 后续若获准增加观测，应与真实正常源帧的 record/t/槽写入顺序作同阶段对照，并成对记录**两个槽各自**的整体 numTracks（+0x4）、kPose numData（+0x32）、onFraction（+0x38）、数据地址/范围与变换载荷有效性；同时记录 t0/t1、record模式和真实分支，在 generation/update/reset/sample 前后按同一步号对齐。再确认 63666/63582 的实际结果、63581 自建原生 context，以及 58423/downstream 是否消费有效姿态；插件自建ctx或0x100字节头哈希不能替代。
 
-受控播种若后续选用，只是因果实验，不是修复已获证明；写116/1或让哈希变化都不能使G2通过。仍须持续有意义的原版idle、有效必要骨变换变化、源侧对照不变，并完成后续生命周期检查，不放宽原验收。此次只更新文档，未实现audit16/v18、未新增trace或运行游戏。
+受控播种若后续选用，只是因果实验，不是修复已获证明；写116/1或让哈希变化都不能使G2通过。仍须持续有意义的原版idle、有效必要骨变换变化、源侧对照不变，并完成后续生命周期检查，不放宽原验收。现已实现[v18取证包](#g2-v18-frame-trace)，仅增加既有候选流程的只读观测；未做新机器码写入者审计或游戏运行。
 
 历史环境与材料：AE 1.6.1170（`E:\SteamLibrary\steamapps\common\Skyrim Special Edition`）、MO2 `E:\SkyrimAE`；历次部署点/包身份保留在[构建](build.md)及逐轮运行记录。可复现审计在`build/g1-audit-20261023/`，包括listings、`ragdoll_rtti_scan.py`和`output_track_scan.py`；本轮不修改或运行这些历史工具。
 
 ## 维护约束
 
-此文拥有实验程序和状态；修改时同步[动画](animation.md)、[OAR](oar-hooks.md)、[构建](build.md)、[维护](code-maintenance.md)、README、相关配置和Changelog。区别两条边界：`BehaviorGraphProbe`最多16条源分组、值语义、只读；`IndependentGraph`默认off、每进程一次，当前v17 inject为40条自身前缀预算，另有复用源快照，允许的候选原生调用/字段写入仅由对应实验契约授权。两者都不写源图，不能把源探针只读描述套在整个实验上。文档核查不替代引擎所有权、姿态或生命周期证据；本次没有新增构建或运行。
+此文拥有实验程序和状态；修改时同步[动画](animation.md)、[OAR](oar-hooks.md)、[构建](build.md)、[维护](code-maintenance.md)、README、相关配置和Changelog。区别两条边界：`BehaviorGraphProbe`最多16条源分组、值语义、只读；`IndependentGraph`默认off、每进程一次，当前v17 inject为40条自身前缀预算，另有复用源快照，允许的候选原生调用/字段写入仅由对应实验契约授权。两者都不写源图，不能把源探针只读描述套在整个实验上。文档核查不替代引擎所有权、姿态或生命周期证据；v18新增观测最多31条GRAPH FRAME，与旧40条及源快照分开；构建/离线结果见Build，运行结果仍待取得。

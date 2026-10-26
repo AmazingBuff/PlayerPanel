@@ -3,6 +3,8 @@
 //
 #include "animation/behavior_graph/independent_graph.h"
 
+#include "animation/behavior_graph/frame_trace.h"
+
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbBehaviorGraphData.h"
@@ -940,6 +942,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=slots step={} p0={} h0={:016x} p1={} h1={:016x}",
                                 actor_id, request, step, ptr0, hash0, ptr1, hash1);
                         };
+                        FrameTrace frame_trace(mode == IndependentGraphMode::inject && version == SKSE::RUNTIME_SSE_1_6_1170,
+                            actor_id, request, candidate->characterInstance);
                         for (std::uint32_t step = 0; behavior && step < DriveSteps; ++step)
                         {
                             // Engine per-frame recipe (slot-5 helper 0xbacc90): one 63602
@@ -948,9 +952,11 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // queue drains. The shell is constructed and destroyed each
                             // pass with the engine's own ctor/dtor pair; both are only
                             // valid on empty graphs, which the shell always is.
+                            frame_trace.phase(*candidate_base, step, FrameStage::e_pre_pipeline);
                             construct(shell, nullptr, false);
                             frame_pipeline(shell, candidate_base);
                             shell_destroy(shell);
+                            frame_trace.phase(*candidate_base, step, FrameStage::e_post_pipeline);
                             if (step == 0)
                             {
                                 // v14 (audit 13): read-only fork evidence — did 63602's
@@ -979,14 +985,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // the engine hosts each record on the stack per call, so it
                             // is rebuilt fresh every step, with the drive's fixed 1/60 s
                             // step as dt instead of 63602's zero.
-                            // v17 (audit 15 Q4): the record byte map switches to the
-                            // manager's real per-frame producer 0x54c130: +0x28 u16 id
-                            // stays 0 (zero-init), +0x2A = 0 (Path B — no slot swap, no
-                            // track reset, 0x246 cleared, [0x240] recomputed via
-                            // 63575), +0x2B = 1, +0x2C = 1, +0x2E = 1 (+0x2D stays 0;
-                            // the u16 write at rsp+0x54 covers only +0x2C/+0x2D). The
-                            // +0x2A=1 map of v15 was 63602's tail zero-dt special, not
-                            // the engine's per-frame recipe.
+                            // This audited manager byte map is preserved from v17.
+                            // Path B also depends on t0/t1; v17 observed Path A despite +0x2A=0.
                             alignas(8) std::uint8_t update_record[0x30]{};
                             *reinterpret_cast<float*>(update_record) = DriveTimestep;
                             update_record[0x2A] = 0;
@@ -994,6 +994,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             update_record[0x2C] = 1;
                             update_record[0x2E] = 1;
                             engine_update(candidate_base, update_record, 0);
+                            frame_trace.phase(*candidate_base, step, FrameStage::e_post_update);
                             if (step == 1 || step == 2)
                                 log_slots(step);
                             if (step == 0)
@@ -1033,8 +1034,11 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // v17: direct sampling-block call — 63581(candidate, word
                             // [graph+0x240]) per audit 15 Q2; the mirrored field is
                             // read at the call, after the mirror write above.
+                            frame_trace.phase(*candidate_base, step, FrameStage::e_pre_sample);
                             sampling_branch(candidate_base,
                                 *reinterpret_cast<const std::uint16_t*>(reinterpret_cast<std::uintptr_t>(candidate_base) + 0x240));
+                            frame_trace.sampled_pose(candidate->characterInstance);
+                            frame_trace.phase(*candidate_base, step, FrameStage::e_post_sample);
                             if (step + 1 == DriveSteps / 2)
                             {
                                 candidate_pose_mid = format_pose_hash(candidate->characterInstance);
@@ -1058,6 +1062,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             candidate_pose_before, candidate_pose_mid, candidate_pose_end);
                         log_drive_state(actor_id, request, "post-drive", activated,
                             first_drift(source_before, identify(source_graph)), observe_drive(*candidate));
+                        frame_trace.summary();
                     }
                 }
             }

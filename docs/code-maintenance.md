@@ -8,6 +8,8 @@ Current research status (2026-10-26): [G1 passes the revised Option A criteria; 
 
 The [G1/G2 implementation](../src/animation/behavior_graph/independent_graph.cpp) is separate from production playback: `IndependentGraph=off|construct|load|drive|inject`, default off, restart-required, once per process. v17 inject uses the audited constructor/loader/character activation, 63602 pipeline, 63587 update, one WeapEquip dispatch and direct 63581 entry; it budgets forty `INDEPENDENT GRAPH` rows plus source snapshots. Its 120 fixed steps are two simulated seconds inside one paused batch. Keep the source-only sixteen-row probe separate from candidate calls/field writes. Candidate pose remains unchanged; neither event dispatch nor an element-header hash proves valid sampled bones or complete G3/OAR parity. Follow [the current questions](independent-behavior-graph.md#next-audit), not an old run's “last gap” attribution. Do not write source state, create an Actor or treat deliberate retention as teardown.
 
+[FrameTrace](../src/animation/behavior_graph/frame_trace.h) is an ephemeral value-state observer in the inject branch, enabled only on exact 1.6.1170. It re-resolves slots per selected snapshot and keeps no engine pointer across native calls. The [v18 schema](independent-behavior-graph.md#g2-v18-frame-trace) caps new output at31 rows and leaves the old40/source rows, native calls/writes, retention and off default unchanged. Its two policy/progress cases do not execute the engine; no v18 runtime acceptance is claimed.
+
 ## Current ownership and source map
 
 | Module | Responsibility |

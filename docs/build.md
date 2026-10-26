@@ -8,7 +8,27 @@ Build the current Windows DLL from this checkout. Release is the only configure/
 
 [G1 passed only revised Option A; G2 v17 has not passed](independent-behavior-graph.md#current-status). Native shell release and repeated load/retention are evidenced; loaded-graph teardown, global counts and convergence are not. v17 allocated 116 poses and dispatched WeapEquip with node/variable changes, but pose hashes at 0/60/120 stayed equal. It ran 120 fixed 1/60-second steps in one paused batch (two simulated seconds), not 120 rendered frames. G3–G6 complete acceptance remains open.
 
-`IndependentGraph=off` is the default; v17 inject has a forty-row INDEPENDENT GRAPH budget plus source snapshots, separately from the source-only sixteen-row BehaviorGraphProbe. Old `candidate=none/gate1=not-passed` labels describe the source observer. This documentation-only refresh performs no build, behavioral test, deployment or game run.
+`IndependentGraph=off` is the default; v17 inject has a forty-row INDEPENDENT GRAPH budget plus source snapshots, separately from the source-only sixteen-row BehaviorGraphProbe. Old `candidate=none/gate1=not-passed` labels describe the source observer. The earlier documentation-only refresh produced no runtime evidence. V18 now adds a local observation package; no game run or deployment is performed.
+
+<a id="v18-frame-trace-build"></a>
+## V18 bounded frame-trace verification (2026-10-26)
+
+The [pre-registered observation contract](independent-behavior-graph.md#g2-v18-frame-trace) adds [FrameTrace](../src/animation/behavior_graph/frame_trace.cpp), its [engine-free policy/progress](../src/animation/behavior_graph/frame_trace_policy.h) and [two cases](../tests/behavior_graph_frame_trace_test.cpp). Only inject on exactAE1.6.1170 reads new fields. The original native call/write sequence is retained; no hook, dependency, settings or CMake target is added.
+
+The selected verification is the two direct-compiled policy/progress cases and one Release configure/build with `CHARACTER_PANEL_BUILD_LABEL=behavior-graph-v18-frame-trace-20261026`, followed by DLL/PDB identity, hashes, ZIP CRC and document/source checks. Actual commands/results and isolated package manifest are under `build/behavior-graph-v18-trace-20261026/`; the two cases and final Release build passed. The first sandbox build hit the existing MSB4184 SDK-metadata access denial; the authorized SDK-access retry passed with only the existing /Ob2→/Ob3 warnings. Configure also reported the existing install-rule/cache-toolchain warnings. No dependency update was required. Repository IndependentGraph remainsoff; the test-package INI fragment enables existing inject for manual testing. The package does not install itself or contain game binaries. New native writer/normal-frame/context/payload evidence and the v18 game run remain UNVERIFIED; latest actual run remainsv17 and G2 NOT PASSED.
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v18-frame-trace-20261026-92a3ed071d+dirty-cl94faaed0c6-20261026T063108Z`. Matching CodeView/PDB GUID `{748DB13E-5AAA-4883-8283-751805A36ED4}`, age 77; DLL SHA-256 `e24ad2a54b030d4c9fa8e11ac78a2123512c25a7d80b58599993979ed9baf612` (1,246,720 bytes), PDB SHA-256 `d580cf2923d7662af45b7d513595720b36f529504298330739270a5738148ef1` (35,131,392 bytes). The isolated package is `build/behavior-graph-v18-trace-20261026/test-package/` and `CharacterPanel-behavior-graph-v18-frame-trace-20261026.zip` in its parent; CRC/file hashes and current source identities are recorded in the manifest. Existing untracked `src/base/util.cpp` is part of the unchanged CMake glob and was compiled; its untouched hash and `util.h` hash are disclosed separately. No files were deployed.
+
+The existing ZIP SHA-256 is `cd3645698693dafefc264b97cbee50a264ba82559b62afc96c6a18c43fbc4953`. Its `92a3ed0+dirty` identity and manifest describe the build-time workspace; a later Git commit does not modify or rebuild that package. The package remains frozen while the [v18 test handoff](independent-behavior-graph.md#v18-handoff) awaits a first runtime result. Return the complete log, actual loaded build identity/manifest and operation times. `completed` counts returned 63581 calls, not successful sampling. No new experiment is scheduled before adjudicating that evidence.
+
+Reproduction commands (two engine-free cases total, no old suites):
+
+```powershell
+C:/env/llvm/bin/clang++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_frame_trace_test.cpp -o build/behavior-graph-v18-trace-20261026/frame_trace_test.exe
+build/behavior-graph-v18-trace-20261026/frame_trace_test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v18-frame-trace-20261026
+cmake --build --preset Release
+```
 
 ## Scope and non-goals
 
