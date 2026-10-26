@@ -8,7 +8,7 @@ Build the current Windows DLL from this checkout. Release is the only configure/
 
 [G1 passed only revised Option A; G2 v18 has not passed](independent-behavior-graph.md#current-status). Native shell release and repeated load/retention are evidenced; loaded-graph teardown, global counts and convergence are not. v17 allocated 116 poses and dispatched WeapEquip with node/variable changes, but pose hashes at 0/60/120 stayed equal. [v18](independent-behavior-graph.md#g2-v18-run) ran the same recipe with five-stage slot observations: both slots kept `numTracks=21` and `numData=0`, onFraction fell from the slot-2-written 1.0 to 0 in both slots after the first update, the time pair stayed at the Path A reset value, and the pose stayed `bc160a8c2b3a5a58` across 120 returned sampling calls with zero raw-buffer changes. It ran 120 fixed 1/60-second steps in one paused batch (two simulated seconds), not 120 rendered frames. G3–G6 complete acceptance remains open.
 
-`IndependentGraph=off` is the default; inject runs the v17 forty-row INDEPENDENT GRAPH budget plus source snapshots, separately from the source-only sixteen-row BehaviorGraphProbe. Old `candidate=none/gate1=not-passed` labels describe the source observer. The earlier documentation-only refresh produced no runtime evidence. V18 adds a local observation package; the first record of that package went stale (see [the rebuild note](#v18-frame-trace-build)), so it was rebuilt from the committed source and redeployed on 2026-10-26, then run once (23:01 session) and reverted to `off`.
+`IndependentGraph=off` is the default; inject runs the v17 forty-row INDEPENDENT GRAPH budget plus source snapshots, separately from the source-only sixteen-row BehaviorGraphProbe. Old `candidate=none/gate1=not-passed` labels describe the source observer. The earlier documentation-only refresh produced no runtime evidence. V18 adds a local observation package; the first record of that package went stale (see [the rebuild note](#v18-frame-trace-build)), so it was rebuilt from the committed source and redeployed on 2026-10-26, then run once (23:01 session) and reverted to `off`. V19 (the eye-position experiment) is built but not deployed or run; its identity and offline checks are in the [V19 build record](#v19-eye-arm-build).
 
 <a id="v18-frame-trace-build"></a>
 ## V18 bounded frame-trace verification (2026-10-26)
@@ -33,6 +33,26 @@ Reproduction commands (two engine-free cases total, no old suites):
 C:/env/mingw64/bin/g++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_frame_trace_test.cpp -o build/behavior-graph-v18-trace-20261026/frame_trace_test.exe
 build/behavior-graph-v18-trace-20261026/frame_trace_test.exe
 cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v18-frame-trace-20261026
+cmake --build --preset Release
+```
+
+<a id="v19-eye-arm-build"></a>
+## V19 eye-arm experiment build (2026-10-26)
+
+The [v19 contract](independent-behavior-graph.md#g2-v19-contract) adds one record field to the inject branch: a read-only `BSAnimationUpdateData::optionalEyePosition` (+0x18) pointing at the candidate root's `+0xA0..+0xA8` shifted +900 on Z, or a zero vector when the root is null. The trace becomes `GRAPH FRAME schema=v19` — three appended fields per stage row (`root218/b248/eye`) plus `arm-observed` in the summary — with the 30+1 and 40-row budgets unchanged. Drive/construct/load modes keep the v18 record.
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v19-eye-arm-20261026-e17d5d12f6-cl94faaed0c6-20261026T153952Z` (clean HEAD `e17d5d12f6`, submodule `94faaed0`); CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 319; DLL SHA-256 `344d9abb8373292322e2e1216d85291fa218b4cea175cb171633777567fba274` (1,249,792 bytes), PDB SHA-256 `9848cd143671bd7c7d8b47a1ad1aff7e53b9ab8c53945f7020703f5af0185868` (35,418,112 bytes). Configure/build emitted only the existing D9025 `/Ob2`→`/Ob3` warnings and the existing install-rule warning; no dependency update.
+
+The engine-free case set is now three: the v18 policy/progress pair plus one case for `make_eye_point` (null root → zero point, root → +900 on Z) and `arm_observed` (reset value false, armed interval true). All three pass under g++ 15.1 with `-Wall -Wextra -Werror`.
+
+**Not packaged, not deployed, not run.** The game directory still holds the v18 package with `IndependentGraph=off`; deploying v19 means backing that pair up to `dist/deploy-backup-20261026-v18/` first. The repository sample INI stays `off`. Once deployed, the run must report the loaded `SCENEGRAPH BUILD` identity above, and the six pre-registered contract branches decide the outcome.
+
+Reproduction commands:
+
+```powershell
+C:/env/mingw64/bin/g++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_frame_trace_test.cpp -o build/v19-frame-trace-test.exe
+build/v19-frame-trace-test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v19-eye-arm-20261026
 cmake --build --preset Release
 ```
 
