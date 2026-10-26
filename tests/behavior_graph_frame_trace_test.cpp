@@ -5,8 +5,10 @@
 #define PLUGIN_NAMESPACE_END }
 #include "animation/behavior_graph/frame_trace_policy.h"
 
+#include <array>
 #include <cassert>
 #include <iostream>
+#include <limits>
 
 #ifdef NDEBUG
 #error This test requires assertions.
@@ -49,9 +51,30 @@ void raw_pose_progress_keeps_transient_changes_and_missing_observations()
     assert(progress.first_changed() == 4);
 }
 
+void eye_point_and_arm_detection_are_bounded()
+{
+    using test_plugin::animation::behavior_graph::arm_observed;
+    using test_plugin::animation::behavior_graph::Eye_Offset_Z;
+    using test_plugin::animation::behavior_graph::EyePoint;
+    using test_plugin::animation::behavior_graph::make_eye_point;
+
+    const EyePoint zero = make_eye_point(std::nullopt);
+    assert(zero.x == 0.0F && zero.y == 0.0F && zero.z == 0.0F);
+
+    const EyePoint shifted = make_eye_point(std::array<float, 3>{ 1.5F, -2.0F, 3.0F });
+    assert(shifted.x == 1.5F && shifted.y == -2.0F && shifted.z == 3.0F + Eye_Offset_Z);
+
+    const float lowest = std::numeric_limits<float>::lowest();
+    assert(!arm_observed(0.0F, lowest));
+    assert(!arm_observed(lowest, lowest));
+    assert(arm_observed(-0.0167F, 0.2333F));
+    assert(arm_observed(0.0F, 0.0F));
+}
+
 int main()
 {
     selected_boundaries_are_bounded_and_not_repeated();
     raw_pose_progress_keeps_transient_changes_and_missing_observations();
-    std::cout << "2 frame-trace policy/progress cases passed (engine-free)\n";
+    eye_point_and_arm_detection_are_bounded();
+    std::cout << "3 frame-trace policy/progress cases passed (engine-free)\n";
 }

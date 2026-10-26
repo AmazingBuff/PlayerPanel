@@ -17,7 +17,7 @@ namespace animation::behavior_graph
     class FrameTrace
     {
     public:
-        FrameTrace(bool enabled, std::uint32_t actor_id, std::uint64_t request, RE::hkbCharacter const& baseline);
+        FrameTrace(bool enabled, std::uint32_t actor_id, std::uint64_t request, RE::hkbCharacter const& baseline, void const* eye);
 
         void phase(RE::BShkbAnimationGraph const& graph, std::uint32_t step, FrameStage stage);
         void sampled_pose(RE::hkbCharacter const& character);
@@ -29,6 +29,8 @@ namespace animation::behavior_graph
         std::uint64_t m_request;
         FrameTraceBudget m_budget;
         RawPoseProgress m_progress;
+        void const* m_eye;
+        bool m_arm_observed;
     };
 }
 PLUGIN_NAMESPACE_END

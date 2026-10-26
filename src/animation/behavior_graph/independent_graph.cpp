@@ -20,8 +20,10 @@
 #include "animation/behavior_graph/ownership_probe.h"
 #include "animation/settings.h"
 
+#include <array>
 #include <chrono>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -942,8 +944,25 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=slots step={} p0={} h0={:016x} p1={} h1={:016x}",
                                 actor_id, request, step, ptr0, hash0, ptr1, hash1);
                         };
+                        // v19 contract: the inject recipe supplies the audited
+                        // optionalEyePosition (record+0x18) so 63587's arm block can run.
+                        // The point is the candidate root's position shifted along Z past
+                        // the arm block's 800-unit cap; a null root keeps a non-null zero
+                        // point (the arm step is then fixed and the content is unread).
+                        // Other modes keep the v18 record (null pointer) unchanged.
+                        const bool eye_arm = mode == IndependentGraphMode::inject && version == SKSE::RUNTIME_SSE_1_6_1170;
+                        std::optional<std::array<float, 3>> root_position;
+                        if (eye_arm)
+                        {
+                            if (std::uintptr_t const root_node = *reinterpret_cast<const std::uintptr_t*>(graph_base + 0x218))
+                            {
+                                const auto* const position = reinterpret_cast<const float*>(root_node + 0xA0);
+                                root_position = std::array<float, 3>{ position[0], position[1], position[2] };
+                            }
+                        }
+                        EyePoint eye = make_eye_point(root_position);
                         FrameTrace frame_trace(mode == IndependentGraphMode::inject && version == SKSE::RUNTIME_SSE_1_6_1170,
-                            actor_id, request, candidate->characterInstance);
+                            actor_id, request, candidate->characterInstance, eye_arm ? &eye : nullptr);
                         for (std::uint32_t step = 0; behavior && step < DriveSteps; ++step)
                         {
                             // Engine per-frame recipe (slot-5 helper 0xbacc90): one 63602
@@ -993,6 +1012,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             update_record[0x2B] = 1;
                             update_record[0x2C] = 1;
                             update_record[0x2E] = 1;
+                            // v19 only: the audited BSAnimationUpdateData::optionalEyePosition
+                            // slot; every other mode keeps the v18 null record field.
+                            if (eye_arm)
+                                *reinterpret_cast<void**>(update_record + 0x18) = &eye;
                             engine_update(candidate_base, update_record, 0);
                             frame_trace.phase(*candidate_base, step, FrameStage::e_post_update);
                             if (step == 1 || step == 2)

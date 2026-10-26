@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <string_view>
 
@@ -26,6 +27,30 @@ namespace animation::behavior_graph
     inline constexpr std::array<std::string_view, 5> Frame_Stage_Names{
         "pre-pipeline", "post-pipeline", "post-update", "pre-sample", "post-sample"
     };
+
+    // v19 contract: the eye point is the candidate root's position shifted along Z
+    // by more than the arm block's 800-unit cap, which yields its maximum 0.25 step.
+    inline constexpr float Eye_Offset_Z = 900.0F;
+
+    struct EyePoint
+    {
+        float x;
+        float y;
+        float z;
+    };
+
+    [[nodiscard]] inline EyePoint make_eye_point(std::optional<std::array<float, 3>> root_position)
+    {
+        if (!root_position) return EyePoint{ 0.0F, 0.0F, 0.0F };
+        return EyePoint{ (*root_position)[0], (*root_position)[1], (*root_position)[2] + Eye_Offset_Z };
+    }
+
+    // The arm block rewrites the smaller timer away from its {0,-MAXFLT} reset value.
+    [[nodiscard]] inline bool arm_observed(float t0, float t1)
+    {
+        const float smaller = t0 < t1 ? t0 : t1;
+        return smaller > std::numeric_limits<float>::lowest();
+    }
 
     class FrameTraceBudget
     {

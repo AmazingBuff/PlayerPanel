@@ -50,21 +50,25 @@ namespace
     }
 }
 
-FrameTrace::FrameTrace(bool enabled, std::uint32_t actor_id, std::uint64_t request, RE::hkbCharacter const& baseline) :
+FrameTrace::FrameTrace(bool enabled, std::uint32_t actor_id, std::uint64_t request, RE::hkbCharacter const& baseline, void const* eye) :
     m_enabled(enabled), m_actor_id(actor_id), m_request(request), m_budget(),
-    m_progress(enabled ? raw_pose_hash(baseline) : std::nullopt) {}
+    m_progress(enabled ? raw_pose_hash(baseline) : std::nullopt), m_eye(eye), m_arm_observed(false) {}
 
 void FrameTrace::phase(RE::BShkbAnimationGraph const& graph, std::uint32_t step, FrameStage stage)
 {
     if (!m_enabled || !m_budget.take(step, stage)) return;
     const float t0 = scalar_at<float>(&graph, 0x1E8);
     const float t1 = scalar_at<float>(&graph, 0x1EC);
-    logger::info("GRAPH FRAME schema=v18 actor={:08x} request={} step={} stage={} completed={} graph={:#x} numAnim={} w245={:#x} b246={} b249={} t0={:.9g}/{:#010x} t1={:.9g}/{:#010x} slot0[{}] slot1[{}]",
+    if (stage == FrameStage::e_post_update && arm_observed(t0, t1)) m_arm_observed = true;
+    logger::info("GRAPH FRAME schema=v19 actor={:08x} request={} step={} stage={} completed={} graph={:#x} numAnim={} w245={:#x} b246={} b249={} t0={:.9g}/{:#010x} t1={:.9g}/{:#010x} root218={:#x} b248={} eye={:#x} slot0[{}] slot1[{}]",
         m_actor_id, m_request, step, Frame_Stage_Names[static_cast<std::size_t>(stage)], m_progress.completed(),
         reinterpret_cast<std::uintptr_t>(&graph), scalar_at<std::uint16_t>(&graph, 0x240),
         scalar_at<std::uint16_t>(&graph, 0x245), scalar_at<std::uint8_t>(&graph, 0x246),
         scalar_at<std::uint8_t>(&graph, 0x249), t0, std::bit_cast<std::uint32_t>(t0),
-        t1, std::bit_cast<std::uint32_t>(t1), slot_fields(graph, 0), slot_fields(graph, 1));
+        t1, std::bit_cast<std::uint32_t>(t1),
+        reinterpret_cast<std::uintptr_t>(scalar_at<void const*>(&graph, 0x218)),
+        scalar_at<std::uint8_t>(&graph, 0x248), reinterpret_cast<std::uintptr_t>(m_eye),
+        slot_fields(graph, 0), slot_fields(graph, 1));
 }
 
 void FrameTrace::sampled_pose(RE::hkbCharacter const& character)
@@ -77,11 +81,11 @@ void FrameTrace::summary()
     if (!m_enabled || !m_budget.take_summary()) return;
     const std::optional<std::uint64_t> baseline = m_progress.baseline();
     const std::optional<std::uint32_t> first = m_progress.first_changed();
-    logger::info("GRAPH FRAME schema=v18 actor={:08x} request={} stage=summary phase-rows={} total-rows={} completed={} pose-available={} pose-missing={} raw-hash-changes={} first-changed-completed={} baseline={} fingerprint=raw-buffer-padding-sensitive generator-payload=unobserved native-context=unobserved acceptance=unjudged",
+    logger::info("GRAPH FRAME schema=v19 actor={:08x} request={} stage=summary phase-rows={} total-rows={} completed={} pose-available={} pose-missing={} raw-hash-changes={} first-changed-completed={} baseline={} arm-observed={} fingerprint=raw-buffer-padding-sensitive generator-payload=unobserved native-context=unobserved acceptance=unjudged",
         m_actor_id, m_request, m_budget.rows(), m_budget.rows() + 1, m_progress.completed(),
         m_progress.available(), m_progress.missing(), m_progress.changes(),
         first ? fmt::format("{}", *first) : "none-observed",
-        baseline ? fmt::format("{:016x}", *baseline) : "unavailable");
+        baseline ? fmt::format("{:016x}", *baseline) : "unavailable", m_arm_observed ? "yes" : "no");
 }
 }
 PLUGIN_NAMESPACE_END
