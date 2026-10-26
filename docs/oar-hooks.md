@@ -2,7 +2,7 @@
 
 ## Independent graph investigation (2026-10-23)
 
-Current status (2026-10-26): [G1 passed only revised Option A; G2 v17 has not passed](independent-behavior-graph.md#current-status). Repeated load/retention and sampled source equality do not prove loaded-graph teardown or complete isolation. v17 dispatches WeapEquip and changes graph state but the 116-pose buffer remains unchanged; a single event is not full G3. G4 still must verify independent OAR context, history and sinks.
+Current status (2026-10-26): [G1 passed only revised Option A; G2 v18 (latest actual run) has not passed](independent-behavior-graph.md#current-status). Repeated load/retention and sampled source equality do not prove loaded-graph teardown or complete isolation. v18 keeps the v17 recipe, dispatches WeapEquip and changes graph state, but the 116-pose buffer remains unchanged; a single event is not full G3. G4 still must verify independent OAR context, history and sinks.
 
 At fixed OAR 3.1.6 revision `0c1c8b38a5323b9e26df41ff9d10ce801b984a45`, `GetReplacementAnimation(hkbCharacter*,...)` derives the outer graph/holder; graph-variable/drawn conditions may read the Actor. Graph addresses do not isolate Actor/ref/submod Random, sequence/PlayOnce history, event sinks or callbacks. The source-only `BehaviorGraphProbe` has a sixteen-row budget and fixed observation labels, distinct from the forty-row v17 `INDEPENDENT GRAPH` inject flow. The OAR adapter still has no verified independent context/history bridge or playback parity; current product queries continue through the existing `PreviewContext`/`PreviewClip` carriers. See [audit limits](behavior-graph-construction-audit.md#audit-current).
 
