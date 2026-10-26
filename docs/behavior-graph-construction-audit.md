@@ -15,6 +15,7 @@
 - **v19 运行期补注（2026-10-26）**：候选 `[graph+0x218] rootNode = 0`（审计十四“v15 借用期非空”的旧读法不成立）；臂块外层门因此全部满足后仍在 0xbb2603 的 `63864()` 归一处止步（`xmm6 = 63864() - 0.5*dt` 当返回值 ≤0.25），步长不足以越过 `1.25*dt`，t 未被改写。故“rootNode 为空时步长固定 0.25”不成立，`63864` 是 arm 的实际步长闸门，见[v19 运行记录](independent-behavior-graph.md#g2-v19-run)。
 - **审计十七（2026-10-26）**：臂块步长闸门 63864（0xbc3990，唯一调用点 0xbb2603）返回 `hkbBehaviorGraph::activeNodes`（`+0x98`）上某个归一化动画状态量的最小值，无合格节点时 FLT_MAX；候选上实测等价于 ≤0.04583，`-0.5*dt` 后必然过不了 `1.25*dt` 门。候选 rootNode（+0x218）由构造器 0xbad070 清零，审计集内无人重新写入，原生图写入者仍 UNVERIFIED。结论：眼位是必要条件而非充分条件，下一步回到选择/生成链，见[审计十七](#audit17)。
 - **审计十八（2026-10-26/27）**：63602 的生成/更新/复位全部作用于**第一实参**（`r13 = rcx`）；引擎自己的壳图助手 0xbacc90 与我们的配方同构，第一实参就是未装载的栈上壳图，因此 65149 在第一门（`character.behaviorGraph != 0`）返回、63587 在序言四门返回——**63602 从未在候选上生成任何东西**（修正审计十三/十四的推断）。真正的生成入口是角色级包装 0xbc3270/0xbc32d0 → 65232（门：`behaviorGraph.isActive (+0x12C)`、分区规模 `numStaticNodes (+0x128)`）→ 65237，配方一次都没调用。见[审计十八](#audit18)。
+- **审计十九（2026-10-27）**：生成上下文链 = `0x53fd20` → `0xba4e30`（管理器图数组 + 默认下标）→ `63595`（门 = `[graph+0x200]` 即 `ProjectDBData*`；按 request 的 id 表查 `projectDBData+0xc8` 哈希）→ `63859` → `65232` → `65237`。sink 是 **0x10 字节适配器 {vtable, buffer}**：0x1992da8（65149/63602）、0x1989320、0x1989360；slot1–4 是恒真谓词，slot5（`0xc25ee0`/`0xbc51c0`/`0xbc72e0`）才是输出转发虚拟；63602 的 buffer 在其栈帧 `[rbp+0x140]`（约 0xA0 字节）。见[审计十九](#audit19)。
 - 头部种子/时序是优先阻断假设，不是唯一已证根因；审计十六后，眼位输入才是本配方缺的第一个上游量，`[graph+0x248]` 语义与 63666/63582/58423 门后链仍未取证。受控播种若另行选择也只是因果实验，写116/1或哈希变化不能替代G2有意义idle/有效骨/源对照及后续生命周期验收。
 
 下文按审计日期保留原指令记录和当时结论；涉及已过时判断以本节和各处后验注为准。92a3ed0文档澄清本身未新增运行证据；此后v18增加既有流程的只读观测并于2026-10-26运行一次（30+1行，判读见[运行记录](independent-behavior-graph.md#g2-v18-run)），审计十六（同日）补做了眼位/记录/分岔/采样门的机器码审计，见[审计十六](#audit16)。
@@ -631,6 +632,48 @@ python audit16_window.py 0xbb0710 0x0 0x40     # 63584 输出/计时复位
 ### 审计十八限制
 
 63602 第二实参（候选）的六个 vtable 槽（0x30/0x38/0x40/0x48/0x50/0x60）与 40 字节步长表项语义未解码；sink/adapter 的对象布局未解；`0xbb31b0` 的上下文未读；`behaviorGraph.isActive`/`numStaticNodes` 在候选上的运行期值未采集。本节未运行新游戏、未改配方。
+
+<a id="audit19"></a>
+## 审计十九：生成上下文链（0x53fd20 → 0xba4e30 → 63595 → 63859 → 65232）与 sink 适配器（2026-10-27）
+
+> 起因 = [审计十八](#audit18)：真正的生成入口是角色级 0xbc3270/0xbc32d0。本节只读镜像，地址为 RVA。
+
+**Q1 —— 引擎每帧生成的实际调用链**
+
+1. `0x53fd20`（508 B，最外层）→ 唯一直接调用 `0xba4e30`（0x53fdbf）。
+2. `0xba4e30`（226 B，每图分派）：`rcx = 管理器`、`edx = 图下标`、`r8 = ?`、`r9 = sink`。它取 `[mgr+0x48]+index*8`（图数组）、`[mgr+0x50]`（数量）、`[mgr+0xb0]`（默认下标，`edx<0` 时使用），先 `69166([sink], graph+0x1f0, …)`（`+0x1F0 = BShkbAnimationGraph::projectName`），再 `63595(graph, request, sink)`（0xba4ebf）。
+3. `63595`（0xbb31b0，434 B）：门 = `[graph+0x200] != 0`，而 CommonLib 头明确 `+0x200 = ProjectDBData* projectDBData`（候选已有，v18/v19 日志的 `project-db` 非空）。随后用 `projectDBData+0xc8`（哈希表，容量 `+0xac`、哨兵 `+0xb8`）按 request 的 id 表（`[request+0x8]` 数组、`[request+0x18]` 数量）逐项解析，填一份值数组；**只有解析计数与请求数量相等**才调 `63859(character = graph+0xC0, values, sink)`（0xbb331c）。
+4. `63859`（0xbc32d0）→ `65232` → `65237`，见[审计十八](#audit18)。另有 `0xbc3270` 同族（无直接调用点，仅 vtable）。
+
+**Q2 —— sink 是 0x10 字节的适配器 {vtable, buffer}**
+
+1. 三个已知适配器：`0x1992da8`（65149 内部构造，63602 用它）、`0x1989320`（0xbc3270）、`0x1989360`（0xbc32d0）。
+2. 结构由 65149 的构造序列给出：`[rsp+0x38] = vtable`、`[rsp+0x40] = sink 缓冲指针`，对象共 0x10 字节（slot0 的删除析构器在 `0xbc750b` 段落里按 `edx=0x10` 释放）。
+3. 槽位语义：slot0 = 标量删除析构；slot1–4 在三个 vtable 里都是同一组 `mov al,1; ret`（`0xc28ab0/0xc28ac0/0xc28ad0/0xc28ae0`，四个恒真谓词）；**slot5 是真正的输出转发虚拟**（`0xc25ee0` / `0xbc51c0` / `0xbc72e0`，三者不同），65237 的遍历通过它把生成结果写进 buffer。
+4. 63602 的 sink 缓冲位于其栈帧 `[rbp+0x140]`（后续字段到 `[rbp+0x1e0]`/`[rbp+0x1f4]`，可见约 0xA0 字节），这是未来构造合法 buffer 的尺寸线索。
+
+**结论**
+
+- 生成不是“调 63602”或“调 63587”能得到的：它需要 `(graph, request, sink)` 或 `(character, values, sink)` 三元组，sink 必须是 `{vtbl, buffer}` 适配器，buffer 至少约 0xA0 字节且布局由 slot5 决定。
+- 候选的 `projectDBData` 已非空（`[graph+0x200]`），所以 63595 的第一道门能过；但 `behaviorGraph.isActive (+0x12C)` 与 `numStaticNodes (+0x128)` 在候选上的值尚未采集。
+- 因此“显式生成”契约（v20）可行但需要先解决 sink/buffer 布局：直接调 `65149(candidate.character, &local_buffer≥0xA0)` 是最短路径（65149 自己构造适配器，不检查 isActive），但 buffer 若小于/错位会让 slot5 的转发越界——必须先解 slot5。
+
+**下一个有界问题（audit20）**：解 `0xc25ee0`（65149 适配器 slot5）与 `0x53fd20` 的上下文——确认 buffer 的字段布局（轨道/姿态/计数）与每帧由谁驱动，然后才评估 v20 契约（显式生成一次）的可行性与风险。
+
+### 审计十九新增复现命令
+
+```powershell
+cd E:\SkyrimTools\Proj\CharacterPanel\build\g1-audit-20261023
+python disasm_func.py 0xbb31b0   # 63595：projectDBData 门 + id 解析
+python disasm_func.py 0xba4e30   # 每图分派（manager 数组 → 63595）
+python disasm_func.py 0x53fd20   # 最外层生成驱动
+python audit16_window.py 0xc28ab0 0x0 0x50   # 适配器四个恒真谓词
+python audit16_window.py 0xc26070 0x0 0x30   # 65149 适配器 slot0（析构器）
+```
+
+### 审计十九限制
+
+`0x53fd20` 的上层调用者与其上下文、`69166` 的语义、slot5 的 buffer 布局、值数组格式、`behaviorGraph.isActive`/`numStaticNodes` 在候选上的运行期值均未取证。本节未运行游戏、未改配方。
 
 ## 对设计契约的影响
 

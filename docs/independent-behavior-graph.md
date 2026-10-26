@@ -728,7 +728,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 
 **判定**：G2 仍 **NOT PASSED**——没有 arm、没有 Path B，pose 与 v11–v18 同为 `bc160a8c2b3a5a58`；本轮只证明“眼位非空 + 外层门满足”不足以保证臂块执行。
 
-**下一有界问题（audit19）**：[审计十七](behavior-graph-construction-audit.md#audit17) 把 no-arm 定位到 63864（activeNodes 上的归一化动画状态量，候选上 ≤0.04583）；[审计十八](behavior-graph-construction-audit.md#audit18) 进一步证明 **63602 从未在候选上生成任何东西**——它的生成/更新/复位都作用于第一实参，而配方传的是未装载的栈上壳图；真正的生成入口是角色级 0xbc3270/0xbc32d0 → 65232（门：`character.behaviorGraph != 0`、`behaviorGraph.isActive (+0x12C)`、分区规模 `numStaticNodes (+0x128)`）→ 65237，配方从未调用。下一步读 `0xbb31b0`（0xbc32d0 的唯一调用者）与 sink/adapter 布局，然后才谈“显式生成”新契约。audit19 结论前不新增原生调用、不改配方、不写 t/f。
+**下一有界问题（audit20）**：[审计十九](behavior-graph-construction-audit.md#audit19) 已把生成上下文链固定为 `0x53fd20 → 0xba4e30 → 63595 → 63859 → 65232`：`63595` 的门是 `[graph+0x200]`（`ProjectDBData*`），sink 是 **0x10 字节适配器 {vtable, buffer}**，slot5（`0xc25ee0`/`0xbc51c0`/`0xbc72e0`）才是输出转发虚拟，63602 的 buffer 在其栈帧 `[rbp+0x140]`（约 0xA0 字节）。下一步解 `0xc25ee0` 的 buffer 布局与 `0x53fd20` 的上层驱动，再评估“显式生成一次”的 v20 契约（最短路径是 `65149(candidate.character, &local_buffer≥0xA0)`，但 buffer 错位会让 slot5 越界）。audit20 结论前不新增原生调用、不改配方、不写 t/f。
 
 ## 当前采集器与操作
 
@@ -803,6 +803,7 @@ BehaviorGraphProbe=true
 | G2 v19 运行与判读 | 2026-10-26 23:46 会话：身份与构建一致；FRAME 30+1、IG 40、BG 36，无`[E]`/崩溃，`source-stable=true retained=true`；`root218=0 b248=0`、`eye` 非空、step 0 旧读槽 f=1.0，但 **`arm-observed=no`**、t 恒 `{0,-MAXFLT}`、无 Path B、pose 仍 `bc160a8c2b3a5a58`；日志归档（41,470字节，`45AAEE09…`），INI 已回 off，见[v19记录](#g2-v19-run) | **audit17**：`63864()` 返回值语义、候选 rootNode 缺失；双槽 f 初值待后续 |
 | 审计十七（机器码） | 2026-10-26：臂块步长闸门 = 63864（0xbc3990，唯一调用点 0xbb2603），返回 `hkbBehaviorGraph::activeNodes(+0x98)` 上归一化动画状态量的最小值（默认 FLT_MAX）；候选上 ≤0.04583 故 `-0.5*dt` 后必过不了 `1.25*dt`；候选 rootNode 由构造器清零、审计集内无写入者，见[审计十七](behavior-graph-construction-audit.md#audit17) | 63864 字段语义、`0xacf340`/`0xac3400` 返回值、原生图 rootNode 写入者 |
 | 审计十八（机器码） | 2026-10-26/27：63602 的生成/更新/复位只作用于第一实参（`r13=rcx`），引擎壳图助手 0xbacc90 与配方同构而壳图未装载 → **63602 从未在候选上生成**（修正审计十三/十四）；真正入口 0xbc3270/0xbc32d0 → 65232（门 `character.behaviorGraph`、`isActive(+0x12C)`、`numStaticNodes(+0x128)`）→ 65237，配方未调用，见[审计十八](behavior-graph-construction-audit.md#audit18) | `0xbb31b0` 上下文、sink/adapter 布局、第二实参六槽语义、候选 isActive/numStaticNodes 运行值 |
+| 审计十九（机器码） | 2026-10-27：生成链 `0x53fd20 → 0xba4e30 → 63595 → 63859 → 65232`；`63595` 门 = `[graph+0x200]`（`ProjectDBData*`），按 request id 表查 `projectDBData+0xc8`；sink = **0x10 字节适配器 {vtable, buffer}**（0x1992da8/0x1989320/0x1989360，slot5 才是输出转发），63602 的 buffer 在 `[rbp+0x140]`（约 0xA0 B），见[审计十九](behavior-graph-construction-audit.md#audit19) | slot5 buffer 布局、`0x53fd20` 上层驱动、`69166` 语义、值数组格式 |
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
@@ -819,9 +820,11 @@ BehaviorGraphProbe=true
 
 **audit18 也已执行**（[审计十八](behavior-graph-construction-audit.md#audit18)）：63602 的生成/更新/复位全部作用于**第一实参**（`r13 = rcx`）；引擎自己的壳图助手 0xbacc90 与我们的配方同构，第一实参是未装载的栈上壳图，所以 65149 在第一门（`character.behaviorGraph != 0`）返回、63587 在序言四门返回——**v7–v19 的 63602 通过程从未在候选上生成任何东西**（修正审计十三/十四的推断）。真正的生成入口是角色级 0xbc3270/0xbc32d0 → 65232（门：`character.behaviorGraph != 0`、`behaviorGraph.isActive (+0x12C)`、分区规模 `numStaticNodes (+0x128)`）→ 65237（递归遍历，写 sink），配方一次都没调用。`generatorOutputs` 的 `numData` 全程 0 因此是预期结果。
 
-因此下一个有界问题是 **audit19：`0xbb31b0`（0xbc32d0 的唯一调用者）与 sink/adapter（vtable `0x1989320`/`0x1989360`）的布局**——确认引擎每帧在什么上下文、用什么缓冲调用生成，以及候选上 `behaviorGraph.isActive`/`numStaticNodes` 的实际值；之后才谈“显式生成”新契约。audit19 结论前不新增原生调用、不改 dt、不写 t/f。
+**audit19 也已执行**（[审计十九](behavior-graph-construction-audit.md#audit19)）：引擎每帧生成链 = `0x53fd20` → `0xba4e30`（管理器图数组 + 默认下标）→ `63595`（门 = `[graph+0x200]`，即 `ProjectDBData*`；按 request 的 id 表查 `projectDBData+0xc8` 哈希）→ `63859` → `65232` → `65237`。sink 是 **0x10 字节适配器 {vtable, buffer}**（0x1992da8/0x1989320/0x1989360），slot1–4 恒真，slot5（`0xc25ee0`/`0xbc51c0`/`0xbc72e0`）才是输出转发虚拟；63602 的 buffer 在其栈帧 `[rbp+0x140]`（约 0xA0 字节）。
 
-仍未取证：`[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 的输出选择、63582 的 59303/64112 混合、58423 各门在候选上的实际值、原生帧双槽 f 的初值（源 gen0 f=1.0 对候选 f=0.0）、63864 字段语义、原生图 rootNode 的写入者、63602 第二实参的六个 vtable 槽语义。
+因此下一个有界问题是 **audit20：`0xc25ee0`（65149 适配器 slot5）的 buffer 布局与 `0x53fd20` 的上层驱动**——确认缓冲需要哪些字段（轨道/姿态/计数）以及每帧由谁驱动；之后才评估“显式生成一次”的 v20 契约（最短路径 `65149(candidate.character, &local_buffer≥0xA0)`，但缓冲错位会让 slot5 越界）。audit20 结论前不新增原生调用、不改 dt、不写 t/f。
+
+仍未取证：`[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 的输出选择、63582 的 59303/64112 混合、58423 各门在候选上的实际值、原生帧双槽 f 的初值（源 gen0 f=1.0 对候选 f=0.0）、63864 字段语义、原生图 rootNode 的写入者、63602 第二实参的六个 vtable 槽语义、sink buffer 布局与 `behaviorGraph.isActive`/`numStaticNodes` 运行值。
 
 若后续获准增加观测，仍应与真实正常源帧的 record/t/槽写入顺序作同阶段对照，并按同一步号成对记录两槽的 numTracks（+0x4）、numData（+0x32）、onFraction（+0x38）、元素身份与 t0/t1；插件自建 ctx 或 0x100 字节头哈希不能替代。v18 取证包与运行结果见 [v18 记录](#g2-v18-run)，审计十六/十七/十八见[审计记录](behavior-graph-construction-audit.md#audit16)。
 
