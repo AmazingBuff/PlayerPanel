@@ -728,7 +728,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 
 **判定**：G2 仍 **NOT PASSED**——没有 arm、没有 Path B，pose 与 v11–v18 同为 `bc160a8c2b3a5a58`；本轮只证明“眼位非空 + 外层门满足”不足以保证臂块执行。
 
-**下一有界问题（决策点）**：[审计二十](behavior-graph-construction-audit.md#audit20) 解了 sink 适配器 slot5（`0xc25ee0`）：它先用 `65177([ctx+8], buffer+0x38, …)` 解析名字/状态，再用项目名在 `[[adapter+8]+8]+0x28` 哈希表里查 float 并调 `59268(buffer, float)`；buffer 的字段包括 `+0x00` 引用计数项目名串、`+0x08` 名字→float 注册表、`+0x38` 名字/状态子对象、`+0x88` 另一指针，总大小 ≥0xA0。**伪造 buffer 会踩引用计数串与未知生命周期，v20“显式生成”暂不立项。** 下一步二选一：**audit21 继续静态解** 65177/59268/注册表来源，或**设计只读观测契约**在引擎生成入口读取真实 sink 的字段（不构造、不写入）。audit20 结论前不新增原生调用、不改配方、不写 t/f。
+**下一有界问题（架构决策点）**：[审计二十一](behavior-graph-construction-audit.md#audit21) 给出决定性事实：63602 的生成块整体受第一实参 `behaviorGraph` 守卫（0xbb62ae），块内含 65149 生成与 63602 内部 63587；壳图没有 behaviorGraph，所以**这两次调用在 v7–v19 里从未发生**。同时 63602 的 sink 是**栈子对象指针描述符**（`[rbp+0x140]` 起 12 个槽），与 0xba4e30 的 sink（首字段 BSFixedString）是不同具体类；`65177` 拼 `<obj+0x38>/<buffer+0x38>`，`59268` 只是 `movss [rcx+0xF0], xmm1; ret`。结论：**没有安全可行的“最小生成实验”**——要候选被生成，只能把候选登记进某个 manager（突破 G1 的 no-registration 边界），或接受独立图停在现有状态。这是架构选择，不是下一轮观测；`audit21` 之后不新增原生调用、不改配方。
 
 ## 当前采集器与操作
 
@@ -804,7 +804,8 @@ BehaviorGraphProbe=true
 | 审计十七（机器码） | 2026-10-26：臂块步长闸门 = 63864（0xbc3990，唯一调用点 0xbb2603），返回 `hkbBehaviorGraph::activeNodes(+0x98)` 上归一化动画状态量的最小值（默认 FLT_MAX）；候选上 ≤0.04583 故 `-0.5*dt` 后必过不了 `1.25*dt`；候选 rootNode 由构造器清零、审计集内无写入者，见[审计十七](behavior-graph-construction-audit.md#audit17) | 63864 字段语义、`0xacf340`/`0xac3400` 返回值、原生图 rootNode 写入者 |
 | 审计十八（机器码） | 2026-10-26/27：63602 的生成/更新/复位只作用于第一实参（`r13=rcx`），引擎壳图助手 0xbacc90 与配方同构而壳图未装载 → **63602 从未在候选上生成**（修正审计十三/十四）；真正入口 0xbc3270/0xbc32d0 → 65232（门 `character.behaviorGraph`、`isActive(+0x12C)`、`numStaticNodes(+0x128)`）→ 65237，配方未调用，见[审计十八](behavior-graph-construction-audit.md#audit18) | `0xbb31b0` 上下文、sink/adapter 布局、第二实参六槽语义、候选 isActive/numStaticNodes 运行值 |
 | 审计十九（机器码） | 2026-10-27：生成链 `0x53fd20 → 0xba4e30 → 63595 → 63859 → 65232`；`63595` 门 = `[graph+0x200]`（`ProjectDBData*`），按 request id 表查 `projectDBData+0xc8`；sink = **0x10 字节适配器 {vtable, buffer}**（0x1992da8/0x1989320/0x1989360，slot5 才是输出转发），63602 的 buffer 在 `[rbp+0x140]`（约 0xA0 B），见[审计十九](behavior-graph-construction-audit.md#audit19) | slot5 buffer 布局、`0x53fd20` 上层驱动、`69166` 语义、值数组格式 |
-| 审计二十（机器码） | 2026-10-27：slot5（`0xc25ee0`）= `65177([ctx+8], buffer+0x38, …)` 解析名字/状态 → 项目名查 `[[adapter+8]+8]+0x28` 哈希 → `59268(buffer, float)`；buffer 字段 `+0x00` 项目名串、`+0x08` 注册表、`+0x38` 子对象、`+0x88` 指针，总 ≥0xA0；**伪造 buffer 风险不可接受，v20 暂不立项**，见[审计二十](behavior-graph-construction-audit.md#audit20) | 65177 字符串协议、59268 函数体、注册表来源、buffer 完整大小/对齐 |
+| 审计二十（机器码） | 2026-10-27：slot5（`0xc25ee0`）= `65177([ctx+8], buffer+0x38, …)` 解析名字/状态 → 项目名查 `[[adapter+8]+8]+0x28` 哈希 → `59268(buffer, float)`；当时读到的 buffer 字段（`+0x00` 项目名串、`+0x08` 注册表、`+0x38` 子对象、`+0x88` 指针，总 ≥0xA0）后由审计二十一修正；**伪造 buffer 风险不可接受，v20 暂不立项**，见[审计二十](behavior-graph-construction-audit.md#audit20) | 65177 字符串协议、59268 函数体、注册表来源、buffer 完整大小/对齐 |
+| 审计二十一（机器码） | 2026-10-27：63602 生成块受第一实参 `behaviorGraph` 守卫（0xbb62ae），壳图路径上 65149 与内部 63587 **都没被调用**；`65177` 拼 `<obj+0x38>/<buffer+0x38>` tagged string，`59268` = `movss [rcx+0xF0], xmm1; ret`；63602 的 sink 是 12 槽栈子对象描述符、与 0xba4e30 的 sink 不同类。**无安全最小生成实验 → 架构决策**，见[审计二十一](behavior-graph-construction-audit.md#audit21) | 是否允许把候选登记进 manager（突破 G1 边界）；第二实参六槽语义、63584/59441 对真图的作用 |
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
@@ -825,7 +826,9 @@ BehaviorGraphProbe=true
 
 因此下一个有界问题是 **audit20：`0xc25ee0`（65149 适配器 slot5）的 buffer 布局与 `0x53fd20` 的上层驱动**——确认缓冲需要哪些字段（轨道/姿态/计数）以及每帧由谁驱动；之后才评估“显式生成一次”的 v20 契约（最短路径 `65149(candidate.character, &local_buffer≥0xA0)`，但缓冲错位会让 slot5 越界）。audit20 结论前不新增原生调用、不改 dt、不写 t/f。
 
-**audit20 已执行**（[审计二十](behavior-graph-construction-audit.md#audit20)）：slot5 先用 `65177([ctx+8], buffer+0x38, …)` 解析名字/状态，再按项目名在 `[[adapter+8]+8]+0x28` 哈希表里查 float 并调 `59268(buffer, float)`；buffer 字段 = `+0x00` 引用计数项目名串（69166 赋值）、`+0x08` 名字→float 注册表、`+0x38` 名字/状态子对象、`+0x88` 指针，总大小 ≥0xA0。**伪造 buffer 会踩引用计数串与未知生命周期，v20 暂不立项**。下一步二选一：audit21 继续静态解 65177/59268/注册表，或设计只读观测契约读取真实 sink 字段。audit20 之后不改配方、不新增原生调用。
+**audit20 已执行**（[审计二十](behavior-graph-construction-audit.md#audit20)）：slot5 先用 `65177([ctx+8], buffer+0x38, …)` 解析名字/状态，再按名字在 `[[adapter+8]+8]+0x28` 哈希表里查 float 并调 `59268(buffer, float)`；当时读到的 buffer 字段（`+0x00` 项目名串、`+0x08` 注册表、`+0x38` 子对象、`+0x88` 指针）后由审计二十一修正为“描述符/不同 sink 类”。**伪造 buffer 风险不可接受，v20 暂不立项**。
+
+**audit21 已执行**（[审计二十一](behavior-graph-construction-audit.md#audit21)）：63602 的整个生成块受第一实参 `behaviorGraph` 守卫（0xbb62ae），块内的 65149 与内部 63587 在壳图路径上**根本没被调用**；`65177` 只是拼 `<obj+0x38>/<buffer+0x38>` 的 tagged string，`59268` 只是 `movss [rcx+0xF0], xmm1; ret`；63602 的 sink 是 12 个栈子对象指针的描述符，和 0xba4e30 的 sink 不是同一具体类。**没有安全可行的最小生成实验**；下一步是架构决策（是否允许把候选登记进 manager），不是继续观测。audit21 之后不新增原生调用、不改配方、不写 t/f。
 
 仍未取证：`[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 的输出选择、63582 的 59303/64112 混合、58423 各门在候选上的实际值、原生帧双槽 f 的初值（源 gen0 f=1.0 对候选 f=0.0）、63864 字段语义、原生图 rootNode 的写入者、63602 第二实参的六个 vtable 槽语义、sink buffer 布局与 `behaviorGraph.isActive`/`numStaticNodes` 运行值。
 
