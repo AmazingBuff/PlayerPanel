@@ -6,6 +6,20 @@ Native DAC dependency/session/restore: docs/dac.md
 Log navigation and hash conventions: docs/code-maintenance.md
 Historical research summaries/source recovery: docs/history.md and docs/history-sources.md
 
+Research status (2026-10-26): docs/independent-behavior-graph.md#current-status
+G1 passes revised Option A only (shell release, repeated load, sampled source
+equality, loaded graph retained). Loaded-graph teardown/global counts/convergence
+are unverified. G2 v17 has not passed: 116 poses stay unchanged despite WeapEquip
+dispatch and node/variable evolution. Complete G3-G6 and OAR parity remain open.
+IndependentGraph defaults off and runs once per process. v17 inject budgets 40
+INDEPENDENT GRAPH rows plus source snapshots; 120 fixed 1/60-second steps mean
+two simulated seconds in one paused batch, not 120 rendered frames.
+BehaviorGraphProbe is a separate source-only 16-row observer. Its fixed
+candidate=none/gate1=not-passed label describes that row, not current G1 status.
+Header initialization/reset/refill is a first blocking hypothesis, not the
+proved only cause. n at +0x32 is numData; native numTracks is at +0x4. Sampling
+payload/context/application still need evidence; no audit16/v18 runs here.
+
 Current build (repository root, prepared toolchain):
   cmake --preset Release
   cmake --build --preset Release
@@ -96,11 +110,16 @@ Combat Start/Loop use the TDM-effect OR combat-state clause;
 this preview currently projects combat state to zero. Full pack/game validation
 remains pending.
 
-Two representative game follow-up categories (not verified locally):
+Two game follow-up categories (r4 is partial evidence, not complete acceptance):
   1. Equipment idle policy: world draw/attack/move/sheathe still selects held non-combat idle,
      rapid equipment changes and restored marker state with unrelated equipment/buffs intact.
   2. Copied-graph presentation/lifetime: F7 compatible-loop preservation, F8, close/reopen/
      load boundaries, appearance, attachments, framing and transparency.
+
+r4 (docs/diagnostics/display-issues-2026-10-22.md#r4-session) records shield9515,
+torch composed rows and five matched restores. Torch-only removal was not covered.
+Raw nonuniform scale and read_pose's scalar x are evidence to compare against
+native semantics and phase-aligned world/panel transforms, not a proven root cause.
 
 Retirement bookkeeping is capped; retained native graph memory is not. Safe
 teardown remains unresolved. Local build/document checks do not prove game-time

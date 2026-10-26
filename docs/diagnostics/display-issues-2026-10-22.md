@@ -6,7 +6,7 @@
 > 原件含该轮全部探针输出，已归并总结并可从固定 Git 基线恢复）。
 
 > 本交接保留前几版测试说明；更早报告/日志已归并为[历史总结](../history.md)，原件见[来源索引](../history-sources.md)；当前关联诊断、POSE 前缀与请求总预算见[第 8 节](#8-2026-10-22-已报告问题的关联诊断)，基础快速映射格式见第 7 节。
-> **当前入口是[第 10 节](#10-2026-10-23-装备上下文与火把分层修复待上机)**。[第 9 节](#9-2026-10-22-换装片源与站立谓词修复)保留此前的换装片源/站立谓词修复、两场会话（`r1` `5ec8fcf99f`、`r2` `3617bf1f27`）和纯诊断包 `r3`（`a46e724`，尚无会话）的历史判读；r1/r2 原始日志仍保留原处。
+> **当前运行证据见[r4及其后验边界](#r4-session)**；[第10节](#10-2026-10-23-装备上下文与火把分层修复待上机)保留10-23修复交付前的测试计划。[第9节](#9-2026-10-22-换装片源与站立谓词修复)保留r1/r2/r3旧判读，r1/r2原始日志仍在原处。独立图的G1修订通过/G2 v17未过另见[当前台账](../independent-behavior-graph.md#current-status)。
 
 ## 1. 需要修的三项显示问题（用户报告）
 
@@ -254,6 +254,8 @@ Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMove
 
 ## 10. 2026-10-23 装备上下文与火把分层修复（待上机）
 
+> 历史计划说明（2026-10-26更新）：标题锚点与交付前步骤保留；其后已有[r4运行](#r4-session)，本节“待上机/未部署”只指原交付时点，不代替当前结果。
+
 当前代码修复：所有实际 Unequip 查询使用之前的双手 ID，效果修订重查保留原过渡动作/上下文；下一 idle 才用当前装备。IED 历史查询按依赖放行：已核对 SDS 设置、显式 gear node；equipped hint 仅允许其请求手未变化。改变的手及未知历史谓词仍拒绝，原生 false 保留。
 
 右手单手武器＋左火把使用武器 body idle＋独立查询加载的 Tor_1HMPose 左臂层，覆盖左锁骨、上臂、前臂、手指；不覆盖根/躯干/腿/右臂。只装卸火把不触发右手武器装卸；只卸右手武器而保留火把时，过渡仍保留火把层。torch-only 仍走 TOR_Idle。加载/基础片缺失会明确记录 body-only 回退，不能当作视觉等价。pending/reuse/refresh/retarget/same-asset/outgoing 路径均携带层所有权；当前只做源码审查，游戏时序未验证。
@@ -275,14 +277,16 @@ Smooth 的非战斗变体统一带 `OR( HasMagicEffect(Smooth 0x802), NOT IsMove
 <a id="r4-session"></a>
 ### r4 上机结果（2026-10-23 22:53–23:00 会话，构建 `5ef6f0520e`）
 
+后验表述更新：2026-10-26；原日志/构建身份不变。本节区分实际选片、候选集合与物理资产存在、raw输入与视觉因果；未新增实验。
+
 归档 [CharacterPanel-animation-repair-20261023-2253.log](CharacterPanel-animation-repair-20261023-2253.log)（7,431,793 字节、22,986 行、19 请求、无崩溃无错误；19 条警告中 13 条为 Smooth Exhaustion/规则的 DAC 预检拒绝，属设计内过滤）。会话干净收尾：`DAC restore … matched` 共 5 次（epoch=2/4/6/8/10，最后一次 `baseline=0 spell-groups=3`），`Panel menu opening=false` 后 lifetime reset。判据逐项：
 
-1. **盾（query-hands/Non-Combat）**：卸盾接受 `Smooth Moveset - 1hm Shield\1hm Shield Non-combat Equip Base\1hm_unequip.hkx`（9515），idle 落 `1hm Shield Non-Combat idle Start/Loop`（9013/8992）——r2 的“卸盾用 Gunslicer”已翻案。装备方向接受 `1hm Shield Equip Base`（8920）：request=2 的 base=22 拒绝列表完整（远未到 48 上限）且**不含**任何 Shield Non-Combat 装备候选，即该包没有非战斗装备片，`1hm Shield Equip Base` 是唯一装备片——不是 r2 的战斗变体 bug。
-2. **斧（idle/Start→Loop）**：idle 接受 `Smooth Moveset - Axe\Axe Non-Combat idle Start`（8985）——r1/r2 的“斧 idle 落 Gunslicer/战斗变体”已翻案。Start→Loop 不切换由包内容解释：全部查询中 `Smooth Moveset - Axe` 只出现 `Axe Combat idle Loop` 与 `Axe Non-Combat idle Start` 两个文件夹，**不存在非战斗 Loop**，边界重查无 Loop 候选可选。
-3. **斧/弓/弩装备方向落 Gunslicer**：request=7（base=22）、13（base=393）的拒绝列表中均无 Smooth Axe/Bow 装备候选——这些包不替换 `1hm_equip`/`bow_equip`，Gunslicer 获胜是安装包内容的真实结果，不是选片 bug。
-4. **axe flash 根因（raw-xyz 证据）**：request=7 的 Gunslicer `Sword\1hm_equip.hkx` 在 `NPC Root [Root]` 上有 x=1.213338→1.197217、`NPC COM [COM ]` 上 x=0.823950→0.835038 的纯 x 轴缩放轨道（双手 0.9 等比），即“位置拉近”来自该片的 Root/COM x 缩放动画；非 1.0 采样共 417 行，集中在 req=7（48）/13（129）/14（96）。仍未添加任何 clamp 或修正——是否修正属产品决定。弓/弩的极端缩放同样取得 raw 证据（req=13/14）。
-5. **火把分层**：req=8/10/11/12/18/19 均 `ANIMATION TORCH outcome=composed … arm='Animations\tor_1hmpose.hkx' mask=left-arm`，无 body-only 回退；req=8 只装火把触发 `transition base unavailable form=none; idle only` 且未重放武器装备（“只装卸火把不触发右手武器装卸”验证通过）；req=11 卸斧过渡 `body='Animations\1hm_unequip.hkx' arm=tor_1hmpose` ——保留火把卸右武器时左臂层保持。**只卸火把**方向本会话未覆盖。
+1. **盾（query-hands/Non-Combat）**：本会话卸盾接受 `Smooth Moveset - 1hm Shield\1hm Shield Non-combat Equip Base\1hm_unequip.hkx`（9515），idle落Start/Loop（9013/8992），装备接受 `1hm Shield Equip Base`（8920）。request=2/base=22记录的候选/拒绝集没有Shield Non-Combat装备候选；这限定于该次观察集，不能单凭日志缺席证明磁盘不存在物理文件或所有安装包都只有一个装备片。与r2按logical path/方向比较，不跨会话硬对index。
+2. **斧（idle/Start→Loop）**：idle接受 `Smooth Moveset - Axe\Axe Non-Combat idle Start`（8985）。该轮查询记录里只出现Axe Combat idle Loop与Axe Non-Combat idle Start，未观察到非战斗Loop候选；边界重查仍回Start。不能由候选日志直接推出整个安装目录绝无非战斗Loop，仍需区分资产存在、注册到当前base及条件准入；这也不证明一切不切Loop都只是包内容。
+3. **斧/弓/弩装备方向落Gunslicer**：request=7/base=22和13/base=393记录的拒绝集没有Smooth Axe/Bow装备候选，实际接受Gunslicer。缺候选可能涉及包内容、注册base或前置过滤；本日志不能独立证明物理文件不存在。此前离线审查的给定Smooth Bow压缩包没有equip资源/弩project，只限定该包版本，不能推广所有安装覆盖；Gunslicer过渡本身不足以判选片bug。
+4. **axe flash的输入/表示证据，视觉根因仍未定**：request=7 Gunslicer `Sword\1hm_equip.hkx`映射到 `NPC Root [Root]` 的raw-xyz为 `(1.213338,1.000000,1.000000)`，后续x=1.197217；COM的x=0.823950→0.835038，手部样本为0.9等比。日志写 `conversion=scale-x`，[read_pose](../../src/animation/clip.h)确实取scale[0]为标量；这确认了非均匀输入与当前表示，不证明该片独自导致“拉近”。非均匀缩放表示损失是**待验证贡献假设**，本轮未核对游戏原生转换语义，不能假定原生必保留三轴。需相同phase的原生/面板骨变换、可靠映射与合成/相机上下文A/B。该轮统计非1采样417行（req7/13/14为48/129/96），弓/弩也有raw异常；未做clamp、映射、资源或转换修改，未完成视觉A/B。
+5. **火把分层**：req=8/10/11/12/18/19均记录 `ANIMATION TORCH outcome=composed … arm=Animations\tor_1hmpose.hkx mask=left-arm`，无body-only。req8只装火把时idle-only且未重放右武器Equip；req11卸斧过渡仍保留torch arm。它们是相应路径的运行日志证据，不单独证明遮罩资产/视觉完全相同；**只卸火把方向未覆盖**，不能把只装方向合并成“装卸均通过”。
 6. **F7/换装**：req=14 的 `reason=manual` 重捕获 `outcome=accepted`（capture=15，old→new graph）；快速换装期间 graph/request 链一致，`SCOPY PARK cap reached; oldest graph remains allocated` 出现一次（已知资源积累限制）。
-7. **2H 斧**：req=15–18 装备/idle/卸载全部落 `Smooth Moveset - 2hw Axe`（Equip Base 10334 / Non-Combat idle Start 10341 / Non-combat 卸载 10395），无缩放异常。
+7. **2H斧**：req15–18装备/idle/卸载接受 `Smooth Moveset - 2hw Axe`（Equip Base10334、Non-Combat idle Start10341、非战斗卸载10395）；已记录采样未见上述同类scale异常，不代表所有帧/变体均验收。
 
-遗留：axe/bow/crossbow 的装备方向若要 Smooth 动作需补包或改查询预期（当前为内容事实）；axe 非战斗 Loop 不存在；只卸火把未覆盖；`SCOPY PARK` 资源积累仍开放。`BEHAVIOR GRAPH` 基线结果与判读见 [G1 文档](../independent-behavior-graph.md#g1-源基线2026-10-23-会话)。
+遗留：Axe/Bow/弩的注册base/候选与实际资产覆盖需分别核对；非战斗Loop在本轮候选集中缺席不等于物理文件全局不存在。axe/bow/crossbow视觉原因及scale-x假设未完成同相位A/B，只卸火把未测，`SCOPY PARK`资源积累开放。五次restore matched仅指受控snapshot；index只在该会话项目内有效。独立图源基线与后续G1/G2分别见[源基线](../independent-behavior-graph.md#g1-源基线2026-10-23-会话)和[当前结论](../independent-behavior-graph.md#current-status)。

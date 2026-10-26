@@ -8,6 +8,8 @@ SceneGraph is the sole character-preview backend. It copies a source actor's exi
 
 The preview shows standing weapon posture and existing equipment/appearance. Animation targets equipped non-combat idles independently of world action, after observed native Smooth goal preparation. Empty hands use the configured loop/direct-base choice. This change adds no movement/attack mirroring, multi-actor UI, physics registration, FaceGen controller, shader/material work or safe graph destruction. The source graph/transforms stay read-only; native `NiObject::Clone` copies its graph. [dac::Session](dac.md) temporarily borrows only controlled original-Actor marker effects and restores them at the UI close boundary.
 
+The separate [independent-graph investigation](independent-behavior-graph.md#current-status) has G1 revised Option A pass and G2 v17 not passed as of 2026-10-26. It does not replace this backend. The loaded experimental graph is deliberately retained; its teardown/global convergence are unverified. [r4](diagnostics/display-issues-2026-10-22.md#r4-session) provides partial runtime evidence for product shield/torch behavior, while copy retirement remains unresolved.
+
 ## Architecture
 
 `CharacterManager` registers source actors, collects per-actor equipment-event revisions and distributes `PreviewFrame` menu/lifetime inputs in the serialized render bracket. Each registered `SceneGraph` retains its source handle, monitor/controller, copied tree and placement state. Its `update` method decides when to observe, request animation, capture, retarget, poll resources and toggle drawing. Input only queues F7/F8 intent on that object.
@@ -97,7 +99,7 @@ Existing C++23, VS2022/MSVC 14.44.35207, Windows SDK, CommonLibSSE, SKSE, OAR an
 
 [Build](build.md) documents the single Release target, pinned setup, generated outputs and configure-time identity. Prior native evidence and its limits are recorded in [Build verification](build.md#verification-and-limits). The two animation cases compile directly as documented there; no CMake test target is added.
 
-Build/source checks establish compilation and structural consistency, not game-time hook, loader, framing, visual or lifetime behavior. [Maintenance](code-maintenance.md#debugging-navigation) maps actual logs and the two existing representative runtime follow-up categories. No Skyrim runtime is available here.
+Build/source checks establish compilation and structural consistency, not game-time hook, loader, framing, visual or lifetime behavior. [Maintenance](code-maintenance.md#debugging-navigation) maps actual logs and the two representative runtime follow-up categories. Later AE 1.6.1170/MO2 sessions provide the bounded evidence in [r4](diagnostics/display-issues-2026-10-22.md#r4-session) and [G1/G2](independent-behavior-graph.md#current-status); they do not close complete visual or lifecycle acceptance.
 
 ## Safe modification
 

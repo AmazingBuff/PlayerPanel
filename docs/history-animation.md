@@ -1,6 +1,6 @@
 # 动画、OAR 与暂停期行为图实验总结
 
-更新：2026-10-23。本文把已过期的动作报告、测试单和旧日志提炼为可复用证据；所有原件从固定提交 `719c90bfe115a67ac64b80271dc8afced780290f` 恢复，逐文件归属见[来源表](history-sources.md)。[渲染总结](history-rendering.md)拥有取景、灯光、材质及显示生命周期历史。
+更新：2026-10-26。本文把已过期的动作报告、测试单和旧日志提炼为可复用证据；当次清理的144份旧来源从固定提交 `719c90bfe115a67ac64b80271dc8afced780290f` 恢复，逐文件归属见[来源表](history-sources.md)。后来新增的r4/G1/G2日志按本文及当前台账的实际链接读取，不属于该恢复点。[渲染总结](history-rendering.md)拥有取景、灯光、材质及显示生命周期历史。
 
 当前规范是[动画](animation.md)、[OAR 适配](oar-hooks.md)、[DAC](dac.md)、[SceneGraph](scene-graph.md)与[独立行为图验证](independent-behavior-graph.md)。本文的旧热键、源码路径、部署包与方案不是当前操作接口。本次不运行游戏、不改变播放器或实验状态。
 
@@ -17,7 +17,8 @@
 | AFP1–9，10-13 | 强制 generate 后可获得暂停最终输出并写回同 Actor，随后才接通直绘；生成、应用、上屏分别验收。 |
 | OAR preview/idle3，10-15–18 | 按预览状态主动查询，曾试世界相位接续与文件夹序列，后被现行装备目标/原生 DAC 标记路线取代。 |
 | DAC/IED 与问题追踪，10-20–23 | 修正原名、标记预检、历史手部、火把层和诊断；r1/r2 仍留下选片/姿态问题。 |
-| 无第二 Actor 独立行为图，10-23 | 只做 G1 静态审计与默认关闭源基线探针；G1 未通过，G2–G6 未开始。 |
+| 无第二 Actor 独立行为图，截至10-23 | 当时只做静态审计与源探针，未通过G1；该历史停点后来更新，见下行。 |
+| 独立图后续，10-24–26 | G1仅方案A修订通过，装载图保留而未销毁；G2 v17的116项pose仍冻结，完整G3–G6未过。 |
 
 <a id="pose-probes"></a>
 ## 节点、蒙皮缓存和“动作看起来在动”的不同证明
@@ -160,7 +161,7 @@ IED的原生false必须保留。提供方压缩包标签1.0.3而嵌入版本1.0.
 <a id="recent"></a>
 ## r1/r2与10-23修复：仍在用的未决证据
 
-最新诊断交接与两份raw保留原处：[r1](diagnostics/CharacterPanel-issue-trace-r1-20261022-2231.log)、[r2](diagnostics/CharacterPanel-issue-trace-r2-20261022-2314.log)、[当前步骤第10节](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机)。r1关闭恢复5次，r2为2次；r1盾/卸盾index8940/9503，r2为8938/9496。数字是每次项目的局部索引，按logical path、request、阶段比较，不能跨会话硬对ID。WORLD是**暂停源图快照**，不是正常世界换装后稳定行为，也没有记录完整事件链。
+r1/r2是较早问题阶段的原始证据，保留原处：[r1](diagnostics/CharacterPanel-issue-trace-r1-20261022-2231.log)、[r2](diagnostics/CharacterPanel-issue-trace-r2-20261022-2314.log)、[10-23交付前步骤](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机)，后续运行见[r4](diagnostics/display-issues-2026-10-22.md#r4-session)。r1关闭恢复5次，r2为2次；r1盾/卸盾index8940/9503，r2为8938/9496。数字是每次项目的局部索引，按logical path、request、阶段比较，不能跨会话硬对ID。WORLD是**暂停源图快照**，不是正常世界换装后稳定行为，也没有记录完整事件链。
 
 | 问题 | 已知事实与当前边界 |
 | --- | --- |
@@ -171,18 +172,20 @@ IED的原生false必须保留。提供方压缩包标签1.0.3而嵌入版本1.0.
 | 弓/弩 | r2弓左手incoming scale13.462，混合结束Root0.004102、COM17.625725，外层0.35；异常已出现在输入链，不能仅归因旧动作混合。三轴scale日志新增，转换仍取X、空表仍identity-unverified，未做猜测clamp。给定Smooth Bow包没有equip资源/弩project，所以选Gunslicer过渡本身不是选片失败证据。 |
 | movement | OAR3.1.6的direction0=None、1=Forward；静止0应true，先前全false投影语义错误已修。r3日志只在命中时发，缺seen=no不足以证明hook漏装；10-23补参数化诊断，尚无对应新会话。 |
 
-`CharacterPanel-oar-probe-20261022.log`是更早00:42–00:54会话，归并其DAC拒绝/restore和WORLD/PANEL观察；它不替最新r1/r2。10-23修复提交`a9a0a20`与后续行为基线提交`719c90b`的Release/离线结果都不是新的游戏运行结果。当前问题不能因删除老日志而被标成已解决。
+`CharacterPanel-oar-probe-20261022.log`是更早00:42–00:54会话，归并其DAC拒绝/restore和WORLD/PANEL观察；它不替r1/r2或后来的r4。10-23修复提交`a9a0a20`与后续行为基线提交`719c90b`的Release/离线结果都不是新的游戏运行结果。当前问题不能因删除老日志而被标成已解决。
+
+r4（10-23）的后验进展见[当前问题记录](diagnostics/display-issues-2026-10-22.md#r4-session)：卸盾接受非战斗9515，torch多次composed，restore matched5次；只卸火把未覆盖，park-cap仍有原生分配积累。index须按会话解释。候选集中未见Axe非战斗Loop不能单独证明磁盘无该文件；此前离线Smooth Bow包范围也不能推广全部安装覆盖。Root raw-xyz `(1.213338,1,1)`与read_pose取X确认输入/表示事实，scale-x非均匀损失是否造成视觉差异仍待核对原生语义及相同phase、可靠mapping/合成上下文A/B；不认定资源作者为唯一根因。
 
 <a id="graph-validation"></a>
 ## 独立行为图：当前可行性关卡
 
-无第二Actor、复用行为项目的候选图，目的在于让原状态机自己激活节点，而非继续手写所有入口。`ConstructAnimationGraph`已有声明（holder虚函数slot05及多个override）。2026-10-23的[二进制审计](behavior-graph-construction-audit.md)在AE 1.6.1170上确认了五种实现、holder传参（REFR自身或空）与配对销毁，但项目加载、链接、`hkbCharacter` setup及激活入口仍未定位；不能直接拷内存或调用试错。
+截至2026-10-26，候选已实际通过空holder原生构造、重复装载与字符级激活，并在暂停批次推进/注入事件；不能再写“只有源基线、加载未定位”。**G1 PASSED只指方案A修订**：空壳配对销毁、重复装载、所采源快照相同、装载图保留。装载图停用/销毁、全局登记计数、资源收敛与全部共享写状态仍未验证。
 
-OAR会从hkbCharacter反查BShkbAnimationGraph/Actor；图变量、drawn等可能经Actor读取，Random/顺序/PlayOnce状态和事件sink还在图外。图指针不同不等于条件上下文、历史、回调独立。候选阶段变量须用哨兵验证实际读谁；清理不能抹源Actor历史；输出事件先只收集，DAC隔离后再接。
+G2 v17于10-26运行，accepted8.289ms、116项pose、WeapEquip dispatched、activeNodes97→125→111与变量变化；候选pose在0/60/120仍`bc160a8c2b3a5a58`，源前后`7ac13b9170de9d2b`，11组源快照相同。120×1/60秒是一次暂停批次的2秒模拟时间，不是渲染帧或持续idle。**G2 NOT PASSED**，单次事件不算完整G3；OAR语境/历史/sink、完整骨输出和生命周期仍是后续关卡。
 
-目前只有静态对象归属审计、1.6.1170构造/销毁二进制审计及默认关闭`BehaviorGraphProbe`，每actor/request最多16分组行，role=source-baseline/candidate=none；没有创建、链接、Activate/Update/Generate、图变量写入或事件。**源基线不能证明隔离。G1 NOT PASSED，G2–G6 NOT STARTED/LOCKED。** 本机实际存在AE 1.6.1170安装与MO2实例，但本轮未部署、未启动游戏；保留的`CharacterPanel-engine-text.txt`是历史dump元数据，不是游戏可执行文件或已验证工厂协议。
+v17已直调63581入口，但63666/63582实际采样/混合主体和58423应用未验证。slots的n是+0x32 numData，f是+0x38 onFraction，native numTracks门在+0x4；不能由n=0断言轨道数门失败。slot2/post-pipeline1已有f=1，post-update1才双槽清零，故初始化/重置/重新填充与双槽顺序是首要假设，而非唯一已证根因。pred=0只在0/60两检点观测；Path B还要t状态条件，不能从本配方推出所有正dt帧均不可达。元素头哈希不是完整动态变换。
 
-下一步门槛与台账仅由[独立行为图文档](independent-behavior-graph.md)维护：先构造/所有权/销毁，再原版单边推进，再图原生Equip→Idle→Unequip，再OAR上下文/历史隔离，之后完整贡献层姿态，最后重复生命周期。首批只两场景，前关未过后关不开；历史第二Actor正证据既不能忽略，也不能替新G1过关。
+当前状态与原始日志由[独立行为图文档](independent-behavior-graph.md#current-status)维护；[审计后验边界](behavior-graph-construction-audit.md#audit-current)保留旧假设及纠正。audit16/受控播种尚未实施，写116/1或哈希变化不替代有意义idle、有效骨、源对照与后续生命周期。默认IndependentGraph=off，产品仍为装备驱动播放器。源探针16行固定标签不是当前G1结论；v17 inject另有40条自身前缀预算和源快照。OAR Actor读源、共享历史与回调隔离仍须G4验证，保留的engine-text只是历史元数据。
 
 <a id="future"></a>
 ## 未执行方向与验收约束
