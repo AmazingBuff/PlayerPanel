@@ -672,11 +672,11 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 `completed`、头部字段或raw哈希变化都不自动通过G2。待新日志到达后，先按同一步号与物理槽身份比较五阶段，再决定下一个有界问题；原生写入者、生成载荷、内部ctx及应用/生命周期仍按既有判据待证。
 
 <a id="g2-v19-contract"></a>
-## G2 v19 契约与实现（2026-10-26，眼位输入因果实验；已构建，未部署/未运行）
+## G2 v19 契约与实现（2026-10-26，眼位输入因果实验；已部署，未运行）
 
 **目的**：只验证[审计十六](behavior-graph-construction-audit.md#audit16)给出的因果链——`record+0x18`（`BSAnimationUpdateData::optionalEyePosition`）非空 → 0xbb252b 眼位推进块把 `t_smaller` 抬出复位值 → 下一次 63587 分岔进入 Path B → 原生 `0x240`/`0x246` 改变 → 63581 的门是否因此可过。它是**单变量因果实验**，不是修复，也不改变 G2 验收；即使全部命中，G2 仍未通过。
 
-**实现状态（2026-10-26）**：代码已实现并提交 `e17d5d1`；Release 构建身份 `CharacterPanel-scenegraph-behavior-graph-v19-eye-arm-20261026-e17d5d12f6-cl94faaed0c6-20261026T153952Z`（DLL SHA-256 `344d9abb…`，1,249,792字节；PDB `9848cd14…`，35,418,112字节；CodeView `{7F586C2E-…}` age 319），三个 engine-free 案例通过。**尚未打包、部署或运行**：仓库示例 INI 仍 `off`，游戏目录仍是 v18（INI=off）。实现点=[frame_trace_policy.h](../src/animation/behavior_graph/frame_trace_policy.h) 的 `EyePoint`/`make_eye_point`/`arm_observed`、[frame_trace.cpp](../src/animation/behavior_graph/frame_trace.cpp) 的 `schema=v19` 行与 summary `arm-observed`、[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 每步记录的 `+0x18`；除 `inject`+精确 1.6.1170 外的模式不改记录。
+**实现状态（2026-10-26）**：代码已实现并提交 `e17d5d1`；Release 构建身份 `CharacterPanel-scenegraph-behavior-graph-v19-eye-arm-20261026-e17d5d12f6-cl94faaed0c6-20261026T153952Z`（DLL SHA-256 `344d9abb…`，1,249,792字节；PDB `9848cd14…`，35,418,112字节；CodeView `{7F586C2E-…}` age 319），三个 engine-free 案例通过。**已部署（未打包）、尚未运行**：v18 的 DLL/PDB 与 `off` INI 备份在 `dist/deploy-backup-20261026-v18/`，MO2 实例现为 v19 DLL/PDB、部署 INI 为 `inject`；仓库示例 INI 仍 `off`。实现点=[frame_trace_policy.h](../src/animation/behavior_graph/frame_trace_policy.h) 的 `EyePoint`/`make_eye_point`/`arm_observed`、[frame_trace.cpp](../src/animation/behavior_graph/frame_trace.cpp) 的 `schema=v19` 行与 summary `arm-observed`、[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 每步记录的 `+0x18`；除 `inject`+精确 1.6.1170 外的模式不改记录。
 
 **依据（审计十六，RVA）**：臂块门 = `record+0x18 != 0`、`record+0x2A == 0`、`record+0x2B != 0`、`[graph+0x248] == 0`，且（`record+0x2C == 0` 或交换前旧读槽 `+4>2` 且 `+0x38>0`）；臂块写 `t_smaller = xmm6 + t_larger`（仅当大于 `1.25*dt`）并跳过复位，`xmm6` 由 rootNode 距离决定（rootNode 为空时固定 0.25）；Path B 条件 = `+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`，Path B 写 `0x240 = 63575(graph, record+0x18, record+0x2C, &out, record+0x28)`、`[0x246]=0`，不交换、不复位；63581 门 = 双槽 `+4>2`、`+0x38>0`、`t_larger ≥ 0`、`t_smaller < 0`，`f=1.0` 只由 63582 写到 63666 的输出元素。
 
@@ -700,9 +700,9 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 5. 崩溃/断言 → 立即停，保留日志与崩溃报告，部署与 INI 回到 v18 状态（`off`）；同一会话不得重试。
 6. `eye` 非空但 t 毫无变化 → 记“臂块内部门/阈值未满足”（`xmm1 > 1.25*dt` 或旧读槽 f 门），**停止**，不调偏移量重试。
 
-**构建与部署**：构建已完成（`CHARACTER_PANEL_BUILD_LABEL=behavior-graph-v19-eye-arm-20261026` 的 Release，离线三例通过）；**打包、部署与运行仍待批准**。获批后按 v18 流程把当前 v18 对备份到 `dist/deploy-backup-20261026-v18/`，部署 v19 后 INI 置 `inject`，一次暂停开包后回传完整日志、身份与 manifest；判读后 INI 回 `off`。
+**构建与部署**：构建已完成（`CHARACTER_PANEL_BUILD_LABEL=behavior-graph-v19-eye-arm-20261026` 的 Release，离线三例通过）；**已按 v18 流程部署（不打包）**：当前 v18 对（DLL `72C33A0E…`、PDB `1BACEB55…`）与 `off` INI 备份到 `dist/deploy-backup-20261026-v18/`，MO2 实例的 `CharacterPanel/SKSE/Plugins/` 现为 v19 DLL `344d9abb…`/PDB `9848cd14…`，部署 INI（1,038字节）为 `inject`，其余键未动。**运行仍待一次上机**：重启 → 暂停后第一次开包 → 回传完整日志、`SCENEGRAPH BUILD` 身份与开/关包时刻；判读后 INI 回 `off`。回滚=还原那三份备份并重启。
 
-**验收边界**：本契约只测“眼位 → t → Path B → 63581 门”的因果链；G2 仍需有意义的原版 idle、有效骨运动、源侧对照不变与后续生命周期证据。部署运行前仓库按 [v18 停点](#v18-handoff) 与[有界问题](#next-audit) 执行，默认 `IndependentGraph=off`。
+**验收边界**：本契约只测“眼位 → t → Path B → 63581 门”的因果链；G2 仍需有意义的原版 idle、有效骨运动、源侧对照不变与后续生命周期证据。运行前仓库按 [v18 停点](#v18-handoff) 与[有界问题](#next-audit) 执行，默认 `IndependentGraph=off`（部署副本除外）。
 
 ## 当前采集器与操作
 
@@ -770,10 +770,10 @@ BehaviorGraphProbe=true
 | 方案 A 评审与 v4 实现 | 2026-10-24 采纳方案 A：销毁判据重定义（空壳销毁 + 装载图销毁移至 G2 生命周期）、v4 保留流程（永不释放的持有指针，每进程 ≤1 张泄漏）、v4 预注册判据（装载复现 + 装载后源基线全等 + 保留无崩溃 → G1 PASSED），见[方案 A 修订](#2026-10-24-方案-a-修订销毁判据经-g1b-v3-崩溃后评审)；构建身份 `…20261024T065321Z`（DLL SHA-256 `37C255DA…`）已部署 | **G1b v4 运行与判读（按修订判据完成 G1）**；G2 前提：激活/更新入口审计 |
 | G1b v4 运行与判读 | 2026-10-24 会话：装载复现（`accepted ms=8.797`）、装载后源基线独立 diff 全等、`retained=true` 无崩溃，同会话面板多轮开合正常，见[v4 运行记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)；INI 已收回 off | — |
 | **G1 判定** | **PASSED（2026-10-24，方案 A 修订判据）**——空壳配对销毁 + 两次装载成功（装配完整/共享同址/setup 自建）+ 装载后源基线全等 + 保留无崩溃，见[v4 记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话) | 注册表计数 UNVERIFIED；可写状态写隔离属 G2+；装载图销毁由 G2 生命周期取得 |
-| **G2 当前判定** | **NOT PASSED（v18，2026-10-26 23:01）**：120 次 63581 调用后 116 项 pose 仍 `bc160a8c2b3a5a58`、原始缓冲 0 次变化；五阶段取证见[v18记录](#g2-v18-run) | 数量门过而双槽 onFraction 全 0（复位定位在本步 63602 之后、63587 返回之前）；t 对钉在 Path A 复位值、`record+0x18` 恒空 → 63575/0x246 清零/63568 回填全被绕过。**审计十六已解释**：`+0x18=optionalEyePosition` 由 REFR 的 `ModifyAnimationUpdateData` 写入，缺它则 arm 块不可达、Path A 每步复位；下一步是带眼位输入的 [v19 实验](#g2-v19-contract)（已实现并构建，未部署/未运行） |
+| **G2 当前判定** | **NOT PASSED（v18，2026-10-26 23:01）**：120 次 63581 调用后 116 项 pose 仍 `bc160a8c2b3a5a58`、原始缓冲 0 次变化；五阶段取证见[v18记录](#g2-v18-run) | 数量门过而双槽 onFraction 全 0（复位定位在本步 63602 之后、63587 返回之前）；t 对钉在 Path A 复位值、`record+0x18` 恒空 → 63575/0x246 清零/63568 回填全被绕过。**审计十六已解释**：`+0x18=optionalEyePosition` 由 REFR 的 `ModifyAnimationUpdateData` 写入，缺它则 arm 块不可达、Path A 每步复位；下一步是带眼位输入的 [v19 实验](#g2-v19-contract)（已部署，未运行） |
 | G2 v18 取证运行 | 2026-10-26 23:01 会话：加载身份与包内 manifest 一致；`GRAPH FRAME` 30+1、`INDEPENDENT GRAPH` 40、`BEHAVIOR GRAPH` 36（三块逐行全等）；无`[E]`、无崩溃；`source-stable=true retained=true`；部署 INI 已回 off | Path B 的 t 区间来源、63575 原生数量、63568 回填条件、63666/63582/58423 应用链 |
 | 审计十六（机器码） | 2026-10-26：record = `BSAnimationUpdateData`（`+0x18=optionalEyePosition`，唯一写入者=REFR vtable 槽 0x3C8 `ModifyAnimationUpdateData`，Actor 0x6a3750 / PC 0x74e7a0 / REFR 空桩 0x2f71a0）；Path B 真条件改为 `+0x2A==0 && t_larger≥0 && t_smaller>-MAXFLT`；arm 块门与 63581 四道门、63568/63582 的写入分工逐条落定，见[审计十六](behavior-graph-construction-audit.md#audit16) | `[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 输出选择、63582 混合细节、58423 门值、原生帧双槽 f 初值 |
-| G2 v19 实现与构建 | 2026-10-26：单变量眼位实验已实现（提交 `e17d5d1`）——注入分支每步记录 `+0x18` 指向 rootNode 位置 +900 的只读 3×float；FRAME 行改 `schema=v19` 并追加 `root218/b248/eye`，summary 加 `arm-observed`；Release 身份 `…v19-eye-arm-20261026-e17d5d12f6…`（DLL `344d9abb…`），三个 engine-free 案例通过，见[契约与实现](#g2-v19-contract)、[构建记录](build.md#v19-eye-arm-build) | **未打包/未部署/未运行**：六条预注册分支待一次上机判读 |
+| G2 v19 实现与部署 | 2026-10-26：单变量眼位实验已实现（提交 `e17d5d1`）并部署——注入分支每步记录 `+0x18` 指向 rootNode 位置 +900 的只读 3×float；FRAME 行改 `schema=v19` 并追加 `root218/b248/eye`，summary 加 `arm-observed`；Release 身份 `…v19-eye-arm-20261026-e17d5d12f6…`（DLL `344d9abb…`），三个 engine-free 案例通过；v18 对备份在 `dist/deploy-backup-20261026-v18/`，部署 INI=`inject`（未打包），见[契约与实现](#g2-v19-contract)、[构建记录](build.md#v19-eye-arm-build) | **未运行**：六条预注册分支待一次上机判读 |
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
@@ -784,7 +784,7 @@ BehaviorGraphProbe=true
 
 **audit16 已于 2026-10-26 执行**（[审计十六](behavior-graph-construction-audit.md#audit16)），结论：那个 record 就是 `RE::BSAnimationUpdateData`，`+0x18` 是 `optionalEyePosition`（`NiPoint3*`），唯一写入者是 REFR/Actor 的 vtable 槽 0x3C8 `ModifyAnimationUpdateData`；`0x54c130` 的引擎每帧路径与插件自建记录都传 null。Path B 的真条件是 `record+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`（无上界，`{0,-MAXFLT}` 即使 dt=0 也不满足）；能把 t 抬出复位值的 arm 块（0xbb252b）以 `record+0x18 != 0`、`+0x2B != 0`、`[graph+0x248]==0` 等为门，成功时跳过复位；63581 采样门要求双槽 `+4>2` **且 `+0x38>0`**、`t_larger ≥ 0`、`t_smaller < 0`；`f=1.0` 只由 63582 写到 63666 返回的输出元素（63568 只回填 `+0x32`），63575 的计数同样依赖眼位。v18 的“每步 Path A + 双槽 f=0 + numData 0”由此得到机器码解释：`record+0x18=null` → arm 不可达 → t 永在复位值 → Path A 每步复位清槽。
 
-由此下一步不是再观察，而是**为独立图做眼位输入的因果实验**：契约已写好并**已实现、已构建**（提交 `e17d5d1`，DLL `344d9abb…`），但**未部署、未运行**。它保持 inject 的调用序、40 行 `INDEPENDENT GRAPH` 与 ≤31 行 `GRAPH FRAME` 预算不变，只把每步 `BSAnimationUpdateData` 的 `+0x18` 指向一个只读的 3×float（rootNode 位置 +900；rootNode 为空时给零向量但仍非空），预注册判读依次是：臂块外层门（`[graph+0x248]`/rootNode）→ arm 是否写 t → 下一帧是否出现 Path B 签名（`w245=0`、`b246=0`；`0x240` 记录原生值，可能为 0）→ 63581 四道门是否至少一步全过 → 63582 是否填充输出元素。契约还预先说明本轮的**臂窗口只有第 0 步**（`+0x2C=1` 的旧读槽 f 门只在 step 0 由 slot 2 满足），因此第 0 步未 arm 即按分支 2/6 停，不调参重试。详见[契约与实现](#g2-v19-contract)。
+由此下一步不是再观察，而是**为独立图做眼位输入的因果实验**：契约已写好，**已实现、已构建并部署**（提交 `e17d5d1`，DLL `344d9abb…`，部署 INI=`inject`），但**尚未运行**。它保持 inject 的调用序、40 行 `INDEPENDENT GRAPH` 与 ≤31 行 `GRAPH FRAME` 预算不变，只把每步 `BSAnimationUpdateData` 的 `+0x18` 指向一个只读的 3×float（rootNode 位置 +900；rootNode 为空时给零向量但仍非空），预注册判读依次是：臂块外层门（`[graph+0x248]`/rootNode）→ arm 是否写 t → 下一帧是否出现 Path B 签名（`w245=0`、`b246=0`；`0x240` 记录原生值，可能为 0）→ 63581 四道门是否至少一步全过 → 63582 是否填充输出元素。契约还预先说明本轮的**臂窗口只有第 0 步**（`+0x2C=1` 的旧读槽 f 门只在 step 0 由 slot 2 满足），因此第 0 步未 arm 即按分支 2/6 停，不调参重试。详见[契约与实现](#g2-v19-contract)。
 
 契约获批前不改驱动配方、不播种、不推进 G3+。仍未取证：`[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 的输出选择、63582 的 59303/64112 混合、58423 各门在候选上的实际值、以及原生帧双槽 f 的初值（源 gen0 f=1.0 对候选 f=0.0）。
 
@@ -794,4 +794,4 @@ BehaviorGraphProbe=true
 
 ## 维护约束
 
-此文拥有实验程序和状态；修改时同步[动画](animation.md)、[OAR](oar-hooks.md)、[构建](build.md)、[维护](code-maintenance.md)、README、相关配置和Changelog。区别两条边界：`BehaviorGraphProbe`最多16条源分组、值语义、只读；`IndependentGraph`默认off、每进程一次，当前 inject（v17 配方）为40条自身前缀预算，另有复用源快照，允许的候选原生调用/字段写入仅由对应实验契约授权。两者都不写源图，不能把源探针只读描述套在整个实验上。v18 在旧40条与源快照之外另有≤31条 `GRAPH FRAME`，其运行结果见 [v18 记录](#g2-v18-run)；v19 已实现并构建（[契约与实现](#g2-v19-contract)）但未部署/未运行，除获批的 eye 指针外不得据此增加调用或写入。文档核查不替代引擎所有权、姿态或生命周期证据；构建/离线结果见 [Build](build.md#v19-eye-arm-build)。
+此文拥有实验程序和状态；修改时同步[动画](animation.md)、[OAR](oar-hooks.md)、[构建](build.md)、[维护](code-maintenance.md)、README、相关配置和Changelog。区别两条边界：`BehaviorGraphProbe`最多16条源分组、值语义、只读；`IndependentGraph`默认off、每进程一次，当前 inject（v17 配方）为40条自身前缀预算，另有复用源快照，允许的候选原生调用/字段写入仅由对应实验契约授权。两者都不写源图，不能把源探针只读描述套在整个实验上。v18 在旧40条与源快照之外另有≤31条 `GRAPH FRAME`，其运行结果见 [v18 记录](#g2-v18-run)；v19 已实现、构建并部署（[契约与实现](#g2-v19-contract)）但未运行，除获批的 eye 指针外不得据此增加调用或写入。文档核查不替代引擎所有权、姿态或生命周期证据；构建/离线结果见 [Build](build.md#v19-eye-arm-build)。
