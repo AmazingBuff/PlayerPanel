@@ -9,12 +9,12 @@
 | 关卡 | 截至 2026-10-26 的结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **NOT PASSED，最新已运行版本为 v18（2026-10-26 23:01）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化，没有有意义的 idle 位姿运动。 |
+| G2 | **NOT PASSED，最新已运行版本为 v19（2026-10-26 23:46）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化，没有有意义的 idle 位姿运动。 |
 | G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
 
 [v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
 
-v18 把"输出轨道头的初始化/重置/重新填充"这一优先假设收窄为两条运行期事实：**复位发生在本步 63602 结束之后、63587 返回之前**（双槽 onFraction 由 1.0 变 0.0，`numData` 始终 0），以及**本配方每步都走 Path A**（`w245=0x101 b246=1`、双槽每步各交换一次、t 对被复位为 `{0,-MAXFLT}` 且不累积）。[审计十六](behavior-graph-construction-audit.md#audit16) 同日给出机器码解释：该 record 就是 `BSAnimationUpdateData`，`+0x18` 是 `optionalEyePosition`，只有 REFR 的 `ModifyAnimationUpdateData` 会填；arm 块以它非空为门，`0x54c130` 的引擎每帧路径与插件自建记录都是 null，所以 t 永远回不到合法区间。Path B 的真条件是 `record+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`（`{0,-MAXFLT}` 即使 dt=0 也不满足）；63581 的采样门还要求双槽 `+0x38>0`，而 `f=1.0` 只由 63582 写、Path A 每步把它清回 0。因此 63575 的解析、`0x246` 清零与 63568 回填全被绕过，`0x240` 的原生值每次 update 后为 0，采样看到的 116 只是插件镜像。下一步见[有界审计问题](#next-audit)：设计带眼位输入的有界因果实验（v19 契约，未实现），不播种、不改现有配方。详见 [v18 运行记录](#g2-v18-run)。
+v18 把"输出轨道头的初始化/重置/重新填充"这一优先假设收窄为两条运行期事实：**复位发生在本步 63602 结束之后、63587 返回之前**（双槽 onFraction 由 1.0 变 0.0，`numData` 始终 0），以及**本配方每步都走 Path A**（`w245=0x101 b246=1`、双槽每步各交换一次、t 对被复位为 `{0,-MAXFLT}` 且不累积）。[审计十六](behavior-graph-construction-audit.md#audit16) 同日给出机器码解释：该 record 就是 `BSAnimationUpdateData`，`+0x18` 是 `optionalEyePosition`，只有 REFR 的 `ModifyAnimationUpdateData` 会填；arm 块以它非空为门，`0x54c130` 的引擎每帧路径与插件自建记录都是 null，所以 t 永远回不到合法区间。Path B 的真条件是 `record+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`（`{0,-MAXFLT}` 即使 dt=0 也不满足）；63581 的采样门还要求双槽 `+0x38>0`，而 `f=1.0` 只由 63582 写、Path A 每步把它清回 0。因此 63575 的解析、`0x246` 清零与 63568 回填全被绕过，`0x240` 的原生值每次 update 后为 0，采样看到的 116 只是插件镜像。v19 把这一解释推进了一步：[运行记录](#g2-v19-run) 显示 `rootNode([graph+0x218])=0`，臂块外层门虽全过，但步长被 0xbb2603 的 `63864()` 归一后仍不足以越过 `1.25*dt`，t 未被改写（`arm-observed=no`），因此没有 Path B。下一步是 audit17：`63864()` 的返回值语义与候选 rootNode 缺失，见[有界审计问题](#next-audit)；不播种、不改现有配方。详见 [v18 运行记录](#g2-v18-run)。
 
 ## 目标与边界
 
@@ -672,13 +672,13 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 `completed`、头部字段或raw哈希变化都不自动通过G2。待新日志到达后，先按同一步号与物理槽身份比较五阶段，再决定下一个有界问题；原生写入者、生成载荷、内部ctx及应用/生命周期仍按既有判据待证。
 
 <a id="g2-v19-contract"></a>
-## G2 v19 契约与实现（2026-10-26，眼位输入因果实验；已部署，未运行）
+## G2 v19 契约、实现与运行（2026-10-26，眼位输入因果实验；已运行：分支 6，无 arm）
 
 **目的**：只验证[审计十六](behavior-graph-construction-audit.md#audit16)给出的因果链——`record+0x18`（`BSAnimationUpdateData::optionalEyePosition`）非空 → 0xbb252b 眼位推进块把 `t_smaller` 抬出复位值 → 下一次 63587 分岔进入 Path B → 原生 `0x240`/`0x246` 改变 → 63581 的门是否因此可过。它是**单变量因果实验**，不是修复，也不改变 G2 验收；即使全部命中，G2 仍未通过。
 
-**实现状态（2026-10-26）**：代码已实现并提交 `e17d5d1`；Release 构建身份 `CharacterPanel-scenegraph-behavior-graph-v19-eye-arm-20261026-e17d5d12f6-cl94faaed0c6-20261026T153952Z`（DLL SHA-256 `344d9abb…`，1,249,792字节；PDB `9848cd14…`，35,418,112字节；CodeView `{7F586C2E-…}` age 319），三个 engine-free 案例通过。**已部署（未打包）、尚未运行**：v18 的 DLL/PDB 与 `off` INI 备份在 `dist/deploy-backup-20261026-v18/`，MO2 实例现为 v19 DLL/PDB、部署 INI 为 `inject`；仓库示例 INI 仍 `off`。实现点=[frame_trace_policy.h](../src/animation/behavior_graph/frame_trace_policy.h) 的 `EyePoint`/`make_eye_point`/`arm_observed`、[frame_trace.cpp](../src/animation/behavior_graph/frame_trace.cpp) 的 `schema=v19` 行与 summary `arm-observed`、[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 每步记录的 `+0x18`；除 `inject`+精确 1.6.1170 外的模式不改记录。
+**实现状态（2026-10-26）**：代码已实现并提交 `e17d5d1`；Release 构建身份 `CharacterPanel-scenegraph-behavior-graph-v19-eye-arm-20261026-e17d5d12f6-cl94faaed0c6-20261026T153952Z`（DLL SHA-256 `344d9abb…`，1,249,792字节；PDB `9848cd14…`，35,418,112字节；CodeView `{7F586C2E-…}` age 319），三个 engine-free 案例通过。**已部署（未打包）并运行一次**：v18 的 DLL/PDB 与 `off` INI 备份在 `dist/deploy-backup-20261026-v18/`；23:46 会话落在预注册分支 6（无 arm），部署 INI 已回 `off`，v19 DLL/PDB 留在原位，详见[运行记录](#g2-v19-run)。实现点=[frame_trace_policy.h](../src/animation/behavior_graph/frame_trace_policy.h) 的 `EyePoint`/`make_eye_point`/`arm_observed`、[frame_trace.cpp](../src/animation/behavior_graph/frame_trace.cpp) 的 `schema=v19` 行与 summary `arm-observed`、[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 每步记录的 `+0x18`；除 `inject`+精确 1.6.1170 外的模式不改记录。
 
-**依据（审计十六，RVA）**：臂块门 = `record+0x18 != 0`、`record+0x2A == 0`、`record+0x2B != 0`、`[graph+0x248] == 0`，且（`record+0x2C == 0` 或交换前旧读槽 `+4>2` 且 `+0x38>0`）；臂块写 `t_smaller = xmm6 + t_larger`（仅当大于 `1.25*dt`）并跳过复位，`xmm6` 由 rootNode 距离决定（rootNode 为空时固定 0.25）；Path B 条件 = `+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`，Path B 写 `0x240 = 63575(graph, record+0x18, record+0x2C, &out, record+0x28)`、`[0x246]=0`，不交换、不复位；63581 门 = 双槽 `+4>2`、`+0x38>0`、`t_larger ≥ 0`、`t_smaller < 0`，`f=1.0` 只由 63582 写到 63666 的输出元素。
+**依据（审计十六，RVA）**：臂块门 = `record+0x18 != 0`、`record+0x2A == 0`、`record+0x2B != 0`、`[graph+0x248] == 0`，且（`record+0x2C == 0` 或交换前旧读槽 `+4>2` 且 `+0x38>0`）；臂块写 `t_smaller = xmm6 + t_larger`（仅当大于 `1.25*dt`）并跳过复位，`xmm6` 由 rootNode 距离决定，**且 0xbb2603 的 `63864()` 会再归一它**（审计十六原写的“rootNode 为空时固定 0.25”已被 v19 运行期否证，见[运行记录](#g2-v19-run)）；Path B 条件 = `+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`，Path B 写 `0x240 = 63575(graph, record+0x18, record+0x2C, &out, record+0x28)`、`[0x246]=0`，不交换、不复位；63581 门 = 双槽 `+4>2`、`+0x38>0`、`t_larger ≥ 0`、`t_smaller < 0`，`f=1.0` 只由 63582 写到 63666 的输出元素。
 
 **唯一改动**：在既有 inject 驱动循环的每步 `update_record`（[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 里的 `alignas(8) std::uint8_t update_record[0x30]`）写 `*reinterpret_cast<void**>(update_record + 0x18) = &eye;`，`eye` 是栈上 3×float：
 
@@ -700,9 +700,35 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 5. 崩溃/断言 → 立即停，保留日志与崩溃报告，部署与 INI 回到 v18 状态（`off`）；同一会话不得重试。
 6. `eye` 非空但 t 毫无变化 → 记“臂块内部门/阈值未满足”（`xmm1 > 1.25*dt` 或旧读槽 f 门），**停止**，不调偏移量重试。
 
-**构建与部署**：构建已完成（`CHARACTER_PANEL_BUILD_LABEL=behavior-graph-v19-eye-arm-20261026` 的 Release，离线三例通过）；**已按 v18 流程部署（不打包）**：当前 v18 对（DLL `72C33A0E…`、PDB `1BACEB55…`）与 `off` INI 备份到 `dist/deploy-backup-20261026-v18/`，MO2 实例的 `CharacterPanel/SKSE/Plugins/` 现为 v19 DLL `344d9abb…`/PDB `9848cd14…`，部署 INI（1,038字节）为 `inject`，其余键未动。**运行仍待一次上机**：重启 → 暂停后第一次开包 → 回传完整日志、`SCENEGRAPH BUILD` 身份与开/关包时刻；判读后 INI 回 `off`。回滚=还原那三份备份并重启。
+**构建与部署**：构建已完成（`CHARACTER_PANEL_BUILD_LABEL=behavior-graph-v19-eye-arm-20261026` 的 Release，离线三例通过）；**已按 v18 流程部署（不打包）并运行一次**：v18 对（DLL `72C33A0E…`、PDB `1BACEB55…`）与 `off` INI 备份在 `dist/deploy-backup-20261026-v18/`，MO2 实例的 `CharacterPanel/SKSE/Plugins/` 现为 v19 DLL `344d9abb…`/PDB `9848cd14…`；本轮 INI 为 `inject`，判读后已回 `off`。判读见[运行记录](#g2-v19-run)。回滚=还原那三份备份并重启。
 
 **验收边界**：本契约只测“眼位 → t → Path B → 63581 门”的因果链；G2 仍需有意义的原版 idle、有效骨运动、源侧对照不变与后续生命周期证据。运行前仓库按 [v18 停点](#v18-handoff) 与[有界问题](#next-audit) 执行，默认 `IndependentGraph=off`（部署副本除外）。
+
+<a id="g2-v19-run"></a>
+## G2 v19 运行记录（2026-10-26 会话，无 arm：臂块步长门槛与候选 rootNode 缺失）
+
+构建 `CharacterPanel-scenegraph-behavior-graph-v19-eye-arm-20261026-e17d5d12f6-cl94faaed0c6-20261026T153952Z`（DLL `344d9abb…`，与构建记录一致）。2026-10-26 23:46 会话：`Panel menu opening=true` 23:46:47.728 → `opening=false` 23:46:59.707，实验行 23:46:47.739–47.751。[原始日志](diagnostics/CharacterPanel-g2v19-eye-arm-20261026-2346.log)原样归档（41,470字节，SHA-256 `45AAEE09…`）。部署 INI 判读后已回 `off`，v19 DLL/PDB 留在原位。
+
+**行数与预算**：`GRAPH FRAME schema=v19` 30条阶段行 + 1条 summary；`INDEPENDENT GRAPH` 40行；`BEHAVIOR GRAPH` 36行（三份12行，逐行全等）；无`[E]`、无崩溃，15条`[W]`为既有 DAC/studio-light 警告。summary：`completed=120 pose-available=120 pose-missing=0 raw-hash-changes=0 baseline=bc160a8c2b3a5a58 arm-observed=no`。
+
+**决定性观测**：
+
+- 每条 FRAME 行：`root218=0x0`、`b248=0`、`eye=0x1d6e56bd30`（按契约非空；rootNode 为空故内容为零向量）。
+- step 0 pre/post-pipeline：`t0=t1=-MAXFLT`，slot0=E0 `+38=1.000`（slot 2 写入）、slot1=E1 `+38=0.000`，双槽 `+4=21`、`+32=0`。
+- step 0 post-update：`t0=0`、`t1=-MAXFLT`，`w245=0x101 b246=1 b249=1`，双槽交换且 `+38` 均为 0；之后所有阶段 t 不变，`arm-observed=no`。
+- 120步、`candidate-pose-0/60/120=bc160a8c2b3a5a58`；源 pose 前后 `df87ebc0d3550cda`，`source-stable=true retained=true`；`phase=pred step=0/60 r=0x00`。
+
+**判读（预注册分支 6 落定）**：臂块外层门全部满足——`record+0x18` 非空（`eye` 非空）、`+0x2A=0`、`+0x2B=1`、`[graph+0x248]=0`、step 0 的旧读槽 E0 `+0x38=1.0>0` 且 `+4>2`——所以不是分支 1，也不是旧读槽 f 门。失败在臂块内部：rootNode（`[graph+0x218]`）为 0 时距离分支被跳过（`xmm2=FLT_MAX`），步长候选取 0.25，但 0xbb2603 的 `63864()` 返回值随后覆盖它（`63864()>0.25` 才保留 0.25，否则 `xmm6 = 63864() - 0.5*dt`），最终 `xmm1 = xmm6 + t_larger` 必须大于 `1.25*dt=0.02083` 才写 t。观测到 t 完全未变 ⇒ `xmm1 ≤ 0.02083`；在 `t_larger=-dt=-0.01667` 下即 `xmm6 ≤ 0.0375`（等价于 `63864() ≤ 0.0458`，或返回 NaN）。按契约**停止，不调偏移量、不改 dt 重试**。
+
+**本轮新增/修正的事实**：
+
+1. 候选图 `[graph+0x218] rootNode = 0`——首次直接读到；与审计十四时代“v15 借用期 rootNode 非空”的旧读法冲突，说明候选装载链没有装配 rootNode（与审计十“装载止步 63949、63870 尾链”一致）。rootNode 为空也让 63575 的距离阈值路径不可用。
+2. 审计十六“rootNode 为空时臂块步长固定 0.25”被运行期否证：0xbb25fc 之后还有一次 `63864()` 归一（0xbb2603–0xbb261c），小返回值会把步长压到 0.25 以下；本轮的 no-arm 正发生在这里。
+3. `b248=0` 使 `[graph+0x248]==0` 门满足；`eye` 按设计非空——v19 的记录字段本身没有传错。
+
+**判定**：G2 仍 **NOT PASSED**——没有 arm、没有 Path B，pose 与 v11–v18 同为 `bc160a8c2b3a5a58`；本轮只证明“眼位非空 + 外层门满足”不足以保证臂块执行。
+
+**下一有界问题（audit17）**：`63864`（0xbc3990，唯一调用点 0xbb2603）的返回值语义——它读 `behaviorGraph+0x98` 的计数/数组并调用 0xac3400/0xab3fe0/0xacf340，需查明在候选（暂停、无选中动画）上为何 ≤0.0458，以及 rootNode 缺失是否使它恒小。audit17 结论出来前不调 eye 偏移、不改 dt、不写 t/f；双槽 `f=0` 初值是分支 3/4 的前提，本轮未走到。
 
 ## 当前采集器与操作
 
@@ -770,10 +796,11 @@ BehaviorGraphProbe=true
 | 方案 A 评审与 v4 实现 | 2026-10-24 采纳方案 A：销毁判据重定义（空壳销毁 + 装载图销毁移至 G2 生命周期）、v4 保留流程（永不释放的持有指针，每进程 ≤1 张泄漏）、v4 预注册判据（装载复现 + 装载后源基线全等 + 保留无崩溃 → G1 PASSED），见[方案 A 修订](#2026-10-24-方案-a-修订销毁判据经-g1b-v3-崩溃后评审)；构建身份 `…20261024T065321Z`（DLL SHA-256 `37C255DA…`）已部署 | **G1b v4 运行与判读（按修订判据完成 G1）**；G2 前提：激活/更新入口审计 |
 | G1b v4 运行与判读 | 2026-10-24 会话：装载复现（`accepted ms=8.797`）、装载后源基线独立 diff 全等、`retained=true` 无崩溃，同会话面板多轮开合正常，见[v4 运行记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)；INI 已收回 off | — |
 | **G1 判定** | **PASSED（2026-10-24，方案 A 修订判据）**——空壳配对销毁 + 两次装载成功（装配完整/共享同址/setup 自建）+ 装载后源基线全等 + 保留无崩溃，见[v4 记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话) | 注册表计数 UNVERIFIED；可写状态写隔离属 G2+；装载图销毁由 G2 生命周期取得 |
-| **G2 当前判定** | **NOT PASSED（v18，2026-10-26 23:01）**：120 次 63581 调用后 116 项 pose 仍 `bc160a8c2b3a5a58`、原始缓冲 0 次变化；五阶段取证见[v18记录](#g2-v18-run) | 数量门过而双槽 onFraction 全 0（复位定位在本步 63602 之后、63587 返回之前）；t 对钉在 Path A 复位值、`record+0x18` 恒空 → 63575/0x246 清零/63568 回填全被绕过。**审计十六已解释**：`+0x18=optionalEyePosition` 由 REFR 的 `ModifyAnimationUpdateData` 写入，缺它则 arm 块不可达、Path A 每步复位；下一步是带眼位输入的 [v19 实验](#g2-v19-contract)（已部署，未运行） |
+| **G2 当前判定** | **NOT PASSED（v19，2026-10-26 23:46）**：120 次 63581 调用后 116 项 pose 仍 `bc160a8c2b3a5a58`、原始缓冲 0 次变化；v19 眼位实验落预注册分支 6（`arm-observed=no`，t 未改写），见[v19记录](#g2-v19-run) | 外层门全过（`root218=0`、`b248=0`、`eye` 非空、step 0 旧读槽 f=1.0），但 0xbb2603 的 `63864()` 归一后步长不足以越过 `1.25*dt`；下一步 audit17（63864 返回值语义、rootNode 缺失）；双槽 f 初值仍是后续门 |
 | G2 v18 取证运行 | 2026-10-26 23:01 会话：加载身份与包内 manifest 一致；`GRAPH FRAME` 30+1、`INDEPENDENT GRAPH` 40、`BEHAVIOR GRAPH` 36（三块逐行全等）；无`[E]`、无崩溃；`source-stable=true retained=true`；部署 INI 已回 off | Path B 的 t 区间来源、63575 原生数量、63568 回填条件、63666/63582/58423 应用链 |
 | 审计十六（机器码） | 2026-10-26：record = `BSAnimationUpdateData`（`+0x18=optionalEyePosition`，唯一写入者=REFR vtable 槽 0x3C8 `ModifyAnimationUpdateData`，Actor 0x6a3750 / PC 0x74e7a0 / REFR 空桩 0x2f71a0）；Path B 真条件改为 `+0x2A==0 && t_larger≥0 && t_smaller>-MAXFLT`；arm 块门与 63581 四道门、63568/63582 的写入分工逐条落定，见[审计十六](behavior-graph-construction-audit.md#audit16) | `[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 输出选择、63582 混合细节、58423 门值、原生帧双槽 f 初值 |
-| G2 v19 实现与部署 | 2026-10-26：单变量眼位实验已实现（提交 `e17d5d1`）并部署——注入分支每步记录 `+0x18` 指向 rootNode 位置 +900 的只读 3×float；FRAME 行改 `schema=v19` 并追加 `root218/b248/eye`，summary 加 `arm-observed`；Release 身份 `…v19-eye-arm-20261026-e17d5d12f6…`（DLL `344d9abb…`），三个 engine-free 案例通过；v18 对备份在 `dist/deploy-backup-20261026-v18/`，部署 INI=`inject`（未打包），见[契约与实现](#g2-v19-contract)、[构建记录](build.md#v19-eye-arm-build) | **未运行**：六条预注册分支待一次上机判读 |
+| G2 v19 实现与部署 | 2026-10-26：单变量眼位实验已实现（提交 `e17d5d1`）并部署——注入分支每步记录 `+0x18` 指向 rootNode 位置 +900 的只读 3×float；FRAME 行改 `schema=v19` 并追加 `root218/b248/eye`，summary 加 `arm-observed`；Release 身份 `…v19-eye-arm-20261026-e17d5d12f6…`（DLL `344d9abb…`），三个 engine-free 案例通过；v18 对备份在 `dist/deploy-backup-20261026-v18/`，部署 INI=`inject`（未打包），见[契约与实现](#g2-v19-contract)、[构建记录](build.md#v19-eye-arm-build) | —（运行见下行） |
+| G2 v19 运行与判读 | 2026-10-26 23:46 会话：身份与构建一致；FRAME 30+1、IG 40、BG 36，无`[E]`/崩溃，`source-stable=true retained=true`；`root218=0 b248=0`、`eye` 非空、step 0 旧读槽 f=1.0，但 **`arm-observed=no`**、t 恒 `{0,-MAXFLT}`、无 Path B、pose 仍 `bc160a8c2b3a5a58`；日志归档（41,470字节，`45AAEE09…`），INI 已回 off，见[v19记录](#g2-v19-run) | **audit17**：`63864()` 返回值语义、候选 rootNode 缺失；双槽 f 初值待后续 |
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
@@ -784,9 +811,11 @@ BehaviorGraphProbe=true
 
 **audit16 已于 2026-10-26 执行**（[审计十六](behavior-graph-construction-audit.md#audit16)），结论：那个 record 就是 `RE::BSAnimationUpdateData`，`+0x18` 是 `optionalEyePosition`（`NiPoint3*`），唯一写入者是 REFR/Actor 的 vtable 槽 0x3C8 `ModifyAnimationUpdateData`；`0x54c130` 的引擎每帧路径与插件自建记录都传 null。Path B 的真条件是 `record+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`（无上界，`{0,-MAXFLT}` 即使 dt=0 也不满足）；能把 t 抬出复位值的 arm 块（0xbb252b）以 `record+0x18 != 0`、`+0x2B != 0`、`[graph+0x248]==0` 等为门，成功时跳过复位；63581 采样门要求双槽 `+4>2` **且 `+0x38>0`**、`t_larger ≥ 0`、`t_smaller < 0`；`f=1.0` 只由 63582 写到 63666 返回的输出元素（63568 只回填 `+0x32`），63575 的计数同样依赖眼位。v18 的“每步 Path A + 双槽 f=0 + numData 0”由此得到机器码解释：`record+0x18=null` → arm 不可达 → t 永在复位值 → Path A 每步复位清槽。
 
-由此下一步不是再观察，而是**为独立图做眼位输入的因果实验**：契约已写好，**已实现、已构建并部署**（提交 `e17d5d1`，DLL `344d9abb…`，部署 INI=`inject`），但**尚未运行**。它保持 inject 的调用序、40 行 `INDEPENDENT GRAPH` 与 ≤31 行 `GRAPH FRAME` 预算不变，只把每步 `BSAnimationUpdateData` 的 `+0x18` 指向一个只读的 3×float（rootNode 位置 +900；rootNode 为空时给零向量但仍非空），预注册判读依次是：臂块外层门（`[graph+0x248]`/rootNode）→ arm 是否写 t → 下一帧是否出现 Path B 签名（`w245=0`、`b246=0`；`0x240` 记录原生值，可能为 0）→ 63581 四道门是否至少一步全过 → 63582 是否填充输出元素。契约还预先说明本轮的**臂窗口只有第 0 步**（`+0x2C=1` 的旧读槽 f 门只在 step 0 由 slot 2 满足），因此第 0 步未 arm 即按分支 2/6 停，不调参重试。详见[契约与实现](#g2-v19-contract)。
+由此下一步是**眼位输入的因果实验**，并已在同日执行：契约写好 → 实现（`e17d5d1`）→ 构建 → 部署 → 2026-10-26 23:46 一次上机（[v19 运行记录](#g2-v19-run)）。结果为**预注册分支 6**：`rootNode=0`、`b248=0`、`eye` 非空、step 0 旧读槽 `f=1.0`，外层门全过，但 0xbb2603 的 `63864()` 归一后臂块步长不足以越过 `1.25*dt`，t 未被改写（`arm-observed=no`），没有 Path B，pose 不变。
 
-契约获批前不改驱动配方、不播种、不推进 G3+。仍未取证：`[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 的输出选择、63582 的 59303/64112 混合、58423 各门在候选上的实际值、以及原生帧双槽 f 的初值（源 gen0 f=1.0 对候选 f=0.0）。
+因此下一个有界问题是 **audit17：`63864`（0xbc3990，唯一调用点 0xbb2603）的返回值语义**——它读 `behaviorGraph+0x98` 的计数/数组并调用 `0xac3400`/`0xab3fe0`/`0xacf340`，需查明它在候选（暂停、无选中动画、rootNode 为空）上为何 ≤0.0458，以及这是否由 rootNode 缺失或动画未选中决定。**audit17 结论出来前不调 eye 偏移、不改 dt、不写 t/f**；双槽 `f` 初值是分支 3/4 的前提，本轮未走到。
+
+仍未取证：`[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 的输出选择、63582 的 59303/64112 混合、58423 各门在候选上的实际值、原生帧双槽 f 的初值（源 gen0 f=1.0 对候选 f=0.0）、以及候选 rootNode 缺失的装配点。
 
 若后续获准增加观测，仍应与真实正常源帧的 record/t/槽写入顺序作同阶段对照，并按同一步号成对记录两槽的 numTracks（+0x4）、numData（+0x32）、onFraction（+0x38）、元素身份与 t0/t1；插件自建 ctx 或 0x100 字节头哈希不能替代。v18 取证包与运行结果见 [v18 记录](#g2-v18-run)，审计十六见[审计记录](behavior-graph-construction-audit.md#audit16)。
 

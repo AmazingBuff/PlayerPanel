@@ -11,7 +11,8 @@
 - [v17](independent-behavior-graph.md#g2-v17-运行记录2026-10-26-会话谓词翻假达成与采样门23落定)仅在step0/60观测pred=0；slot2和post-pipeline1曾有f=1，post-update1两槽f=0，记录检查点继续为0。**v18 五阶段观测**（[运行记录](independent-behavior-graph.md#g2-v18-run)）把复位定位在本步 63602 之后、63587 返回之前：两槽 `numTracks(+0x4)=21` 全程满足数量门，`numData(+0x32)` 全程 0，onFraction 只有 step 0 pre-pipeline 的 slot 2 写入值 1.0，之后双槽全 0。不能说轨道头从未初始化，也不能说管线永不写头。
 - 63581直调到入口/门判定不等于63666/63582采样混合主体执行；0x100字节元素头哈希不等于完整变换载荷。实际生成数据、正确双槽、63581原生ctx与58423应用仍未知。
 - Path B需`record+0x2A==0`、`t_larger ≥ 0` 与 `t_smaller > -MAXFLT`（严格；无上界，见[审计十六](#audit16)）。**v18 运行期**：`record+0x2A=0` 的配方下仍 120 步全 Path A（`w245=0x101 b246=1`、每步交换一次双槽），t 在首次 update 后恒为 `{0,-MAXFLT}`；序言先减 dt 使 fork 时 t_larger<0，`record+0x18` 恒空又使唯一 t 推进块不可达。这不是“所有正 dt 原生帧都不可能 Path B”的证明——原生帧靠 REFR 的 `ModifyAnimationUpdateData` 填 `optionalEyePosition` 后由 arm 块把 t 抬起来。
-- **审计十六**：`record` 就是 `BSAnimationUpdateData`（`+0x18=NiPoint3* optionalEyePosition`，唯一写入者是 REFR/Actor 的 vtable 槽 0x3C8）；arm 块（0xbb252b）以 `record+0x18 != 0`、`+0x2B != 0`、`[graph+0x248]==0` 等为门，成功时跳复位；63581 采样门要求双槽 `+4>2` **且 `+0x38>0`**、`t_larger ≥ 0`、`t_smaller < 0`；`f=1.0` 只由 63582 写（63568 只写 `+0x32`）；63575 的计数也依赖眼位。眼位是 v18 观测到的“每步 Path A + f 清零 + numData 0”的机器码解释，见[审计十六](#audit16)。
+- **审计十六**：`record` 就是 `BSAnimationUpdateData`（`+0x18=NiPoint3* optionalEyePosition`，唯一写入者是 REFR/Actor 的 vtable 槽 0x3C8）；臂块（0xbb252b）以 `record+0x18 != 0`、`+0x2B != 0`、`[graph+0x248]==0` 等为门，成功时跳复位；63581 采样门要求双槽 `+4>2` **且 `+0x38>0`**、`t_larger ≥ 0`、`t_smaller < 0`；`f=1.0` 只由 63582 写（63568 只写 `+0x32`）；63575 的计数也依赖眼位。眼位是 v18 观测到的“每步 Path A + f 清零 + numData 0”的机器码解释，见[审计十六](#audit16)。
+- **v19 运行期补注（2026-10-26）**：候选 `[graph+0x218] rootNode = 0`（审计十四“v15 借用期非空”的旧读法不成立）；臂块外层门因此全部满足后仍在 0xbb2603 的 `63864()` 归一处止步（`xmm6 = 63864() - 0.5*dt` 当返回值 ≤0.25），步长不足以越过 `1.25*dt`，t 未被改写。故“rootNode 为空时步长固定 0.25”不成立，`63864` 是 arm 的实际步长闸门，见[v19 运行记录](independent-behavior-graph.md#g2-v19-run)。
 - 头部种子/时序是优先阻断假设，不是唯一已证根因；审计十六后，眼位输入才是本配方缺的第一个上游量，`[graph+0x248]` 语义与 63666/63582/58423 门后链仍未取证。受控播种若另行选择也只是因果实验，写116/1或哈希变化不能替代G2有意义idle/有效骨/源对照及后续生命周期验收。
 
 下文按审计日期保留原指令记录和当时结论；涉及已过时判断以本节和各处后验注为准。92a3ed0文档澄清本身未新增运行证据；此后v18增加既有流程的只读观测并于2026-10-26运行一次（30+1行，判读见[运行记录](independent-behavior-graph.md#g2-v18-run)），审计十六（同日）补做了眼位/记录/分岔/采样门的机器码审计，见[审计十六](#audit16)。
@@ -491,7 +492,7 @@ python -c "import sys; sys.path.insert(0,'.'); import disasm_func as df; from ca
 **Q3 —— 能把 t 抬出复位值的只有 Path A 内的“眼位推进块”（0xbb252b–0xbb265d）**
 
 1. 可达条件（0xbb24d8 起逐条）：`record+0x18 != 0`、`record+0x2A == 0`、`record+0x2B != 0`、`[graph+0x248] == 0`，并且 `record+0x2C == 0` 或（`[graph+0x220]` 槽 `+4>2` 且 `+0x38>0`）。
-2. 内容：`rootNode(+0x218)` 与 `record+0x18` 的距离²（再除以 `[root+0xF0]²`）→ 与 400²/800²/常数比较得出插值步长（`63864` 参与）→ `xmm1 = t_larger + step`。只有 `xmm1 > 1.25*dt` 才执行 `movss [graph + bp*4 + 0x1E8], xmm1`（0xbb2650，`bp` = 较小者下标），随后 `jmp 0xbb26fa` **跳过复位**。
+2. 内容：`rootNode(+0x218)` 与 `record+0x18` 的距离²（再除以 `[root+0xF0]²`）→ 与 400²/800²/常数比较得出插值步长（`63864` 参与）→ `xmm1 = t_larger + step`。只有 `xmm1 > 1.25*dt` 才执行 `movss [graph + bp*4 + 0x1E8], xmm1`（0xbb2650，`bp` = 较小者下标），随后 `jmp 0xbb26fa` **跳过复位**。**v19 运行期注**：0xbb25fc–0xbb261c 的 `63864()` 归一才是实际步长闸门（返回值 ≤0.25 时 `xmm6 = 63864() - 0.5*dt`），本轮 no-arm 正发生在此，见[v19 运行记录](independent-behavior-graph.md#g2-v19-run)。
 3. 复位块（0xbb2662–0xbb26f5）只在 `-t_larger ≥ 0`（t_larger ≤ 0）时执行：`t0=0`、`t1=-MAXFLT`，并逐轨道清 onFraction/flags、尾写 `[tracks+0x32]=0`。**arm 与复位互斥**：arm 成功的那帧不复位，未 arm 的帧把 t 打回复位值并清写槽。
 4. 与 v18 对应：`+0x18=null` 使 0xbb24dc 的 `test r8,r8; je 0xbb2662` 直接跳过 arm 块 → t 永远 `{0,-MAXFLT}` → 每帧 Path A 复位 → 双槽 `+0x38=0`、`+0x32=0`。
 
