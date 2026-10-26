@@ -13,6 +13,7 @@
 - Path B需`record+0x2A==0`、`t_larger ≥ 0` 与 `t_smaller > -MAXFLT`（严格；无上界，见[审计十六](#audit16)）。**v18 运行期**：`record+0x2A=0` 的配方下仍 120 步全 Path A（`w245=0x101 b246=1`、每步交换一次双槽），t 在首次 update 后恒为 `{0,-MAXFLT}`；序言先减 dt 使 fork 时 t_larger<0，`record+0x18` 恒空又使唯一 t 推进块不可达。这不是“所有正 dt 原生帧都不可能 Path B”的证明——原生帧靠 REFR 的 `ModifyAnimationUpdateData` 填 `optionalEyePosition` 后由 arm 块把 t 抬起来。
 - **审计十六**：`record` 就是 `BSAnimationUpdateData`（`+0x18=NiPoint3* optionalEyePosition`，唯一写入者是 REFR/Actor 的 vtable 槽 0x3C8）；臂块（0xbb252b）以 `record+0x18 != 0`、`+0x2B != 0`、`[graph+0x248]==0` 等为门，成功时跳复位；63581 采样门要求双槽 `+4>2` **且 `+0x38>0`**、`t_larger ≥ 0`、`t_smaller < 0`；`f=1.0` 只由 63582 写（63568 只写 `+0x32`）；63575 的计数也依赖眼位。眼位是 v18 观测到的“每步 Path A + f 清零 + numData 0”的机器码解释，见[审计十六](#audit16)。
 - **v19 运行期补注（2026-10-26）**：候选 `[graph+0x218] rootNode = 0`（审计十四“v15 借用期非空”的旧读法不成立）；臂块外层门因此全部满足后仍在 0xbb2603 的 `63864()` 归一处止步（`xmm6 = 63864() - 0.5*dt` 当返回值 ≤0.25），步长不足以越过 `1.25*dt`，t 未被改写。故“rootNode 为空时步长固定 0.25”不成立，`63864` 是 arm 的实际步长闸门，见[v19 运行记录](independent-behavior-graph.md#g2-v19-run)。
+- **审计十七（2026-10-26）**：臂块步长闸门 63864（0xbc3990，唯一调用点 0xbb2603）返回 `hkbBehaviorGraph::activeNodes`（`+0x98`）上某个归一化动画状态量的最小值，无合格节点时 FLT_MAX；候选上实测等价于 ≤0.04583，`-0.5*dt` 后必然过不了 `1.25*dt` 门。候选 rootNode（+0x218）由构造器 0xbad070 清零，审计集内无人重新写入，原生图写入者仍 UNVERIFIED。结论：眼位是必要条件而非充分条件，下一步回到选择/生成链，见[审计十七](#audit17)。
 - 头部种子/时序是优先阻断假设，不是唯一已证根因；审计十六后，眼位输入才是本配方缺的第一个上游量，`[graph+0x248]` 语义与 63666/63582/58423 门后链仍未取证。受控播种若另行选择也只是因果实验，写116/1或哈希变化不能替代G2有意义idle/有效骨/源对照及后续生命周期验收。
 
 下文按审计日期保留原指令记录和当时结论；涉及已过时判断以本节和各处后验注为准。92a3ed0文档澄清本身未新增运行证据；此后v18增加既有流程的只读观测并于2026-10-26运行一次（30+1行，判读见[运行记录](independent-behavior-graph.md#g2-v18-run)），审计十六（同日）补做了眼位/记录/分岔/采样门的机器码审计，见[审计十六](#audit16)。
@@ -534,6 +535,47 @@ python audit16_window.py 0x7e5b60 0x80 0x10
 
 静态结论只覆盖本镜像的可达调用图：`[graph+0x248]` 的语义、`[graph+0x160]` 回退表内容、63666 的输出选择内部、63582 的 59303/64112 混合细节、58423 各门在候选上的实际值仍 UNVERIFIED。`optionalEyePosition` 之外是否还有其它输入能 arm t，未被本条排除。
 
+
+<a id="audit17"></a>
+## 审计十七：臂块步长闸门 63864 与候选 rootNode 缺失（2026-10-26）
+
+> 起因 = [v19 运行记录](independent-behavior-graph.md#g2-v19-run)：眼位非空、臂块外层门全过，但 t 未被改写（`arm-observed=no`）。本节只读镜像，地址为 RVA。
+
+**Q1 —— 63864（0xbc3990）是什么**
+
+1. 全镜像唯一调用点是 0xbb2603（63587 臂块内）；实参只有 `rcx = [graph+0x208]`（behaviorGraph），入口不读 `rdx`（死参数）。
+2. 函数体跨三块 .pdata 链（0xbc3990–0xbc39d0、0xbc39d0–0xbc3d63、0xbc3d63–0xbc3d87），返回 `xmm0 = xmm10`（0xbc3d6b）。
+3. `xmm10` 初值 `xmm12 = FLT_MAX`（0x17743f8）；随后遍历 `behaviorGraph+0x98`（CommonLib 头 `hkbBehaviorGraph::activeNodes; // 098`），对满足条件的节点做 `minss`/`maxss` 归并（0xbc3ce4–0xbc3ce9、0xbc3d03–0xbc3d0c）。即**返回 activeNodes 上某个归一化动画状态量的最小值**；无合格节点时返回 FLT_MAX。
+4. 单节点输入（0xbc3a7b–0xbc3acd）：`xmm6 = [node+0x64]`、`xmm2 = 0xacf340(node)`、`xmm0 = [node+0x68]`；若 `xmm0 > 0` 则 `xmm6 = ([node+0x64]/[node+0x68]) * 0xacf340(node)`、`xmm2 = [node+0x68]`；`[node+0x72]==3 && [node+0x106]!=0` 时对 xmm6 取负；随后要求 `xmm6 != 0` 且 `xmm2 > 0`。再对 `[node+0x50]` 指向的数组（count `[+0x18]`，步长 0x20）做 min/max，并与 `[[node+0x88]+0x10]` 比较（0xbc3aee–0xbc3b66 等）。**这些字段的时间/权重语义未逐项证实**——本条只证明它是一个“取小”的动画状态量，不是常量。
+
+**Q2 —— 为什么这解释了 v19 的 no-arm**
+
+0xbb25fc–0xbb261c：步长候选 `xmm6`（rootNode 空时为 0.25）先与 `63864()` 比较，`63864() > 0.25` 才保留 0.25，否则 `xmm6 = 63864() - 0.5*dt`；随后 0xbb2620 用 `xmm1 = xmm6 + t_larger` 与 `1.25*dt` 比较，只有更大才写 t。本配方 `t_larger = -dt = -1/60`，故 arm 要求 `xmm6 > 0.0375`，等价于 **`63864() > 0.04583`**。v19 实测 t 未变 ⇒ 候选上 `63864() ≤ 0.04583`（或 NaN）：activeNodes 里至少一个合格节点给出了接近 0 的值，`-0.5*dt` 后步长变负，必然不过门。
+
+**Q3 —— 候选 rootNode（+0x218）的来源**
+
+1. `BShkbAnimationGraph` 构造器 0xbad070 把 `[r14+0x218]` 与 +0x1F0/+0x1F8/+0x200/+0x208/+0x220/+0x228 一起清零（0xbad216–0xbad247，`r15=0`）；构造器不设置 rootNode。
+2. 审计函数集（含 63870/63946/63949/63950 的 listings）内没有图 +0x218 的写入；全镜像“按 .pdata 逐函数反汇编 + disp 0x218 写入”扫描命中大量其它结构的 +0x218 写入，但未命中图构造器那一处（该函数块在扫描中失步），因此“谁在原生图上写入 rootNode”仍 **UNVERIFIED**。
+3. 运行期事实：候选 `[graph+0x218]=0`（v19 每条 FRAME 行），与审计十“候选装载止步 63949、63870 尾链未执行”一致；`63575` 的距离阈值路径与臂块的距离分支因此都不可用。
+
+**结论**
+
+- v19 的 no-arm 既不是记录字段问题，也不是眼位指针问题，而是**臂块步长来自 activeNodes 的动画状态量（63864），候选上该值≈0**；眼位是必要条件，不是充分条件。
+- 不改配方时能改变 63864 返回值的只有“让 activeNodes 带上真实的动画时间/权重”——即**动画选择/生成**这一步（v7 时代结论：65149/65237 生成遍历从未在候选上产出选择）。这解释了为什么 v11–v19 逐层开门后 pose 仍冻结。
+- 因此 G2 的下一个有界问题回到选择链：**audit18 先读 63602 生成遍历（65237）的入口门与 63666 的输出选择**，判断“显式选择”是否需要一次新契约。
+
+### 审计十七新增复现命令
+
+```powershell
+cd E:\SkyrimTools\Proj\CharacterPanel\build\g1-audit-20261023
+python audit16_window.py 0xbc3990 0x0 0x584 > listings/audit17_63864_full.txt   # 63864 全函数（跨 .pdata 链）
+python audit17_store_scan.py 0x218    # 按 .pdata 逐函数的 +0x218 写入扫描
+python audit16_window.py 0xbad220 0x40 0x30   # 构造器清零 +0x218
+```
+
+### 审计十七限制
+
+`63864` 的字段语义、`0xacf340`/`0xac3400` 的返回值、原生图上 rootNode 的实际写入者仍未证实；本轮只用运行期“`63864() ≤ 0.04583`”与静态“取小 + 唯一调用点”定位了闸门。未运行新游戏、未改驱动配方。
 
 ## 对设计契约的影响
 
