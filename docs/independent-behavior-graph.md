@@ -14,7 +14,7 @@
 
 [v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
 
-v18 把"输出轨道头的初始化/重置/重新填充"这一优先假设收窄为两条运行期事实：**复位发生在本步 63602 结束之后、63587 返回之前**（双槽 onFraction 由 1.0 变 0.0，`numData` 始终 0），以及**本配方每步都走 Path A**（`w245=0x101 b246=1`、双槽每步各交换一次、t 对被复位为 `{0,-MAXFLT}` 且不累积）。[审计十六](behavior-graph-construction-audit.md#audit16) 同日给出机器码解释：该 record 就是 `BSAnimationUpdateData`，`+0x18` 是 `optionalEyePosition`，只有 REFR 的 `ModifyAnimationUpdateData` 会填；arm 块以它非空为门，`0x54c130` 的引擎每帧路径与插件自建记录都是 null，所以 t 永远回不到合法区间。Path B 的真条件是 `record+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`（`{0,-MAXFLT}` 即使 dt=0 也不满足）；63581 的采样门还要求双槽 `+0x38>0`，而 `f=1.0` 只由 63582 写、Path A 每步把它清回 0。因此 63575 的解析、`0x246` 清零与 63568 回填全被绕过，`0x240` 的原生值每次 update 后为 0，采样看到的 116 只是插件镜像。v19 把这一解释推进了一步：[运行记录](#g2-v19-run) 显示 `rootNode([graph+0x218])=0`，臂块外层门虽全过，但步长被 0xbb2603 的 `63864()` 归一后仍不足以越过 `1.25*dt`，t 未被改写（`arm-observed=no`），因此没有 Path B。[审计十七](behavior-graph-construction-audit.md#audit17) 进一步确认 63864 取的是 `activeNodes` 上的归一化动画状态量（候选上 ≤0.04583），所以下一步回到选择/生成链（audit18），见[有界审计问题](#next-audit)；不播种、不改现有配方。详见 [v18 运行记录](#g2-v18-run)。
+v18 把"输出轨道头的初始化/重置/重新填充"这一优先假设收窄为两条运行期事实：**复位发生在本步 63602 结束之后、63587 返回之前**（双槽 onFraction 由 1.0 变 0.0，`numData` 始终 0），以及**本配方每步都走 Path A**（`w245=0x101 b246=1`、双槽每步各交换一次、t 对被复位为 `{0,-MAXFLT}` 且不累积）。[审计十六](behavior-graph-construction-audit.md#audit16) 同日给出机器码解释：该 record 就是 `BSAnimationUpdateData`，`+0x18` 是 `optionalEyePosition`，只有 REFR 的 `ModifyAnimationUpdateData` 会填；arm 块以它非空为门，`0x54c130` 的引擎每帧路径与插件自建记录都是 null，所以 t 永远回不到合法区间。Path B 的真条件是 `record+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`（`{0,-MAXFLT}` 即使 dt=0 也不满足）；63581 的采样门还要求双槽 `+0x38>0`，而 `f=1.0` 只由 63582 写、Path A 每步把它清回 0。因此 63575 的解析、`0x246` 清零与 63568 回填全被绕过，`0x240` 的原生值每次 update 后为 0，采样看到的 116 只是插件镜像。v19 把这一解释推进了一步：[运行记录](#g2-v19-run) 显示 `rootNode([graph+0x218])=0`，臂块外层门虽全过，但步长被 0xbb2603 的 `63864()` 归一后仍不足以越过 `1.25*dt`，t 未被改写（`arm-observed=no`），因此没有 Path B。[审计十七](behavior-graph-construction-audit.md#audit17) 进一步确认 63864 取的是 `activeNodes` 上的归一化动画状态量（候选上 ≤0.04583），[审计十八](behavior-graph-construction-audit.md#audit18) 则证明每步 63602 通过程只作用于未装载的栈上壳图、从未在候选上生成任何东西（真正的生成入口是角色级 0xbc3270/0xbc32d0 → 65232 → 65237，配方未调用）。下一步是 audit19（`0xbb31b0` 与 sink/adapter 布局），见[有界审计问题](#next-audit)；不播种、不改现有配方。详见 [v18 运行记录](#g2-v18-run)。
 
 ## 目标与边界
 
@@ -728,7 +728,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 
 **判定**：G2 仍 **NOT PASSED**——没有 arm、没有 Path B，pose 与 v11–v18 同为 `bc160a8c2b3a5a58`；本轮只证明“眼位非空 + 外层门满足”不足以保证臂块执行。
 
-**下一有界问题（audit18）**：[审计十七](behavior-graph-construction-audit.md#audit17) 已把 no-arm 定位到 63864——它返回 `hkbBehaviorGraph::activeNodes` 上某个归一化动画状态量的最小值，候选上该值 ≤0.04583，`-0.5*dt` 后必过不了 `1.25*dt` 门，故眼位是必要条件而非充分条件。下一步回到选择/生成链：读 63602 生成遍历（65237）的入口门与 63666 的输出选择，判断是否需要一次“显式选择”的新契约。audit18 结论前不调 eye 偏移、不改 dt、不写 t/f。
+**下一有界问题（audit19）**：[审计十七](behavior-graph-construction-audit.md#audit17) 把 no-arm 定位到 63864（activeNodes 上的归一化动画状态量，候选上 ≤0.04583）；[审计十八](behavior-graph-construction-audit.md#audit18) 进一步证明 **63602 从未在候选上生成任何东西**——它的生成/更新/复位都作用于第一实参，而配方传的是未装载的栈上壳图；真正的生成入口是角色级 0xbc3270/0xbc32d0 → 65232（门：`character.behaviorGraph != 0`、`behaviorGraph.isActive (+0x12C)`、分区规模 `numStaticNodes (+0x128)`）→ 65237，配方从未调用。下一步读 `0xbb31b0`（0xbc32d0 的唯一调用者）与 sink/adapter 布局，然后才谈“显式生成”新契约。audit19 结论前不新增原生调用、不改配方、不写 t/f。
 
 ## 当前采集器与操作
 
@@ -802,6 +802,7 @@ BehaviorGraphProbe=true
 | G2 v19 实现与部署 | 2026-10-26：单变量眼位实验已实现（提交 `e17d5d1`）并部署——注入分支每步记录 `+0x18` 指向 rootNode 位置 +900 的只读 3×float；FRAME 行改 `schema=v19` 并追加 `root218/b248/eye`，summary 加 `arm-observed`；Release 身份 `…v19-eye-arm-20261026-e17d5d12f6…`（DLL `344d9abb…`），三个 engine-free 案例通过；v18 对备份在 `dist/deploy-backup-20261026-v18/`，部署 INI=`inject`（未打包），见[契约与实现](#g2-v19-contract)、[构建记录](build.md#v19-eye-arm-build) | —（运行见下行） |
 | G2 v19 运行与判读 | 2026-10-26 23:46 会话：身份与构建一致；FRAME 30+1、IG 40、BG 36，无`[E]`/崩溃，`source-stable=true retained=true`；`root218=0 b248=0`、`eye` 非空、step 0 旧读槽 f=1.0，但 **`arm-observed=no`**、t 恒 `{0,-MAXFLT}`、无 Path B、pose 仍 `bc160a8c2b3a5a58`；日志归档（41,470字节，`45AAEE09…`），INI 已回 off，见[v19记录](#g2-v19-run) | **audit17**：`63864()` 返回值语义、候选 rootNode 缺失；双槽 f 初值待后续 |
 | 审计十七（机器码） | 2026-10-26：臂块步长闸门 = 63864（0xbc3990，唯一调用点 0xbb2603），返回 `hkbBehaviorGraph::activeNodes(+0x98)` 上归一化动画状态量的最小值（默认 FLT_MAX）；候选上 ≤0.04583 故 `-0.5*dt` 后必过不了 `1.25*dt`；候选 rootNode 由构造器清零、审计集内无写入者，见[审计十七](behavior-graph-construction-audit.md#audit17) | 63864 字段语义、`0xacf340`/`0xac3400` 返回值、原生图 rootNode 写入者 |
+| 审计十八（机器码） | 2026-10-26/27：63602 的生成/更新/复位只作用于第一实参（`r13=rcx`），引擎壳图助手 0xbacc90 与配方同构而壳图未装载 → **63602 从未在候选上生成**（修正审计十三/十四）；真正入口 0xbc3270/0xbc32d0 → 65232（门 `character.behaviorGraph`、`isActive(+0x12C)`、`numStaticNodes(+0x128)`）→ 65237，配方未调用，见[审计十八](behavior-graph-construction-audit.md#audit18) | `0xbb31b0` 上下文、sink/adapter 布局、第二实参六槽语义、候选 isActive/numStaticNodes 运行值 |
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
@@ -816,11 +817,13 @@ BehaviorGraphProbe=true
 
 **audit17 已执行**（[审计十七](behavior-graph-construction-audit.md#audit17)）：臂块步长闸门是 63864（0xbc3990，唯一调用点 0xbb2603），它返回 `hkbBehaviorGraph::activeNodes`（`+0x98`）上某个归一化动画状态量的最小值（默认 FLT_MAX）；v19 的 no-arm 等价于候选上该值 ≤0.04583，`-0.5*dt` 之后必然过不了 `1.25*dt`。候选 `[graph+0x218] rootNode` 由构造器 0xbad070 清零、审计集内无人重新写入（原生图写入者仍 UNVERIFIED）。结论：**眼位是必要条件，不是充分条件**。
 
-因此下一个有界问题是 **audit18：候选上 63602 的生成遍历（65237）为何没有产出可采样的动画状态**——先读 65237 的入口门与 63666 的输出选择，判断“显式选择”是否需要一次新契约。audit18 结论前不调 eye 偏移、不改 dt、不写 t/f。
+**audit18 也已执行**（[审计十八](behavior-graph-construction-audit.md#audit18)）：63602 的生成/更新/复位全部作用于**第一实参**（`r13 = rcx`）；引擎自己的壳图助手 0xbacc90 与我们的配方同构，第一实参是未装载的栈上壳图，所以 65149 在第一门（`character.behaviorGraph != 0`）返回、63587 在序言四门返回——**v7–v19 的 63602 通过程从未在候选上生成任何东西**（修正审计十三/十四的推断）。真正的生成入口是角色级 0xbc3270/0xbc32d0 → 65232（门：`character.behaviorGraph != 0`、`behaviorGraph.isActive (+0x12C)`、分区规模 `numStaticNodes (+0x128)`）→ 65237（递归遍历，写 sink），配方一次都没调用。`generatorOutputs` 的 `numData` 全程 0 因此是预期结果。
 
-仍未取证：`[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 的输出选择、63582 的 59303/64112 混合、58423 各门在候选上的实际值、原生帧双槽 f 的初值（源 gen0 f=1.0 对候选 f=0.0）、63864 字段语义、以及原生图 rootNode 的写入者。
+因此下一个有界问题是 **audit19：`0xbb31b0`（0xbc32d0 的唯一调用者）与 sink/adapter（vtable `0x1989320`/`0x1989360`）的布局**——确认引擎每帧在什么上下文、用什么缓冲调用生成，以及候选上 `behaviorGraph.isActive`/`numStaticNodes` 的实际值；之后才谈“显式生成”新契约。audit19 结论前不新增原生调用、不改 dt、不写 t/f。
 
-若后续获准增加观测，仍应与真实正常源帧的 record/t/槽写入顺序作同阶段对照，并按同一步号成对记录两槽的 numTracks（+0x4）、numData（+0x32）、onFraction（+0x38）、元素身份与 t0/t1；插件自建 ctx 或 0x100 字节头哈希不能替代。v18 取证包与运行结果见 [v18 记录](#g2-v18-run)，审计十六/十七见[审计记录](behavior-graph-construction-audit.md#audit16)。
+仍未取证：`[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 的输出选择、63582 的 59303/64112 混合、58423 各门在候选上的实际值、原生帧双槽 f 的初值（源 gen0 f=1.0 对候选 f=0.0）、63864 字段语义、原生图 rootNode 的写入者、63602 第二实参的六个 vtable 槽语义。
+
+若后续获准增加观测，仍应与真实正常源帧的 record/t/槽写入顺序作同阶段对照，并按同一步号成对记录两槽的 numTracks（+0x4）、numData（+0x32）、onFraction（+0x38）、元素身份与 t0/t1；插件自建 ctx 或 0x100 字节头哈希不能替代。v18 取证包与运行结果见 [v18 记录](#g2-v18-run)，审计十六/十七/十八见[审计记录](behavior-graph-construction-audit.md#audit16)。
 
 历史环境与材料：AE 1.6.1170（`E:\SteamLibrary\steamapps\common\Skyrim Special Edition`）、MO2 `E:\SkyrimAE`；历次部署点/包身份保留在[构建](build.md)及逐轮运行记录。可复现审计在`build/g1-audit-20261023/`，包括listings、`ragdoll_rtti_scan.py`和`output_track_scan.py`；本轮不修改或运行这些历史工具。
 

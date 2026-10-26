@@ -14,6 +14,7 @@
 - **审计十六**：`record` 就是 `BSAnimationUpdateData`（`+0x18=NiPoint3* optionalEyePosition`，唯一写入者是 REFR/Actor 的 vtable 槽 0x3C8）；臂块（0xbb252b）以 `record+0x18 != 0`、`+0x2B != 0`、`[graph+0x248]==0` 等为门，成功时跳复位；63581 采样门要求双槽 `+4>2` **且 `+0x38>0`**、`t_larger ≥ 0`、`t_smaller < 0`；`f=1.0` 只由 63582 写（63568 只写 `+0x32`）；63575 的计数也依赖眼位。眼位是 v18 观测到的“每步 Path A + f 清零 + numData 0”的机器码解释，见[审计十六](#audit16)。
 - **v19 运行期补注（2026-10-26）**：候选 `[graph+0x218] rootNode = 0`（审计十四“v15 借用期非空”的旧读法不成立）；臂块外层门因此全部满足后仍在 0xbb2603 的 `63864()` 归一处止步（`xmm6 = 63864() - 0.5*dt` 当返回值 ≤0.25），步长不足以越过 `1.25*dt`，t 未被改写。故“rootNode 为空时步长固定 0.25”不成立，`63864` 是 arm 的实际步长闸门，见[v19 运行记录](independent-behavior-graph.md#g2-v19-run)。
 - **审计十七（2026-10-26）**：臂块步长闸门 63864（0xbc3990，唯一调用点 0xbb2603）返回 `hkbBehaviorGraph::activeNodes`（`+0x98`）上某个归一化动画状态量的最小值，无合格节点时 FLT_MAX；候选上实测等价于 ≤0.04583，`-0.5*dt` 后必然过不了 `1.25*dt` 门。候选 rootNode（+0x218）由构造器 0xbad070 清零，审计集内无人重新写入，原生图写入者仍 UNVERIFIED。结论：眼位是必要条件而非充分条件，下一步回到选择/生成链，见[审计十七](#audit17)。
+- **审计十八（2026-10-26/27）**：63602 的生成/更新/复位全部作用于**第一实参**（`r13 = rcx`）；引擎自己的壳图助手 0xbacc90 与我们的配方同构，第一实参就是未装载的栈上壳图，因此 65149 在第一门（`character.behaviorGraph != 0`）返回、63587 在序言四门返回——**63602 从未在候选上生成任何东西**（修正审计十三/十四的推断）。真正的生成入口是角色级包装 0xbc3270/0xbc32d0 → 65232（门：`behaviorGraph.isActive (+0x12C)`、分区规模 `numStaticNodes (+0x128)`）→ 65237，配方一次都没调用。见[审计十八](#audit18)。
 - 头部种子/时序是优先阻断假设，不是唯一已证根因；审计十六后，眼位输入才是本配方缺的第一个上游量，`[graph+0x248]` 语义与 63666/63582/58423 门后链仍未取证。受控播种若另行选择也只是因果实验，写116/1或哈希变化不能替代G2有意义idle/有效骨/源对照及后续生命周期验收。
 
 下文按审计日期保留原指令记录和当时结论；涉及已过时判断以本节和各处后验注为准。92a3ed0文档澄清本身未新增运行证据；此后v18增加既有流程的只读观测并于2026-10-26运行一次（30+1行，判读见[运行记录](independent-behavior-graph.md#g2-v18-run)），审计十六（同日）补做了眼位/记录/分岔/采样门的机器码审计，见[审计十六](#audit16)。
@@ -576,6 +577,60 @@ python audit16_window.py 0xbad220 0x40 0x30   # 构造器清零 +0x218
 ### 审计十七限制
 
 `63864` 的字段语义、`0xacf340`/`0xac3400` 的返回值、原生图上 rootNode 的实际写入者仍未证实；本轮只用运行期“`63864() ≤ 0.04583`”与静态“取小 + 唯一调用点”定位了闸门。未运行新游戏、未改驱动配方。
+
+<a id="audit18"></a>
+## 审计十八：63602 只在自己的第一实参上生成，候选从未收到生成遍历（2026-10-26/27）
+
+> 起因 = [审计十七](#audit17) 的结论“缺的是动画选择/生成”。本节只读镜像，地址为 RVA。
+
+**Q1 —— 63602（0xbb4c50）的两个实参分别做什么**
+
+1. 序言直接固定：`r13 = rcx`（第一实参）、`rsi = rdx`（第二实参），没有交换（0xbb4c83–0xbb4c86）。
+2. 63602 对 **r13** 做全部“每图运算”：`[r13+0x243]=1`（0xbb4cbc）、65149 生成（`rcx = r13+0xC0`，0xbb635e）、63587 更新（`rcx = r13`，0xbb63b5）、63584 复位（`rcx = r13`，0xbb63c5）、`[r13+0x140]` 通知（0xbb63cd）。
+3. 第二实参 rsi 只被当作**被写对象**：一系列 `mov rax,[rsi]` + `call [rax+0x30/0x38/0x40/0x48/0x50/0x60]`，实参是 63602 栈上 `[rbp-0x28]` 起、步长 0x28 的表项指针（0xbb53e3–0xbb54b4 等）。即“把一份按图组织的表写进第二实参”，不是生成。
+
+**Q2 —— 引擎自己的调用方式与我们的配方完全相同，但生成发生在壳上**
+
+1. `0xbacc90`（70 B）是引擎的“每图管线助手”：`63555(shell,0,0)` 构造栈上壳图 → `63602(shell, target)` → `63556(shell)` 销毁（0xbaccaa–0xbaccc8）。插件 `independent_graph.cpp` 的 `construct(shell,nullptr,false); frame_pipeline(shell, candidate); shell_destroy(shell);` 与它逐句同构。
+2. 因此 63602 的 r13 = **壳图**。壳图由 `BShkbAnimationGraph` 构造器建立、holder=nullptr、从未装载项目：`[shell+0xC0+0x58]`（`character.behaviorGraph`）为 0，`[shell+0x110]`、`[shell+0x208]` 也为 0。
+3. 于是这条路径上：65149 在第一道门 `cmp qword [rcx+0x58],0`（0xc24c5d）直接返回；63587 在序言四门（0xbb23c1–0xbb23f3）直接返回；63584 只对壳图写 `[+0x1E8]/[+0x1EC]=-MAXFLT`、`[+0x230]=0`。**整条 63602 通过程对壳图是空操作，对候选只做表写入，不产生任何 pose 数据。**
+4. 修正审计十三/十四的推断：当时把 63602 的 r13 当成“目标图”、并据此认为“管线遍历对候选产生内容写入”。按本节，63602 的生成/更新/复位只作用于第一实参，而配方里第一实参是壳图。
+
+**Q3 —— 真正的生成入口（在别处）**
+
+1. `0xbc3270`（83 B）与 `0xbc32d0`（100 B）是成对的生成包装：都先 `cmp qword [rcx+0x58],0`（第一实参为 **hkbCharacter**），再以 `(ctx, character, adapter{vtbl, sink}) → 65232` 调用（0xbc32b1 / 0xbc3322）。二者只差适配器 vtable（`0x1989320` / `0x1989360`）与是否带 `xmm1` 时间。
+2. `65232`（0xc28af0，443 B）：`58315` 建 context → `rdi=[character+0x58]`（behaviorGraph）→ **门：`[behaviorGraph+0x12C]`（isActive）**；用 `[behaviorGraph+0x128]`（numStaticNodes，int16）算分区规模（0xc28b99–0xc28bd3）→ 组装分区数组 → 调 **65237**（0xc28f30，4250 B，递归遍历；输出写入传入的 adapter/sink）。
+3. `0xbc3270` **没有任何直接调用点**（只经 vtable 到达）；`0xbc32d0` 只有一个调用点 `0xbb331c`，位于 `0xbb31b0`（0x1b2 B）。也就是说生成是由上层（角色/管理器）通过 vtable 或该路径驱动的，而不是 63602。
+
+**Q4 —— 63584（0xbb0710）是“输出/计时复位”**
+
+`r8=[rcx+0x220]`、`[rcx+0x1E8]=-MAXFLT`、`[rcx+0x1EC]=-MAXFLT`、`[rcx+0x230]=0`，随后检查 `[0x220]`/`[0x228]` 是否为空（0xbb0710–0xbb0748）。它与 63587 的 Path A 复位是两套：63584 作用于 63602 的第一实参（本配方=壳图），不影响候选的 t 对（v19 的 pre/post-pipeline 行也证实 63602 前后 t 不变）。
+
+**结论**
+
+- v7–v19 的“63602 生成管线”从未在候选上生成任何东西：生成/更新/复位都落在栈上壳图，候选只被写入变量表。`generatorOutputs` 的 `numData` 全程为 0 因此是**预期结果**，不是某个门的偶发失败。
+- 候选要拿到动画状态，必须调用**角色级生成入口**（0xbc3270/0xbc32d0 → 65232 → 65237），并满足 `character.behaviorGraph != 0`、`behaviorGraph.isActive (+0x12C)` 与分区规模 `numStaticNodes (+0x128)` 的前提；这需要一个正确构造的 sink/adapter（vtable `0x1989320`/`0x1989360` 的对象 + 输出缓冲），当前配方一样都没有。
+- 在此之前，任何“调 63602 再采样”的配方都不会产生 pose；这与 v11–v19 的 pose 恒为 `bc160a8c2b3a5a58` 完全一致。
+
+**下一个有界问题（audit19）**：`0xbb31b0`（0xbc32d0 的唯一调用者）与生成 sink/adapter 的布局——确认引擎每帧在什么上下文、用什么缓冲调用生成，以及候选上 `behaviorGraph.isActive`/`numStaticNodes` 的实际值。audit19 结论前不新增原生调用、不改配方。
+
+### 审计十八新增复现命令
+
+```powershell
+cd E:\SkyrimTools\Proj\CharacterPanel\build\g1-audit-20261023
+python disasm_func.py 0xbacc90     # 引擎的壳图/63602 助手
+python disasm_func.py 0xbc3270     # 角色级生成包装 A（vtable-only）
+python disasm_func.py 0xbc32d0     # 角色级生成包装 B（唯一调用者 0xbb31b0）
+python disasm_func.py 0xc24c50     # 65149：63602 的生成入口（第一门 = character.behaviorGraph）
+python disasm_func.py 0xc28af0     # 65232：isActive / numStaticNodes / 分区
+python audit16_window.py 0xbb636c 0x40 0x10    # 63602 的 65149/63587/63584 调用序
+python audit16_window.py 0xbb53e3 0x0 0xd0     # 第二实参的 vtable 表写入段
+python audit16_window.py 0xbb0710 0x0 0x40     # 63584 输出/计时复位
+```
+
+### 审计十八限制
+
+63602 第二实参（候选）的六个 vtable 槽（0x30/0x38/0x40/0x48/0x50/0x60）与 40 字节步长表项语义未解码；sink/adapter 的对象布局未解；`0xbb31b0` 的上下文未读；`behaviorGraph.isActive`/`numStaticNodes` 在候选上的运行期值未采集。本节未运行新游戏、未改配方。
 
 ## 对设计契约的影响
 
