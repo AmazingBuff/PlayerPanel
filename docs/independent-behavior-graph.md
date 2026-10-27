@@ -9,7 +9,7 @@
 | 关卡 | 截至 2026-10-27 的结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **NOT PASSED（但 2026-10-27 22:02 的 v20a 首次取得运动证据）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化。v20 首轮 guard 通过后在入口前崩溃（越界诊断，已修为 v20a）。**v20a 运行**：`63589(mode0)` 到达（guard `ready`、修正链四跳可读），首步即回填 `numData=116 f=1.0`，step 2 起 Path B 且 `arm-observed=yes`，`gen0elem` 与双槽元素哈希变化，候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`(60)→`8fb4cd336c4395bf`(120)、120/120 次变化，同时源侧 pose 不变、三份源基线逐行全等。缺逐骨/有限值证据与视觉确认，故仍不放行；**v21 运行（22:18）**：三点 `entries=116 finite=116 nonfinite=0`、`moved=94`（60/120，门槛 16）、抽样骨 38/76 `moved=yes`，但 `source-equal=8/21/15` 命中第 3 条 → 判据停止；审计证明第 3 条为**误报**（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`source-equal` 是十分量精确值相等，恒等/常量骨必然计入），见 [v20 记录](#g2-v20-run)、[v20a 记录](#g2-v20a-run)、[v21 契约](#g2-v21-contract) 与 [v21 运行记录](#g2-v21-run)；v22 已把该判据改为指针同一性 + “相等且在变化”计数，并于 23:03 运行通过：三点全有限、`alias=no`、60/120 `source-equal-moving=0`、`moved=94`、LHnd/LF30 在动 → **pose 内容证据成立**；G2 仍 NOT PASSED（跨批次持续性、语义对应与场景应用/视觉确认未证），见 [v22 契约](#g2-v22-contract) 与 [v22 运行记录](#g2-v22-run)。 |
+| G2 | **NOT PASSED（但 2026-10-27 22:02 的 v20a 首次取得运动证据）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化。v20 首轮 guard 通过后在入口前崩溃（越界诊断，已修为 v20a）。**v20a 运行**：`63589(mode0)` 到达（guard `ready`、修正链四跳可读），首步即回填 `numData=116 f=1.0`，step 2 起 Path B 且 `arm-observed=yes`，`gen0elem` 与双槽元素哈希变化，候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`(60)→`8fb4cd336c4395bf`(120)、120/120 次变化，同时源侧 pose 不变、三份源基线逐行全等。缺逐骨/有限值证据与视觉确认，故仍不放行；**v21 运行（22:18）**：三点 `entries=116 finite=116 nonfinite=0`、`moved=94`（60/120，门槛 16）、抽样骨 38/76 `moved=yes`，但 `source-equal=8/21/15` 命中第 3 条 → 判据停止；审计证明第 3 条为**误报**（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`source-equal` 是十分量精确值相等，恒等/常量骨必然计入），见 [v20 记录](#g2-v20-run)、[v20a 记录](#g2-v20a-run)、[v21 契约](#g2-v21-contract) 与 [v21 运行记录](#g2-v21-run)；v22 已把该判据改为指针同一性 + “相等且在变化”计数，并于 23:03 运行通过：三点全有限、`alias=no`、60/120 `source-equal-moving=0`、`moved=94`、LHnd/LF30 在动 → **pose 内容证据成立**；G2 仍 NOT PASSED（跨批次持续性、语义对应与场景应用/视觉确认未证），见 [v22 契约](#g2-v22-contract) 与 [v22 运行记录](#g2-v22-run)；v23 已把“语义对应”做成可判定观测（活动 clip generator + 在其自身时间上采样对照）并部署待测（[v23 契约](#g2-v23-contract)）。 |
 | G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
 
 [v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
@@ -69,7 +69,7 @@ OAR 隔离还包括图外状态：图变量和 `IsWeaponDrawn` 可通过 Actor �
 
 G1 通过后，在无 OAR 的原版基线只推进候选图。使用固定记录的时间步，采集候选剪辑时钟与输出姿态、源活动节点/变量/时钟/骨骼前后差分。窗口内禁止合法装备操作混入对照；用户换装备后重新建立基线。
 
-通过：候选原版 idle 持续、有意义地前进，必要骨的有效变换变化可验证，源保持对照；时钟、索引、状态机、元素头或姿态哈希变化单独都不够。**当前 G2 NOT PASSED，最新 v22（2026-10-27 23:03）**：`poseLocal` 层已取得 pose 内容证据——116/116 条在三点全有限、94 条在变化、LHnd/LF30 两根必要骨在动、`alias=no` 且 `source-equal-moving=0`、源侧全程不变。缺口收敛为“持续”（单批 120 步＝2 秒模拟，无跨批次证据）、“有意义”（未与 HKX/原版相位对应）与场景应用/视觉确认；见 [v22 运行记录](#g2-v22-run)。旧 v2/v17 只代表当时进度，源不变结论限于已采结构和 pose 内容。装载图生命周期与后续关卡不由此通过。
+通过：候选原版 idle 持续、有意义地前进，必要骨的有效变换变化可验证，源保持对照；时钟、索引、状态机、元素头或姿态哈希变化单独都不够。**当前 G2 NOT PASSED，最新 v22（2026-10-27 23:03）**：`poseLocal` 层已取得 pose 内容证据——116/116 条在三点全有限、94 条在变化、LHnd/LF30 两根必要骨在动、`alias=no` 且 `source-equal-moving=0`、源侧全程不变。缺口收敛为“持续”（单批 120 步＝2 秒模拟，无跨批次证据）、“有意义”（未与 HKX/原版相位对应）与场景应用/视觉确认；见 [v22 运行记录](#g2-v22-run)。v23 已实现“有意义”的可判定版本并部署待测：[v23 契约](#g2-v23-contract)。旧 v2/v17 只代表当时进度，源不变结论限于已采结构和 pose 内容。装载图生命周期与后续关卡不由此通过。
 
 前置激活/推进审计及 v1–v17 实现记录已保留；[最初 G2 契约](#2026-10-24-g2-契约drive-模式实验设计)的 63586/裸 Update 配方后来迭代为字符级 58453 激活、63602 管线、63587 包装与 v17 的 63581 直调。调用入口已定位不等于输出链可用，当前后续问题以[有界审计清单](#next-audit)为准。
 
@@ -935,12 +935,34 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 
 **第三份非别名证据**：源 pose 哈希三轮各不相同（`983fc2d4a169fa5b` / `bd107af608b00103` / `d3f3eeb452316397`），候选三点哈希三轮逐位相同（`bc160a8c2b3a5a58` / `63f638a6ac08d955` / `8fb4cd336c4395bf`），四骨数值同样逐位复现（例如索引 38 在 step 60 的 `q=(0.0439,0.1031,0.5867,-0.8021)`），而 step 0 的源 `p` 每轮不同（本轮 `(0.0000,-0.0439,15.6427)`，v21 为 `(0.0000,0.0663,15.9209)`）。候选内容与源内容无关，生成路径对同一输入确定性可复现。
 
-**下一有界问题（待评审，尚未预注册）**——两条互斥候选，都可只读完成：
+**下一有界问题（2026-10-27 23:07 选定第 2 条）**：语义对应由 [v23](#g2-v23-contract) 预注册并实现。**更正本段原先的说法**：第 2 条并非“不新增原生调用”——它必须调用一次 `aAnimation::SamplePartialTracks` 才能取得参照采样，v23 契约已把这次 const 只读调用单列并说明理由。第 1 条（跨批次持续性）仍待后续。
 
-1. **跨批次持续性**：同一次请求内连续跑多个 120 步批次（例如 0/120/240/360），检查 pose 继续变化、不收敛到常量、不回落绑定姿态，并记录剪辑时钟；这条直接补 G2 的“持续”。
-2. **语义对应**：把候选 `poseLocal` 与 HKX 参照在同一剪辑时间上的采样逐骨比较（项目已有 HKX 取数/采样设施），确认它确实在播 `mt_idle` 而不是任意变化；这条补“有意义”。
+<a id="g2-v23-contract"></a>
+## G2 v23 契约：语义对应（2026-10-27，已实现/已部署/未运行）
 
-两者都不新增原生调用；任选其一都构成新身份（v23）。场景应用与视觉确认属另一层，需先决定是否把候选 pose 接到显示图。
+**动机**：v22 证明 `poseLocal` 有限、在变化、未别名，但没有证明这些数值有语义——任何生成器写出像样的数字都能过那道门。G2 原文要求“有意义地前进”，本契约把它落成一个可判定的问题：**`poseLocal` 是不是某个活动片段在它自己时间上的采样？**
+
+**方法（只读遍历 + 一次 const 采样调用）**：
+
+1. 取 `candidate.characterInstance.behaviorGraph->activeNodes`（`hkArray<hkbNodeInfo>`，扫描前 256 项；运行期实测 97–125 项）。
+2. 只把 `nodeClone` 的 vtable 等于 `RE::VTABLE_hkbClipGenerator[0].address()` 的节点当片段生成器；不匹配记 `no-clip-generator`，**绝不做类型转换**。
+3. 读 `animationName` / `localTime` / `mode` / `playbackSpeed` / `binding`；`binding->animation` 与 `transformTrackToBoneIndices` 给出轨道→骨骼映射，越界索引记 `unmapped` 而非钳制。
+4. 在 `localTime` 上调用一次 `SamplePartialTracks`，写进本函数的临时 `std::vector`，然后逐条与 `poseLocal[bone]` 比较。
+5. 旋转用 `1-|dot|`（q 与 -q 同旋转，避免按分量比较的假失配），平移/缩放用分量差；ε 预注册为位置 1e-4、旋转 1e-5、缩放 1e-4。
+6. 每个检查点最多 3 条 `clip-ref` 行（0/60/120 → ≤9 行），`status=unavailable` 单独一行说明原因。
+
+**预注册判读（逐条，命中即停）**：
+
+1. 全部检查点都是 `status=unavailable` → 记 `unavailable`，**不给结论**；下一问改为“pose 从哪来”（生成器输出/层混合），不得据此判失败。
+2. 有 `status=compared` 但 `unmapped == tracks`（没有一条能映射到 `poseLocal`）→ 同样记 `unavailable`。
+3. `compared>0` 且 **`agreed == compared`** → **完全对应**：`poseLocal` 就是该片段在该 `time` 上的采样；`name`/`time`/`duration` 同时给出片段身份与相位。
+4. `agreed / compared >= 0.8` 且 `max-dpos <= 0.05`（模型单位）→ **主体对应**：绝大多数轨道一致，差异集中在少数骨，下一问是哪些骨被 IK/pose modifier 改写。
+5. 低于第 4 条 → **不是单一片段的直接采样**：记为分层/混合或后处理结果，下一问转层分解，不得把 v22 的“在变化”升级为“有意义”。
+6. 崩溃或源漂移 → 立即停止，保留完整日志与匹配 PDB，不在同会话调参重试。
+
+**这是唯一新增原生调用的轮次**：此前各轮都保持“零新增原生调用”。`SamplePartialTracks` 是 `hkaAnimation` 的 const 虚函数，产品每帧采样显示播放器走的就是这条路径；它只写本函数的临时缓冲，不写 pose、不写图、不改剪辑时间。
+
+**实现与部署（2026-10-27 23:11，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v23-clip-ref-20261027-dab0266d8d-cl94faaed0c6-20261027T151151Z`（干净 `dab0266`，子模块 `94faaed0`，无 `+dirty`；DLL `cda65d28…` 1,277,440 字节、PDB `9c28e222…` 35,696,640 字节、CodeView age 325）。新增 `clip_reference_policy.h`（旋转符号无关比较、位置/缩放分量差、聚合计数）与 19 断言 engine-free 用例；五个用例全过。首次编译在 `clip_reference_agrees` 上触发 cl C4834（`[[nodiscard]]` 返回值被丢弃，`/WX` 下为错误），该函数本就以累积为目的，去掉 `[[nodiscard]]` 后通过。包 `build/behavior-graph-v23-clip-ref-20261027/test-package/`（manifest `2ed82f4a…` 6,998 字节），ZIP 9,961,520 字节、SHA-256 `3cf6eb47…`，五条目重解压复核与 manifest 逐条相符。v22 三件套备份到 `dist/deploy-backup-20261027-v22/`（DLL `5756e0e6…`、PDB `b763d05f…`、`off` INI 1,061 字节 `cc0572ca…`），MO2 现为 v23 DLL/PDB，部署 INI=`inject`（1,072 字节 `88dec6d8…`）。**该轮不上机**；随后的一次运行待记录。
 
 ## 当前采集器与操作
 
@@ -1027,6 +1049,7 @@ BehaviorGraphProbe=true
 | G2 v21 运行与判读 | 2026-10-27 22:18 会话：身份一致、无崩溃无 `[E]`；ENTRY 1、FRAME 30+1、IG 55（40 基础 + 15 pose 行）、BG 36；三点 `entries=116 finite=116 nonfinite=0`，`moved=94`(60)/`94`(120)、`max-delta` 3.43/2.31，抽样骨 38、76 `moved=yes`、0、115 `moved=no`，源侧 `source-moved=0`、`source-pose-before=after=bd107af6…`；**`source-equal=8/21/15` 命中第 3 条 → 停止**；审计判定为误报（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`pose_sample_identical` 为十分量精确值相等）；日志归档（47,393 字节 `601D2B47…`），INI 回 off，见[v21 运行记录](#g2-v21-run) | 判据改为指针同一性 + “相等且在变化”计数（v22），一次运行后再判第 4 条 |
 | G2 v22 契约与实现 | 2026-10-27 22:56：`pose_buffer_alias`（`poseLocal` 指针同一性）+ `watch_aliasing`（相等且相对 step 0 变化的条目数），`pose-content` 加 `source-equal-moving`/`source-equal-static`/`alias` 三字段，行数与预算不变；pose content 用例扩到 36 断言、四例全过；身份 `…v22-alias-watch-20261027-22ef58464f…`（DLL `5756e0e6…`、age 323），ZIP `be5bd284…`、manifest `c9878cc7…`，v21 三件套备份到 `dist/deploy-backup-20261027-v21/`，部署 INI=`inject`（1,056 字节 `e7ba0854…`），见[契约](#g2-v22-contract)与[构建记录](build.md#v22-alias-watch-2026-10-27) | —（运行见下行） |
 | G2 v22 运行与判读 | 2026-10-27 23:03 会话：身份一致、无崩溃无 `[E]`；ENTRY 1、FRAME 30+1、IG 55、BG 36；三点 `entries=116 finite=116 nonfinite=0`、`alias=no`，`moved=94`(60/120)，`source-equal=21/15` 而 **`source-equal-moving=0`**、`source-equal-static=21/15`（即计数全由常量骨构成，闭合 v21 误报审计），抽样骨 38/76 两点均在动；源侧 `source-pose-before=after=d3f3eeb4…`、`source-stable=true retained=true`；**判据第 5 条成立 → pose 内容证据成立**，G2 仍 NOT PASSED（持续/语义/场景应用未证）；日志归档（47,564 字节 `6C06C504…`），INI 回 off，见[v22 运行记录](#g2-v22-run) | 下一问二选一（待评审）：跨批次持续性，或用 HKX 参照做语义对应 |
+| G2 v23 契约与实现 | 2026-10-27 23:11：只读遍历 `activeNodes`（前 256 项），vtable 等于 `RE::VTABLE_hkbClipGenerator[0].address()` 才当片段生成器；读 `animationName`/`localTime`/`binding`，用 `SamplePartialTracks` 在片段自身时间采样，按 `transformTrackToBoneIndices` 与 `poseLocal` 逐条比较（旋转用 `1-|dot|`）；新增 `clip_reference_policy.h` 与 19 断言用例，`clip-ref` ≤3 行/检查点；身份 `…v23-clip-ref-20261027-dab0266d8d…`（DLL `cda65d28…`、age 325），ZIP `3cf6eb47…`、manifest `2ed82f4a…`，v22 三件套备份到 `dist/deploy-backup-20261027-v22/`，部署 INI=`inject`（1,072 字节 `88dec6d8…`），见[契约](#g2-v23-contract)与[构建记录](build.md#v23-clip-ref-2026-10-27) | —（待上机；门槛 `agreed=compared` 或 ≥0.8 且 `max-dpos≤0.05`） |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |
@@ -1038,7 +1061,7 @@ BehaviorGraphProbe=true
 
 当前选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
 
-最新实际运行为 v22（2026-10-27 23:03）：pose 内容证据成立，G2 的剩余缺口是持续性与语义对应，两条候选下一问见 [v22 运行记录](#g2-v22-run)。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
+最新实际运行为 v22（2026-10-27 23:03）：pose 内容证据成立，G2 的剩余缺口是持续性与场景应用；语义对应已由 v23 做成可判定观测并部署待测（[v23 契约](#g2-v23-contract)）。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
 
 ## 维护约束
 
