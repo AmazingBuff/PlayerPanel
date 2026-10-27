@@ -1163,12 +1163,19 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     if (!node_is_clip_generator(node))
                                         continue;
                                     const auto* const clip = static_cast<const RE::hkbClipGenerator*>(node);
-                                    const RE::hkaAnimationBinding* const binding = clip->binding;
+                                    // Same rule as the v20a chain: never dereference an
+                                    // intermediate that has not been filtered first.
+                                    const RE::hkaAnimationBinding* const binding =
+                                        plausible_object_pointer(reinterpret_cast<std::uintptr_t>(clip->binding))
+                                        ? clip->binding
+                                        : nullptr;
                                     const RE::hkaAnimation* const animation = binding ? binding->animation.get() : nullptr;
-                                    const std::int32_t tracks = animation ? animation->numberOfTransformTracks : 0;
+                                    const bool animation_plausible = animation != nullptr &&
+                                        plausible_object_pointer(reinterpret_cast<std::uintptr_t>(animation));
+                                    const std::int32_t tracks = animation_plausible ? animation->numberOfTransformTracks : 0;
                                     const float local_time = clip->localTime;
                                     const std::string name = read_string(clip->animationName, 96);
-                                    if (!binding || !animation || tracks <= 0 || tracks > 512 || !std::isfinite(local_time))
+                                    if (!binding || !animation_plausible || tracks <= 0 || tracks > 512 || !std::isfinite(local_time))
                                     {
                                         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} slot={} index={} status=unavailable reason=bad-binding name='{}' tracks={} time={:.4f}",
                                             actor_id, request, step, reported, i, name, tracks, local_time);
