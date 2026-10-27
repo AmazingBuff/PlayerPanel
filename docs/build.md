@@ -226,6 +226,26 @@ Package: `build/behavior-graph-v27-display-pose-20261028/test-package/` (`SKSE/P
 
 Deployment (2026-10-28 00:21): the v26 trio was backed up to `dist/deploy-backup-20261028-v26/`, the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` + `DisplayPose=true` (1,063 bytes `2834670d…`). **No run has happened yet.**
 
+<a id="v28-display-step-2026-10-28"></a>
+## V28 per-frame display step build (2026-10-28)
+
+v27 established the display handoff and the user confirmed it visually: `ANIMATION DISPLAY … bones=116`, the panel showing the candidate's `H2H_Idle` stance, frozen by design. The [v28 contract](independent-behavior-graph.md#g2-v28-contract) makes it move by advancing the retained graph once per rendered frame through the same `63589(candidate, &mode0)` entry the bounded drive used, then applying the resulting `poseLocal`. A failed step falls back to the v27 frozen pose, and `DisplayStep=false` returns to v27. Steps 1/60/120 log a pose hash, which separates "did the graph advance" from "did the screen follow".
+
+This is the first round that calls the native generation entry from the render path, once per frame. The per-frame path has no world borrow and no ragdoll slot work; the entry's gates (setup / animationSkeleton / behaviorGraph non-null, `+0x12C` active) do not depend on them, but if the three hashes repeat the entry does not self-advance in isolation and the update chain becomes the next question.
+
+Commands (proxy variables cleared for the reason recorded above):
+
+```
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v28-display-step-20261028
+cmake --build --preset Release
+```
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v28-display-step-20261028-44dcdf4663-cl94faaed0c6-20261027T162729Z` (clean HEAD `44dcdf4663`, submodule `94faaed0`; no `+dirty`). DLL SHA-256 `e3f9ade882fb33eb7112026ca057df0176f06f91385597de99ec857bbf6b60e8` (1,302,016 bytes), PDB SHA-256 `3acff4afa5b5c1c8dd5748bd12ee4770e313b1b1b4c19056dcbf769777e207d9` (35,958,784 bytes); CodeView/PDB GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 337. Configure and build exited 0 with only the existing install-rule and D9025 warnings. Five engine-free cases pass with the local `g++` 15.1.
+
+Package: `build/behavior-graph-v28-display-step-20261028/test-package/` (`SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md`, `manifest.json` `46ae35ee…` 4,357 bytes); ZIP `CharacterPanel-behavior-graph-v28-display-step-20261028.zip` is 10,015,286 bytes, SHA-256 `d2965ca80f24c5f4415b9f3e0f1a066f6840e86660cbaca4342ea25e28b1551a`, five entries re-extracted and re-hashed against the manifest. The package INI carries all three experiment keys (`inject`, `DisplayPose=true`, `DisplayStep=true`); the repository sample keeps every switch off.
+
+Deployment (2026-10-28 00:29): the v27 trio was backed up to `dist/deploy-backup-20261028-v27/`, the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI carries the three keys (1,070 bytes `0866cec7…`). **No run has happened yet.**
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
