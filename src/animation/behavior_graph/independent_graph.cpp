@@ -1027,6 +1027,9 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // engine-free. Read-only: no native call and no buffer write.
                             std::vector<PoseSample> previous_candidate_pose;
                             std::vector<PoseSample> previous_source_pose;
+                            // v22: the step-0 candidate pose, so "moving" can be decided
+                            // against the bind baseline instead of the previous checkpoint.
+                            std::vector<PoseSample> baseline_candidate_pose;
                             const auto read_pose_local = [](RE::hkbCharacter const& character, std::vector<PoseSample>& out) {
                                 out.clear();
                                 if (!character.poseLocal || character.numPoseLocal <= 0)
@@ -1060,14 +1063,22 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 read_pose_local(source_base->characterInstance, current_source);
                                 const PoseComparison comparison = compare_pose(current_candidate, previous_candidate_pose);
                                 const PoseComparison source_comparison = compare_pose(current_source, previous_source_pose);
-                                const std::size_t aliased = count_identical(current_candidate, current_source);
-                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-content step={} entries={} finite={} nonfinite={} moved={} max-delta={} source-entries={} source-finite={} source-moved={} source-equal={}",
+                                // v22: aliasing is decided by buffer identity plus "equal and
+                                // still moving"; the raw equal count stays a statistic only.
+                                const bool buffer_alias = pose_buffer_alias(candidate->characterInstance.poseLocal,
+                                    source_base->characterInstance.poseLocal);
+                                const PoseAliasWatch watch =
+                                    watch_aliasing(current_candidate, current_source, baseline_candidate_pose, buffer_alias);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-content step={} entries={} finite={} nonfinite={} moved={} max-delta={} source-entries={} source-finite={} source-moved={} source-equal={} source-equal-moving={} source-equal-static={} alias={}",
                                     actor_id, request, step, comparison.entries, comparison.finite, comparison.non_finite,
                                     or_missing(comparison.has_previous, fmt::format("{}", comparison.moved)),
                                     or_missing(comparison.has_previous, fmt::format("{:.6f}", comparison.max_delta)),
                                     source_comparison.entries, source_comparison.finite,
                                     or_missing(source_comparison.has_previous, fmt::format("{}", source_comparison.moved)),
-                                    aliased);
+                                    watch.equal,
+                                    or_missing(watch.has_baseline, fmt::format("{}", watch.equal_moving)),
+                                    or_missing(watch.has_baseline, fmt::format("{}", watch.equal_static)),
+                                    watch.buffer_alias ? "yes" : "no");
                                 const RE::hkaSkeleton* const skeleton =
                                     candidate->characterInstance.setup ? candidate->characterInstance.setup->animationSkeleton.get() : nullptr;
                                 const std::size_t bone_count = skeleton ? static_cast<std::size_t>(skeleton->bones.size()) : 0;
@@ -1091,6 +1102,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         current_source[index].translation[0], current_source[index].translation[1],
                                         current_source[index].translation[2]);
                                 }
+                                if (step == 0)
+                                    baseline_candidate_pose = current_candidate;
                                 previous_candidate_pose = current_candidate;
                                 previous_source_pose = current_source;
                             };

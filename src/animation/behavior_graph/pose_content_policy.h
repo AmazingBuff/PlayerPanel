@@ -125,5 +125,53 @@ namespace animation::behavior_graph
                 ++identical;
         return identical;
     }
+
+    // v22 alias-watch revision (2026-10-27). The v21 watch counted value-identical
+    // entries, which cannot separate constant bones from a shared buffer: two graphs
+    // playing the same clip agree on every constant (identity or held-channel) bone by
+    // construction, so that count is always non-zero and the pre-registered branch fired
+    // on a false positive. Aliasing is instead two separate, decidable observations:
+    // whether both characters point at one poseLocal buffer, and whether any entry that
+    // is *moving* is still bit-identical to the source's held pose. The raw count is kept
+    // as a reported statistic so rounds stay comparable, but it no longer gates.
+    struct PoseAliasWatch
+    {
+        std::size_t compared{};      // entries compared at this checkpoint
+        std::size_t equal{};         // value-identical to the source (statistic only)
+        std::size_t equal_moving{};  // identical to the source AND changed since baseline
+        std::size_t equal_static{};  // identical to the source AND unchanged since baseline
+        bool        has_baseline{};  // false at the first checkpoint: the split is unavailable
+        bool        buffer_alias{};  // candidate and source share one poseLocal buffer
+    };
+
+    [[nodiscard]] inline bool pose_buffer_alias(void const* const candidate, void const* const source)
+    {
+        return candidate != nullptr && candidate == source;
+    }
+
+    [[nodiscard]] inline PoseAliasWatch watch_aliasing(std::vector<PoseSample> const& current,
+        std::vector<PoseSample> const& source, std::vector<PoseSample> const& baseline,
+        bool const buffer_alias, float const epsilon = kPoseDeltaEpsilon)
+    {
+        PoseAliasWatch result;
+        result.compared = std::min(current.size(), source.size());
+        result.equal = count_identical(current, source);
+        result.buffer_alias = buffer_alias;
+        // The split needs a step-0 reference of the same length; a short baseline would
+        // silently compare different bones, so it is treated as unavailable instead.
+        result.has_baseline = !baseline.empty() && baseline.size() >= result.compared;
+        if (!result.has_baseline)
+            return result;
+        for (std::size_t i = 0; i < result.compared; ++i)
+        {
+            if (!pose_sample_identical(current[i], source[i]))
+                continue;
+            if (pose_sample_differs(current[i], baseline[i], epsilon))
+                ++result.equal_moving;
+            else
+                ++result.equal_static;
+        }
+        return result;
+    }
 }
 PLUGIN_NAMESPACE_END
