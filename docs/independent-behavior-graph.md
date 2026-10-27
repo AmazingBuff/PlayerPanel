@@ -1333,7 +1333,7 @@ v28 漏掉的正是这三条。这一条同时解释了为什么批量能推进�
 4. 动但明显抖动 → 逐帧步长与渲染帧率不匹配，记现象，下一问对齐 dt。
 
 <a id="g2-v29-build"></a>
-**实现与部署（待填）**
+**实现与部署（2026-10-28 00:50，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v29-display-pipeline-20261028-04903ed263-cl94faaed0c6-20261027T165004Z`（干净 `04903ed`，无 `+dirty`；DLL `ce712e20…` 1,302,016 字节、PDB `6157150e…` 35,958,784 字节、age 339）。只改 `step_display_pose` 内部：每帧 63555 构壳 → 63602 管线 → 63556 销毁 → 63589，壳用栈上 `shell_storage`。五个 engine-free 用例全过。包 `build/behavior-graph-v29-display-pipeline-20261028/test-package/`（manifest `12970d32…` 4,110 字节、INI 1,363 字节 `f5ac5618…`），ZIP 9,996,292 字节、SHA-256 `42f92e94…`，五条目复核相符。v28 三件套备份到 `dist/deploy-backup-20261028-v28/`，MO2 现为 v29，部署 INI 三键（1,095 字节 `468fb691…`）。**该轮不上机**；随后的一次运行待记录。
 
 ## 当前采集器与操作
 
@@ -1430,6 +1430,8 @@ BehaviorGraphProbe=true
 | G2 v26 运行与判读 | 2026-10-28 00:12 会话：身份一致、无崩溃无 `[E]`；ENTRY 1、FRAME 30+1、IG 77、BG 36；`pose-steps` **119/120 步 pose 在变**（除首尾两点外档位全 `5`，>1e-2），预注册第 1 条命中 → 可见连续性成立；同轮 v22/v25 判据逐字复现；同时推翻 v25 的“4 Hz 跳帧”推论（pose 采样时间不是那个成批发布的 `localTime` 字段）；**G2 四项要件全部有数据，判 PASSED**（限定单进程单批 120 步，不含场景应用/装载销毁/G3–G6）；日志归档（58,751 字节 `D90DCD77…`），INI 回 off，见[v26 运行记录](#g2-v26-run) | G3 或场景应用的前置契约 |
 | G2 v27 契约与实现 | 2026-10-28 00:20：静态接驳——保留候选的 `hkbCharacter*` 进模块静态，`held_display_pose` 产出（骨名→NiTransform），`advance()` 在 `DisplayPose=true` 时用它替代 OAR 采样；不新增原生调用；身份 `…v27-display-pose-20261028-c894c956f8…`（DLL `b973aa5b…`、age 335），ZIP `6a195266…`、manifest `d3545033…`，v26 三件套备份到 `dist/deploy-backup-20261028-v26/`，部署 INI=`inject`+`DisplayPose=true`（1,063 字节 `2834670d…`），见[契约](#g2-v27-contract)与[构建记录](build.md#v27-display-pose-2026-10-28) | —（运行见下行） |
 | G2 v28 契约与实现 | 2026-10-28 00:27：`step_display_pose` 每渲染帧一次 `63589(candidate,&mode0)`，第 1/60/120 次打 `pose-hash`；新键 `DisplayStep`；步进失败回落 v27 冻结姿态；身份 `…v28-display-step-20261028-44dcdf4663…`（DLL `e3f9ade8…`、age 337），ZIP `d2965ca8…`、manifest `46ae35ee…`，v27 备份到 `dist/deploy-backup-20261028-v27/`，部署 INI 三键（1,070 字节 `0866cec7…`），见[契约](#g2-v28-contract)与[构建记录](build.md#v28-display-step-2026-10-28) | —（运行见下行） |
+| G2 v28 运行与判读 | 2026-10-28 00:47 会话：三条 `pose-hash` **全同**（`7d568c4d…`），120 次调用约 3.35 s、画面不动 → 预注册第 2 条命中：**只调 63589 不推进**；批量每步的 63555/63602/63556 才是推进来源，日志归档（59,181 字节 `3cde4194…`），见[v28 运行记录](#g2-v28-run) |
+| G2 v29 契约与实现 | 2026-10-28 00:50：`step_display_pose` 补上 63555→63602→63556 再 63589；身份 `…v29-display-pipeline-20261028-04903ed263…`（DLL `ce712e20…`、age 339），ZIP `42f92e94…`、manifest `12970d32…`，v28 备份到 `dist/deploy-backup-20261028-v28/`，部署 INI 三键（1,095 字节 `468fb691…`），见[契约](#g2-v29-contract)与[构建记录](build.md#v29-display-pipeline-2026-10-28) | —（运行见下行） |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |
@@ -1441,7 +1443,7 @@ BehaviorGraphProbe=true
 
 当前选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
 
-最新实际运行为 v26（2026-10-28 00:12）：pose 每步都在变（119/120），G2 四项判据全部满足并判 PASSED；v27 已把候选姿态静态接到显示图并经用户确认（`bones=116`、画面为 `H2H_Idle`），v28 逐帧推进已部署待测（[v27 契约](#g2-v27-contract)、[v28 契约](#g2-v28-contract)）；v24 运行给出“有意义”的数据：step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle` 在该时刻的采样（旋转误差 ≤6.1e-5）；剩余缺口是“持续”——idle 时钟每驱动步推进 0.75×–1.55×，非恒定，见 [v24 运行记录](#g2-v24-run)。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
+最新实际运行为 v26（2026-10-28 00:12）：pose 每步都在变（119/120），G2 四项判据全部满足并判 PASSED；v27 已把候选姿态静态接到显示图并经用户确认（`bones=116`、画面为 `H2H_Idle`），v28 逐帧推进得到负结果（只调 63589 不推进），v29 补上 63555/63602/63556 已部署待测（[v28 运行记录](#g2-v28-run)、[v29 契约](#g2-v29-contract)）；v24 运行给出“有意义”的数据：step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle` 在该时刻的采样（旋转误差 ≤6.1e-5）；剩余缺口是“持续”——idle 时钟每驱动步推进 0.75×–1.55×，非恒定，见 [v24 运行记录](#g2-v24-run)。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
 
 ## 维护约束
 

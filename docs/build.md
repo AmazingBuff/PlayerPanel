@@ -246,6 +246,33 @@ Package: `build/behavior-graph-v28-display-step-20261028/test-package/` (`SKSE/P
 
 Deployment (2026-10-28 00:29): the v27 trio was backed up to `dist/deploy-backup-20261028-v27/`, the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI carries the three keys (1,070 bytes `0866cec7…`). **No run has happened yet.**
 
+<a id="v29-display-pipeline-2026-10-28"></a>
+## V29 per-frame pipeline step build (2026-10-28)
+
+The v28 run was a clean negative result: three identical pose hashes (`7d568c4d…`) across 120 per-frame calls spread over 3.35 s, with the figure visibly frozen. Comparing it against the batch showed why — the bounded drive does not just call `63589` per step, it runs the engine's own frame pipeline first:
+
+```
+63555 construct(shell, nullptr, false)      // scratch shell on the stack
+63602 frame_pipeline(shell, candidate)      // hkbBehaviorGraph update -> clip advance
+63556 shell_destroy(shell)
+63589 (candidate, &mode0)                   // sampling entry only
+```
+
+The [v29 contract](independent-behavior-graph.md#g2-v29-contract) reproduces that core once per rendered frame inside `step_display_pose`. **This is the first round to put 63602 into the render path**; the batch ran the same three calls 120 times without a crash, and the shell uses stack storage destroyed immediately.
+
+Commands (proxy variables cleared for the reason recorded above):
+
+```
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v29-display-pipeline-20261028
+cmake --build --preset Release
+```
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v29-display-pipeline-20261028-04903ed263-cl94faaed0c6-20261027T165004Z` (clean HEAD `04903ed263`, submodule `94faaed0`; no `+dirty`). DLL SHA-256 `ce712e2058522d90e2cda9ca6fdafa1e6725868113eff5feda1ffb07282db79f` (1,302,016 bytes), PDB SHA-256 `6157150ea25d19c06c502c8c79ef015d078160294c8b4b04cc900269141b7156` (35,958,784 bytes); CodeView/PDB GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 339. Configure and build exited 0 with only the existing install-rule and D9025 warnings. Five engine-free cases pass.
+
+Package: `build/behavior-graph-v29-display-pipeline-20261028/test-package/` (`SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md`, `manifest.json` `12970d32…` 4,110 bytes); ZIP `CharacterPanel-behavior-graph-v29-display-pipeline-20261028.zip` is 9,996,292 bytes, SHA-256 `42f92e948c47af21eaada48c64665a70a4d1b44f1abc0b559f0f1daed5de6405`, five entries re-extracted and re-hashed against the manifest. The package INI carries the three experiment keys; the repository sample keeps every switch off.
+
+Deployment (2026-10-28 00:51): the v28 trio was backed up to `dist/deploy-backup-20261028-v28/`, the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI carries the three keys (1,095 bytes `468fb691…`). **No run has happened yet.**
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
