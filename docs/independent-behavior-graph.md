@@ -1281,6 +1281,60 @@ deltas='.55555555555555555555555555555555555555555555555555555555555555555555555
 <a id="g2-v28-build"></a>
 **实现与部署（2026-10-28 00:27，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v28-display-step-20261028-44dcdf4663-cl94faaed0c6-20261027T162729Z`（干净 `44dcdf4`，无 `+dirty`；DLL `e3f9ade8…` 1,302,016 字节、PDB `3acff4af…` 35,958,784 字节、age 337）。改动：`independent_graph.{h,cpp}` 记录 `g_held_graph` 并新增 `step_display_pose`（每帧一次 `63589`，第 1/60/120 次各打一条 pose-hash）、`settings.{h,cpp}` 增 `DisplayStep`、`controller.cpp` 在 `DisplayPose` 分支里优先步进、失败回落冻结姿态。五个 engine-free 用例全过。包 `build/behavior-graph-v28-display-step-20261028/test-package/`（manifest `46ae35ee…` 4,357 字节，包内 INI 1,338 字节 `327e36a9…` = `inject` + `DisplayPose` + `DisplayStep`），ZIP 10,015,286 字节、SHA-256 `d2965ca8…`，五条目复核相符。v27 三件套备份到 `dist/deploy-backup-20261028-v27/`，MO2 现为 v28 DLL/PDB，部署 INI 三键（1,070 字节 `0866cec7…`）。**该轮不上机**；随后的一次运行待记录。
 
+<a id="g2-v28-run"></a>
+## G2 v28 运行记录（2026-10-28 00:47 会话，只调 63589 不推进 —— 负结果）
+
+构建 `CharacterPanel-scenegraph-behavior-graph-v28-display-step-20261028-44dcdf4663-…`（DLL `e3f9ade8…`），INI 三键（`inject` + `DisplayPose` + `DisplayStep`），运行时 `1-6-1170-0`。**无崩溃、无 `[E]`**。
+
+**观测**：
+
+```
+00:47:43.867  ANIMATION DISPLAY step=1   pose-hash=7d568c4dee1ac065 bones=116
+00:47:43.867  ANIMATION DISPLAY source=independent-graph bones=116 note=stepping-per-frame
+00:47:45.607  ANIMATION DISPLAY step=60  pose-hash=7d568c4dee1ac065 bones=116
+00:47:47.222  ANIMATION DISPLAY step=120 pose-hash=7d568c4dee1ac065 bones=116
+```
+
+三次 `pose-hash` **完全相同**（`7d568c4d…`），画面不动，用户复核一致。120 次调用分布在约 3.35 秒内（约 36 fps），所以调用确实发生了，只是没有产生任何姿态变化。
+
+**判定：预注册第 2 条命中——63589 孤立调用不自推进。**`step_display_pose` 只做了一次 `63589(candidate, &mode0)`，与批量"每步一次"的调用**在参数上完全相同**，但批量每步之前还跑了引擎自己的每帧管线：
+
+```
+frame_trace(pre_pipeline)
+construct(shell, nullptr, false)      // 63555
+frame_pipeline(shell, candidate_base) // 63602
+shell_destroy(shell)                  // 63556
+frame_trace(post_pipeline)
+... 之后才是 63589
+```
+
+v28 漏掉的正是这三条。这一条同时解释了为什么批量能推进、逐帧不能：**推进来自 63602 管线（63587 → clip 更新），63589 只是采样入口**。
+
+**代价与收获**：一轮负结果换来一条明确的责任划分——批量的 120 步推进不是 `63589` 的功劳。v29 据此补上管线。
+
+<a id="g2-v29-contract"></a>
+## G2 v29 契约：逐帧补齐引擎管线（2026-10-28，已实现/待构建）
+
+**动机**：v28 证明只调 `63589` 不推进。批量每步的真实顺序是 `63555 → 63602 → 63556 → 63589`，其中 63602 才是每帧图管线（63587 → clip 更新 → `0x12E`），63589 只负责采样。v29 把这三条补进 `step_display_pose`。
+
+**变更（只改 `step_display_pose` 内部）**：
+
+1. 每帧用栈上的 `shell_storage` 构造 scratch 壳（63555，`construct(shell, nullptr, false)`），跑 `frame_pipeline(shell, g_held_graph)`（63602），立即 `shell_destroy(shell)`（63556）。
+2. 然后照旧一次 `63589(g_held_graph, &mode0)`，再读回 `poseLocal`。
+3. 诊断保持 1/60/120 三条 `pose-hash`。
+
+**风险**：渲染路径每帧多三条原生调用（构壳、管线、销毁），与引擎自身每帧所做的工作同量级；批量里这套调用跑过 120 次无崩溃。**这是本实验第一次把 63602 放进渲染路径**，若出现崩溃，回退 `DisplayStep=false` 即回到 v28 的静态显示。
+
+**预注册判读**：
+
+1. 三条 `pose-hash` 互不相同、画面在动 → 逐帧推进成立，场景应用打通。
+2. 三条仍相同 → 管线也不足以在渲染路径推进，下一问转向"渲染钩子的调用时机是否在引擎更新括号之外"。
+3. 崩溃 → 回 `DisplayStep=false`，保留完整日志与匹配 PDB，不在同会话重试。
+4. 动但明显抖动 → 逐帧步长与渲染帧率不匹配，记现象，下一问对齐 dt。
+
+<a id="g2-v29-build"></a>
+**实现与部署（待填）**
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。

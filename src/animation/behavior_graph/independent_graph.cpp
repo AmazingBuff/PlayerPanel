@@ -1617,10 +1617,19 @@ bool step_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out
     out.clear();
     if (!g_held_graph || !g_held_character)
         return false;
-    // One generation entry per rendered frame - the same call the bounded drive makes, with the
-    // same mode byte. Nothing else is written: no event, no guard, no world borrow.
+    // v29: the batch runs the engine's per-frame pipeline (63555 shell -> 63602 -> 63556) before
+    // each generation entry. v28 called only 63589, and the three identical pose hashes showed the
+    // entry does not advance anything on its own; this reproduces the batch's per-step core.
     static std::uint8_t mode = 0;
+    static REL::Relocation<constructor_t> construct{ REL::ID(GraphConstructorID) };
+    static REL::Relocation<frame_pipeline_t> frame_pipeline{ REL::ID(FramePipelineID) };
+    static REL::Relocation<graph_destructor_t> shell_destroy{ REL::ID(GraphDestructorID) };
     static REL::Relocation<generation_entry_t> entry{ REL::ID(GenerationEntryID) };
+    alignas(0x10) std::uint8_t shell_storage[sizeof(RE::BShkbAnimationGraph)]{};
+    auto* const shell = reinterpret_cast<RE::BShkbAnimationGraph*>(shell_storage);
+    construct(shell, nullptr, false);
+    frame_pipeline(shell, g_held_graph);
+    shell_destroy(shell);
     entry(g_held_graph, &mode);
     static std::uint64_t calls = 0;
     ++calls;
