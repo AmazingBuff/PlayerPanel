@@ -1223,12 +1223,27 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         clip_reference_agrees(match, pose_sample_from_transform(sampled[track]),
                                             pose[static_cast<std::size_t>(bone)]);
                                     }
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} slot={} index={} status=compared name='{}' binding-index={} map-len={} mapping={} time={:.4f} duration={:.4f} mode={} speed={:.3f} tracks={} mapped={} compared={} agreed={} unmapped={} max-dpos={:.6f} max-drot={:.6f} max-dscale={:.6f}",
+                                    // v25: audit26 showed the advance is
+                                    // dt x ((effDuration/enforcedDuration or 1) x playbackSpeed),
+                                    // so a constant multiplier must be ruled out by reading the
+                                    // enforced duration and the crop amounts, not by assuming 1.0.
+                                    const RE::hkaDefaultAnimationControl* const control =
+                                        plausible_object_pointer(reinterpret_cast<std::uintptr_t>(clip->animationControl.get()))
+                                        ? clip->animationControl.get()
+                                        : nullptr;
+                                    const float crop_sum = control
+                                        ? control->cropStartAmountLocalTime + control->cropEndAmountLocalTime
+                                        : 0.0f;
+                                    const float effective_duration = control
+                                        ? std::max(animation->duration - crop_sum, 0.0f)
+                                        : animation->duration;
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} slot={} index={} status=compared name='{}' binding-index={} map-len={} mapping={} time={:.4f} duration={:.4f} enforced={:.4f} crop-sum={:.4f} eff-duration={:.4f} mode={} speed={:.3f} tracks={} mapped={} compared={} agreed={} unmapped={} max-dpos={:.6f} max-drot={:.6f} max-dscale={:.6f}",
                                         actor_id, request, step, slot, index, name,
                                         static_cast<std::uint32_t>(clip->animationBindingIndex),
                                         static_cast<std::uint32_t>(map.size()),
                                         identity ? "identity" : "table",
-                                        local_time, animation->duration,
+                                        local_time, animation->duration, clip->enforcedDuration, crop_sum,
+                                        effective_duration,
                                         static_cast<std::uint32_t>(clip->mode.get()), clip->playbackSpeed,
                                         tracks, mapped, match.compared, match.agreed, match.unmapped,
                                         match.max_position, match.max_rotation, match.max_scale);
@@ -1257,6 +1272,74 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 }
                                 logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-clock step={} found={} entries='{}'",
                                     actor_id, request, step, clips.size(), entries);
+                            };
+                            // v25: one character per drive step for each clip's localTime delta.
+                            // audit26 established that the clock consumes dt and nothing else, so
+                            // an uneven advance can only come from how often that Update is
+                            // reached; the bitstring shows the pattern without 121 log rows.
+                            // Code: '.' = 0 frames, '1'..'9' = frames, 'A'..'Z' = 10..35 frames,
+                            // 'N' = time went backwards (wrap or restart), '-' = clip absent.
+                            struct ClipStepTrace
+                            {
+                                std::string name;
+                                std::string deltas;
+                                std::uint32_t first_step{};
+                                float last_time{};
+                            };
+                            std::vector<ClipStepTrace> clip_step_traces;
+                            const auto log_clip_step = [&](std::uint32_t const step) {
+                                const auto clips = collect_active_clips(8);
+                                std::vector<bool> seen(clip_step_traces.size(), false);
+                                for (auto const& [index, clip] : clips)
+                                {
+                                    const std::string full = read_string(clip->animationName, 96);
+                                    const std::size_t slash = full.find_last_of("\\/");
+                                    const std::string leaf = slash == std::string::npos ? full : full.substr(slash + 1);
+                                    std::size_t at = 0;
+                                    for (; at < clip_step_traces.size(); ++at)
+                                    {
+                                        if (clip_step_traces[at].name == leaf)
+                                            break;
+                                    }
+                                    if (at == clip_step_traces.size())
+                                    {
+                                        ClipStepTrace fresh;
+                                        fresh.name = leaf;
+                                        fresh.first_step = step;
+                                        fresh.last_time = clip->localTime;
+                                        fresh.deltas.push_back('.');
+                                        clip_step_traces.push_back(fresh);
+                                        seen.push_back(true);
+                                        continue;
+                                    }
+                                    seen[at] = true;
+                                    ClipStepTrace& trace = clip_step_traces[at];
+                                    const float now = clip->localTime;
+                                    const long frames = std::lround((now - trace.last_time) * 60.0f);
+                                    trace.last_time = now;
+                                    char code = '.';
+                                    if (frames < 0)
+                                        code = 'N';
+                                    else if (frames > 35)
+                                        code = '?';
+                                    else if (frames > 9)
+                                        code = static_cast<char>('A' + (frames - 10));
+                                    else if (frames > 0)
+                                        code = static_cast<char>('0' + frames);
+                                    trace.deltas.push_back(code);
+                                }
+                                for (std::size_t i = 0; i < clip_step_traces.size(); ++i)
+                                {
+                                    if (!seen[i])
+                                        clip_step_traces[i].deltas.push_back('-');
+                                }
+                            };
+                            const auto emit_clip_steps = [&] {
+                                for (auto const& trace : clip_step_traces)
+                                {
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-steps name='{}' first={} steps={} deltas='{}'",
+                                        actor_id, request, trace.name, trace.first_step, trace.deltas.size(), trace.deltas);
+                                }
                             };
                             // v19 contract: the inject recipe supplies the audited
                             // optionalEyePosition (record+0x18) so 63587's arm block can run.
@@ -1389,7 +1472,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     candidate_pose_mid = format_pose_hash(candidate->characterInstance);
                                     log_state_probe("60");
                                 }
+                                log_clip_step(step);
                             }
+                            log_clip_step(120);
+                            emit_clip_steps();
                             // v17: idempotent slot-3 re-check after the drive — the world
                             // borrow is released right below, so nothing re-registers the
                             // bodies afterwards; the call feeds the pipeline row only.

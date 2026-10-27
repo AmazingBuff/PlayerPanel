@@ -1090,6 +1090,32 @@ G2 的四项要件因此变成：pose 内容（v22 成立）、必要骨变化�
 
 **下一有界问题（2026-10-27 23:53 做掉第 1 条）**：[audit26](behavior-graph-construction-audit.md#audit26) 已把时钟的算式读出来——`new = old + dt × ((实时长/enforcedDuration)×playbackSpeed)`，再按 `[cropStart, cropStart+实时长]` 钳制，**只消费 dt，没有帧计数**。所以 0.75×–1.55× 不可能来自时钟自身（checkpoint 上 `playbackSpeed` 全是 1.000），只能来自“到达 Update 的 dt 不均匀”。剩余问题是**哪些驱动步漏了**，需要逐步记录才能定位；第 2 条（dt 缩放运行）暂时不需要，因为算法已经证明它对 dt 是线性的。
 
+<a id="g2-v25-contract"></a>
+## G2 v25 契约：逐步时钟（2026-10-27，已实现/待构建）
+
+**动机**：[audit26](behavior-graph-construction-audit.md#audit26) 已证明时钟只消费 dt——`new = old + dt × speed`，`speed = (effDuration / enforcedDuration 或 1) × playbackSpeed`，再按 `[cropStart, cropStart + effDuration]` 钳制。v24 看到的 0.75×–1.55× 因此只剩两种可能：①部分驱动步没走到该片段的 Update；②那些步的 dt 不同，或 speed 不是 1（`enforcedDuration` 与裁剪量当时没记录，不能排除常数倍率）。v25 把这两条都变成可读数据。
+
+**变更（仍只有一次 const 采样调用）**：
+
+1. `clip-ref` 增三个字段：`enforced=`（`hkbClipGenerator::enforcedDuration`，`+0x68`）、`crop-sum=`（`hkaDefaultAnimationControl::cropStartAmountLocalTime + cropEndAmountLocalTime`，`+0x9C`/`+0xA0`）、`eff-duration=`（`duration − crop-sum`，与 `0xACF340` 同式，向下钳零）。用来排除“常数倍率”。
+2. 新增 `clip-steps`：每个片段一行，每个驱动步一个字符，记录该步 `localTime` 的增量（四舍五入到 1/60 帧）。编码 `.`=0、`1`–`9`=1–9 帧、`A`–`Z`=10–35 帧、`N`=回退、`-`=该步不在活动集。行内带 `first=`（首次出现的步号）与 `steps=`（字符数）。
+3. `clip-clock`（7 行）保留不变，作为人读对照。
+
+**预算**：`clip-steps` ≤8 行；`clip-ref` 行数与上限不变（≤24）。新增 ≤8 行。
+
+**预注册判读（逐条）**：
+
+1. 某片段位串出现**周期缺口**（例如每 4 步一个 `.`）→ 那些步没有执行该节点的 Update；下一问是 63587 的节点门（`[node+0x30] flags&1`、`[entry+0x85]`）为什么对活动片段翻假。
+2. 位串**没有缺口但每步增量不是 1 帧**（如 `0`/`1` 交替、或小数被四舍五入成 0.75 无法整除的模式）→ dt 本身不是 1/60，或 speed ≠ 1；由 `enforced` / `crop-sum` / `eff-duration` 判定是哪一项。
+3. 位串出现 `N`（回退）→ 片段被重启或循环回绕；记录回绕周期，不判失败。
+4. 位串在激活后**全程 `.`**（零推进）→ 与 v24 的 `clip-clock` 冲突，停止并复查读取位置。
+5. 崩溃或源漂移 → 停止，保留完整日志与匹配 PDB。
+
+**判定口径**：本轮只回答“0.75× 从哪来”，**不改变 G2 的通过标准**；“持续”是否成立仍按原句（候选原版 idle 持续、有意义地前进）在拿到位串之后由下一轮判。
+
+<a id="g2-v25-build"></a>
+**实现与部署（待填）**
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。
