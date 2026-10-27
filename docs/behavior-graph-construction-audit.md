@@ -11,6 +11,8 @@
 
 [audit25](#audit25) 给出 v23 那个空映射状态的指令级答案：AE 1.6.1170 的 `ConvertTrackPoseToBonePose`（REL 60005）在 `transformTrackToBoneIndices` 为空时直接把轨道号当骨骼号（identity），非空时查表。该结论只覆盖这一个助手。
 
+[audit26](#audit26) 回答 v24 留下的时钟问题：`hkbClipGenerator::Update`（槽 5 `0xACDE40`）把时间推进交给 `0xACFDE0`，算式是 `new = old + dt × ((实时长/enforcedDuration)×playbackSpeed)` 再按 `[cropStart, cropStart+实时长]` 钳制——**只消费 dt，没有帧计数**。因此 v24 的 0.75×–1.55× 只能来自“到达 Update 的 dt 不均匀”，具体漏在哪些驱动步需要逐步记录。
+
 [audit22](#audit22)纠正了两类核心误读：63374/63595/63859/63923给出项目/clip元数据，65232/65237为共享visitor，不证明manager登记必要；63568的mode0实际跳0xbaeb59，经58343/58376到真实Generate槽，且0xbaeb8b自身写f=1。因此旧“mode0不生成/只有63582写f/全部v7–v19无生成”的说法不能作当前前提。审计二十一的壳图behaviorGraph守卫仍有效，但不支持其架构独占性推断。
 
 实际Generate槽0x17(+0xb8)=58334使用活r8/r9，SDK声明不足以直接调用；本轮恢复经同步消费mode字节的63589(candidate,&mode0)，不手造context/output/sink、不创建/登记manager或播种。numTracks/numData/onFraction、头部/有效pose、raw hash/有意义骨运动仍须分开；恢复入口或填头不自动通过G2。空manager构造/真实析构的原生栈先例仅为静态协议，不能证明图释放或全局隔离。
@@ -925,6 +927,41 @@ v23 运行里，60/120 两个检查点的所有活动片段都报 `mapped=0`，�
 **结论**：引擎的 `ConvertTrackPoseToBonePose` 在映射数组为空时**直接把轨道号当骨骼号**（identity），非空时按表映射。这与仓库里既有的 `identity-unverified` 标签（[clip.cpp](../src/animation/clip.cpp)、[controller.cpp](../src/animation/controller.cpp)）一致，但那个标签此前没有依据；本节把它升级为“AE 1.6.1170 该助手有指令级依据的 identity”。
 
 **边界**：只审计了这一个助手（pose 转换路径）。空映射在**其它**消费点（例如 `GetNumTransformTracks`，AE ID 64091，其地址 `0xBD3BE0` 不落在任何 `.pdata` 记录内，未展开）是否同样按 identity 处理，未验证；若后续要依赖“整个引擎都按 identity”，需要补该函数的链式范围。本节不改变任何实验配方，只给 v24 的比较提供合法依据。
+
+<a id="audit26"></a>
+## 审计二十六：片段时钟由 dt 驱动，不是帧计数（2026-10-27）
+
+v24 运行里 idle 栈的 `localTime` 每驱动步只走 0.75×–1.55×（而非 `dt=1/60` 的 1×）。本节回答时钟本身消费什么：**我们喂的 dt，还是引擎自己的帧计数**。答案是前者。
+
+**目标**：`hkbClipGenerator` 的 Update 槽。`VTABLE_hkbClipGenerator`（AE ID 226785，RVA `0x1963E78`）槽 5 = `0xACDE40`（909 字节，`.pdata` 记录完整，函数开头带 `TthkbClipGenerator::update` 作用域串），与 CommonLib 声明 `void Update(const hkbContext&, float) override; // 05` 对应。
+
+**调用链与写入点**：
+
+| 地址 | 指令 | 含义 |
+| --- | --- | --- |
+| `0xACDED3` | `movss xmm2, [rbx+0x64]` | 读旧 `playbackSpeed` |
+| `0xACDEFF` | `movss [rbx+0x64], xmm1` | **本次 Update 的调用方写入 `playbackSpeed`**（不是常量） |
+| `0xACDF85` | `call 0xACFDE0` | 时间推进在助手内完成；`r8=&[rsp+0x34]`（旧值出参）、`r9=&[rsp+0xC8]`（新值出参）、`xmm1=dt` |
+| `0xACDFA3` | `movss [rbx+0xF0], xmm0` | `localTime` 由助手输出写回 |
+| `0xACDFAB` | `movss [rax+0x10], xmm0` | 同一值同时写入 `animationControl(+0x88)+0x10` |
+
+**助手的算式**（`0xACFDE0`，128 字节记录 + 链式延续到 `0xACFF7F`）：
+
+1. `0xACFE18`：`cmp byte [rcx+0x72], 2` → 按 `mode` 分流；`mode==2`（用户控制）走 `0xACFE1E`–`0xACFE52`，用 `userControlledTimeFraction` 直接算时间。
+2. 其余模式先在 `0xACFE57/5D` 把**旧** `localTime` 写进出参，再 `0xACFE60 call 0xAD01F0` 求速度，`0xACFE74 movss [control+0x5C], xmm6` 把速度写回动画控制。
+3. `0xACFE8F`：`xmm6 = xmm7`（**xmm7 = 入口 xmm1 = dt**）；`0xACFE9B mulss xmm6, [rcx+0x5C]`（× 速度）；`0xACFEF3 addss xmm6, [r15]`（+ 旧 `localTime`）→ **`new = old + dt × speed`**。
+4. `0xACFEF3`–`0xACFF37` 把结果钳在 `[cropStart, cropStart + effDuration]`：`0xACFEEE call 0xACF340` 取实时长，`0xACFF01` 越界时写终点并置 `atEnd=1`（`0xACFF05`），`0xACFF33` 低于起点时写起点。
+5. 该内联钳制路径只覆盖 `mode==0`（`0xACFED8 test al,al; jne 0xACFF39`）；其它模式在 `0xACFEBF call qword [rax+0x20]`（动画控制 vtable 槽 4）里生成新时间，**同一条 dt 经 `xmm1` 传进去**（`0xACFEB9 movaps xmm1, xmm7`）。
+
+**速度来源**（`0xAD01F0`，79 字节）：
+
+- `0xACF340` 是叶子函数（无 `.pdata`），返回 `animation->duration(+0x14) − (control+0x9C + control+0xA0)` 并向下钳零，即**去掉裁剪量的实际片段长度**。
+- `0xAD0201`–`0xAD0214`：若实时长 >0 且 `enforcedDuration(+0x68)` >0，`speed = 实时长 / enforcedDuration`；否则 `speed = 1.0`（`0xAD0216` 取 `0x3F800000`）。
+- `0xAD0222 mulss xmm0, [rbx+0x64]`：再乘 `playbackSpeed`；`mode==3 && pingPongBackward` 时取负（`0xAD0232 xorps`，掩码 `0x80000000`）。
+
+**结论**：`localTime` 的增量**只由 Update 收到的 dt 与 `(实时长/enforcedDuration)×playbackSpeed` 决定**，没有任何帧计数器或真实时钟参与。因此 v24 观察到的 0.75×–1.55× **不能由时钟自身的算式解释**（checkpoint 上记录的 `playbackSpeed` 都是 1.000）；它只能来自“每步有多少 dt 真正到达 Update”——要么部分驱动步没走到该节点的 Update，要么那些步传下来的 dt 不同。
+
+**边界**：`enforcedDuration`（`+0x68`）与裁剪量（`control+0x9C/0xA0`）没有在运行期记录，所以无法排除 `enforcedDuration ≠ 实时长` 造成一个**常数**倍率；但常数倍率解释不了 1.55× 的突变，所以主要假设仍是“到达 Update 的 dt 不均匀”。哪个驱动步漏了，需要逐步记录，不在本轮结论内。`0xACFDE0` 的 `mode≠0` 路径走的动画控制 vtable 槽 4 也未展开。
 
 ## 复现
 
