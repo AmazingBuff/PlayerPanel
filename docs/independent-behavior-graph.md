@@ -9,7 +9,7 @@
 | 关卡 | 截至 2026-10-27 的结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **NOT PASSED；最新运行 v20（2026-10-27 21:48，入口前崩溃）、最新构建 v20a（同日 21:56，修正越界诊断、待上机），最后一次完整观测为 v19（2026-10-26 23:46）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化，没有有意义的 idle 位姿运动。v20 首轮 guard 通过（`outcome=ready`），但随即在 **63589 之前**的 v16 遗留 g3-gates 只读链处越界崩溃（`context+0x50` 越过 `sizeof(hkbContext)=0x50`），**入口从未执行**；v20a 已按 audit24 修正该链并部署待测，见 [v20 记录](#g2-v20-run)。 |
+| G2 | **NOT PASSED（但 2026-10-27 22:02 的 v20a 首次取得运动证据）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化。v20 首轮 guard 通过后在入口前崩溃（越界诊断，已修为 v20a）。**v20a 运行**：`63589(mode0)` 到达（guard `ready`、修正链四跳可读），首步即回填 `numData=116 f=1.0`，step 2 起 Path B 且 `arm-observed=yes`，`gen0elem` 与双槽元素哈希变化，候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`(60)→`8fb4cd336c4395bf`(120)、120/120 次变化，同时源侧 pose 不变、三份源基线逐行全等。缺逐骨/有限值证据与视觉确认，故仍不放行；见 [v20 记录](#g2-v20-run) 与 [v20a 记录](#g2-v20a-run)。 |
 | G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
 
 [v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
@@ -752,7 +752,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 <a id="v20-handoff"></a>
 ## v20 测试交接与当前停点
 
-**v20 首轮在入口前崩溃；越界诊断已按 [audit24](behavior-graph-construction-audit.md#audit24) 修正，v20a 已构建、打包并部署，等待第一次上机结果。最新实际运行仍为 v20（2026-10-27 21:48，63589 从未执行），最后一次完整观测仍为 v19，G2 未通过。** 下一轮按包内 runbook 跑一次 v20a 即可；不预先播种或推进后续关卡。
+**v20a 已运行一次并取得首次运动证据：入口 `63589(mode0)` 到达，输出头被填充、Path B 与 arm 出现，候选 raw pose 在 120/120 次调用中变化，源侧控制不变；但逐骨/有限值与视觉证据仍缺，G2 仍 NOT PASSED。** 部署 INI 已回 `off`；下一轮按[v20a 记录的下一有界问题](#g2-v20a-run)做 pose 内容解码，不新增原生调用、不预先播种或推进后续关卡。
 
 原冻结包（身份 `…-242d0a50c5+dirty-cl94faaed0c6-20261027T070457Z`、ZIP `3f9f9182…`、DLL `6c76c2a7…`）不在本检出中，故 2026-10-27 以同一提交源重建：新身份 `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-a83e5229e7-cl94faaed0c6-20261027T134152Z`（干净 `a83e522`，身份无 `+dirty`），DLL `13688a9d…`（1,253,888 字节）、PDB `07a509da…`（35,467,264 字节），CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 320；ZIP 9,750,395 字节、SHA-256 `076cf6f7…`，五个条目重解压复核通过。两次构建不声称字节等同，旧哈希只作历史；判读一律以实际加载的 `SCENEGRAPH BUILD` 身份与包内 manifest 为准，不用较新提交号替代重新构建证据。详见[构建与重建记录](build.md#v20-rebuild-2026-10-27)。
 
@@ -790,7 +790,30 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 2. 复查插件内其它 `context + offset` 读取是否越过 `0x50`，以及同类"链首缺一次解引用"的写法。
 3. 任一修复都构成新的构建身份（v20a），需重新构建/打包/部署后再取一次上机结果；在那次结果之前，本轮只证明"入口前的诊断越界"，不能用于评价 63589 的行为。
 
-**v20a 修正与部署（2026-10-27 21:56，未上机）**：按上列第 1 项修正链起点——`[context]` → `hkbCharacter::setup`（+0x50）→ `hkbCharacterSetup::data`（+0x40）→ `hkbCharacterData::footIkDriverInfo`（+0x88），全部走声明成员，`[graph+0x100]` 改用 `hkbFootIkDriver::disableFootIk`，并在每次解引用前过新增的 [observation_chain_policy.h](../src/animation/behavior_graph/observation_chain_policy.h)（`plausible_object_pointer`，只读声明成员、不再触碰对象之外的栈槽）；行字段改为 `character/setup/data/footik-info`。三个 engine-free 用例全部通过（新增策略 11 行、guard 22 行、frame-trace 3 例，`g++` 15.1 `-Wall -Wextra -Werror`）。身份 `CharacterPanel-scenegraph-behavior-graph-v20a-chain-fix-20261027-7d18a90787-cl94faaed0c6-20261027T135614Z`（干净 `7d18a90`，DLL `691f7592…`、PDB `5b3d8cc8…`、CodeView age 321），ZIP `f4586e16…`。v20 三件套已备份到 `dist/deploy-backup-20261027-v20/`，MO2 现为 v20a DLL/PDB，部署 INI（1,073 字节 `6e9d2005…`）为 `inject`。**本轮只修观测，不产生新运行证据**：63589 仍未执行，判据与预算不变，见[构建记录](build.md#v20a-chain-fix-2026-10-27)。
+**v20a 修正与部署（2026-10-27 21:56）**：按上列第 1 项修正链起点——`[context]` → `hkbCharacter::setup`（+0x50）→ `hkbCharacterSetup::data`（+0x40）→ `hkbCharacterData::footIkDriverInfo`（+0x88），全部走声明成员，`[graph+0x100]` 改用 `hkbFootIkDriver::disableFootIk`，并在每次解引用前过新增的 [observation_chain_policy.h](../src/animation/behavior_graph/observation_chain_policy.h)（`plausible_object_pointer`，只读声明成员、不再触碰对象之外的栈槽）；行字段改为 `character/setup/data/footik-info`。三个 engine-free 用例全部通过（新增策略 11 行、guard 22 行、frame-trace 3 例，`g++` 15.1 `-Wall -Wextra -Werror`）。身份 `CharacterPanel-scenegraph-behavior-graph-v20a-chain-fix-20261027-7d18a90787-cl94faaed0c6-20261027T135614Z`（干净 `7d18a90`，DLL `691f7592…`、PDB `5b3d8cc8…`、CodeView age 321），ZIP `f4586e16…`。v20 三件套已备份到 `dist/deploy-backup-20261027-v20/`，MO2 现为 v20a DLL/PDB。**构建与部署本身不产生运行证据**；随后的一次运行见下节的 [v20a 运行记录](#g2-v20a-run)。
+
+<a id="g2-v20a-run"></a>
+## G2 v20a 运行记录（2026-10-27 22:02 会话，入口到达、pose 首次变化）
+
+构建 `CharacterPanel-scenegraph-behavior-graph-v20a-chain-fix-20261027-7d18a90787-cl94faaed0c6-20261027T135614Z`（DLL `691f7592…`、PDB `5b3d8cc8…`），部署 INI=`inject`，运行时 `1-6-1170-0`：22:01:34 加载（`SCENEGRAPH BUILD` 与包内 manifest 逐字一致），22:02:36.590 开包，实验行 22:02:36.597–36.600，22:02:42.216 关包（`DAC restore … result=matched`）。**无崩溃、无 `[E]`**；15 条 `[W]` 均为既有 DAC/studio-light 警告。原始日志原样归档为 [CharacterPanel-g2v20a-entry-20261027-2202.log](diagnostics/CharacterPanel-g2v20a-entry-20261027-2202.log)（43,330 字节，SHA-256 `E05BFEAF9AAA49E7DE026A17D62F0050BC59B3B388D5B52BFE0E43F35349FAD0`）。
+
+**预算与门**：`GRAPH ENTRY` 1 条、`GRAPH FRAME` 30+1、`INDEPENDENT GRAPH` 40、`BEHAVIOR GRAPH` 36（三块 12 行逐行全等）。guard `outcome=ready`；修正后的 g3-gates 链在候选上四跳全部可读：`g100=0x1d572e9c8a0 flag4a=0x00 character=0x1dab1c853c0 setup=0x1d572e9c9c0 data=0x1d5371d26f0 footik-info=0x1d5371d5b70`（character 与 `phase=driver` 的候选 char 同址，data 与候选 setup-data 同址）。
+
+**首次走到 63589 之后的新事实**：
+
+1. **输出头被真实填充**：step 0 `post-sample` 起 slot0 `numData=116 onFraction=1.0`，step 1 交换后 slot1 同值，step 2 起双槽均 `numData=116 f=1.0`；`tracks-end[+32=0x0074 +38=1.000]`。v7–v19 从未出现。
+2. **首次 arm 与 Path B**：step 1 `post-update` 的 t 对为 `t0=-0.0166667 t1=0.175`，step 2 起 `w245=0x0 b246=0`（Path B），summary `arm-observed=yes`。t 对在 Path A 复位后还会再次 arm（step 119 为 `t0=0.05 t1=-0.2`）——因此 v19 契约里"arm 窗口实际只有 step 0"是 **v17 配方（无生成、槽头恒 0）的产物**，不是引擎限制。
+3. **生成内容变化**：`gen0elem` 由 `cf37f9140cd1eb83` 变为 `cbd25238b4fbce52`，双槽元素哈希一致；step 60 起原生 `cand-anim=0x0074`（此前恒 0，只有插件 mirror）。
+4. **raw pose 首次变化**：`candidate-pose-0=bc160a8c2b3a5a58`（bind 基线）→ `60=63f638a6ac08d955` → `120=8fb4cd336c4395bf`；summary `completed=120 pose-available=120 pose-missing=0 raw-hash-changes=120 first-changed-completed=1`，即**每次返回的 63589 都改变了候选 pose 原始缓冲**。
+5. **源侧对照不变**：`source-pose-before=983fc2d4a169fa5b source-pose-after=983fc2d4a169fa5b`、`source-drift=none`×3、三份源基线逐行全等、`source-stable=true retained=true`；`world-restored=true ragdoll-removed=true`。
+6. **状态机活着**：active 节点 97→125→111，变量集哈希逐段变化（`893b33fd…`→`214e2111…`→`a4bb41b6…`），`post-drive children-flag=1`（注入前为 0）。
+
+**判读（预注册分支"raw pose 变化"）**：本轮证明 **v17–v19 的空结果来自入口选择**——直调 63581 跳过了 63589 的外层生成/头部回填/arm-apply，所以生成内容、槽头、Path B 与 pose 全都不动；把入口换回 `63589(mode0)`、其余不变后这些环节同时出现，源侧控制保持。这回答了 audit21/22 遗留的"入口是否必要"的运行期问题。
+
+**但 G2 仍 NOT PASSED**：预注册明写 raw pose 变化不等于有效骨骼运动，而本包只有含 padding 的原始缓冲哈希、元素头哈希与计数/分数，没有逐骨或有限值证据，也没有视觉确认；summary 自身标 `acceptance=unjudged fingerprint=raw-buffer-padding-sensitive generator-payload=unobserved native-context=unobserved`。装载图销毁、全局收敛、G3–G6 与独立 OAR 语境同样未验收。
+
+**下一有界问题（pose 内容，不新增原生调用）**：新增一个只读解码契约——在 step 0/60/120 对固定的一组（例如四个）具名骨从 `poseLocal` 解码 translation/quaternion，要求全部有限、至少这些骨在 60/120 步发生变化，并在源图播放同一 `mt_idle` 片段时对同址骨做对照；预算沿用本轮的 30+1。通过这一检查后才谈"有意义的原版 idle"，之后才是装载图销毁与 G3。面板内的视觉确认由观察者另行判断，不能替代数值证据。
+
 
 ## 当前采集器与操作
 
@@ -858,7 +881,7 @@ BehaviorGraphProbe=true
 | 方案 A 评审与 v4 实现 | 2026-10-24 采纳方案 A：销毁判据重定义（空壳销毁 + 装载图销毁移至 G2 生命周期）、v4 保留流程（永不释放的持有指针，每进程 ≤1 张泄漏）、v4 预注册判据（装载复现 + 装载后源基线全等 + 保留无崩溃 → G1 PASSED），见[方案 A 修订](#2026-10-24-方案-a-修订销毁判据经-g1b-v3-崩溃后评审)；构建身份 `…20261024T065321Z`（DLL SHA-256 `37C255DA…`）已部署 | **G1b v4 运行与判读（按修订判据完成 G1）**；G2 前提：激活/更新入口审计 |
 | G1b v4 运行与判读 | 2026-10-24 会话：装载复现（`accepted ms=8.797`）、装载后源基线独立 diff 全等、`retained=true` 无崩溃，同会话面板多轮开合正常，见[v4 运行记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)；INI 已收回 off | — |
 | **G1 判定** | **PASSED（2026-10-24，方案 A 修订判据）**——空壳配对销毁 + 两次装载成功（装配完整/共享同址/setup 自建）+ 装载后源基线全等 + 保留无崩溃，见[v4 记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话) | 注册表计数 UNVERIFIED；可写状态写隔离属 G2+；装载图销毁由 G2 生命周期取得 |
-| **G2 当前判定** | **NOT PASSED（v19，2026-10-26 23:46）**：120 次 63581 调用后 116 项 pose 仍 `bc160a8c2b3a5a58`、原始缓冲 0 次变化；v19 眼位实验落预注册分支 6（`arm-observed=no`，t 未改写），见[v19记录](#g2-v19-run) | 外层门全过（`root218=0`、`b248=0`、`eye` 非空、step 0 旧读槽 f=1.0），但 0xbb2603 的 `63864()` 归一后步长不足以越过 `1.25*dt`；下一步 audit17（63864 返回值语义、rootNode 缺失）；双槽 f 初值仍是后续门 |
+| **G2 当前判定** | **NOT PASSED（v20a，2026-10-27 22:02）**：入口 `63589(mode0)` 首次到达，输出头填充（双槽 `numData=116 f=1.0`、`tracks-end +32=0x0074 +38=1.0`）、step 2 起 Path B、`arm-observed=yes`、`gen0elem` 与元素哈希变化、候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`→`8fb4cd336c4395bf`（120/120 次变化），源侧 pose 不变、三份源基线全等，见[v20a记录](#g2-v20a-run) | 只差逐骨/有限值与视觉证据：需新增 pose 内容解码契约（具名骨 translation/quaternion 有限性、60/120 步变化、与源同片段对照），之后才是装载图销毁与 G3 |
 | G2 v18 取证运行 | 2026-10-26 23:01 会话：加载身份与包内 manifest 一致；`GRAPH FRAME` 30+1、`INDEPENDENT GRAPH` 40、`BEHAVIOR GRAPH` 36（三块逐行全等）；无`[E]`、无崩溃；`source-stable=true retained=true`；部署 INI 已回 off | Path B 的 t 区间来源、63575 原生数量、63568 回填条件、63666/63582/58423 应用链 |
 | 审计十六（机器码） | 2026-10-26：record = `BSAnimationUpdateData`（`+0x18=optionalEyePosition`，唯一写入者=REFR vtable 槽 0x3C8 `ModifyAnimationUpdateData`，Actor 0x6a3750 / PC 0x74e7a0 / REFR 空桩 0x2f71a0）；Path B 真条件改为 `+0x2A==0 && t_larger≥0 && t_smaller>-MAXFLT`；arm 块门与 63581 四道门、63568/63582 的写入分工逐条落定，见[审计十六](behavior-graph-construction-audit.md#audit16) | `[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 输出选择、63582 混合细节、58423 门值、原生帧双槽 f 初值 |
 | G2 v19 实现与部署 | 2026-10-26：单变量眼位实验已实现（提交 `e17d5d1`）并部署——注入分支每步记录 `+0x18` 指向 rootNode 位置 +900 的只读 3×float；FRAME 行改 `schema=v19` 并追加 `root218/b248/eye`，summary 加 `arm-observed`；Release 身份 `…v19-eye-arm-20261026-e17d5d12f6…`（DLL `344d9abb…`），三个 engine-free 案例通过；v18 对备份在 `dist/deploy-backup-20261026-v18/`，部署 INI=`inject`（未打包），见[契约与实现](#g2-v19-contract)、[构建记录](build.md#v19-eye-arm-build) | —（运行见下行） |
@@ -871,7 +894,8 @@ BehaviorGraphProbe=true
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
 | G2 v20 重建与部署 | 2026-10-27：原冻结包不在本检出中，按 v18 先例以干净 `a83e522` 重建/打包/部署（DLL `13688a9d…`、ZIP `076cf6f7…`、manifest `a9ae936d…`），v19 三件套备份在 `dist/deploy-backup-20261026-v19/`，部署 INI=`inject`，见[构建记录](build.md#v20-rebuild-2026-10-27) | —（运行见下行） |
 | G2 v20 运行与崩溃 | 2026-10-27 21:48 会话：身份与包内 manifest 一致，`GRAPH ENTRY outcome=ready`（guard 通过），随后在 **63589 之前**的 v16 遗留 g3-gates 只读链崩溃——`context+0x50` 越过 `sizeof(hkbContext)=0x50`，`[+0x40]` 得垃圾后 `[+0x88]` 越界；**入口从未执行**，无 FRAME/completed/pose 证据；日志与崩溃报告已归档（`2278201C…`/`4074DF23…`），INI 回 off，不在同会话重试，见[v20记录](#g2-v20-run) | 先修该越界诊断（按 audit23 正确链或移除该行），复查同类写法，再以新身份（v20a）重测 |
-| G2 v20a 修正与部署 | 2026-10-27 21:56：g3-gates 改为 `[context]`→setup(+0x50)→data(+0x40)→footIkDriverInfo(+0x88) 的声明成员链，新增 `observation_chain_policy` guard 与对应 engine-free 用例（三个用例全过）；身份 `…v20a-chain-fix-20261027-7d18a90787…`（DLL `691f7592…`、age 321），v20 三件套备份到 `dist/deploy-backup-20261027-v20/`，部署 INI=`inject`，见[构建记录](build.md#v20a-chain-fix-2026-10-27) | —（待上机；63589 仍从未执行） |
+| G2 v20a 修正与部署 | 2026-10-27 21:56：g3-gates 改为 `[context]`→setup(+0x50)→data(+0x40)→footIkDriverInfo(+0x88) 的声明成员链，新增 `observation_chain_policy` guard 与对应 engine-free 用例（三个用例全过）；身份 `…v20a-chain-fix-20261027-7d18a90787…`（DLL `691f7592…`、age 321），v20 三件套备份到 `dist/deploy-backup-20261027-v20/`，部署 INI=`inject`，见[构建记录](build.md#v20a-chain-fix-2026-10-27) | —（运行见下行） |
+| G2 v20a 运行与判读 | 2026-10-27 22:02 会话：身份一致、无崩溃无 `[E]`；ENTRY 1、FRAME 30+1、IG 40、BG 36（三块全等）；guard ready、g3-gates 四跳可读；首步回填 `numData=116 f=1.0`，step 2 起 Path B、`arm-observed=yes`，`gen0elem` 变化，raw pose `bc160a8c…`→`63f638a6…`(60)→`8fb4cd33…`(120)、120/120 次变化，源侧 `983fc2d4…` 前后不变、`source-stable=true retained=true`；日志归档（43,330 字节 `E05BFEAF…`），INI 回 off，见[v20a记录](#g2-v20a-run) | pose 内容解码契约（具名骨有限性/变化/源对照）；视觉确认另行判断 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |

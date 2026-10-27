@@ -894,7 +894,7 @@ python build/behavior-graph-output-audit-20261027/audit23_image.py func 58423 58
 - **插件写法**：驱动前的 `std::uint8_t context_storage[sizeof(RE::hkbContext)]`（0x50 字节）由 58315 填充，随后 g3-gates 诊断读取 `[ctx+0x50] → [+0x40] → [+0x88]`；第一跳已经越过对象末尾，读到的是相邻栈槽。
 - **运行期对照**：v16/v18/v19 该槽为 0，行内三字段均为 `null`（三份归档日志一致）；v20 因新增 guard 局部量改变栈布局，该槽非空（`rbx=0x7BD6CD336F4B8024`），`[+0x40]` 得到的垃圾值再被 `[+0x88]` 解引用，在 `CharacterPanel.dll+0x28067`（`independent_graph.cpp:955` 的 `mov r8, [rbx+0x88]`）触发 `EXCEPTION_ACCESS_VIOLATION`。
 - **与 audit23 的关系**：原生 58423 的链是 `[context]`（character）→`+0x50`（setup）→`+0x40`（data）→`+0x88`（footIkDriverInfo），插件那条少了首次解引用；纠正后既回到对象内读取，也与引擎语义一致。
-- **边界**：该崩溃发生在 63589 之前，不构成对入口、生成、输出头或 pose 的任何证据；这是观测代码的纠正，不改变 v20 的单一行为变量，但会产生新的构建身份。已按此落地 v20a（`…v20a-chain-fix-20261027-7d18a90787…`）：链改为声明成员 `hkbCharacter::setup`/`hkbCharacterSetup::data`/`hkbCharacterData::footIkDriverInfo`，`[graph+0x100]` 用 `hkbFootIkDriver::disableFootIk`，每跳过 `observation_chain_policy.h` 的 `plausible_object_pointer`；见[构建记录](build.md#v20a-chain-fix-2026-10-27)与 [v20 记录](independent-behavior-graph.md#g2-v20-run)。
+- **边界**：该崩溃发生在 63589 之前，不构成对入口、生成、输出头或 pose 的任何证据；这是观测代码的纠正，不改变 v20 的单一行为变量，但会产生新的构建身份。已按此落地 v20a（`…v20a-chain-fix-20261027-7d18a90787…`）：链改为声明成员 `hkbCharacter::setup`/`hkbCharacterSetup::data`/`hkbCharacterData::footIkDriverInfo`，`[graph+0x100]` 用 `hkbFootIkDriver::disableFootIk`，每跳过 `observation_chain_policy.h` 的 `plausible_object_pointer`；见[构建记录](build.md#v20a-chain-fix-2026-10-27)与 [v20 记录](independent-behavior-graph.md#g2-v20-run)。随后的一次 v20a 运行在同一行正确解析出四跳并继续走到 63589，取得首次 pose 变化（[v20a 记录](independent-behavior-graph.md#g2-v20a-run)），因此本轮修复只影响可观测性，不是实验变量。
 
 ## 复现
 
