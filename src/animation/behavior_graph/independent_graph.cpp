@@ -5,14 +5,17 @@
 
 #include "animation/behavior_graph/frame_trace.h"
 #include "animation/behavior_graph/generation_entry_policy.h"
+#include "animation/behavior_graph/observation_chain_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbBehaviorGraphData.h"
 #include "RE/H/hkbBehaviorGraphStringData.h"
 #include "RE/H/hkbCharacter.h"
+#include "RE/H/hkbCharacterData.h"
 #include "RE/H/hkbCharacterSetup.h"
 #include "RE/H/hkbContext.h"
+#include "RE/H/hkbFootIkDriver.h"
 #include "RE/H/hkbProjectData.h"
 #include "RE/H/hkbProjectStringData.h"
 #include "RE/M/MemoryManager.h"
@@ -938,29 +941,40 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     output_tracks(0), output_tracks(1));
                             };
                             // v16 gate-G3 evidence, one read-only row before the drive loop:
-                            // 58423's entry gates are byte [rcx+0x4A] (rcx = [graph+0x100]),
-                            // [[out]]+4 > 0xB and the ctx chain [ctx+0x50] → [+0x40] →
-                            // [+0x88] (0xab7f54..0xab7f89); the plugin's 58315-built context
-                            // backs the ctx side. No writes.
+                            // 58423's entry gates are byte [footIkDriver+0x4A] (rcx =
+                            // [graph+0x100]), [[out]]+4 > 0xB and the context chain
+                            // (0xab7f54..0xab7f89). v20a (audit24): the old row read
+                            // `[ctx+0x50]` although `sizeof(RE::hkbContext)` is 0x50 - one
+                            // slot past the object - and v20 crashed there; audit23's chain
+                            // is [context] -> character, then setup (+0x50) -> data (+0x40)
+                            // -> footIkDriverInfo (+0x88). Every hop is now a declared member
+                            // and every intermediate is checked before it is dereferenced.
+                            // No writes.
                             const std::uintptr_t graph_base = reinterpret_cast<std::uintptr_t>(candidate_base);
                             const std::uintptr_t gate_owner = *reinterpret_cast<const std::uintptr_t*>(graph_base + 0x100);
-                            const std::uintptr_t gate_flag =
-                                gate_owner ? *reinterpret_cast<const std::uint8_t*>(gate_owner + 0x4A) : 0;
-                            const std::uintptr_t chain_50 = context
-                                ? *reinterpret_cast<const std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(context) + 0x50)
-                                : 0;
-                            const std::uintptr_t chain_40 = chain_50
-                                ? *reinterpret_cast<const std::uintptr_t*>(chain_50 + 0x40)
-                                : 0;
-                            const std::uintptr_t chain_88 = chain_40
-                                ? *reinterpret_cast<const std::uintptr_t*>(chain_40 + 0x88)
-                                : 0;
-                            const auto ptr_field = [](std::uintptr_t const value) {
-                                return value ? fmt::format("{:#x}", value) : std::string("null");
+                            const auto readable = [](void const* const value) {
+                                return plausible_object_pointer(reinterpret_cast<std::uintptr_t>(value));
                             };
-                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=g3-gates g100={} flag4a={:#04x} ctx+50={} +40={} +88={}",
-                                actor_id, request, ptr_field(gate_owner), gate_flag,
-                                ptr_field(chain_50), ptr_field(chain_40), ptr_field(chain_88));
+                            const auto* const gate_driver = readable(reinterpret_cast<void const*>(gate_owner))
+                                ? reinterpret_cast<const RE::hkbFootIkDriver*>(gate_owner)
+                                : nullptr;
+                            const std::uint8_t gate_flag = gate_driver ? gate_driver->disableFootIk : 0;
+                            const RE::hkbCharacter* const gate_character =
+                                readable(context) ? context->character : nullptr;
+                            const RE::hkbCharacterSetup* const gate_setup =
+                                readable(gate_character) ? gate_character->setup.get() : nullptr;
+                            const RE::hkbCharacterData* const gate_data =
+                                readable(gate_setup) ? gate_setup->data.get() : nullptr;
+                            const RE::hkbFootIkDriverInfo* const gate_foot_ik_info =
+                                readable(gate_data) ? gate_data->footIkDriverInfo.get() : nullptr;
+                            const auto ptr_field = [](void const* const value) {
+                                const auto address = reinterpret_cast<std::uintptr_t>(value);
+                                return address ? fmt::format("{:#x}", address) : std::string("null");
+                            };
+                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=g3-gates g100={} flag4a={:#04x} character={} setup={} data={} footik-info={}",
+                                actor_id, request, ptr_field(reinterpret_cast<void const*>(gate_owner)), gate_flag,
+                                ptr_field(gate_character), ptr_field(gate_setup), ptr_field(gate_data),
+                                ptr_field(gate_foot_ik_info));
                             // v16 gate-G4 evidence: the per-slot pointer/numData/onFraction
                             // sequence over the double-buffer pair ([graph+0x220]/[0x228]).
                             // n/f are the read slot's first output track header (+0x32 word,
