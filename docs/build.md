@@ -188,6 +188,24 @@ Package: `build/behavior-graph-v25-step-clock-20261027/test-package/` (`SKSE/Plu
 
 Deployment (2026-10-27 23:59): the v24 trio was backed up to `dist/deploy-backup-20261027-v24/` (DLL `13bc2b12…`, PDB `c4a72f08…`, `off` INI 1,046 bytes `1424473c…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,057 bytes `4af7e8ee…`). **One run happened at 2026-10-28 00:03**: identity matched, no crash, no `[E]`, five `clip-steps` rows. The bitstrings settle the clock question: the three idle clips advanced 72 frames over 72 drive steps (exactly 1.000x), and `H2H_Equip` advanced 50 frames, its own `duration`, before stopping. Delivery is batched though - twelve single-frame steps, then 15 frames every 15 steps with 14 zero steps between - so the v24 "0.75x lag" is a sampling artefact of a 20-step window against a 15-step period and that reading is withdrawn. The deployed INI returned to `off` (1,063 bytes `e910d4e8…`). See the [v25 run record](independent-behavior-graph.md#g2-v25-run).
 
+<a id="v26-pose-step-2026-10-28"></a>
+## V26 per-step pose build (2026-10-28)
+
+The [v26 contract](independent-behavior-graph.md#g2-v26-contract) answers the one item v25 left open. v25 showed the idle clip clock advances exactly 1.000x but in batches - 15 frames every 15 drive steps, 14 zero steps between - so the remaining question is whether `poseLocal` follows that batching (a 4 Hz slideshow) or changes every step. This build reads `poseLocal` at the end of every drive step, compares the ten meaningful components against the previous step with `pose_sample_max_delta`, and writes one bucketed character per step (`.` = 0, `1` <= 1e-5, `2` <= 1e-4, `3` <= 1e-3, `4` <= 1e-2, `5` > 1e-2) into a single `pose-steps` row. No native call was added; entry, guard, drive and every earlier row are unchanged.
+
+Commands (proxy variables cleared for the reason recorded above):
+
+```
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v26-pose-step-20261028
+cmake --build --preset Release
+```
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v26-pose-step-20261028-aed15ad6c0-cl94faaed0c6-20261027T160910Z` (clean HEAD `aed15ad6c0`, submodule `94faaed0`; no `+dirty`). DLL SHA-256 `6c117d47ced99f149df1024a35c9cc4919ad6b7fdef9606f57f93d21f56066c7` (1,294,848 bytes), PDB SHA-256 `9203291b9fd0175602d7389ebc479b9e16e76abea02e18475d3253895e641a13` (35,909,632 bytes); CodeView/PDB GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 333. Configure and build exited 0 with only the existing install-rule and D9025 warnings. Five engine-free cases pass with the local `g++` 15.1 under `-Wall -Wextra -Werror`.
+
+Package: `build/behavior-graph-v26-pose-step-20261028/test-package/` (`SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md`, `manifest.json` `a02e25c1…` 4,824 bytes); ZIP `CharacterPanel-behavior-graph-v26-pose-step-20261028.zip` is 10,029,787 bytes, SHA-256 `d3d7f1b71048000ca26df5845d585f8662e3f99907da2cf28ac2df2f572e5f17`, five forward-slash entries re-extracted and re-hashed against the manifest. The package INI is the unchanged v21 fragment (`inject`, 1,278 bytes `efff49a5…`); the repository sample stays `off`.
+
+Deployment (2026-10-28 00:10): the v25 trio was backed up to `dist/deploy-backup-20261027-v25/` (DLL `d8ca80bb…`, PDB `a468bead…`, `off` INI 1,063 bytes `e910d4e8…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,042 bytes `29692657…`). **No run has happened yet.**
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
