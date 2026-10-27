@@ -47,6 +47,8 @@ namespace
     // after the bounded drive has finished. Null until a candidate is retained; never stepped
     // from here.
     RE::hkbCharacter* g_held_character = nullptr;
+    // v28: the retained graph itself, so the display path can advance it one step per frame.
+    RE::BShkbAnimationGraph* g_held_graph = nullptr;
 
     // AE address-library ids from the 1.6.1170 audit; the experiment is gated to AE.
     constexpr std::uint64_t GraphConstructorID = 63555;
@@ -523,6 +525,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     bool loaded = false;
     // v27: filled where the candidate is still in scope; the display path reads it later.
     RE::hkbCharacter* retained_character = nullptr;
+    RE::BShkbAnimationGraph* retained_graph = nullptr;
     {
         void* const memory = RE::MemoryManager::GetSingleton()->Allocate(
             sizeof(RE::BShkbAnimationGraph), GraphAlignment, true);
@@ -648,6 +651,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                     // the G2 lifecycle owns its teardown.
                     new RE::BSTSmartPointer<RE::BShkbAnimationGraph>(candidate);
                     retained_character = &candidate->characterInstance;
+                    retained_graph = candidate.get();
                 }
 
                 if (loaded && (mode == IndependentGraphMode::drive || mode == IndependentGraphMode::inject))
@@ -1573,7 +1577,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     // v27: the retained candidate is the only handle the display path can reach later, so its
     // character is remembered here. Nothing is stepped from this pointer here.
     if (retained_loaded)
+    {
         g_held_character = retained_character;
+        g_held_graph = retained_graph;
+    }
     const Identity source_after = identify(source_graph);
     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase={} source-drift={} registry-probe=unavailable",
         actor_id, request, retained_loaded ? "retained" : "destroyed", first_drift(source_before, source_after));
@@ -1603,6 +1610,37 @@ bool held_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out
         out.emplace_back(std::string(raw), ni_local_from_pose(read_pose(g_held_character->poseLocal[i])));
     }
     return !out.empty();
+}
+
+bool step_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out)
+{
+    out.clear();
+    if (!g_held_graph || !g_held_character)
+        return false;
+    // One generation entry per rendered frame - the same call the bounded drive makes, with the
+    // same mode byte. Nothing else is written: no event, no guard, no world borrow.
+    static std::uint8_t mode = 0;
+    static REL::Relocation<generation_entry_t> entry{ REL::ID(GenerationEntryID) };
+    entry(g_held_graph, &mode);
+    static std::uint64_t calls = 0;
+    ++calls;
+    const bool converted = held_display_pose(out);
+    if (calls == 1 || calls == 60 || calls == 120)
+    {
+        std::uint64_t hash = 1469598103934665603ull;
+        if (g_held_character->poseLocal && g_held_character->numPoseLocal > 0)
+        {
+            const auto* const bytes = reinterpret_cast<const std::uint8_t*>(g_held_character->poseLocal);
+            const std::size_t count = static_cast<std::size_t>(g_held_character->numPoseLocal) * 0x30;
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                hash ^= bytes[i];
+                hash *= 1099511628211ull;
+            }
+        }
+        logger::info("ANIMATION DISPLAY step={} pose-hash={:016x} bones={}", calls, hash, out.size());
+    }
+    return converted;
 }
 }
 PLUGIN_NAMESPACE_END

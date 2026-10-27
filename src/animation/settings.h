@@ -15,5 +15,7 @@ namespace animation
     // v27: when true and a candidate is retained, the panel's display pose comes from that
     // candidate instead of the OAR clip sampler.
     [[nodiscard]] bool display_pose();
+    // v28: advance the retained graph one step per rendered frame instead of showing the frozen pose.
+    [[nodiscard]] bool display_step();
 }
 PLUGIN_NAMESPACE_END

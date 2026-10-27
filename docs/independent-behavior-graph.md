@@ -1244,6 +1244,32 @@ deltas='.55555555555555555555555555555555555555555555555555555555555555555555555
 <a id="g2-v27-build"></a>
 **实现与部署（2026-10-28 00:20，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v27-display-pose-20261028-c894c956f8-cl94faaed0c6-20261027T162057Z`（干净 `c894c95`，子模块 `94faaed0`，无 `+dirty`；DLL `b973aa5b…` 1,298,944 字节、PDB `75a228f5…` 35,926,016 字节、CodeView age 335）。改动四处：`independent_graph.{h,cpp}` 记录保留候选的 `hkbCharacter*` 并实现 `held_display_pose`、`settings.{h,cpp}` 增 `DisplayPose`、`controller.cpp` 在 `advance()` 开头接驳。首次编译在 `candidate` 越出作用域处失败（`C2065`），改为在泄漏点捕获 `retained_character` 后通过。五个 engine-free 用例全过。包 `build/behavior-graph-v27-display-pose-20261028/test-package/`（manifest `d3545033…` 5,020 字节，包内 INI 1,295 字节 `618b1081…` = `inject` + `DisplayPose=true`），ZIP 10,018,217 字节、SHA-256 `6a195266…`，五条目复核相符。v26 三件套备份到 `dist/deploy-backup-20261028-v26/`，MO2 现为 v27 DLL/PDB，部署 INI=`inject` + `DisplayPose=true`（1,063 字节 `2834670d…`）。**该轮不上机**；随后的一次运行待记录。
 
+<a id="g2-v28-contract"></a>
+## G2 v28 契约：逐帧推进显示（2026-10-28，已实现/待构建）
+
+**动机**：v27 的静态接驳已确认——日志 `ANIMATION DISPLAY … bones=116`，画面就是 `H2H_Idle` 的站姿，用户复核一致。它不动是设计使然：`held_display_pose` 只读冻结缓冲。v28 让保留图每渲染帧推进一次，再把新姿态接给显示图。
+
+**变更**：
+
+1. 记录保留图指针 `g_held_graph`（与 `g_held_character` 同一保留点）。
+2. 新增 `step_display_pose()`：调用一次 `63589(candidate, &mode0)`——与批量驱动完全相同的入口与 mode 字节，不派发事件、不做 guard、不借 world——然后按 v27 的规则读回姿态。
+3. 新键 `[Experiment] DisplayStep`（默认 false）。为真时 `advance()` 用 `step_display_pose`；步进返回 false 时回落到冻结姿态。
+4. 诊断：第 1/60/120 次调用各打一行 `ANIMATION DISPLAY step=<n> pose-hash=<hex> bones=<n>`，把“图有没有走”和“画面有没有跟”分开判。
+
+**风险与边界**：这是第一次在渲染路径里逐帧调用原生生成入口。批量里 63589 每步一次、共 120 次；这里同样每帧一次。但批量周边还有 world 借用与 slot 操作，逐帧路径没有——63589 的门（setup/animationSkeleton/behaviorGraph 非空 + `+0x12C` 已激活）不依赖它们，预期可跑；若三次哈希相同，则说明孤立调用不自推进，下一问回到 63587 的更新是否必须随步执行。
+
+**回退**：`DisplayStep=false` 回到 v27 的冻结姿态；`DisplayPose=false` 完全回到 OAR 路径。
+
+**预注册判读（逐条）**：
+
+1. 三次 `pose-hash` 互不相同、画面在动 → 逐帧推进成立，场景应用打通。
+2. 哈希相同、画面不动 → 63589 在缺 world/缺批量周边时不推进：记“入口孤立调用不自推进”，下一问查更新链。
+3. 只有首次那行、没有 step 行 → 走的是回落路径（步进返回 false）。
+4. 崩溃 → 回 `off`，保留完整日志与匹配 PDB。
+
+<a id="g2-v28-build"></a>
+**实现与部署（待填）**
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。

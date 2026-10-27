@@ -61,5 +61,9 @@ namespace animation::behavior_graph
     // apply it. Read-only: it never steps the graph, so the figure is frozen at the last
     // sampled frame. Empty when no candidate was retained.
     [[nodiscard]] bool held_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out);
+
+    // v28: advance the retained graph by one bounded drive step and return the resulting pose.
+    // Same single entry call as the batch, one per rendered frame; false when no graph is held.
+    [[nodiscard]] bool step_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out);
 }
 PLUGIN_NAMESPACE_END

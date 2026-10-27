@@ -1179,13 +1179,20 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
     if (display_pose())
     {
         PoseBuffer held;
-        if (behavior_graph::held_display_pose(held))
+        // v28: with DisplayStep on, the graph is advanced once per rendered frame and the pose is
+        // read back from its new state; a failed step falls back to the frozen pose.
+        const bool stepping = display_step();
+        bool have_pose = stepping && behavior_graph::step_display_pose(held);
+        if (!have_pose)
+            have_pose = behavior_graph::held_display_pose(held);
+        if (have_pose)
         {
             static bool display_source_logged = false;
             if (!display_source_logged)
             {
                 display_source_logged = true;
-                logger::info("ANIMATION DISPLAY source=independent-graph bones={} note=frozen-at-last-driven-step", held.size());
+                logger::info("ANIMATION DISPLAY source=independent-graph bones={} note={}",
+                    held.size(), stepping ? "stepping-per-frame" : "frozen-at-last-driven-step");
             }
             state.pose.clear();
             for (auto& entry : held)
