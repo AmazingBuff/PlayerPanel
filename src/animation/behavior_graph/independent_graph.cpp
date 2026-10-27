@@ -3,12 +3,15 @@
 //
 #include "animation/behavior_graph/independent_graph.h"
 
+#include "animation/behavior_graph/clip_reference_policy.h"
 #include "animation/behavior_graph/frame_trace.h"
 #include "animation/behavior_graph/generation_entry_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
 #include "animation/behavior_graph/pose_content_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
+#include "RE/H/hkaAnimation.h"
+#include "RE/H/hkaAnimationBinding.h"
 #include "RE/H/hkaSkeleton.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbBehaviorGraphData.h"
@@ -16,6 +19,7 @@
 #include "RE/H/hkbCharacter.h"
 #include "RE/H/hkbCharacterData.h"
 #include "RE/H/hkbCharacterSetup.h"
+#include "RE/H/hkbClipGenerator.h"
 #include "RE/H/hkbContext.h"
 #include "RE/H/hkbFootIkDriver.h"
 #include "RE/H/hkbProjectData.h"
@@ -368,15 +372,46 @@ namespace
     // v21: bounded, plausibility-checked read of a skeleton bone name. The string lives
     // in engine memory, so an implausible pointer is reported instead of dereferenced,
     // and the scan stops at 48 characters so a malformed name cannot walk far.
-    std::string read_bone_name(RE::hkStringPtr const& name)
+    std::string read_string(RE::hkStringPtr const& text, std::size_t const max_length)
     {
-        const char* const raw = name.c_str();
+        const char* const raw = text.c_str();
         if (!plausible_object_pointer(reinterpret_cast<std::uintptr_t>(raw)))
             return std::string("unreadable");
         std::size_t length = 0;
-        while (length < 48 && raw[length] != '\0')
+        while (length < max_length && raw[length] != '\0')
             ++length;
         return std::string(raw, length);
+    }
+
+    std::string read_bone_name(RE::hkStringPtr const& name)
+    {
+        // 48 keeps a bone name intact; a clip path is longer and gets its own bound.
+        return read_string(name, 48);
+    }
+
+    // v23 semantic-correspondence helpers. A live graph node counts as a clip generator
+    // only when its vtable is the one REL resolves for hkbClipGenerator; anything else is
+    // reported as "no clip generator" rather than cast to an assumed type.
+    bool node_is_clip_generator(RE::hkbNode const* const node)
+    {
+        if (!node)
+            return false;
+        return *reinterpret_cast<const std::uintptr_t*>(node) == RE::VTABLE_hkbClipGenerator[0].address();
+    }
+
+    PoseSample pose_sample_from_transform(RE::hkQsTransform const& entry)
+    {
+        float translation[4]{};
+        float rotation[4]{};
+        float scale[4]{};
+        std::memcpy(translation, &entry.translation, sizeof(translation));
+        std::memcpy(rotation, &entry.rotation, sizeof(rotation));
+        std::memcpy(scale, &entry.scale, sizeof(scale));
+        PoseSample sample;
+        sample.translation = { translation[0], translation[1], translation[2] };
+        sample.rotation = { rotation[0], rotation[1], rotation[2], rotation[3] };
+        sample.scale = { scale[0], scale[1], scale[2] };
+        return sample;
     }
 
     // Decisive G2 discriminator (v3): did the update change ANY node/variable state?
@@ -1039,18 +1074,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 out.reserve(limit);
                                 for (std::size_t i = 0; i < limit; ++i)
                                 {
-                                    const RE::hkQsTransform& entry = character.poseLocal[i];
-                                    float translation[4]{};
-                                    float rotation[4]{};
-                                    float scale[4]{};
-                                    std::memcpy(translation, &entry.translation, sizeof(translation));
-                                    std::memcpy(rotation, &entry.rotation, sizeof(rotation));
-                                    std::memcpy(scale, &entry.scale, sizeof(scale));
-                                    PoseSample sample;
-                                    sample.translation = { translation[0], translation[1], translation[2] };
-                                    sample.rotation = { rotation[0], rotation[1], rotation[2], rotation[3] };
-                                    sample.scale = { scale[0], scale[1], scale[2] };
-                                    out.push_back(sample);
+                                    out.push_back(pose_sample_from_transform(character.poseLocal[i]));
                                 }
                             };
                             const auto or_missing = [](bool const known, std::string const& value) {
@@ -1106,6 +1130,81 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     baseline_candidate_pose = current_candidate;
                                 previous_candidate_pose = current_candidate;
                                 previous_source_pose = current_source;
+                            };
+                            // v23 semantic correspondence (read-only): is poseLocal the sample
+                            // of an active clip at that clip's own time? The active node list is
+                            // walked without writing anything; a node is only treated as a clip
+                            // generator when its vtable matches REL's hkbClipGenerator. The single
+                            // native call is SamplePartialTracks - the same API the display player
+                            // already uses every frame - and it samples a copy, not the live clip.
+                            const auto log_clip_reference = [&](std::uint32_t const step) {
+                                RE::hkbBehaviorGraph* const graph = candidate->characterInstance.behaviorGraph.get();
+                                if (!graph || !graph->activeNodes)
+                                {
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} status=unavailable reason=no-graph",
+                                        actor_id, request, step);
+                                    return;
+                                }
+                                std::vector<PoseSample> pose;
+                                read_pose_local(candidate->characterInstance, pose);
+                                if (pose.empty())
+                                {
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} status=unavailable reason=no-pose",
+                                        actor_id, request, step);
+                                    return;
+                                }
+                                RE::NodeList const& nodes = *graph->activeNodes;
+                                const std::size_t active = static_cast<std::size_t>(nodes.size());
+                                const std::size_t count = active < 256 ? active : 256;
+                                std::size_t reported = 0;
+                                for (std::size_t i = 0; i < count && reported < 3; ++i)
+                                {
+                                    RE::hkbNode* const node = nodes.data()[i].nodeClone;
+                                    if (!node_is_clip_generator(node))
+                                        continue;
+                                    const auto* const clip = static_cast<const RE::hkbClipGenerator*>(node);
+                                    const RE::hkaAnimationBinding* const binding = clip->binding;
+                                    const RE::hkaAnimation* const animation = binding ? binding->animation.get() : nullptr;
+                                    const std::int32_t tracks = animation ? animation->numberOfTransformTracks : 0;
+                                    const float local_time = clip->localTime;
+                                    const std::string name = read_string(clip->animationName, 96);
+                                    if (!binding || !animation || tracks <= 0 || tracks > 512 || !std::isfinite(local_time))
+                                    {
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} slot={} index={} status=unavailable reason=bad-binding name='{}' tracks={} time={:.4f}",
+                                            actor_id, request, step, reported, i, name, tracks, local_time);
+                                        ++reported;
+                                        continue;
+                                    }
+                                    std::vector<RE::hkQsTransform> sampled(static_cast<std::size_t>(tracks));
+                                    animation->SamplePartialTracks(local_time, static_cast<std::uint32_t>(tracks),
+                                        sampled.data(), 0, nullptr, nullptr);
+                                    ClipReferenceMatch match;
+                                    const auto& map = binding->transformTrackToBoneIndices;
+                                    const std::size_t mapped = std::min<std::size_t>(static_cast<std::size_t>(tracks),
+                                        static_cast<std::size_t>(map.size()));
+                                    for (std::size_t track = 0; track < mapped; ++track)
+                                    {
+                                        const std::int32_t bone = map.data()[track];
+                                        if (bone < 0 || static_cast<std::size_t>(bone) >= pose.size())
+                                        {
+                                            ++match.unmapped;
+                                            continue;
+                                        }
+                                        clip_reference_agrees(match, pose_sample_from_transform(sampled[track]),
+                                            pose[static_cast<std::size_t>(bone)]);
+                                    }
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} slot={} index={} status=compared name='{}' time={:.4f} duration={:.4f} mode={} speed={:.3f} tracks={} mapped={} compared={} agreed={} unmapped={} max-dpos={:.6f} max-drot={:.6f} max-dscale={:.6f}",
+                                        actor_id, request, step, reported, i, name, local_time, animation->duration,
+                                        static_cast<std::uint32_t>(clip->mode.get()), clip->playbackSpeed,
+                                        tracks, mapped, match.compared, match.agreed, match.unmapped,
+                                        match.max_position, match.max_rotation, match.max_scale);
+                                    ++reported;
+                                }
+                                if (reported == 0)
+                                {
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} status=unavailable reason=no-clip-generator scanned={} active={}",
+                                        actor_id, request, step, count, active);
+                                }
                             };
                             // v19 contract: the inject recipe supplies the audited
                             // optionalEyePosition (record+0x18) so 63587's arm block can run.
@@ -1214,6 +1313,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         actor_id, request, step, predicate);
                                     log_slots(step);
                                     log_pose_content(step);
+                                    log_clip_reference(step);
                                 }
                                 // V20 uses the audited outer wrapper; other profiles retain 63581.
                                 // The mode byte lives across this synchronous call.
@@ -1245,6 +1345,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             log_state_probe("120");
                             log_slots(120);
                             log_pose_content(120);
+                            log_clip_reference(120);
                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pipeline steps={} shell=pairs world-restored=true ragdoll-removed={} tracks-end[{}]",
                                 actor_id, request, DriveSteps, slot2_removed, pose_track_fields(candidate.get()));
 
