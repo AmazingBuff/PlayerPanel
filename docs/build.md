@@ -150,7 +150,7 @@ Build identity: `CharacterPanel-scenegraph-behavior-graph-v23-clip-ref-20261027-
 
 Package: `build/behavior-graph-v23-clip-ref-20261027/test-package/` (`SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md`, `manifest.json` `2f143a77…` 7,373 bytes); ZIP `CharacterPanel-behavior-graph-v23-clip-ref-20261027.zip` is 9,928,402 bytes, SHA-256 `05ac4a3ef1bc2f7cb25985b74c4850b3010ccc14644ea3197259ff0e836006e9`, five forward-slash entries re-extracted and re-hashed against the manifest. The package INI is the unchanged v21 fragment (`inject`, 1,278 bytes `efff49a5…`); the repository sample stays `off`.
 
-Deployment (2026-10-27 23:16): the v22 trio was backed up to `dist/deploy-backup-20261027-v22/` (DLL `5756e0e6…`, PDB `b763d05f…`, `off` INI 1,061 bytes `cc0572ca…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,072 bytes `88dec6d8…`). **No run has happened yet.**
+Deployment (2026-10-27 23:16): the v22 trio was backed up to `dist/deploy-backup-20261027-v22/` (DLL `5756e0e6…`, PDB `b763d05f…`, `off` INI 1,061 bytes `cc0572ca…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,072 bytes `655a9c89…`). **No run has happened yet.**
 
 ## Scope and non-goals
 
