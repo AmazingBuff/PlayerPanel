@@ -6,8 +6,10 @@
 #include "animation/behavior_graph/frame_trace.h"
 #include "animation/behavior_graph/generation_entry_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
+#include "animation/behavior_graph/pose_content_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
+#include "RE/H/hkaSkeleton.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbBehaviorGraphData.h"
 #include "RE/H/hkbBehaviorGraphStringData.h"
@@ -361,6 +363,20 @@ namespace
         if (pose_hash(character, hash))
             return fmt::format("{:016x}", hash);
         return "unavailable";
+    }
+
+    // v21: bounded, plausibility-checked read of a skeleton bone name. The string lives
+    // in engine memory, so an implausible pointer is reported instead of dereferenced,
+    // and the scan stops at 48 characters so a malformed name cannot walk far.
+    std::string read_bone_name(RE::hkStringPtr const& name)
+    {
+        const char* const raw = name.c_str();
+        if (!plausible_object_pointer(reinterpret_cast<std::uintptr_t>(raw)))
+            return std::string("unreadable");
+        std::size_t length = 0;
+        while (length < 48 && raw[length] != '\0')
+            ++length;
+        return std::string(raw, length);
     }
 
     // Decisive G2 discriminator (v3): did the update change ANY node/variable state?
@@ -1000,6 +1016,84 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=slots step={} p0={} h0={:016x} p1={} h1={:016x}",
                                     actor_id, request, step, ptr0, hash0, ptr1, hash1);
                             };
+                            // v21 pose-content contract (2026-10-27): a raw FNV over
+                            // poseLocal is padding-sensitive, so it proves bytes changed, not
+                            // that a bone carries a finite, changing transform. At three
+                            // checkpoints this decodes every entry through the declared
+                            // hkQsTransform (0x30 stride), compares each entry with the
+                            // previous checkpoint, compares with the source's own poseLocal and
+                            // counts candidate/source identical entries (aliasing watch). The
+                            // pure arithmetic lives in pose_content_policy.h and is covered
+                            // engine-free. Read-only: no native call and no buffer write.
+                            std::vector<PoseSample> previous_candidate_pose;
+                            std::vector<PoseSample> previous_source_pose;
+                            const auto read_pose_local = [](RE::hkbCharacter const& character, std::vector<PoseSample>& out) {
+                                out.clear();
+                                if (!character.poseLocal || character.numPoseLocal <= 0)
+                                    return;
+                                const std::size_t count = static_cast<std::size_t>(character.numPoseLocal);
+                                const std::size_t limit = count < kMaxPoseEntries ? count : kMaxPoseEntries;
+                                out.reserve(limit);
+                                for (std::size_t i = 0; i < limit; ++i)
+                                {
+                                    const RE::hkQsTransform& entry = character.poseLocal[i];
+                                    float translation[4]{};
+                                    float rotation[4]{};
+                                    float scale[4]{};
+                                    std::memcpy(translation, &entry.translation, sizeof(translation));
+                                    std::memcpy(rotation, &entry.rotation, sizeof(rotation));
+                                    std::memcpy(scale, &entry.scale, sizeof(scale));
+                                    PoseSample sample;
+                                    sample.translation = { translation[0], translation[1], translation[2] };
+                                    sample.rotation = { rotation[0], rotation[1], rotation[2], rotation[3] };
+                                    sample.scale = { scale[0], scale[1], scale[2] };
+                                    out.push_back(sample);
+                                }
+                            };
+                            const auto or_missing = [](bool const known, std::string const& value) {
+                                return known ? value : std::string("n/a");
+                            };
+                            const auto log_pose_content = [&](std::uint32_t const step) {
+                                std::vector<PoseSample> current_candidate;
+                                std::vector<PoseSample> current_source;
+                                read_pose_local(candidate->characterInstance, current_candidate);
+                                read_pose_local(source_base->characterInstance, current_source);
+                                const PoseComparison comparison = compare_pose(current_candidate, previous_candidate_pose);
+                                const PoseComparison source_comparison = compare_pose(current_source, previous_source_pose);
+                                const std::size_t aliased = count_identical(current_candidate, current_source);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-content step={} entries={} finite={} nonfinite={} moved={} max-delta={} source-entries={} source-finite={} source-moved={} source-equal={}",
+                                    actor_id, request, step, comparison.entries, comparison.finite, comparison.non_finite,
+                                    or_missing(comparison.has_previous, fmt::format("{}", comparison.moved)),
+                                    or_missing(comparison.has_previous, fmt::format("{:.6f}", comparison.max_delta)),
+                                    source_comparison.entries, source_comparison.finite,
+                                    or_missing(source_comparison.has_previous, fmt::format("{}", source_comparison.moved)),
+                                    aliased);
+                                const RE::hkaSkeleton* const skeleton =
+                                    candidate->characterInstance.setup ? candidate->characterInstance.setup->animationSkeleton.get() : nullptr;
+                                const std::size_t bone_count = skeleton ? static_cast<std::size_t>(skeleton->bones.size()) : 0;
+                                for (std::size_t slot = 0; slot < 4 && bone_count > 0; ++slot)
+                                {
+                                    const std::size_t index = (slot * (bone_count - 1)) / 3;
+                                    if (index >= current_candidate.size() || index >= current_source.size())
+                                        continue;
+                                    const PoseSample& sample = current_candidate[index];
+                                    const std::string name = read_bone_name(skeleton->bones.data()[index].name);
+                                    const std::string moved = index < previous_candidate_pose.size()
+                                        ? (pose_sample_differs(sample, previous_candidate_pose[index]) ? "yes" : "no")
+                                        : "n/a";
+                                    const bool matches_source = pose_sample_identical(sample, current_source[index]);
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-bone step={} index={} name='{}' p=({:.4f},{:.4f},{:.4f}) q=({:.4f},{:.4f},{:.4f},{:.4f}) s=({:.3f},{:.3f},{:.3f}) finite={} moved={} source-equal={} source-p=({:.4f},{:.4f},{:.4f})",
+                                        actor_id, request, step, index, name,
+                                        sample.translation[0], sample.translation[1], sample.translation[2],
+                                        sample.rotation[0], sample.rotation[1], sample.rotation[2], sample.rotation[3],
+                                        sample.scale[0], sample.scale[1], sample.scale[2],
+                                        pose_sample_finite(sample), moved, matches_source,
+                                        current_source[index].translation[0], current_source[index].translation[1],
+                                        current_source[index].translation[2]);
+                                }
+                                previous_candidate_pose = current_candidate;
+                                previous_source_pose = current_source;
+                            };
                             // v19 contract: the inject recipe supplies the audited
                             // optionalEyePosition (record+0x18) so 63587's arm block can run.
                             // The point is the candidate root's position shifted along Z past
@@ -1106,6 +1200,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pred step={} r={:#04x}",
                                         actor_id, request, step, predicate);
                                     log_slots(step);
+                                    log_pose_content(step);
                                 }
                                 // V20 uses the audited outer wrapper; other profiles retain 63581.
                                 // The mode byte lives across this synchronous call.
@@ -1136,6 +1231,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             candidate_pose_end = format_pose_hash(candidate->characterInstance);
                             log_state_probe("120");
                             log_slots(120);
+                            log_pose_content(120);
                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pipeline steps={} shell=pairs world-restored=true ragdoll-removed={} tracks-end[{}]",
                                 actor_id, request, DriveSteps, slot2_removed, pose_track_fields(candidate.get()));
 
