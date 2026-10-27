@@ -9,7 +9,7 @@
 | 关卡 | 截至 2026-10-27 的结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **NOT PASSED，最新已运行版本为 v20（2026-10-27 21:48，入口前崩溃）、最后一次完整观测为 v19（2026-10-26 23:46）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化，没有有意义的 idle 位姿运动。v20 首轮 guard 通过（`outcome=ready`），但随即在 **63589 之前**的 v16 遗留 g3-gates 只读链处越界崩溃（`context+0x50` 越过 `sizeof(hkbContext)=0x50`），**入口从未执行**，见 [v20 记录](#g2-v20-run)。 |
+| G2 | **NOT PASSED；最新运行 v20（2026-10-27 21:48，入口前崩溃）、最新构建 v20a（同日 21:56，修正越界诊断、待上机），最后一次完整观测为 v19（2026-10-26 23:46）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化，没有有意义的 idle 位姿运动。v20 首轮 guard 通过（`outcome=ready`），但随即在 **63589 之前**的 v16 遗留 g3-gates 只读链处越界崩溃（`context+0x50` 越过 `sizeof(hkbContext)=0x50`），**入口从未执行**；v20a 已按 audit24 修正该链并部署待测，见 [v20 记录](#g2-v20-run)。 |
 | G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
 
 [v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
@@ -752,7 +752,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 <a id="v20-handoff"></a>
 ## v20 测试交接与当前停点
 
-**实现、静态审计和本地验证均已完成；v20 包已按 v18 先例重建并部署，并已运行一次——在入口之前崩溃，因此 63589 仍未被执行。最新实际运行为 v20（2026-10-27 21:48），最后一次完整观测仍为 v19，G2 未通过。** 现有源码与测试保持冻结，下一轮必须先修那条越界诊断并以新身份重测，不预先播种或推进后续关卡。
+**v20 首轮在入口前崩溃；越界诊断已按 [audit24](behavior-graph-construction-audit.md#audit24) 修正，v20a 已构建、打包并部署，等待第一次上机结果。最新实际运行仍为 v20（2026-10-27 21:48，63589 从未执行），最后一次完整观测仍为 v19，G2 未通过。** 下一轮按包内 runbook 跑一次 v20a 即可；不预先播种或推进后续关卡。
 
 原冻结包（身份 `…-242d0a50c5+dirty-cl94faaed0c6-20261027T070457Z`、ZIP `3f9f9182…`、DLL `6c76c2a7…`）不在本检出中，故 2026-10-27 以同一提交源重建：新身份 `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-a83e5229e7-cl94faaed0c6-20261027T134152Z`（干净 `a83e522`，身份无 `+dirty`），DLL `13688a9d…`（1,253,888 字节）、PDB `07a509da…`（35,467,264 字节），CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 320；ZIP 9,750,395 字节、SHA-256 `076cf6f7…`，五个条目重解压复核通过。两次构建不声称字节等同，旧哈希只作历史；判读一律以实际加载的 `SCENEGRAPH BUILD` 身份与包内 manifest 为准，不用较新提交号替代重新构建证据。详见[构建与重建记录](build.md#v20-rebuild-2026-10-27)。
 
@@ -789,6 +789,8 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 1. 把 g3-gates 的链起点改为 `[context]` 再 `+0x50/+0x40/+0x88`（audit23 的正确链），或直接移除这条 v16 遗留行；两者都不触碰 v20 的单一入口变量。
 2. 复查插件内其它 `context + offset` 读取是否越过 `0x50`，以及同类"链首缺一次解引用"的写法。
 3. 任一修复都构成新的构建身份（v20a），需重新构建/打包/部署后再取一次上机结果；在那次结果之前，本轮只证明"入口前的诊断越界"，不能用于评价 63589 的行为。
+
+**v20a 修正与部署（2026-10-27 21:56，未上机）**：按上列第 1 项修正链起点——`[context]` → `hkbCharacter::setup`（+0x50）→ `hkbCharacterSetup::data`（+0x40）→ `hkbCharacterData::footIkDriverInfo`（+0x88），全部走声明成员，`[graph+0x100]` 改用 `hkbFootIkDriver::disableFootIk`，并在每次解引用前过新增的 [observation_chain_policy.h](../src/animation/behavior_graph/observation_chain_policy.h)（`plausible_object_pointer`，只读声明成员、不再触碰对象之外的栈槽）；行字段改为 `character/setup/data/footik-info`。三个 engine-free 用例全部通过（新增策略 11 行、guard 22 行、frame-trace 3 例，`g++` 15.1 `-Wall -Wextra -Werror`）。身份 `CharacterPanel-scenegraph-behavior-graph-v20a-chain-fix-20261027-7d18a90787-cl94faaed0c6-20261027T135614Z`（干净 `7d18a90`，DLL `691f7592…`、PDB `5b3d8cc8…`、CodeView age 321），ZIP `f4586e16…`。v20 三件套已备份到 `dist/deploy-backup-20261027-v20/`，MO2 现为 v20a DLL/PDB，部署 INI（1,073 字节 `6e9d2005…`）为 `inject`。**本轮只修观测，不产生新运行证据**：63589 仍未执行，判据与预算不变，见[构建记录](build.md#v20a-chain-fix-2026-10-27)。
 
 ## 当前采集器与操作
 
@@ -869,6 +871,7 @@ BehaviorGraphProbe=true
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
 | G2 v20 重建与部署 | 2026-10-27：原冻结包不在本检出中，按 v18 先例以干净 `a83e522` 重建/打包/部署（DLL `13688a9d…`、ZIP `076cf6f7…`、manifest `a9ae936d…`），v19 三件套备份在 `dist/deploy-backup-20261026-v19/`，部署 INI=`inject`，见[构建记录](build.md#v20-rebuild-2026-10-27) | —（运行见下行） |
 | G2 v20 运行与崩溃 | 2026-10-27 21:48 会话：身份与包内 manifest 一致，`GRAPH ENTRY outcome=ready`（guard 通过），随后在 **63589 之前**的 v16 遗留 g3-gates 只读链崩溃——`context+0x50` 越过 `sizeof(hkbContext)=0x50`，`[+0x40]` 得垃圾后 `[+0x88]` 越界；**入口从未执行**，无 FRAME/completed/pose 证据；日志与崩溃报告已归档（`2278201C…`/`4074DF23…`），INI 回 off，不在同会话重试，见[v20记录](#g2-v20-run) | 先修该越界诊断（按 audit23 正确链或移除该行），复查同类写法，再以新身份（v20a）重测 |
+| G2 v20a 修正与部署 | 2026-10-27 21:56：g3-gates 改为 `[context]`→setup(+0x50)→data(+0x40)→footIkDriverInfo(+0x88) 的声明成员链，新增 `observation_chain_policy` guard 与对应 engine-free 用例（三个用例全过）；身份 `…v20a-chain-fix-20261027-7d18a90787…`（DLL `691f7592…`、age 321），v20 三件套备份到 `dist/deploy-backup-20261027-v20/`，部署 INI=`inject`，见[构建记录](build.md#v20a-chain-fix-2026-10-27) | —（待上机；63589 仍从未执行） |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |
@@ -884,4 +887,4 @@ BehaviorGraphProbe=true
 
 ## 维护约束
 
-此文拥有实验程序和状态；修改时同步[动画](animation.md)、[OAR](oar-hooks.md)、[构建](build.md)、[维护](code-maintenance.md)、README、相关配置和Changelog。区别两条边界：`BehaviorGraphProbe`最多16条源分组、值语义、只读；`IndependentGraph`默认off、每进程一次，当前 inject（v17 配方）为40条自身前缀预算，另有复用源快照，允许的候选原生调用/字段写入仅由对应实验契约授权。两者都不写源图，不能把源探针只读描述套在整个实验上。v18 在旧40条与源快照之外另有≤31条 `GRAPH FRAME`，其运行结果见 [v18 记录](#g2-v18-run)；v19 已实现、构建、部署并运行一次（分支 6，见[契约与实现](#g2-v19-contract)与[v19 记录](#g2-v19-run)），除获批的 eye 指针外不得据此增加调用或写入。文档核查不替代引擎所有权、姿态或生命周期证据；构建/离线结果见 [Build](build.md#v19-eye-arm-build)。
+此文拥有实验程序和状态；修改时同步[动画](animation.md)、[OAR](oar-hooks.md)、[构建](build.md)、[维护](code-maintenance.md)、README、相关配置和Changelog。区别两条边界：`BehaviorGraphProbe`最多16条源分组、值语义、只读；`IndependentGraph`默认off、每进程一次，当前 inject（v17 配方）为40条自身前缀预算，另有复用源快照，允许的候选原生调用/字段写入仅由对应实验契约授权。两者都不写源图，不能把源探针只读描述套在整个实验上。v18 在旧40条与源快照之外另有≤31条 `GRAPH FRAME`，其运行结果见 [v18 记录](#g2-v18-run)；v19 已实现、构建、部署并运行一次（分支 6，见[契约与实现](#g2-v19-contract)与[v19 记录](#g2-v19-run)），除获批的 eye 指针外不得据此增加调用或写入。v20 只改采样入口（63589），其首轮在入口前崩溃，v20a 仅修正该越界诊断并已部署待测；两者的原生调用许可同一，见[v20 记录](#g2-v20-run)。文档核查不替代引擎所有权、姿态或生命周期证据；构建/离线结果见 [Build](build.md#v19-eye-arm-build) 与 [v20a 构建](build.md#v20a-chain-fix-2026-10-27)。
