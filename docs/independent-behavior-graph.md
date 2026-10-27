@@ -1335,6 +1335,46 @@ v28 漏掉的正是这三条。这一条同时解释了为什么批量能推进�
 <a id="g2-v29-build"></a>
 **实现与部署（2026-10-28 00:50，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v29-display-pipeline-20261028-04903ed263-cl94faaed0c6-20261027T165004Z`（干净 `04903ed`，无 `+dirty`；DLL `ce712e20…` 1,302,016 字节、PDB `6157150e…` 35,958,784 字节、age 339）。只改 `step_display_pose` 内部：每帧 63555 构壳 → 63602 管线 → 63556 销毁 → 63589，壳用栈上 `shell_storage`。五个 engine-free 用例全过。包 `build/behavior-graph-v29-display-pipeline-20261028/test-package/`（manifest `12970d32…` 4,110 字节、INI 1,363 字节 `f5ac5618…`），ZIP 9,996,292 字节、SHA-256 `42f92e94…`，五条目复核相符。v28 三件套备份到 `dist/deploy-backup-20261028-v28/`，MO2 现为 v29，部署 INI 三键（1,095 字节 `468fb691…`）。**该轮不上机**；随后的一次运行待记录。
 
+<a id="g2-v29-run"></a>
+## G2 v29 运行记录（2026-10-28 00:54 会话，补管线后仍不动 —— 调用没生效）
+
+构建 `…v29-display-pipeline-20261028-04903ed263-…`（DLL `ce712e20…`）。**无崩溃、无 `[E]`**。
+
+```
+00:54:33.682  ANIMATION DISPLAY step=1   pose-hash=7d568c4dee1ac065 bones=116
+00:54:35.455  ANIMATION DISPLAY step=60  pose-hash=7d568c4dee1ac065 bones=116
+00:54:37.111  ANIMATION DISPLAY step=120 pose-hash=7d568c4dee1ac065 bones=116
+```
+
+**三条哈希不只是彼此相同，还与 v28 逐位相同（`7d568c4d…`）。**这就排除了“推进得不够”：补上 63555/63602/63556 之后图状态没有任何变化，说明这几条调用在渲染路径里**根本没有生效**，而不是效果太小。
+
+**判定：预注册第 2 条命中（变体）——管线也不足以推进。**下一步不是换配方，而是先确认门的实际取值：`63587/63589` 的入口门（`+0x110`、`[+0x110]+0x20`、`+0x208`、`[[+0x208]+0x12C]`）与 `+0x12C/+0x12E/+0x245/+0x246/+0x240` 在渲染路径里是不是已经翻假。v30 只加诊断，不改行为。
+
+<a id="g2-v30-contract"></a>
+## G2 v30 契约：显示路径的门诊断（2026-10-28，已实现/待构建）
+
+**动机**：v28 与 v29 的 pose 哈希逐位相同，说明渲染路径里的原生调用没有产生任何状态变化。先看门，再谈配方。
+
+**变更（只加日志，不改行为）**：`step_display_pose` 在第 1 次与第 60 次调用时各打一行：
+
+```
+ANIMATION DISPLAY gates call=<n> active=<+0x12C> children=<+0x12E> b245=<+0x245> b246=<+0x246>
+    w240=<+0x240 字> c110=<+0x110 指针> c208=<+0x208 指针> numData0=<槽0 +0x32> numData1=<槽1 +0x32>
+```
+
+槽指针按 `plausible_object_pointer` 过滤，不可读记 `-1`。
+
+**预注册判读（逐条，命中即停）**：
+
+1. `active=0` → 图在渲染路径里已不处于激活态：下一问是什么把它关掉的（批次收尾、面板关闭，还是引擎自己）。
+2. `children=0` 或 `b245=0` / `b246=0` → 图没有 arm：下一问是 arm 由谁置位、渲染路径里能否补。
+3. `numData0=0` 且 `numData1=0` → 两个输出槽是空的，采样器本来就无内容可采；与 v26 批内 `numData=116` 对照即可定性。
+4. 门全部健康（`active=1`、`children=1`、`numData≈116`）而哈希仍不动 → 调用在更深一层被短路，下一问转向 63602 自身的门链（`0x110 → +0x20`）。
+5. 崩溃 → 回 `DisplayStep=false`，保留证据。
+
+<a id="g2-v30-build"></a>
+**实现与部署（待填）**
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。

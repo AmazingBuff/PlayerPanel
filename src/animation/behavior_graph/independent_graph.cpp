@@ -1648,6 +1648,26 @@ bool step_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out
             }
         }
         logger::info("ANIMATION DISPLAY step={} pose-hash={:016x} bones={}", calls, hash, out.size());
+        // v30: the pose hash never moved (v28 and v29 both reported 7d568c4d...), so the calls
+        // are reaching the graph but changing nothing. These are the gates 63587/63589 read
+        // (audit16/audit18) plus the two output slots' numData, which says whether the frame
+        // pipeline is even eligible to run here.
+        const auto* const fields = reinterpret_cast<const std::uint8_t*>(g_held_graph);
+        const auto slot_num_data = [](std::uintptr_t const slot) -> int
+        {
+            if (!plausible_object_pointer(slot))
+                return -1;
+            return static_cast<int>(*reinterpret_cast<const std::uint16_t*>(slot + 0x32));
+        };
+        const std::uintptr_t slot0 = *reinterpret_cast<const std::uintptr_t*>(fields + 0x220);
+        const std::uintptr_t slot1 = *reinterpret_cast<const std::uintptr_t*>(fields + 0x228);
+        logger::info("ANIMATION DISPLAY gates call={} active={} children={} b245={:#04x} b246={} w240={} c110={:#x} c208={:#x} numData0={} numData1={}",
+            calls, static_cast<int>(fields[0x12C]), static_cast<int>(fields[0x12E]),
+            static_cast<int>(fields[0x245]), static_cast<int>(fields[0x246]),
+            static_cast<int>(*reinterpret_cast<const std::uint16_t*>(fields + 0x240)),
+            *reinterpret_cast<const std::uintptr_t*>(fields + 0x110),
+            *reinterpret_cast<const std::uintptr_t*>(fields + 0x208),
+            slot_num_data(slot0), slot_num_data(slot1));
     }
     return converted;
 }
