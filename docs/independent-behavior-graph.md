@@ -1373,7 +1373,7 @@ ANIMATION DISPLAY gates call=<n> active=<+0x12C> children=<+0x12E> b245=<+0x245>
 5. 崩溃 → 回 `DisplayStep=false`，保留证据。
 
 <a id="g2-v30-build"></a>
-**实现与部署（待填）**
+**实现与部署（2026-10-28 00:56，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v30-display-gates-20261028-0829b1d26d-cl94faaed0c6-20261027T165604Z`（干净 `0829b1d`；DLL `e5b0e57c…` 1,304,064 字节、PDB `e450627a…` 35,975,168 字节、age 341）。只加诊断：`step_display_pose` 在 call 1/60 各打一行门值，行为仍是 v29 的每帧 63555→63602→63556→63589。五个 engine-free 用例全过。包 `build/behavior-graph-v30-display-gates-20261028/test-package/`（manifest `cdebfff0…` 3,919 字节、INI 1,356 字节 `98ebd960…`），ZIP 9,986,675 字节、SHA-256 `1ce2b765…`，五条目复核相符。v29 三件套备份到 `dist/deploy-backup-20261028-v29/`，MO2 现为 v30，部署 INI 三键（1,068 字节 `50adad10…`）。**该轮不上机**。
 
 ## 当前采集器与操作
 
@@ -1472,6 +1472,8 @@ BehaviorGraphProbe=true
 | G2 v28 契约与实现 | 2026-10-28 00:27：`step_display_pose` 每渲染帧一次 `63589(candidate,&mode0)`，第 1/60/120 次打 `pose-hash`；新键 `DisplayStep`；步进失败回落 v27 冻结姿态；身份 `…v28-display-step-20261028-44dcdf4663…`（DLL `e3f9ade8…`、age 337），ZIP `d2965ca8…`、manifest `46ae35ee…`，v27 备份到 `dist/deploy-backup-20261028-v27/`，部署 INI 三键（1,070 字节 `0866cec7…`），见[契约](#g2-v28-contract)与[构建记录](build.md#v28-display-step-2026-10-28) | —（运行见下行） |
 | G2 v28 运行与判读 | 2026-10-28 00:47 会话：三条 `pose-hash` **全同**（`7d568c4d…`），120 次调用约 3.35 s、画面不动 → 预注册第 2 条命中：**只调 63589 不推进**；批量每步的 63555/63602/63556 才是推进来源，日志归档（59,181 字节 `3cde4194…`），见[v28 运行记录](#g2-v28-run) |
 | G2 v29 契约与实现 | 2026-10-28 00:50：`step_display_pose` 补上 63555→63602→63556 再 63589；身份 `…v29-display-pipeline-20261028-04903ed263…`（DLL `ce712e20…`、age 339），ZIP `42f92e94…`、manifest `12970d32…`，v28 备份到 `dist/deploy-backup-20261028-v28/`，部署 INI 三键（1,095 字节 `468fb691…`），见[契约](#g2-v29-contract)与[构建记录](build.md#v29-display-pipeline-2026-10-28) | —（运行见下行） |
+| G2 v29 运行与判读 | 2026-10-28 00:54 会话：三条 `pose-hash` 仍全同，且与 v28 **逐位相同**（`7d568c4d…`）→ 补上 63555/63602/63556 后图状态零变化，说明渲染路径里的调用根本没生效，不是推进幅度问题；日志归档（59,223 字节 `57eb0b22…`），见[v29 运行记录](#g2-v29-run) |
+| G2 v30 契约与实现 | 2026-10-28 00:56：只加门诊断（`active/children/b245/b246/w240/c110/c208/numData0/numData1`，call 1 与 60 各一行），行为不变；身份 `…v30-display-gates-20261028-0829b1d26d…`（DLL `e5b0e57c…`、age 341），ZIP `1ce2b765…`、manifest `cdebfff0…`，v29 备份到 `dist/deploy-backup-20261028-v29/`，部署 INI 三键（1,068 字节 `50adad10…`），见[契约](#g2-v30-contract)与[构建记录](build.md#v30-display-gates-2026-10-28) | —（运行见下行） |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |
@@ -1483,7 +1485,7 @@ BehaviorGraphProbe=true
 
 当前选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
 
-最新实际运行为 v26（2026-10-28 00:12）：pose 每步都在变（119/120），G2 四项判据全部满足并判 PASSED；v27 已把候选姿态静态接到显示图并经用户确认（`bones=116`、画面为 `H2H_Idle`），v28 逐帧推进得到负结果（只调 63589 不推进），v29 补上 63555/63602/63556 已部署待测（[v28 运行记录](#g2-v28-run)、[v29 契约](#g2-v29-contract)）；v24 运行给出“有意义”的数据：step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle` 在该时刻的采样（旋转误差 ≤6.1e-5）；剩余缺口是“持续”——idle 时钟每驱动步推进 0.75×–1.55×，非恒定，见 [v24 运行记录](#g2-v24-run)。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
+最新实际运行为 v26（2026-10-28 00:12）：pose 每步都在变（119/120），G2 四项判据全部满足并判 PASSED；v27 已把候选姿态静态接到显示图并经用户确认（`bones=116`、画面为 `H2H_Idle`），v28 逐帧推进得到负结果（只调 63589 不推进），v29 补上 63555/63602/63556 后哈希仍逐位相同（调用没生效），v30 门诊断已部署待测（[v29 运行记录](#g2-v29-run)、[v30 契约](#g2-v30-contract)）；v24 运行给出“有意义”的数据：step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle` 在该时刻的采样（旋转误差 ≤6.1e-5）；剩余缺口是“持续”——idle 时钟每驱动步推进 0.75×–1.55×，非恒定，见 [v24 运行记录](#g2-v24-run)。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
 
 ## 维护约束
 

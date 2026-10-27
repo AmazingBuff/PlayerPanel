@@ -273,6 +273,22 @@ Package: `build/behavior-graph-v29-display-pipeline-20261028/test-package/` (`SK
 
 Deployment (2026-10-28 00:51): the v28 trio was backed up to `dist/deploy-backup-20261028-v28/`, the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI carries the three keys (1,095 bytes `468fb691…`). **No run has happened yet.**
 
+<a id="v30-display-gates-2026-10-28"></a>
+## V30 display gate diagnostics build (2026-10-28)
+
+v28 called only `63589`; v29 added the batch's pipeline (`63555 → 63602 → 63556`). Both produced **the identical pose hash** `7d568c4dee1ac065`, which rules out "the advance is too small" and points at the calls changing nothing on the display path. This round adds no recipe: `step_display_pose` logs the gates that `63587`/`63589` read — `+0x12C` (active), `+0x12E` (children), `+0x245`, `+0x246`, `+0x240` (word), `+0x110`, `+0x208` — plus both output slots' `numData` (`+0x32`), on calls 1 and 60. Slot pointers pass `plausible_object_pointer` first and report `-1` when unreadable.
+
+Commands (proxy variables cleared for the reason recorded above):
+
+```
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v30-display-gates-20261028
+cmake --build --preset Release
+```
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v30-display-gates-20261028-0829b1d26d-cl94faaed0c6-20261027T165604Z` (clean HEAD `0829b1d26d`, submodule `94faaed0`). DLL SHA-256 `e5b0e57c657751cbec317bc3e53350ce1b509ec55ae8b44a318faf6effa73381` (1,304,064 bytes), PDB SHA-256 `e450627abc459dfee9559e793d722f8cfbb3dc5b0201f7cc9b5744c1e5fa4cc6` (35,975,168 bytes); CodeView age 341. Five engine-free cases pass.
+
+Package: `build/behavior-graph-v30-display-gates-20261028/test-package/` (`manifest.json` `cdebfff0…` 3,919 bytes); ZIP 9,986,675 bytes, SHA-256 `1ce2b765…`, five entries re-hashed against the manifest. Deployment: the v29 trio was backed up to `dist/deploy-backup-20261028-v29/` and the deployed INI keeps the three experiment keys (1,068 bytes `50adad10…`). **No run has happened yet.**
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
