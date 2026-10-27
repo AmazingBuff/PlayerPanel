@@ -4,6 +4,7 @@
 #include "animation/behavior_graph/independent_graph.h"
 
 #include "animation/behavior_graph/clip_reference_policy.h"
+#include "animation/clip.h"
 #include "animation/behavior_graph/frame_trace.h"
 #include "animation/behavior_graph/generation_entry_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
@@ -42,6 +43,11 @@ namespace animation::behavior_graph
 {
 namespace
 {
+    // v27: the retained candidate's character, remembered so the display path can read its pose
+    // after the bounded drive has finished. Null until a candidate is retained; never stepped
+    // from here.
+    RE::hkbCharacter* g_held_character = nullptr;
+
     // AE address-library ids from the 1.6.1170 audit; the experiment is gated to AE.
     constexpr std::uint64_t GraphConstructorID = 63555;
     constexpr std::uint64_t GraphLoaderID = 63585;
@@ -515,6 +521,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     Identity candidate_final;
     bool constructed = false;
     bool loaded = false;
+    // v27: filled where the candidate is still in scope; the display path reads it later.
+    RE::hkbCharacter* retained_character = nullptr;
     {
         void* const memory = RE::MemoryManager::GetSingleton()->Allocate(
             sizeof(RE::BShkbAnimationGraph), GraphAlignment, true);
@@ -639,6 +647,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                     // pointer that is never released, not even at static destruction;
                     // the G2 lifecycle owns its teardown.
                     new RE::BSTSmartPointer<RE::BShkbAnimationGraph>(candidate);
+                    retained_character = &candidate->characterInstance;
                 }
 
                 if (loaded && (mode == IndependentGraphMode::drive || mode == IndependentGraphMode::inject))
@@ -1561,6 +1570,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     }
 
     const bool retained_loaded = mode != IndependentGraphMode::off && mode != IndependentGraphMode::construct && loaded;
+    // v27: the retained candidate is the only handle the display path can reach later, so its
+    // character is remembered here. Nothing is stepped from this pointer here.
+    if (retained_loaded)
+        g_held_character = retained_character;
     const Identity source_after = identify(source_graph);
     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase={} source-drift={} registry-probe=unavailable",
         actor_id, request, retained_loaded ? "retained" : "destroyed", first_drift(source_before, source_after));
@@ -1568,6 +1581,28 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=end constructed={} loaded={} assembly={} separated={} source-stable={} retained={}",
         actor_id, request, constructed, loaded, assembled(candidate_final), separated(source_before, candidate_final),
         std::string_view(first_drift(source_before, source_after)) == "none", retained_loaded);
+}
+
+bool held_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out)
+{
+    out.clear();
+    if (!g_held_character || !g_held_character->poseLocal || g_held_character->numPoseLocal <= 0)
+        return false;
+    const RE::hkaSkeleton* const skeleton =
+        g_held_character->setup ? g_held_character->setup->animationSkeleton.get() : nullptr;
+    if (!skeleton || skeleton->bones.empty())
+        return false;
+    const std::size_t bones = static_cast<std::size_t>(skeleton->bones.size());
+    const std::size_t entries = std::min<std::size_t>(static_cast<std::size_t>(g_held_character->numPoseLocal), bones);
+    out.reserve(entries);
+    for (std::size_t i = 0; i < entries; ++i)
+    {
+        const char* const raw = skeleton->bones.data()[i].name.c_str();
+        if (!raw || raw[0] == '\0')
+            continue;
+        out.emplace_back(std::string(raw), ni_local_from_pose(read_pose(g_held_character->poseLocal[i])));
+    }
+    return !out.empty();
 }
 }
 PLUGIN_NAMESPACE_END

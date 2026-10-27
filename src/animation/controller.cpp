@@ -1173,6 +1173,30 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
 {
     State& state = *m_state;
     if (!ready() || state.root != &root) return 0;
+    // v27 display handoff: with DisplayPose on and a candidate retained, the panel shows that
+    // candidate's pose instead of the OAR sampler. The pose is frozen at the last driven frame;
+    // this branch adds no native call, it only reads the retained character's poseLocal.
+    if (display_pose())
+    {
+        PoseBuffer held;
+        if (behavior_graph::held_display_pose(held))
+        {
+            static bool display_source_logged = false;
+            if (!display_source_logged)
+            {
+                display_source_logged = true;
+                logger::info("ANIMATION DISPLAY source=independent-graph bones={} note=frozen-at-last-driven-step", held.size());
+            }
+            state.pose.clear();
+            for (auto& entry : held)
+                state.pose.emplace(entry.first, entry.second);
+            for (auto const& [name, local] : state.pose)
+                if (auto target = state.nodes.find(name); target != state.nodes.end())
+                    target->second->local = local;
+            recompute_subtree_worlds(root, 0);
+            return state.pose.size();
+        }
+    }
     const auto now = std::chrono::steady_clock::now();
     const double delta = std::clamp(std::chrono::duration<double>(now - state.last_tick).count(), 0.0, 0.1);
     state.last_tick = now;

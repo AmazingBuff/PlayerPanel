@@ -12,5 +12,8 @@ namespace animation
     [[nodiscard]] bool detailed_animation_trace();
     [[nodiscard]] bool behavior_graph_probe();
     [[nodiscard]] behavior_graph::IndependentGraphMode independent_graph_setting();
+    // v27: when true and a candidate is retained, the panel's display pose comes from that
+    // candidate instead of the OAR clip sampler.
+    [[nodiscard]] bool display_pose();
 }
 PLUGIN_NAMESPACE_END

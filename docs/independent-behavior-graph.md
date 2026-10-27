@@ -1218,6 +1218,32 @@ deltas='.55555555555555555555555555555555555555555555555555555555555555555555555
 
 **下一有界问题（G3 前置，待评审）**：把候选 pose 接到显示图，或先在候选图上做 Equip→Idle→Unequip 的原生事件链（G3）。两者都需要新的契约；当前部署已回 `off`。
 
+<a id="g2-v27-contract"></a>
+## G2 v27 契约：把候选姿态接到显示图（2026-10-28，已实现/待构建）
+
+**动机**：G2 的全部证据都来自缓冲，没有一条来自屏幕。v27 把保留候选的 `poseLocal` 转成（骨名 → 局部变换），交给面板现有的 name→node 映射去应用——复用 `AnimationController::advance()` 已有的落盘循环与 `recompute_subtree_worlds`，不另开渲染路径。
+
+**变更（不新增原生调用）**：
+
+1. 实验结束时把保留候选的 `hkbCharacter*` 记进模块静态（只在 `retained_loaded` 时），因为那是显示路径唯一能拿到的句柄。
+2. 新增只读 `held_display_pose(out)`：读 `poseLocal`，按 `setup->animationSkeleton->bones[i].name` 生成 `(骨名, NiTransform)`；骨架缺失、姿态为空或名称为空则跳过该条。
+3. 新增 INI 键 `[Experiment] DisplayPose=false`。为 true 且存在保留候选时，`advance()` 用该姿态替代 OAR 采样结果，之后仍走原来的 apply 循环与 world 级联。
+4. 首次生效打 1 行：`ANIMATION DISPLAY source=independent-graph bones=<n> note=frozen-at-last-driven-step`。
+
+**范围**：v27 只做**静态接驳**——姿态冻结在驱动结束那一帧，不逐帧推进。目的是先确认“候选姿态能被显示图正确应用”（视觉证据的入口）；逐帧动起来是下一轮的事，需要把逐步驱动搬进渲染路径，风险高一个量级。
+
+**回退**：`DisplayPose=false` 立即恢复原 OAR 路径；候选未保留时该分支直接跳过、零副作用。
+
+**预注册判读（逐条）**：
+
+1. 出现 `ANIMATION DISPLAY … bones≈116`，且画面里的角色是候选姿态（应与 v24 的 `H2H_Idle`、`time=1.2` 一致）→ 接驳成立。
+2. 没有该行 → 候选未保留或 `held_display_pose` 返回空，记 `unavailable`，不改判据。
+3. 画面与 OAR 姿态看不出差别 → 骨名没命中（`state.nodes` 的键与骨架名不一致），下一问查映射，不算失败。
+4. 崩溃 → 回 `off`，保留完整日志与匹配 PDB。
+
+<a id="g2-v27-build"></a>
+**实现与部署（待填）**
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。
