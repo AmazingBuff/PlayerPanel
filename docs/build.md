@@ -170,6 +170,24 @@ Package: `build/behavior-graph-v24-layer-census-20261027/test-package/` (`SKSE/P
 
 Deployment (2026-10-27 23:38): the v23 trio was backed up to `dist/deploy-backup-20261027-v23/` (DLL `efa90c21…`, PDB `f7e3e2c6…`, `off` INI 1,077 bytes `02f37ace…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,062 bytes `ac255097…`). **One run happened at 23:48**: identity matched, no crash, no `[E]`, 9 `clip-ref` and 7 `clip-clock` rows. Every identity-mapped binding reported `mapped=99/97` with a full `compared` count, so audit25's semantics held at runtime; `H2H_Idle` (binding-index 681) owned 90 of 99 tracks at step 120 with rotation error ≤6.1e-5 across all 99, which is the first layer attribution and satisfies the v24 gate. The clock row showed the stack switching mid-drive (`H2H_Equip` alone at steps 20/40, the idle stack from step 60) and the idle clock advancing 0.75x-1.55x per drive step rather than 1x, leaving continuity as the only open G2 item. The deployed INI returned to `off` (1,046 bytes `1424473c…`). See the [v24 run record](independent-behavior-graph.md#g2-v24-run).
 
+<a id="v25-step-clock-2026-10-27"></a>
+## V25 step-clock build (2026-10-27)
+
+[Audit26](behavior-graph-construction-audit.md#audit26) established that the clip clock consumes dt and nothing else: `hkbClipGenerator::Update` (`0xACDE40`) hands the advance to `0xACFDE0`, which computes `new = old + dt x speed`, `speed = (effDuration/enforcedDuration or 1) x playbackSpeed`, clamped to `[cropStart, cropStart+effDuration]`. The v24 lag of 0.75x-1.55x therefore cannot come from the clock's own arithmetic. The [v25 contract](independent-behavior-graph.md#g2-v25-contract) makes both remaining explanations readable: `clip-ref` now reports `enforced` (`hkbClipGenerator::enforcedDuration`), `crop-sum` (`hkaDefaultAnimationControl::cropStartAmountLocalTime + cropEndAmountLocalTime`) and `eff-duration` (`duration - crop-sum`, the same expression as `0xACF340`), which rules out a constant multiplier; and a new `clip-steps` row holds one character per drive step with that step's `localTime` delta in 1/60 frames (`.`=0, `1`-`9`, `A`-`Z`=10-35, `N`=backwards, `-`=absent), so a periodic gap versus a fractional speed become distinguishable without 121 log rows. Entry, guard, eye point, the drive and every earlier row are unchanged; the only native call is still the const `SamplePartialTracks`.
+
+Commands (proxy variables cleared for the reason recorded above):
+
+```powershell
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v25-step-clock-20261027
+cmake --build --preset Release
+```
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v25-step-clock-20261027-862cebdf1b-cl94faaed0c6-20261027T155811Z` (clean HEAD `862cebdf1b`, submodule `94faaed0`; no `+dirty`). DLL SHA-256 `d8ca80bbf76693b23a3faafa46c33158c853972abb54dd157717874971405463` (1,290,752 bytes), PDB SHA-256 `a468bead87e32664fe283c0f9c85d2b4b9e8a7516371e789b3c56e2ae69ddbe6` (35,860,480 bytes); CodeView/PDB GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 331. Configure and build exited 0 with only the existing install-rule and D9025 warnings. Five engine-free cases pass with the local `g++` 15.1 under `-Wall -Wextra -Werror`: pose content (36 assertions), clip reference (19), observation chain (11 rows), generation entry (22 rows) and frame trace (3 cases).
+
+Package: `build/behavior-graph-v25-step-clock-20261027/test-package/` (`SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md`, `manifest.json` `ba4bc726…` 5,571 bytes); ZIP `CharacterPanel-behavior-graph-v25-step-clock-20261027.zip` is 10,029,342 bytes, SHA-256 `15820120451f95a55c799fbd40f8c584bbe020aa880448e05e8a8abe4b2732d9`, five forward-slash entries re-extracted and re-hashed against the manifest. The package INI is the unchanged v21 fragment (`inject`, 1,278 bytes `efff49a5…`); the repository sample stays `off`.
+
+Deployment (2026-10-27 23:59): the v24 trio was backed up to `dist/deploy-backup-20261027-v24/` (DLL `13bc2b12…`, PDB `c4a72f08…`, `off` INI 1,046 bytes `1424473c…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,057 bytes `4af7e8ee…`). **No run has happened yet.**
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
