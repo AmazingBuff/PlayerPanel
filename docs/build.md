@@ -4,11 +4,12 @@
 
 Build the current Windows DLL from this checkout. Release is the only configure/build preset and `CharacterPanel` is the only first-party target. The result is `build/Release/CharacterPanel.dll` with matching debugging symbols.
 
-## Current research status (2026-10-26)
+<a id="current-research-status-2026-10-26"></a>
+## Current research status (2026-10-27)
 
-[G1 passed only revised Option A; G2 v18 has not passed](independent-behavior-graph.md#current-status). Native shell release and repeated load/retention are evidenced; loaded-graph teardown, global counts and convergence are not. v17 allocated 116 poses and dispatched WeapEquip with node/variable changes, but pose hashes at 0/60/120 stayed equal. [v18](independent-behavior-graph.md#g2-v18-run) ran the same recipe with five-stage slot observations: both slots kept `numTracks=21` and `numData=0`, onFraction fell from the slot-2-written 1.0 to 0 in both slots after the first update, the time pair stayed at the Path A reset value, and the pose stayed `bc160a8c2b3a5a58` across 120 returned sampling calls with zero raw-buffer changes. It ran 120 fixed 1/60-second steps in one paused batch (two simulated seconds), not 120 rendered frames. G3–G6 complete acceptance remains open.
+[G1 passed only revised Option A; G2 latest actualrunv19 has not passed](independent-behavior-graph.md#current-status). V18/v19 runtime records below remain historical evidence; loaded teardown/global convergence and G3–G6 complete acceptance stay open. The current [v20 test](#v20-generation-entry-build) uses the audit22 native wrapper behind a private-state guard; no manager registration or runtime success is claimed.
 
-`IndependentGraph=off` is the default; inject runs the v17 forty-row INDEPENDENT GRAPH budget plus source snapshots, separately from the source-only sixteen-row BehaviorGraphProbe. Old `candidate=none/gate1=not-passed` labels describe the source observer. The earlier documentation-only refresh produced no runtime evidence. V18 adds a local observation package; the first record of that package went stale (see [the rebuild note](#v18-frame-trace-build)), so it was rebuilt from the committed source and redeployed on 2026-10-26, then run once (23:01 session) and reverted to `off`. V19 (the eye-position experiment) is built, deployed unpackaged and was run once on 2026-10-26 (pre-registered branch 6, no arm); the deployed INI is back to `off`. Its identity, offline checks and the run record are in the [V19 build record](#v19-eye-arm-build).
+DefaultIndependentGraph remainsoff. New FRAME30+1 plus ENTRY1 total at most32 rows, separately from old40/source snapshots; guard skip has no FRAME. Source-only probe labels/budget do not report current G1 acceptance. No game or deployment occurs in this local build task.
 
 <a id="v18-frame-trace-build"></a>
 ## V18 bounded frame-trace verification (2026-10-26)
@@ -53,6 +54,26 @@ Reproduction commands:
 C:/env/mingw64/bin/g++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_frame_trace_test.cpp -o build/v19-frame-trace-test.exe
 build/v19-frame-trace-test.exe
 cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v19-eye-arm-20261026
+cmake --build --preset Release
+```
+
+<a id="v20-generation-entry-build"></a>
+## V20 native generation-entry test (2026-10-27)
+
+[Audit22](behavior-graph-construction-audit.md#audit22) supplies the native63589 ABI and mode0 synchronous branch. The [pre-registered test](independent-behavior-graph.md#g2-v20-generation-entry) uses the [production value guard](../src/animation/behavior_graph/generation_entry_policy.h) and [one parameterized engine-free case](../tests/behavior_graph_generation_entry_test.cpp); the22value rows passed with assertions enabled, without native calls. Earlier trace/progress/eye algorithms are unchanged and their old evidence is reused, not rerun as new acceptance.
+
+The intended local verification is Release configure/build with label `behavior-graph-v20-generation-entry-20261027`, matching DLL/PDB inspection, protected input/source hashes, links and isolated ZIP CRC. The initial Release configure/build passed; a review-only const-byte/comment repair was followed by an incremental compile/link of independent_graph.cpp and an up-to-date completion check (exit0), without rerunning the unchanged guard case. Configure reported the existing install-rule warning and compilation the existing /Ob2→/Ob3 warning. The SDK metadata directory was read through authorized build permissions. No dependencies, CMake targets, runtime configuration defaults, original asset executable or vendor declarations change. Game execution/deployment are not performed. Latest actualrunv19, v20 pending and G2 not passed.
+
+Final identity: `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-242d0a50c5+dirty-cl94faaed0c6-20261027T070457Z`. DLL SHA-256 `6c76c2a7a5cbbe32437bef3634404ecde9928d5cc6eff73d367ca146f54d84b7` (1,251,328 bytes), PDB SHA-256 `9d2a09e98f9ae9161f9398fb4ee94e2fcd50addb93f3e8692e4898f4f442f43e` (35,196,928 bytes); matched CodeView/PDB GUID `{748DB13E-5AAA-4883-8283-751805A36ED4}`, age79. The new isolated folder is `build/behavior-graph-v20-generation-entry-20261027/test-package/`, ZIP `CharacterPanel-behavior-graph-v20-generation-entry-20261027.zip` in its parent. Manifest records source hashes (including unchanged preexisting util.* compiled by the existing glob), input hashes and restrictions; no game image/tool/SDK is inside the ZIP. Native runtime evidence remains pending.
+
+ZIP SHA-256 `3f9f9182c0590d9285fa2fd77895cc35496da3ee75a3f70adf6ac4f50b0b8a49` (9,469,280 bytes), five entries; CRC and each file hash match. This identity/manifest describe the build-time `242d0a5+dirty` workspace; a later Git commit will not rewrite the existing package. Return the complete log plus actual loaded identity/manifest and first-open/close/abnormal times; guard-skip has only ENTRY by design. No new result is pre-judged.
+
+The [v20 handoff](independent-behavior-graph.md#v20-handoff) is the current stop: the matched package is frozen and awaits testing; latest actual run remains v19 and G2 has not passed. Follow its return/stop protocol and the existing package runbook. Later commits do not change these recorded artifact hashes, and this documentation completion does not rerun a build or test.
+
+```powershell
+C:/env/llvm/bin/clang++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_generation_entry_test.cpp -o build/behavior-graph-v20-generation-entry-20261027/generation_entry_test.exe
+build/behavior-graph-v20-generation-entry-20261027/generation_entry_test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v20-generation-entry-20261027
 cmake --build --preset Release
 ```
 

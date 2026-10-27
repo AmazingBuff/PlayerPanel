@@ -1,3 +1,15 @@
+Current v20 entry test (2026-10-27):
+  docs/independent-behavior-graph.md#g2-v20-generation-entry
+  docs/behavior-graph-construction-audit.md#audit22
+Latest actual run is v19; v20 awaits its first runtime log, G2 has not passed.
+Only exact1170 inject restores63589(&mode0), behind a private-state guard.
+No manager registration, fake sink, directSDK Generate or header seeding.
+All v19 eye/flags/timestep/world/retention/source controls stay unchanged.
+GRAPH FRAME schema=v20 entry=63589 mode=0 denotes intent; completed counts
+returned outer-entry calls, not actual Generate or successful sampling.
+FRAME30+1 plus ENTRY1 means at most32 new-prefix rows; old40/source rows
+remain separate. Guard skip has only ENTRY, with no FRAME rows by design.
+
 CharacterPanel — SceneGraph runtime notes
 
 Build setup and pinned dependencies: docs/build.md
@@ -6,38 +18,18 @@ Native DAC dependency/session/restore: docs/dac.md
 Log navigation and hash conventions: docs/code-maintenance.md
 Historical research summaries/source recovery: docs/history.md and docs/history-sources.md
 
-Research status (2026-10-26): docs/independent-behavior-graph.md#current-status
-G1 passes revised Option A only (shell release, repeated load, sampled source
-equality, loaded graph retained). Loaded-graph teardown/global counts/convergence
-are unverified. G2 v17 has not passed: 116 poses stay unchanged despite WeapEquip
-dispatch and node/variable evolution. Complete G3-G6 and OAR parity remain open.
-IndependentGraph defaults off and runs once per process. v17 inject budgets 40
-INDEPENDENT GRAPH rows plus source snapshots; 120 fixed 1/60-second steps mean
-two simulated seconds in one paused batch, not 120 rendered frames.
-BehaviorGraphProbe is a separate source-only 16-row observer. Its fixed
-candidate=none/gate1=not-passed label describes that row, not current G1 status.
-Header initialization/reset/refill is a first blocking hypothesis, not the
-proved only cause. n at +0x32 is numData; native numTracks is at +0x4. Sampling
-payload/context/application still need evidence. V18 implementation is ready for
-manual evidence collection; no new writer audit or v18 game run is claimed.
-V18: docs/independent-behavior-graph.md#g2-v18-frame-trace
-Only inject on exact AE1.6.1170 adds GRAPH FRAME schema=v18: 30 phase rows
-plus one summary, separate from old40/source rows. Raw pose hashes are checked
-after all completed samples but include padding and do not pass G2.
-The native recipe and repository off default are unchanged.
-
-V18 test handoff: docs/independent-behavior-graph.md#v18-handoff
-Current stop: package ready, first v18 game result pending; G2 has not passed.
-ZIP: CharacterPanel-behavior-graph-v18-frame-trace-20261026.zip
-SHA256: cd3645698693dafefc264b97cbee50a264ba82559b62afc96c6a18c43fbc4953
-DLL/PDB GUID {748DB13E-5AAA-4883-8283-751805A36ED4}, age77.
-The 92a3ed0+dirty package identity describes build time; a subsequent Git
-commit does not rewrite the existing package, manifest or loaded identity.
-Return the complete CharacterPanel.log, actual build identity/manifest and
-first-open/close/abnormal-event times. If rows are missing, retain runtime,
-actual INI, restart status and whether this process had already run the test.
-completed is a returned 63581-call count, not an effective-sampling count.
-Await and adjudicate new raw evidence before seeding or advancing other gates.
+Research status: docs/independent-behavior-graph.md#current-status
+G1 passes revised Option A only; loaded teardown/global counts/convergence and
+fullG3-G6 remain unverified. Actual v18/v19 logs exist; latest actualrunv19 did
+not passG2. Their dated packages/identities remain in docs/build.md/history.
+Current handoff is v20 above, pending its first raw result. The initial v18
+cd364569 package record is historical, not the current test-package identity.
+Return complete CharacterPanel.log, actual build identity/manifest and first
+open/close/abnormal-event times. For missing rows retain actualruntime/INI,
+restart status and whether this process already ran the experiment.
+completed counts returned outer63589 calls in v20, not successful sampling.
+After the run restore IndependentGraph=off and restart; do not seed/tune/retry
+within a source-drift/crash session. Adjudicate raw results before next steps.
 
 Current build (repository root, prepared toolchain):
   cmake --preset Release

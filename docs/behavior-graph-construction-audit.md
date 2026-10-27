@@ -1,26 +1,22 @@
 # 行为图构造与销毁的二进制审计（2026-10-23）
 
-更新：2026-10-26。本文保存1.6.1170目标镜像的静态审计、历次推断及后续运行纠正；当前门判据由[独立图当前结论](independent-behavior-graph.md#current-status)拥有。**G1仅按方案A修订通过，G2 v18（最新实际运行）未通过**；装载图停用/销毁、全局计数与资源收敛仍未验证。已定位并实际使用的入口不能再写成“G2设计中”，静态可执行路径也不能冒充实际分支和动态骨输出。
+更新：2026-10-27。本文保存1.6.1170目标镜像的静态审计、历次推断及后续运行纠正；当前门判据由[独立图当前结论](independent-behavior-graph.md#current-status)拥有。**G1仅按方案A修订通过，G2 v19（最新实际运行）未通过**；装载图停用/销毁、全局计数与资源收敛仍未验证。已定位并实际使用的入口不能再写成“G2设计中”，静态可执行路径也不能冒充实际分支和动态骨输出。
 
 本文只记录已读出的指令事实和可复现步骤，不把地址相等、函数可反汇编或构造成功当作独立图可用。G1 的通过/停止判据仍由[六关验证](independent-behavior-graph.md#六道关卡)拥有。
 
 <a id="audit-current"></a>
-## 当前字段与后验边界（2026-10-26）
+## 当前生成入口与后验边界（2026-10-27）
 
-- `slots n=uint16(element+0x32)`是kPose numData；`f=float(element+0x38)`是onFraction。原生门中的`DWORD(element+0x4)>2`是整体numTracks，三者不能互换。驱动前head `e022000015000000`的+4为0x15，不证明后续值；n=0不证明数量子门失败。
-- [v17](independent-behavior-graph.md#g2-v17-运行记录2026-10-26-会话谓词翻假达成与采样门23落定)仅在step0/60观测pred=0；slot2和post-pipeline1曾有f=1，post-update1两槽f=0，记录检查点继续为0。**v18 五阶段观测**（[运行记录](independent-behavior-graph.md#g2-v18-run)）把复位定位在本步 63602 之后、63587 返回之前：两槽 `numTracks(+0x4)=21` 全程满足数量门，`numData(+0x32)` 全程 0，onFraction 只有 step 0 pre-pipeline 的 slot 2 写入值 1.0，之后双槽全 0。不能说轨道头从未初始化，也不能说管线永不写头。
-- 63581直调到入口/门判定不等于63666/63582采样混合主体执行；0x100字节元素头哈希不等于完整变换载荷。实际生成数据、正确双槽、63581原生ctx与58423应用仍未知。
-- Path B需`record+0x2A==0`、`t_larger ≥ 0` 与 `t_smaller > -MAXFLT`（严格；无上界，见[审计十六](#audit16)）。**v18 运行期**：`record+0x2A=0` 的配方下仍 120 步全 Path A（`w245=0x101 b246=1`、每步交换一次双槽），t 在首次 update 后恒为 `{0,-MAXFLT}`；序言先减 dt 使 fork 时 t_larger<0，`record+0x18` 恒空又使唯一 t 推进块不可达。这不是“所有正 dt 原生帧都不可能 Path B”的证明——原生帧靠 REFR 的 `ModifyAnimationUpdateData` 填 `optionalEyePosition` 后由 arm 块把 t 抬起来。
-- **审计十六**：`record` 就是 `BSAnimationUpdateData`（`+0x18=NiPoint3* optionalEyePosition`，唯一写入者是 REFR/Actor 的 vtable 槽 0x3C8）；臂块（0xbb252b）以 `record+0x18 != 0`、`+0x2B != 0`、`[graph+0x248]==0` 等为门，成功时跳复位；63581 采样门要求双槽 `+4>2` **且 `+0x38>0`**、`t_larger ≥ 0`、`t_smaller < 0`；`f=1.0` 只由 63582 写（63568 只写 `+0x32`）；63575 的计数也依赖眼位。眼位是 v18 观测到的“每步 Path A + f 清零 + numData 0”的机器码解释，见[审计十六](#audit16)。
-- **v19 运行期补注（2026-10-26）**：候选 `[graph+0x218] rootNode = 0`（审计十四“v15 借用期非空”的旧读法不成立）；臂块外层门因此全部满足后仍在 0xbb2603 的 `63864()` 归一处止步（`xmm6 = 63864() - 0.5*dt` 当返回值 ≤0.25），步长不足以越过 `1.25*dt`，t 未被改写。故“rootNode 为空时步长固定 0.25”不成立，`63864` 是 arm 的实际步长闸门，见[v19 运行记录](independent-behavior-graph.md#g2-v19-run)。
-- **审计十七（2026-10-26）**：臂块步长闸门 63864（0xbc3990，唯一调用点 0xbb2603）返回 `hkbBehaviorGraph::activeNodes`（`+0x98`）上某个归一化动画状态量的最小值，无合格节点时 FLT_MAX；候选上实测等价于 ≤0.04583，`-0.5*dt` 后必然过不了 `1.25*dt` 门。候选 rootNode（+0x218）由构造器 0xbad070 清零，审计集内无人重新写入，原生图写入者仍 UNVERIFIED。结论：眼位是必要条件而非充分条件，下一步回到选择/生成链，见[审计十七](#audit17)。
-- **审计十八（2026-10-26/27）**：63602 的生成/更新/复位全部作用于**第一实参**（`r13 = rcx`）；引擎自己的壳图助手 0xbacc90 与我们的配方同构，第一实参就是未装载的栈上壳图，因此 65149 在第一门（`character.behaviorGraph != 0`）返回、63587 在序言四门返回——**63602 从未在候选上生成任何东西**（修正审计十三/十四的推断）。真正的生成入口是角色级包装 0xbc3270/0xbc32d0 → 65232（门：`behaviorGraph.isActive (+0x12C)`、分区规模 `numStaticNodes (+0x128)`）→ 65237，配方一次都没调用。见[审计十八](#audit18)。
-- **审计十九（2026-10-27）**：生成上下文链 = `0x53fd20` → `0xba4e30`（管理器图数组 + 默认下标）→ `63595`（门 = `[graph+0x200]` 即 `ProjectDBData*`；按 request 的 id 表查 `projectDBData+0xc8` 哈希）→ `63859` → `65232` → `65237`。sink 是 **0x10 字节适配器 {vtable, buffer}**：0x1992da8（65149/63602）、0x1989320、0x1989360；slot1–4 是恒真谓词，slot5（`0xc25ee0`/`0xbc51c0`/`0xbc72e0`）才是输出转发虚拟；63602 的 buffer 在其栈帧 `[rbp+0x140]`（约 0xA0 字节）。见[审计十九](#audit19)。
-- **审计二十（2026-10-27）**：sink 适配器 slot5（`0xc25ee0`，65149 适配器）先 `65177([ctx+8], buffer+0x38, &local)` 解析名字/状态，再按名字在 `[[adapter+8]+8]+0x28` 哈希表里查 float，并调 `59268(buffer, float)`；当时记录的 buffer 字段（`+0x00` 项目名串、`+0x08` 注册表、`+0x38` 子对象、`+0x88` 指针，≥0xA0）在[审计二十一](#audit21) 被修正为“描述符/不同 sink 类”的读法。见[审计二十](#audit20)。
-- **审计二十一（2026-10-27）**：63602 的生成块整体受第一实参 `behaviorGraph` 守卫（0xbb62ae `cmp [r13+0x208],0; je 0xbb63bd`），块内含 65149 生成与 63602 内部那次 63587；壳图无 behaviorGraph → **两次调用都没发生**（比审计十八更强）。65177 = 拼接 `<[对象+0x38]>/<[buffer+0x38]>`（tagged string，低位置 1）到栈上 hkStringPtr 式构造器（+0x108/+0x110/+0x112）；59268 = `movss [rcx+0xF0], xmm1; ret`；63602 的 “buffer” 是 **栈子对象指针描述符**（`[rbp+0x140]` 起 12 个槽各指向一个栈子对象），与 0xba4e30 的 sink（首字段为 BSFixedString）是不同具体类。结论：没有安全可行的“最小生成实验”，下一步是架构决策（是否允许把候选登记进 manager），见[审计二十一](#audit21)。
-- 头部种子/时序是优先阻断假设，不是唯一已证根因；审计十六后，眼位输入才是本配方缺的第一个上游量，`[graph+0x248]` 语义与 63666/63582/58423 门后链仍未取证。受控播种若另行选择也只是因果实验，写116/1或哈希变化不能替代G2有意义idle/有效骨/源对照及后续生命周期验收。
+最新实际运行仍为[v19](independent-behavior-graph.md#g2-v19-run)，G2未通过；[v20预注册](independent-behavior-graph.md#g2-v20-generation-entry)尚无运行结果。G1只按方案A修订通过，装载销毁/全局计数/资源收敛未证。
 
-下文按审计日期保留原指令记录和当时结论；涉及已过时判断以本节和各处后验注为准。92a3ed0文档澄清本身未新增运行证据；此后v18增加既有流程的只读观测并于2026-10-26运行一次（30+1行，判读见[运行记录](independent-behavior-graph.md#g2-v18-run)），审计十六（同日）补做了眼位/记录/分岔/采样门的机器码审计，见[审计十六](#audit16)。
+[audit22](#audit22)纠正了两类核心误读：63374/63595/63859/63923给出项目/clip元数据，65232/65237为共享visitor，不证明manager登记必要；63568的mode0实际跳0xbaeb59，经58343/58376到真实Generate槽，且0xbaeb8b自身写f=1。因此旧“mode0不生成/只有63582写f/全部v7–v19无生成”的说法不能作当前前提。审计二十一的壳图behaviorGraph守卫仍有效，但不支持其架构独占性推断。
+
+实际Generate槽0x17(+0xb8)=58334使用活r8/r9，SDK声明不足以直接调用；本轮恢复经同步消费mode字节的63589(candidate,&mode0)，不手造context/output/sink、不创建/登记manager或播种。numTracks/numData/onFraction、头部/有效pose、raw hash/有意义骨运动仍须分开；恢复入口或填头不自动通过G2。空manager构造/真实析构的原生栈先例仅为静态协议，不能证明图释放或全局隔离。
+
+
+[审计二十三](#audit23) 进一步区分生成、character.poseLocal 复制和外层场景应用：63581 有三条 memcpy 路径，fraction/t 只门控插值分支；58423 是 footIK，不能用冻结 g3-gates 的错误 context 链否定其原生路径。63856 只在该写入者中写 rotation/translation 而不写 scale。v20 仍待运行，一个入口变量覆盖多类内部职责，不能由后续单一变化唯一归因 Generate。
+
+下文保留原指令记录及历史推断，后验注和audit22限定过强结论。地址为RVA；LLVM用PE首选基址0x140000000，活进程基址依ASLR。本轮没有游戏运行。
 
 <a id="audit16-preparation"></a>
 ## 审计十六取证准备（2026-10-26，源码/日志时序）
@@ -34,14 +30,14 @@
 - 目标：`E:\SteamLibrary\steamapps\common\Skyrim Special Edition\SkyrimSE.exe`，FileVersion 1.6.1170.0，37,157,144 字节，SHA-256 `C434208894F07F604B852F29B8EDC3A58C4DE63DE783373733E72B2B73F33BE9`。
 - 目标文件为 SteamStub 3.1 x64 打包：入口点位于 `.bind`，整个 `.text` 熵约 7.997。直接反汇编得到的是密文，不能作为证据。
 - 审计使用**副本**解包后的镜像：`SkyrimSE.original.exe.unpacked.exe`，36,950,016 字节，SHA-256 `843823C115DBC56B5E9740350DB49170CC4EEA013A79513B7FD066DEEC719A2B`；入口点回到 `.text`（`0x153bc64`），`.rdata` 与打包文件一致。原始 exe 未被修改。
-- 地址库：CommonLibSSE-NG 的 `tests/REL/versionlib-1-6-1170-0.bin`（format 2，version 1.6.1170.0，428,973 条记录、428,461 个唯一 ID，SHA-256 `C4093C569A3C83B26587F4B9EA4C55DE9AE6E73B84A2AF9FB3FBD30E2FE0D452`），与目标文件逐项对齐。
+- 地址库：CommonLibSSE-NG 的 `tests/REL/versionlib-1-6-1170-0.bin`（format 2，version 1.6.1170.0，428,461 条记录、428,461 个唯一 ID，SHA-256 `C4093C569A3C83B26587F4B9EA4C55DE9AE6E73B84A2AF9FB3FBD30E2FE0D452`），与目标文件逐项对齐。
 - 本审计不运行游戏、不注入进程、不修改原始游戏文件，也不加入任何运行时代码。
 
 ## 方法与校验
 
 1. 用 Steamless 3.1.0.5（`Steamless.CLI.exe`，官方 release zip，SHA-256 `E3E2D22E098FF3FB359B2876AA2BED9596F0501E6FF588CBFFAE90A76D2DC4F5`）对 exe 副本解包；日志确认 `SteamStub Variant 3.1 (x64)`、`.bind` 移除、`.text` 解密。工具与解包镜像只在本地 `build/g1-audit-20261023/`，不随仓库提交。
 2. 解析 versionlib 得到 `id → RVA`，再用 PE 段表映射到文件偏移；读取 `.rdata` 的 vtable 与 RTTI（Complete Object Locator 的类名和子对象偏移），并对每个 vtable 槽位检查其目标是否是 `.pdata` 的函数起点。
-3. 反汇编使用 capstone 5.0.7；函数边界取自 `.pdata` 的 `RUNTIME_FUNCTION`。每条指令的 RIP 相对数据引用与直接调用目标都以 RVA 标注，调用目标再反查地址库 ID。CommonLibSSE 头文件中的 `RELOCATION_ID` 与函数名仅用作**声明来源的标签**，不作为行为证据。
+3. 反汇编使用 capstone 5.0.7；函数边界取自 `.pdata` 的 `RUNTIME_FUNCTION`。每条指令的 RIP 相对数据引用与直接调用目标都以 RVA 标注，调用目标再反查地址库 ID。CommonLibSSE 头文件中的 `RELOCATION_ID` 与函数名仅用作**声明来源的标签**，不作为行为证据。 后续 [audit23](#audit23) 发现部分例程使用链式 unwind，增加父记录归组后才得到完整范围；单条记录不再一概视为完整函数。audit22 已引的关键包装函数为单记录，其调用路由不变。
 4. 校验样例：`VTABLE_TESObjectREFR` 的四个 vtable 分别解析为 `.?AVTESObjectREFR@@`、子对象偏移 `0x0/0x20/0x30/0x38`；`VTABLE_hkbCharacter` 解析为 `.?AVhkbCharacter@@`；`VTABLE_BShkbAnimationGraph` 解析为 `.?AVBShkbAnimationGraph@@`，槽位 0–13 全部落在 `.text` 且是 `.pdata` 函数起点（槽位 14 起为相邻数据）。这些一致性与地址库版本共同支持“RVA 对齐正确”的结论。
 
 ## vtable 与槽位
@@ -327,6 +323,8 @@ v13 判据②后的定向补审，起点 = 候选 `[graph+0x246]=0` 使采样入
 
 ## 63587 内部条件与位姿最后一公里（2026-10-25 续审计十四）
 
+> audit23 后验注：58423 的 0x65 字节只是链式 unwind 前缀，完整体为 footIK；63581 有三条 poseLocal memcpy，不能把 fraction/t 或 footIK 条件当全部复制路径的门。见[完整分工](#audit23)。
+
 > 后验注（2026-10-26）：下面保留v15时点静态推演；元素头变化不能证明完整变换载荷，未记录的逐步t/分支仍未知。Path B须完整两条件，且dt结论只限既述记录/复位配方。**v18 运行期（同一候选、dt=1/60、record+0x18=null）证实本节的 Path A 推断**：120 步全部 `w245=0x101 b246=1`、每步交换一次双槽，t 在首次 update 后恒为 `{0,-MAXFLT}`，见[运行记录](independent-behavior-graph.md#g2-v18-run)。
 
 v15 判据②后的定向补审，目标 = 四个由 v15 运行提出的问题：Q1（Path A/B 分岔与 +0x1E8 生命周期）、Q2（双缓冲语义：交换与内容写入如何区分）、Q3（绑定后的 kPose 轨道到 `poseLocal` 的写入路径与门前最后一程，优先）、Q4（58429 位姿应用的角色）。全部指令级事实（本节随分析增量落盘）：
@@ -398,6 +396,8 @@ python -c "import sys; sys.path.insert(0,'.'); import disasm_func as df; print(h
 ```
 
 ## 63564 谓词真值条件与 63581 采样入口约定（2026-10-25 续审计十五）
+
+> audit23 后验注：本节所列 fraction/t 条件选插值，失败不代表整例程返回。保存的 63564 谓词限制插值和普通 fallback，但不能推广到其检查前的可选 footIK 复制。冻结 g3-gates 的 context 链少了初次解引用；见[后验纠正](#audit23)。
 
 > 后验注（2026-10-26）：本节为v17前审计，Q4及末尾“+0x2A=0→Path B/自有门静态全过”的预期已由v17纠正：该字节只是必要条件，双槽f在记录检点为0；不是采样主体已执行。旧推断保留，当前语义见[字段与后验边界](#audit-current)。
 
@@ -473,6 +473,8 @@ python -c "import sys; sys.path.insert(0,'.'); import disasm_func as df; from ca
 
 <a id="audit16"></a>
 ## 记录的 t/眼位输入、Path B 真条件与 63581 采样门（2026-10-26 审计十六）
+
+> audit23 后验注：保留本节原分岔指令，但插值门失败仍可走普通 pose 复制；root/footIK 只限制相应可选分支。58423 是完整 footIK 体，场景骨应用在外层 63856。旧唯一 f 写入者误读已由 audit22 纠正；见[audit23](#audit23)。
 
 > 本节只读 1.6.1170 解包镜像（`SkyrimSE.original.exe.unpacked.exe`，SHA-256 `843823C1…`），所有地址为 RVA；运行期对齐见 [v18 运行记录](independent-behavior-graph.md#g2-v18-run)。它修正审计十四/十五的四处结论（下文标"修正"），并给出 v18 观测的机器码解释。
 
@@ -584,6 +586,8 @@ python audit16_window.py 0xbad220 0x40 0x30   # 构造器清零 +0x218
 <a id="audit18"></a>
 ## 审计十八：63602 只在自己的第一实参上生成，候选从未收到生成遍历（2026-10-26/27）
 
+> audit22后验注：本节visitor/生成独占性及manager必要性推断已收窄，原指令事实保留；见[新审计](#audit22)。
+
 > 起因 = [审计十七](#audit17) 的结论“缺的是动画选择/生成”。本节只读镜像，地址为 RVA。
 
 **Q1 —— 63602（0xbb4c50）的两个实参分别做什么**
@@ -638,6 +642,8 @@ python audit16_window.py 0xbb0710 0x0 0x40     # 63584 输出/计时复位
 <a id="audit19"></a>
 ## 审计十九：生成上下文链（0x53fd20 → 0xba4e30 → 63595 → 63859 → 65232）与 sink 适配器（2026-10-27）
 
+> audit22后验注：本节visitor/生成独占性及manager必要性推断已收窄，原指令事实保留；见[新审计](#audit22)。
+
 > 起因 = [审计十八](#audit18)：真正的生成入口是角色级 0xbc3270/0xbc32d0。本节只读镜像，地址为 RVA。
 
 **Q1 —— 引擎每帧生成的实际调用链**
@@ -679,6 +685,8 @@ python audit16_window.py 0xc26070 0x0 0x30   # 65149 适配器 slot0（析构器
 
 <a id="audit20"></a>
 ## 审计二十：sink 适配器 slot5 与 buffer 布局（2026-10-27）
+
+> audit22后验注：本节visitor/生成独占性及manager必要性推断已收窄，原指令事实保留；见[新审计](#audit22)。
 
 > 起因 = [审计十九](#audit19)：要评估“显式生成”契约，必须先知道 sink buffer 需要什么。本节只读镜像，地址为 RVA。
 
@@ -726,6 +734,8 @@ python disasm_func.py 0xcec820     # 69166：引用计数串赋值（sink+0 = �
 <a id="audit21"></a>
 ## 审计二十一：63602 的生成块由第一实参的 behaviorGraph 守卫；sink 是栈子对象描述符（2026-10-27）
 
+> audit22后验注：本节visitor/生成独占性及manager必要性推断已收窄，原指令事实保留；见[新审计](#audit22)。
+
 > 起因 = [审计十八](#audit18)/[二十](#audit20)。本节只读镜像，地址为 RVA。
 
 **Q1 —— 63602 的生成块整体被跳过（决定性）**
@@ -772,6 +782,108 @@ python audit16_window.py 0xacf760 0x0 0x20    # 59268：movss [rcx+0xF0], xmm1
 - 构造 API **不是**“独立图可用”的证据；它只证明“可以分配并初始化空壳，且能按引用计数成对释放”。
 - 若继续走“无第二 Actor”的路线，必须解决**无 REFR 的 holder/rootNode 语义**：要么证明空 holder 下 OAR/IED 仍能按明确规则求值，要么引入一个轻量、可销毁的 holder 代理，并证明它不会被 OAR 当作源 Actor 的权威状态。
 - 在加载/激活协议被证明前，不应在插件里调用 `ConstructAnimationGraph`、`~BShkbAnimationGraph`、`Activate`/`Update`/`Generate` 或任何写 `+0x1F0/+0x200/+0x208` 的路径；也不应把本次地址写入代码作为可调用保证。
+
+<a id="audit22"></a>
+## 审计二十二：元数据visitor与原生同步生成入口（2026-10-27）
+
+> audit23 方法补注：后续按链式 unwind 归组补全了部分旧短函数范围；本节关键 63589/63568/58343/58376 均为单记录，既定 mode0 路由不变。新增静态知识不扩大现有包的调用授权。
+
+已复核原exe SHA-256 `C434208894F07F604B852F29B8EDC3A58C4DE63DE783373733E72B2B73F33BE9`、解包副本 `843823C115DBC56B5E9740350DB49170CC4EEA013A79513B7FD066DEEC719A2B`、地址库 `C4093C569A3C83B26587F4B9EA4C55DE9AE6E73B84A2AF9FB3FBD30E2FE0D452`。解码记录/唯一ID为428461/428461，纠正旧428973；不把raw字节xref候选当全局完备调用图。固定Steamless3.1.0.5官方tag许可为CC BY-NC-ND4.0，仅本地未修改分析副本，分析工具及其源码、派生镜像不新增进入Git，亦不进入插件或测试包；已有asset原始exe受保护，只读不改。
+
+1. **尚未证明manager登记必要。** RTTI/vtable AE232742→0x1985c18；空构造63353/0xba35b0、真实析构63355/0xba3850。32881/32882有栈构造→63369→真实析构先例，删除析构63411不适用于栈。空构造的已检路径建立自有容器/锁/cache，不证明运行期全局状态或装载图释放；63369需要真实provider，本轮不调用或登记。
+2. **QueryAnimations形状。** 63374/0xba4e30选manager图并经69166拷项目名，再到63595/0xbb31b0；后者按ProjectDBData+0xc8映射名字/id，进入63859/0xbc32d0。sink0x1989360的slot5=63923/0xbc72e0读clip名字/float/control状态并追加0x20字节记录（string@0、float@8/c/10/14、bool@18），与ClipData及0x53fd20的消费相符。65232/65237为callback visitor，不能仅凭出现它们就称唯一pose生成入口。audit21壳图守卫保留，manager必须论和无最小实验论撤回。
+3. **真实Generate参数。** hkbBehaviorGraph AE220287 vtable0x1941450，slot0x17(+0xb8)=58334/0xab2190；叶入口直接使用r8/r9。完整58376/0xab50b0在0xab5607–0xab561f设置node rcx、native context rdx、活r8/r9、float stack5后派发槽+0xb8。SDK Generate(context)不足以直接调用，vendor声明不改。始于0xab55e0的非对齐窗口不是证据。
+4. **63568 mode0同步链。** 0xbae922 test dil，0xbae925 JE到0xbaeb59，不是0xbaeb81；0xbaeb6a/71/75准备候选输出wrapper/native context/private behavior，0xbaeb7c调58343/0xab2e00，其0xab3024调58376。返回后0xbaeb8b原生写element+0x38=1，再继续63573/63581等。旧mode0跳过生成和63582唯一写f均为误读；写f仍不证明有效骨输出。
+5. **63589外层两参ABI。** 0xbb2a40检查+0x110/+0x20、+0x208 behavior及+0x12c active；b246非零时0xbb2ab9同步读byte[rdx]、0xbb2abc调63568，否则0xbb2aca调63581。mode指针不存储，TLS+0x768标签配对恢复。本轮选择63589(candidate,&mode0)，由原生包装准备参数，不手造Generate/sink/manager。没有显式manager实参不等于全部隐藏依赖已排除，仍须运行证据。旧v7–v16曾走63589，不能只凭63602壳图守卫断言全无生成。
+
+完整listing与复核记录在忽略目录`build/behavior-graph-manager-audit-20261027/`：`func_ba35b0/ba3850/ba4e30/bb31b0/bc32d0/bc72e0/bb2a40/bae860/ab2e00/ab50b0/ab2190.txt`。使用`audit_image.py summary/id/vtable/func`及LLVM按.pdata边界复现；listing首选VA减0x140000000得到RVA，活进程模块基址另计。
+
+**下一步：** [v20受控入口实验](independent-behavior-graph.md#g2-v20-generation-entry)只在inject/exact1170恢复63589(&mode0)，先拒绝明显可写源别名，其余v19眼位/flags/dt/slot/world/retention/源对照不变。没有manager、fake sink、直接SDK Generate、手动t/f/count播种。实际Generate/pose、正常源帧、OAR语境、manager必要性及装载销毁仍待证；未运行游戏。
+
+<a id="audit23"></a>
+## 审计二十三：输出布局、poseLocal 复制与场景应用（2026-10-27）
+
+本轮只有静态分析和文档修订。输入仍为原始 AE 1.6.1170 镜像（SHA-256 `C434208894F07F604B852F29B8EDC3A58C4DE63DE783373733E72B2B73F33BE9`）、既有解包副本（`843823C115DBC56B5E9740350DB49170CC4EEA013A79513B7FD066DEEC719A2B`）及同版地址库（`C4093C569A3C83B26587F4B9EA4C55DE9AE6E73B84A2AF9FB3FBD30E2FE0D452`）。没有重新解包、运行游戏、修改代码或重打 v20 包；工具来源和许可沿用 [audit22](#audit22)。以下地址均为 RVA，LLVM 输出的首选 VA 需减去 `0x140000000`，活进程基址另由 ASLR 决定。
+
+### 链式 unwind 与函数范围纠正
+
+旧工具把单条 `RUNTIME_FUNCTION` 的范围直接当作完整例程，在部分函数上漏掉了后续片段。按 [Microsoft x64 exception 文档](https://learn.microsoft.com/en-us/cpp/build/exception-handling-x64?view=msvc-170)，`UNW_FLAG_CHAININFO` 表示偶数对齐的 `UNWIND_CODE` 数组后还带父级记录。新工具从 `unwindRVA + 4 + 2*((CountOfCodes+1)&~1)` 读取父记录，校验其属于 `.pdata` 并防止循环，按根归组；父代码地址不保证小于子片段，不能仅向相邻地址延长反汇编。
+
+本镜像有 120080 条 runtime 记录、27981 条链式记录、92099 个 unwind 根；这不是源码函数数量。所选组的完整连续范围如下，结束地址不包含在范围内：
+
+| ID | 根 RVA → 结束 RVA | 组内记录 | 总字节 |
+| --- | --- | --- | --- |
+| 58423 | `0xab7f30 → 0xab9d63` | 12 | 7731 |
+| 58466 | `0xabdc90 → 0xabdd0c` | 3 | 124 |
+| 63856 | `0xbc2fe0 → 0xbc3237` | 3 | 599 |
+| 64112 | `0xbd52d0 → 0xbd54bf` | 3 | 495 |
+| 59284 | `0xad1390 → 0xad15dd` | 3 | 589 |
+
+因此旧称 58423 只有 `0x65` 字节、前缀几道门即为全部处理的结论撤回。audit22 的关键 63589、63568、58343、58376 均只有单条记录，其已引调用点和路由不因此改变。叶函数仍须另核实入口与控制流；不把 unwind 根数当全局完备函数或 xref 统计。
+
+### 输出轨道布局与哈希范围
+
+SDK [hkbGeneratorOutput.h](../extern/CommonLibSSE/include/RE/H/hkbGeneratorOutput.h) 的字段标签与 59298（`0xad27e0`）写入相符：wrapper 首字段指向 Tracks，Tracks 的 `+0` 为 `numBytes`、`+4` 为 `numTracks`；master 和每条头均为 `0x10` 字节。
+
+| 头内字段 | 相对轨道头 | kPose（索引 2）相对 Tracks |
+| --- | --- | --- |
+| capacity | `+0` | `+0x30` |
+| numData | `+2` | `+0x32` |
+| dataOffset | `+4` | `+0x34` |
+| elementSize | `+6` | `+0x36` |
+| onFraction | `+8` | `+0x38` |
+| flags / type | `+0xC / +0xD` | `+0x3C / +0x3D` |
+
+前四字段为 16 位存储；这里的 pose 地址使用有符号扩展的 `dataOffset(+0x34)` 加 **Tracks 基址**。`+0x14` 则是 WorldFromModel 的 dataOffset，不是 pose。下述复制路径把 numData 按无符号 16 位读取，不应把字段的类型标签与每个消费者的扩展方式混为一谈。
+
+63666（`0xbba880`）实际建立 21 条 descriptor，而不是直接采用 SDK 枚举的 kTotal=25；该布局头区为 `0x160` 字节。当前 slots 的 `0x100` 字节 FNV 只覆盖 master 和早期头，排除该布局的变换载荷；另一个 raw pose 哈希读取 character.poseLocal，仍可能包含 padding。二者都不自动证明有意义骨运动。
+
+59297/59298 按容量与 elementSize 对齐分配，flags&6 时另有 palette/sparse 存储，pose 还有 59305 提供的辅助区域。59298 将 fraction 初始化为 0，numData 在 flags&6 时为 0，否则取 capacity。完整 59284 会复制 fraction，并对普通有限正 fraction 复制对齐的 numData×elementSize 及额外 pose 区域，分别处理 flags1/2/4。59305 返回值的具体位集语义未证，因此这里只称辅助区域。不能据头部就把所有轨道当平铺的 dense transform 数组，也未授权新载荷解析或运行期读取。
+
+### 63581 内的三条 poseLocal 复制路径
+
+58458（`0xabd930`）返回 character+`0x90` 的 poseLocal，缺失时经 58466 分配。完整 58466 从 setup.animationSkeleton 的 bones 数量建立 numPoseLocal，分配 `boneCount×0x30`，复制 referencePose 并设置 deletePoseLocal；这不证明所有运行缓冲的边界均有效。
+
+63581 入口把 WorldFromModel 从 Tracks+有符号 word14 保存到栈，接收 DX 的 sampleCount。sampleCount 为 0 时走 `0xbb02c0`，跳过 pose 复制、按条件复位 footIK，并仅在保存的 63564 谓词为假时处理 worldFromModel。sampleCount>0 时，普通有限 fraction/t 门选的是**插值分支**，失败跳到 `0xbb0106`，不是立即返回。
+
+| 路径 | 源与复制字节数 | getter / memcpy 调用点 | 谓词与其他边界 |
+| --- | --- | --- | --- |
+| 插值 | 临时输出的 pose；回写后的 graph+0x240 × `0x30` | `0xbb00be / 0xbb00cc` | 双槽数量、正 fraction 和 t 条件后，`0xbaff4d/50` 还要求保存的 63564 谓词为假，才到 63666/63582；不能漏掉这道门。 |
+| 可选 footIK 分支中的复制 | 临时复制输出的 pose；uint16 numData × `0x30` | `0xbb020c / 0xbb021a` | 受 setup/footIK、b249、全局开关及 rootNode 等条件约束；该次复制发生在 `0xbb0277` 的谓词检查之前，不能给它套上后者的前提，也不能仅由复制证明 footIK 求解生效。 |
+| 普通 fallback | 当前 graph+0x220 的 Tracks pose；numTracks>2 时取 uint16 numData，否则取 0，再乘 `0x30` | `0xbb02ab / 0xbb02b9` | `0xbb0277` 要求保存谓词为假，`0xbb027c` 要求此前尚未复制；不要求双槽正 fraction、有效插值 t、rootNode 或 footIK 数据。 |
+
+57148（`0xa8bba0`）是已知入口的跳板，经 `0x153cf3c` 到 IAT `0x174fa08`；PE 导入证据确认目标为 `VCRUNTIME140.dll!memcpy`，不是仅按名字猜测。普通 fallback 的 numData=0 可产生零字节复制；因此 v18/v19 的 n=0、f=0、raw pose 不变与该路径相容，不能反推运行时必定没有调用 memcpy。插值与普通 fallback 的 pred=false 前提也不能推广到可选 footIK 那次复制。末尾 63569 更新 character.worldFromModel，**不是** 63856 的场景骨应用。
+
+### footIK、冻结的 g3-gates 与临时资源
+
+类型标签和完整机器码共同印证：hkbCharacter+0x40 是 footIkDriver（即外层 graph+0x100），hkbCharacter+0x50 是 setup，而 setup.data（hkbCharacterData）+0x88 才是 footIkDriverInfo。58423 的 RCX 是 footIkDriver；其 `+0x4A` 检查与 disableFootIk 相符，完整 7731 字节体继续处理配置、控制与腿部数据，不能再称通用 poseLocal 写入者。58427 则处理 footIK 腿部/状态复位。
+
+58423 从 RDX 的原生 context **先取 `[context]` 得到 character**，再沿 character+0x50 → setup+0x40 → data+0x88 读取 footIkDriverInfo。冻结的 [g3-gates 记录](../src/animation/behavior_graph/independent_graph.cpp) 却从插件自建 context+0x50 直接开始，少了初次解引用，又不是 63581 内建的 context。该日志的 null 不能证明原生 footIK 链缺失，更不能证明通用 Generate 不成立；本轮不修代码或日志 schema。
+
+63666 分配的临时 wrapper 的 +8 在 engine TLS 分配时为 0、调用者提供 R9 缓冲时为 1。63733 在前者释放原生分配并清指针，在后者只清指针；63581 的另一临时 wrapper 另走 57059 释放。SDK 的 bool 标签不能单独替代这些具体清理协议，不能混用分配族或跨调用复用临时对象。本结论不覆盖持久 generatorOutputs、job 分支、装载图销毁或全局资源收敛。
+
+### 外层场景应用与缩放写入范围
+
+63568 在生成、写 fraction 及 63581 后，满足谓词/count 条件时经 58458 取 poseLocal，`0xbaebe2` 调 63856；63589 的 b246=0 分支也在 63581 后于 `0xbb2b01` 调它。63572 是另一条 count 守卫包装。三处调用均经完整对齐确认，不声称它们是全局全部调用者。因此 v17–v19 直调 63581 也绕过了这些**外层场景应用职责**；候选 rootNode/骨数组与 raw pose 状态未证，不能直接把这种绕过当作冻结原因。
+
+完整 63856 把负 requestedCount 或大于 BoneNodeEntry 数组 size 的请求回退为 size，非正有效数量直接返回。pose 步长为 `0x30`、entry 步长为 `0x10`，空 node 跳过；负 handle 用 node+0x48 的 local，非负 handle 经 node+0x130、handle×0x80 和可选 cache+0x70 指向目标。cache 的独立类型未确认。
+
+该函数只读取输入 translation(+0/4/8) 和 quaternion(+0x10/14/18/1C)，归一化四元数后写目标 rotation 九个 float 与 translation(+0x24/28/2C)。**在 63856 内没有读取输入 scale 向量 +0x20，也没有写目标 scale +0x30**，目标已有 scale 在这个写入者中保留。相比之下，[read_pose 与 ni_local_from_pose](../src/animation/clip.h) 取 raw scale X 并写 local.scale；两条路径的写入覆盖范围不同已静态确认。此结论只限 63856，不代表全引擎的缩放转换、其他写入者或世界合成，更不证明斧头/r4闪近的唯一原因；本轮不改转换或加入 clamp。
+
+### 对 v20 和后续问题的影响
+
+v20 保持一个受控入口变量（63581→63589），但外层入口恢复了生成与场景应用等多类内部职责。后续若有变化，不能只据该变化唯一归因 Generate。比较顺序应为入口 guard/门 → 当前输出 n/f → raw pose 可用性/变化 → 有效骨载荷与相位 → BoneNodeEntry 数组及场景应用 → 源控制、OAR 语境与生命周期。冻结 v20 包没有真实载荷、原生分支或 node 应用 trace；填头但 pose 不变时，不能自动归咎插值 t 或播种。
+
+后续有界静态问题可限于完整 unwind 组下的 58343/58376 生成器前提与活动节点遍历、63582 的载荷混合/flags；若需 node 应用诊断，另按后续契约添加。本轮只记录 F01–F06，149 个冻结输入、v20 代码/测试/包均保持。最新实际运行仍是 v19，v20 待测，G2 未通过。
+
+复现（仓库根目录；工具及 full/group/import 证据在忽略目录内）：
+
+```powershell
+python build/behavior-graph-output-audit-20261027/audit23_image.py summary
+python build/behavior-graph-output-audit-20261027/audit23_image.py func 58423 58466 63856 64112 59284 59297 59298 63581 63568 63589 63666 63733 58458
+```
+
+旧 `audit_image.py` 保留历史复现；本轮工具增加 chain-aware 分组并结合分支/落点校验选中完整范围，不重新定义所有函数，也未执行新的引擎调用。
 
 ## 复现
 

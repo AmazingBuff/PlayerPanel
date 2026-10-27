@@ -2,11 +2,11 @@
 
 ## Independent graph investigation (2026-10-23)
 
-Current status (2026-10-26): [G1 passed only revised Option A; G2 v18 (latest actual run) has not passed](independent-behavior-graph.md#current-status). Repeated load/retention and sampled source equality do not prove loaded-graph teardown or complete isolation. v18 keeps the v17 recipe, dispatches WeapEquip and changes graph state, but the 116-pose buffer remains unchanged; a single event is not full G3. G4 still must verify independent OAR context, history and sinks.
+Current status (2026-10-27): [G1 passes revised Option A; latest actualrunv19 has not passed G2](independent-behavior-graph.md#current-status). Complete G3, independent OAR context/history/sinks and loaded teardown/convergence remain open. [Audit22](behavior-graph-construction-audit.md#audit22) reclassifies the query/visitor chain as clip metadata and does not establish manager registration necessity.
 
 At fixed OAR 3.1.6 revision `0c1c8b38a5323b9e26df41ff9d10ce801b984a45`, `GetReplacementAnimation(hkbCharacter*,...)` derives the outer graph/holder; graph-variable/drawn conditions may read the Actor. Graph addresses do not isolate Actor/ref/submod Random, sequence/PlayOnce history, event sinks or callbacks. The source-only `BehaviorGraphProbe` has a sixteen-row budget and fixed observation labels, distinct from the forty-row v17 `INDEPENDENT GRAPH` inject flow. The OAR adapter still has no verified independent context/history bridge or playback parity; current product queries continue through the existing `PreviewContext`/`PreviewClip` carriers. See [audit limits](behavior-graph-construction-audit.md#audit-current).
 
-The [v18 frame trace](independent-behavior-graph.md#g2-v18-frame-trace) observes only the existing inject candidate flow on exact1.6.1170. It adds no OAR call/hook, condition/history projection or source graph update, and does not supply the unverified independent OAR bridge. New31-row GRAPH FRAME output is separate from the existing forty-row experiment and source snapshots; G2 and OAR parity remain unpassed.
+[V20](independent-behavior-graph.md#g2-v20-generation-entry) tests the native63589 mode0 wrapper after one private-state guard, preserving v19 inputs. It creates no manager/fake sink, calls no SDK Generate and adds no OAR bridge or history manipulation. FRAME30+1 plus ENTRY1 are separate from old40/source rows; guard skip has no FRAME. completed is a returned outer-entry count, not proof of internal Generate or OAR parity. Latest actualrun remainsv19; v20 awaits evidence.
 
 ## Historical hand and direction boundary (2026-10-23)
 

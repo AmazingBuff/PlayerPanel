@@ -60,7 +60,7 @@ void FrameTrace::phase(RE::BShkbAnimationGraph const& graph, std::uint32_t step,
     const float t0 = scalar_at<float>(&graph, 0x1E8);
     const float t1 = scalar_at<float>(&graph, 0x1EC);
     if (stage == FrameStage::e_post_update && arm_observed(t0, t1)) m_arm_observed = true;
-    logger::info("GRAPH FRAME schema=v19 actor={:08x} request={} step={} stage={} completed={} graph={:#x} numAnim={} w245={:#x} b246={} b249={} t0={:.9g}/{:#010x} t1={:.9g}/{:#010x} root218={:#x} b248={} eye={:#x} slot0[{}] slot1[{}]",
+    logger::info("GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor={:08x} request={} step={} stage={} completed={} graph={:#x} numAnim={} w245={:#x} b246={} b249={} t0={:.9g}/{:#010x} t1={:.9g}/{:#010x} root218={:#x} b248={} eye={:#x} slot0[{}] slot1[{}]",
         m_actor_id, m_request, step, Frame_Stage_Names[static_cast<std::size_t>(stage)], m_progress.completed(),
         reinterpret_cast<std::uintptr_t>(&graph), scalar_at<std::uint16_t>(&graph, 0x240),
         scalar_at<std::uint16_t>(&graph, 0x245), scalar_at<std::uint8_t>(&graph, 0x246),
@@ -81,7 +81,7 @@ void FrameTrace::summary()
     if (!m_enabled || !m_budget.take_summary()) return;
     const std::optional<std::uint64_t> baseline = m_progress.baseline();
     const std::optional<std::uint32_t> first = m_progress.first_changed();
-    logger::info("GRAPH FRAME schema=v19 actor={:08x} request={} stage=summary phase-rows={} total-rows={} completed={} pose-available={} pose-missing={} raw-hash-changes={} first-changed-completed={} baseline={} arm-observed={} fingerprint=raw-buffer-padding-sensitive generator-payload=unobserved native-context=unobserved acceptance=unjudged",
+    logger::info("GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor={:08x} request={} stage=summary phase-rows={} total-rows={} completed={} pose-available={} pose-missing={} raw-hash-changes={} first-changed-completed={} baseline={} arm-observed={} fingerprint=raw-buffer-padding-sensitive generator-payload=unobserved native-context=unobserved acceptance=unjudged",
         m_actor_id, m_request, m_budget.rows(), m_budget.rows() + 1, m_progress.completed(),
         m_progress.available(), m_progress.missing(), m_progress.changes(),
         first ? fmt::format("{}", *first) : "none-observed",

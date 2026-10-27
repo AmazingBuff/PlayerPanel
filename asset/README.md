@@ -12,7 +12,7 @@ the plugin or shipped with it.
   (the copy keeps the original name so the audit records can name their source).
 - Purpose: reproduce the addresses and facts recorded in
   [behavior-graph-construction-audit.md](../docs/behavior-graph-construction-audit.md). All
-  addresses there are RVAs; runtime VAs are `0x140000000 + RVA`.
+  addresses there are RVAs. LLVM listing VAs use the PE preferred base `0x140000000 + RVA`; actual live-process VAs use the ASLR-selected module base plus RVA.
 
 The retail `.text` is SteamStub 3.1 encrypted, so it cannot be disassembled directly. The audits
 run on a locally generated unpacked copy:
