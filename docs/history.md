@@ -10,6 +10,7 @@
 
 | 要了解的内容 | 文档 |
 | --- | --- |
+| **全部测试与验证状态（先读这个）** | [验证总表](independent-behavior-graph.md#verification-matrix)：关卡判定、v17–v30 逐轮结论、已验证的引擎事实、未验证项、测试包清单、复现入口 |
 | 构建、依赖和验证入口 | [Build](build.md) |
 | 复制显示图、取景、装备与生命周期 | [SceneGraph](scene-graph.md) |
 | 播放器、OAR查询、DAC原生事件 | [Animation](animation.md)、[OAR](oar-hooks.md)、[DAC](dac.md) |

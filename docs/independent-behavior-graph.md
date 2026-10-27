@@ -18,6 +18,94 @@
 
 [audit23](behavior-graph-construction-audit.md#audit23) 已静态拆开三段职责：原生生成、63581 内的三条 poseLocal memcpy、外层 63856 的场景应用。双槽 fraction/t 门失败不等于整函数无复制；58423 的短函数/context 旧判读也已纠正。63856 在该写入者中不更新 scale，与手动采样转 local 的写入范围不同，但视觉因果仍未证明。v20 恢复一个外层入口变量，同时恢复多类内部职责，后续变化不能唯一归因 Generate。此次不改冻结代码/测试/包，不新增运行结果。
 
+<a id="verification-matrix"></a>
+## 验证总表（2026-10-28 冻结）
+
+截至 2026-10-28 01:00 的**全部测试与验证状态**。逐轮细节在各自小节；与本表冲突时，以本表的判定与限定为准。
+
+### 关卡
+
+| 关卡 | 判定 | 限定 / 未覆盖 |
+| --- | --- | --- |
+| G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
+| G2 | **PASSED**（2026-10-28 00:12，[v26](#g2-v26-run)） | 单进程、单次暂停批次 120 步（2 秒模拟）、AE 1.6.1170、入口 `63589(mode0)`；**不含**逐帧播放与场景应用 |
+| G3–G6 | 未执行 | — |
+
+### 逐轮实验（本系列）
+
+| 轮次 | 目的 | 结论 |
+| --- | --- | --- |
+| v17 / v18 | 采样门与帧轨迹 | 空结果，定位采样门 |
+| v19 | 眼位 arm | `arm-observed=no`，定位 63864 步长门 |
+| v20 | 恢复 `63589` 入口 | guard 通过后、入口前崩溃（越界诊断） |
+| v20a | 修诊断链 | 入口到达，首次 pose 变化（120/120） |
+| v21 | pose 内容解码 | 命中第 3 条（`source-equal>0`）→ 审计判为误报 |
+| v22 | 别名判据修正 | 通过：有限、在变、未别名 |
+| v23 | 语义对应 | 单一片段不成立；候选是多片段栈 |
+| v24 | identity 映射 + 层普查 | `H2H_Idle` 覆盖 90/99 骨，旋转误差 ≤6.1e-5 |
+| v25 | 逐步时钟 | 速率 **1.000×**；v24 的 0.75× 判为采样假象 |
+| v26 | 逐步 pose | 119/120 步在变 → **G2 PASSED** |
+| v27 | 静态接驳显示图 | `bones=116`，画面为 `H2H_Idle`（用户截图确认） |
+| v28 | 逐帧（只调 63589） | 三条哈希全同 → 该调用不自推进 |
+| v29 | 逐帧（补 63555/63602/63556） | 哈希与 v28 **逐位相同** → 渲染路径里调用零效果 |
+| v30 | 门诊断 | `children=0` 等线索，无定论；批量与逐帧同一线程 |
+
+### 已验证的引擎事实（指令级）
+
+| 事实 | 依据 |
+| --- | --- |
+| 空 `transformTrackToBoneIndices` = identity | [audit25](behavior-graph-construction-audit.md#audit25)，AE `ConvertTrackPoseToBonePose` @ `0xB03380` |
+| 片段时钟只消费 dt：`new = old + dt × ((effDur/enforcedDur 或 1) × playbackSpeed)` | [audit26](behavior-graph-construction-audit.md#audit26)，`0xACDE40` → `0xACFDE0`，速度 `0xAD01F0` |
+| 批量推进来自 `63555 → 63602 → 63556`，不是 `63589` | v28 / v29 两次负结果 |
+| 渲染路径里这套图调用零效果（同线程、无崩溃） | v29 / v30 |
+
+### 已验证的产品行为
+
+- 保留候选的姿态可正确应用到显示拷贝：**116 根骨全部命中名字映射**（[v27](#g2-v27-run)，用户截图）。
+- `DisplayPose=false` 时 OAR 路径完全不受影响（默认即此）。
+
+### 未验证 / 开放项
+
+| 项 | 现状 |
+| --- | --- |
+| 面板内逐帧动起来 | 三次负结果（v28–v30）；建议姿态缓存回放，未立项 |
+| 场景应用（物理、武器挂载交互） | 未验 |
+| 装载图生命周期/销毁、全局收敛 | 未证（G1 遗留） |
+| G3–G6、独立 OAR 语境 | 未执行 |
+| `+0x12C` 读到 17 的实际语义 | 未解释 |
+| `numData` 的间接层 | 读取偏移不对（读到 62016，无效），待查 |
+
+### 当前部署与开关
+
+- MO2 部署：**v30 DLL `e5b0e57c…`**（与包内逐字节相同），**全部实验开关关闭**：`IndependentGraph=off`、`DisplayPose=false`、`DisplayStep=false`。产品行为 = 纯 OAR 路径。
+- 仓库样例 `config/CharacterPanel.ini` 同样三键全关。
+
+### 测试包清单
+
+| 轮次 | ZIP | 字节 | SHA-256 前 16 位 |
+| --- | --- | --- | --- |
+| v20 | `CharacterPanel-behavior-graph-v20-generation-entry-20261027.zip` | 9,750,395 | `076cf6f7…` |
+| v20a | `…v20a-chain-fix-20261027.zip` | 9,747,510 | `f4586e16…` |
+| v21 | `…v21-pose-content-20261027.zip` | 9,928,507 | `4cfa5ac8…` |
+| v22 | `…v22-alias-watch-20261027.zip` | 9,921,485 | `be5bd284…` |
+| v23 | `…v23-clip-ref-20261027.zip` | 9,928,402 | `05ac4a3e…` |
+| v24 | `…v24-layer-census-20261027.zip` | 10,015,469 | `68991ca7…` |
+| v25 | `…v25-step-clock-20261027.zip` | 10,029,342 | `15820120…` |
+| v26 | `…v26-pose-step-20261028.zip` | 10,029,787 | `d3d7f1b7…` |
+| v27 | `…v27-display-pose-20261028.zip` | 10,018,217 | `6a195266…` |
+| v28 | `…v28-display-step-20261028.zip` | 10,015,286 | `d2965ca8…` |
+| v29 | `…v29-display-pipeline-20261028.zip` | 9,996,292 | `42f92e94…` |
+| v30 | `…v30-display-gates-20261028.zip` | 9,986,675 | `1ce2b765…` |
+
+所有包在 `build/behavior-graph-v2*-2026102*/`，被 `.gitignore` 忽略；完整身份与 manifest 哈希记录在各轮构建段（[build.md](build.md)）。
+
+### 复现入口
+
+- **构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=<轮次>` → `cmake --build --preset Release`；先清掉小写 `http_proxy` 等变量（否则 MSBuild CL 任务报 MSB6001）。
+- **引擎无关用例**：`C:/env/mingw64/bin/g++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_<name>_test.cpp`，共五例（pose content 36 断言 / clip reference 19 / observation chain 11 行 / generation entry 22 行 / frame trace 3 例）。
+- **静态审计**：`C:/Python314/python.exe`（已装 pefile + capstone 5.0.7），解包镜像与脚本在 `build/g1-audit-20261023/`，单函数反汇编用 `disasm_func.py <rva>`。
+- **运行日志**：`Documents/My Games/Skyrim Special Edition/SKSE/CharacterPanel.log`，每轮归档到 `docs/diagnostics/CharacterPanel-g2v<轮次>-*.log`。
+
 ## 目标与边界
 
 验证能否在不创建第二个 Actor、保持原角色行为图只读的条件下，复用原行为项目与状态机，让预览图自行激活动作，再接入 OAR。现有装备驱动播放器继续工作；本实验不替换它，不改变动作入口、DAC、IED、变体、装备或源图状态。
