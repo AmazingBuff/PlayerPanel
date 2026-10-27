@@ -206,6 +206,26 @@ Package: `build/behavior-graph-v26-pose-step-20261028/test-package/` (`SKSE/Plug
 
 Deployment (2026-10-28 00:10): the v25 trio was backed up to `dist/deploy-backup-20261027-v25/` (DLL `d8ca80bb…`, PDB `a468bead…`, `off` INI 1,063 bytes `e910d4e8…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,042 bytes `29692657…`). **One run happened at 00:12**: identity matched, no crash, no `[E]`, and the single `pose-steps` row read `changed=119` of 120 comparisons with every non-baseline character in the >1e-2 bucket. The pose therefore changes on every drive step, which retires the 4 Hz worry the v25 clock batching suggested (the sampled time is not the batched `localTime` field) and closes the last open G2 item. The deployed INI returned to `off` (1,041 bytes `04c2af00…`). See the [v26 run record](independent-behavior-graph.md#g2-v26-run).
 
+<a id="v27-display-pose-2026-10-28"></a>
+## V27 display handoff build (2026-10-28)
+
+The [v27 contract](independent-behavior-graph.md#g2-v27-contract) puts the candidate's pose on screen for the first time. G2's evidence up to v26 came entirely from buffers, so this build converts the retained candidate's `poseLocal` into `(bone name, NiTransform)` pairs and lets `AnimationController::advance()` apply them through the existing name→node map, instead of the OAR clip sampler. Four files change: `independent_graph.{h,cpp}` remember the retained candidate's `hkbCharacter*` and expose the read-only `held_display_pose`, `settings.{h,cpp}` add the `DisplayPose` key, and `controller.cpp` branches at the top of `advance()`. **No native call is added** - the branch only reads `poseLocal` and the skeleton names - and the pose stays frozen at the last driven step, so this round establishes the wiring, not playback. `DisplayPose=false` or a missing candidate leaves the original path untouched.
+
+The first compile failed with C2065 because the retained-character assignment referenced `candidate` outside its block scope; capturing the pointer at the point where the graph is deliberately leaked (`retained_character`) and storing it at function end fixed it.
+
+Commands (proxy variables cleared for the reason recorded above):
+
+```
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v27-display-pose-20261028
+cmake --build --preset Release
+```
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v27-display-pose-20261028-c894c956f8-cl94faaed0c6-20261027T162057Z` (clean HEAD `c894c956f8`, submodule `94faaed0`; no `+dirty`). DLL SHA-256 `b973aa5bc72d86e1ddff3db8d5c868731b49075f19c329a2539edd936ab450b5` (1,298,944 bytes), PDB SHA-256 `75a228f51d814055f304bd6fd43f9d1e9b747131ad8c8af4704fcffd45c8e4b0` (35,926,016 bytes); CodeView/PDB GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 335. Configure and build exited 0 with only the existing install-rule and D9025 warnings. Five engine-free cases pass with the local `g++` 15.1 under `-Wall -Wextra -Werror`.
+
+Package: `build/behavior-graph-v27-display-pose-20261028/test-package/` (`SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md`, `manifest.json` `d3545033…` 5,020 bytes); ZIP `CharacterPanel-behavior-graph-v27-display-pose-20261028.zip` is 10,018,217 bytes, SHA-256 `6a195266c2b33af3185f03a586291fb43753d8e84f422fa15842b85e60394255`, five forward-slash entries re-extracted and re-hashed against the manifest. The package INI is the v21 fragment plus `DisplayPose=true` (1,295 bytes `618b1081…`); the repository sample keeps `DisplayPose=false`.
+
+Deployment (2026-10-28 00:21): the v26 trio was backed up to `dist/deploy-backup-20261028-v26/`, the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` + `DisplayPose=true` (1,063 bytes `2834670d…`). **No run has happened yet.**
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
