@@ -152,6 +152,24 @@ Package: `build/behavior-graph-v23-clip-ref-20261027/test-package/` (`SKSE/Plugi
 
 Deployment (2026-10-27 23:16): the v22 trio was backed up to `dist/deploy-backup-20261027-v22/` (DLL `5756e0e6…`, PDB `b763d05f…`, `off` INI 1,061 bytes `cc0572ca…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,072 bytes `655a9c89…`). **One run happened at 23:19**: identity matched, no crash, no `[E]`, and the round produced 8 `clip-ref` rows. Branch 5 fired: the only real comparison (step 0, `male\MT_Idle.HKX`) agreed on 22 of 99 tracks with `max-dpos` 3.98, and that checkpoint still holds the bind pose. At steps 60/120 every reported binding has an empty `transformTrackToBoneIndices`, so `mapped=0` and no comparison happened — a state the contract did not pre-register. Structurally the round is the most informative so far: the candidate runs `H2H_Idle` + `1HM_Idle` + `SCAR_1hmReadyDummy` as a synchronised stack, with clip time advancing 0.0167 → 0.1833 → 1.2000 over 120 steps (2.0 s simulated). The deployed INI returned to `off` (1,077 bytes `02f37ace…`). G2 remains NOT PASSED. See the [v23 run record](independent-behavior-graph.md#g2-v23-run).
 
+<a id="v24-layer-census-2026-10-27"></a>
+## V24 layer census build (2026-10-27)
+
+The [v24 contract](independent-behavior-graph.md#g2-v24-contract) closes the gap the v23 run exposed: at steps 60/120 every active clip reported `mapped=0` because its `hkaAnimationBinding::transformTrackToBoneIndices` is empty. [Audit25](behavior-graph-construction-audit.md#audit25) settled that state at instruction level on the AE 1.6.1170 image — `ConvertTrackPoseToBonePose` (REL 60005, `0xB03380`) does `0xB033C0 cmp [rdx+8],0` / `0xB033C4 sete`, then `0xB03405 movzx esi, bx` on the empty branch (`bone = track`) and `0xB03411 movzx esi, word [rax+rcx*2]` on the table branch — so this build compares with the engine's own identity semantics instead of skipping. Two further observations ride along: the census rises from 3 to 8 slots and reports `animationBindingIndex` and map length, and a `clip-clock` row at steps 0/20/40/60/80/100/120 turns the clip clock into a curve. `collect_active_clips` is shared by both rows; the only native call is still the const `SamplePartialTracks`. No policy header changed.
+
+Commands (proxy variables cleared for the reason recorded above):
+
+```powershell
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v24-layer-census-20261027
+cmake --build --preset Release
+```
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v24-layer-census-20261027-50c2396d66-cl94faaed0c6-20261027T153521Z` (clean HEAD `50c2396d66`, submodule `94faaed0`; no `+dirty`). DLL SHA-256 `13bc2b126b1cf2a30eb32d7a44128bb4561788d73b787f7a9e218e23036f41d6` (1,282,560 bytes), PDB SHA-256 `c4a72f086c5ac12186870d7b35e3859dc348ed68eb8cb8bf8f7f15a5162a42e0` (35,770,368 bytes); CodeView/PDB GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 329. Configure and build exited 0 with only the existing install-rule and D9025 warnings. Five engine-free cases pass with the local `g++` 15.1 under `-Wall -Wextra -Werror`: pose content (36 assertions), clip reference (19), observation chain (11 rows), generation entry (22 rows) and frame trace (3 cases).
+
+Package: `build/behavior-graph-v24-layer-census-20261027/test-package/` (`SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md`, `manifest.json` `7e47d6fc…` 6,268 bytes); ZIP `CharacterPanel-behavior-graph-v24-layer-census-20261027.zip` is 10,015,469 bytes, SHA-256 `68991ca70d5d8e81da0c47eccfee7880c5151634672a547a6f4685b4e8cbaa32`, five forward-slash entries re-extracted and re-hashed against the manifest. The package INI is the unchanged v21 fragment (`inject`, 1,278 bytes `efff49a5…`); the repository sample stays `off`.
+
+Deployment (2026-10-27 23:38): the v23 trio was backed up to `dist/deploy-backup-20261027-v23/` (DLL `efa90c21…`, PDB `f7e3e2c6…`, `off` INI 1,077 bytes `02f37ace…` with the run note), the MO2 mod now holds this DLL/PDB (byte-identical to the package), and the deployed INI is `inject` (1,062 bytes `ac255097…`). **No run has happened yet.**
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
