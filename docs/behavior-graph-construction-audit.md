@@ -7,7 +7,9 @@
 <a id="audit-current"></a>
 ## 当前生成入口与后验边界（2026-10-27）
 
-最新实际运行仍为[v19](independent-behavior-graph.md#g2-v19-run)，G2未通过；[v20预注册](independent-behavior-graph.md#g2-v20-generation-entry)尚无运行结果。G1只按方案A修订通过，装载销毁/全局计数/资源收敛未证。
+最新实际运行为 [v23](independent-behavior-graph.md#g2-v23-run)（2026-10-27 23:19），G2 未通过：单一片段对照不成立，候选被定位为 `H2H_Idle`+`1HM_Idle`+`SCAR_1hmReadyDummy` 的多片段栈，且 60/120 两点因空映射未做成比较。G1 只按方案A修订通过，装载销毁/全局计数/资源收敛未证。
+
+[audit25](#audit25) 给出 v23 那个空映射状态的指令级答案：AE 1.6.1170 的 `ConvertTrackPoseToBonePose`（REL 60005）在 `transformTrackToBoneIndices` 为空时直接把轨道号当骨骼号（identity），非空时查表。该结论只覆盖这一个助手。
 
 [audit22](#audit22)纠正了两类核心误读：63374/63595/63859/63923给出项目/clip元数据，65232/65237为共享visitor，不证明manager登记必要；63568的mode0实际跳0xbaeb59，经58343/58376到真实Generate槽，且0xbaeb8b自身写f=1。因此旧“mode0不生成/只有63582写f/全部v7–v19无生成”的说法不能作当前前提。审计二十一的壳图behaviorGraph守卫仍有效，但不支持其架构独占性推断。
 
@@ -895,6 +897,34 @@ python build/behavior-graph-output-audit-20261027/audit23_image.py func 58423 58
 - **运行期对照**：v16/v18/v19 该槽为 0，行内三字段均为 `null`（三份归档日志一致）；v20 因新增 guard 局部量改变栈布局，该槽非空（`rbx=0x7BD6CD336F4B8024`），`[+0x40]` 得到的垃圾值再被 `[+0x88]` 解引用，在 `CharacterPanel.dll+0x28067`（`independent_graph.cpp:955` 的 `mov r8, [rbx+0x88]`）触发 `EXCEPTION_ACCESS_VIOLATION`。
 - **与 audit23 的关系**：原生 58423 的链是 `[context]`（character）→`+0x50`（setup）→`+0x40`（data）→`+0x88`（footIkDriverInfo），插件那条少了首次解引用；纠正后既回到对象内读取，也与引擎语义一致。
 - **边界**：该崩溃发生在 63589 之前，不构成对入口、生成、输出头或 pose 的任何证据；这是观测代码的纠正，不改变 v20 的单一行为变量，但会产生新的构建身份。已按此落地 v20a（`…v20a-chain-fix-20261027-7d18a90787…`）：链改为声明成员 `hkbCharacter::setup`/`hkbCharacterSetup::data`/`hkbCharacterData::footIkDriverInfo`，`[graph+0x100]` 用 `hkbFootIkDriver::disableFootIk`，每跳过 `observation_chain_policy.h` 的 `plausible_object_pointer`；见[构建记录](build.md#v20a-chain-fix-2026-10-27)与 [v20 记录](independent-behavior-graph.md#g2-v20-run)。随后的一次 v20a 运行在同一行正确解析出四跳并继续走到 63589，取得首次 pose 变化（[v20a 记录](independent-behavior-graph.md#g2-v20a-run)），因此本轮修复只影响可观测性，不是实验变量。
+
+<a id="audit25"></a>
+## 审计二十五：空 `transformTrackToBoneIndices` 的语义（2026-10-27）
+
+v23 运行里，60/120 两个检查点的所有活动片段都报 `mapped=0`，原因是那些 `hkaAnimationBinding::transformTrackToBoneIndices`（`hkArray<int16_t>`，成员偏移 `+0x20`，大小字段 `+0x28`）为空。本节回答“空映射是否等于 identity”，用的是引擎自己的转换助手，不是插件推断。
+
+**目标与工具**：`SkyrimSE.original.exe.unpacked.exe`（Steamless 3.1.0.5 解包，36,950,016 字节，SHA-256 `843823C1…19A2B`，与[目标与边界](#目标与边界)同一镜像）；capstone 5.0.7；地址来自 versionlib 1.6.1170。函数选择依据是 OpenAnimationReplacer 对引擎导出的同名声明（`OpenAnimationReplacer/src/Offsets.h`）：`ConvertTrackPoseToBonePose` AE ID **60005**，`REL::VariantID(59332, 60005, 0xA7C160)`。
+
+**函数范围**：`.pdata` 记录 `0xB03380–0xB033F0`（112 字节）只是链式 unwind 的第一段；实际循环延续到 `0xB0351C` 之后，因此按控制流展开读取，不把 `.pdata` 末端当函数终点（与 [audit23](#audit23) 的链式 unwind 教训一致）。
+
+**指令事实**（AE 1.6.1170，RVA）：
+
+| 地址 | 指令 | 含义 |
+| --- | --- | --- |
+| `0xB033C0` | `cmp dword ptr [rdx+8], 0` | `rdx = [rsp+0xA8]` = 第 6 实参（`hkArray<int16_t> const&` 的地址）；`+8` 是 size |
+| `0xB033C4` | `sete byte ptr [rsp+0x90]` | `empty = (size == 0)`，存为局部标志 |
+| `0xB033E7` | `movzx r15d, byte ptr [rsp+0x90]` | 进入循环前把标志装进 `r15b` |
+| `0xB03400` | `test r15b, r15b` | 每个轨道判定 |
+| `0xB03403` | `je 0xB0340A` | 非空 → 走查表分支 |
+| **`0xB03405`** | **`movzx esi, bx`** | **空 → `bone = bx`（即循环中的轨道号本身）** |
+| `0xB03408` | `jmp 0xB03415` | 跳过查表 |
+| `0xB0340A` | `mov rax, qword ptr [rdx]` | 非空 → `map.data` |
+| `0xB03411` | `movzx esi, word ptr [rax+rcx*2]` | `bone = map[track]` |
+| `0xB034D5` | `inc bx` / `0xB034DB cmp eax,[rsp+0x80]` | 循环以 `bx`（轨道号）递增，上界 = 第 1 实参（轨道数） |
+
+**结论**：引擎的 `ConvertTrackPoseToBonePose` 在映射数组为空时**直接把轨道号当骨骼号**（identity），非空时按表映射。这与仓库里既有的 `identity-unverified` 标签（[clip.cpp](../src/animation/clip.cpp)、[controller.cpp](../src/animation/controller.cpp)）一致，但那个标签此前没有依据；本节把它升级为“AE 1.6.1170 该助手有指令级依据的 identity”。
+
+**边界**：只审计了这一个助手（pose 转换路径）。空映射在**其它**消费点（例如 `GetNumTransformTracks`，AE ID 64091，其地址 `0xBD3BE0` 不落在任何 `.pdata` 记录内，未展开）是否同样按 identity 处理，未验证；若后续要依赖“整个引擎都按 identity”，需要补该函数的链式范围。本节不改变任何实验配方，只给 v24 的比较提供合法依据。
 
 ## 复现
 

@@ -1011,6 +1011,35 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 2. **拿到完整层清单**：把 `clip-ref` 的 3 槽上限提到 8，并输出每个生成器的 `animationBindingIndex`，确认栈到底有几层、哪些是权重占位。
 3. 前两项都落地后重跑一次。若 identity 成立，逐层比较就能说出“姿态 = 哪几层的组合”，届时再决定“有意义”按单层判还是按加权混合判——这一条必须写成新契约，不能事后放宽。
 
+<a id="g2-v24-contract"></a>
+## G2 v24 契约：空映射语义 + 层普查 + 片段时钟（2026-10-27，已实现/待构建）
+
+**动机**：v23 只给出一个负结论（单一片段不成立）和一个结构事实（多片段栈），而 60/120 两点根本没做成比较——那些 binding 的映射数组为空。v24 一次把三件事做掉：确认空映射语义、拿完整层清单、把片段时钟从三个点变成曲线。
+
+**依据（第一部分已在审计里完成）**：[audit25](behavior-graph-construction-audit.md#audit25) 用 AE 1.6.1170 的 `ConvertTrackPoseToBonePose`（REL 60005，`0xB03380`）指令级确认：`map.size()==0` 时 `bone = track`（`0xB03405 movzx esi, bx`），非空时 `bone = map[track]`（`0xB03411`）。identity 因此不是假设，是引擎在该转 pose 助手里的行为。
+
+**变更（仍只有一次 const 采样调用）**：
+
+1. `clip-ref` 采用该语义：新增 `mapping=identity|table`、`binding-index`（`hkbClipGenerator::animationBindingIndex`）与 `map-len`；空映射时按轨道号比较，不再跳过。
+2. 槽位上限 3 → 8，拿到完整层清单；每检查点 ≤8 行。
+3. 新增 `clip-clock`：step 0/20/40/60/80/100/120 各 1 行，列出每个活动片段的短名与 `localTime`，把“片段时钟 vs 驱动”变成曲线而不是三点。
+
+**预算**：`clip-ref` ≤8×3 = 24 行；`clip-clock` 7 行；合计新增 ≤31 行，与 `GRAPH FRAME` 30+1、`INDEPENDENT GRAPH` 40、`BEHAVIOR GRAPH` 36 及既有 pose 行分账。
+
+**预注册判读（逐条，命中即停）**：
+
+1. 三个检查点都 `status=unavailable` → 记 `unavailable`，不给结论。
+2. 有行为 `mapping=identity` 却仍 `mapped=0` → 与 audit25 冲突（说明这些 binding 运行时并非空，或读取位置不同）：停止并复查读取位置，**不得改判据绕开**。
+3. 至少一层 `agreed / compared >= 0.8` → 该层就是这些骨的姿态来源，记名字与 `binding-index`；“有意义”按“层可归属”成立。
+4. 多层各自覆盖不同骨且均 ≥0.8 → 记“互补栈”，同样算层可归属。
+5. 没有任何一层 ≥0.5 → 姿态是混合/后处理结果，不可按层归属；下一问转向权重与 pose modifier，**不得**把 v22 的“在变化”升级为“有意义”。
+6. 崩溃或源漂移 → 停止，保留完整日志与匹配 PDB。
+
+**时钟判读（单列，不参与上面六条）**：把 `clip-clock` 的 `localTime` 与驱动步数对照。若曲线严格单调但斜率 < 1（v23 三点给出的比值约 0.6），记“片段时钟落后于驱动”；若中途停滞，记停滞区间，作为 G2“持续”的明确缺口。**这一条只记录观测，不预先判定谁对。**
+
+<a id="g2-v24-build"></a>
+**实现与部署（2026-10-27 23:4x）**：待填。
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。
