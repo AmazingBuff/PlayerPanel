@@ -116,6 +116,24 @@ Package: `build/behavior-graph-v21-pose-content-20261027/test-package/` (`SKSE/P
 
 Deployment (2026-10-27 22:11): the v20a trio was backed up to `dist/deploy-backup-20261027-v20a/` (DLL `691f7592…`, PDB `5b3d8cc8…`, INI 1,059 bytes `6e6f668f…` with the run note), the MO2 mod now holds this DLL/PDB, and the deployed INI is `inject` (1,075 bytes `11798909…`); all other keys unchanged. **One run happened at 22:18**: it hit pre-registered branch 3 (`source-equal` 8/21/15) and stopped, which the [v21 run record](independent-behavior-graph.md#g2-v21-run) audits as a criterion false positive (distinct `poseLocal` addresses, candidate hashes bit-identical across two runs while the source hash differed, and `pose_sample_identical` being exact ten-component equality). The deployed INI returned to `off` at 22:20 and both files stayed; G2 remains NOT PASSED.
 
+<a id="v22-alias-watch-2026-10-27"></a>
+## V22 alias-watch build (2026-10-27)
+
+The [v22 contract](independent-behavior-graph.md#g2-v22-contract) replaces the v21 aliasing watch after that watch fired on a criterion the [v21 run record](independent-behavior-graph.md#g2-v21-run) audits as a false positive. `pose_sample_identical` is exact ten-component equality, so counting candidate/source equal entries can never separate constant bones from a shared buffer. The build adds two decidable observations and no native behaviour: `pose_buffer_alias` compares the two `character.poseLocal` pointers, and `watch_aliasing` reports `equal_moving` (identical to the source **and** changed since the step-0 baseline by more than 1e-6) alongside `equal_static`. The raw `source-equal` count is still printed for round-to-round comparability but no longer gates. The `pose-content` row gains three fields and keeps its three-row budget; `pose-bone` rows, the `63589(mode0)` entry, the guard, the eye point, 120 x 1/60 drive, world/ragdoll/slot/event/retention recipes and every other budget are untouched.
+
+Commands (same preset as every previous round; the proxy variables are cleared because this shell exports both cases and MSBuild rejects the duplicate switch):
+
+```powershell
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v22-alias-watch-20261027
+cmake --build --preset Release
+```
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v22-alias-watch-20261027-22ef58464f-cl94faaed0c6-20261027T145636Z` (clean HEAD `22ef58464fae657af3f82ae60df2eaffe9b6400b`, submodule `94faaed0`; no `+dirty`). DLL SHA-256 `5756e0e647056cbaf1a8664007328c8289b5c66d441e254975ecd348daa15aa2` (1,268,736 bytes), PDB SHA-256 `b763d05fe0528e74b02413d2f2027cb1697187f706e0bc390c24a12b38bb04d0` (35,631,104 bytes); CodeView/PDB GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 323. Configure and build exited 0 with only the existing install-rule and `cl` D9025 `/Ob2`→`/Ob3` warnings; no dependency install or update. Four engine-free cases pass with the local `g++` 15.1 under `-Wall -Wextra -Werror`: pose content (36 assertions, up from 20), observation chain (11 rows), generation entry (22 rows) and frame trace (3 cases).
+
+Package: `build/behavior-graph-v22-alias-watch-20261027/test-package/` (`SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md`, `manifest.json` `c9878cc7…` 7,468 bytes); ZIP `CharacterPanel-behavior-graph-v22-alias-watch-20261027.zip` is 9,921,485 bytes, SHA-256 `be5bd284d6c927157828cb22c7ec242533d74af368bd2f420aa48723083d2928`, five forward-slash entries re-extracted and re-hashed against the manifest. The package INI is the unchanged v21 test fragment (`inject`, 1,278 bytes `efff49a5…`); the repository sample stays `off`.
+
+Deployment (2026-10-27 22:59): the v21 trio was backed up to `dist/deploy-backup-20261027-v21/` (DLL `e0880651…`, PDB `787b3005…`, `off` INI 1,058 bytes `98a2d082…` with the run note), the MO2 mod now holds this DLL/PDB (`5756e0e6…` / `b763d05f…`, byte-identical to the package), and the deployed INI is `inject` (1,056 bytes `e7ba0854…`) with the v21 run note replaced by a v22 deployment note. **No run has happened yet**; G2 remains NOT PASSED regardless of this build.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.

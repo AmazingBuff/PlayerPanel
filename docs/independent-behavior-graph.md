@@ -9,7 +9,7 @@
 | 关卡 | 截至 2026-10-27 的结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **NOT PASSED（但 2026-10-27 22:02 的 v20a 首次取得运动证据）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化。v20 首轮 guard 通过后在入口前崩溃（越界诊断，已修为 v20a）。**v20a 运行**：`63589(mode0)` 到达（guard `ready`、修正链四跳可读），首步即回填 `numData=116 f=1.0`，step 2 起 Path B 且 `arm-observed=yes`，`gen0elem` 与双槽元素哈希变化，候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`(60)→`8fb4cd336c4395bf`(120)、120/120 次变化，同时源侧 pose 不变、三份源基线逐行全等。缺逐骨/有限值证据与视觉确认，故仍不放行；**v21 运行（22:18）**：三点 `entries=116 finite=116 nonfinite=0`、`moved=94`（60/120，门槛 16）、抽样骨 38/76 `moved=yes`，但 `source-equal=8/21/15` 命中第 3 条 → 判据停止；审计证明第 3 条为**误报**（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`source-equal` 是十分量精确值相等，恒等/常量骨必然计入），见 [v20 记录](#g2-v20-run)、[v20a 记录](#g2-v20a-run)、[v21 契约](#g2-v21-contract) 与 [v21 运行记录](#g2-v21-run)。 |
+| G2 | **NOT PASSED（但 2026-10-27 22:02 的 v20a 首次取得运动证据）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化。v20 首轮 guard 通过后在入口前崩溃（越界诊断，已修为 v20a）。**v20a 运行**：`63589(mode0)` 到达（guard `ready`、修正链四跳可读），首步即回填 `numData=116 f=1.0`，step 2 起 Path B 且 `arm-observed=yes`，`gen0elem` 与双槽元素哈希变化，候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`(60)→`8fb4cd336c4395bf`(120)、120/120 次变化，同时源侧 pose 不变、三份源基线逐行全等。缺逐骨/有限值证据与视觉确认，故仍不放行；**v21 运行（22:18）**：三点 `entries=116 finite=116 nonfinite=0`、`moved=94`（60/120，门槛 16）、抽样骨 38/76 `moved=yes`，但 `source-equal=8/21/15` 命中第 3 条 → 判据停止；审计证明第 3 条为**误报**（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`source-equal` 是十分量精确值相等，恒等/常量骨必然计入），见 [v20 记录](#g2-v20-run)、[v20a 记录](#g2-v20a-run)、[v21 契约](#g2-v21-contract) 与 [v21 运行记录](#g2-v21-run)；v22 已把该判据改为指针同一性 + “相等且在变化”计数，构建部署完毕、等待一次运行（[v22 契约](#g2-v22-contract)）。 |
 | G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
 
 [v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
@@ -752,7 +752,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 <a id="v20-handoff"></a>
 ## v20 测试交接与当前停点
 
-**v20a 已运行一次并取得首次运动证据：入口 `63589(mode0)` 到达，输出头被填充、Path B 与 arm 出现，候选 raw pose 在 120/120 次调用中变化，源侧控制不变；但逐骨/有限值与视觉证据仍缺，G2 仍 NOT PASSED。** v21 pose 内容解码已于 2026-10-27 22:18 运行一次：三点全有限、`moved=94`、两根抽样骨在动，但 `source-equal=8/21/15` 命中预注册第 3 条；该条经[v21 运行记录](#g2-v21-run)审计为误报（不同址、跨 run 不相关、判据为精确值相等），G2 仍未通过。下一步是 v22 判据修正（指针同一性 + “与源相等且在变化”计数），不新增原生调用、不预先播种或推进后续关卡。
+**v20a 已运行一次并取得首次运动证据：入口 `63589(mode0)` 到达，输出头被填充、Path B 与 arm 出现，候选 raw pose 在 120/120 次调用中变化，源侧控制不变；但逐骨/有限值与视觉证据仍缺，G2 仍 NOT PASSED。** v21 pose 内容解码已于 2026-10-27 22:18 运行一次：三点全有限、`moved=94`、两根抽样骨在动，但 `source-equal=8/21/15` 命中预注册第 3 条；该条经[v21 运行记录](#g2-v21-run)审计为误报（不同址、跨 run 不相关、判据为精确值相等），G2 仍未通过。下一步已由 [v22](#g2-v22-contract) 实现并部署（指针同一性 + “与源相等且在变化”计数），等待一次运行；不新增原生调用、不预先播种或推进后续关卡。
 
 原冻结包（身份 `…-242d0a50c5+dirty-cl94faaed0c6-20261027T070457Z`、ZIP `3f9f9182…`、DLL `6c76c2a7…`）不在本检出中，故 2026-10-27 以同一提交源重建：新身份 `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-a83e5229e7-cl94faaed0c6-20261027T134152Z`（干净 `a83e522`，身份无 `+dirty`），DLL `13688a9d…`（1,253,888 字节）、PDB `07a509da…`（35,467,264 字节），CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 320；ZIP 9,750,395 字节、SHA-256 `076cf6f7…`，五个条目重解压复核通过。两次构建不声称字节等同，旧哈希只作历史；判读一律以实际加载的 `SCENEGRAPH BUILD` 身份与包内 manifest 为准，不用较新提交号替代重新构建证据。详见[构建与重建记录](build.md#v20-rebuild-2026-10-27)。
 
@@ -874,6 +874,32 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 
 **下一有界问题（判据修正，不新增原生调用、不改配方）**：把别名判据换成两项可判定观测——①两个 `poseLocal` 的**指针同一性**（真别名检测）；②`source-equal` 只统计“与源相等**且**相对 step 0 发生过变化”的条目（别名若成立，该计数必 >0；常量骨则恒为 0）。原始 `source-equal` 保留为统计量、不进门槛。其余入口/guard/眼位/120 步/预算不动；修正构成新身份（v22），需再一次运行，在那之前 G2 仍为 NOT PASSED。
 
+<a id="g2-v22-contract"></a>
+## G2 v22 契约：别名判据修正（2026-10-27，已实现/已部署/未运行）
+
+**动机**：v21 唯一的缺陷在第 3 条判据。[v21 运行记录](#g2-v21-run)已用现有日志证明它把“值相等”当成“别名”：候选与源 `poseLocal` 不同址、源哈希两轮不同而候选三点哈希逐位相同、`pose_sample_identical` 又是十分量精确相等——任何两张播同一片段的图都会命中。修正不改配方，只把该判据换成两项可判定观测。
+
+**变更（只读；不加原生调用、不写缓冲、不改行数）**：
+
+- `pose_buffer_alias(candidate, source)`：两个 `character.poseLocal` 的**指针同一性**；任一侧为 null 不算别名。
+- `watch_aliasing(current, source, baseline, buffer_alias)` → `PoseAliasWatch{compared, equal, equal_moving, equal_static, has_baseline, buffer_alias}`。`equal_moving` = 同索引与源精确相等**且**相对 step 0 基线某分量变化 >1e-6 的条目数；step 0 基线即该检查点，故该点记 `n/a`；基线长度不足时整项记 `n/a`，不跨骨比较。
+- `pose-content` 行追加 `source-equal-moving` / `source-equal-static` / `alias` 三个字段；仍为每检查点 1 条、共 3 条，`pose-bone` 12 条不变，不新增预算。
+- 入口 `63589(mode0)`、guard、v19 眼位、120×1/60、world 借用、slot2/3、事件、保留与源侧对照全部不动。
+
+**预注册判读（v22，取代 v21 的第 3、4 条；其余条沿用）**：
+
+1. 任一检查点 `nonfinite>0` 或任一 `pose-bone` 行 `finite=false` → pose 内容无效，停止，转查 audit23 的三条 poseLocal 复制路径。
+2. `entries=0` 或骨名不可读 → 记 `unavailable`，不给结论。
+3. `alias=yes` → 两图共用同一缓冲，**真别名**：停止并审计。
+4. `source-equal-moving>0` → 存在“与源相等且在变化”的条目，**别名嫌疑**：停止并审计。
+5. 三点 `finite=entries`、`alias=no`、step 60 与 120 的 `source-equal-moving=0`，且两点 `moved` **均 ≥16（共 116）**、四骨至少两动 → **pose 内容证据成立**（有限、在变化、未别名）。仍**不是** G2 通过。
+6. 全有限未别名但 `moved<16` → 记“原始缓冲变化主要来自 padding/噪声”，下一问转输出选择/混合与场景应用。
+7. 崩溃或源漂移 → 立即停止，保留完整日志与匹配 PDB，不在同会话重试。
+
+`source-equal` 与 `source-equal-static` **只作对照**：同片段两图在这两项上非零是预期现象，不构成失败。
+
+**实现与部署（2026-10-27 22:56，未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v22-alias-watch-20261027-22ef58464f-cl94faaed0c6-20261027T145636Z`（干净 `22ef584`，子模块 `94faaed0`，无 `+dirty`；DLL `5756e0e6…` 1,268,736 字节、PDB `b763d05f…` 35,631,104 字节、CodeView age 323）。四个 engine-free 用例全过（pose content 36 断言、观测链 11 行、generation entry 22 行、frame trace 3 例）。包 `build/behavior-graph-v22-alias-watch-20261027/test-package/`（manifest `c9878cc7…` 7,468 字节），ZIP 9,921,485 字节、SHA-256 `be5bd284…`，五条目重解压复核与 manifest 逐条相符。v21 三件套备份到 `dist/deploy-backup-20261027-v21/`（DLL `e0880651…`、PDB `787b3005…`、`off` INI 1,058 字节 `98a2d082…`），MO2 现为 v22 DLL/PDB，部署 INI=`inject`（1,056 字节 `e7ba0854…`）。**本轮不上机，等待一次运行**；详见[构建记录](build.md#v22-alias-watch-2026-10-27)。
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。
@@ -957,6 +983,7 @@ BehaviorGraphProbe=true
 | G2 v20a 运行与判读 | 2026-10-27 22:02 会话：身份一致、无崩溃无 `[E]`；ENTRY 1、FRAME 30+1、IG 40、BG 36（三块全等）；guard ready、g3-gates 四跳可读；首步回填 `numData=116 f=1.0`，step 2 起 Path B、`arm-observed=yes`，`gen0elem` 变化，raw pose `bc160a8c…`→`63f638a6…`(60)→`8fb4cd33…`(120)、120/120 次变化，源侧 `983fc2d4…` 前后不变、`source-stable=true retained=true`；日志归档（43,330 字节 `E05BFEAF…`），INI 回 off，见[v20a记录](#g2-v20a-run) | pose 内容解码契约（具名骨有限性/变化/源对照）；视觉确认另行判断 |
 | G2 v21 契约与实现 | 2026-10-27：只读解码 `poseLocal`（声明 `hkQsTransform` 0x30），三点 0/60/120 全量有限性 + 逐条变化 + 源对照 + 别名计数；新增 `pose_content_policy.h` 与 20 断言 engine-free 用例；预算新增 ≤15 行；身份 `…v21-pose-content-20261027-fe7c4d15e1…`（DLL `e0880651…`、age 322），ZIP `4cfa5ac8…`，v20a 三件套备份到 `dist/deploy-backup-20261027-v20a/`，部署 INI=`inject`，见[契约](#g2-v21-contract)与[构建记录](build.md#v21-pose-content-2026-10-27) | —（待上机；判定门槛 `moved≥16`、四骨至少两动） |
 | G2 v21 运行与判读 | 2026-10-27 22:18 会话：身份一致、无崩溃无 `[E]`；ENTRY 1、FRAME 30+1、IG 55（40 基础 + 15 pose 行）、BG 36；三点 `entries=116 finite=116 nonfinite=0`，`moved=94`(60)/`94`(120)、`max-delta` 3.43/2.31，抽样骨 38、76 `moved=yes`、0、115 `moved=no`，源侧 `source-moved=0`、`source-pose-before=after=bd107af6…`；**`source-equal=8/21/15` 命中第 3 条 → 停止**；审计判定为误报（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`pose_sample_identical` 为十分量精确值相等）；日志归档（47,393 字节 `601D2B47…`），INI 回 off，见[v21 运行记录](#g2-v21-run) | 判据改为指针同一性 + “相等且在变化”计数（v22），一次运行后再判第 4 条 |
+| G2 v22 契约与实现 | 2026-10-27 22:56：`pose_buffer_alias`（`poseLocal` 指针同一性）+ `watch_aliasing`（相等且相对 step 0 变化的条目数），`pose-content` 加 `source-equal-moving`/`source-equal-static`/`alias` 三字段，行数与预算不变；pose content 用例扩到 36 断言、四例全过；身份 `…v22-alias-watch-20261027-22ef58464f…`（DLL `5756e0e6…`、age 323），ZIP `be5bd284…`、manifest `c9878cc7…`，v21 三件套备份到 `dist/deploy-backup-20261027-v21/`，部署 INI=`inject`（1,056 字节 `e7ba0854…`），见[契约](#g2-v22-contract)与[构建记录](build.md#v22-alias-watch-2026-10-27) | —（待上机；门槛 `alias=no` 且 60/120 `source-equal-moving=0`） |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |
