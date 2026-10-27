@@ -7,7 +7,7 @@
 <a id="audit-current"></a>
 ## 当前生成入口与后验边界（2026-10-27）
 
-最新实际运行为 [v24](independent-behavior-graph.md#g2-v24-run)（2026-10-27 23:48），G2 未通过但只剩“持续”：空映射按 identity 比较后，`H2H_Idle`（binding-index 681）在 step 120 覆盖 90/99 条轨道、旋转误差 ≤6.1e-5，层可归属成立；idle 时钟每驱动步 0.75×–1.55× 非恒定，待审计 `localTime` 的写入者。G1 只按方案A修订通过，装载销毁/全局计数/资源收敛未证。
+最新实际运行为 [v26](independent-behavior-graph.md#g2-v26-run)（2026-10-28 00:12）：**G2 判 PASSED**（限定单进程单批 120 步）。证据链收敛于四个读数——空映射按 identity（[audit25](#audit25)）后 `H2H_Idle` 覆盖 90/99 骨、旋转误差 ≤6.1e-5；时钟速率 1.000×（[audit26](#audit26) 的 dt 算式 + v25 位串）；pose 每步都在变（v26 的 119/120）。v24 的“0.75×”已确认为采样假象。装载销毁/全局计数/资源收敛与 G3–G6 仍未证。
 
 [audit25](#audit25) 给出 v23 那个空映射状态的指令级答案：AE 1.6.1170 的 `ConvertTrackPoseToBonePose`（REL 60005）在 `transformTrackToBoneIndices` 为空时直接把轨道号当骨骼号（identity），非空时查表。该结论只覆盖这一个助手。
 
