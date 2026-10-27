@@ -9,12 +9,12 @@
 | 关卡 | 截至 2026-10-27 的结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **NOT PASSED，最新已运行版本为 v19（2026-10-26 23:46）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化，没有有意义的 idle 位姿运动。 |
+| G2 | **NOT PASSED，最新已运行版本为 v20（2026-10-27 21:48，入口前崩溃）、最后一次完整观测为 v19（2026-10-26 23:46）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化，没有有意义的 idle 位姿运动。v20 首轮 guard 通过（`outcome=ready`），但随即在 **63589 之前**的 v16 遗留 g3-gates 只读链处越界崩溃（`context+0x50` 越过 `sizeof(hkbContext)=0x50`），**入口从未执行**，见 [v20 记录](#g2-v20-run)。 |
 | G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
 
 [v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
 
-当前按[audit22](behavior-graph-construction-audit.md#audit22)修订生成链分类：63374/63595/63859/65232/65237提供clip元数据/visitor，不能推出manager登记必要；audit21壳图守卫只限制该路径。真实Generate槽有额外活参数，不直调SDK声明。63589→63568的mode0实际经58343/58376派发Generate，63568自身还写f=1，纠正旧跳转及唯一写入者读法。新[v20契约](#g2-v20-generation-entry)仅恢复63589(&mode0)，保持v19其余配方、off默认和源manager不写边界；不创建manager、fake sink或播种。最新实际运行仍为v19，v20待测，G2未通过。
+当前按[audit22](behavior-graph-construction-audit.md#audit22)修订生成链分类：63374/63595/63859/65232/65237提供clip元数据/visitor，不能推出manager登记必要；audit21壳图守卫只限制该路径。真实Generate槽有额外活参数，不直调SDK声明。63589→63568的mode0实际经58343/58376派发Generate，63568自身还写f=1，纠正旧跳转及唯一写入者读法。新[v20契约](#g2-v20-generation-entry)仅恢复63589(&mode0)，保持v19其余配方、off默认和源manager不写边界；不创建manager、fake sink或播种。最新实际运行为 v20（2026-10-27 21:48）：guard 通过后、首次 63589 之前，在 v16 遗留的 g3-gates 只读链处越界崩溃，入口从未执行，G2 未通过。
 
 [audit23](behavior-graph-construction-audit.md#audit23) 已静态拆开三段职责：原生生成、63581 内的三条 poseLocal memcpy、外层 63856 的场景应用。双槽 fraction/t 门失败不等于整函数无复制；58423 的短函数/context 旧判读也已纠正。63856 在该写入者中不更新 scale，与手动采样转 local 的写入范围不同，但视觉因果仍未证明。v20 恢复一个外层入口变量，同时恢复多类内部职责，后续变化不能唯一归因 Generate。此次不改冻结代码/测试/包，不新增运行结果。
 
@@ -752,11 +752,11 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 <a id="v20-handoff"></a>
 ## v20 测试交接与当前停点
 
-**实现、静态审计和本地验证均已完成；v20 包已按 v18 先例重建并部署，等待第一次上机结果。最新实际运行仍为 v19，G2 未通过。** 现有源码与测试保持冻结，下一次原始结果到达后再裁决，不预先播种或推进后续关卡。
+**实现、静态审计和本地验证均已完成；v20 包已按 v18 先例重建并部署，并已运行一次——在入口之前崩溃，因此 63589 仍未被执行。最新实际运行为 v20（2026-10-27 21:48），最后一次完整观测仍为 v19，G2 未通过。** 现有源码与测试保持冻结，下一轮必须先修那条越界诊断并以新身份重测，不预先播种或推进后续关卡。
 
 原冻结包（身份 `…-242d0a50c5+dirty-cl94faaed0c6-20261027T070457Z`、ZIP `3f9f9182…`、DLL `6c76c2a7…`）不在本检出中，故 2026-10-27 以同一提交源重建：新身份 `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-a83e5229e7-cl94faaed0c6-20261027T134152Z`（干净 `a83e522`，身份无 `+dirty`），DLL `13688a9d…`（1,253,888 字节）、PDB `07a509da…`（35,467,264 字节），CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 320；ZIP 9,750,395 字节、SHA-256 `076cf6f7…`，五个条目重解压复核通过。两次构建不声称字节等同，旧哈希只作历史；判读一律以实际加载的 `SCENEGRAPH BUILD` 身份与包内 manifest 为准，不用较新提交号替代重新构建证据。详见[构建与重建记录](build.md#v20-rebuild-2026-10-27)。
 
-使用 `build/behavior-graph-v20-generation-entry-20261027/CharacterPanel-behavior-graph-v20-generation-entry-20261027.zip`，按包内 `README-测试步骤.md` 和[预注册契约](#g2-v20-generation-entry)操作。已按 v18 流程部署（2026-10-27 21:42，未上机）：v19 三件套（DLL `344d9abb…`、PDB `9848cd14…`、`off` INI 1,034 字节）备份在 `dist/deploy-backup-20261026-v19/`，MO2 实例 `CharacterPanel/SKSE/Plugins/` 现为 v20 DLL/PDB，部署 INI（1,055 字节 `1db104fa…`）为 `inject`，其余键未动；仓库样例仍为 `off`。回滚=还原该备份并重启。
+使用 `build/behavior-graph-v20-generation-entry-20261027/CharacterPanel-behavior-graph-v20-generation-entry-20261027.zip`，按包内 `README-测试步骤.md` 和[预注册契约](#g2-v20-generation-entry)操作。已按 v18 流程部署（2026-10-27 21:42）：v19 三件套（DLL `344d9abb…`、PDB `9848cd14…`、`off` INI 1,034 字节）备份在 `dist/deploy-backup-20261026-v19/`，MO2 实例 `CharacterPanel/SKSE/Plugins/` 现为 v20 DLL/PDB，仓库样例仍为 `off`；部署 INI 曾为 `inject`（1,055 字节 `1db104fa…`，其余键未动），首轮崩溃后已按预注册回 `off`。回滚=还原该备份并重启。
 
 回传完整 `CharacterPanel.log`、实际 `SCENEGRAPH BUILD` 身份、所用 manifest，以及首次暂停开包、关包和异常发生的时刻/操作。先核对精确 AE 1.6.1170、匹配 DLL/PDB、合并后的 INI 和重启状态；实验每进程只触发一次。缺行时还要保留该进程此前是否已经运行过实验，不能据缺行猜原因。测试结束把 `IndependentGraph` 恢复为 `off` 并重启；异常或源漂移时立即停止并保留日志/崩溃报告与匹配 PDB，不在同一会话调参重试。
 
@@ -772,7 +772,23 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 | 头已填、pose 仍不变 | 限定到生成、复制和应用问题，不能直接归咎插值 t 或播种。 |
 | 崩溃 / 源漂移 | 停止，保留完整证据；不在同次会话重试。 |
 
-完整 G3–G6、OAR 语境、深层隔离和装载图回收仍未验收。此处只完成交接，不新增运行结果或诊断代码。
+完整 G3–G6、OAR 语境、深层隔离和装载图回收仍未验收。上表"崩溃 / 源漂移"行已经发生了：首轮结果见下节，此处只记录交接与那次运行，不新增诊断代码。
+
+<a id="g2-v20-run"></a>
+## G2 v20 运行记录（2026-10-27 21:48 会话，入口前崩溃）
+
+构建 `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-a83e5229e7-cl94faaed0c6-20261027T134152Z`（DLL `13688a9d…`、PDB `07a509da…`），部署 INI=`inject`，运行时 `1-6-1170-0`。21:46:12 加载，`SCENEGRAPH BUILD` 身份与包内 manifest 逐字一致；21:48:57.911 `Panel menu opening=true`，实验行 21:48:57.922–57.931，随即崩溃。原始日志原样归档为 [CharacterPanel-g2v20-entry-crash-20261027-2148.log](diagnostics/CharacterPanel-g2v20-entry-crash-20261027-2148.log)（16,920 字节，SHA-256 `2278201CDBCF9090EC1CC3FD038C751D70B66C3FF4614C8CE5B3D63D89E11127`），崩溃报告为 [CharacterPanel-g2v20-crash-report-20261027-2148.log](diagnostics/CharacterPanel-g2v20-crash-report-20261027-2148.log)（119,326 字节，SHA-256 `4074DF23232254922CEBC44E1DEBD187C50DBD4798C53C5161899ACA0788D2F7`）。
+
+**guard 与崩溃位置**：`GRAPH ENTRY schema=v20 … outcome=ready reason=ready entry=63589 mode=0` —— 唯一的 guard 通过（behavior 非空、私有且 outer/character 一致，activeNodes/变量/pose 可写存储可用，四组输出/元素不与源槽或彼此混用）。崩溃是 `EXCEPTION_ACCESS_VIOLATION`，`CharacterPanel.dll+0x28067`，`independent_graph.cpp:955` 的 `mov r8, [rbx+0x88]`，`rbx=0x7BD6CD336F4B8024`（非规范指针），访问目标 `[rbx+0x88]`。该行属于 **v16 起就存在的只读 g3-gates 诊断**，位置在驱动循环之前，因此本轮 **63589 一次都没有被调用**：没有 `GRAPH FRAME`、没有 `completed`、没有 pose 采样，也没有任何关于生成/输出/应用的证据。
+
+**原因（静态声明与运行期一致）**：`RE::hkbContext` 的声明大小正是 `0x50`（[hkbContext.h](../extern/CommonLibSSE/include/RE/H/hkbContext.h) 末尾 `static_assert(sizeof(hkbContext) == 0x50)`），而诊断把 `ctx+0x50` 当作 chain 起点读取 —— 那是 `context_storage[sizeof(RE::hkbContext)]` 数组**末尾之后**的栈槽，属越界读。v16/v18/v19 那次读到 0，链立即短路（三份日志均为 `ctx+50=null +40=null +88=null`）；本轮该槽非空，`[+0x40]` 再读到垃圾，`[垃圾+0x88]` 才崩溃。这也印证 [audit23](behavior-graph-construction-audit.md#audit23) 的纠正：原生 58423 的链是 `[context]`（character）→`+0x50`（setup）→`+0x40`（data）→`+0x88`（footIkDriverInfo），插件那条少了首次解引用。**结论：这是自 v16 起潜伏在观测代码里的越界读，v20 只是改变了栈布局把它暴露出来；没有任何证据表明 63589 会崩溃，也没有证据表明它被调用过。**
+
+**判定**：G2 仍 **NOT PASSED**。按预注册"崩溃→立即停、保留完整日志与匹配 PDB、不在同一次会话重试"，本轮不再上机、不改配方、不调参；部署 INI 已回 `off`（v20 DLL/PDB 留在原位，回滚备份 `dist/deploy-backup-20261026-v19/` 不变）。
+
+**下一有界问题（先修诊断，不新增原生调用）**：
+1. 把 g3-gates 的链起点改为 `[context]` 再 `+0x50/+0x40/+0x88`（audit23 的正确链），或直接移除这条 v16 遗留行；两者都不触碰 v20 的单一入口变量。
+2. 复查插件内其它 `context + offset` 读取是否越过 `0x50`，以及同类"链首缺一次解引用"的写法。
+3. 任一修复都构成新的构建身份（v20a），需重新构建/打包/部署后再取一次上机结果；在那次结果之前，本轮只证明"入口前的诊断越界"，不能用于评价 63589 的行为。
 
 ## 当前采集器与操作
 
@@ -851,6 +867,8 @@ BehaviorGraphProbe=true
 | 审计二十（机器码） | 2026-10-27：slot5（`0xc25ee0`）= `65177([ctx+8], buffer+0x38, …)` 解析名字/状态 → 项目名查 `[[adapter+8]+8]+0x28` 哈希 → `59268(buffer, float)`；当时读到的 buffer 字段（`+0x00` 项目名串、`+0x08` 注册表、`+0x38` 子对象、`+0x88` 指针，总 ≥0xA0）后由审计二十一修正；**伪造 buffer 风险不可接受，v20 暂不立项**，见[审计二十](behavior-graph-construction-audit.md#audit20) | 65177 字符串协议、59268 函数体、注册表来源、buffer 完整大小/对齐 |
 | 审计二十一（机器码） | 2026-10-27：63602 生成块受第一实参 `behaviorGraph` 守卫（0xbb62ae），壳图路径上 65149 与内部 63587 **都没被调用**；`65177` 拼 `<obj+0x38>/<buffer+0x38>` tagged string，`59268` = `movss [rcx+0xF0], xmm1; ret`；63602 的 sink 是 12 槽栈子对象描述符、与 0xba4e30 的 sink 不同类。**无安全最小生成实验 → 架构决策**，见[审计二十一](behavior-graph-construction-audit.md#audit21) | 是否允许把候选登记进 manager（突破 G1 边界）；第二实参六槽语义、63584/59441 对真图的作用 |
 | G3–G6完整关卡 | 未通过/未执行，前关未过不开展完整验收 | 一次WeapEquip注入不算完整G3；装载图生命周期与全局收敛仍未过 |
+| G2 v20 重建与部署 | 2026-10-27：原冻结包不在本检出中，按 v18 先例以干净 `a83e522` 重建/打包/部署（DLL `13688a9d…`、ZIP `076cf6f7…`、manifest `a9ae936d…`），v19 三件套备份在 `dist/deploy-backup-20261026-v19/`，部署 INI=`inject`，见[构建记录](build.md#v20-rebuild-2026-10-27) | —（运行见下行） |
+| G2 v20 运行与崩溃 | 2026-10-27 21:48 会话：身份与包内 manifest 一致，`GRAPH ENTRY outcome=ready`（guard 通过），随后在 **63589 之前**的 v16 遗留 g3-gates 只读链崩溃——`context+0x50` 越过 `sizeof(hkbContext)=0x50`，`[+0x40]` 得垃圾后 `[+0x88]` 越界；**入口从未执行**，无 FRAME/completed/pose 证据；日志与崩溃报告已归档（`2278201C…`/`4074DF23…`），INI 回 off，不在同会话重试，见[v20记录](#g2-v20-run) | 先修该越界诊断（按 audit23 正确链或移除该行），复查同类写法，再以新身份（v20a）重测 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |

@@ -874,7 +874,7 @@ SDK [hkbGeneratorOutput.h](../extern/CommonLibSSE/include/RE/H/hkbGeneratorOutpu
 
 v20 保持一个受控入口变量（63581→63589），但外层入口恢复了生成与场景应用等多类内部职责。后续若有变化，不能只据该变化唯一归因 Generate。比较顺序应为入口 guard/门 → 当前输出 n/f → raw pose 可用性/变化 → 有效骨载荷与相位 → BoneNodeEntry 数组及场景应用 → 源控制、OAR 语境与生命周期。冻结 v20 包没有真实载荷、原生分支或 node 应用 trace；填头但 pose 不变时，不能自动归咎插值 t 或播种。
 
-后续有界静态问题可限于完整 unwind 组下的 58343/58376 生成器前提与活动节点遍历、63582 的载荷混合/flags；若需 node 应用诊断，另按后续契约添加。本轮只记录 F01–F06，149 个冻结输入、v20 代码/测试/包均保持。最新实际运行仍是 v19，v20 待测，G2 未通过。
+后续有界静态问题可限于完整 unwind 组下的 58343/58376 生成器前提与活动节点遍历、63582 的载荷混合/flags；若需 node 应用诊断，另按后续契约添加。本轮只记录 F01–F06，149 个冻结输入、v20 代码/测试/包均保持。最新实际运行为 v20（2026-10-27 21:48，入口前在 g3-gates 越界读处崩溃，63589 从未执行），G2 未通过；见[审计二十四](#audit24)与 [v20 记录](independent-behavior-graph.md#g2-v20-run)。
 
 复现（仓库根目录；工具及 full/group/import 证据在忽略目录内）：
 
@@ -884,6 +884,17 @@ python build/behavior-graph-output-audit-20261027/audit23_image.py func 58423 58
 ```
 
 旧 `audit_image.py` 保留历史复现；本轮工具增加 chain-aware 分组并结合分支/落点校验选中完整范围，不重新定义所有函数，也未执行新的引擎调用。
+
+<a id="audit24"></a>
+## 插件侧对照：g3-gates 链越过 hkbContext 末尾（2026-10-27）
+
+本节不是新的二进制审计，而是把 [audit23](#audit23) 的链首纠正与一次运行期崩溃对齐。依据为本地 CommonLibSSE-NG `94faaed0` 的声明与匹配 PDB 的崩溃报告，未新增反汇编或引擎调用。
+
+- **声明事实**：`RE::hkbContext` 的成员止于 `animationCache`（0x48），文件末尾 `static_assert(sizeof(hkbContext) == 0x50)`，因此有效偏移只有 `0x00–0x4F`。
+- **插件写法**：驱动前的 `std::uint8_t context_storage[sizeof(RE::hkbContext)]`（0x50 字节）由 58315 填充，随后 g3-gates 诊断读取 `[ctx+0x50] → [+0x40] → [+0x88]`；第一跳已经越过对象末尾，读到的是相邻栈槽。
+- **运行期对照**：v16/v18/v19 该槽为 0，行内三字段均为 `null`（三份归档日志一致）；v20 因新增 guard 局部量改变栈布局，该槽非空（`rbx=0x7BD6CD336F4B8024`），`[+0x40]` 得到的垃圾值再被 `[+0x88]` 解引用，在 `CharacterPanel.dll+0x28067`（`independent_graph.cpp:955` 的 `mov r8, [rbx+0x88]`）触发 `EXCEPTION_ACCESS_VIOLATION`。
+- **与 audit23 的关系**：原生 58423 的链是 `[context]`（character）→`+0x50`（setup）→`+0x40`（data）→`+0x88`（footIkDriverInfo），插件那条少了首次解引用；纠正后既回到对象内读取，也与引擎语义一致。
+- **边界**：该崩溃发生在 63589 之前，不构成对入口、生成、输出头或 pose 的任何证据；这是观测代码的纠正，不改变 v20 的单一行为变量，但会产生新的构建身份。
 
 ## 复现
 
