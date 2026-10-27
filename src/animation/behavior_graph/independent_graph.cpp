@@ -1341,6 +1341,57 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         actor_id, request, trace.name, trace.first_step, trace.deltas.size(), trace.deltas);
                                 }
                             };
+                            // v26: does poseLocal follow the clock every step, or only at the batch
+                            // boundary v25 found? One character per drive step, bucketed by the
+                            // largest single-component change since the previous step:
+                            // '.' = 0, '1' <= 1e-5, '2' <= 1e-4, '3' <= 1e-3, '4' <= 1e-2, '5' > 1e-2.
+                            std::vector<PoseSample> pose_step_previous;
+                            std::string pose_step_deltas;
+                            std::size_t pose_step_changed = 0;
+                            std::uint32_t pose_step_first = 0;
+                            bool pose_step_started = false;
+                            float pose_step_max = 0.0f;
+                            const auto log_pose_step = [&](std::uint32_t const step) {
+                                std::vector<PoseSample> current;
+                                read_pose_local(candidate->characterInstance, current);
+                                if (current.empty())
+                                    return;
+                                if (!pose_step_started)
+                                {
+                                    pose_step_started = true;
+                                    pose_step_first = step;
+                                    pose_step_previous = std::move(current);
+                                    pose_step_deltas.push_back('.');
+                                    return;
+                                }
+                                float worst = 0.0f;
+                                const std::size_t limit = std::min(current.size(), pose_step_previous.size());
+                                for (std::size_t i = 0; i < limit; ++i)
+                                    worst = std::max(worst, pose_sample_max_delta(current[i], pose_step_previous[i]));
+                                pose_step_max = std::max(pose_step_max, worst);
+                                char code = '.';
+                                if (worst > 1.0e-2f)
+                                    code = '5';
+                                else if (worst > 1.0e-3f)
+                                    code = '4';
+                                else if (worst > 1.0e-4f)
+                                    code = '3';
+                                else if (worst > 1.0e-5f)
+                                    code = '2';
+                                else if (worst > 0.0f)
+                                    code = '1';
+                                if (code != '.')
+                                    ++pose_step_changed;
+                                pose_step_deltas.push_back(code);
+                                pose_step_previous = std::move(current);
+                            };
+                            const auto emit_pose_steps = [&] {
+                                if (!pose_step_started)
+                                    return;
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-steps first={} steps={} changed={} max-delta={:.6f} deltas='{}'",
+                                    actor_id, request, pose_step_first, pose_step_deltas.size(), pose_step_changed,
+                                    pose_step_max, pose_step_deltas);
+                            };
                             // v19 contract: the inject recipe supplies the audited
                             // optionalEyePosition (record+0x18) so 63587's arm block can run.
                             // The point is the candidate root's position shifted along Z past
@@ -1473,9 +1524,12 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     log_state_probe("60");
                                 }
                                 log_clip_step(step);
+                                log_pose_step(step);
                             }
                             log_clip_step(120);
+                            log_pose_step(120);
                             emit_clip_steps();
+                            emit_pose_steps();
                             // v17: idempotent slot-3 re-check after the drive — the world
                             // borrow is released right below, so nothing re-registers the
                             // bodies afterwards; the call feeds the pipeline row only.
