@@ -752,11 +752,11 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 <a id="v20-handoff"></a>
 ## v20 测试交接与当前停点
 
-**实现、静态审计和本地验证已就绪；最新实际运行仍为 v19，v20 待测，G2 未通过。** 现有源码、测试和包保持冻结，下一次原始结果到达后再裁决，不预先播种或推进后续关卡。
+**实现、静态审计和本地验证均已完成；v20 包已按 v18 先例重建并部署，等待第一次上机结果。最新实际运行仍为 v19，G2 未通过。** 现有源码与测试保持冻结，下一次原始结果到达后再裁决，不预先播种或推进后续关卡。
 
-使用 `build/behavior-graph-v20-generation-entry-20261027/CharacterPanel-behavior-graph-v20-generation-entry-20261027.zip`，按包内 `README-测试步骤.md` 和[预注册契约](#g2-v20-generation-entry)操作。ZIP SHA-256 为 `3f9f9182c0590d9285fa2fd77895cc35496da3ee75a3f70adf6ac4f50b0b8a49`；匹配 DLL/PDB GUID `{748DB13E-5AAA-4883-8283-751805A36ED4}`，age 79。完整文件哈希见包内 manifest 和[构建记录](build.md#v20-generation-entry-build)。
+原冻结包（身份 `…-242d0a50c5+dirty-cl94faaed0c6-20261027T070457Z`、ZIP `3f9f9182…`、DLL `6c76c2a7…`）不在本检出中，故 2026-10-27 以同一提交源重建：新身份 `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-a83e5229e7-cl94faaed0c6-20261027T134152Z`（干净 `a83e522`，身份无 `+dirty`），DLL `13688a9d…`（1,253,888 字节）、PDB `07a509da…`（35,467,264 字节），CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 320；ZIP 9,750,395 字节、SHA-256 `076cf6f7…`，五个条目重解压复核通过。两次构建不声称字节等同，旧哈希只作历史；判读一律以实际加载的 `SCENEGRAPH BUILD` 身份与包内 manifest 为准，不用较新提交号替代重新构建证据。详见[构建与重建记录](build.md#v20-rebuild-2026-10-27)。
 
-冻结身份是 `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-242d0a50c5+dirty-cl94faaed0c6-20261027T070457Z`。它记录构建时的工作区，后续 Git 提交不会改写该 DLL/PDB、ZIP、manifest 或身份；分析回传时以实际加载身份和哈希为准，不以较新提交号代替重新构建证据。
+使用 `build/behavior-graph-v20-generation-entry-20261027/CharacterPanel-behavior-graph-v20-generation-entry-20261027.zip`，按包内 `README-测试步骤.md` 和[预注册契约](#g2-v20-generation-entry)操作。已按 v18 流程部署（2026-10-27 21:42，未上机）：v19 三件套（DLL `344d9abb…`、PDB `9848cd14…`、`off` INI 1,034 字节）备份在 `dist/deploy-backup-20261026-v19/`，MO2 实例 `CharacterPanel/SKSE/Plugins/` 现为 v20 DLL/PDB，部署 INI（1,055 字节 `1db104fa…`）为 `inject`，其余键未动；仓库样例仍为 `off`。回滚=还原该备份并重启。
 
 回传完整 `CharacterPanel.log`、实际 `SCENEGRAPH BUILD` 身份、所用 manifest，以及首次暂停开包、关包和异常发生的时刻/操作。先核对精确 AE 1.6.1170、匹配 DLL/PDB、合并后的 INI 和重启状态；实验每进程只触发一次。缺行时还要保留该进程此前是否已经运行过实验，不能据缺行猜原因。测试结束把 `IndependentGraph` 恢复为 `off` 并重启；异常或源漂移时立即停止并保留日志/崩溃报告与匹配 PDB，不在同一会话调参重试。
 

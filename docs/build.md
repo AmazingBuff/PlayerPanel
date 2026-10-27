@@ -68,14 +68,27 @@ Final identity: `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-2
 
 ZIP SHA-256 `3f9f9182c0590d9285fa2fd77895cc35496da3ee75a3f70adf6ac4f50b0b8a49` (9,469,280 bytes), five entries; CRC and each file hash match. This identity/manifest describe the build-time `242d0a5+dirty` workspace; a later Git commit will not rewrite the existing package. Return the complete log plus actual loaded identity/manifest and first-open/close/abnormal times; guard-skip has only ENTRY by design. No new result is pre-judged.
 
-The [v20 handoff](independent-behavior-graph.md#v20-handoff) is the current stop: the matched package is frozen and awaits testing; latest actual run remains v19 and G2 has not passed. Follow its return/stop protocol and the existing package runbook. Later commits do not change these recorded artifact hashes, and this documentation completion does not rerun a build or test.
+The [v20 handoff](independent-behavior-graph.md#v20-handoff) is the current stop. The frozen package recorded above is absent from this checkout, so the same committed source was rebuilt, repackaged and redeployed on 2026-10-27 (see [rebuild and deployment](#v20-rebuild-2026-10-27)); latest actual run remains v19 and G2 has not passed. Return the complete log plus the actually loaded identity/manifest and first-open/close/abnormal times; guard-skip has only ENTRY by design. Later commits do not change the recorded artifact hashes of either build.
+
+The command below uses the local `g++` 15.1 (`C:/env/mingw64/bin/g++.exe`); the earlier record's `C:/env/llvm/bin/clang++.exe` does not exist in this environment.
 
 ```powershell
-C:/env/llvm/bin/clang++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_generation_entry_test.cpp -o build/behavior-graph-v20-generation-entry-20261027/generation_entry_test.exe
+C:/env/mingw64/bin/g++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_generation_entry_test.cpp -o build/behavior-graph-v20-generation-entry-20261027/generation_entry_test.exe
 build/behavior-graph-v20-generation-entry-20261027/generation_entry_test.exe
 cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v20-generation-entry-20261027
 cmake --build --preset Release
 ```
+
+<a id="v20-rebuild-2026-10-27"></a>
+### Rebuild and deployment (2026-10-27)
+
+Rebuild reason: the frozen v20 package above (identity `…-242d0a50c5+dirty-cl94faaed0c6-20261027T070457Z`, ZIP `3f9f9182…`, DLL `6c76c2a7…`) is not present in this checkout — `build/behavior-graph-v20-generation-entry-20261027/` did not exist, `build/Release` held the v19 pair, and no `*v20-generation-entry*` artifact existed on this machine. The committed source at `a83e522` (the commit that added the guarded native generation experiment on the same parent `242d0a5`) was rebuilt and repackaged; the earlier package was built from an uncommitted tree whose bytes are unrecorded, so byte identity is not claimed and its hashes remain history only.
+
+New identity: `CharacterPanel-scenegraph-behavior-graph-v20-generation-entry-20261027-a83e5229e7-cl94faaed0c6-20261027T134152Z` (clean HEAD `a83e5229e7e25f84a1e210d290bf2dc57e0fd02b`, submodule `94faaed0`; the embedded identity carries no `+dirty` suffix because the tree and submodule were clean at configure time). DLL SHA-256 `13688a9d243873f25ae153e8776cbee3d70b8760a10311042234da3ae0cc1535` (1,253,888 bytes), PDB SHA-256 `07a509da9b0a9b91e76cf222f5002c57dd99bb832caf56b9ebcfed78724b9668` (35,467,264 bytes); CodeView/PDB GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}`, age 320 (same GUID family as v18 age 317 and v19 age 319). Configure and build exited 0 with only the existing install-rule warning and the existing `cl` D9025 `/Ob2`→`/Ob3` warnings; no dependency install or update. The engine-free guard case was compiled and run with the local `g++` 15.1 under `-Wall -Wextra -Werror`: `1 parameterized generation-entry ownership case passed (22 value rows, engine-free)`.
+
+Package: `build/behavior-graph-v20-generation-entry-20261027/test-package/` holds `SKSE/Plugins/{CharacterPanel.dll|.pdb|.ini}`, `README-测试步骤.md` and `manifest.json` (`a9ae936d…`, 6,999 bytes); the sibling ZIP `CharacterPanel-behavior-graph-v20-generation-entry-20261027.zip` is 9,750,395 bytes, SHA-256 `076cf6f793a8a8bc5939bda85dc6eb5c24416ad363324cb19c1958af2e164e3e`, five entries with forward-slash names. Extracted and re-hashed against the manifest: DLL/PDB/INI hashes match. The package INI (1,207 bytes, `7128173d…`) is the repository sample plus `[Experiment] IndependentGraph=inject` and keeps both diagnostics flags false; the repository sample stays `off`.
+
+Deployment (2026-10-27 21:42): the on-disk v19 trio was backed up first to `dist/deploy-backup-20261026-v19/` (DLL `344d9abb…` 1,249,792 bytes, PDB `9848cd14…` 35,418,112 bytes, INI 1,034 bytes `875bb216…`, all matching the v19 record), and the MO2 mod `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` now holds this build's DLL (`13688a9d…`) and PDB (`07a509da…`) with the deployed INI at 1,055 bytes (`1db104fa…`) carrying `IndependentGraph=inject`; every other deployed key is unchanged. The documented revert is now this v19 backup; the earlier `dist/deploy-backup-20261026-v18/` pair remains as the second step back. No game launch happened in this task, so the v20 entry, its guard and the pose outcome remain unobserved.
 
 ## Scope and non-goals
 
