@@ -7,7 +7,7 @@
 <a id="audit-current"></a>
 ## 当前生成入口与后验边界（2026-10-27）
 
-最新实际运行为 [v23](independent-behavior-graph.md#g2-v23-run)（2026-10-27 23:19），G2 未通过：单一片段对照不成立，候选被定位为 `H2H_Idle`+`1HM_Idle`+`SCAR_1hmReadyDummy` 的多片段栈，且 60/120 两点因空映射未做成比较。G1 只按方案A修订通过，装载销毁/全局计数/资源收敛未证。
+最新实际运行为 [v24](independent-behavior-graph.md#g2-v24-run)（2026-10-27 23:48），G2 未通过但只剩“持续”：空映射按 identity 比较后，`H2H_Idle`（binding-index 681）在 step 120 覆盖 90/99 条轨道、旋转误差 ≤6.1e-5，层可归属成立；idle 时钟每驱动步 0.75×–1.55× 非恒定，待审计 `localTime` 的写入者。G1 只按方案A修订通过，装载销毁/全局计数/资源收敛未证。
 
 [audit25](#audit25) 给出 v23 那个空映射状态的指令级答案：AE 1.6.1170 的 `ConvertTrackPoseToBonePose`（REL 60005）在 `transformTrackToBoneIndices` 为空时直接把轨道号当骨骼号（identity），非空时查表。该结论只覆盖这一个助手。
 

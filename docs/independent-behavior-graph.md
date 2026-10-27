@@ -9,12 +9,12 @@
 | 关卡 | 截至 2026-10-27 的结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **NOT PASSED（但 2026-10-27 22:02 的 v20a 首次取得运动证据）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化。v20 首轮 guard 通过后在入口前崩溃（越界诊断，已修为 v20a）。**v20a 运行**：`63589(mode0)` 到达（guard `ready`、修正链四跳可读），首步即回填 `numData=116 f=1.0`，step 2 起 Path B 且 `arm-observed=yes`，`gen0elem` 与双槽元素哈希变化，候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`(60)→`8fb4cd336c4395bf`(120)、120/120 次变化，同时源侧 pose 不变、三份源基线逐行全等。缺逐骨/有限值证据与视觉确认，故仍不放行；**v21 运行（22:18）**：三点 `entries=116 finite=116 nonfinite=0`、`moved=94`（60/120，门槛 16）、抽样骨 38/76 `moved=yes`，但 `source-equal=8/21/15` 命中第 3 条 → 判据停止；审计证明第 3 条为**误报**（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`source-equal` 是十分量精确值相等，恒等/常量骨必然计入），见 [v20 记录](#g2-v20-run)、[v20a 记录](#g2-v20a-run)、[v21 契约](#g2-v21-contract) 与 [v21 运行记录](#g2-v21-run)；v22 已把该判据改为指针同一性 + “相等且在变化”计数，并于 23:03 运行通过：三点全有限、`alias=no`、60/120 `source-equal-moving=0`、`moved=94`、LHnd/LF30 在动 → **pose 内容证据成立**；G2 仍 NOT PASSED（跨批次持续性、语义对应与场景应用/视觉确认未证），见 [v22 契约](#g2-v22-contract) 与 [v22 运行记录](#g2-v22-run)；v23 已把“语义对应”做成可判定观测（活动 clip generator + 在其自身时间上采样对照）；**v23 运行（23:19）**：单一片段假设不成立（第 5 条，`agreed=22/99`、`max-dpos=3.98`），但定位到候选在跑多片段栈（`H2H_Idle` + `1HM_Idle` + `SCAR_1hmReadyDummy`，60/120 两点 `mapped=0` 未做成比较），G2 仍未通过，见 [v23 契约](#g2-v23-contract) 与 [v23 运行记录](#g2-v23-run)；v24（空映射 identity 语义 + 8 槽层普查 + `clip-clock` 曲线）已按 [audit25](behavior-graph-construction-audit.md#audit25) 构建部署待测（[v24 契约](#g2-v24-contract)）。 |
+| G2 | **NOT PASSED（但 2026-10-27 22:02 的 v20a 首次取得运动证据）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化。v20 首轮 guard 通过后在入口前崩溃（越界诊断，已修为 v20a）。**v20a 运行**：`63589(mode0)` 到达（guard `ready`、修正链四跳可读），首步即回填 `numData=116 f=1.0`，step 2 起 Path B 且 `arm-observed=yes`，`gen0elem` 与双槽元素哈希变化，候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`(60)→`8fb4cd336c4395bf`(120)、120/120 次变化，同时源侧 pose 不变、三份源基线逐行全等。缺逐骨/有限值证据与视觉确认，故仍不放行；**v21 运行（22:18）**：三点 `entries=116 finite=116 nonfinite=0`、`moved=94`（60/120，门槛 16）、抽样骨 38/76 `moved=yes`，但 `source-equal=8/21/15` 命中第 3 条 → 判据停止；审计证明第 3 条为**误报**（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`source-equal` 是十分量精确值相等，恒等/常量骨必然计入），见 [v20 记录](#g2-v20-run)、[v20a 记录](#g2-v20a-run)、[v21 契约](#g2-v21-contract) 与 [v21 运行记录](#g2-v21-run)；v22 已把该判据改为指针同一性 + “相等且在变化”计数，并于 23:03 运行通过：三点全有限、`alias=no`、60/120 `source-equal-moving=0`、`moved=94`、LHnd/LF30 在动 → **pose 内容证据成立**；G2 仍 NOT PASSED（跨批次持续性、语义对应与场景应用/视觉确认未证），见 [v22 契约](#g2-v22-contract) 与 [v22 运行记录](#g2-v22-run)；v23 已把“语义对应”做成可判定观测（活动 clip generator + 在其自身时间上采样对照）；**v23 运行（23:19）**：单一片段假设不成立（第 5 条，`agreed=22/99`、`max-dpos=3.98`），但定位到候选在跑多片段栈（`H2H_Idle` + `1HM_Idle` + `SCAR_1hmReadyDummy`，60/120 两点 `mapped=0` 未做成比较），G2 仍未通过，见 [v23 契约](#g2-v23-contract) 与 [v23 运行记录](#g2-v23-run)；v24（空映射 identity 语义 + 8 槽层普查 + `clip-clock` 曲线）已按 [audit25](behavior-graph-construction-audit.md#audit25) 运行一次：**层可归属成立**——step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle`（binding-index 681）在该时刻的采样，全部 99 条旋转误差 ≤6.1e-5；“有意义”取得数据，G2 只剩“持续”未定（idle 时钟每步 0.75×–1.55×，非恒定），见 [v24 契约](#g2-v24-contract) 与 [v24 运行记录](#g2-v24-run)。 |
 | G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
 
 [v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
 
-当前按[audit22](behavior-graph-construction-audit.md#audit22)修订生成链分类：63374/63595/63859/65232/65237提供clip元数据/visitor，不能推出manager登记必要；audit21壳图守卫只限制该路径。真实Generate槽有额外活参数，不直调SDK声明。63589→63568的mode0实际经58343/58376派发Generate，63568自身还写f=1，纠正旧跳转及唯一写入者读法。新[v20契约](#g2-v20-generation-entry)仅恢复63589(&mode0)，保持v19其余配方、off默认和源manager不写边界；不创建manager、fake sink或播种。最新实际运行为 v21（2026-10-27 22:18）：入口 63589 到达、pose 三点全有限且 94/116 条在变化，但 `source-equal>0` 命中第 3 条并已审计为判据误报；修正后的别名判据（指针同一性 + “相等且在变化”）待 v22 构建与一次运行，G2 未通过。
+当前按[audit22](behavior-graph-construction-audit.md#audit22)修订生成链分类：63374/63595/63859/65232/65237提供clip元数据/visitor，不能推出manager登记必要；audit21壳图守卫只限制该路径。真实Generate槽有额外活参数，不直调SDK声明。63589→63568的mode0实际经58343/58376派发Generate，63568自身还写f=1，纠正旧跳转及唯一写入者读法。新[v20契约](#g2-v20-generation-entry)仅恢复63589(&mode0)，保持v19其余配方、off默认和源manager不写边界；不创建manager、fake sink或播种。最新实际运行为 v21（2026-10-27 22:18）：入口 63589 到达、pose 三点全有限且 94/116 条在变化，但 `source-equal>0` 命中第 3 条并已审计为判据误报。此后 v22（pose 内容）、v24（层可归属）相继取得证据，当前只剩“持续”未定，见 [v24 运行记录](#g2-v24-run)；G2 未通过。
 
 [audit23](behavior-graph-construction-audit.md#audit23) 已静态拆开三段职责：原生生成、63581 内的三条 poseLocal memcpy、外层 63856 的场景应用。双槽 fraction/t 门失败不等于整函数无复制；58423 的短函数/context 旧判读也已纠正。63856 在该写入者中不更新 scale，与手动采样转 local 的写入范围不同，但视觉因果仍未证明。v20 恢复一个外层入口变量，同时恢复多类内部职责，后续变化不能唯一归因 Generate。此次不改冻结代码/测试/包，不新增运行结果。
 
@@ -1036,6 +1036,65 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 <a id="g2-v24-build"></a>
 **实现与部署（2026-10-27 23:35，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v24-layer-census-20261027-50c2396d66-cl94faaed0c6-20261027T153521Z`（干净 `50c2396`，子模块 `94faaed0`，无 `+dirty`；DLL `13bc2b12…` 1,282,560 字节、PDB `c4a72f08…` 35,770,368 字节、CodeView age 329）。只改 `independent_graph.cpp`：扫描抽成 `collect_active_clips`、槽位 3→8、`map.empty()` 时 `bone = track`、两行模板各加字段、新增 `log_clip_clock` 并在 `step % 20 == 0` 与 120 处调用；`clip_reference_policy.h` 未改，五个 engine-free 用例全过。包 `build/behavior-graph-v24-layer-census-20261027/test-package/`（manifest `7e47d6fc…` 6,268 字节），ZIP 10,015,469 字节、SHA-256 `68991ca7…`，五条目重解压复核与 manifest 逐条相符。v23 三件套备份到 `dist/deploy-backup-20261027-v23/`（DLL `efa90c21…`、PDB `f7e3e2c6…`、`off` INI 1,077 字节 `02f37ace…`），MO2 现为 v24 DLL/PDB（与包内相同），部署 INI=`inject`（1,062 字节 `ac255097…`）。**该轮不上机**；随后的一次运行待记录。
 
+<a id="g2-v24-run"></a>
+## G2 v24 运行记录（2026-10-27 23:48 会话，层可归属成立）
+
+构建 `CharacterPanel-scenegraph-behavior-graph-v24-layer-census-20261027-50c2396d66-cl94faaed0c6-20261027T153521Z`（DLL `13bc2b12…`），部署 INI=`inject`，运行时 `1-6-1170-0`：23:48:02.887 加载（`SCENEGRAPH BUILD` 与部署身份逐字一致）。**无崩溃、无 `[E]`**；15 条 `[W]` 与既往同类。原始日志归档为 [CharacterPanel-g2v24-layer-census-20261027-2348.log](diagnostics/CharacterPanel-g2v24-layer-census-20261027-2348.log)（53,932 字节，SHA-256 `58276FCA6DFD742E58DF410FA4B935C44B3EB8CEF5424A39282B993BDCB568EEA`）。
+
+**预算**：`GRAPH ENTRY` 1、`GRAPH FRAME` 30+1、`BEHAVIOR GRAPH` 36、`INDEPENDENT GRAPH` 71（40 基础 + `pose-content` 3 + `pose-bone` 12 + `clip-ref` 9 + `clip-clock` 7），均在预注册上限内（`clip-ref` ≤24、`clip-clock` 7）。
+
+**层普查（9 条 `clip-ref`，比例 = agreed/compared）**：
+
+| step | slot | 片段 | binding-index | map-len | mapping | tracks | compared | agreed | 比例 | max-dpos | max-drot |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | 0 | `H2H_Equip.hkx` | 11045 | 0 | identity | 99 | 99 | 36 | 0.364 | 2.263 | 0.0531 |
+| 0 | 1 | `male\MT_Idle.HKX` | 1022 | 99 | table | 99 | 99 | 22 | 0.222 | 3.983 | 0.0638 |
+| 60 | 0 | `H2H_Idle.hkx` | 681 | 0 | identity | 99 | 99 | 46 | 0.465 | 0.497 | 0.00035 |
+| 60 | 1 | `1HM_Idle.hkx` | 23 | 0 | identity | 99 | 99 | 19 | 0.192 | 3.107 | 0.2544 |
+| 60 | 2 | `SCAR_1hmReadyDummy.hkx` | 15074 | 0 | identity | 97 | 97 | 16 | 0.165 | 17.321 | 0.2544 |
+| 60 | 3 | `H2H_Equip.hkx` | 11045 | 0 | identity | 99 | 99 | 19 | 0.192 | 5.477 | 0.0562 |
+| 120 | 0 | `H2H_Idle.hkx` | 681 | 0 | identity | 99 | 99 | **90** | **0.909** | 0.187 | **0.000061** |
+| 120 | 1 | `1HM_Idle.hkx` | 23 | 0 | identity | 99 | 99 | 23 | 0.232 | 3.378 | 0.2684 |
+| 120 | 2 | `SCAR_1hmReadyDummy.hkx` | 15074 | 0 | identity | 97 | 97 | 15 | 0.155 | 100.658 | 0.7345 |
+
+**时钟曲线（7 条 `clip-clock`）**：
+
+| step | found | entries |
+| --- | --- | --- |
+| 0 | 2 | `H2H_Equip:0.0167`, `MT_Idle:0.0167` |
+| 20 | 1 | `H2H_Equip:0.4583` |
+| 40 | 1 | `H2H_Equip:0.7083` |
+| 60 | 4 | `H2H_Idle:0.1833`, `1HM_Idle:0.1833`, `SCAR:0.1833`, `H2H_Equip:0.8333` |
+| 80 | 3 | idle 三条均 `0.7000` |
+| 100 | 3 | idle 三条均 `0.9500` |
+| 120 | 3 | idle 三条均 `1.2000` |
+
+**预注册判读（逐条）**：
+
+| 条 | 条件 | 本轮结果 |
+| --- | --- | --- |
+| 1 | 三点全 `unavailable` | 未触发（9 条 `status=compared`） |
+| 2 | `mapping=identity` 却 `mapped=0` | **未发生**：所有 identity 行 `mapped=99`（SCAR 97）、`compared` 满额 → [audit25](behavior-graph-construction-audit.md#audit25) 的语义在运行期成立 |
+| 3 | 至少一层 `agreed/compared ≥ 0.8` | **命中**：`H2H_Idle` 90/99 = 0.909（binding-index 681） |
+| 4 | 多层互补且均 ≥0.8 | 不适用（只有一层达标） |
+| 5 | 无任何层 ≥0.5 | 不适用 |
+| 6 | 崩溃/源漂移 | 不适用 |
+
+**判定**：**第 3 条命中——层可归属成立，G2 的“有意义”取得数据**。step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle` 在该时刻（`time=1.2000`）的采样；而且**全部 99 条的旋转误差 ≤ 6.1e-5**，差异只出现在 9 条的位置分量上（最大 0.187 个模型单位），形态指向这 9 条被额外的平移层或提取运动改写，而不是姿态本身不同。其余层在同一时刻的比例只有 0.155–0.232，`SCAR_1hmReadyDummy` 的 `max-dpos=100.658` 说明它是局部占位片段而非全身片段，不能拿来论证“加权混合”。
+
+G2 的四项要件因此变成：pose 内容（v22 成立）、必要骨变化（v22 成立）、源对照（每轮成立）、**有意义（本轮成立，层可归属）**；**只剩“持续”没有定论**，而本轮第一次给出了它的量化形态：
+
+1. **驱动中途栈发生切换**：step 20/40 只有 `H2H_Equip`（`mode=0` 单次播放），step 60 起 idle 栈接管，`H2H_Equip` 停在自己的 `duration=0.8333`——符合单次播放语义，不是停滞。
+2. **idle 栈时钟单调推进，但步长不是常数**：`0.1833`(60) → `0.7000`(80) → `0.9500`(100) → `1.2000`(120)。60→80 是 31 帧 / 20 步（1.55×），80→100 与 100→120 各 15 帧 / 20 步（0.75×）。
+3. 也就是说，**每驱动步的推进量在 0.75× 与 1.55× 之间**，与我们喂的 `dt=1/60`（1×）不符。“持续”目前唯一的缺口就是这个比例。
+
+**下一有界问题（v25，待评审，未预注册）**：
+
+1. **静态审计时钟写入者**：谁写 `hkbClipGenerator::localTime`（`+0xF0`），它消费的是我们喂的 dt、还是引擎自己的帧计数/时间源；若消费 dt，定位 0.25 的损失发生在哪一段（63587 的更新、63583 的排空，还是 clip 自身的 `playbackSpeed`/`enabled` 门）。
+2. **若审计不能定论，做一次 dt 缩放运行**：同一配方下把驱动步长改成 2×（或 0.5×），看 idle 时钟是否等比缩放。等比 → dt 被正确消费，损失在别处；不等比 → 时钟由帧驱动，“持续”要按帧改判据。
+
+两条都不改变 v22–v24 的既有结论；第 2 条需要新身份与新契约。
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。
@@ -1124,6 +1183,7 @@ BehaviorGraphProbe=true
 | G2 v23 契约与实现 | 2026-10-27 23:14：只读遍历 `activeNodes`（前 256 项），vtable 等于 `RE::VTABLE_hkbClipGenerator[0].address()` 才当片段生成器；`binding` 先过 `plausible_object_pointer` 再读 `animation`；读 `animationName`/`localTime`/`binding`，用 `SamplePartialTracks` 在片段自身时间采样，按 `transformTrackToBoneIndices` 与 `poseLocal` 逐条比较（旋转用 `1-|dot|`）；新增 `clip_reference_policy.h` 与 19 断言用例，`clip-ref` ≤3 行/检查点；身份 `…v23-clip-ref-20261027-ddb58bc269…`（DLL `efa90c21…`、age 327），ZIP `05ac4a3e…`、manifest `2f143a77…`，v22 三件套备份到 `dist/deploy-backup-20261027-v22/`，部署 INI=`inject`（1,072 字节 `655a9c89…`），见[契约](#g2-v23-contract)与[构建记录](build.md#v23-clip-ref-2026-10-27) | —（运行见下行） |
 | G2 v23 运行与判读 | 2026-10-27 23:19 会话：身份一致、无崩溃无 `[E]`；ENTRY 1、FRAME 30+1、IG 63、BG 36（`clip-ref` 8 ≤9）；v22 门槛逐字复现；**第 5 条命中**（`agreed=22/99`、`max-dpos=3.983`，且该点 pose 仍是绑定姿态），60/120 两点 `mapped=0`（binding 的 `transformTrackToBoneIndices` 为空）未做成比较、属契约未覆盖状态；结构收获：候选在跑 `H2H_Idle`+`1HM_Idle`+`SCAR_1hmReadyDummy` 多片段栈，三点同步时钟 0.0167/0.1833/1.2000，片段时钟与驱动不同步；日志归档（50,159 字节 `9452BF96…`），INI 回 off，见[v23 运行记录](#g2-v23-run) | 下一问（待评审）：空映射语义审计 + 完整层清单，之后再重跑 |
 | G2 v24 契约与实现 | 2026-10-27 23:35：空映射按 audit25 的 identity 语义比较（`mapping=identity|table`），槽位 3→8 并输出 `binding-index`/`map-len`，新增 `clip-clock`（0/20/40/60/80/100/120）；`clip-ref` ≤24 行、`clip-clock` 7 行；身份 `…v24-layer-census-20261027-50c2396d66…`（DLL `13bc2b12…`、age 329），ZIP `68991ca7…`、manifest `7e47d6fc…`，v23 三件套备份到 `dist/deploy-backup-20261027-v23/`，部署 INI=`inject`（1,062 字节 `ac255097…`），见[契约](#g2-v24-contract)与[构建记录](build.md#v24-layer-census-2026-10-27) | —（待上机；门槛：层 `agreed/compared ≥0.8` 或互补栈） |
+| G2 v24 运行与判读 | 2026-10-27 23:48 会话：身份一致、无崩溃无 `[E]`；ENTRY 1、FRAME 30+1、IG 71（40+15+9+7）、BG 36；**identity 行全部 `mapped=99/97`、`compared` 满额**（audit25 语义运行期成立，未触发第 2 条冲突）；**第 3 条命中**：`H2H_Idle`（binding-index 681）在 step 120 达 90/99 = 0.909，且 99 条旋转误差全 ≤6.1e-5，差异只在 9 条的位置分量（≤0.187）；`clip-clock` 显示栈在驱动中途切换（step 20/40 仅 `H2H_Equip`，60 起 idle 栈接管、`H2H_Equip` 停在自身 `duration`），idle 时钟单调但每步 0.75×–1.55× 非恒定；日志归档（53,932 字节 `58276FCA…`），INI 回 off，见[v24 运行记录](#g2-v24-run) | 只剩“持续”：需审计 `localTime` 写入者消费的是 dt 还是内部帧计数 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |
@@ -1135,7 +1195,7 @@ BehaviorGraphProbe=true
 
 当前选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
 
-最新实际运行为 v23（2026-10-27 23:19）：单一片段对照不成立，但片段栈被定位（`H2H_Idle` + `1HM_Idle` + `SCAR_1hmReadyDummy`），且片段时钟与驱动不同步（120 步 / 2.0 s 模拟只走 1.2 s）；v24 已按 audit25 的 identity 语义与 8 槽普查构建部署待测。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
+最新实际运行为 v24（2026-10-27 23:48）：层可归属成立，G2 只剩“持续”；v24 运行给出“有意义”的数据：step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle` 在该时刻的采样（旋转误差 ≤6.1e-5）；剩余缺口是“持续”——idle 时钟每驱动步推进 0.75×–1.55×，非恒定，见 [v24 运行记录](#g2-v24-run)。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
 
 ## 维护约束
 
