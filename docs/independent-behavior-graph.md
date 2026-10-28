@@ -1653,6 +1653,46 @@ call 1/60/120 × `post-pipeline/post-update/post-sample` 共 9 行，全部为 `
 
 **范围**：单进程、暂停背包、一个 actor/来源；四条边界（`reset` 中断、重开不拼接、F7 重捕获、读档后拒绝旧候选）全部成立。**未验**：来源图被替换但 controller 未重建的 `reason=source-invalid` 分支；装载图停用/销毁与全局收敛仍属 G1 遗留。
 
+<a id="g3-a-contract"></a>
+## G3-A 契约：源图时间线记录（2026-10-28，v37 已实现并部署，待上机）
+
+G3 的前置观测。目标是先在**正常游戏**里拿到同一单手武器 Equip → Idle → Unequip 的输入顺序（变量写入 + 活动节点变化），作为之后回放给候选的输入清单和对照基线。**不手动指定动作族或 HKX**，也不发事件给源。
+
+**仪器**：`src/animation/behavior_graph/source_timeline.cpp`，由现有 post-UI 渲染钩子（REL ID 79947/82084）每帧调用一次，`[Experiment] SourceTimeline=true` 才生效。只读、不新增钩子、不新增 native 调用、不碰候选图。
+
+**读点**（均按本仓库已在用的偏移核对过头文件与既有代码）：
+
+| 数据 | 路径 |
+| --- | --- |
+| 变量值 | `BShkbAnimationGraph::behaviorGraph`(+0x208) → `hkbBehaviorGraph::variableValueSet`(+0xD8) → `hkArray` 数据指针 +0x10、计数 +0x18 |
+| 变量名 | `hkbBehaviorGraph::data`(+0x88) → `hkbBehaviorGraphData::stringData`(+0x78) → `hkbBehaviorGraphStringData::variableNames`(+0x30) |
+| 活动节点 | `hkbBehaviorGraph::activeNodes`(+0x98) → 数据指针 +0、计数 +8；前 64 项做 FNV 哈希 |
+
+计数与既有运行读数一致（`vars[words=652]`），这是本轮唯一可自证的数据形状。
+
+**输出**（每帧只在变化时写，单进程 ≤200 行，超出后写一行 `budget-exhausted` 并停）：
+
+```
+SOURCE TIMELINE armed actor=00000014 words=652
+SOURCE TIMELINE variable index=<i> name='<n>' <old>-><new> float=<f>-><f>
+SOURCE TIMELINE nodes count=<n> hash=<016x>
+```
+
+变量按 int32 原样输出，同时给出同一 4 字节的 float 解释——类型靠名字与变化形态判断，不猜。
+
+**预注册观察（不得事后放宽）**：
+
+1. 装备瞬间出现一组变量变化；卸下时出现反向变化。两次的变量集合与顺序**不要求对称**，只记录实际顺序。
+2. `nodes` 的 `count/hash` 在装备与卸下各变一次或多次，Idle 期间稳定；若 Idle 期间持续变化，说明该哈希包含会抖动的字段，记录为仪器限制而不是状态变化。
+3. `armed` 行必须在进游戏后出现且 `words=652`。若 `words` 不是 652，或根本没有 `armed`，本轮判为未采。
+4. 全程源 `pose`/`activeNodes` 不被本仪器写入（只读），源行为与未装插件时一致。
+
+**停止条件**：没有 `armed` 行、`words≠652`、budget 在 equip 前耗尽、或出现非有限 float 且伴随崩溃 → 停止判读，保留日志与匹配 PDB，回审计。
+
+**运行步骤**：`SourceTimeline=true`、其余键保持 off，重启；进入游戏后原地：装备一把单手武器 → 等约 2 s → 卸下 → 等约 2 s → 退出并交日志。不要开背包、不要 F7、不要换装以外的操作。
+
+**不做**：不写变量、不发事件、不调 native、不把源图状态复制给候选。G3 的回放与"候选走同一顺序"的判定属下一份契约。
+
 ## 当前采集器与操作
 
 `BehaviorGraphProbe`只读源日志仍按每actor/request最多16条预算。另一路`IndependentGraph=off|construct|load|drive|inject`默认off、重启生效，首次暂停panel-open每进程最多一次；v17 inject的INDEPENDENT GRAPH既定预算为40行，另有复用的源分组快照。候选可以被构造/装载/激活/推进/注入，不能用源探针“只读”描述整个实验；源图保持只读。装载候选刻意保留至进程结束，每进程至多一张，不代表安全销毁已实现。
@@ -1794,6 +1834,7 @@ BehaviorGraphProbe=true
 | G2 v31/v32 离线 | 2026-10-28 白天：v31 共用完整单步与修正读法、v32 来源/窗口/语义运动/实际写骨，两个新 engine-free 场景各 2 例通过，Release 构建通过；**产物未留存**（`build/Release` 仍是 v30，检出内无 v31/v32 目录或包） | 重建后上机 |
 | G2 v33 重建与部署 | 2026-10-28 22:20–22:23：以 HEAD `d323b35` 重配新 label 构建（干净树，无 `+dirty`），DLL `061d5b8a…` 1,319,424 B / PDB `5924464d…`；同一树重跑两个离线场景各 2 例通过；v30 三件套备份至 `dist/deploy-backup-20261028-v30/` 后部署，三键开。见[构建](build.md#v33-rebuild-2026-10-28)与[部署](#deploy-state) | —（运行见下行） |
 | G2 v34 边界会话 | 2026-10-28。22:47 会话：开包 1 跑满 120（未在 120 前关）、开包 2 重采基线且不拼接、开包 3 中途 F7 → `steps=84 reason=retarget source-comparison=discarded` + view 2→3、读档后开包 0 条 display 行；日志 83,924 字节 `23637075…`。**23:00 补测**：开包 1 在 call 61 关包 → `steps=61 reason=reset source-comparison=discarded` 且无摘要，开包 2 从 call 1 独立跑满 120；日志 64,003 字节 `bc7f27c4…`。两次均无 `[E]`。附带：`native-step` 三点哈希与 v33 逐位相同而源 before 不同 → 候选轨迹可复现且与源无关；`SCOPY PARK` 累积 4 份。三键已回 off。见[v34 记录](#g2-v34-boundaries) | 来源图替换而 controller 未重建的 `source-invalid` 分支；G1 装载销毁/全局收敛；G3–G6 |
+| G3-A 源图时间线 | 2026-10-28 23:41：新增 `source_timeline.cpp`（post-UI 每帧只读源图，diff 652 个 word 变量 + 活动节点 count/hash，≤200 行/进程），`[Experiment] SourceTimeline` 开关，构建 v37（`…v37-source-timeline-20261028-81578f5c63…`，DLL `7f3bd92e…`）并部署。见[契约](#g3-a-contract)、[构建](build.md#v37-source-timeline-2026-10-28) | 未上机；本构建未加离线用例（native glue，无 policy 头可挂） |
 | G1 遗留审计 + v35/v36 | 2026-10-28 23:11–23:18：指令级确认 `Deactivate`（`0xab1f70`）对 `activeNodes` 无空检查、`context+8` 非空即早退、释放 `variableValueSet` 并置 `isActive=false`；引擎只在 `BShkbAnimationGraph` 析构里配对调用；候选与源三份日志 `root-generator` 同指针 → **销毁判 NO-GO**。**v35 探针证伪**：23:16 读回 `registry=300474432->300474432`，重审确认 `+0x228` 是不变奇偶值、`inc` 未写回、`63529` 是无锁追加而非登记 → 旧"登记计数"结论作废，判无锚点。`1ca2ad6` 已 revert（`cee948d`），构建 **v36**（`…v36-registry-probe-revert-20261028-cee948dcf8…`，DLL `ac01ac95…`）并部署，三键回 off。见[审计与更正](#g1-teardown-audit)、[v35 构建](build.md#v35-registry-probe-2026-10-28)、[v36 构建](build.md#v36-revert-2026-10-28) | —（该项结清） |
 | G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |

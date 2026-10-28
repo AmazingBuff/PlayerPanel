@@ -368,6 +368,19 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v36-registry-probe-revert-20
 
 **Deployed 2026-10-28 23:18**: the v35 trio went to `dist/deploy-backup-20261028-v35/` (DLL `9d5cce9f…`), the deployed DLL now hashes to `ac01ac95…`, and all three experiment keys are back to `off/false/false`, so the shipped behaviour is the plain OAR product path.
 
+<a id="v37-source-timeline-2026-10-28"></a>
+## V37 source timeline recorder (2026-10-28)
+
+First half of G3: a read-only recorder for the player's own graph, sampled once per post-UI frame and called from the existing render hook, so no new hook and no new native call are introduced. It logs only word-variable transitions, the active-node count and a 64-entry node hash, with a 200-line process budget. Contract, read points and pre-registered readings are in the [G3-A contract](independent-behavior-graph.md#g3-a-contract).
+
+New files: [source_timeline.h](../src/animation/behavior_graph/source_timeline.h) / [source_timeline.cpp](../src/animation/behavior_graph/source_timeline.cpp); `settings.cpp/h` gains `SourceTimeline`; [renderer.cpp](../src/render/renderer.cpp) calls it from `post_ui_draw`. The tree was committed first (`81578f5c63`) so the identity is clean.
+
+**No engine-free test was added for this build.** The recorder is native glue over engine offsets; the only pure logic is the diff loop and the FNV mix, and neither has a policy header to host a test. This is a deliberate gap for this probe, not a rerun of the existing suites (which were not executed either).
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v37-source-timeline-20261028-81578f5c63-cl94faaed0c6-20261028T153941Z`. DLL **1,327,616 bytes**, SHA-256 `7f3bd92eb5e341db50314168fe2a18eaaaad86a84813d5ea13d0130c76fd8103`; PDB **36,327,424 bytes**, SHA-256 `c85cb1926e23c18fa9326ba5d241522c179c9401855bb84ac70ae3ce4ec69208`.
+
+**Deployed 2026-10-28 23:41**: the v36 trio went to `dist/deploy-backup-20261028-v36/` (DLL `ac01ac95…`); the deployed INI sets `SourceTimeline=true` with `IndependentGraph=off` and both display keys false, so the product animation path is untouched.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
