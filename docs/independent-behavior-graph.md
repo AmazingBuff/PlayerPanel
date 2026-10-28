@@ -1731,7 +1731,9 @@ v38 引入 **settle 规则**：一个新值必须连续 **3 个采样**保持不
 
 身份 `…v39-timeline-window-20261029-5f2cf53de6-cl94faaed0c6-20261028T161546Z`，DLL `5f2f660a…`、1,328,640 B；v38 三件套备份到 `dist/deploy-backup-20261029-v38/`，已部署。构建见 [v39](build.md#v39-window-2026-10-29)。
 
-**v39/v40 上机步骤**：进游戏后先站定（**不要开面板**），**按 F7**（日志出现 `window-open seconds=20`），随后 20 秒内：装一把单手武器 → 等约 2 s → 卸下 → 等约 2 s。窗口自动关闭后退出交日志。
+**v39/v40/v41 上机步骤**：进游戏后先站定（**不要开面板**），**按 F7**（日志出现 `window-open seconds=20`），随后 20 秒内：装一把单手武器 → 等约 2 s → 卸下 → 等约 2 s。窗口自动关闭后退出交日志。
+
+> **v41 判据修正**：F7 的分流依据是 `PanelMonitor::is_menu_open()`，不是"场景图是否存在"——00:21 那次按 F7 只触发了面板重捕获并被 `outside paused inventory` 拒绝，说明场景图对象在面板外同样存在。若再出现 `command=1 ignored outside paused inventory`，即判热键未到达时间线窗口。
 
 **预注册（v39）**：`window-open` 出现且 `words=463`；装备与卸下在窗口内各出现一组 settled 变化；同一索引在窗口内出现次数不超过其真实状态数（例如 `iLeftHandEquipped` 不应出现 10 次以上）；`window-closed lines=N` 且 N≤800。若窗口内仍只看到 1.2 s 周期循环而没有装备变化，说明装备走的是事件而非变量——那 G3-B 的输入就必须以事件为主，变量只作对照。
 
@@ -1886,6 +1888,8 @@ BehaviorGraphProbe=true
 | G3-A v38 运行（未采） | 2026-10-29 00:11：`armed words=463 nodes=36`，预算撑到 18.2 s 后耗尽，装备未进日志；日志 22,707 字节 `6f7055bb…`。发现源图 **~1.2 s 周期循环**（`bVoiceReady`/`BlendJump`/`bIsInMT`/`iLeftHandEquipped` + 节点数 22↔27↔44↔54），常开预算记录必然被它磨光 | 改为显式窗口 |
 | G3-A v39 窗口 | 2026-10-29 00:17：F9 开 20 s 窗口（在 scene-graph 门之前处理，正常游戏可用）、自动关闭、预算 800；身份 `…v39-timeline-window-20261029-5f2cf53de6…`，DLL `5f2f660a…`；v38 备份到 `dist/deploy-backup-20261029-v38/`。**F9 与游戏快速读档冲突，本轮作废** | 换键重发 |
 | G3-A v40 换键 | 2026-10-29 00:19：时间线窗口改绑 **F7**（仅在无面板时；面板内 F7 仍为重捕获），构建 `…v40-timeline-f7-20261029-58d25af47b…`（DLL `5f791d2c…`），v39 备份到 `dist/deploy-backup-20261029-v39/`，已部署 | 未上机 |
+| G3-A v40 运行（空采） | 2026-10-29 00:21：`SourceTimeline=true` 已加载，但按 F7 只出现 `SceneGraph ... command=1 ignored outside paused inventory`——**场景图对象在面板外也存在**，所以"graph 为空"不能当面板关闭的判据，F7 落进了重捕获分支。日志 4,035 字节 `e6c623a7…` | 改用面板状态判定 |
+| G3-A v41 门修正 | 2026-10-29 00:24：改用 `PanelMonitor::is_menu_open()` 判定——面板外 F7 开窗口，面板内 F7 重捕获；构建 `…v41-timeline-panel-gate-20261029-9bc1a4b03a…`（DLL `3b8f8efe…`），v40 备份到 `dist/deploy-backup-20261029-v40/`，已部署 | 未上机 |
 | G1 遗留审计 + v35/v36 | 2026-10-28 23:11–23:18：指令级确认 `Deactivate`（`0xab1f70`）对 `activeNodes` 无空检查、`context+8` 非空即早退、释放 `variableValueSet` 并置 `isActive=false`；引擎只在 `BShkbAnimationGraph` 析构里配对调用；候选与源三份日志 `root-generator` 同指针 → **销毁判 NO-GO**。**v35 探针证伪**：23:16 读回 `registry=300474432->300474432`，重审确认 `+0x228` 是不变奇偶值、`inc` 未写回、`63529` 是无锁追加而非登记 → 旧"登记计数"结论作废，判无锚点。`1ca2ad6` 已 revert（`cee948d`），构建 **v36**（`…v36-registry-probe-revert-20261028-cee948dcf8…`，DLL `ac01ac95…`）并部署，三键回 off。见[审计与更正](#g1-teardown-audit)、[v35 构建](build.md#v35-registry-probe-2026-10-28)、[v36 构建](build.md#v36-revert-2026-10-28) | —（该项结清） |
 | G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |

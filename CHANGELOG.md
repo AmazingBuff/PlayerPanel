@@ -130,6 +130,8 @@
 
 ### Fixed
 
+- Gate the F7 timeline binding on the panel state (v41): the scene graph exists outside the pause menu, so the first binding sent F7 into the recapture branch and produced `command=1 ignored outside paused inventory`. `PanelMonitor::is_menu_open()` is now the discriminator — F7 opens the 20-second timeline window outside the panel and recaptures inside it.
+
 - Bound the source timeline to an explicit window (v39, rebound to F7 in v40): the second run lasted 18 seconds and still lost the equip sequence because the source graph cycles `bVoiceReady`/`BlendJump`/`bIsInMT`/`iLeftHandEquipped` and the node count on a roughly 1.2-second period. F7 now opens a 20-second window when no panel is open (inside the panel F7 keeps its recapture meaning — F9 was dropped because the game reserves it for quick load), the window closes by itself, and the line budget is 800. That period is also a constraint for G3-B: replay must not treat those cyclic variables as equip events. See the [contract](docs/independent-behavior-graph.md#g3-a-contract).
 
 - Settle the source timeline and drop the per-frame node hash (v38): the first run spent all 200 lines in 8.5 seconds on `TimeDelta` and a node hash that changed every frame, so the equip sequence was never reached. A variable is now written only after its new value survives three consecutive samples, and the node line keeps the count alone. Same read points, same read-only guarantee, same budget. The same run also showed that the candidate holds 652 word variables while the source holds 463, so G3 replay must map by name rather than index. See the [contract](docs/independent-behavior-graph.md#g3-a-contract).

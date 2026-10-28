@@ -1,0 +1,43 @@
+[00:20:32.017] [29904] [I] CharacterPanel v1-2-1-0
+[00:20:32.017] [29904] [I] CharacterPanel loaded
+[2026-10-29 00:20:32.016] [thread 29904] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(73): [info] CharacterPanel v1-2-1-0
+[00:21:06.377] [29904] [I] OAR Animations V1 mapping API available
+[00:21:06.377] [29904] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[00:21:06.377] [29904] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[00:21:43.060] [36892] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[00:21:43.060] [36892] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[00:21:43.060] [36892] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[00:21:43.060] [36892] [I] EXPERIMENT setting IndependentGraph=off
+[00:21:43.060] [36892] [I] EXPERIMENT setting DisplayPose=false
+[00:21:43.060] [36892] [I] EXPERIMENT setting DisplayStep=false
+[00:21:43.060] [36892] [I] EXPERIMENT setting SourceTimeline=true
+[00:21:43.062] [36892] [I] DAC native inventory lifecycle sink installed
+[00:21:43.065] [36892] [I] All shaders compiled
+[00:21:43.065] [36892] [I] Installed pre-UI renderer hook
+[00:21:43.065] [36892] [I] Panel menu sink installed
+[00:21:43.065] [36892] [I] CharacterManager equipment sink installed
+[00:21:43.065] [36892] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-behavior-graph-v40-timeline-f7-20261029-58d25af47b-cl94faaed0c6-20261028T161853Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[00:21:43.093] [24456] [I] Studio host changed: 0x0 -> 0x1f7094a6980 (paused=true)
+[00:21:43.093] [24456] [I] Studio light node has been created
+[00:21:43.093] [24456] [I] CP-LIGHT slot 0: registered, shell 0x1f8943bf880 queued (ledger stays the authority)
+[00:21:43.093] [24456] [I] CP-LIGHT slot 1: registered, shell 0x1f8943bf740 queued (ledger stays the authority)
+[00:21:43.093] [24456] [I] CP-LIGHT slot 2: registered, shell 0x1f8943bf600 queued (ledger stays the authority)
+[00:21:43.093] [24456] [I] Studio lights registered on the ledger (scene=0x1ed7adb6e80 -- ledger fetch will populate the slots)
+[00:21:43.093] [24456] [I] CP-LIGHT slot 0: ledger shell fetched 0x1f8943bf880 (after 0 miss frames)
+[00:21:43.093] [24456] [I] CP-LIGHT slot 1: ledger shell fetched 0x1f8943bf740 (after 0 miss frames)
+[00:21:43.093] [24456] [I] CP-LIGHT slot 2: ledger shell fetched 0x1f8943bf600 (after 0 miss frames)
+[00:22:03.272] [29904] [I] DAC old-world sessions discarded world=2
+[00:22:03.577] [24456] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:22:03.577] [24456] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:22:03.577] [24456] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:22:03.577] [24456] [W] Studio lights not fully served by the ledger yet
+[00:22:09.951] [24456] [W] Studio lights not fully served by the ledger yet
+[00:22:12.609] [24456] [I] CharacterManager watch actor=00000014
+[00:22:12.619] [24456] [I] OAR bases stage=world-prewarm project=0x1f6b6908530 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.137
+[00:22:12.619] [24456] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1f8943bfc40 filed to lightQueueAdd)
+[00:22:12.619] [24456] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1f8943bf240 filed to lightQueueAdd)
+[00:22:12.619] [24456] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1f8943bf100 filed to lightQueueAdd)
+[00:22:12.686] [24456] [I] CP-LIGHT slot 0: ledger shell fetched 0x1f8943bfc40 (after 1 miss frames)
+[00:22:12.686] [24456] [I] CP-LIGHT slot 1: ledger shell fetched 0x1f8943bf240 (after 1 miss frames)
+[00:22:12.686] [24456] [I] CP-LIGHT slot 2: ledger shell fetched 0x1f8943bf100 (after 1 miss frames)
+[00:22:24.093] [29904] [I] SceneGraph actor=00000014 command=1 ignored outside paused inventory

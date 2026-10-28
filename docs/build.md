@@ -408,6 +408,15 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v40-timeline-f7-20261029-58d
 
 **Deployed 2026-10-29 00:20**: the v39 trio went to `dist/deploy-backup-20261029-v39/`, the deployed DLL hashes to `5f791d2c…`, and the build string now reads `F7-recapture-or-timeline`.
 
+<a id="v41-panel-gate-2026-10-29"></a>
+## V41 F7 gated on the panel state (2026-10-29)
+
+The v40 run loaded `SourceTimeline=true` but F7 only produced `SceneGraph ... command=1 ignored outside paused inventory`: a scene graph object exists outside the pause menu, so "no graph" was the wrong discriminator and the key fell into the recapture branch. V41 gates on `PanelMonitor::is_menu_open()` instead — F7 opens the timeline window outside the panel and keeps recapture inside it. Nothing else changed.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v41-timeline-panel-gate-20261029-9bc1a4b03a-cl94faaed0c6-20261028T162406Z`. DLL **1,328,640 bytes**, SHA-256 `3b8f8efe72d388f4870088804e6bf52f27a0d344f9e07c2e8dd933ea3ed099c6`; PDB **36,352,000 bytes**, SHA-256 `e99d04cd65c4c4e6a29a1c91bcac5ec43fd947ffec3aa706a1eb85dadb3812ff`.
+
+**Deployed 2026-10-29 00:25**: the v40 trio went to `dist/deploy-backup-20261029-v40/`, the deployed DLL hashes to `3b8f8efe…`.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
