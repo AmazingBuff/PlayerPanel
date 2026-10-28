@@ -362,6 +362,7 @@ public:
     ChoiceReason waiting_reason = ChoiceReason::e_request;
     bool base_fallback = false;
     RE::BSTSmartPointer<RE::BShkbAnimationGraph> graph;
+    behavior_graph::DisplaySession display;
     RE::NiAVObject* root = nullptr;
     oar::QuerySession query;
     SelectionState variants;
@@ -799,7 +800,10 @@ public:
 };
 
 AnimationController::AnimationController() : m_state(std::make_unique<State>()) {}
-AnimationController::~AnimationController() = default;
+AnimationController::~AnimationController()
+{
+    behavior_graph::invalidate_display_owner(reinterpret_cast<std::uintptr_t>(this));
+}
 void AnimationController::reset()
 {
     if (m_state->actor_id) logger::info("ANIMATION actor={:08x} request={} lifetime reset", m_state->actor_id, m_state->generation);
@@ -854,10 +858,15 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     state.has_observation = true;
     state.graph = std::move(graph);
     if (!state.graph) { state.pending.reset(); return; }
+    behavior_graph::DisplaySourceIdentity const display_source{
+        state.actor_id, state.source_generation, reinterpret_cast<std::uintptr_t>(state.graph.get()),
+        reinterpret_cast<std::uintptr_t>(this)
+    };
+    state.display.request(display_source, state.generation);
     if (behavior_graph_probe())
         behavior_graph::observe_source_baseline(*state.graph, state.actor_id, state.generation, state.source_generation);
     if (observation.reason == "panel-open")
-        behavior_graph::run_independent_graph_experiment(*state.graph, state.actor_id, state.generation, state.source_generation);
+        behavior_graph::run_independent_graph_experiment(*state.graph, display_source, state.generation);
     logger::info("ANIMATION actor={:08x} request={} reason='{}' source-generation={} equipment-target={}", state.actor_id,
         state.generation, observation.reason, state.source_generation, weapon_form_name(target.form));
     if (observation.reason == "panel-open" || observation.reason == "equipment")
@@ -973,6 +982,7 @@ void AnimationController::retarget(RE::NiAVObject& root)
     if (state.root == &root) return;
     state.root = &root;
     state.nodes.clear();
+    state.display.retarget();
     RE::BSVisit::TraverseScenegraphObjects(&root, [&](RE::NiAVObject* node)
     {
         if (node != &root && node->name.c_str()) state.nodes.try_emplace(node->name.c_str(), node);
@@ -1173,35 +1183,26 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
 {
     State& state = *m_state;
     if (!ready() || state.root != &root) return 0;
-    // v27 display handoff: with DisplayPose on and a candidate retained, the panel shows that
-    // candidate's pose instead of the OAR sampler. The pose is frozen at the last driven frame;
-    // this branch adds no native call, it only reads the retained character's poseLocal.
+    // The owned source graph keeps the context alive through an opt-in candidate step.
     if (display_pose())
     {
         PoseBuffer held;
-        // v28: with DisplayStep on, the graph is advanced once per rendered frame and the pose is
-        // read back from its new state; a failed step falls back to the frozen pose.
         const bool stepping = display_step();
-        bool have_pose = stepping && behavior_graph::step_display_pose(held);
+        bool const stepped = stepping && state.graph && state.display.step_display_pose(*state.graph, held);
+        bool have_pose = stepped;
         if (!have_pose)
-            have_pose = behavior_graph::held_display_pose(held);
+            have_pose = state.graph && state.display.held_display_pose(*state.graph, held);
         if (have_pose)
         {
-            static bool display_source_logged = false;
-            if (!display_source_logged)
-            {
-                display_source_logged = true;
-                logger::info("ANIMATION DISPLAY source=independent-graph bones={} note={}",
-                    held.size(), stepping ? "stepping-per-frame" : "frozen-at-last-driven-step");
-            }
             state.pose.clear();
             for (auto& entry : held)
                 state.pose.emplace(entry.first, entry.second);
-            for (auto const& [name, local] : state.pose)
-                if (auto target = state.nodes.find(name); target != state.nodes.end())
-                    target->second->local = local;
+            char const* const root_name = root.name.c_str();
+            behavior_graph::DisplayApplicationCoverage const coverage = behavior_graph::apply_named_display_pose(
+                state.pose, state.nodes, root_name ? std::string_view(root_name) : std::string_view{});
+            state.display.record_application(stepped, held.size(), coverage);
             recompute_subtree_worlds(root, 0);
-            return state.pose.size();
+            return coverage.applied;
         }
     }
     const auto now = std::chrono::steady_clock::now();

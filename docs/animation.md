@@ -1,16 +1,14 @@
 # Actor animation previews
 
-## Independent behavior graph validation (2026-10-23)
+## Independent behavior graph validation (2026-10-28)
 
-Current status (2026-10-27): [G1 passes only revised Option A; G2 latest actualrunv19 has not passed](independent-behavior-graph.md#current-status). Loaded-graph teardown/global convergence, fullG3 and independent OAR context/history/sinks remain unverified. The v18/v19 records and past hypotheses remain in the canonical history; [audit22](behavior-graph-construction-audit.md#audit22) corrects visitor/Generate classification and the native mode0 branch.
+The default player below continues to select/sample OAR clips on the copied SceneGraph. The separate [independent-graph experiment](independent-behavior-graph.md#current-status) is at v32: G1 passes revised Option A; G2 candidate semantic continuity awaits re-verification. V26's raw 119/120 result remains historical evidence, while v27 confirms 116 output records and a static stance without measured node coverage. V31/v32 have focused offline regression and Release build evidence only, with no deployment or game result. Loaded teardown/global convergence, G3–G6 and independent OAR context/history/sinks remain unverified.
 
-`BehaviorGraphProbe=false` is the separate source-only sixteen-row observer. Its fixed `candidate=none/gate1=not-passed` labels identify that snapshot, not the current G1 verdict. `IndependentGraph=off|construct|load|drive|inject` remains defaultoff and once per process; runtime/recipe experiments are separate from this product player.
+`BehaviorGraphProbe=false` is a separate sixteen-row source observer. Its fixed `candidate=none/gate1=not-passed` labels describe that observation, not the current G1 verdict. `IndependentGraph` defaults to `off`; construction/drive runs at most once per process on panel open. Loaded candidates remain retained because native teardown is unresolved.
 
-[V20](independent-behavior-graph.md#g2-v20-generation-entry) changes only eligible exact1170 inject63581 calls to63589(&mode0), after the [private writable-state guard](../src/animation/behavior_graph/generation_entry_policy.h). The v19 eye,flags,dt,mirror,world/retention/source controls stay unchanged. Manager registration is not shown necessary; wrapper hidden dependencies remain unknown, and no manager/sink/SDK Generate is introduced. Other profiles retain63581.
+With `DisplayPose=true`, `AnimationController::advance` first asks its owned `DisplaySession` for a valid retained candidate pose. `DisplayStep=true` requests one fixed 1/60-second step per eligible display call on exact AE 1.6.1170 inject, using the shared batch recipe and private-storage guard. A failed step may use the same valid source's frozen pose; stale actor/graph/generation/controller-owner identity rejects both candidate paths and continues through OAR. This fixed step is not calibrated to actual FPS.
 
-`GRAPH FRAME schema=v20 entry=63589 mode=0` denotes intent; pre/post-sample bracket the outer generation/apply entry and completed counts returned calls, not effective generation or sampling. FRAME30+1 and separate ENTRY1 total at most32 new rows, beside existing40/source snapshots. Guard failure intentionally has ENTRY skip but no FRAME. Budget/progress/eye algorithms are unchanged, and raw hash/headers never pass G2 automatically. No v20 runtime result is claimed.
-
-[Audit23](behavior-graph-construction-audit.md#audit23) separates generation, copying into character.poseLocal and applying that pose to scene bones. In 63581 the dual fraction/t checks select interpolation; failure can still reach a plain copy, while the optional footIK copy has its own gates. 58423 is the full footIK routine, not a generic pose writer. Frozen g3-gates uses a different, incomplete context chain and cannot rule out the native one. Restoring 63589 changes several internal responsibilities through one controlled entry; v20 is unchanged and still awaits runtime evidence.
+The controller owns request/view measurement windows, not the retained candidate allocation. Closing/resetting or a new request discards partial comparisons; F7 retarget refreshes the copied-node map, view baseline and coverage without rewinding compatible normal playback clocks. A destroyed owner invalidates its candidate view; source changes do not create another candidate in the same process. See the [canonical v32 interfaces and manual checklist](independent-behavior-graph.md#g2-v32-display-session) for semantic motion, actual assignment counts and expected fallback. Native audit/history details remain there rather than serving as current operating instructions.
 
 ## Equipment context and torch composition (2026-10-23)
 
@@ -44,6 +42,8 @@ BehaviorGraphProbe=false
 
 [Experiment]
 IndependentGraph=off
+DisplayPose=false
+DisplayStep=false
 ```
 
 The accepted values are lowercase and affect empty hands only:
@@ -56,6 +56,8 @@ The accepted values are lowercase and affect empty hands only:
 A missing file uses the default; an invalid value logs one warning and uses the default. Settings load once at DataLoaded, so restart the game after edits. There is no new UI or live reload. Equipped spells, staves, shields and torches keep their corresponding families in either mode; carried inventory items do not count as equipped. Both modes retain the separate zero-time vanilla MT_Idle calibration.
 
 `DetailedAnimationTrace=false` is the normal diagnostic setting. Accepted panel mappings and event-driven WORLD snapshots remain enabled; set it to `true` and restart only when collecting bounded axe probes, annotation information, Smooth marker reports, candidate rejection detail or capture geometry listings. Dispatch, conditions, source/isolation audits and warnings/errors run in either mode. Ordinary information is buffered with periodic flushing about once per second; warnings/errors flush immediately. The flush timer only flushes sinks and performs no engine work.
+
+The three experiment keys above are independent of `DetailedAnimationTrace`. Preserve other INI settings when enabling an experiment and restart. `DisplayPose=false` selects normal OAR playback; `DisplayPose=true/DisplayStep=false` permits a valid frozen candidate; both display flags true request eligible stepping. A stale view always returns to OAR. `IndependentGraph=off` is the safe default; use `inject` only under the [v32 checklist](independent-behavior-graph.md#v32-manual-checklist).
 
 ## Architecture
 
@@ -79,8 +81,12 @@ Missing DAC/Smooth, unsafe tags or a two-second observation timeout do not force
 | --- | --- |
 | [action.h](../src/animation/action.h), [idle_policy.h](../src/animation/idle_policy.h) | `weapon_form_from_hands`, `panel_idle_bases`, `panel_transition_bases`, `panel_base_animation_names`, `IdleTarget`, `idle_target`, `parse_unarmed_idle` |
 | [base_animation_cache.h](../src/animation/oar/base_animation_cache.h), [query_policy.h](../src/animation/oar/query_policy.h) | `BaseAnimationCache`, `BaseAnimationProject`, project-only sparse metadata and session-only conditions |
-| [settings.h](../src/animation/settings.h), [settings.cpp](../src/animation/settings.cpp) | `load_settings`, `unarmed_idle_setting` |
+| [settings.h](../src/animation/settings.h), [settings.cpp](../src/animation/settings.cpp) | `load_settings`, `unarmed_idle_setting`, `independent_graph_setting`, `display_pose`, `display_step` |
 | [controller.h](../src/animation/controller.h), [controller.cpp](../src/animation/controller.cpp) | `SourceObservation`, `AnimationController::request`, `poll`, `advance`, `retarget`, `apply_standing_pose` |
+| [independent_graph.h](../src/animation/behavior_graph/independent_graph.h), [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) | controller-owned `DisplaySession`, `request`, `retarget`, `held_display_pose`, `step_display_pose`, `record_application`, `invalidate_display_owner` |
+| [display_state_policy.h](../src/animation/behavior_graph/display_state_policy.h), [pose_motion_policy.h](../src/animation/behavior_graph/pose_motion_policy.h) | `DisplaySourceIdentity`, `DisplayWindow`, `apply_named_display_pose`, `compare_display_motion` |
+| [drive_step_policy.h](../src/animation/behavior_graph/drive_step_policy.h), [graph_observation_policy.h](../src/animation/behavior_graph/graph_observation_policy.h) | `drive_graph_step`, `ScopedGraphWorld`, `observe_graph_activity`, `observe_output_slot` |
+| [behavior_graph_display_step_test.cpp](../tests/behavior_graph_display_step_test.cpp), [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp) | prior v31 shared-step/read regressions and v32 source/window/motion/coverage regressions; [commands and evidence](build.md#v32-display-session-2026-10-28) |
 | [event_clock.h](../src/animation/event_clock.h), [event_clock.cpp](../src/animation/event_clock.cpp) | `EventClock`, `Annotation`, `clip_annotations` |
 | [sequence.h](../src/animation/sequence.h), [variant_state.h](../src/animation/variant_state.h) | `Stage`, pose composition and accepted `SelectionState` |
 | [clip.h](../src/animation/clip.h), [clip.cpp](../src/animation/clip.cpp) | `ClipPlayback`, retained binding ownership, track mapping and detached samples |
@@ -203,13 +209,15 @@ Logs identify setting, actor/request/goal/family, preparation requested/ready/fa
 
 Existing Skyrim/SKSE/CommonLib/Havok, audited OAR and supported original DAC remain. INI parsing uses existing SimpleIni. No new package, DAC rebuild, TOML parser or UI is required. See [build/config setup](build.md).
 
-Exactly two direct-compiled [cases](../tests/animation_controller_test.cpp) exercise production policy/parser/preparation/transaction types with a narrow fake Actor boundary: default equipped-to-empty goal convergence/current tickets/entry restoration, and direct MT_Idle rejecting stale work after request/close. The first also checks ready-to-marker-loss invalidation. [Retained graph/math checks](../tests/snapshot_transform_test.cpp) are not executed for this change. Release compilation/static ownership review do not execute native detach/attach or magic APIs.
+The default-player evidence below belongs to earlier dated changes; it is not a fresh run for documentation completion. Exactly two direct-compiled [cases](../tests/animation_controller_test.cpp) exercise production policy/parser/preparation/transaction types with a narrow fake Actor boundary: default equipped-to-empty goal convergence/current tickets/entry restoration, and direct MT_Idle rejecting stale work after request/close. The first also checks ready-to-marker-loss invalidation. [Retained graph/math checks](../tests/snapshot_transform_test.cpp) are not executed for this change. Release compilation/static ownership review do not execute native detach/attach or magic APIs.
 
 The separate [two sparse-cache cases](../tests/base_animation_cache_cases.h) exercise production resolution/cache policy amid 15,000 replacement names and project/table/load invalidation, including missing originals and selected-index names. See [direct compilation](build.md#fixed-base-index-verification). The retained graph/math driver shares these case definitions after removal of obsolete catalogue APIs; its other checks were not run for this change.
 
 Earlier offline-only changes had no local runtime. AE 1.6.1170/MO2 sessions are now recorded in [r4](diagnostics/display-issues-2026-10-22.md#r4-session) and [G1/G2](independent-behavior-graph.md#current-status). Those bounded results do not establish complete native timing, dual/bow/custom-skeleton visuals, scabbards or lifetime correctness; this documentation refresh runs no game.
 
 The earlier 2026-10-22 DAC/axe follow-up ran the [two event matching cases](../tests/dac_event_match_test.cpp), using the production comparator shared by `event_scope` and `smooth_idle_goal`; see [DAC matching and verification](dac.md#event-tag-matching). The separate torch/shield follow-up ran [two policy cases](../tests/torch_shield_policy_test.cpp), and low-overhead mapping ran [two mapping cases](../tests/animation_mapping_test.cpp). The issue-trace follow-up runs only [one budget case](../tests/diagnostic_trace_test.cpp), `request_budget_bounds_rearming_sampling_and_stale_windows`, exercising repeated rearm, both request caps, denial stopping stale samples, same-request non-reset, new-request reset, skipped slots and expiration. Earlier drivers are not rerun. Tests are engine-free; Release compilation and source review do not execute native API/conditions/UI tasks, loading, rendering or visuals. Runtime performance and root causes remain game-only evidence.
+
+The experimental [v31 regressions](build.md#v31-display-step-2026-10-28) and [v32 regressions](build.md#v32-display-session-2026-10-28) are separate prior evidence: two focused engine-free cases per change, plus their Release builds. No behavioral tests/build or game session were rerun for this documentation completion. The [v32 checklist](independent-behavior-graph.md#v32-manual-checklist) owns pending runtime checks; candidate movement alone cannot establish applied or visible motion.
 
 ## Safe modification and synchronized history
 

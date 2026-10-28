@@ -3,9 +3,11 @@
 //
 #pragma once
 
+#include "animation/behavior_graph/display_state_policy.h"
 #include "RE/N/NiTransform.h"
 
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -54,16 +56,28 @@ namespace animation::behavior_graph
     // Runs at most once per process during a paused panel request. Never activates, drives or
     // writes the source graph; loaded candidates remain retained pending lifecycle proof.
     void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_graph,
-        std::uint32_t actor_id, std::uint64_t request, std::uint64_t source_generation);
+        DisplaySourceIdentity source, std::uint64_t request);
 
-    // v27 display handoff: the pose the retained candidate holds when its bounded drive ends,
-    // converted to (bone name, local transform) pairs so the panel's own name→node map can
-    // apply it. Read-only: it never steps the graph, so the figure is frozen at the last
-    // sampled frame. Empty when no candidate was retained.
-    [[nodiscard]] bool held_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out);
+    // Invalidates the view only; the loaded candidate remains retained without native teardown.
+    void invalidate_display_owner(std::uintptr_t owner);
 
-    // v28: advance the retained graph by one bounded drive step and return the resulting pose.
-    // Same single entry call as the batch, one per rendered frame; false when no graph is held.
-    [[nodiscard]] bool step_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out);
+    class DisplaySession
+    {
+    public:
+        DisplaySession();
+        ~DisplaySession();
+        void request(DisplaySourceIdentity source, std::uint64_t request);
+        void retarget();
+
+        [[nodiscard]] bool held_display_pose(RE::BShkbAnimationGraph const& source_graph,
+            std::vector<std::pair<std::string, RE::NiTransform>>& out);
+        [[nodiscard]] bool step_display_pose(RE::BShkbAnimationGraph const& source_graph,
+            std::vector<std::pair<std::string, RE::NiTransform>>& out);
+        void record_application(bool stepped, std::size_t output_records, DisplayApplicationCoverage const& coverage);
+
+    private:
+        class State;
+        std::unique_ptr<State> m_state;
+    };
 }
 PLUGIN_NAMESPACE_END

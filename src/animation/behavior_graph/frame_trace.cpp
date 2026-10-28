@@ -2,6 +2,7 @@
 // Created by AmazingBuff on 2026/10/26.
 //
 #include "animation/behavior_graph/frame_trace.h"
+#include "animation/behavior_graph/graph_observation_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/H/hkbCharacter.h"
@@ -41,12 +42,11 @@ namespace
     {
         void const* const output = graph.generatorOutputs[index];
         if (!output) return "status=missing-output";
-        void const* const element = scalar_at<void const*>(output, 0);
-        if (!element) return "status=missing-element";
-        const float fraction = scalar_at<float>(element, 0x38);
+        std::optional<OutputSlotObservation> const slot = observe_output_slot(output);
+        if (!slot) return "status=missing-element";
         return fmt::format("status=present element={:#x} numTracks={} numData={} onFraction={:.9g} bits={:#010x}",
-            reinterpret_cast<std::uintptr_t>(element), scalar_at<std::uint32_t>(element, 0x4),
-            scalar_at<std::uint16_t>(element, 0x32), fraction, std::bit_cast<std::uint32_t>(fraction));
+            reinterpret_cast<std::uintptr_t>(slot->element), slot->num_tracks,
+            slot->num_data, slot->on_fraction, std::bit_cast<std::uint32_t>(slot->on_fraction));
     }
 }
 

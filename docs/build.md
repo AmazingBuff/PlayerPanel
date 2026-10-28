@@ -5,11 +5,13 @@
 Build the current Windows DLL from this checkout. Release is the only configure/build preset and `CharacterPanel` is the only first-party target. The result is `build/Release/CharacterPanel.dll` with matching debugging symbols.
 
 <a id="current-research-status-2026-10-26"></a>
-## Current research status (2026-10-27)
+## Current research status (2026-10-28)
 
-[G1 passed only revised Option A; G2 latest actual run v20a produced the first pose motion but has not passed, and v20 crashed before its entry](independent-behavior-graph.md#current-status). V18/v19 runtime records below remain historical evidence; loaded teardown/global convergence and G3–G6 complete acceptance stay open. The current [v20 test](#v20-generation-entry-build) uses the audit22 native wrapper behind a private-state guard; no manager registration or runtime success is claimed. The v20a rebuild ([record](#v20a-chain-fix-2026-10-27)) fixed the pre-entry diagnostic, reached 63589 and moved the candidate pose; bone-level and visual acceptance are still missing.
+[G1 passes revised Option A; G2 candidate semantic continuity needs re-verification](independent-behavior-graph.md#current-status). V26's raw-criterion pass remains historical; q/-q changes alone cannot prove motion. V27 confirms 116 output records and the static stance, without measured full node coverage. V31 fixes the incomplete native step/invalid reads; [v32](#v32-display-session-2026-10-28) binds source/window ownership and separates semantic candidate motion from actual assignments.
 
-DefaultIndependentGraph remainsoff. New FRAME30+1 plus ENTRY1 total at most32 rows, separately from old40/source snapshots; guard skip has no FRAME. Source-only probe labels/budget do not report current G1 acceptance. No game or deployment occurs in this local build task.
+The new v32 cases and Release build pass offline only. Defaults remain off; no package, deployment or game run. Candidate continuity, actual display application and visual motion are separate pending checks. Use the [v32 manual checklist](independent-behavior-graph.md#v32-manual-checklist) for the pending game session. Dated sections below retain their original build-time state.
+
+
 
 <a id="v18-frame-trace-build"></a>
 ## V18 bounded frame-trace verification (2026-10-26)
@@ -289,6 +291,46 @@ Build identity: `CharacterPanel-scenegraph-behavior-graph-v30-display-gates-2026
 
 Package: `build/behavior-graph-v30-display-gates-20261028/test-package/` (`manifest.json` `cdebfff0…` 3,919 bytes); ZIP 9,986,675 bytes, SHA-256 `1ce2b765…`, five entries re-hashed against the manifest. Deployment: the v29 trio was backed up to `dist/deploy-backup-20261028-v29/` and the deployed INI keeps the three experiment keys (1,068 bytes `50adad10…`). **No run has happened yet.**
 
+<a id="v31-display-step-2026-10-28"></a>
+## V31 shared display step and corrected observations (2026-10-28)
+
+[V31](independent-behavior-graph.md#g2-v31-correction) makes the batch and eligible display use the same existing native step, including the explicit 63587 timestep update, eye record, behavior update flag, bone-count mirror and generation entry. The display borrows the source world only during that step and restores the candidate's previous field. Activity comes from the internal behavior graph; output numData comes through its element. Default experiment switches stay off. No new ABI, dependencies, package, deployment or game run.
+
+Two engine-free cases in [behavior_graph_display_step_test.cpp](../tests/behavior_graph_display_step_test.cpp) passed with assertions and MSVC 14.44.35207. To reproduce, use an x64 VS developer PowerShell with that toolset initialized, from the repository root:
+
+```powershell
+New-Item -ItemType Directory -Force build/behavior-graph-v31-display-step-20261028 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests/behavior_graph_display_step_test.cpp /Fobuild/behavior-graph-v31-display-step-20261028/display_step_test.obj /Febuild/behavior-graph-v31-display-step-20261028/display_step_test.exe
+./build/behavior-graph-v31-display-step-20261028/display_step_test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v31-display-step-20261028
+cmake --build --preset Release
+```
+
+The ready local vcpkg root is `D:/Microsoft Visual Studio/2022/Community/VC/vcpkg`; configure passes using the existing installed packages. Proxy variables are cleared only in the build child process. The first restricted build stopped at MSB4184 because it could not read the Windows SDK registration directory; the retry with SDK access reached compilation. A batch-local pose-reader visibility error was corrected by sharing that same reader; the affected rebuild then passes. Remaining warnings are the existing install-rules warning and D9025 `/Ob2` overridden by `/Ob3`.
+
+Build identity: `CharacterPanel-scenegraph-behavior-graph-v31-display-step-20261028-f5ec13f2c2+dirty-cl94faaed0c6-20261028T033354Z`. DLL `build/Release/CharacterPanel.dll`: **1,306,624 bytes**, SHA-256 `a15e75baf36925bc463cb9d6619f8b8f06f71d5c6f38d57afa45952627419b3c`; PDB `build/Release/CharacterPanel.pdb`: **35,753,984 bytes**, SHA-256 `0280e4f8bf9b17de9f6afadfa265a93cf98130b63bd698731f5114737b3eb223`. These are a new local build from the uncommitted correction, not the old v20 DLL or a v30 package. Logs are under `build/behavior-graph-v31-display-step-20261028/`.
+
+**Game playback remains unverified.** Compare meaningful finite bone changes and display motion within v31 over 120 actual display calls, with source before/after controls. V31 display hashes now use the batch hash function; their values must not be compared with v28–v30's different FNV initial value to infer motion. Loaded teardown/global convergence and G3–G6 remain open.
+
+<a id="v32-display-session-2026-10-28"></a>
+## V32 display ownership and motion/coverage evidence (2026-10-28)
+
+[V32](independent-behavior-graph.md#g2-v32-display-session) corrects source/controller validity, request/view measurement windows, sign-invariant candidate motion and actual node-write counts. The v31 native-step helper and frame readers are unchanged; all defaults stay off. Exactly two new coherent engine-free cases passed with assertions and MSVC14.44 `/W4 /WX`; the old suite was not rerun. They are `source_sessions_do_not_reuse_stale_views_or_partial_measurements` and `candidate_motion_and_applied_coverage_do_not_overstate_visible_motion` in [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp). These are prior verified results; documentation completion reruns neither tests nor build. To reproduce from the repository root in an x64 VS developer PowerShell with MSVC 14.44.35207 initialized:
+
+```powershell
+New-Item -ItemType Directory -Force build/behavior-graph-v32-display-session-20261028 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests/behavior_graph_display_session_test.cpp /Fobuild/behavior-graph-v32-display-session-20261028/display_session_test.obj /Febuild/behavior-graph-v32-display-session-20261028/display_session_test.exe
+./build/behavior-graph-v32-display-session-20261028/display_session_test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v32-display-session-20261028
+cmake --build --preset Release
+```
+
+The recorded compile/test/configure/build commands exited 0. The directory-creation line above makes the reproduction snippet self-contained; it is not a newly run check. The build uses the same installed vcpkg packages and ordinary SDK read access as v31; proxy variables are cleared only in its child process. Existing install-rule and D9025 `/Ob2`→`/Ob3` warnings remain. Logs are under `build/behavior-graph-v32-display-session-20261028/`.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v32-display-session-20261028-f5ec13f2c2+dirty-cl94faaed0c6-20261028T073724Z`. DLL **1,316,864 bytes**, SHA-256 `7605f2277838109cb209cc7d50c87a75bbca8d89acd3515fdb0100589451d338`; PDB **35,958,784 bytes**, SHA-256 `791aef7e2cac855e851c64d038c154c876a872827a0524536b07675736d3a83e`. Outputs are `build/Release/CharacterPanel.dll` and `.pdb` from that pre-commit working tree. This is a historical configure-time identity at `f5ec13f2c2+dirty`; a later local commit does not relabel either artifact. No binary was rebuilt for the documentation completion. A binary for a new HEAD requires fresh configure then build and a new recorded identity/hash pair; it may still carry `+dirty` while unrelated local files remain. CMake recursively gathers first-party sources and Git status includes untracked files, so the preserved local `src/base/util.cpp`/`util.h` must not be silently treated as part of the tracked commit or as proof of byte-for-byte reproduction from that commit alone.
+
+**No game execution, package or deployment.** Candidate semantic continuity must be rechecked with new runtime data; actual node coverage/source controls and visual display remain separate pending verification under the [v32 checklist](independent-behavior-graph.md#v32-manual-checklist). Historical raw119/120 does not establish semantic motion, and bones=116 did not count applied nodes.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
@@ -369,7 +411,7 @@ Normal Windows linker `.lib`/`.exp` files may accompany the DLL. They are not ad
 
 Preserve the existing project/output/namespace and Release `/Zi` plus `/DEBUG:FULL` symbols. Keep CommonLibSSE and shader/automatic-generation plumbing when changing the main target.
 
-`Plugin_Build_Identity` is generated **at configure time** from the configured label, Git revision/dirty state, CommonLib revision/dirty state and configure timestamp. A commit alone does not refresh an existing header or DLL. When preparing a binary for a new commit, run **configure, then build** again and retain its matching PDB. The log's `SCENEGRAPH BUILD` identity identifies that configured binary, not whatever HEAD happens to be later.
+`Plugin_Build_Identity` is generated **at configure time** from the configured label, Git revision/dirty state, CommonLib revision/dirty state and configure timestamp. A commit alone does not refresh an existing header or DLL. When preparing a binary for a new commit, run **configure, then build** again and retain its matching PDB. The log's `SCENEGRAPH BUILD` identity identifies that configured binary, not whatever HEAD happens to be later. Local untracked source files also affect the working-tree provenance: a clean tracked commit alone does not capture them or guarantee a clean/byte-identical build.
 
 ## Failure modes
 

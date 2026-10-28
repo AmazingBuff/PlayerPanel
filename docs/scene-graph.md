@@ -8,13 +8,13 @@ SceneGraph is the sole character-preview backend. It copies a source actor's exi
 
 The preview shows standing weapon posture and existing equipment/appearance. Animation targets equipped non-combat idles independently of world action, after observed native Smooth goal preparation. Empty hands use the configured loop/direct-base choice. This change adds no movement/attack mirroring, multi-actor UI, physics registration, FaceGen controller, shader/material work or safe graph destruction. The source graph/transforms stay read-only; native `NiObject::Clone` copies its graph. [dac::Session](dac.md) temporarily borrows only controlled original-Actor marker effects and restores them at the UI close boundary.
 
-The separate [independent-graph investigation](independent-behavior-graph.md#current-status) has G1 revised Option A pass and G2 v17 not passed as of 2026-10-26. It does not replace this backend. The loaded experimental graph is deliberately retained; its teardown/global convergence are unverified. [r4](diagnostics/display-issues-2026-10-22.md#r4-session) provides partial runtime evidence for product shield/torch behavior, while copy retirement remains unresolved.
+The separate [independent-graph investigation](independent-behavior-graph.md#current-status) has G1 revised Option A pass and G2 candidate semantic continuity pending as of 2026-10-28. V26's raw-criterion pass is historical; [v32](independent-behavior-graph.md#g2-v32-display-session) has offline evidence only, and display coverage/visual motion remain separate pending checks. It does not replace this backend. The loaded experimental graph is deliberately retained; its teardown/global convergence are unverified. [r4](diagnostics/display-issues-2026-10-22.md#r4-session) provides partial runtime evidence for product shield/torch behavior, while copy retirement remains unresolved.
 
 ## Architecture
 
 `CharacterManager` registers source actors, collects per-actor equipment-event revisions and distributes `PreviewFrame` menu/lifetime inputs in the serialized render bracket. Each registered `SceneGraph` retains its source handle, monitor/controller, copied tree and placement state. Its `update` method decides when to observe, request animation, capture, retarget, poll resources and toggle drawing. Input only queues F7/F8 intent on that object.
 
-`SceneGraph` implements graph copying, source/copy audits and retirement privately in `scene_graph_capture.cpp`. `SceneGraph::replace_graph` rebuilds placement/node data and retargets the same controller while the previous tree is still retained, then parks it. Graph replacement preserves animation clocks. The renderer calls manager update and the selected SceneGraph's draw method inside D3D state-capture scopes. It cannot switch to an Actor or puppet backend.
+`SceneGraph` implements graph copying, source/copy audits and retirement privately in `scene_graph_capture.cpp`. `SceneGraph::replace_graph` rebuilds placement/node data and retargets the same controller while the previous tree is still retained, then parks it. Compatible copied-graph replacement preserves normal animation clocks. The experimental `DisplaySession` instead starts a new view measurement window and refreshes coverage when retarget rebuilds the node map; this does not rewind the retained candidate. The renderer calls manager update and the selected SceneGraph's draw method inside D3D state-capture scopes. It cannot switch to an Actor or puppet backend.
 
 Animation remains a separate module: OAR returns copied query metadata; animation owns annotation clocks, leases, accepted variant history and pose composition. SceneGraph separately owns a native DAC session, whose inventory entry snapshot survives appearance/equipment/source-graph retarget. See [animation previews](animation.md).
 
@@ -44,16 +44,20 @@ flowchart LR
 | [figure_audit.h](../src/character/figure_audit.h), [figure_audit.cpp](../src/character/figure_audit.cpp) | collision-helper classification and appearance-settle signature |
 | [snapshot_transform.h](../src/character/snapshot_transform.h) | `snapshot_delta`, `recompute_subtree_worlds` |
 | [input.cpp](../src/input/input.cpp), [main.cpp](../src/main.cpp), [renderer.cpp](../src/render/renderer.cpp) | queued controls, lifetime/installation, update/draw bracket |
+| [independent_graph.h](../src/animation/behavior_graph/independent_graph.h), [display_state_policy.h](../src/animation/behavior_graph/display_state_policy.h) | `DisplaySession`, `DisplaySourceIdentity`, `DisplayWindow`, `apply_named_display_pose`; experimental view validity and actual copied-node assignments |
+| [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp), [behavior_graph_display_step_test.cpp](../tests/behavior_graph_display_step_test.cpp) | focused engine-free session/window/motion/coverage and shared-step/read regressions |
 | [CMakeLists.txt](../CMakeLists.txt), [CMakePresets.json](../CMakePresets.json), [plugin.h.in](../cmake/plugin.h.in) | single backend and generated build identity |
+
+The opt-in candidate display is owned by animation's [DisplaySession](../src/animation/behavior_graph/independent_graph.h). It accepts only the retained actor/source-graph/generation/controller-owner identity. New requests and close/reset discard partial measurements; changed source identity or a destroyed owner rejects both frozen and stepped reads and continues through OAR. A same-source reopen may reuse the retained candidate with a fresh window. The experiment creates at most one candidate per process; a changed source may require a game restart. Native retention is separate from view validity and never authorizes teardown.
 
 ## Interfaces and controls
 
-- F7 queues recapture of the player's current graph while a paused inventory is open.
+- F7 queues recapture of the player's current graph while a paused inventory is open. When accepted capture changes the copied root, retarget refreshes experimental coverage/baselines and begins a new view window even if source/request are unchanged.
 - F8 queues display toggle for that same SceneGraph.
 - Menu state/revision comes only from `PanelMonitor`; equipment events only increment watched actor revisions.
 - `clear_previews` queues release for the next serialized update. Expired source handles unregister; temporarily missing 3D suspends a session while retaining the source record.
 
-There are no Actor spawning, dressing, inventory synchronization, body-morph copying or live-graph diagnostic controls. Removed diagnostic hotkeys have no active handlers.
+There are no Actor spawning, dressing, inventory synchronization or body-morph copying controls. Removed diagnostic hotkeys have no active handlers; F7/F8 do not enable the opt-in graph experiment, which is configured through INI settings and requires a restart.
 
 `SceneGraph::observe_source` also records left torch presence independently of the body family for the [one-handed body/arm composition](animation.md#equipment-context-and-torch-composition-2026-10-23). Retarget rebinds the owned arm layer alongside body/standing/calibration for pending, active and outgoing proposals. Source equipment/transform/framing policy does not change.
 
@@ -97,7 +101,7 @@ Existing C++23, VS2022/MSVC 14.44.35207, Windows SDK, CommonLibSSE, SKSE, OAR an
 
 ## Verification
 
-[Build](build.md) documents the single Release target, pinned setup, generated outputs and configure-time identity. Prior native evidence and its limits are recorded in [Build verification](build.md#verification-and-limits). The two animation cases compile directly as documented there; no CMake test target is added.
+[Build](build.md) documents the single Release target, pinned setup, generated outputs and configure-time identity. Prior native evidence and its limits are recorded in [Build verification](build.md#verification-and-limits). Default-player checks and the prior v31/v32 experimental regressions compile directly as documented there; no CMake test target is added. The [v32 manual checklist](independent-behavior-graph.md#v32-manual-checklist) owns pending display/source/window checks; no game verification was performed for this documentation change.
 
 Build/source checks establish compilation and structural consistency, not game-time hook, loader, framing, visual or lifetime behavior. [Maintenance](code-maintenance.md#debugging-navigation) maps actual logs and the two representative runtime follow-up categories. Later AE 1.6.1170/MO2 sessions provide the bounded evidence in [r4](diagnostics/display-issues-2026-10-22.md#r4-session) and [G1/G2](independent-behavior-graph.md#current-status); they do not close complete visual or lifecycle acceptance.
 

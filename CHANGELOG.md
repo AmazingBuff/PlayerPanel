@@ -124,6 +124,8 @@
 
 ### Fixed
 
+- Fix opt-in independent-graph preview stepping by sharing the complete batch update and restoring its temporary world context. Reject stale source/controller views, reset measurement windows per request/recapture, and report corrected graph reads, sign-invariant candidate motion and actual bone assignments. Defaults stay off; focused offline regressions and Release builds pass, while candidate continuity, display coverage and visual motion await [v32 game verification](docs/independent-behavior-graph.md#v32-manual-checklist).
+
 - Fix preview equipment-removal context and combine one-handed weapon idles with a torch arm layer; improve bounded animation diagnosis.
 - Preserve typed transitions across effect refresh and admit only proven historical IED dependencies. Remaining Smooth selection, axe flash and bow/crossbow visuals require game verification.
 - Fix torch preview candidates being rejected solely for the core current-weather flag condition,

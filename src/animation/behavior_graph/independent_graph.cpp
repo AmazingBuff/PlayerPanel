@@ -4,11 +4,14 @@
 #include "animation/behavior_graph/independent_graph.h"
 
 #include "animation/behavior_graph/clip_reference_policy.h"
+#include "animation/behavior_graph/drive_step_policy.h"
 #include "animation/clip.h"
 #include "animation/behavior_graph/frame_trace.h"
 #include "animation/behavior_graph/generation_entry_policy.h"
+#include "animation/behavior_graph/graph_observation_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
 #include "animation/behavior_graph/pose_content_policy.h"
+#include "animation/behavior_graph/pose_motion_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/H/hkaAnimation.h"
@@ -49,6 +52,8 @@ namespace
     RE::hkbCharacter* g_held_character = nullptr;
     // v28: the retained graph itself, so the display path can advance it one step per frame.
     RE::BShkbAnimationGraph* g_held_graph = nullptr;
+    DisplaySourceIdentity g_held_source{};
+    bool g_held_step_ready = false;
 
     // AE address-library ids from the 1.6.1170 audit; the experiment is gated to AE.
     constexpr std::uint64_t GraphConstructorID = 63555;
@@ -188,6 +193,51 @@ namespace
     std::uintptr_t address(void const* pointer)
     {
         return reinterpret_cast<std::uintptr_t>(pointer);
+    }
+
+    EyePoint candidate_eye_point(RE::BShkbAnimationGraph const& graph)
+    {
+        std::optional<std::array<float, 3>> root_position;
+        if (graph.rootNode)
+        {
+            float const* const position = reinterpret_cast<float const*>(address(graph.rootNode) + 0xA0);
+            root_position = std::array<float, 3>{ position[0], position[1], position[2] };
+        }
+        return make_eye_point(root_position);
+    }
+
+    template <class Observe>
+    void drive_candidate_step(RE::BShkbAnimationGraph& graph, RE::BShkbAnimationGraph const& source,
+        bool generation_profile, EyePoint const* eye, Observe const& observe)
+    {
+        const auto pipeline = [](RE::BShkbAnimationGraph& target) {
+            static REL::Relocation<constructor_t> s_construct{ REL::ID(GraphConstructorID) };
+            static REL::Relocation<frame_pipeline_t> s_pipeline{ REL::ID(FramePipelineID) };
+            static REL::Relocation<graph_destructor_t> s_destroy{ REL::ID(GraphDestructorID) };
+            alignas(0x10) std::uint8_t storage[sizeof(RE::BShkbAnimationGraph)]{};
+            RE::BShkbAnimationGraph* const shell = reinterpret_cast<RE::BShkbAnimationGraph*>(storage);
+            s_construct(shell, nullptr, false);
+            s_pipeline(shell, &target);
+            s_destroy(shell);
+        };
+        const auto update = [](RE::BShkbAnimationGraph& target, void* record) {
+            static REL::Relocation<engine_update_wrapper_t> s_update{ REL::ID(EngineUpdateWrapperID) };
+            s_update(&target, record, 0);
+        };
+        const auto generate = [generation_profile](RE::BShkbAnimationGraph& target) {
+            if (generation_profile)
+            {
+                static REL::Relocation<generation_entry_t> s_generate{ REL::ID(GenerationEntryID) };
+                std::uint8_t const mode = 0;
+                s_generate(&target, &mode);
+            }
+            else
+            {
+                static REL::Relocation<sampling_branch_t> s_sample{ REL::ID(SamplingBranchID) };
+                s_sample(&target, target.numAnimBones);
+            }
+        };
+        drive_graph_step(graph, source, DriveTimestep, eye, pipeline, update, generate, observe);
     }
 
     // Event-name lookup over the behavior graph's OWN string data
@@ -450,6 +500,17 @@ namespace
             return "element=0";
         return fmt::format("hash={:016x}", fnv1a_64(element, 0x100));
     }
+    void read_pose_local(RE::hkbCharacter const& character, std::vector<PoseSample>& out)
+    {
+        out.clear();
+        if (!character.poseLocal || character.numPoseLocal <= 0) return;
+        std::size_t const count = static_cast<std::size_t>(character.numPoseLocal);
+        std::size_t const limit = std::min(count, kMaxPoseEntries);
+        out.reserve(limit);
+        for (std::size_t i = 0; i < limit; ++i)
+            out.push_back(pose_sample_from_transform(character.poseLocal[i]));
+    }
+
     template <class T>
     T generation_field(void const* base, std::size_t offset)
     {
@@ -493,9 +554,86 @@ namespace
 
 }
 
-void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_graph,
-    std::uint32_t const actor_id, std::uint64_t const request, std::uint64_t const source_generation)
+class DisplaySession::State
 {
+public:
+    State() : window(), source_before{}, source_pose_before(), previous_pose(), raw_changed(0),
+        semantic_changed(0), raw_finite(true), semantic_valid(true), coverage_due(true), mode_known(false), last_stepped(false) {}
+
+    void clear_statistics()
+    {
+        source_before = {};
+        source_pose_before.clear();
+        previous_pose.clear();
+        raw_changed = 0;
+        semantic_changed = 0;
+        raw_finite = true;
+        semantic_valid = true;
+        coverage_due = true;
+        mode_known = false;
+    }
+
+    void abort(char const* reason)
+    {
+        if (window.steps() > 0 && window.steps() < 120 && window.take_row())
+            logger::info("ANIMATION DISPLAY window=aborted actor={:08x} request={} source-generation={} view={} steps={} reason={} source-comparison=discarded",
+                window.source().actor_id, window.request(), window.source().generation, window.view(), window.steps(), reason);
+    }
+
+    bool accepts_source(RE::BShkbAnimationGraph const& source_graph)
+    {
+        if (g_held_graph && g_held_character && window.source().graph == address(&source_graph) && window.accepts(g_held_source))
+            return true;
+        abort("source-invalid");
+        window.end();
+        clear_statistics();
+        return false;
+    }
+
+public:
+    DisplayWindow window;
+    Identity source_before;
+    std::string source_pose_before;
+    std::vector<PoseSample> previous_pose;
+    std::uint32_t raw_changed;
+    std::uint32_t semantic_changed;
+    bool raw_finite;
+    bool semantic_valid;
+    bool coverage_due;
+    bool mode_known;
+    bool last_stepped;
+};
+
+DisplaySession::DisplaySession() : m_state(std::make_unique<State>()) {}
+DisplaySession::~DisplaySession() { m_state->abort("reset"); }
+
+void DisplaySession::request(DisplaySourceIdentity source, std::uint64_t request)
+{
+    DisplayWindow& window = m_state->window;
+    if (window.active() && same_display_source(window.source(), source) && window.request() == request) return;
+    m_state->abort("request");
+    (void)window.bind(source, request);
+    m_state->clear_statistics();
+}
+
+void DisplaySession::retarget()
+{
+    m_state->abort("retarget");
+    if (m_state->window.active()) m_state->window.retarget();
+    m_state->clear_statistics();
+}
+
+void invalidate_display_owner(std::uintptr_t owner)
+{
+    if (!invalidate_display_source(g_held_source, owner)) return;
+    g_held_step_ready = false;
+}
+
+void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_graph,
+    DisplaySourceIdentity const source, std::uint64_t const request)
+{
+    std::uint32_t const actor_id = source.actor_id;
+    std::uint64_t const source_generation = source.generation;
     static bool attempted = false;
     const IndependentGraphMode mode = independent_graph_setting();
     if (mode == IndependentGraphMode::off || attempted)
@@ -523,6 +661,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     Identity candidate_final;
     bool constructed = false;
     bool loaded = false;
+    bool step_ready = false;
     // v27: filled where the candidate is still in scope; the display path reads it later.
     RE::hkbCharacter* retained_character = nullptr;
     RE::BShkbAnimationGraph* retained_graph = nullptr;
@@ -881,25 +1020,12 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         actor_id, request);
                                 }
                             }
-                            // v15: 63602's tail calls 63587(target, &record, 0) with the
-                            // stack record layout below; the direct call mirrors it (audit
-                            // 13, the 0xbb63b8 tail) in place of the bare slot-5 update.
-                            static REL::Relocation<engine_update_wrapper_t> engine_update{ REL::ID(EngineUpdateWrapperID) };
                             // v16: 63564's convention carries one alive argument — the
                             // candidate graph (audit14_branch_63581.txt calls it with the
                             // exact rcx/rdx 63581 received and the callee never reads dx) —
                             // and its whole 0x61-byte body is read-only, so the direct call
                             // is bounded (R-01).
                             static REL::Relocation<pose_predicate_t> pose_predicate{ REL::ID(PosePredicateID) };
-                            // v17: the per-step sampling goes through 63581 directly
-                            // (audit 15 Q2's two-live-argument convention), bypassing the
-                            // 63589 fork that routed every step to the 63568 branch.
-                            static REL::Relocation<sampling_branch_t> sampling_branch{ REL::ID(SamplingBranchID) };
-                            static REL::Relocation<frame_pipeline_t> frame_pipeline{ REL::ID(FramePipelineID) };
-                            static REL::Relocation<graph_destructor_t> shell_destroy{ REL::ID(GraphDestructorID) };
-                            // Stack storage for the per-pass scratch shell, exactly like the
-                            // engine's slot-5 helper hosts its 63602 pass on a stack graph.
-                            alignas(0x10) std::uint8_t shell_storage[sizeof(RE::BShkbAnimationGraph)]{};
                             // v10: borrow the source's physics world for the drive duration
                             // only — the gates row proved the candidate lacks exactly this
                             // one field (its ragdoll driver already exists) and slot 2's
@@ -977,7 +1103,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 fill_animation_data(candidate.get(), true);
                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=slot0c before[{}] after[{}]",
                                 actor_id, request, data_before, animation_data_state());
-                            auto* const shell = reinterpret_cast<RE::BShkbAnimationGraph*>(shell_storage);
                             // v15: the v14 post-pipeline1 fork evidence and the new
                             // post-update1 row share one emitter (same field set:
                             // 0x240/0x245/0x246/0x249 plus both double-buffer slots' track
@@ -1078,18 +1203,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // v22: the step-0 candidate pose, so "moving" can be decided
                             // against the bind baseline instead of the previous checkpoint.
                             std::vector<PoseSample> baseline_candidate_pose;
-                            const auto read_pose_local = [](RE::hkbCharacter const& character, std::vector<PoseSample>& out) {
-                                out.clear();
-                                if (!character.poseLocal || character.numPoseLocal <= 0)
-                                    return;
-                                const std::size_t count = static_cast<std::size_t>(character.numPoseLocal);
-                                const std::size_t limit = count < kMaxPoseEntries ? count : kMaxPoseEntries;
-                                out.reserve(limit);
-                                for (std::size_t i = 0; i < limit; ++i)
-                                {
-                                    out.push_back(pose_sample_from_transform(character.poseLocal[i]));
-                                }
-                            };
                             const auto or_missing = [](bool const known, std::string const& value) {
                                 return known ? value : std::string("n/a");
                             };
@@ -1364,6 +1477,9 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             std::uint32_t pose_step_first = 0;
                             bool pose_step_started = false;
                             float pose_step_max = 0.0f;
+                            std::size_t semantic_step_comparisons = 0;
+                            std::size_t semantic_step_changed = 0;
+                            bool semantic_steps_valid = true;
                             const auto log_pose_step = [&](std::uint32_t const step) {
                                 std::vector<PoseSample> current;
                                 read_pose_local(candidate->characterInstance, current);
@@ -1377,6 +1493,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     pose_step_deltas.push_back('.');
                                     return;
                                 }
+                                PoseMotionComparison const motion = compare_display_motion(current, pose_step_previous);
+                                ++semantic_step_comparisons;
+                                semantic_step_changed += motion.moved > 0 ? 1u : 0u;
+                                semantic_steps_valid = semantic_steps_valid && motion.valid;
                                 float worst = 0.0f;
                                 const std::size_t limit = std::min(current.size(), pose_step_previous.size());
                                 for (std::size_t i = 0; i < limit; ++i)
@@ -1404,133 +1524,46 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-steps first={} steps={} changed={} max-delta={:.6f} deltas='{}'",
                                     actor_id, request, pose_step_first, pose_step_deltas.size(), pose_step_changed,
                                     pose_step_max, pose_step_deltas);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-motion comparisons={} changed={} valid={} epsilon={} channels=translation/quaternion-chord/scale-x acceptance=unjudged",
+                                    actor_id, request, semantic_step_comparisons, semantic_step_changed, semantic_steps_valid,
+                                    Display_Motion_Epsilon);
                             };
-                            // v19 contract: the inject recipe supplies the audited
-                            // optionalEyePosition (record+0x18) so 63587's arm block can run.
-                            // The point is the candidate root's position shifted along Z past
-                            // the arm block's 800-unit cap; a null root keeps a non-null zero
-                            // point (the arm step is then fixed and the content is unread).
-                            // Other modes keep the v18 record (null pointer) unchanged.
-                            const bool eye_arm = mode == IndependentGraphMode::inject && version == SKSE::RUNTIME_SSE_1_6_1170;
-                            std::optional<std::array<float, 3>> root_position;
-                            if (eye_arm)
-                            {
-                                if (std::uintptr_t const root_node = *reinterpret_cast<const std::uintptr_t*>(graph_base + 0x218))
-                                {
-                                    const auto* const position = reinterpret_cast<const float*>(root_node + 0xA0);
-                                    root_position = std::array<float, 3>{ position[0], position[1], position[2] };
-                                }
-                            }
-                            EyePoint eye = make_eye_point(root_position);
-                            FrameTrace frame_trace(mode == IndependentGraphMode::inject && version == SKSE::RUNTIME_SSE_1_6_1170,
-                                actor_id, request, candidate->characterInstance, eye_arm ? &eye : nullptr);
-                            std::uint8_t const generation_mode = 0;
+                            const bool eye_arm = generation_profile;
+                            EyePoint const eye = candidate_eye_point(*candidate);
+                            FrameTrace frame_trace(generation_profile, actor_id, request,
+                                candidate->characterInstance, eye_arm ? &eye : nullptr);
                             for (std::uint32_t step = 0; behavior && step < DriveSteps; ++step)
                             {
-                                // The existing scratch helper pair stays unchanged.
-                                // Audit22 tests generation through the later outer entry instead.
-                                frame_trace.phase(*candidate_base, step, FrameStage::e_pre_pipeline);
-                                construct(shell, nullptr, false);
-                                frame_pipeline(shell, candidate_base);
-                                shell_destroy(shell);
-                                frame_trace.phase(*candidate_base, step, FrameStage::e_post_pipeline);
-                                if (step == 0)
-                                {
-                                    // v14 (audit 13): read-only fork evidence — did 63602's
-                                    // internal 63587 tail run on the candidate? Its prologue
-                                    // writes word 0x245 = 0x101 (245=1, 246=1) and Path B
-                                    // recomputes numAnimBones and resets 246; the outputs are
-                                    // double-buffered (+0x220/+0x228 swapped by 63587), so
-                                    // both slots' track fields are logged. (Adjudicated ②:
-                                    // all zero, slots unchanged → 63587 never reached the
-                                    // candidate, which is why v15 calls it directly.)
-                                    log_bookkeeping("post-pipeline1");
-                                }
-                                // The engine requests per-frame children re-activation by
-                                // setting graph+0x12E = 1 before every update (63602's tail
-                                // does exactly this for each subscribed graph, and its own
-                                // zero-dt update consumed the flag again); the update's
-                                // internal gate skips its 60079 activation walk otherwise.
-                                *reinterpret_cast<std::uint8_t*>(address(behavior) + 0x12E) = 1;
-                                // v15: replace the bare 58329 update with the ENGINE's
-                                // per-frame wrapper 63587 — 63602's tail calls it exactly
-                                // like this (target graph, stack record, third argument 0)
-                                // and the v14 run proved the candidate never receives that
-                                // call. The record is 63602's tail layout (audit 13):
-                                // ≥0x30 bytes, zero-initialized, float dt at +0x00 and the
-                                // byte modes +0x2a..+0x2e = 1,1,1,0,1 (footIK at +0x2e);
-                                // the engine hosts each record on the stack per call, so it
-                                // is rebuilt fresh every step, with the drive's fixed 1/60 s
-                                // step as dt instead of 63602's zero.
-                                // This audited manager byte map is preserved from v17.
-                                // Path B also depends on t0/t1; v17 observed Path A despite +0x2A=0.
-                                alignas(8) std::uint8_t update_record[0x30]{};
-                                *reinterpret_cast<float*>(update_record) = DriveTimestep;
-                                update_record[0x2A] = 0;
-                                update_record[0x2B] = 1;
-                                update_record[0x2C] = 1;
-                                update_record[0x2E] = 1;
-                                // v19 only: the audited BSAnimationUpdateData::optionalEyePosition
-                                // slot; every other mode keeps the v18 null record field.
-                                if (eye_arm)
-                                    *reinterpret_cast<void**>(update_record + 0x18) = &eye;
-                                engine_update(candidate_base, update_record, 0);
-                                frame_trace.phase(*candidate_base, step, FrameStage::e_post_update);
-                                if (step == 1 || step == 2)
-                                    log_slots(step);
-                                if (step == 0)
-                                {
-                                    // v15: the same field set immediately after the first
-                                    // direct call — any 63587 bookkeeping (w245 ≠ 0, b246=1,
-                                    // num-anim recomputed, slots swapped vs post-pipeline1)
-                                    // proves the wrapper reached the candidate; all zero
-                                    // means its prologue gates (+0x110 / [[+0x110]+0x20] /
-                                    // +0x208 / [[+0x208]+0x12c]) blocked — pre-registered ③,
-                                    // next audit = the +0x208 gate chain.
-                                    log_bookkeeping("post-update1");
-                                }
-                                // v17: the mirror that feeds the sampler. The engine's
-                                // per-frame 63587 writes word [graph+0x240] from the
-                                // manager record via 63575 (Path B recomputes it); on the
-                                // recordless candidate the drive mirrors numPoseLocal
-                                // (0x74 for the same skeleton) into it each step, exactly
-                                // as since v7, and reads it back as the direct 63581
-                                // call's second argument (audit 15 Q2: edx = word
-                                // [graph+0x240]).
-                                *reinterpret_cast<std::uint16_t*>(reinterpret_cast<std::uintptr_t>(candidate_base) + 0x240) =
-                                    static_cast<std::uint16_t>(candidate->characterInstance.numPoseLocal);
-                                // v16: direct 63564 predicate observation at steps 0/60,
-                                // immediately before the sampling block — the same call
-                                // 63581 makes first thing inside the block (same rcx the
-                                // sampler receives, rdx provably dead); a nonzero return
-                                // means 63581 skips the whole block at 0xbaff4d. The
-                                // read-only body keeps the call observation-only.
-                                if (step == 0 || step == 60)
-                                {
-                                    const std::uint8_t predicate = pose_predicate(candidate_base);
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pred step={} r={:#04x}",
-                                        actor_id, request, step, predicate);
-                                    log_slots(step);
-                                    log_pose_content(step);
-                                    log_clip_reference(step);
-                                }
-                                if (step % 20 == 0)
-                                    log_clip_clock(step);
-                                // V20 uses the audited outer wrapper; other profiles retain 63581.
-                                // The mode byte lives across this synchronous call.
-                                frame_trace.phase(*candidate_base, step, FrameStage::e_pre_sample);
-                                if (generation_profile)
-                                {
-                                    static REL::Relocation<generation_entry_t> generation_entry{ REL::ID(GenerationEntryID) };
-                                    generation_entry(candidate_base, &generation_mode);
-                                }
-                                else
-                                {
-                                    sampling_branch(candidate_base,
-                                        *reinterpret_cast<const std::uint16_t*>(reinterpret_cast<std::uintptr_t>(candidate_base) + 0x240));
-                                }
-                                frame_trace.sampled_pose(candidate->characterInstance);
-                                frame_trace.phase(*candidate_base, step, FrameStage::e_post_sample);
+                                const auto observe_step = [&](FrameStage stage) {
+                                    if (stage == FrameStage::e_pre_sample)
+                                    {
+                                        if (step == 0 || step == 60)
+                                        {
+                                            const std::uint8_t predicate = pose_predicate(candidate_base);
+                                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pred step={} r={:#04x}",
+                                                actor_id, request, step, predicate);
+                                            log_slots(step);
+                                            log_pose_content(step);
+                                            log_clip_reference(step);
+                                        }
+                                        if (step % 20 == 0)
+                                            log_clip_clock(step);
+                                    }
+                                    if (stage == FrameStage::e_post_sample)
+                                        frame_trace.sampled_pose(candidate->characterInstance);
+                                    frame_trace.phase(*candidate_base, step, stage);
+                                    if (stage == FrameStage::e_post_pipeline && step == 0)
+                                        log_bookkeeping("post-pipeline1");
+                                    if (stage == FrameStage::e_post_update)
+                                    {
+                                        if (step == 1 || step == 2)
+                                            log_slots(step);
+                                        if (step == 0)
+                                            log_bookkeeping("post-update1");
+                                    }
+                                };
+                                drive_candidate_step(*candidate_base, source_graph, generation_profile,
+                                    eye_arm ? &eye : nullptr, observe_step);
                                 if (step + 1 == DriveSteps / 2)
                                 {
                                     candidate_pose_mid = format_pose_hash(candidate->characterInstance);
@@ -1539,6 +1572,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 log_clip_step(step);
                                 log_pose_step(step);
                             }
+                            step_ready = generation_profile && behavior;
                             log_clip_step(120);
                             log_pose_step(120);
                             emit_clip_steps();
@@ -1580,6 +1614,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     {
         g_held_character = retained_character;
         g_held_graph = retained_graph;
+        g_held_source = source;
+        g_held_step_ready = step_ready;
     }
     const Identity source_after = identify(source_graph);
     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase={} source-drift={} registry-probe=unavailable",
@@ -1590,86 +1626,116 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
         std::string_view(first_drift(source_before, source_after)) == "none", retained_loaded);
 }
 
-bool held_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out)
+bool DisplaySession::held_display_pose(RE::BShkbAnimationGraph const& source_graph,
+    std::vector<std::pair<std::string, RE::NiTransform>>& out)
 {
     out.clear();
-    if (!g_held_character || !g_held_character->poseLocal || g_held_character->numPoseLocal <= 0)
+    if (!m_state->accepts_source(source_graph) || !g_held_character->poseLocal || g_held_character->numPoseLocal <= 0)
         return false;
-    const RE::hkaSkeleton* const skeleton =
+    RE::hkaSkeleton const* const skeleton =
         g_held_character->setup ? g_held_character->setup->animationSkeleton.get() : nullptr;
-    if (!skeleton || skeleton->bones.empty())
-        return false;
-    const std::size_t bones = static_cast<std::size_t>(skeleton->bones.size());
-    const std::size_t entries = std::min<std::size_t>(static_cast<std::size_t>(g_held_character->numPoseLocal), bones);
+    if (!skeleton || skeleton->bones.empty()) return false;
+    std::size_t const bones = static_cast<std::size_t>(skeleton->bones.size());
+    std::size_t const entries = std::min<std::size_t>(static_cast<std::size_t>(g_held_character->numPoseLocal), bones);
     out.reserve(entries);
     for (std::size_t i = 0; i < entries; ++i)
     {
-        const char* const raw = skeleton->bones.data()[i].name.c_str();
-        if (!raw || raw[0] == '\0')
-            continue;
+        char const* const raw = skeleton->bones.data()[i].name.c_str();
+        if (!raw || raw[0] == '\0') continue;
         out.emplace_back(std::string(raw), ni_local_from_pose(read_pose(g_held_character->poseLocal[i])));
     }
     return !out.empty();
 }
 
-bool step_display_pose(std::vector<std::pair<std::string, RE::NiTransform>>& out)
+bool DisplaySession::step_display_pose(RE::BShkbAnimationGraph const& source_graph,
+    std::vector<std::pair<std::string, RE::NiTransform>>& out)
 {
     out.clear();
-    if (!g_held_graph || !g_held_character)
+    State& state = *m_state;
+    if (!state.accepts_source(source_graph) || !g_held_step_ready ||
+        independent_graph_setting() != IndependentGraphMode::inject || !REL::Module::IsAE() ||
+        REL::Module::get().version() != SKSE::RUNTIME_SSE_1_6_1170)
         return false;
-    // v29: the batch runs the engine's per-frame pipeline (63555 shell -> 63602 -> 63556) before
-    // each generation entry. v28 called only 63589, and the three identical pose hashes showed the
-    // entry does not advance anything on its own; this reproduces the batch's per-step core.
-    static std::uint8_t mode = 0;
-    static REL::Relocation<constructor_t> construct{ REL::ID(GraphConstructorID) };
-    static REL::Relocation<frame_pipeline_t> frame_pipeline{ REL::ID(FramePipelineID) };
-    static REL::Relocation<graph_destructor_t> shell_destroy{ REL::ID(GraphDestructorID) };
-    static REL::Relocation<generation_entry_t> entry{ REL::ID(GenerationEntryID) };
-    alignas(0x10) std::uint8_t shell_storage[sizeof(RE::BShkbAnimationGraph)]{};
-    auto* const shell = reinterpret_cast<RE::BShkbAnimationGraph*>(shell_storage);
-    construct(shell, nullptr, false);
-    frame_pipeline(shell, g_held_graph);
-    shell_destroy(shell);
-    entry(g_held_graph, &mode);
-    static std::uint64_t calls = 0;
-    ++calls;
-    const bool converted = held_display_pose(out);
-    if (calls == 1 || calls == 60 || calls == 120)
+    if (generation_entry_status(generation_entry_view(*g_held_graph), generation_entry_view(source_graph)) !=
+        GenerationEntryStatus::e_ready)
+        return false;
+
+    DisplayWindow& window = state.window;
+    std::uint32_t const call = window.steps() + 1;
+    bool const checkpoint = call == 1 || call == 60 || call == 120;
+    if (call == 1)
     {
-        std::uint64_t hash = 1469598103934665603ull;
-        if (g_held_character->poseLocal && g_held_character->numPoseLocal > 0)
-        {
-            const auto* const bytes = reinterpret_cast<const std::uint8_t*>(g_held_character->poseLocal);
-            const std::size_t count = static_cast<std::size_t>(g_held_character->numPoseLocal) * 0x30;
-            for (std::size_t i = 0; i < count; ++i)
-            {
-                hash ^= bytes[i];
-                hash *= 1099511628211ull;
-            }
-        }
-        logger::info("ANIMATION DISPLAY step={} pose-hash={:016x} bones={}", calls, hash, out.size());
-        // v30: the pose hash never moved (v28 and v29 both reported 7d568c4d...), so the calls
-        // are reaching the graph but changing nothing. These are the gates 63587/63589 read
-        // (audit16/audit18) plus the two output slots' numData, which says whether the frame
-        // pipeline is even eligible to run here.
-        const auto* const fields = reinterpret_cast<const std::uint8_t*>(g_held_graph);
-        const auto slot_num_data = [](std::uintptr_t const slot) -> int
-        {
-            if (!plausible_object_pointer(slot))
-                return -1;
-            return static_cast<int>(*reinterpret_cast<const std::uint16_t*>(slot + 0x32));
-        };
-        const std::uintptr_t slot0 = *reinterpret_cast<const std::uintptr_t*>(fields + 0x220);
-        const std::uintptr_t slot1 = *reinterpret_cast<const std::uintptr_t*>(fields + 0x228);
-        logger::info("ANIMATION DISPLAY gates call={} active={} children={} b245={:#04x} b246={} w240={} c110={:#x} c208={:#x} numData0={} numData1={}",
-            calls, static_cast<int>(fields[0x12C]), static_cast<int>(fields[0x12E]),
-            static_cast<int>(fields[0x245]), static_cast<int>(fields[0x246]),
-            static_cast<int>(*reinterpret_cast<const std::uint16_t*>(fields + 0x240)),
-            *reinterpret_cast<const std::uintptr_t*>(fields + 0x110),
-            *reinterpret_cast<const std::uintptr_t*>(fields + 0x208),
-            slot_num_data(slot0), slot_num_data(slot1));
+        state.source_before = identify(source_graph);
+        state.source_pose_before = format_pose_hash(source_graph.characterInstance);
+        read_pose_local(*g_held_character, state.previous_pose);
+        if (window.take_row())
+            logger::info("ANIMATION DISPLAY source-control stage=before actor={:08x} request={} source-generation={} view={} pose-hash={}",
+                window.source().actor_id, window.request(), window.source().generation, window.view(), state.source_pose_before);
+    }
+    const auto observe_step = [&](FrameStage stage) {
+        if (!checkpoint || (stage != FrameStage::e_post_pipeline && stage != FrameStage::e_post_update &&
+            stage != FrameStage::e_post_sample) || !window.take_row())
+            return;
+        GraphActivity const activity = observe_graph_activity(*g_held_graph);
+        std::optional<OutputSlotObservation> const slot0 = observe_output_slot(g_held_graph->generatorOutputs[0]);
+        std::optional<OutputSlotObservation> const slot1 = observe_output_slot(g_held_graph->generatorOutputs[1]);
+        logger::info("ANIMATION DISPLAY gates request={} view={} call={} stage={} active={} children={} w245={:#x} b246={} numAnim={} numData0={} numData1={}",
+            window.request(), window.view(), call, Frame_Stage_Names[static_cast<std::size_t>(stage)], activity.active,
+            activity.update_active_nodes, observation_scalar<std::uint16_t>(g_held_graph, 0x245),
+            observation_scalar<std::uint8_t>(g_held_graph, 0x246), g_held_graph->numAnimBones,
+            slot0 ? static_cast<int>(slot0->num_data) : -1, slot1 ? static_cast<int>(slot1->num_data) : -1);
+    };
+    EyePoint const eye = candidate_eye_point(*g_held_graph);
+    drive_candidate_step(*g_held_graph, source_graph, true, &eye, observe_step);
+    window.advanced();
+    bool const converted = held_display_pose(source_graph, out);
+    if (call <= 120)
+    {
+        std::vector<PoseSample> pose;
+        read_pose_local(*g_held_character, pose);
+        PoseComparison const raw = compare_pose(pose, state.previous_pose);
+        PoseMotionComparison const motion = compare_display_motion(pose, state.previous_pose);
+        state.raw_changed += raw.moved > 0 ? 1u : 0u;
+        state.semantic_changed += motion.moved > 0 ? 1u : 0u;
+        state.raw_finite = state.raw_finite && raw.entries > 0 && raw.non_finite == 0;
+        state.semantic_valid = state.semantic_valid && motion.valid;
+        state.previous_pose = std::move(pose);
+    }
+    if (checkpoint && window.take_row())
+        logger::info("ANIMATION DISPLAY native-step={} request={} view={} pose-hash={} output-records={}",
+            call, window.request(), window.view(), format_pose_hash(*g_held_character), out.size());
+    if (call == 120)
+    {
+        if (window.take_row())
+            logger::info("ANIMATION DISPLAY pose-summary request={} view={} native-steps=120 raw-changed={} raw-finite={} semantic-changed={} semantic-valid={} epsilon={} scope=candidate acceptance=unjudged",
+                window.request(), window.view(), state.raw_changed, state.raw_finite, state.semantic_changed,
+                state.semantic_valid, Display_Motion_Epsilon);
+        if (window.take_row())
+            logger::info("ANIMATION DISPLAY source-control stage=after request={} source-generation={} view={} source-drift={} pose-before={} pose-after={}",
+                window.request(), window.source().generation, window.view(), first_drift(state.source_before, identify(source_graph)),
+                state.source_pose_before, format_pose_hash(source_graph.characterInstance));
+        state.previous_pose.clear();
     }
     return converted;
+}
+
+void DisplaySession::record_application(bool stepped, std::size_t output_records, DisplayApplicationCoverage const& coverage)
+{
+    State& state = *m_state;
+    if ((!state.coverage_due && state.mode_known && state.last_stepped == stepped) || !state.window.take_row()) return;
+    std::string missing;
+    for (std::size_t i = 0; i < coverage.missing_name_count; ++i)
+    {
+        if (!missing.empty()) missing += ',';
+        missing += coverage.missing_names[i];
+    }
+    logger::info("ANIMATION DISPLAY application actor={:08x} request={} source-generation={} view={} mode={} output-records={} requested-unique={} applied={} missing={} skipped-root={} duplicates={} missing-names='{}'",
+        state.window.source().actor_id, state.window.request(), state.window.source().generation, state.window.view(),
+        stepped ? "stepped" : "frozen", output_records, coverage.requested, coverage.applied, coverage.missing,
+        coverage.skipped_root, output_records - coverage.requested, missing);
+    state.coverage_due = false;
+    state.mode_known = true;
+    state.last_stepped = stepped;
 }
 }
 PLUGIN_NAMESPACE_END

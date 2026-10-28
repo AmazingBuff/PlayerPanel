@@ -1,28 +1,23 @@
 # 行为图构造与销毁的二进制审计（2026-10-23）
 
-更新：2026-10-27。本文保存1.6.1170目标镜像的静态审计、历次推断及后续运行纠正；当前门判据由[独立图当前结论](independent-behavior-graph.md#current-status)拥有。**G1仅按方案A修订通过，G2 v19（最新实际运行）未通过**；装载图停用/销毁、全局计数与资源收敛仍未验证。已定位并实际使用的入口不能再写成“G2设计中”，静态可执行路径也不能冒充实际分支和动态骨输出。
-
-本文只记录已读出的指令事实和可复现步骤，不把地址相等、函数可反汇编或构造成功当作独立图可用。G1 的通过/停止判据仍由[六关验证](independent-behavior-graph.md#六道关卡)拥有。
+更新：2026-10-28。本文保留 AE 1.6.1170 的静态审计与历史推断；[当前关卡](independent-behavior-graph.md#current-status)和 [v32](independent-behavior-graph.md#g2-v32-display-session)优先。G1 仅按方案 A 修订通过；v26 的 G2 raw 判据通过保留为历史，当前逐步候选语义连续性待复验。装载销毁、全局收敛和 G3–G6 未验证。
 
 <a id="audit-current"></a>
-## 当前生成入口与后验边界（2026-10-27）
+## 当前生成入口与后验边界（2026-10-28）
 
-最新实际运行为 [v26](independent-behavior-graph.md#g2-v26-run)（2026-10-28 00:12）：**G2 判 PASSED**（限定单进程单批 120 步）。证据链收敛于四个读数——空映射按 identity（[audit25](#audit25)）后 `H2H_Idle` 覆盖 90/99 骨、旋转误差 ≤6.1e-5；时钟速率 1.000×（[audit26](#audit26) 的 dt 算式 + v25 位串）；pose 每步都在变（v26 的 119/120）。v24 的“0.75×”已确认为采样假象。装载销毁/全局计数/资源收敛与 G3–G6 仍未证。
+v32 收窄两项观测推论：raw119/120 可能包含 q/-q 表示翻转，需要独立的候选语义连续性统计；v27 的 116 是输出记录数，实际 name→node assignments 未计数。来源 generation/owner、请求窗口和实际覆盖已在代码中修正，只有两个新离线场景与 Release 构建通过；不是新的原生指令审计或游戏成功。原有限值、私有缓冲、层归属、时钟证据以及以下指令事实保留，详见 [v32](independent-behavior-graph.md#g2-v32-display-session)。
 
-[audit25](#audit25) 给出 v23 那个空映射状态的指令级答案：AE 1.6.1170 的 `ConvertTrackPoseToBonePose`（REL 60005）在 `transformTrackToBoneIndices` 为空时直接把轨道号当骨骼号（identity），非空时查表。该结论只覆盖这一个助手。
+当前复现入口为 [v32 手工清单](independent-behavior-graph.md#v32-manual-checklist)：候选语义连续性、实际应用与画面分别判读，使用同一 request/view 的源对照。来源/owner 失效时冻结与逐步视图都回 OAR；装载分配仍保留，不能把视图失效当作安全销毁。每窗口最多 18 行 display 观测；本次文档完善没有新增原生审计、构建、部署或游戏运行。
 
-[audit26](#audit26) 回答 v24 留下的时钟问题：`hkbClipGenerator::Update`（槽 5 `0xACDE40`）把时间推进交给 `0xACFDE0`，算式是 `new = old + dt × ((实时长/enforcedDuration)×playbackSpeed)` 再按 `[cropStart, cropStart+实时长]` 钳制——**只消费 dt，没有帧计数**。因此 v24 的 0.75×–1.55× 只能来自“到达 Update 的 dt 不均匀”，具体漏在哪些驱动步需要逐步记录。
+v31 是对调用路径和观测对象的源码更正，没有新增 native 入口或二进制审计。既有 63587 更新记录、63589 mode0 生成入口与行为图字段声明继续沿用；不可直接以 SDK 的简化 Generate 声明替代已审计的同步入口。
 
-[audit22](#audit22)纠正了两类核心误读：63374/63595/63859/63923给出项目/clip元数据，65232/65237为共享visitor，不证明manager登记必要；63568的mode0实际跳0xbaeb59，经58343/58376到真实Generate槽，且0xbaeb8b自身写f=1。因此旧“mode0不生成/只有63582写f/全部v7–v19无生成”的说法不能作当前前提。审计二十一的壳图behaviorGraph守卫仍有效，但不支持其架构独占性推断。
+- 成功批量每步含辅助管线、内部行为图子图标记、显式 `63587(dt/eye)`、骨数镜像和生成。v28–v30 显示路径漏掉更新及相关输入，故其负结果不能证明完整逐帧配方不可行。
+- v30 的 `active/children` 从外层对象取错基址，真正字段是内部 `hkbBehaviorGraph::isActive/updateActiveNodes`；`numData` 少读取 output 的 element 指针。值 17/62016 不能解释为门状态。
+- `b245=0/b246=0` 也可出现在正常 Path B；v30 成功批量 step 2/119 即有这组值。阶段后值不能替代调用前条件。
+- v31 让批量与显示复用同一单步并正确观察阶段，候选 world 字段单步借用后恢复。两个离线回归与 Release 构建通过，**尚无 v31/v32 游戏运行**；见[更正与待验项](independent-behavior-graph.md#g2-v31-correction)。
 
-实际Generate槽0x17(+0xb8)=58334使用活r8/r9，SDK声明不足以直接调用；本轮恢复经同步消费mode字节的63589(candidate,&mode0)，不手造context/output/sink、不创建/登记manager或播种。numTracks/numData/onFraction、头部/有效pose、raw hash/有意义骨运动仍须分开；恢复入口或填头不自动通过G2。空manager构造/真实析构的原生栈先例仅为静态协议，不能证明图释放或全局隔离。
+下文按日期保存历史审计和当时的推断；后验更正优先。指令事实、调用后观察、有效骨变换与视觉运动须分别举证。元数据 visitor 不能推出 manager 登记必要；输出头/f/t 不能独自证明完整姿态生成，已有审计22/23的限定继续有效。
 
-
-[审计二十三](#audit23) 进一步区分生成、character.poseLocal 复制和外层场景应用：63581 有三条 memcpy 路径，fraction/t 只门控插值分支；58423 是 footIK，不能用冻结 g3-gates 的错误 context 链否定其原生路径。63856 只在该写入者中写 rotation/translation 而不写 scale。v20 仍待运行，一个入口变量覆盖多类内部职责，不能由后续单一变化唯一归因 Generate。
-
-下文保留原指令记录及历史推断，后验注和audit22限定过强结论。地址为RVA；LLVM用PE首选基址0x140000000，活进程基址依ASLR。本轮没有游戏运行。
-
-<a id="audit16-preparation"></a>
 ## 审计十六取证准备（2026-10-26，源码/日志时序）
 
 当前可直接复核的v17源码顺序为63602生成管线（scratch构造/销毁配对）→原有0x12E写→63587更新→0x240镜像→63581。原日志slot2/post-pipeline1曾f=1，post-update1变双槽0；这只定位了观察边界，尚未确认完整原生写入者。新增[v18只读观测契约](independent-behavior-graph.md#g2-v18-frame-trace)记录两槽真实+0x4数量、+0x32数据数、+0x38权重、t状态与物理身份，以区分清零/交换/再填；每次采样后另统计raw pose指纹变化。

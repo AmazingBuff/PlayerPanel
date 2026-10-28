@@ -1,34 +1,34 @@
 # 独立行为图验证
 
-更新：2026-10-27。本文是独立行为图实验的当前状态权威；旧契约、构建身份和逐轮记录在下文保留，不能把当时的预期或判读当成现状。
+更新：2026-10-28。当前状态以本节、[验证总表](#verification-matrix)与 [v32 修正](#g2-v32-display-session)为准；原始日志和历史契约不变。v31 修正单步调用和读取，v32 修正来源/测量归属、运动语义和实际写骨覆盖，均尚未上机。
 
 <a id="current-status"></a>
 
 ## 当前结论
 
-| 关卡 | 截至 2026-10-27 的结果 | 证据边界 |
+| 关卡 | 当前结果 | 证据边界 |
 | --- | --- | --- |
-| G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载、采集范围内源基线全等、装载图保留无崩溃；[G1b v4](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)。装载图停用/销毁、全局登记计数和资源收敛仍未验证。 |
-| G2 | **PASSED（2026-10-28 00:12，v26；范围限定见[v26 运行记录](#g2-v26-run)）** | v18 五阶段取证：双槽 `numTracks(+0x4)=21`（数量门满足）、`numData(+0x32)` 全程 0、onFraction 仅 step 0 pre-pipeline 为 1.0（slot 2 写入）后被首次 63587 复位为 0；t 对复位为 `{0,-MAXFLT}` 且 120 步内不累积，每步 Path A（`w245=0x101 b246=1`、双槽每步交换一次）。v19 眼位实验落在预注册分支 6：`root218=0`、`eye` 非空、`[graph+0x248]=0`、step 0 旧读槽 `f=1.0`，外层门全过，但 `63864()` 把臂块步长压到 `1.25*dt` 以下，t 未被改写（`arm-observed=no`），无 Path B；120 次 63581 全部返回而候选 pose 仍为 `bc160a8c2b3a5a58`、原始缓冲 0 次变化。v20 首轮 guard 通过后在入口前崩溃（越界诊断，已修为 v20a）。**v20a 运行**：`63589(mode0)` 到达（guard `ready`、修正链四跳可读），首步即回填 `numData=116 f=1.0`，step 2 起 Path B 且 `arm-observed=yes`，`gen0elem` 与双槽元素哈希变化，候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`(60)→`8fb4cd336c4395bf`(120)、120/120 次变化，同时源侧 pose 不变、三份源基线逐行全等。缺逐骨/有限值证据与视觉确认，故仍不放行；**v21 运行（22:18）**：三点 `entries=116 finite=116 nonfinite=0`、`moved=94`（60/120，门槛 16）、抽样骨 38/76 `moved=yes`，但 `source-equal=8/21/15` 命中第 3 条 → 判据停止；审计证明第 3 条为**误报**（候选/源 `poseLocal` 不同址；源哈希两轮不同而候选三点哈希逐位相同；`source-equal` 是十分量精确值相等，恒等/常量骨必然计入），见 [v20 记录](#g2-v20-run)、[v20a 记录](#g2-v20a-run)、[v21 契约](#g2-v21-contract) 与 [v21 运行记录](#g2-v21-run)；v22 已把该判据改为指针同一性 + “相等且在变化”计数，并于 23:03 运行通过：三点全有限、`alias=no`、60/120 `source-equal-moving=0`、`moved=94`、LHnd/LF30 在动 → **pose 内容证据成立**；G2 仍 NOT PASSED（跨批次持续性、语义对应与场景应用/视觉确认未证），见 [v22 契约](#g2-v22-contract) 与 [v22 运行记录](#g2-v22-run)；v23 已把“语义对应”做成可判定观测（活动 clip generator + 在其自身时间上采样对照）；**v23 运行（23:19）**：单一片段假设不成立（第 5 条，`agreed=22/99`、`max-dpos=3.98`），但定位到候选在跑多片段栈（`H2H_Idle` + `1HM_Idle` + `SCAR_1hmReadyDummy`，60/120 两点 `mapped=0` 未做成比较），G2 仍未通过，见 [v23 契约](#g2-v23-contract) 与 [v23 运行记录](#g2-v23-run)；v24（空映射 identity 语义 + 8 槽层普查 + `clip-clock` 曲线）已按 [audit25](behavior-graph-construction-audit.md#audit25) 运行一次：**层可归属成立**——step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle`（binding-index 681）在该时刻的采样，全部 99 条旋转误差 ≤6.1e-5；“有意义”取得数据，G2 只剩“持续”未定（idle 时钟每步 0.75×–1.55×，非恒定）。[audit26](behavior-graph-construction-audit.md#audit26) 已证时钟只消费 dt，v25（`clip-steps` 逐步位串 + `enforced`/`crop-sum`/`eff-duration`）已构建部署待测，**v25 运行（2026-10-28 00:03）**：`clip-steps` 位串证明 idle 时钟速率是 **1.000×**（72 步推进 72 帧），v24 的 0.75×–1.55× 是 20 步采样窗对上 15 步成批周期的假象，该结论作废；但交付成批（每 15 步一次推进 15 帧），pose 级逐步持续性仍未证。**v26 运行（2026-10-28 00:12）**：`pose-steps` 显示 **119/120 步 pose 都在变**（档位全 `5`，>1e-2），可见连续性成立；v25 的“交付成批”读数属实，但其“4 Hz 跳帧”的推论被推翻——pose 的采样时间不是那个成批发布的 `localTime` 字段。**G2 的四项要件至此全部有数据**，判 **PASSED**，范围限定为单进程单批 120 步、不含场景应用/视觉确认/装载销毁/G3–G6。见 [v24 契约](#g2-v24-contract)、[v24 运行记录](#g2-v24-run)、[v25 运行记录](#g2-v25-run)、[v26 契约](#g2-v26-contract) 与 [v26 运行记录](#g2-v26-run)。 |
-| G3–G6 | **完整关卡未通过/未执行** | 单次事件注入不等于 Equip→Idle→Unequip；OAR 上下文/历史/sink、完整有效骨输出与生命周期均未验收。 |
+| G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁、全局登记计数与资源收敛仍未验证。 |
+| G2 | **语义连续性待复验** | [v26](#g2-v26-run)曾按当时 raw 分量判据判 PASSED；119/120 不能排除 q/-q 表示翻转。有限值、私有缓冲、片段层归属及 1.000× 时钟证据保留，不能代替逐步语义运动。 |
+| G3–G6 | **完整关卡未通过/未执行** | 事件链、独立 OAR 语境、完整姿态对照及生命周期仍需分别验收。 |
 
-[v18 原始日志](diagnostics/CharacterPanel-g2v18-trace-20261026-2301.log)中源 pose 前后为 `c58dcc07593b5e75`，三份 12 行源基线块逐行全等；它同样只支持所采结构/姿态哈希不变，不证明全部共享可写资源、回调或全局状态都隔离。120 步×1/60 秒是**同一次暂停括号内的 2 秒模拟时间批次**，不是 120 个渲染帧或持续面板播放。实验默认 `IndependentGraph=off`，该轮 deploy 的 INI 已回 off；产品仍使用装备驱动播放器。
+v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
-当前按[audit22](behavior-graph-construction-audit.md#audit22)修订生成链分类：63374/63595/63859/65232/65237提供clip元数据/visitor，不能推出manager登记必要；audit21壳图守卫只限制该路径。真实Generate槽有额外活参数，不直调SDK声明。63589→63568的mode0实际经58343/58376派发Generate，63568自身还写f=1，纠正旧跳转及唯一写入者读法。新[v20契约](#g2-v20-generation-entry)仅恢复63589(&mode0)，保持v19其余配方、off默认和源manager不写边界；不创建manager、fake sink或播种。最新实际运行为 v21（2026-10-27 22:18）：入口 63589 到达、pose 三点全有限且 94/116 条在变化，但 `source-equal>0` 命中第 3 条并已审计为判据误报。此后 v22（pose 内容）、v24（层可归属）相继取得证据，当前只剩“持续”未定，见 [v24 运行记录](#g2-v24-run)；G2 未通过。
+[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口；另记符号不变的候选运动和实际写入覆盖。两个新离线场景及 Release 构建通过，见[构建记录](build.md#v32-display-session-2026-10-28)。没有新游戏日志、部署或视觉通过结论。默认三键关闭，产品仍走装备驱动 OAR 路径；缓存仅是备选。
 
-[audit23](behavior-graph-construction-audit.md#audit23) 已静态拆开三段职责：原生生成、63581 内的三条 poseLocal memcpy、外层 63856 的场景应用。双槽 fraction/t 门失败不等于整函数无复制；58423 的短函数/context 旧判读也已纠正。63856 在该写入者中不更新 scale，与手动采样转 local 的写入范围不同，但视觉因果仍未证明。v20 恢复一个外层入口变量，同时恢复多类内部职责，后续变化不能唯一归因 Generate。此次不改冻结代码/测试/包，不新增运行结果。
+
 
 <a id="verification-matrix"></a>
-## 验证总表（2026-10-28 冻结）
+## 验证总表（2026-10-28，v32 观测与归属更正）
 
-截至 2026-10-28 01:00 的**全部测试与验证状态**。逐轮细节在各自小节；与本表冲突时，以本表的判定与限定为准。
+归档运行结果截至 2026-10-28 00:59；v31/v32 只有离线修正与构建证据。旧 raw 119/120 和 bones=116 的读数保留，其连续性与全骨覆盖推论由 [v32](#g2-v32-display-session)收窄。
 
 ### 关卡
 
 | 关卡 | 判定 | 限定 / 未覆盖 |
 | --- | --- | --- |
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
-| G2 | **PASSED**（2026-10-28 00:12，[v26](#g2-v26-run)） | 单进程、单次暂停批次 120 步（2 秒模拟）、AE 1.6.1170、入口 `63589(mode0)`；**不含**逐帧播放与场景应用 |
+| G2 | **语义连续性待复验** | v26 历史 raw 判据曾通过；有限/私有/层归属/时钟证据保留。需排除 q/-q，补逐步候选语义连续性；实际应用/画面属于另项展示验证 |
 | G3–G6 | 未执行 | — |
 
 ### 逐轮实验（本系列）
@@ -44,11 +44,13 @@
 | v23 | 语义对应 | 单一片段不成立；候选是多片段栈 |
 | v24 | identity 映射 + 层普查 | `H2H_Idle` 覆盖 90/99 骨，旋转误差 ≤6.1e-5 |
 | v25 | 逐步时钟 | 速率 **1.000×**；v24 的 0.75× 判为采样假象 |
-| v26 | 逐步 pose | 119/120 步在变 → **G2 PASSED** |
-| v27 | 静态接驳显示图 | `bones=116`，画面为 `H2H_Idle`（用户截图确认） |
+| v26 | 逐步 raw pose | 119/120，按当时判据判 G2 PASSED；当前不能据此单独证明语义连续性 |
+| v27 | 静态接驳显示图 | 输出 `bones=116`，用户确认 `H2H_Idle` 站姿；实际骨映射覆盖未计数 |
 | v28 | 逐帧（只调 63589） | 三条哈希全同 → 该调用不自推进 |
-| v29 | 逐帧（补 63555/63602/63556） | 哈希与 v28 **逐位相同** → 渲染路径里调用零效果 |
-| v30 | 门诊断 | `children=0` 等线索，无定论；批量与逐帧同一线程 |
+| v29 | 逐帧（补 63555/63602/63556） | 哈希与 v28 逐位相同；仍遗漏显式 63587(dt/eye) 等成功批量步骤 |
+| v30 | 门诊断 | 显示冻结；active/children 对象基址错误、numData 少解引用；批量与显示同线程 |
+| v31 | 共用完整单步、修正诊断 | 两个离线回归及 Release 构建通过；跨帧游戏结果待验 |
+| v32 | 来源/窗口、语义运动和覆盖 | 两个新离线场景及 Release 构建通过；旧 raw 不变，新语义与实际写骨读数待上机 |
 
 ### 已验证的引擎事实（指令级）
 
@@ -56,28 +58,28 @@
 | --- | --- |
 | 空 `transformTrackToBoneIndices` = identity | [audit25](behavior-graph-construction-audit.md#audit25)，AE `ConvertTrackPoseToBonePose` @ `0xB03380` |
 | 片段时钟只消费 dt：`new = old + dt × ((effDur/enforcedDur 或 1) × playbackSpeed)` | [audit26](behavior-graph-construction-audit.md#audit26)，`0xACDE40` → `0xACFDE0`，速度 `0xAD01F0` |
-| 批量推进来自 `63555 → 63602 → 63556`，不是 `63589` | v28 / v29 两次负结果 |
-| 渲染路径里这套图调用零效果（同线程、无崩溃） | v29 / v30 |
+| 成功批量配方包含辅助管线、子图标记、显式 `63587(dt/eye)`、骨数镜像和生成入口 | 既有批量源码、原生更新审计、v26/v30 批量记录；[v31 共用实现](#g2-v31-correction) |
+| v28–v30 显示实现未产生新 pose，但没有测试完整批量配方 | v29/v30 原始显示日志与源码差分；不能据此判定完整逐帧驱动不可行 |
 
 ### 已验证的产品行为
 
-- 保留候选的姿态可正确应用到显示拷贝：**116 根骨全部命中名字映射**（[v27](#g2-v27-run)，用户截图）。
+- 保留候选提供 **116 条姿态记录**，用户确认显示拷贝呈 H2H_Idle 静态站姿（[v27](#g2-v27-run)）；实际命中、缺失和根节点跳过数尚无游戏记录。
 - `DisplayPose=false` 时 OAR 路径完全不受影响（默认即此）。
 
 ### 未验证 / 开放项
 
 | 项 | 现状 |
 | --- | --- |
-| 面板内逐帧动起来 | 三次负结果（v28–v30）；建议姿态缓存回放，未立项 |
+| 面板内逐帧动起来 | v31 复用完整单步，v32 校正测量；需候选语义变化、实际应用覆盖及画面共同验证 |
+| G2 批量逐步语义连续性 | raw 分量会把 q/-q 翻转计为变化；v32 新增 `pose-motion` 对照，未采到新运行数据 |
 | 场景应用（物理、武器挂载交互） | 未验 |
 | 装载图生命周期/销毁、全局收敛 | 未证（G1 遗留） |
 | G3–G6、独立 OAR 语境 | 未执行 |
-| `+0x12C` 读到 17 的实际语义 | 未解释 |
-| `numData` 的间接层 | 读取偏移不对（读到 62016，无效），待查 |
+| v30 的无效门/槽读数 | 原因已由源码确认并在 v31 修正：行为图对象基址与 output→element 间接层；新运行数据待采 |
 
 ### 当前部署与开关
 
-- MO2 部署：**v30 DLL `e5b0e57c…`**（与包内逐字节相同），**全部实验开关关闭**：`IndependentGraph=off`、`DisplayPose=false`、`DisplayStep=false`。产品行为 = 纯 OAR 路径。
+- 最近归档的 MO2 部署记录为 **v30 DLL `e5b0e57c…`**、三键关闭。本轮没有检查或更改安装目录，没有部署 v31 或 v32。
 - 仓库样例 `config/CharacterPanel.ini` 同样三键全关。
 
 ### 测试包清单
@@ -97,14 +99,14 @@
 | v29 | `…v29-display-pipeline-20261028.zip` | 9,996,292 | `42f92e94…` |
 | v30 | `…v30-display-gates-20261028.zip` | 9,986,675 | `1ce2b765…` |
 
-所有包在 `build/behavior-graph-v2*-2026102*/`，被 `.gitignore` 忽略；完整身份与 manifest 哈希记录在各轮构建段（[build.md](build.md)）。
+历史包目录约定为 `build/behavior-graph-v2*-2026102*/`，被 `.gitignore` 忽略；完整身份与 manifest 哈希记录在各轮构建段（[build.md](build.md)）。本轮本机未发现 v30 包，没有生成 v31/v32 测试包。
 
 ### 复现入口
 
 - **构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=<轮次>` → `cmake --build --preset Release`；先清掉小写 `http_proxy` 等变量（否则 MSBuild CL 任务报 MSB6001）。
-- **引擎无关用例**：`C:/env/mingw64/bin/g++.exe -std=c++23 -Wall -Wextra -Werror -Isrc tests/behavior_graph_<name>_test.cpp`，共五例（pose content 36 断言 / clip reference 19 / observation chain 11 行 / generation entry 22 行 / frame trace 3 例）。
+- **当前引擎无关用例**：v32 只运行 [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp) 中两个连贯场景，MSVC14.44 命令见 [v32 build](build.md#v32-display-session-2026-10-28)。旧五个 policy 用例的结果属于历史记录，本轮未重跑；CMake 仍未注册测试目标。
 - **静态审计**：`C:/Python314/python.exe`（已装 pefile + capstone 5.0.7），解包镜像与脚本在 `build/g1-audit-20261023/`，单函数反汇编用 `disasm_func.py <rva>`。
-- **运行日志**：`Documents/My Games/Skyrim Special Edition/SKSE/CharacterPanel.log`，每轮归档到 `docs/diagnostics/CharacterPanel-g2v<轮次>-*.log`。
+- **运行日志**：以 `SKSE::log::log_directory()` 返回的目录中 `CharacterPanel.log` 为准（见 [main.cpp](../src/main.cpp) 的 `initialize_log`）；历史机器使用 Documents 下的 SKSE 目录，不应据此猜当前路径。每轮日志与匹配 DLL/PDB、INI 一起保留。
 
 ## 目标与边界
 
@@ -157,7 +159,7 @@ OAR 隔离还包括图外状态：图变量和 `IsWeaponDrawn` 可通过 Actor �
 
 G1 通过后，在无 OAR 的原版基线只推进候选图。使用固定记录的时间步，采集候选剪辑时钟与输出姿态、源活动节点/变量/时钟/骨骼前后差分。窗口内禁止合法装备操作混入对照；用户换装备后重新建立基线。
 
-通过：候选原版 idle 持续、有意义地前进，必要骨的有效变换变化可验证，源保持对照；时钟、索引、状态机、元素头或姿态哈希变化单独都不够。**当前 G2 PASSED（2026-10-28 00:12，v26；范围限定见[v26 运行记录](#g2-v26-run)）**。证据链：`poseLocal` 内容有限、在变化、未别名（[v22](#g2-v22-run)）→ 候选是多片段栈而非单片段（[v23](#g2-v23-run)）→ `H2H_Idle`（binding-index 681）在 step 120 覆盖 90/99 条轨道、旋转误差 ≤6.1e-5，层可归属（[v24](#g2-v24-run)）→ idle 时钟速率 1.000×（[v25](#g2-v25-run)）→ **pose 每步都在变（119/120，档位全 >1e-2）**，可见连续性成立（[v26](#g2-v26-run)）。范围限定：单进程、单次暂停批次 120 步（2 秒模拟）、AE 1.6.1170；**不含**场景应用与视觉确认、装载图生命周期/销毁、全局收敛、G3–G6 与独立 OAR 语境。旧 v2/v17 只代表当时进度。装载图生命周期与后续关卡不由此通过。
+通过：候选原版 idle 持续、有意义地前进，必要骨的有效变换变化可验证，源保持对照；时钟、索引、状态机、元素头或原始分量变化单独都不够。**当前逐步候选语义连续性待复验**：v26 的 119/120 是当时 raw 判据通过记录，q/-q 反例使其不能单独证明连续运动。有限、私有缓冲、v24 层归属及 v25 的 1.000× 时钟证据保留。G2 仍限定 AE1170 单进程单次暂停批次，不包含实际显示应用/视觉确认、生命周期或后续关卡；展示验证另行记录。见[v32](#g2-v32-display-session)。
 
 前置激活/推进审计及 v1–v17 实现记录已保留；[最初 G2 契约](#2026-10-24-g2-契约drive-模式实验设计)的 63586/裸 Update 配方后来迭代为字符级 58453 激活、63602 管线、63587 包装与 v17 的 63581 直调。调用入口已定位不等于输出链可用，当前后续问题以[有界审计清单](#next-audit)为准。
 
@@ -1264,7 +1266,9 @@ G2 的四项要件因此变成：pose 内容（v22 成立）、必要骨变化�
 **实现与部署（2026-10-28 00:09，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v26-pose-step-20261028-aed15ad6c0-cl94faaed0c6-20261027T160910Z`（干净 `aed15ad`，子模块 `94faaed0`，无 `+dirty`；DLL `6c117d47…` 1,294,848 字节、PDB `9203291b…` 35,909,632 字节、CodeView age 333）。只改 `independent_graph.cpp`：新增 `log_pose_step`/`emit_pose_steps`（每步末尾读 `poseLocal`、与上一步取十个分量的最大绝对差、按六档写一个字符），在每步与 120 处调用、循环结束后输出；`pose-steps` 1 行。包 `build/behavior-graph-v26-pose-step-20261028/test-package/`（manifest `a02e25c1…` 4,824 字节），ZIP 10,029,787 字节、SHA-256 `d3d7f1b7…`，五条目重解压复核与 manifest 逐条相符。v25 三件套备份到 `dist/deploy-backup-20261027-v25/`（DLL `d8ca80bb…`、PDB `a468bead…`、`off` INI 1,063 字节 `e910d4e8…`），MO2 现为 v26 DLL/PDB（与包内相同），部署 INI=`inject`（1,042 字节 `29692657…`）。**该轮不上机**；随后的一次运行待记录。
 
 <a id="g2-v26-run"></a>
-## G2 v26 运行记录（2026-10-28 00:12 会话，pose 每步都在变 —— G2 判据全部满足）
+## G2 v26 运行记录（2026-10-28 00:12，历史 raw 判据通过；语义连续性待复验）
+
+> v32 后验更正：本节原始读数和当时判定保留。raw 分量的 119/120 可由静止旋转的 q/-q 表示翻转复现；这不证明该次游戏姿态静止，但撤回仅凭 raw 数值确认语义连续性的推论。有限值、私有缓冲、层归属和时钟证据不因此作废。
 
 构建 `CharacterPanel-scenegraph-behavior-graph-v26-pose-step-20261028-aed15ad6c0-cl94faaed0c6-20261027T160910Z`（DLL `6c117d47…`），部署 INI=`inject`，运行时 `1-6-1170-0`：00:12:57.721 加载（`SCENEGRAPH BUILD` 与部署身份逐字一致）。**无崩溃、无 `[E]`**；15 条 `[W]` 与既往同类。原始日志归档为 [CharacterPanel-g2v26-pose-step-20261028-0012.log](diagnostics/CharacterPanel-g2v26-pose-step-20261028-0012.log)（58,751 字节，SHA-256 `D90DCD777A74C5E51FCF96B22147BAFB0AA9011699D72F76EA36DE5D159007D1`）。
 
@@ -1289,11 +1293,11 @@ deltas='.55555555555555555555555555555555555555555555555555555555555555555555555
 | 4 | 档位 `5` 连续出现 | 出现且连续——但它就是判据 1 所要求的“每步都在变”，不是跳变；`max-delta=2.0` 由 step 0→1 的绑定姿态→首帧过渡贡献 |
 | 5 | 崩溃/源漂移 | 未发生 |
 
-**判定：第 1 条命中——pose 每步都在变，可见连续性成立。**
+**当时按 raw 判据判定第 1 条命中。** v32 复核表明该读数本身不足以证明语义或可见连续性，当前需补符号不变的运动统计与画面。
 
-一个必须记下的**内部不一致**：v25 读到 `clip->localTime` 是按 15 步成批发布的（`F` + 14 个 `.` 的周期），而 pose 却每步都变。两者同时成立只有一种解释——**pose 的采样时间不是我们读到的那个 `localTime` 字段**：实际推进的时间在动画控制一侧逐步走，`hkbClipGenerator::Update` 只是每 15 步才把它抄进 `localTime`。这推翻的是 v25 记录里“交付成批 → 4 Hz 跳帧”的**推论**，不是 v25 的读数本身：读数（`localTime` 成批）正确，推论（pose 也成批）错误。机制层面“为什么 `Update` 每 15 步才跑一次”仍未知，但它不再是 G2 的阻断项。
+**当时的机制推断（不作为当前前提）**：v25 的 localTime 成批发布和 v26 raw 分量变化曾被解释为两套采样时间。v32 证明 raw 变化也可来自 q/-q 表示翻转，因此不能凭这两项读数唯一确定姿态实际采样时钟；原时钟/位串保留，候选逐步语义连续性需新统计。
 
-**G2 判定：PASSED（按现有条文，范围限定如下）**
+**当时 G2 判定：PASSED（历史 raw 判据，范围如下；当前语义连续性待复验）**
 
 | 要件 | 证据 | 结论 |
 | --- | --- | --- |
@@ -1339,7 +1343,7 @@ deltas='.55555555555555555555555555555555555555555555555555555555555555555555555
 
 **观测**：`EXPERIMENT setting DisplayPose=true`；`ANIMATION DISPLAY source=independent-graph bones=116 note=frozen-at-last-driven-step`（1 条）。用户复核截图：面板里的角色站姿**确实是 `H2H_Idle`**（与 v24 在 step 120 的归属一致），且**一直不动**。
 
-**判定：第 1 条命中——接驳成立**。候选姿态被正确应用到显示拷贝（116 根骨全部命中 name→node 映射），画面第一次来自独立图而不是 OAR 采样器。**不动是设计**：`held_display_pose` 只读冻结缓冲，逐帧推进是 v28 的事。
+**判定：静态站姿接驳成立，实际覆盖未计数。** 日志中的 116 是候选输出记录数，不能推成 116 个 name→node 命中；用户画面确认只支持 H2H_Idle 站姿。v32 将分别报告实际 assignments/missing/skipped-root。**不动是当轮设计**：只读取冻结缓冲。
 
 这一条同时给了 G2 之外的第一份**屏幕证据**：v24 说"姿态内容属于 `H2H_Idle`"是数值结论，v27 把它变成了肉眼可见的站姿。视觉一致性成立，但**不等于**场景应用全部验收（逐帧播放、物理、武器挂载交互仍未验）。
 
@@ -1464,7 +1468,7 @@ ANIMATION DISPLAY gates call=<n> active=<+0x12C> children=<+0x12E> b245=<+0x245>
 **实现与部署（2026-10-28 00:56，当轮未上机）**：身份 `CharacterPanel-scenegraph-behavior-graph-v30-display-gates-20261028-0829b1d26d-cl94faaed0c6-20261027T165604Z`（干净 `0829b1d`；DLL `e5b0e57c…` 1,304,064 字节、PDB `e450627a…` 35,975,168 字节、age 341）。只加诊断：`step_display_pose` 在 call 1/60 各打一行门值，行为仍是 v29 的每帧 63555→63602→63556→63589。五个 engine-free 用例全过。包 `build/behavior-graph-v30-display-gates-20261028/test-package/`（manifest `cdebfff0…` 3,919 字节、INI 1,356 字节 `98ebd960…`），ZIP 9,986,675 字节、SHA-256 `1ce2b765…`，五条目复核相符。v29 三件套备份到 `dist/deploy-backup-20261028-v29/`，MO2 现为 v30，部署 INI 三键（1,068 字节 `50adad10…`）。**该轮不上机**。
 
 <a id="g2-v30-run"></a>
-## G2 v30 运行记录（2026-10-28 00:58 会话，门值可读但不定论）
+## G2 v30 运行记录（2026-10-28 00:58 会话，门诊断无效的后验更正）
 
 构建 `…v30-display-gates-20261028-0829b1d26d-…`（DLL `e5b0e57c…`）。**无崩溃、无 `[E]`**。`step` 哈希仍三连相同（`7d568c4d…`）。
 
@@ -1475,18 +1479,114 @@ active=17  children=0  b245=0x00  b246=0  w240=116
 c110=0x211f2bc49c0  c208=0x211f272ca00  numData0=62016  numData1=1
 ```
 
-**判读（按预注册逐条）**：
+**后验更正（2026-10-28，v31 源码复核）**：
 
-1. `active=0`？**否**（17）。图没有整体失活。
-2. `children=0` 或 `b245=0`／`b246=0`？**命中**——`children=0`、`b245=0`、`b246=0`，即"没有 arm、没有 Path A/B"。批量的 post-drive 记录里 `children-flag=1`，这里是 0。
-3. `numData0=0 且 numData1=0`？未命中，但**这两个读数无效**：`numData0=62016`（`0xF240`）不可能是 numData，说明 `[graph+0x220]+0x32` 的间接层与我读的不一致；`numData1=1` 同样不可信。这一条如实记为 inconclusive，不能用它推任何结论。
-4. 门全健康而哈希不动？不适用（第 2 条已命中）。
+1. `active=17` 和 `children=0` **不是行为图的门值**：v30 从外层 `BShkbAnimationGraph+0x12C/+0x12E` 读取；真正字段属于内部 `hkbBehaviorGraph::isActive/updateActiveNodes`。“图没有失活”“没有 arm”两条解释均撤回。
+2. `numData0=62016/numData1=1` 无效的原因已定位：少读取输出对象中的 element 指针。正确链是 `generatorOutputs[i] → element → +0x32`，已有 `FrameTrace` 采用这条链。
+3. `b245=0/b246=0` 本身也不能判失败；同一轮成功批量在 step 2、119 的 Path B 已有这组值。旧门值又都取自生成之后，不能冒充调用前的前提。
+4. 批量与显示同在 `[38632]` 线程、显示哈希三次相同仍是有效观察，但只证明**当时不完整的显示步骤没有推进**。成功批量显式调用了 `63587(dt/eye)`，v29/v30 没有；此前“完整逐帧调用零效果、应转缓存”的推论依据不足，撤回。
 
-**必须说明的边界**：门值是在 `63589` **之后**读的，`children` 可能刚被更新链消费掉，所以"图没 arm"是强线索、不是定论。另外线程不是原因——批量行与 `ANIMATION DISPLAY` 行同在 `[38632]` 一个线程上。
+原始日志、上面的数值和已归档包身份不变。后续采用下面的完整单步验证，不能把旧负结果扩大为架构不可行。
 
-**结论**：两轮（v28/v29）已确认"渲染路径里这套原生调用零效果"，v30 的门值又不能给出干净的断路点。继续在逐帧原生调用上加配方，收益已经很低。
+<a id="g2-v31-correction"></a>
+## G2 v31：共用单步与诊断更正（2026-10-28，离线通过，待上机）
 
-**转向（建议 v31，未预注册）**：**姿态缓存回放**。批量那 120 步本来就能推进（v26 证明 pose 每步都在变），而 v27/v28 证明"读出来的姿态能正确画到屏幕上"。把这两条已验证的路径接起来即可：批量每步把 `poseLocal` 转成（骨序）`NiTransform` 数组存进环形缓冲，显示时按 60 fps 逐帧回放这个缓存。**不需要在渲染路径里做任何原生调用**，也就绕开了 v28–v30 全部失败点。代价是回放 2 秒后循环，不是活的图。
+> 以下记录 v31 的实现。来源/测量归属、运动判读和覆盖统计已由 [v32](#g2-v32-display-session)更新，不能把这份历史单步修正当成当前完整接口说明。
+
+### 目的与范围
+
+修正显示路径漏更新和诊断读错对象；复用已通过的批量步骤验证跨帧姿态，不实现缓存播放，也不推进 G3–G6 或装载图销毁。没有新原生入口、ABI、依赖、manager/sink 或第二个 Actor。
+
+### 驱动、所有权与接口
+
+`drive_graph_step` 的顺序是辅助管线 → 内部行为图更新标记 → `63587`（固定 dt=1/60、原有眼位/模式记录）→ 骨数镜像 → 原有生成入口。批量的五个 `FrameStage` 观察点及旧日志预算保留，显示通过同一 `drive_candidate_step` 执行这些步骤。
+
+`AnimationController::advance` 从持有的 `BSTSmartPointer` 传入源图 const 引用；`step_display_pose(source_graph,out)` 只接受同一来源、已完成批量的 exact AE 1.6.1170 inject 候选，并重用 `generation_entry_status` 的私有存储守卫。物理世界只在单步中借用，`ScopedGraphWorld` 恢复候选原字段，不保留源 world 裸引用、不逐帧重新注册 ragdoll。
+
+`IndependentGraph=off`、`DisplayPose=false`、`DisplayStep=false` 仍是默认值。显示实验未满足前提则返回 false，沿既有冻结姿态回退；没有可用候选时沿原 OAR 路径。仍是每次显示调用推进一个固定步长，尚未实现按实际 FPS 校准速率。
+
+### 代码与验证入口
+
+| 文件 / 稳定入口 | 职责 |
+| --- | --- |
+| [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp)：`drive_candidate_step`、`step_display_pose` | 既有 native 调用与资格守卫、显示取证 |
+| [drive_step_policy.h](../src/animation/behavior_graph/drive_step_policy.h)：`drive_graph_step`、`ScopedGraphWorld` | 共用步骤与临时 world 恢复 |
+| [graph_observation_policy.h](../src/animation/behavior_graph/graph_observation_policy.h)：`observe_graph_activity`、`observe_output_slot` | 内部行为图成员与 output→element 读取 |
+| [frame_trace.cpp](../src/animation/behavior_graph/frame_trace.cpp)：`FrameTrace::phase` | 复用正确槽读取，保留既有阶段观察 |
+| [controller.cpp](../src/animation/controller.cpp)：`AnimationController::advance` | 源图所有权、开关与显示回退 |
+| [behavior_graph_display_step_test.cpp](../tests/behavior_graph_display_step_test.cpp) | 两个 engine-free 用例：有 dt 的单步姿态变化/world 恢复；分离的外层/行为/输出/element 内存读取 |
+| [CharacterPanel.ini](../config/CharacterPanel.ini) | 三个实验默认值及重启约束 |
+
+依赖仍为现有 C++23/MSVC、CommonLibSSE、AE1170 地址库与已加载项目；离线测试不加载游戏。构建命令和实际身份见 [v31 build](build.md#v31-display-step-2026-10-28)。
+
+### 失败与上机判读
+
+显示调用 1/60/120 的 `post-pipeline/post-update/post-sample` 各记录内部激活/子图标记和正确 numData，共 9 行；另有 3 行姿态哈希、1 行 120 步有效分量 `pose-summary`、2 行源对照及 controller 的 1 行来源，总上限 **16 行**，120 步后不继续输出。阶段零值仅是观察，不自动判失败。
+
+v31 的显示哈希复用批量 `format_pose_hash`；v28–v30 显示代码的 FNV 初始值不同，**不能用跨版本哈希与旧 `7d568c4d…` 是否相同判断运动**。只比较 v31 内部结果，重点看有限值、有效分量变化和实际画面。
+
+待做一次 exact1170 inject 上机：`DisplayPose=true/DisplayStep=true`，确认 120 个实际显示帧中骨变换有限且持续变化、画面连续运动、源 pose/结构对照保持不变。异常或源漂移时回 off 并保留日志/PDB。当前没有新运行日志，不宣称显示通过；若完整步骤仍停住，依据修正后的阶段取证定位，再决定是否采用缓存备选。
+
+### 修改与同步约束
+
+批量和显示必须继续共用同一记录/步骤；任何 native 前提变化先核对既有引擎审计。同步维护上述实现、两个用例、默认 INI、本节、README 导航和 build 证据。历史 v28–v30 原始数值保留，后验更正与运行结果分开；G2 的限定通过不扩展到全局隔离、完整 OAR 或生命周期。
+
+
+<a id="g2-v32-display-session"></a>
+## G2 v32：来源、测量归属与运动/覆盖证据（2026-10-28，离线通过，待上机）
+
+### 范围与来源有效性
+
+本轮只修四项审计问题，保留 v31 的原生单步、exact1170/inject/private-storage 守卫与临时 world 恢复；没有新 REL ID、ABI、依赖、native 调用、物理功能或装备交接设计。
+
+`DisplaySourceIdentity` 记录 actor、源图地址、`source_graph_generation` 和 controller owner。冻结和逐步读取都先经 `DisplaySession::State::accepts_source`；图地址改变、同地址 generation 改变或 owner 失效时，旧候选不得再参与显示，沿现有 OAR 路径。普通关闭/重开仍可复用同一有效候选；源生命周期改变后不会自动创建新候选。
+
+`AnimationController` 析构只清除它绑定的保留视图资格，防止 PreLoad/NewGame 等销毁后复用地址和从零开始的 generation 再次匹配。已装载候选仍按原实验约束保留，不调用 native 销毁、不再次分配；需要新来源的独立图实验须重启进程。
+
+### 窗口与重捕获
+
+测量由 controller 的 `DisplaySession` 持有，不再使用函数静态计数/基线。新 request、来源失效或 controller reset/关闭会结束或丢弃部分窗口；只有同一有效窗口的 call 1 与 call 120 才比较源控制。关闭后的 60+60 次调用不会拼成一次 120 步结果。
+
+F7 导致显示拷贝 retarget 时，即使来源和 request 未变，也会结束旧 view 窗口并创建新 view epoch，重新采基线和报告映射覆盖。`window=aborted` 不做源前后比较。每个窗口最多 **18 条** display 日志，包含阶段、源对照、覆盖、摘要和中止；没有逐帧日志或无限缺失名字列表。
+
+### raw、候选语义运动与实际写入
+
+- 原 `compare_pose`、`pose_sample_max_delta`、identity/alias-watch 以及 `pose-steps` raw 位串语义不变。raw 119/120 继续是取证数据，不能单独作为运动通过判据。
+- `compare_display_motion` 使用 translation XYZ、归一化旋转的符号不变弦长 `sqrt(2*(1-|dot|))` 和显示实际使用的 uniform scale X。阈值是 **1e-6**，保持逐帧小运动敏感度；没有复用片段归属的宽松 1e-5 agreement 容差。q/-q 翻转和仅 scale Y/Z 改变不算候选语义运动。
+- 批量增加一行 `phase=pose-motion`（旧 raw 行保留）；显示摘要分别记 `raw-changed/raw-finite` 与 `semantic-changed/semantic-valid`，标明 `scope=candidate acceptance=unjudged`。候选中变化的骨可能根本没有映射到显示图，故仍不等于可见运动。
+- `apply_named_display_pose` 是实际赋值路径，返回真正的 assignment 数。日志分别报告 output records、去重 requested、applied、missing、skipped-root 和 duplicates，最多列出 4 个缺失名字。根排除来自既有 retarget 不索引显示 root 的策略，以实际 root 名识别，没有硬编码骨名。`advance()` 返回 applied，不再返回候选记录数。
+
+### 代码、用例与同步
+
+| 入口 | 作用 |
+| --- | --- |
+| [display_state_policy.h](../src/animation/behavior_graph/display_state_policy.h)：`same_display_source`、`invalidate_display_source`、`DisplayWindow` | 来源/owner、请求/view 窗口与日志预算 |
+| 同文件：`apply_named_display_pose` | 真实赋值及 matched/missing/root-skipped 计数 |
+| [pose_motion_policy.h](../src/animation/behavior_graph/pose_motion_policy.h)：`compare_display_motion` | 独立语义运动；复用既有旋转比较数学 |
+| [independent_graph.h](../src/animation/behavior_graph/independent_graph.h)、[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp)：`DisplaySession`、`held_display_pose`、`step_display_pose`、`record_application` | controller 所有的基线、native-step 取证、候选读取和覆盖日志 |
+| [controller.cpp](../src/animation/controller.cpp)：`request/reset/retarget/advance` 与析构 | 传递来源身份，重置窗口，析构失效视图，应用真实覆盖 |
+| [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp) | 两个连贯场景：来源/owner/关闭/重开/F7；q/-q、真实小运动与实际写骨覆盖 |
+
+两个新 engine-free 场景和 Release 构建通过，实际身份/哈希见 [v32 build](build.md#v32-display-session-2026-10-28)。v32 没有修改旧 v31 用例和 native-step/FrameTrace 文件，未扩大旧测试集；本次文档完善没有重跑测试或构建。默认 `IndependentGraph=off/DisplayPose=false/DisplayStep=false`，没有部署或启动游戏。
+
+<a id="v32-manual-checklist"></a>
+### 下一次 AE1170 手工验证清单（未执行）
+
+以下是待执行程序，不是游戏结果。只做两类有界观察：先完成一个不中断的显示窗口，再观察窗口/来源失效边界。无需为文档修改重跑旧用例或构建。
+
+1. **核对输入和身份。** 保留待测 DLL 与匹配 PDB、原 INI 和日志。若使用现有 v32 离线构建，逐项核对 [build 记录](build.md#v32-display-session-2026-10-28)的 SHA-256、字节数及完整 `SCENEGRAPH BUILD` 身份（`f5ec13f2c2+dirty`，配置时间 `20261028T073724Z`）；它是提交前产物，后续提交不会改写身份。若另行重新构建，则记录实际新身份/哈希，不能沿用旧记录。确认运行时为 exact **AE 1.6.1170 / `1-6-1170-0`**。本轮未部署任何文件。
+2. **只调整三个实验键，重启。** 在实际加载的 `[Experiment]` 中设 `IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`，保留其他 INI 设置。设置在 DataLoaded 加载，须完整退出游戏再启动。保留此轮实际 INI；详细 tracing 不是这些 display 行的前提。首次可用的 `panel-open` 执行一次候选批量；确认本轮候选具备 loaded/retained、私有状态守卫与来源身份，再解释后续 display 行。
+3. **完成首个连续窗口。** 打开暂停背包，保持同一 actor/source graph/generation/controller、request 和 view；在前 **120 次 eligible display calls** 内不关闭、不 F7、不改变来源/装备。固定步长是每次 eligible 调用 1/60 秒；调用数不等于实际显示 FPS，也不等于同样长的墙钟时间。记录 `native-step=1/60/120` 及各自 `gates` 的 `post-pipeline/post-update/post-sample`。120 后驱动可以继续，但该窗口测量/日志受预算限制，不产生第二份摘要。
+4. **分别填写三类结论。** 候选：并列保存批量 `phase=pose-steps` 的 raw 位串与 `phase=pose-motion comparisons/changed/valid/epsilon`，以及显示 `pose-summary native-steps=120 raw-changed/raw-finite/semantic-changed/semantic-valid`。语义阈值为 **1e-6**，translation XYZ、符号不变 quaternion chord、scale X；q/-q 或仅 scale Y/Z 改变不算语义运动。计数是“至少一个候选骨变化”的比较次数，不是变化骨数；批量与显示的起始基线不同，不要求语义值照搬历史 **119/120**。`acceptance=unjudged` 要保留，按 G2 原有范围独立评估逐步语义连续性。应用：保存同窗口 `application mode=stepped` 的 `output-records/requested-unique/applied/missing/skipped-root/duplicates/missing-names`；核对 `requested-unique = applied + missing + skipped-root`、`duplicates = output-records - requested-unique`。只列最多四个 missing 名字，计数才是总数；不要求恰好 **116** 个 applied。画面：直接观察/记录拷贝角色是否持续运动、是否冻结或跳变；候选语义变化与 applied 数均不能替代视觉确认，也不能证明变化的骨都被映射。
+5. **核对同窗口源控制。** 将 `source-control stage=before` 与 call 120 的 `stage=after` 按 request/source-generation/view 配对，必须看到 `source-drift=none` 且 `pose-before=pose-after`。不能跨 request/view 拼源基线。源快照只是所测字段/raw pose 的控制，不能扩大为全部共享状态、原生阶段隔离或全局收敛证明。
+6. **观察中断、重开和 F7。** 在后续新窗口中，若在 120 前关闭（例如只到 checkpoint 60），应丢弃旧窗口并在有部分步骤时报告 `window=aborted ... source-comparison=discarded`；重开从新基线开始，旧 60 + 新 60 不能组成摘要。同一有效来源允许复用保留候选。F7 接受新拷贝并 retarget 后，应重新报告 coverage，从新 view/request 窗口的 call 1 采源基线；正常兼容动画时钟不因测量重置而倒带。若 request 同时改变，view 编号可重新从零开始，须以完整身份关联。
+7. **最后观察来源/owner 失效。** 来源图替换、同地址新 generation，或 PreLoad/NewGame 等销毁 controller 后，旧候选的冻结与逐步路径都应被拒绝，回到既有 OAR 采样；不能继续把旧 candidate 的行当成新来源。原生候选仍保留、不会自动重建，换来源后若要新的独立候选须重启游戏进程。若没有足够日志/画面区分这些边界，记录为未验证。
+
+**停止与恢复：** 身份/运行时不符、守卫失败、非有限/无效数据、source drift 或源 pose 改变时停止本轮；完整窗口缺少必要摘要/源控制或预算被中断耗尽时也停止判通过，不拼接日志或只凭 raw 哈希补结论。崩溃保留完整日志与匹配 PDB，不在同进程重试。完成观察或出现上述异常后，恢复 `IndependentGraph=off`、`DisplayPose=false`、`DisplayStep=false` 并完整重启，保留其余 INI 设置。候选语义连续性、显示覆盖/视觉结果、G1 遗留和 G3–G6 分别记录；本清单不扩大 G2 的验收范围。
+
+下一次上机要同时记录候选语义运动、实际应用覆盖、同窗口源对照和画面；再检查重开、来源 generation 改变和重捕获后的有效性/窗口边界。**G2 逐步语义连续性当前待复验**：v26 的历史 raw 判据通过保留，不能把符号翻转反例当作历史游戏静止的证据。有限、私有、层归属和时钟证据保留；物理/武器交互、原生阶段隔离、装载销毁及 G3–G6 仍未由本轮验证。
+
+后续改动须保持来源守卫同时覆盖冻结/逐步路径、窗口随 owner/request/view 更新、raw 与语义统计分离，并同步此文、代码/两个场景、README/build/Changelog。原始归档日志不改。
 
 ## 当前采集器与操作
 
@@ -1587,7 +1687,7 @@ BehaviorGraphProbe=true
 | G2 v29 契约与实现 | 2026-10-28 00:50：`step_display_pose` 补上 63555→63602→63556 再 63589；身份 `…v29-display-pipeline-20261028-04903ed263…`（DLL `ce712e20…`、age 339），ZIP `42f92e94…`、manifest `12970d32…`，v28 备份到 `dist/deploy-backup-20261028-v28/`，部署 INI 三键（1,095 字节 `468fb691…`），见[契约](#g2-v29-contract)与[构建记录](build.md#v29-display-pipeline-2026-10-28) | —（运行见下行） |
 | G2 v29 运行与判读 | 2026-10-28 00:54 会话：三条 `pose-hash` 仍全同，且与 v28 **逐位相同**（`7d568c4d…`）→ 补上 63555/63602/63556 后图状态零变化，说明渲染路径里的调用根本没生效，不是推进幅度问题；日志归档（59,223 字节 `57eb0b22…`），见[v29 运行记录](#g2-v29-run) |
 | G2 v30 契约与实现 | 2026-10-28 00:56：只加门诊断（`active/children/b245/b246/w240/c110/c208/numData0/numData1`，call 1 与 60 各一行），行为不变；身份 `…v30-display-gates-20261028-0829b1d26d…`（DLL `e5b0e57c…`、age 341），ZIP `1ce2b765…`、manifest `cdebfff0…`，v29 备份到 `dist/deploy-backup-20261028-v29/`，部署 INI 三键（1,068 字节 `50adad10…`），见[契约](#g2-v30-contract)与[构建记录](build.md#v30-display-gates-2026-10-28) | —（运行见下行） |
-| G2 v30 运行与判读 | 2026-10-28 00:58 会话：门值三次一致（`active=17`、`children=0`、`b245=0`、`b246=0`、`w240=116`、`c110`/`c208` 非空）；**第 2 条命中**（未 arm/未 Path A/B），但读点在 `63589` 之后、`numData` 间接层读错（`62016` 无效），故只作强线索；批量与逐帧同在 `[38632]` 线程，**线程不是原因**；日志归档（54,987 字节 `0F7B25DE…`）；实验开关已全部回 off，见[v30 运行记录](#g2-v30-run) | 转向：姿态缓存回放（不在渲染路径做原生调用） |
+| G2 v30 运行与判读 | 2026-10-28 00:58 会话：显示哈希仍冻结，批量/显示同线程；日志归档 54,987 字节 `0F7B25DE…`，三键回 off。后验复核：active/children 基址错误、numData 少解引用，不能判图未 arm；显示也遗漏 63587 等完整步骤。见[v30 更正](#g2-v30-run) | 优先验证 [v31 共用单步](#g2-v31-correction)，缓存为备选 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |
@@ -1599,7 +1699,7 @@ BehaviorGraphProbe=true
 
 当前选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
 
-最新实际运行为 v26（2026-10-28 00:12）：pose 每步都在变（119/120），G2 四项判据全部满足并判 PASSED；v27 已把候选姿态静态接到显示图并经用户确认（`bones=116`、画面为 `H2H_Idle`），v28 逐帧推进得到负结果（只调 63589 不推进），v29 补上 63555/63602/63556 后哈希仍逐位相同（调用没生效），v30 门诊断读数后判定"逐帧原生调用零效果"不可绕，建议转向姿态缓存回放（[v30 运行记录](#g2-v30-run)）；v24 运行给出“有意义”的数据：step 120 的 `poseLocal` 有 90/99 条轨道就是 `H2H_Idle` 在该时刻的采样（旋转误差 ≤6.1e-5）；剩余缺口是“持续”——idle 时钟每驱动步推进 0.75×–1.55×，非恒定，见 [v24 运行记录](#g2-v24-run)。正常源帧、装载销毁与全局收敛仍待证，恢复入口或填头不会放宽验收。
+最新归档运行为 v30（2026-10-28 00:59）：批量 raw 119/120，显示冻结。v26 的原始判据通过保留为历史，逐步候选语义连续性当前待复验；v27 仅确认输出 116 条记录及静态站姿，实际覆盖未计数。v31 修正不完整单步和错误读数，v32 修正来源/窗口与运动/覆盖证据，只有离线成功；下一步按 [v32](#g2-v32-display-session)分别验证候选语义连续性和展示应用，不把缓存当成既定转向。
 
 ## 维护约束
 
