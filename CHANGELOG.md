@@ -130,6 +130,8 @@
 
 ### Fixed
 
+- Bound the source timeline to an explicit window (v39): the second run lasted 18 seconds and still lost the equip sequence because the source graph cycles `bVoiceReady`/`BlendJump`/`bIsInMT`/`iLeftHandEquipped` and the node count on a roughly 1.2-second period. F9 now opens a 20-second window (handled before the scene-graph gate so it works during normal play), the window closes by itself, and the line budget rises to 800. That period is also a constraint for G3-B: replay must not treat those cyclic variables as equip events. See the [contract](docs/independent-behavior-graph.md#g3-a-contract).
+
 - Settle the source timeline and drop the per-frame node hash (v38): the first run spent all 200 lines in 8.5 seconds on `TimeDelta` and a node hash that changed every frame, so the equip sequence was never reached. A variable is now written only after its new value survives three consecutive samples, and the node line keeps the count alone. Same read points, same read-only guarantee, same budget. The same run also showed that the candidate holds 652 word variables while the source holds 463, so G3 replay must map by name rather than index. See the [contract](docs/independent-behavior-graph.md#g3-a-contract).
 
 - Verify the opt-in display stepping in game (v33, AE 1.6.1170): one uninterrupted 120-call window measured 120/120 sign-invariant candidate motion at 1e-6, 109/116 actual node assignments with `109+7+0=116` and zero duplicates, an unchanged source pose and continuous on-screen motion. The corrected gate readers report `active/children=true` and 116 output records at every checkpoint, so the v30 `children=0`/`numData=62016` readout is retired as a misread object. Window/source boundaries, loaded teardown and G3–G6 remain open.

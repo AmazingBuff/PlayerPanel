@@ -390,6 +390,15 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v38-source-timeline-settle-2
 
 **Deployed 2026-10-29 00:09**: the v37 trio went to `dist/deploy-backup-20261029-v37/`, and the INI keeps `SourceTimeline=true` with everything else off. No engine-free test was added for this build either; the change is the same native glue with a different write rule.
 
+<a id="v39-window-2026-10-29"></a>
+## V39 bounded timeline window (2026-10-29)
+
+The v38 run lasted 18 seconds and still lost the equip sequence: the source graph runs a roughly 1.2-second cycle (`bVoiceReady`, `BlendJump`, `bIsInMT`, `iLeftHandEquipped`, node count 22↔27↔44↔54) that consumes any always-on budget. V39 stops sampling outside an explicit window: **F9 opens 20 seconds**, the window closes by itself, and the line budget rises to 800. Settle rule, read points and read-only guarantees are unchanged; the hotkey is handled before the scene-graph gate so it works during normal play.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v39-timeline-window-20261029-5f2cf53de6-cl94faaed0c6-20261028T161546Z`. DLL **1,328,640 bytes**, SHA-256 `5f2f660a1caba06d954244a0ee019c715684f554281a793db2d3a31494a46191`; PDB **36,352,000 bytes**, SHA-256 `a6a418df4a5155996260e61857d2f4af6aff31420672358785c479b31eeddaf0`.
+
+**Deployed 2026-10-29 00:17**: the v38 trio went to `dist/deploy-backup-20261029-v38/`, the deployed DLL hashes to `5f2f660a…`, and the INI keeps `SourceTimeline=true` with everything else off. The build string now advertises `F9-timeline`.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
