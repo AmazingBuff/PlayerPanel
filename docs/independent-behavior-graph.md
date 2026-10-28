@@ -8,7 +8,7 @@
 
 | 关卡 | 当前结果 | 证据边界 |
 | --- | --- | --- |
-| G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁、全局登记计数与资源收敛仍未验证。 |
+| G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)），全局登记计数改由 v35 只读探针测量，均未上机。 |
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：来源图替换而 controller 未重建的 `source-invalid` 分支、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3–G6 | **完整关卡未通过/未执行** | 事件链、独立 OAR 语境、完整姿态对照及生命周期仍需分别验收。 |
 
@@ -77,7 +77,8 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | --- | --- |
 | 显示窗口边界 | **已验全部四条**：`reset` 中断（`steps=61`，无摘要）、重开不拼接、F7 `reason=retarget` + view 递增 + 重采基线、读档后旧候选被拒且无 `native-step` 残留（v34）。**未验**：来源图被替换而 controller 未重建的 `reason=source-invalid` 分支 |
 | 场景应用（物理、武器挂载交互） | 未验 |
-| 装载图生命周期/销毁、全局收敛 | 未证（G1 遗留） |
+| 装载图停用/销毁 | **判为 NO-GO（2026-10-28 审计）**：`Deactivate` 对 `activeNodes` 无空检查，且候选与源共享 `rootGenerator`，未证活动节点条目是克隆；污染源图比崩溃更糟。收益只是每进程一张图的登记与内存，不阻塞 G3–G6。见[审计](#g1-teardown-audit) |
+| 全局登记计数 | 静态确认装载即 `+0x228` 自增一次、我们永不减；**v35 只读探针待上机**读 `N->N+1`（[契约](#g1-teardown-audit)） |
 | G3–G6、独立 OAR 语境 | 未执行 |
 | 非骨缺失项逐名核对 | v33 的 `missing=7` 只按预算列了 4 个名字，其余 3 个未列名，不能逐一断言全部非骨 |
 | 帧率无关性 | 固定步长 1/60 每次 eligible 调用；调用数不等于墙钟时间，未做不同 FPS 下的速率校准 |
@@ -1684,6 +1685,50 @@ BehaviorGraphProbe=true
 
 当时未完成激活/更新、事件路由与共享范围，G1 未通过；后续已定位加载/激活/推进链并进行 v1–v17 定位实验，见[审计记录](behavior-graph-construction-audit.md)和[当前结论](#current-status)。OAR 语境、全局状态与装载图停用/销毁仍未验收，不能由入口定位推断通过。
 
+<a id="g1-teardown-audit"></a>
+## G1 遗留一：装载图停用/销毁（2026-10-28 审计，判定 NO-GO）
+
+> 本节只做静态判定，不新增 native 调用，也未上机。目标是决定"是否值得为一劳永逸的销毁写实验"，不是证明销毁可能。
+
+**`hkbBehaviorGraph::Deactivate` 的真实形态**（vtable 槽 7 = `0xab1f70`，`.pdata` 只记 25 B，实体延伸到 `0xab20b1`）：
+
+- 序言 `cmp qword [rdx+8], 0; jne 0xab20b1`——**当 context+8 非空时直接返回，什么都不做**。是否真的拆除取决于调用方给的 context，而不是图自身状态。
+- 否则先 `mov rax,[rcx+0x98]`（`activeNodes`）再 `movsxd r15,[rax+8]`：**对 `activeNodes` 没有任何空检查**。G1b v3 的崩溃就是这一步（从未激活的图 `activeNodes=0`），指令级原因在此确认。
+- 遍历 `activeNodes` 时对带 `+0x88` 标记的条目回调节点槽 0，并把 `context+8` 临时改成 `[条目+0x60]`；循环后 `call 0xab7090`，再在 `variableMode==0` 时 `0xa883a0`（Release）释放 `variableValueSet` 并把 `[this+0xD8]` **置空**，最后 `[this+0x12C]=0`（`isActive=false`）。
+- 语义后果：一旦 Deactivate，图不能再被驱动，必须重新 Activate；我们保留的候选没有 Activate 的第二条入口。
+
+**引擎自己怎么配对**：`BShkbAnimationGraph` 的真析构 `0xbad2c0` 在 `[+0x208]`（behaviorGraph）非空时，用 `58315`（`0xab0a60`）就地构造 `hkbContext`，然后 `call qword [rax+0x38]`——即槽 7 Deactivate，之后才释放 `generatorOutputs`/`rootNode`/fade controllers。**Deactivate 只在"图即将随容器一起消失"时被调用**，我们的候选从不进入这个路径，于是登记与内存都留到进程结束。
+
+**为什么仍判 NO-GO**：三份日志（22:28 / 22:47 / 23:00）里候选与源的 `root-generator` 是**同一个指针**（`0x1c7b4322c70` / `0x1f134ae2c70` / `0x201343a2c70`），而 `active-nodes` 各自独立（候选 `…/97`、源 `…/111`）。也就是说加载器把项目级生成器树作为共享数据借给候选，激活时才建自己的活动节点数组。Deactivate 的循环正好走 `activeNodes` 条目并对部分条目回调——**若任一条目指向共享模板而非克隆，就会改到源图的状态**。这与崩溃不是一个量级：崩溃可复现、可放弃；源图被污染会跟着存档走。在"活动节点条目是否为克隆"取证之前，正常存档上不做销毁实验。
+
+**收益核算**：候选每进程至多一张（`attempted` 静态 + `retained` 分支），已装载即不再分配。销毁能换回的是"一次进程内的一个图 + 一条登记"，不是可累积的泄漏。因此它是质量项，不是稳定性项，**不阻塞 G3–G6**。
+
+## G1 遗留二：全局登记计数（2026-10-28 审计 + v35 只读探针）
+
+**静态事实**：加载函数 `63845`（`0xbc1d70`）在返回前用自旋锁（`[r9+0xC]` 在 `0x30000001`/`0x40000000` 间翻转）包住一段登记：
+
+```
+bc2146: mov r10, [rip+…]      ; 0x315C950，全局槽存的是对象指针
+bc2177: lea rcx, [r10+0x1F8]  ; 登记容器内联在 +0x1F8
+bc217e: mov r8d, [rcx+0x30]   ; 计数在容器 +0x30（即对象 +0x228）
+bc2182: inc r8d
+bc2188: call 0xbabbf0         ; id 63529，插入
+```
+
+也就是说**每次"接受"的装载都会把图登记进全局表并让计数 +1**，而我们的路径从不走析构，所以这个 +1 永久保留。此前日志里的 `registry-probe=unavailable` 是硬编码占位，不是探测失败。
+
+**v35 探针**：`independent_graph.cpp` 新增 `registered_graph_count()`（`REL::Offset{0x315C950}` → 取值 → `+0x228` 读 `int32`，空指针返回 `unavailable`），只在 AE 1.6.1170 且 `IndependentGraph != off` 时生效；`phase=retained` 行把占位换成 `registry=<before>-><after>`。**只读，不调用任何 native 函数，不写引擎内存。**
+
+**预注册读数（不得事后放宽）**：
+
+| 观察点 | 期望 | 不成立的信号 |
+| --- | --- | --- |
+| `phase=begin` 前（进程内首次暂停开包前） | 一个整数 N（源码里记在 `registry_before`） | `unavailable` = 全局槽为空或运行时不是 1170，本轮判为未采，不得用其它数字代入 |
+| `phase=retained` 后 | `N->N+1` | 增量 ≠ 1（>1 说明还有别的登记路径；=0 说明装载没真正登记，需重审 63845 结论） |
+| 关包、再次开包 | 仍 `N+1`（`attempted` 已置位，不再装载） | 继续增长 = 存在未被识别的重复装载 |
+
+**停止条件**：读到 `unavailable`、增量不是 1、或进程内出现第二次装载，即停止判读，保留日志与匹配 PDB，回到审计而不是改配方。**不做**：不调用 Deactivate、不删除候选、不把候选登记进 manager、不加写操作。
+
 ## G1 源基线（2026-10-23 会话）
 
 同日晚间会话（[r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session)，构建 `5ef6f0520e`、`BehaviorGraphProbe=true`）取得第一份真实目标游戏源基线：**19/19 请求、228 行、单 actor 00000014、无 missing/异常行**。关键事实（request=1 块）：
@@ -1755,6 +1800,7 @@ BehaviorGraphProbe=true
 | G2 v31/v32 离线 | 2026-10-28 白天：v31 共用完整单步与修正读法、v32 来源/窗口/语义运动/实际写骨，两个新 engine-free 场景各 2 例通过，Release 构建通过；**产物未留存**（`build/Release` 仍是 v30，检出内无 v31/v32 目录或包） | 重建后上机 |
 | G2 v33 重建与部署 | 2026-10-28 22:20–22:23：以 HEAD `d323b35` 重配新 label 构建（干净树，无 `+dirty`），DLL `061d5b8a…` 1,319,424 B / PDB `5924464d…`；同一树重跑两个离线场景各 2 例通过；v30 三件套备份至 `dist/deploy-backup-20261028-v30/` 后部署，三键开。见[构建](build.md#v33-rebuild-2026-10-28)与[部署](#deploy-state) | —（运行见下行） |
 | G2 v34 边界会话 | 2026-10-28。22:47 会话：开包 1 跑满 120（未在 120 前关）、开包 2 重采基线且不拼接、开包 3 中途 F7 → `steps=84 reason=retarget source-comparison=discarded` + view 2→3、读档后开包 0 条 display 行；日志 83,924 字节 `23637075…`。**23:00 补测**：开包 1 在 call 61 关包 → `steps=61 reason=reset source-comparison=discarded` 且无摘要，开包 2 从 call 1 独立跑满 120；日志 64,003 字节 `bc7f27c4…`。两次均无 `[E]`。附带：`native-step` 三点哈希与 v33 逐位相同而源 before 不同 → 候选轨迹可复现且与源无关；`SCOPY PARK` 累积 4 份。三键已回 off。见[v34 记录](#g2-v34-boundaries) | 来源图替换而 controller 未重建的 `source-invalid` 分支；G1 装载销毁/全局收敛；G3–G6 |
+| G1 遗留审计 + v35 | 2026-10-28 23:11：指令级确认 `Deactivate`（`0xab1f70`）对 `activeNodes` 无空检查、`context+8` 非空即早退、释放 `variableValueSet` 并置 `isActive=false`；引擎只在 `BShkbAnimationGraph` 析构里配对调用；候选与源三份日志 `root-generator` 同指针 → **销毁判 NO-GO**。另确认 `63845` 尾部对 `+0x228` 计数自增，遂加只读探针 `registered_graph_count()`，构建 v35（身份 `…v35-registry-probe-20261028-1ca2ad6979…`，DLL `9d5cce9f…`）并部署，`IndependentGraph=inject`、显示两键关闭。见[审计与契约](#g1-teardown-audit)、[构建](build.md#v35-registry-probe-2026-10-28) | 一次上机读数 `N->N+1`，尚未执行 |
 | G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |

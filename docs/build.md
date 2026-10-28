@@ -346,6 +346,17 @@ Toolchain note for reproduction: the `vcvars64.bat`/`Enter-VsDevShell` route fai
 
 **Deployed 2026-10-28 22:23 and run the same evening.** The v30 trio in `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` was first copied to `dist/deploy-backup-20261028-v30/` (DLL `e5b0e57c…`, PDB `e450627a…`, INI `2e150d41…`, 1,094 bytes), then replaced by this DLL/PDB; the deployed copies hash to `061d5b8a…` and `5924464d…`. MO2 profile `AE` lists `+CharacterPanel`, so nothing else needs enabling. The deployed `CharacterPanel.ini` briefly set `IndependentGraph=inject`, `DisplayPose=true`, `DisplayStep=true` (1,338 bytes, SHA-256 `0861a221…`); after the 22:28 session all three were restored to off with a run comment, so the deployed file is now 1,384 bytes, SHA-256 `8beb6286ead09d7cc8fcba955fb8a14efc3a896588375471b312221e448da408`. Settings load at DataLoaded, so a full restart is required either way. The repository sample `config/CharacterPanel.ini` stays default-off. Session result: the [v33 run record](independent-behavior-graph.md#g2-v33-run); remaining checklist steps are the window/source boundaries.
 
+<a id="v35-registry-probe-2026-10-28"></a>
+## V35 registry-count probe (2026-10-28)
+
+[G1 leftover two](independent-behavior-graph.md#g1-teardown-audit) turns the hardcoded `registry-probe=unavailable` into a measurement: `registered_graph_count()` reads the engine's graph registry through `REL::Offset{0x315C950}` + `0x1F8` + `0x30`, and `phase=retained` prints `registry=<before>-><after>`. It is a plain data read with a null guard and an exact-AE1170 gate; no native call, no engine write, no Deactivate. The change is one helper pair plus one format string in [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp).
+
+Configure and build used the same commands as v33; the tree was committed first (`1ca2ad6979`) so the identity is clean. The two engine-free suites were **not** rerun for this build — the delta touches only native glue and logging, and neither suite links that code.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v35-registry-probe-20261028-1ca2ad6979-cl94faaed0c6-20261028T150959Z`. DLL **1,319,936 bytes**, SHA-256 `9d5cce9ffbfc925155f0f09305c8a14363dbb4c6802e9dd74ccef7db34cc1753`; PDB **36,261,888 bytes**, SHA-256 `c9fdd1d92431098dcfda6ff680af2dc647871321b7e1c3c159d143fc25b6553f`.
+
+**Deployed 2026-10-28 23:11.** The v33 trio was backed up to `dist/deploy-backup-20261028-v33/` (DLL `061d5b8a…`, PDB `5924464d…`, INI `a7140437…`), then replaced. The deployed INI sets `IndependentGraph=inject` only — `DisplayPose`/`DisplayStep` stay false, because the probe runs at load and needs no display stepping. Pre-registered reading, stop conditions and the non-goals are in the [contract](independent-behavior-graph.md#g1-teardown-audit).
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
