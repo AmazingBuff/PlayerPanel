@@ -9,14 +9,14 @@
 | 关卡 | 当前结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁、全局登记计数与资源收敛仍未验证。 |
-| G2 | **PASSED（2026-10-28 v33，限定范围）** | 单进程单窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。不含 120 前中断、F7、来源失效、装载销毁与 G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
+| G2 | **PASSED（2026-10-28 v33 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。边界已验三条：重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）；**`reason=reset` 的 120 前关窗仍未采**。装载销毁、G3–G6 未覆盖；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3–G6 | **完整关卡未通过/未执行** | 事件链、独立 OAR 语境、完整姿态对照及生命周期仍需分别验收。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
 [v33](#g2-v33-run)（v32 代码的重建）在 2026-10-28 22:28 上机取得第一个非中断窗口：120 次 eligible 显示调用里候选语义运动 120/120（1e-6、符号不变）、实际写骨 109/116（`missing` 7 个全为已列名的非骨控制/挂点，`109+7+0=116` 自洽）、源侧 `drift=none` 且 before=after、**画面连续运动经用户确认**。同一窗口的门读数 `active/children=true`、`numAnim=numData=116`，从运行侧确认 v30 那组 `children=0`/`numData=62016` 是读错对象。G2 因此按原范围判 PASSED，边界（120 前中断、重开、F7、来源失效）与装载销毁、G3–G6 仍未执行。
 
-[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口；另记符号不变的候选运动和实际写入覆盖。两个新离线场景及 Release 构建通过，见[构建记录](build.md#v32-display-session-2026-10-28)。2026-10-28 22:23 把同一份源码重建为 **v33** 并部署到 MO2 实例，22:28 的会话取得[首个连续窗口](#g2-v33-run)，三键已恢复 off，见[部署记录](#deploy-state)。默认三键仍关闭，产品走装备驱动 OAR 路径，缓存不再是备选主线（未被证明需要）。
+[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口；另记符号不变的候选运动和实际写入覆盖。两个新离线场景及 Release 构建通过，见[构建记录](build.md#v32-display-session-2026-10-28)。2026-10-28 22:23 把同一份源码重建为 **v33** 并部署到 MO2 实例，22:28 的会话取得[首个连续窗口](#g2-v33-run)，22:47 的会话补齐[三条边界](#g2-v34-boundaries)（重开、F7、读档失效），只剩 `reason=reset` 的 120 前关窗未采。默认三键关闭，产品走装备驱动 OAR 路径；缓存回放未被需要，不作为既定方向。
 
 
 
@@ -30,7 +30,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | 关卡 | 判定 | 限定 / 未覆盖 |
 | --- | --- | --- |
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
-| G2 | **PASSED**（v33，限定范围） | 单进程单窗口 120 次 eligible 调用：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界（120 前中断/重开/F7/来源失效）、场景应用、装载销毁与 G3–G6 未覆盖 |
+| G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：重开不拼接、F7 `reason=retarget`（`steps=84` 丢弃）、读档后旧候选被拒回落 OAR。`reason=reset` 的 120 前关窗、场景应用、装载销毁与 G3–G6 未覆盖 |
 | G3–G6 | 未执行 | — |
 
 ### 逐轮实验（本系列）
@@ -54,6 +54,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | v31 | 共用完整单步、修正诊断 | 两个离线回归及 Release 构建通过；该轮无产物留存 |
 | v32 | 来源/窗口、语义运动和覆盖 | 两个新离线场景及 Release 构建通过；产物未留存，由 v33 重建后上机 |
 | v33 | 重建 v32 代码并上机单窗口 | **显示连续推进成立**：语义 120/120、applied 109/116、源不变、画面连续；门读数修正 v30 结论 |
+| v34 | 同一 DLL，只做窗口/来源边界 | 重开不拼接、F7 `steps=84 reason=retarget` 后 view 2→3、读档后 0 条 display 行；`reason=reset` 未采（120 步仅约 3.3 s，人工关不及）。附带：候选轨迹跨会话逐位复现且与源姿态无关 |
 
 ### 已验证的引擎事实（指令级）
 
@@ -74,7 +75,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 
 | 项 | 现状 |
 | --- | --- |
-| 显示窗口边界 | 120 前中断（`window=aborted`）、重开不拼接、F7 新 view epoch、来源 generation 改变/controller 销毁后拒绝旧候选，均未在 v33 采集；本轮只跑了一个完整窗口 |
+| 显示窗口边界 | 已验：重开不拼接（v34）、F7 `reason=retarget` + view 递增 + 重采基线（v34）、读档后旧候选被拒且无 `native-step` 残留（v34）。**未验**：120 前关窗的 `reason=reset` 分支；来源图地址变更而未重建 controller 的 `reason=source-invalid` 分支 |
 | 场景应用（物理、武器挂载交互） | 未验 |
 | 装载图生命周期/销毁、全局收敛 | 未证（G1 遗留） |
 | G3–G6、独立 OAR 语境 | 未执行 |
@@ -85,7 +86,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 ### 当前部署与开关
 
 - **2026-10-28 22:23 部署 v33**（v32 代码在 HEAD `d323b35` 上的重建）：DLL `061d5b8a…`（1,319,424 B）、PDB `5924464d…`，MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，profile `AE` 为 `+CharacterPanel`。
-- **22:28 会话已用它跑完一个完整窗口**（[v33](#g2-v33-run)）。会话结束后三键已恢复 `off/false/false`；部署 INI 现为 1,384 B、`8beb6286…`，带本轮运行注释，须完整退出游戏后重启才按默认（纯 OAR）运行。
+- **22:28 会话已用它跑完一个完整窗口**（[v33](#g2-v33-run)），22:47 会话补齐三条边界（[v34](#g2-v34-boundaries)）。**当前三键为开**，为补测 `reason=reset` 保留；补测完必须恢复 `off/false/false` 并完整重启。
 - 部署前 v30 三件套已备份到 `dist/deploy-backup-20261028-v30/`（DLL `e5b0e57c…`、PDB `e450627a…`、INI `2e150d41…`）。上一份归档运行记录仍是 **v30 DLL `e5b0e57c…`**（三键关闭）。
 - v31/v32 从未部署：它们的构建产物不在本检出中（`build/Release` 当时是 v30），所以本轮用同一份源码重建为 v33，身份与哈希见 [build](build.md#v33-rebuild-2026-10-28)。
 - 仓库样例 `config/CharacterPanel.ini` 同样三键全关，不要随部署一起改。
@@ -1582,7 +1583,7 @@ F7 导致显示拷贝 retarget 时，即使来源和 request 未变，也会结�
 
 以下是待执行程序，不是游戏结果。只做两类有界观察：先完成一个不中断的显示窗口，再观察窗口/来源失效边界。无需为文档修改重跑旧用例或构建。
 
-> 执行状态（2026-10-28 22:28）：**第 1–5 步已执行一次**——身份核对改为 [v33 记录](build.md#v33-rebuild-2026-10-28)（DLL `061d5b8a…` / PDB `5924464d…`，干净树、无 `+dirty`），三键开启后完成首个非中断窗口，三类结论见 [v33 运行记录](#g2-v33-run)。**第 6–7 步（120 前中断、重开拼接、F7 新 view epoch、来源/owner 失效）尚未执行**，仍是下一场的有界任务；清单文字保持原样。
+> 执行状态（2026-10-28）：**第 1–5 步已执行**——身份核对改为 [v33 记录](build.md#v33-rebuild-2026-10-28)，首个非中断窗口成立（[v33](#g2-v33-run)）。**第 6 步部分成立**：重开不拼接、F7 丢弃 `steps=84`、读档后旧候选被拒（[v34](#g2-v34-boundaries)）；**`reason=reset` 的 120 前关窗仍未采**（120 次调用仅约 3.3 s）。**第 7 步未执行**。清单文字保持原样。
 
 1. **核对输入和身份。** 保留待测 DLL 与匹配 PDB、原 INI 和日志。若使用现有 v32 离线构建，逐项核对 [build 记录](build.md#v32-display-session-2026-10-28)的 SHA-256、字节数及完整 `SCENEGRAPH BUILD` 身份（`f5ec13f2c2+dirty`，配置时间 `20261028T073724Z`）；它是提交前产物，后续提交不会改写身份。若另行重新构建，则记录实际新身份/哈希，不能沿用旧记录。确认运行时为 exact **AE 1.6.1170 / `1-6-1170-0`**。v33 已按上方执行状态部署，核对该对哈希而不是旧 v32 记录。
 2. **只调整三个实验键，重启。** 在实际加载的 `[Experiment]` 中设 `IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`，保留其他 INI 设置。设置在 DataLoaded 加载，须完整退出游戏再启动。保留此轮实际 INI；详细 tracing 不是这些 display 行的前提。首次可用的 `panel-open` 执行一次候选批量；确认本轮候选具备 loaded/retained、私有状态守卫与来源身份，再解释后续 display 行。
@@ -1627,6 +1628,29 @@ call 1/60/120 × `post-pipeline/post-update/post-sample` 共 9 行，全部为 `
 22:28:14 `DAC restore … result=matched`（epoch=2、`spell-groups=3`）、`Panel menu opening=false`、`lifetime reset`；会话结束后三键恢复 off 并完整重启才回到默认产品路径。
 
 本记录只覆盖：单进程、单次批量、单窗口 120 次 eligible 调用、暂停背包、一个 actor/来源/generation/view。**未覆盖**：120 前中断与 `window=aborted`、重开不拼接、F7 重捕获的新 view epoch、来源 generation 改变或 controller 销毁后拒绝旧候选、装载图停用/销毁与全局收敛、物理/武器挂载交互、G3–G6、不同帧率下的速率校准。
+
+<a id="g2-v34-boundaries"></a>
+## G2 v34 边界会话（2026-10-28 22:47 会话，F7 与来源失效成立，reset 中断未采）
+
+同一份 DLL（v33）第三次上机，只做窗口/来源边界，不新增代码。日志[归档](diagnostics/CharacterPanel-g2v34-boundaries-20261028-2247.log)（83,924 字节、`23637075…`）；无 `[E]`，15 条 `[W]` 同属既有 DAC 预检与灯光账本。
+
+**会话形状**：22:46:33 启动 → 开包 1（request=1/view=1）、开包 2（request=2/view=2）、开包 3（request=3/view=2，中途 F7 → view=3）、读档、读档后开包（request=1，新 lifetime）。
+
+| 步骤 | 结果 | 证据 |
+| --- | --- | --- |
+| ① 120 前关窗（`reason=reset`） | **未达成** | 开包 1 从 22:47:53.292 一路跑到 call 120（22:47:56.598）并出摘要，22:49:06 才关包。120 次 eligible 调用只需约 3.3 s，人工操作来不及 |
+| ② 重开 | **成立** | 开包 2 重采 `stage=before pose-hash=0af9a6a6f3f1c963`（与开包 1 的 `1ebf9021afd2a1d1` 不同）、call 从 1 起算，独立跑满 120 并出第二份摘要——没有接续开包 1 |
+| ③ F7 | **成立** | `window=aborted … request=3 view=2 steps=84 reason=retarget source-comparison=discarded`；随后 view 2→3、重采 before（`f5a9a106bc431094`，源未变故与窗口内相同）、`application` 重报覆盖，新窗口再跑满 120 并出摘要 |
+| ④ 来源失效 | **成立（预期形态）** | 读档后开包只有 `ANIMATION PANEL accepted` 与 OAR `asset ready`，**没有任何 `ANIMATION DISPLAY` 行**，也没有残留 `native-step`。旧候选被拒、实验不在同进程重跑 |
+
+### 附带读数
+
+- **候选轨迹逐位可复现，且与源姿态无关**：本次开包 1 的 `native-step=1/60/120` 为 `63f161f2cd7502c9` / `7a044b3473f832df` / `2b29331eea5279d9`，与 [v33](#g2-v33-run) 那次**逐位相同**；而两次的源 `stage=before` 哈希分别是 `1ebf9021…` 与 `23dd49fe…`。固定 1/60 步长加候选自身图状态决定轨迹，源姿态不参与——隔离的正面证据。
+- **重开会让 view 跳 2**：`request=2` 先 `retarget` 到上一份拷贝（22:49:14.311），再 `SCOPY BEGIN capture=2` 后 `retarget` 到新拷贝（22:49:14.316），基线在两次之后才采。view 编号不连续属设计内，不能当异常。
+- **call 1 的门可能是瞬态**：`request=3 view=2` 的 call=1 读到 `children=false w245=0x101 b246=1`，到 call=60 已是 `children=true w245=0x0`，窗口照常推进（哈希在变）。门值要看整窗或至少两个检查点，**单点读数会重犯 v30 的错**。
+- `SCOPY PARK … snapshots held alive for the process lifetime: 4`：本会话累积 4 份场景拷贝，归 ②（资源收敛）记账，不属于本步。
+
+**范围**：单进程、暂停背包、一个 actor/来源；`reason=reset` 那条中断分支仍未采集，其余三条边界成立。装载图停用/销毁与全局收敛仍属 G1 遗留。
 
 ## 当前采集器与操作
 
@@ -1730,6 +1754,7 @@ BehaviorGraphProbe=true
 | G2 v30 运行与判读 | 2026-10-28 00:58 会话：显示哈希仍冻结，批量/显示同线程；日志归档 54,987 字节 `0F7B25DE…`，三键回 off。后验复核：active/children 基址错误、numData 少解引用，不能判图未 arm；显示也遗漏 63587 等完整步骤。见[v30 更正](#g2-v30-run) | 优先验证 [v31 共用单步](#g2-v31-correction)，缓存为备选 |
 | G2 v31/v32 离线 | 2026-10-28 白天：v31 共用完整单步与修正读法、v32 来源/窗口/语义运动/实际写骨，两个新 engine-free 场景各 2 例通过，Release 构建通过；**产物未留存**（`build/Release` 仍是 v30，检出内无 v31/v32 目录或包） | 重建后上机 |
 | G2 v33 重建与部署 | 2026-10-28 22:20–22:23：以 HEAD `d323b35` 重配新 label 构建（干净树，无 `+dirty`），DLL `061d5b8a…` 1,319,424 B / PDB `5924464d…`；同一树重跑两个离线场景各 2 例通过；v30 三件套备份至 `dist/deploy-backup-20261028-v30/` 后部署，三键开。见[构建](build.md#v33-rebuild-2026-10-28)与[部署](#deploy-state) | —（运行见下行） |
+| G2 v34 边界会话 | 2026-10-28 22:47 会话（同一 v33 DLL）：开包 1 跑满 120（未在 120 前关）、开包 2 重采基线且不拼接、开包 3 中途 F7 → `steps=84 reason=retarget source-comparison=discarded` + view 2→3、读档后开包 0 条 display 行；无 `[E]`；日志归档 83,924 字节 `23637075…`。附带：`native-step` 三点哈希与 v33 逐位相同而源 before 不同 → 候选轨迹可复现且与源无关；`SCOPY PARK` 累积 4 份。见[v34 记录](#g2-v34-boundaries) | `reason=reset` 的 120 前关窗；随后恢复三键 off |
 | G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
