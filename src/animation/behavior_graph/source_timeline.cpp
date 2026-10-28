@@ -26,21 +26,19 @@ namespace animation::behavior_graph
 {
     namespace
     {
-        // G3-A keeps its own budgets: the graph has 652 word variables today, and a bounded
-        // number of lines keeps one equip/unequip pair readable.
+        // G3-A budgets and rules. The point of the settle rule is to ignore per-frame scalars
+        // (TimeDelta, Pitch, velocity...) and keep only values that actually hold: a change is
+        // written only after the new value has survived kSettleSamples consecutive samples.
         constexpr std::size_t kMaxWords = 1024;
         constexpr std::uint32_t kLineBudget = 200;
-        constexpr std::int32_t kNodeHashEntries = 64;
+        constexpr std::uint8_t kSettleSamples = 3;
         constexpr std::uint64_t kFnvOffset = 0xcbf29ce484222325ull;
-        constexpr std::uint64_t kFnvPrime = 0x100000001b3ull;
 
         // hkbVariableValueSet stores its word array behind an hkArray whose data pointer and
-        // count are at +0x10 / +0x18; the same offsets the candidate probe already reads.
+        // count are at +0x10 / +0x18; both offsets are the ones the candidate probe already reads.
         constexpr std::size_t kWordDataOffset = 0x10;
         constexpr std::size_t kWordCountOffset = 0x18;
-        // hkbBehaviorGraph::activeNodes is an opaque NodeList; the data pointer is at +0 and
-        // the count at +8, matching the generation-entry reader.
-        constexpr std::size_t kNodeDataOffset = 0x0;
+        // hkbBehaviorGraph::activeNodes is an opaque NodeList: data pointer at +0, count at +8.
         constexpr std::size_t kNodeCountOffset = 0x8;
 
         template <class T>
@@ -53,10 +51,13 @@ namespace animation::behavior_graph
 
         struct Recorder
         {
-            std::vector<std::int32_t> words;
+            std::vector<std::int32_t> logged;
+            std::vector<std::int32_t> candidate;
+            std::vector<std::uint8_t> settled;
             std::vector<std::uint8_t> named;
             std::int32_t node_count = -1;
-            std::uint64_t node_hash = 0;
+            std::int32_t node_candidate = -1;
+            std::uint8_t node_settled = 0;
             std::uint32_t lines = 0;
             bool armed = false;
             bool exhausted = false;
@@ -100,16 +101,6 @@ namespace animation::behavior_graph
             return chosen;
         }
 
-        std::uint64_t mix(std::uint64_t a_hash, std::uint64_t a_value)
-        {
-            for (std::size_t byte = 0; byte < sizeof(a_value); ++byte)
-            {
-                a_hash ^= (a_value >> (byte * 8)) & 0xFFull;
-                a_hash *= kFnvPrime;
-            }
-            return a_hash;
-        }
-
         char const* variable_name(RE::hkbBehaviorGraph const& a_graph, std::size_t a_index)
         {
             RE::hkbBehaviorGraphData const* const data = a_graph.data.get();
@@ -121,22 +112,39 @@ namespace animation::behavior_graph
             return names[static_cast<std::uint32_t>(a_index)].c_str();
         }
 
+        void arm(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
+            std::size_t a_count, std::uint32_t a_actor_id)
+        {
+            a_state.armed = true;
+            a_state.logged.assign(a_words, a_words + a_count);
+            a_state.candidate.assign(a_words, a_words + a_count);
+            a_state.settled.assign(a_count, 0);
+            a_state.named.assign(a_count, 0);
+            void* const nodes = a_behavior.activeNodes;
+            a_state.node_count = nodes ? field_at<std::int32_t>(nodes, kNodeCountOffset) : 0;
+            a_state.node_candidate = a_state.node_count;
+            a_state.node_settled = 0;
+            logger::info("SOURCE TIMELINE armed actor={:08x} words={} nodes={}", a_actor_id, a_count, a_state.node_count);
+        }
+
         void sample_variables(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
             std::size_t a_count)
         {
-            if (a_state.words.size() != a_count)
-            {
-                a_state.words.assign(a_words, a_words + a_count);
-                a_state.named.assign(a_count, 0);
-                return;
-            }
             for (std::size_t i = 0; i < a_count; ++i)
             {
                 std::int32_t const current = a_words[i];
-                if (a_state.words[i] == current)
+                if (current != a_state.candidate[i])
+                {
+                    a_state.candidate[i] = current;
+                    a_state.settled[i] = 0;
                     continue;
-                std::int32_t const previous = a_state.words[i];
-                a_state.words[i] = current;
+                }
+                if (a_state.settled[i] < kSettleSamples)
+                    ++a_state.settled[i];
+                if (a_state.settled[i] < kSettleSamples || current == a_state.logged[i])
+                    continue;
+                std::int32_t const previous = a_state.logged[i];
+                a_state.logged[i] = current;
                 if (!take_line(a_state))
                     return;
                 float previous_float = 0.0f;
@@ -159,21 +167,19 @@ namespace animation::behavior_graph
         {
             void* const nodes = a_behavior.activeNodes;
             std::int32_t const count = nodes ? field_at<std::int32_t>(nodes, kNodeCountOffset) : 0;
-            std::uintptr_t const data = nodes ? field_at<std::uintptr_t>(nodes, kNodeDataOffset) : 0;
-            std::uint64_t hash = kFnvOffset;
-            if (data && count > 0)
+            if (count != a_state.node_candidate)
             {
-                std::int32_t const limit = std::min(count, kNodeHashEntries);
-                for (std::int32_t i = 0; i < limit; ++i)
-                    hash = mix(hash, field_at<std::uintptr_t>(reinterpret_cast<void const*>(data), sizeof(std::uintptr_t) *
-                        static_cast<std::size_t>(i)));
+                a_state.node_candidate = count;
+                a_state.node_settled = 0;
+                return;
             }
-            if (count == a_state.node_count && hash == a_state.node_hash)
+            if (a_state.node_settled < kSettleSamples)
+                ++a_state.node_settled;
+            if (a_state.node_settled < kSettleSamples || count == a_state.node_count)
                 return;
             a_state.node_count = count;
-            a_state.node_hash = hash;
             if (take_line(a_state))
-                logger::info("SOURCE TIMELINE nodes count={} hash={:016x}", count, hash);
+                logger::info("SOURCE TIMELINE nodes count={}", count);
         }
     }
 
@@ -198,12 +204,15 @@ namespace animation::behavior_graph
         Recorder& state = recorder();
         if (!state.armed)
         {
-            state.armed = true;
-            logger::info("SOURCE TIMELINE armed actor={:08x} words={}", actor.GetFormID(), count);
-            state.words.assign(words, words + count);
-            state.named.assign(static_cast<std::size_t>(count), 0);
-            state.node_count = -1;
-            state.node_hash = 0;
+            arm(state, *behavior, words, static_cast<std::size_t>(count), actor.GetFormID());
+            return;
+        }
+        if (state.logged.size() != static_cast<std::size_t>(count))
+        {
+            // The graph was replaced or reloaded; start a fresh baseline instead of diffing
+            // two different variable layouts.
+            logger::info("SOURCE TIMELINE rearm actor={:08x} words={}->{}", actor.GetFormID(), state.logged.size(), count);
+            arm(state, *behavior, words, static_cast<std::size_t>(count), actor.GetFormID());
             return;
         }
         sample_variables(state, *behavior, words, static_cast<std::size_t>(count));
