@@ -399,6 +399,15 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v39-timeline-window-20261029
 
 **Deployed 2026-10-29 00:17**: the v38 trio went to `dist/deploy-backup-20261029-v38/`, the deployed DLL hashes to `5f2f660a…`, and the INI keeps `SourceTimeline=true` with everything else off. The build string now advertises `F9-timeline`.
 
+<a id="v40-f7-2026-10-29"></a>
+## V40 timeline hotkey moved to F7 (2026-10-29)
+
+F9 is the game's own quick-load key, so v39's binding was unusable. V40 binds the timeline window to **F7 when no panel is open**; inside the panel F7 keeps its recapture meaning. The window length, settle rule, read points and budget are unchanged; only the input branch moved.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v40-timeline-f7-20261029-58d25af47b-cl94faaed0c6-20261028T161853Z`. DLL **1,328,640 bytes**, SHA-256 `5f791d2cedcad54ff97b6c18cc294966617972c0e4ed03ff57c353924dc1bc49`; PDB **36,352,000 bytes**, SHA-256 `139a491a6b3210495d98fe42ab17ad457a653edadafaa8815e54e35cf779055c`.
+
+**Deployed 2026-10-29 00:20**: the v39 trio went to `dist/deploy-backup-20261029-v39/`, the deployed DLL hashes to `5f791d2c…`, and the build string now reads `F7-recapture-or-timeline`.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
