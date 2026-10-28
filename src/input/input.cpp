@@ -5,6 +5,7 @@
 #include "input/input.h"
 
 #include "character/character_manager.h"
+#include "panel/panel_monitor.h"
 #include "animation/behavior_graph/source_timeline.h"
 
 #include <Windows.h>
@@ -36,14 +37,16 @@ namespace
                     continue;
                 const uint32_t scan = button->GetIDCode();
                 const auto graph = CharacterManager::instance().get_scene_graph(RE::PlayerCharacter::GetSingleton());
-                if (!graph)
+                // A scene graph object exists outside the pause menu too, so the panel-open state
+                // is the discriminator, not the graph pointer. F7 recaptures only in the panel;
+                // elsewhere it opens the G3-A timeline window.
+                if (!PanelMonitor::instance().is_menu_open())
                 {
-                    // G3-A: with no panel open, F7 opens the bounded timeline window instead of
-                    // recapturing. Inside the panel F7 keeps its recapture meaning below.
                     if (scan == MapVirtualKeyA(VK_F7, MAPVK_VK_TO_VSC))
                         animation::behavior_graph::arm_source_timeline();
                     continue;
                 }
+                if (!graph) continue;
                 using Command = SceneGraph::Command;
                 if (scan == MapVirtualKeyA(VK_F7, MAPVK_VK_TO_VSC))
                     graph->request(Command::e_capture);
