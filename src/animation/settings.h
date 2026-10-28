@@ -17,5 +17,7 @@ namespace animation
     [[nodiscard]] bool display_pose();
     // v28: advance the retained graph one step per rendered frame instead of showing the frozen pose.
     [[nodiscard]] bool display_step();
+    // G3-A: log the player graph's variable/active-node changes during normal play.
+    [[nodiscard]] bool source_timeline();
 }
 PLUGIN_NAMESPACE_END

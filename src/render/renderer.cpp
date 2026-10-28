@@ -11,6 +11,7 @@
 
 #include "panel/panel_monitor.h"
 #include "character/character_manager.h"
+#include "animation/behavior_graph/source_timeline.h"
 
 PLUGIN_NAMESPACE_BEGIN
 
@@ -149,6 +150,10 @@ namespace
 
     void post_ui_draw(int64_t)
     {
+        // G3-A: read the player's own graph once per frame. Off by default; when off this is a
+        // single settings read and returns.
+        if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
+            animation::behavior_graph::sample_source_timeline(*player);
         PassMerger::instance().on_post_ui_draw();
     }
 }
