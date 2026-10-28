@@ -35,14 +35,15 @@ namespace
                 if (!button || button->device.get() != RE::INPUT_DEVICE::kKeyboard || !button->IsDown())
                     continue;
                 const uint32_t scan = button->GetIDCode();
-                // G3-A: F9 opens a bounded timeline window without needing an open panel.
-                if (scan == MapVirtualKeyA(VK_F9, MAPVK_VK_TO_VSC))
+                const auto graph = CharacterManager::instance().get_scene_graph(RE::PlayerCharacter::GetSingleton());
+                if (!graph)
                 {
-                    animation::behavior_graph::arm_source_timeline();
+                    // G3-A: with no panel open, F7 opens the bounded timeline window instead of
+                    // recapturing. Inside the panel F7 keeps its recapture meaning below.
+                    if (scan == MapVirtualKeyA(VK_F7, MAPVK_VK_TO_VSC))
+                        animation::behavior_graph::arm_source_timeline();
                     continue;
                 }
-                const auto graph = CharacterManager::instance().get_scene_graph(RE::PlayerCharacter::GetSingleton());
-                if (!graph) continue;
                 using Command = SceneGraph::Command;
                 if (scan == MapVirtualKeyA(VK_F7, MAPVK_VK_TO_VSC))
                     graph->request(Command::e_capture);
