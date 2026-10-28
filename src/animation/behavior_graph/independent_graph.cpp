@@ -552,6 +552,28 @@ namespace
         return view;
     }
 
+    // AE 1.6.1170: an accepted graph load (REL id 63845) registers the finished object in the
+    // global table at [0x315C950] + 0x1F8 and increments the live count at +0x30. The retained
+    // candidate is never destroyed, so this count is the only direct measure of what the
+    // experiment leaves behind. It is a plain data read with a null guard, not a native call.
+    [[nodiscard]] std::optional<std::int32_t> registered_graph_count()
+    {
+        if (!REL::Module::IsAE() || REL::Module::get().version() != SKSE::RUNTIME_SSE_1_6_1170)
+            return std::nullopt;
+        static REL::Relocation<std::uintptr_t> s_registry_slot{ REL::Offset{ 0x315C950 } };
+        std::uintptr_t const registry = s_registry_slot.get();
+        if (!registry)
+            return std::nullopt;
+        return *reinterpret_cast<std::int32_t const*>(registry + 0x1F8 + 0x30);
+    }
+
+    [[nodiscard]] std::string registry_transition(std::optional<std::int32_t> const before,
+        std::optional<std::int32_t> const after)
+    {
+        if (!before || !after)
+            return "unavailable";
+        return fmt::format("{}->{}", *before, *after);
+    }
 }
 
 class DisplaySession::State
@@ -654,6 +676,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=begin mode={} runtime={}.{}.{}.{} holder=nullptr factory={} loader={} third-arg=false",
         actor_id, request, independent_graph_name(mode), version.major(), version.minor(), version.patch(), version.build(),
         GraphConstructorID, GraphLoaderID);
+    std::optional<std::int32_t> const registry_before = registered_graph_count();
 
     const Identity source_before = identify(source_graph);
     observe_source_baseline(source_graph, actor_id, request, source_generation);
@@ -1618,8 +1641,9 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
         g_held_step_ready = step_ready;
     }
     const Identity source_after = identify(source_graph);
-    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase={} source-drift={} registry-probe=unavailable",
-        actor_id, request, retained_loaded ? "retained" : "destroyed", first_drift(source_before, source_after));
+    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase={} source-drift={} registry={}",
+        actor_id, request, retained_loaded ? "retained" : "destroyed", first_drift(source_before, source_after),
+        registry_transition(registry_before, registered_graph_count()));
     observe_source_baseline(source_graph, actor_id, request, source_generation);
     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=end constructed={} loaded={} assembly={} separated={} source-stable={} retained={}",
         actor_id, request, constructed, loaded, assembled(candidate_final), separated(source_before, candidate_final),
