@@ -10,7 +10,8 @@
 
 | 要了解的内容 | 文档 |
 | --- | --- |
-| **全部测试与验证状态（先读这个）** | [验证总表](independent-behavior-graph.md#verification-matrix)：v17–v30 归档运行、v31/v32 离线修正、raw 与语义连续性边界、实际应用覆盖及复现入口 |
+| **当前状态、部署与后续规划（新会话先读这个）** | [当前状态与后续规划](independent-behavior-graph.md#handoff-20261029)：已完成项、DLL/开关、G3-B 契约草案、G3-B→G4→G5→G6 排序、反模式清单 |
+| **全部测试与验证状态** | [验证总表](independent-behavior-graph.md#verification-matrix)：各关卡判定、逐轮结论、引擎事实、未验证项 |
 | 构建、依赖和验证入口 | [Build](build.md) |
 | 复制显示图、取景、装备与生命周期 | [SceneGraph](scene-graph.md) |
 | 播放器、OAR查询、DAC原生事件 | [Animation](animation.md)、[OAR](oar-hooks.md)、[DAC](dac.md) |
