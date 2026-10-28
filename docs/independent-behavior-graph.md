@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-10-28。当前状态以本节、[验证总表](#verification-matrix)与 [v32 修正](#g2-v32-display-session)为准；原始日志和历史契约不变。v31 修正单步调用和读取，v32 修正来源/测量归属、运动语义和实际写骨覆盖，均尚未上机。
+更新：2026-10-28。当前状态以本节、[验证总表](#verification-matrix)与 [v32 修正](#g2-v32-display-session)为准；原始日志和历史契约不变。v31 修正单步调用和读取，v32 修正来源/测量归属、运动语义和实际写骨覆盖；两者的产物不在检出中，已用同一份源码重建为 **v33 并部署（三键开启）**，尚未上机。
 
 <a id="current-status"></a>
 
@@ -14,7 +14,7 @@
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
-[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口；另记符号不变的候选运动和实际写入覆盖。两个新离线场景及 Release 构建通过，见[构建记录](build.md#v32-display-session-2026-10-28)。没有新游戏日志、部署或视觉通过结论。默认三键关闭，产品仍走装备驱动 OAR 路径；缓存仅是备选。
+[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口；另记符号不变的候选运动和实际写入覆盖。两个新离线场景及 Release 构建通过，见[构建记录](build.md#v32-display-session-2026-10-28)。没有新游戏日志或视觉通过结论。2026-10-28 22:23 已把同一份源码重建为 **v33** 并部署到 MO2 实例（三键开启），见[部署记录](#deploy-state)；默认三键仍关闭，产品走装备驱动 OAR 路径，缓存仅是备选。
 
 
 
@@ -77,10 +77,13 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G3–G6、独立 OAR 语境 | 未执行 |
 | v30 的无效门/槽读数 | 原因已由源码确认并在 v31 修正：行为图对象基址与 output→element 间接层；新运行数据待采 |
 
+<a id="deploy-state"></a>
 ### 当前部署与开关
 
-- 最近归档的 MO2 部署记录为 **v30 DLL `e5b0e57c…`**、三键关闭。本轮没有检查或更改安装目录，没有部署 v31 或 v32。
-- 仓库样例 `config/CharacterPanel.ini` 同样三键全关。
+- **2026-10-28 22:23 部署 v33**（v32 代码在 HEAD `d323b35` 上的重建）：DLL `061d5b8a…`（1,319,424 B）、PDB `5924464d…`，MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，profile `AE` 为 `+CharacterPanel`。部署 INI 三键已开：`IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`（1,338 B、`0861a221…`），须完整退出游戏后重启才生效。尚未上机。
+- 部署前 v30 三件套已备份到 `dist/deploy-backup-20261028-v30/`（DLL `e5b0e57c…`、PDB `e450627a…`、INI `2e150d41…`）。上一份归档记录仍是 **v30 DLL `e5b0e57c…`** 的运行（三键关闭）。
+- v31/v32 从未部署：它们的构建产物不在本检出中（`build/Release` 当时是 v30），所以本轮用同一份源码重建为 v33，身份与哈希见 [build](build.md#v33-rebuild-2026-10-28)。
+- 仓库样例 `config/CharacterPanel.ini` 同样三键全关，不要随部署一起改。
 
 ### 测试包清单
 
@@ -1574,7 +1577,9 @@ F7 导致显示拷贝 retarget 时，即使来源和 request 未变，也会结�
 
 以下是待执行程序，不是游戏结果。只做两类有界观察：先完成一个不中断的显示窗口，再观察窗口/来源失效边界。无需为文档修改重跑旧用例或构建。
 
-1. **核对输入和身份。** 保留待测 DLL 与匹配 PDB、原 INI 和日志。若使用现有 v32 离线构建，逐项核对 [build 记录](build.md#v32-display-session-2026-10-28)的 SHA-256、字节数及完整 `SCENEGRAPH BUILD` 身份（`f5ec13f2c2+dirty`，配置时间 `20261028T073724Z`）；它是提交前产物，后续提交不会改写身份。若另行重新构建，则记录实际新身份/哈希，不能沿用旧记录。确认运行时为 exact **AE 1.6.1170 / `1-6-1170-0`**。本轮未部署任何文件。
+> 执行状态（2026-10-28 22:23）：v32 的构建产物不在检出中，已用同一份源码重建为 v33 并部署，三键开启。**第 1 步的身份核对对象改为 [v33 记录](build.md#v33-rebuild-2026-10-28)**（DLL `061d5b8a…` / PDB `5924464d…`，干净树身份，无 `+dirty`）；其余步骤文字不变。
+
+1. **核对输入和身份。** 保留待测 DLL 与匹配 PDB、原 INI 和日志。若使用现有 v32 离线构建，逐项核对 [build 记录](build.md#v32-display-session-2026-10-28)的 SHA-256、字节数及完整 `SCENEGRAPH BUILD` 身份（`f5ec13f2c2+dirty`，配置时间 `20261028T073724Z`）；它是提交前产物，后续提交不会改写身份。若另行重新构建，则记录实际新身份/哈希，不能沿用旧记录。确认运行时为 exact **AE 1.6.1170 / `1-6-1170-0`**。v33 已按上方执行状态部署，核对该对哈希而不是旧 v32 记录。
 2. **只调整三个实验键，重启。** 在实际加载的 `[Experiment]` 中设 `IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`，保留其他 INI 设置。设置在 DataLoaded 加载，须完整退出游戏再启动。保留此轮实际 INI；详细 tracing 不是这些 display 行的前提。首次可用的 `panel-open` 执行一次候选批量；确认本轮候选具备 loaded/retained、私有状态守卫与来源身份，再解释后续 display 行。
 3. **完成首个连续窗口。** 打开暂停背包，保持同一 actor/source graph/generation/controller、request 和 view；在前 **120 次 eligible display calls** 内不关闭、不 F7、不改变来源/装备。固定步长是每次 eligible 调用 1/60 秒；调用数不等于实际显示 FPS，也不等于同样长的墙钟时间。记录 `native-step=1/60/120` 及各自 `gates` 的 `post-pipeline/post-update/post-sample`。120 后驱动可以继续，但该窗口测量/日志受预算限制，不产生第二份摘要。
 4. **分别填写三类结论。** 候选：并列保存批量 `phase=pose-steps` 的 raw 位串与 `phase=pose-motion comparisons/changed/valid/epsilon`，以及显示 `pose-summary native-steps=120 raw-changed/raw-finite/semantic-changed/semantic-valid`。语义阈值为 **1e-6**，translation XYZ、符号不变 quaternion chord、scale X；q/-q 或仅 scale Y/Z 改变不算语义运动。计数是“至少一个候选骨变化”的比较次数，不是变化骨数；批量与显示的起始基线不同，不要求语义值照搬历史 **119/120**。`acceptance=unjudged` 要保留，按 G2 原有范围独立评估逐步语义连续性。应用：保存同窗口 `application mode=stepped` 的 `output-records/requested-unique/applied/missing/skipped-root/duplicates/missing-names`；核对 `requested-unique = applied + missing + skipped-root`、`duplicates = output-records - requested-unique`。只列最多四个 missing 名字，计数才是总数；不要求恰好 **116** 个 applied。画面：直接观察/记录拷贝角色是否持续运动、是否冻结或跳变；候选语义变化与 applied 数均不能替代视觉确认，也不能证明变化的骨都被映射。

@@ -344,7 +344,7 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v33-display-session-20261028
 
 Toolchain note for reproduction: the `vcvars64.bat`/`Enter-VsDevShell` route fails in this environment because the sandbox blocks `reg.exe`, so the SDK include paths are never resolved and `cl` stops at `crtdbg.h`. Compiling with explicit `INCLUDE`/`LIB`/`PATH` (`<VS>\VC\Tools\MSVC\14.44.35207` plus `Windows Kits\10` `10.0.26100.0`) works and was the route used here. CMake/MSBuild is unaffected because the cache already carries the resolved SDK.
 
-**No deployment, INI change or game run yet.** The next step is the [v32 checklist](independent-behavior-graph.md#v32-manual-checklist) against this pair.
+**Deployed 2026-10-28 22:23, no game run yet.** The v30 trio in `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` was first copied to `dist/deploy-backup-20261028-v30/` (DLL `e5b0e57c…`, PDB `e450627a…`, INI `2e150d41…`, 1,094 bytes), then replaced by this DLL/PDB; the deployed copies hash to `061d5b8a…` and `5924464d…`. MO2 profile `AE` lists `+CharacterPanel`, so nothing else needs enabling. The deployed `CharacterPanel.ini` in that directory now sets `IndependentGraph=inject`, `DisplayPose=true`, `DisplayStep=true` (1,338 bytes, SHA-256 `0861a221f861cbfaeced4c25463b0b3b1c10a4da96c0e6cff3ed1bb015e07d64`) with a pending-session comment; settings load at DataLoaded, so the game must be fully restarted. The repository sample `config/CharacterPanel.ini` stays default-off. Next: the [v32 checklist](independent-behavior-graph.md#v32-manual-checklist) against this pair, then restore all three keys.
 
 ## Scope and non-goals
 
