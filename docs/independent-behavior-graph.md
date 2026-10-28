@@ -8,7 +8,7 @@
 
 | 关卡 | 当前结果 | 证据边界 |
 | --- | --- | --- |
-| G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)），全局登记计数改由 v35 只读探针测量，均未上机。 |
+| G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)）；"全局登记计数"的旧静态结论被 v35 上机读数证伪、判为无锚点（[更正](#g1-teardown-audit)）。 |
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：来源图替换而 controller 未重建的 `source-invalid` 分支、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3–G6 | **完整关卡未通过/未执行** | 事件链、独立 OAR 语境、完整姿态对照及生命周期仍需分别验收。 |
 
@@ -78,7 +78,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | 显示窗口边界 | **已验全部四条**：`reset` 中断（`steps=61`，无摘要）、重开不拼接、F7 `reason=retarget` + view 递增 + 重采基线、读档后旧候选被拒且无 `native-step` 残留（v34）。**未验**：来源图被替换而 controller 未重建的 `reason=source-invalid` 分支 |
 | 场景应用（物理、武器挂载交互） | 未验 |
 | 装载图停用/销毁 | **判为 NO-GO（2026-10-28 审计）**：`Deactivate` 对 `activeNodes` 无空检查，且候选与源共享 `rootGenerator`，未证活动节点条目是克隆；污染源图比崩溃更糟。收益只是每进程一张图的登记与内存，不阻塞 G3–G6。见[审计](#g1-teardown-audit) |
-| 全局登记计数 | 静态确认装载即 `+0x228` 自增一次、我们永不减；**v35 只读探针待上机**读 `N->N+1`（[契约](#g1-teardown-audit)） |
+| 全局登记计数 | **无锚点、不立项**：v35 探针在 23:16 上机读回 `300474432->300474432`，重审指令确认 `[0x315C950]+0x228` 是不变的奇偶/序列值、`inc` 未写回、`63529` 只是无锁追加而非登记；旧审计那句话判为误读（[更正](#g1-teardown-audit)） |
 | G3–G6、独立 OAR 语境 | 未执行 |
 | 非骨缺失项逐名核对 | v33 的 `missing=7` 只按预算列了 4 个名字，其余 3 个未列名，不能逐一断言全部非骨 |
 | 帧率无关性 | 固定步长 1/60 每次 eligible 调用；调用数不等于墙钟时间，未做不同 FPS 下的速率校准 |
@@ -87,9 +87,9 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 ### 当前部署与开关
 
 - **2026-10-28 22:23 部署 v33**（v32 代码在 HEAD `d323b35` 上的重建）：DLL `061d5b8a…`（1,319,424 B）、PDB `5924464d…`，MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，profile `AE` 为 `+CharacterPanel`。
-- **22:28 会话已用它跑完一个完整窗口**（[v33](#g2-v33-run)），22:47 与 23:00 两次会话补齐四条边界（[v34](#g2-v34-boundaries)）。**全部观察结束，三键已恢复 `off/false/false`**（部署 INI 1,444 B、`a7140437…`）；须完整退出游戏后重启才回到默认产品路径。
-- 部署前 v30 三件套已备份到 `dist/deploy-backup-20261028-v30/`（DLL `e5b0e57c…`、PDB `e450627a…`、INI `2e150d41…`）。上一份归档运行记录仍是 **v30 DLL `e5b0e57c…`**（三键关闭）。
-- v31/v32 从未部署：它们的构建产物不在本检出中（`build/Release` 当时是 v30），所以本轮用同一份源码重建为 v33，身份与哈希见 [build](build.md#v33-rebuild-2026-10-28)。
+- **2026-10-28 23:18 部署 v36**（v33 代码 + 回滚 v35 探针，身份 `…v36-registry-probe-revert-20261028-cee948dcf8…`，DLL `ac01ac95…`、1,319,424 B）：**三键全部 off**，产品走纯 OAR。v35 三件套备份在 `dist/deploy-backup-20261028-v35/`（DLL `9d5cce9f…`）。
+- 之前用同一份代码的 v33 跑过 v33/v34 两个会话（完整窗口 + 四条边界），`IndependentGraph=inject` 下的行为已记录在案。
+- v31/v32 从未部署：它们的构建产物不在本检出中，所以当时用同一份源码重建为 v33，身份与哈希见 [build](build.md#v33-rebuild-2026-10-28)。
 - 仓库样例 `config/CharacterPanel.ini` 同样三键全关，不要随部署一起改。
 
 ### 测试包清单
@@ -1703,31 +1703,25 @@ BehaviorGraphProbe=true
 
 **收益核算**：候选每进程至多一张（`attempted` 静态 + `retained` 分支），已装载即不再分配。销毁能换回的是"一次进程内的一个图 + 一条登记"，不是可累积的泄漏。因此它是质量项，不是稳定性项，**不阻塞 G3–G6**。
 
-## G1 遗留二：全局登记计数（2026-10-28 审计 + v35 只读探针）
+## G1 遗留二：全局登记计数（2026-10-28 审计 → v35 上机证伪 → v36 回滚）
 
-**静态事实**：加载函数 `63845`（`0xbc1d70`）在返回前用自旋锁（`[r9+0xC]` 在 `0x30000001`/`0x40000000` 间翻转）包住一段登记：
+**这一项先前的静态结论是错的，本节保留更正过程。**
 
-```
-bc2146: mov r10, [rip+…]      ; 0x315C950，全局槽存的是对象指针
-bc2177: lea rcx, [r10+0x1F8]  ; 登记容器内联在 +0x1F8
-bc217e: mov r8d, [rcx+0x30]   ; 计数在容器 +0x30（即对象 +0x228）
-bc2182: inc r8d
-bc2188: call 0xbabbf0         ; id 63529，插入
-```
+原先的读法：`63845`（`0xbc1d70`）尾部用自旋锁包住一段登记，`[r10+0x1F8]+0x30` 是计数、`inc` 后 `call 63529` 插入，因此"每次接受装载都会让全局登记计数 +1"。据此加了 v35 只读探针并在 23:16 上机。
 
-也就是说**每次"接受"的装载都会把图登记进全局表并让计数 +1**，而我们的路径从不走析构，所以这个 +1 永久保留。此前日志里的 `registry-probe=unavailable` 是硬编码占位，不是探测失败。
+**上机读数**：`phase=retained source-drift=none registry=300474432->300474432`（日志[归档](diagnostics/CharacterPanel-g1v35-registry-probe-20261028-2316.log)，54,198 字节、`0046da43…`）——**前后完全相同，且 3 亿这个量级不可能是计数**。按预注册的停止条件当场判该轮未采，回到审计。
 
-**v35 探针**：`independent_graph.cpp` 新增 `registered_graph_count()`（`REL::Offset{0x315C950}` → 取值 → `+0x228` 读 `int32`，空指针返回 `unavailable`），只在 AE 1.6.1170 且 `IndependentGraph != off` 时生效；`phase=retained` 行把占位换成 `registry=<before>-><after>`。**只读，不调用任何 native 函数，不写引擎内存。**
+**重读指令后确认三处判错**：
 
-**预注册读数（不得事后放宽）**：
+1. `call 0xbabbf0`（id 63529）不是登记插入，而是**把对象推进一条无锁追加缓冲**：`lea rbx,[rcx + (r8&1)*0x18]` 选两条 0x18 字节车道，`lock cmpxchg [rbx],1` 抢槽，`mov rax,[rbx+0x10]` 取尾指针，`[rax]=rdi` 写入对象，`[rbx+0x10]=rdi+0x18` 推进尾指针，最后把锁位清零。**没有数组增长、没有计数存储。**
+2. `inc r8d` 只在寄存器里，**63529 全程没有把 `r8d` 写回 `[rcx+0x30]`**；函数体内只写到 `[rbx]`、`[rax]`、`[rbx+0x10]`。所以那个字段是**不变的序列/奇偶值**，不是随装载增长的计数——这正是本次读数前后相同的原因。
+3. 该块还有前置门 `test r9,r9; je 0xbc218e`：`r9` 为空时整段跳过。即使跳过，结论也一样——**这里没有可测量的"登记计数"**。
 
-| 观察点 | 期望 | 不成立的信号 |
-| --- | --- | --- |
-| `phase=begin` 前（进程内首次暂停开包前） | 一个整数 N（源码里记在 `registry_before`） | `unavailable` = 全局槽为空或运行时不是 1170，本轮判为未采，不得用其它数字代入 |
-| `phase=retained` 后 | `N->N+1` | 增量 ≠ 1（>1 说明还有别的登记路径；=0 说明装载没真正登记，需重审 63845 结论） |
-| 关包、再次开包 | 仍 `N+1`（`attempted` 已置位，不再装载） | 继续增长 = 存在未被识别的重复装载 |
+**结论**：`registry-probe` 没有可靠锚点。此前文档里"尾部把完成对象登记进全局注册表、计数自增"这句话是误读，已在本节更正；原始审计记录保留，不追溯改写。**这一项从"待上机"降级为"无锚点、不立项"**，不再占据待办清单。
 
-**停止条件**：读到 `unavailable`、增量不是 1、或进程内出现第二次装载，即停止判读，保留日志与匹配 PDB，回到审计而不是改配方。**不做**：不调用 Deactivate、不删除候选、不把候选登记进 manager、不加写操作。
+**v36**：`1ca2ad6` 的探针已 `git revert`（`cee948d`），构建 `…v36-registry-probe-revert-20261028-cee948dcf8…`（DLL `ac01ac95…`、1,319,424 B）并部署，三键全部回 off，见[构建](build.md#v36-revert-2026-10-28)。
+
+**仍然成立的部分**：候选由我们自己持有、从不销毁（`g_held_graph`，每进程至多一张），这一点不依赖上面任何读数。因此"装载图停用/销毁"仍按上一节判 **NO-GO**；而"图是否被引擎登记"目前**未知且不可测**，不再作为结论使用。
 
 ## G1 源基线（2026-10-23 会话）
 
@@ -1800,7 +1794,7 @@ bc2188: call 0xbabbf0         ; id 63529，插入
 | G2 v31/v32 离线 | 2026-10-28 白天：v31 共用完整单步与修正读法、v32 来源/窗口/语义运动/实际写骨，两个新 engine-free 场景各 2 例通过，Release 构建通过；**产物未留存**（`build/Release` 仍是 v30，检出内无 v31/v32 目录或包） | 重建后上机 |
 | G2 v33 重建与部署 | 2026-10-28 22:20–22:23：以 HEAD `d323b35` 重配新 label 构建（干净树，无 `+dirty`），DLL `061d5b8a…` 1,319,424 B / PDB `5924464d…`；同一树重跑两个离线场景各 2 例通过；v30 三件套备份至 `dist/deploy-backup-20261028-v30/` 后部署，三键开。见[构建](build.md#v33-rebuild-2026-10-28)与[部署](#deploy-state) | —（运行见下行） |
 | G2 v34 边界会话 | 2026-10-28。22:47 会话：开包 1 跑满 120（未在 120 前关）、开包 2 重采基线且不拼接、开包 3 中途 F7 → `steps=84 reason=retarget source-comparison=discarded` + view 2→3、读档后开包 0 条 display 行；日志 83,924 字节 `23637075…`。**23:00 补测**：开包 1 在 call 61 关包 → `steps=61 reason=reset source-comparison=discarded` 且无摘要，开包 2 从 call 1 独立跑满 120；日志 64,003 字节 `bc7f27c4…`。两次均无 `[E]`。附带：`native-step` 三点哈希与 v33 逐位相同而源 before 不同 → 候选轨迹可复现且与源无关；`SCOPY PARK` 累积 4 份。三键已回 off。见[v34 记录](#g2-v34-boundaries) | 来源图替换而 controller 未重建的 `source-invalid` 分支；G1 装载销毁/全局收敛；G3–G6 |
-| G1 遗留审计 + v35 | 2026-10-28 23:11：指令级确认 `Deactivate`（`0xab1f70`）对 `activeNodes` 无空检查、`context+8` 非空即早退、释放 `variableValueSet` 并置 `isActive=false`；引擎只在 `BShkbAnimationGraph` 析构里配对调用；候选与源三份日志 `root-generator` 同指针 → **销毁判 NO-GO**。另确认 `63845` 尾部对 `+0x228` 计数自增，遂加只读探针 `registered_graph_count()`，构建 v35（身份 `…v35-registry-probe-20261028-1ca2ad6979…`，DLL `9d5cce9f…`）并部署，`IndependentGraph=inject`、显示两键关闭。见[审计与契约](#g1-teardown-audit)、[构建](build.md#v35-registry-probe-2026-10-28) | 一次上机读数 `N->N+1`，尚未执行 |
+| G1 遗留审计 + v35/v36 | 2026-10-28 23:11–23:18：指令级确认 `Deactivate`（`0xab1f70`）对 `activeNodes` 无空检查、`context+8` 非空即早退、释放 `variableValueSet` 并置 `isActive=false`；引擎只在 `BShkbAnimationGraph` 析构里配对调用；候选与源三份日志 `root-generator` 同指针 → **销毁判 NO-GO**。**v35 探针证伪**：23:16 读回 `registry=300474432->300474432`，重审确认 `+0x228` 是不变奇偶值、`inc` 未写回、`63529` 是无锁追加而非登记 → 旧"登记计数"结论作废，判无锚点。`1ca2ad6` 已 revert（`cee948d`），构建 **v36**（`…v36-registry-probe-revert-20261028-cee948dcf8…`，DLL `ac01ac95…`）并部署，三键回 off。见[审计与更正](#g1-teardown-audit)、[v35 构建](build.md#v35-registry-probe-2026-10-28)、[v36 构建](build.md#v36-revert-2026-10-28) | —（该项结清） |
 | G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |

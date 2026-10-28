@@ -8,7 +8,7 @@
 
 ### Added
 
-- Report the engine's behavior-graph registry count around the candidate load (v35): the retained graph is registered by the engine loader and never removed, and the previous `registry-probe=unavailable` was a placeholder rather than a failed probe. `registered_graph_count()` reads `[0x315C950] + 0x228` under an exact-AE1170 gate with a null guard and prints `registry=<before>-><after>` on `phase=retained`. Read-only, no native call, no engine write; pre-registered reading in the [G1 leftover contract](docs/independent-behavior-graph.md#g1-teardown-audit).
+- Probe the engine's behavior-graph registry count around the candidate load (v35), then withdraw it (v36): the 23:16 run printed `registry=300474432->300474432`, and re-reading the instructions showed that `[0x315C950] + 0x228` is a local parity value that is never written back while `63529` is a lock-free append rather than a registry insert. The earlier "the loader registers the graph and bumps a count" reading is retired; the item is left without a measurable anchor instead of being guessed at. See the [correction](docs/independent-behavior-graph.md#g1-teardown-audit).
 
 - Record the teardown decision from the same audit: `hkbBehaviorGraph::Deactivate` dereferences `activeNodes` without a null check, early-returns when `context+8` is set, releases `variableValueSet` and clears `isActive`, and the engine only calls it from `BShkbAnimationGraph`'s destructor. Because the candidate shares `rootGenerator` with the source graph and the active-node entries are not proven to be clones, destroying the retained candidate is a documented **NO-GO** — corrupting the source graph would follow the save, which is worse than a reproducible crash.
 

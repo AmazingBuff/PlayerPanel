@@ -349,13 +349,24 @@ Toolchain note for reproduction: the `vcvars64.bat`/`Enter-VsDevShell` route fai
 <a id="v35-registry-probe-2026-10-28"></a>
 ## V35 registry-count probe (2026-10-28)
 
-[G1 leftover two](independent-behavior-graph.md#g1-teardown-audit) turns the hardcoded `registry-probe=unavailable` into a measurement: `registered_graph_count()` reads the engine's graph registry through `REL::Offset{0x315C950}` + `0x1F8` + `0x30`, and `phase=retained` prints `registry=<before>-><after>`. It is a plain data read with a null guard and an exact-AE1170 gate; no native call, no engine write, no Deactivate. The change is one helper pair plus one format string in [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp).
+> **The premise of this build was wrong.** The 23:16 run printed `registry=300474432->300474432`; re-reading the instructions showed the field is a local parity/sequence value that is never written back, and `63529` is a lock-free append rather than a registry insert. The probe is reverted in [v36](#v36-revert-2026-10-28) and the claim is corrected in the [G1 leftover section](independent-behavior-graph.md#g1-teardown-audit). This record is kept as the negative result.
+
+[G1 leftover two](independent-behavior-graph.md#g1-teardown-audit) turned the hardcoded `registry-probe=unavailable` into a measurement: `registered_graph_count()` read `REL::Offset{0x315C950}` + `0x1F8` + `0x30`, and `phase=retained` printed `registry=<before>-><after>`. Plain data read with a null guard and an exact-AE1170 gate; no native call, no engine write, no Deactivate.
 
 Configure and build used the same commands as v33; the tree was committed first (`1ca2ad6979`) so the identity is clean. The two engine-free suites were **not** rerun for this build — the delta touches only native glue and logging, and neither suite links that code.
 
 Identity: `CharacterPanel-scenegraph-behavior-graph-v35-registry-probe-20261028-1ca2ad6979-cl94faaed0c6-20261028T150959Z`. DLL **1,319,936 bytes**, SHA-256 `9d5cce9ffbfc925155f0f09305c8a14363dbb4c6802e9dd74ccef7db34cc1753`; PDB **36,261,888 bytes**, SHA-256 `c9fdd1d92431098dcfda6ff680af2dc647871321b7e1c3c159d143fc25b6553f`.
 
 **Deployed 2026-10-28 23:11.** The v33 trio was backed up to `dist/deploy-backup-20261028-v33/` (DLL `061d5b8a…`, PDB `5924464d…`, INI `a7140437…`), then replaced. The deployed INI sets `IndependentGraph=inject` only — `DisplayPose`/`DisplayStep` stay false, because the probe runs at load and needs no display stepping. Pre-registered reading, stop conditions and the non-goals are in the [contract](independent-behavior-graph.md#g1-teardown-audit).
+
+<a id="v36-revert-2026-10-28"></a>
+## V36 registry-probe revert (2026-10-28)
+
+`1ca2ad6` is reverted by `cee948d` because the field it read is not a registry count. Configure and build used the same commands; the tree was clean at the revert commit, so the identity carries no `+dirty`. The two engine-free suites were not rerun — the revert restores the exact v33 source for that file.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v36-registry-probe-revert-20261028-cee948dcf8-cl94faaed0c6-20261028T151759Z`. DLL **1,319,424 bytes**, SHA-256 `ac01ac953dc923b62cfecec17d83bfa8371d0a622ba13c72370f11a233c278c3`; PDB **36,261,888 bytes**, SHA-256 `584e3e4f527e8e929d74dfa40c24116721b2f968c629a966fad848c04b8b0b68`.
+
+**Deployed 2026-10-28 23:18**: the v35 trio went to `dist/deploy-backup-20261028-v35/` (DLL `9d5cce9f…`), the deployed DLL now hashes to `ac01ac95…`, and all three experiment keys are back to `off/false/false`, so the shipped behaviour is the plain OAR product path.
 
 ## Scope and non-goals
 
