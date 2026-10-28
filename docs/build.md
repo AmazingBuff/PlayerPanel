@@ -331,6 +331,21 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v32-display-session-20261028
 
 **No game execution, package or deployment.** Candidate semantic continuity must be rechecked with new runtime data; actual node coverage/source controls and visual display remain separate pending verification under the [v32 checklist](independent-behavior-graph.md#v32-manual-checklist). Historical raw119/120 does not establish semantic motion, and bones=116 did not count applied nodes.
 
+<a id="v33-rebuild-2026-10-28"></a>
+## V33 rebuild of the committed v32 code (2026-10-28)
+
+The v32 identity above came from an uncommitted tree and no v31/v32 artifact survived in the checkout: `build/Release/CharacterPanel.dll` was the deployed v30 binary (`e5b0e57c…`, 1,304,064 bytes) and no `build/behavior-graph-v31-*`/`v32-*` directory or package existed. A game run therefore needs a fresh artifact from committed HEAD `d323b35` under a new label; the source is unchanged from the v32 tree, so the contract and the two engine-free cases are the same code.
+
+- Configure: `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v33-display-session-20261028` with the lowercase proxy variables removed from the child environment; clean tree, so the identity carries no `+dirty`.
+- Build: `cmake --build --preset Release`, exit 0 (incremental against the v30 objects). Only the pre-existing install-rule warning and D9025 `/Ob2`→`/Ob3` remain.
+- Engine-free cases rerun on this tree, both exit 0: [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp) (`2 display-session regression cases passed`) and [behavior_graph_display_step_test.cpp](../tests/behavior_graph_display_step_test.cpp) (`2 display-step regression cases passed`), object/exe under `build/behavior-graph-v33-display-session-20261028/`. The older policy cases were still not rerun.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v33-display-session-20261028-d323b357a8-cl94faaed0c6-20261028T142029Z`, embedded and verified in the DLL. DLL **1,319,424 bytes**, SHA-256 `061d5b8af09c14c1c9fffabdfed82cd4ac5889feabec80bb62bf357b1adadd75`; PDB **36,261,888 bytes**, SHA-256 `5924464d94f0c8843fd1a4dc50ff3651dac9321e12c7b9c4460ffc4fb7eefdbe`. The binary is larger than the recorded v32 one because the label and configure stamp differ, not because of a source change.
+
+Toolchain note for reproduction: the `vcvars64.bat`/`Enter-VsDevShell` route fails in this environment because the sandbox blocks `reg.exe`, so the SDK include paths are never resolved and `cl` stops at `crtdbg.h`. Compiling with explicit `INCLUDE`/`LIB`/`PATH` (`<VS>\VC\Tools\MSVC\14.44.35207` plus `Windows Kits\10` `10.0.26100.0`) works and was the route used here. CMake/MSBuild is unaffected because the cache already carries the resolved SDK.
+
+**No deployment, INI change or game run yet.** The next step is the [v32 checklist](independent-behavior-graph.md#v32-manual-checklist) against this pair.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.

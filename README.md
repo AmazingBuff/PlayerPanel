@@ -6,7 +6,7 @@ C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), w
 
 The default product path uses the copied scene tree, OAR clip selection/sampling and native DAC preparation. [Animation](docs/animation.md) owns equipment policy, torch composition, accepted clocks and configuration; [SceneGraph](docs/scene-graph.md) owns capture, placement, attachments and drawing.
 
-The opt-in [independent behavior graph investigation](docs/independent-behavior-graph.md#current-status) is at v32. G1 passes only the revised Option A criterion. G2 candidate semantic continuity awaits re-verification: v26's raw 119/120 result remains historical evidence, and v27 confirmed 116 output records plus a static H2H_Idle stance without measuring actual bone coverage. V31 shares the complete batch/display step and correct readers; v32 binds source/controller/request/view ownership and separates semantic motion from actual assignments. Their focused offline regressions and Release builds passed; **v31/v32 have no deployment or game result**. Loaded teardown, global convergence, G3–G6 and independent OAR parity remain unverified.
+The opt-in [independent behavior graph investigation](docs/independent-behavior-graph.md#current-status) is at v32. G1 passes only the revised Option A criterion. G2 candidate semantic continuity awaits re-verification: v26's raw 119/120 result remains historical evidence, and v27 confirmed 116 output records plus a static H2H_Idle stance without measuring actual bone coverage. V31 shares the complete batch/display step and correct readers; v32 binds source/controller/request/view ownership and separates semantic motion from actual assignments. Their focused offline regressions and Release builds passed; **v31/v32 have no deployment or game result**. Because no v31/v32 artifact survived in the checkout, the committed code was rebuilt under the `v33` label; that pair ([Build](docs/build.md#v33-rebuild-2026-10-28)) is what the next session tests. Loaded teardown, global convergence, G3–G6 and independent OAR parity remain unverified.
 
 All experiment keys default off:
 
@@ -28,7 +28,7 @@ cmake --preset Release
 cmake --build --preset Release
 ```
 
-Release is the sole configure/build preset; CharacterPanel is the sole first-party target. Outputs are `build/Release/CharacterPanel.dll` and its matching PDB. Keep that pair with its `SCENEGRAPH BUILD` identity. Identity is captured at configure time; committing documentation does not relabel an existing DLL. See the [v32 pre-commit binary record](docs/build.md#v32-display-session-2026-10-28).
+Release is the sole configure/build preset; CharacterPanel is the sole first-party target. Outputs are `build/Release/CharacterPanel.dll` and its matching PDB. Keep that pair with its `SCENEGRAPH BUILD` identity. Identity is captured at configure time; committing documentation does not relabel an existing DLL. The current deployable pair is a rebuild of the committed v32 code under a new label, recorded in the [v33 build record](docs/build.md#v33-rebuild-2026-10-28); the earlier [v32 pre-commit binary record](docs/build.md#v32-display-session-2026-10-28) no longer has an artifact in the checkout.
 
 Preserve existing settings when updating [CharacterPanel.ini](config/CharacterPanel.ini). Settings load once at DataLoaded; restart after edits. In a paused inventory, **F7** queues recapture and **F8** toggles display. Compatible recapture retains normal playback clocks; the experimental measurement window and coverage refresh when the copied view changes.
 
