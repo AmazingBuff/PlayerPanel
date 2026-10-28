@@ -6,7 +6,9 @@ C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), w
 
 The default product path uses the copied scene tree, OAR clip selection/sampling and native DAC preparation. [Animation](docs/animation.md) owns equipment policy, torch composition, accepted clocks and configuration; [SceneGraph](docs/scene-graph.md) owns capture, placement, attachments and drawing.
 
-The opt-in [independent behavior graph investigation](docs/independent-behavior-graph.md#current-status) is at v32. G1 passes only the revised Option A criterion. G2 candidate semantic continuity awaits re-verification: v26's raw 119/120 result remains historical evidence, and v27 confirmed 116 output records plus a static H2H_Idle stance without measuring actual bone coverage. V31 shares the complete batch/display step and correct readers; v32 binds source/controller/request/view ownership and separates semantic motion from actual assignments. Their focused offline regressions and Release builds passed; **v31/v32 have no deployment or game result**. Because no v31/v32 artifact survived in the checkout, the committed code was rebuilt under the `v33` label; that pair ([Build](docs/build.md#v33-rebuild-2026-10-28)) is deployed with the three experiment keys on, waiting for the first game session. Loaded teardown, global convergence, G3–G6 and independent OAR parity remain unverified.
+The opt-in [independent behavior graph investigation](docs/independent-behavior-graph.md#current-status) is at v33. G1 passes only the revised Option A criterion. **G2 now passes within a bounded scope**: one uninterrupted 120-call display window measured 120/120 sign-invariant candidate motion, 109/116 actual node assignments (`109+7+0=116` self-consistent, the listed misses being non-bone control/attachment nodes), unchanged source pose and continuous on-screen motion ([v33 run](docs/independent-behavior-graph.md#g2-v33-run)). v26's raw 119/120 stays historical raw evidence. Window boundaries (abort, reopen, F7, source invalidation), loaded teardown, global convergence, G3–G6 and independent OAR parity remain unverified.
+
+The committed code was rebuilt under the `v33` label because no v31/v32 artifact survived the checkout; that pair ([Build](docs/build.md#v33-rebuild-2026-10-28)) is deployed, has run once, and the three experiment keys are back to off.
 
 All experiment keys default off:
 
@@ -17,7 +19,7 @@ DisplayPose=false
 DisplayStep=false
 ```
 
-Use the [verification matrix](docs/independent-behavior-graph.md#verification-matrix) for measured results and the [v32 manual checklist](docs/independent-behavior-graph.md#v32-manual-checklist) for the next game session. Candidate semantic continuity, actual display application and visual motion require separate evidence. Historical contracts, native audits and raw logs remain linked from the canonical document and [history index](docs/history.md).
+Use the [verification matrix](docs/independent-behavior-graph.md#verification-matrix) for measured results and the [v32 manual checklist](docs/independent-behavior-graph.md#v32-manual-checklist) for the next game session; steps 1–5 have run once, steps 6–7 (boundaries) have not. Candidate motion, applied coverage and visual motion stay separate evidence. Historical contracts, native audits and raw logs remain linked from the canonical document and [history index](docs/history.md).
 
 ## Build and controls
 

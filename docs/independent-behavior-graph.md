@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-10-28。当前状态以本节、[验证总表](#verification-matrix)与 [v32 修正](#g2-v32-display-session)为准；原始日志和历史契约不变。v31 修正单步调用和读取，v32 修正来源/测量归属、运动语义和实际写骨覆盖；两者的产物不在检出中，已用同一份源码重建为 **v33 并部署（三键开启）**，尚未上机。
+更新：2026-10-28。当前状态以本节、[验证总表](#verification-matrix)与 [v33 运行记录](#g2-v33-run)为准；原始日志和历史契约不变。v31 修正单步调用和读取，v32 修正来源/测量归属、运动语义和实际写骨覆盖；两者的产物不在检出中，已用同一份源码重建为 v33，2026-10-28 22:28 上机取得首个连续显示窗口，三键已恢复 off。
 
 <a id="current-status"></a>
 
@@ -9,26 +9,28 @@
 | 关卡 | 当前结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁、全局登记计数与资源收敛仍未验证。 |
-| G2 | **语义连续性待复验** | [v26](#g2-v26-run)曾按当时 raw 分量判据判 PASSED；119/120 不能排除 q/-q 表示翻转。有限值、私有缓冲、片段层归属及 1.000× 时钟证据保留，不能代替逐步语义运动。 |
+| G2 | **PASSED（2026-10-28 v33，限定范围）** | 单进程单窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。不含 120 前中断、F7、来源失效、装载销毁与 G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3–G6 | **完整关卡未通过/未执行** | 事件链、独立 OAR 语境、完整姿态对照及生命周期仍需分别验收。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
-[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口；另记符号不变的候选运动和实际写入覆盖。两个新离线场景及 Release 构建通过，见[构建记录](build.md#v32-display-session-2026-10-28)。没有新游戏日志或视觉通过结论。2026-10-28 22:23 已把同一份源码重建为 **v33** 并部署到 MO2 实例（三键开启），见[部署记录](#deploy-state)；默认三键仍关闭，产品走装备驱动 OAR 路径，缓存仅是备选。
+[v33](#g2-v33-run)（v32 代码的重建）在 2026-10-28 22:28 上机取得第一个非中断窗口：120 次 eligible 显示调用里候选语义运动 120/120（1e-6、符号不变）、实际写骨 109/116（`missing` 7 个全为已列名的非骨控制/挂点，`109+7+0=116` 自洽）、源侧 `drift=none` 且 before=after、**画面连续运动经用户确认**。同一窗口的门读数 `active/children=true`、`numAnim=numData=116`，从运行侧确认 v30 那组 `children=0`/`numData=62016` 是读错对象。G2 因此按原范围判 PASSED，边界（120 前中断、重开、F7、来源失效）与装载销毁、G3–G6 仍未执行。
+
+[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口；另记符号不变的候选运动和实际写入覆盖。两个新离线场景及 Release 构建通过，见[构建记录](build.md#v32-display-session-2026-10-28)。2026-10-28 22:23 把同一份源码重建为 **v33** 并部署到 MO2 实例，22:28 的会话取得[首个连续窗口](#g2-v33-run)，三键已恢复 off，见[部署记录](#deploy-state)。默认三键仍关闭，产品走装备驱动 OAR 路径，缓存不再是备选主线（未被证明需要）。
 
 
 
 <a id="verification-matrix"></a>
-## 验证总表（2026-10-28，v32 观测与归属更正）
+## 验证总表（2026-10-28，v33 首个显示窗口）
 
-归档运行结果截至 2026-10-28 00:59；v31/v32 只有离线修正与构建证据。旧 raw 119/120 和 bones=116 的读数保留，其连续性与全骨覆盖推论由 [v32](#g2-v32-display-session)收窄。
+归档运行结果截至 2026-10-28 22:28（v33）；v31/v32 只有离线修正与构建证据。旧 raw 119/120 和 bones=116 的读数保留，其连续性与全骨覆盖推论由 [v32](#g2-v32-display-session)收窄、由 [v33](#g2-v33-run)重新以语义度量与实际写骨数取代。
 
 ### 关卡
 
 | 关卡 | 判定 | 限定 / 未覆盖 |
 | --- | --- | --- |
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
-| G2 | **语义连续性待复验** | v26 历史 raw 判据曾通过；有限/私有/层归属/时钟证据保留。需排除 q/-q，补逐步候选语义连续性；实际应用/画面属于另项展示验证 |
+| G2 | **PASSED**（v33，限定范围） | 单进程单窗口 120 次 eligible 调用：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界（120 前中断/重开/F7/来源失效）、场景应用、装载销毁与 G3–G6 未覆盖 |
 | G3–G6 | 未执行 | — |
 
 ### 逐轮实验（本系列）
@@ -49,8 +51,9 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | v28 | 逐帧（只调 63589） | 三条哈希全同 → 该调用不自推进 |
 | v29 | 逐帧（补 63555/63602/63556） | 哈希与 v28 逐位相同；仍遗漏显式 63587(dt/eye) 等成功批量步骤 |
 | v30 | 门诊断 | 显示冻结；active/children 对象基址错误、numData 少解引用；批量与显示同线程 |
-| v31 | 共用完整单步、修正诊断 | 两个离线回归及 Release 构建通过；跨帧游戏结果待验 |
-| v32 | 来源/窗口、语义运动和覆盖 | 两个新离线场景及 Release 构建通过；旧 raw 不变，新语义与实际写骨读数待上机 |
+| v31 | 共用完整单步、修正诊断 | 两个离线回归及 Release 构建通过；该轮无产物留存 |
+| v32 | 来源/窗口、语义运动和覆盖 | 两个新离线场景及 Release 构建通过；产物未留存，由 v33 重建后上机 |
+| v33 | 重建 v32 代码并上机单窗口 | **显示连续推进成立**：语义 120/120、applied 109/116、源不变、画面连续；门读数修正 v30 结论 |
 
 ### 已验证的引擎事实（指令级）
 
@@ -63,25 +66,27 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 
 ### 已验证的产品行为
 
-- 保留候选提供 **116 条姿态记录**，用户确认显示拷贝呈 H2H_Idle 静态站姿（[v27](#g2-v27-run)）；实际命中、缺失和根节点跳过数尚无游戏记录。
+- 保留候选提供 **116 条姿态记录**；[v27](#g2-v27-run)确认显示拷贝呈 H2H_Idle 静态站姿，[v33](#g2-v33-run)测出实际写骨 **109/116**（`missing=7`、`skipped-root=0`、`duplicates=0`，不变量 `109+7+0=116` 自洽），已列名的缺失项均为 `x_NPC Rotate/LookNode/Translate` 与 `Weapon` 这类非骨控制/挂点。
+- **面板内角色连续运动**（[v33](#g2-v33-run)）：`native-step` 1/60/120 三点哈希互异，`pose-summary semantic-changed=120/120`，画面经用户确认。
 - `DisplayPose=false` 时 OAR 路径完全不受影响（默认即此）。
 
 ### 未验证 / 开放项
 
 | 项 | 现状 |
 | --- | --- |
-| 面板内逐帧动起来 | v31 复用完整单步，v32 校正测量；需候选语义变化、实际应用覆盖及画面共同验证 |
-| G2 批量逐步语义连续性 | raw 分量会把 q/-q 翻转计为变化；v32 新增 `pose-motion` 对照，未采到新运行数据 |
+| 显示窗口边界 | 120 前中断（`window=aborted`）、重开不拼接、F7 新 view epoch、来源 generation 改变/controller 销毁后拒绝旧候选，均未在 v33 采集；本轮只跑了一个完整窗口 |
 | 场景应用（物理、武器挂载交互） | 未验 |
 | 装载图生命周期/销毁、全局收敛 | 未证（G1 遗留） |
 | G3–G6、独立 OAR 语境 | 未执行 |
-| v30 的无效门/槽读数 | 原因已由源码确认并在 v31 修正：行为图对象基址与 output→element 间接层；新运行数据待采 |
+| 非骨缺失项逐名核对 | v33 的 `missing=7` 只按预算列了 4 个名字，其余 3 个未列名，不能逐一断言全部非骨 |
+| 帧率无关性 | 固定步长 1/60 每次 eligible 调用；调用数不等于墙钟时间，未做不同 FPS 下的速率校准 |
 
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **2026-10-28 22:23 部署 v33**（v32 代码在 HEAD `d323b35` 上的重建）：DLL `061d5b8a…`（1,319,424 B）、PDB `5924464d…`，MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，profile `AE` 为 `+CharacterPanel`。部署 INI 三键已开：`IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`（1,338 B、`0861a221…`），须完整退出游戏后重启才生效。尚未上机。
-- 部署前 v30 三件套已备份到 `dist/deploy-backup-20261028-v30/`（DLL `e5b0e57c…`、PDB `e450627a…`、INI `2e150d41…`）。上一份归档记录仍是 **v30 DLL `e5b0e57c…`** 的运行（三键关闭）。
+- **2026-10-28 22:23 部署 v33**（v32 代码在 HEAD `d323b35` 上的重建）：DLL `061d5b8a…`（1,319,424 B）、PDB `5924464d…`，MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，profile `AE` 为 `+CharacterPanel`。
+- **22:28 会话已用它跑完一个完整窗口**（[v33](#g2-v33-run)）。会话结束后三键已恢复 `off/false/false`；部署 INI 现为 1,384 B、`8beb6286…`，带本轮运行注释，须完整退出游戏后重启才按默认（纯 OAR）运行。
+- 部署前 v30 三件套已备份到 `dist/deploy-backup-20261028-v30/`（DLL `e5b0e57c…`、PDB `e450627a…`、INI `2e150d41…`）。上一份归档运行记录仍是 **v30 DLL `e5b0e57c…`**（三键关闭）。
 - v31/v32 从未部署：它们的构建产物不在本检出中（`build/Release` 当时是 v30），所以本轮用同一份源码重建为 v33，身份与哈希见 [build](build.md#v33-rebuild-2026-10-28)。
 - 仓库样例 `config/CharacterPanel.ini` 同样三键全关，不要随部署一起改。
 
@@ -1577,7 +1582,7 @@ F7 导致显示拷贝 retarget 时，即使来源和 request 未变，也会结�
 
 以下是待执行程序，不是游戏结果。只做两类有界观察：先完成一个不中断的显示窗口，再观察窗口/来源失效边界。无需为文档修改重跑旧用例或构建。
 
-> 执行状态（2026-10-28 22:23）：v32 的构建产物不在检出中，已用同一份源码重建为 v33 并部署，三键开启。**第 1 步的身份核对对象改为 [v33 记录](build.md#v33-rebuild-2026-10-28)**（DLL `061d5b8a…` / PDB `5924464d…`，干净树身份，无 `+dirty`）；其余步骤文字不变。
+> 执行状态（2026-10-28 22:28）：**第 1–5 步已执行一次**——身份核对改为 [v33 记录](build.md#v33-rebuild-2026-10-28)（DLL `061d5b8a…` / PDB `5924464d…`，干净树、无 `+dirty`），三键开启后完成首个非中断窗口，三类结论见 [v33 运行记录](#g2-v33-run)。**第 6–7 步（120 前中断、重开拼接、F7 新 view epoch、来源/owner 失效）尚未执行**，仍是下一场的有界任务；清单文字保持原样。
 
 1. **核对输入和身份。** 保留待测 DLL 与匹配 PDB、原 INI 和日志。若使用现有 v32 离线构建，逐项核对 [build 记录](build.md#v32-display-session-2026-10-28)的 SHA-256、字节数及完整 `SCENEGRAPH BUILD` 身份（`f5ec13f2c2+dirty`，配置时间 `20261028T073724Z`）；它是提交前产物，后续提交不会改写身份。若另行重新构建，则记录实际新身份/哈希，不能沿用旧记录。确认运行时为 exact **AE 1.6.1170 / `1-6-1170-0`**。v33 已按上方执行状态部署，核对该对哈希而不是旧 v32 记录。
 2. **只调整三个实验键，重启。** 在实际加载的 `[Experiment]` 中设 `IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`，保留其他 INI 设置。设置在 DataLoaded 加载，须完整退出游戏再启动。保留此轮实际 INI；详细 tracing 不是这些 display 行的前提。首次可用的 `panel-open` 执行一次候选批量；确认本轮候选具备 loaded/retained、私有状态守卫与来源身份，再解释后续 display 行。
@@ -1592,6 +1597,36 @@ F7 导致显示拷贝 retarget 时，即使来源和 request 未变，也会结�
 下一次上机要同时记录候选语义运动、实际应用覆盖、同窗口源对照和画面；再检查重开、来源 generation 改变和重捕获后的有效性/窗口边界。**G2 逐步语义连续性当前待复验**：v26 的历史 raw 判据通过保留，不能把符号翻转反例当作历史游戏静止的证据。有限、私有、层归属和时钟证据保留；物理/武器交互、原生阶段隔离、装载销毁及 G3–G6 仍未由本轮验证。
 
 后续改动须保持来源守卫同时覆盖冻结/逐步路径、窗口随 owner/request/view 更新、raw 与语义统计分离，并同步此文、代码/两个场景、README/build/Changelog。原始归档日志不改。
+
+<a id="g2-v33-run"></a>
+## G2 v33 运行记录（2026-10-28 22:28 会话，首个连续显示窗口成立）
+
+> v33 只是 v32 代码在 HEAD `d323b35` 上的重建（[构建](build.md#v33-rebuild-2026-10-28)），不是新的实验契约。本轮不新增 native 调用、不改配方，只把 v32 的测量与覆盖统计第一次带到游戏里。
+
+**身份与运行时**：`CharacterPanel-scenegraph-behavior-graph-v33-display-session-20261028-d323b357a8-cl94faaed0c6-20261028T142029Z`，`runtime=1-6-1170-0`（exact AE 1.6.1170）。日志[归档](diagnostics/CharacterPanel-g2v33-display-session-20261028-2228.log)（57,004 字节、`11462f1c…`、246 行）；无 `[E]`、无崩溃，19 条 `[W]` 全为既有 DAC 预检拒绝与 studio 灯光账本。
+
+**窗口**：`request=1`、`source-generation=1`、`view=1`，call 1 在 22:28:02.650、call 120 在 22:28:05.969（约 3.32 s，≈36 次/秒），中间没有关闭、F7 或换装；随后才出现 `stage=after`。没有 `window=aborted`。
+
+### 三类结论（分开记）
+
+| 类别 | 读数 | 判读 |
+| --- | --- | --- |
+| 候选语义运动 | 显示 `pose-summary native-steps=120 raw-changed=120 raw-finite=true semantic-changed=120 semantic-valid=true epsilon=1e-06 scope=candidate acceptance=unjudged`；批量 `pose-motion comparisons=120 changed=119 valid=true`；`pose-content` 三点 `entries=116 finite=116 nonfinite=0 alias=no` | **成立**：符号不变度量（translation XYZ + quaternion 弦长 + scale X）下 120/120 次比较均变化，q/-q 与仅 scale Y/Z 不计入 |
+| 实际应用 | `application mode=stepped output-records=116 requested-unique=116 applied=109 missing=7 skipped-root=0 duplicates=0`；`missing-names='x_NPC Rotate [Rot ],x_NPC LookNode [Look],x_NPC Translate [Pos ],Weapon'` | **成立（有界）**：`109+7+0=116` 与 `duplicates=0` 自洽；已列的 4 个缺失名都是非骨控制/挂点。预算只列 4/7，其余 3 个未列名 |
+| 源对照 | before=after=`23dd49fed3fbf888`，`source-drift=none`，同 request/generation/view；批量 `drive-done source-pose-before=after=23dd49fed3fbf888` | **成立**：源侧姿态未变 |
+| 画面 | 用户确认面板内角色连续运动（截图 2026-10-28 22:28:09） | **成立** |
+
+显式显示哈希 `native-step=1/60/120` 为 `63f161f2cd7502c9` / `7a044b3473f832df` / `2b29331eea5279d9`，三点互异。v31 起显示与批量共用同一哈希函数，因此只在本轮内部比较，不与 v28–v30 的 `7d568c4d…` 对照。
+
+### 门读数：v30 结论的运行期反证
+
+call 1/60/120 × `post-pipeline/post-update/post-sample` 共 9 行，全部为 `active=true children=true numAnim=116 numData0=116 numData1=116`（`post-update` 的 `numAnim=0` 在三点与 v31 一致，属该阶段读数）。v30 记下的 `active=17`、`children=0`、`numData=62016` 因此确认是对象基址与 output→element 间接层读错，**不能再用作"图未 arm"的证据**；v31 的修正读法在真实窗口里全部为非零。
+
+### 收尾与范围
+
+22:28:14 `DAC restore … result=matched`（epoch=2、`spell-groups=3`）、`Panel menu opening=false`、`lifetime reset`；会话结束后三键恢复 off 并完整重启才回到默认产品路径。
+
+本记录只覆盖：单进程、单次批量、单窗口 120 次 eligible 调用、暂停背包、一个 actor/来源/generation/view。**未覆盖**：120 前中断与 `window=aborted`、重开不拼接、F7 重捕获的新 view epoch、来源 generation 改变或 controller 销毁后拒绝旧候选、装载图停用/销毁与全局收敛、物理/武器挂载交互、G3–G6、不同帧率下的速率校准。
 
 ## 当前采集器与操作
 
@@ -1659,7 +1694,7 @@ BehaviorGraphProbe=true
 | 方案 A 评审与 v4 实现 | 2026-10-24 采纳方案 A：销毁判据重定义（空壳销毁 + 装载图销毁移至 G2 生命周期）、v4 保留流程（永不释放的持有指针，每进程 ≤1 张泄漏）、v4 预注册判据（装载复现 + 装载后源基线全等 + 保留无崩溃 → G1 PASSED），见[方案 A 修订](#2026-10-24-方案-a-修订销毁判据经-g1b-v3-崩溃后评审)；构建身份 `…20261024T065321Z`（DLL SHA-256 `37C255DA…`）已部署 | **G1b v4 运行与判读（按修订判据完成 G1）**；G2 前提：激活/更新入口审计 |
 | G1b v4 运行与判读 | 2026-10-24 会话：装载复现（`accepted ms=8.797`）、装载后源基线独立 diff 全等、`retained=true` 无崩溃，同会话面板多轮开合正常，见[v4 运行记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话)；INI 已收回 off | — |
 | **G1 判定** | **PASSED（2026-10-24，方案 A 修订判据）**——空壳配对销毁 + 两次装载成功（装配完整/共享同址/setup 自建）+ 装载后源基线全等 + 保留无崩溃，见[v4 记录](#g1b-v4-运行记录与-g1-判定2026-10-24-会话) | 注册表计数 UNVERIFIED；可写状态写隔离属 G2+；装载图销毁由 G2 生命周期取得 |
-| **G2 当前判定** | **NOT PASSED（v20a，2026-10-27 22:02）**：入口 `63589(mode0)` 首次到达，输出头填充（双槽 `numData=116 f=1.0`、`tracks-end +32=0x0074 +38=1.0`）、step 2 起 Path B、`arm-observed=yes`、`gen0elem` 与元素哈希变化、候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`→`8fb4cd336c4395bf`（120/120 次变化），源侧 pose 不变、三份源基线全等，见[v20a记录](#g2-v20a-run) | 只差逐骨/有限值与视觉证据：需新增 pose 内容解码契约（具名骨 translation/quaternion 有限性、60/120 步变化、与源同片段对照），之后才是装载图销毁与 G3 |
+| **G2 判定（历史快照，v20a）** | **NOT PASSED（v20a，2026-10-27 22:02）**：入口 `63589(mode0)` 首次到达，输出头填充（双槽 `numData=116 f=1.0`、`tracks-end +32=0x0074 +38=1.0`）、step 2 起 Path B、`arm-observed=yes`、`gen0elem` 与元素哈希变化、候选 raw pose `bc160a8c2b3a5a58`→`63f638a6ac08d955`→`8fb4cd336c4395bf`（120/120 次变化），源侧 pose 不变、三份源基线全等，见[v20a记录](#g2-v20a-run) | 该行只记录当时的判定；现行判定见[当前结论](#current-status)与 [v33 运行记录](#g2-v33-run) |
 | G2 v18 取证运行 | 2026-10-26 23:01 会话：加载身份与包内 manifest 一致；`GRAPH FRAME` 30+1、`INDEPENDENT GRAPH` 40、`BEHAVIOR GRAPH` 36（三块逐行全等）；无`[E]`、无崩溃；`source-stable=true retained=true`；部署 INI 已回 off | Path B 的 t 区间来源、63575 原生数量、63568 回填条件、63666/63582/58423 应用链 |
 | 审计十六（机器码） | 2026-10-26：record = `BSAnimationUpdateData`（`+0x18=optionalEyePosition`，唯一写入者=REFR vtable 槽 0x3C8 `ModifyAnimationUpdateData`，Actor 0x6a3750 / PC 0x74e7a0 / REFR 空桩 0x2f71a0）；Path B 真条件改为 `+0x2A==0 && t_larger≥0 && t_smaller>-MAXFLT`；arm 块门与 63581 四道门、63568/63582 的写入分工逐条落定，见[审计十六](behavior-graph-construction-audit.md#audit16) | `[graph+0x248]` 语义、`[graph+0x160]` 回退表、63666 输出选择、63582 混合细节、58423 门值、原生帧双槽 f 初值 |
 | G2 v19 实现与部署 | 2026-10-26：单变量眼位实验已实现（提交 `e17d5d1`）并部署——注入分支每步记录 `+0x18` 指向 rootNode 位置 +900 的只读 3×float；FRAME 行改 `schema=v19` 并追加 `root218/b248/eye`，summary 加 `arm-observed`；Release 身份 `…v19-eye-arm-20261026-e17d5d12f6…`（DLL `344d9abb…`），三个 engine-free 案例通过；v18 对备份在 `dist/deploy-backup-20261026-v18/`，部署 INI=`inject`（未打包），见[契约与实现](#g2-v19-contract)、[构建记录](build.md#v19-eye-arm-build) | —（运行见下行） |
@@ -1693,6 +1728,9 @@ BehaviorGraphProbe=true
 | G2 v29 运行与判读 | 2026-10-28 00:54 会话：三条 `pose-hash` 仍全同，且与 v28 **逐位相同**（`7d568c4d…`）→ 补上 63555/63602/63556 后图状态零变化，说明渲染路径里的调用根本没生效，不是推进幅度问题；日志归档（59,223 字节 `57eb0b22…`），见[v29 运行记录](#g2-v29-run) |
 | G2 v30 契约与实现 | 2026-10-28 00:56：只加门诊断（`active/children/b245/b246/w240/c110/c208/numData0/numData1`，call 1 与 60 各一行），行为不变；身份 `…v30-display-gates-20261028-0829b1d26d…`（DLL `e5b0e57c…`、age 341），ZIP `1ce2b765…`、manifest `cdebfff0…`，v29 备份到 `dist/deploy-backup-20261028-v29/`，部署 INI 三键（1,068 字节 `50adad10…`），见[契约](#g2-v30-contract)与[构建记录](build.md#v30-display-gates-2026-10-28) | —（运行见下行） |
 | G2 v30 运行与判读 | 2026-10-28 00:58 会话：显示哈希仍冻结，批量/显示同线程；日志归档 54,987 字节 `0F7B25DE…`，三键回 off。后验复核：active/children 基址错误、numData 少解引用，不能判图未 arm；显示也遗漏 63587 等完整步骤。见[v30 更正](#g2-v30-run) | 优先验证 [v31 共用单步](#g2-v31-correction)，缓存为备选 |
+| G2 v31/v32 离线 | 2026-10-28 白天：v31 共用完整单步与修正读法、v32 来源/窗口/语义运动/实际写骨，两个新 engine-free 场景各 2 例通过，Release 构建通过；**产物未留存**（`build/Release` 仍是 v30，检出内无 v31/v32 目录或包） | 重建后上机 |
+| G2 v33 重建与部署 | 2026-10-28 22:20–22:23：以 HEAD `d323b35` 重配新 label 构建（干净树，无 `+dirty`），DLL `061d5b8a…` 1,319,424 B / PDB `5924464d…`；同一树重跑两个离线场景各 2 例通过；v30 三件套备份至 `dist/deploy-backup-20261028-v30/` 后部署，三键开。见[构建](build.md#v33-rebuild-2026-10-28)与[部署](#deploy-state) | —（运行见下行） |
+| G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
 | G1 源基线采集 | 2026-10-23 会话 19/19 请求、228 行、无异常，见 [源基线](#g1-源基线2026-10-23-会话)与 [r4 日志](diagnostics/display-issues-2026-10-22.md#r4-session) | —（后续证据见 G1/G2 各行） |
 | G1c | NOT STARTED | 按方案 A 修订跳过：`holder=nullptr` 已证充分，源 holder 别名量化移至 G4 |
@@ -1704,7 +1742,7 @@ BehaviorGraphProbe=true
 
 当前选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
 
-最新归档运行为 v30（2026-10-28 00:59）：批量 raw 119/120，显示冻结。v26 的原始判据通过保留为历史，逐步候选语义连续性当前待复验；v27 仅确认输出 116 条记录及静态站姿，实际覆盖未计数。v31 修正不完整单步和错误读数，v32 修正来源/窗口与运动/覆盖证据，只有离线成功；下一步按 [v32](#g2-v32-display-session)分别验证候选语义连续性和展示应用，不把缓存当成既定转向。
+最新归档运行为 v33（2026-10-28 22:28）：单窗口 120 步，候选语义 120/120、实际写骨 109/116、源不变、画面连续，G2 按原范围判 PASSED；v26 的 raw 119/120 与 v27 的静态接姿保留为历史证据。下一步不再是"证明能动"，而是三件互不替代的事：① 窗口/来源边界（120 前中断、重开不拼接、F7 新 view epoch、来源 generation 改变或 controller 销毁后拒绝旧候选）；② G1 遗留的装载图停用/销毁与全局收敛；③ G3–G6（Equip→Idle→Unequip 事件链、独立 OAR 语境、完整姿态对照）。缓存回放未被需要，不作为既定方向。
 
 ## 维护约束
 
