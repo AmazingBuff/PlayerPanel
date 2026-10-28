@@ -381,6 +381,15 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v37-source-timeline-20261028
 
 **Deployed 2026-10-28 23:41**: the v36 trio went to `dist/deploy-backup-20261028-v36/` (DLL `ac01ac95…`); the deployed INI sets `SourceTimeline=true` with `IndependentGraph=off` and both display keys false, so the product animation path is untouched.
 
+<a id="v38-settle-2026-10-29"></a>
+## V38 settled source timeline (2026-10-29)
+
+The v37 run booked 200 lines in 8.5 seconds — 76 from `TimeDelta`, 91 from a per-frame node hash — and never reached the equip sequence, so the [contract](independent-behavior-graph.md#g3-a-contract) marks that run uncollected. V38 changes the recording rule instead of the threshold: a variable is written only after its new value has survived three consecutive samples, and the node line keeps the count alone (the hash was per-frame noise). Budget, read points and the read-only guarantees are unchanged.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v38-source-timeline-settle-20261029-ad15b58ae8-cl94faaed0c6-20261028T160832Z`. DLL **1,327,616 bytes**, SHA-256 `17567d57e8deddadcc14949f9449cb1ba51c87a55992bf73d35aa9b49a94f18f`; PDB **36,343,808 bytes**, SHA-256 `32261d2439d4d472e1cc3e0801b326c63e019a42b8d905adfbfaa6e9931b9b9a`.
+
+**Deployed 2026-10-29 00:09**: the v37 trio went to `dist/deploy-backup-20261029-v37/`, and the INI keeps `SourceTimeline=true` with everything else off. No engine-free test was added for this build either; the change is the same native glue with a different write rule.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.

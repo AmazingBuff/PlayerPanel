@@ -1670,6 +1670,8 @@ G3 的前置观测。目标是先在**正常游戏**里拿到同一单手武器 
 
 计数与既有运行读数一致（`vars[words=652]`），这是本轮唯一可自证的数据形状。
 
+> **更正（2026-10-29 00:05）**：上一句是错的。`652` 是**候选图**的 word 计数（`phase=probe vars[...]`），源图实测是 **463**。两者本来就不是同一个变量集合，不能拿候选的数字当源图的预期值。这项更正连同"回放必须按名字而非索引"的结论写在下面的 v37 运行记录里。
+
 **输出**（每帧只在变化时写，单进程 ≤200 行，超出后写一行 `budget-exhausted` 并停）：
 
 ```
@@ -1684,10 +1686,30 @@ SOURCE TIMELINE nodes count=<n> hash=<016x>
 
 1. 装备瞬间出现一组变量变化；卸下时出现反向变化。两次的变量集合与顺序**不要求对称**，只记录实际顺序。
 2. `nodes` 的 `count/hash` 在装备与卸下各变一次或多次，Idle 期间稳定；若 Idle 期间持续变化，说明该哈希包含会抖动的字段，记录为仪器限制而不是状态变化。
-3. `armed` 行必须在进游戏后出现且 `words=652`。若 `words` 不是 652，或根本没有 `armed`，本轮判为未采。
+3. `armed` 行必须在进游戏后出现且给出该图的 word 计数。**原判据写的是"必须 652"，那是候选图的数字；源图实测 463，故改为：`armed` 存在、`words>0`、且与后续行的索引范围自洽。** 若没有 `armed`，本轮判为未采。
 4. 全程源 `pose`/`activeNodes` 不被本仪器写入（只读），源行为与未装插件时一致。
 
-**停止条件**：没有 `armed` 行、`words≠652`、budget 在 equip 前耗尽、或出现非有限 float 且伴随崩溃 → 停止判读，保留日志与匹配 PDB，回审计。
+**停止条件**：没有 `armed` 行、`words≤0`、budget 在 equip 前耗尽、或出现非有限 float 且伴随崩溃 → 停止判读，保留日志与匹配 PDB，回审计。
+
+### v37 运行记录（2026-10-29 00:05，判为未采）
+
+身份 `…v37-source-timeline-20261028-81578f5c63…`。日志[归档](diagnostics/CharacterPanel-g3a-v37-timeline-20261029-0005.log)（23,521 字节、`29ffef2a…`）。`armed actor=00000014 words=463 nodes=36`，随后 200 行在 **8.5 秒内**用尽（`budget-exhausted`）。按停止条件第 3 条，**本轮不采**。
+
+三条失败原因，都已定位到仪器而不是引擎：
+
+1. **预注册的 652 不是源图的数**：`652` 来自候选图（`phase=probe vars[words=652]`），源图是 **463**。契约写错，已在上文更正。这条同时暴露一个真事实——**候选与源的变量集合大小不同（652 vs 463），G3-B 的回放必须按变量名映射，不能按索引照搬。**
+2. **节点哈希是每帧噪声**：`count=36` 全程稳定，但哈希每约 20 ms 变一次（91 行全是它）。说明我哈希的 64 个指针内容每帧在变，或 `NodeList` 的布局假设不对；该哈希已删除，v38 只记 `count`。
+3. **预算被标量吃光**：`index=53 TimeDelta` 一个变量占 76 行，节点占 91 行，装备/卸下发生在预算之后，**目标序列根本没进日志**。
+
+仍然成立的部分：仪器本身是通的——`armed` 出现、109 行变量带着真实名字（`iEquippedItemState`、`fIdleTimer`、`bowZoom`、`bNSV_Teammate_*` 等），名字解析与 463 计数都对得上。坏的只是记录策略。
+
+### v38 规则修订（不是放宽判据，而是换记录规则）
+
+v38 引入 **settle 规则**：一个新值必须连续 **3 个采样**保持不变才写盘。`TimeDelta`/`Pitch`/`Velocity` 这类每帧都变的标量永远 settle 不了，自然不落盘；`iEquippedItemState` 这类状态量照常记录。节点同样只记 `count` 且要求 settle。其余（预算 200、只读、armed/rearm）不变。
+
+身份 `…v38-source-timeline-settle-20261029-ad15b58ae8-cl94faaed0c6-20261028T160832Z`，DLL `17567d57…`、1,327,616 B；v37 三件套备份到 `dist/deploy-backup-20261029-v37/`，已部署，`SourceTimeline=true` 不变。构建见 [v38](build.md#v38-settle-2026-10-29)。
+
+**v38 的预注册读数**：`armed` 行给出 `words=463 nodes=36`；装备与卸下各出现一组 **settled** 变量变化（预期含 `iEquippedItemState`），且两次之间没有 `TimeDelta` 之类的高频行；`nodes` 若变化则只记 count。若 200 行仍被高频量吃光、或 settle 后一行变量都没有，判仪器失败并重新设计触发方式。
 
 **运行步骤**：`SourceTimeline=true`、其余键保持 off，重启；进入游戏后原地：装备一把单手武器 → 等约 2 s → 卸下 → 等约 2 s → 退出并交日志。不要开背包、不要 F7、不要换装以外的操作。
 
@@ -1835,6 +1857,8 @@ BehaviorGraphProbe=true
 | G2 v33 重建与部署 | 2026-10-28 22:20–22:23：以 HEAD `d323b35` 重配新 label 构建（干净树，无 `+dirty`），DLL `061d5b8a…` 1,319,424 B / PDB `5924464d…`；同一树重跑两个离线场景各 2 例通过；v30 三件套备份至 `dist/deploy-backup-20261028-v30/` 后部署，三键开。见[构建](build.md#v33-rebuild-2026-10-28)与[部署](#deploy-state) | —（运行见下行） |
 | G2 v34 边界会话 | 2026-10-28。22:47 会话：开包 1 跑满 120（未在 120 前关）、开包 2 重采基线且不拼接、开包 3 中途 F7 → `steps=84 reason=retarget source-comparison=discarded` + view 2→3、读档后开包 0 条 display 行；日志 83,924 字节 `23637075…`。**23:00 补测**：开包 1 在 call 61 关包 → `steps=61 reason=reset source-comparison=discarded` 且无摘要，开包 2 从 call 1 独立跑满 120；日志 64,003 字节 `bc7f27c4…`。两次均无 `[E]`。附带：`native-step` 三点哈希与 v33 逐位相同而源 before 不同 → 候选轨迹可复现且与源无关；`SCOPY PARK` 累积 4 份。三键已回 off。见[v34 记录](#g2-v34-boundaries) | 来源图替换而 controller 未重建的 `source-invalid` 分支；G1 装载销毁/全局收敛；G3–G6 |
 | G3-A 源图时间线 | 2026-10-28 23:41：新增 `source_timeline.cpp`（post-UI 每帧只读源图，diff 652 个 word 变量 + 活动节点 count/hash，≤200 行/进程），`[Experiment] SourceTimeline` 开关，构建 v37（`…v37-source-timeline-20261028-81578f5c63…`，DLL `7f3bd92e…`）并部署。见[契约](#g3-a-contract)、[构建](build.md#v37-source-timeline-2026-10-28) | 未上机；本构建未加离线用例（native glue，无 policy 头可挂） |
+| G3-A v37 运行（未采） | 2026-10-29 00:05：`armed words=463 nodes=36`，但 200 行在 8.5 s 内被 `TimeDelta`(76 行) 与每帧节点哈希(91 行) 吃光，装备/卸下未进日志；日志 23,521 字节 `29ffef2a…`。附带真事实：**候选 652 vs 源 463**，回放必须按名字映射。见[v37 记录](#g3-a-contract) | 仪器规则修订 |
+| G3-A v38 修订 | 2026-10-29 00:09：settle 规则（连续 3 个采样不变才写）+ 节点只记 count；身份 `…v38-source-timeline-settle-20261029-ad15b58ae8…`，DLL `17567d57…`；v37 三件套备份到 `dist/deploy-backup-20261029-v37/`，已部署，`SourceTimeline=true` | 未上机 |
 | G1 遗留审计 + v35/v36 | 2026-10-28 23:11–23:18：指令级确认 `Deactivate`（`0xab1f70`）对 `activeNodes` 无空检查、`context+8` 非空即早退、释放 `variableValueSet` 并置 `isActive=false`；引擎只在 `BShkbAnimationGraph` 析构里配对调用；候选与源三份日志 `root-generator` 同指针 → **销毁判 NO-GO**。**v35 探针证伪**：23:16 读回 `registry=300474432->300474432`，重审确认 `+0x228` 是不变奇偶值、`inc` 未写回、`63529` 是无锁追加而非登记 → 旧"登记计数"结论作废，判无锚点。`1ca2ad6` 已 revert（`cee948d`），构建 **v36**（`…v36-registry-probe-revert-20261028-cee948dcf8…`，DLL `ac01ac95…`）并部署，三键回 off。见[审计与更正](#g1-teardown-audit)、[v35 构建](build.md#v35-registry-probe-2026-10-28)、[v36 构建](build.md#v36-revert-2026-10-28) | —（该项结清） |
 | G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |

@@ -130,6 +130,8 @@
 
 ### Fixed
 
+- Settle the source timeline and drop the per-frame node hash (v38): the first run spent all 200 lines in 8.5 seconds on `TimeDelta` and a node hash that changed every frame, so the equip sequence was never reached. A variable is now written only after its new value survives three consecutive samples, and the node line keeps the count alone. Same read points, same read-only guarantee, same budget. The same run also showed that the candidate holds 652 word variables while the source holds 463, so G3 replay must map by name rather than index. See the [contract](docs/independent-behavior-graph.md#g3-a-contract).
+
 - Verify the opt-in display stepping in game (v33, AE 1.6.1170): one uninterrupted 120-call window measured 120/120 sign-invariant candidate motion at 1e-6, 109/116 actual node assignments with `109+7+0=116` and zero duplicates, an unchanged source pose and continuous on-screen motion. The corrected gate readers report `active/children=true` and 116 output records at every checkpoint, so the v30 `children=0`/`numData=62016` readout is retired as a misread object. Window/source boundaries, loaded teardown and G3–G6 remain open.
 
 - Fix opt-in independent-graph preview stepping by sharing the complete batch update and restoring its temporary world context. Reject stale source/controller views, reset measurement windows per request/recapture, and report corrected graph reads, sign-invariant candidate motion and actual bone assignments. Defaults stay off; focused offline regressions and Release builds pass, and the [v33 game run](docs/independent-behavior-graph.md#g2-v33-run) confirms the bounded display window.

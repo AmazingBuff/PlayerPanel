@@ -1,0 +1,244 @@
+[00:04:44.612] [29256] [I] CharacterPanel v1-2-1-0
+[00:04:44.612] [29256] [I] CharacterPanel loaded
+[2026-10-29 00:04:44.612] [thread 29256] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(73): [info] CharacterPanel v1-2-1-0
+[00:04:57.628] [29256] [I] OAR Animations V1 mapping API available
+[00:04:57.628] [29256] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[00:04:57.628] [29256] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[00:05:35.505] [5580 ] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[00:05:35.505] [5580 ] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[00:05:35.505] [5580 ] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[00:05:35.505] [5580 ] [I] EXPERIMENT setting IndependentGraph=off
+[00:05:35.505] [5580 ] [I] EXPERIMENT setting DisplayPose=false
+[00:05:35.505] [5580 ] [I] EXPERIMENT setting DisplayStep=false
+[00:05:35.505] [5580 ] [I] EXPERIMENT setting SourceTimeline=true
+[00:05:35.507] [5580 ] [I] DAC native inventory lifecycle sink installed
+[00:05:35.510] [5580 ] [I] All shaders compiled
+[00:05:35.510] [5580 ] [I] Installed pre-UI renderer hook
+[00:05:35.510] [5580 ] [I] Panel menu sink installed
+[00:05:35.510] [5580 ] [I] CharacterManager equipment sink installed
+[00:05:35.510] [5580 ] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-behavior-graph-v37-source-timeline-20261028-81578f5c63-cl94faaed0c6-20261028T153941Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture F8-toggle
+[00:05:35.522] [14784] [I] Studio host changed: 0x0 -> 0x2aa8a2a6980 (paused=true)
+[00:05:35.522] [14784] [I] Studio light node has been created
+[00:05:35.522] [14784] [I] CP-LIGHT slot 0: registered, shell 0x2ac147b7880 queued (ledger stays the authority)
+[00:05:35.522] [14784] [I] CP-LIGHT slot 1: registered, shell 0x2ac147b7740 queued (ledger stays the authority)
+[00:05:35.522] [14784] [I] CP-LIGHT slot 2: registered, shell 0x2ac147b7600 queued (ledger stays the authority)
+[00:05:35.522] [14784] [I] Studio lights registered on the ledger (scene=0x2a081016e80 -- ledger fetch will populate the slots)
+[00:05:35.522] [14784] [I] CP-LIGHT slot 0: ledger shell fetched 0x2ac147b7880 (after 0 miss frames)
+[00:05:35.522] [14784] [I] CP-LIGHT slot 1: ledger shell fetched 0x2ac147b7740 (after 0 miss frames)
+[00:05:35.522] [14784] [I] CP-LIGHT slot 2: ledger shell fetched 0x2ac147b7600 (after 0 miss frames)
+[00:05:54.861] [29256] [I] DAC old-world sessions discarded world=2
+[00:05:55.162] [14784] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:05:55.162] [14784] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:05:55.162] [14784] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:05:55.162] [14784] [W] Studio lights not fully served by the ledger yet
+[00:05:59.952] [14784] [I] SOURCE TIMELINE armed actor=00000014 words=463
+[00:06:00.006] [14784] [I] SOURCE TIMELINE nodes count=36 hash=961c9d87248b0e04
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=2 name='TurnDelta' 0->-2147483648 float=0.0000->-0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=16 name='Pitch' 0->-1042919273 float=0.0000->-26.7894
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=29 name='staggerMagnitude' 0->1048911544 float=0.0000->0.2600
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=53 name='TimeDelta' 1015222895->1017728292 float=0.0160->0.0207
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=54 name='PitchOffset' 0->1098306790 float=0.0000->15.4270
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=91 name='CastBlendDamped' 0->-1230423203 float=0.0000->-0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=114 name='bowZoom' 1065353216->0 float=1.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=118 name='iEquippedItemState' 0->9 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=131 name='fMagicForceEquipBlendValue' 0->-1082130432 float=0.0000->-1.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=136 name='fIdleTimer' 1056964608->0 float=0.5000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=171 name='iRegularAttack' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=176 name='VelocityZ' 0->-1045625126 float=0.0000->-21.6283
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=197 name='leftWeaponSpeedMult' 0->1065353216 float=0.0000->1.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=240 name='SkyParkourSpeedMult' 1065353216->1066611507 float=1.0000->1.1500
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=243 name='SkyParkourLedge' 0->-1 float=0.0000->-nan
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=285 name='MaxsuPoise_PoiseHealth' 1120403456->1126945522 float=100.0000->171.8240
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=286 name='MaxsuPoise_RegenDelayTimer' 0->-1138323386 float=0.0000->-0.0102
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=287 name='MaxsuPoise_StaggerProtectTimer' 0->-1134833478 float=0.0000->-0.0134
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=295 name='bNSV_Teammate_isUndead' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=300 name='bNSV_Teammate_isWeaponOut' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=303 name='bNSV_Teammate_boundweapontarget' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=308 name='bNSV_Teammate_cloaktarget' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=311 name='bNSV_Teammate_armourtarget' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=314 name='bNSV_Teammate_invisibilitytarget' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=320 name='bNSV_Teammate_wardtarget' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=361 name='PerfectParriedHitsSTM' 0->1 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=362 name='ParriedHitsSTM' 0->3 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=368 name='StaggerAmount_AnimationCMF' 1065353216->0 float=1.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=397 name='TKDR_IframeDuration' 0->1050253722 float=0.0000->0.3000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=413 name='iSBF_RightCastType' 0->6 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=414 name='iSBF_LeftCastType' 0->6 float=0.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE variable index=415 name='staggerDirection' 1065353216->0 float=1.0000->0.0000
+[00:06:00.272] [14784] [I] SOURCE TIMELINE nodes count=36 hash=9b9c0640f35949ec
+[00:06:01.542] [14784] [W] Studio lights not fully served by the ledger yet
+[00:06:02.264] [14784] [I] CharacterManager watch actor=00000014
+[00:06:02.274] [14784] [I] OAR bases stage=world-prewarm project=0x2aa37288080 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.048
+[00:06:02.274] [14784] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x2ac147b7c40 filed to lightQueueAdd)
+[00:06:02.274] [14784] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x2ac147b7240 filed to lightQueueAdd)
+[00:06:02.274] [14784] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x2ac147b7100 filed to lightQueueAdd)
+[00:06:02.342] [14784] [I] CP-LIGHT slot 0: ledger shell fetched 0x2ac147b7c40 (after 1 miss frames)
+[00:06:02.342] [14784] [I] CP-LIGHT slot 1: ledger shell fetched 0x2ac147b7240 (after 1 miss frames)
+[00:06:02.342] [14784] [I] CP-LIGHT slot 2: ledger shell fetched 0x2ac147b7100 (after 1 miss frames)
+[00:06:02.884] [29256] [I] SOURCE TIMELINE variable index=53 1017728292->1010055512 float=0.0207->0.0110
+[00:06:02.884] [29256] [I] SOURCE TIMELINE variable index=285 1126945522->1125410406 float=171.8240->148.4000
+[00:06:02.884] [29256] [I] SOURCE TIMELINE nodes count=36 hash=79588198ecd0aa2a
+[00:06:05.437] [29256] [I] SOURCE TIMELINE variable index=53 1010055512->1023067176 float=0.0110->0.0306
+[00:06:05.437] [29256] [I] SOURCE TIMELINE nodes count=36 hash=41c76a839f37bd9c
+[00:06:05.473] [29256] [I] SOURCE TIMELINE variable index=53 1023067176->1030203084 float=0.0306->0.0566
+[00:06:05.473] [29256] [I] SOURCE TIMELINE nodes count=36 hash=b042f6be65bf28b1
+[00:06:05.502] [29256] [I] SOURCE TIMELINE variable index=53 1030203084->1031276827 float=0.0566->0.0606
+[00:06:05.503] [29256] [I] SOURCE TIMELINE nodes count=36 hash=b593e91a9b8b001a
+[00:06:05.533] [29256] [I] SOURCE TIMELINE variable index=53 1031276827->1031962828 float=0.0606->0.0637
+[00:06:05.533] [29256] [I] SOURCE TIMELINE nodes count=36 hash=a7c3b05d48a5a29d
+[00:06:05.560] [29256] [I] SOURCE TIMELINE variable index=53 1031962828->1032365481 float=0.0637->0.0667
+[00:06:05.560] [29256] [I] SOURCE TIMELINE nodes count=36 hash=fe6bbc102e66ac6a
+[00:06:05.585] [29256] [I] SOURCE TIMELINE variable index=53 1032365481->1032701025 float=0.0667->0.0692
+[00:06:05.586] [29256] [I] SOURCE TIMELINE nodes count=36 hash=bc9a23e62d717010
+[00:06:05.611] [29256] [I] SOURCE TIMELINE variable index=53 1032701025->1032991831 float=0.0692->0.0714
+[00:06:05.611] [29256] [I] SOURCE TIMELINE nodes count=36 hash=23f63d582dd26d02
+[00:06:05.639] [29256] [I] SOURCE TIMELINE variable index=53 1032991831->1032991830 float=0.0714->0.0714
+[00:06:05.639] [29256] [I] SOURCE TIMELINE nodes count=36 hash=5eb5d4d31706ff11
+[00:06:05.663] [29256] [I] SOURCE TIMELINE variable index=53 1032991830->1028070513 float=0.0714->0.0486
+[00:06:05.663] [29256] [I] SOURCE TIMELINE nodes count=36 hash=d37139f8fb064913
+[00:06:05.685] [29256] [I] SOURCE TIMELINE variable index=53 1028070513->1021396911 float=0.0486->0.0275
+[00:06:05.685] [29256] [I] SOURCE TIMELINE nodes count=36 hash=802ff4ec50c94395
+[00:06:05.707] [29256] [I] SOURCE TIMELINE variable index=53 1021396911->1020860040 float=0.0275->0.0265
+[00:06:05.707] [29256] [I] SOURCE TIMELINE nodes count=36 hash=89cdedd621995e7e
+[00:06:05.727] [29256] [I] SOURCE TIMELINE variable index=53 1020860040->1020144212 float=0.0265->0.0252
+[00:06:05.727] [29256] [I] SOURCE TIMELINE nodes count=36 hash=a682e9ed152c41ed
+[00:06:05.747] [29256] [I] SOURCE TIMELINE variable index=53 1020144212->1019338905 float=0.0252->0.0237
+[00:06:05.747] [29256] [I] SOURCE TIMELINE nodes count=36 hash=f2a93f2e7e88048f
+[00:06:05.766] [29256] [I] SOURCE TIMELINE variable index=53 1019338905->1018802035 float=0.0237->0.0227
+[00:06:05.766] [29256] [I] SOURCE TIMELINE nodes count=36 hash=808c9d14f03cbac1
+[00:06:05.787] [29256] [I] SOURCE TIMELINE variable index=53 1018802035->1018354643 float=0.0227->0.0218
+[00:06:05.787] [29256] [I] SOURCE TIMELINE nodes count=36 hash=48bf5185a79e98f4
+[00:06:05.809] [29256] [I] SOURCE TIMELINE variable index=53 1018354643->1018175685 float=0.0218->0.0215
+[00:06:05.809] [29256] [I] SOURCE TIMELINE nodes count=36 hash=e4b1fb5e0478c391
+[00:06:05.832] [29256] [I] SOURCE TIMELINE variable index=53 1018175685->1018086205 float=0.0215->0.0213
+[00:06:05.832] [29256] [I] SOURCE TIMELINE nodes count=36 hash=04b62ae1371c4825
+[00:06:05.948] [29256] [I] SOURCE TIMELINE variable index=53 1018086205->1018086208 float=0.0213->0.0213
+[00:06:05.948] [29256] [I] SOURCE TIMELINE nodes count=36 hash=104269db3574d696
+[00:06:05.968] [29256] [I] SOURCE TIMELINE variable index=53 1018086208->1023656243 float=0.0213->0.0322
+[00:06:05.968] [29256] [I] SOURCE TIMELINE nodes count=36 hash=6144bae2e4b022a6
+[00:06:05.990] [29256] [I] SOURCE TIMELINE nodes count=36 hash=c3b7d26d2b1bc63e
+[00:06:06.010] [29256] [I] SOURCE TIMELINE variable index=53 1023656243->1023700981 float=0.0322->0.0323
+[00:06:06.010] [29256] [I] SOURCE TIMELINE nodes count=36 hash=f94a69bc3d52f4d7
+[00:06:06.032] [29256] [I] SOURCE TIMELINE variable index=53 1023700981->1023790460 float=0.0323->0.0327
+[00:06:06.032] [29256] [I] SOURCE TIMELINE nodes count=36 hash=54cab37f31ae4841
+[00:06:06.052] [29256] [I] SOURCE TIMELINE nodes count=36 hash=0ba61595ebf25d1b
+[00:06:06.072] [29256] [I] SOURCE TIMELINE variable index=53 1023790460->1023656243 float=0.0327->0.0322
+[00:06:06.072] [29256] [I] SOURCE TIMELINE nodes count=36 hash=e0e1b9ac3beb7a0b
+[00:06:06.092] [29256] [I] SOURCE TIMELINE variable index=53 1023656243->1023522025 float=0.0322->0.0317
+[00:06:06.092] [29256] [I] SOURCE TIMELINE nodes count=36 hash=a33c421f21924bdc
+[00:06:06.114] [29256] [I] SOURCE TIMELINE variable index=53 1023522025->1023477285 float=0.0317->0.0315
+[00:06:06.114] [29256] [I] SOURCE TIMELINE nodes count=36 hash=50ff69d98e442869
+[00:06:06.134] [29256] [I] SOURCE TIMELINE variable index=53 1023477285->1017638814 float=0.0315->0.0205
+[00:06:06.134] [29256] [I] SOURCE TIMELINE nodes count=36 hash=5d4273a2c837eff6
+[00:06:06.154] [29256] [I] SOURCE TIMELINE nodes count=36 hash=50b016485a47062a
+[00:06:06.174] [29256] [I] SOURCE TIMELINE nodes count=36 hash=d2bc2bac366cb90e
+[00:06:06.193] [29256] [I] SOURCE TIMELINE variable index=53 1017638814->1017459857 float=0.0205->0.0202
+[00:06:06.193] [29256] [I] SOURCE TIMELINE nodes count=36 hash=1eda2b9126b57b23
+[00:06:06.213] [29256] [I] SOURCE TIMELINE variable index=53 1017459857->1017370379 float=0.0202->0.0200
+[00:06:06.213] [29256] [I] SOURCE TIMELINE nodes count=36 hash=080f43c620aefe22
+[00:06:06.233] [29256] [I] SOURCE TIMELINE variable index=53 1017370379->1017459857 float=0.0200->0.0202
+[00:06:06.233] [29256] [I] SOURCE TIMELINE nodes count=36 hash=cf9f2d4790702a57
+[00:06:06.253] [29256] [I] SOURCE TIMELINE nodes count=36 hash=0ca1d11aee9adf04
+[00:06:06.272] [29256] [I] SOURCE TIMELINE variable index=53 1017459857->1017370379 float=0.0202->0.0200
+[00:06:06.272] [29256] [I] SOURCE TIMELINE nodes count=36 hash=f1e0cce18c3663f5
+[00:06:06.289] [29256] [I] SOURCE TIMELINE variable index=53 1017370379->1017280901 float=0.0200->0.0198
+[00:06:06.289] [29256] [I] SOURCE TIMELINE nodes count=36 hash=8904a771b459fae4
+[00:06:06.307] [29256] [I] SOURCE TIMELINE variable index=53 1017280901->1017101945 float=0.0198->0.0195
+[00:06:06.307] [29256] [I] SOURCE TIMELINE nodes count=36 hash=8bd20da56555d710
+[00:06:06.324] [29256] [I] SOURCE TIMELINE variable index=53 1017101945->1016833509 float=0.0195->0.0190
+[00:06:06.324] [29256] [I] SOURCE TIMELINE nodes count=36 hash=cb48ee40ad77cbe9
+[00:06:06.342] [29256] [I] SOURCE TIMELINE variable index=53 1016833509->1016744029 float=0.0190->0.0188
+[00:06:06.342] [29256] [I] SOURCE TIMELINE nodes count=36 hash=51d63eb9c7fc3b7c
+[00:06:06.359] [29256] [I] SOURCE TIMELINE variable index=53 1016744029->1016565073 float=0.0188->0.0185
+[00:06:06.359] [29256] [I] SOURCE TIMELINE nodes count=36 hash=8b0af81bd0b214c5
+[00:06:06.379] [29256] [I] SOURCE TIMELINE variable index=53 1016565073->1016565072 float=0.0185->0.0185
+[00:06:06.379] [29256] [I] SOURCE TIMELINE nodes count=36 hash=a5674a36aa6c7dcf
+[00:06:06.398] [29256] [I] SOURCE TIMELINE variable index=53 1016565072->1016386116 float=0.0185->0.0182
+[00:06:06.398] [29256] [I] SOURCE TIMELINE nodes count=36 hash=b0cb0922d2300848
+[00:06:06.417] [29256] [I] SOURCE TIMELINE variable index=53 1016386116->1016296637 float=0.0182->0.0180
+[00:06:06.417] [29256] [I] SOURCE TIMELINE nodes count=36 hash=8f911f072a1f1dc1
+[00:06:06.434] [29256] [I] SOURCE TIMELINE nodes count=36 hash=c24eb565f024df0d
+[00:06:06.451] [29256] [I] SOURCE TIMELINE variable index=53 1016296637->1016207159 float=0.0180->0.0178
+[00:06:06.451] [29256] [I] SOURCE TIMELINE nodes count=36 hash=4adb00100f36540c
+[00:06:06.469] [29256] [I] SOURCE TIMELINE nodes count=36 hash=6c613dc689fb1893
+[00:06:06.486] [29256] [I] SOURCE TIMELINE variable index=53 1016207159->1016296637 float=0.0178->0.0180
+[00:06:06.486] [29256] [I] SOURCE TIMELINE nodes count=36 hash=2252a3af26153a46
+[00:06:06.503] [29256] [I] SOURCE TIMELINE nodes count=36 hash=5a8402fa90472875
+[00:06:06.520] [29256] [I] SOURCE TIMELINE variable index=53 1016296637->1016117681 float=0.0180->0.0177
+[00:06:06.520] [29256] [I] SOURCE TIMELINE nodes count=36 hash=02479a3c13c638b0
+[00:06:06.538] [29256] [I] SOURCE TIMELINE variable index=53 1016117681->1016028201 float=0.0177->0.0175
+[00:06:06.538] [29256] [I] SOURCE TIMELINE nodes count=36 hash=8ab99041e5896948
+[00:06:06.556] [29256] [I] SOURCE TIMELINE variable index=53 1016028201->1016028203 float=0.0175->0.0175
+[00:06:06.556] [29256] [I] SOURCE TIMELINE nodes count=36 hash=03f0518218c68e97
+[00:06:06.575] [29256] [I] SOURCE TIMELINE variable index=53 1016028203->1015938724 float=0.0175->0.0173
+[00:06:06.575] [29256] [I] SOURCE TIMELINE nodes count=36 hash=969d14c2b7bec4a2
+[00:06:06.595] [29256] [I] SOURCE TIMELINE variable index=53 1015938724->1016028201 float=0.0173->0.0175
+[00:06:06.595] [29256] [I] SOURCE TIMELINE nodes count=36 hash=d4e3eb24f0460ae9
+[00:06:06.711] [29256] [I] SOURCE TIMELINE variable index=53 1016028201->1016117680 float=0.0175->0.0177
+[00:06:06.711] [29256] [I] SOURCE TIMELINE nodes count=36 hash=dcf2ce0190ff0175
+[00:06:06.740] [29256] [I] SOURCE TIMELINE variable index=53 1016117680->1022291696 float=0.0177->0.0292
+[00:06:06.740] [29256] [I] SOURCE TIMELINE nodes count=36 hash=d12007665cb1f791
+[00:06:06.761] [29256] [I] SOURCE TIMELINE variable index=53 1022291696->1023275960 float=0.0292->0.0310
+[00:06:06.761] [29256] [I] SOURCE TIMELINE nodes count=36 hash=831855601153cdaf
+[00:06:06.782] [29256] [I] SOURCE TIMELINE variable index=53 1023275960->1023522025 float=0.0310->0.0317
+[00:06:06.782] [29256] [I] SOURCE TIMELINE nodes count=36 hash=4109728517f1c58b
+[00:06:06.804] [29256] [I] SOURCE TIMELINE variable index=53 1023522025->1023700981 float=0.0317->0.0323
+[00:06:06.804] [29256] [I] SOURCE TIMELINE nodes count=36 hash=d563bb3c9201c26b
+[00:06:06.824] [29256] [I] SOURCE TIMELINE variable index=53 1023700981->1023879939 float=0.0323->0.0330
+[00:06:06.824] [29256] [I] SOURCE TIMELINE nodes count=36 hash=b102709cb882270d
+[00:06:06.845] [29256] [I] SOURCE TIMELINE variable index=53 1023879939->1023969417 float=0.0330->0.0333
+[00:06:06.845] [29256] [I] SOURCE TIMELINE nodes count=36 hash=031f46ab3f4b2167
+[00:06:06.866] [29256] [I] SOURCE TIMELINE variable index=53 1023969417->1024014157 float=0.0333->0.0335
+[00:06:06.866] [29256] [I] SOURCE TIMELINE nodes count=36 hash=6eff6af3ea984fb9
+[00:06:06.887] [29256] [I] SOURCE TIMELINE nodes count=36 hash=c9707a231029bbd3
+[00:06:06.907] [29256] [I] SOURCE TIMELINE variable index=53 1024014157->1017996729 float=0.0335->0.0212
+[00:06:06.907] [29256] [I] SOURCE TIMELINE nodes count=36 hash=a1b626e1a08a9535
+[00:06:06.928] [29256] [I] SOURCE TIMELINE variable index=53 1017996729->1017907251 float=0.0212->0.0210
+[00:06:06.928] [29256] [I] SOURCE TIMELINE nodes count=36 hash=1a4e79b6d056f71c
+[00:06:06.950] [29256] [I] SOURCE TIMELINE nodes count=36 hash=06bdd104a89b565f
+[00:06:06.972] [29256] [I] SOURCE TIMELINE variable index=53 1017907251->1017996729 float=0.0210->0.0212
+[00:06:06.972] [29256] [I] SOURCE TIMELINE nodes count=36 hash=b98cea9277d0d039
+[00:06:06.994] [29256] [I] SOURCE TIMELINE nodes count=36 hash=9ee79e0fd3923800
+[00:06:07.014] [29256] [I] SOURCE TIMELINE variable index=285 1125410406->1126945521 float=148.4000->171.8240
+[00:06:07.014] [29256] [I] SOURCE TIMELINE nodes count=36 hash=f9658d5b99daedaa
+[00:06:07.035] [29256] [I] SOURCE TIMELINE nodes count=36 hash=f72b16404505cf0a
+[00:06:07.056] [29256] [I] SOURCE TIMELINE nodes count=36 hash=5243795b744ed3d9
+[00:06:07.956] [29256] [I] SOURCE TIMELINE nodes count=36 hash=e550480874da8a18
+[00:06:07.979] [29256] [I] SOURCE TIMELINE variable index=53 1017996729->1025967769 float=0.0212->0.0408
+[00:06:07.979] [29256] [I] SOURCE TIMELINE nodes count=36 hash=5f4541b29c59ecb9
+[00:06:08.011] [29256] [I] SOURCE TIMELINE variable index=53 1025967769->1026459901 float=0.0408->0.0426
+[00:06:08.011] [29256] [I] SOURCE TIMELINE nodes count=36 hash=f820711018211182
+[00:06:08.042] [29256] [I] SOURCE TIMELINE variable index=53 1026459901->1026862555 float=0.0426->0.0441
+[00:06:08.042] [29256] [I] SOURCE TIMELINE nodes count=36 hash=3ed03235df28046f
+[00:06:08.073] [29256] [I] SOURCE TIMELINE variable index=53 1026862555->1027265207 float=0.0441->0.0456
+[00:06:08.073] [29256] [I] SOURCE TIMELINE nodes count=36 hash=bd72df76c590711b
+[00:06:08.103] [29256] [I] SOURCE TIMELINE variable index=53 1027265207->1027712600 float=0.0456->0.0473
+[00:06:08.104] [29256] [I] SOURCE TIMELINE nodes count=36 hash=9bc9df3677870452
+[00:06:08.135] [29256] [I] SOURCE TIMELINE variable index=53 1027712600->1028159992 float=0.0473->0.0489
+[00:06:08.135] [29256] [I] SOURCE TIMELINE nodes count=36 hash=eb9dfacdaa2fa488
+[00:06:08.165] [29256] [I] SOURCE TIMELINE variable index=53 1028159992->1028562647 float=0.0489->0.0504
+[00:06:08.165] [29256] [I] SOURCE TIMELINE nodes count=36 hash=916131b2ad9e301c
+[00:06:08.196] [29256] [I] SOURCE TIMELINE variable index=53 1028562647->1028607385 float=0.0504->0.0506
+[00:06:08.196] [29256] [I] SOURCE TIMELINE nodes count=36 hash=76f9696ddf27c406
+[00:06:08.221] [29256] [I] SOURCE TIMELINE variable index=53 1028607385->1023186480 float=0.0506->0.0308
+[00:06:08.221] [29256] [I] SOURCE TIMELINE nodes count=36 hash=7f94d261dd6458cf
+[00:06:08.243] [29256] [I] SOURCE TIMELINE variable index=53 1023186480->1022828567 float=0.0308->0.0302
+[00:06:08.243] [29256] [I] SOURCE TIMELINE nodes count=36 hash=b0d27096883e134e
+[00:06:08.265] [29256] [I] SOURCE TIMELINE variable index=53 1022828567->1022023260 float=0.0302->0.0287
+[00:06:08.265] [29256] [I] SOURCE TIMELINE nodes count=36 hash=b3cedd171bda9e3e
+[00:06:08.286] [29256] [I] SOURCE TIMELINE variable index=53 1022023260->1021217953 float=0.0287->0.0272
+[00:06:08.286] [29256] [I] SOURCE TIMELINE nodes count=36 hash=2132b0c1f4dd265a
+[00:06:08.307] [29256] [I] SOURCE TIMELINE variable index=53 1021217953->1020412647 float=0.0272->0.0257
+[00:06:08.307] [29256] [I] SOURCE TIMELINE nodes count=36 hash=b52c2af8b3a83c16
+[00:06:08.330] [29256] [I] SOURCE TIMELINE variable index=53 1020412647->1019696820 float=0.0257->0.0243
+[00:06:08.330] [29256] [I] SOURCE TIMELINE nodes count=36 hash=4ae42740dbfc359e
+[00:06:08.354] [29256] [I] SOURCE TIMELINE variable index=53 1019696820->1019159948 float=0.0243->0.0233
+[00:06:08.354] [29256] [I] SOURCE TIMELINE nodes count=36 hash=e3cc8b9811bb6f1e
+[00:06:08.379] [29256] [I] SOURCE TIMELINE variable index=53 1019159948->1019070471 float=0.0233->0.0232
+[00:06:08.379] [29256] [I] SOURCE TIMELINE nodes count=36 hash=c3df63b34e12fe45
+[00:06:08.403] [29256] [I] SOURCE TIMELINE variable index=53 1019070471->1018802035 float=0.0232->0.0227
+[00:06:08.403] [29256] [I] SOURCE TIMELINE nodes count=36 hash=42a30e0d407b10ff
+[00:06:08.427] [29256] [I] SOURCE TIMELINE variable index=53 1018802035->1018980992 float=0.0227->0.0230
+[00:06:08.427] [29256] [I] SOURCE TIMELINE nodes count=36 hash=cdcc20a66154a777
+[00:06:08.452] [29256] [I] SOURCE TIMELINE variable index=53 1018980992->1019070469 float=0.0230->0.0232
+[00:06:08.452] [29256] [I] SOURCE TIMELINE budget-exhausted lines=200
