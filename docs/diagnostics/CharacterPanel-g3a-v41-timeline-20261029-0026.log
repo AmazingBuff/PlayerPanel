@@ -1,0 +1,162 @@
+[00:25:11.460] [36308] [I] CharacterPanel v1-2-1-0
+[00:25:11.460] [36308] [I] CharacterPanel loaded
+[2026-10-29 00:25:11.459] [thread 36308] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(73): [info] CharacterPanel v1-2-1-0
+[00:25:22.054] [36308] [I] OAR Animations V1 mapping API available
+[00:25:22.054] [36308] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[00:25:22.054] [36308] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[00:26:00.154] [3400 ] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[00:26:00.154] [3400 ] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[00:26:00.154] [3400 ] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[00:26:00.154] [3400 ] [I] EXPERIMENT setting IndependentGraph=off
+[00:26:00.154] [3400 ] [I] EXPERIMENT setting DisplayPose=false
+[00:26:00.154] [3400 ] [I] EXPERIMENT setting DisplayStep=false
+[00:26:00.154] [3400 ] [I] EXPERIMENT setting SourceTimeline=true
+[00:26:00.156] [3400 ] [I] DAC native inventory lifecycle sink installed
+[00:26:00.159] [3400 ] [I] All shaders compiled
+[00:26:00.159] [3400 ] [I] Installed pre-UI renderer hook
+[00:26:00.159] [3400 ] [I] Panel menu sink installed
+[00:26:00.159] [3400 ] [I] CharacterManager equipment sink installed
+[00:26:00.159] [3400 ] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-behavior-graph-v41-timeline-panel-gate-20261029-9bc1a4b03a-cl94faaed0c6-20261028T162406Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[00:26:00.177] [32184] [I] Studio host changed: 0x0 -> 0x29409756980 (paused=true)
+[00:26:00.177] [32184] [I] Studio light node has been created
+[00:26:00.177] [32184] [I] CP-LIGHT slot 0: registered, shell 0x295980cf880 queued (ledger stays the authority)
+[00:26:00.177] [32184] [I] CP-LIGHT slot 1: registered, shell 0x295980cf740 queued (ledger stays the authority)
+[00:26:00.177] [32184] [I] CP-LIGHT slot 2: registered, shell 0x295980cf600 queued (ledger stays the authority)
+[00:26:00.177] [32184] [I] Studio lights registered on the ledger (scene=0x28a277b6e80 -- ledger fetch will populate the slots)
+[00:26:00.177] [32184] [I] CP-LIGHT slot 0: ledger shell fetched 0x295980cf880 (after 0 miss frames)
+[00:26:00.177] [32184] [I] CP-LIGHT slot 1: ledger shell fetched 0x295980cf740 (after 0 miss frames)
+[00:26:00.177] [32184] [I] CP-LIGHT slot 2: ledger shell fetched 0x295980cf600 (after 0 miss frames)
+[00:26:19.164] [36308] [I] DAC old-world sessions discarded world=2
+[00:26:19.467] [32184] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:26:19.467] [32184] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:26:19.467] [32184] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:26:19.467] [32184] [W] Studio lights not fully served by the ledger yet
+[00:26:25.834] [32184] [W] Studio lights not fully served by the ledger yet
+[00:26:28.440] [32184] [I] CharacterManager watch actor=00000014
+[00:26:28.450] [32184] [I] OAR bases stage=world-prewarm project=0x293b69a5f30 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.039
+[00:26:28.450] [32184] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x295980cfc40 filed to lightQueueAdd)
+[00:26:28.450] [32184] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x295980cf240 filed to lightQueueAdd)
+[00:26:28.450] [32184] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x295980cf100 filed to lightQueueAdd)
+[00:26:28.517] [32184] [I] CP-LIGHT slot 0: ledger shell fetched 0x295980cfc40 (after 1 miss frames)
+[00:26:28.517] [32184] [I] CP-LIGHT slot 1: ledger shell fetched 0x295980cf240 (after 1 miss frames)
+[00:26:28.517] [32184] [I] CP-LIGHT slot 2: ledger shell fetched 0x295980cf100 (after 1 miss frames)
+[00:26:44.165] [28800] [I] SOURCE TIMELINE arm-requested
+[00:26:44.181] [36308] [I] SOURCE TIMELINE window-open actor=00000014 words=463 nodes=36 seconds=20
+[00:26:44.519] [36308] [I] SOURCE TIMELINE variable index=53 name='TimeDelta' 1015670287->1015759765 float=0.0168->0.0170
+[00:26:44.638] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015670287 float=0.0170->0.0168
+[00:26:44.873] [36308] [I] SOURCE TIMELINE variable index=53 1015670287->1015759765 float=0.0168->0.0170
+[00:26:45.330] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015759766 float=0.0170->0.0170
+[00:26:46.074] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1015759765 float=0.0170->0.0170
+[00:26:46.158] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015670287 float=0.0170->0.0168
+[00:26:46.634] [36308] [I] SOURCE TIMELINE variable index=110 name='IsEquipping' 0->1 float=0.0000->0.0000
+[00:26:46.634] [36308] [I] SOURCE TIMELINE variable index=113 name='currentDefaultState' 0->10 float=0.0000->0.0000
+[00:26:46.634] [36308] [I] SOURCE TIMELINE nodes count=51
+[00:26:46.823] [36308] [I] SOURCE TIMELINE variable index=70 name='bVoiceReady' 1->0 float=0.0000->0.0000
+[00:26:46.823] [36308] [I] SOURCE TIMELINE variable index=200 name='bIsInMT' 1->0 float=0.0000->0.0000
+[00:26:46.823] [36308] [I] SOURCE TIMELINE nodes count=32
+[00:26:46.840] [36308] [I] SOURCE TIMELINE variable index=53 1015670287->1015849245 float=0.0168->0.0172
+[00:26:46.840] [36308] [I] SOURCE TIMELINE variable index=180 name='iLeftHandEquipped' 0->9 float=0.0000->0.0000
+[00:26:46.995] [36308] [I] SOURCE TIMELINE nodes count=33
+[00:26:47.011] [36308] [I] SOURCE TIMELINE variable index=126 name='bAttached' 0->1 float=0.0000->0.0000
+[00:26:47.132] [36308] [I] SOURCE TIMELINE variable index=117 name='iMagicEquipped' 0->1 float=0.0000->0.0000
+[00:26:47.132] [36308] [I] SOURCE TIMELINE variable index=179 name='iRightHandEquipped' 0->1 float=0.0000->0.0000
+[00:26:47.217] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1015759766 float=0.0172->0.0170
+[00:26:47.945] [36308] [I] SOURCE TIMELINE variable index=38 name='IsAttackReady' 0->1 float=0.0000->0.0000
+[00:26:47.945] [36308] [I] SOURCE TIMELINE variable index=70 0->1 float=0.0000->0.0000
+[00:26:47.946] [36308] [I] SOURCE TIMELINE variable index=92 name='bMLh_Ready' 0->1 float=0.0000->0.0000
+[00:26:47.946] [36308] [I] SOURCE TIMELINE variable index=93 name='bMRh_Ready' 0->1 float=0.0000->0.0000
+[00:26:47.946] [36308] [I] SOURCE TIMELINE variable index=94 name='iState' 0->9 float=0.0000->0.0000
+[00:26:47.946] [36308] [I] SOURCE TIMELINE variable index=113 10->1 float=0.0000->0.0000
+[00:26:47.946] [36308] [I] SOURCE TIMELINE nodes count=81
+[00:26:47.963] [36308] [I] SOURCE TIMELINE variable index=126 1->0 float=0.0000->0.0000
+[00:26:48.053] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1016296637 float=0.0170->0.0180
+[00:26:48.159] [36308] [I] SOURCE TIMELINE variable index=110 1->0 float=0.0000->0.0000
+[00:26:48.159] [36308] [I] SOURCE TIMELINE nodes count=66
+[00:26:48.664] [36308] [I] SOURCE TIMELINE variable index=53 1016296637->1015849245 float=0.0180->0.0172
+[00:26:51.305] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1015759767 float=0.0172->0.0170
+[00:26:51.424] [36308] [I] SOURCE TIMELINE variable index=53 1015759767->1015759765 float=0.0170->0.0170
+[00:26:51.510] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015759767 float=0.0170->0.0170
+[00:26:51.612] [36308] [I] SOURCE TIMELINE variable index=53 1015759767->1015759766 float=0.0170->0.0170
+[00:26:52.094] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1015849245 float=0.0170->0.0172
+[00:26:52.414] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1016296637 float=0.0172->0.0180
+[00:26:52.668] [36308] [I] SOURCE TIMELINE variable index=53 1016296637->1015759765 float=0.0180->0.0170
+[00:26:53.189] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015849245 float=0.0170->0.0172
+[00:26:53.380] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1015938724 float=0.0172->0.0173
+[00:26:53.652] [36308] [I] SOURCE TIMELINE variable index=65 name='PitchManualOverride' 0->1 float=0.0000->0.0000
+[00:26:53.652] [36308] [I] SOURCE TIMELINE variable index=111 name='IsUnequipping' 0->1 float=0.0000->0.0000
+[00:26:53.652] [36308] [I] SOURCE TIMELINE variable index=113 1->12 float=0.0000->0.0000
+[00:26:53.652] [36308] [I] SOURCE TIMELINE variable index=125 name='bEquipUnequip' 0->1 float=0.0000->0.0000
+[00:26:53.652] [36308] [I] SOURCE TIMELINE nodes count=82
+[00:26:53.838] [36308] [I] SOURCE TIMELINE variable index=38 1->0 float=0.0000->0.0000
+[00:26:53.838] [36308] [I] SOURCE TIMELINE variable index=70 1->0 float=0.0000->0.0000
+[00:26:53.838] [36308] [I] SOURCE TIMELINE variable index=92 1->0 float=0.0000->0.0000
+[00:26:53.838] [36308] [I] SOURCE TIMELINE variable index=93 1->0 float=0.0000->0.0000
+[00:26:53.838] [36308] [I] SOURCE TIMELINE variable index=94 9->0 float=0.0000->0.0000
+[00:26:53.838] [36308] [I] SOURCE TIMELINE nodes count=33
+[00:26:54.469] [36308] [I] SOURCE TIMELINE variable index=53 1015938724->1016028202 float=0.0173->0.0175
+[00:26:54.504] [36308] [I] SOURCE TIMELINE variable index=117 1->0 float=0.0000->0.0000
+[00:26:54.504] [36308] [I] SOURCE TIMELINE variable index=179 1->0 float=0.0000->0.0000
+[00:26:54.625] [36308] [I] SOURCE TIMELINE variable index=53 1016028202->1015849245 float=0.0175->0.0172
+[00:26:54.728] [36308] [I] SOURCE TIMELINE variable index=70 0->1 float=0.0000->0.0000
+[00:26:54.728] [36308] [I] SOURCE TIMELINE variable index=113 12->0 float=0.0000->0.0000
+[00:26:54.728] [36308] [I] SOURCE TIMELINE variable index=200 0->1 float=0.0000->0.0000
+[00:26:54.728] [36308] [I] SOURCE TIMELINE nodes count=52
+[00:26:54.744] [36308] [I] SOURCE TIMELINE variable index=180 9->0 float=0.0000->0.0000
+[00:26:54.828] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1015759766 float=0.0172->0.0170
+[00:26:54.933] [36308] [I] SOURCE TIMELINE variable index=65 1->0 float=0.0000->0.0000
+[00:26:54.933] [36308] [I] SOURCE TIMELINE variable index=111 1->0 float=0.0000->0.0000
+[00:26:54.933] [36308] [I] SOURCE TIMELINE variable index=125 1->0 float=0.0000->0.0000
+[00:26:54.933] [36308] [I] SOURCE TIMELINE nodes count=36
+[00:26:55.108] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1015938724 float=0.0170->0.0173
+[00:26:55.337] [36308] [I] SOURCE TIMELINE variable index=53 1015938724->1016117680 float=0.0173->0.0177
+[00:26:55.506] [36308] [I] SOURCE TIMELINE variable index=53 1016117680->1015759765 float=0.0177->0.0170
+[00:26:55.606] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015670287 float=0.0170->0.0168
+[00:26:55.743] [36308] [I] SOURCE TIMELINE variable index=53 1015670287->1015759766 float=0.0168->0.0170
+[00:26:56.049] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1015849245 float=0.0170->0.0172
+[00:26:56.854] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1016028203 float=0.0172->0.0175
+[00:26:57.297] [36308] [I] SOURCE TIMELINE variable index=53 1016028203->1015759766 float=0.0175->0.0170
+[00:26:57.569] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1015670287 float=0.0170->0.0168
+[00:26:58.228] [36308] [I] SOURCE TIMELINE variable index=53 1015670287->1015759766 float=0.0168->0.0170
+[00:26:58.497] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1015670287 float=0.0170->0.0168
+[00:26:58.822] [36308] [I] SOURCE TIMELINE variable index=53 1015670287->1015849245 float=0.0168->0.0172
+[00:26:58.958] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1015670287 float=0.0172->0.0168
+[00:26:59.599] [36308] [I] SOURCE TIMELINE variable index=53 1015670287->1015759766 float=0.0168->0.0170
+[00:26:59.667] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1015670287 float=0.0170->0.0168
+[00:26:59.836] [36308] [I] SOURCE TIMELINE variable index=53 1015670287->1015759765 float=0.0168->0.0170
+[00:27:00.760] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015670287 float=0.0170->0.0168
+[00:27:00.896] [36308] [I] SOURCE TIMELINE variable index=53 1015670287->1015759765 float=0.0168->0.0170
+[00:27:01.016] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015759766 float=0.0170->0.0170
+[00:27:01.304] [36308] [I] SOURCE TIMELINE variable index=53 1015759766->1015759765 float=0.0170->0.0170
+[00:27:01.406] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015759767 float=0.0170->0.0170
+[00:27:01.807] [36308] [I] SOURCE TIMELINE variable index=53 1015759767->1015849245 float=0.0170->0.0172
+[00:27:02.148] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1015759765 float=0.0172->0.0170
+[00:27:02.301] [36308] [I] SOURCE TIMELINE variable index=53 1015759765->1015849245 float=0.0170->0.0172
+[00:27:02.729] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1015759767 float=0.0172->0.0170
+[00:27:02.832] [36308] [I] SOURCE TIMELINE variable index=53 1015759767->1015849245 float=0.0170->0.0172
+[00:27:02.938] [36308] [I] SOURCE TIMELINE variable index=48 name='iSyncTurnState' 1->0 float=0.0000->0.0000
+[00:27:02.955] [36308] [I] SOURCE TIMELINE variable index=0 name='Speed' 0->1072235567 float=0.0000->1.8204
+[00:27:02.989] [36308] [I] SOURCE TIMELINE variable index=151 name='bHeadTracking' 0->1 float=0.0000->0.0000
+[00:27:03.061] [36308] [I] SOURCE TIMELINE variable index=3 name='iSyncIdleLocomotion' 0->1 float=0.0000->0.0000
+[00:27:03.061] [36308] [I] SOURCE TIMELINE variable index=185 name='bHeadTrackSpine' 1->0 float=0.0000->0.0000
+[00:27:03.080] [36308] [I] SOURCE TIMELINE nodes count=53
+[00:27:03.341] [36308] [I] SOURCE TIMELINE variable index=0 1072235567->1136003908 float=1.8204->364.0880
+[00:27:03.341] [36308] [I] SOURCE TIMELINE variable index=40 name='SpeedSampled' 0->1136003908 float=0.0000->364.0880
+[00:27:03.450] [36308] [I] SOURCE TIMELINE nodes count=49
+[00:27:03.515] [36308] [I] SOURCE TIMELINE variable index=16 name='Pitch' -1042896743->-1046591602 float=-26.8323->-19.7849
+[00:27:03.537] [36308] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000
+[00:27:03.627] [36308] [I] SOURCE TIMELINE variable index=0 1136003908->1136003909 float=364.0880->364.0880
+[00:27:03.627] [36308] [I] SOURCE TIMELINE variable index=40 1136003908->1136003909 float=364.0880->364.0880
+[00:27:03.627] [36308] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000
+[00:27:03.627] [36308] [I] SOURCE TIMELINE variable index=53 1015849245->1018444121 float=0.0172->0.0220
+[00:27:03.989] [36308] [I] SOURCE TIMELINE variable index=177 name='bInJumpState' 0->1 float=0.0000->0.0000
+[00:27:03.989] [36308] [I] SOURCE TIMELINE variable index=206 name='bHumanoidFootIKDisable' 0->1 float=0.0000->0.0000
+[00:27:03.989] [36308] [I] SOURCE TIMELINE nodes count=64
+[00:27:04.011] [36308] [I] SOURCE TIMELINE variable index=48 2->0 float=0.0000->0.0000
+[00:27:04.032] [36308] [I] SOURCE TIMELINE variable index=2 name='TurnDelta' -2147483648->-1036779520 float=-0.0000->-45.0000
+[00:27:04.147] [36308] [I] SOURCE TIMELINE variable index=16 -1046591602->-1048101085 float=-19.7849->-16.9058
+[00:27:04.147] [36308] [I] SOURCE TIMELINE variable index=53 1018444121->1018802035 float=0.0220->0.0227
+[00:27:04.170] [36308] [I] SOURCE TIMELINE variable index=70 1->0 float=0.0000->0.0000
+[00:27:04.170] [36308] [I] SOURCE TIMELINE variable index=185 0->1 float=0.0000->0.0000
+[00:27:04.170] [36308] [I] SOURCE TIMELINE variable index=200 1->0 float=0.0000->0.0000
+[00:27:04.170] [36308] [I] SOURCE TIMELINE nodes count=31
+[00:27:04.193] [36308] [I] SOURCE TIMELINE window-closed lines=117

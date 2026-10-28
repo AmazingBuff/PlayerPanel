@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)）；"全局登记计数"的旧静态结论被 v35 上机读数证伪、判为无锚点（[更正](#g1-teardown-audit)）。 |
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：来源图替换而 controller 未重建的 `source-invalid` 分支、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
-| G3–G6 | **完整关卡未通过/未执行** | 事件链、独立 OAR 语境、完整姿态对照及生命周期仍需分别验收。 |
+| G3–G6 | **G3-A 成立；G3-B 与 G4–G6 未执行** | G3-A 已按名字取得同一单手武器 Equip→Idle→Unequip 的变量顺序与相位（[v41](#g3-a-contract)）；候选是否自行走完同一顺序（G3-B）、OAR 语境隔离、完整姿态对照及生命周期仍需分别验收。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
@@ -31,7 +31,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | --- | --- | --- |
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：`source-invalid` 分支、场景应用、装载销毁与 G3–G6 |
-| G3–G6 | 未执行 | — |
+| G3–G6 | G3-A 成立；G3-B 与 G4–G6 未执行 | G3-A 的输入清单见 [v41 记录](#g3-a-contract) |
 
 ### 逐轮实验（本系列）
 
@@ -79,7 +79,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | 场景应用（物理、武器挂载交互） | 未验 |
 | 装载图停用/销毁 | **判为 NO-GO（2026-10-28 审计）**：`Deactivate` 对 `activeNodes` 无空检查，且候选与源共享 `rootGenerator`，未证活动节点条目是克隆；污染源图比崩溃更糟。收益只是每进程一张图的登记与内存，不阻塞 G3–G6。见[审计](#g1-teardown-audit) |
 | 全局登记计数 | **无锚点、不立项**：v35 探针在 23:16 上机读回 `300474432->300474432`，重审指令确认 `[0x315C950]+0x228` 是不变的奇偶/序列值、`inc` 未写回、`63529` 只是无锁追加而非登记；旧审计那句话判为误读（[更正](#g1-teardown-audit)） |
-| G3–G6、独立 OAR 语境 | 未执行 |
+| G3–G6、独立 OAR 语境 | **G3-A 成立**（源序列已按名字取得）；G3-B（候选自行走完同一顺序）、G4–G6 未执行 |
 | 非骨缺失项逐名核对 | v33 的 `missing=7` 只按预算列了 4 个名字，其余 3 个未列名，不能逐一断言全部非骨 |
 | 帧率无关性 | 固定步长 1/60 每次 eligible 调用；调用数不等于墙钟时间，未做不同 FPS 下的速率校准 |
 
@@ -1735,6 +1735,45 @@ v38 引入 **settle 规则**：一个新值必须连续 **3 个采样**保持不
 
 > **v41 判据修正**：F7 的分流依据是 `PanelMonitor::is_menu_open()`，不是"场景图是否存在"——00:21 那次按 F7 只触发了面板重捕获并被 `outside paused inventory` 拒绝，说明场景图对象在面板外同样存在。若再出现 `command=1 ignored outside paused inventory`，即判热键未到达时间线窗口。
 
+### v41 运行记录（2026-10-29 00:26，**G3-A 成立**）
+
+身份 `…v41-timeline-panel-gate-20261029-9bc1a4b03a…`。日志[归档](diagnostics/CharacterPanel-g3a-v41-timeline-20261029-0026.log)（15,705 字节、`bc48e764…`、无 `[E]`）。`arm-requested` → `window-open words=463 nodes=36 seconds=20` → 117 行 → `window-closed lines=117`，预算未触顶。
+
+**装备（00:26:46.634 → 48.159，约 1.5 s）**
+
+| 时刻 | settled 变化 |
+| --- | --- |
+| 46.634 | `IsEquipping` 0→1、`currentDefaultState` 0→10、nodes 51 |
+| 46.823 | `bVoiceReady` 1→0、`bIsInMT` 1→0、nodes 32 |
+| 46.840 | `iLeftHandEquipped` 0→9 |
+| 46.995 | nodes 33 |
+| 47.011 | `bAttached` 0→1 |
+| 47.132 | `iMagicEquipped` 0→1、`iRightHandEquipped` 0→1 |
+| 47.945 | `IsAttackReady` 0→1、`bVoiceReady` 0→1、`bMLh_Ready`/`bMRh_Ready` 0→1、**`iState` 0→9**、`currentDefaultState` 10→1、nodes 81 |
+| 47.963 | `bAttached` 1→0 |
+| 48.159 | `IsEquipping` 1→0、nodes 66 |
+
+**卸下（00:26:53.652 → 54.933，约 1.3 s）**
+
+| 时刻 | settled 变化 |
+| --- | --- |
+| 53.652 | `PitchManualOverride` 0→1、`IsUnequipping` 0→1、`currentDefaultState` 1→12、`bEquipUnequip` 0→1、nodes 82 |
+| 53.838 | `IsAttackReady` 1→0、`bVoiceReady` 1→0、`bMLh_Ready`/`bMRh_Ready` 1→0、**`iState` 9→0**、nodes 33 |
+| 54.504 | `iMagicEquipped` 1→0、`iRightHandEquipped` 1→0 |
+| 54.728 | `bVoiceReady` 0→1、`currentDefaultState` 12→0、`bIsInMT` 0→1、nodes 52 |
+| 54.744 | `iLeftHandEquipped` 9→0 |
+| 54.933 | `PitchManualOverride` 1→0、`IsUnequipping` 1→0、`bEquipUnequip` 1→0、nodes 36 |
+
+判读：
+
+- 两条序列都把**状态量**写进了日志，而 1.2 s 周期量（`BlendJump` 等）没有主导输出——settle + 窗口两条规则合在一起生效。
+- `iState` 0→9（装备完成）与 9→0（卸下完成）是最干净的相位标志；`currentDefaultState` 走 0→10→1→12→0，`IsEquipping`/`IsUnequipping` 各是一段 1.5 s / 1.3 s 的矩形脉冲。
+- 装备与卸下的变量集合**不对称**：装备有 `bAttached`、`IsAttackReady`、`bMLh_Ready`/`bMRh_Ready`；卸下有 `PitchManualOverride`、`bEquipUnequip`。回放时不能只按"把装备序列取反"来做。
+- `TimeDelta` 仍出现约 50 次（settle 拦不住持续抖动），但在 800 预算里不构成问题。
+- 窗口关后（00:27:02 起）出现 `Speed`/`iSyncIdleLocomotion`/`bInJumpState` 等，属用户移动，不在本次判读范围。
+
+**G3-A 判定：成立**——按名字拿到同一把单手武器 Equip→Idle→Unequip 的变量顺序与相位，未手动指定动作族/HKX，未发事件、未写变量。**下一步 G3-B**：把这些输入按**变量名**（候选 652 vs 源 463，索引不可复用）送到候选图，并记录候选是否自行走完同一顺序。
+
 **预注册（v39）**：`window-open` 出现且 `words=463`；装备与卸下在窗口内各出现一组 settled 变化；同一索引在窗口内出现次数不超过其真实状态数（例如 `iLeftHandEquipped` 不应出现 10 次以上）；`window-closed lines=N` 且 N≤800。若窗口内仍只看到 1.2 s 周期循环而没有装备变化，说明装备走的是事件而非变量——那 G3-B 的输入就必须以事件为主，变量只作对照。
 
 **运行步骤**：`SourceTimeline=true`、其余键保持 off，重启；进入游戏后原地：装备一把单手武器 → 等约 2 s → 卸下 → 等约 2 s → 退出并交日志。不要开背包、不要 F7、不要换装以外的操作。
@@ -1889,7 +1928,8 @@ BehaviorGraphProbe=true
 | G3-A v39 窗口 | 2026-10-29 00:17：F9 开 20 s 窗口（在 scene-graph 门之前处理，正常游戏可用）、自动关闭、预算 800；身份 `…v39-timeline-window-20261029-5f2cf53de6…`，DLL `5f2f660a…`；v38 备份到 `dist/deploy-backup-20261029-v38/`。**F9 与游戏快速读档冲突，本轮作废** | 换键重发 |
 | G3-A v40 换键 | 2026-10-29 00:19：时间线窗口改绑 **F7**（仅在无面板时；面板内 F7 仍为重捕获），构建 `…v40-timeline-f7-20261029-58d25af47b…`（DLL `5f791d2c…`），v39 备份到 `dist/deploy-backup-20261029-v39/`，已部署 | 未上机 |
 | G3-A v40 运行（空采） | 2026-10-29 00:21：`SourceTimeline=true` 已加载，但按 F7 只出现 `SceneGraph ... command=1 ignored outside paused inventory`——**场景图对象在面板外也存在**，所以"graph 为空"不能当面板关闭的判据，F7 落进了重捕获分支。日志 4,035 字节 `e6c623a7…` | 改用面板状态判定 |
-| G3-A v41 门修正 | 2026-10-29 00:24：改用 `PanelMonitor::is_menu_open()` 判定——面板外 F7 开窗口，面板内 F7 重捕获；构建 `…v41-timeline-panel-gate-20261029-9bc1a4b03a…`（DLL `3b8f8efe…`），v40 备份到 `dist/deploy-backup-20261029-v40/`，已部署 | 未上机 |
+| G3-A v41 门修正 | 2026-10-29 00:24：改用 `PanelMonitor::is_menu_open()` 判定——面板外 F7 开窗口，面板内 F7 重捕获；构建 `…v41-timeline-panel-gate-20261029-9bc1a4b03a…`（DLL `3b8f8efe…`），v40 备份到 `dist/deploy-backup-20261029-v40/`，已部署 | —（运行见下行） |
+| G3-A v41 运行（成立） | 2026-10-29 00:26：`window-open words=463` → 117 行 → `window-closed`；装备（46.634–48.159）与卸下（53.652–54.933）两段 settled 序列完整，`iState` 0→9→0、`currentDefaultState` 0→10→1→12→0、`IsEquipping`/`IsUnequipping` 各一段脉冲；日志 15,705 字节 `bc48e764…`。**G3-A 成立** | G3-B 回放契约 |
 | G1 遗留审计 + v35/v36 | 2026-10-28 23:11–23:18：指令级确认 `Deactivate`（`0xab1f70`）对 `activeNodes` 无空检查、`context+8` 非空即早退、释放 `variableValueSet` 并置 `isActive=false`；引擎只在 `BShkbAnimationGraph` 析构里配对调用；候选与源三份日志 `root-generator` 同指针 → **销毁判 NO-GO**。**v35 探针证伪**：23:16 读回 `registry=300474432->300474432`，重审确认 `+0x228` 是不变奇偶值、`inc` 未写回、`63529` 是无锁追加而非登记 → 旧"登记计数"结论作废，判无锚点。`1ca2ad6` 已 revert（`cee948d`），构建 **v36**（`…v36-registry-probe-revert-20261028-cee948dcf8…`，DLL `ac01ac95…`）并部署，三键回 off。见[审计与更正](#g1-teardown-audit)、[v35 构建](build.md#v35-registry-probe-2026-10-28)、[v36 构建](build.md#v36-revert-2026-10-28) | —（该项结清） |
 | G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
