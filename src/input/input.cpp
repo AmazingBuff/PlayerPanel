@@ -5,6 +5,7 @@
 #include "input/input.h"
 
 #include "character/character_manager.h"
+#include "animation/behavior_graph/source_timeline.h"
 
 #include <Windows.h>
 
@@ -33,10 +34,16 @@ namespace
                 RE::ButtonEvent* button = event->AsButtonEvent();
                 if (!button || button->device.get() != RE::INPUT_DEVICE::kKeyboard || !button->IsDown())
                     continue;
+                const uint32_t scan = button->GetIDCode();
+                // G3-A: F9 opens a bounded timeline window without needing an open panel.
+                if (scan == MapVirtualKeyA(VK_F9, MAPVK_VK_TO_VSC))
+                {
+                    animation::behavior_graph::arm_source_timeline();
+                    continue;
+                }
                 const auto graph = CharacterManager::instance().get_scene_graph(RE::PlayerCharacter::GetSingleton());
                 if (!graph) continue;
                 using Command = SceneGraph::Command;
-                const uint32_t scan = button->GetIDCode();
                 if (scan == MapVirtualKeyA(VK_F7, MAPVK_VK_TO_VSC))
                     graph->request(Command::e_capture);
                 else if (scan == MapVirtualKeyA(VK_F8, MAPVK_VK_TO_VSC))

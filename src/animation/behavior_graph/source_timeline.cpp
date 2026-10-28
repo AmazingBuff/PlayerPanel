@@ -16,6 +16,7 @@
 #include <RE/H/hkStringPtr.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -30,9 +31,9 @@ namespace animation::behavior_graph
         // (TimeDelta, Pitch, velocity...) and keep only values that actually hold: a change is
         // written only after the new value has survived kSettleSamples consecutive samples.
         constexpr std::size_t kMaxWords = 1024;
-        constexpr std::uint32_t kLineBudget = 200;
+        constexpr std::uint32_t kLineBudget = 800;
         constexpr std::uint8_t kSettleSamples = 3;
-        constexpr std::uint64_t kFnvOffset = 0xcbf29ce484222325ull;
+        constexpr std::chrono::seconds kWindow{ 20 };
 
         // hkbVariableValueSet stores its word array behind an hkArray whose data pointer and
         // count are at +0x10 / +0x18; both offsets are the ones the candidate probe already reads.
@@ -60,7 +61,9 @@ namespace animation::behavior_graph
             std::uint8_t node_settled = 0;
             std::uint32_t lines = 0;
             bool armed = false;
+            bool pending_arm = false;
             bool exhausted = false;
+            std::chrono::steady_clock::time_point window_start{};
         };
 
         Recorder& recorder()
@@ -116,6 +119,7 @@ namespace animation::behavior_graph
             std::size_t a_count, std::uint32_t a_actor_id)
         {
             a_state.armed = true;
+            a_state.window_start = std::chrono::steady_clock::now();
             a_state.logged.assign(a_words, a_words + a_count);
             a_state.candidate.assign(a_words, a_words + a_count);
             a_state.settled.assign(a_count, 0);
@@ -124,7 +128,8 @@ namespace animation::behavior_graph
             a_state.node_count = nodes ? field_at<std::int32_t>(nodes, kNodeCountOffset) : 0;
             a_state.node_candidate = a_state.node_count;
             a_state.node_settled = 0;
-            logger::info("SOURCE TIMELINE armed actor={:08x} words={} nodes={}", a_actor_id, a_count, a_state.node_count);
+            logger::info("SOURCE TIMELINE window-open actor={:08x} words={} nodes={} seconds={}", a_actor_id, a_count,
+                a_state.node_count, kWindow.count());
         }
 
         void sample_variables(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
@@ -183,9 +188,21 @@ namespace animation::behavior_graph
         }
     }
 
+    void arm_source_timeline()
+    {
+        if (!source_timeline())
+            return;
+        Recorder& state = recorder();
+        state.pending_arm = true;
+        logger::info("SOURCE TIMELINE arm-requested");
+    }
+
     void sample_source_timeline(RE::Actor& actor)
     {
         if (!source_timeline())
+            return;
+        Recorder& state = recorder();
+        if (!state.armed && !state.pending_arm)
             return;
         RE::BShkbAnimationGraph* const graph = player_graph(actor);
         if (!graph)
@@ -201,17 +218,23 @@ namespace animation::behavior_graph
         if (count <= 0 || static_cast<std::size_t>(count) > kMaxWords || !words)
             return;
 
-        Recorder& state = recorder();
-        if (!state.armed)
+        if (state.pending_arm)
         {
+            state.pending_arm = false;
             arm(state, *behavior, words, static_cast<std::size_t>(count), actor.GetFormID());
+            return;
+        }
+        if (std::chrono::steady_clock::now() - state.window_start > kWindow)
+        {
+            state.armed = false;
+            logger::info("SOURCE TIMELINE window-closed lines={}", state.lines);
             return;
         }
         if (state.logged.size() != static_cast<std::size_t>(count))
         {
-            // The graph was replaced or reloaded; start a fresh baseline instead of diffing
-            // two different variable layouts.
-            logger::info("SOURCE TIMELINE rearm actor={:08x} words={}->{}", actor.GetFormID(), state.logged.size(), count);
+            // The graph was replaced or reloaded while the window was open; rebase instead of
+            // diffing two different variable layouts.
+            logger::info("SOURCE TIMELINE rebase actor={:08x} words={}->{}", actor.GetFormID(), state.logged.size(), count);
             arm(state, *behavior, words, static_cast<std::size_t>(count), actor.GetFormID());
             return;
         }

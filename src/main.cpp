@@ -49,7 +49,7 @@ namespace
             PLUGIN_NAMESPACE::PanelMonitor::instance().install();
             PLUGIN_NAMESPACE::CharacterManager::instance().install();
             PLUGIN_NAMESPACE::InputManager::install();
-            logger::info("SCENEGRAPH BUILD {} runtime={} backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture F8-toggle",
+            logger::info("SCENEGRAPH BUILD {} runtime={} backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture F8-toggle F9-timeline",
                 Plugin::Plugin_Build_Identity, REL::Module::get().version().string());
 
             break;
