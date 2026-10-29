@@ -10,6 +10,7 @@
 #include "input/input.h"
 #include "animation/oar/hooks.h"
 #include "animation/dac/session.h"
+#include "animation/behavior_graph/source_timeline.h"
 #include "animation/settings.h"
 
 namespace
@@ -55,6 +56,7 @@ namespace
             break;
         case SKSE::MessagingInterface::kPreLoadGame:
         case SKSE::MessagingInterface::kNewGame:
+            PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_source_timeline();
             PLUGIN_NAMESPACE::dac::reset_world();
             PLUGIN_NAMESPACE::CharacterManager::instance().clear_previews();
 

@@ -4,6 +4,8 @@
 
 #include "animation/behavior_graph/source_timeline.h"
 
+#include "animation/behavior_graph/source_timeline_policy.h"
+
 #include "animation/settings.h"
 
 #include <RE/A/Actor.h>
@@ -31,9 +33,7 @@ namespace animation::behavior_graph
         // (TimeDelta, Pitch, velocity...) and keep only values that actually hold: a change is
         // written only after the new value has survived kSettleSamples consecutive samples.
         constexpr std::size_t kMaxWords = 1024;
-        constexpr std::uint32_t kLineBudget = 800;
         constexpr std::uint8_t kSettleSamples = 3;
-        constexpr std::chrono::seconds kWindow{ 20 };
 
         // hkbVariableValueSet stores its word array behind an hkArray whose data pointer and
         // count are at +0x10 / +0x18; both offsets are the ones the candidate probe already reads.
@@ -59,11 +59,7 @@ namespace animation::behavior_graph
             std::int32_t node_count = -1;
             std::int32_t node_candidate = -1;
             std::uint8_t node_settled = 0;
-            std::uint32_t lines = 0;
-            bool armed = false;
-            bool pending_arm = false;
-            bool exhausted = false;
-            std::chrono::steady_clock::time_point window_start{};
+            SourceTimelineWindow window;
         };
 
         Recorder& recorder()
@@ -72,18 +68,26 @@ namespace animation::behavior_graph
             return s_recorder;
         }
 
+        SourceTimelineRequests& requests()
+        {
+            static SourceTimelineRequests s_requests;
+            return s_requests;
+        }
+
         bool take_line(Recorder& state)
         {
-            if (state.exhausted)
+            if (state.window.exhausted())
                 return false;
-            if (state.lines < kLineBudget)
-            {
-                ++state.lines;
+            if (state.window.take_line())
                 return true;
-            }
-            state.exhausted = true;
-            logger::info("SOURCE TIMELINE budget-exhausted lines={}", kLineBudget);
+            logger::info("SOURCE TIMELINE budget-exhausted lines={}", Source_Timeline_Line_Budget);
             return false;
+        }
+
+        void abort_source(Recorder& state)
+        {
+            state.window.cancel();
+            logger::info("SOURCE TIMELINE window-aborted reason=source-lost-or-replaced lines={}", state.window.lines());
         }
 
         RE::BShkbAnimationGraph* player_graph(RE::Actor& actor)
@@ -115,11 +119,9 @@ namespace animation::behavior_graph
             return names[static_cast<std::uint32_t>(a_index)].c_str();
         }
 
-        void arm(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
+        void baseline(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
             std::size_t a_count, std::uint32_t a_actor_id)
         {
-            a_state.armed = true;
-            a_state.window_start = std::chrono::steady_clock::now();
             a_state.logged.assign(a_words, a_words + a_count);
             a_state.candidate.assign(a_words, a_words + a_count);
             a_state.settled.assign(a_count, 0);
@@ -129,7 +131,7 @@ namespace animation::behavior_graph
             a_state.node_candidate = a_state.node_count;
             a_state.node_settled = 0;
             logger::info("SOURCE TIMELINE window-open actor={:08x} words={} nodes={} seconds={}", a_actor_id, a_count,
-                a_state.node_count, kWindow.count());
+                a_state.node_count, Source_Timeline_Window.count());
         }
 
         void sample_variables(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
@@ -192,9 +194,13 @@ namespace animation::behavior_graph
     {
         if (!source_timeline())
             return;
-        Recorder& state = recorder();
-        state.pending_arm = true;
+        requests().arm();
         logger::info("SOURCE TIMELINE arm-requested");
+    }
+
+    void invalidate_source_timeline()
+    {
+        requests().invalidate();
     }
 
     void sample_source_timeline(RE::Actor& actor)
@@ -202,42 +208,71 @@ namespace animation::behavior_graph
         if (!source_timeline())
             return;
         Recorder& state = recorder();
-        if (!state.armed && !state.pending_arm)
+        SourceTimelineIntent const intent = requests().take();
+        if (intent == SourceTimelineIntent::e_invalidate)
+        {
+            state = Recorder{};
+            logger::info("SOURCE TIMELINE invalidated reason=world-reset");
             return;
+        }
+        if (intent == SourceTimelineIntent::e_arm)
+        {
+            state = Recorder{};
+            state.window.arm(std::chrono::steady_clock::now());
+        }
+        if (!state.window.active())
+            return;
+        if (state.window.expire(std::chrono::steady_clock::now()))
+        {
+            logger::info("SOURCE TIMELINE window-closed lines={}", state.window.lines());
+            return;
+        }
         RE::BShkbAnimationGraph* const graph = player_graph(actor);
         if (!graph)
+        {
+            abort_source(state);
             return;
+        }
         RE::hkbBehaviorGraph* const behavior = graph->behaviorGraph;
         if (!behavior)
+        {
+            abort_source(state);
             return;
+        }
+        RE::hkbBehaviorGraphData* const data = behavior->data.get();
         RE::hkbVariableValueSet* const set = behavior->variableValueSet.get();
-        if (!set)
+        if (!data || !set)
+        {
+            abort_source(state);
             return;
+        }
         std::int32_t const count = field_at<std::int32_t>(set, kWordCountOffset);
         std::int32_t const* const words = field_at<std::int32_t const*>(set, kWordDataOffset);
         if (count <= 0 || static_cast<std::size_t>(count) > kMaxWords || !words)
+        {
+            abort_source(state);
             return;
+        }
 
-        if (state.pending_arm)
+        SourceTimelineIdentity const source{
+            reinterpret_cast<std::uintptr_t>(&actor), reinterpret_cast<std::uintptr_t>(graph),
+            reinterpret_cast<std::uintptr_t>(behavior), reinterpret_cast<std::uintptr_t>(data),
+            reinterpret_cast<std::uintptr_t>(set), reinterpret_cast<std::uintptr_t>(words),
+            static_cast<std::size_t>(count)
+        };
+        SourceTimelineSample const sample = state.window.observe_source(source);
+        if (sample == SourceTimelineSample::e_aborted)
         {
-            state.pending_arm = false;
-            arm(state, *behavior, words, static_cast<std::size_t>(count), actor.GetFormID());
+            abort_source(state);
             return;
         }
-        if (std::chrono::steady_clock::now() - state.window_start > kWindow)
+        if (sample == SourceTimelineSample::e_baseline)
         {
-            state.armed = false;
-            logger::info("SOURCE TIMELINE window-closed lines={}", state.lines);
+            baseline(state, *behavior, words, source.count, actor.GetFormID());
             return;
         }
-        if (state.logged.size() != static_cast<std::size_t>(count))
-        {
-            // The graph was replaced or reloaded while the window was open; rebase instead of
-            // diffing two different variable layouts.
-            logger::info("SOURCE TIMELINE rebase actor={:08x} words={}->{}", actor.GetFormID(), state.logged.size(), count);
-            arm(state, *behavior, words, static_cast<std::size_t>(count), actor.GetFormID());
+        if (state.window.exhausted())
             return;
-        }
         sample_variables(state, *behavior, words, static_cast<std::size_t>(count));
         sample_nodes(state, *behavior);
     }

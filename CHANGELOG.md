@@ -8,7 +8,7 @@
 
 ### Added
 
-- Capture the source's own equip/unequip timeline in game (G3-A, v41): a 20-second F7 window produced 117 settled lines covering both transitions — `IsEquipping`/`IsUnequipping` pulses, `currentDefaultState` 0→10→1→12→0, `iState` 0→9→0, `iRightHandEquipped`/`iMagicEquipped`/`iLeftHandEquipped`, and node counts 36→51→81→66→33→82→36. The two sequences are not mirror images, so replay must use the recorded order rather than invert the equip. G3-B (replay by variable name, since the candidate holds 652 words and the source 463) is the next step. See the [run record](docs/independent-behavior-graph.md#g3-a-contract).
+- Capture the source's own equip/unequip timeline in game (G3-A, v41): a 20-second F7 window produced 117 settled lines covering both transitions — `IsEquipping`/`IsUnequipping` pulses, `currentDefaultState` 0→10→1→12→0, `iState` 0→9→0, `iRightHandEquipped`/`iMagicEquipped`/`iLeftHandEquipped`, and node counts 36→51→81→66→33→82→36. The settled phase trajectories are not mirror images. They establish observations, while external writer roles, runtime types and event timing still need verification before a G3-B replay contract; `iState` and `currentDefaultState` remain observation-only. See the [run record](docs/independent-behavior-graph.md#g3-a-contract).
 
 - Record the source graph's own timeline for G3-A (v37): once per post-UI frame, and only when `[Experiment] SourceTimeline` is on, the plugin diffs the graph's 652 word variables and the active-node count/hash, logging changed indices with their names and the int/float reading of the same four bytes. It reuses the existing render hook — no new hook, no native call, no write, no event dispatch, no candidate interaction — and stops after 200 lines per process. Contract and pre-registered readings: [G3-A](docs/independent-behavior-graph.md#g3-a-contract), build: [v37](docs/build.md#v37-source-timeline-2026-10-28).
 
@@ -88,6 +88,8 @@
 
 ### Changed
 
+- Exclude unlisted local `.cpp` files from the plugin build by keeping an explicit list of intended translation units (v45, local only).
+
 - Publish one `OAR QUERY` candidate rejection per distinct cause (first provider/condition/root-false
   signature, at most twenty-four) plus one suppression line, instead of the first eight
   unsupported and two native-false details: a pack whose replacements all share one condition
@@ -131,6 +133,15 @@
 - Remove Actor-based preview creation, equipment mirroring and puppet diagnostics; use SceneGraph previews in every build.
 
 ### Fixed
+
+- Preserve complete retired-copy ownership tracking and report the true process-total retention count instead of a truncated bookkeeping count; native memory remains intentionally retained (v46, local only).
+
+- Fix opt-in candidate playback speed changing with render cadence by pacing fixed steps with elapsed display time and limiting stall catch-up to six steps per draw (v44, local only).
+
+- Fix independent F7 source-timeline windows to receive fresh 20-second/800-line budgets and discard stale traces after source loss, replacement or world reset (v43, local only).
+
+- Report up to eight missing preview node names while preserving total coverage counts.
+- Report one bounded preview rejection reason per view so cleared retained tokens, source changes and controller mismatches can be distinguished.
 
 - Gate the F7 timeline binding on the panel state (v41): the scene graph exists outside the pause menu, so the first binding sent F7 into the recapture branch and produced `command=1 ignored outside paused inventory`. `PanelMonitor::is_menu_open()` is now the discriminator — F7 opens the 20-second timeline window outside the panel and recaptures inside it.
 

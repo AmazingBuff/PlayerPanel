@@ -271,18 +271,16 @@ namespace
 void SceneGraph::retire_graph(RE::NiPointer<RE::NiAVObject> graph)
 {
     if (!graph) return;
-    // Only bookkeeping is bounded. These retained references outlive every SceneGraph instance.
-    static std::vector<RE::NiPointer<RE::NiAVObject>*> s_parked_graphs;
-    static bool s_cap_logged = false;
-    static constexpr size_t s_parked_graph_cap = 12;
-    s_parked_graphs.push_back(std::make_unique<RE::NiPointer<RE::NiAVObject>>(std::move(graph)).release());
-    logger::info("SCOPY PARK actor={:08x} snapshots held alive for the process lifetime: {}", source_id(), s_parked_graphs.size());
-    if (s_parked_graphs.size() > s_parked_graph_cap)
-    {
-        if (!s_cap_logged) logger::warn("SCOPY PARK cap reached; oldest graph remains allocated");
-        s_cap_logged = true;
-        s_parked_graphs.erase(s_parked_graphs.begin());
-    }
+    // The heap owner intentionally survives static teardown until native release is proven safe.
+    static std::vector<RE::NiPointer<RE::NiAVObject>>* const s_parked_graphs =
+        new std::vector<RE::NiPointer<RE::NiAVObject>>;
+    static constexpr size_t s_warning_threshold = 12;
+    s_parked_graphs->push_back(std::move(graph));
+    logger::info("SCOPY PARK actor={:08x} scope=process retained-total={} retention=intentional-process-lifetime",
+        source_id(), s_parked_graphs->size());
+    if (s_parked_graphs->size() == s_warning_threshold + 1)
+        logger::warn("SCOPY PARK scope=process diagnostic-threshold={} retained-total={} retention=intentional-process-lifetime memory-bound=none",
+            s_warning_threshold, s_parked_graphs->size());
 }
 
 RE::NiPointer<RE::NiAVObject> SceneGraph::capture_graph(RE::Actor& actor)

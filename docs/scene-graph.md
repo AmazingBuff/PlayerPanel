@@ -8,7 +8,15 @@ SceneGraph is the sole character-preview backend. It copies a source actor's exi
 
 The preview shows standing weapon posture and existing equipment/appearance. Animation targets equipped non-combat idles independently of world action, after observed native Smooth goal preparation. Empty hands use the configured loop/direct-base choice. This change adds no movement/attack mirroring, multi-actor UI, physics registration, FaceGen controller, shader/material work or safe graph destruction. The source graph/transforms stay read-only; native `NiObject::Clone` copies its graph. [dac::Session](dac.md) temporarily borrows only controlled original-Actor marker effects and restores them at the UI close boundary.
 
-The separate [independent-graph investigation](independent-behavior-graph.md#current-status) has G1 revised Option A pass and G2 candidate semantic continuity pending as of 2026-10-28. V26's raw-criterion pass is historical; [v32](independent-behavior-graph.md#g2-v32-display-session) has offline evidence only, and display coverage/visual motion remain separate pending checks. It does not replace this backend. The loaded experimental graph is deliberately retained; its teardown/global convergence are unverified. [r4](diagnostics/display-issues-2026-10-22.md#r4-session) provides partial runtime evidence for product shield/torch behavior, while copy retirement remains unresolved.
+The separate [independent-graph investigation](independent-behavior-graph.md#current-status) does not replace this backend. G1 passes revised Option A. [V33/V34](independent-behavior-graph.md#verification-matrix) establish the bounded G2 display result: semantic motion 120/120, 109/116 actual assignments, unchanged source controls and user-confirmed continuous motion, plus reset/reopen/F7/post-load fallback. The old seven misses have four logged names and three unknown; control/attachment labels do not prove harmless omissions. Exact old rejection cause, same-controller source/generation replacement and frozen-only rejection remain unverified. [V41 G3-A](independent-behavior-graph.md#g3-a-contract) successfully records a named settled phase trajectory; G3-B requires verified role/type mapping and justified external inputs, with `iState`/`currentDefaultState` observation-only. G4–G6 remain open.
+
+The latest recorded install is v41 (`3b8f8efe…`), SourceTimeline=true and IndependentGraph/DisplayPose/DisplayStep off; repository defaults keep all four off. [V42](independent-behavior-graph.md#v42-residual-corrections) is local only: cap8 missing names and one rejection row under the existing 18-row window budget, without new native calls or game results. G6 retains source restoration, request/task invalidation, preview references/callbacks/sinks/history and observable repeated-session convergence. One loaded candidate retained per process is an explicit exception; loaded teardown remains NO-GO and no valid global registry count anchor exists. DAC restore matched is partial evidence.
+
+[r4](diagnostics/display-issues-2026-10-22.md#r4-session) provides partial runtime evidence for product shield/torch behavior, while copy retirement remains unresolved.
+
+The local [v44 candidate display clock](independent-behavior-graph.md#v44-display-clock) schedules 60 native steps per elapsed second between eligible draws, with a 100 ms/six-step catch-up cap. Timing-only waits keep the current valid pose in stepped mode. Request/view changes, rejection and ineligible/frozen fallback reset the origin; compatible OAR clocks are unchanged. Native-step counters are independent of draw counts. [Two timing regressions and Release build](build.md#v44-display-clock-2026-10-29) pass; no deployment/game validation is claimed and installation remains v41.
+
+The local [v46 retirement correction](#retired-copy-accounting-v46) preserves every ordinary retired copy handle and reports process-total retention. It does not reclaim native memory or establish lifecycle convergence; the recorded installation remains v41.
 
 ## Architecture
 
@@ -67,7 +75,7 @@ Outside paused inventory, `SceneGraph::update_monitor` also asks `AnimationContr
 
 Native capture, lease release, pose writes and graph replacement stay in the render/update bracket. Input callbacks never clone or animate. Animation requests, Random/variant history and source/display generations stay per source actor. A graph replacement retargets before its old nodes are retired. Source graph audits reject aliased writable state; copying never advances or writes the source actor's graph.
 
-Rendering retains geometry filtering, standing-pose calibration, material submission and D3D binding restoration. Copied graphs remain detached from engine menu roots. Retired copied trees deliberately remain parked: function-static bookkeeping holds raw pointers to retained native references, so destroying a SceneGraph cannot release them. The twelve-entry cap limits bookkeeping only; retained native allocations are not bounded by it and may accumulate across captures and preview lifetimes. There is no safe native teardown mechanism here.
+Rendering retains geometry filtering, standing-pose calibration, material submission and D3D binding restoration. Copied graphs remain detached from engine menu roots. Retired copied trees deliberately remain parked: a function-static pointer owns one heap vector of `NiPointer` values, and that vector intentionally survives static teardown. No retained handle is erased or cleared. `SCOPY PARK scope=process retained-total=...` counts all retained handle entries across actors and preview lifetimes; 12 is only a diagnostic threshold, with a single warning when the total reaches 13. Native allocations remain unbounded and safe teardown is unresolved; complete tracking does not reclaim memory.
 
 Placement calibration normally uses the vanilla MT_Idle standard: `AnimationController::apply_standing_pose` samples the independent base calibration asset at time zero, and `SceneGraph::draw` calls `calibrate_from_posed_bound` before writing the current action on the same frame. Calibration waits while that asset is pending. If its lease fails, the standing underlay is also the vanilla base; action poses never supply calibration. [Event timing and dynamic selection](animation.md#event-timing-and-native-state) describes the separate animation policy.
 
@@ -101,9 +109,85 @@ Existing C++23, VS2022/MSVC 14.44.35207, Windows SDK, CommonLibSSE, SKSE, OAR an
 
 ## Verification
 
-[Build](build.md) documents the single Release target, pinned setup, generated outputs and configure-time identity. Prior native evidence and its limits are recorded in [Build verification](build.md#verification-and-limits). Default-player checks and the prior v31/v32 experimental regressions compile directly as documented there; no CMake test target is added. The [v32 manual checklist](independent-behavior-graph.md#v32-manual-checklist) owns pending display/source/window checks; no game verification was performed for this documentation change.
+[Build](build.md) records the single Release target and the archived [v46 DLL/PDB](build.md#v46-retained-copy-ledger-2026-10-29). Reuse the recorded two-case checks for [v42 display sessions](build.md#v42-residual-corrections-2026-10-29), [v43 source windows](build.md#v43-source-sessions-2026-10-29) and [v44 display clock](build.md#v44-display-clock-2026-10-29); this documentation pass reruns no tests/build. The [v46 first-game-pass procedure](#v46-manual-regression) below is entirely **PENDING**. Later experimental source/frozen/application checks remain under the [independent-graph checklist](independent-behavior-graph.md#v32-manual-checklist) and [v42 observation requirements](independent-behavior-graph.md#v42-residual-corrections).
 
 Build/source checks establish compilation and structural consistency, not game-time hook, loader, framing, visual or lifetime behavior. [Maintenance](code-maintenance.md#debugging-navigation) maps actual logs and the two representative runtime follow-up categories. Later AE 1.6.1170/MO2 sessions provide the bounded evidence in [r4](diagnostics/display-issues-2026-10-22.md#r4-session) and [G1/G2](independent-behavior-graph.md#current-status); they do not close complete visual or lifecycle acceptance.
+
+<a id="retired-copy-accounting-v46"></a>
+## V46 complete retired-copy accounting (2026-10-29, local only)
+
+[SceneGraph::retire_graph](../src/character/scene_graph_capture.cpp) now moves every non-null retired root into one heap-allocated `std::vector<RE::NiPointer<RE::NiAVObject>>`, reached through a function-static pointer. The heap owner deliberately has no shutdown destructor, so retained native references survive every SceneGraph instance and static teardown. Vector relocation uses the pinned CommonLib `NiPointer` noexcept move constructor, which steals `_ptr` and nulls the source; moved-from destruction cannot detach the native object. This supports container movement, not destruction of a retained native graph. Per-copy heap wrapper allocations and erased raw-pointer entries are removed.
+
+The two existing callers are unchanged: replacement retargets the controller to the new graph before retiring `previous`; destruction calls `close_session` before retiring `m_graph_object`. Menu close alone still retains the current copy. There is no new native call, traversal, destructor, release attempt, capture limit or source mutation.
+
+Each successful retirement logs `SCOPY PARK actor=... scope=process retained-total=N retention=intentional-process-lifetime`. `actor` identifies the triggering preview; N is the cumulative process-wide number of retained handle entries, not a per-actor count, unique live-graph census or byte measurement. Nothing is removed, so totals continue through 13, 14 and beyond. Exactly at N=13, one warning reports `diagnostic-threshold=12 retained-total=13 retention=intentional-process-lifetime memory-bound=none`. The threshold has no allocation or bookkeeping cap.
+
+Historical `snapshots held alive ...` and `cap reached` lines remain raw evidence of the old implementation. Its pre-erasure collection size plateaued at 13 while older allocations remained retained and their pointers were dropped from bookkeeping. Those printed counts do not establish a native-memory bound or the complete old process total. V46 does not retroactively recover lost historical handles or rewrite logs/counts.
+
+**Memory growth remains unresolved.** Ordinary copied trees can accumulate for every accepted replacement and preview lifetime. This is separate from the investigation's deliberately retained one-per-process independent behavior-graph candidate. That candidate exception does not make ordinary repeated-copy growth a G6 pass. Neither retained handle counts nor `DAC restore matched` establish memory reclamation, native byte usage or repeated-session convergence.
+
+Before a future reclamation design can be approved, evidence must identify the supported native destruction/refcount path and ownership of cloned/shared subobjects, establish render/controller/callback quiescence and safe release order, then validate repeated capture/retarget/close/world-reset cycles on the target runtime. Measure native references/allocations and source stability, including use-after-free/source-corruption checks; a shrinking container or an unchanged root count alone is insufficient. This is a future proof checklist, not release authority in v46.
+
+Verification is bounded SDK move/lifetime inspection, unchanged caller-order inspection, one Release configure/build and protected-file/artifact/navigation checks ([commands, identity and hashes](build.md#v46-retained-copy-ledger-2026-10-29)). No synthetic std::vector test or runtime teardown test was introduced. **Local only: no deployment or game launch.** Native bytes, safe teardown and runtime memory convergence remain unverified; the latest recorded install is v41 and historical r4/G2/G3-A records remain unchanged.
+
+<a id="v46-manual-regression"></a>
+## V46 first game pass: source windows and normal preview
+
+This is a procedure for the next operator session, not a completed run. It checks the read-only source recorder and normal OAR preview with native candidate display disabled. The latest recorded installation remains v41; the local v46 pair has build/source evidence only. All runtime outcomes below are **PENDING**.
+
+### Prepare the matched files and settings
+
+Close the game. Back up the installed CharacterPanel.dll, matching PDB and existing INI together. Use the archived pair in `build/behavior-graph-v46-retained-copy-ledger-20261029/`, with the exact sizes and SHA-256 values in the [v46 build record](build.md#v46-retained-copy-ledger-2026-10-29). Its DLL SHA-256 is `1b86665563be9e4534855ec8d629cf84a673326f5ad8c54ce74cfffeb95d4a57`; the matching PDB is `f1b106052ec87d8ff0ef7e4f8e4f8e4fbde1fb0e0fb828b080459311bde1fab3`.
+
+The loaded `SCENEGRAPH BUILD` line must match:
+
+```text
+CharacterPanel-scenegraph-behavior-graph-v46-retained-copy-ledger-20261029-38fb82c54f+dirty-cl94faaed0c6-20261029T093244Z
+```
+
+Edit only these existing keys in the deployed INI, preserving all other sections, keys and values. This is a temporary test configuration; repository defaults remain unchanged.
+
+```ini
+[Diagnostics]
+DetailedAnimationTrace=true
+BehaviorGraphProbe=false
+
+[Experiment]
+IndependentGraph=off
+DisplayPose=false
+DisplayStep=false
+SourceTimeline=true
+```
+
+Fully restart the game after the file/settings change. Settings load once at DataLoaded. Confirm the build line and loaded settings before interpreting results; a mismatch is an incomplete preparation, not v46 runtime evidence. A later source commit does not rebuild or relabel this archived pair.
+
+### Workflow 1: independent source windows and load cancellation
+
+1. Stand normally with the preview panel closed. Use the same single-handed weapon and existing equipment hotkey/controls for both windows. Press **F7** outside the panel; retain `arm-requested` and `window-open`.
+2. Equip that weapon, wait about two seconds, then unequip it. Let the 20-second window finish and retain `window-closed lines=N`. Press F7 again and repeat the same sequence in another complete window.
+3. Compare the two explicit windows: each starts a new baseline/settle state and fresh 800-line allowance; neither inherits exhaustion or comparisons from the previous window. Do not require a fixed word count, identical trajectories or 800 emitted lines. There is no need to exhaust the budget.
+4. Open another window with F7, then load an existing test save while it is active. Retain the world-reset/invalidation and load timing. After loading completes and normal source 3D is ready, explicitly press F7 again and let that new window close before starting panel checks. A pending world invalidation takes priority over an arm; if that press did not produce a new `window-open`, preserve the records and explicitly re-arm after invalidation/source readiness. Proceed only after the new window opens and closes.
+5. Check that the old window was cancelled, the post-load window starts independently, and traces do not concatenate across source replacement. If a source is lost/replaced, preserve `window-aborted reason=source-lost-or-replaced` rather than interpreting it as a rebase or successful recording. Record a missing open/close or unexpected continuation as unresolved evidence.
+
+### Workflow 2: normal OAR preview, equipment and recapture
+
+1. Open the paused inventory. Equip a one-handed axe, observe equip/start into idle, hold for about six seconds, then unequip. Record any flash toward the camera, repeated start segment, framing jump or stalled transition with the action time and video timestamp when available.
+2. Use a right-hand weapon plus left-hand torch, then remove **only the torch**. Keep the right-hand weapon unchanged and observe the left-arm pose, attachment visibility and idle convergence.
+3. In the panel, request **three accepted F7 recaptures**, waiting for acceptance between presses. Distinguish requests/rejections from accepted `SCOPY CAPTURE`/`SCOPY GRAPH` records. Then use **F8** to hide/show, close the inventory and reopen it. Record playback continuity, source-effect restoration and any visual anomaly. Do not turn this into a rapid allocation stress run.
+4. Correlate accepted replacements with `SCOPY PARK actor=... scope=process retained-total=N`. The count includes all retired handle entries across actors and preview lifetimes, so it need not equal three. Each new PARK event increments the complete process total; an initial capture without an old root need not park anything, and close alone need not retire the current copy. Preserve extra automatic captures and rejection reasons when accounting for the sequence.
+
+Twelve is only a diagnostic threshold; reaching 13 is not required. If the one-time threshold warning appears, retain it as a diagnostic, not a memory bound or reclamation result. Ordinary native copies remain allocated. This normal-path session does **not** validate native DisplayStep pacing, missing candidate-bone names, same-controller candidate rejection, frozen-only fallback or G3-B replay; those remain separate pending experiments.
+
+### Return evidence and restore
+
+| Workflow category | Runtime status | Evidence to retain |
+| --- | --- | --- |
+| Source windows / load cancellation | **PENDING** | Full arm/open/close/abort/invalidation sequence, action/load times, per-window line counts and observed source changes |
+| Normal preview / equipment / recapture | **PENDING** | Axe and torch observations, three accepted recaptures versus PARK events/process totals, F8 and close/reopen behavior, anomaly/video timestamps |
+
+Return the **complete CharacterPanel.log**, including its build line, loaded settings and surrounding records, plus the exact pair hashes and test-setting values. Keep timing notes and any video with the log. Bounded pose/source snapshots can miss transients or represent different phases; absent rows do not establish absence of a visual problem. Source identity snapshots do not prove setter timing, writer roles or atomic native arrays.
+
+After preserving the log, exit the game, restore the pre-test INI and fully restart. If reverting the binary, restore the backed-up DLL/PDB together. No result is marked passed by this document; actual game evidence is still needed. Safe native reclamation, visual root cause and G3-B/G4–G6 conclusions remain open.
 
 ## Safe modification
 

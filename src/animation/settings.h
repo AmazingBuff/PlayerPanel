@@ -15,7 +15,7 @@ namespace animation
     // v27: when true and a candidate is retained, the panel's display pose comes from that
     // candidate instead of the OAR clip sampler.
     [[nodiscard]] bool display_pose();
-    // v28: advance the retained graph one step per rendered frame instead of showing the frozen pose.
+    // Pace fixed 1/60 steps by eligible elapsed time, capped at 100 ms / 6 steps per display call.
     [[nodiscard]] bool display_step();
     // G3-A: log the player graph's variable/active-node changes during normal play.
     [[nodiscard]] bool source_timeline();

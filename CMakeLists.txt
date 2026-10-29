@@ -17,7 +17,38 @@ option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime fea
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-file(GLOB_RECURSE PLUGIN_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+set(PLUGIN_SOURCES
+	src/animation/behavior_graph/frame_trace.cpp
+	src/animation/behavior_graph/independent_graph.cpp
+	src/animation/behavior_graph/ownership_probe.cpp
+	src/animation/behavior_graph/source_timeline.cpp
+	src/animation/clip.cpp
+	src/animation/controller.cpp
+	src/animation/dac/effects.cpp
+	src/animation/dac/native.cpp
+	src/animation/dac/script_attachment.cpp
+	src/animation/dac/session.cpp
+	src/animation/event_clock.cpp
+	src/animation/oar/hooks.cpp
+	src/animation/settings.cpp
+	src/character/character_manager.cpp
+	src/character/equipment_state.cpp
+	src/character/figure_audit.cpp
+	src/character/held_equipment.cpp
+	src/character/scene_graph.cpp
+	src/character/scene_graph_capture.cpp
+	src/input/input.cpp
+	src/main.cpp
+	src/panel/panel_monitor.cpp
+	src/render/dx11/common_states.cpp
+	src/render/dx11/d3d11_util.cpp
+	src/render/pass/composite.cpp
+	src/render/render_hook.cpp
+	src/render/renderer.cpp
+	src/render/shader_manager.cpp
+	src/render/studio/figure_passes.cpp
+	src/render/studio/light.cpp
+)
 file(GLOB_RECURSE PLUGIN_HEADERS CONFIGURE_DEPENDS src/*.h)
 
 # HLSL sources live as real files under src/render/shaders and are embedded

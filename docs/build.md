@@ -1,17 +1,23 @@
 # Build CharacterPanel
 
+The current local [v44 pacing correction](#v44-display-clock-2026-10-29) uses elapsed display time for fixed native steps. Its clock tests/build are local only; latest recorded installation remains v41.
+
+The newest local artifact is [v46](#v46-retained-copy-ledger-2026-10-29), with complete ordinary retired-copy handle accounting. The [v45](#v45-source-list-2026-10-29) 30-unit source list still excludes preserved untracked util.cpp. No deployment/game run occurred.
+
+For the next operator session use the canonical [v46 first-game-pass procedure](scene-graph.md#v46-manual-regression), including pair/settings backup, restart and two pending workflows. The dated build records below describe operations at artifact creation: their “no commit” statements do not prohibit later source commits, and a source commit does not rebuild or relabel an archived DLL/PDB. This comment/documentation pass reuses the recorded tests and v46 build without rerunning them.
+
 ## Purpose
 
 Build the current Windows DLL from this checkout. Release is the only configure/build preset and `CharacterPanel` is the only first-party target. The result is `build/Release/CharacterPanel.dll` with matching debugging symbols.
 
 <a id="current-research-status-2026-10-26"></a>
-## Current research status (2026-10-28)
+## Current research status (2026-10-29)
 
-[G1 passes revised Option A; G2 candidate semantic continuity needs re-verification](independent-behavior-graph.md#current-status). V26's raw-criterion pass remains historical; q/-q changes alone cannot prove motion. V27 confirms 116 output records and the static stance, without measured full node coverage. V31 fixes the incomplete native step/invalid reads; [v32](#v32-display-session-2026-10-28) binds source/window ownership and separates semantic candidate motion from actual assignments.
+[G1 passes revised Option A; G2 passes within its measured scope](independent-behavior-graph.md#current-status). V33 records candidate semantic motion 120/120, 109/116 assignments, unchanged source controls and user-confirmed continuous display. V34 records reset/reopen/F7/post-load fallback; the exact old rejection cause, same-controller source/generation replacement and frozen-only rejection remain unverified. V41 establishes a usable named settled G3-A phase trajectory, with external input roles/types/event timing pending before G3-B.
 
-The new v32 cases and Release build pass offline only. Defaults remain off; no package, deployment or game run. Candidate continuity, actual display application and visual motion are separate pending checks. Use the [v32 manual checklist](independent-behavior-graph.md#v32-manual-checklist) for the pending game session. Dated sections below retain their original build-time state.
+The latest recorded installation is [v41](#v41-panel-gate-2026-10-29), DLL `3b8f8efe…`, `SourceTimeline=true` and the other three experiment keys off. Repository defaults have all four off. [V42](#v42-residual-corrections-2026-10-29) is local only, adding cap8 missing names and one bounded rejection reason. No new game run/deployment is claimed. G4–G6 remain pending; retained loaded-graph teardown is NO-GO, and G6 still covers non-exempt references/callbacks/sinks/history, invalidation, source restoration and repeated-session convergence. Dated sections below preserve their build-time states; later runtime verdicts live in the canonical record.
 
-
+The latest local source-recorder correction is [v43](#v43-source-sessions-2026-10-29): independent F7 budgets/baselines and source/world invalidation. It has no deployment or game result and preserves the historical G2/G3-A conclusions.
 
 <a id="v18-frame-trace-build"></a>
 ## V18 bounded frame-trace verification (2026-10-26)
@@ -344,7 +350,7 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v33-display-session-20261028
 
 Toolchain note for reproduction: the `vcvars64.bat`/`Enter-VsDevShell` route fails in this environment because the sandbox blocks `reg.exe`, so the SDK include paths are never resolved and `cl` stops at `crtdbg.h`. Compiling with explicit `INCLUDE`/`LIB`/`PATH` (`<VS>\VC\Tools\MSVC\14.44.35207` plus `Windows Kits\10` `10.0.26100.0`) works and was the route used here. CMake/MSBuild is unaffected because the cache already carries the resolved SDK.
 
-**Deployed 2026-10-28 22:23 and run the same evening.** The v30 trio in `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` was first copied to `dist/deploy-backup-20261028-v30/` (DLL `e5b0e57c…`, PDB `e450627a…`, INI `2e150d41…`, 1,094 bytes), then replaced by this DLL/PDB; the deployed copies hash to `061d5b8a…` and `5924464d…`. MO2 profile `AE` lists `+CharacterPanel`, so nothing else needs enabling. The deployed `CharacterPanel.ini` briefly set `IndependentGraph=inject`, `DisplayPose=true`, `DisplayStep=true` (1,338 bytes, SHA-256 `0861a221…`); after the 22:28 session all three were restored to off with a run comment, so the deployed file is now 1,384 bytes, SHA-256 `8beb6286ead09d7cc8fcba955fb8a14efc3a896588375471b312221e448da408`. Settings load at DataLoaded, so a full restart is required either way. The repository sample `config/CharacterPanel.ini` stays default-off. Session result: the [v33 run record](independent-behavior-graph.md#g2-v33-run); remaining checklist steps are the window/source boundaries.
+**Deployed 2026-10-28 22:23 and run the same evening.** The v30 trio in `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` was first copied to `dist/deploy-backup-20261028-v30/` (DLL `e5b0e57c…`, PDB `e450627a…`, INI `2e150d41…`, 1,094 bytes), then replaced by this DLL/PDB; the deployed copies hash to `061d5b8a…` and `5924464d…`. MO2 profile `AE` lists `+CharacterPanel`, so nothing else needs enabling. The deployed `CharacterPanel.ini` briefly set `IndependentGraph=inject`, `DisplayPose=true`, `DisplayStep=true` (1,338 bytes, SHA-256 `0861a221…`); after the 22:28 session all three were restored to off with a run comment, so the deployed file is now 1,384 bytes, SHA-256 `8beb6286ead09d7cc8fcba955fb8a14efc3a896588375471b312221e448da408`. Settings load at DataLoaded, so a full restart is required either way. The repository sample `config/CharacterPanel.ini` stays default-off. Session result: the [v33 run record](independent-behavior-graph.md#g2-v33-run); the later [v34 sessions](independent-behavior-graph.md#g2-v34-boundaries) record four boundary outcomes with the stated limits.
 
 <a id="v35-registry-probe-2026-10-28"></a>
 ## V35 registry-count probe (2026-10-28)
@@ -417,6 +423,112 @@ Identity: `CharacterPanel-scenegraph-behavior-graph-v41-timeline-panel-gate-2026
 
 **Deployed 2026-10-29 00:25**: the v40 trio went to `dist/deploy-backup-20261029-v40/`, the deployed DLL hashes to `3b8f8efe…`.
 
+<a id="v42-residual-corrections-2026-10-29"></a>
+## V42 residual corrections and bounded diagnostics (2026-10-29, local only)
+
+[Canonical scope and pending observations](independent-behavior-graph.md#v42-residual-corrections): missing names increase from the historical cap4 to cap8; a rejected request/view emits at most one typed reason using the existing 18-row budget. Original source-identity acceptance, valid-source frozen fallback, native guards, timeline/input and motion algorithms are unchanged. The two existing session scenarios alone are extended: lifecycle/identity/window rejection classification and seven missing names with application/root arithmetic. No old v31 suite or full suite rerun.
+
+From an x64 developer shell initialized by `D:/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvars64.bat -vcvars_ver=14.44`, with assertions enabled:
+
+```powershell
+New-Item -ItemType Directory -Force build/behavior-graph-v42-residual-corrections-20261029 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests/behavior_graph_display_session_test.cpp /Fobuild/behavior-graph-v42-residual-corrections-20261029/display_session_test.obj /Febuild/behavior-graph-v42-residual-corrections-20261029/display_session_test.exe
+./build/behavior-graph-v42-residual-corrections-20261029/display_session_test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v42-residual-corrections-20261029
+cmake --build --preset Release
+```
+
+Direct MSVC compile/run and configure exited **0**; output: `2 display-session regression cases passed (engine-free)`. The first sandbox build exited **1**, MSB4184 while reading `C:/Users/lhq49/AppData/Local/Microsoft SDKs`; the same build with ordinary installed-SDK read permission exited **0**. Proxy variables were removed only in the child build environment. Existing install-rule/cache-toolchain and D9025 `/Ob2`→`/Ob3` warnings remain. Logs, protected-file snapshot, test artifacts and copied DLL/PDB are under `build/behavior-graph-v42-residual-corrections-20261029/`.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v42-residual-corrections-20261029-38fb82c54f+dirty-cl94faaed0c6-20261029T055837Z` (also verified embedded in the DLL). DLL **1,327,104 bytes**, SHA-256 `0da91fd8df6cf9740ba3c60cba0cfe018a79eb438c83defb015ce7d5fae2fd84`; PDB **36,065,280 bytes**, SHA-256 `9973c4c4b6e4a31ddaff229ac584378e2417df5045023de145b39190fabfbb92`. The dirty identity includes this uncommitted correction and preserved unrelated `src/base/util.cpp`/`util.h`; the existing source glob still includes them, so this is not a byte-for-byte clean-commit reproduction claim.
+
+**Local build only; no commit, push, package, deployment or game launch.** The latest recorded install remains v41 with its distinct identity/hash and SourceTimeline=true, other three experiment keys off; repository defaults remain all off. Real seven missing names/application semantics and precise same-controller source/generation or frozen-only rejection still need new authorized game data. Offline instrumentation does not establish those runtime results. G3-A remains successful settled phase observation; G3-B external role/type/event-timing prerequisites and full observable G6 limits are in the canonical handoff.
+
+<a id="v43-source-sessions-2026-10-29"></a>
+## V43 independent source-timeline sessions (2026-10-29, local only)
+
+[Canonical invariants and limitations](independent-behavior-graph.md#v43-source-sessions) cover fresh per-arm 20-second/800-line budgets, sampler-owned array/settle reset, address-value source binding and queued world cancellation. Production uses [SourceTimelineWindow/SourceTimelineRequests](../src/animation/behavior_graph/source_timeline_policy.h); [source_timeline.cpp](../src/animation/behavior_graph/source_timeline.cpp) consumes intents and deadlines before optional graph reads. `main.cpp::message_handler` publishes PreLoadGame/NewGame invalidation before the existing DAC/preview reset actions. F7 routing, settle3/raw reporting and defaults are unchanged.
+
+Exactly [two new engine-free scenarios](../tests/source_timeline_session_test.cpp) ran: exhaustion then two independent re-arms/new baselines; and a source/world lifecycle with same-count replacement, storage change, source loss, deadline before first source and pending/active cancellation. Production array/settle initialization is also reviewed at `Recorder{}`/`baseline`. Existing v42 cases and full suites were not rerun.
+
+From an x64 developer shell initialized by `D:/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvars64.bat -vcvars_ver=14.44`, with assertions enabled:
+
+```powershell
+New-Item -ItemType Directory -Force build/behavior-graph-v43-source-sessions-20261029 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests/source_timeline_session_test.cpp /Fobuild/behavior-graph-v43-source-sessions-20261029/source_timeline_session_test.obj /Febuild/behavior-graph-v43-source-sessions-20261029/source_timeline_session_test.exe
+./build/behavior-graph-v43-source-sessions-20261029/source_timeline_session_test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v43-source-sessions-20261029
+cmake --build --preset Release
+```
+
+MSVC compile/run and configure exited **0**; output: `2 source-timeline session regression cases passed (engine-free)`. An initial wrapper invocation with a forward-slash CMD path failed before compilation (`build` not recognized); using the resolved Windows script path succeeded. The first sandbox build exited **1**, MSB4184 while reading `C:/Users/lhq49/AppData/Local/Microsoft SDKs`; the same build with installed-SDK read permission exited **0**. Proxy variables were removed only in the child configure/build environment. Existing install-rule and D9025 `/Ob2`→`/Ob3` warnings remain. Logs, source snapshots, preservation/navigation evidence, tests and copied DLL/PDB are under `build/behavior-graph-v43-source-sessions-20261029/`.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v43-source-sessions-20261029-38fb82c54f+dirty-cl94faaed0c6-20261029T090649Z` (also verified embedded in the DLL). DLL **1,328,128 bytes**, SHA-256 `99313a18b14cf5275b0ed329df385ef4183d76e0ac51e07d69e33a291f670400`; PDB **36,089,856 bytes**, SHA-256 `9345bfecb7ec8874e500c5bc6f81e48b772e2ab6095270688a9f6716bbafc2e9`. The configure-time dirty identity includes the preserved untracked `src/base/util.cpp`/`util.h`, still included by the existing source glob, alongside v42 and this change. This is not a clean-commit reproduction claim.
+
+**Local only; no commit, push, package, deployment or game launch.** Latest recorded install remains [v41](#v41-panel-gate-2026-10-29); v42 artifacts/history are preserved. Source identity snapshots do not establish writer roles, exact setter/event timing, atomic native arrays or unobserved same-address lifetime changes. No new native calls/hooks, configuration/dependencies or teardown authority. Historical G2 and G3-A evidence is unchanged.
+
+<a id="v44-display-clock-2026-10-29"></a>
+## V44 elapsed candidate display clock (2026-10-29, local only)
+
+[Current timing/reset contract](independent-behavior-graph.md#v44-display-clock): eligible elapsed steady-clock time schedules fixed native 1/60 steps, first call establishes an origin, each delta caps at 100 ms/six steps and excess stall time is discarded while fractional carry remains. Zero-due calls retain stepped-mode candidate output without native/motion increments. Request/retarget/rejection and ineligible/frozen fallback reset pacing. Original native recipe, batch steps, v42 diagnostics and v43 source sessions are preserved.
+
+The production [DisplayStepClock](../src/animation/behavior_graph/display_step_clock.h) has exactly [two engine-free scenarios](../tests/behavior_graph_display_clock_test.cpp): 30 FPS two-second elapsed progression produces 120 steps; 120 FPS produces the same 120 with zero-due calls and checks reset gaps, six-step stall cap, fractional carry and discarded backlog. Source inspection checks per-native guards/motion/checkpoints and zero-due mode; no prior behavioral suites rerun.
+
+From an x64 developer shell initialized by `D:/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvars64.bat -vcvars_ver=14.44`, with assertions enabled:
+
+```powershell
+New-Item -ItemType Directory -Force build/behavior-graph-v44-display-clock-20261029 | Out-Null
+cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests/behavior_graph_display_clock_test.cpp /Fobuild/behavior-graph-v44-display-clock-20261029/display_clock_test.obj /Febuild/behavior-graph-v44-display-clock-20261029/display_clock_test.exe
+./build/behavior-graph-v44-display-clock-20261029/display_clock_test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v44-display-clock-20261029
+cmake --build --preset Release
+```
+
+Compile/run/configure exited **0**; `2 display-clock regression cases passed (engine-free)`. The first sandbox build exited **1** on the known MSB4184 installed-SDK metadata denial at `C:/Users/lhq49/AppData/Local/Microsoft SDKs`; the authorized SDK-read retry exited **0**. Only child configure/build proxy variables were cleared. Existing install-rule and `/Ob2`→`/Ob3` warnings remain. Logs, source snapshots, tests, verification evidence and copied DLL/PDB are under `build/behavior-graph-v44-display-clock-20261029/`.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v44-display-clock-20261029-38fb82c54f+dirty-cl94faaed0c6-20261029T091938Z` (verified embedded in the DLL). DLL **1,332,224 bytes**, SHA-256 `129dee119d1bc07129aba788d0e98b537b68ef5f5dd5c0ea5319ac3b995ac66b`; PDB **36,122,624 bytes**, SHA-256 `62bb1c0db1da25e46e02b2aeb0de7cca9dc6075e5dcd688fc8e21641cda1ee10`. Configure-time dirty identity includes preserved untracked `src/base/util.cpp`/`util.h` under the unchanged source glob and prior v42/v43 work; no clean-commit reproduction claim.
+
+**Local only; no commit, push, package, deployment or game launch.** Latest recorded install stays [v41](#v41-panel-gate-2026-10-29), SourceTimeline=true and other experiment keys off; repository defaults remain all off. Historical v33/v34 per-call results and v41 G3-A evidence are unchanged. Two deterministic clock scenarios establish scheduling arithmetic, while game speed/visual validation remains pending.
+
+<a id="v45-source-list-2026-10-29"></a>
+## V45 explicit plugin translation units (2026-10-29, local only)
+
+The recursive `.cpp` glob previously compiled unrelated untracked `src/base/util.cpp`. `PLUGIN_SOURCES` now lists exactly the 30 reviewed intended plugin units, sorted by path. Both util.cpp and util.h remain byte-for-byte preserved and untracked; util.cpp is absent from generated ClCompile inputs. The header glob, target, generated shader/version/resource files, dependencies, toolchain, native APIs and product/test sources are unchanged. All v42–v44 features remain present. Historical v42–v44 artifacts actually used the old glob and included util.cpp; their identities/hashes and evidence remain unchanged.
+
+Future intended `.cpp` additions/removals must update `PLUGIN_SOURCES` in [CMakeLists.txt](../CMakeLists.txt), followed by configure and compile-inventory review. CMake resolves the list directly; Git is used only for this local validation comparison, with no new build-time Git requirement. Existing build identity metadata/fallback behavior is unchanged. Explicit first-party units do not by themselves establish external-dependency or byte-for-byte reproducibility.
+
+```powershell
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v45-source-list-20261029
+python build/behavior-graph-v45-source-list-20261029/verify_inventory.py
+cmake --build --preset Release
+```
+
+Configure and the inventory check exited **0**. The XML inventory in `build/CharacterPanel.vcxproj`, excluding only generated `cmake_pch.cxx`, matches all 30 tracked intended units from the reviewed `git ls-files -- src/*.cpp` inventory; every path exists, with no util.cpp or test units. The script and exact inventory are local evidence under `build/behavior-graph-v45-source-list-20261029/`, not a new build entry point. No behavioral tests were needed or rerun for this mechanical selection change.
+
+The first sandbox build exited **1** on the known MSB4184 denial reading `C:/Users/lhq49/AppData/Local/Microsoft SDKs`; the authorized installed-SDK-read retry exited **0**. Only child configure/build proxy variables were cleared. Existing install-rule and `/Ob2`→`/Ob3` warnings remain. Logs, inventory, snapshots, preservation/link evidence and copied DLL/PDB are in the same v45 artifact directory.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v45-source-list-20261029-38fb82c54f+dirty-cl94faaed0c6-20261029T092710Z` (also verified embedded in the DLL). DLL **1,330,176 bytes**, SHA-256 `7cee6442b310cb9caaf943ea2294891bafaf92f5acb9e2ffd3dc72b35907bcc6`; PDB **36,122,624 bytes**, SHA-256 `bb083876bf9b30851093783cdd6fde91a52d065b6105a1f158a47f06551d4ff5`. The configure-time identity remains dirty because prior v42–v44 work and this build change are uncommitted and util files remain untracked; their presence in status no longer makes util.cpp a compile input. No clean-commit or HEAD-only byte-reproduction claim is made.
+
+**Local only; no commit, push, package, deployment or game launch.** Latest recorded install remains [v41](#v41-panel-gate-2026-10-29), SourceTimeline=true with the other experiment keys off; repository defaults remain all off. Product/test hashes, earlier artifacts and bounded historical game conclusions are preserved.
+
+<a id="v46-retained-copy-ledger-2026-10-29"></a>
+## V46 complete retained-copy ledger (2026-10-29, local only)
+
+[Canonical lifetime/accounting contract](scene-graph.md#retired-copy-accounting-v46): `SceneGraph::retire_graph` keeps all NiPointer values in one intentionally surviving heap vector, removes per-copy heap wrappers/erased raw pointers, and logs the true process-total handle count. Twelve is a diagnostic threshold; only total 13 warns. Native allocation remains intentionally unbounded and unfreed, separately from the experimental one-per-process candidate. Both caller order and all other native behavior are unchanged.
+
+Read-only inspection confirms pinned CommonLib `NiPointer(NiPointer&&) noexcept` steals `_ptr` and nulls its source; `TryDetach` decrements only a non-null pointer. Thus vector reallocation can move handles without releasing their native objects. Existing replacement retargets before retirement; destruction closes the session before retirement. This is not native destructor safety evidence. No synthetic container tests or old behavioral suites were needed or run.
+
+```powershell
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v46-retained-copy-ledger-20261029
+cmake --build --preset Release
+```
+
+Configure exited **0**. The first sandbox build exited **1** on the known MSB4184 installed-SDK metadata denial at `C:/Users/lhq49/AppData/Local/Microsoft SDKs`; the authorized SDK-read retry exited **0**. Proxy variables were cleared only in child configure/build environments. Existing install-rule and `/Ob2`→`/Ob3` warnings remain. Logs, source snapshots, SDK/caller inspection and protected-file/navigation evidence plus copied DLL/PDB are under `build/behavior-graph-v46-retained-copy-ledger-20261029/`.
+
+Identity: `CharacterPanel-scenegraph-behavior-graph-v46-retained-copy-ledger-20261029-38fb82c54f+dirty-cl94faaed0c6-20261029T093244Z` (verified embedded in the DLL). DLL **1,331,200 bytes**, SHA-256 `1b86665563be9e4534855ec8d629cf84a673326f5ad8c54ce74cfffeb95d4a57`; PDB **36,122,624 bytes**, SHA-256 `f1b106052ec87d8ff0ef7e4f8e4f8e4fbde1fb0e0fb828b080459311bde1fab3`. Configure-time dirty metadata reflects uncommitted v42–v46 work and preserved untracked util files; the unchanged v45 source list excludes util.cpp from compile inputs. No clean-commit reproduction claim is made.
+
+**Local only; no commit, push, package, deployment or game launch.** The latest recorded install remains [v41](#v41-panel-gate-2026-10-29). Eight prior v42–v45 DLL/PDB files and historical records/logs are preserved. Native memory usage, safe destruction and repeated-session convergence remain unverified; this change fixes bookkeeping/diagnostic accuracy, not native memory reclamation.
+
 ## Scope and non-goals
 
 This guide covers the existing C++23/x64 toolchain, dependencies, generated files and local build evidence. It does not add test, package, install or compatibility routes, upgrade the toolchain, deploy files or establish game-time correctness. Plugin metadata declares Skyrim 1.6.1170 compatibility and minimum SKSE 2.2.6 through `CompatibleVersions` and `MinimumRequiredXSEVersion`; see [main.cpp](../src/main.cpp), `SKSEPlugin_Version`.
@@ -466,9 +578,9 @@ cmake --build --preset Release
 
 ## Architecture and generated outputs
 
-[CMakeLists.txt](../CMakeLists.txt) gathers first-party sources with `CONFIGURE_DEPENDS`, links CommonLibSSE and the existing installed libraries, embeds HLSL, and generates plugin/version metadata. No additional first-party executable or test target is configured.
+[CMakeLists.txt](../CMakeLists.txt) lists 30 intended first-party `.cpp` translation units explicitly in sorted `PLUGIN_SOURCES`; headers retain their existing `CONFIGURE_DEPENDS` glob. It links CommonLibSSE and the existing installed libraries, embeds HLSL, and generates plugin/version metadata. No additional first-party executable or test target is configured.
 
-OAR and DAC sources are nested under `src/animation/oar` and `src/animation/dac`. The existing recursive source/header globs and `src` include root cover both; reconfigure after directory changes to regenerate the source list. No separate target or namespace change is needed.
+OAR and DAC sources are nested under `src/animation/oar` and `src/animation/dac`. The explicit translation-unit list, existing header glob and `src` include root cover both. When adding/removing an intended plugin `.cpp`, update the sorted `PLUGIN_SOURCES` list and reconfigure; placing an unlisted file under `src` does not compile it. The list is declared directly in CMake and adds no Git runtime requirement for archived source builds. No separate target or namespace change is needed.
 
 Production callers use root-relative headers such as `#include "animation/oar/hooks.h"` and `#include "animation/dac/session.h"` through `target_include_directories` in [CMakeLists.txt](../CMakeLists.txt). Direct-compiled offline tests use the same convention with `/I src`, as in the [shared cache cases](../tests/base_animation_cache_cases.h), and retain their [existing verification command](#fixed-base-index-verification). Both integrations use this shared include root; no additional module include directory or test target is required.
 
@@ -533,6 +645,7 @@ The [second loader audit](behavior-graph-construction-audit.md#第二实参形�
 
 Verification: Release reconfigure/build passed with only the existing /Ob2→/Ob3 override warning. The new DLL embeds the configured identity `CharacterPanel-scenegraph-scenegraph-646a0f2064+dirty-cl94faaed0c6-20261024T051200Z` (HEAD `646a0f2` plus the uncommitted revision), and DLL SHA-256 `1B3DA312DE53BD1169760BB40542829C1DF6007FC3F9AAF132DABD545D7BBB33` (1,202,320 bytes) and PDB SHA-256 `2478547CEB5ADE9F6537DE21221FC9A82EB9113F0A16BA84069A45B1BE1C34C9` (34,795,520 bytes) come from the same link. Deployment on 2026-10-24 13:12 replaced the `5d4bee1` build under `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` after backing it up to `dist/deploy-backup-20261024-5d4bee1/`; the deployed INI sets `IndependentGraph=load`. The G1b v2 run has not happened.
 
+<a id="g1b-v3-顺序取值实验-2026-10-24"></a>
 ## G1b v2 run and v3 sequential-value experiment (2026-10-24)
 
 The v2 build ran on 2026-10-24 13:30 and was rejected again in 0.289 ms, this time with the new `load-args` row showing `behavior-path='' project-name='DefaultFemale' path='DefaultFemale'` ([raw log](diagnostics/CharacterPanel-g1bv2-load-20261024-1330.log); verdict in the [v2 run record](independent-behavior-graph.md#g1b-v2-运行记录2026-10-24-会话)). The follow-up static audit ([third loader audit](behavior-graph-construction-audit.md#加载取值与前置链的续审计三2026-10-24g1b-v2-复盘)) established that registry keys carry the directory and extension (helper 69489 strips the extension only when writing `projectName`) and that 63949 creates the character setup itself, so the rejection was a pure registry miss.

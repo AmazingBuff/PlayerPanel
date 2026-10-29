@@ -1,13 +1,13 @@
 # 行为图构造与销毁的二进制审计（2026-10-23）
 
-更新：2026-10-28。本文保留 AE 1.6.1170 的静态审计与历史推断；[当前关卡](independent-behavior-graph.md#current-status)和 [v32](independent-behavior-graph.md#g2-v32-display-session)优先。G1 仅按方案 A 修订通过；v26 的 G2 raw 判据通过保留为历史，当前逐步候选语义连续性待复验。装载销毁、全局收敛和 G3–G6 未验证。
+更新：2026-10-29。本文保留 AE 1.6.1170 静态审计与历史推断；[当前证据](independent-behavior-graph.md#verification-matrix)优先。G1 只按方案 A 修订通过；v33 以语义运动 120/120、实际赋值 109/116、源不变和用户画面确认取得有界 G2 通过，v34 四条边界成立但确切拒绝原因未直接记录；v41 的 G3-A settled 相位观测成立，非完整外部输入 trace。G3-B/G4–G6 仍待验证。
 
 <a id="audit-current"></a>
-## 当前生成入口与后验边界（2026-10-28）
+## 当前生成入口与后验边界（2026-10-29）
 
-v32 收窄两项观测推论：raw119/120 可能包含 q/-q 表示翻转，需要独立的候选语义连续性统计；v27 的 116 是输出记录数，实际 name→node assignments 未计数。来源 generation/owner、请求窗口和实际覆盖已在代码中修正，只有两个新离线场景与 Release 构建通过；不是新的原生指令审计或游戏成功。原有限值、私有缓冲、层归属、时钟证据以及以下指令事实保留，详见 [v32](independent-behavior-graph.md#g2-v32-display-session)。
+v32 收窄 raw119/120 与 bones=116 的推论，v33 随后分别测得语义运动与实际覆盖；missing=7 的旧 cap4 只列四名、另三未知，不证明可忽略。v34 的 reset/重开/F7/读档回落结果保留，同 controller 来源/generation 改变与 frozen-only 拒绝未验。新 [v42 有界诊断](independent-behavior-graph.md#v42-residual-corrections)仅提升后续可观测性，既有指令事实、native 配方和原始日志不改。
 
-当前复现入口为 [v32 手工清单](independent-behavior-graph.md#v32-manual-checklist)：候选语义连续性、实际应用与画面分别判读，使用同一 request/view 的源对照。来源/owner 失效时冻结与逐步视图都回 OAR；装载分配仍保留，不能把视图失效当作安全销毁。每窗口最多 18 行 display 观测；本次文档完善没有新增原生审计、构建、部署或游戏运行。
+当前复现入口为 [手工清单](independent-behavior-graph.md#v32-manual-checklist)与 [v42 待采项](independent-behavior-graph.md#v42-residual-corrections)。最新记录安装为 v41（SourceTimeline=true、其余三键 off）；最新本地产物为 [v46](build.md#v46-retained-copy-ledger-2026-10-29)，未部署。新增 [audit27](#audit27) 只证明三个变量至少各有一个静态外部整数 setter 调用点，没有新增运行代码或游戏结果。18 行窗口内最多一次拒绝理由，cap8 只影响未来 missing 名称。装载 teardown 仍 NO-GO；进程保留一张候选是 G6 显式例外，其余源恢复、请求/任务、引用/回调/sink/历史和重复会话收敛仍待验；全局引擎登记计数没有有效测量锚点。
 
 v31 是对调用路径和观测对象的源码更正，没有新增 native 入口或二进制审计。既有 63587 更新记录、63589 mode0 生成入口与行为图字段声明继续沿用；不可直接以 SDK 的简化 Generate 声明替代已审计的同步入口。
 
@@ -1072,3 +1072,31 @@ python build/g1-audit-20261023/disasm_func.py 0xbb4c50   # 63602 尾部 63587 �
 - 地址库记录的是**未打包布局**的 RVA；本次已用 vtable/RTTI/`.pdata` 对齐验证，但不代表所有 ID 都经过逐条核对。
 - 第三实参的 `RACE_DATA::flags` 第 7 位语义、`+0x247` 的用途、`0xcc4680` 的一次性初始化身份均未解析。
 - 本次没有修改运行代码，没有新增依赖、目标或配置；`BehaviorGraphProbe` 的采集字段和 G1 采集预算不变。
+
+<a id="audit27"></a>
+## 审计二十七：三个 equipped 变量的静态外部整数写入者（2026-10-29）
+
+本节只补足 G3-B 的部分 writer 证据：[当前输入表与前置核实](independent-behavior-graph.md#handoff-20261029)仍约束后续工作。没有写变量、回放事件、引入 native 入口或运行游戏；不改变 G2/G3-A 判定。
+
+**目标与来源**：AE 1.6.1170 解包镜像 `SkyrimSE.original.exe.unpacked.exe`，SHA-256 `843823c115dbc56b5e9740350db49170cc4eea013a79513b7fd066deec719a2b`；地址库 `extern/CommonLibSSE/tests/REL/versionlib-1-6-1170-0.bin`，SHA-256 `c4093c569a3c83b26587f4b9ea4c55de9ae6e73b84a2af9fb3fbd30e2fe0d452`。SDK 固定为 CommonLibSSE `94faaed0c60eddd8347767f2d4d29a97c93bde8c`。镜像/本地审计脚本位于既有 ignored `build/behavior-graph-manager-audit-20261027/` 与 `build/behavior-graph-output-audit-20261027/`，不是可移植导航或仓库依赖；复核须先具备这些已核哈希的本地输入。
+
+**完整性与 setter 身份**：chain-aware `.pdata` 归组确认 AE ID **38821** 为单条 unwind 记录，范围 `[0x6c6f30, 0x6c7176)`，完整 **582 字节**。[IAnimationGraphManagerHolder.cpp](../extern/CommonLibSSE/src/RE/I/IAnimationGraphManagerHolder.cpp) 的 `SetGraphVariableInt(BSFixedString const&, std::int32_t)` 声明映射 `RELOCATION_ID(32142, 32886)`；AE32886 对应 RVA `0x54b7b0`。该包装器把按值传入的 `r8d` 存到栈，再于 `0x54b7be` 调 AE32932（`0x54d720`），传入该整数的地址。因此下表是整数 setter 路径的静态调用证据，不能用它替代图内 `variableInfos` 的实际类型检查。
+
+| 变量名 | AE38821 内 setter 调用 RVA | 名字身份与初始化 | 本地值来源，仅按指令描述 |
+| --- | --- | --- | --- |
+| `iMagicEquipped` | `0x6c703d` → AE32886 / `0x54b7b0` | name token `0x319abf0`；`0x6c7144` 取字面串 RVA `0x18a0330`，`0x6c714b` 取 token，`0x6c7152` 调初始化 AE69161 | `r8d=r14d`，由本函数 native 分支标志组合；不推定具体玩法语义 |
+| `iLeftHandEquipped` | `0x6c7075` → AE32886 / `0x54b7b0` | `FixedStrings+0x398`；初始化例程 AE15908（`0x21f300`）的 `0x21fc64` 取字面串 `0x178ab08`，`0x21fc6b` 初始化该字段 | `r8d=ebp`：0 或 AE14220（`0x1d1de0`）处理 AE39195（`0x6d88f0`）结果后的 AX 符号扩展 |
+| `iRightHandEquipped` | `0x6c70a9` → AE32886 / `0x54b7b0` | `FixedStrings+0x3a0`；AE15908 的 `0x21fc7c` 取字面串 `0x178ab20`，`0x21fc83` 初始化该字段 | `r8d=ebx`：0 或 AE14220 处理 AE39196（`0x6d8900`）结果后的 AX 符号扩展 |
+
+[FixedStrings.h](../extern/CommonLibSSE/include/RE/F/FixedStrings.h) 的 `iLeftHandEquipped`/`iRightHandEquipped` 字段分别声明在 `0x398`/`0x3a0`；三处字面串已从镜像按 RVA 读取核名。getter AE11437（`0x14ef60`）返回该 singleton，并在初始化分支调用 AE15908。这些对应关系与 setter 调用窗口一起完成名字核对，没有把变量槽号或函数名猜测当作身份依据。
+
+**可得结论**：这三个名字分别存在至少一个原生、图外 `SetGraphVariableInt` 静态调用点。不能据此证明 writer 唯一性、v41 运行实际经过这些分支、源/候选图实际 `variableInfos/m_type` 表示类型与按名映射、输入子集的必要性/充分性，或事件/瞬态/原 setter 的精确时序。`iState`、`currentDefaultState` 仍只作输出/相位观察，禁止回放写入；`IsEquipping`、`IsUnequipping`、`bEquipUnequip` 及其它 flag 的角色仍未决。G3-B 仍未实现或通过，也没有 setter/event 写入授权。
+
+**有界复核**：使用现成 Python、只读模块函数和已安装 `C:/env/llvm/bin/llvm-objdump.exe`；`-B` 避免写 bytecode，下列命令仅打印指定完整函数/窗口和名字，不调用模块 CLI 的文件输出分支。
+
+```powershell
+C:/env/python312/python.exe -B -c "import sys; sys.path[:0]=['build/behavior-graph-manager-audit-20261027','build/behavior-graph-output-audit-20261027']; import audit_image as i, audit23_image as a; g,t=a.listing(i.target('38821')); print(g); print(t)"
+C:/env/python312/python.exe -B -c "import sys; sys.path.insert(0,'build/behavior-graph-manager-audit-20261027'); import audit_image as i; print(i.disasm(i.target('32886'))); print(i.disasm(0x21fc59,0x2f)); print(i.disasm(0x6c7144,0x13)); print([(hex(r),i.read(r,32).split(bytes([0]),1)[0]) for r in (0x18a0330,0x178ab08,0x178ab20)])"
+```
+
+本次已逐项复核三条直接 call 的 rel32 目标、名字初始化引用、字面串、SDK 声明和 582 字节边界；现成 LLVM 的调用窗口与保留取证一致，主镜像/地址库哈希断言通过。下一步仍是源/候选运行时名字/类型映射、剩余 writer/角色和最小输入集/事件时序证据，然后另立写入契约。仅文档更新，无构建/测试重跑；最新本地 DLL/PDB 保持 [v46](build.md#v46-retained-copy-ledger-2026-10-29)，记录安装保持 v41。

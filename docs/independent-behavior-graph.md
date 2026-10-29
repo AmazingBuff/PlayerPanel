@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-10-29。**新会话先读[当前状态与后续规划](#handoff-20261029)**（已完成项、部署、G3-B 契约草案、排序与反模式清单）；测量结果以[验证总表](#verification-matrix)为准，逐轮细节见 [G3-A](#g3-a-contract) 与 [G2 v33/v34](#g2-v33-run)。原始日志和历史契约不变。
+更新：2026-10-29。**新会话先读[当前状态与后续规划](#handoff-20261029)**（已完成项、部署、G3-B 契约草案、排序与反模式清单）；测量结果以[验证总表](#verification-matrix)为准，逐轮细节见 [G3-A](#g3-a-contract) 与 [G2 v33/v34](#g2-v33-run)。原始日志和历史契约不变。[v44 显示时钟](#v44-display-clock)仅本地验证 elapsed 60 Hz 调度，游戏速率/画面待验。[v43 源记录窗口修正](#v43-source-sessions)仅在本地构建/离线验证，尚未部署或上机。
 
 <a id="current-status"></a>
 
@@ -9,29 +9,29 @@
 | 关卡 | 当前结果 | 证据边界 |
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)）；"全局登记计数"的旧静态结论被 v35 上机读数证伪、判为无锚点（[更正](#g1-teardown-audit)）。 |
-| G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：来源图替换而 controller 未重建的 `source-invalid` 分支、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
-| G3–G6 | **G3-A 成立；G3-B 与 G4–G6 未执行** | G3-A 已按名字取得同一单手武器 Equip→Idle→Unequip 的变量顺序与相位（[v41](#g3-a-contract)）；候选是否自行走完同一顺序（G3-B）、OAR 语境隔离、完整姿态对照及生命周期仍需分别验收。 |
+| G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
+| G3–G6 | **G3-A 成立；G3-B 与 G4–G6 未执行** | G3-A 已按名字取得同一单手武器 Equip→Idle→Unequip 的 settled 观测序列与相位（[v41](#g3-a-contract)）；候选是否自行走完同一顺序（G3-B）、OAR 语境隔离、完整姿态对照及生命周期仍需分别验收。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
-[v33](#g2-v33-run)（v32 代码的重建）在 2026-10-28 22:28 上机取得第一个非中断窗口：120 次 eligible 显示调用里候选语义运动 120/120（1e-6、符号不变）、实际写骨 109/116（`missing` 7 个全为已列名的非骨控制/挂点，`109+7+0=116` 自洽）、源侧 `drift=none` 且 before=after、**画面连续运动经用户确认**。同一窗口的门读数 `active/children=true`、`numAnim=numData=116`，从运行侧确认 v30 那组 `children=0`/`numData=62016` 是读错对象。G2 因此按原范围判 PASSED，边界（120 前中断、重开、F7、来源失效）与装载销毁、G3–G6 仍未执行。
+[v33](#g2-v33-run)（v32 代码的重建）在 2026-10-28 22:28 上机取得第一个非中断窗口：120 次 eligible 显示调用里候选语义运动 120/120（1e-6、符号不变）、实际写骨 109/116（`missing=7`，旧日志只列 4 个控制/挂点标签、另 3 个未知；标签不能证明可忽略，`109+7+0=116` 自洽）、源侧 `drift=none` 且 before=after、**画面连续运动经用户确认**。同一窗口的门读数 `active/children=true`、`numAnim=numData=116`，从运行侧确认 v30 那组 `children=0`/`numData=62016` 是读错对象。G2 因此按原范围判 PASSED；v34 后续补齐四条已观察边界，确切拒绝原因、同 controller 来源替换和 frozen-only 拒绝仍未验，装载销毁及 G3-B/G4–G6 不由此通过。
 
-[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口；另记符号不变的候选运动和实际写入覆盖。两个新离线场景及 Release 构建通过，见[构建记录](build.md#v32-display-session-2026-10-28)。2026-10-28 22:23 把同一份源码重建为 **v33** 并部署到 MO2 实例，22:28 的会话取得[首个连续窗口](#g2-v33-run)，22:47 的会话补齐[三条边界](#g2-v34-boundaries)（重开、F7、读档失效），只剩 `reason=reset` 的 120 前关窗未采。默认三键关闭，产品走装备驱动 OAR 路径；缓存回放未被需要，不作为既定方向。
+[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口。相同代码重建为 v33 后，完整窗口与 v34 四条边界均已有运行记录。最新记录安装为 v41，仅 SourceTimeline 开启；v42 是本地诊断补全，v43 是独立源记录窗口修正，两者均未部署。默认产品仍走装备驱动 OAR 路径；缓存回放不作为既定方向。
 
 
 
 <a id="verification-matrix"></a>
-## 验证总表（2026-10-28，v33 首个显示窗口）
+## 验证总表（2026-10-29，含 v33/v34/v41 证据）
 
-归档运行结果截至 2026-10-28 22:28（v33）；v31/v32 只有离线修正与构建证据。旧 raw 119/120 和 bones=116 的读数保留，其连续性与全骨覆盖推论由 [v32](#g2-v32-display-session)收窄、由 [v33](#g2-v33-run)重新以语义度量与实际写骨数取代。
+归档运行结果涵盖 v33 的连续显示窗口、v34 的四条边界及 v41 的 G3-A settled 相位轨迹。v42 只补全有界诊断与文档，v43 只修正源记录窗口，均未上机。旧 raw119/120 和 bones=116 原始读数保留；当前候选运动、实际应用与视觉结论分别由 v33 的对应证据支持。
 
 ### 关卡
 
 | 关卡 | 判定 | 限定 / 未覆盖 |
 | --- | --- | --- |
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
-| G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：`source-invalid` 分支、场景应用、装载销毁与 G3–G6 |
-| G3–G6 | G3-A 成立；G3-B 与 G4–G6 未执行 | G3-A 的输入清单见 [v41 记录](#g3-a-contract) |
+| G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
+| G3–G6 | G3-A 成立；G3-B 与 G4–G6 未执行 | G3-A 的观测相位轨迹见 [v41 记录](#g3-a-contract) |
 
 ### 逐轮实验（本系列）
 
@@ -75,22 +75,21 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 
 | 项 | 现状 |
 | --- | --- |
-| 显示窗口边界 | **已验全部四条**：`reset` 中断（`steps=61`，无摘要）、重开不拼接、F7 `reason=retarget` + view 递增 + 重采基线、读档后旧候选被拒且无 `native-step` 残留（v34）。**未验**：来源图被替换而 controller 未重建的 `reason=source-invalid` 分支 |
+| 显示窗口边界 | **已验全部四条**：`reset` 中断（`steps=61`，无摘要）、重开不拼接、F7 `reason=retarget` + view 递增 + 重采基线、读档后旧候选被拒且无 `native-step` 残留（v34）。**未验**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝；旧日志未直接记录读档拒绝的确切原因 |
 | 场景应用（物理、武器挂载交互） | 未验 |
 | 装载图停用/销毁 | **判为 NO-GO（2026-10-28 审计）**：`Deactivate` 对 `activeNodes` 无空检查，且候选与源共享 `rootGenerator`，未证活动节点条目是克隆；污染源图比崩溃更糟。收益只是每进程一张图的登记与内存，不阻塞 G3–G6。见[审计](#g1-teardown-audit) |
 | 全局登记计数 | **无锚点、不立项**：v35 探针在 23:16 上机读回 `300474432->300474432`，重审指令确认 `[0x315C950]+0x228` 是不变的奇偶/序列值、`inc` 未写回、`63529` 只是无锁追加而非登记；旧审计那句话判为误读（[更正](#g1-teardown-audit)） |
 | G3–G6、独立 OAR 语境 | **G3-A 成立**（源序列已按名字取得）；G3-B（候选自行走完同一顺序）、G4–G6 未执行 |
-| 非骨缺失项逐名核对 | v33 的 `missing=7` 只按预算列了 4 个名字，其余 3 个未列名，不能逐一断言全部非骨 |
-| 帧率无关性 | 固定步长 1/60 每次 eligible 调用；调用数不等于墙钟时间，未做不同 FPS 下的速率校准 |
+| 缺失项逐名与语义核对 | v33 的 `missing=7` 只按预算列了 4 个名字，其余 3 个未列名，不能逐一断言全部非骨 |
+| 帧率无关性 | [v44 本地代码](#v44-display-clock)按 eligible elapsed 时间累计 60 Hz，100 ms/六步上限；30/120 FPS 两个离线场景各在两秒产生 120 步。游戏速率/画面未验；v33/v34 的每调用记录仍为历史 |
 
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **2026-10-28 22:23 部署 v33**（v32 代码在 HEAD `d323b35` 上的重建）：DLL `061d5b8a…`（1,319,424 B）、PDB `5924464d…`，MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，profile `AE` 为 `+CharacterPanel`。
-- **2026-10-28 23:18 部署 v36**（v33 代码 + 回滚 v35 探针，身份 `…v36-registry-probe-revert-20261028-cee948dcf8…`，DLL `ac01ac95…`、1,319,424 B）：**三键全部 off**，产品走纯 OAR。v35 三件套备份在 `dist/deploy-backup-20261028-v35/`（DLL `9d5cce9f…`）。
-- 之前用同一份代码的 v33 跑过 v33/v34 两个会话（完整窗口 + 四条边界），`IndependentGraph=inject` 下的行为已记录在案。
-- v31/v32 从未部署：它们的构建产物不在本检出中，所以当时用同一份源码重建为 v33，身份与哈希见 [build](build.md#v33-rebuild-2026-10-28)。
-- 仓库样例 `config/CharacterPanel.ini` 同样三键全关，不要随部署一起改。
+- **最新记录安装：2026-10-29 00:25 的 v41**，DLL `3b8f8efe…`、PDB `e99d04cd…`，完整身份/哈希见 [v41 build](build.md#v41-panel-gate-2026-10-29)，MO2 路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
+- 该次部署 INI 为 `SourceTimeline=true`、`IndependentGraph=off`、`DisplayPose=false`、`DisplayStep=false`。仓库样例四键均 off；历史 v36 全关记录不再是当前安装。
+- v33 曾跑过完整窗口和 v34 四条边界；v31/v32 未部署的重建缘由保留在 [v33 build](build.md#v33-rebuild-2026-10-28)。
+- **v42 仅本地构建，未部署/启动游戏**；其能力与待采证据见 [v42](#v42-residual-corrections)。
 
 ### 测试包清单
 
@@ -114,7 +113,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 ### 复现入口
 
 - **构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=<轮次>` → `cmake --build --preset Release`；先清掉小写 `http_proxy` 等变量（否则 MSBuild CL 任务报 MSB6001）。
-- **当前引擎无关用例**：v32 只运行 [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp) 中两个连贯场景，MSVC14.44 命令见 [v32 build](build.md#v32-display-session-2026-10-28)。旧五个 policy 用例的结果属于历史记录，本轮未重跑；CMake 仍未注册测试目标。
+- **当前引擎无关用例**：v42 仅扩展并运行 [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp) 中两个连贯场景，MSVC14.44 命令见 [v42 build](build.md#v42-residual-corrections-2026-10-29)。旧五个 policy 用例的结果属于历史记录，本轮未重跑；CMake 仍未注册测试目标。
 - **静态审计**：`C:/Python314/python.exe`（已装 pefile + capstone 5.0.7），解包镜像与脚本在 `build/g1-audit-20261023/`，单函数反汇编用 `disasm_func.py <rva>`。
 - **运行日志**：以 `SKSE::log::log_directory()` 返回的目录中 `CharacterPanel.log` 为准（见 [main.cpp](../src/main.cpp) 的 `initialize_log`）；历史机器使用 Documents 下的 SKSE 目录，不应据此猜当前路径。每轮日志与匹配 DLL/PDB、INI 一起保留。
 
@@ -169,13 +168,13 @@ OAR 隔离还包括图外状态：图变量和 `IsWeaponDrawn` 可通过 Actor �
 
 G1 通过后，在无 OAR 的原版基线只推进候选图。使用固定记录的时间步，采集候选剪辑时钟与输出姿态、源活动节点/变量/时钟/骨骼前后差分。窗口内禁止合法装备操作混入对照；用户换装备后重新建立基线。
 
-通过：候选原版 idle 持续、有意义地前进，必要骨的有效变换变化可验证，源保持对照；时钟、索引、状态机、元素头或原始分量变化单独都不够。**当前逐步候选语义连续性待复验**：v26 的 119/120 是当时 raw 判据通过记录，q/-q 反例使其不能单独证明连续运动。有限、私有缓冲、v24 层归属及 v25 的 1.000× 时钟证据保留。G2 仍限定 AE1170 单进程单次暂停批次，不包含实际显示应用/视觉确认、生命周期或后续关卡；展示验证另行记录。见[v32](#g2-v32-display-session)。
+通过：候选原版 idle 持续、有意义地前进，必要骨的有效变换变化可验证，源保持对照；时钟、索引、状态机、元素头或原始分量变化单独都不够。**v33 已在限定范围通过**：候选语义运动 120/120、109/116 实际赋值、源对照不变及用户确认画面连续。v26 raw119/120 不单独证明运动；所保留的有限、私有缓冲、层归属、时钟证据仍有效。物理/挂载交互、全部有效骨覆盖、装载图生命周期和 G3–G6 仍未通过。
 
 前置激活/推进审计及 v1–v17 实现记录已保留；[最初 G2 契约](#2026-10-24-g2-契约drive-模式实验设计)的 63586/裸 Update 配方后来迭代为字符级 58453 激活、63602 管线、63587 包装与 v17 的 63581 直调。调用入口已定位不等于输出链可用，当前后续问题以[有界审计清单](#next-audit)为准。
 
 ### G3：图原生的 Equip → Idle → Unequip
 
-正常游戏运行时先记录同一单手武器的变量写入与事件先后顺序、节点激活/退出。把等价输入送到候选图；不能手动指定动作族/HKX 来“通过”。输出事件先只收集，不派发到源 Actor。
+正常游戏运行时先取得同一单手武器的相位轨迹，再核实外部变量/事件的写入者、角色与运行时类型及其先后时序。G3-A 已取得 settled 观测轨迹，但不是 setter/事件拦截；完整外部输入与时序仍需证据。后续只把已论证的等价外部输入送到候选图，不能手动指定动作族/HKX 或写输出状态来“通过”。输出事件先只收集，不派发到源 Actor。
 
 通过：候选状态机自行完成相同顺序，并能按事件和相位与原版轨迹对应。事件丢失、阶段变量仍读源值或靠播放器强制切片均失败。完整 G3 当前未执行；G2 定位轮已派发一次 WeapEquip 并观察到状态转移，不能计为整段装卸链或原生 OAR 一致性通过。
 
@@ -195,9 +194,11 @@ G1 通过后，在无 OAR 的原版基线只推进候选图。使用固定记录
 
 ### G6：生命周期与资源恢复
 
-记录创建前/运行中/销毁后的实例、运行节点、资源引用、事件 sink、OAR 登记、任务和输出数量。重复会话、快速换装、重捕获、关闭背包、读档；旧任务带会话代数失效，先停止工作再逆序解除回调和资源。
+记录创建前/运行中/关闭后的源状态、请求/任务代数、预览持有的引用、输出、回调、事件 sink、OAR 登记与历史。重复会话、快速换装、重捕获、关闭、读档时，先使旧请求/任务失效，再解除预览拥有的回调/引用，并验证可观察计数与状态回到基线且不持续累积。
 
-通过：计数回到基线，没有源状态漂移或持续积累。崩溃未出现不能代替清理证据。当前未执行。
+**显式例外**：已装载候选刻意每进程保留一张，不尝试停用/销毁（NO-GO）；此项不作为“全部释放”的通过条件。全局引擎登记计数没有可靠测量锚点，不能当作可测量的通过项。其余可观察的预览引用、回调/sink、历史、请求/任务与重复会话收敛仍须验证，不能借例外省略。
+
+通过：源恢复、旧工作失效、预览自有关系正确解除，重复会话无非例外积累。`DAC restore … result=matched` 仅支持对应效果恢复；无崩溃也不等于 G6。当前 G6 未执行。
 
 ## G1 实验契约（2026-10-23 设计，未实现）
 
@@ -1564,7 +1565,7 @@ F7 导致显示拷贝 retarget 时，即使来源和 request 未变，也会结�
 - 原 `compare_pose`、`pose_sample_max_delta`、identity/alias-watch 以及 `pose-steps` raw 位串语义不变。raw 119/120 继续是取证数据，不能单独作为运动通过判据。
 - `compare_display_motion` 使用 translation XYZ、归一化旋转的符号不变弦长 `sqrt(2*(1-|dot|))` 和显示实际使用的 uniform scale X。阈值是 **1e-6**，保持逐帧小运动敏感度；没有复用片段归属的宽松 1e-5 agreement 容差。q/-q 翻转和仅 scale Y/Z 改变不算候选语义运动。
 - 批量增加一行 `phase=pose-motion`（旧 raw 行保留）；显示摘要分别记 `raw-changed/raw-finite` 与 `semantic-changed/semantic-valid`，标明 `scope=candidate acceptance=unjudged`。候选中变化的骨可能根本没有映射到显示图，故仍不等于可见运动。
-- `apply_named_display_pose` 是实际赋值路径，返回真正的 assignment 数。日志分别报告 output records、去重 requested、applied、missing、skipped-root 和 duplicates，最多列出 4 个缺失名字。根排除来自既有 retarget 不索引显示 root 的策略，以实际 root 名识别，没有硬编码骨名。`advance()` 返回 applied，不再返回候选记录数。
+- `apply_named_display_pose` 是实际赋值路径，返回真正的 assignment 数。日志分别报告 output records、去重 requested、applied、missing、skipped-root 和 duplicates，v32 旧格式最多列出 4 个缺失名字；v42 容量为 8，计数仍为权威总数。根排除来自既有 retarget 不索引显示 root 的策略，以实际 root 名识别，没有硬编码骨名。`advance()` 返回 applied，不再返回候选记录数。
 
 ### 代码、用例与同步
 
@@ -1580,16 +1581,18 @@ F7 导致显示拷贝 retarget 时，即使来源和 request 未变，也会结�
 两个新 engine-free 场景和 Release 构建通过，实际身份/哈希见 [v32 build](build.md#v32-display-session-2026-10-28)。v32 没有修改旧 v31 用例和 native-step/FrameTrace 文件，未扩大旧测试集；本次文档完善没有重跑测试或构建。默认 `IndependentGraph=off/DisplayPose=false/DisplayStep=false`，没有部署或启动游戏。
 
 <a id="v32-manual-checklist"></a>
-### 下一次 AE1170 手工验证清单（未执行）
+### AE1170 手工验证清单（v33/v34 已部分执行，剩余项注明）
 
-以下是待执行程序，不是游戏结果。只做两类有界观察：先完成一个不中断的显示窗口，再观察窗口/来源失效边界。无需为文档修改重跑旧用例或构建。
+以下程序的历史执行状态见引用运行记录；剩余项仍待新的有授权游戏会话。v42 新诊断不能替代运行证据。
 
-> 执行状态（2026-10-28）：**第 1–6 步已执行**——身份核对改为 [v33 记录](build.md#v33-rebuild-2026-10-28)，首个非中断窗口成立（[v33](#g2-v33-run)），中断（`steps=61 reason=reset`，无摘要）、重开不拼接、F7（`steps=84 reason=retarget`）全部成立（[v34](#g2-v34-boundaries)）。**第 7 步部分成立**：读档销毁 controller 后旧候选被拒、回落 OAR 已验；来源图被替换而同地址 generation 改变的分支未验。清单文字保持原样。
+**v44 当前计数说明**：下方旧 v33/v34 的 call/墙钟记录保持原样。新调度的 `native-step` 与 gates `call` 均为实际原生步序号，120 native steps 不等于 120 rendered calls；零步调用仍显示 stepped 候选姿态。验证应观察原生步 120 与实际 elapsed 时间，并分别记录停顿/100 ms 截断、重开/F7 和不可推进恢复；尚无 v44 游戏数据。
+
+> 执行状态（2026-10-28）：**第 1–6 步已执行**——身份核对改为 [v33 记录](build.md#v33-rebuild-2026-10-28)，首个非中断窗口成立（[v33](#g2-v33-run)），中断（`steps=61 reason=reset`，无摘要）、重开不拼接、F7（`steps=84 reason=retarget`）全部成立（[v34](#g2-v34-boundaries)）。**第 7 步部分成立**：读档后回落 OAR 且无 native 行已验；旧日志没有确切拒绝原因。同 controller 来源图/generation 替换及单独 frozen-only 拒绝未验。
 
 1. **核对输入和身份。** 保留待测 DLL 与匹配 PDB、原 INI 和日志。若使用现有 v32 离线构建，逐项核对 [build 记录](build.md#v32-display-session-2026-10-28)的 SHA-256、字节数及完整 `SCENEGRAPH BUILD` 身份（`f5ec13f2c2+dirty`，配置时间 `20261028T073724Z`）；它是提交前产物，后续提交不会改写身份。若另行重新构建，则记录实际新身份/哈希，不能沿用旧记录。确认运行时为 exact **AE 1.6.1170 / `1-6-1170-0`**。v33 已按上方执行状态部署，核对该对哈希而不是旧 v32 记录。
 2. **只调整三个实验键，重启。** 在实际加载的 `[Experiment]` 中设 `IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`，保留其他 INI 设置。设置在 DataLoaded 加载，须完整退出游戏再启动。保留此轮实际 INI；详细 tracing 不是这些 display 行的前提。首次可用的 `panel-open` 执行一次候选批量；确认本轮候选具备 loaded/retained、私有状态守卫与来源身份，再解释后续 display 行。
 3. **完成首个连续窗口。** 打开暂停背包，保持同一 actor/source graph/generation/controller、request 和 view；在前 **120 次 eligible display calls** 内不关闭、不 F7、不改变来源/装备。固定步长是每次 eligible 调用 1/60 秒；调用数不等于实际显示 FPS，也不等于同样长的墙钟时间。记录 `native-step=1/60/120` 及各自 `gates` 的 `post-pipeline/post-update/post-sample`。120 后驱动可以继续，但该窗口测量/日志受预算限制，不产生第二份摘要。
-4. **分别填写三类结论。** 候选：并列保存批量 `phase=pose-steps` 的 raw 位串与 `phase=pose-motion comparisons/changed/valid/epsilon`，以及显示 `pose-summary native-steps=120 raw-changed/raw-finite/semantic-changed/semantic-valid`。语义阈值为 **1e-6**，translation XYZ、符号不变 quaternion chord、scale X；q/-q 或仅 scale Y/Z 改变不算语义运动。计数是“至少一个候选骨变化”的比较次数，不是变化骨数；批量与显示的起始基线不同，不要求语义值照搬历史 **119/120**。`acceptance=unjudged` 要保留，按 G2 原有范围独立评估逐步语义连续性。应用：保存同窗口 `application mode=stepped` 的 `output-records/requested-unique/applied/missing/skipped-root/duplicates/missing-names`；核对 `requested-unique = applied + missing + skipped-root`、`duplicates = output-records - requested-unique`。只列最多四个 missing 名字，计数才是总数；不要求恰好 **116** 个 applied。画面：直接观察/记录拷贝角色是否持续运动、是否冻结或跳变；候选语义变化与 applied 数均不能替代视觉确认，也不能证明变化的骨都被映射。
+4. **分别填写三类结论。** 候选：并列保存批量 `phase=pose-steps` 的 raw 位串与 `phase=pose-motion comparisons/changed/valid/epsilon`，以及显示 `pose-summary native-steps=120 raw-changed/raw-finite/semantic-changed/semantic-valid`。语义阈值为 **1e-6**，translation XYZ、符号不变 quaternion chord、scale X；q/-q 或仅 scale Y/Z 改变不算语义运动。计数是“至少一个候选骨变化”的比较次数，不是变化骨数；批量与显示的起始基线不同，不要求语义值照搬历史 **119/120**。`acceptance=unjudged` 要保留，按 G2 原有范围独立评估逐步语义连续性。应用：保存同窗口 `application mode=stepped` 的 `output-records/requested-unique/applied/missing/skipped-root/duplicates/missing-names`；核对 `requested-unique = applied + missing + skipped-root`、`duplicates = output-records - requested-unique`。v33/v34 旧日志最多列四个名字，v42 新格式最多八个；计数才是总数；不要求恰好 **116** 个 applied。画面：直接观察/记录拷贝角色是否持续运动、是否冻结或跳变；候选语义变化与 applied 数均不能替代视觉确认，也不能证明变化的骨都被映射。
 5. **核对同窗口源控制。** 将 `source-control stage=before` 与 call 120 的 `stage=after` 按 request/source-generation/view 配对，必须看到 `source-drift=none` 且 `pose-before=pose-after`。不能跨 request/view 拼源基线。源快照只是所测字段/raw pose 的控制，不能扩大为全部共享状态、原生阶段隔离或全局收敛证明。
 6. **观察中断、重开和 F7。** 在后续新窗口中，若在 120 前关闭（例如只到 checkpoint 60），应丢弃旧窗口并在有部分步骤时报告 `window=aborted ... source-comparison=discarded`；重开从新基线开始，旧 60 + 新 60 不能组成摘要。同一有效来源允许复用保留候选。F7 接受新拷贝并 retarget 后，应重新报告 coverage，从新 view/request 窗口的 call 1 采源基线；正常兼容动画时钟不因测量重置而倒带。若 request 同时改变，view 编号可重新从零开始，须以完整身份关联。
 7. **最后观察来源/owner 失效。** 来源图替换、同地址新 generation，或 PreLoad/NewGame 等销毁 controller 后，旧候选的冻结与逐步路径都应被拒绝，回到既有 OAR 采样；不能继续把旧 candidate 的行当成新来源。原生候选仍保留、不会自动重建，换来源后若要新的独立候选须重启游戏进程。若没有足够日志/画面区分这些边界，记录为未验证。
@@ -1614,7 +1617,7 @@ F7 导致显示拷贝 retarget 时，即使来源和 request 未变，也会结�
 | 类别 | 读数 | 判读 |
 | --- | --- | --- |
 | 候选语义运动 | 显示 `pose-summary native-steps=120 raw-changed=120 raw-finite=true semantic-changed=120 semantic-valid=true epsilon=1e-06 scope=candidate acceptance=unjudged`；批量 `pose-motion comparisons=120 changed=119 valid=true`；`pose-content` 三点 `entries=116 finite=116 nonfinite=0 alias=no` | **成立**：符号不变度量（translation XYZ + quaternion 弦长 + scale X）下 120/120 次比较均变化，q/-q 与仅 scale Y/Z 不计入 |
-| 实际应用 | `application mode=stepped output-records=116 requested-unique=116 applied=109 missing=7 skipped-root=0 duplicates=0`；`missing-names='x_NPC Rotate [Rot ],x_NPC LookNode [Look],x_NPC Translate [Pos ],Weapon'` | **成立（有界）**：`109+7+0=116` 与 `duplicates=0` 自洽；已列的 4 个缺失名都是非骨控制/挂点。预算只列 4/7，其余 3 个未列名 |
+| 实际应用 | `application mode=stepped output-records=116 requested-unique=116 applied=109 missing=7 skipped-root=0 duplicates=0`；`missing-names='x_NPC Rotate [Rot ],x_NPC LookNode [Look],x_NPC Translate [Pos ],Weapon'` | **成立（有界）**：`109+7+0=116` 与 `duplicates=0` 自洽；旧 cap4 只列这 4/7 个名字，其余 3 个未知。已知控制/挂点标签不证明可忽略，`Weapon` 仍需应用语义核对；若后续遇到 `Shield` 也同样核对，不能因此给历史未知项补名 |
 | 源对照 | before=after=`23dd49fed3fbf888`，`source-drift=none`，同 request/generation/view；批量 `drive-done source-pose-before=after=23dd49fed3fbf888` | **成立**：源侧姿态未变 |
 | 画面 | 用户确认面板内角色连续运动（截图 2026-10-28 22:28:09） | **成立** |
 
@@ -1642,7 +1645,7 @@ call 1/60/120 × `post-pipeline/post-update/post-sample` 共 9 行，全部为 `
 | ① 120 前关窗（`reason=reset`） | **成立（23:00 补测）** | 第二次会话开包 1 在 call 61（23:00:53.569 关包）中止：`window=aborted … request=1 view=1 steps=61 reason=reset source-comparison=discarded`，**没有 `pose-summary`**；随后开包 2 从 call 1 重采 `97dd7a5b8bbd183e`、独立跑满 120 出摘要——61 步没有被接着用。日志[归档](diagnostics/CharacterPanel-g2v34-reset-20261028-2300.log)（64,003 字节、`bc7f27c4…`，无 `[E]`） |
 | ② 重开 | **成立** | 开包 2 重采 `stage=before pose-hash=0af9a6a6f3f1c963`（与开包 1 的 `1ebf9021afd2a1d1` 不同）、call 从 1 起算，独立跑满 120 并出第二份摘要——没有接续开包 1 |
 | ③ F7 | **成立** | `window=aborted … request=3 view=2 steps=84 reason=retarget source-comparison=discarded`；随后 view 2→3、重采 before（`f5a9a106bc431094`，源未变故与窗口内相同）、`application` 重报覆盖，新窗口再跑满 120 并出摘要 |
-| ④ 来源失效 | **成立（预期形态）** | 读档后开包只有 `ANIMATION PANEL accepted` 与 OAR `asset ready`，**没有任何 `ANIMATION DISPLAY` 行**，也没有残留 `native-step`。旧候选被拒、实验不在同进程重跑 |
+| ④ 来源失效 | **成立（观察到回落形态，确切原因未记录）** | 读档后开包只有 `ANIMATION PANEL accepted` 与 OAR `asset ready`，**没有任何 `ANIMATION DISPLAY` 行**，也没有残留 `native-step`。符合旧候选拒绝/回落的预期形态，实验不在同进程重跑；旧日志没有直接给出 owner/graph/generation 等拒绝原因 |
 
 ### 附带读数
 
@@ -1651,12 +1654,12 @@ call 1/60/120 × `post-pipeline/post-update/post-sample` 共 9 行，全部为 `
 - **call 1 的门可能是瞬态**：`request=3 view=2` 的 call=1 读到 `children=false w245=0x101 b246=1`，到 call=60 已是 `children=true w245=0x0`，窗口照常推进（哈希在变）。门值要看整窗或至少两个检查点，**单点读数会重犯 v30 的错**。
 - `SCOPY PARK … snapshots held alive for the process lifetime: 4`：22:47 会话累积 4 份场景拷贝，归 ②（资源收敛）记账，不属于本步。
 
-**范围**：单进程、暂停背包、一个 actor/来源；四条边界（`reset` 中断、重开不拼接、F7 重捕获、读档后拒绝旧候选）全部成立。**未验**：来源图被替换但 controller 未重建的 `reason=source-invalid` 分支；装载图停用/销毁与全局收敛仍属 G1 遗留。
+**范围**：单进程、暂停背包、一个 actor/来源；四条边界（`reset` 中断、重开不拼接、F7 重捕获、读档后拒绝旧候选）全部成立。**未验**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档的确切拒绝原因。装载图停用/销毁仍 NO-GO；非例外资源收敛仍属 G6。
 
 <a id="g3-a-contract"></a>
-## G3-A 契约：源图时间线记录（2026-10-28，v37 已实现并部署，待上机）
+## G3-A：源图时间线记录（历史 v37 契约与 v41 成功观测）
 
-G3 的前置观测。目标是先在**正常游戏**里拿到同一单手武器 Equip → Idle → Unequip 的输入顺序（变量写入 + 活动节点变化），作为之后回放给候选的输入清单和对照基线。**不手动指定动作族或 HKX**，也不发事件给源。
+G3 的前置观测。v41 已在正常游戏里取得同一单手武器 Equip→Idle→Unequip 的命名 settled 序列与相位，作为可用的观测基线；没有手动指定动作族/HKX，没有写变量或给源发事件。它不是完整的外部输入清单。下面 v37 契约/输出为历史记录，后续规则和当前限制优先。
 
 **仪器**：`src/animation/behavior_graph/source_timeline.cpp`，由现有 post-UI 渲染钩子（REL ID 79947/82084）每帧调用一次，`[Experiment] SourceTimeline=true` 才生效。只读、不新增钩子、不新增 native 调用、不碰候选图。
 
@@ -1680,7 +1683,7 @@ SOURCE TIMELINE variable index=<i> name='<n>' <old>-><new> float=<f>-><f>
 SOURCE TIMELINE nodes count=<n> hash=<016x>
 ```
 
-变量按 int32 原样输出，同时给出同一 4 字节的 float 解释——类型靠名字与变化形态判断，不猜。
+历史输出同时给出同一 4 字节的 int32/float 解释；这不是类型证据。名字前缀、数值形态、观测转移均不能确认 Bool/Int/Float 或输入/输出角色。运行时类型需核对 `hkbBehaviorGraphData::variableInfos` / `hkbVariableInfo::m_type`；外部写入者/因果角色还需独立证据。
 
 **预注册观察（不得事后放宽）**：
 
@@ -1705,7 +1708,7 @@ SOURCE TIMELINE nodes count=<n> hash=<016x>
 
 ### v38 规则修订（不是放宽判据，而是换记录规则）
 
-v38 引入 **settle 规则**：一个新值必须连续 **3 个采样**保持不变才写盘。`TimeDelta`/`Pitch`/`Velocity` 这类每帧都变的标量永远 settle 不了，自然不落盘；`iEquippedItemState` 这类状态量照常记录。节点同样只记 `count` 且要求 settle。其余（预算 200、只读、armed/rearm）不变。
+v38 引入 **settle 规则**：新值变化的那个采样将计数清零，之后还须 **3 个稳定采样**才写盘。`TimeDelta`/`Pitch`/`Velocity` 这类每帧都变的标量永远 settle 不了，自然不落盘；`iEquippedItemState` 这类状态量照常记录。节点同样只记 `count` 且要求 settle。其余（预算 200、只读、armed/rearm）不变。
 
 身份 `…v38-source-timeline-settle-20261029-ad15b58ae8-cl94faaed0c6-20261028T160832Z`，DLL `17567d57…`、1,327,616 B；v37 三件套备份到 `dist/deploy-backup-20261029-v37/`，已部署，`SourceTimeline=true` 不变。构建见 [v38](build.md#v38-settle-2026-10-29)。
 
@@ -1770,13 +1773,13 @@ v38 引入 **settle 规则**：一个新值必须连续 **3 个采样**保持不
 - `iState` 0→9（装备完成）与 9→0（卸下完成）是最干净的相位标志；`currentDefaultState` 走 0→10→1→12→0，`IsEquipping`/`IsUnequipping` 各是一段 1.5 s / 1.3 s 的矩形脉冲。
 - 装备与卸下的变量集合**不对称**：装备有 `bAttached`、`IsAttackReady`、`bMLh_Ready`/`bMRh_Ready`；卸下有 `PitchManualOverride`、`bEquipUnequip`。回放时不能只按"把装备序列取反"来做。
 - `TimeDelta` 仍出现约 50 次（settle 拦不住持续抖动），但在 800 预算里不构成问题。
-- 窗口关后（00:27:02 起）出现 `Speed`/`iSyncIdleLocomotion`/`bInJumpState` 等，属用户移动，不在本次判读范围。
+- 00:27:02 起的 `Speed`/`iSyncIdleLocomotion`/`bInJumpState` 等用户移动仍在窗口内：实际关闭为 **00:27:04.193**。它们在所选装备/卸下分析片段之外，不是“窗口关闭后”的行。
 
-**G3-A 判定：成立**——按名字拿到同一把单手武器 Equip→Idle→Unequip 的变量顺序与相位，未手动指定动作族/HKX，未发事件、未写变量。**下一步 G3-B**：把这些输入按**变量名**（候选 652 vs 源 463，索引不可复用）送到候选图，并记录候选是否自行走完同一顺序。
+**G3-A 判定：成立**——同一把单手武器两段按名字可用的 settled 相位轨迹已取得，未手动指定动作族/HKX、未发事件或写变量。变化后还需三个稳定采样，时间戳反映 settle 后的采样/输出时刻；短暂值可能漏失。同次采样按变量索引遍历，同时间戳行不证明原始 setter 顺序，日志也不提供源事件时间。该成功观测不升级为完整外部输入轨迹；G3-B 先完成下方角色/类型/时序前置核实。
 
 **预注册（v39）**：`window-open` 出现且 `words=463`；装备与卸下在窗口内各出现一组 settled 变化；同一索引在窗口内出现次数不超过其真实状态数（例如 `iLeftHandEquipped` 不应出现 10 次以上）；`window-closed lines=N` 且 N≤800。若窗口内仍只看到 1.2 s 周期循环而没有装备变化，说明装备走的是事件而非变量——那 G3-B 的输入就必须以事件为主，变量只作对照。
 
-**运行步骤**：`SourceTimeline=true`、其余键保持 off，重启；进入游戏后原地：装备一把单手武器 → 等约 2 s → 卸下 → 等约 2 s → 退出并交日志。不要开背包、不要 F7、不要换装以外的操作。
+**当前运行步骤**：`SourceTimeline=true`、其余三键 off，重启；进入游戏后站定、不开面板，按 **F7** 开 20 秒窗口，随后装备一把单手武器 → 等约 2 s → 卸下 → 等约 2 s；等 `window-closed` 后保留日志。面板内 F7 是重捕获；F9 保持游戏快速读档。旧不按 F7 的常开式说明仅属于历史 v37/v38。
 
 **不做**：不写变量、不发事件、不调 native、不把源图状态复制给候选。G3 的回放与"候选走同一顺序"的判定属下一份契约。
 
@@ -1920,7 +1923,7 @@ BehaviorGraphProbe=true
 | G2 v30 运行与判读 | 2026-10-28 00:58 会话：显示哈希仍冻结，批量/显示同线程；日志归档 54,987 字节 `0F7B25DE…`，三键回 off。后验复核：active/children 基址错误、numData 少解引用，不能判图未 arm；显示也遗漏 63587 等完整步骤。见[v30 更正](#g2-v30-run) | 优先验证 [v31 共用单步](#g2-v31-correction)，缓存为备选 |
 | G2 v31/v32 离线 | 2026-10-28 白天：v31 共用完整单步与修正读法、v32 来源/窗口/语义运动/实际写骨，两个新 engine-free 场景各 2 例通过，Release 构建通过；**产物未留存**（`build/Release` 仍是 v30，检出内无 v31/v32 目录或包） | 重建后上机 |
 | G2 v33 重建与部署 | 2026-10-28 22:20–22:23：以 HEAD `d323b35` 重配新 label 构建（干净树，无 `+dirty`），DLL `061d5b8a…` 1,319,424 B / PDB `5924464d…`；同一树重跑两个离线场景各 2 例通过；v30 三件套备份至 `dist/deploy-backup-20261028-v30/` 后部署，三键开。见[构建](build.md#v33-rebuild-2026-10-28)与[部署](#deploy-state) | —（运行见下行） |
-| G2 v34 边界会话 | 2026-10-28。22:47 会话：开包 1 跑满 120（未在 120 前关）、开包 2 重采基线且不拼接、开包 3 中途 F7 → `steps=84 reason=retarget source-comparison=discarded` + view 2→3、读档后开包 0 条 display 行；日志 83,924 字节 `23637075…`。**23:00 补测**：开包 1 在 call 61 关包 → `steps=61 reason=reset source-comparison=discarded` 且无摘要，开包 2 从 call 1 独立跑满 120；日志 64,003 字节 `bc7f27c4…`。两次均无 `[E]`。附带：`native-step` 三点哈希与 v33 逐位相同而源 before 不同 → 候选轨迹可复现且与源无关；`SCOPY PARK` 累积 4 份。三键已回 off。见[v34 记录](#g2-v34-boundaries) | 来源图替换而 controller 未重建的 `source-invalid` 分支；G1 装载销毁/全局收敛；G3–G6 |
+| G2 v34 边界会话 | 2026-10-28。22:47 会话：开包 1 跑满 120（未在 120 前关）、开包 2 重采基线且不拼接、开包 3 中途 F7 → `steps=84 reason=retarget source-comparison=discarded` + view 2→3、读档后开包 0 条 display 行；日志 83,924 字节 `23637075…`。**23:00 补测**：开包 1 在 call 61 关包 → `steps=61 reason=reset source-comparison=discarded` 且无摘要，开包 2 从 call 1 独立跑满 120；日志 64,003 字节 `bc7f27c4…`。两次均无 `[E]`。附带：`native-step` 三点哈希与 v33 逐位相同而源 before 不同 → 候选轨迹可复现且与源无关；`SCOPY PARK` 累积 4 份。三键已回 off。见[v34 记录](#g2-v34-boundaries) | 同 controller 来源/generation 替换、frozen-only 拒绝和确切原因未验；新诊断见 v42 `window=rejected`。装载 teardown NO-GO，其余收敛仍属 G6 |
 | G3-A 源图时间线 | 2026-10-28 23:41：新增 `source_timeline.cpp`（post-UI 每帧只读源图，diff 652 个 word 变量 + 活动节点 count/hash，≤200 行/进程），`[Experiment] SourceTimeline` 开关，构建 v37（`…v37-source-timeline-20261028-81578f5c63…`，DLL `7f3bd92e…`）并部署。见[契约](#g3-a-contract)、[构建](build.md#v37-source-timeline-2026-10-28) | 未上机；本构建未加离线用例（native glue，无 policy 头可挂） |
 | G3-A v37 运行（未采） | 2026-10-29 00:05：`armed words=463 nodes=36`，但 200 行在 8.5 s 内被 `TimeDelta`(76 行) 与每帧节点哈希(91 行) 吃光，装备/卸下未进日志；日志 23,521 字节 `29ffef2a…`。附带真事实：**候选 652 vs 源 463**，回放必须按名字映射。见[v37 记录](#g3-a-contract) | 仪器规则修订 |
 | G3-A v38 修订 | 2026-10-29 00:09：settle 规则（连续 3 个采样不变才写）+ 节点只记 count；身份 `…v38-source-timeline-settle-20261029-ad15b58ae8…`，DLL `17567d57…`；v37 三件套备份到 `dist/deploy-backup-20261029-v37/`，已部署，`SourceTimeline=true` | 未上机 |
@@ -1929,7 +1932,7 @@ BehaviorGraphProbe=true
 | G3-A v40 换键 | 2026-10-29 00:19：时间线窗口改绑 **F7**（仅在无面板时；面板内 F7 仍为重捕获），构建 `…v40-timeline-f7-20261029-58d25af47b…`（DLL `5f791d2c…`），v39 备份到 `dist/deploy-backup-20261029-v39/`，已部署 | 未上机 |
 | G3-A v40 运行（空采） | 2026-10-29 00:21：`SourceTimeline=true` 已加载，但按 F7 只出现 `SceneGraph ... command=1 ignored outside paused inventory`——**场景图对象在面板外也存在**，所以"graph 为空"不能当面板关闭的判据，F7 落进了重捕获分支。日志 4,035 字节 `e6c623a7…` | 改用面板状态判定 |
 | G3-A v41 门修正 | 2026-10-29 00:24：改用 `PanelMonitor::is_menu_open()` 判定——面板外 F7 开窗口，面板内 F7 重捕获；构建 `…v41-timeline-panel-gate-20261029-9bc1a4b03a…`（DLL `3b8f8efe…`），v40 备份到 `dist/deploy-backup-20261029-v40/`，已部署 | —（运行见下行） |
-| G3-A v41 运行（成立） | 2026-10-29 00:26：`window-open words=463` → 117 行 → `window-closed`；装备（46.634–48.159）与卸下（53.652–54.933）两段 settled 序列完整，`iState` 0→9→0、`currentDefaultState` 0→10→1→12→0、`IsEquipping`/`IsUnequipping` 各一段脉冲；日志 15,705 字节 `bc48e764…`。**G3-A 成立** | G3-B 回放契约 |
+| G3-A v41 运行（成立） | 2026-10-29 00:26：`window-open words=463` → 117 行 → `window-closed`；装备（46.634–48.159）与卸下（53.652–54.933）两段所选 settled 相位轨迹已取得（非完整外部输入 trace），`iState` 0→9→0、`currentDefaultState` 0→10→1→12→0、`IsEquipping`/`IsUnequipping` 各一段脉冲；日志 15,705 字节 `bc48e764…`。**G3-A 成立** | G3-B 回放契约 |
 | G1 遗留审计 + v35/v36 | 2026-10-28 23:11–23:18：指令级确认 `Deactivate`（`0xab1f70`）对 `activeNodes` 无空检查、`context+8` 非空即早退、释放 `variableValueSet` 并置 `isActive=false`；引擎只在 `BShkbAnimationGraph` 析构里配对调用；候选与源三份日志 `root-generator` 同指针 → **销毁判 NO-GO**。**v35 探针证伪**：23:16 读回 `registry=300474432->300474432`，重审确认 `+0x228` 是不变奇偶值、`inc` 未写回、`63529` 是无锁追加而非登记 → 旧"登记计数"结论作废，判无锚点。`1ca2ad6` 已 revert（`cee948d`），构建 **v36**（`…v36-registry-probe-revert-20261028-cee948dcf8…`，DLL `ac01ac95…`）并部署，三键回 off。见[审计与更正](#g1-teardown-audit)、[v35 构建](build.md#v35-registry-probe-2026-10-28)、[v36 构建](build.md#v36-revert-2026-10-28) | —（该项结清） |
 | G2 v33 运行与判读 | 2026-10-28 22:28 会话：单窗口 `request=1/view=1/generation=1`，call 1→120 未中断（3.32 s）；**语义 120/120、applied 109/116（不变量自洽）、源 before=after=`23dd49fed3fbf888`、画面连续**；门 9 行全 `active/children=true numAnim=numData=116`，运行期反证 v30 的读错；`DAC restore matched`，无 `[E]`；日志归档 57,004 字节 `11462f1c…`，三键回 off。见[v33 记录](#g2-v33-run) | 边界（中断/重开/F7/来源失效）、装载销毁、G3–G6 |
 | G1 源基线准备 | 默认关闭采集器；Release 构建、16 项有界静态/文档检查、23 个新增相对链接及 DLL/PDB/ZIP 核验通过，见 [Build](build.md#behavior-graph-baseline-checks-2026-10-23) | 实际目标游戏日志，尚未运行 |
@@ -1939,11 +1942,11 @@ BehaviorGraphProbe=true
 <a id="next-audit"></a>
 ## 下一步有界验证问题
 
-[audit23](behavior-graph-construction-audit.md#audit23) 提供输出头、三条 poseLocal 复制和场景应用的静态分工。先比较入口/输出 n/f，再比较 raw pose 与有效载荷，最后查骨数组/场景应用和源控制；f/t 只限制插值，不应在 raw pose 不变时直接认定它是唯一原因。现有 v20 没有载荷/原生分支/node 应用 trace；若继续有界静态工作，关注完整 unwind 组下的 58343/58376 活动生成器前提及 63582 混合/flags，额外诊断另行授权。
+历史 v20 前置问题（当前排序由下方交接覆盖）：[audit23](behavior-graph-construction-audit.md#audit23) 提供输出头、三条 poseLocal 复制和场景应用的静态分工。先比较入口/输出 n/f，再比较 raw pose 与有效载荷，最后查骨数组/场景应用和源控制；f/t 只限制插值，不应在 raw pose 不变时直接认定它是唯一原因。现有 v20 没有载荷/原生分支/node 应用 trace；若继续有界静态工作，关注完整 unwind 组下的 58343/58376 活动生成器前提及 63582 混合/flags，额外诊断另行授权。
 
-当前选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
+历史 v20 选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
 
-最新归档运行：G3-A v41（2026-10-29 00:26）已取得源图的 Equip→Unequip 输入序列；G2 的显示窗口与四条边界均已成立。**后续问题不再在这里列**，改由[当前状态与后续规划](#handoff-20261029)统一排序（G3-B → G4 → G5 → G6）。
+最新归档运行：G3-A v41（2026-10-29 00:26）已取得源图 Equip→Idle→Unequip 的 settled 相位轨迹（非完整外部输入 trace）；G2 的显示窗口与四条边界均已成立。**后续问题不再在这里列**，改由[当前状态与后续规划](#handoff-20261029)统一排序（G3-B → G4 → G5 → G6）。
 
 <a id="handoff-20261029"></a>
 ## 当前状态与后续规划（2026-10-29 交接）
@@ -1958,42 +1961,47 @@ BehaviorGraphProbe=true
 | G1 遗留·装载图销毁 | **NO-GO**（2026-10-28 审计） | `Deactivate` 对 `activeNodes` 无空检查；候选与源共享 `rootGenerator`，污染源图会跟着存档 |
 | G1 遗留·全局登记计数 | **证伪、不立项** | v35 读数 `300474432->300474432`；`inc` 未写回，`63529` 是无锁追加 |
 | G2（暂停期单边推进 + 显示） | **PASSED**，限定范围 | 语义 120/120、实际写骨 109/116、源 `drift=none`、画面连续；四条边界（reset/F7/重开/读档）全成立 |
-| G3-A（源图输入序列） | **成立**（2026-10-29 00:26） | 同一把单手武器的 Equip→Idle→Unequip 两段 settled 序列，按名字可取 |
+| G3-A（源图 settled 相位轨迹） | **成立**（2026-10-29 00:26） | 同一把单手武器的 Equip→Idle→Unequip 两段 settled 序列，按名字可取 |
 | G3-B（候选自行走完同一顺序） | 未开始 | 本节第三节即其契约草案 |
 | G4–G6 | 未执行 | — |
 
 ### 二、当前部署与开关
 
-- DLL `3b8f8efe…`（v41，身份 `…v41-timeline-panel-gate-20261029-9bc1a4b03a…`），MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
+- 最新记录安装 DLL `3b8f8efe…`（v41，身份 `…v41-timeline-panel-gate-20261029-9bc1a4b03a…`），MO2 实例 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
 - 部署 INI：`SourceTimeline=true`，`IndependentGraph=off`，`DisplayPose=false`，`DisplayStep=false`。产品动画路径为纯 OAR。
 - 备份链：`dist/deploy-backup-20261029-v40/`、`-v39/`、`-v38/`、`-v37/`、`-v36/`、`-v35/`、`-v33/`、`-v30/`。
 - 热键：**F7** 在面板外开 20 秒时间线窗口，面板内仍是重捕获；F8 切显示。F9 是游戏快速读档，不可占用。
 
+本地 [v43](#v43-source-sessions)修正源记录窗口，[v44](#v44-display-clock)按 elapsed 时间调度显示，[v45](build.md#v45-source-list-2026-10-29)显式列编译单元，[v46](scene-graph.md#retired-copy-accounting-v46)保留完整退休副本台账。最新本地 DLL/PDB 仍为 [v46](build.md#v46-retained-copy-ledger-2026-10-29)，安装仍是上述 v41；本次 audit27 仅文档，不重编译或部署。不能把新代码/静态证据追认到旧运行。
+
 ### 三、G3-B 契约草案（未实现）
 
-**目标**：把 v41 记录到的输入按变量名送到候选图，判定候选是否**自行**走完 Equip→Idle→Unequip；候选产生的事件只收集，不派发给源。
+**目标**：在已证明的外部输入子集下，让候选自行完成 Equip→Idle→Unequip。v41 是成功的 settled 相位轨迹，不能把其每一项变化直接当成 replay 输入。本节仅草案，未授予 setter/event 写入权限。
 
-**输入**（来自 [v41 记录](#g3-a-contract)，顺序与时序照抄，不做对称化处理）：
+| 项 | 当前角色 / 类型 | 证据与前置核实 |
+| --- | --- | --- |
+| `iState`、`currentDefaultState` | 本草案只作输出/相位观察，禁止回放写入；运行时类型待核对 | v41 分别观测 0→9→0、0→10→1→12→0；不据此推定类型或外部因果角色 |
+| `iRightHandEquipped`、`iLeftHandEquipped`、`iMagicEquipped` | 各有至少一个静态外部整数 setter 调用点；仍是待准入的输入候选，实际类型/映射待验 | [audit27](behavior-graph-construction-audit.md#audit27)：AE38821 中 `0x6c70a9` / `0x6c7075` / `0x6c703d` 调 AE32886。不证明独占 writer、v41 实际执行、源/候选 variableInfos 类型/映射、最小充分输入集或事件时序 |
+| `IsEquipping`、`IsUnequipping`、`bEquipUnequip` 及其它观测 flag | 拟议/不确定项，不是已授权写表 | 名字/0与1/相位相关性不证明 Bool 或外部输入；也可能是图内输出 |
+| `WeapEquip` | 可用的候选单次注入路径；源事件时序未知 | 早期注入证明确有路径；G3-A 没有拦截源事件，不能宣称捕获了事件发生时刻 |
+| 节点计数、clip 栈 | 观察输出 | 与相位对应；不作为强制成功的写入目标 |
 
-- 事件：`WeapEquip`（沿用已有的单次注入路径）。
-- 变量：`iRightHandEquipped`、`iLeftHandEquipped`、`iMagicEquipped`、`currentDefaultState`、`IsEquipping`、`IsUnequipping`、`bEquipUnequip`，按记录的时刻换算成步号（1 s ≈ 60 步）。
+**写入契约前置**：按变量名核对源与候选的存在性和 `variableInfos`/`m_type`，建立经验证的 Bool/Int/Float 映射（463/652 的槽索引不可照搬）；另外核实外部写入者/输入输出角色及必要事件，论证最小外部输入子集。类型元数据只证明表示类型，不能证明 writer 或因果角色。瞬态和事件时序若是决策必要条件，须先取得相应证据；不能把 settled 日志时间机械换成原 setter 步号。
 
-**机制**：按名字调用引擎 setter（`SetGraphVariableBool/Float/Int`，`RELOCATION_ID(62710,63607)` / `(62709,63608)` / `(62708,63609)`）写到候选图。**不直接写 `variableValueSet` 的 word 槽**——非 word 变量在 word 数组里存的是索引而非值，按名字走 setter 才不会被类型布局坑（候选 652 words vs 源 463，索引不可复用）。驱动复用 `drive_candidate_step` 的固定 1/60 步。
+**后续机制候选**：只对经验证的外部输入按名字选择既有 typed setter；不直接复制 word 槽、不新增 ABI/REL 入口。驱动仍以已有 `drive_candidate_step` 的 1/60 步为基线。事件/变量顺序不能由同 timestamp 的索引顺序反推；实验的时序容差须在写入契约里预注册。
 
-**观察**：候选自己的 `iState`、`currentDefaultState`、`IsEquipping`/`IsUnequipping`，加上 `activeNodes` 计数与 clip 栈（复用 `clip-ref` 的读取），按步号有界输出。
+**观察与判据草案**：候选自己的 `iState`/`currentDefaultState` 相位、Equip→Idle→Unequip 的 clip 栈和节点变化，应由状态机在外部输入下自行产生，并保持源 pose/变量对照。禁止写这两个相位值来满足判据。输入不足或角色/类型/时序未定时，回到证据核实，不放宽为成功；崩溃/非有限值/源漂移立即停止。
 
-**预注册通过判据**：候选的 `iState` 出现 **0→9**，并在卸下段回到 **0**，且**全程我们没有写过 `iState`**；候选 clip 栈在装备段出现装备类片段；源侧 pose 与变量保持对照不变。
-
-**停止条件**：输入全部送达而 `iState` 不动（判输入集不足，不得改判"状态机不走"）；只有在我们写 `iState` 时才动（判失败——那说明它不是状态机输出）；候选崩溃或出现非有限值。
-
-**明确不做**：不给源发事件、不写源变量、不改变装备、不把 `iState`/`currentDefaultState` 当输入、不因"看起来像"而放宽判据。
+**视觉与回收边界**：[audit23](behavior-graph-construction-audit.md#audit23)已证 63856 不读输入 scale 向量、不写目标 scale，而当前转换会取 raw scale X 并写 local.scale；这是写入覆盖差异，不是相位对齐后的视觉根因。r4 的有限相机/混合/缩放样本缺少同步视频时刻与同相位 world/panel 对照，不能唯一定位闪近原因。普通 native 副本回收仍未证；v46 只修复完整台账/进程总数，未回收原生内存，G6 不因此通过。
 
 ### 四、之后的排序
 
-1. **G3-B**（本节）——一次构建 + 一次上机（暂停背包内）。
-2. **G4 语境隔离**——哨兵实验：故意让候选的阶段变量与源不同，确认 OAR 实际读谁；需要 OAR 钩子侧的观测点。
-3. **G5 完整姿态对照**——**阈值必须在看结果前固定**（位置/旋转/缩放及其依据），并与 v24 的 90/99 骨、≤6.1e-5 旋转误差口径衔接。
-4. **G6 生命周期**——只覆盖"关包后源恢复"（已有 `DAC restore matched` 部分证据）；装载图销毁已 NO-GO，不再计入 G6。
+下一次实际上机先按 [v46 首轮正常路径步骤](scene-graph.md#v46-manual-regression)核对源窗口/读档取消和普通 OAR 预览；两类结果均 **PENDING**，native candidate display 关闭。这不替代下面另场实验的 G3-B→G4→G5→G6 研究顺序。
+
+1. **G3-B 前置核实 → 新写入契约 → 实现/构建/获授权上机**；当前草案不能直接执行回放。
+2. **G4 语境隔离**：确认 OAR 阶段变量来源，验证历史、回调和 sink 的隔离。
+3. **G5 完整姿态对照**：提前固定位置/旋转/缩放阈值及依据，核对全部有效层与骨。
+4. **G6 生命周期与资源恢复**：源恢复、请求/任务失效、预览自有引用/回调/sink/历史和重复会话收敛；一张进程级保留候选是明确例外，装载 teardown 仍 NO-GO，全局引擎登记计数无可测量锚点。`DAC restore matched` 只是部分证据。
 
 ### 五、反模式清单（这几轮实际踩过的）
 
@@ -2002,15 +2010,61 @@ BehaviorGraphProbe=true
 3. 常开式预算记录——会被源图自带的 ~1.2 s 周期磨光（v38）。
 4. 用"场景图指针是否存在"判断面板开没开——面板外同样存在（v40）。
 5. 单点读门值就下结论（v30 的 `children=0`）。
-6. 把周期量当状态事件（G3-B 必须排除 `BlendJump`/`bVoiceReady`/`bIsInMT` 这类循环）。
+6. 把周期量或相位相关 flag 直接当外部输入；`BlendJump`/`bVoiceReady`/`bIsInMT` 等循环必须先辨明角色。
 
-### 六、下一次会话的最小任务清单
+### 六、下一次会话的最小任务清单（2026-10-29，v46 首轮待上机）
 
-1. 读本节 + [验证总表](#verification-matrix) + [G3-A v41 记录](#g3-a-contract)。
-2. 核对部署 DLL 哈希是否为 `3b8f8efe…`；不是就先确认部署状态。
-3. 按本节第三节实现回放，先写纯逻辑（步号表 + 名字映射）与 engine-free 用例，再接 native setter。
-4. 构建 → 部署 → 暂停背包内跑一次 → 按预注册判读。
+1. 读本节、[验证总表](#verification-matrix)和 [v46 首轮操作步骤](scene-graph.md#v46-manual-regression)。历史 G2/G3-A 结论与本轮待验分开。
+2. 用 [v46 归档身份/哈希](build.md#v46-retained-copy-ledger-2026-10-29)核对将测试的 DLL/PDB，先备份已装 pair/INI，只改清单中的既有键并完整重启。最新记录安装仍是 v41；这份文档没有部署文件。
+3. 执行源窗口/读档取消，再执行正常 OAR 斧头、火把、三次已接受 F7 重捕获、F8 和关包重开；两类运行结果均 **PENDING**。保持 IndependentGraph=off、DisplayPose/DisplayStep=false，不据此验收 native pacing 或 G3-B。
+4. 回传含 build 行的完整 CharacterPanel.log、设置、动作/异常时间、可用视频时间戳，以及接受捕获与 process retained-total 对照。按清单恢复原 INI 并重启；不把台账增长当回收成功。
+5. 后续 G3-B 仍须第三节的源/候选名字与实际类型映射、剩余 writer/角色、明确输入子集和预注册时序，再另立写入契约。本次文档整理不重跑构建/测试，也不执行部署或游戏。
+
+<a id="v42-residual-corrections"></a>
+## v42：遗留证据校正与有界诊断（2026-10-29，本地）
+
+`DisplayApplicationCoverage::missing_names` 从旧 cap4 提至 cap8。未来七缺失的 application 行可列全七名，超过八时仍以 `missing` 总数为准；requested/applied/missing/skipped-root/duplicates 算式和名称映射未改。v33 历史缺失总数仍七、已列四、未知三；不追加历史名字，不把 Weapon/Shield 控制/挂载语义当作无关。
+
+冻结和逐步入口仍共用 `DisplaySession::State::accepts_source`；`DisplayWindow::rejection` 以原有效性真值分类，失败时 `reject` 消费既有 18 行预算并终止窗口。新行 `ANIMATION DISPLAY window=rejected ... steps=... reason=... source-comparison=discarded` 最多一条，不因 step 后 frozen 回退或后续帧重复输出。原因依次区分 `unbound-retained`、`actor-mismatch`、`source-generation-mismatch`、`source-graph-mismatch`、`controller-owner-mismatch`，并区分调用图与 token 不同的 `call-graph-mismatch`、候选缺失的 `candidate-unavailable`；inactive 窗口不再出行。多重不匹配只报告先遇到的一项。清空 retained token 只能证明 unbound，不能谎报已比较 owner 不同。预算已用完则无新行；有效来源的 frozen 回退与 exact1170/inject/private-storage native 守卫不变。
+
+代码导航：[display_state_policy.h](../src/animation/behavior_graph/display_state_policy.h) 的 `DisplaySourceRejection`、`display_source_rejection`、`DisplayWindow::rejection/reject` 与 `apply_named_display_pose`；[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 `State::accepts_source`。只扩展 [原两个 session 场景](../tests/behavior_graph_display_session_test.cpp)：生命周期/身份/窗口拒绝，以及运动/七缺失覆盖。实际命令、结果、身份和 DLL/PDB 哈希见 [v42 build](build.md#v42-residual-corrections-2026-10-29)。无新依赖/目标/配置，无 timeline/input/native/运动算法修改。
+
+**待授权游戏复现**：用新 DLL/PDB 核对身份，在有效显示窗口采 application 的全部真实缺失名并解释应用语义；再在同 controller 下实际改变来源图/generation，分别采 stepped 与 frozen-only 路径的 `window=rejected reason=...`/OAR 回落。核对只出一条、终止后无 native-step；若预算耗尽或原因不明保留未验证。v34 的 reset/重开/F7/读档回落四项结果保留；确切旧原因不能由新仪器倒推。**v42 尚无游戏数据**，仍未证明真实七名、同 owner 来源替换或 frozen-only 拒绝。
 
 ## 维护约束
 
 此文拥有实验程序和状态；修改时同步[动画](animation.md)、[OAR](oar-hooks.md)、[构建](build.md)、[维护](code-maintenance.md)、README、相关配置和Changelog。区别两条边界：`BehaviorGraphProbe`最多16条源分组、值语义、只读；`IndependentGraph`默认off、每进程一次，当前 inject（v17 配方）为40条自身前缀预算，另有复用源快照，允许的候选原生调用/字段写入仅由对应实验契约授权。两者都不写源图，不能把源探针只读描述套在整个实验上。v18 在旧40条与源快照之外另有≤31条 `GRAPH FRAME`，其运行结果见 [v18 记录](#g2-v18-run)；v19 已实现、构建、部署并运行一次（分支 6，见[契约与实现](#g2-v19-contract)与[v19 记录](#g2-v19-run)），除获批的 eye 指针外不得据此增加调用或写入。v20 只改采样入口（63589），其首轮在入口前崩溃，v20a 仅修正该越界诊断并已部署待测；两者的原生调用许可同一，见[v20 记录](#g2-v20-run)。文档核查不替代引擎所有权、姿态或生命周期证据；构建/离线结果见 [Build](build.md#v19-eye-arm-build) 与 [v20a 构建](build.md#v20a-chain-fix-2026-10-27)。
+
+<a id="v43-source-sessions"></a>
+## v43：独立源记录窗口（2026-10-29，本地）
+
+本轮只修正只读记录器的会话边界，保留 v41 的 G3-A 成功观测、v33/v34 的 G2 结论与上面的 v42 诊断改动。**本地构建与两个离线场景通过；未部署、未启动游戏、无新游戏证据。** 最新记录安装仍为 v41，SourceTimeline=true、其余三键 off；仓库四键默认均 off。
+
+当前采集规则：面板外 F7 发布 arm 意图；post-UI sampler 消费后开始固定 20 秒截止时间，并清空变量 logged/candidate/settled/named 数组、节点基线/settle 计数、800 行预算与 exhaustion。重按 F7 同样重新开始，即使上窗已耗尽；原连续三个稳定采样规则及原始 int/float 四字节输出不变。首次有效来源只采新基线，不把上一窗的候选值或 settle 进度带进来。截止时间在任何可选图/数据/存储读取之前检查；等待首个有效来源不延长窗口。
+
+窗口只接受同一 actor、外层 BShkbAnimationGraph、behavior、data、variable-set、word-storage 地址值和 word 数量。任一身份/布局变化（包括同数量替换）或来源不可用，输出 `window-aborted reason=source-lost-or-replaced` 并终止；不会 rebase 或续期，必须显式再按 F7。身份仅为数值快照，不保留原生引用；无法识别未观察到的同址生命周期 ABA，也不使原生数组读取成为原子操作。
+
+F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，不修改 Recorder 向量。世界失效优先于尚未消费的 arm，sampler 在任何源读取前消费失效、清空 pending/active 记录并返回；随后需新的显式 F7。既有 DAC reset 和 preview clear 不变。渲染先采样、后 manager 更新的顺序不能单靠延迟清理保护，因此取消直接从世界消息发布。此排队边界不承诺与正在进行的引擎数组修改同步。
+
+代码入口：[source_timeline.cpp](../src/animation/behavior_graph/source_timeline.cpp) 的 `sample_source_timeline`、`baseline`、`abort_source`；[source_timeline.h](../src/animation/behavior_graph/source_timeline.h) 的 F7/取消接口；[source_timeline_policy.h](../src/animation/behavior_graph/source_timeline_policy.h) 的 `SourceTimelineWindow::arm/expire/observe_source/take_line`、`SourceTimelineRequests`；[main.cpp](../src/main.cpp) 的 `message_handler`。实际数组只由 sampler 持有，回调只接触原子请求。
+
+[两个 engine-free 回归场景](../tests/source_timeline_session_test.cpp)：一窗耗完 800 行后连续两次重开，各自取得全额预算并要求新基线；另一个连续生命周期场景覆盖同数量图替换、存储迁移、源丢失、未绑定窗口按期结束，以及 pending/active 世界失效优先和后续显式重开。生产直接使用被测 policy；数组和节点 settle 重置由 sampler 的 `Recorder{}` 与 `baseline` 路径保证。MSVC 命令、退出结果、完整构建身份、DLL/PDB 大小及 SHA-256 见 [v43 build](build.md#v43-source-sessions-2026-10-29)。未重跑已保留的 v42 两例或全套。
+
+安全修改：保持请求发布和数组所有权分离；增加来源字段时同步 identity 比较、上述两个场景和本节。此修正不证明变量的外部 writer 角色、运行时类型、确切 setter/event 时刻或原生数组原子性；G3-B 仍须原有前置核实。没有新 native hook/调用/写入、依赖、配置、兼容性范围或装载销毁权限。
+
+<a id="v44-display-clock"></a>
+## v44：按 elapsed 时间调度候选显示（2026-10-29，本地）
+
+修正 opt-in `DisplayStep` 原先每次 draw 强制推进一个 1/60 步导致的速率随渲染调用频率变化。当前 [DisplayStepClock](../src/animation/behavior_graph/display_step_clock.h) 只在旧来源/运行时/inject/private-generation 门通过后消费 steady_clock 时间。首个 eligible 调用仅建立 origin、零强制步；后续累计每秒 60 个固定 native 步。一个观测 delta 最多计 100 ms、单次 draw 最多六步；超长停顿的多余时间丢弃，余下不足一步的精度仍保留，不形成无界 backlog。不改变游戏或用户 timescale。
+
+时钟属于 `DisplaySession::State`。request、retarget 和来源拒绝经 `clear_statistics` 清空 origin/余量；不可推进或 public frozen fallback 同样 reset，这些明确 reset 边界后的首次 eligible 调用不追赶此前时间。若只是 F8 隐藏等绘制中断，且没有 request/retarget/reset，时钟不会因此完整暂停；恢复时按原停顿规则最多计 100 ms/六步，不能概括为扣除所有不可见时间。零 due 时通过 private held reader 返回当前有效候选姿态，成功仍是 stepped mode，不递增 native/motion 计数，也不因等待而反复输出 application mode。真正的来源不匹配仍拒绝候选并回 OAR。
+
+每个 actual native 步都单独检查 generation 存储门、运行原共用配方、递增 `DisplayWindow::steps`、做原始/语义运动比较，并分别处理 1/60/120 checkpoint 与 source-control。多个 due 步跨过 60 或 120 时不会漏点。checkpoint 保留原 `output-records` 读数；循环结束后读取/转换最终候选姿态供本次 draw。`native-step` 与 gates `call` 都是实际步序号，pose-summary 的 120 是 native steps，不代表 120 个渲染调用或游戏实时速率已校准。batch 的 120 个固定步和 native IDs/配方均未改变。
+
+每个 view 最多一条 `ANIMATION DISPLAY pacing request=... view=... hz=60 max-delta-ms=100 max-steps=6 first-call=origin`，占原有 18 行预算。保留 v42 的缺失 cap8/一次拒绝诊断，以及 v43 源记录器；没有新配置、依赖、native hook/ABI/写入、候选销毁权限。
+
+代码导航：[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 `DisplaySession::step_display_pose`、`read_held_display_pose`、`held_display_pose`、`State::clear_statistics`；[接口](../src/animation/behavior_graph/independent_graph.h)；[settings.h](../src/animation/settings.h) 的 `display_step` 注释。安全修改时保持 clock reset 与 request/view/fallback 边界一致，保留逐 actual-step 的门、比较和 checkpoint；零 due 不能被解释为 frozen mode。
+
+[两个 clock 回归](../tests/behavior_graph_display_clock_test.cpp)使用人工时间，不运行引擎：30 FPS 两秒产生 120 步且首调用为零；120 FPS 两秒同为 120 步且包含零 due 调用，随后 reset/不可推进间隔、长停顿六步截断、保留小数步且无残留 backlog。MSVC14.44 assertions、Release 构建与保护哈希/导航检查见 [v44 build](build.md#v44-display-clock-2026-10-29)。未重跑旧套件。
+
+**本地代码/离线验证通过，未部署或启动游戏。** 安装仍是 v41、SourceTimeline=true 其余三键 off；仓库四键默认 off。v33/v34 历史调用频率/120 步和 G2 结论、v41 G3-A settled 轨迹保持原样；本轮不把历史调用耗时追认为 60 Hz 速率证据。游戏时的速率、停顿和画面仍待新的授权观察。

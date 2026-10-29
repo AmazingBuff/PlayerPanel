@@ -16,8 +16,10 @@ namespace animation::behavior_graph
     // touches the retained candidate. Off unless [Experiment] SourceTimeline is on.
     void sample_source_timeline(RE::Actor& actor);
 
-    // Opens a bounded recording window (F9). The window closes by itself so a forgotten key
-    // press cannot consume the whole budget; pressing the key again restarts it.
+    // Publishes a fresh bounded window request (F7); the sampler owns all recording state.
     void arm_source_timeline();
+
+    // Queues cancellation across a world boundary, consumed before the next source read.
+    void invalidate_source_timeline();
 }
 PLUGIN_NAMESPACE_END

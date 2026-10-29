@@ -71,11 +71,14 @@ namespace animation::behavior_graph
 
         [[nodiscard]] bool held_display_pose(RE::BShkbAnimationGraph const& source_graph,
             std::vector<std::pair<std::string, RE::NiTransform>>& out);
+        // Timing waits still return a valid stepped-mode pose; only due ticks run native steps.
         [[nodiscard]] bool step_display_pose(RE::BShkbAnimationGraph const& source_graph,
             std::vector<std::pair<std::string, RE::NiTransform>>& out);
         void record_application(bool stepped, std::size_t output_records, DisplayApplicationCoverage const& coverage);
 
     private:
+        [[nodiscard]] bool read_held_display_pose(RE::BShkbAnimationGraph const& source_graph,
+            std::vector<std::pair<std::string, RE::NiTransform>>& out);
         class State;
         std::unique_ptr<State> m_state;
     };

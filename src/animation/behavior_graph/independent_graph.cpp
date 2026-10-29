@@ -5,6 +5,7 @@
 
 #include "animation/behavior_graph/clip_reference_policy.h"
 #include "animation/behavior_graph/drive_step_policy.h"
+#include "animation/behavior_graph/display_step_clock.h"
 #include "animation/clip.h"
 #include "animation/behavior_graph/frame_trace.h"
 #include "animation/behavior_graph/generation_entry_policy.h"
@@ -50,7 +51,7 @@ namespace
     // after the bounded drive has finished. Null until a candidate is retained; never stepped
     // from here.
     RE::hkbCharacter* g_held_character = nullptr;
-    // v28: the retained graph itself, so the display path can advance it one step per frame.
+    // The retained graph advances in fixed native steps paced by eligible elapsed display time.
     RE::BShkbAnimationGraph* g_held_graph = nullptr;
     DisplaySourceIdentity g_held_source{};
     bool g_held_step_ready = false;
@@ -557,11 +558,13 @@ namespace
 class DisplaySession::State
 {
 public:
-    State() : window(), source_before{}, source_pose_before(), previous_pose(), raw_changed(0),
+    State() : window(), clock(), pacing_due(true), source_before{}, source_pose_before(), previous_pose(), raw_changed(0),
         semantic_changed(0), raw_finite(true), semantic_valid(true), coverage_due(true), mode_known(false), last_stepped(false) {}
 
     void clear_statistics()
     {
+        clock.reset();
+        pacing_due = true;
         source_before = {};
         source_pose_before.clear();
         previous_pose.clear();
@@ -582,16 +585,25 @@ public:
 
     bool accepts_source(RE::BShkbAnimationGraph const& source_graph)
     {
-        if (g_held_graph && g_held_character && window.source().graph == address(&source_graph) && window.accepts(g_held_source))
-            return true;
-        abort("source-invalid");
-        window.end();
+        DisplaySourceRejection reason = window.rejection(g_held_source, address(&source_graph));
+        if (reason == DisplaySourceRejection::e_none)
+        {
+            if (g_held_graph && g_held_character) return true;
+            reason = DisplaySourceRejection::e_candidate_unavailable;
+        }
+        std::uint32_t const steps = window.steps();
+        if (window.reject())
+            logger::info("ANIMATION DISPLAY window=rejected actor={:08x} request={} source-generation={} view={} steps={} reason={} source-comparison=discarded",
+                window.source().actor_id, window.request(), window.source().generation, window.view(), steps,
+                display_source_rejection_name(reason));
         clear_statistics();
         return false;
     }
 
 public:
     DisplayWindow window;
+    DisplayStepClock clock;
+    bool pacing_due;
     Identity source_before;
     std::string source_pose_before;
     std::vector<PoseSample> previous_pose;
@@ -1629,6 +1641,13 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
 bool DisplaySession::held_display_pose(RE::BShkbAnimationGraph const& source_graph,
     std::vector<std::pair<std::string, RE::NiTransform>>& out)
 {
+    m_state->clock.reset();
+    return read_held_display_pose(source_graph, out);
+}
+
+bool DisplaySession::read_held_display_pose(RE::BShkbAnimationGraph const& source_graph,
+    std::vector<std::pair<std::string, RE::NiTransform>>& out)
+{
     out.clear();
     if (!m_state->accepts_source(source_graph) || !g_held_character->poseLocal || g_held_character->numPoseLocal <= 0)
         return false;
@@ -1655,67 +1674,104 @@ bool DisplaySession::step_display_pose(RE::BShkbAnimationGraph const& source_gra
     if (!state.accepts_source(source_graph) || !g_held_step_ready ||
         independent_graph_setting() != IndependentGraphMode::inject || !REL::Module::IsAE() ||
         REL::Module::get().version() != SKSE::RUNTIME_SSE_1_6_1170)
+    {
+        state.clock.reset();
         return false;
+    }
     if (generation_entry_status(generation_entry_view(*g_held_graph), generation_entry_view(source_graph)) !=
         GenerationEntryStatus::e_ready)
+    {
+        state.clock.reset();
         return false;
+    }
 
     DisplayWindow& window = state.window;
-    std::uint32_t const call = window.steps() + 1;
-    bool const checkpoint = call == 1 || call == 60 || call == 120;
-    if (call == 1)
+    if (state.pacing_due)
     {
-        state.source_before = identify(source_graph);
-        state.source_pose_before = format_pose_hash(source_graph.characterInstance);
-        read_pose_local(*g_held_character, state.previous_pose);
+        state.pacing_due = false;
         if (window.take_row())
-            logger::info("ANIMATION DISPLAY source-control stage=before actor={:08x} request={} source-generation={} view={} pose-hash={}",
-                window.source().actor_id, window.request(), window.source().generation, window.view(), state.source_pose_before);
+            logger::info("ANIMATION DISPLAY pacing request={} view={} hz={} max-delta-ms={} max-steps={} first-call=origin",
+                window.request(), window.view(), Display_Step_Rate, Display_Max_Delta.count(), Display_Max_Steps);
     }
-    const auto observe_step = [&](FrameStage stage) {
-        if (!checkpoint || (stage != FrameStage::e_post_pipeline && stage != FrameStage::e_post_update &&
-            stage != FrameStage::e_post_sample) || !window.take_row())
-            return;
-        GraphActivity const activity = observe_graph_activity(*g_held_graph);
-        std::optional<OutputSlotObservation> const slot0 = observe_output_slot(g_held_graph->generatorOutputs[0]);
-        std::optional<OutputSlotObservation> const slot1 = observe_output_slot(g_held_graph->generatorOutputs[1]);
-        logger::info("ANIMATION DISPLAY gates request={} view={} call={} stage={} active={} children={} w245={:#x} b246={} numAnim={} numData0={} numData1={}",
-            window.request(), window.view(), call, Frame_Stage_Names[static_cast<std::size_t>(stage)], activity.active,
-            activity.update_active_nodes, observation_scalar<std::uint16_t>(g_held_graph, 0x245),
-            observation_scalar<std::uint8_t>(g_held_graph, 0x246), g_held_graph->numAnimBones,
-            slot0 ? static_cast<int>(slot0->num_data) : -1, slot1 ? static_cast<int>(slot1->num_data) : -1);
-    };
-    EyePoint const eye = candidate_eye_point(*g_held_graph);
-    drive_candidate_step(*g_held_graph, source_graph, true, &eye, observe_step);
-    window.advanced();
-    bool const converted = held_display_pose(source_graph, out);
-    if (call <= 120)
+    std::uint32_t const due = state.clock.advance(std::chrono::steady_clock::now());
+    if (due == 0)
     {
-        std::vector<PoseSample> pose;
-        read_pose_local(*g_held_character, pose);
-        PoseComparison const raw = compare_pose(pose, state.previous_pose);
-        PoseMotionComparison const motion = compare_display_motion(pose, state.previous_pose);
-        state.raw_changed += raw.moved > 0 ? 1u : 0u;
-        state.semantic_changed += motion.moved > 0 ? 1u : 0u;
-        state.raw_finite = state.raw_finite && raw.entries > 0 && raw.non_finite == 0;
-        state.semantic_valid = state.semantic_valid && motion.valid;
-        state.previous_pose = std::move(pose);
+        bool const converted = read_held_display_pose(source_graph, out);
+        if (!converted) state.clock.reset();
+        return converted;
     }
-    if (checkpoint && window.take_row())
-        logger::info("ANIMATION DISPLAY native-step={} request={} view={} pose-hash={} output-records={}",
-            call, window.request(), window.view(), format_pose_hash(*g_held_character), out.size());
-    if (call == 120)
+    for (std::uint32_t step = 0; step < due; ++step)
     {
-        if (window.take_row())
-            logger::info("ANIMATION DISPLAY pose-summary request={} view={} native-steps=120 raw-changed={} raw-finite={} semantic-changed={} semantic-valid={} epsilon={} scope=candidate acceptance=unjudged",
-                window.request(), window.view(), state.raw_changed, state.raw_finite, state.semantic_changed,
-                state.semantic_valid, Display_Motion_Epsilon);
-        if (window.take_row())
-            logger::info("ANIMATION DISPLAY source-control stage=after request={} source-generation={} view={} source-drift={} pose-before={} pose-after={}",
-                window.request(), window.source().generation, window.view(), first_drift(state.source_before, identify(source_graph)),
-                state.source_pose_before, format_pose_hash(source_graph.characterInstance));
-        state.previous_pose.clear();
+        if (generation_entry_status(generation_entry_view(*g_held_graph), generation_entry_view(source_graph)) !=
+            GenerationEntryStatus::e_ready)
+        {
+            state.clock.reset();
+            return false;
+        }
+        std::uint32_t const call = window.steps() + 1;
+        bool const checkpoint = call == 1 || call == 60 || call == 120;
+        if (call == 1)
+        {
+            state.source_before = identify(source_graph);
+            state.source_pose_before = format_pose_hash(source_graph.characterInstance);
+            read_pose_local(*g_held_character, state.previous_pose);
+            if (window.take_row())
+                logger::info("ANIMATION DISPLAY source-control stage=before actor={:08x} request={} source-generation={} view={} pose-hash={}",
+                    window.source().actor_id, window.request(), window.source().generation, window.view(), state.source_pose_before);
+        }
+        const auto observe_step = [&](FrameStage stage) {
+            if (!checkpoint || (stage != FrameStage::e_post_pipeline && stage != FrameStage::e_post_update &&
+                stage != FrameStage::e_post_sample) || !window.take_row())
+                return;
+            GraphActivity const activity = observe_graph_activity(*g_held_graph);
+            std::optional<OutputSlotObservation> const slot0 = observe_output_slot(g_held_graph->generatorOutputs[0]);
+            std::optional<OutputSlotObservation> const slot1 = observe_output_slot(g_held_graph->generatorOutputs[1]);
+            logger::info("ANIMATION DISPLAY gates request={} view={} call={} stage={} active={} children={} w245={:#x} b246={} numAnim={} numData0={} numData1={}",
+                window.request(), window.view(), call, Frame_Stage_Names[static_cast<std::size_t>(stage)], activity.active,
+                activity.update_active_nodes, observation_scalar<std::uint16_t>(g_held_graph, 0x245),
+                observation_scalar<std::uint8_t>(g_held_graph, 0x246), g_held_graph->numAnimBones,
+                slot0 ? static_cast<int>(slot0->num_data) : -1, slot1 ? static_cast<int>(slot1->num_data) : -1);
+        };
+        EyePoint const eye = candidate_eye_point(*g_held_graph);
+        drive_candidate_step(*g_held_graph, source_graph, true, &eye, observe_step);
+        window.advanced();
+        if (call <= 120)
+        {
+            std::vector<PoseSample> pose;
+            read_pose_local(*g_held_character, pose);
+            PoseComparison const raw = compare_pose(pose, state.previous_pose);
+            PoseMotionComparison const motion = compare_display_motion(pose, state.previous_pose);
+            state.raw_changed += raw.moved > 0 ? 1u : 0u;
+            state.semantic_changed += motion.moved > 0 ? 1u : 0u;
+            state.raw_finite = state.raw_finite && raw.entries > 0 && raw.non_finite == 0;
+            state.semantic_valid = state.semantic_valid && motion.valid;
+            state.previous_pose = std::move(pose);
+        }
+        if (checkpoint && window.take_row())
+        {
+            if (!read_held_display_pose(source_graph, out))
+            {
+                state.clock.reset();
+                return false;
+            }
+            logger::info("ANIMATION DISPLAY native-step={} request={} view={} pose-hash={} output-records={}",
+                call, window.request(), window.view(), format_pose_hash(*g_held_character), out.size());
+        }
+        if (call == 120)
+        {
+            if (window.take_row())
+                logger::info("ANIMATION DISPLAY pose-summary request={} view={} native-steps=120 raw-changed={} raw-finite={} semantic-changed={} semantic-valid={} epsilon={} scope=candidate acceptance=unjudged",
+                    window.request(), window.view(), state.raw_changed, state.raw_finite, state.semantic_changed,
+                    state.semantic_valid, Display_Motion_Epsilon);
+            if (window.take_row())
+                logger::info("ANIMATION DISPLAY source-control stage=after request={} source-generation={} view={} source-drift={} pose-before={} pose-after={}",
+                    window.request(), window.source().generation, window.view(), first_drift(state.source_before, identify(source_graph)),
+                    state.source_pose_before, format_pose_hash(source_graph.characterInstance));
+            state.previous_pose.clear();
+        }
     }
+    bool const converted = read_held_display_pose(source_graph, out);
+    if (!converted) state.clock.reset();
     return converted;
 }
 
