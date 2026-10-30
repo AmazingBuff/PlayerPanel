@@ -17,6 +17,7 @@
 | 播放器、OAR查询、DAC原生事件 | [Animation](animation.md)、[OAR](oar-hooks.md)、[DAC](dac.md) |
 | 默认产品的未决外观/装备问题 | [诊断交接第10节](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机)；[r1原始日志](diagnostics/CharacterPanel-issue-trace-r1-20261022-2231.log)、[r2原始日志](diagnostics/CharacterPanel-issue-trace-r2-20261022-2314.log) |
 | **v46 首轮正常路径上机（PENDING）** | [首轮操作步骤](scene-graph.md#v46-manual-regression)：匹配归档 DLL/PDB、备份/仅改既有 INI 键并重启；两类工作流为源窗口/读档取消，以及正常 OAR 斧头/火把/F7/F8/重开。DisplayPose/DisplayStep 保持 false；完整日志、画面时间与 process retained-total 待回传。尚未执行 |
+| DCMF 参考（2026-10-30，后置） | [固定提交源码笔记](community-reference-supplement.md#dcmf-reference)仅归档；先完成上方仍为 PENDING 的 v46 两类工作流并审阅实际游戏证据，之后再安排对照，不改变当前步骤/设置/判据 |
 | 后续独立图实验上机 | [v32 手工清单](independent-behavior-graph.md#v32-manual-checklist)：匹配身份与三键重启、连续 120 调用、候选语义/实际应用/画面分开、同窗口源对照、中断/重开/F7/来源失效及停止恢复规则；**第 1–5 步已于 2026-10-28 22:28 执行一次**（[v33 记录](independent-behavior-graph.md#g2-v33-run)），**第 6 步与第 7 步读档回落已由 v34 观察；同 controller 来源/generation 变更、确切拒绝原因和 frozen-only 路径待新数据**，部署状态见[当前部署与开关](independent-behavior-graph.md#deploy-state) |
 | 独立图可行性与实际进度 | [当前六关结论](independent-behavior-graph.md#current-status)：G1 按方案 A 修订通过；**G2 按原范围 PASSED（v33 单窗口）**——语义 120/120、applied 109/116、源不变、画面连续；v26 的 raw 判据与 v27 的静态接姿保留为历史。v31/v32 的离线修正由 v33 重建后上机验证。四条边界由 v34 成立但原因取证有限；G3-A 轨迹由 v41 成立，G3-B/G4–G6 未验。装载销毁 NO-GO，进程保留候选为显式例外；其余生命周期收敛仍待验 |
 | 工程约束、产品要求和研究来源 | [维护](code-maintenance.md)、[PRD](player-panel-prd.md)、[社区参考](community-reference-supplement.md) |

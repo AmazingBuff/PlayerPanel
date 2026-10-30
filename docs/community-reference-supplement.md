@@ -3,6 +3,8 @@
 日期：2026-09-29  
 状态：已核对公开说明与相关源码；尚未完成 PlayerPanel 内的移植和游戏验证。
 
+第 1–6 节是 2026-09-29 的历史调查，版本说明、未固定分支及 M0/M1/M2 顺序均限于当时四个案例。当前验证以 [v46 两类待验工作流](scene-graph.md#v46-manual-regression)为准；2026-10-30 新增的 [DCMF 参考](#dcmf-reference)已固定源码提交，但仅归档，后续对照暂缓。
+
 本文补充 [PlayerPanel PRD](player-panel-prd.md) 的技术调查依据，记录 Dragon’s Eye Minimap、Outfit Preview Selector（OPS）、Apparel Preview 与 SosGui 的参考价值。O 表示世界中的实际玩家，P 表示独立面板角色。
 
 这些案例用于定位可研究的调用链和模块，不改变 PRD 的“世界画面 → 不透明摄影棚面板 → 其他 UI → 最终后处理”顺序，也不代表独立 P、独立动作与渲染模组兼容已得到验证。
@@ -95,6 +97,30 @@
 
 区分三个证据层级：CommonLib 声明证明“有接口线索”；社区源码证明“有具体应用方式”；本插件在目标环境中的实测才证明“适用于 PlayerPanel”。参考项目的成功不能替代最后一层。
 
-本轮引用的是公开网页可见的分支源码，未固定提交哈希。正式复用前需固定版本、核对接口与许可，并区分源码和发布资产；本文没有复制第三方实现，也没有认定这些项目已在本项目目标组合下兼容。
+上述第 1–6 节（2026-09-29）引用的是公开网页可见的分支源码，未固定提交哈希。正式复用前需固定版本、核对接口与许可，并区分源码和发布资产；这些历史案例没有复制第三方实现，也没有被认定已在本项目目标组合下兼容。
 
 相关文档：[PRD](player-panel-prd.md)、[M0 诊断](history-rendering.md#m0)、[用户采集报告](history-rendering.md#m0)、[累积器原型试验](history-rendering.md#m0)。这些旧试验已归并为渲染总结，原件见[来源索引](history-sources.md)；本文不把其中未经独立核实的推断升级为已验证接口。
+
+<a id="dcmf-reference"></a>
+## 7. DCMF：仅归档参考，完成当前验证后再对照（2026-10-30）
+
+**状态：对照处理暂缓。** 先由用户完成现有 [v46 首轮验证](scene-graph.md#v46-manual-regression)的源窗口/读档取消、正常 OAR 预览两类工作流，再审阅回传日志及画面证据，之后才安排 DCMF 对照。两类工作流仍为 **PENDING**；本节不增加步骤、设置或验收条件，也不表示已经上机。
+
+### 核对范围与版本
+
+本节整理的是 2026-10-30 已完成的源码分析，不开展新调查。核对使用公开 master 对应的固定提交 [`8b49affa88179cdc9d4ca3d1b503e358af59889d`](https://github.com/DisizMod/DCMF/tree/8b49affa88179cdc9d4ca3d1b503e358af59889d)，提交说明为 **“1.3.0 in development”**；30 个缓存文件已按对应 Git blob 与 SHA-256 核对。此前同日的 Nexus 页面观察记录为 **1.4.1**，本次未刷新发布页，不能据此认定发布二进制与这份源码等价。上述四个旧项目的未固定分支说明不适用于本次固定提交。
+
+### 可供日后阅读的方向与边界
+
+| 主题 | 已核对的固定源码事实 | 日后可对照的现有模块与限制（本次不执行） |
+| --- | --- | --- |
+| 可逆骨骼基线与最后写入差量 | [Bone.cpp 的根节点门与 take-back](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/apply/Bone.cpp#L155-L237)区分动画基线和本次写入；仅在值仍保留自己的最后写入结果时取回相应旋转、缩放/子节点偏移，再[施加并记录本轮结果](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/apply/Bone.cpp#L386-L474)。 | 可作为 [clip.h](../src/animation/clip.h) 的 `read_pose`/`ni_local_from_pose` 与 [controller.cpp](../src/animation/controller.cpp) 的 `advance` 的阅读对照。其 hook 要求节点等于真实引用的 `Get3D(false)`；PlayerPanel 副本清除了 user data，不能直接套用真实 Actor 的写入阶段，也不能由此判定当前视觉根因。 |
+| 源 clip、OAR 换片与事件观察 | [AnimationGraph.cpp](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/AnimationGraph.cpp#L138-L263)观察 clip 激活/停用、OAR-swap 与图输出事件；[Flush](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/AnimationGraph.cpp#L504-L529)延后处理结束记录以区分换片。 | 可用于理解当前 [源记录器](../src/animation/behavior_graph/source_timeline.cpp)的观测边界；该路径依赖 graph holder。输出事件与 clip 记录不是完整输入 setter trace，不能补成所有输入的写入者、原 setter 时刻或 G3-B 回放依据。 |
+| 外观与 morph/parts 代次 | [MorphGeneration](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/API/DCMF-VertexOffsetAPI.h#L27-L35)提供 morph 写入或形状重绑后的代次；[ActorState::Update](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/ActorState.cpp#L325-L430)维护外观相关状态/代次。 | 仅作为 [FigureAssembly](../src/character/figure_audit.h) 计数型 signature 与副本外观失效边界的参考；不新增逐帧整图重捕获。modifier/cache 状态退休不等于完整 native 副本或独立图的安全销毁证明，当前副本保留增长仍未解决。 |
+| 暂停背包与墙钟调度 | [Scheduler::CheckGate](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/Scheduler.cpp#L130-L160)、[Advance](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/Scheduler.cpp#L423-L450)与 [Hook::Frame](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/Hook.cpp#L24-L66)区分暂停门与真实时间推进。 | 仅供日后与 [DisplayStepClock](../src/animation/behavior_graph/display_step_clock.h) 及 [SceneGraph](scene-graph.md) 的更新 bracket 对照；不是 manager-less 私有行为图可推进的证据。当前 v46 首轮仍关闭 native candidate display，不改其调度或设置。 |
+
+### Play 路径与不可推导的结论
+
+已核对的 [Play 按钮链](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/SharedTypes.cpp#L922-L955)调用真实 Actor 上的 [`AnimationPlay::Play`](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/AnimationPlay.cpp#L394-L414)；[接口说明](https://github.com/DisizMod/DCMF/blob/8b49affa88179cdc9d4ca3d1b503e358af59889d/src/AnimationPlay.h#L10-L24)把它限定为叠在该 Actor 现有图上的临时 clip overlay，停止后返回图自身姿态。按钮提示明确排除了图附带的声音和持有物体。它不是独立完整状态机；README 的反射式状态/事件播放说法不作为这条已核对公开 Play 路径的已实现能力证据。
+
+以上只保存源码事实与阅读方向，没有集成/移植、第三方代码复制、依赖接入、构建或游戏验证；不推导 PlayerPanel 的运行时兼容、G1/G3/G6 通过、视觉根因或 native 树回收安全性。未来若再考虑复用，仍须另行核对适用上下文、接口与许可。现在的优先级保持为：**当前 v46 验证 → 实际证据审阅 → 再安排 DCMF 对照**。

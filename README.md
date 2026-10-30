@@ -30,6 +30,8 @@ The local [v46 retired-copy ledger](docs/scene-graph.md#retired-copy-accounting-
 
 The next operator task is the [v46 first-game-pass procedure](docs/scene-graph.md#v46-manual-regression): two **PENDING** workflows covering fresh source windows/load cancellation and normal OAR axe/torch/recapture behavior. It keeps native candidate display off, backs up the matched files/settings, and returns the full log plus visual timing notes. The procedure has not been executed by this documentation update.
 
+The [DCMF source notes](docs/community-reference-supplement.md#dcmf-reference) are reference only, with comparison deferred until the unchanged v46 workflows are completed and their returned game evidence reviewed. Both workflows remain PENDING; no DCMF integration or comparison is underway.
+
 ## Build and controls
 
 The plugin compiles only the 30 explicit `.cpp` units in [CMakeLists.txt](CMakeLists.txt), `PLUGIN_SOURCES`. Add each new intended unit to that sorted list and reconfigure; unlisted local `.cpp` files are excluded. The preserved untracked util files remain untouched; historical v42–v44 builds used the old source glob. [Build boundary and verification](docs/build.md#v45-source-list-2026-10-29) record the current inventory and local-only artifact.

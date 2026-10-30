@@ -2014,6 +2014,8 @@ BehaviorGraphProbe=true
 
 ### 六、下一次会话的最小任务清单（2026-10-29，v46 首轮待上机）
 
+2026-10-30 补充：[DCMF 源码分析](community-reference-supplement.md#dcmf-reference)只作为后续参考。先完成下列现有 v46 源窗口/读档取消与正常 OAR 预览两类工作流并审阅实际日志/画面证据，再安排 DCMF 对照；两类仍为 **PENDING**，当前步骤、设置和判据不变。
+
 1. 读本节、[验证总表](#verification-matrix)和 [v46 首轮操作步骤](scene-graph.md#v46-manual-regression)。历史 G2/G3-A 结论与本轮待验分开。
 2. 用 [v46 归档身份/哈希](build.md#v46-retained-copy-ledger-2026-10-29)核对将测试的 DLL/PDB，先备份已装 pair/INI，只改清单中的既有键并完整重启。最新记录安装仍是 v41；这份文档没有部署文件。
 3. 执行源窗口/读档取消，再执行正常 OAR 斧头、火把、三次已接受 F7 重捕获、F8 和关包重开；两类运行结果均 **PENDING**。保持 IndependentGraph=off、DisplayPose/DisplayStep=false，不据此验收 native pacing 或 G3-B。
