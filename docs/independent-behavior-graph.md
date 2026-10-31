@@ -2323,7 +2323,15 @@ typed setter 按 `m_type` 自选（沿用 S4 机制），两写的返回值与�
 
 **离线用例**：无新增纯逻辑（settle 阈值分支在既有 recorder 内，行为由窗口数据裁定）；按 S1/E3 前例不凑用例。
 
-**状态：已实现、已构建（干净身份 `…-65c069e1ba-…`，[v58 build](build.md#v58-transient-watch-2026-10-31)）、已部署待上机**（部署 INI = `SourceTimeline=true` + `SourceTransientWatch=true` + 其余全 off）。
+**状态：已实现、已构建（干净身份 `…-65c069e1ba-…`，[v58 build](build.md#v58-transient-watch-2026-10-31)）；首轮已上机，词空间按判据彻底排除（见下），部署 INI 已回 dormant（v58 DLL 留装）。
+
+**首轮运行（2026-10-31 17:59，v58，AE 1.6.1170，actor 00000014；[日志](diagnostics/CharacterPanel-g3be3-transient-watch-20261031-1759.log) 9,558 字节 SHA-256 `479e1e4d…`）：词空间按预注册判据彻底排除。** 瞬态模式全程工作：int/bool 行全部 `mode=transient`、REAL/quad 保持 settle（`TimeDelta`/`Pitch` 走老规则）。读档取消与显式重 arm 照常（`invalidated reason=world-reset` → `window-open … mode=transient`）。两次转移完整入窗：
+
+- **装备锚**（`default` 0→10 @17:59:25.866）：`IsEquipping`、`bVoiceReady`/`bIsInMT` 1→0、`iLeftHandEquipped` 0→9、`bAttached` 0→1、`iMagicEquipped`/`iRightHandEquipped` 0→1、ready 组与 `iState 0→9`——正控通过（v41 已知行全部复现），**无新增变量**。
+- **卸下锚**（`default` 1→12 @17:59:32.780）：**同帧恰好四个已知变量**（`PitchManualOverride` 0→1、`IsUnequipping` 0→1、`bEquipUnequip` 0→1、`default` 本身），锚前后 ±10 帧亦无四个已知变量之外的任何行。
+- **仪器有效性旁证**：`iLeftHandEquipped` 在 17:59:33.649–33.915 出现 **9→0→9→0 单帧闪烁**——settle-3 规则看不见、v41 从未记录的瞬态被当场抓住，证明瞬态确实存在于此图、仪器确实能看见，只是不在触发点上。
+
+**裁定**：按预注册判据——锚内只有四个已知变量（S4/S5 已证单独或 rh 组合写入均不触发）——**源图词空间作为触发源彻底排除（持久与瞬态一并排除）**。合并全部实验：转移触发既不在事件入口、不在 typed setter、不在任何词写（持久或瞬态、单写或合取），剩余唯一假设域是**图内部逻辑**——转移由状态机自身条件驱动（嵌套状态机、clip 时间/注释条件、或对未纳入观测的结构性状态的响应）。下一阶段为**图内结构静态审计**：从源图内存（或 1HM HKX）解出 equipped idle 态的出边转移表及其条件绑定（事件/变量/通配），定位 1→12 转移的真实条件表达式，另行立契约。
 
 <a id="c-g3b-e2-write-capture"></a>
 <a id="c-g3b-e2-write-capture"></a>
