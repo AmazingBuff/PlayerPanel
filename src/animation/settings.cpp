@@ -16,6 +16,7 @@ namespace
     bool g_display_step = false;
     bool g_source_timeline = false;
     bool g_source_event_capture = false;
+    bool g_source_write_capture = false;
     bool g_candidate_variable_census = false;
     bool g_candidate_input_probe = false;
     std::string g_candidate_input_variable = "IsEquipping";
@@ -41,6 +42,7 @@ void load_settings()
     g_display_step = ini.GetBoolValue("Experiment", "DisplayStep", false);
     g_source_timeline = ini.GetBoolValue("Experiment", "SourceTimeline", false);
     g_source_event_capture = ini.GetBoolValue("Experiment", "SourceEventCapture", false);
+    g_source_write_capture = ini.GetBoolValue("Experiment", "SourceWriteCapture", false);
     g_candidate_variable_census = ini.GetBoolValue("Experiment", "CandidateVariableCensus", false);
     g_candidate_input_probe = ini.GetBoolValue("Experiment", "CandidateInputProbe", false);
     char const* const input_variable = ini.GetValue("Experiment", "CandidateInputVariable", "IsEquipping");
@@ -61,6 +63,7 @@ void load_settings()
     logger::info("EXPERIMENT setting DisplayStep={}", g_display_step);
     logger::info("EXPERIMENT setting SourceTimeline={}", g_source_timeline);
     logger::info("EXPERIMENT setting SourceEventCapture={}", g_source_event_capture);
+    logger::info("EXPERIMENT setting SourceWriteCapture={}", g_source_write_capture);
     logger::info("EXPERIMENT setting CandidateVariableCensus={}", g_candidate_variable_census);
     logger::info("EXPERIMENT setting CandidateInputProbe={} variable='{}' value={}", g_candidate_input_probe,
         g_candidate_input_variable, g_candidate_input_value);
@@ -76,6 +79,7 @@ bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }
 bool source_timeline() { return g_source_timeline; }
 bool source_event_capture() { return g_source_event_capture; }
+bool source_write_capture() { return g_source_write_capture; }
 bool candidate_variable_census() { return g_candidate_variable_census; }
 bool candidate_input_probe() { return g_candidate_input_probe; }
 std::string const& candidate_input_variable() { return g_candidate_input_variable; }

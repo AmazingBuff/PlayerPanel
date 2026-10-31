@@ -11,6 +11,7 @@
 #include "animation/oar/hooks.h"
 #include "animation/dac/session.h"
 #include "animation/behavior_graph/source_event_capture.h"
+#include "animation/behavior_graph/source_write_capture.h"
 #include "animation/behavior_graph/source_timeline.h"
 #include "animation/settings.h"
 
@@ -46,6 +47,7 @@ namespace
         case SKSE::MessagingInterface::kDataLoaded:
             PLUGIN_NAMESPACE::animation::load_settings();
             PLUGIN_NAMESPACE::animation::behavior_graph::install_source_event_capture();
+            PLUGIN_NAMESPACE::animation::behavior_graph::install_source_write_capture();
             PLUGIN_NAMESPACE::dac::install();
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
             PLUGIN_NAMESPACE::Renderer::install();
@@ -60,6 +62,7 @@ namespace
         case SKSE::MessagingInterface::kNewGame:
             PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_source_timeline();
             PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_source_event_capture();
+            PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_source_write_capture();
             PLUGIN_NAMESPACE::dac::reset_world();
             PLUGIN_NAMESPACE::CharacterManager::instance().clear_previews();
 

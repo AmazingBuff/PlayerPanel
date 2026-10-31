@@ -26,6 +26,10 @@ namespace animation
     // during an F7 window together with the settled phase variables. Requires
     // IndependentGraph=off; SourceTimeline wins when both are on.
     [[nodiscard]] bool source_event_capture();
+    // C-G3B-E2: install read-only observers on the typed graph setters (Bool/Int) and log every
+    // write to the player's graphs during an F7 window. Requires IndependentGraph=off; the
+    // other source instruments win when both are on.
+    [[nodiscard]] bool source_write_capture();
     // C-VC1: one-shot read-only dump of the candidate's variable table, aligned by name against
     // the source. Requires IndependentGraph != off; writes nothing and calls no native function.
     [[nodiscard]] bool candidate_variable_census();

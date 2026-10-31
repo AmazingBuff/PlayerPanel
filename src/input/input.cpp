@@ -7,6 +7,7 @@
 #include "character/character_manager.h"
 #include "panel/panel_monitor.h"
 #include "animation/behavior_graph/source_event_capture.h"
+#include "animation/behavior_graph/source_write_capture.h"
 #include "animation/behavior_graph/source_timeline.h"
 
 #include <Windows.h>
@@ -50,6 +51,7 @@ namespace
                         // on because then the capture hook is never installed.
                         animation::behavior_graph::arm_source_timeline();
                         animation::behavior_graph::arm_source_event_capture();
+                        animation::behavior_graph::arm_source_write_capture();
                     }
                     continue;
                 }

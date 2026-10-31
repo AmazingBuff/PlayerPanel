@@ -12,6 +12,7 @@
 #include "panel/panel_monitor.h"
 #include "character/character_manager.h"
 #include "animation/behavior_graph/source_event_capture.h"
+#include "animation/behavior_graph/source_write_capture.h"
 #include "animation/behavior_graph/source_timeline.h"
 
 PLUGIN_NAMESPACE_BEGIN
@@ -157,6 +158,7 @@ namespace
         {
             animation::behavior_graph::sample_source_timeline(*player);
             animation::behavior_graph::sample_source_event_capture(*player);
+            animation::behavior_graph::sample_source_write_capture(*player);
         }
         PassMerger::instance().on_post_ui_draw();
     }
