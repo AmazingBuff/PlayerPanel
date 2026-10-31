@@ -2323,7 +2323,7 @@ typed setter 按 `m_type` 自选（沿用 S4 机制），两写的返回值与�
 
 **离线用例**：无新增纯逻辑（settle 阈值分支在既有 recorder 内，行为由窗口数据裁定）；按 S1/E3 前例不凑用例。
 
-**状态：已实现（v58）。** 实现面：settings 键、source_timeline.cpp 的 baseline 类型解析 + 采样瞬态分支 + 窗口行 mode 字段；`PLUGIN_SOURCES` 不变（32）。
+**状态：已实现、已构建（干净身份 `…-65c069e1ba-…`，[v58 build](build.md#v58-transient-watch-2026-10-31)）、已部署待上机**（部署 INI = `SourceTimeline=true` + `SourceTransientWatch=true` + 其余全 off）。
 
 <a id="c-g3b-e2-write-capture"></a>
 <a id="c-g3b-e2-write-capture"></a>
