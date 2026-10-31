@@ -2287,6 +2287,27 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **第三轮后部署（2026-10-31）**：v55 三件套备份至 `dist/deploy-backup-20261031-v55/`，v56 DLL/PDB（`868e6c35…`/`68bebe2e…`，与构建档案一致）装入部署位；部署 INI（1,860 字节 `fd1c43b1…`）为 `SourceWriteCapture=true` + `IndependentGraph=off` + 其余全 off。E2 运行判据见 [E2 契约](#c-g3b-e2-write-capture)。
 
+<a id="c-g3b-s5-two-write"></a>
+## C-G3B-S5：装备态补齐 + 卸下命令的两写序列（草案，2026-10-31，未实现）
+
+**假设**：E2 裁定后唯一未被排除且可检验的输入形态是**状态合取**——源侧 equipped idle 与候选 equipped idle 存在已证实的状态差：源在装备段中部（47.132）经非 63609 路径写入 `iRightHandEquipped=1`，候选经 WeapEquip 进入的 equipped idle 里 `rh=0`（S3/S4 各轮 `rh` 列恒 0）。若卸下转移条件是合取（`bEquipUnequip==1 且 iRightHandEquipped==1` 一类），则 S4 三轮单写全负（候选缺 rh=1）与源侧照常触发完全自洽。本切片回放真实序列：**先补齐装备态，再下卸下命令**。
+
+**写集（两写，有序，每进程一次，位置 = settle 门通过后、121 步采样窗前）**：
+
+1. **前置写** `iRightHandEquipped`（179，INT32，C-VC1 实测）值 1——补齐真实装备态；
+2. **命令写** `bEquipUnequip`（125，BOOL，C-VC1 实测）值 1——卸下命令。
+
+typed setter 按 `m_type` 自选（沿用 S4 机制），两写的返回值与读回必录；任一名字缺失或类型不支持即 `outcome=skip`，不跑采样窗。两写之间无人工延时——源侧两写相距 6 秒以上（47.132 与 53.652），但合取条件只看值组合与时序窗口；若判负，"需要中间步数间隔"作为残留假设入档（后续可用 INI 在两写间加预注册步数的变体再试，不属本契约）。
+
+**机制**：新键 `[Experiment] CandidateUnequipPrime`——非空时第二段在命令写之前先做前置写，为空保持 S4 单写行为。其余（门、settle、121 步采样、观测行、typed 选择、停止条件）沿用 S4/S3 已验证机制；写入路径抽一个共用 helper（S4 现有写法改为调用它），无新增策略逻辑、无离线新用例。门：`CandidateUnequipProbe=true` + `IndependentGraph=inject` + `CandidateUnequipVariable=bEquipUnequip` + `CandidateUnequipPrime=iRightHandEquipped`。
+
+**判据**：主判据 `currentDefaultState` 1→12→0；辅判据节点数偏离基线回落、卸下脉冲出现、运动持续。命中 → 卸下触发 = 装备态合取，G3-B 输入子集定为 {equip: `WeapEquip` 事件, unequip: rh 补齐 + `bEquipUnequip` 命令}，进入完整回放契约起草（预注册两段时序容差）。未命中 → 状态合取假设判死，按 E2 裁定转向图内结构分析（嵌套状态机/转移条件静态审计），不再有输入侧切片。`iState` 照旧只记录不判定。
+
+**非目标**：不写第三个变量（`iMagicEquipped` 的同款补齐留作判负后的记录性变体）、不做姿态对照、不宣称 G3-B 通过。
+
+**停止条件**：崩溃、非有限值、`source-drift` 非 none 立即停止。
+
+**状态：草案，未实现。** 实现仅涉及 S4 第二段抽 helper 与新 INI 键；构建后部署 INI 按本契约门设置。
 <a id="c-g3b-e2-write-capture"></a>
 ## C-G3B-E2：源图 setter 写观察（草案，2026-10-31，未实现）
 
