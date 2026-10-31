@@ -2747,3 +2747,18 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 - **验证**：display_step 引擎无关用例 g++ C++23 `-Wall -Wextra -Werror` 通过。**上机步骤与运行 1 完全相同**（同 INI 配置、同操作序列、同判据 3 复用检查）。
 
 **收尾状态：A2 已实现并部署（v61），部署 INI 已切 A2 运行配置（`60ff8f27…`，逐键断言过——含修正一处 dormant 默认值残留 `CandidateInputVariable=IsEquipping` → 空，反模式 11 再执行），待上机。**
+
+**A2 首轮运行（2026-10-31 23:32，v61 身份 `57fa4affab` 活日志确认，actor 00000014 request=1；[日志](diagnostics/CharacterPanel-g4a2-clip-identity-20261031-2330.log) 135,464 字节 SHA-256 `bc93eb75…`）：问题①已决（逐帧、剪辑绑定）；问题②源侧排除（owner=src:0、overlaps=0）但 owner 全 `neither` 与 numeric 变量名未解码，判读未闭——A3 微切片。**
+
+| 项 | 观测 |
+| --- | --- |
+| 复用守门 | **再次全过**：恰好两次 `result=dispatched`；`drive-done candidate-pose = bc160a8c/63f638a6/c407cb4e`、`unequip-done = 8fb4cd33/4f2aebde/c407cb4e`（与 S6/F/v60 三轮逐位一致）；`source-drift=none`（源 before=after=5025a78c）；零 `[E]`；`OAR COND` 恰 1 行（武装窗口外的产品提案查询） |
+| ①触发入口 | **已决**：`post-activate=0`（激活突发假设被否）→ `post-weapequip=23` → `at-settle=1603`（装备窗口 120 步内 +1580，**~13/步**）→ `post-unequip=1628`（卸下注入 +25）→ 窗口总 2037（卸下窗口 120 步 +409，**~3.4/步**）→ 显示窗口（120 步稳态 idle）**0**。求值 = **OAR 逐帧机制，与"正在播放的非 idle 剪辑"绑定**（装备/卸下剪辑活跃期逐帧评估，MT idle 期为零），非一次性突发 |
+| ②clip 身份 | 命中行 clip 名字解码成功且**逐帧恒定**：装备窗口全部 `Animations\H2H_Equip.hkx`（单对象 0x25073c00dc0），后续 `Animations\H2H_Idle.hkx`（0x25073c42c80）——本轮玩家徒手（H2H 族），评估对象 = 候选正在播放的剪辑族 |
+| ②图归属 | **owner=neither ×2037，src=0、cand=0**。两个候选解释：(H1) 评估收到的是**模板节点**——OAR 装载期记录捕获共享模板树上的 clip generator（root-generator 源/候选同址、activeNodes 持有克隆，模板不入 activeNodes → neither 自洽，且候选 63585 装载过 OAR 装载钩子、REFR=null 与无 holder 自洽）；(H2) 扫描的 entries 基址 @+0 不对。count@+8 读法与既有 DriveState 同源（日志 `/97` 实证），头部读取可信，**H1 为优**，但两说未决 |
+| ②变量读取 | `sites n=72`（numeric 命中存在，逐帧伴生）但**变量名全部为空**——名字读取以 `Numeric_Type_Offset==3`（图变量类型）为前置，72 次全空说明这些 numeric 大概率**非图变量型**（或其他值源），也可能名字通道有缺陷——type 值未记录，无法区分。若最终判定非图变量，则"读了谁的变量"问题自然消解 |
+| ③状态写 | 维持间接（不变） |
+
+**A2 裁定：失败签名确定排除**（2037 次求值零源归属、零 overlaps、源漂移逐位为零、复放确定性保持）；**通过条件仍未满足**（owner=neither 未解释、numeric 读取性质未知）——**G4-A 仍未决，但危险半边（源侧接触）已以高置信度关闭**。B 段验收的世界侧问题（Random/历史消耗）与 owner 解释相互独立，但按契约纪律维持暂停至判读闭合。
+
+**C-G4-A3 微切片（预注册，3 项仪器增量，同 INI 配置同操作）**：①numeric 命中行记录 `type=N` 原始类型值（区分图变量 vs 其他值源）；②`post-activate` 快照行附带 `scan=cand-entries/cand-count/src-entries/src-count`（与 DriveState 的 `/97` 锚定，验证扫描基址）；③命中行附带当帧 `cand-count`（活计数锚）。判读规则：numeric 全部 type≠3 且扫描锚健全（count≥90 与 DriveState 一致）→ H1 成立（模板级评估、无图变量读取）→ **判据 1 按修订解释关闭，B/C 解禁**；type=3 出现 → 图变量读取存在，按 name/owner 继续裁；扫描锚不健全 → 扫描修正后重跑。
