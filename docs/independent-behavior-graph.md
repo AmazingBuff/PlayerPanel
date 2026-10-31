@@ -2807,3 +2807,15 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 | 附带 | F9 后首开面板记录到读档还原态 (sword,spell-left)——F9 恢复存档装备而非上轮末态；弓首槽的自锚定设计吸收之 | `SCAR_1hmReadyDummy → DumDum` 全行恒定 | ✓ |
 
 **裁定：A/A PASSED（预注册粒度：`(original, oar-mod, oar-submod 族)` 逐槽一致；交替尾缀为本底方差且已证与预览无关）。** 对照设计有效，运行 B 可执行——判据保持族粒度，尾缀排除照旧。运行 B 的读档初态由弓首槽自锚定吸收（F9 还原什么装备都无所谓，弓先行清左手）。
+
+**运行 B + C 段（2026-11-01 00:28–00:32，v62 留装，配置 ② `inject`+显示+回放四键+OarContextWatch，单会话 5 次开面板；[日志](diagnostics/CharacterPanel-g4bc-run-b-20261101-0028.log) 317,842 字节 SHA-256 `f015a1af…`）：B/C 全过——G4 PASSED。**
+
+| 项 | 观测 |
+| --- | --- |
+| 回放复现（第四次） | 恰好两次 `result=dispatched`；`drive-done candidate-pose = bc160a8c/…`、`unequip-done = 8fb4cd33/…` 逐位一致；`source-drift=none`；零 `[E]` |
+| 隔离结论复现（回放+显示共存态） | `window=experiment evaluations=2037 overlaps=0 owner=cand:0/src:0/neither:2037`——与 A 段三轮**同构同分布**（e:1379/n:72/s:339/r:247 逐项相同）；全部显示窗口（retarget/reset ×6+）`evaluations=0` |
+| B：世界选择对照 | 轮序列三槽与 A/A 基线逐族吻合——弓 `(bow,bow)` → `bow Non-Combat idle`（尾缀 Loop，本底方差内）、剑 `(sword,空)` → `1hm Non-Combat idle`（尾缀 Loop）、法术 `(spell,spell)` → `16031899`；预览（回放+显示 ≥20 秒）运行于轮前，**条件驱动的世界选择零漂移** |
+| C：关闭清理与 sink | 5 次开面板 5 次 `SCOPY CAPTURE … accepted`；`SCOPY PARK retained-total` 2→3→4 每捕获 +1（刻意保留规则内，远低于 12 阈值，无未配对句柄行）；**EquipSink 存活**——装备修订计数跨面板 10→14 持续递增（热键装备事件照常到达）；DAC restore 每次关面板 `matched`（epoch 6/8/10）；候选步进全程 `source-drift=none` |
+| 附带 | 前两行预轮记录（sword+空手）`MT_Idle → 'Idle 1'/'Idle 2'`——MT 族亦见交替尾缀（本底方差类，判据外） |
+
+**G4 收官裁定：PASSED（A/B/C 三段各自限定范围）。** A = OAR 求值语境隔离（模板级评估、零图变量读取、零源接触）；B = 世界历史无消耗（条件驱动选择零漂移）；C = 关闭清理与 sink 作用域成立。按排序进入 **G5（完整姿态对照）**——G3-B 的 pose 哈希基线与 B-v2 的装备族序列是 G5 的直接前置；G5 开工第一步为预注册其位置/旋转/缩放阈值与逐骨覆盖判据。
