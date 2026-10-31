@@ -45,5 +45,10 @@ namespace animation
     // event path as the activation injection and sample the unequip phase for another 121 steps.
     // Requires IndependentGraph=inject.
     [[nodiscard]] bool candidate_unequip_probe();
+    // C-G3B-S4: the unequip slice's second-stage input. Non-empty selects a by-name typed
+    // variable write at the settle point (the pre-registered ladder bEquipUnequip ->
+    // IsUnequipping -> PitchManualOverride, one INI-only round per name); empty keeps the S3
+    // 1HM_Unequip event dispatch.
+    [[nodiscard]] std::string const& candidate_unequip_variable();
 }
 PLUGIN_NAMESPACE_END

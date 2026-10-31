@@ -2083,19 +2083,83 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=settle outcome=settled target-step={} settled-step={} baseline-default={} baseline-nodes={}",
                                         actor_id, request, settle_gate.target_step(), settle_gate.settled_step(),
                                         Unequip_Settle_Target, settle_gate.baseline_nodes());
-                                    const RE::hkbBehaviorGraphData* const unequip_data =
-                                        behavior ? behavior->data.get() : nullptr;
-                                    const std::int32_t unequip_id = unequip_data ?
-                                        lookup_event_id_in_graph(*unequip_data, Unequip_Event_Name) : -1;
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=event-lookup name='{}' id={} source=graph-events",
-                                        actor_id, request, Unequip_Event_Name, unequip_id);
-                                    if (unequip_id >= 0)
+                                    // C-G3B-S4: a non-empty CandidateUnequipVariable swaps the second
+                                    // stage from the S3 event dispatch to one typed by-name variable
+                                    // write at the settle point (the pre-registered unequip-side
+                                    // ladder, one INI-only round per name). The empty name keeps the
+                                    // S3 1HM_Unequip dispatch verbatim.
+                                    bool input_delivered = false;
+                                    if (!candidate_unequip_variable().empty())
                                     {
-                                        InjectedEvent unequip_event{ static_cast<std::uint32_t>(unequip_id), 0, nullptr, nullptr };
-                                        static REL::Relocation<event_dispatch_t> unequip_dispatch{ REL::ID(EventDispatchID) };
-                                        unequip_dispatch(behavior, context, &unequip_event);
-                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-inject event='{}' id={} result=dispatched",
+                                        std::string const& var_name = candidate_unequip_variable();
+                                        const RE::hkbBehaviorGraphData* const unequip_data =
+                                            behavior ? behavior->data.get() : nullptr;
+                                        std::size_t var_index = 0;
+                                        if (!variable_index(unequip_data, var_name.c_str(), var_index))
+                                        {
+                                            logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=skip reason=name-missing name='{}'",
+                                                actor_id, request, var_name);
+                                        }
+                                        else
+                                        {
+                                            std::int8_t const var_type = static_cast<std::int8_t>(
+                                                unequip_data->variableInfos.data()[var_index].m_type.get());
+                                            char const* setter = "unsupported";
+                                            bool wrote = false;
+                                            if (var_type == 0)
+                                            {
+                                                setter = "SetGraphVariableBool";
+                                                wrote = candidate_base->SetGraphVariableBool(
+                                                    RE::BSFixedString{ var_name.c_str() }, true);
+                                            }
+                                            else if (var_type >= 1 && var_type <= 3)
+                                            {
+                                                setter = "SetGraphVariableInt";
+                                                wrote = candidate_base->SetGraphVariableInt(
+                                                    RE::BSFixedString{ var_name.c_str() }, 1);
+                                            }
+                                            if (setter[0] == 'u')
+                                            {
+                                                logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=skip reason=unsupported-type name='{}' type={}",
+                                                    actor_id, request, var_name, census_type_name(var_type));
+                                            }
+                                            else
+                                            {
+                                                std::int32_t readback = 0;
+                                                bool const input_readable = read_variable_int(*candidate_base, var_index, readback);
+                                                logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=write name='{}' index={} type={} value=1 setter={} result={} readback={}",
+                                                    actor_id, request, var_name, var_index, census_type_name(var_type),
+                                                    setter, wrote ? "true" : "false",
+                                                    input_readable ? std::to_string(readback) : std::string{ "unreadable" });
+                                                input_delivered = true;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        const RE::hkbBehaviorGraphData* const unequip_data =
+                                            behavior ? behavior->data.get() : nullptr;
+                                        const std::int32_t unequip_id = unequip_data ?
+                                            lookup_event_id_in_graph(*unequip_data, Unequip_Event_Name) : -1;
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=event-lookup name='{}' id={} source=graph-events",
                                             actor_id, request, Unequip_Event_Name, unequip_id);
+                                        if (unequip_id >= 0)
+                                        {
+                                            InjectedEvent unequip_event{ static_cast<std::uint32_t>(unequip_id), 0, nullptr, nullptr };
+                                            static REL::Relocation<event_dispatch_t> unequip_dispatch{ REL::ID(EventDispatchID) };
+                                            unequip_dispatch(behavior, context, &unequip_event);
+                                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-inject event='{}' id={} result=dispatched",
+                                                actor_id, request, Unequip_Event_Name, unequip_id);
+                                            input_delivered = true;
+                                        }
+                                        else
+                                        {
+                                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-skip reason=event-name-missing name='{}'",
+                                                actor_id, request, Unequip_Event_Name);
+                                        }
+                                    }
+                                    if (input_delivered)
+                                    {
                                         const std::string unequip_pose_0 = format_pose_hash(candidate->characterInstance);
                                         std::string unequip_pose_mid = "not-run";
                                         std::string unequip_pose_end = "not-run";
@@ -2143,11 +2207,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-done steps={} cand-pose-0={} cand-pose-60={} cand-pose-120={} source-drift={}",
                                             actor_id, request, DriveSteps, unequip_pose_0, unequip_pose_mid,
                                             unequip_pose_end, first_drift(source_before, identify(source_graph)));
-                                    }
-                                    else
-                                    {
-                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-skip reason=event-name-missing name='{}'",
-                                            actor_id, request, Unequip_Event_Name);
                                     }
                                 }
                                 else
