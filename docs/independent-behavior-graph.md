@@ -2308,4 +2308,10 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **实现影响面**：新模块 `source_write_capture.{h,cpp}`，`PLUGIN_SOURCES` 31→32；stub 构造器与 E1 同款复制（记录签名不同，不强抽公共件）；文档同步按维护约束。**部署排序：S4 阶梯（第二/三轮）仍在同一部署 INI 上等待上机，E2 构建完成后不部署，阶梯判死或打平后再部署**——两实验共用 F7 与部署位。
 
-**状态：已实现、已构建（干净身份 `…-a185603f5a-…`，[v56 build](build.md#v56-write-capture-2026-10-31)）、S4 阶梯判死后已部署待上机**（部署 INI = `SourceWriteCapture=true` + 其余全 off）。**
+**状态：已实现、已构建（干净身份 `…-a185603f5a-…`，[v56 build](build.md#v56-write-capture-2026-10-31)）、首轮已上机判负后部署 INI 回 dormant（v56 DLL 留装）。**
+
+**首轮运行（2026-10-31 17:43，v56，AE 1.6.1170，actor 00000014；[日志](diagnostics/CharacterPanel-g3be2-write-capture-20261031-1743.log) 7,315 字节 SHA-256 `6c3055fc…`）：typed-setter 假设判负，且正控同空。** 两条 detour 运行时头部核验通过并安装（Bool→`0x7ff758546600`、Int→`0x7ff758546790`，与解析库一致）；F7 开窗 `window-open graphs=2 words=463`——玩家两张图都在门内（E1 的"事件/写去了别的图"残余闭合）；两次真实转移完整发生在窗口内（装备 17:43:00.7–02.2、卸下 17:43:07.6–08.9，与 v41 轨迹逐项一致）；**`writes=0`、`ring-dropped=0`、`window-closed reason=expired writes=0 phases=21`**。
+
+**裁定**：按预注册判据，两个锚（装备/卸下 ±10 帧）内均无写行 → **typed setter 路线判死，"外部调用路线"全线关闭**：转移当刻既无 58377 事件（E1）也无 Bool/Int setter 调用（本探针，双图覆盖）。**正控同空是本裁定最重的部分**——v41 明确观察到装备段中部的 `iMagicEquipped`/`iRightHandEquipped` 0→1，而 63607/63609 上零调用，说明引擎的装备态写**不经** `BShkbAnimationGraph::SetGraphVariableBool/Int`（更可能是 [audit27](behavior-graph-construction-audit.md) 的 manager 层入口 AE32886 直接写字数组）。instrument 判定本身以装备锚为正控的假设被推翻，如实入档。
+
+**全部证据合并后的机制图景与 S5 假设**：已排除 = 事件分发、三个卸下脉冲变量的单独持久写、装备态 setter 作为触发、63607/63609 写入路径、转移前持久命令写。**未被排除**：源侧 equipped idle 与候选 equipped idle 的**状态差**——源在装备段中部（47.132）已有 `iRightHandEquipped=1`（经非 63609 路径写入），候选经 WeapEquip 进入的 equipped idle 里 `rh=0`（S3/S4 各轮 `rh` 恒 0）。若卸下转移条件是合取（如 `bEquipUnequip==1 且 iRightHandEquipped==1`），则 S4 三轮单写全负、源侧照常触发就完全自洽。**S5（草案）**：两写序列回放——settle 门通过后先写 `iRightHandEquipped=1`（补齐真实装备态），再写 `bEquipUnequip=1`（卸下命令），判据不变（`default` 1→12→0）。

@@ -1,0 +1,76 @@
+[17:41:16.171] [19964] [I] CharacterPanel v1-2-1-0
+[17:41:16.171] [19964] [I] CharacterPanel loaded
+[2026-10-31 17:41:16.171] [thread 19964] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(81): [info] CharacterPanel v1-2-1-0
+[17:41:28.350] [19964] [I] OAR Animations V1 mapping API available
+[17:41:28.350] [19964] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[17:41:28.350] [19964] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[17:42:10.895] [35752] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[17:42:10.895] [35752] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[17:42:10.895] [35752] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[17:42:10.895] [35752] [I] EXPERIMENT setting IndependentGraph=off
+[17:42:10.895] [35752] [I] EXPERIMENT setting DisplayPose=false
+[17:42:10.895] [35752] [I] EXPERIMENT setting DisplayStep=false
+[17:42:10.895] [35752] [I] EXPERIMENT setting SourceTimeline=false
+[17:42:10.895] [35752] [I] EXPERIMENT setting SourceEventCapture=false
+[17:42:10.895] [35752] [I] EXPERIMENT setting SourceWriteCapture=true
+[17:42:10.895] [35752] [I] EXPERIMENT setting CandidateVariableCensus=false
+[17:42:10.895] [35752] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[17:42:10.895] [35752] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[17:42:10.895] [35752] [I] EXPERIMENT setting CandidateUnequipProbe=false variable=''
+[17:42:10.895] [35752] [I] SOURCE EVENTCAPTURE install-skip reason=off
+[17:42:10.897] [35752] [I] SOURCE WRITECAPTURE installed target='SetGraphVariableBool' address=0x7ff758546600 thunk=0x7ff6d91e0000 original=0x7ff6d91e0060 head=48 89 5c 24 10
+[17:42:10.897] [35752] [I] SOURCE WRITECAPTURE installed target='SetGraphVariableInt' address=0x7ff758546790 thunk=0x7ff6d91e0060 original=0x7ff6d91e00c0 head=48 89 5c 24 10
+[17:42:10.897] [35752] [I] DAC native inventory lifecycle sink installed
+[17:42:10.901] [35752] [I] All shaders compiled
+[17:42:10.901] [35752] [I] Installed pre-UI renderer hook
+[17:42:10.901] [35752] [I] Panel menu sink installed
+[17:42:10.901] [35752] [I] CharacterManager equipment sink installed
+[17:42:10.901] [35752] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-behavior-graph-v56-write-capture-20261031-a185603f5a-cl94faaed0c6-20261031T085732Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[17:42:10.908] [24656] [I] Studio host changed: 0x0 -> 0x1c1a9456980 (paused=true)
+[17:42:10.908] [24656] [I] Studio light node has been created
+[17:42:10.908] [24656] [I] CP-LIGHT slot 0: registered, shell 0x1c32db17880 queued (ledger stays the authority)
+[17:42:10.908] [24656] [I] CP-LIGHT slot 1: registered, shell 0x1c32db17740 queued (ledger stays the authority)
+[17:42:10.908] [24656] [I] CP-LIGHT slot 2: registered, shell 0x1c32db17600 queued (ledger stays the authority)
+[17:42:10.908] [24656] [I] Studio lights registered on the ledger (scene=0x1b7e8866e80 -- ledger fetch will populate the slots)
+[17:42:10.908] [24656] [I] CP-LIGHT slot 0: ledger shell fetched 0x1c32db17880 (after 0 miss frames)
+[17:42:10.908] [24656] [I] CP-LIGHT slot 1: ledger shell fetched 0x1c32db17740 (after 0 miss frames)
+[17:42:10.908] [24656] [I] CP-LIGHT slot 2: ledger shell fetched 0x1c32db17600 (after 0 miss frames)
+[17:42:35.441] [19964] [I] DAC old-world sessions discarded world=2
+[17:42:35.607] [24656] [I] SOURCE WRITECAPTURE invalidated reason=world-reset
+[17:42:35.769] [24656] [I] CP-LIGHT slot 0: ledger shell dropped
+[17:42:35.770] [24656] [I] CP-LIGHT slot 1: ledger shell dropped
+[17:42:35.770] [24656] [I] CP-LIGHT slot 2: ledger shell dropped
+[17:42:35.770] [24656] [W] Studio lights not fully served by the ledger yet
+[17:42:42.211] [24656] [W] Studio lights not fully served by the ledger yet
+[17:42:45.956] [24656] [I] CharacterManager watch actor=00000014
+[17:42:45.966] [24656] [I] OAR bases stage=world-prewarm project=0x1c157075280 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.122
+[17:42:45.967] [24656] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1c32db17c40 filed to lightQueueAdd)
+[17:42:45.967] [24656] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1c32db17240 filed to lightQueueAdd)
+[17:42:45.967] [24656] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1c32db17100 filed to lightQueueAdd)
+[17:42:46.043] [24656] [I] CP-LIGHT slot 0: ledger shell fetched 0x1c32db17c40 (after 1 miss frames)
+[17:42:46.043] [24656] [I] CP-LIGHT slot 1: ledger shell fetched 0x1c32db17240 (after 1 miss frames)
+[17:42:46.043] [24656] [I] CP-LIGHT slot 2: ledger shell fetched 0x1c32db17100 (after 1 miss frames)
+[17:42:57.631] [27268] [I] SOURCE WRITECAPTURE arm-requested
+[17:42:57.652] [19964] [I] SOURCE WRITECAPTURE window-open actor=00000014 graphs=2 words=463 nodes=36 writes-budget=300 phases-budget=200 seconds=20 tracked currentDefaultState=113 iState=94 IsEquipping=110 IsUnequipping=111 bEquipUnequip=125
+[17:43:00.704] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='currentDefaultState' 0->10
+[17:43:00.704] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='IsEquipping' 0->1
+[17:43:00.704] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 36->51
+[17:43:00.877] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 51->32
+[17:43:01.059] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 32->33
+[17:43:01.975] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='currentDefaultState' 10->1
+[17:43:01.975] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='iState' 0->9
+[17:43:01.975] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 33->80
+[17:43:02.199] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='IsEquipping' 1->0
+[17:43:02.199] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 80->65
+[17:43:07.556] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='currentDefaultState' 1->12
+[17:43:07.556] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='IsUnequipping' 0->1
+[17:43:07.556] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='bEquipUnequip' 0->1
+[17:43:07.556] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 65->81
+[17:43:07.751] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='iState' 9->0
+[17:43:07.751] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 81->33
+[17:43:08.654] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='currentDefaultState' 12->0
+[17:43:08.654] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 33->52
+[17:43:08.874] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='IsUnequipping' 1->0
+[17:43:08.874] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='bEquipUnequip' 1->0
+[17:43:08.874] [19964] [I] SOURCE WRITECAPTURE phase actor=00000014 name='nodes' 52->36
+[17:43:17.667] [19964] [I] SOURCE WRITECAPTURE window-closed reason=expired actor=00000014 writes=0 phases=21 ring-dropped=0
