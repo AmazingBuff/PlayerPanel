@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-10-31。**新会话先读[当前状态与后续规划](#handoff-20261029)**（已完成项、部署、G3-B 契约草案、排序与反模式清单），再读 [2026-10-30/31 会话总结](#session-20261030)（C-VC1/S1/S2：相位由事件驱动，变量路线判死）与 [C-G3B-S3 草案](#c-g3b-s3-unequip-event)；测量结果以[验证总表](#verification-matrix)为准，逐轮细节见 [G3-A](#g3-a-contract) 与 [G2 v33/v34](#g2-v33-run)。原始日志和历史契约不变。[v44 显示时钟](#v44-display-clock)仅本地验证 elapsed 60 Hz 调度，游戏速率/画面待验；[v43 源记录窗口](#v43-source-sessions)的会话边界已随 v46 首轮上机走查（2026-10-30）。
+更新：2026-10-31。**新会话先读[当前状态与后续规划](#handoff-20261029)**（已完成项、部署、G3-B 契约草案、排序与反模式清单），再读 [2026-10-30/31 会话总结](#session-20261030)（C-VC1/S1/S2：相位由事件驱动，变量路线判死）、[C-G3B-S3](#c-g3b-s3-unequip-event)（首轮判负：`1HM_Unequip` 分发被接受但不推进相位）与 [C-G3B-E1 草案](#c-g3b-e1-event-capture)（源图事件流捕获，待评审）；测量结果以[验证总表](#verification-matrix)为准，逐轮细节见 [G3-A](#g3-a-contract) 与 [G2 v33/v34](#g2-v33-run)。原始日志和历史契约不变。[v44 显示时钟](#v44-display-clock)仅本地验证 elapsed 60 Hz 调度，游戏速率/画面待验；[v43 源记录窗口](#v43-source-sessions)的会话边界已随 v46 首轮上机走查（2026-10-30）。
 
 <a id="current-status"></a>
 
@@ -2203,3 +2203,35 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 | 卸下段（第二窗口） | 121 行采样全为 `default=1 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=111`；`unequip-motion comparisons=119 changed=119 valid=true`（装备 idle 继续动画），`cand-pose-0=8fb4cd33… 60=7a044b34… 120=2b29331e…`（终点与第一窗口终点同哈希）；无 `[E]`、无崩溃，`source-drift=none` 全程，`phase=end retained=true` |
 
 **裁定**：主判据（`default` 1→12→0）未命中；辅判据未命中（无节点偏离、无卸下脉冲）；`iState` 恒 0 按预注册仅记录。**`1HM_Unequip`（id=15）单独注入对未注册候选图不足以推进卸下相位**——分发被接受但状态机未离开 equipped idle；对照 v52 的 `WeapEquip`（id=2）能推进装备相位，事件路径本身有效，负结果限定于该事件与该时机（settled equipped idle）。按防 fishing 约束不试第二个候选名；"卸下转移需要哪个事件/是否需要伴随输入或装备上下文"须先回到事件名表与引擎证据再立项。本轮顺带产出两条确定证据：候选 652 表含 `PitchManualOverride`(65) 与 `1HM_Unequip`(id=15)；事件表在注入阶段为 8223 项。会话后部署 INI 已回 dormant off（1,585 字节 `1bcd95bc…`）。
+
+<a id="c-g3b-e1-event-capture"></a>
+## C-G3B-E1：源图事件流捕获（草案，2026-10-31，未实现）
+
+**背景与目标**：S3 判负后剩下的未决是"真实卸下到底由什么驱动"。v41 只记录了变量的 settled 轨迹，从未拦截源图实际收到的事件。本探针只回答一件事：**真实装备/卸下期间，引擎向控制器源图的状态机派发了哪些事件（id→名字），时序与相位变化如何对应**。它是 G3-B 写入契约"事件时序"前置的证据来源，不触碰候选、不注入任何事件、不写任何变量。
+
+**机制（本实验线首个 detour 类仪器，授权边界见下）**：在引擎事件派发原语 **58377**（`REL::ID(58377)`，hkbBehaviorGraph vtable 槽 6 落体，[审计五/续审计五](behavior-graph-construction-audit.md)）安装只读 trampoline detour。选它的理由：事件到状态机的两条原生路径——"入队 + Update 尾部桩（0xab1f30）逐个派发"与"内部直调 58377"——**最终都经过 58377**；纯轮询事件队列环形缓冲（`[q+0x00]` 数组、`[q+0x8]` 容量、`[q+0xC]` 读游标、`[q+0x14]` 计数、24 B 表项，[队列审计](behavior-graph-construction-audit.md)已闭合）看不到直调路径，存在结构盲区，故不采用。
+
+**回调读集与纪律**（全部只读）：实参 `behavior`、`event->id`（+0x00 u32）、`event->payload` 槽判空（+0x08 指针，**不解引用**）、`ctx->behavior`（+8 判空）。behavior == 当前窗口源图指针时写入无锁 SPSC 环（生产者 = 游戏主线程动画更新，消费者 = 渲染钩子 drain；深度 1024，溢出只计数不阻塞），随后立即转发原函数。热路径 = 一次原子 load 比较，窗口关闭时 gate 为空直接放行。**回调内不解析字符串、不分配内存、不持锁、不调用引擎函数。**
+
+**安全前置（实现时核对，写进构建记录）**：detour 头部 5 字节补丁要求 `0xab58a0` 起始至少 5 字节为完整指令边界——实现前先 dump 前 16 字节反汇编核对，不满足则本探针作罢，不换写法、不退回写队列或改 vtable。SKSE trampoline 常驻不卸载：窗口 gate 清零后残余成本为每帧一次分支；detour 生命周期 = 进程生命周期，安装一次。
+
+**门与窗口**：新键 `[Experiment] SourceEventCapture=false`（默认 off）。要求 `IndependentGraph=off`（纯源观察，候选不存在、注入路径零干扰）。与 `SourceTimeline` 同开属非法配置：加载告警，且 **SourceTimeline 优先、E1 不装 hook**。窗口复用 SourceTimeline 骨架语义：面板外 F7 发布 arm 意图 → 20 秒截止 → 源丢失/替换/读档取消，取消后须显式再按 F7；一次只服务一个捕获器。
+
+**观测**（同窗两路，一次 F7 同时产出）：
+
+1. 事件行：渲染侧每帧 drain 环，逐条 `SOURCE EVENT actor=… request=… seq=… id=… name='…' payload=null|set`。名字在 drain 侧用图自身 `stringData->eventNames[id]`（`&~1` 掩码，与既有 lookup 同款读法）解析；id ≥ count 记 `name=oor`。
+2. 相位行：沿用 v37 的按帧 diff 规则（仅变化时出），同窗采样 `currentDefaultState`/`iState`/`IsEquipping`/`IsUnequipping`/`bEquipUnequip`/节点数，供事件与相位对齐。
+
+**预算**：事件行 ≤ 600 行/窗口、相位行 ≤ 200 行/窗口；任一耗尽即 `budget-exhausted` 终止（照 SourceTimeline 惯例），不滚动覆盖。
+
+**判据（预注册）**：run sheet = F7 开窗 → 装备单手武器 → 等约 2 秒 → 卸下 → 等约 2 秒 → 窗口自动关。裁定以相位变化为锚：**装备锚** = `currentDefaultState` 首次离开 0 ±10 帧内的事件序列；**卸下锚** = `currentDefaultState` 首次离开 1 ±10 帧内的事件序列。锚窗口内的 (id, 名字) 集合即"真实装备/卸下的事件签名"，作为下一个注入切片（S5+）的唯一合法候选来源——仍按单名预注册规则逐轮验证。**负结果同样有效**：锚窗口内事件行为空、或只有 FootLeft/FootRight 类步频事件，说明卸下转移不经 58377 可见的事件驱动，届时转回"卸下侧变量从未被写入过"（`bEquipUnequip`/`PitchManualOverride`）这条未测线索，另行立契约。
+
+**非目标**：不注入、不写变量、不触碰候选、不改 58377 行为语义（纯透传）、不做姿态对照、不宣称 G3-B 前置完成。
+
+**停止条件**：崩溃立即停止——detour 崩溃即回退纯观察、INI 回 off 并归档 crash 报告；源丢失/替换/读档取消照 SourceTimeline 身份规则；behavior 指针同址复用（ABA）由"源替换即取消窗口"规则覆盖，残余风险如实入档。
+
+**离线用例**：SPSC 环与窗口状态机进 engine-free 策略头——溢出计数、drain 保序、gate 关闭丢弃、预算耗尽、源取消优先于未消费 arm——`cl /W4 /WX` 全过才算实现完成。
+
+**实现影响面**：新增 hook 载体 `.cpp`，`PLUGIN_SOURCES` 30→31；`SKSE::GetTrampoline()` 为工具链既有能力；按维护约束同步主文档、animation、OAR、build、maintenance、README、config 与 CHANGELOG。
+
+**状态：草案，未实现、未构建、未上机。** 评审通过后实现顺序 = 反汇编核对 `0xab58a0` 头部 → 策略头 + 离线用例 → detour 接线 → 本地构建 → 部署（备份现装 INI；`SourceEventCapture=true`、`IndependentGraph=off`）→ 上机按 run sheet。
