@@ -869,3 +869,5 @@ Maintain this guide with [README](../README.md), [SceneGraph](scene-graph.md), [
 ## Related history
 
 The [historical index](history.md) preserves older probe, test and package records. The current single-DLL setup supersedes their build entry points without changing their recorded outcomes.
+
+The same v59 binary also carries the [C-G3B-F full-replay acceptance](independent-behavior-graph.md#c-g3b-f-full-replay) run (2026-10-31): the dormant INI was backed up to `dist/deploy-backup-20261031-v59/` (1,834 bytes, `1d40a0eb…`) and the deployed INI switched to the F configuration (1,921 bytes, SHA-256 `6dfb54ec28e4086747d18017a6970eb3a4f85778fc33d34b15bac131e0ace9ba`) — `inject`, `CandidateInputProbe=true` with an **empty** `CandidateInputVariable` (observe-only six-point sampling), plus the S6 keys. DLL/PDB unchanged; no rebuild.

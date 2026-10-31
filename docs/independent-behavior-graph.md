@@ -2534,3 +2534,37 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **裁定**：主判据 `currentDefaultState` 1→12→0 **命中**，辅判据（节点偏离回落、三脉冲出现并按 isActive 语义清零、运动持续）全部命中。**S3 判负根因确证为错误事件名；G3-B 外部输入子集正式定为 {`WeapEquip`(2)，`Unequip`(144)}**——A1 的全部结构性预测（id 解析、注入当帧转移、脉冲绑定语义、剪辑尾触发器收尾）在运行期逐项验证。附带事实：候选卸下段 12→0 用了 21 步（源侧约 1.3 s），按 S3 契约条款不机械换算、不影响裁定。
 
 **G3-B 现状**：装备段（`WeapEquip` 注入）与卸下段（`Unequip` 注入）均已可回放，两段收尾均由图内剪辑尾触发器自发完成。**下一步：G3-B 本体完整回放契约**——一次进程内连贯走完 Equip→Idle→Unequip 全相位（两事件 + 两收尾），预注册两段时序容差与 `iState` 判据取舍，再做姿态对照验收。
+
+<a id="c-g3b-f-full-replay"></a>
+## C-G3B-F：G3-B 本体完整回放验收（草案 → 部署，2026-10-31）
+
+**目标**：单一进程、单一候选，仅以已证实的外部输入子集 {`WeapEquip`(2)，`Unequip`(144)} 驱动，验收候选状态机**自行走完 Equip→Idle→Unequip 全相位序列**（`currentDefaultState` 0→10→1→12→0），两处段内转移（10→1、12→0）均由图内剪辑尾触发器自发完成。这是 G3-B 的收官判定：S6 已在单进程中实际走通全链，但其预注册判据只覆盖卸下段——按"不能把后设判据追认到已结束的运行"纪律，本契约以全序列判据重新预注册并在同二进制上重跑。
+
+**源侧对照基线（既有证据，不需新源会话）**：v41 源轨迹 `default` 0→10→1→12→0（装备 46.6–48.2，卸下 53.7–54.9）。候选侧对照同一**顺序**；节点数与时长不要求一致（图内容与装备上下文不同，S6 已证 21 步 vs 源 1.3 s）。
+
+**机制**：**零新代码**——v59 二进制原样（身份 `…-dcf05cab1e-…`），纯 INI 观测配置。装备段轨迹由 S1 探针的观测模式补齐：`CandidateInputProbe=true` + `CandidateInputVariable=`（空 = `observe-only`，在 step 0/1/2/6/60/120 采样、不写任何变量，代码路径 [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) `arm_candidate_input_probe` 空名分支）+ S6 三键（`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`、变量两键空）。两探针同窗口共存（S1 激活时 arm、卸下探针独立 arm，共用 e_pre_sample）。
+
+**判据（预注册）**：
+
+1. **主判据（全序列，逐段）**：
+   - 0→10：激活 `WeapEquip` 注入当帧——第一窗口 step-0 行 `default=10`（候选初始 0 已由 v48 普查证实）；
+   - 10→1：≤120 步内自发完成——六点采样 step-60 行 `default=1` + settle 行 `baseline-default=1`（精确步号预期 ~49，已五次复现，只记录不判定）；
+   - 1→12：settle 后 `Unequip` 注入当帧——第二窗口 step-0 行 `default=12`；
+   - 12→0：≤121 步窗口内自发完成——`Unequip_Out` 剪辑尾触发器（S6 实测 step 21，只记录不判定）。
+2. **辅判据**：两段运动持续（`pose-motion`/`unequip-motion` changed 高）；卸下段三脉冲同帧出现并按 isActive 语义清零；全程恰好两次外部注入（激活 `WeapEquip` + settle `Unequip`），10→1 与 12→0 无对应注入行；无 `[E]`；`source-drift=none` 全程。
+3. **iState 裁定**：**不作为 G3-B 判据**（只记录）。v52/S6 已证候选侧恒 0；A1 定位其写者为引擎 `BSiStateTaggingGenerator`，候选侧不触发的原因（装备上下文）列为独立残余，不阻塞本判定。
+4. **姿态对照**：**不在 G3-B 判据内**——候选 vs 源的逐骨姿态验收属 G5（预注册排序），G3-B 只验收相位序列、图内自发完成与运动自洽。
+
+**命中** → **G3-B PASSED（限定范围：相位序列回放；姿态验收归 G5）**，按排序进入 G4（语境隔离）。未命中 → 负结果入档，断在哪段记哪段（段内自发转移失败将指向该段触发器的候选侧条件差异，另立切片）。`iState`/姿态不作为判据，故二者异常不构成失败。
+
+**非目标**：不写任何变量（观测模式空名不写入）、不做源姿态对照、不做语境隔离、不触碰显示/捕获/台账、不改二进制。
+
+**停止条件**：崩溃、非有限值或 `source-drift` 非 none 立即停止并保留日志。
+
+**门（全 INI）**：`IndependentGraph=inject` + `CandidateInputProbe=true` + `CandidateInputVariable=`（空）+ `CandidateUnequipProbe=true` + `CandidateUnequipEvent=Unequip`（变量两键空）。观测行预算沿既有两探针上限（S1 六点 + settle/121 行卸下段），无新键。
+
+**实现影响面**：零代码改动，`PLUGIN_SOURCES` 32 不变，无离线用例（无新逻辑）。部署仅换 INI（v59 DLL/PDB 原位不动，先备份当前 dormant INI）。
+
+**部署（2026-10-31）**：v59 DLL/PDB 原位不动（`013e1bdc…`/`8b8fd16f…`），当前 dormant INI 备份至 `dist/deploy-backup-20261031-v59/`（INI 1,834 字节 `1d40a0eb…`），部署 INI 换为本契约配置（1,921 字节，SHA-256 `6dfb54ec28e4086747d18017a6970eb3a4f85778fc33d34b15bac131e0ace9ba`：`inject` + `CandidateInputProbe=true` + `CandidateInputVariable=` 空 + S6 三键）。
+
+**状态：契约已预注册、已部署待上机（v59 二进制原样）。** 运行结果回填在下方追加，不改写本节既有文字。
