@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-10-31（深夜）。**新会话先读[当前状态与后续规划（2026-10-31 深夜交接）](#handoff-20261031-night)**——本日两阶段：白天六次上机（S3→E1→S4 三轮→S5→E2→E3）判死全部外部输入路线；深夜三连（A1 离线结构审计→S6 事件名修正→F 本体验收）解出装备机制全景并 **G3-B PASSED（限定范围）**。下一阶段为 G4（语境隔离）。10-31 晚间接管节与 10-29 接管节仅作历史排序参考。测量结果以[验证总表](#verification-matrix)为准。原始日志和历史契约不变。
+更新：2026-10-31（深夜+收尾）。**新会话先读[当前状态与后续规划（2026-10-31 深夜交接）](#handoff-20261031-night)**——本日两阶段：白天六次上机（S3→E1→S4 三轮→S5→E2→E3）判死全部外部输入路线；深夜三连（A1 离线结构审计→S6 事件名修正→F 本体验收）解出装备机制全景并 **G3-B PASSED（限定范围）**。下一阶段为 **G4（语境隔离），其预注册契约已立：[C-G4 契约](#c-g4-context-isolation)**（含本会话的代码级静态前提核实与三段实验设计，未实现待授权）。10-31 晚间接管节与 10-29 接管节仅作历史排序参考。测量结果以[验证总表](#verification-matrix)为准。原始日志和历史契约不变。
 
 <a id="current-status"></a>
 
@@ -1985,7 +1985,7 @@ BehaviorGraphProbe=true
 
 ### 四、下一阶段：G4（语境隔离）→ G5 → G6（排序不变）
 
-- **G4**：确认 OAR 阶段变量来源，验证历史、回调和 sink 的隔离——即候选在面板显示链里被驱动时，OAR 与游戏本体动画状态互不污染。先读 [10-29 交接的 G4 条目](#handoff-20261029)、[scene-graph.md 的显示会话边界](scene-graph.md)与 v33/v34 显示窗口证据（G2 的显示四边界是 G4 的直接基础）。
+- **G4**：确认 OAR 阶段变量来源，验证历史、回调和 sink 的隔离——即候选在面板显示链里被驱动时，OAR 与游戏本体动画状态互不污染。先读 [10-29 交接的 G4 条目](#handoff-20261029)、[scene-graph.md 的显示会话边界](scene-graph.md)与 v33/v34 显示窗口证据（G2 的显示四边界是 G4 的直接基础）。**2026-10-31 收尾补充：G4 预注册契约已立（[C-G4 契约](#c-g4-context-isolation)）——含显示链/OAR 交接面的代码级核实（显示激活期间产品查询不执行、投影硬编码、候选直调引擎入口）与三段实验设计（A 求值可见性哨兵、B 世界历史 A/B 对照、C 关闭清理），待实现与授权上机。**
 - **G5**：完整姿态对照——提前固定位置/旋转/缩放阈值及依据，核对全部有效层与骨；G3-B 的 pose 哈希基线（装备段 `bc160a8c/63f638a6/c407cb4e`、卸下段 `8fb4cd33/4f2aebde/c407cb4e`）可作为其确定性锚点。
 - **G6**：生命周期与资源恢复（源恢复、请求/任务失效、预览自有引用/回调/sink/历史、重复会话收敛）；装载 teardown 仍 NO-GO，全局登记计数无可测锚点。
 
@@ -2637,3 +2637,74 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **裁定：G3-B PASSED（限定范围：相位序列回放）。** 候选仅凭 {`WeapEquip`(2)，`Unequip`(144)} 两个外部输入，在自身状态机上完整走完 Equip→Idle→Unequip，两处段内转移均由图内剪辑尾触发器自发完成，全程无任何变量写入。`iState` 按预注册只记录（全程 0，残余独立立项）；姿态对照按预注册归 G5。
 
 **收尾状态**：部署 INI 已回 dormant（v59 留装）；G3-B 关闭，按排序进入 **G4（语境隔离：OAR 阶段变量来源、历史/回调/sink 隔离）**。
+
+<a id="c-g4-context-isolation"></a>
+## C-G4 契约：OAR 上下文、历史与回调隔离（草案，2026-10-31，未实现）
+
+**背景与目标**：G3-B 已证候选仅凭 {`WeapEquip`(2)，`Unequip`(144)} 即可在自身状态机走完装卸全相位序列。按预注册排序，本契约验收 **G4 语境隔离**：候选在面板显示链里被驱动时，OAR 与游戏本体动画状态互不污染——OAR 阶段变量的读取来源符合各自语境（[10-29 交接 G4 定义](#handoff-20261029)："身份/装备允许按明确设计借读，阶段状态必须对应候选"）、预览不消耗世界 Random/顺序/PlayOnce 历史、回调与 sink 作用域不跨界、关闭只清预览自有登记。三段实验 **A → B → C** 排序：A 的求值可见性结论是 B/C 的隔离前提，A 判负时 B/C 停止。
+
+### 代码级静态前提（2026-10-31 本会话核实，反模式 12 要求当场断言）
+
+以下六项为本契约的静态地基，全部已按现行代码（oar-idle3 @ `1edc743`）核实；实现或上机前若代码变动须重新核对：
+
+1. **显示激活期间产品 OAR 查询不执行**：`AnimationController::advance` 的 `display_pose()` 分支（[controller.cpp](../src/animation/controller.cpp) 1187）取得候选姿态后提前返回，产品选片/`query_animation`/`ScopedEvaluation` 及 DAC 注记派发（`session->dispatch`，1222）都位于其后。产品查询与候选显示在单次 advance 内互斥——"预览语境的 OAR 求值"在当前设计下不存在，本契约以运行日志坐实该互斥。
+2. **产品投影是硬编码静态值**：`preview_state()`（[controller.cpp](../src/animation/controller.cpp) 108）只填常量（Speed=0、Direction=0、IsEquipping=0 等），**不读任何活图变量**。"阶段变量读谁"在产品路径上由设计消解（都不读）；kProjected 模式下非投影条件保持"引擎自己的答案"= 读源 Actor 真实图（设计内借读，仅发生在候选关闭时）。
+3. **候选驱动链为插件直调引擎入口**：`drive_candidate_step`（[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 213）直调 63602 帧管线 / 63587 更新包装 / 63589 或 63581 采样。OAR 的已知钩子面是装载期 `LoadClips` 与查询期 `GetReplacementAnimation`（[oar-hooks.md](oar-hooks.md)），候选驱动不调用这两类入口；**是否穿过 OAR trampoline 的引擎内部函数属运行期证据，由 A 段求值观察器回答**。
+4. **候选为方案 A 空壳装载**：内嵌自有 hkbCharacter（+0xC0，[构造审计](behavior-graph-construction-audit.md)），holder=nullptr。OAR per-actor 上下文以 holder REFR 为键；空 holder 时其兜底取 rootNode（构造审计 129 行："空 holder 的图仍可能被 OAR 求值，取决于 rootNode 的归属"——候选 rootNode 为复制树借用期非空，兜底是否命中由 A 段运行证据回答）。
+5. **候选/源变量值分储**：候选与源共享同一 `hkbBehaviorGraphData`（C-VC1 判定），但变量**值**按图实例分储——G3-B 已证对候选按名写入不触碰源。阶段哨兵（A 段）的可区分性由此保证。
+6. **既有观察面可直接复用**：`OAR COND actor=… clip-key=…` 求值行（[hooks.cpp](../src/animation/oar/hooks.cpp) 994，详细模式）、`ANIMATION WORLD … clips=` 源侧选中快照（[controller.cpp](../src/animation/controller.cpp) 875，面板打开时自动发射）、S1 探针观测模式（空名 observe-only）、`source-drift` 源对照与 `SourceEventCapture` 源图事件捕获。B 段的世界选中证据采集无需新仪器行。
+
+### 实验设计与判据（预注册，不得事后放宽）
+
+#### A：OAR 求值可见性与来源哨兵（上机）
+
+**哨兵构造**：候选经 G3-B 同款两次注入回放（`inject` + S1 观测 + S6 三键，[C-G3B-F](#c-g3b-f-full-replay) 配置）进入与源可区分的阶段——候选 `IsEquipping=1`/`currentDefaultState=10` vs 源 MT `IsEquipping=0`/`currentDefaultState=0`。窗口全程 `DetailedAnimationTrace=true`。
+
+**仪器（v60 新增，最小面）**：
+1. **OAR 求值窗口标记 + 交集检测**：在既有求值观察处（hooks.cpp），当候选活动窗口激活时，对每条 OAR 求值记录求值身份（actor-id、clip-key、可取得的 graph/hkbCharacter 指针）与候选身份（保留图 `g_held_graph`、其 characterInstance、复制树根）的比对；交集非零输出 `OAR CONTEXT overlap=…` 行，窗口结束时输出汇总 `OAR CONTEXT window=… evaluations=N overlaps=M`。新 INI 键 `[Experiment] OarContextWatch`（默认 false，重启生效）。
+2. **显示抑制计数**：advance 显示分支每帧累计，窗口关闭时输出一行 `DISPLAY advance display-frames=N product-query-suppressed=N`（[controller.cpp](../src/animation/controller.cpp) 显示分支处，约 5 行）。
+
+**判据（预注册）**：
+1. **主判据（隔离正向）**：候选活动窗口内 `overlaps=0`——OAR 求值不触碰候选图/候选 hkbCharacter/复制树；
+2. **辅判据（互斥坐实）**：`product-query-suppressed` 计数 > 0，且窗口内无产品查询产物行（`OAR COND`/`OAR bases`/选片行）；
+3. **哨兵裁定（仅当 overlaps>0 时启用）**：交集求值所读取的阶段变量值须入档并裁定来源——读到**候选值**（哨兵泄漏）即 G4-A 判负；读到**源值**须解释哪条路径把源图带进该求值语境（预期嫌疑：holder=nullptr 时 rootNode 兜底命中复制树，见静态前提 4）。判负不回滚 G3-B，另立切片定位求值入口。
+
+#### B：世界历史消耗 A/B 对照（上机，需 A 通过）
+
+**A/A 基线（先行）**：同一存档点、同装备，**无预览**直接执行同一动作序列（拔刀-收刀 ×N，N≥3）两次，比对 OAR 选中序列可重复性。A/A 不一致说明该序列含不可控随机（OAR Random 条件或游戏内随机），对照设计无效——须换用可重复序列后**重新预注册**，不得带噪声上机。
+
+**配置（防基线污染）**：A/A 基线与运行 A 用 `IndependentGraph=off`（纯产品路径——面板打开不得触发候选实验）；仅运行 B 用 `inject`。`ANIMATION WORLD` 行在两种配置下都发射（无面板外新仪器）。实验为每进程一次（[independent_graph.h](../src/animation/behavior_graph/independent_graph.h)），B 的后续开面板只做记录性显示请求，不再回放。
+
+**运行 A**：固定初态 → 直接执行动作序列（每步动作后开面板记录、关面板继续）→ `ANIMATION WORLD` 行逐项记录源侧选中。
+**运行 B**：读档回同一存档点（同初态）→ 打开面板跑候选显示 ≥20 秒（含两次注入回放）→ 关闭面板 → 执行相同动作序列（同逐项记录法）→ 记录。
+
+**判据**：A/A 与 A/B 的选中序列**逐项一致**（剪辑名/绑定名/变体）→ 预览未消耗世界 Random/顺序/PlayOnce 历史，历史隔离成立；不一致 → 差异点入档，在三嫌疑（候选 native 步进、产品查询、DAC 派发）中定位消耗者后另立切片。OAR 版本、项目集合、加载顺序在两运行间不得改动；手动操作时长差异不算差异，**选中结果**才算。
+
+#### C：关闭清理与 sink 作用域（上机，与 B 同会话可合并执行）
+
+**流程**：候选显示 + 回放结束后关闭面板 → 记录 DisplaySession close/reset 行、DAC 恢复状态（对照 [dac.md](dac.md) 既有 `restore matched` 证据）、EquipSink 存活性（关闭后再做一次换装，预览修订照常触发）。
+
+**判据（预注册）**：
+1. 关闭只清预览自有登记：SCOPY 台账遵守既有规则（retained-total 只增不减属"刻意保留"例外；无新增未配对句柄行）；
+2. 源 Actor 的 OAR 状态与 sink 存活：关闭后世界动作照常选中（B 运行后半已证），换装事件照常到达 EquipSink；
+3. 候选步进全程 `source-drift=none` + `SourceEventCapture` 源图零事件（G3-B 判据复用——候选自发转移产生的事件（`WeapEquip_Out`/`Unequip_Out`）不泄漏进源图事件路由）。
+
+### 仪器影响面（v60）
+
+- `hooks.cpp`：求值观察处加窗口标记 + 交集检测 + `OAR CONTEXT` 行（判据 A1/A3）。
+- `controller.cpp`：显示分支抑制计数一行（判据 A2）。
+- `settings`：新键 `[Experiment] OarContextWatch`（默认 off）。
+- 其余零新代码：S1 观测模式、`ANIMATION WORLD`、`source-drift`、SourceEventCapture 均为 v59 既有仪器。`PLUGIN_SOURCES` 预计不变（按实现定）。
+
+### 门与部署注意
+
+- **门**：v60 DLL/PDB 部署 + INI 按段配置（命名注意区分：**实验 A** = `inject` + S1 观测两键（`CandidateInputProbe=true`、`CandidateInputVariable=` 空）+ S6 卸下两键（`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`）+ `OarContextWatch=true` + `DetailedAnimationTrace=true`；**B 段的 A/A 基线与运行 A** = `IndependentGraph=off`；**B 段的运行 B** = 实验 A 配置）。上机由用户执行，每次换配置先备份当前 INI。
+- **INI 卫生（反模式 11）**：当前部署 INI 中 `CandidateUnequipEvent` 键**重复出现两次**（S6 与 F 两次部署叠加，值相同无行为影响）——v60 部署时必须清理，且部署后逐键打印回读断言。
+- **停止条件**：崩溃、非有限值、`source-drift` 非 none 立即停止；A 段 overlaps 非零时停止 B/C（隔离前提不成立）。
+
+### 非目标与残余关联
+
+- **非目标**：不新增 DAC 事件捕获通道（G4 定义原文："DAC 要在事件捕获和隔离证明后另行接入既有受控通道"——本轮只验证 DAC 现状行为与恢复）；装载 teardown 维持 NO-GO；G5 姿态阈值不制定；不做源姿态对照。
+- **残余关联**：[652/8223 合并矛盾](#handoff-20261031-night)（运行时变量表含静态文件之外的注入内容，指向 OAR 系运行时改图）——A 段求值观察若记录到 OAR 对候选图 data/变量的触碰即为该项的收敛证据；零交集则该项保持独立残余，不因 G4 通过而关闭。候选侧 `iState` 恒 0 与 `currentDefaultState` 引擎镜像机制两项残余继续独立，不阻塞 G4。
+
+**状态：契约已预注册，未实现。** 实现按"草案 → 实现/构建（v60）/获授权上机"推进；运行结果回填在下方追加，不改写本节既有文字。
