@@ -2273,6 +2273,29 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **门**：`CandidateUnequipProbe=true` + `IndependentGraph=inject` + `CandidateUnequipVariable=<名字>`。
 
-**状态：已实现、已构建（干净身份 `…-9f1bbb9e59-…`，[v55 build](build.md#v55-unequip-variable-2026-10-31)）、已部署待上机。** 实现仅涉及 S3 第二段的写法分支与新 INI 键（`CandidateUnequipVariable`，空 = 保持 S3 事件路径），无新增策略逻辑；写入缺名/类型不支持按 S1 惯例 skip（不跑采样窗）。部署 INI 为第一轮：`inject` + `CandidateUnequipProbe=true` + `CandidateUnequipVariable=bEquipUnequip`。第二/三轮只改 INI 换名重跑同一二进制；首轮结果回填时在下方追加，不改写本节既有文字。
+**状态：已实现、已构建（干净身份 `…-9f1bbb9e59-…`，[v55 build](build.md#v55-unequip-variable-2026-10-31)）、已部署。** 实现仅涉及 S3 第二段的写法分支与新 INI 键（`CandidateUnequipVariable`，空 = 保持 S3 事件路径），无新增策略逻辑；写入缺名/类型不支持按 S1 惯例 skip（不跑采样窗）。部署 INI 运行后已换为第二轮名单，仓库样例保持新键为空。结果按轮回填在下方追加，不改写本节既有文字。
 
 **第一轮（2026-10-31 16:45，v55，`bEquipUnequip`；[日志](diagnostics/CharacterPanel-g3bs4-r1-bequipequip-20261031-1645.log) 72,238 字节 SHA-256 `685ed235…`）：判负。** settle 第三次逐点复现（`target-step=49 settled-step=63 baseline-nodes=111`）；`phase=input outcome=write name='bEquipUnequip' index=125 type=BOOL setter=SetGraphVariableBool result=true readback=1`，且该值在 121 行采样中**全程保持 1**——写入被接受且持久，但 `default` 121 点恒 1、`nodes` 恒 111、`IsUnequipping`/`PitchManualOverride` 恒 0，运动 119/119（装备 idle 照常动画），无崩溃、`source-drift=none`。主判据未命中。负结果含义明确：**值进了槽、状态机不认**——`bEquipUnequip` 读作图内输出（源侧由卸下序列自身清零，候选无序列可清）。按阶梯进第二轮 `IsUnequipping`（INI-only，已部署，v55 二进制不变）。
+
+<a id="c-g3b-e2-write-capture"></a>
+## C-G3B-E2：源图 setter 写观察（草案，2026-10-31，未实现）
+
+**背景**：v41 原始日志（15,705 字节全量，非选摘）复核给出新事实：**从装备完成（48.159）到卸下转移（53.652）的 5.5 秒里，源图变量空间唯一的活动只有 `TimeDelta`（REAL 帧时长抖动）**——没有任何持久性命令变量先于转移。结合 E1（无 58377 事件）与 S4r1（`bEquipUnequip` 持久写入不触发），剩余假设只有一个可检验形态：引擎在转移当刻经 **typed setter**（`BShkbAnimationGraph::SetGraphVariableBool/Int`）写过某个变量，但该写入是**瞬态**的（写后 1–2 帧内被图自身消费/清零），被 v37 的 settle-3 规则滤掉。本探针在 setter 入口直接观察，瞬态与非瞬态都逃不掉。
+
+**机制**：复用 E1 已验证的只读 detour 机械，两个 hook：`SetGraphVariableBool`（REL 63607，VA `0x140bb6600`）与 `SetGraphVariableInt`（REL 63609，VA `0x140bb6790`；本机 `versionlib-1-6-1170-0.bin` 按 CommonLib IDDB v2 增量格式解析得出，解析器以 58377→`0xab58a0` 与 E1 交叉验证）。两函数头部同为 `48 89 5c 24 10`（`mov [rsp+10h],rbx`，5 字节、RIP 无关、边界恰在 +5）——5 字节 jmp 无需填充、仅重定位这一条指令。运行时安装前照 E1 惯例核对头部字节。**Float setter（63608）不在范围**（值通道为 xmm2，且已知 REAL 活动只有帧时长噪声）；若判据需要再单独立项。
+
+**回调读集与纪律**：`this`（图指针）、`BSFixedString*`（名字）、值（r8）。记录函数在调用现场**立即复制名字 ≤64 字节**进环（调用者的名字对象是栈临时，render 侧延迟读会悬垂——这是与 E1 事件行的关键实现差异），随记录 {图指针, 名字, 值}；无锁 SPSC 环、溢出计数，其余纪律同 E1（不分配、不持锁、不调引擎函数、立即转发）。**门**：源图集合（采样器 baseline 时发现的玩家全部非第一人称图，≤4 指针的原子数组）——E1 只盯一张图，本探针盯玩家所有图，一并闭合"事件/写去别的图"的残余。窗口关闭时 gate 为空直接放行。
+
+**窗口与预算**：新键 `[Experiment] SourceWriteCapture=false`；`IndependentGraph=off`；与 SourceTimeline/SourceEventCapture 三者互斥（同开属非法配置，加载告警，优先级 SourceTimeline > SourceEventCapture > SourceWriteCapture）。F7 开 20 秒窗；采样器同窗记录 settled 相位行（五个装备链变量 + 节点数，settle-3 规则）作对齐锚；写行预算 300 行/窗，相位行 200 行/窗，任一耗尽即关。
+
+**判据（预注册）**：run sheet 同 E1（F7 → 装备单手武器 → ~2 s → 卸下 → ~2 s）。以卸下转移（`default` 首离 1）±10 帧为锚：**锚内有 setter 写行** → 该 (名, 值) 即触发候选——S5 从候选 equipped idle 写它（沿用 S4 机械，INI-only 换名）；**锚内无任何写行** → 与 E1 合并得出"外部调用路线全线判死"（事件 + setter 都不在转移当刻发生），转移由图内部逻辑驱动，路线转向图内结构分析（嵌套状态机/转移条件审计），另行立项。装备锚（首离 0）同样记录作对照——预计能看见 audit27 的装备态写（46.634 段），这同时是仪器正确性的正控。
+
+**非目标**：不写任何变量、不注入事件、不触碰候选、Float setter 不观察、不宣称 G3-B 前置完成。
+
+**停止条件**：崩溃（detour 崩溃即回退纯观察、INI 回 off、归档 crash 报告）；源丢失/替换/读档取消照既有规则。
+
+**离线用例**：名字复制的环（含悬垂防护：调用现场复制）、门数组匹配、双预算——`cl /W4 /WX` 全过。
+
+**实现影响面**：新模块 `source_write_capture.{h,cpp}`，`PLUGIN_SOURCES` 31→32；stub 构造器与 E1 同款复制（记录签名不同，不强抽公共件）；文档同步按维护约束。**部署排序：S4 阶梯（第二/三轮）仍在同一部署 INI 上等待上机，E2 构建完成后不部署，阶梯判死或打平后再部署**——两实验共用 F7 与部署位。
+
+**状态：草案，未实现、未构建。** 头部字节与 VA 已按上述核实；实现顺序 = 策略头 + 离线用例 → 双 detour 接线 → 本地构建 →（阶梯结束后）部署。
