@@ -2234,4 +2234,16 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **实现影响面**：新增 hook 载体 `.cpp`，`PLUGIN_SOURCES` 30→31；`SKSE::GetTrampoline()` 为工具链既有能力；按维护约束同步主文档、animation、OAR、build、maintenance、README、config 与 CHANGELOG。
 
-**状态：已实现、已构建（干净身份 `…-995d32347d-…`，[v54 build](build.md#v54-event-capture-2026-10-31)）、已部署待上机。** 安全前置已按本节条款完成并记录在构建节：58377 头部 7 字节 `48 8b c4 48 89 48 08` 从审计用的 Steamless 解包镜像（SHA-256 `843823c1…` 与台账一致）读出，两条指令均无 RIP 相对寻址、边界在 +7，5 字节 jmp + 2 填充可安全落位；桩头 `48 83 ec 48 48 83 7a 08 00` 与审计 `0xab1f30` 记录互证。实现要点：detour 头部字节在**运行时安装前再核对一次**（不匹配则记下实测 16 字节、不装 hook）；thunk 保存全部寄存器与标志、调用记录函数后跳转重定位头；环为"满时丢最新"语义（生产者不得写消费者尾索引，SPSC 单写者约束），逐帧 drain 下该路径实际不可达，dropped 计数是响亮失败信号。离线三例（环序/溢出/drain-discard、双预算独立关窗、cancel 与到期优先）`cl /W4 /WX` 通过。部署 INI：`SourceEventCapture=true` + `IndependentGraph=off` + `SourceTimeline=false`，其余全 off；仓库样例全 off。首轮结果回填时在下方追加，不改写本节既有文字。
+**状态：已实现、已构建（干净身份 `…-995d32347d-…`，[v54 build](build.md#v54-event-capture-2026-10-31)）、已部署；首轮已上机，事件路线判负（见下）。** 安全前置已按本节条款完成并记录在构建节：58377 头部 7 字节 `48 8b c4 48 89 48 08` 从审计用的 Steamless 解包镜像（SHA-256 `843823c1…` 与台账一致）读出，两条指令均无 RIP 相对寻址、边界在 +7，5 字节 jmp + 2 填充可安全落位；桩头 `48 83 ec 48 48 83 7a 08 00` 与审计 `0xab1f30` 记录互证。实现要点：detour 头部字节在**运行时安装前再核对一次**（不匹配则记下实测 16 字节、不装 hook）；thunk 保存全部寄存器与标志、调用记录函数后跳转重定位头；环为"满时丢最新"语义（生产者不得写消费者尾索引，SPSC 单写者约束），逐帧 drain 下该路径实际不可达，dropped 计数是响亮失败信号。离线三例（环序/溢出/drain-discard、双预算独立关窗、cancel 与到期优先）`cl /W4 /WX` 通过。部署 INI 运行后已回 dormant off（v54 DLL 留装），仓库样例全 off。结果回填在下方追加，不改写本节既有文字。
+
+**首轮运行（2026-10-31 16:31，v54，AE 1.6.1170，actor 00000014；[日志](diagnostics/CharacterPanel-g3be1-event-capture-20261031-1631.log) 6,937 字节 SHA-256 `d43ad1b1…`）：事件路线判负，负结果决定性。**
+
+| 流 | 观测 |
+| --- | --- |
+| 安装 | `installed target=0x7ff7584458a0 stub=0x7ff6d91e0000 original=0x7ff6d91e0050 head=48 8b c4 48 89 48 08`——运行时头部核验通过，detour 在位；16:30:42 一次读档触发 `invalidated reason=world-reset`，取消路径工作，随后显式 F7 开窗成功 |
+| 相位流 | 装备 `0→10→1`（`iState 0→9`、`IsEquipping` 脉冲、节点 36→51→33→80→65）；卸下 `1→12→0`（`iState 9→0`、`IsUnequipping`/`bEquipUnequip` 脉冲、节点 65→81→33→52→36）——与 v41 基线逐项一致：监视的 463 词玩家自有图正确，相位流可靠。五个相位名全部解析（113/94/110/111/125，与 C-VC1 索引一致） |
+| 事件流 | **`events=0`，`ring-dropped=0`**——两次真实相位转移全程，引擎没有向这张图派发任何经 58377 的事件；`window-closed reason=expired events=0 phases=20` |
+
+**裁定**：装备锚与卸下锚（`currentDefaultState` 首离 0 / 首离 1 ±10 帧）窗口内事件行为空，按预注册判据记负结果——**真实装备/卸下流程不经 58377 可见的事件驱动**。这与全部既有证据自洽：v52 的 `WeapEquip` 注入能推进候选装备相位（事件触发入口存在，但真实流程不走它）；[audit27](behavior-graph-construction-audit.md) 的三个静态外部整数 setter 位点指向真实流程的机制是**引擎代码直接写图变量、状态机按变量条件转移**。剩余未测线索收敛为本节草案预注册的那条：**卸下侧变量从未作为输入写过**——S1/S2 只测过装备侧（`iRightHandEquipped`、`IsEquipping`），`bEquipUnequip`(125) 与 `PitchManualOverride`(65) 从未写过，且两者已证存在于候选 652 表。下一个切片应复用 S3 的两段结构（`WeapEquip` → settle 门），把第二段从事件分发换成对卸下侧变量的按名 typed setter 写入。
+
+**残余限定（如实入档）**：本仪器按设计只对源图指针过滤，无法区分"引擎不向这张图派发事件"与"引擎根本不经 58377 派发任何事件"（后者意味着"两条原生路径都过 58377"的审计覆盖不完备）。闭合它需要一个极小全局计数探针；就当前决策而言不需要——负结果已足以把下一片指向卸下侧变量。部署 INI 已回 dormant off（1,633 字节 `aa49d0f7…`）。

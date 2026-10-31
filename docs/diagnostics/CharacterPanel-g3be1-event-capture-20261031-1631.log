@@ -1,0 +1,73 @@
+[16:28:25.263] [32880] [I] CharacterPanel v1-2-1-0
+[16:28:25.263] [32880] [I] CharacterPanel loaded
+[2026-10-31 16:28:25.262] [thread 32880] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(78): [info] CharacterPanel v1-2-1-0
+[16:28:45.439] [32880] [I] OAR Animations V1 mapping API available
+[16:28:45.439] [32880] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[16:28:45.439] [32880] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[16:30:04.233] [41396] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[16:30:04.233] [41396] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[16:30:04.233] [41396] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[16:30:04.233] [41396] [I] EXPERIMENT setting IndependentGraph=off
+[16:30:04.233] [41396] [I] EXPERIMENT setting DisplayPose=false
+[16:30:04.233] [41396] [I] EXPERIMENT setting DisplayStep=false
+[16:30:04.233] [41396] [I] EXPERIMENT setting SourceTimeline=false
+[16:30:04.233] [41396] [I] EXPERIMENT setting SourceEventCapture=true
+[16:30:04.233] [41396] [I] EXPERIMENT setting CandidateVariableCensus=false
+[16:30:04.233] [41396] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[16:30:04.233] [41396] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[16:30:04.233] [41396] [I] EXPERIMENT setting CandidateUnequipProbe=false
+[16:30:04.235] [41396] [I] SOURCE EVENTCAPTURE installed target=0x7ff7584458a0 stub=0x7ff6d91e0000 original=0x7ff6d91e0050 head=48 8b c4 48 89 48 08
+[16:30:04.235] [41396] [I] DAC native inventory lifecycle sink installed
+[16:30:04.240] [41396] [I] All shaders compiled
+[16:30:04.240] [41396] [I] Installed pre-UI renderer hook
+[16:30:04.240] [41396] [I] Panel menu sink installed
+[16:30:04.240] [41396] [I] CharacterManager equipment sink installed
+[16:30:04.240] [41396] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-behavior-graph-v54-event-capture-20261031-995d32347d-cl94faaed0c6-20261031T081640Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[16:30:04.250] [37100] [I] Studio host changed: 0x0 -> 0x212ac986980 (paused=true)
+[16:30:04.250] [37100] [I] Studio light node has been created
+[16:30:04.250] [37100] [I] CP-LIGHT slot 0: registered, shell 0x2140e067880 queued (ledger stays the authority)
+[16:30:04.250] [37100] [I] CP-LIGHT slot 1: registered, shell 0x2140e067740 queued (ledger stays the authority)
+[16:30:04.250] [37100] [I] CP-LIGHT slot 2: registered, shell 0x2140e067600 queued (ledger stays the authority)
+[16:30:04.250] [37100] [I] Studio lights registered on the ledger (scene=0x208c9dc6e80 -- ledger fetch will populate the slots)
+[16:30:04.250] [37100] [I] CP-LIGHT slot 0: ledger shell fetched 0x2140e067880 (after 0 miss frames)
+[16:30:04.250] [37100] [I] CP-LIGHT slot 1: ledger shell fetched 0x2140e067740 (after 0 miss frames)
+[16:30:04.250] [37100] [I] CP-LIGHT slot 2: ledger shell fetched 0x2140e067600 (after 0 miss frames)
+[16:30:42.112] [32880] [I] DAC old-world sessions discarded world=2
+[16:30:42.354] [37100] [I] SOURCE EVENTCAPTURE invalidated reason=world-reset
+[16:30:42.689] [37100] [I] CP-LIGHT slot 0: ledger shell dropped
+[16:30:42.689] [37100] [I] CP-LIGHT slot 1: ledger shell dropped
+[16:30:42.689] [37100] [I] CP-LIGHT slot 2: ledger shell dropped
+[16:30:42.689] [37100] [W] Studio lights not fully served by the ledger yet
+[16:30:49.356] [37100] [W] Studio lights not fully served by the ledger yet
+[16:30:56.056] [37100] [W] Studio lights not fully served by the ledger yet
+[16:31:00.253] [37100] [I] CharacterManager watch actor=00000014
+[16:31:00.285] [37100] [I] OAR bases stage=world-prewarm project=0x2125b366400 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=5.971
+[16:31:00.285] [37100] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x2140e067c40 filed to lightQueueAdd)
+[16:31:00.285] [37100] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x2140e067240 filed to lightQueueAdd)
+[16:31:00.285] [37100] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x2140e067100 filed to lightQueueAdd)
+[16:31:00.388] [37100] [I] CP-LIGHT slot 0: ledger shell fetched 0x2140e067c40 (after 1 miss frames)
+[16:31:00.388] [37100] [I] CP-LIGHT slot 1: ledger shell fetched 0x2140e067240 (after 1 miss frames)
+[16:31:00.388] [37100] [I] CP-LIGHT slot 2: ledger shell fetched 0x2140e067100 (after 1 miss frames)
+[16:31:18.445] [40068] [I] SOURCE EVENTCAPTURE arm-requested
+[16:31:18.491] [32880] [I] SOURCE EVENTCAPTURE window-open actor=00000014 words=463 nodes=36 events-budget=600 phases-budget=200 seconds=20 tracked currentDefaultState=113 iState=94 IsEquipping=110 IsUnequipping=111 bEquipUnequip=125
+[16:31:20.624] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 0->10
+[16:31:20.624] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 0->1
+[16:31:20.624] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 36->51
+[16:31:20.951] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 51->33
+[16:31:21.910] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 10->1
+[16:31:21.910] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 0->9
+[16:31:21.910] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 33->80
+[16:31:22.110] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 1->0
+[16:31:22.110] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 80->65
+[16:31:27.749] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 1->12
+[16:31:27.749] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsUnequipping' 0->1
+[16:31:27.749] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='bEquipUnequip' 0->1
+[16:31:27.749] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 65->81
+[16:31:27.941] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 9->0
+[16:31:27.941] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 81->33
+[16:31:28.872] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 12->0
+[16:31:28.872] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 33->52
+[16:31:29.120] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsUnequipping' 1->0
+[16:31:29.120] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='bEquipUnequip' 1->0
+[16:31:29.120] [32880] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 52->36
+[16:31:38.496] [32880] [I] SOURCE EVENTCAPTURE window-closed reason=expired actor=00000014 events=0 phases=20 ring-dropped=0
