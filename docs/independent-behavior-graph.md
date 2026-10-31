@@ -2762,3 +2762,16 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **A2 裁定：失败签名确定排除**（2037 次求值零源归属、零 overlaps、源漂移逐位为零、复放确定性保持）；**通过条件仍未满足**（owner=neither 未解释、numeric 读取性质未知）——**G4-A 仍未决，但危险半边（源侧接触）已以高置信度关闭**。B 段验收的世界侧问题（Random/历史消耗）与 owner 解释相互独立，但按契约纪律维持暂停至判读闭合。
 
 **C-G4-A3 微切片（预注册，3 项仪器增量，同 INI 配置同操作）**：①numeric 命中行记录 `type=N` 原始类型值（区分图变量 vs 其他值源）；②`post-activate` 快照行附带 `scan=cand-entries/cand-count/src-entries/src-count`（与 DriveState 的 `/97` 锚定，验证扫描基址）；③命中行附带当帧 `cand-count`（活计数锚）。判读规则：numeric 全部 type≠3 且扫描锚健全（count≥90 与 DriveState 一致）→ H1 成立（模板级评估、无图变量读取）→ **判据 1 按修订解释关闭，B/C 解禁**；type=3 出现 → 图变量读取存在，按 name/owner 继续裁；扫描锚不健全 → 扫描修正后重跑。
+
+**A3 首轮运行（2026-10-31 23:46，v62 身份 `2dbe98c785` 活日志确认，actor 00000014 request=1；[日志](diagnostics/CharacterPanel-g4a3-scan-anchor-20261031-2345.log) 136,736 字节 SHA-256 `231032cb…`）：双证齐，H1 成立——G4-A 判据 1 按修订解释关闭。**
+
+| 项 | 观测 |
+| --- | --- |
+| 扫描锚 | `OAR CONTEXT scan cand-list=0x1c8f35ee9c0 cand-entries=0x1c8c6019540 cand-count=97 src-list=0x1c8f41e89f0 src-entries=0x1c8cb9ec120 src-count=106`——双侧 entries/count 全为活值，cand-count=97 与 DriveState `active-nodes=…/97` 同源互证；**扫描在真实数据上行走，布局正确**，neither 分类可信 |
+| numeric 类型 | 命中行 `type=0` 全部（25 行采样零 type=3）——**零图变量读取**（type 3 = 图变量访问器；type 0 为其他值源，语义未标注但不属图变量），A2 的名字全空由此解释 |
+| owner | `neither ×2043`（`window=experiment evaluations=2043 overlaps=0 sites=e:1382/n:72/s:341/r:248 owner=cand:0/src:0/neither:2043`，与 A2 的 2037 同构）——扫描已证健全，neither = 评估对象**确在两图激活集之外 = 模板节点**（OAR 装载期记录捕获共享模板树上的 clip generator） |
+| 复用守门 | **第三次全过**：恰好两次 `result=dispatched`；装备段 `bc160a8c…`、卸下段 `8fb4cd33…` 逐位一致；`source-drift=none`；零 `[E]`；显示窗口（稳态 idle）`evaluations=0` 复现 |
+
+**G4-A 收官裁定：PASSED（限定范围：OAR 求值语境隔离，判据 1 按修订解释关闭）。** 三轮运行（v60/v61/v62）合并证据链：①候选活动窗口内的 OAR 求值 = **OAR 装载期记录的逐帧机制在评估共享模板树上 clip 的替换条件**（激活期零、非 idle 剪辑逐帧 ~13/3.4、稳态 idle 零），全部以 REFR=null（候选无 holder，模板无 REFR 可解析）进行；②**零图变量读取**（72 次 numeric 全为非图变量型 type=0）；③**零源侧接触**（owner=src:0、overlaps=0、源哈希三轮逐位不变）；④产品查询与候选显示的结构互斥坐实（武装窗口内零产品查询产物行）。"OAR 求值不触碰候选图/源图变量"按修订解释成立：触碰的是**共享模板级替换数据**（装载期由 OAR 写入图内容，两图本就共享），不是任一图的运行时变量/激活状态。残余已知项：numeric type=0 的具体语义、模板级评估是否写 OAR 内部状态（③仍间接）——均不构成源/候选运行时污染信号，随 B 段世界动作验收自然覆盖。
+
+**B/C 解禁。** 下一步 = B 段（A/A 基线 ×2 → 运行 A，配置 `IndependentGraph=off`；运行 B，配置 `inject`+显示+回放），判据不变（世界动作选中序列逐项一致）。C 段可与 B 的运行 B 同会话。
