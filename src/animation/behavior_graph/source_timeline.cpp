@@ -56,6 +56,10 @@ namespace animation::behavior_graph
             std::vector<std::int32_t> candidate;
             std::vector<std::uint8_t> settled;
             std::vector<std::uint8_t> named;
+            // C-G3B-E3: per-index transient mode - BOOL/INT-typed variables log every observed
+            // word change immediately (settle-0), catching one-frame command writes the
+            // settle-3 rule filters out. REAL/quad types keep settle-3.
+            std::vector<std::uint8_t> transient;
             std::int32_t node_count = -1;
             std::int32_t node_candidate = -1;
             std::uint8_t node_settled = 0;
@@ -126,12 +130,28 @@ namespace animation::behavior_graph
             a_state.candidate.assign(a_words, a_words + a_count);
             a_state.settled.assign(a_count, 0);
             a_state.named.assign(a_count, 0);
+            a_state.transient.assign(a_count, 0);
+            if (source_transient_watch())
+            {
+                RE::hkbBehaviorGraphData const* const data = a_behavior.data.get();
+                if (data && data->variableInfos.size() >= a_count)
+                {
+                    for (std::size_t i = 0; i < a_count; ++i)
+                    {
+                        std::int8_t const type = static_cast<std::int8_t>(
+                            data->variableInfos.data()[i].m_type.get());
+                        a_state.transient[i] = type >= 0 && type <= 3 ? std::uint8_t{ 1 } :
+                            std::uint8_t{ 0 };
+                    }
+                }
+            }
             void* const nodes = a_behavior.activeNodes;
             a_state.node_count = nodes ? field_at<std::int32_t>(nodes, kNodeCountOffset) : 0;
             a_state.node_candidate = a_state.node_count;
             a_state.node_settled = 0;
-            logger::info("SOURCE TIMELINE window-open actor={:08x} words={} nodes={} seconds={}", a_actor_id, a_count,
-                a_state.node_count, Source_Timeline_Window.count());
+            logger::info("SOURCE TIMELINE window-open actor={:08x} words={} nodes={} seconds={} mode={}",
+                a_actor_id, a_count, a_state.node_count, Source_Timeline_Window.count(),
+                source_transient_watch() ? "transient" : "settled");
         }
 
         void sample_variables(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
@@ -140,6 +160,26 @@ namespace animation::behavior_graph
             for (std::size_t i = 0; i < a_count; ++i)
             {
                 std::int32_t const current = a_words[i];
+                if (a_state.transient.size() > i && a_state.transient[i] && current != a_state.logged[i])
+                {
+                    // Transient mode: a one-frame write (and its revert) must be visible, so
+                    // every observed change against the last logged value logs immediately.
+                    if (!take_line(a_state))
+                        return;
+                    std::int32_t const previous = a_state.logged[i];
+                    a_state.logged[i] = current;
+                    a_state.candidate[i] = current;
+                    a_state.settled[i] = 0;
+                    char const* name = a_state.named[i] ? nullptr : variable_name(a_behavior, i);
+                    if (name)
+                        a_state.named[i] = 1;
+                    if (name)
+                        logger::info("SOURCE TIMELINE variable index={} name='{}' {}->{} mode=transient", i, name,
+                            previous, current);
+                    else
+                        logger::info("SOURCE TIMELINE variable index={} {}->{} mode=transient", i, previous, current);
+                    continue;
+                }
                 if (current != a_state.candidate[i])
                 {
                     a_state.candidate[i] = current;

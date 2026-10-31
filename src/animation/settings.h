@@ -22,6 +22,10 @@ namespace animation
     [[nodiscard]] bool display_step();
     // G3-A: log the player graph's variable/active-node changes during normal play.
     [[nodiscard]] bool source_timeline();
+    // C-G3B-E3: transient mode for the source timeline - BOOL/INT-typed variables log every
+    // observed word change immediately (no settle rule), catching one-frame command writes
+    // the settle-3 rule filters out. Requires SourceTimeline.
+    [[nodiscard]] bool source_transient_watch();
     // C-G3B-E1: install a read-only 58377 observer and log the source graph's dispatched events
     // during an F7 window together with the settled phase variables. Requires
     // IndependentGraph=off; SourceTimeline wins when both are on.

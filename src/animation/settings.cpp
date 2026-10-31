@@ -15,6 +15,7 @@ namespace
     bool g_display_pose = false;
     bool g_display_step = false;
     bool g_source_timeline = false;
+    bool g_source_transient_watch = false;
     bool g_source_event_capture = false;
     bool g_source_write_capture = false;
     bool g_candidate_variable_census = false;
@@ -42,6 +43,7 @@ void load_settings()
     g_display_pose = ini.GetBoolValue("Experiment", "DisplayPose", false);
     g_display_step = ini.GetBoolValue("Experiment", "DisplayStep", false);
     g_source_timeline = ini.GetBoolValue("Experiment", "SourceTimeline", false);
+    g_source_transient_watch = ini.GetBoolValue("Experiment", "SourceTransientWatch", false);
     g_source_event_capture = ini.GetBoolValue("Experiment", "SourceEventCapture", false);
     g_source_write_capture = ini.GetBoolValue("Experiment", "SourceWriteCapture", false);
     g_candidate_variable_census = ini.GetBoolValue("Experiment", "CandidateVariableCensus", false);
@@ -64,7 +66,8 @@ void load_settings()
     logger::info("EXPERIMENT setting IndependentGraph={}", behavior_graph::independent_graph_name(g_independent_graph));
     logger::info("EXPERIMENT setting DisplayPose={}", g_display_pose);
     logger::info("EXPERIMENT setting DisplayStep={}", g_display_step);
-    logger::info("EXPERIMENT setting SourceTimeline={}", g_source_timeline);
+    logger::info("EXPERIMENT setting SourceTimeline={} transient={}", g_source_timeline,
+        g_source_transient_watch);
     logger::info("EXPERIMENT setting SourceEventCapture={}", g_source_event_capture);
     logger::info("EXPERIMENT setting SourceWriteCapture={}", g_source_write_capture);
     logger::info("EXPERIMENT setting CandidateVariableCensus={}", g_candidate_variable_census);
@@ -81,6 +84,7 @@ behavior_graph::IndependentGraphMode independent_graph_setting() { return g_inde
 bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }
 bool source_timeline() { return g_source_timeline; }
+bool source_transient_watch() { return g_source_transient_watch; }
 bool source_event_capture() { return g_source_event_capture; }
 bool source_write_capture() { return g_source_write_capture; }
 bool candidate_variable_census() { return g_candidate_variable_census; }

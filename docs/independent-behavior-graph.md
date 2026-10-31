@@ -2308,6 +2308,24 @@ typed setter 按 `m_type` 自选（沿用 S4 机制），两写的返回值与�
 **停止条件**：崩溃、非有限值、`source-drift` 非 none 立即停止。
 
 **状态：已实现、已构建（干净身份 `…-227d5104a3-…`，[v57 build](build.md#v57-two-write-2026-10-31)）、已部署待上机。** 实现按契约：S4 的写块抽成共用 `typed_write` lambda（skip 行带 `stage=` 标记），settle 后先 `prime` 后 `command`，任一失败即结束不跑采样窗；`CandidateUnequipPrime` 为空保持 S4 单写行为、`CandidateUnequipVariable` 为空保持 S3 事件路径。部署 INI = `inject` + `CandidateUnequipProbe=true` + `CandidateUnequipPrime=iRightHandEquipped` + `CandidateUnequipVariable=bEquipUnequip`，其余全 off。首轮结果回填时在下方追加，不改写本节既有文字。
+<a id="c-g3b-e3-transient-watch"></a>
+## C-G3B-E3：源图瞬态写监视（草案 → 实现，2026-10-31）
+
+**背景**：S5 判负后输入侧路线按契约退役，但 E2 留下一条已证事实撑起的观察假设：引擎**确实直接写**源图词数组（装备态写不经 63609，E2 `writes=0` 而 v41 词变化可见）——那么卸下触发也可能是**同样的直接写 + 瞬态**（1–2 帧内被图消费/清零），恰好落进 v37 settle-3 规则的盲区。本探针把盲区关掉：**BOOL/INT 类型的词变化逐帧立即落行（settle-0），REAL/quad 保持 settle-3**（滤 TimeDelta 类帧标量洪流）。任何一帧命令写及其回退都无法遁形。
+
+**机制**：`[Experiment] SourceTransientWatch`（默认 off）作为 SourceTimeline 的模式修饰键，非独立窗口。baseline 时按 `variableInfos.m_type` 为每个索引置瞬态标志（BOOL=0/INT8=1/INT16=2/INT32=3）；采样时瞬态索引**与最近落行值比较**，任何变化立即出 `mode=transient` 行（含回退变化），其余类型与全部既有规则（身份、取消、预算 800 行、settle-3）不变。窗口行带 `mode=transient|settled`。门：`SourceTimeline=true` + `IndependentGraph=off`。
+
+**判据（预注册）**：run sheet 同 E1/E2（F7 → 装备单手武器 → ~2 s → 卸下 → ~2 s）。以卸下转移（`default` 首离 1）±10 帧为锚：**锚内出现四个已知变量之外的 `mode=transient` 行** → 该 (名, 值) 即触发候选，S6 沿 S4 机械写它（瞬态变量则需带步数间隔的变体，另行预注册）；**锚内只有四个已知变量** → 词空间彻底排除，转移为图内部逻辑驱动（嵌套状态机/转移条件静态审计立项）。装备锚（首离 0）预计能看到装备态写（v41 见过的 `iMagicEquipped`/`iRightHandEquipped` 等）——它们同时是仪器正控：E2 已证这些写不经 63609，settle-3 能看到它们说明写法是持久的；瞬态模式对它们应产生与 v41 一致的行（不重不漏）。
+
+**非目标**：不写变量、不注入、不触碰候选；REAL 帧标量仍被 settle-3 滤除（若触发恰为 REAL 瞬态写入则本探针盲，如实入档——概率低，已见 REAL 活动仅 TimeDelta）。
+
+**停止条件**：沿用 SourceTimeline 全部规则（源丢失/替换取消、预算耗尽终止、崩溃停止）。
+
+**离线用例**：无新增纯逻辑（settle 阈值分支在既有 recorder 内，行为由窗口数据裁定）；按 S1/E3 前例不凑用例。
+
+**状态：已实现（v58）。** 实现面：settings 键、source_timeline.cpp 的 baseline 类型解析 + 采样瞬态分支 + 窗口行 mode 字段；`PLUGIN_SOURCES` 不变（32）。
+
+<a id="c-g3b-e2-write-capture"></a>
 <a id="c-g3b-e2-write-capture"></a>
 ## C-G3B-E2：源图 setter 写观察（草案，2026-10-31，未实现）
 
