@@ -2078,6 +2078,47 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             if (unequip_probe.armed)
                             {
                                 const UnequipSettleVerdict settle_verdict = settle_gate.verdict();
+                                // S4/S5: one typed by-name write on the candidate - resolved in the
+                                // graph's own table, setter chosen by m_type, result and read-back
+                                // logged. False = name missing or unsupported type (no window runs).
+                                const auto typed_write = [&](RE::BShkbAnimationGraph& a_graph,
+                                    RE::hkbBehaviorGraphData const* a_data, char const* a_name,
+                                    char const* a_tag) {
+                                    std::size_t var_index = 0;
+                                    if (!variable_index(a_data, a_name, var_index))
+                                    {
+                                        logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=skip reason=name-missing name='{}' stage='{}'",
+                                            actor_id, request, a_name, a_tag);
+                                        return false;
+                                    }
+                                    std::int8_t const var_type = static_cast<std::int8_t>(
+                                        a_data->variableInfos.data()[var_index].m_type.get());
+                                    char const* setter = "unsupported";
+                                    bool wrote = false;
+                                    if (var_type == 0)
+                                    {
+                                        setter = "SetGraphVariableBool";
+                                        wrote = a_graph.SetGraphVariableBool(RE::BSFixedString{ a_name }, true);
+                                    }
+                                    else if (var_type >= 1 && var_type <= 3)
+                                    {
+                                        setter = "SetGraphVariableInt";
+                                        wrote = a_graph.SetGraphVariableInt(RE::BSFixedString{ a_name }, 1);
+                                    }
+                                    if (setter[0] == 'u')
+                                    {
+                                        logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=skip reason=unsupported-type name='{}' type={} stage='{}'",
+                                            actor_id, request, a_name, census_type_name(var_type), a_tag);
+                                        return false;
+                                    }
+                                    std::int32_t readback = 0;
+                                    bool const input_readable = read_variable_int(a_graph, var_index, readback);
+                                    logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=write stage='{}' name='{}' index={} type={} value=1 setter={} result={} readback={}",
+                                        actor_id, request, a_tag, a_name, var_index, census_type_name(var_type),
+                                        setter, wrote ? "true" : "false",
+                                        input_readable ? std::to_string(readback) : std::string{ "unreadable" });
+                                    return true;
+                                };
                                 if (settle_verdict == UnequipSettleVerdict::e_settled)
                                 {
                                     logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=settle outcome=settled target-step={} settled-step={} baseline-default={} baseline-nodes={}",
@@ -2089,56 +2130,24 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     // ladder, one INI-only round per name). The empty name keeps the
                                     // S3 1HM_Unequip dispatch verbatim.
                                     bool input_delivered = false;
+                                    const RE::hkbBehaviorGraphData* const unequip_data =
+                                        behavior ? behavior->data.get() : nullptr;
+                                    // C-G3B-S5: an optional prime write (the equipped state the
+                                    // WeapEquip path skips) precedes the command write; either failing
+                                    // ends the slice without a sampling window.
+                                    if (!candidate_unequip_prime().empty())
+                                        input_delivered = typed_write(*candidate_base, unequip_data,
+                                            candidate_unequip_prime().c_str(), "prime");
+                                    else
+                                        input_delivered = true;
                                     if (!candidate_unequip_variable().empty())
                                     {
-                                        std::string const& var_name = candidate_unequip_variable();
-                                        const RE::hkbBehaviorGraphData* const unequip_data =
-                                            behavior ? behavior->data.get() : nullptr;
-                                        std::size_t var_index = 0;
-                                        if (!variable_index(unequip_data, var_name.c_str(), var_index))
-                                        {
-                                            logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=skip reason=name-missing name='{}'",
-                                                actor_id, request, var_name);
-                                        }
-                                        else
-                                        {
-                                            std::int8_t const var_type = static_cast<std::int8_t>(
-                                                unequip_data->variableInfos.data()[var_index].m_type.get());
-                                            char const* setter = "unsupported";
-                                            bool wrote = false;
-                                            if (var_type == 0)
-                                            {
-                                                setter = "SetGraphVariableBool";
-                                                wrote = candidate_base->SetGraphVariableBool(
-                                                    RE::BSFixedString{ var_name.c_str() }, true);
-                                            }
-                                            else if (var_type >= 1 && var_type <= 3)
-                                            {
-                                                setter = "SetGraphVariableInt";
-                                                wrote = candidate_base->SetGraphVariableInt(
-                                                    RE::BSFixedString{ var_name.c_str() }, 1);
-                                            }
-                                            if (setter[0] == 'u')
-                                            {
-                                                logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=skip reason=unsupported-type name='{}' type={}",
-                                                    actor_id, request, var_name, census_type_name(var_type));
-                                            }
-                                            else
-                                            {
-                                                std::int32_t readback = 0;
-                                                bool const input_readable = read_variable_int(*candidate_base, var_index, readback);
-                                                logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=write name='{}' index={} type={} value=1 setter={} result={} readback={}",
-                                                    actor_id, request, var_name, var_index, census_type_name(var_type),
-                                                    setter, wrote ? "true" : "false",
-                                                    input_readable ? std::to_string(readback) : std::string{ "unreadable" });
-                                                input_delivered = true;
-                                            }
-                                        }
+                                        if (input_delivered)
+                                            input_delivered = typed_write(*candidate_base, unequip_data,
+                                                candidate_unequip_variable().c_str(), "command");
                                     }
                                     else
                                     {
-                                        const RE::hkbBehaviorGraphData* const unequip_data =
-                                            behavior ? behavior->data.get() : nullptr;
                                         const std::int32_t unequip_id = unequip_data ?
                                             lookup_event_id_in_graph(*unequip_data, Unequip_Event_Name) : -1;
                                         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=event-lookup name='{}' id={} source=graph-events",

@@ -54,5 +54,10 @@ namespace animation
     // IsUnequipping -> PitchManualOverride, one INI-only round per name); empty keeps the S3
     // 1HM_Unequip event dispatch.
     [[nodiscard]] std::string const& candidate_unequip_variable();
+    // C-G3B-S5: an optional prime write before the unequip command — the pre-registered
+    // sequence writes iRightHandEquipped=1 first (completing the real equipped state the
+    // WeapEquip path skips), then the CandidateUnequipVariable command. Empty keeps the S4
+    // single-write behaviour.
+    [[nodiscard]] std::string const& candidate_unequip_prime();
 }
 PLUGIN_NAMESPACE_END

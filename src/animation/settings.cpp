@@ -24,6 +24,7 @@ namespace
     bool g_candidate_generation_entry = false;
     bool g_candidate_unequip_probe = false;
     std::string g_candidate_unequip_variable;
+    std::string g_candidate_unequip_prime;
 }
 void load_settings()
 {
@@ -53,6 +54,8 @@ void load_settings()
     g_candidate_unequip_probe = ini.GetBoolValue("Experiment", "CandidateUnequipProbe", false);
     char const* const unequip_variable = ini.GetValue("Experiment", "CandidateUnequipVariable", "");
     g_candidate_unequip_variable = unequip_variable ? unequip_variable : "";
+    char const* const unequip_prime = ini.GetValue("Experiment", "CandidateUnequipPrime", "");
+    g_candidate_unequip_prime = unequip_prime ? unequip_prime : "";
     if (!parsed) logger::warn("ANIMATION invalid Animation.UnarmedIdle='{}'; using non_combat_loop", value);
     if (!parsed_experiment) logger::warn("EXPERIMENT invalid Experiment.IndependentGraph='{}'; using off", experiment);
     logger::info("ANIMATION setting UnarmedIdle={}", g_unarmed_idle == UnarmedIdle::e_mt_idle ? "mt_idle" : "non_combat_loop");
@@ -68,8 +71,8 @@ void load_settings()
     logger::info("EXPERIMENT setting CandidateInputProbe={} variable='{}' value={}", g_candidate_input_probe,
         g_candidate_input_variable, g_candidate_input_value);
     logger::info("EXPERIMENT setting CandidateGenerationEntry={}", g_candidate_generation_entry);
-    logger::info("EXPERIMENT setting CandidateUnequipProbe={} variable='{}'", g_candidate_unequip_probe,
-        g_candidate_unequip_variable);
+    logger::info("EXPERIMENT setting CandidateUnequipProbe={} variable='{}' prime='{}'", g_candidate_unequip_probe,
+        g_candidate_unequip_variable, g_candidate_unequip_prime);
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
@@ -87,5 +90,6 @@ std::int32_t candidate_input_value() { return g_candidate_input_value; }
 bool candidate_generation_entry() { return g_candidate_generation_entry; }
 bool candidate_unequip_probe() { return g_candidate_unequip_probe; }
 std::string const& candidate_unequip_variable() { return g_candidate_unequip_variable; }
+std::string const& candidate_unequip_prime() { return g_candidate_unequip_prime; }
 }
 PLUGIN_NAMESPACE_END
