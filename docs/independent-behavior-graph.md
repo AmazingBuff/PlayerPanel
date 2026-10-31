@@ -2178,7 +2178,7 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 2. settle 门：候选 `currentDefaultState` 到达 1 后连续三次采样保持稳定（v38 settle 规则），同时记录此时的节点数为装备 idle 基线。等待上限预注册 120 步；超限输出 `outcome=no-settle` 并终止，不降级为定时注入。
 3. 第二段：注入 `1HM_Unequip`，其后逐步采样 121 步（0–119 + 120），沿用 v51 的逐步采样修正——六点采样会漏瞬态相位。
 
-**观测**（只读）：逐行 `CANDIDATE UNEQUIP step=… default=… istate=… uneq=… bequip=… pitch=… nodes=…`，对照 v41 源侧卸下段（53.652–54.933，约 1.3 s）的变量集 `IsUnequipping`/`bEquipUnequip`/`PitchManualOverride`；`phase=unequip-motion comparisons=120`（勘误：草案此处误写 121，实现按第一段窗口口径——121 行采样、120 次相邻比较）、三点 pose 哈希与 `source-drift` 照旧。注入尝试自带的 `phase=events count=` 行照常输出。
+**观测**（只读）：逐行 `CANDIDATE UNEQUIP step=… default=… istate=… uneq=… bequip=… pitch=… nodes=…`，对照 v41 源侧卸下段（53.652–54.933，约 1.3 s）的变量集 `IsUnequipping`/`bEquipUnequip`/`PitchManualOverride`；`phase=unequip-motion comparisons=…`（勘误：草案误写 121，且行名为 `unequip-motion`——实现为窗口内 120 次 pose 读样、首个作基线，即 119 次相邻比较；采样行 121 含窗外 step 120。首轮实测 119，与本口径一致）、三点 pose 哈希与 `source-drift` 照旧。注入尝试自带的 `phase=events count=` 行照常输出。
 
 **判据**：主判据 `currentDefaultState` 1→12→0；辅判据节点数偏离 settle 门记录的装备 idle 基线并回落、`IsUnequipping`/`bEquipUnequip` 出现脉冲、运动持续。命中主判据 → 事件链足以驱动卸下段，G3-B 输入子集扩为 {equip 事件, unequip 事件}，下一片预注册两事件的时序容差并起草完整回放契约。未命中 → 负结果入档，回到事件名表证据。`iState` 在本切片**只记录不判定**：S1/S2 已证候选侧它可能需要真实装备上下文，是否作为 G3-B 必需判据留给 G3-B 本体契约决定。
 
@@ -2192,4 +2192,14 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **实现与部署（2026-10-31，v53）**：settle 门落在 engine-free 策略头 [unequip_settle_policy.h](../src/animation/behavior_graph/unequip_settle_policy.h)（`UnequipSettleGate`：目标值 1、三连续采样稳定、扰动重计、尾部离开目标即 `no-settle`），三个离线用例在 [behavior_graph_unequip_settle_test.cpp](../tests/behavior_graph_unequip_settle_test.cpp)（`cl /W4 /WX` exit 0）。调用点在 [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp)：门喂入在第一段窗口每步 `e_pre_sample`；判定与二次分发在第一段采样/发射之后、物理世界归还之前（复用同一 borrowed world、`hkbContext` 与生成入口）；`InjectedEvent` 上提为匿名命名空间单一定义，注入块仅改为引用它。观测行按判据所需命名解析：`currentDefaultState` 缺失即整片 skip（`name-missing`），`iState`/`IsUnequipping`/`bEquipUnequip`/`PitchManualOverride`/`iRightHandEquipped` 任一缺失只让该列显示 `none`，不中止切片。预算：`CANDIDATE UNEQUIP` 前缀 ≤ arm 1 行 + settle 1 行 + 121 行采样；第二段新增的 `INDEPENDENT GRAPH` 行 ≤ 4 条（event-lookup、unequip-inject 或 unequip-skip、unequip-motion、unequip-done）；第二段窗口不消耗 `GRAPH FRAME`/clip/slots 预算。构建身份、哈希与部署 INI 见 [v53 build](build.md#v53-unequip-event-2026-10-31)。
 
-**状态：已实现、已构建（干净身份 `…-ecb5869efd-…`）、已部署待上机。** 部署 INI 为 `IndependentGraph=inject` + `CandidateUnequipProbe=true` + `CandidateInputProbe=true`（变量名为空，观察 only），仓库样例保持全 off。运行判据与本节草案一致；首轮结果回填时在下方追加，不改写本节既有文字。
+**状态：已实现、已构建（干净身份 `…-ecb5869efd-…`）、已部署；首轮已上机，判为负结果（见下）。** 部署 INI 运行后已回 dormant off（v53 DLL 留装），仓库样例保持全 off。运行判据与本节草案一致；结果回填在下方追加，不改写本节既有文字。
+
+**首轮运行（2026-10-31 15:55，v53，AE 1.6.1170，actor 00000014 request=1；[日志](diagnostics/CharacterPanel-g3bs3-unequip-event-20261031-1555.log) 86,409 字节 SHA-256 `5cc72cec…`）：负结果。**
+
+| 段 | 观测 |
+| --- | --- |
+| 装备段（第一窗口） | 与 v52 行为一致：`phase=settle outcome=settled target-step=49 settled-step=63 baseline-default=1 baseline-nodes=111`（target-step 与 v52 的 step 49、基线与 v52 终态 111 完全一致）；`pose-motion comparisons=120 changed=119`；`candidate-pose-0=bc160a8c… 60=63f638a6… 120=2b29331e…`；源 pose 前后同为 `ec429de0…` |
+| 门与事件 | `outcome=arm default=113 istate=94 uneq=111 bequip=125 pitch=65 rh=179`——六名全部解析，`PitchManualOverride` 首证存在于候选 652 表（index 65）；`phase=events count=8223`，前 16 名与 v8d 转储逐项一致 → **普查"双 0"裁定为 8192 上限截断伪影**，普查代码区分 0 与超上限的修正项成立；`1HM_Unequip` 解析 **id=15**，单次分发成功 |
+| 卸下段（第二窗口） | 121 行采样全为 `default=1 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=111`；`unequip-motion comparisons=119 changed=119 valid=true`（装备 idle 继续动画），`cand-pose-0=8fb4cd33… 60=7a044b34… 120=2b29331e…`（终点与第一窗口终点同哈希）；无 `[E]`、无崩溃，`source-drift=none` 全程，`phase=end retained=true` |
+
+**裁定**：主判据（`default` 1→12→0）未命中；辅判据未命中（无节点偏离、无卸下脉冲）；`iState` 恒 0 按预注册仅记录。**`1HM_Unequip`（id=15）单独注入对未注册候选图不足以推进卸下相位**——分发被接受但状态机未离开 equipped idle；对照 v52 的 `WeapEquip`（id=2）能推进装备相位，事件路径本身有效，负结果限定于该事件与该时机（settled equipped idle）。按防 fishing 约束不试第二个候选名；"卸下转移需要哪个事件/是否需要伴随输入或装备上下文"须先回到事件名表与引擎证据再立项。本轮顺带产出两条确定证据：候选 652 表含 `PitchManualOverride`(65) 与 `1HM_Unequip`(id=15)；事件表在注入阶段为 8223 项。会话后部署 INI 已回 dormant off（1,585 字节 `1bcd95bc…`）。
