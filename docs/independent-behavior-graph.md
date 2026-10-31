@@ -1983,6 +1983,8 @@ BehaviorGraphProbe=true
 
 ### 三、G3-B 现状重估
 
+**（2026-10-31 晚间更新：图内结构静态审计已完成——[C-G3B-A1](#c-g3b-a1-structural-audit)。答案：1→12 由事件 `Unequip`(id=144) 驱动（条件关闭、无时间窗），S3 判负系注入了错误事件名（`1HM_Unequip`=15 不是转移事件）；卸下锚三脉冲全部是卸下子机器 isActive 绑定输出；两段收尾均由剪辑尾触发器内部发射。G3-B 卸下段判定为事件可注入类，外部输入子集 = {WeapEquip(2), Unequip(144)}，下一片 S6 沿 S3 骨架换正确事件名。以下"出路"段落保留为历史排序记录。）**
+
 - **装备段可回放**：`WeapEquip` 注入即可。
 - **卸下段不可外部回放**：原 G3-B 草案"在已证明的外部输入子集下回放 Equip→Idle→Unequip"的卸下段前提不成立——外部输入子集为空集。
 - **出路**（按预注册排序，下一阶段唯一工作包）：**图内结构静态审计**——解出 equipped idle（`default`=1）状态的出边转移表与条件绑定，回答"1→12 转移的真实条件是什么"。答案决定 G3-B 卸下段的形态：条件若为事件/变量，候选侧照做（尽管真实流程不走，注入仍可能有效——注意 `WeapEquip` 对候选有效恰是先例）；条件若依赖 clip 时间/内部嵌套逻辑，则卸下段回放需重定义范围（如仅装备段回放 + 卸下段作为独立议题）。
@@ -2414,3 +2416,107 @@ typed setter 按 `m_type` 自选（沿用 S4 机制），两写的返回值与�
 **裁定**：按预注册判据，两个锚（装备/卸下 ±10 帧）内均无写行 → **typed setter 路线判死，"外部调用路线"全线关闭**：转移当刻既无 58377 事件（E1）也无 Bool/Int setter 调用（本探针，双图覆盖）。**正控同空是本裁定最重的部分**——v41 明确观察到装备段中部的 `iMagicEquipped`/`iRightHandEquipped` 0→1，而 63607/63609 上零调用，说明引擎的装备态写**不经** `BShkbAnimationGraph::SetGraphVariableBool/Int`（更可能是 [audit27](behavior-graph-construction-audit.md) 的 manager 层入口 AE32886 直接写字数组）。instrument 判定本身以装备锚为正控的假设被推翻，如实入档。
 
 **全部证据合并后的机制图景与 S5 假设**：已排除 = 事件分发、三个卸下脉冲变量的单独持久写、装备态 setter 作为触发、63607/63609 写入路径、转移前持久命令写。**未被排除**：源侧 equipped idle 与候选 equipped idle 的**状态差**——源在装备段中部（47.132）已有 `iRightHandEquipped=1`（经非 63609 路径写入），候选经 WeapEquip 进入的 equipped idle 里 `rh=0`（S3/S4 各轮 `rh` 恒 0）。若卸下转移条件是合取（如 `bEquipUnequip==1 且 iRightHandEquipped==1`），则 S4 三轮单写全负、源侧照常触发就完全自洽。**S5（草案）**：两写序列回放——settle 门通过后先写 `iRightHandEquipped=1`（补齐真实装备态），再写 `bEquipUnequip=1`（卸下命令），判据不变（`default` 1→12→0）。
+
+<a id="c-g3b-a1-structural-audit"></a>
+## C-G3B-A1：图内结构静态审计——离线 HKX 解析（草案 → 实施，2026-10-31）
+
+**背景与目标**：S3–E3 六轮上机已把卸下转移（源图 `currentDefaultState` 1→12）的全部外部输入路线判死（见 [handoff-20261031](#handoff-20261031) 合并裁定），剩余假设域是图内部逻辑。本契约是预注册排序里的下一阶段唯一工作包：**纯离线解析运行时行为链的 HKX 文件，解出 equipped idle 态的出边转移表与条件绑定，回答"1→12 转移的真实条件是什么"**。纯只读：不触碰游戏进程、不部署 DLL、不写任何变量。
+
+**审计对象（运行时实际生效文件，MO2 冲突解析锁定为 Pandora_Output，2026-10-31 哈希）**：
+
+| 文件 | 字节 | SHA-256 |
+| --- | --- | --- |
+| `meshes/actors/character/Characters Female/DefaultFemale.hkx` | 809,056 | `5f953a3749b431a9444368a43411b904b6c14830ce89f5808e971c822c139cd0` |
+| `meshes/actors/character/Behaviors/0_Master.hkx` | 12,951,504 | `466cf1169ee0a0af`（前缀，全量见构建节） |
+| `meshes/actors/character/Behaviors/1hm_behavior.hkx` | 1,505,120 | `c56f96bbd2e291e5`（前缀） |
+| `meshes/actors/character/Behaviors/weapequip.hkx` | 75,456 | `fd0f0e096eca0c58`（前缀） |
+
+外加 `hkbBehaviorReferenceGenerator.behaviorName` 引用链闭包（引用文件相对 `Behaviors\` 解析）。审计范围限定于此机当前行为链（含 BFCO/Pandora 修改），**不外推原版 1HM**。
+
+**侦察已确立的结构事实（2026-10-31 准备轮，工具链端到端验证通过）**：
+
+1. 运行时 652 变量表 = 0_Master 自有 389 变量 + 引用文件变量**按名统一合并**；0_Master 自有索引与 C-VC1 运行时普查逐项一致（`currentDefaultState=113`、`iState=94`、`iRightHandEquipped=179`、`bEquipUnequip=125`、`PitchManualOverride=65`、`WeapEquip=事件2`、`1HM_Unequip=事件15`）。
+2. 全项目链唯一条件类为 `hkbExpressionCondition`（条件=表达式字符串）；无事件/变量/剪辑/姿态匹配条件类实例。触发机制候选域因此收窄为：**表达式条件、转移 `triggerInterval`（enter/exit 事件或本地时间窗口）、嵌套状态机/父机 `fromNestedStateId` 逻辑、表达式脚本层赋值**。
+3. `currentDefaultState` 已见的写入机制：一处 `sm[currentStateId] → var[113]` 绑定（DragonRider 机器，5 态）+ 表达式赋值 `currentDefaultState = 0`；**写出 10/1/12 的机制尚未定位**——这正是本审计的主判据对象。
+4. 装备链结构锚点：`toForceEquipState` 机器（8 态 id 7–14，startStateId=7=`toWeapEquip`）、`WeapEquipBFR → behaviors/weapequip.hkx`、`1HM_UnequipState`/`1HM_UnequipMSG`/`1HM_Unequip_ModifierGenerator` 节点名。
+
+**工具**：[HKX2-Enhanced-Library](https://github.com/Monitor221hz/HKX2-Enhanced-Library)（`91fa5b0`，C# net10；序列化布局尺寸 `hkbStateMachine=0x108` 与 pinned CommonLib 运行时类一致，交叉验证）+ 本地 `build/hkx-audit/HkxDump`（gitignored，转储工具）。首轮冒烟与运行时索引一致性已核对。若结论存疑，用用户提供的 HKX_Edit 交叉验证。
+
+**读集（全部只读）**：全部状态机 `states[]`/`transitions[]`/`wildcardTransitions`（condition 表达式全文、eventId→名、triggerInterval、toStateId/fromNestedStateId、priority、flags）；StateInfo 的 enter/exit notify 事件；全部 `hkbVariableBindingSet`（memberPath/variableIndex/bitIndex/bindingType，**各文件按自己的变量名表解析**）；全部 `hkbEvaluateExpressionModifier` 的表达式（含 `assignmentVariableIndex`/`assignmentEventIndex`/`eventMode`）；`hkbClipGenerator` 的 clip trigger 数组（localTime+事件）。解析器行为约束：无限深度遍历、对象按引用去重（MSG 扇出不得重复展开）、引用文件跟进加载。
+
+**判据（预注册）**：
+
+1. **主判据**：找到产生 `currentDefaultState` ∈ {1, 10, 12} 的机制集合（绑定 / 表达式赋值 / 转移），并核对它能覆盖运行时实测序列 0→10→1→12→0（v41/E1）。机制不唯一时全部列出并标注证据强度，不择一采信。
+2. **1→12 转移的触发条件**：给出其所在状态机的对象路径、状态 id、转移条目全文（条件表达式 / eventId→名 / triggerInterval / 优先级 / flags）。若为表达式条件，引用表达式原文；若为时间窗，给出 enter/exit 事件与时间值。
+3. **自洽性核对表**：答案必须逐项解释 E1（转移当刻零 58377 事件）、E2（零 typed setter 调用）、E3（卸下锚同帧恰四个已知变量）、S4/S5（单写与合取写均不触发候选）。任何一项解释不了即如实记录"部分解释"，不得强行裁死。
+4. **产出判定**：答案决定 G3-B 卸下段形态——触发若为表达式/事件可注入类 → 候选侧回放可行（`WeapEquip` 先例适用）；若依赖 clip 时间/嵌套结构/引擎直写 → 卸下段回放重定义范围（仅装备段回放 + 卸下段独立议题）。
+
+**非目标**：不写变量、不注入事件、不上机、不部署、不改插件代码与配置；不把本机行为链结论外推到原版；不据此宣称 G3-B 通过。
+
+**停止条件**：解析器对任何目标文件反序列化失败、或解析输出与原始字节字符串扫描矛盾（如类清单缺 `hkbStateMachine`）→ 停止并如实报告，不猜测补全；运行时 652/8223 计数若无法由合并解释，按矛盾记录处理。
+
+**状态：准备完成（本节侦察事实即产物），全量结构提取实施中。** 结果回填在下方追加，不改写本节既有文字。
+
+**实施与结果（2026-10-31，C-G3B-A1 首轮全量结构提取，纯离线）**
+
+工具落地：[HKX2-Enhanced-Library](https://github.com/Monitor221hz/HKX2-Enhanced-Library) `91fa5b0`（C# net10，dotnet 10.0.403 本机构建）+ 转储程序 `build/hkx-audit/HkxDump`（gitignored；能力：反序列化 Skyrim SE hkx、无界深度遍历、对象按引用去重、`hkbBehaviorReferenceGenerator` 引用跟进含 MO2 VFS 回退、修饰符级 `hkbVariableBindingSet` 转储——`hkbNode : hkbBindable`，修饰符也带绑定集）。环境注记：全局 NuGet.Config 存在失效 vcpkg 本地源（`C:\src\vcpkg\scripts\buildsystems` 不存在），已在 `build/hkx-audit/NuGet.config` 用 `<clear/>` 局部绕过，全局配置未改。
+
+**结构事实（全部来自解析，哈希锚定）**：装载链闭包 = 23 个行为文件（Pandora_Output 17 + 模组松散 6：modernstaggerlock/ItemUse/FNIS×3/skyparkour/maxsuBlockHit），主转储 112,143 行。装备链核心 = `0_Master.hkx` 内 `root/Root/mg/msg/msg/msg/Default_State`（9 态，wildcard=7）：`0=MT_Behavior_State`（未装备）、`1=Weap_Readied_State`（装备 idle）、`2=Magic_Behavior_State`、`10=Weap_Equip_State`、`11=Magic_Equip_State`、`12=Weap_Unequip_State`、`13=Magic_Unequip_State`、`14=KillMove_State`、`20=NonLethal_PairedAnimations`。**运行时 `currentDefaultState` 的 0→10→1→12→0 序列即该机状态 id 序列**。
+
+**主判据答案：1→12 的真实条件是事件注入，不是变量、不是时间窗。** `Weap_Readied_State(id=1)` 的出边（全文）：
+
+```
+TRANS toState=12 eventId=144(Unequip)           cond=null  trigger=[0,0] flags=256
+TRANS toState=10 eventId=2(WeapEquip)           cond=EXPR[IsNPC == 0] flags=0
+TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=256
+```
+
+`flags=256 = FLAG_DISABLE_CONDITION`（条件求值关闭），trigger 区间未启用（无 `FLAG_USE_TRIGGER_INTERVAL`）。**S3 判负的直接原因即注入了错误事件名**：`1HM_Unequip`(id=15) 存在于事件名表但不是任何 Default_State 转移的事件；正确名是 **`Unequip`（0_Master 表 id=144，候选共享同一 stringData）**。Default_State 自身 7 条通配全部指向 10/11/0（force-equip 与 ReanimateExit），父机（68 态机）通配无指向 12 者——**1→12 全链唯一路径就是事件 144（加 982 备选）**。
+
+**完整状态链（装备段 + 卸下段，全部事件驱动、条件关闭、剪辑尾触发器收尾）**：
+
+| 转移 | 事件 | 收尾机制 |
+| --- | --- | --- |
+| 0→10 | `WeapEquip`(2) 注入/游戏派发 | — |
+| 10→1 | `WeapEquip_Out`(49) | weapequip.hkx 剪辑尾触发器 `t=0 relEnd=True`（v52 候选 step-49 自证内部发射） |
+| 1→12 | **`Unequip`(144)** 注入/游戏派发 | — |
+| 12→0 | `Unequip_Out`(50)（移动中走 76 `Unequip_OutMoving`） | 卸下剪辑尾触发器 `t=0 relEnd=True`（移动变体 `t=-0.25 relEnd=True`） |
+
+**卸下锚四变量签名（E3）的结构解释**：`PitchManualOverride`(65) = `sm[Weap_Unequip_State/mg] isActive` 绑定；`IsUnequipping`(111) = `sm[.../Weap_UnequipRoot/b] isActive` 绑定 + 两个 `hkbEventDrivenModifier.enable` 绑定；`bEquipUnequip`(125) = `sm[.../Weap_UnequipRoot/b] isActive` 绑定；`currentDefaultState`(113) 见下。**三个脉冲全部是卸下子机器激活/去活的绑定输出**——S4 写它们不触发、S5 合取也不触发，与"输出不可作输入"完全自洽。装备段同构：`IsEquipping`(110) = Weap_Equip_State 的 EventDrivenModifier.enable 绑定。
+
+**currentDefaultState 写者（判据 1 的残余未知，如实记录）**：静态 23 文件中 `member=currentStateId` 绑定共 6 处（root→i1HMState(39)、Block_Standing→iBlockState(22)、Magic 两处→testInt(47/48)、Magic_Behavior_State/b→iEquippedItemState(118)、DragonRider→currentDefaultState(113)），**Default_State 及其父机均无绑定**；表达式层无赋值（293 条表达式无一写它；raw 字符串区的 `currentDefaultState = 0`/`weaponSheathe if(1)` 为无引用孤儿串）。但 v52 候选（无 manager、无游戏代码）实测 `default` 跟踪 10→1——**写者在图求值内部，判定为引擎装载期建立的"指定状态机 currentStateId→具名变量"镜像机制**（绑定机构存在性的先例即 DragonRider 绑定）；其建立来源（project DB/character data 何处声明）为残余未知，记录待查，不影响本判据。
+
+**自洽性核对表（判据 3）**：E1（转移当刻零 58377 事件）→ 事件 144 的真实派发不经 58377，属 E1 预注册时已声明的残余（manager 级动画事件派发路径未审计，路径存在性由本审计反证：转移必须由 144 触发且 144 无任何图内发射点——**游戏/引擎在图外发射**）；E2（零 setter）→ 全部变量写为绑定求值，非 setter 调用；E3（锚内恰四变量）→ 三脉冲为 isActive 绑定、第四个是状态镜像本身；S4/S5（单写/合取写不触发）→ 脉冲变量是输出；S3 → 错误事件名。**六轮负结果全部得到结构解释，无遗留矛盾。**
+
+**G3-B 卸下段形态判定（判据 4）**：**事件可注入类——候选侧回放可行**。外部输入子集 = {`WeapEquip`(2)，`Unequip`(144)}，注入机制沿用 S3 已验证的 `lookup_event_id_in_graph`（按名解析）+ `InjectedEvent` + `event_dispatch`；两段收尾（WeapEquip_Out/Unequip_Out）由剪辑尾触发器内部发射，无需注入。`iState` 由引擎 `BSiStateTaggingGenerator.iStateToSetAs` 维护（候选侧恒 0 的现象与真实装备上下文假设仍留 G3-B 本体裁定）。
+
+**判据外矛盾记录**：运行时合并表 652 变量/8223 事件无法由静态链（23 文件，变量名并集 526、事件名并集 9332，2^20 子集穷举无一同时命中）重现——事件方向运行时更少、变量方向更多，指向运行时注入内容（OAR 系改图最可疑）或引擎合并的额外规则。不影响本轮结论：全部装备链变量/事件都在 0_Master 主表（389+8173）且索引与 C-VC1 运行时普查逐项一致（113/94/179/125/110/111/65/117/180/38，事件 2/15/49/50/144/982）。
+
+**关键文件哈希（完整）**：0_Master.hkx `466cf1169ee0a0afad01532d3f1b9a1b1d410dc8dcc3ad3045bb1aae65775e61`；1hm_behavior.hkx `c56f96bbd2e291e5d9ad5ea45907c1e2b147ca4ad50e0d2e03d86e7566ca1d0f`；weapequip.hkx `fd0f0e096eca0c5863b33e854883002ab9e19512aebc2d7161ae0a6ee5bb36e6`；DefaultFemale.hkx（Pandora_Output Characters Female）`5f953a3749b431a9444368a43411b904b6c14830ce89f5808e971c822c139cd0`；运行时实际接受的根路径为 `Actors\Character\DefaultFemale.hkx`（S3 日志 load-try，解析到 BSA 原版根项目，其 behaviorFilename 单值指向 0_master）。
+
+**状态：首轮完成，主判据/自洽性/形态判定全部落档。** 下一步（另立契约）：C-G3B-S6——候选 equipped idle settle 后注入 `Unequip`(144)，判据沿用 S3 骨架（主判据 `default` 1→12→0，辅判据三脉冲 isActive 绑定按序出现 + Unequip_Out 内部发射回 0）。
+
+<a id="c-g3b-s6-unequip-event-retry"></a>
+## C-G3B-S6：Unequip(144) 事件注入切片（草案 → 实现，2026-10-31）
+
+**目标**：只证一件事——候选在装备相位 settle 后接受**一次** `Unequip` 事件注入，能否自行进入并走完卸下相位（`currentDefaultState` 1→12→0）。这是把 v52 已验证的事件注入机制从装备段延伸到卸下段，修正 S3 的错误事件名后重跑同构切片，不是 G3-B 本体。
+
+**依据（C-G3B-A1 结构审计）**：`Weap_Readied_State(id=1)` 的唯一 1→12 出边 = `eventId=144(Unequip) cond=null flags=256(FLAG_DISABLE_CONDITION)` 无时间窗（备选 `BoundWeap_Unequip`=982）；S3 判负的直接原因是注入了 `1HM_Unequip`(15)——该名存在于事件表但不是任何 Default_State 转移的事件。卸下锚三脉冲是卸下子机器 isActive/enable 绑定输出，12→0 收尾由卸下剪辑尾触发器 `t=0 relEnd=True id=50(Unequip_Out)` 内部发射。
+
+**输入（单名预注册）**：`Unequip`。按 S3 的防 fishing 规则本轮只注入此一名；判负则负结果入档回 A1 证据，不试第二个候选名。
+
+**机制**：复用 S3 两段结构（`WeapEquip` 激活注入 → settle 门）与 v52 已验证的 `lookup_event_id_in_graph` 按名解析 + `InjectedEvent` + `event_dispatch`。唯一新机制是**事件名来源**：新键 `[Experiment] CandidateUnequipEvent`——非空时第二段分发该名，空时保持 S3 硬编码 `1HM_Unequip`（历史 INI 不变即可逐字复现旧轮）。门：`CandidateUnequipProbe=true` + `IndependentGraph=inject` + `CandidateUnequipEvent=Unequip`，且 `CandidateUnequipVariable`/`CandidateUnequipPrime` 留空（变量路径优先，留空才走事件路径）。
+
+**时机**：settle 门通过后（v38 三连续稳定采样规则，目标 `currentDefaultState`=1），与 S3 相同；等地上限 120 步。
+
+**观测**（只读，沿用 S3）：settle 行 + `phase=event-lookup name='Unequip' id=` + `phase=unequip-inject` + 121 行 `CANDIDATE UNEQUIP step=… default=… istate=… uneq=… bequip=… pitch=… rh=… nodes=…` + `phase=unequip-motion`（119 次相邻 pose 比较）+ 三点 pose 哈希 + `source-drift`。A1 已证三脉冲为绑定输出，预期与转移同帧出现；运行时解析 id 由 event-lookup 行记录——按名解析不依赖预注册 id，若 ≠144 如实记录（合并表差异已由 A1 矛盾条款覆盖），不中止。
+
+**判据（预注册）**：主判据 `currentDefaultState` 1→12→0；辅判据节点数偏离 settle 基线（111）并回落、三脉冲出现、运动持续。命中 → G3-B 外部输入子集正式定为 {`WeapEquip`(2)，`Unequip`(144)}，下一步起草 G3-B 本体完整回放契约（预注册两段时序容差）。未命中 → 负结果入档回 A1 证据。`iState` 只记录不判定（A1：由引擎 `BSiStateTaggingGenerator` 维护；候选恒 0 的装备上下文问题留 G3-B 本体裁定是否作为必需判据）。
+
+**非目标**：不写任何变量、不做姿态对照验收、不触碰显示/捕获/台账、不宣称 G3-B 通过。
+
+**停止条件**：崩溃、非有限值或 `source-drift` 非 none 立即停止并保留日志。
+
+**实现影响面**：`settings.h`/`settings.cpp` 新键 + `independent_graph.cpp` 事件名选择；无新文件（`PLUGIN_SOURCES` 32 不变）、无新增策略逻辑（按名解析机制已有），无离线新用例（判据只能运行时取，凑恒真断言无意义，沿 S1/E3 前例）。
+
+**状态：草案已预注册，实现与构建进行中；完成与部署事实回填在下方追加，不改写本节既有文字。**
