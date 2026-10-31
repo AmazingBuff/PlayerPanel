@@ -2277,6 +2277,10 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **第一轮（2026-10-31 16:45，v55，`bEquipUnequip`；[日志](diagnostics/CharacterPanel-g3bs4-r1-bequipequip-20261031-1645.log) 72,238 字节 SHA-256 `685ed235…`）：判负。** settle 第三次逐点复现（`target-step=49 settled-step=63 baseline-nodes=111`）；`phase=input outcome=write name='bEquipUnequip' index=125 type=BOOL setter=SetGraphVariableBool result=true readback=1`，且该值在 121 行采样中**全程保持 1**——写入被接受且持久，但 `default` 121 点恒 1、`nodes` 恒 111、`IsUnequipping`/`PitchManualOverride` 恒 0，运动 119/119（装备 idle 照常动画），无崩溃、`source-drift=none`。主判据未命中。负结果含义明确：**值进了槽、状态机不认**——`bEquipUnequip` 读作图内输出（源侧由卸下序列自身清零，候选无序列可清）。按阶梯进第二轮 `IsUnequipping`（INI-only，已部署，v55 二进制不变）。
 
+**第二轮（2026-10-31 17:07，v55，`IsUnequipping`；[日志](diagnostics/CharacterPanel-g3bs4-r2-isunequipping-20261031-1707.log) 72,231 字节 SHA-256 `985f210e…`）：判负，形态与第一轮完全一致。** settle 第四次逐点复现（`target-step=49 settled-step=63 baseline-nodes=111`）；`phase=input outcome=write name='IsUnequipping' index=111 type=BOOL setter=SetGraphVariableBool result=true readback=1`，121 行全程保持 1；`default` 恒 1、`nodes` 恒 111、运动 119/119、`source-drift=none`。镜像名假设死亡。按阶梯进第三轮 `PitchManualOverride`（INI-only，已部署；其 `m_type` 未实测，REAL/指针类型将记 `unsupported-type` skip，按预注册不算写入轮）。
+
+（附注：本轮之间有一次无效会话——17:01 的日志只有设置加载与读档，面板未打开、实验未启动，零实验行，按惯例记为无效不构成判定。）
+
 <a id="c-g3b-e2-write-capture"></a>
 ## C-G3B-E2：源图 setter 写观察（草案，2026-10-31，未实现）
 
