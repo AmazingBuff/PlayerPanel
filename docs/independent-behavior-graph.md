@@ -2639,7 +2639,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **收尾状态**：部署 INI 已回 dormant（v59 留装）；G3-B 关闭，按排序进入 **G4（语境隔离：OAR 阶段变量来源、历史/回调/sink 隔离）**。
 
 <a id="c-g4-context-isolation"></a>
-## C-G4 契约：OAR 上下文、历史与回调隔离（草案，2026-10-31，未实现）
+## C-G4 契约：OAR 上下文、历史与回调隔离（草案 → 实现/部署，2026-10-31）
 
 **背景与目标**：G3-B 已证候选仅凭 {`WeapEquip`(2)，`Unequip`(144)} 即可在自身状态机走完装卸全相位序列。按预注册排序，本契约验收 **G4 语境隔离**：候选在面板显示链里被驱动时，OAR 与游戏本体动画状态互不污染——OAR 阶段变量的读取来源符合各自语境（[10-29 交接 G4 定义](#handoff-20261029)："身份/装备允许按明确设计借读，阶段状态必须对应候选"）、预览不消耗世界 Random/顺序/PlayOnce 历史、回调与 sink 作用域不跨界、关闭只清预览自有登记。三段实验 **A → B → C** 排序：A 的求值可见性结论是 B/C 的隔离前提，A 判负时 B/C 停止。
 
@@ -2707,4 +2707,18 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 - **非目标**：不新增 DAC 事件捕获通道（G4 定义原文："DAC 要在事件捕获和隔离证明后另行接入既有受控通道"——本轮只验证 DAC 现状行为与恢复）；装载 teardown 维持 NO-GO；G5 姿态阈值不制定；不做源姿态对照。
 - **残余关联**：[652/8223 合并矛盾](#handoff-20261031-night)（运行时变量表含静态文件之外的注入内容，指向 OAR 系运行时改图）——A 段求值观察若记录到 OAR 对候选图 data/变量的触碰即为该项的收敛证据；零交集则该项保持独立残余，不因 G4 通过而关闭。候选侧 `iState` 恒 0 与 `currentDefaultState` 引擎镜像机制两项残余继续独立，不阻塞 G4。
 
-**状态：契约已预注册，未实现。** 实现按"草案 → 实现/构建（v60）/获授权上机"推进；运行结果回填在下方追加，不改写本节既有文字。
+**状态：已实现并部署（v60），待授权上机。** 实现按"草案 → 实现/构建（v60）/获授权上机"推进；运行结果回填在下方追加，不改写本节既有文字。
+
+**实现记录（2026-10-31 收尾，提交 `d2fbc4b`，v60 身份 `…-v60-g4-oar-context-20261031-d2fbc4bb56-cl94faaed0c6-20261031T143009Z`，DLL `a52813e3…` 1,456,128 字节，PDB `8871c53e…`）**：
+
+- **仪器落点**（与契约仪器清单一致，另加一条补充观察）：
+  1. 新头文件 [candidate_window.h](../src/animation/behavior_graph/candidate_window.h)：thread-local 命中台账（depth/evaluations/overlaps/armed source actor id）+ `ScopedCandidateWindow` 守卫 + `note_candidate_window_hit`/`arm_candidate_window`/`take_candidate_window_tally`。
+  2. `drive_graph_step` 步进守卫（[drive_step_policy.h](../src/animation/behavior_graph/drive_step_policy.h)）覆盖全部候选 native 步进；两处预注册事件派发点（激活 `WeapEquip`、settle `Unequip`）同守卫包裹。
+  3. OAR 求值命中记录：四个 detour thunk（`evaluate`/`numeric`/`evaluate-set`/`evaluate-replacement`）入口在 scope 检查**之前**记数——原生（非产品）求值同样可观测；命中行 `OAR CONTEXT hit site=… refr=… subject=…` 每窗口上限 8 行防刷屏，汇总计数不受限。overlap 判定 = 命中 REFR 的 form id == 武装窗口登记的源 actor id（无 holder 候选唯一可能的 REFR 回落来源）。
+  4. 汇总发射点：实验窗口（`run_independent_graph_experiment` 作用域守卫，`window=experiment`）与显示窗口全部关闭路径（`DisplaySession::State::abort` 漏斗，`window=display-<reason>`）——零命中也发射，作为仪器武装证据。
+  5. 显示抑制计数（[controller.cpp](../src/animation/controller.cpp) `advance` 显示分支）：仅统计实际返回候选姿态的帧，显示模式结束时一次发射 `DISPLAY advance display-frames=N product-query-suppressed=N`。
+  6. **补充观察（超出契约原清单，实现时加入）**：装载完成后 `phase=load-bindings` 行——候选/源绑定集指针与条目数对比，回答"63585 装载是否经过与源相同的 OAR 替换管线"（无 holder 装载可能跳过 OAR 装载钩子）；条目数不等即 G5 同剪辑对齐的前置问题，等数为前置满足证据。
+- **开关**：`[Experiment] OarContextWatch`（默认 false）统一门控全部 OAR CONTEXT 行、汇总行、抑制行与绑定计数行；关断时仅余 thread-local 计数自增与 thunk 入口一次布尔检查（产品路径行为不变）。仓库样例 [config/CharacterPanel.ini](../config/CharacterPanel.ini) 已加该键（false）。
+- **验证**：引擎无关用例 `behavior_graph_display_step_test`（编译到改动头 drive_step_policy.h）g++ C++23 `-Wall -Wextra -Werror` 通过（"2 display-step regression cases passed"）；无 settings 解析类测试受新键影响。
+- **部署（2026-10-31）**：v59 三件套备份至 `dist/deploy-backup-20261031-v60/`（DLL `013e1bdc…`、PDB `8b8fd16f…`、dormant INI `65e57401…` 2,013 字节）；v60 DLL/PDB 装入 MO2 实例；部署 dormant INI 重建为 2,147 字节 `27f481f5…`——**修复了 v59 部署 INI 中 `CandidateUnequipEvent` 键重复两次的卫生问题**（S6 与 F 两次部署叠加所致，值相同无行为影响），并加入 `OarContextWatch=false`；部署后 20 键逐键打印回读断言全部正确（反模式 11 执行）。
+- **上机门（待授权）**：实验 A = `inject` + S1 观测两键（`CandidateInputProbe=true`、`CandidateInputVariable=` 空）+ S6 卸下两键（`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`）+ `OarContextWatch=true` + `DetailedAnimationTrace=true`；B 段 A/A 基线与运行 A = `IndependentGraph=off`；B 段运行 B = 实验 A 配置。
