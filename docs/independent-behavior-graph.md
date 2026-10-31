@@ -2723,3 +2723,18 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 - **验证**：引擎无关用例 `behavior_graph_display_step_test`（编译到改动头 drive_step_policy.h）g++ C++23 `-Wall -Wextra -Werror` 通过（"2 display-step regression cases passed"）；无 settings 解析类测试受新键影响。
 - **部署（2026-10-31）**：v59 三件套备份至 `dist/deploy-backup-20261031-v60/`（DLL `013e1bdc…`、PDB `8b8fd16f…`、dormant INI `65e57401…` 2,013 字节）；v60 DLL/PDB 装入 MO2 实例；部署 dormant INI 重建为 2,147 字节 `27f481f5…`——**修复了 v59 部署 INI 中 `CandidateUnequipEvent` 键重复两次的卫生问题**（S6 与 F 两次部署叠加所致，值相同无行为影响），并加入 `OarContextWatch=false`；部署后 20 键逐键打印回读断言全部正确（反模式 11 执行）。
 - **上机门（待授权）**：实验 A = `inject` + S1 观测两键（`CandidateInputProbe=true`、`CandidateInputVariable=` 空）+ S6 卸下两键（`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`）+ `OarContextWatch=true` + `DetailedAnimationTrace=true`；B 段 A/A 基线与运行 A = `IndependentGraph=off`；B 段运行 B = 实验 A 配置。
+
+**首轮运行（2026-10-31 22:58，v60 身份 `fdbd414f45` 活日志确认，AE 1.6.1170，actor 00000014 request=1；[日志](diagnostics/CharacterPanel-g4a-oar-context-20261031-2258.log) 129,822 字节 SHA-256 `a5bb568e…`）：判据 3 命中、判据 2 部分成立、判据 1 出现计划外证据类——G4-A 未决，另立 A2 切片。**
+
+| 判据 | 观测 |
+| --- | --- |
+| 3（复用） | **命中**：恰好两次 `result=dispatched`（`WeapEquip` id=2 + `Unequip` id=144）；step 0 `default=10`、step 49 `default=1`、settle `target-step=49 settled-step=63 baseline-default=1`（第九次复现）、卸下段 step 21 自发回 0；`drive-done candidate-pose-0/60/120 = bc160a8c/63f638a6/c407cb4e`、`unequip-done = 8fb4cd33/4f2aebde/c407cb4e`——与 S6/F 逐位一致（确定性重放）；`pose-motion changed=119/92`；`source-drift=none` 全程；零 `[E]` |
+| 2（辅） | **部分成立**：全程恰好 1 行 `OAR COND`（22:58:01.868，实验窗口结束 01.801 之后、显示步进开始 01.958 之前 = 面板打开的产品提案查询，设计内借读），武装窗口内零产品查询产物行 ✓；但 `DISPLAY advance` 行未发射——该行只在"显示模式结束后下一次 `advance()` 落穿"时输出，而本会话面板关闭后预览不再渲染、无后续 advance 调用（仪器缺口，非隔离失败信号） |
+| 1（主） | **未决**：`OAR CONTEXT window=experiment actor=00000014 request=1 evaluations=2037 overlaps=0`——字面判据 `overlaps=0` 满足（零源 actor REFR 命中），但 `evaluations=2037` 远非预期的 0。前 8 行（8 行上限截断）全部 `refr=00000000`（空 REFR），位于 `phase=activated` 之后、`WeapEquip` 注入之前；分布排除逐步求值（显示窗口 120 步稳态 MT idle **evaluations=0**），指向**激活/转移驱动的突发**（初始激活 + 回放 4 次转移的剪辑激活 ≈ 每次 ~400 求值；命中模式 `evaluate-replacement → evaluate-set → evaluate ×2` 为 OAR 单个 replacement 候选树的完整求值流程） |
+| 4（记录） | `phase=load-bindings source-set=0x2347380d060 source-count=15203 candidate-set=0x2347380d060 candidate-count=15203`——**候选与源共享同一绑定集对象**（`compare-loaded setup=different bindings=same`：候选自有 setup 引用同一绑定集），装载 9.8 ms 一次接受；G5 同剪辑对齐前置满足，但"共享绑定集"本身列入 A2 观察面 |
+
+**裁定：G4-A 未决（NOT adjudicated）。** 预注册失败签名（`overlaps>0` / 候选值读取）未发生，预注册通过签名（`evaluations=0`）也未发生；字面 `overlaps=0` 的满足不能追认为通过——其解释性陈述"OAR 求值不触碰候选"被 2037 次空 REFR 求值削弱（反模式：不得把判据放宽为成功），也不构成判负（无任何源泄漏签名）。**B/C 暂停**（它们验收的"OAR 与候选互不污染"前提正是当前的未决项）。`load-bindings` 的共享绑定集是新的 G4 相关事实，一并交 A2。
+
+**C-G4-A2 切片（预注册，草案 → 实现）**：回答三个问题——①2037 求值的触发入口（激活突发假设 vs 其它：把命中行上限改为按事件分段计数，在每次 dispatch/激活前后打窗口快照行）；②**求值读了哪张图**（关键仪器升级：`evaluate_thunk`/`evaluate_set_thunk`/`evaluate_replacement_thunk` 均有 `hkbClipGenerator* clip` 参数，从 clip 反查所属 graph/character 指针，与候选图 `0x239c0779…`/源图做**图级交集**——首轮只有 REFR 级身份，无法区分"候选图内容自评估"与"外部钩子评估候选"）；③求值是否写 OAR 状态（候选未注册 per-character 上下文，null REFR 下状态写落在何处；由 A2 + 后续 B 段世界动作间接回答）。A2 判负（图级交集命中且读候选值）→ G4 隔离前提重建；A2 判"候选图内容自评估且无源读取"→ 判据 1 按修订解释关闭，B/C 解禁。
+
+**收尾**：部署 INI 已回 dormant（v60 留装）；A2 实现/上机待安排。
