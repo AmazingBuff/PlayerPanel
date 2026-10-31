@@ -69,5 +69,9 @@ namespace animation
     // hard-coded "1HM_Unequip" stays as the empty-key default so historical INI files reproduce
     // their rounds verbatim.
     [[nodiscard]] std::string const& candidate_unequip_event();
+    // C-G4-A: while native candidate activity is armed, count and log OAR condition-evaluation
+    // detour hits (OAR CONTEXT rows) and emit the display-branch suppression row. Default off;
+    // restart after changing.
+    [[nodiscard]] bool oar_context_watch();
 }
 PLUGIN_NAMESPACE_END

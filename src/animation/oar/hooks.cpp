@@ -8,6 +8,7 @@
 #include "animation/oar/ied_conditions.h"
 #include "animation/oar/policy.h"
 #include "animation/oar/preview_clip.h"
+#include "animation/behavior_graph/candidate_window.h"
 #include "animation/settings.h"
 
 #include "RE/H/hkbCharacterStringData.h"
@@ -402,9 +403,29 @@ namespace oar
             return equipped_type(form) == static_cast<std::int8_t>(requested);
         }
 
+        // C-G4-A: count any OAR evaluation-machinery activity that fires while native
+        // candidate activity is armed. Per-hit rows are capped per window; the window
+        // summary reports the full count. Placed before the scope checks so native
+        // (non-product) evaluations are observed too.
+        constexpr std::uint32_t Oar_Context_Hit_Row_Cap = 8;
+
+        void note_oar_context_hit(char const* site, RE::TESObjectREFR const* source, void const* subject)
+        {
+            namespace bg = animation::behavior_graph;
+            if (!bg::candidate_window_active()) return;
+            const RE::FormID refr = source ? source->GetFormID() : 0;
+            bg::note_candidate_window_hit(refr);
+            if (!animation::oar_context_watch()) return;
+            if (bg::g_candidate_window.evaluations > Oar_Context_Hit_Row_Cap) return;
+            logger::info("OAR CONTEXT hit site={} refr={:08x} subject={:#x} evaluations={}",
+                site, refr, reinterpret_cast<std::uintptr_t>(subject),
+                bg::g_candidate_window.evaluations);
+        }
+
         bool evaluate_thunk(Condition const* condition, RE::TESObjectREFR* source,
             RE::hkbClipGenerator* clip, void* submod)
         {
+            note_oar_context_hit("evaluate", source, condition);
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             if (!scope)
                 return s_evaluate(condition, source, clip, submod);
@@ -516,6 +537,7 @@ namespace oar
 
         float numeric_thunk(void const* numeric, RE::TESObjectREFR* source)
         {
+            note_oar_context_hit("numeric", source, numeric);
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             const Frame* const frame = Frame::current;
             if (!scope || !frame || source != frame->m_source || !scope->matches(frame->m_source, frame->m_clip) ||
@@ -737,6 +759,7 @@ namespace oar
         bool evaluate_set_thunk(void const* set, RE::TESObjectREFR* source, RE::hkbClipGenerator* clip,
             void* submod, bool trace)
         {
+            note_oar_context_hit("evaluate-set", source, set);
             QueryFrame* const query = QueryFrame::current;
             ScopedEvaluation* const outer = ScopedEvaluation::current();
             if (!query || !outer || !outer->matches(source, clip))
@@ -794,6 +817,7 @@ namespace oar
         bool evaluate_replacement_thunk(void const* replacement, RE::TESObjectREFR* source,
             RE::hkbClipGenerator* clip)
         {
+            note_oar_context_hit("evaluate-replacement", source, replacement);
             QueryFrame* const query = QueryFrame::current;
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             if (!query || !scope || !scope->matches(source, clip))

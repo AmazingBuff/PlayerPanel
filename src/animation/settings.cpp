@@ -27,6 +27,7 @@ namespace
     std::string g_candidate_unequip_variable;
     std::string g_candidate_unequip_prime;
     std::string g_candidate_unequip_event;
+    bool g_oar_context_watch = false;
 }
 void load_settings()
 {
@@ -61,6 +62,7 @@ void load_settings()
     g_candidate_unequip_prime = unequip_prime ? unequip_prime : "";
     char const* const unequip_event = ini.GetValue("Experiment", "CandidateUnequipEvent", "");
     g_candidate_unequip_event = unequip_event ? unequip_event : "";
+    g_oar_context_watch = ini.GetBoolValue("Experiment", "OarContextWatch", false);
     if (!parsed) logger::warn("ANIMATION invalid Animation.UnarmedIdle='{}'; using non_combat_loop", value);
     if (!parsed_experiment) logger::warn("EXPERIMENT invalid Experiment.IndependentGraph='{}'; using off", experiment);
     logger::info("ANIMATION setting UnarmedIdle={}", g_unarmed_idle == UnarmedIdle::e_mt_idle ? "mt_idle" : "non_combat_loop");
@@ -79,6 +81,7 @@ void load_settings()
     logger::info("EXPERIMENT setting CandidateGenerationEntry={}", g_candidate_generation_entry);
     logger::info("EXPERIMENT setting CandidateUnequipProbe={} variable='{}' prime='{}' event='{}'", g_candidate_unequip_probe,
         g_candidate_unequip_variable, g_candidate_unequip_prime, g_candidate_unequip_event);
+    logger::info("EXPERIMENT setting OarContextWatch={}", g_oar_context_watch);
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
@@ -99,5 +102,6 @@ bool candidate_unequip_probe() { return g_candidate_unequip_probe; }
 std::string const& candidate_unequip_variable() { return g_candidate_unequip_variable; }
 std::string const& candidate_unequip_prime() { return g_candidate_unequip_prime; }
 std::string const& candidate_unequip_event() { return g_candidate_unequip_event; }
+bool oar_context_watch() { return g_oar_context_watch; }
 }
 PLUGIN_NAMESPACE_END

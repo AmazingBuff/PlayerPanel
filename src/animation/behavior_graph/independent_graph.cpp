@@ -4,6 +4,7 @@
 #include "animation/behavior_graph/independent_graph.h"
 
 #include "animation/behavior_graph/candidate_variable_census.h"
+#include "animation/behavior_graph/candidate_window.h"
 #include "animation/behavior_graph/clip_reference_policy.h"
 #include "animation/behavior_graph/drive_step_policy.h"
 #include "animation/behavior_graph/display_step_clock.h"
@@ -20,6 +21,7 @@
 #include "RE/H/hkaAnimation.h"
 #include "RE/H/hkaAnimationBinding.h"
 #include "RE/H/hkaSkeleton.h"
+#include "RE/H/hkbAnimationBindingSet.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbBehaviorGraphData.h"
 #include "RE/H/hkbBehaviorGraphStringData.h"
@@ -1039,6 +1041,14 @@ public:
         if (window.steps() > 0 && window.steps() < 120 && window.take_row())
             logger::info("ANIMATION DISPLAY window=aborted actor={:08x} request={} source-generation={} view={} steps={} reason={} source-comparison=discarded",
                 window.source().actor_id, window.request(), window.source().generation, window.view(), window.steps(), reason);
+        // C-G4-A: every display-window close path funnels here; the summary is the armed
+        // evidence for "no OAR evaluation touched the candidate during display stepping".
+        if (animation::oar_context_watch())
+        {
+            const CandidateWindowTally taken = take_candidate_window_tally();
+            logger::info("OAR CONTEXT window=display-{} actor={:08x} request={} view={} evaluations={} overlaps={}",
+                reason, window.source().actor_id, window.request(), window.view(), taken.evaluations, taken.overlaps);
+        }
     }
 
     bool accepts_source(RE::BShkbAnimationGraph const& source_graph)
@@ -1083,6 +1093,8 @@ void DisplaySession::request(DisplaySourceIdentity source, std::uint64_t request
     if (window.active() && same_display_source(window.source(), source) && window.request() == request) return;
     m_state->abort("request");
     (void)window.bind(source, request);
+    // C-G4-A: a fresh display window re-arms the hit tally for this source.
+    arm_candidate_window(source.actor_id);
     m_state->clear_statistics();
 }
 
@@ -1124,6 +1136,21 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=begin mode={} runtime={}.{}.{}.{} holder=nullptr factory={} loader={} third-arg=false",
         actor_id, request, independent_graph_name(mode), version.major(), version.minor(), version.patch(), version.build(),
         GraphConstructorID, GraphLoaderID);
+
+    // C-G4-A: the experiment window is armed here and summarized at every exit path below.
+    arm_candidate_window(actor_id);
+    struct ExperimentWindowSummary
+    {
+        std::uint32_t actor_id;
+        std::uint64_t request;
+        ~ExperimentWindowSummary()
+        {
+            if (!animation::oar_context_watch()) return;
+            const CandidateWindowTally taken = take_candidate_window_tally();
+            logger::info("OAR CONTEXT window=experiment actor={:08x} request={} evaluations={} overlaps={}",
+                actor_id, request, taken.evaluations, taken.overlaps);
+        }
+    } const experiment_window_summary{ actor_id, request };
 
     const Identity source_before = identify(source_graph);
     observe_source_baseline(source_graph, actor_id, request, source_generation);
@@ -1250,6 +1277,30 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                     same_or_different(source_before.active_nodes, loaded_identity.active_nodes),
                     same_or_different(source_before.variable_values, loaded_identity.variable_values));
                 candidate_final = loaded_identity;
+                if (loaded && animation::oar_context_watch())
+                {
+                    // C-G4 supplementary observation: did the candidate's fresh 63585 load go
+                    // through the same OAR replacement pipeline as the source? Different
+                    // binding counts would say no (a holder-less load can skip OAR's load
+                    // hook); equal counts are the G5 same-clip alignment prerequisite.
+                    const auto read_bindings = [](RE::hkbCharacter const& character)
+                        -> RE::hkbAnimationBindingSet const* {
+                        if (auto const* const set = static_cast<RE::hkbAnimationBindingSet const*>(
+                                character.animationBindingSet.get()))
+                            return set;
+                        return character.setup
+                             ? static_cast<RE::hkbAnimationBindingSet const*>(character.setup->animationBindingSet.get())
+                             : nullptr;
+                    };
+                    const RE::hkbAnimationBindingSet* const source_bindings = read_bindings(source_graph.characterInstance);
+                    const RE::hkbAnimationBindingSet* const candidate_bindings = read_bindings(candidate->characterInstance);
+                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=load-bindings source-set={:#x} source-count={} candidate-set={:#x} candidate-count={}",
+                        actor_id, request,
+                        reinterpret_cast<std::uintptr_t>(source_bindings),
+                        source_bindings ? source_bindings->bindings.size() : 0,
+                        reinterpret_cast<std::uintptr_t>(candidate_bindings),
+                        candidate_bindings ? candidate_bindings->bindings.size() : 0);
+                }
                 if (loaded)
                 {
                     // Deliberate leak (contract revision of 2026-10-24): a loaded graph
@@ -1479,7 +1530,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 {
                                     InjectedEvent event{ static_cast<std::uint32_t>(chosen_id), 0, nullptr, nullptr };
                                     static REL::Relocation<event_dispatch_t> event_dispatch{ REL::ID(EventDispatchID) };
-                                    event_dispatch(behavior, context, &event);
+                                    {
+                                        ScopedCandidateWindow const dispatch_window;
+                                        event_dispatch(behavior, context, &event);
+                                    }
                                     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=inject event='{}' id={} result=dispatched",
                                         actor_id, request, chosen_name, chosen_id);
                                 }
@@ -2169,7 +2223,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         {
                                             InjectedEvent unequip_event{ static_cast<std::uint32_t>(unequip_id), 0, nullptr, nullptr };
                                             static REL::Relocation<event_dispatch_t> unequip_dispatch{ REL::ID(EventDispatchID) };
-                                            unequip_dispatch(behavior, context, &unequip_event);
+                                            {
+                                                ScopedCandidateWindow const dispatch_window;
+                                                unequip_dispatch(behavior, context, &unequip_event);
+                                            }
                                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-inject event='{}' id={} result=dispatched",
                                                 actor_id, request, unequip_event_name, unequip_id);
                                             input_delivered = true;

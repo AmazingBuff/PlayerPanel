@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#include "animation/behavior_graph/candidate_window.h"
 #include "animation/behavior_graph/frame_trace_policy.h"
 
 #include <array>
@@ -32,10 +33,13 @@ namespace animation::behavior_graph
     };
 
     // Native side effects are supplied at their boundary; both callers retain the same step.
+    // The C-G4-A window guard arms for the step's native calls: OAR evaluate detours count
+    // their hits only while candidate activity is actually executing.
     template <class Graph, class Pipeline, class Update, class Generate, class Observe>
     void drive_graph_step(Graph& graph, Graph const& source, float timestep, EyePoint const* eye,
         Pipeline const& pipeline, Update const& update, Generate const& generate, Observe const& observe)
     {
+        ScopedCandidateWindow const candidate_window;
         ScopedGraphWorld<Graph> const world(graph, source);
         observe(FrameStage::e_pre_pipeline);
         pipeline(graph);

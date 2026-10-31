@@ -389,6 +389,9 @@ public:
     bool trace_shield_request = false;
     std::uint64_t pose_probe_epoch = 0;
     std::uint32_t pose_probe_wraps = 0;
+    // C-G4-A: display frames that returned the candidate pose instead of the product
+    // selection path; emitted once when display mode ends.
+    std::uint32_t display_frames = 0;
     MappingPublication mapping_publication;
 
     void trace_decision(std::string_view decision, std::string_view reason, Proposal const* subject)
@@ -1202,8 +1205,17 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
                 state.pose, state.nodes, root_name ? std::string_view(root_name) : std::string_view{});
             state.display.record_application(stepped, held.size(), coverage);
             recompute_subtree_worlds(root, 0);
+            ++state.display_frames;
             return coverage.applied;
         }
+    }
+    // C-G4-A: display mode ended — report how many frames the product selection path was
+    // suppressed by the display branch (the structural mutual-exclusion evidence).
+    if (oar_context_watch() && state.display_frames > 0)
+    {
+        logger::info("DISPLAY advance display-frames={} product-query-suppressed={} actor={:08x} request={}",
+            state.display_frames, state.display_frames, state.actor_id, state.generation);
+        state.display_frames = 0;
     }
     const auto now = std::chrono::steady_clock::now();
     const double delta = std::clamp(std::chrono::duration<double>(now - state.last_tick).count(), 0.0, 0.1);
