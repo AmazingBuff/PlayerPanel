@@ -2247,3 +2247,30 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 **裁定**：装备锚与卸下锚（`currentDefaultState` 首离 0 / 首离 1 ±10 帧）窗口内事件行为空，按预注册判据记负结果——**真实装备/卸下流程不经 58377 可见的事件驱动**。这与全部既有证据自洽：v52 的 `WeapEquip` 注入能推进候选装备相位（事件触发入口存在，但真实流程不走它）；[audit27](behavior-graph-construction-audit.md) 的三个静态外部整数 setter 位点指向真实流程的机制是**引擎代码直接写图变量、状态机按变量条件转移**。剩余未测线索收敛为本节草案预注册的那条：**卸下侧变量从未作为输入写过**——S1/S2 只测过装备侧（`iRightHandEquipped`、`IsEquipping`），`bEquipUnequip`(125) 与 `PitchManualOverride`(65) 从未写过，且两者已证存在于候选 652 表。下一个切片应复用 S3 的两段结构（`WeapEquip` → settle 门），把第二段从事件分发换成对卸下侧变量的按名 typed setter 写入。
 
 **残余限定（如实入档）**：本仪器按设计只对源图指针过滤，无法区分"引擎不向这张图派发事件"与"引擎根本不经 58377 派发任何事件"（后者意味着"两条原生路径都过 58377"的审计覆盖不完备）。闭合它需要一个极小全局计数探针；就当前决策而言不需要——负结果已足以把下一片指向卸下侧变量。部署 INI 已回 dormant off（1,633 字节 `aa49d0f7…`）。
+
+<a id="c-g3b-s4-unequip-variable"></a>
+## C-G3B-S4：卸下侧变量写入切片（草案，2026-10-31，未实现）
+
+**背景**：E1 判负后机制图景收敛为"引擎直接写图变量、状态机按变量条件转移"。但 v41 的 settled 行时序给出一个关键反证：引擎对 `iMagicEquipped`/`iRightHandEquipped` 的 setter 写发生在 54.504——**在卸下转移（53.652 `default` 1→12）之后 0.85 秒**，装备态变量不是卸下转移的触发。转移当刻同刻变化的只有三个脉冲加 `default` 本身：`PitchManualOverride` 0→1、`IsUnequipping` 0→1、`bEquipUnequip` 0→1。若其中之一是引擎当刻写入的输入，从 settled equipped idle 写它就应推进相位——本切片逐一检验，预注册顺序防 fishing。
+
+**输入阶梯（每轮一名，换名仅改 INI，不改二进制）**：
+
+1. `bEquipUnequip`（125，BOOL，C-VC1 实测）——名字直接绑定装备/卸下状态机段；
+2. `IsUnequipping`（111，BOOL）——`IsEquipping` 的镜像（S2 写 `IsEquipping` 无效，但那是激活后非 equipped-idle 态的写入，时机错配，镜像名本身未测）；
+3. `PitchManualOverride`(65)——类型未实测，typed setter 按 `m_type` 自选，REAL/POINTER/quad 跳过。
+
+每轮判负才进下一轮；三轮全负 → 卸下脉冲变量路线判死，触发源既非事件也非已见变量，回到 manager 层路径/写变量监视器另行立项。
+
+**写集**：单个名字、值 1、每进程一次，位置 = S3 的 settle 门通过之后、121 步采样窗之前。typed setter 按 `m_type`（BOOL→`SetGraphVariableBool(true)`，INT8/16/32→`SetGraphVariableInt(1)`），返回值与读回必录；名字在候选自己的 stringData 解析，缺失即 skip（不跑采样窗）。
+
+**机制**：新键 `[Experiment] CandidateUnequipVariable`——非空时第二段从"分发 `1HM_Unequip`"改为"写该变量"，为空保持 S3 事件路径不变。门、settle、121 步采样、观测行、停止条件全部沿用 S3 已验证机制；typed 选择复用 S1 的按型逻辑，无新增策略逻辑、无离线新用例。
+
+**判据**（每轮独立裁定）：主判据 `currentDefaultState` 1→12→0；辅判据节点数偏离基线回落、卸下脉冲出现、运动持续。命中 → 该变量即卸下转移的输入，G3-B 输入子集定为 {equip: `WeapEquip` 事件, unequip: 该变量写入}，下一片预注册两段时序容差并起草完整回放。未命中 → 按阶梯换名重跑。`iState` 照旧只记录不判定。
+
+**非目标**：不写其它变量、不做姿态对照、不改显示/捕获/台账、不宣称 G3-B 通过；第一轮只写 `bEquipUnequip=1`——阶梯是预注册的顺序，不是同轮多写。
+
+**停止条件**：崩溃、非有限值、`source-drift` 非 none 立即停止。
+
+**门**：`CandidateUnequipProbe=true` + `IndependentGraph=inject` + `CandidateUnequipVariable=<名字>`。
+
+**状态：草案，未实现。** 实现仅涉及 S3 第二段的写法分支与新 INI 键；构建后部署 INI 按第一轮名单（`bEquipUnequip`）设置。
