@@ -1,0 +1,106 @@
+[17:56:53.126] [25236] [I] CharacterPanel v1-2-1-0
+[17:56:53.126] [25236] [I] CharacterPanel loaded
+[2026-10-31 17:56:53.126] [thread 25236] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(81): [info] CharacterPanel v1-2-1-0
+[17:57:08.634] [25236] [I] OAR Animations V1 mapping API available
+[17:57:08.634] [25236] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[17:57:08.634] [25236] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[17:57:48.118] [42060] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[17:57:48.118] [42060] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[17:57:48.118] [42060] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[17:57:48.118] [42060] [I] EXPERIMENT setting IndependentGraph=off
+[17:57:48.118] [42060] [I] EXPERIMENT setting DisplayPose=false
+[17:57:48.118] [42060] [I] EXPERIMENT setting DisplayStep=false
+[17:57:48.118] [42060] [I] EXPERIMENT setting SourceTimeline=true transient=true
+[17:57:48.118] [42060] [I] EXPERIMENT setting SourceEventCapture=false
+[17:57:48.118] [42060] [I] EXPERIMENT setting SourceWriteCapture=false
+[17:57:48.118] [42060] [I] EXPERIMENT setting CandidateVariableCensus=false
+[17:57:48.118] [42060] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[17:57:48.118] [42060] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[17:57:48.118] [42060] [I] EXPERIMENT setting CandidateUnequipProbe=false variable='' prime=''
+[17:57:48.118] [42060] [I] SOURCE EVENTCAPTURE install-skip reason=off
+[17:57:48.118] [42060] [I] SOURCE WRITECAPTURE install-skip reason=off
+[17:57:48.120] [42060] [I] DAC native inventory lifecycle sink installed
+[17:57:48.123] [42060] [I] All shaders compiled
+[17:57:48.124] [42060] [I] Installed pre-UI renderer hook
+[17:57:48.124] [42060] [I] Panel menu sink installed
+[17:57:48.124] [42060] [I] CharacterManager equipment sink installed
+[17:57:48.124] [42060] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-behavior-graph-v58-transient-watch-20261031-65c069e1ba-cl94faaed0c6-20261031T095536Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[17:57:48.170] [40928] [I] Studio host changed: 0x0 -> 0x24ead2a6980 (paused=true)
+[17:57:48.170] [40928] [I] Studio light node has been created
+[17:57:48.170] [40928] [I] CP-LIGHT slot 0: registered, shell 0x24feaf4f880 queued (ledger stays the authority)
+[17:57:48.170] [40928] [I] CP-LIGHT slot 1: registered, shell 0x24feaf4f740 queued (ledger stays the authority)
+[17:57:48.170] [40928] [I] CP-LIGHT slot 2: registered, shell 0x24feaf4f600 queued (ledger stays the authority)
+[17:57:48.170] [40928] [I] Studio lights registered on the ledger (scene=0x244cf6f6e80 -- ledger fetch will populate the slots)
+[17:57:48.170] [40928] [I] CP-LIGHT slot 0: ledger shell fetched 0x24feaf4f880 (after 0 miss frames)
+[17:57:48.170] [40928] [I] CP-LIGHT slot 1: ledger shell fetched 0x24feaf4f740 (after 0 miss frames)
+[17:57:48.170] [40928] [I] CP-LIGHT slot 2: ledger shell fetched 0x24feaf4f600 (after 0 miss frames)
+[17:59:02.879] [25236] [I] DAC old-world sessions discarded world=2
+[17:59:03.023] [40928] [I] SOURCE TIMELINE invalidated reason=world-reset
+[17:59:03.184] [40928] [I] CP-LIGHT slot 0: ledger shell dropped
+[17:59:03.184] [40928] [I] CP-LIGHT slot 1: ledger shell dropped
+[17:59:03.184] [40928] [I] CP-LIGHT slot 2: ledger shell dropped
+[17:59:03.184] [40928] [W] Studio lights not fully served by the ledger yet
+[17:59:09.588] [40928] [W] Studio lights not fully served by the ledger yet
+[17:59:12.911] [40928] [I] CharacterManager watch actor=00000014
+[17:59:12.921] [40928] [I] OAR bases stage=world-prewarm project=0x24e5ae59e80 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.084
+[17:59:12.921] [40928] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x24feaf4fc40 filed to lightQueueAdd)
+[17:59:12.921] [40928] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x24feaf4f240 filed to lightQueueAdd)
+[17:59:12.921] [40928] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x24feaf4f100 filed to lightQueueAdd)
+[17:59:12.989] [40928] [I] CP-LIGHT slot 0: ledger shell fetched 0x24feaf4fc40 (after 1 miss frames)
+[17:59:12.989] [40928] [I] CP-LIGHT slot 1: ledger shell fetched 0x24feaf4f240 (after 1 miss frames)
+[17:59:12.989] [40928] [I] CP-LIGHT slot 2: ledger shell fetched 0x24feaf4f100 (after 1 miss frames)
+[17:59:24.010] [35744] [I] SOURCE TIMELINE arm-requested
+[17:59:24.029] [25236] [I] SOURCE TIMELINE window-open actor=00000014 words=463 nodes=36 seconds=20 mode=transient
+[17:59:25.354] [25236] [I] SOURCE TIMELINE variable index=53 name='TimeDelta' 1017817773->1017549337 float=0.0208->0.0203
+[17:59:25.866] [25236] [I] SOURCE TIMELINE variable index=110 name='IsEquipping' 0->1 mode=transient
+[17:59:25.866] [25236] [I] SOURCE TIMELINE variable index=113 name='currentDefaultState' 0->10 mode=transient
+[17:59:25.931] [25236] [I] SOURCE TIMELINE nodes count=51
+[17:59:25.950] [25236] [I] SOURCE TIMELINE variable index=53 1017549337->1017728294 float=0.0203->0.0207
+[17:59:26.053] [25236] [I] SOURCE TIMELINE variable index=70 name='bVoiceReady' 1->0 mode=transient
+[17:59:26.053] [25236] [I] SOURCE TIMELINE variable index=200 name='bIsInMT' 1->0 mode=transient
+[17:59:26.072] [25236] [I] SOURCE TIMELINE variable index=180 name='iLeftHandEquipped' 0->9 mode=transient
+[17:59:26.116] [25236] [I] SOURCE TIMELINE nodes count=32
+[17:59:26.242] [25236] [I] SOURCE TIMELINE variable index=126 name='bAttached' 0->1 mode=transient
+[17:59:26.282] [25236] [I] SOURCE TIMELINE nodes count=33
+[17:59:26.369] [25236] [I] SOURCE TIMELINE variable index=117 name='iMagicEquipped' 0->1 mode=transient
+[17:59:26.369] [25236] [I] SOURCE TIMELINE variable index=179 name='iRightHandEquipped' 0->1 mode=transient
+[17:59:26.454] [25236] [I] SOURCE TIMELINE variable index=16 name='Pitch' -1046456421->-1046163536 float=-20.0428->-20.6014
+[17:59:26.932] [25236] [I] SOURCE TIMELINE variable index=53 1017728294->1017907251 float=0.0207->0.0210
+[17:59:27.172] [25236] [I] SOURCE TIMELINE variable index=38 name='IsAttackReady' 0->1 mode=transient
+[17:59:27.172] [25236] [I] SOURCE TIMELINE variable index=70 0->1 mode=transient
+[17:59:27.172] [25236] [I] SOURCE TIMELINE variable index=92 name='bMLh_Ready' 0->1 mode=transient
+[17:59:27.172] [25236] [I] SOURCE TIMELINE variable index=93 name='bMRh_Ready' 0->1 mode=transient
+[17:59:27.172] [25236] [I] SOURCE TIMELINE variable index=94 name='iState' 0->9 mode=transient
+[17:59:27.172] [25236] [I] SOURCE TIMELINE variable index=113 10->1 mode=transient
+[17:59:27.191] [25236] [I] SOURCE TIMELINE variable index=126 1->0 mode=transient
+[17:59:27.237] [25236] [I] SOURCE TIMELINE nodes count=81
+[17:59:27.397] [25236] [I] SOURCE TIMELINE variable index=110 1->0 mode=transient
+[17:59:27.456] [25236] [I] SOURCE TIMELINE nodes count=66
+[17:59:27.830] [25236] [I] SOURCE TIMELINE variable index=16 -1046163536->-1046186066 float=-20.6014->-20.5584
+[17:59:28.344] [25236] [I] SOURCE TIMELINE variable index=53 1017907251->1018533599 float=0.0210->0.0222
+[17:59:32.780] [25236] [I] SOURCE TIMELINE variable index=65 name='PitchManualOverride' 0->1 mode=transient
+[17:59:32.780] [25236] [I] SOURCE TIMELINE variable index=111 name='IsUnequipping' 0->1 mode=transient
+[17:59:32.780] [25236] [I] SOURCE TIMELINE variable index=113 1->12 mode=transient
+[17:59:32.780] [25236] [I] SOURCE TIMELINE variable index=125 name='bEquipUnequip' 0->1 mode=transient
+[17:59:32.844] [25236] [I] SOURCE TIMELINE nodes count=82
+[17:59:32.981] [25236] [I] SOURCE TIMELINE variable index=38 1->0 mode=transient
+[17:59:32.981] [25236] [I] SOURCE TIMELINE variable index=70 1->0 mode=transient
+[17:59:32.981] [25236] [I] SOURCE TIMELINE variable index=92 1->0 mode=transient
+[17:59:32.981] [25236] [I] SOURCE TIMELINE variable index=93 1->0 mode=transient
+[17:59:32.981] [25236] [I] SOURCE TIMELINE variable index=94 9->0 mode=transient
+[17:59:33.046] [25236] [I] SOURCE TIMELINE nodes count=33
+[17:59:33.649] [25236] [I] SOURCE TIMELINE variable index=117 1->0 mode=transient
+[17:59:33.649] [25236] [I] SOURCE TIMELINE variable index=179 1->0 mode=transient
+[17:59:33.649] [25236] [I] SOURCE TIMELINE variable index=180 9->0 mode=transient
+[17:59:33.669] [25236] [I] SOURCE TIMELINE variable index=180 0->9 mode=transient
+[17:59:33.889] [25236] [I] SOURCE TIMELINE variable index=70 0->1 mode=transient
+[17:59:33.889] [25236] [I] SOURCE TIMELINE variable index=113 12->0 mode=transient
+[17:59:33.889] [25236] [I] SOURCE TIMELINE variable index=200 0->1 mode=transient
+[17:59:33.915] [25236] [I] SOURCE TIMELINE variable index=180 9->0 mode=transient
+[17:59:33.956] [25236] [I] SOURCE TIMELINE nodes count=52
+[17:59:34.108] [25236] [I] SOURCE TIMELINE variable index=65 1->0 mode=transient
+[17:59:34.108] [25236] [I] SOURCE TIMELINE variable index=111 1->0 mode=transient
+[17:59:34.108] [25236] [I] SOURCE TIMELINE variable index=125 1->0 mode=transient
+[17:59:34.171] [25236] [I] SOURCE TIMELINE nodes count=36
+[17:59:34.430] [25236] [I] SOURCE TIMELINE variable index=53 1018533599->1017549337 float=0.0222->0.0203
+[17:59:37.659] [25236] [I] SOURCE TIMELINE variable index=53 1017549337->1017817771 float=0.0203->0.0208
