@@ -54,6 +54,17 @@ namespace animation::behavior_graph
         return taken;
     }
 
+    // Takes the counts only when the armed window belongs to the asking actor: interleaved
+    // non-candidate sessions (one DisplaySession per registered actor) must neither reset
+    // nor consume another window's tally. On mismatch the tally is left untouched and the
+    // returned row carries zero counts with the foreign armed id.
+    [[nodiscard]] inline CandidateWindowTally take_candidate_window_tally_for(std::uint32_t actor_id)
+    {
+        if (g_candidate_window.source_actor_id != actor_id)
+            return CandidateWindowTally{ g_candidate_window.depth, 0, 0, g_candidate_window.source_actor_id };
+        return take_candidate_window_tally();
+    }
+
     class ScopedCandidateWindow
     {
     public:

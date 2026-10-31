@@ -1043,11 +1043,13 @@ public:
                 window.source().actor_id, window.request(), window.source().generation, window.view(), window.steps(), reason);
         // C-G4-A: every display-window close path funnels here; the summary is the armed
         // evidence for "no OAR evaluation touched the candidate during display stepping".
+        // Only the candidate-owning session may take (and emit) the tally.
         if (animation::oar_context_watch())
         {
-            const CandidateWindowTally taken = take_candidate_window_tally();
-            logger::info("OAR CONTEXT window=display-{} actor={:08x} request={} view={} evaluations={} overlaps={}",
-                reason, window.source().actor_id, window.request(), window.view(), taken.evaluations, taken.overlaps);
+            const CandidateWindowTally taken = take_candidate_window_tally_for(window.source().actor_id);
+            if (taken.source_actor_id == window.source().actor_id)
+                logger::info("OAR CONTEXT window=display-{} actor={:08x} request={} view={} evaluations={} overlaps={}",
+                    reason, window.source().actor_id, window.request(), window.view(), taken.evaluations, taken.overlaps);
         }
     }
 
@@ -1093,8 +1095,11 @@ void DisplaySession::request(DisplaySourceIdentity source, std::uint64_t request
     if (window.active() && same_display_source(window.source(), source) && window.request() == request) return;
     m_state->abort("request");
     (void)window.bind(source, request);
-    // C-G4-A: a fresh display window re-arms the hit tally for this source.
-    arm_candidate_window(source.actor_id);
+    // C-G4-A: a fresh display window re-arms the hit tally — but only for the
+    // candidate-owning source, so interleaved non-candidate sessions cannot reset the
+    // candidate window's counts. The first panel open arms inside the experiment itself.
+    if (!g_held_graph || same_display_source(g_held_source, source))
+        arm_candidate_window(source.actor_id);
     m_state->clear_statistics();
 }
 
