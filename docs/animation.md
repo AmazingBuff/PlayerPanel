@@ -214,6 +214,17 @@ The [Smooth boundary](dac.md#smooth-moveset-compatibility-boundary) documents pr
 
 Logs identify setting, actor/request/goal/family, preparation requested/ready/failure, copied-held counts/missing mounts, choices, loads, handovers and restoration. Missing project/base or failed base loading retains accepted playback or loading with diagnostics; no guessed binding/source mutation is a fallback. Unsupported third-party conditions remain rejected, not bypassed.
 
+<a id="idle-start-replay"></a>
+## Open issue: idle start segment replay (2026-10-30)
+
+**症状**：面板里的待机会把片段的起始段每圈重放一次，看起来像"起步 → 起身 → 再起步"循环。2026-10-30 的 v46 首轮上机由操作者确认，装备/卸下/F8/重开均无其他异常。
+
+**机制**（代码路径，非推测）：待机以 `loop=true` 入队（[controller.cpp](../src/animation/controller.cpp) 的 `queue_idle` → `queue(..., {kind, form, true}, ...)`）。[event_clock.h](../src/animation/event_clock.h) 在 `loop=true` 时每到一个 duration 边界先调 `boundary()`、再把时间归零；`controller.cpp` 的边界回调置 `idle_due = true; reason = e_boundary`，随后 `queue_idle(source, e_boundary)` 生成**新的 proposal**，时钟从 0 起播。于是只要选中的片段带起手段，起手就每圈重放一次。
+
+**日志旁证**：待机重入队的时间间隔里反复出现 4.37 s / 4.38 s 的成对值（片段时长约 4.4 s），其余 9.79 / 13.90 / 21.08 s 的间隔与捕获时刻重叠，说明边界重入队与捕获重入队叠加，不是等周期。
+
+**边界**：与 v46 无关（v46 只改退休副本台账）；属产品播放路径的既有问题。未修，也未立契约。三个方向取舍不同——边界处不重入队、保留时钟连续、选段时跳过起手段——需要单独定契约后再动。
+
 ## Dependencies and verification
 
 Existing Skyrim/SKSE/CommonLib/Havok, audited OAR and supported original DAC remain. INI parsing uses existing SimpleIni. No new package, DAC rebuild, TOML parser or UI is required. See [build/config setup](build.md).

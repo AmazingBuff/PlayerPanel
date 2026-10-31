@@ -133,7 +133,7 @@ Verification is bounded SDK move/lifetime inspection, unchanged caller-order ins
 <a id="v46-manual-regression"></a>
 ## V46 first game pass: source windows and normal preview
 
-This is a procedure for the next operator session, not a completed run. It checks the read-only source recorder and normal OAR preview with native candidate display disabled. The latest recorded installation remains v41; the local v46 pair has build/source evidence only. All runtime outcomes below are **PENDING**.
+This procedure was **executed on 2026-10-30 23:14–23:32** with the local v46 rebuild (`behavior-graph-v46-retained-copy-ledger-20261030`, identity `…-c0f2d81953-cl94faaed0c6-20261030T150024Z`, DLL `70b3560a…`). The 20261029 archive named below was not present on that machine, so the 20261030 rebuild was deployed instead; the run therefore belongs to the new identity and is **not** byte-identical evidence for the 20261029 pair. Both workflow categories were observed; results are in the table at the end of this section.
 
 ### Prepare the matched files and settings
 
@@ -182,8 +182,10 @@ Twelve is only a diagnostic threshold; reaching 13 is not required. If the one-t
 
 | Workflow category | Runtime status | Evidence to retain |
 | --- | --- | --- |
-| Source windows / load cancellation | **PENDING** | Full arm/open/close/abort/invalidation sequence, action/load times, per-window line counts and observed source changes |
-| Normal preview / equipment / recapture | **PENDING** | Axe and torch observations, three accepted recaptures versus PARK events/process totals, F8 and close/reopen behavior, anomaly/video timestamps |
+| Source windows / load cancellation | **OBSERVED 2026-10-30**（v46-20261030） | 4 次 F7 → 4 个 `window-open`（words=463 稳定）；关闭 58/74/116 行；读档 `window` 被 `invalidated reason=world-reset` 取消，读档后显式 F7 拿到新基线（nodes 36→66）；无 `budget-exhausted` |
+| Normal preview / equipment / recapture | **OBSERVED 2026-10-30**（v46-20261030） | 15 次捕获全 `accepted`、0 拒绝、14 条 `SCOPY PARK`（首次无前身），`retained-total` 1→14 严格 +1；13 时唯一一条 `diagnostic-threshold=12` 告警、14 时不再出现；F8 隐显正常；关包重开正常恢复；斧头装备无闪近/重复/取景跳变；只摘火把视觉平滑（日志走 `form=none → queue_idle`，设计上不做过渡） |
+
+补充的三条运行事实：**一次"手不碰键鼠"的干净窗口在 20.03 秒关闭**（23:32:10.075→23:32:30.105，46 行），说明截止时间本身正确；另三次关闭比 20 秒晚 +51.5 s / +2.1 s / +17.8 s，原因是游戏失焦或暂停时 post-UI 采样停止、截止检查只在帧内求值，不是计时错误。只摘火把时 `transition base unavailable form=none; idle only` 属**设计行为**（`controller.cpp` 明确跳过 torch→空 的过渡），视觉平滑与日志不矛盾。产品路径另有一处与本轮无关的遗留缺陷——待机起始段每圈重放，见[动画文档](animation.md#idle-start-replay)。
 
 Return the **complete CharacterPanel.log**, including its build line, loaded settings and surrounding records, plus the exact pair hashes and test-setting values. Keep timing notes and any video with the log. Bounded pose/source snapshots can miss transients or represent different phases; absent rows do not establish absence of a visual problem. Source identity snapshots do not prove setter timing, writer roles or atomic native arrays.
 

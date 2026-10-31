@@ -796,6 +796,23 @@ Exactly two [shared cases](../tests/base_animation_cache_cases.h) compile the pr
 
 Keep target/preset changes synchronized, preserve required dependencies/generation and inspect the actual generated solution after removing entry points. Old generated project files are not supported routes. Do not delete archives or unrelated build-directory contents as a substitute for checking the current target graph.
 
+<a id="session-20261030-builds"></a>
+## 2026-10-30/31 session builds (local artifacts)
+
+Seven Release builds were produced in one session. Every configure used `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=<label>` and every build used `cmake --build --preset Release` with the proxy variables removed from the child environment — `http_proxy` and `HTTP_PROXY` together make MSBuild abort with `MSB6001` (duplicate `http_proxy` key). Each pair is archived under `build/<label>/` with its own `BUILD.txt`; each deployment backed the previous DLL/PDB/INI up under `dist/`.
+
+| Label | Identity suffix | DLL bytes / SHA-256 | PDB bytes / SHA-256 | Run |
+| --- | --- | --- | --- | --- |
+| v46-retained-copy-ledger-20261030 | `-c0f2d81953-cl94faaed0c6-20261030T150024Z` | 1,334,784 / `70b3560a8d5f7cd3b534b5f784be4729765cfc7cd5b0c10a741ff9c626028c38` | 36,442,112 / `9eddefaffb676be8ee1a8ef46a7c7ab9456368507a28a35c002de224ec826683` | v46 first pass |
+| v47-candidate-census-20261030 | `…-20261030T154738Z` | 1,367,040 / `aca4046f6247e5cd7f32769bcca8218a8462ec1440c57d7b56e057759c1a5c7e` | 36,950,016 / `89581d204d053b785350caa4809fcf356b717c339ae5a234749400c65c907004` | C-VC1 load |
+| v48-census-post-activate-20261030 | `…-20261030T155732Z` | 1,367,552 / `06fabbe7ae9123bdd9af79dac66058971f7d5e29afa12499f99cd9477bcf3f2f` | 37,064,704 / `c1739368d369b31e16db293fd78b717ed538176c6aa10fcf1888112eb1ab6284` | C-VC1 post-activate |
+| v49-candidate-input-20261031 | `…-20261030T160940Z` | 1,374,720 / `8f516a9397b7ea152f2317f65dda500b539b38d45054f703bf954765991a7cbb` | 37,122,048 / `f07cb9725f98e093adf7473dbc96516fcbc54569edd282ffec53a1d5459101ab` | S1 (invalid run) |
+| v50-generation-entry-20261031 | `…-20261030T161647Z` | 1,375,232 / `f8a9a4c67cdd291483db2c2056884f724d55bb0def52713ce40e9a1a4a8c0dcb` | 37,122,048 / `3690c3d99a474ad66065360429b6bc34edb91c3f81d2354183e16dfdcc0930b4` | S1 re-run |
+| v51-input-slice2-20261031 | `…-20261030T162411Z` | 1,379,328 / `5090a48470a3db1ad8900966c0a691624ed26a8bceb4fe22c3d272205715a73b` | 37,163,008 / `b456ca714d1e56e1b871f99b40420ece3da991f7138167ed2ae78d0914cb14a0` | S2 |
+| v52-event-path-20261031 | `…-20261030T162931Z` | 1,380,864 / `2ee8db3d5ed0eed0f55b37347cab74733da9cfe4c22f8e3387680db49776c466` | 37,179,392 / `315eb10fb2fb98bf98432fdaacf59f6eeacd5f8dc9b7ade34e1eec3584026a53` | event path |
+
+All identities carry `CharacterPanel-scenegraph-behavior-graph-` and `+dirty` (uncommitted session work). `PLUGIN_SOURCES` stayed at 30 units throughout — C-VC1 and the input slice added headers, call sites and settings keys only. v50–v52 and the INI-only combination round reused the binaries above with only the deployed INI changing. The recorded installation at the end of the session is v52 with `IndependentGraph=inject`, `CandidateInputProbe=true`, `CandidateInputVariable=iRightHandEquipped`, `DisplayPose/DisplayStep=false`. Session results: [summary](independent-behavior-graph.md#session-20261030).
+
 ## Synchronized files
 
 Maintain this guide with [README](../README.md), [SceneGraph](scene-graph.md), [animation](animation.md), [maintenance](code-maintenance.md), CMake/preset/template inputs and [runtime notes](../tools/scene_copy/README.txt). Keep current build commands out of [historical evidence](history.md), whose commands describe earlier revisions.

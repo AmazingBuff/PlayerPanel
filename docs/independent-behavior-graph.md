@@ -1986,7 +1986,7 @@ BehaviorGraphProbe=true
 | `WeapEquip` | 可用的候选单次注入路径；源事件时序未知 | 早期注入证明确有路径；G3-A 没有拦截源事件，不能宣称捕获了事件发生时刻 |
 | 节点计数、clip 栈 | 观察输出 | 与相位对应；不作为强制成功的写入目标 |
 
-**写入契约前置**：按变量名核对源与候选的存在性和 `variableInfos`/`m_type`，建立经验证的 Bool/Int/Float 映射（463/652 的槽索引不可照搬）；另外核实外部写入者/输入输出角色及必要事件，论证最小外部输入子集。类型元数据只证明表示类型，不能证明 writer 或因果角色。瞬态和事件时序若是决策必要条件，须先取得相应证据；不能把 settled 日志时间机械换成原 setter 步号。
+**写入契约前置**：按变量名核对源与候选的存在性和 `variableInfos`/`m_type`，建立经验证的 Bool/Int/Float 映射。**C-VC1（2026-10-30）已把这一项收敛为“不需要独立映射”**：候选与控制器源图共享同一个 `hkbBehaviorGraphData`（`data`/`string-data`/`infos`/`initial` 四项判定全为 `same`，652 项名字与 `m_type` 逐一对齐，`matched=652 source-only=0 candidate-only=0`）。旧表述“463/652 的槽索引不可照搬”混淆了两张不同的图：**463 是玩家自有图**（SourceTimeline 的 `player_graph()` 取 manager 里最后一个非第一人称图），**652 是控制器 `source_graph()` 选中、并传给候选的那张**；两者变量表不同，不能互相替代。仍需核实外部写入者/输入输出角色及必要事件，论证最小外部输入子集。类型元数据只证明表示类型，不能证明 writer 或因果角色；八个目标变量在该表里的 `role`/`flags` 全为 0，连 output 位都没有，进一步说明元数据不可作为输入/输出判据。瞬态和事件时序若是决策必要条件，须先取得相应证据；不能把 settled 日志时间机械换成原 setter 步号。
 
 **后续机制候选**：只对经验证的外部输入按名字选择既有 typed setter；不直接复制 word 槽、不新增 ABI/REL 入口。驱动仍以已有 `drive_candidate_step` 的 1/60 步为基线。事件/变量顺序不能由同 timestamp 的索引顺序反推；实验的时序容差须在写入契约里预注册。
 
@@ -2070,3 +2070,95 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 [两个 clock 回归](../tests/behavior_graph_display_clock_test.cpp)使用人工时间，不运行引擎：30 FPS 两秒产生 120 步且首调用为零；120 FPS 两秒同为 120 步且包含零 due 调用，随后 reset/不可推进间隔、长停顿六步截断、保留小数步且无残留 backlog。MSVC14.44 assertions、Release 构建与保护哈希/导航检查见 [v44 build](build.md#v44-display-clock-2026-10-29)。未重跑旧套件。
 
 **本地代码/离线验证通过，未部署或启动游戏。** 安装仍是 v41、SourceTimeline=true 其余三键 off；仓库四键默认 off。v33/v34 历史调用频率/120 步和 G2 结论、v41 G3-A settled 轨迹保持原样；本轮不把历史调用耗时追认为 60 Hz 速率证据。游戏时的速率、停顿和画面仍待新的授权观察。
+
+<a id="c-vc1-candidate-census"></a>
+## C-VC1：候选变量清单只读探针（2026-10-30，本地）
+
+**目的只有一个**：补齐 G3-B 前置核实的第 1 项——候选侧变量按名字的存在性与 `m_type` 映射。此前只有源侧证据（v41 的 463 字轨迹与此后的按名变化序列），候选侧 652 字的槽索引不能照搬。
+
+**读集**（全部为普通字段读，无原生调用、无写入、无新 hook/REL 入口）：两侧各读 `behavior`/`data`/`stringData`/`variableInfos` 指针用于共享判定；`variableInfos.size()`、`variableNames.size()`、词数组 count（`variableValueSet` 成员私有，仍走 +0x10/+0x18）、`variableBounds.size()`、`variableInitialValues` 的 count；逐项 `m_type`/`m_role`/`m_flags`/名字/当前字/初始字/上下界；`eventInfos` + `eventNames` 的名字与 flags。`m_flags` 的 output 位只作提示记录，不作为输入/输出判据。
+
+**门与触发**：新键 `[Experiment] CandidateVariableCensus=false`；仅在 `IndependentGraph != off` 且候选 `loaded==true` 后每进程一次，位于候选保留之后、任何 activate/drive/inject 之前。
+
+**上界**：条目表以类型表为准；词数组存在时取 `min(infos, words)`，词数组缺失时退回 `min(infos, 8192)` 并把这些行标成 `word=none`。名字表缺失或更短只让对应行 unname，不许吞掉类型/名字证据——名字表是证据，不是长度权威。
+
+**输出**：`phase=compare`（data/string-data/infos/values/bounds/initial 六项 `same|different|unavailable`）、两侧 `phase=table`/`phase=types`/`phase=events`、逐项 `item`、`event`，以及按名字的 `align`/`align-missing` 与 `phase=summary`。对齐只按名字；槽位相同但名字不同不算匹配。
+
+**判据**：能从候选侧读到 `iState`、`currentDefaultState`、`iRightHandEquipped`、`iLeftHandEquipped`、`iMagicEquipped`、`IsEquipping`、`IsUnequipping`、`bEquipUnequip` 的 index 与 `m_type`；`data` 若为 `same`，结论固定为“候选复用源类型表，G3-B 不需要独立映射”并停止推断；三处计数不一致时如实记录，不择一采信。
+
+**首次运行（2026-10-30 23:53，v47，`IndependentGraph=load`）**：`phase=compare` 四项为 `data=same string-data=same infos=same initial=same`（同一 `0x1eeb4d37510`）；两侧 `infos=652 named=652`，`align matched=652 source-only=0 candidate-only=0`。因此**候选与控制器源图共享整张变量表，按名字映射这一步对候选是零工作**。八个目标变量：`iState`(94,INT32)、`IsEquipping`(110,BOOL)、`IsUnequipping`(111,BOOL)、`currentDefaultState`(113,INT32)、`iMagicEquipped`(117,INT32)、`bEquipUnequip`(125,BOOL)、`iRightHandEquipped`(179,INT32)、`iLeftHandEquipped`(180,INT32)，`role`/`flags` 全 0。两条负结果：`bounds` 数组为空（`0x0/0`，项目无 authored 上下界），`eventInfos`/`eventNames` 双 0（该路径拿不到事件名与时序）。关键状态差：源侧 `values` 有效、652 字中 217 个非零；**候选 `values=0x0 words=0`，即激活前不存在值集**，652 行全部 `word=none`。
+
+由此得到 G3-B 的新顺序约束：**变量写入必须发生在 Activate 之后**。为了让这条从推断变成证据，v47 之后追加一次只读复采（见下），其余判定与读集不变。
+
+**激活后复采（v48，待上机）**：`IndependentGraph` 为 `drive`/`inject` 且激活成功后，立即对候选再采一次整表，标记 `stage=post-activate`（`phase=post-activate` 先给指针与词数，随后 `phase=table`/`phase=types`/`item` 复用同一读集）。位置在 `log_drive_state("activated")` 之后、任何 1/60 驱动步之前，因此反映的是 step 0 状态；不新增原生调用、不写变量、不改后续步序。所有普查行新增 `stage=` 字段（`load` / `post-activate`）以区分两次采样。
+
+离线两例（[behavior_graph_candidate_census_test.cpp](../tests/behavior_graph_candidate_census_test.cpp)）：类型分组/名字计数/上界，以及按名字对齐的双向缺失与同名异型。策略头 [candidate_variable_census.h](../src/animation/behavior_graph/candidate_variable_census.h) 不依赖 RE 类型；调用点在 [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 load 成功分支与激活成功之后；未新增 `.cpp`，`PLUGIN_SOURCES` 仍为 30 项。
+
+**状态**：v47（load 阶段普查）已上机，结论如上；v48（激活后复采）本地构建完成、待上机。本探针不建立外部 writer 角色、不证明 `m_type` 等于实际写入口径、不采事件发生时刻，也不改动源图变量、候选变量、activeNodes 或显示/捕获路径。候选与源共享 `data` 却报出不同词数，属必须保留的矛盾，不得择一采信。
+
+<a id="c-g3b-s1-single-input"></a>
+## C-G3B-S1：单整数写入切片（2026-10-31，本地）
+
+**目标**：只证一件事——候选在激活后接受**一个**外部整数输入，能否自行进入装备相位。这是 G3-B 回放契约的最小可判切片，不是 G3-B 本体。
+
+**写集**：仅 `iRightHandEquipped`（C-VC1 实测 index 179、`m_type=INT32`），值 `1`，每进程一次。写前按名字在候选自己的 `stringData->variableNames` 里解析 index，名字缺失即 `outcome=skip reason=name-missing`。
+
+**机制**：`BShkbAnimationGraph::SetGraphVariableInt(BSFixedString, int)`（pinned CommonLib 成员，AE 63609，`this` 即候选图）。不新增 REL 入口、不手改 word 槽、不复制槽位。返回值必须记录；返回 false 不重试、不降级为直接写槽。被否掉的路径：`IAnimationGraphManagerHolder::SetGraphVariableInt` 指向 holder 注册的 manager，写不到未注册的候选。
+
+**时机**：`char_activate` 成功之后、第一个 1/60 步之前——v48 已证激活后 `values` 非空且 `words=652`。
+
+**观测**（只读）：step ∈ {0,1,2,6,60,120} 各一行 `CANDIDATE INPUT … rh=… istate=… default=… nodes=…`；节点数基线 97（v48 记录）。
+
+**判据**：写入返回 true 且 step 0 读回 1；120 步内 `iState` 出现 9 或 `currentDefaultState` 出现 10/1、节点数偏离 97 → 单整数足够，下一片做 Unequip。读回 1 但相位不动 → 单整数不足，下一片加 `bEquipUnequip`。返回 false 或读回 0 → 停在诊断。崩溃、非有限值或 `source-drift` 非 none 立即停止并保留日志。
+
+**非目标**：不写其它变量、不做 Unequip、不做姿态对照、不改显示/捕获/台账，也不宣称 G3-B 通过。
+
+门：`[Experiment] CandidateInputProbe=false`，需 `IndependentGraph=drive|inject`。无离线用例——本轮没有新增纯逻辑，判据只能运行时取；为凑用例写恒真断言没有意义。
+
+**状态：本地 Release 构建通过（`/W4 /WX`），已部署待上机。** 该调用前没有任何本项目的变量写入先例；崩溃即视为该 setter 不适用于未注册的候选图，不得改为直接写槽绕行。
+
+**首轮运行（v49，2026-10-31 00:14，`IndependentGraph=drive`）判为无效，不构成对输入的判定**：写入本身成功（`outcome=write result=true readback=1`），但六个采样点全部 `rh=1 istate=0 default=0 nodes=97`，`phase=pose-motion comparisons=120 changed=0 max-delta=0.000000`，`candidate-pose-0/60/120` 三点同哈希 `bc160a8c2b3a5a58`，`phase=activated … children-flag=0`。原因在驱动路径而非输入：`drive` 的批量驱动未跑引擎生成入口（`generation_profile` 原只在 `inject` 置真），候选图因此从未生成，静态图无法判定任何输入。
+
+**v50 修正**：新增 `[Experiment] CandidateGenerationEntry`（默认 off），仅在 `drive` 下把生成入口打开；`inject` 语义不变。打开的正是 [显示路径](../src/animation/behavior_graph/independent_graph.cpp) 每次 draw 已在调用的同一个入口（v33/v34 已跑过数千次），不是新原语。v49 的写入结果只保留为"setter 对未注册候选图返回 true 且读回一致"这一条局部事实，不再解释为相位证据。
+
+**实施结果（2026-10-31 00:22–00:45，v50–v52 与一次仅改 INI 的组合轮）**
+
+| 轮 | 输入 | 运动 | 相位（121 步采样） |
+| --- | --- | --- | --- |
+| v50 (drive+生成入口) | `iRightHandEquipped=1` (INT32) | 80/120 | 全 `istate=0 default=0 nodes=97` |
+| v51 (drive+生成入口) | `IsEquipping=1` (BOOL) | 80/120 | 全 `istate=0 default=0 nodes=97` |
+| v52 (inject，空输入) | `WeapEquip` 事件 | 119/120 | `default` 10→1（step 49），`nodes` 113→96→94→93 → 128→126→125→111 |
+| 组合轮 (inject+变量) | `WeapEquip` + `iRightHandEquipped=1` | 119/120 | 与 v52 完全相同，`istate` 仍 0 |
+
+三条结论：**相位由事件推进，不由这两个变量推进**；`SetGraphVariableInt/Bool` 对未注册候选图可用（写入成功、读回一致），但只是把值放进槽里，状态机不因此起步；`iState=9` 在源侧与 `currentDefaultState 10→1`、`IsAttackReady`/`bMRh_Ready`/`bMLh_Ready` 同刻发生，候选侧稳定为 0 —— 最可能是需要角色身上真的有装备（候选没有物品），而不是缺某个变量。
+
+未决：Unequip 段未被驱动；`iState` 是否应作为 G3-B 的必需判据尚未定；v49 的 `children-flag=0` 已被证伪为"运动门"（v50 该值仍 0 却有 80/120 变化）。生成入口本身才是运动门。
+
+<a id="session-20261030"></a>
+## 2026-10-30/31 会话总结：从 C-VC1 到事件路线
+
+本会话完成了三件事：v46 台账版本首次上机（[步骤与结果](scene-graph.md#v46-manual-regression)）、C-VC1 候选变量普查、以及 C-G3B-S1/S2 输入切片。全部为 AE 1.6.1170 + MO2 实机，逐轮身份与哈希见 [build](build.md#session-20261030-builds)。
+
+| 轮 | 目的 | 结论 |
+| --- | --- | --- |
+| v46-20261030 | 台账与正常路径上机 | 源窗口/读档取消、15 捕获/14 PARK、阈值唯一告警、F8/重开全部正常；干净窗口 20.03 s 关闭。详见 [scene-graph](scene-graph.md#v46-manual-regression) |
+| v47 (C-VC1, load) | 候选变量表 | `data`/`string-data`/`infos`/`initial` 四项全 `same`（同一对象），652 项名字与类型对齐 `652/0/0`；`bounds` 与事件名表为空；**激活前候选无值集** |
+| v48 (C-VC1, drive) | 激活后复采 | `values` 非空、`words=652`；候选按 **initial** 初始化，不继承源活动状态（`Pitch` 源 -26.79 → 候选 0）；八个目标变量 step 0 全 0 |
+| v49 (S1, drive) | 写 `iRightHandEquipped=1` | 写入成功读回 1，但候选静态（`changed=0`、三点同哈希）→ **该轮无效**，根因是 drive 未跑生成入口 |
+| v50 (S1, drive+入口) | 同上 | 运动 80/120，相位 121 点全 `0/0/97` → 单整数不足 |
+| v51 (S2, 逐步采样) | 写 `IsEquipping=1` | 运动 80/120，相位全 `0/0/97` → **变量路线判死** |
+| v52 (inject, 空输入) | 只发 `WeapEquip` | 运动 119/120；`default` 10→1（step 49）、`nodes` 113→96→94→93 → 128→126→125→111 → **事件驱动相位** |
+| 组合轮 (inject+变量) | 事件 + `iRightHandEquipped=1` | 与 v52 逐项相同，`istate` 仍 0 → 变量对出鞘位无贡献 |
+
+**已确立的三条事实**
+
+1. 候选与**控制器源图**共享同一个 `hkbBehaviorGraphData`，名字/类型/初始值完全一致，按名字映射不是工作项；旧表述"源 463 / 候选 652"实为两张不同的图（`player_graph()` 的 463 与 `source_graph()` 的 652）。
+2. 候选值集在激活后才存在，且按 `initial` 初始化——共享 `data` 不等于共享状态，任何输入都必须显式给。
+3. 相位由**事件**推进；`iRightHandEquipped`、`IsEquipping` 这类量在被写入后不改变状态机行为，读作图内输出。`iState=9` 与源侧 `IsAttackReady`/`bMRh_Ready`/`bMLh_Ready` 同刻发生，候选侧恒 0，最可能需要角色身上真有装备。
+
+**两条方法论修正**
+
+- `children-flag=0` 不是运动门：v50 该值仍 0 却有 80/120 变化；真正的门是引擎生成入口，`drive` 原本不跑它，v50 用 `CandidateGenerationEntry` 显式打开。
+- 六点采样会漏瞬态相位：v51 起改为逐步（0–119 + 120）采样，121 行才足以判"没动"。
+
+**未决**：Unequip 段未被驱动（源侧 `default` 1→12）；`iState` 是否应作为 G3-B 必需判据尚未界定；候选若确需装备上下文，那是独立议题。此前的 [G3-B 契约草案](#handoff-20261029) 中"按变量名建立映射"一项按上述第 1 条收敛为不需要，其余前置（写入者角色、最小输入集、事件时序）仍以本节证据为准。
