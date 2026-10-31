@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-10-29。**新会话先读[当前状态与后续规划](#handoff-20261029)**（已完成项、部署、G3-B 契约草案、排序与反模式清单）；测量结果以[验证总表](#verification-matrix)为准，逐轮细节见 [G3-A](#g3-a-contract) 与 [G2 v33/v34](#g2-v33-run)。原始日志和历史契约不变。[v44 显示时钟](#v44-display-clock)仅本地验证 elapsed 60 Hz 调度，游戏速率/画面待验。[v43 源记录窗口修正](#v43-source-sessions)仅在本地构建/离线验证，尚未部署或上机。
+更新：2026-10-31。**新会话先读[当前状态与后续规划](#handoff-20261029)**（已完成项、部署、G3-B 契约草案、排序与反模式清单），再读 [2026-10-30/31 会话总结](#session-20261030)（C-VC1/S1/S2：相位由事件驱动，变量路线判死）与 [C-G3B-S3 草案](#c-g3b-s3-unequip-event)；测量结果以[验证总表](#verification-matrix)为准，逐轮细节见 [G3-A](#g3-a-contract) 与 [G2 v33/v34](#g2-v33-run)。原始日志和历史契约不变。[v44 显示时钟](#v44-display-clock)仅本地验证 elapsed 60 Hz 调度，游戏速率/画面待验；[v43 源记录窗口](#v43-source-sessions)的会话边界已随 v46 首轮上机走查（2026-10-30）。
 
 <a id="current-status"></a>
 
@@ -2162,3 +2162,32 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 - 六点采样会漏瞬态相位：v51 起改为逐步（0–119 + 120）采样，121 行才足以判"没动"。
 
 **未决**：Unequip 段未被驱动（源侧 `default` 1→12）；`iState` 是否应作为 G3-B 必需判据尚未界定；候选若确需装备上下文，那是独立议题。此前的 [G3-B 契约草案](#handoff-20261029) 中"按变量名建立映射"一项按上述第 1 条收敛为不需要，其余前置（写入者角色、最小输入集、事件时序）仍以本节证据为准。
+
+<a id="c-g3b-s3-unequip-event"></a>
+## C-G3B-S3：Unequip 事件切片（草案，2026-10-31，未实现）
+
+**目标**：只证一件事——候选在装备相位完成后接受**一次**卸下事件注入，能否自行进入并走完卸下相位。这是把 v52 的事件路线从 Equip 段延伸到 Unequip 段，是 G3-B 事件输入子集的第二个切片，不是 G3-B 本体。
+
+**输入（事件名预注册）**：`1HM_Unequip`。证据：v8d（2026-10-24）首次读出图事件名表 `count=8223`，前 16 名同时含装备链入口 `WeapEquip` 与 `1HM_Unequip`，这是工作区内唯一有出处的卸下事件名；`WeapUnequip` 在本工作区与 pinned CommonLib 中零出处，禁止臆测。**单一预注册名**：注入后若相位在预注册窗口内不动，按负结果记录并停止，同一轮不试第二个候选名（防 fishing）；第二个名字必须先回到事件名表证据再立项。
+
+**机制**：复用 v52 已验证的同一路径——`lookup_event_id_in_graph` 在图自己的 `stringData->eventNames` 里按名解析 id（上限 `0x8000`、逐名精确比较），以 `InjectedEvent{id,0,nullptr,nullptr}` 走既有 `event_dispatch`（REL ID）分发。区别只在触发时机：这是**第二次**分发，由 settle 门触发，而非激活时的一次性分发；第二次分发本身是新调用，仅由本契约授权。不新增 REL 入口、不写任何变量、不改事件队列结构。
+
+**时机（两段式，每进程一次完整序列）**：
+
+1. 第一段与 v52 完全相同：`IndependentGraph=inject` 激活时单次 `WeapEquip`。
+2. settle 门：候选 `currentDefaultState` 到达 1 后连续三次采样保持稳定（v38 settle 规则），同时记录此时的节点数为装备 idle 基线。等待上限预注册 120 步；超限输出 `outcome=no-settle` 并终止，不降级为定时注入。
+3. 第二段：注入 `1HM_Unequip`，其后逐步采样 121 步（0–119 + 120），沿用 v51 的逐步采样修正——六点采样会漏瞬态相位。
+
+**观测**（只读）：逐行 `CANDIDATE UNEQUIP step=… default=… istate=… uneq=… bequip=… pitch=… nodes=…`，对照 v41 源侧卸下段（53.652–54.933，约 1.3 s）的变量集 `IsUnequipping`/`bEquipUnequip`/`PitchManualOverride`；`phase=pose-motion comparisons=121`、三点 pose 哈希与 `source-drift` 照旧。注入尝试自带的 `phase=events count=` 行照常输出。
+
+**判据**：主判据 `currentDefaultState` 1→12→0；辅判据节点数偏离 settle 门记录的装备 idle 基线并回落、`IsUnequipping`/`bEquipUnequip` 出现脉冲、运动持续。命中主判据 → 事件链足以驱动卸下段，G3-B 输入子集扩为 {equip 事件, unequip 事件}，下一片预注册两事件的时序容差并起草完整回放契约。未命中 → 负结果入档，回到事件名表证据。`iState` 在本切片**只记录不判定**：S1/S2 已证候选侧它可能需要真实装备上下文，是否作为 G3-B 必需判据留给 G3-B 本体契约决定。
+
+**已知矛盾（记录在案，不阻塞本切片）**：C-VC1 v47 在 load 阶段报 `eventInfos`/`eventNames` 双 0，与 v8d 注入阶段读出的 8223 冲突。普查的 `array_size` 对超过 8192 上限的计数返回 0，"空"与"超上限"在其输出中不可区分；v8d 读数发生在注入（激活后）阶段而普查在 load 阶段，时机与上限两种解释并存。该普查结论降级为"未能测定"；S3 运行自带的 `phase=events count=` 行将顺带裁定实际计数。普查代码区分 0 与超上限的修正另立小项，不在 S3 范围内。
+
+**非目标**：不写任何变量、不做姿态对照验收、不改显示/捕获/台账，也不宣称 G3-B 通过；不把源侧 1.3 s 的 `IsUnequipping` 脉冲时长机械换算成候选步数上限。
+
+**停止条件**：崩溃、非有限值或 `source-drift` 非 none 立即停止并保留日志。
+
+**门**：新键 `[Experiment] CandidateUnequipProbe`（默认 off），需 `IndependentGraph=inject`（inject 自带生成入口，无需 `CandidateGenerationEntry`）。settle 门若以 engine-free policy 实现，按仓库惯例须带离线用例：等待超限 `no-settle`、连续三稳定采样触发、中途扰动后重新计数。
+
+**状态：草案，未实现、未构建、未上机。** 实现前与 [G3-B 契约草案](#handoff-20261029)的观察与判据条款核对一致性；实现后按维护约束同步 animation、OAR、build、maintenance、README、config 与 CHANGELOG。
