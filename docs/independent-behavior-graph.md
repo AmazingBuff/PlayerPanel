@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-10-31（晚间）。**新会话先读[当前状态与后续规划（2026-10-31 交接）](#handoff-20261031)**——本日六次上机（S3 → E1 → S4 三轮 → S5 → E2 → E3）已把卸下触发的外部输入路线全部判死，阶段结论与下一阶段（图内结构审计）工作包都在该节；10-29 交接节仅作历史排序参考。测量结果以[验证总表](#verification-matrix)为准。原始日志和历史契约不变。
+更新：2026-10-31（深夜）。**新会话先读[当前状态与后续规划（2026-10-31 深夜交接）](#handoff-20261031-night)**——本日两阶段：白天六次上机（S3→E1→S4 三轮→S5→E2→E3）判死全部外部输入路线；深夜三连（A1 离线结构审计→S6 事件名修正→F 本体验收）解出装备机制全景并 **G3-B PASSED（限定范围）**。下一阶段为 G4（语境隔离）。10-31 晚间接管节与 10-29 接管节仅作历史排序参考。测量结果以[验证总表](#verification-matrix)为准。原始日志和历史契约不变。
 
 <a id="current-status"></a>
 
@@ -1949,6 +1949,60 @@ BehaviorGraphProbe=true
 最新归档运行：G3-A v41（2026-10-29 00:26）已取得源图 Equip→Idle→Unequip 的 settled 相位轨迹（非完整外部输入 trace）；G2 的显示窗口与四条边界均已成立。**后续问题不再在这里列**，改由[当前状态与后续规划](#handoff-20261029)统一排序（G3-B → G4 → G5 → G6）。
 
 <a id="handoff-20261031"></a>
+<a id="handoff-20261031-night"></a>
+## 当前状态与后续规划（2026-10-31 深夜交接，接替晚间交接）
+
+> **新会话从这里开始。** 本节接替 [2026-10-31 晚间交接](#handoff-20261031)：其"下一阶段唯一工作包 = 图内结构静态审计"已完成并当晚收敛为 G3-B PASSED，结论以本节为准；该节的合并裁定、反模式与部署条款继续有效。测量以[验证总表](#verification-matrix)为准；本轮逐轮记录见 [A1](#c-g3b-a1-structural-audit)、[S6](#c-g3b-s6-unequip-event-retry)、[F](#c-g3b-f-full-replay)。
+
+### 一、本阶段做了什么（当晚三连：A1 → S6 → F，零游戏侧新仪器）
+
+| 轮 | 内容 | 判定 |
+| --- | --- | --- |
+| A1（离线，无游戏） | 路线 A 准备 + 全量结构提取：HKX2-Enhanced-Library `91fa5b0`（C# net10）+ 自建转储器 `build/hkx-audit/HkxDump`；运行时行为链锁定 Pandora_Output（MO2 冲突解析 + S3 日志 load-try 佐证），引用闭包 23 文件 | 装备机制全景解出（见二） |
+| S6（v59 上机） | A1 指认 S3 判负根因 = 注入了错误事件名（`1HM_Unequip`=15 不是任何 Default_State 转移的事件）；新键 `CandidateUnequipEvent` 换名重跑同构切片，注入 `Unequip`(144) | **命中**：注入当帧 1→12，step 21 自发回 0 |
+| F（v59 原二进制，纯 INI） | G3-B 本体验收：S1 探针观测模式（空变量名）补装备段轨迹，全序列判据重跑 | **命中**：G3-B PASSED（限定范围） |
+
+### 二、合并裁定（机制全景 + G3-B 关闭）
+
+**装备生命周期机制全景**（全部有静态 + 运行期双重证据）：
+
+- 驱动者 = `0_Master.hkx` 内 `root/Root/mg/msg/msg/msg/Default_State`（9 态机）；运行时 `currentDefaultState` 的 0/10/1/12/2/13 值即其状态 id（0=MT 未装备、10=Weap_Equip、1=Weap_Readied、12=Weap_Unequip、11/13=Magic 两段、2=Magic_Behavior）。
+- 外部输入子集（**G3-B 正式定版**）= {`WeapEquip`(2)，`Unequip`(144)}：0→10 与 1→12 各由一次事件注入驱动（转移条目 `cond=null flags=256=FLAG_DISABLE_CONDITION`，无时间窗；1→12 备选边 `BoundWeapUnequip`=982）。
+- 段内转移 10→1（step 49 逐点实证）与 12→0（step 21）均由**剪辑尾触发器**（`relEnd=True`：weapequip 的 `WeapEquip_Out`(49)、卸下剪辑的 `Unequip_Out`(50)）图内自发完成——外部只需两次注入。
+- 装备/卸下锚的全部脉冲变量（`IsEquipping`(110)、`IsUnequipping`(111)、`bEquipUnequip`(125)、`PitchManualOverride`(65)）= 嵌套机器 `isActive`/`EventDrivenModifier.enable` **绑定输出**；`iState`(94) = 引擎 `BSiStateTaggingGenerator.iStateToSetAs` 维护（源侧 0→9→0，候选侧恒 0）。
+- `currentDefaultState`(113) 的 10/1/12 写者静态不可见（全链唯一 currentStateId 绑定在 DragonRider）——判定为引擎装载期镜像机制，声明来源为残余未知；v52/F 运行期证明写者确在图求值内部。
+- 事件 144 的真实派发不经 58377（E1 零事件 + A1 证明图内无发射点）→ **存在 manager 级动画事件派发路径**，为 E1 预注册时就记录的残余；候选侧注入用插件自己的 `event_dispatch` 不受影响。
+- 运行时合并表 652/8223 无法由静态 23 文件并集（526/9332）重现（2^20 子集穷举无解）——指向 OAR 系运行时改图；不影响本轮结论（装备链全部名字/索引在 0_Master 主表且与 C-VC1 运行时逐项一致）。
+
+**G3-B PASSED（限定范围：相位序列回放）**——F 运行以两次注入在候选自身状态机走完 0→10→1→12→0，两段收尾自发，两窗口 pose 哈希与 S6 完全一致（确定性重放），`source-drift=none` 全程。**姿态对照验收明示归 G5；`iState` 明示不作 G3-B 判据。**
+
+### 三、残余与独立议题（不阻塞 G4，按需立项）
+
+1. `currentDefaultState` 引擎镜像机制的声明来源（project DB / character data 何处声明"哪台机的 currentStateId 镜像到哪个具名变量"）。
+2. 候选侧 `iState` 恒 0：`BSiStateTaggingGenerator` 候选侧不触发的原因（装备上下文假设未证）；若 G5 姿态对照需要 iState 语义，需先解决。
+3. 652/8223 合并矛盾（运行时表含静态文件之外的注入内容；若 G4 语境隔离涉及 OAR 阶段变量来源，此项可能自然收敛）。
+4. 工具遗产：`build/hkx-audit/`（gitignored）内的 HKX2-Enhanced-Library 克隆、HkxDump 转储器与 0_Master 全量转储 `0_master_v2.txt` 可复用于后续结构问题；是否收编进 `tools/` 由用户决定。全局 NuGet.Config 的失效 vcpkg 源（`C:\srccpkg`）建议用户自行清理。
+
+### 四、下一阶段：G4（语境隔离）→ G5 → G6（排序不变）
+
+- **G4**：确认 OAR 阶段变量来源，验证历史、回调和 sink 的隔离——即候选在面板显示链里被驱动时，OAR 与游戏本体动画状态互不污染。先读 [10-29 交接的 G4 条目](#handoff-20261029)、[scene-graph.md 的显示会话边界](scene-graph.md)与 v33/v34 显示窗口证据（G2 的显示四边界是 G4 的直接基础）。
+- **G5**：完整姿态对照——提前固定位置/旋转/缩放阈值及依据，核对全部有效层与骨；G3-B 的 pose 哈希基线（装备段 `bc160a8c/63f638a6/c407cb4e`、卸下段 `8fb4cd33/4f2aebde/c407cb4e`）可作为其确定性锚点。
+- **G6**：生命周期与资源恢复（源恢复、请求/任务失效、预览自有引用/回调/sink/历史、重复会话收敛）；装载 teardown 仍 NO-GO，全局登记计数无可测锚点。
+
+### 五、反模式（本阶段新增三条，接 10-31 清单）
+
+10. 转储器去重不能放两处——`WalkGenerator` 与 `WalkMachine` 对同一对象重复 `seen.Add` 会把整棵状态机树静默跳过（A1 首轮转储只有 8.5k 行的事故根因）；去重只留入口一处，"输出行数远小于已知结构量"就是遍历残缺的警报。
+11. INI 换装必须逐键断言核对——F 部署时两处键值先错后纠（默认值残留 `CandidateInputVariable=IsEquipping`、自替换 no-op 未改 `CandidateUnequipProbe`）；"replace 成功"不等于"键值正确"，写完必须把全部相关键打印回读。
+12. 交接文档里的能力断言要当场核实——"CommonLib 有完整类型"写进了晚间 handoff，实际 pinned v11.0.0 的 `hkbStateMachine` 只有 unk* 骨架、条件类头文件不存在；下一会话按错误断言设计会直接撞墙。
+
+### 六、部署与备份
+
+- 留装：v59 DLL `013e1bdc…`（1,448,960 字节，身份 `…-dcf05cab1e-…`）+ PDB `8b8fd16f…`；部署 INI dormant（2,013 字节 `65e57401…`，全键 off）。
+- 备份链新增：`dist/deploy-backup-20261031-v58/`（v58 三件套）、`-v59/`（v59 对 + F 前 dormant INI `1d40a0eb…`）；F 运行 INI `6dfb54ec…`。
+- 分支 `oar-idle3` 本地领先远端 10 个提交未推送（A1 审计 + S6 三笔 + F 两笔 + 本交接），推送由用户决定。
+- 日志：[S6](diagnostics/CharacterPanel-g3bs6-unequip-event-retry-20261031-2123.log)、[F](diagnostics/CharacterPanel-g3bf-full-replay-20261031-2138.log)。
+
+
 ## 当前状态与后续规划（2026-10-31 交接，接替 10-29 交接）
 
 > **新会话从这里开始。** 本节接替 [2026-10-29 交接](#handoff-20261029)：当日排序里的 G3-B 前置核实（源/候选映射、writer 角色、输入子集、事件时序）已由 v53–v58 六次上机全部收敛或判死，结论与本节为准；10-29 节的 G4–G6 排序与反模式清单仍然有效。测量以[验证总表](#verification-matrix)为准；本轮逐轮记录见 [S3](#c-g3b-s3-unequip-event)、[E1](#c-g3b-e1-event-capture)、[S4](#c-g3b-s4-unequip-variable)、[E2](#c-g3b-e2-write-capture)、[S5](#c-g3b-s5-two-write)、[E3](#c-g3b-e3-transient-watch)。
