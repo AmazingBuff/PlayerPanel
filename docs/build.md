@@ -862,3 +862,10 @@ Maintain this guide with [README](../README.md), [SceneGraph](scene-graph.md), [
 ## Related history
 
 The [historical index](history.md) preserves older probe, test and package records. The current single-DLL setup supersedes their build entry points without changing their recorded outcomes.
+
+<a id="v59-unequip-event-name-2026-10-31"></a>
+## V59 unequip-event-name build (2026-10-31)
+
+The [C-G3B-S6 unequip-event retry](independent-behavior-graph.md#c-g3b-s6-unequip-event-retry) was built from committed HEAD `dcf05ca` (clean identity) after the [C-G3B-A1 structural audit](independent-behavior-graph.md#c-g3b-a1-structural-audit) resolved the equipped-idle 1→12 edge to the event `Unequip` (id 144, condition flag disabled). The only code change: a new `[Experiment] CandidateUnequipEvent` string key (settings parse/log/accessor, same shape as the existing experiment keys) selects the settle-gated second-stage event name in the S3 event branch — non-empty dispatches that name, empty keeps the `1HM_Unequip` literal so historical INI files reproduce their rounds verbatim. No new policy logic, so no new offline cases. `PLUGIN_SOURCES` stays at 32; only the pre-existing D9025 warnings.
+
+Build identity `CharacterPanel-scenegraph-behavior-graph-v59-unequip-event-name-20261031-dcf05cab1e-cl94faaed0c6-20261031T131725Z`; DLL SHA-256 `013e1bdcfb156b25c6d25bd58d8b15f442c7499329e0eaae39399d34eaa983bf` (1,448,960 bytes), PDB SHA-256 `8b8fd16f1c29202017a9ac9eb47d49cec437b17fd024c280a8e07ee09b1cbec7` (38,031,360 bytes). Deployment (2026-10-31) backed the v58 trio up to `dist/deploy-backup-20261031-v58/` (DLL `75b13902…`, PDB `5ce2f421…`, INI 1,795 bytes `86f8bed1…`) and installed this pair. The deployed INI (1,932 bytes, SHA-256 `88763dd68cba8c831cd0ca2e8e7bbad5929b695e41f437aa02412420a7e6b0a6`) is the S6 configuration: `IndependentGraph=inject`, `CandidateUnequipProbe=true`, `CandidateUnequipEvent=Unequip`, `CandidateUnequipVariable`/`CandidateUnequipPrime` empty, everything else off. Repository sample keeps the new key empty. No game run yet.

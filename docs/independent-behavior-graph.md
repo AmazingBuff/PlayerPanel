@@ -2519,4 +2519,6 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 
 **实现影响面**：`settings.h`/`settings.cpp` 新键 + `independent_graph.cpp` 事件名选择；无新文件（`PLUGIN_SOURCES` 32 不变）、无新增策略逻辑（按名解析机制已有），无离线新用例（判据只能运行时取，凑恒真断言无意义，沿 S1/E3 前例）。
 
-**状态：草案已预注册，实现与构建进行中；完成与部署事实回填在下方追加，不改写本节既有文字。**
+**实现与部署（2026-10-31，v59）**：`CandidateUnequipEvent` 键落在 [settings.h](../src/animation/settings.h)/[settings.cpp](../src/animation/settings.cpp)（解析/日志/访问器，与既有实验键同款），事件名选择在 [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 S3 事件分支——非空用键值、空保持 `1HM_Unequip` 字面量（历史 INI 逐字复现），S3 注释块补 S6 溯源；无新文件（`PLUGIN_SOURCES` 32 不变）、无新增策略逻辑、无离线新用例。构建身份 `…-dcf05cab1e-…`、DLL/PDB 哈希见 [v59 build](build.md#v59-unequip-event-name-2026-10-31)。部署 INI 运行后回 dormant；仓库样例新键为空。首轮结果回填在下方追加，不改写本节既有文字。
+
+**状态：已实现、已构建、已部署待上机。**
