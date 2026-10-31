@@ -3,6 +3,7 @@
 //
 #include "animation/behavior_graph/independent_graph.h"
 
+#include "animation/behavior_graph/candidate_variable_census.h"
 #include "animation/behavior_graph/clip_reference_policy.h"
 #include "animation/behavior_graph/drive_step_policy.h"
 #include "animation/behavior_graph/display_step_clock.h"
@@ -553,6 +554,355 @@ namespace
         return view;
     }
 
+    // C-VC1: one-shot read-only census of a graph's variable table. Every read below is a plain
+    // load from the pinned CommonLib layout; nothing here activates, drives, dispatches, writes a
+    // variable, adds a hook or calls a native function. The value set keeps its word array behind
+    // private members, so that array is reached through hkReferencedObject + hkArray offsets.
+    struct CensusSide
+    {
+        std::vector<CensusVariable> variables;
+        std::vector<std::pair<std::string, std::uint32_t>> events;
+        std::size_t infos{};
+        std::size_t names{};
+        std::size_t words{};
+        std::size_t bounds{};
+        std::size_t initial{};
+        std::size_t event_infos{};
+        std::size_t event_names{};
+        std::uintptr_t behavior{};
+        std::uintptr_t data{};
+        std::uintptr_t string_data{};
+        std::uintptr_t infos_ptr{};
+        std::uintptr_t values_ptr{};
+        std::uintptr_t bounds_ptr{};
+        std::uintptr_t initial_ptr{};
+    };
+
+    char const* pointer_relation(std::uintptr_t const a_source, std::uintptr_t const a_candidate)
+    {
+        if (!a_source || !a_candidate) return "unavailable";
+        return a_source == a_candidate ? "same" : "different";
+    }
+
+    std::size_t array_size(std::int32_t const a_count)
+    {
+        return a_count > 0 && static_cast<std::size_t>(a_count) <= Census_Max_Entries ?
+            static_cast<std::size_t>(a_count) : 0;
+    }
+
+    CensusSide read_census(RE::BShkbAnimationGraph const& a_graph)
+    {
+        CensusSide side;
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        side.behavior = address(behavior);
+        if (!behavior) return side;
+        RE::hkbBehaviorGraphData const* const data = behavior->data.get();
+        side.data = address(data);
+        if (!data) return side;
+        RE::hkbBehaviorGraphStringData const* const strings = data->stringData.get();
+        side.string_data = address(strings);
+        side.infos = array_size(data->variableInfos.size());
+        side.infos_ptr = address(data->variableInfos.data());
+        side.bounds = array_size(data->variableBounds.size());
+        side.bounds_ptr = address(data->variableBounds.data());
+        if (strings)
+        {
+            side.names = array_size(strings->variableNames.size());
+            side.event_names = array_size(strings->eventNames.size());
+        }
+        std::uint32_t const* words = nullptr;
+        if (RE::hkbVariableValueSet const* const values = behavior->variableValueSet.get())
+        {
+            side.values_ptr = address(values);
+            words = reinterpret_cast<std::uint32_t const*>(generation_field<std::uintptr_t>(values, 0x10));
+            side.words = words ? array_size(generation_field<std::int32_t>(values, 0x18)) : 0;
+            if (!side.words) words = nullptr;
+        }
+        std::uint32_t const* initial = nullptr;
+        if (data->variableInitialValues)
+        {
+            side.initial_ptr = address(data->variableInitialValues);
+            initial = reinterpret_cast<std::uint32_t const*>(
+                generation_field<std::uintptr_t>(data->variableInitialValues, 0x10));
+            side.initial = initial ? array_size(generation_field<std::int32_t>(data->variableInitialValues, 0x18)) : 0;
+            if (!side.initial) initial = nullptr;
+        }
+        // The item table follows the type table and the word array. A missing or shorter word
+        // array leaves the row without a value instead of erasing the name/type evidence, and a
+        // missing name table leaves the row unnamed.
+        std::size_t const bound = side.words ? census_bound(side.infos, side.words) :
+            std::min(side.infos, Census_Max_Entries);
+        side.variables.reserve(bound);
+        for (std::size_t index = 0; index < bound; ++index)
+        {
+            RE::hkbVariableInfo const& info = data->variableInfos.data()[index];
+            CensusVariable variable;
+            if (strings && index < side.names)
+            {
+                char const* const name = strings->variableNames.data()[index].c_str();
+                if (name) variable.name = name;
+            }
+            variable.type = static_cast<std::int8_t>(info.m_type.get());
+            variable.role = static_cast<std::int16_t>(info.m_role.m_role.get());
+            variable.flags = static_cast<std::int16_t>(info.m_role.m_flags.get());
+            if (words && index < side.words)
+            {
+                variable.word = words[index];
+                variable.has_word = true;
+            }
+            if (index < side.initial) variable.initial = initial[index];
+            if (index < side.bounds)
+            {
+                RE::hkbVariableBounds const& pair = data->variableBounds.data()[index];
+                variable.bounds = std::make_pair(static_cast<std::uint32_t>(pair.m_min.i),
+                    static_cast<std::uint32_t>(pair.m_max.i));
+            }
+            side.variables.push_back(variable);
+        }
+        side.event_infos = array_size(data->eventInfos.size());
+        std::size_t const event_count = std::min(side.event_infos, side.event_names);
+        side.events.reserve(event_count);
+        for (std::size_t index = 0; index < event_count; ++index)
+        {
+            char const* const name = strings->eventNames.data()[index].c_str();
+            side.events.emplace_back(name ? std::string{ name } : std::string{},
+                data->eventInfos.data()[index].m_flags.get());
+        }
+        return side;
+    }
+
+    std::string census_name(CensusVariable const& a_variable)
+    {
+        return a_variable.name.empty() ? std::string{ "<none>" } : "'" + std::string{ a_variable.name } + "'";
+    }
+
+    void log_census_side(char const* a_stage, char const* a_side, std::uint32_t a_actor_id,
+        std::uint64_t a_request, CensusSide const& a_data)
+    {
+        logger::info("CANDIDATE CENSUS actor={:08x} request={} phase=table stage={} side={} behavior={:#x} data={:#x} string-data={:#x} infos={} infos-ptr={:#x} values={:#x} words={} bounds={:#x}/{} initial={:#x}/{}",
+            a_actor_id, a_request, a_stage, a_side, a_data.behavior, a_data.data, a_data.string_data, a_data.infos,
+            a_data.infos_ptr, a_data.values_ptr, a_data.words, a_data.bounds_ptr, a_data.bounds,
+            a_data.initial_ptr, a_data.initial);
+        CensusCounts const counts = census_counts(a_data.variables);
+        logger::info("CANDIDATE CENSUS actor={:08x} request={} phase=types stage={} side={} total={} named={} bool={} int={} real={} pointer={} quad={} unknown={}",
+            a_actor_id, a_request, a_stage, a_side, counts.total, counts.named, counts.boolean, counts.integer,
+            counts.real, counts.pointer, counts.quad, counts.unknown);
+        logger::info("CANDIDATE CENSUS actor={:08x} request={} phase=events stage={} side={} event-infos={} event-names={} logged={}",
+            a_actor_id, a_request, a_stage, a_side, a_data.event_infos, a_data.event_names, a_data.events.size());
+        for (std::size_t index = 0; index < a_data.variables.size(); ++index)
+        {
+            CensusVariable const& variable = a_data.variables[index];
+            float as_float = 0.0f;
+            std::memcpy(&as_float, &variable.word, sizeof(as_float));
+            if (variable.has_word)
+                logger::info("CANDIDATE CENSUS item stage={} side={} index={} name={} type={} role={} flags={} output={} word={} float={:.4f} initial={} bounds={}/{}",
+                    a_stage, a_side, index, census_name(variable), census_type_name(variable.type), variable.role,
+                    variable.flags, census_output(variable.flags) ? 1 : 0, variable.word, as_float,
+                    variable.initial ? std::to_string(*variable.initial) : std::string{ "<none>" },
+                    variable.bounds ? std::to_string(variable.bounds->first) : std::string{ "<none>" },
+                    variable.bounds ? std::to_string(variable.bounds->second) : std::string{ "<none>" });
+            else
+                logger::info("CANDIDATE CENSUS item stage={} side={} index={} name={} type={} role={} flags={} output={} word=none initial={} bounds={}/{}",
+                    a_stage, a_side, index, census_name(variable), census_type_name(variable.type), variable.role,
+                    variable.flags, census_output(variable.flags) ? 1 : 0,
+                    variable.initial ? std::to_string(*variable.initial) : std::string{ "<none>" },
+                    variable.bounds ? std::to_string(variable.bounds->first) : std::string{ "<none>" },
+                    variable.bounds ? std::to_string(variable.bounds->second) : std::string{ "<none>" });
+        }
+        for (std::size_t index = 0; index < a_data.events.size(); ++index)
+            logger::info("CANDIDATE CENSUS event stage={} side={} index={} name='{}' flags={} sync={} silent={}",
+                a_stage, a_side, index, a_data.events[index].first, a_data.events[index].second,
+                (a_data.events[index].second & 0x2) ? 1 : 0, (a_data.events[index].second & 0x1) ? 1 : 0);
+    }
+
+    void log_candidate_census(RE::BShkbAnimationGraph const& a_source, RE::BShkbAnimationGraph const& a_candidate,
+        std::uint32_t a_actor_id, std::uint64_t a_request)
+    {
+        CensusSide const source = read_census(a_source);
+        CensusSide const candidate = read_census(a_candidate);
+        logger::info("CANDIDATE CENSUS actor={:08x} request={} phase=compare data={} string-data={} infos={} values={} bounds={} initial={}",
+            a_actor_id, a_request, pointer_relation(source.data, candidate.data),
+            pointer_relation(source.string_data, candidate.string_data),
+            pointer_relation(source.infos_ptr, candidate.infos_ptr),
+            pointer_relation(source.values_ptr, candidate.values_ptr),
+            pointer_relation(source.bounds_ptr, candidate.bounds_ptr),
+            pointer_relation(source.initial_ptr, candidate.initial_ptr));
+        log_census_side("load", "source", a_actor_id, a_request, source);
+        log_census_side("load", "candidate", a_actor_id, a_request, candidate);
+        CensusAlignment const alignment = census_align(source.variables, candidate.variables);
+        for (CensusMatch const& match : alignment.matched)
+            logger::info("CANDIDATE CENSUS align name={} source={} candidate={} source-type={} candidate-type={} type-match={}",
+                census_name(source.variables[match.source_index]), match.source_index, match.candidate_index,
+                census_type_name(match.source_type), census_type_name(match.candidate_type),
+                match.source_type == match.candidate_type ? "yes" : "no");
+        for (std::size_t const index : alignment.source_only)
+            logger::info("CANDIDATE CENSUS align-missing side=source index={} name={} type={}", index,
+                census_name(source.variables[index]), census_type_name(source.variables[index].type));
+        for (std::size_t const index : alignment.candidate_only)
+            logger::info("CANDIDATE CENSUS align-missing side=candidate index={} name={} type={}", index,
+                census_name(candidate.variables[index]), census_type_name(candidate.variables[index].type));
+        logger::info("CANDIDATE CENSUS actor={:08x} request={} phase=summary matched={} source-only={} candidate-only={} source-words={} candidate-words={}",
+            a_actor_id, a_request, alignment.matched.size(), alignment.source_only.size(),
+            alignment.candidate_only.size(), source.words, candidate.words);
+    }
+
+    // A loaded candidate owns no value set until the engine activates it, so one pass right after
+    // the activation is the only evidence that its table becomes readable and what it holds at
+    // step 0. Read-only: no write, no extra native call, no change to the steps that follow.
+    void log_candidate_census_after_activate(RE::BShkbAnimationGraph const& a_candidate,
+        std::uint32_t a_actor_id, std::uint64_t a_request)
+    {
+        CensusSide const candidate = read_census(a_candidate);
+        logger::info("CANDIDATE CENSUS actor={:08x} request={} phase=post-activate values={:#x} words={} initial={:#x}/{}",
+            a_actor_id, a_request, candidate.values_ptr, candidate.words, candidate.initial_ptr,
+            candidate.initial);
+        log_census_side("post-activate", "candidate", a_actor_id, a_request, candidate);
+    }
+
+    // C-G3B-S1/S2: one external input on an activated candidate. The name is resolved in the
+    // graph's own string table, the setter is chosen from that variable's m_type, and the word
+    // array is only read back as evidence — never written directly.
+    inline constexpr char Input_State_Name[] = "iState";
+    inline constexpr char Input_Default_State_Name[] = "currentDefaultState";
+
+    struct CandidateInputProbe
+    {
+        bool armed{ false };
+        bool wrote{ false };
+        bool has_input{ false };
+        std::size_t index{};
+        std::size_t state{};
+        std::size_t default_state{};
+    };
+
+    bool variable_index(RE::hkbBehaviorGraphData const* a_data, char const* a_name, std::size_t& a_out)
+    {
+        if (!a_data || !a_data->stringData || !a_name) return false;
+        auto const& names = a_data->stringData->variableNames;
+        std::int32_t const count = names.size();
+        if (count <= 0 || static_cast<std::size_t>(count) > Census_Max_Entries) return false;
+        for (std::int32_t index = 0; index < count; ++index)
+        {
+            char const* const name = names.data()[index].c_str();
+            if (name && std::strcmp(name, a_name) == 0)
+            {
+                a_out = static_cast<std::size_t>(index);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    std::uint32_t const* word_values(RE::hkbVariableValueSet const* a_values, std::size_t& a_count)
+    {
+        a_count = 0;
+        if (!a_values) return nullptr;
+        auto const* const words = reinterpret_cast<std::uint32_t const*>(
+            generation_field<std::uintptr_t>(a_values, 0x10));
+        std::int32_t const count = generation_field<std::int32_t>(a_values, 0x18);
+        if (!words || count <= 0 || static_cast<std::size_t>(count) > Census_Max_Entries) return nullptr;
+        a_count = static_cast<std::size_t>(count);
+        return words;
+    }
+
+    bool read_variable_int(RE::BShkbAnimationGraph const& a_graph, std::size_t a_index, std::int32_t& a_out)
+    {
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        std::size_t count = 0;
+        std::uint32_t const* const words = behavior ? word_values(behavior->variableValueSet.get(), count) : nullptr;
+        if (!words || a_index >= count) return false;
+        a_out = static_cast<std::int32_t>(words[a_index]);
+        return true;
+    }
+
+    CandidateInputProbe arm_candidate_input_probe(RE::BShkbAnimationGraph& a_graph, std::uint32_t a_actor_id,
+        std::uint64_t a_request, std::string const& a_name, std::int32_t a_value)
+    {
+        CandidateInputProbe probe;
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        RE::hkbBehaviorGraphData const* const data = behavior ? behavior->data.get() : nullptr;
+        // An empty name means observation only: the run still samples the phase so an event-only
+        // path (inject) can be judged without any variable write.
+        if (a_name.empty())
+        {
+            if (!variable_index(data, Input_State_Name, probe.state) ||
+                !variable_index(data, Input_Default_State_Name, probe.default_state))
+            {
+                logger::info("CANDIDATE INPUT actor={:08x} request={} outcome=skip reason=name-missing name='{}'",
+                    a_actor_id, a_request, Input_State_Name);
+                return probe;
+            }
+            probe.armed = true;
+            logger::info("CANDIDATE INPUT actor={:08x} request={} outcome=observe-only reason=empty-input-name",
+                a_actor_id, a_request);
+            return probe;
+        }
+        if (!variable_index(data, a_name.c_str(), probe.index) ||
+            !variable_index(data, Input_State_Name, probe.state) ||
+            !variable_index(data, Input_Default_State_Name, probe.default_state))
+        {
+            logger::info("CANDIDATE INPUT actor={:08x} request={} outcome=skip reason=name-missing name='{}'",
+                a_actor_id, a_request, a_name);
+            return probe;
+        }
+        std::int8_t const type = static_cast<std::int8_t>(data->variableInfos.data()[probe.index].m_type.get());
+        RE::BSFixedString const name{ a_name.c_str() };
+        char const* setter = "unsupported";
+        if (type == 0)
+        {
+            setter = "SetGraphVariableBool";
+            probe.wrote = a_graph.SetGraphVariableBool(name, a_value != 0);
+        }
+        else if (type >= 1 && type <= 3)
+        {
+            setter = "SetGraphVariableInt";
+            probe.wrote = a_graph.SetGraphVariableInt(name, a_value);
+        }
+        else
+        {
+            // REAL/POINTER/quad-sized targets are not in this slice: the INI value is an integer
+            // and a lossy float or handle write would be evidence of nothing.
+            logger::info("CANDIDATE INPUT actor={:08x} request={} outcome=skip reason=unsupported-type name='{}' type={}",
+                a_actor_id, a_request, a_name, census_type_name(type));
+            return probe;
+        }
+        std::int32_t readback = 0;
+        bool const readable = read_variable_int(a_graph, probe.index, readback);
+        probe.armed = true;
+        probe.has_input = true;
+        logger::info("CANDIDATE INPUT actor={:08x} request={} outcome=write name='{}' index={} type={} value={} setter={} result={} readback={}",
+            a_actor_id, a_request, a_name, probe.index, census_type_name(type), a_value, setter,
+            probe.wrote ? "true" : "false", readable ? std::to_string(readback) : std::string{ "unreadable" });
+        return probe;
+    }
+
+    void sample_candidate_input_probe(CandidateInputProbe const& a_probe, RE::BShkbAnimationGraph const& a_graph,
+        std::uint32_t a_actor_id, std::uint64_t a_request, std::uint32_t a_step)
+    {
+        if (!a_probe.armed) return;
+        std::int32_t input = 0;
+        std::int32_t state = 0;
+        std::int32_t default_state = 0;
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        std::int32_t const nodes = behavior && behavior->activeNodes ?
+            generation_field<std::int32_t>(behavior->activeNodes, 8) : 0;
+        bool const phases = read_variable_int(a_graph, a_probe.state, state) &&
+            read_variable_int(a_graph, a_probe.default_state, default_state);
+        bool const readable = phases && (!a_probe.has_input || read_variable_int(a_graph, a_probe.index, input));
+        if (!readable)
+        {
+            logger::info("CANDIDATE INPUT actor={:08x} request={} step={} outcome=unreadable nodes={}",
+                a_actor_id, a_request, a_step, nodes);
+            return;
+        }
+        if (a_probe.has_input)
+            logger::info("CANDIDATE INPUT actor={:08x} request={} step={} input={} istate={} default={} nodes={}",
+                a_actor_id, a_request, a_step, input, state, default_state, nodes);
+        else
+            logger::info("CANDIDATE INPUT actor={:08x} request={} step={} input=none istate={} default={} nodes={}",
+                a_actor_id, a_request, a_step, state, default_state, nodes);
+    }
+
 }
 
 class DisplaySession::State
@@ -803,6 +1153,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                     new RE::BSTSmartPointer<RE::BShkbAnimationGraph>(candidate);
                     retained_character = &candidate->characterInstance;
                     retained_graph = candidate.get();
+                    if (candidate_variable_census())
+                        log_candidate_census(source_graph, *candidate, actor_id, request);
                 }
 
                 if (loaded && (mode == IndependentGraphMode::drive || mode == IndependentGraphMode::inject))
@@ -832,11 +1184,15 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                         const DriveState after_activate = observe_drive(*candidate);
                         log_drive_state(actor_id, request, "activated", activated,
                             first_drift(source_before, identify(source_graph)), after_activate);
+                        if (candidate_variable_census())
+                            log_candidate_census_after_activate(*candidate, actor_id, request);
                         const std::string candidate_pose_before = format_pose_hash(candidate->characterInstance);
                         std::string candidate_pose_mid = "not-run";
                         std::string candidate_pose_end = "not-run";
 
-                        const bool generation_profile = mode == IndependentGraphMode::inject && version == SKSE::RUNTIME_SSE_1_6_1170;
+                        const bool generation_profile = (mode == IndependentGraphMode::inject ||
+                            (mode == IndependentGraphMode::drive && candidate_generation_entry())) &&
+                            version == SKSE::RUNTIME_SSE_1_6_1170;
                         GenerationEntryStatus generation_guard = GenerationEntryStatus::e_ready;
                         if (generation_profile)
                         {
@@ -1544,11 +1900,17 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             EyePoint const eye = candidate_eye_point(*candidate);
                             FrameTrace frame_trace(generation_profile, actor_id, request,
                                 candidate->characterInstance, eye_arm ? &eye : nullptr);
+                            CandidateInputProbe input_probe;
+                            if (candidate_input_probe())
+                                input_probe = arm_candidate_input_probe(*candidate, actor_id, request,
+                                    candidate_input_variable(), candidate_input_value());
                             for (std::uint32_t step = 0; behavior && step < DriveSteps; ++step)
                             {
                                 const auto observe_step = [&](FrameStage stage) {
                                     if (stage == FrameStage::e_pre_sample)
                                     {
+                                        sample_candidate_input_probe(input_probe, *candidate_base, actor_id,
+                                            request, step);
                                         if (step == 0 || step == 60)
                                         {
                                             const std::uint8_t predicate = pose_predicate(candidate_base);
@@ -1587,6 +1949,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             step_ready = generation_profile && behavior;
                             log_clip_step(120);
                             log_pose_step(120);
+                            sample_candidate_input_probe(input_probe, *candidate_base, actor_id, request, DriveSteps);
                             emit_clip_steps();
                             emit_pose_steps();
                             // v17: idempotent slot-3 re-check after the drive — the world

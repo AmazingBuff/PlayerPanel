@@ -15,6 +15,11 @@ namespace
     bool g_display_pose = false;
     bool g_display_step = false;
     bool g_source_timeline = false;
+    bool g_candidate_variable_census = false;
+    bool g_candidate_input_probe = false;
+    std::string g_candidate_input_variable = "IsEquipping";
+    std::int32_t g_candidate_input_value = 1;
+    bool g_candidate_generation_entry = false;
 }
 void load_settings()
 {
@@ -32,6 +37,13 @@ void load_settings()
     g_display_pose = ini.GetBoolValue("Experiment", "DisplayPose", false);
     g_display_step = ini.GetBoolValue("Experiment", "DisplayStep", false);
     g_source_timeline = ini.GetBoolValue("Experiment", "SourceTimeline", false);
+    g_candidate_variable_census = ini.GetBoolValue("Experiment", "CandidateVariableCensus", false);
+    g_candidate_input_probe = ini.GetBoolValue("Experiment", "CandidateInputProbe", false);
+    char const* const input_variable = ini.GetValue("Experiment", "CandidateInputVariable", "IsEquipping");
+    // A present but empty value means observation only; a missing key keeps the default target.
+    g_candidate_input_variable = input_variable ? input_variable : "IsEquipping";
+    g_candidate_input_value = static_cast<std::int32_t>(ini.GetLongValue("Experiment", "CandidateInputValue", 1));
+    g_candidate_generation_entry = ini.GetBoolValue("Experiment", "CandidateGenerationEntry", false);
     if (!parsed) logger::warn("ANIMATION invalid Animation.UnarmedIdle='{}'; using non_combat_loop", value);
     if (!parsed_experiment) logger::warn("EXPERIMENT invalid Experiment.IndependentGraph='{}'; using off", experiment);
     logger::info("ANIMATION setting UnarmedIdle={}", g_unarmed_idle == UnarmedIdle::e_mt_idle ? "mt_idle" : "non_combat_loop");
@@ -41,6 +53,10 @@ void load_settings()
     logger::info("EXPERIMENT setting DisplayPose={}", g_display_pose);
     logger::info("EXPERIMENT setting DisplayStep={}", g_display_step);
     logger::info("EXPERIMENT setting SourceTimeline={}", g_source_timeline);
+    logger::info("EXPERIMENT setting CandidateVariableCensus={}", g_candidate_variable_census);
+    logger::info("EXPERIMENT setting CandidateInputProbe={} variable='{}' value={}", g_candidate_input_probe,
+        g_candidate_input_variable, g_candidate_input_value);
+    logger::info("EXPERIMENT setting CandidateGenerationEntry={}", g_candidate_generation_entry);
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
@@ -49,5 +65,10 @@ behavior_graph::IndependentGraphMode independent_graph_setting() { return g_inde
 bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }
 bool source_timeline() { return g_source_timeline; }
+bool candidate_variable_census() { return g_candidate_variable_census; }
+bool candidate_input_probe() { return g_candidate_input_probe; }
+std::string const& candidate_input_variable() { return g_candidate_input_variable; }
+std::int32_t candidate_input_value() { return g_candidate_input_value; }
+bool candidate_generation_entry() { return g_candidate_generation_entry; }
 }
 PLUGIN_NAMESPACE_END
