@@ -425,7 +425,8 @@ namespace oar
         }
 
         void note_oar_context_hit(animation::behavior_graph::OarHitSite site, RE::TESObjectREFR const* source,
-            void const* subject, RE::hkbClipGenerator const* clip = nullptr, std::string_view variable_name = {})
+            void const* subject, RE::hkbClipGenerator const* clip = nullptr, std::string_view variable_name = {},
+            int numeric_type = -1)
         {
             namespace bg = animation::behavior_graph;
             if (!bg::candidate_window_active()) return;
@@ -434,11 +435,11 @@ namespace oar
             if (!animation::oar_context_watch()) return;
             if (bg::g_candidate_window.evaluations > Oar_Context_Hit_Row_Cap) return;
             const std::string resolved_clip = clip_name_for_hit(clip);
-            logger::info("OAR CONTEXT hit site={} refr={:08x} clip={:#x} clip-name='{}' owner={} subject={:#x} name='{}' evaluations={}",
+            logger::info("OAR CONTEXT hit site={} refr={:08x} clip={:#x} clip-name='{}' owner={} subject={:#x} name='{}' type={} cand-count={} evaluations={}",
                 bg::oar_hit_site_name(site), refr, reinterpret_cast<std::uintptr_t>(clip), resolved_clip,
                 bg::oar_clip_owner_name(bg::classify_clip_owner(reinterpret_cast<std::uintptr_t>(clip))),
-                reinterpret_cast<std::uintptr_t>(subject), variable_name,
-                bg::g_candidate_window.evaluations);
+                reinterpret_cast<std::uintptr_t>(subject), variable_name, numeric_type,
+                bg::candidate_node_list_count(), bg::g_candidate_window.evaluations);
         }
 
         bool evaluate_thunk(Condition const* condition, RE::TESObjectREFR* source,
@@ -557,15 +558,23 @@ namespace oar
         float numeric_thunk(void const* numeric, RE::TESObjectREFR* source)
         {
             std::string variable_name;
-            if (animation::behavior_graph::candidate_window_active() && numeric &&
-                read_at<std::int32_t>(numeric, Numeric_Type_Offset) == 3)
+            int numeric_type = -1;
+            if (animation::behavior_graph::candidate_window_active() && numeric)
             {
-                // Same MSVC std::string layout the projection path reads (verified in the
-                // Nexus DLL/PDB); only fetched while the window is armed.
-                variable_name = *reinterpret_cast<std::string const*>(
-                    static_cast<std::uint8_t const*>(numeric) + Graph_Name_Offset);
+                // C-G4-A3: log the raw numeric type for every armed hit — type 3 is the graph
+                // variable accessor; anything else is another value source (the empty names
+                // of the A2 run are ambiguous without this).
+                numeric_type = read_at<std::int32_t>(numeric, Numeric_Type_Offset);
+                if (numeric_type == 3)
+                {
+                    // Same MSVC std::string layout the projection path reads (verified in the
+                    // Nexus DLL/PDB); only fetched while the window is armed.
+                    variable_name = *reinterpret_cast<std::string const*>(
+                        static_cast<std::uint8_t const*>(numeric) + Graph_Name_Offset);
+                }
             }
-            note_oar_context_hit(animation::behavior_graph::OarHitSite::e_numeric, source, numeric, nullptr, variable_name);
+            note_oar_context_hit(animation::behavior_graph::OarHitSite::e_numeric, source, numeric, nullptr,
+                variable_name, numeric_type);
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             const Frame* const frame = Frame::current;
             if (!scope || !frame || source != frame->m_source || !scope->matches(frame->m_source, frame->m_clip) ||

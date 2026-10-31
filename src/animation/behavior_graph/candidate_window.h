@@ -55,6 +55,28 @@ namespace animation::behavior_graph
     // header {entries@+0, count@+8}, entries are 0x90-byte records with the node pointer at
     // entry+0x58. Activate initializes the count sentinel; a non-positive or oversized count
     // reads as empty.
+    struct NodeListHeader
+    {
+        std::uintptr_t entries;
+        std::int32_t count;
+    };
+
+    [[nodiscard]] inline NodeListHeader read_node_list_header(std::uintptr_t node_list)
+    {
+        if (!node_list) return { 0, -1 };
+        return { *reinterpret_cast<std::uintptr_t const*>(node_list),
+            *reinterpret_cast<std::int32_t const*>(node_list + 0x8) };
+    }
+
+    // Live candidate active count at hit time — the scan-sanity anchor for the neither
+    // bucket (the same +8 read the DriveState rows log as active-nodes=…/N).
+    [[nodiscard]] inline std::int32_t candidate_node_list_count()
+    {
+        return g_candidate_window.cand_node_list
+             ? *reinterpret_cast<std::int32_t const*>(g_candidate_window.cand_node_list + 0x8)
+             : -1;
+    }
+
     [[nodiscard]] inline bool active_node_list_contains(std::uintptr_t node_list, std::uintptr_t node)
     {
         if (!node_list || !node) return false;

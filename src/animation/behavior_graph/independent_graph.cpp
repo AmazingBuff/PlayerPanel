@@ -1401,6 +1401,22 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 return behavior ? address(behavior->activeNodes) : 0;
                             }(),
                             g_armed_source_node_list);
+                        // C-G4-A3: scan-sanity anchor — the header reads must match the
+                        // DriveState counts (active-nodes=…/N) for the neither bucket to be
+                        // interpretable as template nodes rather than a broken base.
+                        if (animation::oar_context_watch())
+                        {
+                            const auto cand_list = [&] {
+                                const RE::hkbBehaviorGraph* const behavior =
+                                    candidate->characterInstance.behaviorGraph.get();
+                                return behavior ? address(behavior->activeNodes) : 0;
+                            }();
+                            const NodeListHeader cand_header = read_node_list_header(cand_list);
+                            const NodeListHeader src_header = read_node_list_header(g_armed_source_node_list);
+                            logger::info("OAR CONTEXT scan actor={:08x} request={} cand-list={:#x} cand-entries={:#x} cand-count={} src-list={:#x} src-entries={:#x} src-count={}",
+                                actor_id, request, cand_list, cand_header.entries, cand_header.count,
+                                g_armed_source_node_list, src_header.entries, src_header.count);
+                        }
                         log_oar_context_segment("post-activate", actor_id, request);
                         if (candidate_variable_census())
                             log_candidate_census_after_activate(*candidate, actor_id, request);
