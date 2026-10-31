@@ -2281,6 +2281,12 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 （附注：本轮之间有一次无效会话——17:01 的日志只有设置加载与读档，面板未打开、实验未启动，零实验行，按惯例记为无效不构成判定。）
 
+**第三轮（2026-10-31 17:39，v55，`PitchManualOverride`；[日志](diagnostics/CharacterPanel-g3bs4-r3-pitchmanualoverride-20261031-1739.log) 72,261 字节 SHA-256 `54436ac5…`）：判负——阶梯全负。** settle 第五次逐点复现；`phase=input outcome=write name='PitchManualOverride' index=65 type=BOOL setter=SetGraphVariableBool result=true readback=1`（类型首次落档：BOOL），121 行全程保持 1；`default` 恒 1、`nodes` 恒 111、运动 119/119、`source-drift=none`。
+
+**阶梯裁定（三轮全负，路线判死）**：三个卸下脉冲变量从 equipped idle 单独写入全部呈现同一形态——值进槽、被持久读回、状态机不消费。结合 E1（转移当刻无 58377 事件）与 v41 全量复核（转移前 5.5 s 无持久变量活动），**已排除的输入路线：事件分发（1HM_Unequip 判负）、三个卸下脉冲变量的持久写入、装备态 setter（v41 时序证明发生在转移后 0.85 s，非触发）**。剩余假设收敛为 E2 预注册的那条：引擎在转移当刻经 typed setter 写入**瞬态**命令变量（settle-3 规则滤掉了它）。E2（v56，已构建）按部署排序条款于本轮后部署。
+
+**第三轮后部署（2026-10-31）**：v55 三件套备份至 `dist/deploy-backup-20261031-v55/`，v56 DLL/PDB（`868e6c35…`/`68bebe2e…`，与构建档案一致）装入部署位；部署 INI（1,860 字节 `fd1c43b1…`）为 `SourceWriteCapture=true` + `IndependentGraph=off` + 其余全 off。E2 运行判据见 [E2 契约](#c-g3b-e2-write-capture)。
+
 <a id="c-g3b-e2-write-capture"></a>
 ## C-G3B-E2：源图 setter 写观察（草案，2026-10-31，未实现）
 
@@ -2302,4 +2308,4 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **实现影响面**：新模块 `source_write_capture.{h,cpp}`，`PLUGIN_SOURCES` 31→32；stub 构造器与 E1 同款复制（记录签名不同，不强抽公共件）；文档同步按维护约束。**部署排序：S4 阶梯（第二/三轮）仍在同一部署 INI 上等待上机，E2 构建完成后不部署，阶梯判死或打平后再部署**——两实验共用 F7 与部署位。
 
-**状态：已实现、已构建（干净身份 `…-a185603f5a-…`，[v56 build](build.md#v56-write-capture-2026-10-31)）、按部署排序条款**未部署**——S4 阶梯的部署位仍在第二轮 `IsUnequipping` 上；阶梯判死或打平后部署（部署 INI = `SourceWriteCapture=true` + 其余全 off）。**
+**状态：已实现、已构建（干净身份 `…-a185603f5a-…`，[v56 build](build.md#v56-write-capture-2026-10-31)）、S4 阶梯判死后已部署待上机**（部署 INI = `SourceWriteCapture=true` + 其余全 off）。**
