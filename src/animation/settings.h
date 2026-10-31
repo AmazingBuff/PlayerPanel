@@ -63,5 +63,11 @@ namespace animation
     // WeapEquip path skips), then the CandidateUnequipVariable command. Empty keeps the S4
     // single-write behaviour.
     [[nodiscard]] std::string const& candidate_unequip_prime();
+    // C-G3B-S6: the unequip slice's second-stage event name when CandidateUnequipVariable is
+    // empty. The C-G3B-A1 structural audit resolved the Weap_Readied_State 1->12 transition to
+    // the event "Unequip" (id 144 in the 0_Master table) with its condition flag disabled; S3's
+    // hard-coded "1HM_Unequip" stays as the empty-key default so historical INI files reproduce
+    // their rounds verbatim.
+    [[nodiscard]] std::string const& candidate_unequip_event();
 }
 PLUGIN_NAMESPACE_END

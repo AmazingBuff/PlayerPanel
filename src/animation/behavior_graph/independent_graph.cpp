@@ -919,7 +919,9 @@ namespace
     // path as the activation injection, and the following steps are sampled per step. The name is
     // grounded in the v8d event-table dump (count=8223, first 16 names include WeapEquip and
     // 1HM_Unequip); WeapUnequip has no workspace provenance. A miss is a recorded negative
-    // result — no second candidate name is tried in the same round.
+    // result — no second candidate name is tried in the same round. C-G3B-S6 moves the name to
+    // the CandidateUnequipEvent INI key (empty keeps this default) after the C-G3B-A1 audit
+    // resolved the real 1->12 edge to "Unequip".
     inline constexpr char Unequip_Event_Name[] = "1HM_Unequip";
     inline constexpr char Unequip_Is_Unequipping_Name[] = "IsUnequipping";
     inline constexpr char Unequip_Equip_Unequip_Name[] = "bEquipUnequip";
@@ -2148,23 +2150,34 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     }
                                     else
                                     {
+                                        // C-G3B-S6: the event name moves to the INI. The
+                                        // C-G3B-A1 structural audit resolved the settled state's
+                                        // single 1->12 edge to "Unequip" (condition flag disabled);
+                                        // S3's "1HM_Unequip" name is not any Default_State
+                                        // transition's event and stays only as the empty-key
+                                        // default for historical INI reproduction. The
+                                        // pre-registered single-name rule stands: one dispatch,
+                                        // no second candidate name in the same round.
+                                        const std::string& configured_event = candidate_unequip_event();
+                                        const char* const unequip_event_name =
+                                            configured_event.empty() ? Unequip_Event_Name : configured_event.c_str();
                                         const std::int32_t unequip_id = unequip_data ?
-                                            lookup_event_id_in_graph(*unequip_data, Unequip_Event_Name) : -1;
+                                            lookup_event_id_in_graph(*unequip_data, unequip_event_name) : -1;
                                         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=event-lookup name='{}' id={} source=graph-events",
-                                            actor_id, request, Unequip_Event_Name, unequip_id);
+                                            actor_id, request, unequip_event_name, unequip_id);
                                         if (unequip_id >= 0)
                                         {
                                             InjectedEvent unequip_event{ static_cast<std::uint32_t>(unequip_id), 0, nullptr, nullptr };
                                             static REL::Relocation<event_dispatch_t> unequip_dispatch{ REL::ID(EventDispatchID) };
                                             unequip_dispatch(behavior, context, &unequip_event);
                                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-inject event='{}' id={} result=dispatched",
-                                                actor_id, request, Unequip_Event_Name, unequip_id);
+                                                actor_id, request, unequip_event_name, unequip_id);
                                             input_delivered = true;
                                         }
                                         else
                                         {
                                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-skip reason=event-name-missing name='{}'",
-                                                actor_id, request, Unequip_Event_Name);
+                                                actor_id, request, unequip_event_name);
                                         }
                                     }
                                     if (input_delivered)
