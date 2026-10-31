@@ -6,6 +6,7 @@
 
 #include "character/character_manager.h"
 #include "panel/panel_monitor.h"
+#include "animation/behavior_graph/source_event_capture.h"
 #include "animation/behavior_graph/source_timeline.h"
 
 #include <Windows.h>
@@ -43,7 +44,13 @@ namespace
                 if (!PanelMonitor::instance().is_menu_open())
                 {
                     if (scan == MapVirtualKeyA(VK_F7, MAPVK_VK_TO_VSC))
+                    {
+                        // One key, whichever recorder is enabled: the timeline when its key is
+                        // on, otherwise the E1 event capture. The timeline wins when both are
+                        // on because then the capture hook is never installed.
                         animation::behavior_graph::arm_source_timeline();
+                        animation::behavior_graph::arm_source_event_capture();
+                    }
                     continue;
                 }
                 if (!graph) continue;

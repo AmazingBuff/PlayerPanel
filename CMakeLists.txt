@@ -21,6 +21,7 @@ set(PLUGIN_SOURCES
 	src/animation/behavior_graph/frame_trace.cpp
 	src/animation/behavior_graph/independent_graph.cpp
 	src/animation/behavior_graph/ownership_probe.cpp
+	src/animation/behavior_graph/source_event_capture.cpp
 	src/animation/behavior_graph/source_timeline.cpp
 	src/animation/clip.cpp
 	src/animation/controller.cpp
