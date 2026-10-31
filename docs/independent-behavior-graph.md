@@ -2735,6 +2735,15 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 
 **裁定：G4-A 未决（NOT adjudicated）。** 预注册失败签名（`overlaps>0` / 候选值读取）未发生，预注册通过签名（`evaluations=0`）也未发生；字面 `overlaps=0` 的满足不能追认为通过——其解释性陈述"OAR 求值不触碰候选"被 2037 次空 REFR 求值削弱（反模式：不得把判据放宽为成功），也不构成判负（无任何源泄漏签名）。**B/C 暂停**（它们验收的"OAR 与候选互不污染"前提正是当前的未决项）。`load-bindings` 的共享绑定集是新的 G4 相关事实，一并交 A2。
 
-**C-G4-A2 切片（预注册，草案 → 实现）**：回答三个问题——①2037 求值的触发入口（激活突发假设 vs 其它：把命中行上限改为按事件分段计数，在每次 dispatch/激活前后打窗口快照行）；②**求值读了哪张图**（关键仪器升级：`evaluate_thunk`/`evaluate_set_thunk`/`evaluate_replacement_thunk` 均有 `hkbClipGenerator* clip` 参数，从 clip 反查所属 graph/character 指针，与候选图 `0x239c0779…`/源图做**图级交集**——首轮只有 REFR 级身份，无法区分"候选图内容自评估"与"外部钩子评估候选"）；③求值是否写 OAR 状态（候选未注册 per-character 上下文，null REFR 下状态写落在何处；由 A2 + 后续 B 段世界动作间接回答）。A2 判负（图级交集命中且读候选值）→ G4 隔离前提重建；A2 判"候选图内容自评估且无源读取"→ 判据 1 按修订解释关闭，B/C 解禁。
+**C-G4-A2 切片（预注册，草案 → 实现/部署，2026-10-31）**：回答三个问题——①2037 求值的触发入口（激活突发假设 vs 其它：把命中行上限改为按事件分段计数，在每次 dispatch/激活前后打窗口快照行）；②**求值读了哪张图**（关键仪器升级：`evaluate_thunk`/`evaluate_set_thunk`/`evaluate_replacement_thunk` 均有 `hkbClipGenerator* clip` 参数，从 clip 反查所属 graph/character 指针，与候选图 `0x239c0779…`/源图做**图级交集**——首轮只有 REFR 级身份，无法区分"候选图内容自评估"与"外部钩子评估候选"）；③求值是否写 OAR 状态（候选未注册 per-character 上下文，null REFR 下状态写落在何处；由 A2 + 后续 B 段世界动作间接回答）。A2 判负（图级交集命中且读候选值）→ G4 隔离前提重建；A2 判"候选图内容自评估且无源读取"→ 判据 1 按修订解释关闭，B/C 解禁。
 
-**收尾**：部署 INI 已回 dormant（v60 留装）；A2 实现/上机待安排。
+**A2 实现记录（2026-10-31 收尾，实现 `57fa4af`，v61 部署身份 `…-v61-g4a2-clip-identity-20261031-57fa4affab-cl94faaed0c6-20261031T152526Z`，DLL `d1583a7e…` 1,460,736 字节，PDB `f41d5e74…`；v60 三件套备份至 `dist/deploy-backup-20261031-v61/`，部署 INI `60ff8f27…` 与运行 1 配置相同——A2 仪器全部由既有 `OarContextWatch` 键门控，无新键）**：
+
+- **图级归属分类（问题②的决定性通道）**：命中时把 clip 指针对照候选/源各自的 `hkbBehaviorGraph::activeNodes`（审计依据：NodeList 0x10 字节头 `{entries@+0, count@+8}`，条目 0x90 步长、节点指针 @entry+0x58——58377 事件遍历即此布局；CommonLib `NodeList` 不透明，按审计偏移读）。命中行带 `owner=cand|src|neither`，汇总行带 `owner=cand:N/src:N/neither:N`。**已知局限**：初始激活突发发生在 `char_activate` 期间，此时候选 NodeList 尚未诞生——该段命中只能对照源表分类（`post-activate` 快照前的 owner 归属按此解读）；候选列表在激活返回后立即武装。
+- **clip 身份**：命中行新增 `clip={:#x} clip-name='…'`（`hkbClipGenerator::animationName` @+0x48，hkStringPtr 低位掩码后经 `readable` 守卫读 64 字符上限）——clip 名字与分段快照交叉即可判读突发对应哪些剪辑。
+- **分站点计数（问题②的判别前提）**：汇总/快照行带 `sites=e:n/s:r` 四站计数——**numeric 站计数 > 0 即有图变量读取发生**（配合命中行的 `name='…'` 变量名）；全程 numeric=0 则"读了谁的变量"问题自然消解。
+- **分段快照（问题①）**：`OAR CONTEXT segment=<label>` 累计行 ×4——`post-activate`（激活后）、`post-weapequip`（激活注入后）、`at-settle`（卸下 settle 处）、`post-unequip`（卸下注入后）；相邻行差值定位突发所属事件。命中行上限 8→32。
+- **问题③**：仍无直接状态写观测（不变）；由 A2 分类结果 + 后续 B 段世界动作间接回答。
+- **验证**：display_step 引擎无关用例 g++ C++23 `-Wall -Wextra -Werror` 通过。**上机步骤与运行 1 完全相同**（同 INI 配置、同操作序列、同判据 3 复用检查）。
+
+**收尾状态：A2 已实现并部署（v61），部署 INI 已切 A2 运行配置（`60ff8f27…`，逐键断言过——含修正一处 dormant 默认值残留 `CandidateInputVariable=IsEquipping` → 空，反模式 11 再执行），待上机。**
