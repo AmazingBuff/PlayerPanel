@@ -2273,4 +2273,4 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **门**：`CandidateUnequipProbe=true` + `IndependentGraph=inject` + `CandidateUnequipVariable=<名字>`。
 
-**状态：草案，未实现。** 实现仅涉及 S3 第二段的写法分支与新 INI 键；构建后部署 INI 按第一轮名单（`bEquipUnequip`）设置。
+**状态：已实现、已构建（干净身份 `…-9f1bbb9e59-…`，[v55 build](build.md#v55-unequip-variable-2026-10-31)）、已部署待上机。** 实现仅涉及 S3 第二段的写法分支与新 INI 键（`CandidateUnequipVariable`，空 = 保持 S3 事件路径），无新增策略逻辑；写入缺名/类型不支持按 S1 惯例 skip（不跑采样窗）。部署 INI 为第一轮：`inject` + `CandidateUnequipProbe=true` + `CandidateUnequipVariable=bEquipUnequip`。第二/三轮只改 INI 换名重跑同一二进制；首轮结果回填时在下方追加，不改写本节既有文字。
