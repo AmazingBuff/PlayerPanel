@@ -2234,4 +2234,4 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **实现影响面**：新增 hook 载体 `.cpp`，`PLUGIN_SOURCES` 30→31；`SKSE::GetTrampoline()` 为工具链既有能力；按维护约束同步主文档、animation、OAR、build、maintenance、README、config 与 CHANGELOG。
 
-**状态：草案，未实现、未构建、未上机。** 评审通过后实现顺序 = 反汇编核对 `0xab58a0` 头部 → 策略头 + 离线用例 → detour 接线 → 本地构建 → 部署（备份现装 INI；`SourceEventCapture=true`、`IndependentGraph=off`）→ 上机按 run sheet。
+**状态：已实现、已构建（干净身份 `…-995d32347d-…`，[v54 build](build.md#v54-event-capture-2026-10-31)）、已部署待上机。** 安全前置已按本节条款完成并记录在构建节：58377 头部 7 字节 `48 8b c4 48 89 48 08` 从审计用的 Steamless 解包镜像（SHA-256 `843823c1…` 与台账一致）读出，两条指令均无 RIP 相对寻址、边界在 +7，5 字节 jmp + 2 填充可安全落位；桩头 `48 83 ec 48 48 83 7a 08 00` 与审计 `0xab1f30` 记录互证。实现要点：detour 头部字节在**运行时安装前再核对一次**（不匹配则记下实测 16 字节、不装 hook）；thunk 保存全部寄存器与标志、调用记录函数后跳转重定位头；环为"满时丢最新"语义（生产者不得写消费者尾索引，SPSC 单写者约束），逐帧 drain 下该路径实际不可达，dropped 计数是响亮失败信号。离线三例（环序/溢出/drain-discard、双预算独立关窗、cancel 与到期优先）`cl /W4 /WX` 通过。部署 INI：`SourceEventCapture=true` + `IndependentGraph=off` + `SourceTimeline=false`，其余全 off；仓库样例全 off。首轮结果回填时在下方追加，不改写本节既有文字。
