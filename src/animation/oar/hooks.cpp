@@ -13,6 +13,7 @@
 
 #include "RE/H/hkbCharacterStringData.h"
 #include "RE/H/hkbBehaviorGraph.h"
+#include "RE/H/hkbClipGenerator.h"
 #include "RE/H/hkbNodeInfo.h"
 #include "RE/H/hkbAnimationBindingSet.h"
 #include "RE/H/hkbCharacterSetup.h"
@@ -403,29 +404,47 @@ namespace oar
             return equipped_type(form) == static_cast<std::int8_t>(requested);
         }
 
-        // C-G4-A: count any OAR evaluation-machinery activity that fires while native
+        // C-G4-A/A2: count any OAR evaluation-machinery activity that fires while native
         // candidate activity is armed. Per-hit rows are capped per window; the window
-        // summary reports the full count. Placed before the scope checks so native
-        // (non-product) evaluations are observed too.
-        constexpr std::uint32_t Oar_Context_Hit_Row_Cap = 8;
+        // summary reports the full counts. Placed before the scope checks so native
+        // (non-product) evaluations are observed too. A2 classifies each clip against the
+        // candidate's and the source's activeNodes and logs the clip's animation name.
+        constexpr std::uint32_t Oar_Context_Hit_Row_Cap = 32;
 
-        void note_oar_context_hit(char const* site, RE::TESObjectREFR const* source, void const* subject)
+        std::string clip_name_for_hit(RE::hkbClipGenerator const* clip)
+        {
+            if (!clip) return {};
+            // hkStringPtr carries its managed flag in the pointer's low bit (same masking as
+            // the event-name lookup over the graph string data).
+            const std::uintptr_t raw = read_at<std::uintptr_t>(clip, 0x48) & ~std::uintptr_t{ 1 };
+            if (!raw || !readable(reinterpret_cast<void const*>(raw), 1)) return {};
+            const char* const text = reinterpret_cast<char const*>(raw);
+            std::size_t length = 0;
+            while (length < 64 && readable(text + length, 1) && text[length] != '\0') ++length;
+            return { text, length };
+        }
+
+        void note_oar_context_hit(animation::behavior_graph::OarHitSite site, RE::TESObjectREFR const* source,
+            void const* subject, RE::hkbClipGenerator const* clip = nullptr, std::string_view variable_name = {})
         {
             namespace bg = animation::behavior_graph;
             if (!bg::candidate_window_active()) return;
             const RE::FormID refr = source ? source->GetFormID() : 0;
-            bg::note_candidate_window_hit(refr);
+            bg::note_candidate_window_hit(site, refr, reinterpret_cast<std::uintptr_t>(clip));
             if (!animation::oar_context_watch()) return;
             if (bg::g_candidate_window.evaluations > Oar_Context_Hit_Row_Cap) return;
-            logger::info("OAR CONTEXT hit site={} refr={:08x} subject={:#x} evaluations={}",
-                site, refr, reinterpret_cast<std::uintptr_t>(subject),
+            const std::string resolved_clip = clip_name_for_hit(clip);
+            logger::info("OAR CONTEXT hit site={} refr={:08x} clip={:#x} clip-name='{}' owner={} subject={:#x} name='{}' evaluations={}",
+                bg::oar_hit_site_name(site), refr, reinterpret_cast<std::uintptr_t>(clip), resolved_clip,
+                bg::oar_clip_owner_name(bg::classify_clip_owner(reinterpret_cast<std::uintptr_t>(clip))),
+                reinterpret_cast<std::uintptr_t>(subject), variable_name,
                 bg::g_candidate_window.evaluations);
         }
 
         bool evaluate_thunk(Condition const* condition, RE::TESObjectREFR* source,
             RE::hkbClipGenerator* clip, void* submod)
         {
-            note_oar_context_hit("evaluate", source, condition);
+            note_oar_context_hit(animation::behavior_graph::OarHitSite::e_evaluate, source, condition, clip);
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             if (!scope)
                 return s_evaluate(condition, source, clip, submod);
@@ -537,7 +556,16 @@ namespace oar
 
         float numeric_thunk(void const* numeric, RE::TESObjectREFR* source)
         {
-            note_oar_context_hit("numeric", source, numeric);
+            std::string variable_name;
+            if (animation::behavior_graph::candidate_window_active() && numeric &&
+                read_at<std::int32_t>(numeric, Numeric_Type_Offset) == 3)
+            {
+                // Same MSVC std::string layout the projection path reads (verified in the
+                // Nexus DLL/PDB); only fetched while the window is armed.
+                variable_name = *reinterpret_cast<std::string const*>(
+                    static_cast<std::uint8_t const*>(numeric) + Graph_Name_Offset);
+            }
+            note_oar_context_hit(animation::behavior_graph::OarHitSite::e_numeric, source, numeric, nullptr, variable_name);
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             const Frame* const frame = Frame::current;
             if (!scope || !frame || source != frame->m_source || !scope->matches(frame->m_source, frame->m_clip) ||
@@ -759,7 +787,7 @@ namespace oar
         bool evaluate_set_thunk(void const* set, RE::TESObjectREFR* source, RE::hkbClipGenerator* clip,
             void* submod, bool trace)
         {
-            note_oar_context_hit("evaluate-set", source, set);
+            note_oar_context_hit(animation::behavior_graph::OarHitSite::e_evaluate_set, source, set, clip);
             QueryFrame* const query = QueryFrame::current;
             ScopedEvaluation* const outer = ScopedEvaluation::current();
             if (!query || !outer || !outer->matches(source, clip))
@@ -817,7 +845,7 @@ namespace oar
         bool evaluate_replacement_thunk(void const* replacement, RE::TESObjectREFR* source,
             RE::hkbClipGenerator* clip)
         {
-            note_oar_context_hit("evaluate-replacement", source, replacement);
+            note_oar_context_hit(animation::behavior_graph::OarHitSite::e_evaluate_replacement, source, replacement, clip);
             QueryFrame* const query = QueryFrame::current;
             ScopedEvaluation* const scope = ScopedEvaluation::current();
             if (!query || !scope || !scope->matches(source, clip))

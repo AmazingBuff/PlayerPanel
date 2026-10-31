@@ -1048,8 +1048,13 @@ public:
         {
             const CandidateWindowTally taken = take_candidate_window_tally_for(window.source().actor_id);
             if (taken.source_actor_id == window.source().actor_id)
-                logger::info("OAR CONTEXT window=display-{} actor={:08x} request={} view={} evaluations={} overlaps={}",
-                    reason, window.source().actor_id, window.request(), window.view(), taken.evaluations, taken.overlaps);
+                logger::info("OAR CONTEXT window=display-{} actor={:08x} request={} view={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{}",
+                    reason, window.source().actor_id, window.request(), window.view(), taken.evaluations, taken.overlaps,
+                    taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate)],
+                    taken.sites[static_cast<std::size_t>(OarHitSite::e_numeric)],
+                    taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_set)],
+                    taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_replacement)],
+                    taken.cand_active, taken.src_active, taken.neither);
         }
     }
 
@@ -1110,6 +1115,31 @@ void DisplaySession::retarget()
     m_state->clear_statistics();
 }
 
+namespace
+{
+    // C-G4-A2: the source graph's activeNodes NodeList, captured once per process at the
+    // experiment entry and reused by every later window (the source identity cannot change
+    // while a candidate is retained — DisplaySourceIdentity guards it).
+    std::uintptr_t g_armed_source_node_list = 0;
+
+    // Segment snapshot: cumulative hit counts at a named point inside an armed window. The
+    // deltas between consecutive rows localize the OAR evaluation bursts (activation vs
+    // dispatch vs steady stepping).
+    void log_oar_context_segment(char const* label, std::uint32_t actor_id, std::uint64_t request)
+    {
+        if (!animation::oar_context_watch()) return;
+        const CandidateWindowTally peek = peek_candidate_window_tally();
+        logger::info("OAR CONTEXT segment={} actor={:08x} request={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{}",
+            label, actor_id, request, peek.evaluations, peek.overlaps,
+            peek.sites[static_cast<std::size_t>(OarHitSite::e_evaluate)],
+            peek.sites[static_cast<std::size_t>(OarHitSite::e_numeric)],
+            peek.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_set)],
+            peek.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_replacement)],
+            peek.cand_active, peek.src_active, peek.neither);
+    }
+}
+
+
 void invalidate_display_owner(std::uintptr_t owner)
 {
     if (!invalidate_display_source(g_held_source, owner)) return;
@@ -1143,7 +1173,14 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
         GraphConstructorID, GraphLoaderID);
 
     // C-G4-A: the experiment window is armed here and summarized at every exit path below.
+    // C-G4-A2: the source graph's activeNodes NodeList is captured for hit-time clip-owner
+    // classification; the candidate's list is armed right after its activation.
+    g_armed_source_node_list = [&] {
+        const RE::hkbBehaviorGraph* const behavior = source_graph.characterInstance.behaviorGraph.get();
+        return behavior ? address(behavior->activeNodes) : 0;
+    }();
     arm_candidate_window(actor_id);
+    arm_candidate_window_node_lists(0, g_armed_source_node_list);
     struct ExperimentWindowSummary
     {
         std::uint32_t actor_id;
@@ -1152,8 +1189,13 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
         {
             if (!animation::oar_context_watch()) return;
             const CandidateWindowTally taken = take_candidate_window_tally();
-            logger::info("OAR CONTEXT window=experiment actor={:08x} request={} evaluations={} overlaps={}",
-                actor_id, request, taken.evaluations, taken.overlaps);
+            logger::info("OAR CONTEXT window=experiment actor={:08x} request={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{}",
+                actor_id, request, taken.evaluations, taken.overlaps,
+                taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate)],
+                taken.sites[static_cast<std::size_t>(OarHitSite::e_numeric)],
+                taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_set)],
+                taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_replacement)],
+                taken.cand_active, taken.src_active, taken.neither);
         }
     } const experiment_window_summary{ actor_id, request };
 
@@ -1348,6 +1390,18 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                         const DriveState after_activate = observe_drive(*candidate);
                         log_drive_state(actor_id, request, "activated", activated,
                             first_drift(source_before, identify(source_graph)), after_activate);
+                        // C-G4-A2: the candidate's activeNodes NodeList exists from here on —
+                        // arm it for hit-time clip-owner classification, then snapshot the
+                        // activation burst's count (hits DURING the burst classified against
+                        // the source list only; the candidate's list is born mid-burst).
+                        arm_candidate_window_node_lists(
+                            [&] {
+                                const RE::hkbBehaviorGraph* const behavior =
+                                    candidate->characterInstance.behaviorGraph.get();
+                                return behavior ? address(behavior->activeNodes) : 0;
+                            }(),
+                            g_armed_source_node_list);
+                        log_oar_context_segment("post-activate", actor_id, request);
                         if (candidate_variable_census())
                             log_candidate_census_after_activate(*candidate, actor_id, request);
                         const std::string candidate_pose_before = format_pose_hash(candidate->characterInstance);
@@ -1547,6 +1601,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=skip reason=no-known-event",
                                         actor_id, request);
                                 }
+                                log_oar_context_segment("post-weapequip", actor_id, request);
                             }
                             // v16: 63564's convention carries one alive argument — the
                             // candidate graph (audit14_branch_63581.txt calls it with the
@@ -2185,6 +2240,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=settle outcome=settled target-step={} settled-step={} baseline-default={} baseline-nodes={}",
                                         actor_id, request, settle_gate.target_step(), settle_gate.settled_step(),
                                         Unequip_Settle_Target, settle_gate.baseline_nodes());
+                                    log_oar_context_segment("at-settle", actor_id, request);
                                     // C-G3B-S4: a non-empty CandidateUnequipVariable swaps the second
                                     // stage from the S3 event dispatch to one typed by-name variable
                                     // write at the settle point (the pre-registered unequip-side
@@ -2241,6 +2297,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                             logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-skip reason=event-name-missing name='{}'",
                                                 actor_id, request, unequip_event_name);
                                         }
+                                        log_oar_context_segment("post-unequip", actor_id, request);
                                     }
                                     if (input_delivered)
                                     {
