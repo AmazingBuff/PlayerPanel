@@ -14,6 +14,7 @@
 #include "animation/behavior_graph/observation_chain_policy.h"
 #include "animation/behavior_graph/pose_content_policy.h"
 #include "animation/behavior_graph/pose_motion_policy.h"
+#include "animation/behavior_graph/unequip_settle_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/H/hkaAnimation.h"
@@ -269,6 +270,16 @@ namespace
         }
         return -1;
     }
+
+    // The engine's event-triggered-transition entry (58377) takes this stack record; payload and
+    // sender stay null for the slices that only need the transition.
+    struct InjectedEvent
+    {
+        std::uint32_t id;
+        std::uint32_t pad;
+        void* payload;
+        void* sender;
+    };
 
     Identity identify(RE::BShkbAnimationGraph const& graph)
     {
@@ -903,6 +914,101 @@ namespace
                 a_actor_id, a_request, a_step, state, default_state, nodes);
     }
 
+    // C-G3B-S3: the second slice of the event route. After the equip phase settles, ONE more
+    // dispatch of the pre-registered unequip event name runs through the same resolve+dispatch
+    // path as the activation injection, and the following steps are sampled per step. The name is
+    // grounded in the v8d event-table dump (count=8223, first 16 names include WeapEquip and
+    // 1HM_Unequip); WeapUnequip has no workspace provenance. A miss is a recorded negative
+    // result — no second candidate name is tried in the same round.
+    inline constexpr char Unequip_Event_Name[] = "1HM_Unequip";
+    inline constexpr char Unequip_Is_Unequipping_Name[] = "IsUnequipping";
+    inline constexpr char Unequip_Equip_Unequip_Name[] = "bEquipUnequip";
+    inline constexpr char Unequip_Pitch_Name[] = "PitchManualOverride";
+    inline constexpr char Unequip_Right_Hand_Name[] = "iRightHandEquipped";
+
+    struct UnequipProbe
+    {
+        bool armed{ false };
+        std::size_t default_state{};
+        std::size_t state{};
+        std::size_t unequipping{};
+        std::size_t equip_unequip{};
+        std::size_t pitch{};
+        std::size_t right_hand{};
+        bool has_state{ false };
+        bool has_unequipping{ false };
+        bool has_equip_unequip{ false };
+        bool has_pitch{ false };
+        bool has_right_hand{ false };
+    };
+
+    UnequipProbe arm_unequip_probe(RE::hkbBehaviorGraph const* a_behavior, std::uint32_t const a_actor_id,
+        std::uint64_t const a_request)
+    {
+        UnequipProbe probe;
+        RE::hkbBehaviorGraphData const* const data = a_behavior ? a_behavior->data.get() : nullptr;
+        if (!variable_index(data, Input_Default_State_Name, probe.default_state))
+        {
+            logger::info("CANDIDATE UNEQUIP actor={:08x} request={} outcome=skip reason=name-missing name='{}'",
+                a_actor_id, a_request, Input_Default_State_Name);
+            return probe;
+        }
+        // The settled state is the only required name; every observation aid degrades to `none`
+        // in the rows instead of holding the slice hostage to an auxiliary variable.
+        probe.has_state = variable_index(data, Input_State_Name, probe.state);
+        probe.has_unequipping = variable_index(data, Unequip_Is_Unequipping_Name, probe.unequipping);
+        probe.has_equip_unequip = variable_index(data, Unequip_Equip_Unequip_Name, probe.equip_unequip);
+        probe.has_pitch = variable_index(data, Unequip_Pitch_Name, probe.pitch);
+        probe.has_right_hand = variable_index(data, Unequip_Right_Hand_Name, probe.right_hand);
+        probe.armed = true;
+        const auto index_of = [](bool const has, std::size_t const index) {
+            return has ? std::to_string(index) : std::string{ "none" };
+        };
+        logger::info("CANDIDATE UNEQUIP actor={:08x} request={} outcome=arm default={} istate={} uneq={} bequip={} pitch={} rh={}",
+            a_actor_id, a_request, probe.default_state, index_of(probe.has_state, probe.state),
+            index_of(probe.has_unequipping, probe.unequipping), index_of(probe.has_equip_unequip, probe.equip_unequip),
+            index_of(probe.has_pitch, probe.pitch), index_of(probe.has_right_hand, probe.right_hand));
+        return probe;
+    }
+
+    void sample_unequip_probe(UnequipProbe const& a_probe, RE::BShkbAnimationGraph const& a_graph,
+        std::uint32_t const a_actor_id, std::uint64_t const a_request, std::uint32_t const a_step)
+    {
+        if (!a_probe.armed)
+            return;
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        std::int32_t const nodes = behavior && behavior->activeNodes ?
+            generation_field<std::int32_t>(behavior->activeNodes, 8) : 0;
+        std::int32_t default_state = 0;
+        if (!read_variable_int(a_graph, a_probe.default_state, default_state))
+        {
+            logger::info("CANDIDATE UNEQUIP actor={:08x} request={} step={} outcome=unreadable nodes={}",
+                a_actor_id, a_request, a_step, nodes);
+            return;
+        }
+        std::int32_t state = 0;
+        std::int32_t unequipping = 0;
+        std::int32_t equip_unequip = 0;
+        std::int32_t pitch = 0;
+        std::int32_t right_hand = 0;
+        bool const has_state = a_probe.has_state && read_variable_int(a_graph, a_probe.state, state);
+        bool const has_unequipping =
+            a_probe.has_unequipping && read_variable_int(a_graph, a_probe.unequipping, unequipping);
+        bool const has_equip_unequip =
+            a_probe.has_equip_unequip && read_variable_int(a_graph, a_probe.equip_unequip, equip_unequip);
+        bool const has_pitch = a_probe.has_pitch && read_variable_int(a_graph, a_probe.pitch, pitch);
+        bool const has_right_hand =
+            a_probe.has_right_hand && read_variable_int(a_graph, a_probe.right_hand, right_hand);
+        logger::info("CANDIDATE UNEQUIP actor={:08x} request={} step={} default={} istate={} uneq={} bequip={} pitch={} rh={} nodes={}",
+            a_actor_id, a_request, a_step, default_state,
+            has_state ? std::to_string(state) : std::string{ "none" },
+            has_unequipping ? std::to_string(unequipping) : std::string{ "none" },
+            has_equip_unequip ? std::to_string(equip_unequip) : std::string{ "none" },
+            has_pitch ? std::to_string(pitch) : std::string{ "none" },
+            has_right_hand ? std::to_string(right_hand) : std::string{ "none" },
+            nodes);
+    }
+
 }
 
 class DisplaySession::State
@@ -1369,13 +1475,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 }
                                 if (chosen_name)
                                 {
-                                    struct InjectedEvent
-                                    {
-                                        std::uint32_t id;
-                                        std::uint32_t pad;
-                                        void* payload;
-                                        void* sender;
-                                    };
                                     InjectedEvent event{ static_cast<std::uint32_t>(chosen_id), 0, nullptr, nullptr };
                                     static REL::Relocation<event_dispatch_t> event_dispatch{ REL::ID(EventDispatchID) };
                                     event_dispatch(behavior, context, &event);
@@ -1904,6 +2003,16 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             if (candidate_input_probe())
                                 input_probe = arm_candidate_input_probe(*candidate, actor_id, request,
                                     candidate_input_variable(), candidate_input_value());
+                            UnequipProbe unequip_probe;
+                            UnequipSettleGate settle_gate;
+                            if (candidate_unequip_probe())
+                            {
+                                if (mode == IndependentGraphMode::inject)
+                                    unequip_probe = arm_unequip_probe(behavior, actor_id, request);
+                                else
+                                    logger::info("CANDIDATE UNEQUIP actor={:08x} request={} outcome=skip reason=mode-not-inject mode={}",
+                                        actor_id, request, independent_graph_name(mode));
+                            }
                             for (std::uint32_t step = 0; behavior && step < DriveSteps; ++step)
                             {
                                 const auto observe_step = [&](FrameStage stage) {
@@ -1911,6 +2020,14 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     {
                                         sample_candidate_input_probe(input_probe, *candidate_base, actor_id,
                                             request, step);
+                                        if (unequip_probe.armed)
+                                        {
+                                            std::int32_t gate_default = 0;
+                                            std::int32_t const gate_nodes = behavior && behavior->activeNodes ?
+                                                generation_field<std::int32_t>(behavior->activeNodes, 8) : 0;
+                                            if (read_variable_int(*candidate_base, unequip_probe.default_state, gate_default))
+                                                settle_gate.observe(step, gate_default, gate_nodes);
+                                        }
                                         if (step == 0 || step == 60)
                                         {
                                             const std::uint8_t predicate = pose_predicate(candidate_base);
@@ -1952,6 +2069,94 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             sample_candidate_input_probe(input_probe, *candidate_base, actor_id, request, DriveSteps);
                             emit_clip_steps();
                             emit_pose_steps();
+                            // C-G3B-S3: the settle gate arbitrates the single unequip dispatch. Only
+                            // a settled tail arms it; a no-settle window ends the slice instead of
+                            // upgrading to a timed injection. The second window runs under the
+                            // still-borrowed world and the same generation entry as the equip
+                            // phase, observed only by the unequip sampler and a fresh pose trace —
+                            // no frame-trace, clip or slots budget is spent on it.
+                            if (unequip_probe.armed)
+                            {
+                                const UnequipSettleVerdict settle_verdict = settle_gate.verdict();
+                                if (settle_verdict == UnequipSettleVerdict::e_settled)
+                                {
+                                    logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=settle outcome=settled target-step={} settled-step={} baseline-default={} baseline-nodes={}",
+                                        actor_id, request, settle_gate.target_step(), settle_gate.settled_step(),
+                                        Unequip_Settle_Target, settle_gate.baseline_nodes());
+                                    const RE::hkbBehaviorGraphData* const unequip_data =
+                                        behavior ? behavior->data.get() : nullptr;
+                                    const std::int32_t unequip_id = unequip_data ?
+                                        lookup_event_id_in_graph(*unequip_data, Unequip_Event_Name) : -1;
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=event-lookup name='{}' id={} source=graph-events",
+                                        actor_id, request, Unequip_Event_Name, unequip_id);
+                                    if (unequip_id >= 0)
+                                    {
+                                        InjectedEvent unequip_event{ static_cast<std::uint32_t>(unequip_id), 0, nullptr, nullptr };
+                                        static REL::Relocation<event_dispatch_t> unequip_dispatch{ REL::ID(EventDispatchID) };
+                                        unequip_dispatch(behavior, context, &unequip_event);
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-inject event='{}' id={} result=dispatched",
+                                            actor_id, request, Unequip_Event_Name, unequip_id);
+                                        const std::string unequip_pose_0 = format_pose_hash(candidate->characterInstance);
+                                        std::string unequip_pose_mid = "not-run";
+                                        std::string unequip_pose_end = "not-run";
+                                        std::vector<PoseSample> unequip_previous;
+                                        std::size_t unequip_comparisons = 0;
+                                        std::size_t unequip_moved = 0;
+                                        bool unequip_motion_valid = true;
+                                        bool unequip_pose_started = false;
+                                        for (std::uint32_t unequip_step = 0; behavior && unequip_step < DriveSteps; ++unequip_step)
+                                        {
+                                            const auto observe_unequip = [&](FrameStage stage) {
+                                                if (stage == FrameStage::e_pre_sample)
+                                                    sample_unequip_probe(unequip_probe, *candidate_base, actor_id,
+                                                        request, unequip_step);
+                                            };
+                                            drive_candidate_step(*candidate_base, source_graph, generation_profile,
+                                                eye_arm ? &eye : nullptr, observe_unequip);
+                                            std::vector<PoseSample> pose_current;
+                                            read_pose_local(candidate->characterInstance, pose_current);
+                                            if (!pose_current.empty())
+                                            {
+                                                if (!unequip_pose_started)
+                                                {
+                                                    unequip_pose_started = true;
+                                                    unequip_previous = std::move(pose_current);
+                                                }
+                                                else
+                                                {
+                                                    PoseMotionComparison const motion =
+                                                        compare_display_motion(pose_current, unequip_previous);
+                                                    ++unequip_comparisons;
+                                                    unequip_moved += motion.moved > 0 ? 1u : 0u;
+                                                    unequip_motion_valid = unequip_motion_valid && motion.valid;
+                                                    unequip_previous = std::move(pose_current);
+                                                }
+                                            }
+                                            if (unequip_step + 1 == DriveSteps / 2)
+                                                unequip_pose_mid = format_pose_hash(candidate->characterInstance);
+                                        }
+                                        unequip_pose_end = format_pose_hash(candidate->characterInstance);
+                                        sample_unequip_probe(unequip_probe, *candidate_base, actor_id, request, DriveSteps);
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-motion comparisons={} changed={} valid={} epsilon={}",
+                                            actor_id, request, unequip_comparisons, unequip_moved, unequip_motion_valid,
+                                            Display_Motion_Epsilon);
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-done steps={} cand-pose-0={} cand-pose-60={} cand-pose-120={} source-drift={}",
+                                            actor_id, request, DriveSteps, unequip_pose_0, unequip_pose_mid,
+                                            unequip_pose_end, first_drift(source_before, identify(source_graph)));
+                                    }
+                                    else
+                                    {
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-skip reason=event-name-missing name='{}'",
+                                            actor_id, request, Unequip_Event_Name);
+                                    }
+                                }
+                                else
+                                {
+                                    logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=settle outcome=no-settle reached-target={} last-step={} last-default={} last-nodes={}",
+                                        actor_id, request, settle_gate.reached_target() ? "true" : "false",
+                                        settle_gate.last_step(), settle_gate.last_default(), settle_gate.last_nodes());
+                                }
+                            }
                             // v17: idempotent slot-3 re-check after the drive — the world
                             // borrow is released right below, so nothing re-registers the
                             // bodies afterwards; the call feeds the pipeline row only.

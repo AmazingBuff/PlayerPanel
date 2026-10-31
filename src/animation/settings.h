@@ -36,5 +36,10 @@ namespace animation
     // output. inject already implies it; keeping it explicit and off by default leaves historical
     // drive runs comparable.
     [[nodiscard]] bool candidate_generation_entry();
+    // C-G3B-S3: once the equip phase settles (currentDefaultState==1 held for three consecutive
+    // samples inside the first 120 driven steps), dispatch 1HM_Unequip once through the same
+    // event path as the activation injection and sample the unequip phase for another 121 steps.
+    // Requires IndependentGraph=inject.
+    [[nodiscard]] bool candidate_unequip_probe();
 }
 PLUGIN_NAMESPACE_END
