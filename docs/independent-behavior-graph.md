@@ -1983,7 +1983,7 @@ BehaviorGraphProbe=true
 
 ### 三、G3-B 现状重估
 
-**（2026-10-31 晚间更新：图内结构静态审计已完成——[C-G3B-A1](#c-g3b-a1-structural-audit)。答案：1→12 由事件 `Unequip`(id=144) 驱动（条件关闭、无时间窗），S3 判负系注入了错误事件名（`1HM_Unequip`=15 不是转移事件）；卸下锚三脉冲全部是卸下子机器 isActive 绑定输出；两段收尾均由剪辑尾触发器内部发射。G3-B 卸下段判定为事件可注入类，外部输入子集 = {WeapEquip(2), Unequip(144)}，下一片 S6 沿 S3 骨架换正确事件名。以下"出路"段落保留为历史排序记录。）**
+**（2026-10-31 深夜更新：图内结构静态审计 [C-G3B-A1](#c-g3b-a1-structural-audit) 完成并经 [C-G3B-S6](#c-g3b-s6-unequip-event-retry) 运行期验证——1→12 由事件 `Unequip`(id=144) 驱动，S6 首轮主判据 `currentDefaultState` 1→12→0 命中、三脉冲按 isActive 绑定语义同帧出现并在序列完成时清零、`Unequip_Out` 内部发射回 0。**G3-B 外部输入子集正式定为 {`WeapEquip`(2)，`Unequip`(144)}，装备/卸下两段均可回放**。下一步：G3-B 本体完整回放契约（两事件链 + 时序容差 + `iState` 判据取舍 + 姿态对照验收）。10-31 白天六轮外部输入判死结论维持有效——它们判死的是"变量/58377 事件路线"，与 A1/S6 的事件注入路线不矛盾。）**
 
 - **装备段可回放**：`WeapEquip` 注入即可。
 - **卸下段不可外部回放**：原 G3-B 草案"在已证明的外部输入子集下回放 Equip→Idle→Unequip"的卸下段前提不成立——外部输入子集为空集。
@@ -2522,3 +2522,15 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **实现与部署（2026-10-31，v59）**：`CandidateUnequipEvent` 键落在 [settings.h](../src/animation/settings.h)/[settings.cpp](../src/animation/settings.cpp)（解析/日志/访问器，与既有实验键同款），事件名选择在 [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 S3 事件分支——非空用键值、空保持 `1HM_Unequip` 字面量（历史 INI 逐字复现），S3 注释块补 S6 溯源；无新文件（`PLUGIN_SOURCES` 32 不变）、无新增策略逻辑、无离线新用例。构建身份 `…-dcf05cab1e-…`、DLL/PDB 哈希见 [v59 build](build.md#v59-unequip-event-name-2026-10-31)。部署 INI 运行后回 dormant；仓库样例新键为空。首轮结果回填在下方追加，不改写本节既有文字。
 
 **状态：已实现、已构建、已部署待上机。**
+
+**首轮运行（2026-10-31 21:23，v59，AE 1.6.1170，actor 00000014 request=1；[日志](diagnostics/CharacterPanel-g3bs6-unequip-event-retry-20261031-2123.log) 71,530 字节 SHA-256 `237e3d1a…`）：命中——主判据与全部辅判据通过。**
+
+| 段 | 观测 |
+| --- | --- |
+| 装备段 | settle 第七次复现：`phase=settle outcome=settled target-step=49 settled-step=63 baseline-default=1 baseline-nodes=111` |
+| 门与事件 | `phase=event-lookup name='Unequip' id=144 source=graph-events`（与 A1 静态预测逐字一致）；`phase=unequip-inject event='Unequip' id=144 result=dispatched` |
+| 卸下段 | **step=0 即 `default=12 uneq=1 bequip=1 pitch=1 nodes=126`**——转移与三脉冲在注入当帧发生；`default=12` 持续 step 0–20，**step 21 起 `default=0`**（`Unequip_Out` 由剪辑尾触发器内部发射，回到未装备态）；`nodes` 轨迹 126→130→97→115→100→97，偏离 111 基线并回落；三脉冲 step 0–32 保持 1、**step 33 起清零**（卸下子机器去活、isActive 绑定语义）；`rh` 全程 0、`istate` 全程 0（按预注册只记录）；`phase=unequip-motion comparisons=119 changed=92`（运动持续）；三点 pose 哈希 `cand-pose-0=8fb4cd33… 60=4f2aebde… 120=c407cb4e…` 全不相同（起点与 S3 装备 idle 起点同哈希）；`source-drift=none` 全程；无 `[E]`（15 条 `[W]` 均为既有 DAC/Studio 已知告警） |
+
+**裁定**：主判据 `currentDefaultState` 1→12→0 **命中**，辅判据（节点偏离回落、三脉冲出现并按 isActive 语义清零、运动持续）全部命中。**S3 判负根因确证为错误事件名；G3-B 外部输入子集正式定为 {`WeapEquip`(2)，`Unequip`(144)}**——A1 的全部结构性预测（id 解析、注入当帧转移、脉冲绑定语义、剪辑尾触发器收尾）在运行期逐项验证。附带事实：候选卸下段 12→0 用了 21 步（源侧约 1.3 s），按 S3 契约条款不机械换算、不影响裁定。
+
+**G3-B 现状**：装备段（`WeapEquip` 注入）与卸下段（`Unequip` 注入）均已可回放，两段收尾均由图内剪辑尾触发器自发完成。**下一步：G3-B 本体完整回放契约**——一次进程内连贯走完 Equip→Idle→Unequip 全相位（两事件 + 两收尾），预注册两段时序容差与 `iState` 判据取舍，再做姿态对照验收。
