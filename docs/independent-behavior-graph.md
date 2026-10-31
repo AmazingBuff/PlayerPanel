@@ -2178,7 +2178,7 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 2. settle 门：候选 `currentDefaultState` 到达 1 后连续三次采样保持稳定（v38 settle 规则），同时记录此时的节点数为装备 idle 基线。等待上限预注册 120 步；超限输出 `outcome=no-settle` 并终止，不降级为定时注入。
 3. 第二段：注入 `1HM_Unequip`，其后逐步采样 121 步（0–119 + 120），沿用 v51 的逐步采样修正——六点采样会漏瞬态相位。
 
-**观测**（只读）：逐行 `CANDIDATE UNEQUIP step=… default=… istate=… uneq=… bequip=… pitch=… nodes=…`，对照 v41 源侧卸下段（53.652–54.933，约 1.3 s）的变量集 `IsUnequipping`/`bEquipUnequip`/`PitchManualOverride`；`phase=pose-motion comparisons=121`、三点 pose 哈希与 `source-drift` 照旧。注入尝试自带的 `phase=events count=` 行照常输出。
+**观测**（只读）：逐行 `CANDIDATE UNEQUIP step=… default=… istate=… uneq=… bequip=… pitch=… nodes=…`，对照 v41 源侧卸下段（53.652–54.933，约 1.3 s）的变量集 `IsUnequipping`/`bEquipUnequip`/`PitchManualOverride`；`phase=unequip-motion comparisons=120`（勘误：草案此处误写 121，实现按第一段窗口口径——121 行采样、120 次相邻比较）、三点 pose 哈希与 `source-drift` 照旧。注入尝试自带的 `phase=events count=` 行照常输出。
 
 **判据**：主判据 `currentDefaultState` 1→12→0；辅判据节点数偏离 settle 门记录的装备 idle 基线并回落、`IsUnequipping`/`bEquipUnequip` 出现脉冲、运动持续。命中主判据 → 事件链足以驱动卸下段，G3-B 输入子集扩为 {equip 事件, unequip 事件}，下一片预注册两事件的时序容差并起草完整回放契约。未命中 → 负结果入档，回到事件名表证据。`iState` 在本切片**只记录不判定**：S1/S2 已证候选侧它可能需要真实装备上下文，是否作为 G3-B 必需判据留给 G3-B 本体契约决定。
 
@@ -2190,4 +2190,6 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **门**：新键 `[Experiment] CandidateUnequipProbe`（默认 off），需 `IndependentGraph=inject`（inject 自带生成入口，无需 `CandidateGenerationEntry`）。settle 门若以 engine-free policy 实现，按仓库惯例须带离线用例：等待超限 `no-settle`、连续三稳定采样触发、中途扰动后重新计数。
 
-**状态：草案，未实现、未构建、未上机。** 实现前与 [G3-B 契约草案](#handoff-20261029)的观察与判据条款核对一致性；实现后按维护约束同步 animation、OAR、build、maintenance、README、config 与 CHANGELOG。
+**实现与部署（2026-10-31，v53）**：settle 门落在 engine-free 策略头 [unequip_settle_policy.h](../src/animation/behavior_graph/unequip_settle_policy.h)（`UnequipSettleGate`：目标值 1、三连续采样稳定、扰动重计、尾部离开目标即 `no-settle`），三个离线用例在 [behavior_graph_unequip_settle_test.cpp](../tests/behavior_graph_unequip_settle_test.cpp)（`cl /W4 /WX` exit 0）。调用点在 [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp)：门喂入在第一段窗口每步 `e_pre_sample`；判定与二次分发在第一段采样/发射之后、物理世界归还之前（复用同一 borrowed world、`hkbContext` 与生成入口）；`InjectedEvent` 上提为匿名命名空间单一定义，注入块仅改为引用它。观测行按判据所需命名解析：`currentDefaultState` 缺失即整片 skip（`name-missing`），`iState`/`IsUnequipping`/`bEquipUnequip`/`PitchManualOverride`/`iRightHandEquipped` 任一缺失只让该列显示 `none`，不中止切片。预算：`CANDIDATE UNEQUIP` 前缀 ≤ arm 1 行 + settle 1 行 + 121 行采样；第二段新增的 `INDEPENDENT GRAPH` 行 ≤ 4 条（event-lookup、unequip-inject 或 unequip-skip、unequip-motion、unequip-done）；第二段窗口不消耗 `GRAPH FRAME`/clip/slots 预算。构建身份、哈希与部署 INI 见 [v53 build](build.md#v53-unequip-event-2026-10-31)。
+
+**状态：已实现、已构建（干净身份 `…-ecb5869efd-…`）、已部署待上机。** 部署 INI 为 `IndependentGraph=inject` + `CandidateUnequipProbe=true` + `CandidateInputProbe=true`（变量名为空，观察 only），仓库样例保持全 off。运行判据与本节草案一致；首轮结果回填时在下方追加，不改写本节既有文字。
