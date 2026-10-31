@@ -2307,7 +2307,7 @@ typed setter 按 `m_type` 自选（沿用 S4 机制），两写的返回值与�
 
 **停止条件**：崩溃、非有限值、`source-drift` 非 none 立即停止。
 
-**状态：草案，未实现。** 实现仅涉及 S4 第二段抽 helper 与新 INI 键；构建后部署 INI 按本契约门设置。
+**状态：已实现、已构建（干净身份 `…-227d5104a3-…`，[v57 build](build.md#v57-two-write-2026-10-31)）、已部署待上机。** 实现按契约：S4 的写块抽成共用 `typed_write` lambda（skip 行带 `stage=` 标记），settle 后先 `prime` 后 `command`，任一失败即结束不跑采样窗；`CandidateUnequipPrime` 为空保持 S4 单写行为、`CandidateUnequipVariable` 为空保持 S3 事件路径。部署 INI = `inject` + `CandidateUnequipProbe=true` + `CandidateUnequipPrime=iRightHandEquipped` + `CandidateUnequipVariable=bEquipUnequip`，其余全 off。首轮结果回填时在下方追加，不改写本节既有文字。
 <a id="c-g3b-e2-write-capture"></a>
 ## C-G3B-E2：源图 setter 写观察（草案，2026-10-31，未实现）
 

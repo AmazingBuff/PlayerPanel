@@ -841,6 +841,13 @@ The [C-G3B-E2 setter-write observer](independent-behavior-graph.md#c-g3b-e2-writ
 
 Build identity `CharacterPanel-scenegraph-behavior-graph-v56-write-capture-20261031-a185603f5a-cl94faaed0c6-20261031T085732Z`; DLL SHA-256 `868e6c35bdfd57224a56227ae48f94794d864194de78a40d906e1caa938b8781` (1,444,352 bytes), PDB SHA-256 `68bebe2e109f4ddb12c1cf237fd14ba4c4869a72e76395d61895b5e8384538e9` (37,990,400 bytes). Repository sample keeps the new key off. **No deployment and no game result** — deployment happens after the S4 ladder concludes, with the deployed INI at `SourceWriteCapture=true` + everything else off.
 
+<a id="v57-two-write-2026-10-31"></a>
+## V57 two-write build (2026-10-31)
+
+The [C-G3B-S5 two-write replay](independent-behavior-graph.md#c-g3b-s5-two-write) was built from committed HEAD `227d510` (clean identity). The only code change: the S4 typed-write block was refactored into a shared `typed_write` lambda (name-missing/unsupported-type rows now carry a `stage=` marker), and the settled second stage gained an optional prime write before the command write — `CandidateUnequipPrime` non-empty writes that variable first, either write failing ends the slice without a sampling window, and an empty prime keeps the S4 single-write behaviour while an empty `CandidateUnequipVariable` keeps the S3 event path. No new policy logic, so no new offline cases. `PLUGIN_SOURCES` stays at 32; only the pre-existing D9025 warnings.
+
+Build identity `CharacterPanel-scenegraph-behavior-graph-v57-two-write-20261031-227d5104a3-cl94faaed0c6-20261031T094750Z`; DLL SHA-256 `250abfb18d6c2c565144091c0c66a4659ecbe5b996b596b00d2c88921485f9c0` (1,445,888 bytes), PDB SHA-256 `3c15abb0e9602f7eb9a901c29e3b4e6ce01b8199c5aaab5fb9ce92cfbcca5325` (37,990,400 bytes). Deployment (2026-10-31) backed the v56 trio up to `dist/deploy-backup-20261031-v56/` (DLL `868e6c35…`, PDB `68bebe2e…`, INI 1,683 bytes `609f74fc…`) and installed this pair. The deployed INI (1,817 bytes, SHA-256 `4ee969a2…`) is the S5 configuration: `IndependentGraph=inject`, `CandidateUnequipProbe=true`, `CandidateUnequipPrime=iRightHandEquipped`, `CandidateUnequipVariable=bEquipUnequip`, everything else off. Repository sample keeps the new key empty. No game run yet.
+
 ## Synchronized files
 
 Maintain this guide with [README](../README.md), [SceneGraph](scene-graph.md), [animation](animation.md), [maintenance](code-maintenance.md), CMake/preset/template inputs and [runtime notes](../tools/scene_copy/README.txt). Keep current build commands out of [historical evidence](history.md), whose commands describe earlier revisions.
