@@ -1983,7 +1983,7 @@ BehaviorGraphProbe=true
 
 ### 三、G3-B 现状重估
 
-**（2026-10-31 深夜更新：图内结构静态审计 [C-G3B-A1](#c-g3b-a1-structural-audit) 完成并经 [C-G3B-S6](#c-g3b-s6-unequip-event-retry) 运行期验证——1→12 由事件 `Unequip`(id=144) 驱动，S6 首轮主判据 `currentDefaultState` 1→12→0 命中、三脉冲按 isActive 绑定语义同帧出现并在序列完成时清零、`Unequip_Out` 内部发射回 0。**G3-B 外部输入子集正式定为 {`WeapEquip`(2)，`Unequip`(144)}，装备/卸下两段均可回放**。下一步：G3-B 本体完整回放契约（两事件链 + 时序容差 + `iState` 判据取舍 + 姿态对照验收）。10-31 白天六轮外部输入判死结论维持有效——它们判死的是"变量/58377 事件路线"，与 A1/S6 的事件注入路线不矛盾。）**
+**（2026-10-31 深夜终版：图内结构静态审计 [C-G3B-A1](#c-g3b-a1-structural-audit) → 事件名修正切片 [C-G3B-S6](#c-g3b-s6-unequip-event-retry) → 本体验收 [C-G3B-F](#c-g3b-f-full-replay) 当晚三连完成。S6 命中确证 1→12 由事件 `Unequip`(id=144) 驱动；F 运行以 {`WeapEquip`(2)，`Unequip`(144)} 两个外部输入在候选自身状态机上走完 0→10→1→12→0（step 0→49→注入→21），两处段内转移均为图内自发，G3-B PASSED（限定范围：相位序列回放，姿态验收归 G5）。10-31 白天六轮外部输入判死结论维持有效——它们判死的是"变量/58377 事件路线"。下一步：G4（语境隔离）。）**
 
 - **装备段可回放**：`WeapEquip` 注入即可。
 - **卸下段不可外部回放**：原 G3-B 草案"在已证明的外部输入子集下回放 Equip→Idle→Unequip"的卸下段前提不成立——外部输入子集为空集。
@@ -2568,3 +2568,18 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **部署（2026-10-31）**：v59 DLL/PDB 原位不动（`013e1bdc…`/`8b8fd16f…`），当前 dormant INI 备份至 `dist/deploy-backup-20261031-v59/`（INI 1,834 字节 `1d40a0eb…`），部署 INI 换为本契约配置（1,921 字节，SHA-256 `6dfb54ec28e4086747d18017a6970eb3a4f85778fc33d34b15bac131e0ace9ba`：`inject` + `CandidateInputProbe=true` + `CandidateInputVariable=` 空 + S6 三键）。
 
 **状态：契约已预注册、已部署待上机（v59 二进制原样）。** 运行结果回填在下方追加，不改写本节既有文字。
+
+**首轮运行（2026-10-31 21:38，v59 二进制原样，AE 1.6.1170，actor 00000014 request=1；[日志](diagnostics/CharacterPanel-g3bf-full-replay-20261031-2138.log) 85,915 字节 SHA-256 `a56920ef…`）：命中——主判据四段全过，辅判据全过。G3-B PASSED。**
+
+| 判据 | 观测 |
+| --- | --- |
+| 0→10 | step-0 行 `default=10 nodes=113`（激活 `WeapEquip` 注入当帧；初始 0 为 v48 普查既证） |
+| 10→1 | **`default=10` 持续 step 0–48，step 49 起 `default=1`**（`WeapEquip_Out` 内部发射；settle 行 `target-step=49 settled-step=63 baseline-default=1 baseline-nodes=111` 第八次复现）——观测模式的逐步采样把精确步号从"五次预期"升级为逐点实证 |
+| 1→12 | settle 后 `phase=event-lookup name='Unequip' id=144` + `unequip-inject`，第二窗口 step-0 即 `default=12 uneq=1 bequip=1 pitch=1 nodes=126` |
+| 12→0 | `default=12` 持续 step 0–20，**step 21 起 `default=0`**（`Unequip_Out` 内部发射） |
+| 辅判据 | 第一窗口 `pose-motion comparisons=120 changed=119`、第二窗口 `unequip-motion 119 比较 changed=92`（两段运动持续）；三脉冲 step 0–32 保持、step 33 清零（isActive 语义）；**全程恰好两次 `result=dispatched`**（WeapEquip + Unequip），10→1 与 12→0 无注入行；无 `[E]`；`source-drift=none` 全程 |
+| 确定性 | 两窗口 pose 哈希与 S6 完全一致（装备段 `bc160a8c/63f638a6/c407cb4e`，卸下段 `8fb4cd33/4f2aebde/c407cb4e`）——同配置重放确定性的直接证据 |
+
+**裁定：G3-B PASSED（限定范围：相位序列回放）。** 候选仅凭 {`WeapEquip`(2)，`Unequip`(144)} 两个外部输入，在自身状态机上完整走完 Equip→Idle→Unequip，两处段内转移均由图内剪辑尾触发器自发完成，全程无任何变量写入。`iState` 按预注册只记录（全程 0，残余独立立项）；姿态对照按预注册归 G5。
+
+**收尾状态**：部署 INI 已回 dormant（v59 留装）；G3-B 关闭，按排序进入 **G4（语境隔离：OAR 阶段变量来源、历史/回调/sink 隔离）**。
