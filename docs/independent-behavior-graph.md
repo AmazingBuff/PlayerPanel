@@ -2298,4 +2298,4 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **实现影响面**：新模块 `source_write_capture.{h,cpp}`，`PLUGIN_SOURCES` 31→32；stub 构造器与 E1 同款复制（记录签名不同，不强抽公共件）；文档同步按维护约束。**部署排序：S4 阶梯（第二/三轮）仍在同一部署 INI 上等待上机，E2 构建完成后不部署，阶梯判死或打平后再部署**——两实验共用 F7 与部署位。
 
-**状态：草案，未实现、未构建。** 头部字节与 VA 已按上述核实；实现顺序 = 策略头 + 离线用例 → 双 detour 接线 → 本地构建 →（阶梯结束后）部署。
+**状态：已实现、已构建（干净身份 `…-a185603f5a-…`，[v56 build](build.md#v56-write-capture-2026-10-31)）、按部署排序条款**未部署**——S4 阶梯的部署位仍在第二轮 `IsUnequipping` 上；阶梯判死或打平后部署（部署 INI = `SourceWriteCapture=true` + 其余全 off）。**
