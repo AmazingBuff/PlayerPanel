@@ -2,7 +2,7 @@
 
 ## Independent graph investigation (2026-10-23)
 
-更新：2026-11-02。[当前验证总表](independent-behavior-graph.md#verification-matrix)：G1/G2 有界通过、G3-A 成立、G3-B/F 相位回放通过。G4 历史 A/B/C PASSED 保留；A 的分型仪器已实现、构建、部署并运行（v63，见 [C-G4-A4](independent-behavior-graph.md#c-g4-a4-numeric-types)），整窗 72/72 `type=0`、逐窗 `sum == sites n:`，**[A numeric 全窗覆盖](independent-behavior-graph.md#g4-followup-numeric)已关闭**；仅剩 [C 兼容源事件观察](independent-behavior-graph.md#g4-followup-source-events)一项 PENDING。G5 可准备、运行验收后置，G6 待验，装载 teardown NO-GO。[Audit22](behavior-graph-construction-audit.md#audit22)的 query/visitor 链只说明 clip 元数据，不证明 manager 注册必要性。
+更新：2026-11-02。[当前验证总表](independent-behavior-graph.md#verification-matrix)：G1/G2 有界通过、G3-A 成立、G3-B/F 相位回放通过。G4 历史 A/B/C PASSED 保留；其两项证据缺口已全部关闭：A 的分型仪器（v63）给出整窗 72/72 `type=0`、逐窗 `sum == sites n:`，**[A numeric 全窗覆盖](independent-behavior-graph.md#g4-followup-numeric)关闭**；C 的并发源事件观察器（v66，[C-G4-C1](independent-behavior-graph.md#c-g4-c1-concurrent-events)）在同一窗口内取得 `calls=62/other-graph=55` 正控与源图 `events=0`，**[C 源事件观察](independent-behavior-graph.md#g4-followup-source-events)关闭**。下一阶段 G5（阈值/逐骨预注册）；G6 待验，装载 teardown NO-GO。[Audit22](behavior-graph-construction-audit.md#audit22)的 query/visitor 链只说明 clip 元数据，不证明 manager 注册必要性。
 
 C-G4 仪器（v60→v62）在 drive/预注册事件分发的 thread-local candidate window 内，于四站 evaluate detour 的 scope 检查之前 tally 原生及产品命中。`OarContextWatch` 控制明细与 `experiment|display-<reason>` 汇总；明细由 v60 的 8 行升至 v61/v62 的**每窗前 32 条总求值**，不是 32 条 numeric。overlaps 只对齐 REFR 与源 actor，owner 对照两图 activeNodes；null clip 的 numeric 也归入 neither，不能用该归属桶单独确定其取值来源。扫描锚 cand97/src106 与 DriveState 自洽，load-bindings 显示两图共享绑定集；共享数据不等于共享变量活值，也不证明完整姿态/时钟/层一致。
 

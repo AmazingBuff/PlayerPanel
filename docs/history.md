@@ -1,6 +1,6 @@
 # 历史研究总结
 
-更新：2026-11-02。当前状态由[交接](independent-behavior-graph.md#handoff-20261102-evidence)与[验证总表](independent-behavior-graph.md#verification-matrix)拥有：G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过；G4 的历史 PASSED 保留，A 的 numeric 全窗覆盖已由 v63 运行关闭，只剩 C 源事件泄漏一项 PENDING，G5 可准备、运行验收后置，G6 待验。最新记录安装 v66（C1 钉住候选源图，INI 仍为同一份 C1 运行配置），A 项已关闭、C 项两轮尝试无效待第三轮；v46-20261030 两类正常工作流已观察，DCMF 仍仅参考/后置。旧逐轮记录按日期保留；144 份旧原件从 `719c90bfe115a67ac64b80271dc8afced780290f` 恢复，四份退役日志另见[保留与恢复索引](diagnostics/README.md)。
+更新：2026-11-03。当前状态由[交接](independent-behavior-graph.md#handoff-20261102-evidence)与[验证总表](independent-behavior-graph.md#verification-matrix)拥有：G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过；G4 的历史 PASSED 保留，其两项证据缺口已分别由 v63（A：numeric 全窗分型）与 v66（C：并发源事件窗口）的会话关闭，下一阶段 G5 预注册、G6 待验。最新记录安装 v66，部署 INI dormant；v46-20261030 两类正常工作流已观察，DCMF 仍仅参考/后置。旧逐轮记录按日期保留；144 份旧原件从 `719c90bfe115a67ac64b80271dc8afced780290f` 恢复，四份退役日志另见[保留与恢复索引](diagnostics/README.md)。
 
 - [渲染、展示实例与外观](history-rendering.md)：M0状态/合成、Actor与StudioHome、灯光、native Clone、AFP9取景/蒙皮、UBE，以及不同的回收边界。
 - [动画、OAR与暂停行为图](history-animation.md)：HKX取数/采样/映射反转、第二Actor暂停推图、最终输出、OAR/DAC/IED、r1/r2遗留与无Actor独立图关卡。

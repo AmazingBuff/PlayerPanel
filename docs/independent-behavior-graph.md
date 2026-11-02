@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-02。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为保留的历史裁定；当前证据完整性方面，**A 的 numeric 全窗覆盖已由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭**（整窗 72/72 全 `type=0`，逐窗对账相等），只剩 **C 源事件泄漏一项 PENDING**，其兼容观察器 [C-G4-C1](#c-g4-c1-concurrent-events) 已实现、构建并部署（v64），待上机。G5 可准备预注册，运行验收后置于 C 关闭；G6 待验。历史实验与原始读数保留，前向更正见各节；四份冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
+更新：2026-11-03。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为历史裁定，其 **两项证据缺口已于 11-02/11-03 全部关闭**：A 的 numeric 全窗覆盖由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭（整窗 72/72 全 `type=0`、逐窗对账相等），C 的源事件泄漏由 [C-G4-C1](#c-g4-c1-concurrent-events) 的 v66 运行关闭（同一窗口内正控 `calls=62/other-graph=55`、源图 `events=0`、`reason=display-close`）。下一阶段为 **G5（完整姿态对照）**，第一步是预注册误差阈值与逐骨覆盖判据；G6 待验。历史实验与原始读数保留，前向更正见各节；冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
 
 <a id="current-status"></a>
 
@@ -11,8 +11,8 @@
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)）；"全局登记计数"的旧静态结论被 v35 上机读数证伪、判为无锚点（[更正](#g1-teardown-audit)）。 |
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
-| G4 | **历史 A/B/C PASSED；A 已补齐，C 仍 PENDING** | [A 全窗 numeric 类型](#g4-followup-numeric)：[C-G4-A4](#c-g4-a4-numeric-types) v63 运行整窗 72/72 全 `type=0`、逐窗对账相等 → **关闭**；[C 兼容源事件窗口](#g4-followup-source-events)：评审与实现 [C-G4-C1](#c-g4-c1-concurrent-events)（v64）已部署、待上机，尚未关闭；B 只建立当前装备族选择稳定，不普遍证明 Random/sequence/PlayOnce 隔离。 |
-| G5 | **未预注册、未运行** | 可先准备阈值与逐骨/层覆盖协议，运行验收须先关闭 G4 两项缺口。 |
+| G4 | **证据完整性成立（A/C 缺口均已关闭）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；[C 源事件泄漏](#g4-followup-source-events)：v66 运行正控 `calls=62/other-graph=55`、源图 `events=0`、`display-close` 边界；B 只建立当前装备族选择稳定，不普遍证明 Random/sequence/PlayOnce 隔离。 |
+| G5 | **未预注册、未运行** | 可先准备阈值与逐骨/层覆盖协议；G4 两项缺口已闭合，无外部前置。 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -27,7 +27,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 <a id="验证总表2026-10-29含-v33v34v41-证据"></a>
 ## 验证总表（2026-11-02，含 G3-B/F、G4 证据复核与 A4 分型运行）
 
-归档结果包括 v33/v34 显示及边界、v41 源相位、v46-20261030 正常工作流、G3-B/F 完整相位回放、G4 A/B/C 历史裁定和 A4 的 numeric 全窗分型运行。本次只复核文档与保留证据，不新增运行；G4 的 A 项已由 11-02 的 v63 会话关闭，C 项仍 PENDING，不由历史 PASSED 自动关闭。旧 raw119/120、bones=116 与各工件的日期/身份不变。
+归档结果包括 v33/v34 显示及边界、v41 源相位、v46-20261030 正常工作流、G3-B/F 完整相位回放、G4 A/B/C 历史裁定，以及 A4 的 numeric 全窗分型运行与 C1 的并发源事件窗口运行。G4 的两项缺口分别由 11-02 的 v63 会话（A）与 11-03 的 v66 会话（C）关闭。旧 raw119/120、bones=116 与各工件的日期/身份不变。
 
 ### 关卡
 
@@ -36,8 +36,8 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
 | G3 | G3-A 成立；**G3-B PASSED（相位序列）** | [F](#c-g3b-f-full-replay)：两事件复现 0→10→1→12→0；完整姿态另验 |
-| G4 | **历史 PASSED；A 已补齐（v63 运行），C 仍 PENDING** | [numeric 全窗覆盖](#g4-followup-numeric)已关闭（整窗 72/72 `type=0`、逐窗对账相等）；[源事件兼容观察](#g4-followup-source-events)待评审兼容观察器；B 限装备族选择稳定 |
-| G5 | 未预注册、未运行 | 可准备协议，运行验收先闭合 G4 缺口 |
+| G4 | **历史 PASSED；A/C 两项缺口均已关闭** | [numeric 全窗覆盖](#g4-followup-numeric)（v63：整窗 72/72 `type=0`、逐窗对账相等）、[源事件兼容观察](#g4-followup-source-events)（v66：正控 `calls=62/other-graph=55`、源图 `events=0`、`display-close`）；B 限装备族选择稳定 |
+| G5 | 未预注册、未运行 | 可准备协议；G4 两项缺口已闭合，无外部前置 |
 | G6 | PENDING | 非豁免生命周期、源恢复与重复会话收敛未证 |
 
 ### 逐轮实验（本系列）
@@ -94,7 +94,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 ### 当前部署与开关
 
 - **最新记录安装：v66**（2026-11-02 重装，C1 钉住候选源图），身份 `CharacterPanel-scenegraph-v66-g4c1-pinned-graph-0ab9571833-cl94faaed0c6-20261102T154311Z`；DLL 1,474,048 字节 `190c7236…`、PDB 38,522,880 字节 `b4f2596d…`，完整哈希与判读见 [v66 build](build.md#v66-g4c1-pinned-graph-2026-11-02)。记录路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
-- **当前部署 INI：C1 运行配置**（三轮尝试同一份），2,530 字节 `f714e05f…`；A4 键集 + `SourceEventCapture=concurrent`。v65/v64/v63 三件套分别在 `dist/deploy-backup-20261102-v65/`、`-v64/`、`-v63/`，可整组回退。仓库样例仍为 dormant 默认。
+- **当前部署 INI：dormant**，2,147 字节 `27f481f5…`（C1 裁定后从备份恢复并回读核对）；三轮 C1 尝试期间使用的是同一份 C1 运行配置，2,530 字节 `f714e05f…`（A4 键集 + `SourceEventCapture=concurrent`），每轮只换二进制。v65/v64/v63 三件套分别在 `dist/deploy-backup-20261102-v65/`、`-v64/`、`-v63/`，可整组回退。仓库样例仍为 dormant 默认。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
 
@@ -1960,13 +1960,13 @@ BehaviorGraphProbe=true
 
 本节接替下方 11-01 收官摘要。**保留历史 PASSED，整理当次 G4 证据完整性仍有两项 PENDING**；该次仅整理文档/日志，不实现仪器、不构建/部署/上机。
 
-> **同日更新（A4 之后）**：PENDING 1 已由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭（整窗 72/72 `type=0`、逐窗对账相等）；本节与下方 PENDING 1 描述的是当次整理时的状态，当前只剩 PENDING 2（C 源事件泄漏）。
+> **同日更新（A4 之后）**：PENDING 1 由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭、PENDING 2 由 [C-G4-C1](#c-g4-c1-concurrent-events) 的 v66 运行关闭（2026-11-03）；本节与下方 PENDING 描述的是当次整理时的状态，当前 G4 已无剩余缺口。
 
 - **已证**：G1 修订方案 A、G2 v33/v34 有界通过；G3-A 有源 settled 相位，G3-B/[F](#c-g3b-f-full-replay)以 `WeapEquip`(2) + `Unequip`(144) 两次外部注入复现 0→10→1→12→0，装备/卸下段分别 step 49/21 自退，`source-drift=none`。S3/S4/S5 的负结果仅否定各自名字/写集/时机，E1 零 58377 命中仅否定该观察路由，不能推出无外部事件。
 - **资源与活态分开**：候选与控制器源图共享 `hkbBehaviorGraphData`（652 项、对齐 652/0/0）及 15,203 项绑定集，候选变量活值分储、激活前不存在并从 authored defaults 初始化。共享绑定、候选跨轮 pose 哈希相同只支持资源对应/候选确定性，不证明源候选完整姿态、时钟或全部层/权重一致；`owner=neither` 也不单独识别读值来源。
 - **G4 已有证据的范围**：A3 全窗 2,043 次求值，`overlaps=0`、owner=cand:0/src:0/neither:2043、扫描锚 cand97/src106；这些与模板级求值解释相容，但不能替代下列 numeric 全窗计数。B-v2 A/A 与 B 的弓→剑→法术逐族选择稳定；Start/Loop/Loop2 尾缀已预先排除，故不普遍证明 Random/sequence/PlayOnce 历史无消耗。C 已观察 5/5 capture accepted、EquipSink 修订 10→14、DAC restore matched ×3；这些不包含源事件泄漏观测或完整生命周期收敛。
 - **记录部署**：v62 DLL `cdb8a5ed…` / PDB `a7020045…`、dormant INI `27f481f5…`；完整身份见[部署](#deploy-state)。v46 两类正常工作流已在 **20261030 重建**观察，非 20261029 归档逐字节证据；普通副本仍无 native 内存上界。[DCMF](community-reference-supplement.md#dcmf-reference)仅参考/后置；[idle-start 每圈重放](animation.md#idle-start-replay)是独立未决问题。
-- **排序**：先关闭下面两项 G4 证据缺口；G5 可并行准备预注册的误差阈值、有效骨与贡献层/混合/速度覆盖，**运行验收后置**，目前未预注册/未运行；之后 G6（源恢复、任务失效、引用/回调/sink/历史与重复会话收敛）。装载 teardown NO-GO；每进程一张保留候选只是显式例外。**2026-11-02 晚些更新：PENDING 1 已关闭（[C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行），只剩 PENDING 2。**
+- **排序**：先关闭下面两项 G4 证据缺口；G5 可并行准备预注册的误差阈值、有效骨与贡献层/混合/速度覆盖，**运行验收后置**，目前未预注册/未运行；之后 G6（源恢复、任务失效、引用/回调/sink/历史与重复会话收敛）。装载 teardown NO-GO；每进程一张保留候选只是显式例外。**2026-11-02 晚些更新：PENDING 1 已关闭（[C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行）；2026-11-03：PENDING 2 亦关闭（[C-G4-C1](#c-g4-c1-concurrent-events) 的 v66 运行），G4 无剩余证据缺口，下一阶段 G5 预注册。**
 
 <a id="g4-followup-numeric"></a>
 ### PENDING 1（**已关闭**，2026-11-02）：A 的全窗口 numeric 类型覆盖
@@ -1982,7 +1982,7 @@ BehaviorGraphProbe=true
 **关闭（2026-11-02）**：契约、判据与实现见 [C-G4-A4](#c-g4-a4-numeric-types)。v63 运行（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 567,481 字节 `59fa75ca…`）给出整窗分型：实验窗 `evaluations=2037 sites=n:72` 对应 `numeric=t0:72/t3:0/un:0/sum:72`，**31/31 行 `sum == sites n:`**，其后 12 轮显示窗全 0（无跨窗残留），明细仍精确 32 行 → 65 次 numeric 命中在预算之外被计入。修订解释下的"零图变量读取"因此覆盖完整窗口；缺口的原始证据描述保留如下，不再代表当前状态。
 
 <a id="g4-followup-source-events"></a>
-### PENDING 2：C 的兼容源事件观察窗口
+### PENDING 2（**已关闭**，2026-11-03）：C 的兼容源事件观察窗口
 
 **缺口证据**：[B+C 原日志](diagnostics/CharacterPanel-g4bc-run-b-20261101-0028.log)原行 14/21 为 `SourceEventCapture=false`、`install-skip reason=off`，没有源事件观察器。并且 [source_event_capture.cpp](../src/animation/behavior_graph/source_event_capture.cpp) 的 `install_source_event_capture` 明确拒绝 `IndependentGraph!=off`，SourceTimeline 另有优先门；F7 的既有 `sample_source_event_capture` 生命周期面向面板外采集，不能假定覆盖并发 inject+display。**不能仅打开一个 INI 键重跑，也不得删守卫规避冲突。**
 
@@ -1992,7 +1992,7 @@ BehaviorGraphProbe=true
 
 **停点与回传**：门冲突未解决、安装/武装不明、正控失败、源身份变更、缺窗/丢行或候选相关源事件无法归因，停止并保持 PENDING；不得放宽守卫、改写旧日志或自动归类污染。回传兼容生命周期评审/实现契约、路由与正控证据、工件/设置身份、含两次注入/settle/display/reset 边界的完整源/候选日志和无关事件分类表，明确路由未覆盖项。
 
-→ 评审、判据与实现见 [C-G4-C1](#c-g4-c1-concurrent-events)（2026-11-02：三态模式 + 计数正控 + 实验自有的窗口生命周期，v64 已实现、构建并部署，**待上机**；本项在运行回传前保持 PENDING）。
+**关闭（2026-11-03）**：评审、判据与三轮实现见 [C-G4-C1](#c-g4-c1-concurrent-events)。第三轮（v66 钉图版，[日志](diagnostics/CharacterPanel-g4c1-attempt3-pinned-graph-20261103-0010.log) 137,368 字节 `d2fa2b03…`）在同一窗口内给出：`window-open` 的 `data=0x1c4b4cb7510` 与 `pre-activate behavior-data` 逐位相同（观测对象确为候选源图）、武装早于两次派发、`calls=62 / other-graph=55`（正控成立）、`events=0 / ring-dropped=0`（源图零事件）、`reason=display-close`（覆盖显示与关闭边界）。前两轮无效（v64 解析器不一致中止、v65 观测错图）与修正过程一并保留在 C1 节。缺口的原始描述保留如下，不再代表当前状态。
 
 四份已替代的 S4/S5 负日志只从工作树退役；逐轮结果保留，CRLF 与 LF 身份、不可变恢复提交及保留理由见[诊断索引](diagnostics/README.md)。
 
@@ -2746,7 +2746,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 <a id="c-g4-context-isolation"></a>
 ## C-G4 契约：OAR 上下文、历史与回调隔离（草案 → 实现/部署，2026-10-31）
 
-> **2026-11-02 证据范围更正**：本节保留预注册协议及当时 PASSED；A 项已由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行补齐（[numeric 待办](#g4-followup-numeric)**已关闭**：整窗 72/72 `type=0`、逐窗对账相等），C 项见[源事件待办](#g4-followup-source-events)仍未闭合。B 只支持装备族选择稳定，不能补足缺口或普遍证明历史隔离。
+> **2026-11-02 证据范围更正**：本节保留预注册协议及当时 PASSED；其两项证据缺口已于 11-02/11-03 补齐——A 由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行（[待办 1](#g4-followup-numeric)**已关闭**）、C 由 [C-G4-C1](#c-g4-c1-concurrent-events) 的 v66 运行（[待办 2](#g4-followup-source-events)**已关闭**）。B 只支持装备族选择稳定，不能普遍证明历史隔离。
 
 **背景与目标**：G3-B 已证候选仅凭 {`WeapEquip`(2)，`Unequip`(144)} 即可在自身状态机走完装卸全相位序列。按预注册排序，本契约验收 **G4 语境隔离**：候选在面板显示链里被驱动时，OAR 与游戏本体动画状态互不污染——OAR 阶段变量的读取来源符合各自语境（[10-29 交接 G4 定义](#handoff-20261029)："身份/装备允许按明确设计借读，阶段状态必须对应候选"）、预览不消耗世界 Random/顺序/PlayOnce 历史、回调与 sink 作用域不跨界、关闭只清预览自有登记。三段实验 **A → B → C** 排序：A 的求值可见性结论是 B/C 的隔离前提，A 判负时 B/C 停止。
 
@@ -2993,7 +2993,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 <a id="c-g4-c1-concurrent-events"></a>
 ## C-G4-C1：兼容的源事件观察窗口（评审 → 实现，2026-11-02）
 
-> **状态：评审定稿、已实现、已构建并已部署（v66 钉图版），待第三轮上机。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定。
+> **状态：评审定稿、已实现、已构建、已部署并已运行（v66）—— PENDING 2 已关闭。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定，运行结果回填在末尾。
 
 **问题陈述（三个结构事实，缺一不可）**：
 
@@ -3062,4 +3062,17 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **结论：本轮 `events=0` 不能用于 C 判据**（观测对象错，零值无意义），PENDING 2 保持。可用的收获是机制层：窗口先后、正控计数、`display-close` 关窗、零丢弃、无身份中止，全部按预注册工作。
 
 **修正（v66）**：并发窗口改为**钉住实验侧那张图**——`concurrent-armed` 用 `managed_graph(*holder, &a_source_graph)` 只在管理器列表仍持有该对象时才pin，并每帧用同一 `managed_graph` 复核成员关系（只比较指针，不解引用已释放对象）；采样器在 `concurrent_graph` 存在时用钉住的图，legacy F7 路径保持 `player_graph()` 不变。`window-open` 的 `words/nodes/data` 因此应与 `scan src-count`、`load-bindings` 同源，可直接在日志里核对这张图对不对。
+
+**第三轮尝试（2026-11-03 00:10:44–00:10:54，v66 钉图版；[日志](diagnostics/CharacterPanel-g4c1-attempt3-pinned-graph-20261103-0010.log) 137,368 字节 SHA-256 `d2fa2b03…`）：判据 1–6 全部成立 —— PENDING 2 关闭。**
+
+| 判据 | 观测 |
+| --- | --- |
+| 1 安装 | `installed mode=concurrent target=0x7ff7259958a0 … head=48 8b c4 48 89 48 08` |
+| 2 武装 | 00:10:44.638 `window-open actor=00000014 words=652 nodes=106 data=0x1c4b4cb7510` + `concurrent-armed … pinned=yes`，**早于** 44.890 `WeapEquip` 与 45.025 `Unequip` |
+| 3 正控 | `calls=62 ≥ 2`、`other-graph=55 ≥ 2` —— 两次注入与其它图的派发都被 detour 看见并正确分类 |
+| 4 隔离 | `events=0`、`ring-dropped=0`、无 `budget-exhausted`、`reason=display-close`；窗口跨 10.1 秒，覆盖两次注入、120 步回放与显示段关闭 |
+| 5 边界 | 仅限 58377 路由，不外推其它 manager 级事件路径 |
+| 6 身份 | 无 `identity-mismatch`、无 `window-aborted`；`nodes=106` 与同日志 `OAR CONTEXT scan src-count=106` 一致，`data=0x1c4b4cb7510` 与 `pre-activate` 的 `behavior-data` **逐位相同** → 观测对象确为候选所由来的那张图 |
+
+**裁定：PENDING 2 关闭 —— 候选活动期间源图事件为零，且观察器存活、分类有效、窗口覆盖完整。** 复用守门同构：恰好两次 `result=dispatched`（`WeapEquip` 2 / `Unequip` 144）；`drive-done` `bc160a8c…/63f638a6…/c407cb4e…`、`unequip-done` `8fb4cd33…/4f2aebde…/c407cb4e…`（**第八次逐位复现**）；`source-drift=none`、源姿态 before=after=`a8f8dabc8439246e`；零 `[E]`，15 条 `[W]` 均为既有 DAC/台账提示。零计数只限定 58377 路由（E1/A1 已示其覆盖不到全部 manager 级事件路径），**不得外推**。裁定后部署 INI 回 dormant（2,147 字节 `27f481f5…`），v66 DLL/PDB 留装。
 

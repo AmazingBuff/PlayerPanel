@@ -1,0 +1,742 @@
+[00:08:50.840] [11360] [I] CharacterPanel v1-2-1-0
+[00:08:50.840] [11360] [I] CharacterPanel loaded
+[2026-11-03 00:08:50.840] [thread 11360] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(81): [info] CharacterPanel v1-2-1-0
+[00:09:02.118] [11360] [I] OAR Animations V1 mapping API available
+[00:09:02.118] [11360] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[00:09:02.118] [11360] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[00:09:38.881] [11044] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[00:09:38.881] [11044] [I] DIAGNOSTICS setting DetailedAnimationTrace=true
+[00:09:38.881] [11044] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[00:09:38.881] [11044] [I] EXPERIMENT setting IndependentGraph=inject
+[00:09:38.881] [11044] [I] EXPERIMENT setting DisplayPose=true
+[00:09:38.881] [11044] [I] EXPERIMENT setting DisplayStep=true
+[00:09:38.881] [11044] [I] EXPERIMENT setting SourceTimeline=false transient=false
+[00:09:38.881] [11044] [I] EXPERIMENT setting SourceEventCapture=concurrent
+[00:09:38.881] [11044] [I] EXPERIMENT setting SourceWriteCapture=false
+[00:09:38.881] [11044] [I] EXPERIMENT setting CandidateVariableCensus=false
+[00:09:38.881] [11044] [I] EXPERIMENT setting CandidateInputProbe=true variable='' value=1
+[00:09:38.881] [11044] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[00:09:38.881] [11044] [I] EXPERIMENT setting CandidateUnequipProbe=true variable='' prime='' event='Unequip'
+[00:09:38.881] [11044] [I] EXPERIMENT setting OarContextWatch=true
+[00:09:38.882] [11044] [I] SOURCE EVENTCAPTURE installed mode=concurrent target=0x7ff7259958a0 stub=0x7ff6a6730000 original=0x7ff6a6730050 head=48 8b c4 48 89 48 08
+[00:09:38.882] [11044] [I] SOURCE WRITECAPTURE install-skip reason=off
+[00:09:38.882] [11044] [I] DAC native inventory lifecycle sink installed
+[00:09:38.886] [11044] [I] All shaders compiled
+[00:09:38.886] [11044] [I] Installed pre-UI renderer hook
+[00:09:38.886] [11044] [I] Panel menu sink installed
+[00:09:38.886] [11044] [I] CharacterManager equipment sink installed
+[00:09:38.886] [11044] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-v66-g4c1-pinned-graph-0ab9571833-cl94faaed0c6-20261102T154311Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[00:09:38.905] [11924] [I] Studio host changed: 0x0 -> 0x1c509426980 (paused=true)
+[00:09:38.905] [11924] [I] Studio light node has been created
+[00:09:38.905] [11924] [I] CP-LIGHT slot 0: registered, shell 0x1c6906ef880 queued (ledger stays the authority)
+[00:09:38.905] [11924] [I] CP-LIGHT slot 1: registered, shell 0x1c6906ef740 queued (ledger stays the authority)
+[00:09:38.905] [11924] [I] CP-LIGHT slot 2: registered, shell 0x1c6906ef600 queued (ledger stays the authority)
+[00:09:38.905] [11924] [I] Studio lights registered on the ledger (scene=0x1bb6df06e80 -- ledger fetch will populate the slots)
+[00:09:38.905] [11924] [I] CP-LIGHT slot 0: ledger shell fetched 0x1c6906ef880 (after 0 miss frames)
+[00:09:38.905] [11924] [I] CP-LIGHT slot 1: ledger shell fetched 0x1c6906ef740 (after 0 miss frames)
+[00:09:38.905] [11924] [I] CP-LIGHT slot 2: ledger shell fetched 0x1c6906ef600 (after 0 miss frames)
+[00:10:20.315] [11360] [I] DAC old-world sessions discarded world=2
+[00:10:20.459] [11924] [I] SOURCE EVENTCAPTURE invalidated reason=world-reset
+[00:10:20.621] [11924] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:10:20.621] [11924] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:10:20.621] [11924] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:10:20.621] [11924] [W] Studio lights not fully served by the ledger yet
+[00:10:27.010] [11924] [W] Studio lights not fully served by the ledger yet
+[00:10:30.227] [11924] [I] CharacterManager watch actor=00000014
+[00:10:30.239] [11924] [I] OAR bases stage=world-prewarm project=0x1c4b6ab0070 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.475
+[00:10:30.239] [11924] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1c6906efc40 filed to lightQueueAdd)
+[00:10:30.239] [11924] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1c6906ef240 filed to lightQueueAdd)
+[00:10:30.239] [11924] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1c6906ef100 filed to lightQueueAdd)
+[00:10:30.300] [11924] [I] CP-LIGHT slot 0: ledger shell fetched 0x1c6906efc40 (after 1 miss frames)
+[00:10:30.300] [11924] [I] CP-LIGHT slot 1: ledger shell fetched 0x1c6906ef240 (after 1 miss frames)
+[00:10:30.300] [11924] [I] CP-LIGHT slot 2: ledger shell fetched 0x1c6906ef100 (after 1 miss frames)
+[00:10:44.624] [8448 ] [W] DAC native rule event='Reverse_On' unsupported for preview: native rule has non-restorable costs/chance/cooldown/target/dynamic casting
+[00:10:44.624] [8448 ] [W] DAC native spell fe0bb80a 'Exhaustion State Check' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=1 type=0)
+[00:10:44.624] [8448 ] [W] DAC native rule event='HitFrame' unsupported for preview: effect is outside the inert self-marker restoration subset
+[00:10:44.624] [8448 ] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[00:10:44.624] [8448 ] [W] DAC native rule event='MCO_WinOpen' unsupported for preview: effect is outside the inert self-marker restoration subset
+[00:10:44.624] [8448 ] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[00:10:44.624] [8448 ] [W] DAC native rule event='SBF_BlockStart' unsupported for preview: effect is outside the inert self-marker restoration subset
+[00:10:44.624] [8448 ] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[00:10:44.624] [8448 ] [W] DAC native rule event='SBF_NormalAttackStop' unsupported for preview: effect is outside the inert self-marker restoration subset
+[00:10:44.624] [8448 ] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[00:10:44.624] [8448 ] [W] DAC native rule event='SBF_PowerAttackStop' unsupported for preview: effect is outside the inert self-marker restoration subset
+[00:10:44.624] [8448 ] [W] DAC native spell fe0bb808 'Exhaustion State Dispell' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=1 type=0)
+[00:10:44.624] [8448 ] [W] DAC native rule event='FootRight' unsupported for preview: effect is outside the inert self-marker restoration subset
+[00:10:44.625] [8448 ] [I] DAC original NG Plus matched rules=33 handler=0x61fa0 stride=232
+[00:10:44.625] [8448 ] [I] DAC snapshot actor=00000014 epoch=1 effects=0 scope=19
+[00:10:44.625] [8448 ] [I] Panel menu opening=true revision=1
+[00:10:44.638] [11360] [I] OAR CONTEXT window=display-reset actor=00000000 request=0 view=0 evaluations=0 overlaps=0 sites=e:0/n:0/s:0/r:0 owner=cand:0/src:0/neither:0 numeric=t0:0/t1:0/t2:0/t3:0/other:0/un:0/sum:0 t3-rows:0
+[00:10:44.638] [11360] [I] OAR CONTEXT window=display-request actor=00000000 request=0 view=0 evaluations=0 overlaps=0 sites=e:0/n:0/s:0/r:0 owner=cand:0/src:0/neither:0 numeric=t0:0/t1:0/t2:0/t3:0/other:0/un:0/sum:0 t3-rows:0
+[00:10:44.638] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=begin mode=inject runtime=1.6.1170.0 holder=nullptr factory=63555 loader=63585 third-arg=false
+[00:10:44.638] [11360] [I] SOURCE EVENTCAPTURE window-open actor=00000014 words=652 nodes=106 events-budget=600 phases-budget=200 seconds=20 graph=0x1c9a3fb5800 behavior=0x1c4f36b3900 data=0x1c4b4cb7510 set=0x1c4f368d6c0 words-ptr=0x1c4f31a9000 tracked currentDefaultState=113 iState=94 IsEquipping=110 IsUnequipping=111 bEquipUnequip=125
+[00:10:44.638] [11360] [I] SOURCE EVENTCAPTURE concurrent-armed actor=00000014 graph=0x1c9a3fb5800 pinned=yes behavior=0x1c4f36b3900
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 source-generation=1 role=source-baseline candidate=none construction=unverified gate1=not-passed layout=commonlib-declared runtime-layout-verified=no snapshot=non-atomic null-address=0x0 uncollected=unverified
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=container graph=0x1c9a3fb5800 holder=0x1c65f662080 root=0x1c83e968e80 character=0x1c9a3fb58c0 outer-behavior=0x1c4f36b3900 project-db=0x1c4f301ee00
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=character setup=0x1c4f2b54c60 behavior=0x1c4f36b3900 project=0x1c4f31705a0 bindings=0x1c4f2a4ba60 event-queue=0x1c4f28a9f50 world=0x0
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=drivers ragdoll=0x1c4f27e1d00 controller=0x0 foot-ik=0x1c4f2b54d80 hand-ik=0x1c4f28a9f20 raycast=0x0 lod=-1 lod-tracks=-1
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=outputs world-from-model=0x1c4f28a9ec0 pose-local=0x1c4f2dae010 pose-count=116 delete-world=true delete-pose=true generator0=0x1c4f288bb60 generator1=0x1c4f288bb90
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=bones storage=0x1c83dbd8b80 entries=116 animation-bones=116 foot-ik=1
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=setup skeleton=0x1c4b6d990a0 unscaled-skeleton=0x0 bindings=0x0 data=0x1c4b6aacae0 mirrored-skeleton=0x1c4f29d82a0 critical-section=0x7ff72686a290
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=runtime root-generator=0x1c4b42a2c70 declared-root-clone=0x0 data=0x1c4b4cb7510 active-nodes=0x1c4f277b420 variable-values=0x1c4f368d6c0 variable-mode=0
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=maps template-to-clone=0x1c4f288bb70 clone-to-template=0x1c4f288bb80 listener-to-clone=0x1c4f290cd10 active-template-to-index=0x1c4f290cdf0 active-child-indices=0x1c4f290ce00 state-machine-templates=0x0
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=transitions global-data=0x1c4f3fded80 random=0x1c4f288bba0 event-map=0x1c4f40728d0 attribute-map=0x1c4f4072930 variable-map=0x1c4f4072960 property-map=0x1c4f4072840
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=storage ids=0x0/0 mirrored-ids=0x0/0 jobs=0x0/0 partitions=0x0/0 partition-info=0x0
+[00:10:44.638] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=flags active=true linked=false update-active=false state-changed=false intermediate-outputs=0 static-nodes=-30018 next-id=-30018
+[00:10:44.638] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=constructed graph=0x1ca3c6da200 holder=0x0 root=0x0 behavior=0x0 project-db=0x0 project-name=0x7ff9e066bbe6
+[00:10:44.638] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=constructed setup=0x0 project=0x0 bindings=0x0 event-queue=0x1c4f2982900 behavior-data=0x0 bones=0x0/0
+[00:10:44.638] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 compare-shell graph=different holder=different root=different character=different
+[00:10:44.638] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=race-fields sex=1 bg-model='Actors\Character\DefaultFemale.hkx' root-name='Actors\Character\Behaviors\0_Master.hkx' project-field='DefaultFemale' string-data-behavior-path='' source-project-name='DefaultFemale'
+[00:10:44.638] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=load-try 1/4 source=race-bg-model path='Actors\Character\DefaultFemale.hkx'
+[00:10:44.647] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=load try=1 outcome=accepted ms=9.006 behavior=0x1c4f38acf00 project-db=0x1c4f301ee00 project-name=0x1bb6df00a18 behavior-data=0x1c4b4cb7510 active-nodes=0x0 variable-values=0x0
+[00:10:44.647] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 compare-loaded project-db=same project=same setup=different bindings=same behavior-data=same active-nodes=different variable-values=different
+[00:10:44.647] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=load-bindings source-set=0x1c4f2a4ba60 source-count=15203 candidate-set=0x1c4f2a4ba60 candidate-count=15203
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 source-generation=1 role=source-baseline candidate=none construction=unverified gate1=not-passed layout=commonlib-declared runtime-layout-verified=no snapshot=non-atomic null-address=0x0 uncollected=unverified
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=container graph=0x1c9a3fb5800 holder=0x1c65f662080 root=0x1c83e968e80 character=0x1c9a3fb58c0 outer-behavior=0x1c4f36b3900 project-db=0x1c4f301ee00
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=character setup=0x1c4f2b54c60 behavior=0x1c4f36b3900 project=0x1c4f31705a0 bindings=0x1c4f2a4ba60 event-queue=0x1c4f28a9f50 world=0x0
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=drivers ragdoll=0x1c4f27e1d00 controller=0x0 foot-ik=0x1c4f2b54d80 hand-ik=0x1c4f28a9f20 raycast=0x0 lod=-1 lod-tracks=-1
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=outputs world-from-model=0x1c4f28a9ec0 pose-local=0x1c4f2dae010 pose-count=116 delete-world=true delete-pose=true generator0=0x1c4f288bb60 generator1=0x1c4f288bb90
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=bones storage=0x1c83dbd8b80 entries=116 animation-bones=116 foot-ik=1
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=setup skeleton=0x1c4b6d990a0 unscaled-skeleton=0x0 bindings=0x0 data=0x1c4b6aacae0 mirrored-skeleton=0x1c4f29d82a0 critical-section=0x7ff72686a290
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=runtime root-generator=0x1c4b42a2c70 declared-root-clone=0x0 data=0x1c4b4cb7510 active-nodes=0x1c4f277b420 variable-values=0x1c4f368d6c0 variable-mode=0
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=maps template-to-clone=0x1c4f288bb70 clone-to-template=0x1c4f288bb80 listener-to-clone=0x1c4f290cd10 active-template-to-index=0x1c4f290cdf0 active-child-indices=0x1c4f290ce00 state-machine-templates=0x0
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=transitions global-data=0x1c4f3fded80 random=0x1c4f288bba0 event-map=0x1c4f40728d0 attribute-map=0x1c4f4072930 variable-map=0x1c4f4072960 property-map=0x1c4f4072840
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=storage ids=0x0/0 mirrored-ids=0x0/0 jobs=0x0/0 partitions=0x0/0 partition-info=0x0
+[00:10:44.647] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=flags active=true linked=false update-active=false state-changed=false intermediate-outputs=0 static-nodes=-30018 next-id=-30018
+[00:10:44.647] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pre-activate activated=false source-drift=n/a active-nodes=0x0/0 maps=0x0,0x0 variable-values=0x0 flag=0 children-flag=0 root-generator=0x1c4b42a2c70 behavior-data=0x1c4b4cb7510 generator0=0x1c4f3398330 generator1=0x1c4f3398360 pose-local=0x0/0 setup-skeleton=0x1c4b6d990a0 setup-data=0x1c4b6aacae0 setup-mirrored=0x1c4f29d82a0
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=activated activated=true source-drift=none active-nodes=0x1c4f2e803c0/97 maps=0x1c4f365f8a0,0x1c4f2e80400 variable-values=0x1c4f3b62280 flag=1 children-flag=0 root-generator=0x1c4b42a2c70 behavior-data=0x1c4b4cb7510 generator0=0x1c4f3398330 generator1=0x1c4f3398360 pose-local=0x1c4f2e04010/116 setup-skeleton=0x1c4b6d990a0 setup-data=0x1c4b6aacae0 setup-mirrored=0x1c4f29d82a0
+[00:10:44.648] [11360] [I] OAR CONTEXT scan actor=00000014 request=1 cand-list=0x1c4f2e803c0 cand-entries=0x1c4c9f15900 cand-count=97 src-list=0x1c4f277b420 src-entries=0x1c4c8974ed0 src-count=106
+[00:10:44.648] [11360] [I] OAR CONTEXT segment=post-activate actor=00000014 request=1 evaluations=0 overlaps=0 sites=e:0/n:0/s:0/r:0 owner=cand:0/src:0/neither:0 numeric=t0:0/t1:0/t2:0/t3:0/other:0/un:0/sum:0 t3-rows:0
+[00:10:44.648] [11360] [I] GRAPH ENTRY schema=v20 actor=00000014 request=1 outcome=ready reason=ready entry=63589 mode=0 intent=controlled-native-wrapper
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=probe step=activate src-anim=0074 cand-anim=0000 active[count=97 hash=78e1bad0f5729356] vars[words=652 hash=893b33fda31f6434] gen0=b0eddec4c40100000100000000000000 gen0elem=hash=e82729314d2d0cec gen1=106857c9c40100000100000000000000
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=dbdump db=0x1c4f301ee00 qwords[60..e8]=000001c9a3f66b0000000000000001dc00000000000000000000040000000000000002a20000017400007ff726f024840000000000000000000001c8f05d5780000000000000000000004000000000000000333800001b5e00007ff726f024840000000000000000000001c9cfc61700000001c9d90eb58000000000000024a300000000000024a3
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=events count=8223 first='FootLeft','FootRight','WeapEquip','na_MRh_BeginCast_Event','MRh_Cast_State_to_MRh_Readied_State','MRh_Standing_Cast_State_to_MRh_Moving_Cast_State','MRh_SpellReady_Event','MRh_SpellRelease_Event','MRh_Equipped_Event','MRh_SpellFire_Event','MLh_SpellReady_Event','MLh_SpellRelease_Event','SprintStart','SprintStop','na_MLH_BeginCast_Event','1HM_Unequip',
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=gates src-world=0x1c6de67a3c0 src-ragdoll=0x1c4f27e1d00 cand-world=0x0 cand-ragdoll=0x1c4f23b7500 src-gen0[e02200001500000078041cb4c4010000 +32=0x0074 +38=1.000] cand-gen0[e02200001500000048041cb4c4010000 +32=0x0000 +38=0.000]
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=driver src[0x1c4f27e1d00 char=0x1c9a3fb58c0 ragdoll=0x1c4f2b54cc0 bodies=0x1c4f369b4a0 count=18] cand[0x1c4f23b7500 char=0x1ca3c6da2c0 ragdoll=0x1c4f2df99e0 bodies=0x1c4f369b680 count=18]
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='WeapEquip' id=2 source=graph-events
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='SprintStart' id=12 source=graph-events
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='FootLeft' id=0 source=graph-events
+[00:10:44.648] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='FootRight' id=1 source=graph-events
+[00:10:44.664] [11360] [I] OAR CONTEXT hit site=evaluate-replacement refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6d45efb60 name='' type=-1 cand-count=97 evaluations=1
+[00:10:44.680] [11360] [I] OAR CONTEXT hit site=evaluate-set refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6cefa2810 name='' type=-1 cand-count=97 evaluations=2
+[00:10:44.695] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6cd9687b0 name='' type=-1 cand-count=97 evaluations=3
+[00:10:44.710] [11360] [I] OAR CONTEXT hit site=evaluate-replacement refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6d45ee3c0 name='' type=-1 cand-count=97 evaluations=4
+[00:10:44.726] [11360] [I] OAR CONTEXT hit site=evaluate-set refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6bd92b810 name='' type=-1 cand-count=97 evaluations=5
+[00:10:44.741] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ce956900 name='' type=-1 cand-count=97 evaluations=6
+[00:10:44.756] [11360] [I] OAR CONTEXT hit site=evaluate-set refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ce957320 name='' type=-1 cand-count=97 evaluations=7
+[00:10:44.771] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb073f0 name='' type=-1 cand-count=97 evaluations=8
+[00:10:44.771] [11360] [I] OAR CONTEXT hit site=numeric refr=00000000 clip=0x0 clip-name='' owner=neither subject=0x1c6ce94c960 name='' type=0 cand-count=97 evaluations=9
+[00:10:44.787] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb06350 name='' type=-1 cand-count=97 evaluations=10
+[00:10:44.801] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb05fd0 name='' type=-1 cand-count=97 evaluations=11
+[00:10:44.816] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb07620 name='' type=-1 cand-count=97 evaluations=12
+[00:10:44.830] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb06430 name='' type=-1 cand-count=97 evaluations=13
+[00:10:44.830] [11360] [I] OAR CONTEXT hit site=numeric refr=00000000 clip=0x0 clip-name='' owner=neither subject=0x1c6ce94d660 name='' type=0 cand-count=97 evaluations=14
+[00:10:44.845] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb05d30 name='' type=-1 cand-count=97 evaluations=15
+[00:10:44.845] [11360] [I] OAR CONTEXT hit site=numeric refr=00000000 clip=0x0 clip-name='' owner=neither subject=0x1c6ce94c140 name='' type=0 cand-count=97 evaluations=16
+[00:10:44.860] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb05e80 name='' type=-1 cand-count=97 evaluations=17
+[00:10:44.860] [11360] [I] OAR CONTEXT hit site=numeric refr=00000000 clip=0x0 clip-name='' owner=neither subject=0x1c6ce94b440 name='' type=0 cand-count=97 evaluations=18
+[00:10:44.875] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb06e40 name='' type=-1 cand-count=97 evaluations=19
+[00:10:44.875] [11360] [I] OAR CONTEXT hit site=numeric refr=00000000 clip=0x0 clip-name='' owner=neither subject=0x1c6ce94c2e0 name='' type=0 cand-count=97 evaluations=20
+[00:10:44.890] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202edc0 clip-name='Animations\H2H_Equip.hkx' owner=neither subject=0x1c6ceb063c0 name='' type=-1 cand-count=97 evaluations=21
+[00:10:44.890] [11360] [I] OAR CONTEXT hit site=numeric refr=00000000 clip=0x0 clip-name='' owner=neither subject=0x1c6ce94b5e0 name='' type=0 cand-count=97 evaluations=22
+[00:10:44.890] [11360] [I] OAR CONTEXT hit site=numeric refr=00000000 clip=0x0 clip-name='' owner=neither subject=0x1c6ce94b920 name='' type=0 cand-count=97 evaluations=23
+[00:10:44.890] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=inject event='WeapEquip' id=2 result=dispatched
+[00:10:44.890] [11360] [I] OAR CONTEXT segment=post-weapequip actor=00000014 request=1 evaluations=23 overlaps=0 sites=e:11/n:7/s:3/r:2 owner=cand:0/src:0/neither:23 numeric=t0:7/t1:0/t2:0/t3:0/other:0/un:0/sum:7 t3-rows:0
+[00:10:44.890] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=borrow world=0x1c6de67a3c0 ragdoll=own
+[00:10:44.890] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=slot2 added=true removed=true tracks-before[+32=0x0000 +38=0.000] tracks-after[+32=0x0000 +38=1.000]
+[00:10:44.890] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=slot0c before[110=0x1c4f2df97a0 sel+20=0x1c4b6d990a0 246=0] after[110=0x1c4f2df97a0 sel+20=0x1c4b6d990a0 246=0]
+[00:10:44.890] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=g3-gates g100=0x1c4f3102840 flag4a=0x00 character=0x1ca3c6da2c0 setup=0x1c4f2df97a0 data=0x1c4b6aacae0 footik-info=0x1c4b6aaff60
+[00:10:44.890] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 outcome=observe-only reason=empty-input-name
+[00:10:44.891] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 outcome=arm default=113 istate=94 uneq=111 bequip=125 pitch=65 rh=179
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=0 stage=pre-pipeline completed=0 graph=0x1ca3c6da200 numAnim=0 w245=0x0 b246=0 b249=0 t0=-3.40282347e+38/0xff7fffff t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=0 stage=post-pipeline completed=0 graph=0x1ca3c6da200 numAnim=0 w245=0x0 b246=0 b249=0 t0=-3.40282347e+38/0xff7fffff t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=post-pipeline1 num-anim=0x0 w245=0x0 b246=0 b249=0 out0[+32=0x0000 +38=1.000] out1[+32=0x0000 +38=0.000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=0 stage=post-update completed=0 graph=0x1ca3c6da200 numAnim=0 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=post-update1 num-anim=0x0 w245=0x101 b246=1 b249=1 out0[+32=0x0000 +38=0.000] out1[+32=0x0000 +38=0.000]
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=0 input=none istate=0 default=10 nodes=113
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pred step=0 r=0x00
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=slots step=0 p0=0x1c4c9576810 n=0x0000 f=0.000 h0=c29b14a892778511 p1=0x1c4c4deedb0 n=0x0000 f=0.000 h1=e82729314d2d0cec
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-content step=0 entries=116 finite=116 nonfinite=0 moved=n/a max-delta=n/a source-entries=116 source-finite=116 source-moved=n/a source-equal=8 source-equal-moving=n/a source-equal-static=n/a alias=no
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=0 index=0 name='NPC Root [Root]' p=(0.0000,0.0000,0.0000) q=(0.0000,0.0000,0.0000,1.0000) s=(1.000,1.000,1.000) finite=true moved=n/a source-equal=true source-p=(0.0000,0.0000,0.0000)
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=0 index=38 name='NPC L Hand [LHnd]' p=(0.0000,0.0000,16.0467) q=(0.0435,-0.0536,-0.6527,0.7544) s=(0.852,0.852,0.852) finite=true moved=n/a source-equal=false source-p=(0.0000,-0.0454,15.6424)
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=0 index=76 name='NPC L Finger30 [LF30]' p=(1.0941,-0.4388,5.8072) q=(-0.2452,-0.0545,0.2397,-0.9378) s=(1.000,1.000,1.000) finite=true moved=n/a source-equal=false source-p=(1.4843,-0.5009,7.9633)
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=0 index=115 name='Belly' p=(0.0000,0.0000,0.0000) q=(-0.0000,-0.0000,0.0000,1.0000) s=(1.000,1.000,1.000) finite=true moved=n/a source-equal=true source-p=(0.0000,0.0000,0.0000)
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-ref step=0 slot=0 index=0 status=compared name='Animations\H2H_Equip.hkx' binding-index=11045 map-len=0 mapping=identity time=0.0167 duration=0.8333 enforced=0.0000 crop-sum=0.0000 eff-duration=0.8333 mode=0 speed=1.000 tracks=99 mapped=99 compared=99 agreed=36 unmapped=0 max-dpos=2.263196 max-drot=0.053112 max-dscale=0.148320
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-ref step=0 slot=1 index=14 status=compared name='Animations\male\MT_Idle.HKX' binding-index=1022 map-len=99 mapping=table time=0.0167 duration=25.0167 enforced=0.0000 crop-sum=0.0000 eff-duration=25.0167 mode=1 speed=1.000 tracks=99 mapped=99 compared=99 agreed=22 unmapped=0 max-dpos=3.983129 max-drot=0.063770 max-dscale=0.151933
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-clock step=0 found=2 entries='H2H_Equip.hkx:0.0167|MT_Idle.HKX:0.0167'
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=0 stage=pre-sample completed=0 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=0 stage=post-sample completed=1 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=1 stage=pre-pipeline completed=1 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=1 stage=post-pipeline completed=1 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=1 stage=post-update completed=1 graph=0x1ca3c6da200 numAnim=0 w245=0x101 b246=1 b249=1 t0=-0.0166666675/0xbc888889 t1=0.174999997/0x3e333333 root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=slots step=1 p0=0x1c4c4deedb0 n=0x0000 f=0.000 h0=e82729314d2d0cec p1=0x1c4c9576810 n=0x0074 f=1.000 h1=2443106c9cd29e60
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=1 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=1 stage=pre-sample completed=1 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=-0.0166666675/0xbc888889 t1=0.174999997/0x3e333333 root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=1 stage=post-sample completed=2 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=-0.0166666675/0xbc888889 t1=0.174999997/0x3e333333 root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=2 stage=pre-pipeline completed=2 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=-0.0166666675/0xbc888889 t1=0.174999997/0x3e333333 root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=2 stage=post-pipeline completed=2 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=-0.0166666675/0xbc888889 t1=0.174999997/0x3e333333 root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=2 stage=post-update completed=2 graph=0x1ca3c6da200 numAnim=0 w245=0x0 b246=0 b249=1 t0=-0.0333333351/0xbd088889 t1=0.158333331/0x3e222222 root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=slots step=2 p0=0x1c4c4deedb0 n=0x0074 f=1.000 h0=9c2fc7b208246979 p1=0x1c4c9576810 n=0x0074 f=1.000 h1=2443106c9cd29e60
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=2 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=2 stage=pre-sample completed=2 graph=0x1ca3c6da200 numAnim=116 w245=0x0 b246=0 b249=1 t0=-0.0333333351/0xbd088889 t1=0.158333331/0x3e222222 root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:44.891] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=2 stage=post-sample completed=3 graph=0x1ca3c6da200 numAnim=116 w245=0x0 b246=0 b249=1 t0=-0.0333333351/0xbd088889 t1=0.158333331/0x3e222222 root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=3 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=4 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=5 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=6 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=7 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=8 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=9 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=10 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=11 input=none istate=0 default=10 nodes=96
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=12 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=13 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=14 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=15 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=16 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=17 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=18 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=19 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=20 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-clock step=20 found=1 entries='H2H_Equip.hkx:0.4583'
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=21 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=22 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=23 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=24 input=none istate=0 default=10 nodes=94
+[00:10:44.891] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=25 input=none istate=0 default=10 nodes=94
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=26 input=none istate=0 default=10 nodes=94
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=27 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=28 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=29 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=30 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=31 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=32 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=33 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=34 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=35 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=36 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=37 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=38 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=39 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=40 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-clock step=40 found=1 entries='H2H_Equip.hkx:0.7083'
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=41 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=42 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=43 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=44 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=45 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=46 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=47 input=none istate=0 default=10 nodes=93
+[00:10:44.892] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=48 input=none istate=0 default=10 nodes=93
+[00:10:44.907] [11360] [I] OAR CONTEXT hit site=evaluate-replacement refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6d45ee600 name='' type=-1 cand-count=32 evaluations=24
+[00:10:44.921] [11360] [I] OAR CONTEXT hit site=evaluate-set refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6cefa2ff0 name='' type=-1 cand-count=32 evaluations=25
+[00:10:44.936] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6cd9696b0 name='' type=-1 cand-count=32 evaluations=26
+[00:10:44.950] [11360] [I] OAR CONTEXT hit site=evaluate-replacement refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6d45ef260 name='' type=-1 cand-count=32 evaluations=27
+[00:10:44.965] [11360] [I] OAR CONTEXT hit site=evaluate-set refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6cefa2810 name='' type=-1 cand-count=32 evaluations=28
+[00:10:44.979] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6cd9687b0 name='' type=-1 cand-count=32 evaluations=29
+[00:10:44.993] [11360] [I] OAR CONTEXT hit site=evaluate-replacement refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6d45ed760 name='' type=-1 cand-count=32 evaluations=30
+[00:10:45.008] [11360] [I] OAR CONTEXT hit site=evaluate-set refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6bd92b990 name='' type=-1 cand-count=32 evaluations=31
+[00:10:45.022] [11360] [I] OAR CONTEXT hit site=evaluate refr=00000000 clip=0x1c4f202e500 clip-name='Animations\H2H_Idle.hkx' owner=neither subject=0x1c6ce954740 name='' type=-1 cand-count=32 evaluations=32
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=49 input=none istate=0 default=1 nodes=128
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=50 input=none istate=0 default=1 nodes=126
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=51 input=none istate=0 default=1 nodes=125
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=52 input=none istate=0 default=1 nodes=125
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=53 input=none istate=0 default=1 nodes=125
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=54 input=none istate=0 default=1 nodes=125
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=55 input=none istate=0 default=1 nodes=125
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=56 input=none istate=0 default=1 nodes=125
+[00:10:45.023] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=57 input=none istate=0 default=1 nodes=125
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=58 input=none istate=0 default=1 nodes=125
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=59 stage=pre-pipeline completed=59 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=59 stage=post-pipeline completed=59 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=59 stage=post-update completed=59 graph=0x1ca3c6da200 numAnim=0 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=59 input=none istate=0 default=1 nodes=125
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=59 stage=pre-sample completed=59 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=59 stage=post-sample completed=60 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=probe step=60 src-anim=0074 cand-anim=0074 active[count=125 hash=98622bc58a8f1db4] vars[words=652 hash=214e2111c8899cfc] gen0=b0eddec4c40100000100000000000000 gen0elem=hash=9c2fc7b208246979 gen1=106857c9c40100000100000000000000
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=60 stage=pre-pipeline completed=60 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=60 stage=post-pipeline completed=60 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=60 stage=post-update completed=60 graph=0x1ca3c6da200 numAnim=0 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=60 input=none istate=0 default=1 nodes=125
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pred step=60 r=0x00
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=slots step=60 p0=0x1c4c9576810 n=0x0000 f=0.000 h0=c29b14a892778511 p1=0x1c4c4deedb0 n=0x0000 f=0.000 h1=e82729314d2d0cec
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-content step=60 entries=116 finite=116 nonfinite=0 moved=94 max-delta=3.430847 source-entries=116 source-finite=116 source-moved=0 source-equal=21 source-equal-moving=0 source-equal-static=21 alias=no
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=60 index=0 name='NPC Root [Root]' p=(0.0000,0.0000,0.0000) q=(0.0000,0.0000,0.0000,1.0000) s=(1.000,1.000,1.000) finite=true moved=no source-equal=true source-p=(0.0000,0.0000,0.0000)
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=60 index=38 name='NPC L Hand [LHnd]' p=(0.0000,0.0000,16.0466) q=(0.0439,0.1031,0.5867,-0.8021) s=(1.000,1.000,1.000) finite=true moved=yes source-equal=false source-p=(0.0000,-0.0454,15.6424)
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=60 index=76 name='NPC L Finger30 [LF30]' p=(1.4444,-0.6391,7.9764) q=(-0.7249,0.0075,0.1283,-0.6768) s=(1.000,1.000,1.000) finite=true moved=yes source-equal=false source-p=(1.4843,-0.5009,7.9633)
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=60 index=115 name='Belly' p=(0.0000,0.0000,0.0000) q=(-0.0000,-0.0000,0.0000,1.0000) s=(1.000,1.000,1.000) finite=true moved=no source-equal=true source-p=(0.0000,0.0000,0.0000)
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-ref step=60 slot=0 index=0 status=compared name='Animations\H2H_Idle.hkx' binding-index=681 map-len=0 mapping=identity time=0.1833 duration=8.0000 enforced=0.0000 crop-sum=0.0000 eff-duration=8.0000 mode=1 speed=1.000 tracks=99 mapped=99 compared=99 agreed=46 unmapped=0 max-dpos=0.497481 max-drot=0.000350 max-dscale=0.000000
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-ref step=60 slot=1 index=3 status=compared name='Animations\1HM_Idle.hkx' binding-index=23 map-len=0 mapping=identity time=0.1833 duration=9.0000 enforced=0.0000 crop-sum=0.0000 eff-duration=9.0000 mode=1 speed=1.000 tracks=99 mapped=99 compared=99 agreed=19 unmapped=0 max-dpos=3.107021 max-drot=0.254401 max-dscale=0.000000
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-ref step=60 slot=2 index=25 status=compared name='Animations\SCAR_1hmReadyDummy.hkx' binding-index=15078 map-len=0 mapping=identity time=0.1833 duration=6.3333 enforced=0.0000 crop-sum=0.0000 eff-duration=6.3333 mode=0 speed=1.000 tracks=97 mapped=97 compared=97 agreed=16 unmapped=0 max-dpos=17.321125 max-drot=0.254401 max-dscale=0.000000
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-ref step=60 slot=3 index=32 status=compared name='Animations\H2H_Equip.hkx' binding-index=11045 map-len=0 mapping=identity time=0.8333 duration=0.8333 enforced=0.0000 crop-sum=0.0000 eff-duration=0.8333 mode=0 speed=1.000 tracks=99 mapped=99 compared=99 agreed=19 unmapped=0 max-dpos=5.476527 max-drot=0.056187 max-dscale=0.000000
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-clock step=60 found=4 entries='H2H_Idle.hkx:0.1833|1HM_Idle.hkx:0.1833|SCAR_1hmReadyDummy.hkx:0.1833|H2H_Equip.hkx:0.8333'
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=60 stage=pre-sample completed=60 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=0 onFraction=0 bits=0x00000000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=60 stage=post-sample completed=61 graph=0x1ca3c6da200 numAnim=116 w245=0x101 b246=1 b249=1 t0=0/0x00000000 t1=-3.40282347e+38/0xff7fffff root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c4deedb0 numTracks=21 numData=0 onFraction=0 bits=0x00000000]
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=61 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=62 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=63 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=64 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=65 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=66 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=67 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=68 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=69 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=70 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=71 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=72 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=73 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=74 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=75 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=76 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=77 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=78 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=79 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=80 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-clock step=80 found=3 entries='H2H_Idle.hkx:0.7000|1HM_Idle.hkx:0.7000|SCAR_1hmReadyDummy.hkx:0.7000'
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=81 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=82 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=83 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=84 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=85 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=86 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=87 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=88 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=89 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=90 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=91 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=92 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=93 input=none istate=0 default=1 nodes=111
+[00:10:45.024] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=94 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=95 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=96 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=97 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=98 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=99 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=100 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-clock step=100 found=3 entries='H2H_Idle.hkx:0.9500|1HM_Idle.hkx:0.9500|SCAR_1hmReadyDummy.hkx:0.9500'
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=101 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=102 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=103 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=104 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=105 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=106 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=107 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=108 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=109 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=110 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=111 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=112 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=113 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=114 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=115 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=116 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=117 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=118 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=119 stage=pre-pipeline completed=119 graph=0x1ca3c6da200 numAnim=116 w245=0x0 b246=0 b249=1 t0=0.0500000566/0x3d4cccdc t1=-0.199999958/0xbe4cccca root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:45.025] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=119 stage=post-pipeline completed=119 graph=0x1ca3c6da200 numAnim=116 w245=0x0 b246=0 b249=1 t0=0.0500000566/0x3d4cccdc t1=-0.199999958/0xbe4cccca root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:45.025] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=119 stage=post-update completed=119 graph=0x1ca3c6da200 numAnim=0 w245=0x0 b246=0 b249=1 t0=0.033333391/0x3d088898 t1=-0.216666624/0xbe5ddddb root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=119 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=119 stage=pre-sample completed=119 graph=0x1ca3c6da200 numAnim=116 w245=0x0 b246=0 b249=1 t0=0.033333391/0x3d088898 t1=-0.216666624/0xbe5ddddb root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:45.025] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 step=119 stage=post-sample completed=120 graph=0x1ca3c6da200 numAnim=116 w245=0x0 b246=0 b249=1 t0=0.033333391/0x3d088898 t1=-0.216666624/0xbe5ddddb root218=0x0 b248=0 eye=0x82e80fbb10 slot0[status=present element=0x1c4c4deedb0 numTracks=21 numData=116 onFraction=1 bits=0x3f800000] slot1[status=present element=0x1c4c9576810 numTracks=21 numData=116 onFraction=1 bits=0x3f800000]
+[00:10:45.025] [11360] [I] CANDIDATE INPUT actor=00000014 request=1 step=120 input=none istate=0 default=1 nodes=111
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-steps name='H2H_Equip.hkx' first=0 steps=121 deltas='.C..........F..............F..............7..................------------------------------------------------------------'
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-steps name='MT_Idle.HKX' first=0 steps=121 deltas='.------------------------------------------------------------------------------------------------------------------------'
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-steps name='H2H_Idle.hkx' first=49 steps=72 deltas='.111111111111F..............F..............F..............F.............'
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-steps name='1HM_Idle.hkx' first=49 steps=72 deltas='.111111111111F..............F..............F..............F.............'
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-steps name='SCAR_1hmReadyDummy.hkx' first=49 steps=72 deltas='.111111111111F..............F..............F..............F.............'
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-steps first=0 steps=121 changed=119 max-delta=2.000000 deltas='.55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555.'
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-motion comparisons=120 changed=119 valid=true epsilon=1e-06 channels=translation/quaternion-chord/scale-x acceptance=unjudged
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 phase=settle outcome=settled target-step=49 settled-step=63 baseline-default=1 baseline-nodes=111
+[00:10:45.025] [11360] [I] OAR CONTEXT segment=at-settle actor=00000014 request=1 evaluations=1603 overlaps=0 sites=e:1143/n:60/s:221/r:179 owner=cand:0/src:0/neither:1603 numeric=t0:60/t1:0/t2:0/t3:0/other:0/un:0/sum:60 t3-rows:0
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=event-lookup name='Unequip' id=144 source=graph-events
+[00:10:45.025] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=unequip-inject event='Unequip' id=144 result=dispatched
+[00:10:45.025] [11360] [I] OAR CONTEXT segment=post-unequip actor=00000014 request=1 evaluations=1628 overlaps=0 sites=e:1156/n:67/s:224/r:181 owner=cand:0/src:0/neither:1628 numeric=t0:67/t1:0/t2:0/t3:0/other:0/un:0/sum:67 t3-rows:0
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=0 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=126
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=1 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=126
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=2 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=130
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=3 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=130
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=4 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=130
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=5 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=130
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=6 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=130
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=7 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=8 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=9 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=10 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=11 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=12 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=13 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=14 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=15 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=16 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=17 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=18 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=19 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.025] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=20 default=12 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=97
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=21 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=22 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=23 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=24 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=25 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=26 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=27 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=28 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=29 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=30 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=31 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=32 default=0 istate=0 uneq=1 bequip=1 pitch=1 rh=0 nodes=115
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=33 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=34 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=35 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=36 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=37 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=38 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=39 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=40 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=41 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=42 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=43 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=44 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=45 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=46 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=47 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=48 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=49 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=50 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=51 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=52 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=53 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.026] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=54 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=55 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=56 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=57 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=58 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=100
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=59 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=60 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=61 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=62 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=63 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=64 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=65 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=66 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=67 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=68 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=69 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=70 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=71 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=72 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=73 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=74 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=75 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=76 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=77 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=78 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=79 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=80 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=81 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=82 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=83 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=84 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=85 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=86 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=87 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=88 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=89 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=90 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=91 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=92 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=93 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=94 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=95 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=96 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=97 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=98 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=99 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=100 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=101 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=102 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=103 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=104 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=105 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=106 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=107 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=108 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=109 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=110 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=111 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=112 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=113 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=114 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=115 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=116 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=117 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=118 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=119 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] CANDIDATE UNEQUIP actor=00000014 request=1 step=120 default=0 istate=0 uneq=0 bequip=0 pitch=0 rh=0 nodes=97
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=unequip-motion comparisons=119 changed=92 valid=true epsilon=1e-06
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=unequip-done steps=120 cand-pose-0=8fb4cd336c4395bf cand-pose-60=4f2aebdedc1c8e83 cand-pose-120=c407cb4e4a1abbd1 source-drift=none
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=probe step=120 src-anim=0074 cand-anim=0074 active[count=97 hash=0e875681e99b99f6] vars[words=652 hash=43fa3157f42c5ff4] gen0=b0eddec4c40100000100000000000000 gen0elem=hash=9c2fc7b208246979 gen1=106857c9c40100000100000000000000
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=slots step=120 p0=0x1c4c4deedb0 n=0x0074 f=1.000 h0=9c2fc7b208246979 p1=0x1c4c9576810 n=0x0074 f=1.000 h1=2443106c9cd29e60
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-content step=120 entries=116 finite=116 nonfinite=0 moved=94 max-delta=5.711864 source-entries=116 source-finite=116 source-moved=0 source-equal=9 source-equal-moving=0 source-equal-static=9 alias=no
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=120 index=0 name='NPC Root [Root]' p=(0.0000,0.0000,0.0000) q=(0.0000,0.0000,0.0000,1.0000) s=(1.000,1.000,1.000) finite=true moved=no source-equal=true source-p=(0.0000,0.0000,0.0000)
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=120 index=38 name='NPC L Hand [LHnd]' p=(0.0000,0.0000,16.0466) q=(0.0383,0.0066,0.4584,-0.8879) s=(1.000,1.000,1.000) finite=true moved=yes source-equal=false source-p=(0.0000,-0.0454,15.6424)
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=120 index=76 name='NPC L Finger30 [LF30]' p=(1.4444,-0.6391,7.9764) q=(0.4042,0.0014,-0.1900,0.8947) s=(1.000,1.000,1.000) finite=true moved=yes source-equal=false source-p=(1.4843,-0.5009,7.9633)
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pose-bone step=120 index=115 name='Belly' p=(0.0000,0.0000,0.0000) q=(0.0000,0.0000,0.0000,1.0000) s=(1.000,1.000,1.000) finite=true moved=no source-equal=true source-p=(0.0000,0.0000,0.0000)
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-ref step=120 slot=0 index=0 status=compared name='Animations\male\MT_Idle.HKX' binding-index=1022 map-len=99 mapping=table time=1.8667 duration=25.0167 enforced=0.0000 crop-sum=0.0000 eff-duration=25.0167 mode=1 speed=1.000 tracks=99 mapped=99 compared=99 agreed=25 unmapped=0 max-dpos=2.854754 max-drot=0.105920 max-dscale=0.004314
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=clip-clock step=120 found=1 entries='MT_Idle.HKX:1.8667'
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=pipeline steps=120 shell=pairs world-restored=true ragdoll-removed=true tracks-end[+32=0x0074 +38=1.000]
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=drive-done steps=120 dt=0.016667 source-pose-before=a8f8dabc8439246e source-pose-after=a8f8dabc8439246e candidate-pose-0=bc160a8c2b3a5a58 candidate-pose-60=63f638a6ac08d955 candidate-pose-120=c407cb4e4a1abbd1
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=post-drive activated=true source-drift=none active-nodes=0x1c4f386ce20/97 maps=0x1c4f365f8a0,0x1c4f2e80400 variable-values=0x1c4f3b62280 flag=1 children-flag=0 root-generator=0x1c4b42a2c70 behavior-data=0x1c4b4cb7510 generator0=0x1c4f3398330 generator1=0x1c4f3398360 pose-local=0x1c4f2e04010/116 setup-skeleton=0x1c4b6d990a0 setup-data=0x1c4b6aacae0 setup-mirrored=0x1c4f29d82a0
+[00:10:45.027] [11360] [I] GRAPH FRAME schema=v20 entry=63589 mode=0 intent=outer-generation-apply actor=00000014 request=1 stage=summary phase-rows=30 total-rows=31 completed=120 pose-available=120 pose-missing=0 raw-hash-changes=120 first-changed-completed=1 baseline=bc160a8c2b3a5a58 arm-observed=yes fingerprint=raw-buffer-padding-sensitive generator-payload=unobserved native-context=unobserved acceptance=unjudged
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=retained source-drift=none registry-probe=unavailable
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 source-generation=1 role=source-baseline candidate=none construction=unverified gate1=not-passed layout=commonlib-declared runtime-layout-verified=no snapshot=non-atomic null-address=0x0 uncollected=unverified
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=container graph=0x1c9a3fb5800 holder=0x1c65f662080 root=0x1c83e968e80 character=0x1c9a3fb58c0 outer-behavior=0x1c4f36b3900 project-db=0x1c4f301ee00
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=character setup=0x1c4f2b54c60 behavior=0x1c4f36b3900 project=0x1c4f31705a0 bindings=0x1c4f2a4ba60 event-queue=0x1c4f28a9f50 world=0x0
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=drivers ragdoll=0x1c4f27e1d00 controller=0x0 foot-ik=0x1c4f2b54d80 hand-ik=0x1c4f28a9f20 raycast=0x0 lod=-1 lod-tracks=-1
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=outputs world-from-model=0x1c4f28a9ec0 pose-local=0x1c4f2dae010 pose-count=116 delete-world=true delete-pose=true generator0=0x1c4f288bb60 generator1=0x1c4f288bb90
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=bones storage=0x1c83dbd8b80 entries=116 animation-bones=116 foot-ik=1
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=setup skeleton=0x1c4b6d990a0 unscaled-skeleton=0x0 bindings=0x0 data=0x1c4b6aacae0 mirrored-skeleton=0x1c4f29d82a0 critical-section=0x7ff72686a290
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=runtime root-generator=0x1c4b42a2c70 declared-root-clone=0x0 data=0x1c4b4cb7510 active-nodes=0x1c4f277b420 variable-values=0x1c4f368d6c0 variable-mode=0
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=maps template-to-clone=0x1c4f288bb70 clone-to-template=0x1c4f288bb80 listener-to-clone=0x1c4f290cd10 active-template-to-index=0x1c4f290cdf0 active-child-indices=0x1c4f290ce00 state-machine-templates=0x0
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=transitions global-data=0x1c4f3fded80 random=0x1c4f288bba0 event-map=0x1c4f40728d0 attribute-map=0x1c4f4072930 variable-map=0x1c4f4072960 property-map=0x1c4f4072840
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=storage ids=0x0/0 mirrored-ids=0x0/0 jobs=0x0/0 partitions=0x0/0 partition-info=0x0
+[00:10:45.027] [11360] [I] BEHAVIOR GRAPH actor=00000014 request=1 group=flags active=true linked=false update-active=false state-changed=false intermediate-outputs=0 static-nodes=-30018 next-id=-30018
+[00:10:45.027] [11360] [I] INDEPENDENT GRAPH actor=00000014 request=1 phase=end constructed=true loaded=true assembly=true separated=true source-stable=true retained=true
+[00:10:45.028] [11360] [I] OAR CONTEXT window=experiment actor=00000014 request=1 evaluations=2037 overlaps=0 sites=e:1379/n:72/s:339/r:247 owner=cand:0/src:0/neither:2037 numeric=t0:72/t1:0/t2:0/t3:0/other:0/un:0/sum:72 t3-rows:0
+[00:10:45.028] [11360] [I] ANIMATION actor=00000014 request=1 reason='panel-open' source-generation=1 equipment-target=1h
+[00:10:45.040] [11360] [I] ANIMATION WORLD actor=00000014 request=1 snapshot=paused-source reason='panel-open' hands=(560c2a4c,00043324) drawn=false build-ms=12.903 clips=|original='Animations\male\MT_Idle.HKX' index=12220 bound='data\meshes\actors\character\animations\OpenAnimationReplacer\SDB SVFI\SVFI 2 EXT Both Hands Hip\female\mt_idle.hkx' oar-api=available oar-result=replacement oar-path='data\meshes\actors\character\animations\OpenAnimationReplacer\SDB SVFI\SVFI 2 EXT Both Hands Hip\female\mt_idle.hkx' oar-project='DefaultFemale' oar-variant='' oar-submod='Idle 2' oar-mod='Seamless Varied Feminine Idles' t=13.06 node='MT_Idle.HKX' mode=1 flags=0x00 speed=1.0000 at-end=false
+[00:10:45.040] [11360] [I] DAC actor=00000014 request=1 Smooth_loop preparation requested
+[00:10:45.040] [11360] [I] DAC TRACE actor=00000014 request=1 current-request=1 event='Smooth_loop' outcome=queued reason='preparation dispatch UI task'
+[00:10:45.040] [11360] [I] ANIMATION DECISION actor=00000014 request=1 accepted-request=0 decision=waiting-goal-enter reason=request graph=0x0 subject-request=0 subject-action=none subject-index=65535 subject-path='' subject-effect-revision=0 accepted-index=65535 accepted-path=''
+[00:10:45.040] [11360] [I] SCOPY CAPTURE-DUE actor=00000014 request=1 accepted-request=0 next-capture=1 request-reason='panel-open' reason=capture-pending pending=true sampled=false settled=false manual=false revision=0 graph=0x0
+[00:10:45.041] [11360] [I] SCOPY SOURCE-SNAPSHOT actor=00000014 request=1 accepted-request=0 capture=1 graph=0x1c83e968e80 snapshot=paused-source phase=before-clone nodes=15 translation-units=game scale=ratio rotation=qxyzw
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC Root [Root]' node=0x1c83e968880 name='NPC Root [Root]' parent=0x1c9d97d7ec0 parent-name='NPC' local-t=(0.0000,0.0000,0.0000) local-qxyzw=(0.0000,0.0000,0.0000,1.0000) local-s=1.000000 world-t=(1233.3528,9579.4980,-168.4260) world-qxyzw=(0.0000,0.0000,0.8245,0.5659) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC COM [COM ]' node=0x1c9d97d7c40 name='NPC COM [COM ]' parent=0x1c83e968880 parent-name='NPC Root [Root]' local-t=(-4.9277,1.7677,68.3490) local-qxyzw=(-0.0943,0.0653,-0.0092,0.9934) local-s=1.000000 world-t=(1233.4749,9574.2646,-100.0770) world-qxyzw=(-0.1072,-0.0408,0.8138,0.5697) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC Pelvis [Pelv]' node=0x1c9d97d7880 name='NPC Pelvis [Pelv]' parent=0x1c811117740 parent-name='MJF NPC Pelvis [Pelv]' local-t=(0.0000,0.0000,0.0000) local-qxyzw=(-0.0311,0.0059,-0.0045,0.9995) local-s=1.000000 world-t=(1233.4749,9574.2646,-100.0770) world-qxyzw=(-0.0977,-0.0184,0.8112,0.5763) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC Spine2 [Spn2]' node=0x1c9d97f11c0 name='NPC Spine2 [Spn2]' parent=0x1c9d97f1300 parent-name='CME Spine1 [Spn1]' local-t=(0.0000,0.0000,9.8641) local-qxyzw=(-0.0912,-0.0280,0.0024,0.9954) local-s=1.000000 world-t=(1237.3806,9577.7725,-77.4044) world-qxyzw=(0.0028,-0.0106,0.8258,0.5638) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC Head [Head]' node=0x1c9d97f0cc0 name='NPC Head [Head]' parent=0x1c9d97f0e00 parent-name='CME Neck [Neck]' local-t=(0.0000,0.0000,7.3927) local-qxyzw=(0.0427,-0.0003,0.0011,0.9991) local-s=1.000000 world-t=(1234.2261,9578.2705,-48.6679) world-qxyzw=(-0.1863,-0.0190,0.8254,0.5326) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC L Foot [Lft ]' node=0x1c9d97d6e80 name='NPC L Foot [Lft ]' parent=0x1c9d97d6fc0 parent-name='CME L Knee [LKne]' local-t=(0.0000,0.0043,27.9817) local-qxyzw=(-0.5578,0.0739,-0.0784,0.8229) local-s=1.000000 world-t=(1239.7611,9573.1680,-161.9238) world-qxyzw=(0.6980,-0.5433,-0.2860,0.3685) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC R Foot [Rft ]' node=0x1c9d980e980 name='NPC R Foot [Rft ]' parent=0x1c9d97d4180 parent-name='CME R Knee [RKne]' local-t=(0.0000,-0.1218,27.6282) local-qxyzw=(-0.5921,0.0172,0.0723,0.8024) local-s=1.000000 world-t=(1233.9850,9589.0146,-162.3484) world-qxyzw=(0.7715,-0.4325,-0.2290,0.4066) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC L Clavicle [LClv]' node=0x1c9d97f4b80 name='NPC L Clavicle [LClv]' parent=0x1c9d97f4cc0 parent-name='CME L Shoulder' local-t=(-1.6951,5.8875,19.4543) local-qxyzw=(0.0908,-0.7582,0.2774,0.5831) local-s=1.000000 world-t=(1232.3708,9573.6494,-58.0677) world-qxyzw=(0.6760,-0.3594,0.6368,0.0914) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC R Clavicle [RClv]' node=0x1c9d97f02c0 name='NPC R Clavicle [RClv]' parent=0x1c9d97f0400 parent-name='CME R Shoulder' local-t=(1.6951,5.8875,19.4543) local-qxyzw=(0.0888,0.7630,-0.2770,0.5772) local-s=1.000000 world-t=(1231.1364,9576.8066,-58.0116) world-qxyzw=(-0.5755,0.4982,0.3235,0.5621) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC L UpperArm [LUar]' node=0x1c9d97f4900 name='NPC L UpperArm [LUar]' parent=0x1c9d97f4a40 parent-name='CME L Clavicle [LClv]' local-t=(0.0000,0.0000,14.0439) local-qxyzw=(-0.2017,-0.3050,0.4853,0.7942) local-s=1.000000 world-t=(1243.5389,9565.4854,-60.4872) world-qxyzw=(-0.5382,0.7699,-0.2714,0.2097) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC R UpperArm [RUar]' node=0x1c9d97f7ec0 name='NPC R UpperArm [RUar]' parent=0x1c9d97f0180 parent-name='CME R Clavicle [RClv]' local-t=(0.0000,0.0000,14.0439) local-qxyzw=(-0.2640,0.3261,-0.4873,0.7658) local-s=1.000000 world-t=(1233.7719,9590.4199,-60.2412) world-qxyzw=(0.9374,-0.1989,0.0823,-0.2737) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC L Forearm [LLar]' node=0x1c9d97f4680 name='NPC L Forearm [LLar]' parent=0x1c9d97f47c0 parent-name='CME L UpperArm [LUar]' local-t=(0.0000,0.0000,22.4282) local-qxyzw=(-0.7441,0.0000,0.0000,0.6681) local-s=1.000000 world-t=(1257.3334,9561.1768,-77.6385) world-qxyzw=(-0.5156,0.7163,0.3915,-0.2604) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC R Forearm [RLar]' node=0x1c9d97f7c40 name='NPC R Forearm [RLar]' parent=0x1c9d97f7d80 parent-name='CME R UpperArm [RUar]' local-t=(0.0000,0.0000,22.4861) local-qxyzw=(-0.6398,0.0000,0.0000,0.7686) local-s=1.000000 world-t=(1239.6903,9601.2236,-79.0528) world-qxyzw=(0.8956,-0.2056,-0.0640,0.3893) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC L Hand [LHnd]' node=0x1c9d97f4400 name='NPC L Hand [LHnd]' parent=0x1c9d97f4540 parent-name='CME L Forearm [LLar]' local-t=(0.0000,-0.0454,15.6424) local-qxyzw=(-0.3520,0.2107,-0.2823,0.8672) local-s=1.000000 world-t=(1245.2073,9565.7432,-86.4016) world-qxyzw=(0.6402,-0.2829,-0.5565,0.4477) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY SOURCE-NODE actor=00000014 request=1 capture=1 requested='NPC R Hand [RHnd]' node=0x1c9d97f79c0 name='NPC R Hand [RHnd]' parent=0x1c9d97f7b00 parent-name='CME R Forearm [RLar]' local-t=(0.0000,0.0655,15.6990) local-qxyzw=(-0.4693,-0.1667,0.3909,0.7740) local-s=1.000000 world-t=(1235.3563,9590.6494,-89.8165) world-qxyzw=(0.4194,-0.5441,-0.1431,0.7124) world-s=1.000000
+[00:10:45.041] [11360] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x1c83e968e80 parent=0x1c81be6fc80 nodes=1851 geoms=123 api=NiObject::Clone id=68835/70187
+[00:10:45.044] [11360] [I] SCOPY CLONE-RETURN capture=1 copy=0x1ca3c695000
+[00:10:45.044] [11360] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1851 skin-bones=886
+[00:10:45.044] [11360] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[00:10:45.044] [11360] [I] SCOPY CENSUS source-nodes=1851 copy-nodes=1851 source-geoms=123 copy-geoms=123 source-skins=60 copy-skins=60 source-dynamic=10 copy-dynamic=10
+[00:10:45.045] [11360] [I] SCOPY MOUNT-MAP actor=00000014 request=1 accepted-request=0 capture=1 graph=0x1ca3c695000 form=560c2a4c side=right source-model=0x1c9d97dc280 source-name='Weapon  (560C2A4C)' copy-model=0x1ca3c694a00 copy-name='Weapon  (560C2A4C)' previous-parent=0x1c9d9791580 previous-name='WeaponSword' target-parent=0x1ca3c4b2980 target-name='WEAPON' retained-local-t=(0.0000,0.0000,0.0000) qxyzw=(0.0000,0.0000,0.0000,1.0000) s=1.000000
+[00:10:45.045] [11360] [I] SCOPY HELD actor=00000014 attached=1 missing=0 source-graph=read-only
+[00:10:45.045] [11360] [I] SCOPY READY actor=00000014 capture=1 controllers-removed=118 collisions-removed=19
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name=' (FE2E7EFD)[1]/ (FE2E7EFC) [100%]' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_EyeLashesZoe' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='T118' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='T117' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='T116' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='T112' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='T111' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='T110' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E118' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E117' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E116' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E115' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E114' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E113' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E112' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E111' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E110' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E19' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E18' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E17' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E16' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E15' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E14' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E13' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='E12' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='N15' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='N16' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='AE11' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_LDDLevisChoice13be_Female' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleEyesHuman_outer' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleEyesHuman_shadows' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleLensLeft_Dummy' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleLensRight_Dummy' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleEyesHumanLightGrey' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleMouth' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='00UBE_FemaleHead' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name=' (FE2E7807)[1]/ (FE2E7801) [100%]' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Feet' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Leg' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Butt' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Anus' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Belly' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Hand' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Arm' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Breast' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='3BCA_Head' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='VirtualGround' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name=' (FE2E7EFF)[1]/ (FE2E7EFE) [100%]' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Feet' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Heels' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Hands' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Bracelet' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='CollisionStopper' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='LowerBodyCollision' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='VirtualGround' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='BaseShape' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Thighstrap' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Armband' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Dress_Inner' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Dress' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Face [Ovl0]' type='BSDynamicTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='pSmallFlare' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSpray04' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Wisps:0' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Circle02' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Flash' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SuperSprayBreath' type='NiParticleSystem'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='Scb' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='SilverSword:0' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='BloodFX' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='BloodLighting' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name=':47' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name=':40' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='DiamondTop:1' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY GEOMETRY capture=1 name='DiamondBottom:0' type='BSTriShape'
+[00:10:45.045] [11360] [I] SCOPY CAPTURE actor=00000014 request=1 accepted-request=0 capture=1 reason=capture-pending outcome=accepted old-graph=0x0 new-graph=0x1ca3c695000
+[00:10:45.045] [11360] [I] SCOPY GRAPH actor=00000014 request=1 accepted-request=0 capture=1 reason=capture-pending old-graph=0x0 new-graph=0x1ca3c695000 calibration=requested root-local=[t=(1233.3528,9579.4980,-176.0000) qxyzw=(0.0000,0.0000,0.8245,0.5659) s=1.000000] root-world=[t=(1233.3528,9579.4980,-176.0000) qxyzw=(0.0000,0.0000,0.8245,0.5659) s=1.000000]
+[00:10:45.045] [11360] [I] SCOPY FRAME actor=00000014 skinned-bound valid=true radius=79.6 center=(1234.1,9570.6,-108.1) graph-bound radius=280.9 scale=0.35 pruned-nodes=71
+[00:10:45.046] [11360] [I] OAR CONTEXT window=display-retarget actor=00000014 request=1 view=0 evaluations=0 overlaps=0 sites=e:0/n:0/s:0/r:0 owner=cand:0/src:0/neither:0 numeric=t0:0/t1:0/t2:0/t3:0/other:0/un:0/sum:0 t3-rows:0
+[00:10:45.046] [11360] [I] ANIMATION actor=00000014 request=1 graph retarget=0x1ca3c695000 time=0.00
+[00:10:45.046] [11360] [I] ANIMATION EFFECT-REV actor=00000014 request=1 accepted-request=0 previous=0 current=1
+[00:10:45.046] [11360] [I] ANIMATION DECISION actor=00000014 request=1 accepted-request=0 decision=effect-revision reason=observed-native-effects graph=0x1ca3c695000 subject-request=0 subject-action=none subject-index=65535 subject-path='' subject-effect-revision=0 accepted-index=65535 accepted-path=''
+[00:10:45.062] [11360] [I] DAC actor=00000014 request=1 Smooth_loop preparation ready
+[00:10:45.062] [11360] [I] DAC actor=00000014 epoch=1 native-effect revision=2
+[00:10:45.062] [11360] [I] DAC OBSERVED actor=00000014 request=1 revision=2 markers='243802,243808,24382C' cause=effect-signature-change
+[00:10:45.062] [11360] [I] DAC actor=00000014 epoch=1 request=1 event='Smooth_loop' native call completed revision=2
+[00:10:45.069] [11360] [I] ANIMATION EFFECT-REV actor=00000014 request=1 accepted-request=0 previous=1 current=2
+[00:10:45.069] [11360] [I] ANIMATION DECISION actor=00000014 request=1 accepted-request=0 decision=effect-revision reason=observed-native-effects graph=0x1ca3c695000 subject-request=0 subject-action=none subject-index=65535 subject-path='' subject-effect-revision=0 accepted-index=65535 accepted-path=''
+[00:10:45.069] [11360] [I] ANIMATION DECISION actor=00000014 request=1 accepted-request=0 decision=waiting-goal-leave reason=request graph=0x1ca3c695000 subject-request=0 subject-action=none subject-index=65535 subject-path='' subject-effect-revision=0 accepted-index=65535 accepted-path=''
+[00:10:45.069] [11360] [I] ANIMATION actor=00000014 request=1 smooth markers='243802,243808,24382C'
+[00:10:45.069] [11360] [I] ANIMATION actor=00000014 request=1 goal=non-combat-idle family=1h direct=false drawn=true
+[00:10:45.069] [11360] [I] ANIMATION QUERY actor=00000014 request=1 accepted-request=0 pending-action=weapon-idle reason=request target=1h bases='Animations\1hm_idle.hkx' source-hands=(560c2a4c,00043324) source-drawn=false projected-drawn=true hand-override=false override-hands=(00000000,00000000) IsEquipping=0 IsUnequipping=0 effect-revision=2 accepted-path=''
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=unsupported-or-metadata rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\RaySense - Cover Animation\2110000132_Hide_Shield_Right_Exit\1hm_idle.hkx' reason='provider='Open Animation Replacer - RaySense' condition='RaySense_Obstacle' argument='RightTypeObstacle != 43': third-party condition requires an explicit preview adapter' root-false='not-a-native-false' first-false='' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=unsupported-or-metadata rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\RaySense - Cover Animation\2110000122_Hide_Shield_Left_Exit\1hm_idle.hkx' reason='provider='Open Animation Replacer - RaySense' condition='RaySense_Obstacle' argument='LeftTypeObstacle != 43': third-party condition requires an explicit preview adapter' root-false='not-a-native-false' first-false='' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=unsupported-or-metadata rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\RaySense - Cover Animation\2110000115_Hide_Shield_Front_L_Exit\1hm_idle.hkx' reason='provider='Open Animation Replacer - RaySense' condition='RaySense_Obstacle' argument='FrontTypeObstacle != 43': third-party condition requires an explicit preview adapter' root-false='not-a-native-false' first-false='' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=unsupported-or-metadata rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\RaySense - Cover Animation\2110000112_Hide_Shield_Front_R_Exit\1hm_idle.hkx' reason='provider='Open Animation Replacer - RaySense' condition='RaySense_Wall' argument='FrontWall <= 60': third-party condition requires an explicit preview adapter' root-false='not-a-native-false' first-false='' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Beam Walking Assist\2110000084_Fence_Sneak_Exit\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='IsSneaking' argument='': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='IsSneaking' argument='': observed false projected leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Beam Walking Assist\2110000080_Fence\_variants_1hm_idle' reason='native conditions or eligibility returned false' root-false='provider='core' condition='OR' argument='2 child conditions': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='CompareValues' argument='BeamWalkOnBeam == 1': observed false native leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\RaySense - Cover Animation\2110000006_Sneak_Weapon_Exit\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='IsSneaking' argument='': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='IsSneaking' argument='': observed false projected leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Dynamic Sprint\Spell Right Sprint\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='OR' argument='6 child conditions': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='IsEquippedType' argument='Alteration Spell in right hand': observed false native leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Dynamic Sprint\0 Base Spell Left Per-Sprint\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='IsSprinting' argument='': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='IsSprinting' argument='': observed false projected leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Base\Base - 1hm Spell\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='CurrentMovementSpeed' argument='Movement speed >= 1': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='CurrentMovementSpeed' argument='Movement speed >= 1': observed false projected leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Katana\Katana Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='IsEquippedHasKeyword' argument='WeapTypeKatana in right hand': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='IsEquippedHasKeyword' argument='WeapTypeKatana in right hand': observed false native leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Katana\Katana Non-Combat idle Start\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='HasMagicEffect' argument='start on': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='HasMagicEffect' argument='start on': observed false native leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Mace Shield\Mace Shield Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='AND' argument='2 child conditions': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='IsEquippedType' argument='Mace in right hand': observed false native leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Mace Shield\Mace Shield move\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='HasMagicEffect' argument='move on': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='HasMagicEffect' argument='move on': observed false native leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Mace Shield\Mace Shield Non-Combat idle Start\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='HasMagicEffect' argument='start on': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='HasMagicEffect' argument='start on': observed false native leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.075] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Axe Shield\Axe Shield Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='provider='core' condition='AND' argument='2 child conditions': actual first false negated=false result=false scope=root-top-level' first-false='provider='core' condition='IsEquippedType' argument='War Axe in right hand': observed false native leaf; may be an OR arm' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Axe Shield\Axe Shield Combat idle start\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='unobserved; native eligibility/other cause unknown' first-false='' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Dagger Shield\Dagger Shield Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='unobserved; native eligibility/other cause unknown' first-false='' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm Shield\1hm Shield Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='unobserved; native eligibility/other cause unknown' first-false='' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm Pistol\1hm Pistol Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='unobserved; native eligibility/other cause unknown' first-false='' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Mace\Mace Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='unobserved; native eligibility/other cause unknown' first-false='' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Axe\Axe Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='unobserved; native eligibility/other cause unknown' first-false='' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Dagger\Dagger Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='unobserved; native eligibility/other cause unknown' first-false='' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 rejection=native-false rejected-candidate='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Combat idle Loop\1hm_idle.hkx' reason='native conditions or eligibility returned false' root-false='unobserved; native eligibility/other cause unknown' first-false='' movement-seen=no movement-answered=no
+[00:10:45.076] [11360] [I] OAR QUERY actor=00000014 request=1 clip-key=762c17024be32479 base=23 further-unsupported-or-metadata=8 further-native-false=35
+[00:10:45.076] [11360] [I] OAR COND actor=00000014 request=1 clip-key=762c17024be32479 base=23 movement-seen=no movement-answered=no
+[00:10:45.079] [11360] [I] ANIMATION DECISION actor=00000014 request=1 accepted-request=0 decision=pending-choice reason=request graph=0x1ca3c695000 subject-request=1 subject-action=weapon-idle subject-index=8973 subject-path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' subject-effect-revision=2 accepted-index=65535 accepted-path=''
+[00:10:45.081] [11360] [I] ANIMATION LOAD actor=00000014 asset-request=1 role=standing outcome=queued index=1022 path='Animations\female\mt_idle.hkx' loop=true
+[00:10:45.081] [11360] [I] ANIMATION LOAD actor=00000014 asset-request=1 role=calibration outcome=queued index=1022 path='Animations\female\mt_idle.hkx' loop=true
+[00:10:45.081] [11360] [I] ANIMATION LOAD actor=00000014 asset-request=1 role=target outcome=queued index=8973 path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' loop=true
+[00:10:45.081] [11360] [I] ANIMATION actor=00000014 request=1 proposal state=2 choice=0 base='Animations\1hm_idle.hkx' path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' index=8973 first-query-rejection='provider='Open Animation Replacer - RaySense' condition='RaySense_Obstacle' argument='RightTypeObstacle != 43': third-party condition requires an explicit preview adapter'
+[00:10:45.083] [11360] [I] ANIMATION actor=00000014 request=1 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[00:10:45.083] [11360] [I] ANIMATION LOAD actor=00000014 asset-request=1 role=standing outcome=ready graph=0x1ca3c695000 index=1022 path='Animations\female\mt_idle.hkx' queue-to-ready-ms=2.116
+[00:10:45.085] [11360] [I] ANIMATION actor=00000014 request=1 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[00:10:45.085] [11360] [I] ANIMATION LOAD actor=00000014 asset-request=1 role=calibration outcome=ready graph=0x1ca3c695000 index=1022 path='Animations\female\mt_idle.hkx' queue-to-ready-ms=4.037
+[00:10:45.091] [11360] [I] ANIMATION actor=00000014 request=1 asset ready index=8973 base=23 replaced=true duration=19.80 path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[00:10:45.091] [11360] [I] ANIMATION LOAD actor=00000014 asset-request=1 role=target outcome=ready graph=0x1ca3c695000 index=8973 path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' queue-to-ready-ms=10.341
+[00:10:45.091] [11360] [I] ANIMATION DECISION actor=00000014 request=1 accepted-request=1 decision=accepted-handover reason=request graph=0x1ca3c695000 subject-request=1 subject-action=weapon-idle subject-index=8973 subject-path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' subject-effect-revision=2 accepted-index=8973 accepted-path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx'
+[00:10:45.091] [11360] [I] ANIMATION HANDOFF actor=00000014 request=1 accepted-request=1 action=weapon-idle index=8973 path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' handoff-seconds=9.9000 source=duration-midpoint duration=19.8000
+[00:10:45.093] [11360] [I] ANIMATION PANEL actor=00000014 request=1 accepted action=1 original='Animations\1hm_idle.hkx' base-index=23 logical='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' variant='none' index=8973 bound='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - Katana\Katana Non-Combat idle Loop\1hm_idle.hkx' status=replacement clip-time=0.000 blend=0.000 build-ms=1.557
+[00:10:45.093] [11360] [I] SCOPY PLACEMENT actor=00000014 request=1 accepted-request=1 capture=1 graph=0x1ca3c695000 phase=raw-before-standing-calibration anchor=(-0.0000,-485.3555,-0.0000) captured-root=[t=(1233.3528,9579.4980,-176.0000) qxyzw=(0.0000,0.0000,0.8245,0.5659) s=1.000000] applied-root=[t=(3.0044,-486.2473,-23.7676) qxyzw=(0.0000,0.0000,0.0000,1.0000) s=0.350000] world-root=[t=(3.0044,-486.2473,-23.7676) qxyzw=(0.0000,0.0000,0.0000,1.0000) s=0.350000]
+[00:10:45.094] [11360] [I] SCOPY FRAME calibrated offset=(-0.9,-1.6,0.8) radius=28.3
+[00:10:45.094] [11360] [I] SCOPY CALIBRATION actor=00000014 request=1 accepted-request=1 capture=1 graph=0x1ca3c695000 outcome=applied anchor=(-0.0000,-485.3555,-0.0000) offset=(-0.8654,-1.5936,0.7939) radius=28.2707 local-root=[t=(2.1390,-487.8409,-22.9737) qxyzw=(0.0000,0.0000,0.0000,1.0000) s=0.350000] world-root=[t=(2.1390,-487.8409,-22.9737) qxyzw=(0.0000,0.0000,0.0000,1.0000) s=0.350000]
+[00:10:45.094] [11360] [I] ANIMATION DISPLAY pacing request=1 view=1 hz=60 max-delta-ms=100 max-steps=6 first-call=origin
+[00:10:45.094] [11360] [I] ANIMATION DISPLAY application actor=00000014 request=1 source-generation=1 view=1 mode=stepped output-records=116 requested-unique=116 applied=109 missing=7 skipped-root=0 duplicates=0 missing-names='x_NPC Rotate [Rot ],x_NPC LookNode [Look],x_NPC Translate [Pos ],Weapon,Shield,Quiver,Belly'
+[00:10:45.095] [11360] [I] FIGURE transparency geometries=47 blended=14 tested=25 render-flags=0x204 depth=opaque-write/alpha-read
+[00:10:45.095] [11360] [I] SceneGraph draw OM check: bound=0x1c5ca093a20 studio=0x1c5ca093a20 match=true
+[00:10:45.095] [11360] [I] SCOPY COMPOSITE src=0x1bb7c4c8d28 bound=0x1bb7c4c8d28 match=1 draws=1
+[00:10:45.153] [11360] [I] ANIMATION DISPLAY source-control stage=before actor=00000014 request=1 source-generation=1 view=1 pose-hash=a8f8dabc8439246e
+[00:10:45.153] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=1 stage=post-pipeline active=true children=false w245=0x101 b246=1 numAnim=116 numData0=116 numData1=116
+[00:10:45.153] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=1 stage=post-update active=true children=true w245=0x0 b246=0 numAnim=0 numData0=116 numData1=116
+[00:10:45.153] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=1 stage=post-sample active=true children=true w245=0x0 b246=0 numAnim=116 numData0=116 numData1=116
+[00:10:45.153] [11360] [I] ANIMATION DISPLAY native-step=1 request=1 view=1 pose-hash=31218dfeb7d781ec output-records=116
+[00:10:46.106] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=60 stage=post-pipeline active=true children=true w245=0x0 b246=0 numAnim=116 numData0=116 numData1=116
+[00:10:46.106] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=60 stage=post-update active=true children=false w245=0x101 b246=1 numAnim=0 numData0=116 numData1=116
+[00:10:46.106] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=60 stage=post-sample active=true children=false w245=0x101 b246=1 numAnim=116 numData0=116 numData1=116
+[00:10:46.106] [11360] [I] ANIMATION DISPLAY native-step=60 request=1 view=1 pose-hash=a133569596fb5221 output-records=116
+[00:10:47.100] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=120 stage=post-pipeline active=true children=true w245=0x0 b246=0 numAnim=116 numData0=116 numData1=116
+[00:10:47.100] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=120 stage=post-update active=true children=false w245=0x101 b246=1 numAnim=0 numData0=116 numData1=116
+[00:10:47.100] [11360] [I] ANIMATION DISPLAY gates request=1 view=1 call=120 stage=post-sample active=true children=false w245=0x101 b246=1 numAnim=116 numData0=116 numData1=116
+[00:10:47.100] [11360] [I] ANIMATION DISPLAY native-step=120 request=1 view=1 pose-hash=020293e9503c0411 output-records=116
+[00:10:47.100] [11360] [I] ANIMATION DISPLAY pose-summary request=1 view=1 native-steps=120 raw-changed=116 raw-finite=true semantic-changed=116 semantic-valid=true epsilon=1e-06 scope=candidate acceptance=unjudged
+[00:10:47.100] [11360] [I] ANIMATION DISPLAY source-control stage=after request=1 source-generation=1 view=1 source-drift=none pose-before=a8f8dabc8439246e pose-after=a8f8dabc8439246e
+[00:10:54.727] [11360] [I] DAC restore actor=00000014 epoch=2 baseline=0 spell-groups=3 result=matched
+[00:10:54.727] [11360] [I] Panel menu opening=false revision=2
+[00:10:54.740] [11360] [I] ANIMATION actor=00000014 request=1 lifetime reset
+[00:10:54.741] [11360] [I] SOURCE EVENTCAPTURE window-closed reason=display-close actor=00000014 events=0 phases=0 calls=62 other-graph=55 ring-dropped=0
+[00:10:54.741] [11360] [I] OAR CONTEXT window=display-reset actor=00000014 request=1 view=1 evaluations=0 overlaps=0 sites=e:0/n:0/s:0/r:0 owner=cand:0/src:0/neither:0 numeric=t0:0/t1:0/t2:0/t3:0/other:0/un:0/sum:0 t3-rows:0
