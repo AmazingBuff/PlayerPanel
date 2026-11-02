@@ -3049,3 +3049,17 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 
 **修正（v65，判据不变）**：并发武装改为调用与采样器**同一个** `player_graph(*holder)`，并在 `concurrent-armed` 行记录 `graph-match=yes|no`（实验图与解析图是否同一对象）；`window-open` 行补 `graph/behavior/data/set/words-ptr`；新增 `identity-mismatch` 行逐字段对比 prev/now；`window-aborted` 补 `calls/other-graph`。
 
+**第二轮尝试（2026-11-02 23:38–23:40，v65；[日志](diagnostics/CharacterPanel-g4c1-attempt2-wrong-graph-20261102-2338.log) 137,435 字节 SHA-256 `8a478311…`）：仪器机制全通，但观测对象是错的图 —— 不构成 C 判据。**
+
+| 项 | 观测 |
+| --- | --- |
+| 安装 | `installed mode=concurrent … head=48 8b c4 48 89 48 08` |
+| 武装 | 23:40:43.077 `window-open … words=463 nodes=36 graph=0x2039d0f1800 behavior=0x1fef2aee000 data=0x1fec5517960` + `concurrent-armed … graph-match=no` |
+| 先后 | 武装在两次派发**之前**：23:40:43.302 `WeapEquip`、23:40:43.422 `Unequip`；`drive-done` `bc160a8c…/63f638a6…/c407cb4e…`（第七次复现）、`source-drift=none`、零 `[E]` |
+| 正控 | `window-closed reason=display-close events=0 phases=0 calls=64 other-graph=57 ring-dropped=0` —— `calls≥2`、`other≥2` 成立 |
+| **致命问题** | 被观测图是 `words=463/nodes=36/data=0x1fec5517960`，而候选的源图是 `words=652/nodes=106/data=0x1feb4eb7510`（`load-bindings` 的 15203 绑定集与 `pre-activate` 的 `behavior-data` 都指向后者）。两个解析器在同一 actor 上返回**不同图对象**：`player_graph()` 取最后一个非 1stperson；控制器 `source_graph()` 优先 `rootNode == actor.Get3D(false)`。窗口看的是前者，而泄漏判据要的是**候选所由来的那一张** |
+
+**结论：本轮 `events=0` 不能用于 C 判据**（观测对象错，零值无意义），PENDING 2 保持。可用的收获是机制层：窗口先后、正控计数、`display-close` 关窗、零丢弃、无身份中止，全部按预注册工作。
+
+**修正（v66）**：并发窗口改为**钉住实验侧那张图**——`concurrent-armed` 用 `managed_graph(*holder, &a_source_graph)` 只在管理器列表仍持有该对象时才pin，并每帧用同一 `managed_graph` 复核成员关系（只比较指针，不解引用已释放对象）；采样器在 `concurrent_graph` 存在时用钉住的图，legacy F7 路径保持 `player_graph()` 不变。`window-open` 的 `words/nodes/data` 因此应与 `scan src-count`、`load-bindings` 同源，可直接在日志里核对这张图对不对。
+

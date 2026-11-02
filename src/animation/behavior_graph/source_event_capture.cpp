@@ -80,6 +80,13 @@ namespace animation::behavior_graph
             std::uint64_t seq = 0;
             std::uint64_t dropped_seen = 0;
             std::uint32_t actor_id = 0;
+            // C-G4-C1 (v66): pinned observation target. In this mod list the sampler's
+            // player_graph() picks a different graph object than the one the candidate descends
+            // from (words 463 / nodes 36 vs 652 / 106), so a window armed there cannot answer the
+            // leak question. Concurrent windows pin the experiment's graph instead; membership in
+            // the actor's manager list is re-checked every frame, so a replaced graph is detected
+            // without ever dereferencing the stored pointer.
+            RE::BShkbAnimationGraph const* concurrent_graph = nullptr;
             // Identity belongs to the window: re-arming must re-baseline (and re-arm the hook
             // gate) even when the resolved source happens to be pointer-identical.
             SourceTimelineIdentity observed{};
@@ -143,6 +150,22 @@ namespace animation::behavior_graph
                 chosen = graph.get();
             }
             return chosen;
+        }
+
+        // Membership check for a pinned concurrent target: returns the manager's own pointer when
+        // the expected graph is still live, otherwise null. Only pointers are compared, so a freed
+        // graph is never dereferenced.
+        RE::BShkbAnimationGraph* managed_graph(RE::Actor& a_actor, RE::BShkbAnimationGraph const* a_expected)
+        {
+            if (!a_expected)
+                return nullptr;
+            RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+            if (!a_actor.GetAnimationGraphManager(manager) || !manager)
+                return nullptr;
+            for (RE::BSTSmartPointer<RE::BShkbAnimationGraph> const& graph : manager->graphs)
+                if (graph && graph.get() == a_expected)
+                    return graph.get();
+            return nullptr;
         }
 
         template <class T>
@@ -493,16 +516,20 @@ namespace animation::behavior_graph
             logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=no-holder actor={:08x}", a_actor_id);
             return false;
         }
-        // Resolve through the sampler's own function. v64's first attempt armed with the
-        // experiment's graph and the very next sampler pass saw a different graph object (the
-        // controller's resolver prefers the graph whose rootNode is the actor's 3D; this one takes
-        // the last non-1stperson graph), so the identity rule aborted the window as
-        // source-lost-or-replaced. Sharing the resolver makes the identity identical.
-        RE::BShkbAnimationGraph* const graph = player_graph(*holder);
-        RE::hkbBehaviorGraph* const behavior = graph ? graph->behaviorGraph : nullptr;
-        if (!graph || !behavior)
+        // v66: pin the experiment's graph. v65 armed with player_graph() to satisfy the identity
+        // rule, but in this mod list that resolver returns a different graph than the one the
+        // candidate descends from, so the window observed the wrong target (see the contract).
+        // The manager list is the authority: pin only a graph it still owns.
+        RE::BShkbAnimationGraph* const graph = managed_graph(*holder, &a_source_graph);
+        if (!graph)
         {
-            logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=source-unresolved actor={:08x}", a_actor_id);
+            logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=source-not-in-manager actor={:08x}", a_actor_id);
+            return false;
+        }
+        RE::hkbBehaviorGraph* const behavior = graph->behaviorGraph;
+        if (!behavior)
+        {
+            logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=no-behavior actor={:08x}", a_actor_id);
             return false;
         }
         if (capture_state().window.active())
@@ -512,9 +539,9 @@ namespace animation::behavior_graph
             logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=source-fields actor={:08x}", a_actor_id);
             return false;
         }
-        logger::info("SOURCE EVENTCAPTURE concurrent-armed actor={:08x} graph={:#x} graph-match={} behavior={:#x}",
-            a_actor_id, reinterpret_cast<std::uintptr_t>(graph), graph == &a_source_graph ? "yes" : "no",
-            reinterpret_cast<std::uintptr_t>(behavior));
+        capture_state().concurrent_graph = graph;
+        logger::info("SOURCE EVENTCAPTURE concurrent-armed actor={:08x} graph={:#x} pinned=yes behavior={:#x}",
+            a_actor_id, reinterpret_cast<std::uintptr_t>(graph), reinterpret_cast<std::uintptr_t>(behavior));
         return true;
     }
 
@@ -557,7 +584,11 @@ namespace animation::behavior_graph
             close_window("expired");
             return;
         }
-        RE::BShkbAnimationGraph* const graph = player_graph(actor);
+        // C-G4-C1 (v66): a concurrent window observes the pinned graph - the one the candidate
+        // descends from - and re-validates its membership every frame. Legacy F7 windows keep the
+        // player_graph() resolution unchanged.
+        RE::BShkbAnimationGraph* graph = s.concurrent_graph ? managed_graph(actor, s.concurrent_graph)
+                                                            : player_graph(actor);
         if (!graph || !graph->behaviorGraph)
         {
             if (s.actor_id != 0)
