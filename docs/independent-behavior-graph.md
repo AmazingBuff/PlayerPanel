@@ -93,10 +93,10 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **最新记录安装：v62**，身份 `CharacterPanel-scenegraph-behavior-graph-v62-g4a3-scan-anchor-20261031-2dbe98c785-cl94faaed0c6-20261031T154250Z`；DLL 1,461,760 字节 `cdb8a5ed…`、PDB 38,383,616 字节 `a7020045…`，完整哈希见 [v62 build](build.md#v62-g4a3-scan-anchor-2026-10-31)。记录路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
-- 11-01 收尾记录：部署 INI dormant，2,147 字节 `27f481f5…`，实验开关 off；不是 B+C 的运行配置，也不是本次重新读取安装目录所得的证明。仓库样例不变。
+- **最新记录安装：v63**（2026-11-02 重装），身份 `CharacterPanel-scenegraph-v63-g4a4-numeric-types-e97eb65e68-cl94faaed0c6-20261102T142727Z`；DLL 1,466,368 字节 `2c81435c…`、PDB 38,432,768 字节 `c8e361ec…`，完整哈希与离线回归见 [v63 build](build.md#v63-g4a4-numeric-types-2026-11-02)。记录路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
+- **当前部署 INI：A4 运行配置**，2,612 字节 `7cb2562f…`，20 键回读断言通过；键集与 A3 运行逐项相同（`inject` + S1 观测 + S6 `Unequip` + 显示两键 + `OarContextWatch=true` + `DetailedAnimationTrace=true`），差别只在仪器。v62 dormant 三件套（`cdb8a5ed…`/`a7020045…`/`27f481f5…` 2,147 字节）已备份至 `dist/deploy-backup-20261102-v62/`，可整组回退。仓库样例仍为 dormant 默认。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
-- 本次仅文档及四份日志退役，不构建、部署、改 INI 或启动游戏。后续仪器须另立评审/实现范围。
+- 2026-11-02 本轮：仅实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，**未启动游戏、无运行记录**；其余仪器范围仍须另立评审。
 
 ### 测试包清单
 
@@ -1977,7 +1977,7 @@ BehaviorGraphProbe=true
 
 **停点与回传**：总数不对账、跨窗残留、计数/身份缺失或出现未归属 type3，即停止验收、保留原始记录回评审；源漂移、崩溃或非有限值立即停。回传独立实现契约/差分、上述一个聚焦回归结果、匹配工件/设置身份、带 window/segment 边界的完整日志及分型对账/归属结论；不能只给前 32 行。
 
-→ 契约、判据与实现见 [C-G4-A4](#c-g4-a4-numeric-types)（2026-11-02：v63 已实现并构建，待上机；本项在运行回传前保持 PENDING）。
+→ 契约、判据与实现见 [C-G4-A4](#c-g4-a4-numeric-types)（2026-11-02：v63 已实现、构建并部署，待上机；本项在运行回传前保持 PENDING）。
 
 <a id="g4-followup-source-events"></a>
 ### PENDING 2：C 的兼容源事件观察窗口
@@ -2933,7 +2933,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 <a id="c-g4-a4-numeric-types"></a>
 ## C-G4-A4：numeric 类型全窗分型（草案 → 实现，2026-11-02）
 
-> **状态：已实现、已构建（v63），待授权上机。** 预注册文字不改写；运行结果回填在本节末尾。本轮无游戏会话、无部署。
+> **状态：已实现、已构建并部署（v63），待授权上机。** 预注册文字不改写；运行结果回填在本节末尾。本轮无游戏会话；构建与部署身份见 [v63 build](build.md#v63-g4a4-numeric-types-2026-11-02)。
 
 **背景与目标**：[待办 1](#g4-followup-numeric) 指出 A3 的 `sites n=72` 只发射了前 32 条总求值明细、其中 7 条 numeric 全为 `type=0`，其余 65 次类型未知，因此"全窗零图变量读取"不被日志支持。本轮只补这一处盲点：按原始访问器类型给 numeric 命中分型计数，**独立于明细行预算**，并与 `sites[n]` 对账。
 
@@ -2959,4 +2959,14 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **上机门（用户执行）**：配置与 A3 运行相同——`inject` + S1 观测两键（`CandidateInputProbe=true`、`CandidateInputVariable=` 空）+ S6 卸下两键（`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`）+ `DisplayPose=true` + `DisplayStep=true` + `OarContextWatch=true` + `DetailedAnimationTrace=true`；操作序列与 A3 相同（回放 + 显示 ≥20 秒）。**只做一处聚焦回归**：确认明细被截后 numeric 仍进总量（对账），并在下一窗口验证清零；随后匹配 DLL/PDB/INI 身份回传完整日志与分型对账。**不要求 `t3` 为 0**，只要求总量可对账与来源可归属。
 
 **停点与回传**：总数不对账、跨窗残留、计数或身份缺失、出现未归属 type3，即停止验收并保留原始记录回评审；`source-drift` 非 none、崩溃或非有限值立即停。回传须含独立实现契约/差分、聚焦回归结果、匹配工件与设置身份、带 window/segment 边界的完整日志及分型对账/归属结论，不能只给前 32 行。
+
+**实现与部署记录（2026-11-02，提交 `e97eb65e68`，v63 身份 `…-v63-g4a4-numeric-types-e97eb65e68-cl94faaed0c6-20261102T142727Z`，DLL `2c81435c…` 1,466,368 字节、PDB `c8e361ec…` 38,432,768 字节；完整构建记录见 [v63 build](build.md#v63-g4a4-numeric-types-2026-11-02)）**：
+
+- **计数条件（重要边界）**：`arm_candidate_window` 只重置计数，**真正的计数闸门是 `ScopedCandidateWindow` 的 `depth>0`**——与 A2/A3 相同的语义，`drive_graph_step` 与两处预注册派发包裹的正是这个守卫。因此"窗口已武装但无守卫"的区间不会记任何 numeric 类型，这一点在离线回归第 3 例单独验证。
+- **落点**：[candidate_window.h](../src/animation/behavior_graph/candidate_window.h) 的 `note_candidate_numeric_type` 在 `note_candidate_window_hit` 之后由 [hooks.cpp](../src/animation/oar/hooks.cpp) 的 `note_oar_context_hit` 同步调用，二者共同保证"一次 numeric 命中 = site+1 且类型+1"，所以 `sum==sites[n]` 是对账恒等式而非事后推算。
+- **复位**：`clear_candidate_window_counts` 替代原先三处重复的清零（arm / take / 非属主 take），并把 `take_candidate_window_tally_for` 的位置式聚合初始化换为"复制元数据后统一清零"，新计数器不可能在其中一处漏清。
+- **明细预算与 type3**：`Oar_Context_Hit_Row_Cap = 32` 现在只截总明细；过预算后仅 type3 命中可再发 ≤8 行 `OAR CONTEXT numeric-type3`（`name`/REFR/`clip`/`clip-name`/`owner`/`evaluations`/`cand-count`），前 32 行内的 type3 仍只在总明细行里出现一次，不重复。
+- **汇总字段**：三类行统一追加 `numeric=t0:{}/t1:{}/t2:{}/t3:{}/other:{}/un:{}/sum:{} t3-rows:{}`；`other` 覆盖 ≥4 的类型值，`un` 覆盖空/不可读访问器（负值），二者都不并入 `t0`。
+- **未改动**：无新 INI 键（仍由 `OarContextWatch` 门控）、无新源单元（`PLUGIN_SOURCES` 32）、无新原生调用或写入、无 settings 解析变化。
+- **部署**：v62 dormant 三件套备份至 `dist/deploy-backup-20261102-v62/`（哈希与 v62 记录逐项一致），v63 pair 装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，部署 INI 切 A4 运行配置（2,612 字节 `7cb2562f…`，20 键回读断言通过）。**上机由用户执行**：操作与 A3 完全相同的一次会话即可（回放 + 显示 ≥20 秒），判读只看 `sum` 与 `sites n:` 是否相等、以及 `t3` 总量与归属。
 
