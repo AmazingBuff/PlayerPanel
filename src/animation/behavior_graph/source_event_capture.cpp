@@ -47,6 +47,13 @@ namespace animation::behavior_graph
         // The gate the detour reads on every dispatch in the process: non-null exactly while a
         // window is open, holding the source behaviour pointer the filter compares against.
         std::atomic<void const*> g_gate_behavior{ nullptr };
+        // C-G4-C1 liveness counters, read by the window-close row. `calls` counts every entry to
+        // the detour, before the gate, so the plugin's own direct 58377 dispatches prove the hook
+        // is live and reached; `other_graph` counts armed-window dispatches aimed at a different
+        // behaviour graph (the candidate's injected events land there). Neither is allowed to
+        // gate the ring push: only source-graph dispatches become event rows.
+        std::atomic<std::uint64_t> g_calls{ 0 };
+        std::atomic<std::uint64_t> g_other_graph{ 0 };
 
         SourceEventRing& event_ring()
         {
@@ -93,7 +100,19 @@ namespace animation::behavior_graph
         // and a ring push. Nothing here may allocate, lock, log, call the engine or fault.
         void record_source_event(void const* a_behavior, void const* a_ctx, void const* a_event) noexcept
         {
-            if (g_gate_behavior.load(std::memory_order_relaxed) != a_behavior || !a_event)
+            // Counted before the gate so the liveness control sees every dispatch, including the
+            // plugin's own direct 58377 calls and any dispatch outside an armed window.
+            g_calls.fetch_add(1, std::memory_order_relaxed);
+            void const* const gate = g_gate_behavior.load(std::memory_order_relaxed);
+            if (!gate || gate != a_behavior)
+            {
+                // A different graph while armed is the classification evidence: the filter is
+                // discriminating, not silently dropping everything.
+                if (gate && a_behavior)
+                    g_other_graph.fetch_add(1, std::memory_order_relaxed);
+                return;
+            }
+            if (!a_event)
                 return;
             std::uint32_t id = 0;
             std::memcpy(&id, a_event, sizeof(id));
@@ -175,8 +194,13 @@ namespace animation::behavior_graph
             g_gate_behavior.store(nullptr, std::memory_order_release);
             CaptureState& s = capture_state();
             s.window.cancel();
-            logger::info("SOURCE EVENTCAPTURE window-closed reason={} actor={:08x} events={} phases={} ring-dropped={}",
+            // C-G4-C1: the liveness control and the isolation reading share one row. `calls` is
+            // every detour entry in the window (>=2 because the replay dispatches twice),
+            // `other-graph` is how many of those aimed at a non-source graph, `source-events` is
+            // the leak signature.
+            logger::info("SOURCE EVENTCAPTURE window-closed reason={} actor={:08x} events={} phases={} calls={} other-graph={} ring-dropped={}",
                 a_reason, s.actor_id, s.window.event_lines(), s.window.phase_lines(),
+                g_calls.load(std::memory_order_relaxed), g_other_graph.load(std::memory_order_relaxed),
                 event_ring().dropped());
         }
 
@@ -203,6 +227,10 @@ namespace animation::behavior_graph
             a_state.actor_id = a_actor_id;
             event_ring().drain_discard();
             event_ring().reset_dropped();
+            // Counters belong to the window: a fresh window starts at zero so its close row can
+            // be read without subtracting a previous window.
+            g_calls.store(0, std::memory_order_relaxed);
+            g_other_graph.store(0, std::memory_order_relaxed);
             // Gate last: from this store on, every dispatch of this graph lands in the ring.
             g_gate_behavior.store(&a_behavior, std::memory_order_release);
             std::string tracked;
@@ -212,6 +240,35 @@ namespace animation::behavior_graph
             logger::info("SOURCE EVENTCAPTURE window-open actor={:08x} words={} nodes={} events-budget={} phases-budget={} seconds={} tracked {}",
                 a_actor_id, a_count, a_state.node_logged, Source_Event_Line_Budget,
                 Source_Phase_Line_Budget, Source_Event_Window.count(), tracked);
+        }
+
+        // C-G4-C1: one place that turns a live source graph into an armed window (reset, deadline,
+        // identity, baseline, gate). The concurrent arm calls it synchronously from the experiment
+        // entry, which is what guarantees the experiment's own dispatches are counted; the F7 path
+        // keeps its deferred baseline in the sampler.
+        bool begin_capture_window(RE::Actor& a_actor, RE::BShkbAnimationGraph const& a_graph,
+            RE::hkbBehaviorGraph& a_behavior)
+        {
+            RE::hkbBehaviorGraphData* const data = a_behavior.data.get();
+            RE::hkbVariableValueSet* const set = a_behavior.variableValueSet.get();
+            if (!data || !set)
+                return false;
+            std::int32_t const count = field_at<std::int32_t>(set, kWordCountOffset);
+            std::int32_t const* const words = field_at<std::int32_t const*>(set, kWordDataOffset);
+            if (count <= 0 || static_cast<std::size_t>(count) > kMaxWords || !words)
+                return false;
+            CaptureState& s = capture_state();
+            s = CaptureState{};
+            s.window.arm(std::chrono::steady_clock::now());
+            s.observed = SourceTimelineIdentity{
+                reinterpret_cast<std::uintptr_t>(&a_actor), reinterpret_cast<std::uintptr_t>(&a_graph),
+                reinterpret_cast<std::uintptr_t>(&a_behavior), reinterpret_cast<std::uintptr_t>(data),
+                reinterpret_cast<std::uintptr_t>(set), reinterpret_cast<std::uintptr_t>(words),
+                static_cast<std::size_t>(count)
+            };
+            s.has_observed = true;
+            baseline_capture(s, a_behavior, words, static_cast<std::size_t>(count), a_actor.GetFormID());
+            return true;
         }
 
         void drain_events(CaptureState& a_state, RE::hkbBehaviorGraph& a_behavior)
@@ -320,7 +377,11 @@ namespace animation::behavior_graph
             logger::warn("SOURCE EVENTCAPTURE install-skip reason=source-timeline-priority");
             return;
         }
-        if (independent_graph_setting() != IndependentGraphMode::off)
+        // C-G4-C1: only the legacy lifecycle requires IndependentGraph=off. The concurrent mode is
+        // designed to run beside the candidate experiment, so its guard is the timeline priority
+        // above plus the mode itself - never a silent removal of the legacy refusal.
+        if (source_event_capture_mode() == SourceEventCaptureMode::e_on &&
+            independent_graph_setting() != IndependentGraphMode::off)
         {
             logger::warn("SOURCE EVENTCAPTURE install-skip reason=independent-graph-not-off");
             return;
@@ -389,14 +450,18 @@ namespace animation::behavior_graph
             reinterpret_cast<std::uintptr_t>(stub) - (target.address() + 5));
         std::memcpy(patch + 1, &rel, sizeof(rel));
         REL::safe_write(target.address(), patch, sizeof(patch));
-        logger::info("SOURCE EVENTCAPTURE installed target={:#x} stub={:#x} original={:#x} head=48 8b c4 48 89 48 08",
-            target.address(), reinterpret_cast<std::uintptr_t>(stub),
-            reinterpret_cast<std::uintptr_t>(original));
+        logger::info("SOURCE EVENTCAPTURE installed mode={} target={:#x} stub={:#x} original={:#x} head=48 8b c4 48 89 48 08",
+            source_event_capture_mode_name(source_event_capture_mode()), target.address(),
+            reinterpret_cast<std::uintptr_t>(stub), reinterpret_cast<std::uintptr_t>(original));
     }
 
     void arm_source_event_capture()
     {
         if (!source_event_capture() || !g_installed.load(std::memory_order_acquire))
+            return;
+        // C-G4-C1: only the legacy lifecycle listens to F7. The concurrent window is owned by the
+        // experiment/display path, so F7 must not open a second window.
+        if (source_event_capture_mode() != SourceEventCaptureMode::e_on)
             return;
         capture_requests().arm();
         logger::info("SOURCE EVENTCAPTURE arm-requested");
@@ -409,6 +474,42 @@ namespace animation::behavior_graph
         capture_requests().invalidate();
     }
 
+    bool arm_source_event_capture_concurrent(RE::BShkbAnimationGraph const& a_source_graph, std::uint32_t a_actor_id)
+    {
+        if (!source_event_capture_concurrent() || !g_installed.load(std::memory_order_acquire))
+            return false;
+        RE::hkbBehaviorGraph* const behavior = a_source_graph.behaviorGraph;
+        RE::Actor* const holder = a_source_graph.holder;
+        if (!behavior || !holder)
+        {
+            logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason={} actor={:08x}",
+                behavior ? "no-holder" : "no-behavior", a_actor_id);
+            return false;
+        }
+        if (capture_state().window.active())
+            close_window("rearm");
+        if (!begin_capture_window(*holder, a_source_graph, *behavior))
+        {
+            logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=source-fields actor={:08x}", a_actor_id);
+            return false;
+        }
+        logger::info("SOURCE EVENTCAPTURE concurrent-armed actor={:08x} behavior={:#x}",
+            a_actor_id, reinterpret_cast<std::uintptr_t>(behavior));
+        return true;
+    }
+
+    bool source_event_capture_window_open()
+    {
+        return capture_state().window.active();
+    }
+
+    void close_source_event_capture_window(char const* a_reason)
+    {
+        if (!capture_state().window.active())
+            return;
+        close_window(a_reason);
+    }
+
     void sample_source_event_capture(RE::Actor& actor)
     {
         if (!source_event_capture() || !g_installed.load(std::memory_order_acquire))
@@ -419,6 +520,8 @@ namespace animation::behavior_graph
         {
             s = CaptureState{};
             g_gate_behavior.store(nullptr, std::memory_order_release);
+            g_calls.store(0, std::memory_order_relaxed);
+            g_other_graph.store(0, std::memory_order_relaxed);
             logger::info("SOURCE EVENTCAPTURE invalidated reason=world-reset");
             return;
         }

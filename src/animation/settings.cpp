@@ -16,7 +16,7 @@ namespace
     bool g_display_step = false;
     bool g_source_timeline = false;
     bool g_source_transient_watch = false;
-    bool g_source_event_capture = false;
+    behavior_graph::SourceEventCaptureMode g_source_event_capture_mode = behavior_graph::SourceEventCaptureMode::e_off;
     bool g_source_write_capture = false;
     bool g_candidate_variable_census = false;
     bool g_candidate_input_probe = false;
@@ -46,7 +46,10 @@ void load_settings()
     g_display_step = ini.GetBoolValue("Experiment", "DisplayStep", false);
     g_source_timeline = ini.GetBoolValue("Experiment", "SourceTimeline", false);
     g_source_transient_watch = ini.GetBoolValue("Experiment", "SourceTransientWatch", false);
-    g_source_event_capture = ini.GetBoolValue("Experiment", "SourceEventCapture", false);
+    char const* const event_capture = ini.GetValue("Experiment", "SourceEventCapture", "off");
+    std::optional<behavior_graph::SourceEventCaptureMode> const parsed_event_capture =
+        behavior_graph::parse_source_event_capture(event_capture ? std::string_view{ event_capture } : std::string_view{});
+    g_source_event_capture_mode = parsed_event_capture.value_or(behavior_graph::SourceEventCaptureMode::e_off);
     g_source_write_capture = ini.GetBoolValue("Experiment", "SourceWriteCapture", false);
     g_candidate_variable_census = ini.GetBoolValue("Experiment", "CandidateVariableCensus", false);
     g_candidate_input_probe = ini.GetBoolValue("Experiment", "CandidateInputProbe", false);
@@ -65,6 +68,9 @@ void load_settings()
     g_oar_context_watch = ini.GetBoolValue("Experiment", "OarContextWatch", false);
     if (!parsed) logger::warn("ANIMATION invalid Animation.UnarmedIdle='{}'; using non_combat_loop", value);
     if (!parsed_experiment) logger::warn("EXPERIMENT invalid Experiment.IndependentGraph='{}'; using off", experiment);
+    if (!parsed_event_capture)
+        logger::warn("EXPERIMENT invalid Experiment.SourceEventCapture='{}'; using off (expected off|on|concurrent)",
+            event_capture ? event_capture : "");
     logger::info("ANIMATION setting UnarmedIdle={}", g_unarmed_idle == UnarmedIdle::e_mt_idle ? "mt_idle" : "non_combat_loop");
     logger::info("DIAGNOSTICS setting DetailedAnimationTrace={}", g_detailed_animation_trace);
     logger::info("DIAGNOSTICS setting BehaviorGraphProbe={}", g_behavior_graph_probe);
@@ -73,7 +79,7 @@ void load_settings()
     logger::info("EXPERIMENT setting DisplayStep={}", g_display_step);
     logger::info("EXPERIMENT setting SourceTimeline={} transient={}", g_source_timeline,
         g_source_transient_watch);
-    logger::info("EXPERIMENT setting SourceEventCapture={}", g_source_event_capture);
+    logger::info("EXPERIMENT setting SourceEventCapture={}", behavior_graph::source_event_capture_mode_name(g_source_event_capture_mode));
     logger::info("EXPERIMENT setting SourceWriteCapture={}", g_source_write_capture);
     logger::info("EXPERIMENT setting CandidateVariableCensus={}", g_candidate_variable_census);
     logger::info("EXPERIMENT setting CandidateInputProbe={} variable='{}' value={}", g_candidate_input_probe,
@@ -91,7 +97,12 @@ bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }
 bool source_timeline() { return g_source_timeline; }
 bool source_transient_watch() { return g_source_transient_watch; }
-bool source_event_capture() { return g_source_event_capture; }
+bool source_event_capture() { return g_source_event_capture_mode != behavior_graph::SourceEventCaptureMode::e_off; }
+behavior_graph::SourceEventCaptureMode source_event_capture_mode() { return g_source_event_capture_mode; }
+bool source_event_capture_concurrent()
+{
+    return g_source_event_capture_mode == behavior_graph::SourceEventCaptureMode::e_concurrent;
+}
 bool source_write_capture() { return g_source_write_capture; }
 bool candidate_variable_census() { return g_candidate_variable_census; }
 bool candidate_input_probe() { return g_candidate_input_probe; }

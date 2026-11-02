@@ -3,6 +3,7 @@
 //
 #pragma once
 #include "animation/behavior_graph/independent_graph.h"
+#include "animation/behavior_graph/source_event_capture_policy.h"
 #include "animation/idle_policy.h"
 
 #include <cstdint>
@@ -26,10 +27,15 @@ namespace animation
     // observed word change immediately (no settle rule), catching one-frame command writes
     // the settle-3 rule filters out. Requires SourceTimeline.
     [[nodiscard]] bool source_transient_watch();
-    // C-G3B-E1: install a read-only 58377 observer and log the source graph's dispatched events
-    // during an F7 window together with the settled phase variables. Requires
-    // IndependentGraph=off; SourceTimeline wins when both are on.
+    // C-G3B-E1 / C-G4-C1: install a read-only 58377 observer. `on` logs the source graph's
+    // dispatched events during an F7 window (requires IndependentGraph=off; SourceTimeline wins
+    // when both are on). `concurrent` is armed and closed by the candidate experiment/display
+    // path instead, and may coexist with IndependentGraph=inject.
     [[nodiscard]] bool source_event_capture();
+    // C-G4-C1: the parsed three-state mode and the concurrent predicate. `source_event_capture()`
+    // is true for both `on` and `concurrent`.
+    [[nodiscard]] behavior_graph::SourceEventCaptureMode source_event_capture_mode();
+    [[nodiscard]] bool source_event_capture_concurrent();
     // C-G3B-E2: install read-only observers on the typed graph setters (Bool/Int) and log every
     // write to the player's graphs during an F7 window. Requires IndependentGraph=off; the
     // other source instruments win when both are on.

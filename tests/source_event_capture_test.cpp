@@ -8,14 +8,34 @@
 #include <cassert>
 #include <chrono>
 #include <cstdint>
+#include <string_view>
 
 using test_plugin::animation::behavior_graph::SourceEventBudget;
+using test_plugin::animation::behavior_graph::SourceEventCaptureMode;
 using test_plugin::animation::behavior_graph::SourceEventRecord;
 using test_plugin::animation::behavior_graph::SourceEventRing;
 using test_plugin::animation::behavior_graph::SourceEventWindow;
+using test_plugin::animation::behavior_graph::parse_source_event_capture;
 
 namespace
 {
+    // C-G4-C1: the INI key is a three-state mode now. A typo must never arm the hook, and the
+    // historical boolean spellings must keep parsing so old INI files reproduce verbatim.
+    void mode_text_maps_to_three_states()
+    {
+        assert(parse_source_event_capture("off") == SourceEventCaptureMode::e_off);
+        assert(parse_source_event_capture("false") == SourceEventCaptureMode::e_off);
+        assert(parse_source_event_capture("0") == SourceEventCaptureMode::e_off);
+        assert(parse_source_event_capture("") == SourceEventCaptureMode::e_off);
+        assert(parse_source_event_capture("on") == SourceEventCaptureMode::e_on);
+        assert(parse_source_event_capture("TRUE") == SourceEventCaptureMode::e_on);
+        assert(parse_source_event_capture("1") == SourceEventCaptureMode::e_on);
+        assert(parse_source_event_capture("concurrent") == SourceEventCaptureMode::e_concurrent);
+        assert(parse_source_event_capture("Concurrent") == SourceEventCaptureMode::e_concurrent);
+        assert(!parse_source_event_capture("concurrentt").has_value());
+        assert(!parse_source_event_capture("yes").has_value());
+    }
+
     void ring_preserves_order_and_counts_overflow()
     {
         SourceEventRing ring;
@@ -87,6 +107,7 @@ namespace
 
 int main()
 {
+    mode_text_maps_to_three_states();
     ring_preserves_order_and_counts_overflow();
     budgets_run_independently_and_close_the_window();
     cancel_and_expire_beat_open_budgets();

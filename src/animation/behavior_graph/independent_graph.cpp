@@ -15,6 +15,7 @@
 #include "animation/behavior_graph/observation_chain_policy.h"
 #include "animation/behavior_graph/pose_content_policy.h"
 #include "animation/behavior_graph/pose_motion_policy.h"
+#include "animation/behavior_graph/source_event_capture.h"
 #include "animation/behavior_graph/unequip_settle_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
@@ -1066,6 +1067,11 @@ public:
         if (window.steps() > 0 && window.steps() < 120 && window.take_row())
             logger::info("ANIMATION DISPLAY window=aborted actor={:08x} request={} source-generation={} view={} steps={} reason={} source-comparison=discarded",
                 window.source().actor_id, window.request(), window.source().generation, window.view(), window.steps(), reason);
+        // C-G4-C1: a display close with real stepping is the close/reset boundary the concurrent
+        // source-event window covers; a zero-step abort (the request that just bound) must not end
+        // it before the display phase even starts.
+        if (window.steps() > 0)
+            close_source_event_capture_window("display-close");
         // C-G4-A: every display-window close path funnels here; the summary is the armed
         // evidence for "no OAR evaluation touched the candidate during display stepping".
         // Only the candidate-owning session may take (and emit) the tally.
@@ -1214,6 +1220,10 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     }();
     arm_candidate_window(actor_id);
     arm_candidate_window_node_lists(0, g_armed_source_node_list);
+    // C-G4-C1: arm the concurrent source-event window synchronously, before activation and before
+    // any dispatch, so the experiment's own WeapEquip/Unequip calls are counted by the live gate
+    // (they are the pre-registered liveness control). No-op unless SourceEventCapture=concurrent.
+    (void)arm_source_event_capture_concurrent(source_graph, actor_id);
     struct ExperimentWindowSummary
     {
         std::uint32_t actor_id;

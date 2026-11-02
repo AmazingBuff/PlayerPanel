@@ -2988,3 +2988,40 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 
 **裁定：PENDING 1 关闭 —— G4-A 的 numeric 全窗覆盖成立。** 完整 2037 求值窗口内 72 次 numeric 命中**全部 type 0、零 type 3、零 unclassified**，且类型总和与 numeric 站点数逐窗相等；"零图变量读取"由此从 A3 的"7/72 条明细"升级为**整窗 72/72 分型**。G4 只剩 [C 段源事件泄漏](#g4-followup-source-events)一项 PENDING，G5 的运行验收仍后置于其关闭；`t3=0` 不构成"模板级评估不写 OAR 内部状态"的证据，残余项维持原状。裁定后部署 INI 回 dormant（2,147 字节 `27f481f5…`），v63 DLL/PDB 留装。
 
+<a id="c-g4-c1-concurrent-events"></a>
+## C-G4-C1：兼容的源事件观察窗口（评审 → 实现，2026-11-02）
+
+> **状态：评审定稿并实现（v64），待上机。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定。
+
+**问题陈述（三个结构事实，缺一不可）**：
+
+1. B+C 运行里 `SourceEventCapture=false`、`install-skip reason=off` —— 那次没有源事件通道。
+2. 现有安装门 `install_source_event_capture` 在 `IndependentGraph != off` 时直接拒绝；而 F7 武装只走**面板外**路径（[input.cpp](../src/input/input.cpp)）。候选活动只发生在面板内 —— 所以"打开一个 INI 键重跑"在结构上不可能覆盖候选活动，**删守卫也不是设计**。
+3. E1 的残余：观察器只对源图指针过滤，无法区分"引擎不向这张图派发事件"与"引擎根本不经 58377 派发"（[E1 残余限定](#c-g3b-e1-event-capture)）。
+
+**设计（关键事实决定正控来源）**：
+
+- **正控不依赖引擎碰巧派发**：插件自身就是直调 `REL::ID(58377)` 派发 `WeapEquip`/`Unequip`（[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 `event_dispatch`）。每次回放必然在窗口内产生 **≥2 次 58377 调用**；detour 装在函数入口，因此这两次调用就是我们自己的存活正控。
+- **三态模式**：`[Experiment] SourceEventCapture` 从 bool 改为 `off|on|concurrent`（`on`/`true` 保留旧语义）。
+  - `on`：E1 原样 —— F7 窗口、要求 `IndependentGraph=off`、`SourceTimeline` 优先。
+  - `concurrent`：允许 `IndependentGraph=inject`；**仍要求 `SourceTimeline=false`**（两路共用 F7 键与身份规则，不同时开）；窗口由**实验窗口自动武装**（`run_independent_graph_experiment` 入口，同步建立基线与 gate，早于任何注入）、在**显示窗第一次带步数的关闭**（`DisplaySession::State::abort`）或 20 秒到期或世界重置时关闭。
+  - 不删任何守卫：`on` 的拒绝分支一字不改，`concurrent` 是新增的、有自己生命周期的模式；`source_timeline()` 冲突仍是 warn+skip。
+- **计数器（门之前）**：detour 在 gate 检查**之前**自增 `calls`；gate 已武装但目标是别的图时自增 `other-graph`；只有源图命中才入环并落成事件行。这样一次关闭行同时给出三个量：`calls ≥ 2`（观察器存活）、`other-graph ≥ 2`（分类有效，我们的两次注入被识别为非源图）、`source-events = 0`（隔离结论）。
+
+**预注册判据（不得事后放宽）**：
+
+1. **安装**：`SOURCE EVENTCAPTURE installed … mode=concurrent`，运行时头部字节核验通过；出现 head-mismatch 即停。
+2. **武装**：`window-open` 行给出 actor/graph/behavior/data/variable-set/words/count 身份与两条预算，且发生在两次 `result=dispatched` **之前**（同一帧内成立，见设计）。
+3. **正控（硬前提）**：关闭行 `calls ≥ 2` **且** `other-graph ≥ 2`。任一不足即"观察器未被证明存活"，本次零记录**无效**，PENDING 保持，不得改判为通过。
+4. **隔离**：`source-events=0`、`ring-dropped=0`、无 `budget-exhausted`，且窗口覆盖两次注入、settle 与至少一次显示段关闭（`reason=display-close`）。
+5. **边界**：`source-events=0` 只限定 **58377 这一条路由**；不证明 manager 级其它事件路径不存在（A1/E1 已示覆盖不足），不外推到未观察窗口。
+6. **身份**：任一身份变化（`source-lost-or-replaced`）即中止并按停点处理；窗口期间源姿态/变量由既有 `source-drift` 独立复核。
+
+**停点与回传**：头字节不匹配、正控失败、身份变化、缺窗/丢行/预算耗尽 → 停止并保持 PENDING；**不得删守卫、放宽判据或改写旧日志**。回传须含：安装/武装/关闭三行、`calls/other-graph/source-events/ring-dropped` 四项计数、两次 `result=dispatched` 与 `window-open` 的先后关系、匹配的 DLL/PDB/INI 身份，以及窗口内源相位行（若有）。
+
+**非目标**：不注入、不写变量、不触碰候选行为图语义（纯透传，detour 只读三参数）、不做姿态对照、不声称覆盖全部事件路由、不改 F7 既有语义。
+
+**离线回归**：模式解析（`off|false|""`、`on|true`、`concurrent`，含大小写）进 [source_event_capture_test.cpp](../tests/source_event_capture_test.cpp)，`cl /W4 /WX` 通过；环/预算/取消/到期的既有三例不重跑也保持有效。
+
+**实现影响面**：`settings` 三态 + 纯解析函数；`source_event_capture.{h,cpp}` 两个计数器、`begin_capture_window` 共享基线、`arm/close/open` 三个薄 API；`independent_graph.cpp` 的 arm/close 两处调用；文档、配置注释与 CHANGELOG 同步。无新源单元（`PLUGIN_SOURCES` 32）、无新原生调用或写入。
+

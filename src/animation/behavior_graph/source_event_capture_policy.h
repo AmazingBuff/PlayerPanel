@@ -10,6 +10,8 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <string_view>
 
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
@@ -18,6 +20,50 @@ namespace animation::behavior_graph
     inline constexpr std::uint32_t Source_Phase_Line_Budget = 200;
     inline constexpr std::chrono::seconds Source_Event_Window{ 20 };
     inline constexpr std::size_t Source_Event_Ring_Depth = 1024;
+
+    // C-G4-C1: three modes instead of E1's boolean. `on` keeps the E1 semantics verbatim
+    // (panel-outside F7 window, requires IndependentGraph=off); `concurrent` is a separate
+    // lifecycle that may coexist with the candidate experiment because the window is armed and
+    // closed by the experiment/display path instead of by F7. Neither mode removes the other's
+    // guards, and the two never share a window.
+    enum class SourceEventCaptureMode : std::uint8_t
+    {
+        e_off,
+        e_on,
+        e_concurrent
+    };
+
+    // Unknown text yields nullopt so a typo can never arm a hook by accident; the caller logs the
+    // observed string and falls back to off. Accepts the historical boolean spellings.
+    [[nodiscard]] inline std::optional<SourceEventCaptureMode> parse_source_event_capture(
+        std::string_view a_text) noexcept
+    {
+        auto equal_ci = [](std::string_view a_left, std::string_view a_right) {
+            if (a_left.size() != a_right.size()) return false;
+            for (std::size_t i = 0; i < a_left.size(); ++i)
+            {
+                char const l = a_left[i] >= 'A' && a_left[i] <= 'Z' ? static_cast<char>(a_left[i] - 'A' + 'a') : a_left[i];
+                if (l != a_right[i]) return false;
+            }
+            return true;
+        };
+        if (equal_ci(a_text, "concurrent")) return SourceEventCaptureMode::e_concurrent;
+        if (equal_ci(a_text, "on") || equal_ci(a_text, "true") || equal_ci(a_text, "1"))
+            return SourceEventCaptureMode::e_on;
+        if (equal_ci(a_text, "off") || equal_ci(a_text, "false") || equal_ci(a_text, "0") || a_text.empty())
+            return SourceEventCaptureMode::e_off;
+        return std::nullopt;
+    }
+
+    [[nodiscard]] inline char const* source_event_capture_mode_name(SourceEventCaptureMode a_mode) noexcept
+    {
+        switch (a_mode)
+        {
+        case SourceEventCaptureMode::e_on: return "on";
+        case SourceEventCaptureMode::e_concurrent: return "concurrent";
+        default: return "off";
+        }
+    }
     // C-G3B-E1: the seven head bytes the install step verifies before patching 58377 (dumped
     // from the Steamless-unpacked 1.6.1170 image, hash-checked against the audit record):
     // mov rax,rsp; mov [rax+8],rcx. Both instructions are RIP-independent and the boundary at
