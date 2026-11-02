@@ -928,4 +928,13 @@ Deployment (2026-11-02): the dormant v63 trio was backed up to `dist/deploy-back
 
 C1 run sheet (user-executed, one session): open the inventory panel once → the replay runs by itself (~3–4 s) → keep the panel open 2–3 s so display stepping happens → close the panel within ~15 s. Expect `SOURCE EVENTCAPTURE installed … mode=concurrent`, `concurrent-armed` + `window-open`, exactly two `result=dispatched` rows after `window-open`, and `window-closed reason=display-close calls=… other-graph=… events=… ring-dropped=0` with `calls ≥ 2`, `other-graph ≥ 2` and `events=0`. A `reason=expired` close only carries the injection-phase reading (see the contract's criterion 4 branch).
 
+<a id="v65-g4c1-resolver-fix-2026-11-02"></a>
+## v65: C-G4-C1 arm-resolver fix and mismatch diagnostics (2026-11-02)
+
+The first v64 attempt was invalid: the concurrent window was armed with the experiment's graph, while the sampler re-resolves the source every frame with its own resolver. With more than one non-1stperson graph the two resolvers return different objects, so the identity rule aborted the window on the first sampler pass (`source-lost-or-replaced`) — the rule working as designed over a wrong resolver on the arm side. Evidence: [attempt 1](diagnostics/CharacterPanel-g4c1-attempt1-source-identity-20261102-2321.log) (137,183 bytes, SHA-256 `f296c348…`), whose replay still reproduced deterministically.
+
+Build identity `CharacterPanel-scenegraph-v65-g4c1-resolver-fix-adc2acb18a-cl94faaed0c6-20261102T152612Z` (clean tree at `adc2acb18a`); DLL SHA-256 `1b3d60ad3c92701d4b9c7ee116bd951af86ca31211901bc3c8ebc951903e0716` (1,474,048 bytes), PDB SHA-256 `22ef7059bdcfe089e63cd338fe25378a96bd8ae37f36752a139c29b27a75c9ff` (38,522,880 bytes). Changes: arm resolves through `player_graph(*holder)` (the sampler's function) and prints `graph-match=yes|no`; `window-open` adds the graph/behavior/data/set/words pointers; a new `identity-mismatch` row compares prev and now field by field; `window-aborted` now carries `calls/other-graph` so an aborted window still yields the positive-control reading. Criteria unchanged.
+
+Build (2026-11-02 23:26 local): `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v65-g4c1-resolver-fix` + `cmake --build --preset Release`, exit 0, only the pre-existing D9025 notices. Deployment: the v64 trio (DLL `ff00daad…`, PDB `3364ea18…`, the 2,530-byte C1 run INI `f714e05f…`) was backed up to `dist/deploy-backup-20261102-v64/`, then only the DLL/PDB were swapped — the INI stays the C1 run configuration, so the retry differs from attempt 1 by the binary alone. DLL string check confirms the v65 identity, `graph-match=` and `identity-mismatch`.
+
 
