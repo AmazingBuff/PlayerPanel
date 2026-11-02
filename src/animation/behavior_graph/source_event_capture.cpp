@@ -204,8 +204,9 @@ namespace animation::behavior_graph
                 event_ring().dropped());
         }
 
-        void baseline_capture(CaptureState& a_state, RE::hkbBehaviorGraph& a_behavior,
-            std::int32_t const* a_words, std::size_t a_count, std::uint32_t a_actor_id)
+        void baseline_capture(CaptureState& a_state, RE::BShkbAnimationGraph const& a_graph,
+            RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words, std::size_t a_count,
+            std::uint32_t a_actor_id)
         {
             RE::hkbBehaviorGraphData const* const data = a_behavior.data.get();
             for (std::size_t i = 0; i < kPhaseCount; ++i)
@@ -237,9 +238,14 @@ namespace animation::behavior_graph
             for (std::size_t i = 0; i < kPhaseCount; ++i)
                 tracked += fmt::format("{}{}={}", i ? " " : "", kPhaseNames[i],
                     a_state.tracked[i] ? std::to_string(a_state.index[i]) : std::string{ "missing" });
-            logger::info("SOURCE EVENTCAPTURE window-open actor={:08x} words={} nodes={} events-budget={} phases-budget={} seconds={} tracked {}",
+            logger::info("SOURCE EVENTCAPTURE window-open actor={:08x} words={} nodes={} events-budget={} phases-budget={} seconds={} graph={:#x} behavior={:#x} data={:#x} set={:#x} words-ptr={:#x} tracked {}",
                 a_actor_id, a_count, a_state.node_logged, Source_Event_Line_Budget,
-                Source_Phase_Line_Budget, Source_Event_Window.count(), tracked);
+                Source_Phase_Line_Budget, Source_Event_Window.count(),
+                reinterpret_cast<std::uintptr_t>(&a_graph),
+                reinterpret_cast<std::uintptr_t>(&a_behavior),
+                reinterpret_cast<std::uintptr_t>(a_behavior.data.get()),
+                reinterpret_cast<std::uintptr_t>(a_behavior.variableValueSet.get()),
+                reinterpret_cast<std::uintptr_t>(a_words), tracked);
         }
 
         // C-G4-C1: one place that turns a live source graph into an armed window (reset, deadline,
@@ -267,7 +273,7 @@ namespace animation::behavior_graph
                 static_cast<std::size_t>(count)
             };
             s.has_observed = true;
-            baseline_capture(s, a_behavior, words, static_cast<std::size_t>(count), a_actor.GetFormID());
+            baseline_capture(s, a_graph, a_behavior, words, static_cast<std::size_t>(count), a_actor.GetFormID());
             return true;
         }
 
@@ -357,8 +363,11 @@ namespace animation::behavior_graph
         {
             CaptureState& s = capture_state();
             s.window.cancel();
-            logger::info("SOURCE EVENTCAPTURE window-aborted reason={} actor={:08x} events={} phases={}",
-                a_reason, s.actor_id, s.window.event_lines(), s.window.phase_lines());
+            // C-G4-C1: an abort must still carry the liveness counters - the first v64 attempt lost
+            // its positive-control reading exactly here.
+            logger::info("SOURCE EVENTCAPTURE window-aborted reason={} actor={:08x} events={} phases={} calls={} other-graph={}",
+                a_reason, s.actor_id, s.window.event_lines(), s.window.phase_lines(),
+                g_calls.load(std::memory_order_relaxed), g_other_graph.load(std::memory_order_relaxed));
         }
     }
 
@@ -478,23 +487,34 @@ namespace animation::behavior_graph
     {
         if (!source_event_capture_concurrent() || !g_installed.load(std::memory_order_acquire))
             return false;
-        RE::hkbBehaviorGraph* const behavior = a_source_graph.behaviorGraph;
         RE::Actor* const holder = a_source_graph.holder;
-        if (!behavior || !holder)
+        if (!holder)
         {
-            logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason={} actor={:08x}",
-                behavior ? "no-holder" : "no-behavior", a_actor_id);
+            logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=no-holder actor={:08x}", a_actor_id);
+            return false;
+        }
+        // Resolve through the sampler's own function. v64's first attempt armed with the
+        // experiment's graph and the very next sampler pass saw a different graph object (the
+        // controller's resolver prefers the graph whose rootNode is the actor's 3D; this one takes
+        // the last non-1stperson graph), so the identity rule aborted the window as
+        // source-lost-or-replaced. Sharing the resolver makes the identity identical.
+        RE::BShkbAnimationGraph* const graph = player_graph(*holder);
+        RE::hkbBehaviorGraph* const behavior = graph ? graph->behaviorGraph : nullptr;
+        if (!graph || !behavior)
+        {
+            logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=source-unresolved actor={:08x}", a_actor_id);
             return false;
         }
         if (capture_state().window.active())
             close_window("rearm");
-        if (!begin_capture_window(*holder, a_source_graph, *behavior))
+        if (!begin_capture_window(*holder, *graph, *behavior))
         {
             logger::warn("SOURCE EVENTCAPTURE concurrent-arm-skip reason=source-fields actor={:08x}", a_actor_id);
             return false;
         }
-        logger::info("SOURCE EVENTCAPTURE concurrent-armed actor={:08x} behavior={:#x}",
-            a_actor_id, reinterpret_cast<std::uintptr_t>(behavior));
+        logger::info("SOURCE EVENTCAPTURE concurrent-armed actor={:08x} graph={:#x} graph-match={} behavior={:#x}",
+            a_actor_id, reinterpret_cast<std::uintptr_t>(graph), graph == &a_source_graph ? "yes" : "no",
+            reinterpret_cast<std::uintptr_t>(behavior));
         return true;
     }
 
@@ -571,7 +591,7 @@ namespace animation::behavior_graph
         {
             s.observed = source;
             s.has_observed = true;
-            baseline_capture(s, *behavior, words, source.count, actor.GetFormID());
+            baseline_capture(s, *graph, *behavior, words, source.count, actor.GetFormID());
             drain_events(s, *behavior);
             if (s.window.active())
                 sample_phase(s, *behavior, words, source.count);
@@ -583,6 +603,12 @@ namespace animation::behavior_graph
             previous.variable_set != source.variable_set || previous.words != source.words ||
             previous.count != source.count)
         {
+            // C-G4-C1: name the field that moved. The v64 attempt aborted with no delta and cost a
+            // session to diagnose.
+            logger::info("SOURCE EVENTCAPTURE identity-mismatch actor={:08x} prev(actor={:#x} graph={:#x} behavior={:#x} data={:#x} set={:#x} words={:#x} count={}) now(actor={:#x} graph={:#x} behavior={:#x} data={:#x} set={:#x} words={:#x} count={})",
+                s.actor_id, previous.actor, previous.graph, previous.behavior, previous.data,
+                previous.variable_set, previous.words, previous.count, source.actor, source.graph,
+                source.behavior, source.data, source.variable_set, source.words, source.count);
             abort_capture("source-lost-or-replaced");
             return;
         }

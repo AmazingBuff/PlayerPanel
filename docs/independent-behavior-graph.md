@@ -3034,3 +3034,18 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 - **计数器**：`record_source_event` 在 gate 检查**之前**自增 `calls`；gate 在位且目标非源图时自增 `other-graph`；只有源图命中才入环（保持"单一生产者=源图派发者"的 SPSC 约束）。关闭行 `SOURCE EVENTCAPTURE window-closed reason=… events=… phases=… calls=… other-graph=… ring-dropped=…` 一行为正控与隔离签名共用。
 - **上机门（用户执行）**：开面板一次 → 回放自动跑完 → 保持面板 2–3 秒让显示段产生步数 → **15 秒内关面板**。判读：`installed mode=concurrent`；`window-open` 早于两条 `result=dispatched`；`window-closed reason=display-close` 且 `calls ≥ 2`、`other-graph ≥ 2`、`events=0`、`ring-dropped=0`。以 `expired` 关闭时只接受注入段读数（见判据 4 的分支），不得据此关闭 PENDING 2。
 
+**首轮尝试（2026-11-02 23:21–23:23，v64；[日志](diagnostics/CharacterPanel-g4c1-attempt1-source-identity-20261102-2321.log) 137,183 字节 SHA-256 `f296c348…`）：无效 —— 窗口武装后第一个采样帧即中止，正控未取得。**
+
+| 项 | 观测 |
+| --- | --- |
+| 安装 | `installed mode=concurrent target=0x7ff7259958a0 … head=48 8b c4 48 89 48 08`（头字节核验通过） |
+| 武装 | `window-open … words=652 nodes=106 tracked …` → `concurrent-armed actor=00000014 behavior=0x221f3875900`，两行都在两条 `result=dispatched` **之前** |
+| 回放 | 本体正常：两次 `result=dispatched`、`drive-done` `bc160a8c…/63f638a6…/c407cb4e…`（第六次复现）、`source-drift=none`、零 `[E]` |
+| 中止 | `window-aborted reason=source-lost-or-replaced events=0 phases=0` —— 身份规则在第一次采样判定源被替换 |
+
+**根因（代码级，非引擎异常）**：并发武装用实验侧的图（`source_graph`，来自控制器的 `source_graph()` 解析器——优先 `rootNode == actor.Get3D(false)` 的图、回退首个非 1stperson），而采样器每帧用 `player_graph()` 自己解析（要求 `behaviorGraph` 非空、跳过含 `1stperson` 的名字、取**最后一个**匹配）。两个解析器在管理器有多张非 1stperson 图时返回不同对象 → 图指针不同 → 身份不符 → 正确触发中止（规则本身没错，是武装侧用了另一套解析）。
+
+**仪器缺陷（同轮暴露，已修）**：`window-aborted` 行当时不打印 `calls/other-graph`，`identity-mismatch` 也不存在——那一次连正控读数都没留下，只能靠重跑补救。
+
+**修正（v65，判据不变）**：并发武装改为调用与采样器**同一个** `player_graph(*holder)`，并在 `concurrent-armed` 行记录 `graph-match=yes|no`（实验图与解析图是否同一对象）；`window-open` 行补 `graph/behavior/data/set/words-ptr`；新增 `identity-mismatch` 行逐字段对比 prev/now；`window-aborted` 补 `calls/other-graph`。
+
