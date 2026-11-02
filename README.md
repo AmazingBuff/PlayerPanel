@@ -12,7 +12,7 @@ G4 的 [2026-11-01 A/B/C PASSED](docs/independent-behavior-graph.md#handoff-2026
 
 候选与控制器源图共享行为 data 和绑定集，变量活值分储、从 authored defaults 初始化；共享资源与重复候选 pose 哈希均不能证明与源完整姿态、时钟或层混合一致。G2 的实际写骨 109/116、三条缺失名未知，以及同 controller 来源替换/frozen-only 等边界限制继续保留。
 
-最新**记录安装为 v65**（[身份/哈希与尝试记录](docs/build.md#v65-g4c1-resolver-fix-2026-11-02)，DLL `1b3d60ad…` / PDB `22ef7059…`），部署 INI 仍是 C1 运行配置 `f714e05f…`（与首轮尝试同一份，重试只换了二进制）；v64 与 v63 三件套分别备份在 `dist/deploy-backup-20261102-v64/` 与 `dist/deploy-backup-20261102-v63/`。A4 的运行记录见 [C-G4-A4](docs/independent-behavior-graph.md#c-g4-a4-numeric-types)。下面列出主要关闭键（仓库样例仍为 dormant 默认）；完整部署记录见[当前部署与开关](docs/independent-behavior-graph.md#deploy-state)。
+最新**记录安装为 v66**（[身份/哈希与三轮尝试记录](docs/build.md#v66-g4c1-pinned-graph-2026-11-02)，DLL `190c7236…` / PDB `b4f2596d…`），部署 INI 仍是 C1 运行配置 `f714e05f…`（三轮尝试同一份，每轮只换了二进制）；v65/v64/v63 三件套分别备份在 `dist/deploy-backup-20261102-v65/`、`-v64/`、`-v63/`。A4 的运行记录见 [C-G4-A4](docs/independent-behavior-graph.md#c-g4-a4-numeric-types)。下面列出主要关闭键（仓库样例仍为 dormant 默认）；完整部署记录见[当前部署与开关](docs/independent-behavior-graph.md#deploy-state)。
 
 ```ini
 [Experiment]

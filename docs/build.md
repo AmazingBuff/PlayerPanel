@@ -937,4 +937,15 @@ Build identity `CharacterPanel-scenegraph-v65-g4c1-resolver-fix-adc2acb18a-cl94f
 
 Build (2026-11-02 23:26 local): `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v65-g4c1-resolver-fix` + `cmake --build --preset Release`, exit 0, only the pre-existing D9025 notices. Deployment: the v64 trio (DLL `ff00daad…`, PDB `3364ea18…`, the 2,530-byte C1 run INI `f714e05f…`) was backed up to `dist/deploy-backup-20261102-v64/`, then only the DLL/PDB were swapped — the INI stays the C1 run configuration, so the retry differs from attempt 1 by the binary alone. DLL string check confirms the v65 identity, `graph-match=` and `identity-mismatch`.
 
+<a id="v66-g4c1-pinned-graph-2026-11-02"></a>
+## v66: pin the concurrent window to the candidate's source graph (2026-11-02)
+
+Attempt 2 (v65) validated the instrument mechanics but watched the wrong graph: `window-open` armed `words=463 nodes=36 data=0x1fec5517960`, while the candidate's source is `words=652 nodes=106 data=0x1feb4eb7510` (the `load-bindings` 15,203-binding set and `pre-activate` `behavior-data` both belong to the latter). Both resolvers walk the same manager list but prefer different objects — `player_graph()` takes the last non-1stperson graph, the controller's `source_graph()` prefers the graph whose `rootNode` is the actor's 3D. A zero on the non-source graph cannot answer the leak criterion, so attempt 2 is filed as inconclusive ([attempt 2](diagnostics/CharacterPanel-g4c1-attempt2-wrong-graph-20261102-2338.log), 137,435 bytes, SHA-256 `8a478311…`).
+
+Build identity `CharacterPanel-scenegraph-v66-g4c1-pinned-graph-0ab9571833-cl94faaed0c6-20261102T154311Z` (clean tree at `0ab9571833`); DLL SHA-256 `190c7236b7de5299923fb32a3f5727dce0325dcbb68bb9ba41acf33a1962e7ad` (1,474,048 bytes), PDB SHA-256 `b4f2596d6e61ec7aa2ff61b25d75d65f2f737605967110a37a83871a4e2e4c7b` (38,522,880 bytes). Change: concurrent windows pin the experiment's graph — the arm validates it with `managed_graph(*holder, &a_source_graph)` and the sampler re-validates membership every frame (pointer comparison only, so a freed graph is never dereferenced); legacy F7 windows keep `player_graph()`. `window-open` therefore prints the pinned graph's words/nodes/data, checkable against the `OAR CONTEXT scan` and `load-bindings` rows of the same log.
+
+Build (2026-11-02 23:43 local): configure + build exit 0, only the pre-existing D9025 notices. Deployment: the v65 trio was backed up to `dist/deploy-backup-20261102-v65/`, only DLL/PDB swapped; the INI stays the C1 run configuration (`f714e05f…`), so attempt 3 differs from attempt 2 by the binary alone. DLL string check confirms the v66 identity, `source-not-in-manager` and `pinned=yes`.
+
+Attempt-3 acceptance (unchanged criteria): `installed mode=concurrent`, `window-open` before both `result=dispatched` rows with `words=652 nodes=106` (same source as the scan row), `window-closed reason=display-close` with `calls ≥ 2`, `other-graph ≥ 2`, `events=0`, `ring-dropped=0`.
+
 

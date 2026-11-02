@@ -93,8 +93,8 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **最新记录安装：v65**（2026-11-02 重装，C1 武装解析修正），身份 `CharacterPanel-scenegraph-v65-g4c1-resolver-fix-adc2acb18a-cl94faaed0c6-20261102T152612Z`；DLL 1,474,048 字节 `1b3d60ad…`、PDB 38,522,880 字节 `22ef7059…`，完整哈希与修正说明见 [v65 build](build.md#v65-g4c1-resolver-fix-2026-11-02)。记录路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
-- **当前部署 INI：C1 运行配置**（与 v64 尝试同一份），2,530 字节 `f714e05f…`；A4 键集 + `SourceEventCapture=concurrent`。v64 三件套（`ff00daad…`/`3364ea18…`/同份 INI）在 `dist/deploy-backup-20261102-v64/`，v63 dormant 三件套（`2c81435c…`/`c8e361ec…`/`27f481f5…`）在 `dist/deploy-backup-20261102-v63/`，可整组回退。仓库样例仍为 dormant 默认。
+- **最新记录安装：v66**（2026-11-02 重装，C1 钉住候选源图），身份 `CharacterPanel-scenegraph-v66-g4c1-pinned-graph-0ab9571833-cl94faaed0c6-20261102T154311Z`；DLL 1,474,048 字节 `190c7236…`、PDB 38,522,880 字节 `b4f2596d…`，完整哈希与判读见 [v66 build](build.md#v66-g4c1-pinned-graph-2026-11-02)。记录路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
+- **当前部署 INI：C1 运行配置**（三轮尝试同一份），2,530 字节 `f714e05f…`；A4 键集 + `SourceEventCapture=concurrent`。v65/v64/v63 三件套分别在 `dist/deploy-backup-20261102-v65/`、`-v64/`、`-v63/`，可整组回退。仓库样例仍为 dormant 默认。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
 
@@ -2993,7 +2993,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 <a id="c-g4-c1-concurrent-events"></a>
 ## C-G4-C1：兼容的源事件观察窗口（评审 → 实现，2026-11-02）
 
-> **状态：评审定稿、已实现、已构建并已部署（v65 修正版），待上机。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定。
+> **状态：评审定稿、已实现、已构建并已部署（v66 钉图版），待第三轮上机。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定。
 
 **问题陈述（三个结构事实，缺一不可）**：
 
