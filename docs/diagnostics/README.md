@@ -1,6 +1,6 @@
 # 诊断证据保留与恢复
 
-更新：2026-11-02。当前结论以[独立图证据交接](../independent-behavior-graph.md#handoff-20261102-evidence)为准：G3-B 相位回放通过，G4 保留历史 PASSED、当前 A/C 两项证据 PENDING，G5 运行验收后置、G6 待验。本页仅管理证据导航，不生成替代原始日志。
+更新：2026-11-02。当前结论以[独立图证据交接](../independent-behavior-graph.md#handoff-20261102-evidence)为准：G3-B 相位回放通过，G4 保留历史 PASSED、A 项已由 [C-G4-A4](../independent-behavior-graph.md#c-g4-a4-numeric-types) 的 v63 运行关闭，仅剩 C 项 PENDING，G5 运行验收后置、G6 待验。本页仅管理证据导航，不生成替代原始日志。
 
 ## 本次退役范围与理由
 
