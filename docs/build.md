@@ -1,23 +1,22 @@
 # Build CharacterPanel
 
-The current local [v44 pacing correction](#v44-display-clock-2026-10-29) uses elapsed display time for fixed native steps. Its clock tests/build are local only; latest recorded installation remains v41.
+更新：2026-11-02。[当前证据交接](independent-behavior-graph.md#handoff-20261102-evidence)拥有运行结论：G1/G2 有界通过、G3-A 成立、G3-B/F 相位回放通过；G4 历史 PASSED 保留，当前 numeric 全窗类型覆盖与兼容源事件窗口两项 PENDING。G5 可准备协议、运行验收后置，G6 待验。本次仅文档整理，没有新构建、测试、部署或游戏结果。
 
-The newest local artifact is [v46](#v46-retained-copy-ledger-2026-10-29), with complete ordinary retired-copy handle accounting. The [v45](#v45-source-list-2026-10-29) 30-unit source list still excludes preserved untracked util.cpp. No deployment/game run occurred.
+最新记录安装为 [v62](#v62-g4a3-scan-anchor-2026-10-31)，DLL `cdb8a5ed…` / PDB `a7020045…`，dormant INI `27f481f5…`；不是重新读取安装目录的核验。当前 `PLUGIN_SOURCES` 实数 **32**，保留的未跟踪 util.cpp 不在编译清单。v45 的 30 与 v60 叙述的 33 保留为日期记录，后者计数误差以前述当前清单为准。
 
-For the next operator session use the canonical [v46 first-game-pass procedure](scene-graph.md#v46-manual-regression), including pair/settings backup, restart and two pending workflows. The dated build records below describe operations at artifact creation: their “no commit” statements do not prohibit later source commits, and a source commit does not rebuild or relabel an archived DLL/PDB. This comment/documentation pass reuses the recorded tests and v46 build without rerunning them.
+[v46 正常工作流](scene-graph.md#v46-manual-regression)已于 2026-10-30 用同源重建身份观察，非 20261029 归档逐字节验证。以下日期段落描述工件生成/当次操作；历史“未部署/未上机”不代表后来仍未执行，source commit 不会重建或重标 DLL/PDB。
 
 ## Purpose
 
 Build the current Windows DLL from this checkout. Release is the only configure/build preset and `CharacterPanel` is the only first-party target. The result is `build/Release/CharacterPanel.dll` with matching debugging symbols.
 
 <a id="current-research-status-2026-10-26"></a>
-## Current research status (2026-10-29)
+<a id="current-research-status-2026-10-29"></a>
+## Current research status (2026-11-02)
 
-[G1 passes revised Option A; G2 passes within its measured scope](independent-behavior-graph.md#current-status). V33 records candidate semantic motion 120/120, 109/116 assignments, unchanged source controls and user-confirmed continuous display. V34 records reset/reopen/F7/post-load fallback; the exact old rejection cause, same-controller source/generation replacement and frozen-only rejection remain unverified. V41 establishes a usable named settled G3-A phase trajectory, with external input roles/types/event timing pending before G3-B.
+[G1/G2 的限定通过、G3-A 与 G3-B/F 相位通过](independent-behavior-graph.md#verification-matrix)均有留存运行证据。G2 的 109/116 写骨与三未知缺失名、同 controller 来源/generation 替换和 frozen-only 等限制不变；G3-B 不能替代完整姿态验收。
 
-The latest recorded installation is [v41](#v41-panel-gate-2026-10-29), DLL `3b8f8efe…`, `SourceTimeline=true` and the other three experiment keys off. Repository defaults have all four off. [V42](#v42-residual-corrections-2026-10-29) is local only, adding cap8 missing names and one bounded rejection reason. No new game run/deployment is claimed. G4–G6 remain pending; retained loaded-graph teardown is NO-GO, and G6 still covers non-exempt references/callbacks/sinks/history, invalidation, source restoration and repeated-session convergence. Dated sections below preserve their build-time states; later runtime verdicts live in the canonical record.
-
-The latest local source-recorder correction is [v43](#v43-source-sessions-2026-10-29): independent F7 budgets/baselines and source/world invalidation. It has no deployment or game result and preserves the historical G2/G3-A conclusions.
+G4 的两项 [PENDING](independent-behavior-graph.md#handoff-20261102-evidence)涉及 numeric 类型明细被前 32 条总求值预算截断，以及源事件捕获关闭/安装门拒绝 inject 共存；需要另行评审兼容仪器，不是 INI-toggle 重跑。共享 data/绑定与候选哈希复现不证明源候选完整姿态/时钟/层一致。G5 未预注册/未运行，G6 保持完整非豁免生命周期范围；装载 teardown NO-GO。
 
 <a id="v18-frame-trace-build"></a>
 ## V18 bounded frame-trace verification (2026-10-26)
@@ -578,7 +577,7 @@ cmake --build --preset Release
 
 ## Architecture and generated outputs
 
-[CMakeLists.txt](../CMakeLists.txt) lists 30 intended first-party `.cpp` translation units explicitly in sorted `PLUGIN_SOURCES`; headers retain their existing `CONFIGURE_DEPENDS` glob. It links CommonLibSSE and the existing installed libraries, embeds HLSL, and generates plugin/version metadata. No additional first-party executable or test target is configured.
+[CMakeLists.txt](../CMakeLists.txt) lists 32 intended first-party `.cpp` translation units explicitly in sorted `PLUGIN_SOURCES`; headers retain their existing `CONFIGURE_DEPENDS` glob. It links CommonLibSSE and the existing installed libraries, embeds HLSL, and generates plugin/version metadata. No additional first-party executable or test target is configured.
 
 OAR and DAC sources are nested under `src/animation/oar` and `src/animation/dac`. The explicit translation-unit list, existing header glob and `src` include root cover both. When adding/removing an intended plugin `.cpp`, update the sorted `PLUGIN_SOURCES` list and reconfigure; placing an unlisted file under `src` does not compile it. The list is declared directly in CMake and adds no Git runtime requirement for archived source builds. No separate target or namespace change is needed.
 
@@ -875,6 +874,8 @@ The same v59 binary also carries the [C-G3B-F full-replay acceptance](independen
 <a id="v60-g4-oar-context-2026-10-31"></a>
 ## v60: C-G4-A instrument (2026-10-31)
 
+> **2026-11-02 计数更正**：下方 `PLUGIN_SOURCES 33` 为旧记录误差；当前同基线 CMake 实数 32，不改工件身份，也不据此宣称重建。
+
 Build identity `CharacterPanel-scenegraph-behavior-graph-v60-g4-oar-context-20261031-fdbd414f45-cl94faaed0c6-20261031T143920Z` (clean tree at `fdbd414f45`; two earlier same-label builds were superseded in-session before any run — one from the uncommitted tree carried `+dirty`, one at `d2fbc4bb56` predated the tally arm/take hardening in [candidate_window.h](../src/animation/behavior_graph/candidate_window.h) — and neither was deployed); DLL SHA-256 `b519b21d62ea90045606cd5790226b15f0c9380e25cff50ea3260fa9a83b4800` (1,456,128 bytes), PDB SHA-256 `d4aa2f6e9904aed592d984460671a9443f664b8b49534370149e4b15340aee8d` (38,187,008 bytes). Source set unchanged (`PLUGIN_SOURCES` 33; the new `candidate_window.h` is header-only and picked up by the existing header glob). The engine-free `behavior_graph_display_step_test` (compiles the touched `drive_step_policy.h`) passed under g++ C++23 `-Wall -Wextra -Werror` ("2 display-step regression cases passed").
 
 Deployment (2026-10-31) backed the v59 trio up to `dist/deploy-backup-20261031-v60/` (DLL `013e1bdc…`, PDB `8b8fd16f…`, dormant INI 2,013 bytes `65e57401…`) and installed the v60 pair. The deployed dormant INI was rebuilt (2,147 bytes, SHA-256 `27f481f5…`): it fixes the duplicated `CandidateUnequipEvent` key the S6+F deployments had stacked (same value, no behavioral effect) and adds `OarContextWatch=false`; all 20 keys were printed back and asserted after writing. Repository sample keeps the new key false. No game run yet — the [C-G4 contract](independent-behavior-graph.md#c-g4-context-isolation) awaits the user's authorized session.
@@ -886,12 +887,16 @@ First game run (2026-10-31 22:58, identity confirmed in the live log): **G4-A un
 <a id="v61-g4a2-clip-identity-2026-10-31"></a>
 ## v61: C-G4-A2 clip-identity instrument (2026-10-31)
 
+> **2026-11-02 仪器语义更正**：下方保留当时记录；numeric site 命中只表示 numeric 访问器被调用，只有 type3 才属这里的图变量访问，site 总数不能推出每次读值类型。详见[全窗类型待办](independent-behavior-graph.md#g4-followup-numeric)。
+
 Build identity `CharacterPanel-scenegraph-behavior-graph-v61-g4a2-clip-identity-20261031-57fa4affab-cl94faaed0c6-20261031T152526Z` (clean tree at `57fa4affab`); DLL SHA-256 `d1583a7e3d3e4e587ec6874fd12b6698197ee7047a8269a57f3603221cb82a26` (1,460,736 bytes), PDB SHA-256 `f41d5e7469ec8c00a763e64529f69006b8c2e84d6ec4dc3edb65b7d2fe3d707b` (38,277,120 bytes). A2 adds per-detour-site tallies (a numeric hit means a graph variable was fetched), clip-owner classification of every hit against the candidate's and the source's `hkbBehaviorGraph::activeNodes` (audited NodeList layout: entries@+0, count@+8, 0x90-byte entries, node@+0x58), clip `animationName` in hit rows, and four cumulative segment snapshots (post-activate / post-weapequip / at-settle / post-unequip). Hit-row cap raised 8→32. All gated on the existing `OarContextWatch` key. The engine-free `behavior_graph_display_step_test` passed (`-Wall -Wextra -Werror`).
 
 Deployment (2026-10-31) backed the v60 trio up to `dist/deploy-backup-20261031-v61/` (DLL `b519b21d…`, PDB `d4aa2f6e…`, dormant INI `27f481f5…`) and installed the v61 pair. The deployed INI switched to the A2 run configuration (2,151 bytes, SHA-256 `60ff8f27…` — identical key set to the C-G4-A run 1 config; the key-by-key assert caught a dormant-default residue `CandidateInputVariable=IsEquipping` that the derivation missed, fixed to empty before finalizing). No game run yet — the A2 session repeats the run-1 procedure verbatim.
 
 <a id="v62-g4a3-scan-anchor-2026-10-31"></a>
 ## v62: C-G4-A3 scan-anchor micro-instrument (2026-10-31)
+
+> **2026-11-02 前向更正**：下方 G4-A/G4 PASSED 保留为历史裁定。“every numeric hit/type0/zero graph-variable reads”实际只有 7 条 numeric 类型明细（全窗总数 72），A 全窗覆盖 PENDING；B+C 源事件观察器关闭且安装门不兼容 inject，C 源事件泄漏证据 PENDING。B 仅支持装备族稳定。当前状态/两项后续见[证据交接](independent-behavior-graph.md#handoff-20261102-evidence)，本次不实现/构建/部署。
 
 Build identity `CharacterPanel-scenegraph-behavior-graph-v62-g4a3-scan-anchor-20261031-2dbe98c785-cl94faaed0c6-20261031T154250Z` (clean tree at `2dbe98c785`; two earlier same-label builds carried `+dirty` from uncommitted run-record docs and were discarded); DLL SHA-256 `cdb8a5ed72f7132d93f4cef8f41bdddf4664814f508a9e9ff4aeac88a0bc2060` (1,461,760 bytes), PDB SHA-256 `a70200453b42ee5a4b450655d8012ed32150896fb749cc011ffb7e9cd6d058d9` (38,383,616 bytes). A3 adds: the raw numeric type value in hit rows (type 3 = graph-variable accessor — the A2 run's 72 nameless numeric hits were ambiguous), an `OAR CONTEXT scan` row at candidate-list arm time (entries/count of both NodeLists, anchored against the DriveState `active-nodes=…/N` readings), and the live candidate active count in every hit row (interpreting the neither bucket). Engine-free `behavior_graph_display_step_test` passed.
 

@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-01（G4 收官）。**新会话先读[当前状态与后续规划（2026-11-01 G4 收官交接）](#handoff-20261101-g4)**——G4 已 PASSED（A/B/C 三段：OAR 求值语境隔离、世界历史零消耗、关闭清理与 sink），机制增补与残余见该节；逐轮记录在 [C-G4 契约](#c-g4-context-isolation)。**下一阶段为 G5（完整姿态对照），第一步是预注册阈值与逐骨覆盖判据**，其后 G6，排序不变。10-31 深夜/晚间与 10-29 交接节仅作历史排序参考。测量结果以[验证总表](#verification-matrix)为准。原始日志和历史契约不变。
+更新：2026-11-02。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为保留的历史裁定；当前证据完整性有 **A numeric 全窗覆盖、C 源事件泄漏两项 PENDING**。G5 可准备预注册，运行验收后置于两项关闭；G6 待验。历史实验与原始读数保留，前向更正见各节；四份冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
 
 <a id="current-status"></a>
 
@@ -10,20 +10,24 @@
 | --- | --- | --- |
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)）；"全局登记计数"的旧静态结论被 v35 上机读数证伪、判为无锚点（[更正](#g1-teardown-audit)）。 |
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
-| G3–G6 | **G3-A 成立；G3-B 与 G4–G6 未执行** | G3-A 已按名字取得同一单手武器 Equip→Idle→Unequip 的 settled 观测序列与相位（[v41](#g3-a-contract)）；候选是否自行走完同一顺序（G3-B）、OAR 语境隔离、完整姿态对照及生命周期仍需分别验收。 |
+| G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
+| G4 | **历史 A/B/C PASSED；当前两项证据 PENDING** | [A 全窗 numeric 类型](#g4-followup-numeric)、[C 兼容源事件窗口](#g4-followup-source-events)待补；B 只建立当前装备族选择稳定，不普遍证明 Random/sequence/PlayOnce 隔离。 |
+| G5 | **未预注册、未运行** | 可先准备阈值与逐骨/层覆盖协议，运行验收须先关闭 G4 两项缺口。 |
+| G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
 [v33](#g2-v33-run)（v32 代码的重建）在 2026-10-28 22:28 上机取得第一个非中断窗口：120 次 eligible 显示调用里候选语义运动 120/120（1e-6、符号不变）、实际写骨 109/116（`missing=7`，旧日志只列 4 个控制/挂点标签、另 3 个未知；标签不能证明可忽略，`109+7+0=116` 自洽）、源侧 `drift=none` 且 before=after、**画面连续运动经用户确认**。同一窗口的门读数 `active/children=true`、`numAnim=numData=116`，从运行侧确认 v30 那组 `children=0`/`numData=62016` 是读错对象。G2 因此按原范围判 PASSED；v34 后续补齐四条已观察边界，确切拒绝原因、同 controller 来源替换和 frozen-only 拒绝仍未验，装载销毁及 G3-B/G4–G6 不由此通过。
 
-[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口。相同代码重建为 v33 后，完整窗口与 v34 四条边界均已有运行记录。最新记录安装为 v41，仅 SourceTimeline 开启；v42 是本地诊断补全，v43 是独立源记录窗口修正，两者均未部署。默认产品仍走装备驱动 OAR 路径；缓存回放不作为既定方向。
+[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口。相同代码重建为 v33 后，完整窗口与 v34 四条边界均已有运行记录。最新记录安装为 v62、INI dormant（见[部署](#deploy-state)）；v42/v43 的“本地未部署”只描述当时工件，后续 v46-20261030 已观察正常工作流。默认产品仍走装备驱动 OAR 路径；缓存回放不作为既定方向。
 
 
 
 <a id="verification-matrix"></a>
-## 验证总表（2026-10-29，含 v33/v34/v41 证据）
+<a id="验证总表2026-10-29含-v33v34v41-证据"></a>
+## 验证总表（2026-11-02，含 G3-B/F 与 G4 证据复核）
 
-归档运行结果涵盖 v33 的连续显示窗口、v34 的四条边界及 v41 的 G3-A settled 相位轨迹。v42 只补全有界诊断与文档，v43 只修正源记录窗口，均未上机。旧 raw119/120 和 bones=116 原始读数保留；当前候选运动、实际应用与视觉结论分别由 v33 的对应证据支持。
+归档结果包括 v33/v34 显示及边界、v41 源相位、v46-20261030 正常工作流、G3-B/F 完整相位回放和 G4 A/B/C 历史裁定。本次只复核文档与保留证据，不新增运行；G4 两项 PENDING 不由历史 PASSED 自动关闭。旧 raw119/120、bones=116 与各工件的日期/身份不变。
 
 ### 关卡
 
@@ -31,7 +35,10 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | --- | --- | --- |
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
-| G3–G6 | G3-A 成立；G3-B 与 G4–G6 未执行 | G3-A 的观测相位轨迹见 [v41 记录](#g3-a-contract) |
+| G3 | G3-A 成立；**G3-B PASSED（相位序列）** | [F](#c-g3b-f-full-replay)：两事件复现 0→10→1→12→0；完整姿态另验 |
+| G4 | **历史 PASSED；当前 A/C 两项 PENDING** | [numeric 全窗覆盖](#g4-followup-numeric)、[源事件兼容观察](#g4-followup-source-events)；B 限装备族选择稳定 |
+| G5 | 未预注册、未运行 | 可准备协议，运行验收先闭合 G4 缺口 |
+| G6 | PENDING | 非豁免生命周期、源恢复与重复会话收敛未证 |
 
 ### 逐轮实验（本系列）
 
@@ -79,17 +86,17 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | 场景应用（物理、武器挂载交互） | 未验 |
 | 装载图停用/销毁 | **判为 NO-GO（2026-10-28 审计）**：`Deactivate` 对 `activeNodes` 无空检查，且候选与源共享 `rootGenerator`，未证活动节点条目是克隆；污染源图比崩溃更糟。收益只是每进程一张图的登记与内存，不阻塞 G3–G6。见[审计](#g1-teardown-audit) |
 | 全局登记计数 | **无锚点、不立项**：v35 探针在 23:16 上机读回 `300474432->300474432`，重审指令确认 `[0x315C950]+0x228` 是不变的奇偶/序列值、`inc` 未写回、`63529` 只是无锁追加而非登记；旧审计那句话判为误读（[更正](#g1-teardown-audit)） |
-| G3–G6、独立 OAR 语境 | **G3-A 成立**（源序列已按名字取得）；G3-B（候选自行走完同一顺序）、G4–G6 未执行 |
+| G3–G6、独立 OAR 语境 | G3-A 成立、G3-B/F 相位回放通过；G4 历史裁定保留，当前 A/C 两项 PENDING；G5/G6 未验，见[当前交接](#handoff-20261102-evidence) |
 | 缺失项逐名与语义核对 | v33 的 `missing=7` 只按预算列了 4 个名字，其余 3 个未列名，不能逐一断言全部非骨 |
 | 帧率无关性 | [v44 本地代码](#v44-display-clock)按 eligible elapsed 时间累计 60 Hz，100 ms/六步上限；30/120 FPS 两个离线场景各在两秒产生 120 步。游戏速率/画面未验；v33/v34 的每调用记录仍为历史 |
 
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **最新记录安装：2026-10-29 00:25 的 v41**，DLL `3b8f8efe…`、PDB `e99d04cd…`，完整身份/哈希见 [v41 build](build.md#v41-panel-gate-2026-10-29)，MO2 路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
-- 该次部署 INI 为 `SourceTimeline=true`、`IndependentGraph=off`、`DisplayPose=false`、`DisplayStep=false`。仓库样例四键均 off；历史 v36 全关记录不再是当前安装。
-- v33 曾跑过完整窗口和 v34 四条边界；v31/v32 未部署的重建缘由保留在 [v33 build](build.md#v33-rebuild-2026-10-28)。
-- **v42 仅本地构建，未部署/启动游戏**；其能力与待采证据见 [v42](#v42-residual-corrections)。
+- **最新记录安装：v62**，身份 `CharacterPanel-scenegraph-behavior-graph-v62-g4a3-scan-anchor-20261031-2dbe98c785-cl94faaed0c6-20261031T154250Z`；DLL 1,461,760 字节 `cdb8a5ed…`、PDB 38,383,616 字节 `a7020045…`，完整哈希见 [v62 build](build.md#v62-g4a3-scan-anchor-2026-10-31)。记录路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
+- 11-01 收尾记录：部署 INI dormant，2,147 字节 `27f481f5…`，实验开关 off；不是 B+C 的运行配置，也不是本次重新读取安装目录所得的证明。仓库样例不变。
+- v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
+- 本次仅文档及四份日志退役，不构建、部署、改 INI 或启动游戏。后续仪器须另立评审/实现范围。
 
 ### 测试包清单
 
@@ -1946,10 +1953,47 @@ BehaviorGraphProbe=true
 
 历史 v20 选择[v20受控原生入口](#g2-v20-generation-entry)，其机器码依据与manager可选性见[audit22](behavior-graph-construction-audit.md#audit22)。先取得相同v19配方改用63589(&mode0)的头部/pose/源控制证据，再决定实际generation/output/apply问题；不先登记manager或制造sink/种子。旧audit19/20方向已由后验审计更新，原记录保留。
 
-最新归档运行：G3-A v41（2026-10-29 00:26）已取得源图 Equip→Idle→Unequip 的 settled 相位轨迹（非完整外部输入 trace）；G2 的显示窗口与四条边界均已成立。**后续问题不再在这里列**，改由[当前状态与后续规划](#handoff-20261029)统一排序（G3-B → G4 → G5 → G6）。
+早期归档运行：G3-A v41（2026-10-29 00:26）已取得源图 Equip→Idle→Unequip 的 settled 相位轨迹（非完整外部输入 trace）；G2 的显示窗口与四条边界均已成立。**后续问题不再在这里列**，改由[当前证据交接](#handoff-20261102-evidence)统一排序（G4 两项缺口 → G5 → G6）。
+
+<a id="handoff-20261102-evidence"></a>
+## 当前证据交接（2026-11-02）
+
+本节接替下方 11-01 收官摘要。**保留历史 PASSED，当前 G4 证据完整性仍有两项 PENDING**；本次仅整理文档/日志，不实现仪器、不构建/部署/上机。
+
+- **已证**：G1 修订方案 A、G2 v33/v34 有界通过；G3-A 有源 settled 相位，G3-B/[F](#c-g3b-f-full-replay)以 `WeapEquip`(2) + `Unequip`(144) 两次外部注入复现 0→10→1→12→0，装备/卸下段分别 step 49/21 自退，`source-drift=none`。S3/S4/S5 的负结果仅否定各自名字/写集/时机，E1 零 58377 命中仅否定该观察路由，不能推出无外部事件。
+- **资源与活态分开**：候选与控制器源图共享 `hkbBehaviorGraphData`（652 项、对齐 652/0/0）及 15,203 项绑定集，候选变量活值分储、激活前不存在并从 authored defaults 初始化。共享绑定、候选跨轮 pose 哈希相同只支持资源对应/候选确定性，不证明源候选完整姿态、时钟或全部层/权重一致；`owner=neither` 也不单独识别读值来源。
+- **G4 已有证据的范围**：A3 全窗 2,043 次求值，`overlaps=0`、owner=cand:0/src:0/neither:2043、扫描锚 cand97/src106；这些与模板级求值解释相容，但不能替代下列 numeric 全窗计数。B-v2 A/A 与 B 的弓→剑→法术逐族选择稳定；Start/Loop/Loop2 尾缀已预先排除，故不普遍证明 Random/sequence/PlayOnce 历史无消耗。C 已观察 5/5 capture accepted、EquipSink 修订 10→14、DAC restore matched ×3；这些不包含源事件泄漏观测或完整生命周期收敛。
+- **记录部署**：v62 DLL `cdb8a5ed…` / PDB `a7020045…`、dormant INI `27f481f5…`；完整身份见[部署](#deploy-state)。v46 两类正常工作流已在 **20261030 重建**观察，非 20261029 归档逐字节证据；普通副本仍无 native 内存上界。[DCMF](community-reference-supplement.md#dcmf-reference)仅参考/后置；[idle-start 每圈重放](animation.md#idle-start-replay)是独立未决问题。
+- **排序**：先关闭下面两项 G4 证据缺口；G5 可并行准备预注册的误差阈值、有效骨与贡献层/混合/速度覆盖，**运行验收后置**，目前未预注册/未运行；之后 G6（源恢复、任务失效、引用/回调/sink/历史与重复会话收敛）。装载 teardown NO-GO；每进程一张保留候选只是显式例外。
+
+<a id="g4-followup-numeric"></a>
+### PENDING 1：A 的全窗口 numeric 类型覆盖
+
+**缺口证据**：[A3 原日志](diagnostics/CharacterPanel-g4a3-scan-anchor-20261031-2345.log)汇总 `sites n=72`，但全窗只发射前 32 条总求值明细，其中 **7 条 numeric**（原行 125/130/132/134/136/138/139）全为 `type=0`。旧“25 行采样/72 次全 type0/零图变量读取”不由日志支持；剩余 65 次 numeric 的类型未知。`numeric` 表示进入 numeric 访问器，只有 type3 才是这里的图变量访问类型。
+
+**目标与入口**：[hooks.cpp](../src/animation/oar/hooks.cpp) 的 `numeric_thunk`、`note_oar_context_hit`（先 tally，后 `evaluations>32` 截明细）与 [candidate_window.h](../src/animation/behavior_graph/candidate_window.h) 的 `CandidateWindowTally`、`note_candidate_window_hit`、`arm_candidate_window`/`take_candidate_window_tally`。现有 tally 只有 site/owner，没有 numeric 类型总数；未来仪器须按窗口统计所有 numeric 类型（含无法分类项），独立于明细行预算，类型总和与 numeric-site 总数对账，arm/take/reset 后不串窗，并可区分 type3 的来源归属。
+
+**前提与有界验收**：另行评审并批准仪器实现范围；不在本次增计数器。未来只选一个能击中盲点的聚焦回归：**在前 32 条总求值明细之后放入 type3 命中**，确认明细被截仍计入全窗总量，并在下一窗口验证清零/对账；随后匹配 DLL/PDB/INI，在完整候选回放及显示窗回传总量。type3 出现时按变量名、REFR、图/调用作用域追溯源/候选/其它来源，**不能自动判污染**；无法归属保留 PENDING。零 type3 的结论也只限定已证明完整的观察窗口。
+
+**停点与回传**：总数不对账、跨窗残留、计数/身份缺失或出现未归属 type3，即停止验收、保留原始记录回评审；源漂移、崩溃或非有限值立即停。回传独立实现契约/差分、上述一个聚焦回归结果、匹配工件/设置身份、带 window/segment 边界的完整日志及分型对账/归属结论；不能只给前 32 行。
+
+<a id="g4-followup-source-events"></a>
+### PENDING 2：C 的兼容源事件观察窗口
+
+**缺口证据**：[B+C 原日志](diagnostics/CharacterPanel-g4bc-run-b-20261101-0028.log)原行 14/21 为 `SourceEventCapture=false`、`install-skip reason=off`，没有源事件观察器。并且 [source_event_capture.cpp](../src/animation/behavior_graph/source_event_capture.cpp) 的 `install_source_event_capture` 明确拒绝 `IndependentGraph!=off`，SourceTimeline 另有优先门；F7 的既有 `sample_source_event_capture` 生命周期面向面板外采集，不能假定覆盖并发 inject+display。**不能仅打开一个 INI 键重跑，也不得删守卫规避冲突。**
+
+**第一步与前提**：先另立评审范围，核实兼容观察器的安装/武装/窗口生命周期、线程与 source graph/actor 身份、有效路由、重置/关闭和候选活动共存条件；形成批准的仪器设计后才可实现和运行。AE58377 仅为当前已定位的观察路由，[E1](#c-g3b-e1-event-capture)配合 [A1](#c-g3b-a1-structural-audit)已示其覆盖不到全部 manager 级事件路径；若欲扩大结论须另审对应路由证据，不凭该零计数扩大。
+
+**有界验收**：匹配 build/DLL/PDB/INI，保留实际 installed、armed、actor/graph/window 身份与 scope；用已知经该路由到达的事件作为**观察器存活正控**，正控失败则零记录无效。证明观察窗无缺段、无丢行/溢出，覆盖**两次候选注入、两段 settle、显示与 close/reset**，边界前后可对齐。记录/分类同期无关源事件（例如正常步频），验收关注候选活动导致的源路由泄漏，**不要求全世界事件静默**。任一零计数结论只适用于已证明活跃/完整的观察范围；58377-only 的零不能证明所有 manager 事件均不存在。
+
+**停点与回传**：门冲突未解决、安装/武装不明、正控失败、源身份变更、缺窗/丢行或候选相关源事件无法归因，停止并保持 PENDING；不得放宽守卫、改写旧日志或自动归类污染。回传兼容生命周期评审/实现契约、路由与正控证据、工件/设置身份、含两次注入/settle/display/reset 边界的完整源/候选日志和无关事件分类表，明确路由未覆盖项。
+
+四份已替代的 S4/S5 负日志只从工作树退役；逐轮结果保留，CRLF 与 LF 身份、不可变恢复提交及保留理由见[诊断索引](diagnostics/README.md)。
 
 <a id="handoff-20261101-g4"></a>
 ## 当前状态与后续规划（2026-11-01 G4 收官交接）
+
+> **2026-11-02 前向更正（本节为历史裁定）**：下文 PASSED、“零图变量读取”“世界历史零消耗”“不阻塞 G5”保留当时判读，当前以[新交接](#handoff-20261102-evidence)为准：A 仅 7/72 numeric 有类型明细；B 仅当前装备族稳定；C 未启源事件观察器且现有门不兼容 inject。两项证据 PENDING，G5 运行验收后置；共享绑定不证明姿态/时钟/层一致。
 
 > **新会话从这里开始。** 本节接替 [2026-10-31 深夜交接](#handoff-20261031-night)：其排序 G3-B→G4→G5→G6 已推进至 **G4 PASSED（限定范围：A/B/C 三段）**，下一阶段 **G5（完整姿态对照）**。逐轮记录以 [C-G4 契约](#c-g4-context-isolation)节为准，本节为合并摘要。
 
@@ -2435,13 +2479,13 @@ F7 输入和 `main.cpp` 的 PreLoadGame/NewGame 回调只发布原子意图，�
 
 **状态：已实现、已构建（干净身份 `…-9f1bbb9e59-…`，[v55 build](build.md#v55-unequip-variable-2026-10-31)）、已部署。** 实现仅涉及 S3 第二段的写法分支与新 INI 键（`CandidateUnequipVariable`，空 = 保持 S3 事件路径），无新增策略逻辑；写入缺名/类型不支持按 S1 惯例 skip（不跑采样窗）。部署 INI 运行后已换为第二轮名单，仓库样例保持新键为空。结果按轮回填在下方追加，不改写本节既有文字。
 
-**第一轮（2026-10-31 16:45，v55，`bEquipUnequip`；[日志](diagnostics/CharacterPanel-g3bs4-r1-bequipequip-20261031-1645.log) 72,238 字节 SHA-256 `685ed235…`）：判负。** settle 第三次逐点复现（`target-step=49 settled-step=63 baseline-nodes=111`）；`phase=input outcome=write name='bEquipUnequip' index=125 type=BOOL setter=SetGraphVariableBool result=true readback=1`，且该值在 121 行采样中**全程保持 1**——写入被接受且持久，但 `default` 121 点恒 1、`nodes` 恒 111、`IsUnequipping`/`PitchManualOverride` 恒 0，运动 119/119（装备 idle 照常动画），无崩溃、`source-drift=none`。主判据未命中。负结果含义明确：**值进了槽、状态机不认**——`bEquipUnequip` 读作图内输出（源侧由卸下序列自身清零，候选无序列可清）。按阶梯进第二轮 `IsUnequipping`（INI-only，已部署，v55 二进制不变）。
+**第一轮（2026-10-31 16:45，v55，`bEquipUnequip`；[日志](diagnostics/README.md#g3bs4-r1) 72,238 字节 SHA-256 `685ed235…`）：判负。** settle 第三次逐点复现（`target-step=49 settled-step=63 baseline-nodes=111`）；`phase=input outcome=write name='bEquipUnequip' index=125 type=BOOL setter=SetGraphVariableBool result=true readback=1`，且该值在 121 行采样中**全程保持 1**——写入被接受且持久，但 `default` 121 点恒 1、`nodes` 恒 111、`IsUnequipping`/`PitchManualOverride` 恒 0，运动 119/119（装备 idle 照常动画），无崩溃、`source-drift=none`。主判据未命中。负结果含义明确：**值进了槽、状态机不认**——`bEquipUnequip` 读作图内输出（源侧由卸下序列自身清零，候选无序列可清）。按阶梯进第二轮 `IsUnequipping`（INI-only，已部署，v55 二进制不变）。
 
-**第二轮（2026-10-31 17:07，v55，`IsUnequipping`；[日志](diagnostics/CharacterPanel-g3bs4-r2-isunequipping-20261031-1707.log) 72,231 字节 SHA-256 `985f210e…`）：判负，形态与第一轮完全一致。** settle 第四次逐点复现（`target-step=49 settled-step=63 baseline-nodes=111`）；`phase=input outcome=write name='IsUnequipping' index=111 type=BOOL setter=SetGraphVariableBool result=true readback=1`，121 行全程保持 1；`default` 恒 1、`nodes` 恒 111、运动 119/119、`source-drift=none`。镜像名假设死亡。按阶梯进第三轮 `PitchManualOverride`（INI-only，已部署；其 `m_type` 未实测，REAL/指针类型将记 `unsupported-type` skip，按预注册不算写入轮）。
+**第二轮（2026-10-31 17:07，v55，`IsUnequipping`；[日志](diagnostics/README.md#g3bs4-r2) 72,231 字节 SHA-256 `985f210e…`）：判负，形态与第一轮完全一致。** settle 第四次逐点复现（`target-step=49 settled-step=63 baseline-nodes=111`）；`phase=input outcome=write name='IsUnequipping' index=111 type=BOOL setter=SetGraphVariableBool result=true readback=1`，121 行全程保持 1；`default` 恒 1、`nodes` 恒 111、运动 119/119、`source-drift=none`。镜像名假设死亡。按阶梯进第三轮 `PitchManualOverride`（INI-only，已部署；其 `m_type` 未实测，REAL/指针类型将记 `unsupported-type` skip，按预注册不算写入轮）。
 
 （附注：本轮之间有一次无效会话——17:01 的日志只有设置加载与读档，面板未打开、实验未启动，零实验行，按惯例记为无效不构成判定。）
 
-**第三轮（2026-10-31 17:39，v55，`PitchManualOverride`；[日志](diagnostics/CharacterPanel-g3bs4-r3-pitchmanualoverride-20261031-1739.log) 72,261 字节 SHA-256 `54436ac5…`）：判负——阶梯全负。** settle 第五次逐点复现；`phase=input outcome=write name='PitchManualOverride' index=65 type=BOOL setter=SetGraphVariableBool result=true readback=1`（类型首次落档：BOOL），121 行全程保持 1；`default` 恒 1、`nodes` 恒 111、运动 119/119、`source-drift=none`。
+**第三轮（2026-10-31 17:39，v55，`PitchManualOverride`；[日志](diagnostics/README.md#g3bs4-r3) 72,261 字节 SHA-256 `54436ac5…`）：判负——阶梯全负。** settle 第五次逐点复现；`phase=input outcome=write name='PitchManualOverride' index=65 type=BOOL setter=SetGraphVariableBool result=true readback=1`（类型首次落档：BOOL），121 行全程保持 1；`default` 恒 1、`nodes` 恒 111、运动 119/119、`source-drift=none`。
 
 **阶梯裁定（三轮全负，路线判死）**：三个卸下脉冲变量从 equipped idle 单独写入全部呈现同一形态——值进槽、被持久读回、状态机不消费。结合 E1（转移当刻无 58377 事件）与 v41 全量复核（转移前 5.5 s 无持久变量活动），**已排除的输入路线：事件分发（1HM_Unequip 判负）、三个卸下脉冲变量的持久写入、装备态 setter（v41 时序证明发生在转移后 0.85 s，非触发）**。剩余假设收敛为 E2 预注册的那条：引擎在转移当刻经 typed setter 写入**瞬态**命令变量（settle-3 规则滤掉了它）。E2（v56，已构建）按部署排序条款于本轮后部署。
 
@@ -2468,6 +2512,9 @@ typed setter 按 `m_type` 自选（沿用 S4 机制），两写的返回值与�
 **停止条件**：崩溃、非有限值、`source-drift` 非 none 立即停止。
 
 **状态：已实现、已构建（干净身份 `…-227d5104a3-…`，[v57 build](build.md#v57-two-write-2026-10-31)）、已部署待上机。** 实现按契约：S4 的写块抽成共用 `typed_write` lambda（skip 行带 `stage=` 标记），settle 后先 `prime` 后 `command`，任一失败即结束不跑采样窗；`CandidateUnequipPrime` 为空保持 S4 单写行为、`CandidateUnequipVariable` 为空保持 S3 事件路径。部署 INI = `inject` + `CandidateUnequipProbe=true` + `CandidateUnequipPrime=iRightHandEquipped` + `CandidateUnequipVariable=bEquipUnequip`，其余全 off。首轮结果回填时在下方追加，不改写本节既有文字。
+
+**首轮结果（2026-10-31 17:53，v57；[日志退役/恢复](diagnostics/README.md#g3bs5)，原 CRLF 72,647 字节、SHA-256 `c387aa9a…`）：判负。** settle 第六次复现（`target-step=49 settled-step=63 baseline-default=1 baseline-nodes=111`）；先 `stage='prime' iRightHandEquipped`（179，INT32），再 `stage='command' bEquipUnequip`（125，BOOL），两次 setter 均 true、读回均 1，121 行持久；`default=1`、`nodes=111` 全程不变、`source-drift=none`。只否定该 settle 时机的两写合取，输入侧切片按预注册停止并转 E3/A1；其后成功事件路线见 [S6](#c-g3b-s6-unequip-event-retry)/[F](#c-g3b-f-full-replay)，不能把该负结果扩为所有事件或输入均无效。
+
 <a id="c-g3b-e3-transient-watch"></a>
 ## C-G3B-E3：源图瞬态写监视（草案 → 实现，2026-10-31）
 
@@ -2693,6 +2740,8 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 <a id="c-g4-context-isolation"></a>
 ## C-G4 契约：OAR 上下文、历史与回调隔离（草案 → 实现/部署，2026-10-31）
 
+> **2026-11-02 证据范围更正**：本节保留预注册协议及当时 PASSED；当前 A/C 证据未闭合，见 [numeric 待办](#g4-followup-numeric)与[源事件待办](#g4-followup-source-events)。B 只支持装备族选择稳定，不能补足两个缺口或普遍证明历史隔离。
+
 **背景与目标**：G3-B 已证候选仅凭 {`WeapEquip`(2)，`Unequip`(144)} 即可在自身状态机走完装卸全相位序列。按预注册排序，本契约验收 **G4 语境隔离**：候选在面板显示链里被驱动时，OAR 与游戏本体动画状态互不污染——OAR 阶段变量的读取来源符合各自语境（[10-29 交接 G4 定义](#handoff-20261029)："身份/装备允许按明确设计借读，阶段状态必须对应候选"）、预览不消耗世界 Random/顺序/PlayOnce 历史、回调与 sink 作用域不跨界、关闭只清预览自有登记。三段实验 **A → B → C** 排序：A 的求值可见性结论是 B/C 的隔离前提，A 判负时 B/C 停止。
 
 ### 代码级静态前提（2026-10-31 本会话核实，反模式 12 要求当场断言）
@@ -2794,6 +2843,9 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 - **图级归属分类（问题②的决定性通道）**：命中时把 clip 指针对照候选/源各自的 `hkbBehaviorGraph::activeNodes`（审计依据：NodeList 0x10 字节头 `{entries@+0, count@+8}`，条目 0x90 步长、节点指针 @entry+0x58——58377 事件遍历即此布局；CommonLib `NodeList` 不透明，按审计偏移读）。命中行带 `owner=cand|src|neither`，汇总行带 `owner=cand:N/src:N/neither:N`。**已知局限**：初始激活突发发生在 `char_activate` 期间，此时候选 NodeList 尚未诞生——该段命中只能对照源表分类（`post-activate` 快照前的 owner 归属按此解读）；候选列表在激活返回后立即武装。
 - **clip 身份**：命中行新增 `clip={:#x} clip-name='…'`（`hkbClipGenerator::animationName` @+0x48，hkStringPtr 低位掩码后经 `readable` 守卫读 64 字符上限）——clip 名字与分段快照交叉即可判读突发对应哪些剪辑。
 - **分站点计数（问题②的判别前提）**：汇总/快照行带 `sites=e:n/s:r` 四站计数——**numeric 站计数 > 0 即有图变量读取发生**（配合命中行的 `name='…'` 变量名）；全程 numeric=0 则"读了谁的变量"问题自然消解。
+
+> **2026-11-02 更正**：numeric 站命中仅表示访问器被调用，type3 才表示这里的图变量访问；site 总数没有记录每次类型。见[全窗口待办](#g4-followup-numeric)。
+
 - **分段快照（问题①）**：`OAR CONTEXT segment=<label>` 累计行 ×4——`post-activate`（激活后）、`post-weapequip`（激活注入后）、`at-settle`（卸下 settle 处）、`post-unequip`（卸下注入后）；相邻行差值定位突发所属事件。命中行上限 8→32。
 - **问题③**：仍无直接状态写观测（不变）；由 A2 分类结果 + 后续 B 段世界动作间接回答。
 - **验证**：display_step 引擎无关用例 g++ C++23 `-Wall -Wextra -Werror` 通过。**上机步骤与运行 1 完全相同**（同 INI 配置、同操作序列、同判据 3 复用检查）。
@@ -2816,6 +2868,8 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **C-G4-A3 微切片（预注册，3 项仪器增量，同 INI 配置同操作）**：①numeric 命中行记录 `type=N` 原始类型值（区分图变量 vs 其他值源）；②`post-activate` 快照行附带 `scan=cand-entries/cand-count/src-entries/src-count`（与 DriveState 的 `/97` 锚定，验证扫描基址）；③命中行附带当帧 `cand-count`（活计数锚）。判读规则：numeric 全部 type≠3 且扫描锚健全（count≥90 与 DriveState 一致）→ H1 成立（模板级评估、无图变量读取）→ **判据 1 按修订解释关闭，B/C 解禁**；type=3 出现 → 图变量读取存在，按 name/owner 继续裁；扫描锚不健全 → 扫描修正后重跑。
 
 **A3 首轮运行（2026-10-31 23:46，v62 身份 `2dbe98c785` 活日志确认，actor 00000014 request=1；[日志](diagnostics/CharacterPanel-g4a3-scan-anchor-20261031-2345.log) 136,736 字节 SHA-256 `231032cb…`）：双证齐，H1 成立——G4-A 判据 1 按修订解释关闭。**
+
+> **2026-11-02 前向更正**：下表“25 行/72 次全 type0/零图变量读取”属旧判读；实际仅前 32 条总求值明细内的 **7 条 numeric** 显示 type0，未提供全窗 72 次分型。扫描锚/owner/site 总数保留，当前 A 的全窗图变量读取覆盖 **PENDING**，不能由 neither 或源哈希不变替代；见[待办 1](#g4-followup-numeric)。
 
 | 项 | 观测 |
 | --- | --- |
@@ -2861,6 +2915,8 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **裁定：A/A PASSED（预注册粒度：`(original, oar-mod, oar-submod 族)` 逐槽一致；交替尾缀为本底方差且已证与预览无关）。** 对照设计有效，运行 B 可执行——判据保持族粒度，尾缀排除照旧。运行 B 的读档初态由弓首槽自锚定吸收（F9 还原什么装备都无所谓，弓先行清左手）。
 
 **运行 B + C 段（2026-11-01 00:28–00:32，v62 留装，配置 ② `inject`+显示+回放四键+OarContextWatch，单会话 5 次开面板；[日志](diagnostics/CharacterPanel-g4bc-run-b-20261101-0028.log) 317,842 字节 SHA-256 `f015a1af…`）：B/C 全过——G4 PASSED。**
+
+> **2026-11-02 前向更正**：保留当时 PASSED；B 只证明预注册的装备族选择稳定。C 的 capture/sink/DAC 观测没有源事件通道（配置 false、install-skip off），现有门又拒绝 inject 共存；源事件泄漏验收仍 **PENDING**，先评审兼容观察器，见[待办 2](#g4-followup-source-events)。
 
 | 项 | 观测 |
 | --- | --- |
