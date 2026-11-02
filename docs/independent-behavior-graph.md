@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-02。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为保留的历史裁定；当前证据完整性方面，**A 的 numeric 全窗覆盖已由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭**（整窗 72/72 全 `type=0`，逐窗对账相等），只剩 **C 源事件泄漏一项 PENDING**。G5 可准备预注册，运行验收后置于 C 关闭；G6 待验。历史实验与原始读数保留，前向更正见各节；四份冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
+更新：2026-11-02。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为保留的历史裁定；当前证据完整性方面，**A 的 numeric 全窗覆盖已由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭**（整窗 72/72 全 `type=0`，逐窗对账相等），只剩 **C 源事件泄漏一项 PENDING**，其兼容观察器 [C-G4-C1](#c-g4-c1-concurrent-events) 已实现、构建并部署（v64），待上机。G5 可准备预注册，运行验收后置于 C 关闭；G6 待验。历史实验与原始读数保留，前向更正见各节；四份冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
 
 <a id="current-status"></a>
 
@@ -11,7 +11,7 @@
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)）；"全局登记计数"的旧静态结论被 v35 上机读数证伪、判为无锚点（[更正](#g1-teardown-audit)）。 |
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
-| G4 | **历史 A/B/C PASSED；A 已补齐，C 仍 PENDING** | [A 全窗 numeric 类型](#g4-followup-numeric)：[C-G4-A4](#c-g4-a4-numeric-types) v63 运行整窗 72/72 全 `type=0`、逐窗对账相等 → **关闭**；[C 兼容源事件窗口](#g4-followup-source-events)（待评审兼容观察器）仍未关闭；B 只建立当前装备族选择稳定，不普遍证明 Random/sequence/PlayOnce 隔离。 |
+| G4 | **历史 A/B/C PASSED；A 已补齐，C 仍 PENDING** | [A 全窗 numeric 类型](#g4-followup-numeric)：[C-G4-A4](#c-g4-a4-numeric-types) v63 运行整窗 72/72 全 `type=0`、逐窗对账相等 → **关闭**；[C 兼容源事件窗口](#g4-followup-source-events)：评审与实现 [C-G4-C1](#c-g4-c1-concurrent-events)（v64）已部署、待上机，尚未关闭；B 只建立当前装备族选择稳定，不普遍证明 Random/sequence/PlayOnce 隔离。 |
 | G5 | **未预注册、未运行** | 可先准备阈值与逐骨/层覆盖协议，运行验收须先关闭 G4 两项缺口。 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
@@ -93,8 +93,8 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **最新记录安装：v63**（2026-11-02 重装），身份 `CharacterPanel-scenegraph-v63-g4a4-numeric-types-e97eb65e68-cl94faaed0c6-20261102T142727Z`；DLL 1,466,368 字节 `2c81435c…`、PDB 38,432,768 字节 `c8e361ec…`，完整哈希与离线回归见 [v63 build](build.md#v63-g4a4-numeric-types-2026-11-02)。记录路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
-- **当前部署 INI：dormant**，2,147 字节 `27f481f5…`（A4 裁定后已从备份恢复并回读核对）；A4 运行期间使用的是同键集 A3 配置，2,612 字节 `7cb2562f…`（20 键断言，差别只在仪器）。v62 dormant 三件套（`cdb8a5ed…`/`a7020045…`/`27f481f5…`）保留在 `dist/deploy-backup-20261102-v62/`，可整组回退。仓库样例仍为 dormant 默认。
+- **最新记录安装：v64**（2026-11-02 重装），身份 `CharacterPanel-scenegraph-v64-g4c1-concurrent-events-02c16e5b65-cl94faaed0c6-20261102T145517Z`；DLL 1,470,464 字节 `ff00daad…`、PDB 38,481,920 字节 `3364ea18…`，完整哈希与离线回归见 [v64 build](build.md#v64-g4c1-concurrent-events-2026-11-02)。记录路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`。
+- **当前部署 INI：C1 运行配置**，2,530 字节 `f714e05f…`，20 键回读断言通过；即 A4 键集 + `SourceEventCapture=concurrent`（`SourceTimeline=false` 为其前置）。v63 三件套（`2c81435c…`/`c8e361ec…`/dormant INI `27f481f5…` 2,147 字节）已备份至 `dist/deploy-backup-20261102-v63/`，可整组回退。仓库样例仍为 dormant 默认。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
 
@@ -1992,6 +1992,8 @@ BehaviorGraphProbe=true
 
 **停点与回传**：门冲突未解决、安装/武装不明、正控失败、源身份变更、缺窗/丢行或候选相关源事件无法归因，停止并保持 PENDING；不得放宽守卫、改写旧日志或自动归类污染。回传兼容生命周期评审/实现契约、路由与正控证据、工件/设置身份、含两次注入/settle/display/reset 边界的完整源/候选日志和无关事件分类表，明确路由未覆盖项。
 
+→ 评审、判据与实现见 [C-G4-C1](#c-g4-c1-concurrent-events)（2026-11-02：三态模式 + 计数正控 + 实验自有的窗口生命周期，v64 已实现、构建并部署，**待上机**；本项在运行回传前保持 PENDING）。
+
 四份已替代的 S4/S5 负日志只从工作树退役；逐轮结果保留，CRLF 与 LF 身份、不可变恢复提交及保留理由见[诊断索引](diagnostics/README.md)。
 
 <a id="handoff-20261101-g4"></a>
@@ -2991,7 +2993,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 <a id="c-g4-c1-concurrent-events"></a>
 ## C-G4-C1：兼容的源事件观察窗口（评审 → 实现，2026-11-02）
 
-> **状态：评审定稿并实现（v64），待上机。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定。
+> **状态：评审定稿、已实现、已构建并已部署（v64），待上机。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定。
 
 **问题陈述（三个结构事实，缺一不可）**：
 
@@ -3013,7 +3015,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 1. **安装**：`SOURCE EVENTCAPTURE installed … mode=concurrent`，运行时头部字节核验通过；出现 head-mismatch 即停。
 2. **武装**：`window-open` 行给出 actor/graph/behavior/data/variable-set/words/count 身份与两条预算，且发生在两次 `result=dispatched` **之前**（同一帧内成立，见设计）。
 3. **正控（硬前提）**：关闭行 `calls ≥ 2` **且** `other-graph ≥ 2`。任一不足即"观察器未被证明存活"，本次零记录**无效**，PENDING 保持，不得改判为通过。
-4. **隔离**：`source-events=0`、`ring-dropped=0`、无 `budget-exhausted`，且窗口覆盖两次注入、settle 与至少一次显示段关闭（`reason=display-close`）。
+4. **隔离**：`source-events=0`、`ring-dropped=0`、无 `budget-exhausted`，且窗口以 `reason=display-close` 关闭（即显示段确有步数）。**若以 `reason=expired` 关闭**（面板在 20 秒内未关），则显示/关闭边界未覆盖：只接受判据 3 与注入段读数，隔离结论限定为"注入期零源事件"，**不得声称覆盖显示与关闭边界**，也不据此关闭 PENDING。
 5. **边界**：`source-events=0` 只限定 **58377 这一条路由**；不证明 manager 级其它事件路径不存在（A1/E1 已示覆盖不足），不外推到未观察窗口。
 6. **身份**：任一身份变化（`source-lost-or-replaced`）即中止并按停点处理；窗口期间源姿态/变量由既有 `source-drift` 独立复核。
 
@@ -3024,4 +3026,11 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 **离线回归**：模式解析（`off|false|""`、`on|true`、`concurrent`，含大小写）进 [source_event_capture_test.cpp](../tests/source_event_capture_test.cpp)，`cl /W4 /WX` 通过；环/预算/取消/到期的既有三例不重跑也保持有效。
 
 **实现影响面**：`settings` 三态 + 纯解析函数；`source_event_capture.{h,cpp}` 两个计数器、`begin_capture_window` 共享基线、`arm/close/open` 三个薄 API；`independent_graph.cpp` 的 arm/close 两处调用；文档、配置注释与 CHANGELOG 同步。无新源单元（`PLUGIN_SOURCES` 32）、无新原生调用或写入。
+
+**实现与部署记录（2026-11-02，提交 `02c16e5b65`，v64 身份 `…-v64-g4c1-concurrent-events-02c16e5b65-cl94faaed0c6-20261102T145517Z`，DLL `ff00daad…` 1,470,464 字节、PDB `3364ea18…` 38,481,920 字节；完整记录见 [v64 build](build.md#v64-g4c1-concurrent-events-2026-11-02)）**：
+
+- **模式**：`[Experiment] SourceEventCapture=off|on|concurrent`；`on`/`true`/`1` 保持旧语义，无法识别的字符串解析为 `nullopt` → 落回 off 并 warn（打字错误不能武装 hook），日志打印实际模式。`on` 的 `IndependentGraph != off` 拒绝分支**一字未改**；`concurrent` 的条件是"非 SourceTimeline"，与 legacy 共用同一条 timeline 优先警告。
+- **生命周期**：`arm_source_event_capture_concurrent` 在实验入口同步完成 reset→deadline→identity→baseline→gate（`begin_capture_window`，与 F7 路径共用 baseline 代码），因此两次注入发生时 gate 已在位、计数器已从 0 起算；`close` 挂在 `DisplaySession::State::abort` 的"显示段已有步数"分支（零步 abort 不关窗，避免 request 绑定把窗关掉），另有 20 秒到期与世界重置取消。F7 在 concurrent 模式下不再武装。
+- **计数器**：`record_source_event` 在 gate 检查**之前**自增 `calls`；gate 在位且目标非源图时自增 `other-graph`；只有源图命中才入环（保持"单一生产者=源图派发者"的 SPSC 约束）。关闭行 `SOURCE EVENTCAPTURE window-closed reason=… events=… phases=… calls=… other-graph=… ring-dropped=…` 一行为正控与隔离签名共用。
+- **上机门（用户执行）**：开面板一次 → 回放自动跑完 → 保持面板 2–3 秒让显示段产生步数 → **15 秒内关面板**。判读：`installed mode=concurrent`；`window-open` 早于两条 `result=dispatched`；`window-closed reason=display-close` 且 `calls ≥ 2`、`other-graph ≥ 2`、`events=0`、`ring-dropped=0`。以 `expired` 关闭时只接受注入段读数（见判据 4 的分支），不得据此关闭 PENDING 2。
 

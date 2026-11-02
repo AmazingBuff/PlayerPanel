@@ -10,7 +10,7 @@ The preview shows standing weapon posture and existing equipment/appearance. Ani
 
 更新：2026-11-02。独立图调查保留 [G1/G2 的有界通过](independent-behavior-graph.md#verification-matrix)、v41 G3-A 源相位与 [G3-B/F 相位回放通过](independent-behavior-graph.md#c-g3b-f-full-replay)。G2 109/116 实际写骨及三未知缺失名、同 controller 来源/generation 替换与 frozen-only 的未验限制不变。G4 的 A/B/C PASSED 属历史裁定，其中 [A numeric 全窗覆盖](independent-behavior-graph.md#g4-followup-numeric)已由 v63 运行关闭（整窗 72/72 `type=0`、逐窗对账相等），只剩 [C 兼容源事件窗口](independent-behavior-graph.md#g4-followup-source-events)一项 PENDING；B 只支持当前装备族稳定。G5 可准备逐骨/层/误差协议，运行验收后置；G6 待验。
 
-最新记录安装 [v63](build.md#v63-g4a4-numeric-types-2026-11-02)（DLL `2c81435c…` / PDB `c8e361ec…`），A4 裁定后部署 INI 回 dormant `27f481f5…`；本次未重新核验安装。候选与控制器源图共享 data/绑定、变量活值分储；共享绑定或候选哈希相同不证明源候选完整姿态、时钟、层/权重相同。G6 仍涵盖源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛；每进程一张候选为显式例外，装载 teardown NO-GO，无有效全局登记计数锚，DAC restore matched 仅部分证据。
+最新记录安装 [v64](build.md#v64-g4c1-concurrent-events-2026-11-02)（DLL `ff00daad…` / PDB `3364ea18…`），部署 INI 为 C1 运行配置 `f714e05f…`（A4 键集 + `SourceEventCapture=concurrent`）；本次未重新核验安装。候选与控制器源图共享 data/绑定、变量活值分储；共享绑定或候选哈希相同不证明源候选完整姿态、时钟、层/权重相同。G6 仍涵盖源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛；每进程一张候选为显式例外，装载 teardown NO-GO，无有效全局登记计数锚，DAC restore matched 仅部分证据。
 
 [r4](diagnostics/display-issues-2026-10-22.md#r4-session) provides partial runtime evidence for product shield/torch behavior, while copy retirement remains unresolved.
 
