@@ -1015,6 +1015,31 @@ namespace
 
 }
 
+namespace
+{
+    // C-G4-A4: the numeric-accessor type histogram of one armed window plus its reconciliation
+    // figure. Every OAR CONTEXT summary/segment row appends it, so the type total can be
+    // compared with sites n: without trusting the detail-row budget. Types 0..3 are the named
+    // buckets; anything else (including unreadable accessors) is counted separately.
+    struct NumericTypeCounts
+    {
+        std::uint32_t t0;
+        std::uint32_t t1;
+        std::uint32_t t2;
+        std::uint32_t t3;
+        std::uint32_t other;
+        std::uint32_t unclassified;
+        std::uint32_t sum;
+    };
+
+    NumericTypeCounts numeric_type_counts(CandidateWindowTally const& a_tally)
+    {
+        return { a_tally.numeric_types[0], a_tally.numeric_types[1], a_tally.numeric_types[2],
+            a_tally.numeric_types[3], a_tally.numeric_type_other, a_tally.numeric_unclassified,
+            candidate_window_numeric_sum(a_tally) };
+    }
+}
+
 class DisplaySession::State
 {
 public:
@@ -1048,13 +1073,18 @@ public:
         {
             const CandidateWindowTally taken = take_candidate_window_tally_for(window.source().actor_id);
             if (taken.source_actor_id == window.source().actor_id)
-                logger::info("OAR CONTEXT window=display-{} actor={:08x} request={} view={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{}",
+            {
+                const NumericTypeCounts types = numeric_type_counts(taken);
+                logger::info("OAR CONTEXT window=display-{} actor={:08x} request={} view={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{} numeric=t0:{}/t1:{}/t2:{}/t3:{}/other:{}/un:{}/sum:{} t3-rows:{}",
                     reason, window.source().actor_id, window.request(), window.view(), taken.evaluations, taken.overlaps,
                     taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate)],
                     taken.sites[static_cast<std::size_t>(OarHitSite::e_numeric)],
                     taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_set)],
                     taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_replacement)],
-                    taken.cand_active, taken.src_active, taken.neither);
+                    taken.cand_active, taken.src_active, taken.neither,
+                    types.t0, types.t1, types.t2, types.t3, types.other, types.unclassified, types.sum,
+                    taken.numeric_type3_rows);
+            }
         }
     }
 
@@ -1129,13 +1159,16 @@ namespace
     {
         if (!animation::oar_context_watch()) return;
         const CandidateWindowTally peek = peek_candidate_window_tally();
-        logger::info("OAR CONTEXT segment={} actor={:08x} request={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{}",
+        const NumericTypeCounts types = numeric_type_counts(peek);
+        logger::info("OAR CONTEXT segment={} actor={:08x} request={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{} numeric=t0:{}/t1:{}/t2:{}/t3:{}/other:{}/un:{}/sum:{} t3-rows:{}",
             label, actor_id, request, peek.evaluations, peek.overlaps,
             peek.sites[static_cast<std::size_t>(OarHitSite::e_evaluate)],
             peek.sites[static_cast<std::size_t>(OarHitSite::e_numeric)],
             peek.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_set)],
             peek.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_replacement)],
-            peek.cand_active, peek.src_active, peek.neither);
+            peek.cand_active, peek.src_active, peek.neither,
+            types.t0, types.t1, types.t2, types.t3, types.other, types.unclassified, types.sum,
+            peek.numeric_type3_rows);
     }
 }
 
@@ -1189,13 +1222,16 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
         {
             if (!animation::oar_context_watch()) return;
             const CandidateWindowTally taken = take_candidate_window_tally();
-            logger::info("OAR CONTEXT window=experiment actor={:08x} request={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{}",
+            const NumericTypeCounts types = numeric_type_counts(taken);
+            logger::info("OAR CONTEXT window=experiment actor={:08x} request={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{} numeric=t0:{}/t1:{}/t2:{}/t3:{}/other:{}/un:{}/sum:{} t3-rows:{}",
                 actor_id, request, taken.evaluations, taken.overlaps,
                 taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate)],
                 taken.sites[static_cast<std::size_t>(OarHitSite::e_numeric)],
                 taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_set)],
                 taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_replacement)],
-                taken.cand_active, taken.src_active, taken.neither);
+                taken.cand_active, taken.src_active, taken.neither,
+                types.t0, types.t1, types.t2, types.t3, types.other, types.unclassified, types.sum,
+                taken.numeric_type3_rows);
         }
     } const experiment_window_summary{ actor_id, request };
 

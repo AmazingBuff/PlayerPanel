@@ -8,7 +8,7 @@ The default product path uses the copied scene tree, OAR clip selection/sampling
 
 更新：2026-11-02。独立图的[当前交接](docs/independent-behavior-graph.md#handoff-20261102-evidence)与[验证总表](docs/independent-behavior-graph.md#verification-matrix)统一拥有结论：G1 按修订方案 A、G2 按 v33/v34 的有界范围通过；G3-A 源相位轨迹成立，G3-B 已由 [F 完整回放](docs/independent-behavior-graph.md#c-g3b-f-full-replay)通过相位序列验收（`WeapEquip` + `Unequip`，0→10→1→12→0、恰两次外部注入、`source-drift=none`）。E1 的零 58377 命中仅限定该路由，不能推出真实流程没有事件或必由变量触发。
 
-G4 的 [2026-11-01 A/B/C PASSED](docs/independent-behavior-graph.md#handoff-20261101-g4)保留为历史裁定；当前证据完整性有**两项 PENDING**：[A 全窗口 numeric 类型统计](docs/independent-behavior-graph.md#g4-followup-numeric)与 [C 兼容的源事件观察窗口](docs/independent-behavior-graph.md#g4-followup-source-events)。A3 的 numeric 总数 72 只有 7 条类型明细，不能证明全窗零图变量读取；B+C 的源事件捕获关闭，且现有安装门拒绝与 inject 共存，需先评审兼容仪器。B 只证明当前装备族选择稳定，未普遍证明 Random/sequence/PlayOnce 历史隔离。G5 可准备阈值/逐骨协议，运行验收须先关闭两项缺口；G6 仍待验，装载 teardown 维持 NO-GO。
+G4 的 [2026-11-01 A/B/C PASSED](docs/independent-behavior-graph.md#handoff-20261101-g4)保留为历史裁定；当前证据完整性有**两项 PENDING**：[A 全窗口 numeric 类型统计](docs/independent-behavior-graph.md#g4-followup-numeric)与 [C 兼容的源事件观察窗口](docs/independent-behavior-graph.md#g4-followup-source-events)。A3 的 numeric 总数 72 只有 7 条类型明细，不能证明全窗零图变量读取；该盲点的仪器已按 [C-G4-A4](docs/independent-behavior-graph.md#c-g4-a4-numeric-types) 实现并构建为 v63，**但尚无上机回传，本项仍 PENDING**。B+C 的源事件捕获关闭，且现有安装门拒绝与 inject 共存，需先评审兼容仪器。B 只证明当前装备族选择稳定，未普遍证明 Random/sequence/PlayOnce 历史隔离。G5 可准备阈值/逐骨协议，运行验收须先关闭两项缺口；G6 仍待验，装载 teardown 维持 NO-GO。
 
 候选与控制器源图共享行为 data 和绑定集，变量活值分储、从 authored defaults 初始化；共享资源与重复候选 pose 哈希均不能证明与源完整姿态、时钟或层混合一致。G2 的实际写骨 109/116、三条缺失名未知，以及同 controller 来源替换/frozen-only 等边界限制继续保留。
 

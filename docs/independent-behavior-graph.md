@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-02。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为保留的历史裁定；当前证据完整性有 **A numeric 全窗覆盖、C 源事件泄漏两项 PENDING**。G5 可准备预注册，运行验收后置于两项关闭；G6 待验。历史实验与原始读数保留，前向更正见各节；四份冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
+更新：2026-11-02。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为保留的历史裁定；当前证据完整性有 **A numeric 全窗覆盖、C 源事件泄漏两项 PENDING**。A 的分型仪器 [C-G4-A4](#c-g4-a4-numeric-types) 已实现并构建（v63），仍须上机回传对账后才关闭。G5 可准备预注册，运行验收后置于两项关闭；G6 待验。历史实验与原始读数保留，前向更正见各节；四份冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
 
 <a id="current-status"></a>
 
@@ -11,7 +11,7 @@
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)）；"全局登记计数"的旧静态结论被 v35 上机读数证伪、判为无锚点（[更正](#g1-teardown-audit)）。 |
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
-| G4 | **历史 A/B/C PASSED；当前两项证据 PENDING** | [A 全窗 numeric 类型](#g4-followup-numeric)、[C 兼容源事件窗口](#g4-followup-source-events)待补；B 只建立当前装备族选择稳定，不普遍证明 Random/sequence/PlayOnce 隔离。 |
+| G4 | **历史 A/B/C PASSED；当前两项证据 PENDING** | [A 全窗 numeric 类型](#g4-followup-numeric)（[C-G4-A4](#c-g4-a4-numeric-types) v63 已实现，待上机回传）、[C 兼容源事件窗口](#g4-followup-source-events)（待评审兼容观察器）均未关闭；B 只建立当前装备族选择稳定，不普遍证明 Random/sequence/PlayOnce 隔离。 |
 | G5 | **未预注册、未运行** | 可先准备阈值与逐骨/层覆盖协议，运行验收须先关闭 G4 两项缺口。 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
@@ -36,7 +36,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
 | G3 | G3-A 成立；**G3-B PASSED（相位序列）** | [F](#c-g3b-f-full-replay)：两事件复现 0→10→1→12→0；完整姿态另验 |
-| G4 | **历史 PASSED；当前 A/C 两项 PENDING** | [numeric 全窗覆盖](#g4-followup-numeric)、[源事件兼容观察](#g4-followup-source-events)；B 限装备族选择稳定 |
+| G4 | **历史 PASSED；当前 A/C 两项 PENDING** | [numeric 全窗覆盖](#g4-followup-numeric)（[A4 仪器](#c-g4-a4-numeric-types) v63 已实现、待上机）、[源事件兼容观察](#g4-followup-source-events)；B 限装备族选择稳定 |
 | G5 | 未预注册、未运行 | 可准备协议，运行验收先闭合 G4 缺口 |
 | G6 | PENDING | 非豁免生命周期、源恢复与重复会话收敛未证 |
 
@@ -1977,6 +1977,8 @@ BehaviorGraphProbe=true
 
 **停点与回传**：总数不对账、跨窗残留、计数/身份缺失或出现未归属 type3，即停止验收、保留原始记录回评审；源漂移、崩溃或非有限值立即停。回传独立实现契约/差分、上述一个聚焦回归结果、匹配工件/设置身份、带 window/segment 边界的完整日志及分型对账/归属结论；不能只给前 32 行。
 
+→ 契约、判据与实现见 [C-G4-A4](#c-g4-a4-numeric-types)（2026-11-02：v63 已实现并构建，待上机；本项在运行回传前保持 PENDING）。
+
 <a id="g4-followup-source-events"></a>
 ### PENDING 2：C 的兼容源事件观察窗口
 
@@ -2927,3 +2929,34 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 | 附带 | 前两行预轮记录（sword+空手）`MT_Idle → 'Idle 1'/'Idle 2'`——MT 族亦见交替尾缀（本底方差类，判据外） |
 
 **G4 收官裁定：PASSED（A/B/C 三段各自限定范围）。** A = OAR 求值语境隔离（模板级评估、零图变量读取、零源接触）；B = 世界历史无消耗（条件驱动选择零漂移）；C = 关闭清理与 sink 作用域成立。按排序进入 **G5（完整姿态对照）**——G3-B 的 pose 哈希基线与 B-v2 的装备族序列是 G5 的直接前置；G5 开工第一步为预注册其位置/旋转/缩放阈值与逐骨覆盖判据。
+
+<a id="c-g4-a4-numeric-types"></a>
+## C-G4-A4：numeric 类型全窗分型（草案 → 实现，2026-11-02）
+
+> **状态：已实现、已构建（v63），待授权上机。** 预注册文字不改写；运行结果回填在本节末尾。本轮无游戏会话、无部署。
+
+**背景与目标**：[待办 1](#g4-followup-numeric) 指出 A3 的 `sites n=72` 只发射了前 32 条总求值明细、其中 7 条 numeric 全为 `type=0`，其余 65 次类型未知，因此"全窗零图变量读取"不被日志支持。本轮只补这一处盲点：按原始访问器类型给 numeric 命中分型计数，**独立于明细行预算**，并与 `sites[n]` 对账。
+
+**预注册判据（不得事后放宽）**：
+
+1. **对账**：每个 `window=experiment|display-<reason>` 与 `segment=*` 行的 `numeric=…/sum:N` 必须等于同一行的 `sites=n:N`；任一窗口不等即仪器无效，判负并按停点上交，不得引用该窗的类型结论。
+2. **窗口性**：`arm`/`take` 后全部分型计数归零，上一窗的类型不得进入下一窗；非属主 session 的 take 既不消耗也不清理候选窗（A2 契约沿用）。
+3. **明细预算无关**：类型计数在 `Oar_Context_Hit_Row_Cap = 32` 之前累加——第 33 条以后的 numeric 仍须进全窗总量。
+4. **可归属**：`type3`（图变量访问器）若落在 32 条明细之后，仍须有界（每窗 ≤8 行）留下 `name`/REFR/`clip`/`owner` 归属行，且不得与前 32 条明细重复记录。
+5. **结论边界**：全窗 `t3=0` 只限定该窗口内**已计数**的 numeric 命中；`un`（空或不可读访问器）单独成桶，不并入 `t0`，也不得当作"非图变量"证据。
+
+**判读规则**：`sum==sites[n]` 且全窗 `t3=0` → 修订解释下的"A 零图变量读取"覆盖该完整窗口；出现 `t3>0` → 按 `name`/REFR/图作用域追溯来源，**不自动判污染**，无法归属则保持 PENDING。`overlaps`、`source-drift`、崩溃与非有限值等停点条件与 A 段相同。
+
+**仪器影响面（无新 INI 键、无新源单元、无新原生调用/写入）**：
+
+- [candidate_window.h](../src/animation/behavior_graph/candidate_window.h)：`CandidateWindowTally` 增 `numeric_types[4]`（type 0–3）、`numeric_type_other`（≥4）、`numeric_unclassified`（负值/空访问器）、`numeric_type3_rows`；新增 `note_candidate_numeric_type`、`candidate_window_numeric_sum`、`take_numeric_type3_row`；新增 `clear_candidate_window_counts` 统一 arm / take / 非属主 take 三条路径——原先 `take_candidate_window_tally_for` 用位置式聚合初始化返回零行，任何新增计数器都会在那里漏清，现改为复制元数据后统一清零。
+- [hooks.cpp](../src/animation/oar/hooks.cpp) `note_oar_context_hit`：类型计数放在 `OarContextWatch` 门与行预算**之前**；过 32 行后的 type3 走专用归属行 `OAR CONTEXT numeric-type3`（每窗 ≤8 行）。
+- [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp)：`window=display-*`、`segment=*`、`window=experiment` 三类行统一追加 `numeric=t0:{}/t1:{}/t2:{}/t3:{}/other:{}/un:{}/sum:{} t3-rows:{}`。
+- 沿用 `[Experiment] OarContextWatch`（默认 false）；关断时只剩 thunk 入口一次布尔检查与 thread-local 自增，无行发射。
+
+**离线回归（已跑）**：[behavior_graph_candidate_window_test.cpp](../tests/behavior_graph_candidate_window_test.cpp) 六例——32 条明细之后仍计数并对账、`take` 清零且保留元数据、armed scope 外的命中被忽略、新窗无残留、非属主 take 不消耗不清理、type3 行按窗限额且重开后复位。`cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src` 编译零警告、运行 "6 candidate-window numeric-type cases passed" 退出 0。**注意：计数需要 `ScopedCandidateWindow` 深度守卫存活**（`arm` 只重置计数），与生产 `drive_graph_step`/两处派发的守卫一致。
+
+**上机门（用户执行）**：配置与 A3 运行相同——`inject` + S1 观测两键（`CandidateInputProbe=true`、`CandidateInputVariable=` 空）+ S6 卸下两键（`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`）+ `DisplayPose=true` + `DisplayStep=true` + `OarContextWatch=true` + `DetailedAnimationTrace=true`；操作序列与 A3 相同（回放 + 显示 ≥20 秒）。**只做一处聚焦回归**：确认明细被截后 numeric 仍进总量（对账），并在下一窗口验证清零；随后匹配 DLL/PDB/INI 身份回传完整日志与分型对账。**不要求 `t3` 为 0**，只要求总量可对账与来源可归属。
+
+**停点与回传**：总数不对账、跨窗残留、计数或身份缺失、出现未归属 type3，即停止验收并保留原始记录回评审；`source-drift` 非 none、崩溃或非有限值立即停。回传须含独立实现契约/差分、聚焦回归结果、匹配工件与设置身份、带 window/segment 边界的完整日志及分型对账/归属结论，不能只给前 32 行。
+

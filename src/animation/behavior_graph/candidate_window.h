@@ -10,6 +10,14 @@
 // fetched), clip-owner classification against the candidate's and the source's
 // hkbBehaviorGraph::activeNodes, and a peek for the segment snapshot rows.
 //
+// A4 adds: the raw numeric-accessor type histogram. A numeric site hit only proves the
+// accessor was called; type 3 is the graph-variable accessor. A3 read the type only on the
+// rows it emitted, and those were capped at 32 total evaluations (7 numeric rows out of 72
+// hits), so its "all type 0" claim could not cover the window. The histogram counts every
+// armed numeric hit independently of that budget and must reconcile with the numeric site
+// count. Type-3 attribution rows have their own bounded budget because they can arrive after
+// the detail rows are exhausted.
+//
 #pragma once
 
 #include <cstddef>
@@ -29,6 +37,15 @@ namespace animation::behavior_graph
 
     enum class OarClipOwner : std::uint8_t { e_none, e_candidate, e_source };
 
+    // Named buckets 0..3 plus one overflow bucket. The engine's numeric accessor type is an
+    // int32; type 0 is another value source and type 3 is the graph-variable accessor, other
+    // values are unnamed and stay separated instead of being folded into type 0.
+    inline constexpr std::size_t Numeric_Type_Buckets = 4;
+
+    // Bounded per-window budget for type-3 attribution rows (name/REFR/clip/owner). The
+    // detail-row cap cannot carry them: they may arrive after row 32.
+    inline constexpr std::uint32_t Numeric_Type3_Row_Cap = 8;
+
     struct CandidateWindowTally
     {
         std::uint32_t depth = 0;
@@ -38,6 +55,12 @@ namespace animation::behavior_graph
         std::uint32_t src_active = 0;
         std::uint32_t neither = 0;
         std::uint32_t sites[static_cast<std::size_t>(OarHitSite::e_site_count)] = {};
+        // C-G4-A4: every armed numeric hit by raw type. A negative type (null or unreadable
+        // accessor) is unclassified rather than dropped, so the sum always reconciles.
+        std::uint32_t numeric_types[Numeric_Type_Buckets] = {};
+        std::uint32_t numeric_type_other = 0;
+        std::uint32_t numeric_unclassified = 0;
+        std::uint32_t numeric_type3_rows = 0;
         std::uint32_t source_actor_id = 0;
         // hkbBehaviorGraph::activeNodes NodeList pointers, captured for hit-time clip-owner
         // classification. The candidate's list does not exist until its activation, so
@@ -138,16 +161,61 @@ namespace animation::behavior_graph
         else ++window.neither;
     }
 
+    // Counts one armed numeric hit by raw accessor type. Called for every hit before the
+    // detail-row budget, so a capped row still contributes to the window total.
+    inline void note_candidate_numeric_type(int numeric_type)
+    {
+        if (g_candidate_window.depth == 0) return;
+        if (numeric_type < 0)
+        {
+            ++g_candidate_window.numeric_unclassified;
+            return;
+        }
+        if (static_cast<std::size_t>(numeric_type) < Numeric_Type_Buckets)
+            ++g_candidate_window.numeric_types[static_cast<std::size_t>(numeric_type)];
+        else
+            ++g_candidate_window.numeric_type_other;
+    }
+
+    // The reconciliation figure: must equal sites[e_numeric] on every summary row.
+    [[nodiscard]] inline std::uint32_t candidate_window_numeric_sum(CandidateWindowTally const& tally)
+    {
+        std::uint32_t sum = tally.numeric_type_other + tally.numeric_unclassified;
+        for (std::size_t index = 0; index < Numeric_Type_Buckets; ++index)
+            sum += tally.numeric_types[index];
+        return sum;
+    }
+
+    // Reserves one type-3 attribution row for this window; false once the budget is spent.
+    [[nodiscard]] inline bool take_numeric_type3_row()
+    {
+        if (g_candidate_window.numeric_type3_rows >= Numeric_Type3_Row_Cap) return false;
+        ++g_candidate_window.numeric_type3_rows;
+        return true;
+    }
+
+    // Zeroes every counter and keeps the window metadata. Arm, take and the foreign-actor
+    // take path share it, so a new counter cannot be missed in one of them.
+    inline void clear_candidate_window_counts(CandidateWindowTally& tally)
+    {
+        tally.evaluations = 0;
+        tally.overlaps = 0;
+        tally.cand_active = 0;
+        tally.src_active = 0;
+        tally.neither = 0;
+        for (std::size_t index = 0; index < static_cast<std::size_t>(OarHitSite::e_site_count); ++index)
+            tally.sites[index] = 0;
+        for (std::size_t index = 0; index < Numeric_Type_Buckets; ++index)
+            tally.numeric_types[index] = 0;
+        tally.numeric_type_other = 0;
+        tally.numeric_unclassified = 0;
+        tally.numeric_type3_rows = 0;
+    }
+
     // Arms a window (resets the counts, remembers the source actor for overlap matching).
     inline void arm_candidate_window(std::uint32_t source_actor_id)
     {
-        g_candidate_window.evaluations = 0;
-        g_candidate_window.overlaps = 0;
-        g_candidate_window.cand_active = 0;
-        g_candidate_window.src_active = 0;
-        g_candidate_window.neither = 0;
-        for (std::size_t index = 0; index < static_cast<std::size_t>(OarHitSite::e_site_count); ++index)
-            g_candidate_window.sites[index] = 0;
+        clear_candidate_window_counts(g_candidate_window);
         g_candidate_window.source_actor_id = source_actor_id;
     }
 
@@ -167,14 +235,8 @@ namespace animation::behavior_graph
     // Takes the accumulated counts without disarming; callers emit their own rows.
     [[nodiscard]] inline CandidateWindowTally take_candidate_window_tally()
     {
-        CandidateWindowTally taken = peek_candidate_window_tally();
-        g_candidate_window.evaluations = 0;
-        g_candidate_window.overlaps = 0;
-        g_candidate_window.cand_active = 0;
-        g_candidate_window.src_active = 0;
-        g_candidate_window.neither = 0;
-        for (std::size_t index = 0; index < static_cast<std::size_t>(OarHitSite::e_site_count); ++index)
-            g_candidate_window.sites[index] = 0;
+        CandidateWindowTally taken = g_candidate_window;
+        clear_candidate_window_counts(g_candidate_window);
         return taken;
     }
 
@@ -185,8 +247,11 @@ namespace animation::behavior_graph
     [[nodiscard]] inline CandidateWindowTally take_candidate_window_tally_for(std::uint32_t actor_id)
     {
         if (g_candidate_window.source_actor_id != actor_id)
-            return CandidateWindowTally{ g_candidate_window.depth, 0, 0, 0, 0, 0, {}, g_candidate_window.source_actor_id,
-                g_candidate_window.cand_node_list, g_candidate_window.src_node_list };
+        {
+            CandidateWindowTally foreign = g_candidate_window;
+            clear_candidate_window_counts(foreign);
+            return foreign;
+        }
         return take_candidate_window_tally();
     }
 

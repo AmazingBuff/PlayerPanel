@@ -409,6 +409,9 @@ namespace oar
         // summary reports the full counts. Placed before the scope checks so native
         // (non-product) evaluations are observed too. A2 classifies each clip against the
         // candidate's and the source's activeNodes and logs the clip's animation name.
+        // A4: the cap gates detail rows only - the numeric type histogram is counted for
+        // every hit, and type-3 hits past the cap get their own bounded attribution rows
+        // (Numeric_Type3_Row_Cap in candidate_window.h).
         constexpr std::uint32_t Oar_Context_Hit_Row_Cap = 32;
 
         std::string clip_name_for_hit(RE::hkbClipGenerator const* clip)
@@ -432,14 +435,31 @@ namespace oar
             if (!bg::candidate_window_active()) return;
             const RE::FormID refr = source ? source->GetFormID() : 0;
             bg::note_candidate_window_hit(site, refr, reinterpret_cast<std::uintptr_t>(clip));
+            // C-G4-A4: the type histogram counts every armed numeric hit, independently of the
+            // detail-row budget below (A3's capped rows could not answer the window's types).
+            if (site == bg::OarHitSite::e_numeric) bg::note_candidate_numeric_type(numeric_type);
             if (!animation::oar_context_watch()) return;
-            if (bg::g_candidate_window.evaluations > Oar_Context_Hit_Row_Cap) return;
-            const std::string resolved_clip = clip_name_for_hit(clip);
-            logger::info("OAR CONTEXT hit site={} refr={:08x} clip={:#x} clip-name='{}' owner={} subject={:#x} name='{}' type={} cand-count={} evaluations={}",
-                bg::oar_hit_site_name(site), refr, reinterpret_cast<std::uintptr_t>(clip), resolved_clip,
-                bg::oar_clip_owner_name(bg::classify_clip_owner(reinterpret_cast<std::uintptr_t>(clip))),
-                reinterpret_cast<std::uintptr_t>(subject), variable_name, numeric_type,
-                bg::candidate_node_list_count(), bg::g_candidate_window.evaluations);
+            if (bg::g_candidate_window.evaluations <= Oar_Context_Hit_Row_Cap)
+            {
+                const std::string resolved_clip = clip_name_for_hit(clip);
+                logger::info("OAR CONTEXT hit site={} refr={:08x} clip={:#x} clip-name='{}' owner={} subject={:#x} name='{}' type={} cand-count={} evaluations={}",
+                    bg::oar_hit_site_name(site), refr, reinterpret_cast<std::uintptr_t>(clip), resolved_clip,
+                    bg::oar_clip_owner_name(bg::classify_clip_owner(reinterpret_cast<std::uintptr_t>(clip))),
+                    reinterpret_cast<std::uintptr_t>(subject), variable_name, numeric_type,
+                    bg::candidate_node_list_count(), bg::g_candidate_window.evaluations);
+                return;
+            }
+            // Beyond the detail budget a type-3 hit still needs its attribution (name, REFR,
+            // clip owner); it gets its own bounded per-window row instead of being dropped.
+            if (site == bg::OarHitSite::e_numeric && numeric_type == 3 && bg::take_numeric_type3_row())
+            {
+                const std::string resolved_clip = clip_name_for_hit(clip);
+                logger::info("OAR CONTEXT numeric-type3 refr={:08x} clip={:#x} clip-name='{}' owner={} subject={:#x} name='{}' evaluations={} cand-count={}",
+                    refr, reinterpret_cast<std::uintptr_t>(clip), resolved_clip,
+                    bg::oar_clip_owner_name(bg::classify_clip_owner(reinterpret_cast<std::uintptr_t>(clip))),
+                    reinterpret_cast<std::uintptr_t>(subject), variable_name, bg::g_candidate_window.evaluations,
+                    bg::candidate_node_list_count());
+            }
         }
 
         bool evaluate_thunk(Condition const* condition, RE::TESObjectREFR* source,
