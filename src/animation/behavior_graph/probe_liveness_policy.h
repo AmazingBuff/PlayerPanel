@@ -335,27 +335,60 @@ namespace animation::behavior_graph
         }
     }
 
-    // One window per process: arm once, then expire/cancel. Re-arming after a close is refused so a
-    // run cannot stitch two windows into one conclusion.
+    // One window per process with two phases (C-G5-E1 v2). The `concurrent` window is armed by
+    // the experiment, which necessarily happens inside the paused panel where the engine does not
+    // run its sample loop; the first display close therefore *continues* the window into a resumed
+    // phase instead of ending it, so the pinned source graph can be observed while the game runs
+    // again. Re-arming after a close is refused so a run cannot stitch two windows together.
+    enum class ProbePhase : std::uint8_t
+    {
+        e_idle,
+        e_display,
+        e_resumed
+    };
+
+    [[nodiscard]] inline char const* probe_phase_name(ProbePhase a_phase) noexcept
+    {
+        switch (a_phase)
+        {
+        case ProbePhase::e_display: return "display";
+        case ProbePhase::e_resumed: return "resumed";
+        default: return "idle";
+        }
+    }
+
+    inline constexpr std::chrono::seconds Probe_Liveness_Resumed{ 10 };
+
     class ProbeWindow
     {
     public:
         void arm(std::chrono::steady_clock::time_point a_now)
         {
-            m_active = true;
+            m_phase = ProbePhase::e_display;
             m_armed = true;
             m_deadline = a_now + Probe_Liveness_Window;
         }
 
+        // Display close -> resumed phase. Only the first call in a window succeeds, and only from
+        // the display phase; the deadline restarts from `a_now`.
+        [[nodiscard]] bool enter_resumed(std::chrono::steady_clock::time_point a_now)
+        {
+            if (m_phase != ProbePhase::e_display)
+                return false;
+            m_phase = ProbePhase::e_resumed;
+            m_deadline = a_now + Probe_Liveness_Resumed;
+            return true;
+        }
+
         void cancel(ProbeWindowClose a_reason)
         {
-            m_active = false;
+            m_phase = ProbePhase::e_idle;
             m_close = a_reason;
         }
 
         [[nodiscard]] bool expire(std::chrono::steady_clock::time_point a_now)
         {
-            if (!m_active || a_now < m_deadline)
+            if (m_phase == ProbePhase::e_idle || a_now < m_deadline)
                 return false;
             cancel(ProbeWindowClose::e_expired);
             return true;
@@ -365,15 +398,16 @@ namespace animation::behavior_graph
         // it just read.
         [[nodiscard]] bool due(std::chrono::steady_clock::time_point a_now) const
         {
-            return m_active && a_now >= m_deadline;
+            return m_phase != ProbePhase::e_idle && a_now >= m_deadline;
         }
 
-        [[nodiscard]] bool active() const { return m_active; }
+        [[nodiscard]] bool active() const { return m_phase != ProbePhase::e_idle; }
         [[nodiscard]] bool ever_armed() const { return m_armed; }
+        [[nodiscard]] ProbePhase phase() const { return m_phase; }
         [[nodiscard]] ProbeWindowClose close_reason() const { return m_close; }
 
     private:
-        bool m_active{ false };
+        ProbePhase m_phase{ ProbePhase::e_idle };
         bool m_armed{ false };
         ProbeWindowClose m_close{ ProbeWindowClose::e_none };
         std::chrono::steady_clock::time_point m_deadline{};

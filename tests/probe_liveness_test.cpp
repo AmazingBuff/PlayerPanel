@@ -29,6 +29,7 @@ using test_plugin::animation::behavior_graph::probe_graph_from_table_argument;
 using test_plugin::animation::behavior_graph::ProbeCaller;
 using test_plugin::animation::behavior_graph::ProbeLivenessMode;
 using test_plugin::animation::behavior_graph::ProbePairing;
+using test_plugin::animation::behavior_graph::ProbePhase;
 using test_plugin::animation::behavior_graph::ProbeRecord;
 using test_plugin::animation::behavior_graph::ProbeRing;
 using test_plugin::animation::behavior_graph::ProbeWindow;
@@ -103,9 +104,11 @@ namespace
         auto const now = std::chrono::steady_clock::now();
         assert(!window.active());
         assert(!window.ever_armed());
+        assert(window.phase() == ProbePhase::e_idle);
         window.arm(now);
         assert(window.active());
         assert(window.ever_armed());
+        assert(window.phase() == ProbePhase::e_display);
         assert(!window.due(now + std::chrono::seconds(19)));
         assert(window.due(now + std::chrono::seconds(20)));
         assert(window.expire(now + std::chrono::seconds(20)));
@@ -117,6 +120,32 @@ namespace
         window.cancel(ProbeWindowClose::e_display_close);
         assert(!window.active());
         assert(window.close_reason() == ProbeWindowClose::e_display_close);
+    }
+
+    // C-G5-E1 v2: the concurrent window continues into a resumed phase at the first display close,
+    // so the engine's sample loop can be observed after the panel shuts.
+    void window_resumed_phase_starts_at_display_close_and_expires_once()
+    {
+        ProbeWindow window;
+        auto const now = std::chrono::steady_clock::now();
+        window.arm(now);
+        assert(window.enter_resumed(now));
+        assert(window.phase() == ProbePhase::e_resumed);
+        // The resumed deadline is measured from the transition, not from arm.
+        assert(!window.due(now + std::chrono::seconds(9)));
+        assert(window.due(now + std::chrono::seconds(10)));
+        assert(window.expire(now + std::chrono::seconds(10)));
+        assert(window.close_reason() == ProbeWindowClose::e_expired);
+        assert(!window.active());
+
+        // Only the first display close continues; a second one is refused and must close.
+        ProbeWindow again;
+        again.arm(now);
+        assert(again.enter_resumed(now));
+        assert(!again.enter_resumed(now));
+        assert(again.phase() == ProbePhase::e_resumed);
+        again.cancel(ProbeWindowClose::e_display_close);
+        assert(!again.active());
     }
 
     void ring_preserves_order_and_reports_overflow()
@@ -217,10 +246,11 @@ int main()
     table_argument_recovers_graph_and_rejects_bad_pointers();
     pairing_tracks_threads_and_reports_mismatch();
     window_arms_once_and_expires_without_second_close();
+    window_resumed_phase_starts_at_display_close_and_expires_once();
     ring_preserves_order_and_reports_overflow();
 #ifdef _WIN32
     thunk_passes_entry_arguments_and_returns();
 #endif
-    std::printf("7 probe-liveness cases passed (engine-free)\n");
+    std::printf("8 probe-liveness cases passed (engine-free)\n");
     return 0;
 }

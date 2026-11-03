@@ -52,6 +52,10 @@ namespace
     std::atomic<bool> g_arm_requested{ false };
     std::atomic<bool> g_invalidate_requested{ false };
     std::atomic<void*> g_pinned{ nullptr };
+    // v2: the detour gate is atomic (the recorder may run on a different thread than the sampler),
+    // and the last plugin-originated graph lets completion details pair with plugin entries.
+    std::atomic<bool> g_gate{ false };
+    std::atomic<void*> g_plugin_graph{ nullptr };
     std::atomic<std::uint32_t> g_epoch{ 0 };
     std::atomic<std::uint32_t> g_actor{ 0 };
 
@@ -168,7 +172,7 @@ namespace
     void record_sample_entry(void* a_graph, void* a_caller) noexcept
     {
         ProbeState& s = state();
-        if (!s.window.active())
+        if (!g_gate.load(std::memory_order_relaxed))
             return;
         Counters& c = s.counters;
         c.entries_total.fetch_add(1, std::memory_order_relaxed);
@@ -179,7 +183,11 @@ namespace
         switch (caller)
         {
         case ProbeCaller::e_engine_local_loop: c.entries_engine.fetch_add(1, std::memory_order_relaxed); break;
-        case ProbeCaller::e_plugin: c.entries_plugin.fetch_add(1, std::memory_order_relaxed); break;
+        case ProbeCaller::e_plugin:
+            c.entries_plugin.fetch_add(1, std::memory_order_relaxed);
+            // v2: remember the plugin's graph so its 63856 completions can be detailed too.
+            g_plugin_graph.store(a_graph, std::memory_order_relaxed);
+            break;
         default: c.entries_other.fetch_add(1, std::memory_order_relaxed); break;
         }
         bool const is_pinned = pinned != nullptr && a_graph == pinned;
@@ -210,7 +218,7 @@ namespace
     void record_pose_write(void* a_pose, void* a_table, std::uint32_t a_count) noexcept
     {
         ProbeState& s = state();
-        if (!s.window.active())
+        if (!g_gate.load(std::memory_order_relaxed))
             return;
         Counters& c = s.counters;
         c.completions_total.fetch_add(1, std::memory_order_relaxed);
@@ -221,7 +229,10 @@ namespace
             c.completions_pinned.fetch_add(1, std::memory_order_relaxed);
         else
             c.unattributed_completions.fetch_add(1, std::memory_order_relaxed);
-        if (!is_pinned)
+        // v2: plugin-originated completions are detailed as well, so P3 can be evaluated for the
+        // plugin path (the candidate's own 63589 call is the positive control of the window).
+        bool const is_plugin = g_plugin_graph.load(std::memory_order_relaxed) == graph;
+        if (!is_pinned && !is_plugin)
             return;
         ProbeRecord record{};
         record.graph = reinterpret_cast<std::uintptr_t>(graph);
@@ -375,6 +386,7 @@ namespace
         g_actor.store(a_actor_id, std::memory_order_relaxed);
         std::uint32_t const epoch = g_epoch.fetch_add(1, std::memory_order_relaxed) + 1;
         s.window.arm(std::chrono::steady_clock::now());
+        g_gate.store(true, std::memory_order_release);
         logger::info("PROBE LIVENESS concurrent-armed actor={:08x} epoch={} graph={:#x} behavior={:#x} pinned=yes",
             a_actor_id, epoch, reinterpret_cast<std::uintptr_t>(pinned),
             reinterpret_cast<std::uintptr_t>(pinned->behaviorGraph));
@@ -391,12 +403,37 @@ namespace
         ProbeState& s = state();
         if (!s.window.active())
             return;
+        // C-G5-E1 v2: the concurrent window is armed inside the paused panel, where the engine does
+        // not run its sample loop. The first display close therefore continues the same window into
+        // a resumed phase instead of ending it; counters stay cumulative and the segment row marks
+        // the boundary so the resumed phase can be read on its own.
+        if (std::strcmp(a_reason, "display-close") == 0
+            && sampling_liveness_mode() == ProbeLivenessMode::e_concurrent
+            && s.window.phase() == ProbePhase::e_display
+            && s.window.enter_resumed(std::chrono::steady_clock::now()))
+        {
+            logger::info("PROBE LIVENESS window=segment from=display to=resumed seconds={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} completions={} pinned={} unattributed={} detail={} detail-dropped={} ring-dropped={}",
+                Probe_Liveness_Resumed.count(),
+                s.counters.frames.load(std::memory_order_relaxed),
+                s.counters.entries_total.load(std::memory_order_relaxed),
+                s.counters.entries_engine.load(std::memory_order_relaxed),
+                s.counters.entries_plugin.load(std::memory_order_relaxed),
+                s.counters.entries_other.load(std::memory_order_relaxed),
+                s.counters.pinned_engine.load(std::memory_order_relaxed),
+                s.counters.completions_total.load(std::memory_order_relaxed),
+                s.counters.completions_pinned.load(std::memory_order_relaxed),
+                s.counters.unattributed_completions.load(std::memory_order_relaxed),
+                s.detail_lines, s.counters.detail_dropped.load(std::memory_order_relaxed), s.ring.dropped());
+            return;
+        }
         ProbeWindowClose reason = ProbeWindowClose::e_abort;
         if (std::strcmp(a_reason, "display-close") == 0) reason = ProbeWindowClose::e_display_close;
         else if (std::strcmp(a_reason, "expired") == 0) reason = ProbeWindowClose::e_expired;
         else if (std::strcmp(a_reason, "world-reset") == 0) reason = ProbeWindowClose::e_world_reset;
         else if (std::strcmp(a_reason, "rearm") == 0) reason = ProbeWindowClose::e_rearm;
         s.window.cancel(reason);
+        g_gate.store(false, std::memory_order_release);
+        g_plugin_graph.store(nullptr, std::memory_order_relaxed);
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} completions={} pinned={} unattributed={} tracked-entries={} paired-completions={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={}",
             probe_window_close_name(reason), g_actor.load(std::memory_order_relaxed),
@@ -444,6 +481,7 @@ namespace
             s.reset();
             g_epoch.fetch_add(1, std::memory_order_relaxed);
             s.window.arm(std::chrono::steady_clock::now());
+            g_gate.store(true, std::memory_order_release);
             logger::info("PROBE LIVENESS window=open mode=on epoch={} pinned=no",
                 g_epoch.load(std::memory_order_relaxed));
         }
