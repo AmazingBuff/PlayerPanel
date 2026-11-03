@@ -985,6 +985,7 @@ Attempt-3 run (2026-11-03 00:10:44–00:10:54, identity confirmed in the live lo
 - **备份** v66 三件套到 `dist/deploy-backup-20261104-v66/`：DLL 1,474,048 字节 `190c7236…`、PDB 38,522,880 字节 `b4f2596d…`、部署 INI（dormant）2,147 字节 `27f481f5…`（另存 `deployed-dormant-27f481f5.ini`）。
 - **部署** v67：DLL 1,501,696 字节 `e725066c0428f4642bb4529b80c0419490ef4aa1be7b0ec9cd24fd49e4e3457e`、PDB 48,902,144 字节 `1a4da885…`（与 clean-tree 构建逐字节相同；DLL 内嵌身份字符串 `…-7dd5ea7458-…` 与 `PROBE LIVENESS` 目标串均已核对）。
 - **运行 INI**：9,465 字节 `ff3c6f34a29bd67d4134b6a5a4e9de43e47c000d5bf6a445393a2b6d45ba2809`，由仓库样例派生并逐键读回断言：`IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`、`SamplingLiveness=concurrent`，`SourceTimeline/SourceEventCapture/SourceWriteCapture/OarContextWatch` 与全部 candidate 探针保持 off/空（契约禁止叠加 detour 仪器）。
-- **尚未运行**：本次部署等待一次上机会话；结束后的第一步是从备份恢复 dormant INI（`27f481f5…`）并重启，再归档日志。
+- **运行（2026-11-04 00:10，已测）**：面板打开于 00:12:00.314（源快照 `paused-source`），实验 00:12:00.333 武装窗口，00:12:20.345 到期（995 帧）；日志归档 [221,958 字节 `b5318dcb…`](diagnostics/CharacterPanel-g5e1-liveness-first-20261104-0010.log)。判读见 [C-G5-E1 首轮运行](independent-behavior-graph.md#c-g5-e1-run1)：P1/P5 通过、Q2 因窗口只覆盖暂停期而未被检验。
+- **部署已回到 dormant**：`CharacterPanel.ini` 已从备份恢复为 `27f481f5…`（2,147 字节）；v67 DLL/PDB 留在原位，等待 v2 窗口的第二次运行。
 
 

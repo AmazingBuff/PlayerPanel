@@ -393,6 +393,7 @@ namespace
             return;
         ProbeWindowClose reason = ProbeWindowClose::e_abort;
         if (std::strcmp(a_reason, "display-close") == 0) reason = ProbeWindowClose::e_display_close;
+        else if (std::strcmp(a_reason, "expired") == 0) reason = ProbeWindowClose::e_expired;
         else if (std::strcmp(a_reason, "world-reset") == 0) reason = ProbeWindowClose::e_world_reset;
         else if (std::strcmp(a_reason, "rearm") == 0) reason = ProbeWindowClose::e_rearm;
         s.window.cancel(reason);

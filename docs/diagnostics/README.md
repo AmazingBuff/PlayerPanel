@@ -1,6 +1,6 @@
 # 诊断证据保留与恢复
 
-更新：2026-11-03。当前结论以[独立图证据交接](../independent-behavior-graph.md#handoff-20261102-evidence)为准：G3-B 相位回放通过，G4 保留历史 PASSED，其 A 项（v63 运行）与 C 项（v66 运行）证据缺口均已关闭，下一阶段 G5 预注册、G6 待验。本页仅管理证据导航，不生成替代原始日志。
+更新：2026-11-04。当前结论以[独立图证据交接](../independent-behavior-graph.md#handoff-20261102-evidence)为准：G3-B 相位回放通过；G4 的 A 项（v63 运行）保留，**C 项（v66 运行）的"缺口已关闭"已被 [audit30](../behavior-graph-construction-audit.md#audit30) 推翻**（58377 detour thunk 实参错位，零事件是门不成立），待修复后重跑；下一阶段 G5 预注册、G6 待验。本页仅管理证据导航，不生成替代原始日志。
 
 ## 本次退役范围与理由
 
@@ -67,3 +67,8 @@ git show 'ae5dac28356d0ebb1a5fd754ddb4882a8dae26f3:docs/diagnostics/CharacterPan
 - E1/E2/E3 保留源观察路由及负结果的边界，防止把“未观察”推广为全路由不存在；[S6](CharacterPanel-g3bs6-unequip-event-retry-20261031-2123.log)/[F](CharacterPanel-g3bf-full-replay-20261031-2138.log)保留正确事件与完整相位回放的直接证据。
 - G4 [A](CharacterPanel-g4a-oar-context-20261031-2258.log)/[A2](CharacterPanel-g4a2-clip-identity-20261031-2330.log)/[A3](CharacterPanel-g4a3-scan-anchor-20261031-2345.log)、[A/A v1](CharacterPanel-g4b-aa-baseline-20261101-2355.log)/[A/A v2](CharacterPanel-g4b-aa-v2-20261101-2358.log)/[B+C](CharacterPanel-g4bc-run-b-20261101-0028.log)全部保留，供重核明细 cap、numeric72/类型7、关闭的源事件捕获、基线方差和装备族选择范围。
 - 更早的144份文档清理有独立的[历史来源/恢复索引](../history-sources.md)，恢复提交不同，不与本次四日志混用。
+
+
+## C-G5-E1 首轮运行日志（2026-11-04）
+
+- [CharacterPanel-g5e1-liveness-first-20261104-0010.log](CharacterPanel-g5e1-liveness-first-20261104-0010.log)（221,958 字节，SHA-256 5318dcb1e56bd625914b179f2467c6bd23cb60216e2279062572fe1a61bf6d6）：v67 SamplingLiveness=concurrent 窗口，00:12:00.333 武装、00:12:20.345 到期（995 帧）。判读、计数与两条独立事实见[首轮运行](../independent-behavior-graph.md#c-g5-e1-run1)；原文保留，不改写。

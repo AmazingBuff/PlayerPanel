@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-03。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为历史裁定，其 **A 项缺口已于 11-02 关闭**（[C-G4-A4](#c-g4-a4-numeric-types) v63：整窗 72/72 全 `type=0`、逐窗对账相等）；**C 项的 v66 关闭已被 [audit30](behavior-graph-construction-audit.md#audit30) 推翻**——58377 detour 的 thunk 实参槽位错位一格，源图零事件是门不成立的结果，修复后的仪器尚未重跑，G4-C 回到"待重跑"。下一阶段采用 [G5 执行方案 v2](#g5-draft)；[audit28](behavior-graph-construction-audit.md#audit28) 首轮原生审计完成（门 1 NOT_READY）；按 [E1→E2→E3→联合证据验收](#g5-evidence-plan)继续，**E1 的静态部分已完成**（[audit29](behavior-graph-construction-audit.md#audit29)），其最小探针已实现并预注册为 [C-G5-E1 契约](#c-g5-e1-probe)（engine-free 7 例通过；Release 构建被本机依赖状态阻塞，无产物、未部署、未运行）。三片探针的**运行证据**仍 PENDING；之后仍须经评审仪器、独立校准、完整冻结和新正式验证，G5 未冻结/未通过。G6 待验。历史实验与原始读数保留，前向更正见各节；冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
+更新：2026-11-03。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为历史裁定，其 **A 项缺口已于 11-02 关闭**（[C-G4-A4](#c-g4-a4-numeric-types) v63：整窗 72/72 全 `type=0`、逐窗对账相等）；**C 项的 v66 关闭已被 [audit30](behavior-graph-construction-audit.md#audit30) 推翻**——58377 detour 的 thunk 实参槽位错位一格，源图零事件是门不成立的结果，修复后的仪器尚未重跑，G4-C 回到"待重跑"。下一阶段采用 [G5 执行方案 v2](#g5-draft)；[audit28](behavior-graph-construction-audit.md#audit28) 首轮原生审计完成（门 1 NOT_READY）；按 [E1→E2→E3→联合证据验收](#g5-evidence-plan)继续，**E1 的静态部分已完成**（[audit29](behavior-graph-construction-audit.md#audit29)），其最小探针已实现、构建并跑过一轮（[C-G5-E1](#c-g5-e1-probe)、[首轮运行](#c-g5-e1-run1)）：P1 安装与 P5 队列快照成立（`flag=0`、995 帧），但**窗口只覆盖面板暂停期**，引擎帧路径在该期间不采样，Q2 未被检验；需要 v2 窗口延伸（显示关闭后转入恢复游玩期）后再跑。三片探针的**运行证据**仍 PENDING；之后仍须经评审仪器、独立校准、完整冻结和新正式验证，G5 未冻结/未通过。G6 待验。历史实验与原始读数保留，前向更正见各节；冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B 保留；C 的关闭失效（[audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷），待修复后重跑** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 只建立当前装备族选择稳定。**C：v66 的 `events=0` 判为仪器无效**——58377 detour 的 thunk 实参槽位错位，门拿 `rax` 残值与被钉图比较，故零事件是门不成立的结果；`calls=62`（计数在门之前）仍有效。修复后的仪器尚未上机重跑，见 [audit30 裁定](behavior-graph-construction-audit.md#audit30)。 |
-| G5 | **执行方案 v2；正式验收未就绪** | [方案](#g5-draft)与[审计处置](#g5-audit-pending)保留；[audit28](behavior-graph-construction-audit.md#audit28)完成首轮审计，门 1 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)完成 **E1 静态部分**（分派/本地双路径、生成在 58343、poseLocal 末写 63856、原生无完成序号、三处计数须分开）；探针已预注册为 [C-G5-E1](#c-g5-e1-probe) 但**未实现/未运行**，E2/E3 未实现，完整 G5 未冻结/未通过。 |
+| G5 | **执行方案 v2；正式验收未就绪** | [方案](#g5-draft)与[审计处置](#g5-audit-pending)保留；[audit28](behavior-graph-construction-audit.md#audit28)完成首轮审计，门 1 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)完成 **E1 静态部分**；[C-G5-E1](#c-g5-e1-probe) 探针已实现/构建/部署并跑一轮（[首轮运行](#c-g5-e1-run1)：安装与队列快照成立、`flag=0`；但窗口只覆盖面板暂停期，Q2 未被检验），需要 v2 窗口延伸后再跑；E2/E3 未实现，完整 G5 未冻结/未通过。 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -37,7 +37,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
 | G3 | G3-A 成立；**G3-B PASSED（相位序列）** | [F](#c-g3b-f-full-replay)：两事件复现 0→10→1→12→0；完整姿态另验 |
 | G4 | **A/B 保留；C 证据无效，待重跑** | [numeric 全窗覆盖](#g4-followup-numeric)（v63：整窗 72/72 `type=0`、逐窗对账相等）、B 限装备族选择稳定；[源事件兼容观察](#g4-followup-source-events) 的 `events=0` 由 [audit30](behavior-graph-construction-audit.md#audit30) 判为仪器无效（thunk 实参错位），修复后未重跑 |
-| G5 | 首轮审计完成；门 1 NOT_READY；未通过 | [audit28](behavior-graph-construction-audit.md#audit28) 与 [audit29](behavior-graph-construction-audit.md#audit29)：**E1 静态部分已完成**（三块事实 + 字段/寿命表 + 三种序号），探针契约 [C-G5-E1](#c-g5-e1-probe) 已预注册但未实现；E1 运行证据、E2、E3 仍 PENDING；完整目标保留，之后仪器→独立校准→完整冻结→新正式验证 |
+| G5 | 首轮审计完成；门 1 NOT_READY；未通过 | [audit28](behavior-graph-construction-audit.md#audit28) 与 [audit29](behavior-graph-construction-audit.md#audit29)：**E1 静态部分已完成**；探针契约 [C-G5-E1](#c-g5-e1-probe) 已实现并跑一轮（[首轮运行](#c-g5-e1-run1)：P1/P5 通过、P2 因窗口只覆盖暂停期而未被检验）；E1 完整运行证据、E2、E3 仍 PENDING；完整目标保留，之后仪器→独立校准→完整冻结→新正式验证 |
 | G6 | PENDING | 非豁免生命周期、源恢复与重复会话收敛未证 |
 
 ### 逐轮实验（本系列）
@@ -1963,7 +1963,7 @@ BehaviorGraphProbe=true
 <a id="handoff-20261102-evidence"></a>
 ## 当前证据交接（更新至 2026-11-03）
 
-本节接替下方 11-01 收官摘要。G4 当次的两项证据缺口现已关闭，合并证据与限定见 [G4 收官](#g4-closure)；原 PENDING 的问题、仪器要求与关闭记录仍保留在下方。当前采用 [G5 执行方案 v2](#g5-draft)；[audit28](behavior-graph-construction-audit.md#audit28)已完成首轮原生审计，门 1 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)已完成 **E1 静态部分**（分派/本地双路径与 63359 无引用、生成在 58343、poseLocal 末写 63856、计数三分、无原生完成序号），E1 运行证据仍未取得；其最小探针已预注册为 [C-G5-E1 契约](#c-g5-e1-probe)（未实现）。[E1→E2→E3→联合验收与稍后验证清单](#g5-evidence-plan)已采纳；下一包是按该契约实现探针。
+本节接替下方 11-01 收官摘要。G4 当次的两项证据缺口现已关闭，合并证据与限定见 [G4 收官](#g4-closure)；原 PENDING 的问题、仪器要求与关闭记录仍保留在下方。当前采用 [G5 执行方案 v2](#g5-draft)；[audit28](behavior-graph-construction-audit.md#audit28)已完成首轮原生审计，门 1 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)已完成 **E1 静态部分**（分派/本地双路径与 63359 无引用、生成在 58343、poseLocal 末写 63856、计数三分、无原生完成序号），E1 运行证据仍未取得；其最小探针已预注册为 [C-G5-E1 契约](#c-g5-e1-probe)（未实现）。[E1→E2→E3→联合验收与稍后验证清单](#g5-evidence-plan)已采纳；[C-G5-E1](#c-g5-e1-probe) 探针已实现并跑过一轮（[首轮运行](#c-g5-e1-run1)：安装/队列成立，窗口只覆盖面板暂停期，Q2 待 v2 重跑）。
 
 > **关闭记录**：PENDING 1 由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭，PENDING 2 由 [C-G4-C1](#c-g4-c1-concurrent-events) 的 v66 运行关闭（2026-11-03）；下方缺口描述属于当时证据，不代表当前仍待补测。
 
@@ -3312,9 +3312,9 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 5. 依未来会话协议关闭/取消并归档，再恢复记录的设置并重启；不能盲用旧会话开关或继续解引用失效对象。装载 teardown 仍 NO-GO，候选保留例外不扩大，G6 与 DCMF 对照继续后置。
 
 <a id="c-g5-e1-probe"></a>
-## C-G5-E1：源采样 producer liveness 最小探针（契约草案 v1，2026-11-03，未实现）
+## C-G5-E1：源采样 producer liveness 最小探针（契约 v1 + 首轮运行，2026-11-03/04）
 
-> **状态：已实现（2026-11-03），engine-free 用例通过，Release 构建通过；未部署、未运行。** 本契约只回答 [audit29](behavior-graph-construction-audit.md#audit29) 第八节列出的三个未证问题——**采样线程、钉住的源图是否真的走本地循环、队列负载的消费者是否在别处重入采样**；它不产生 G5 通过结论，不承担 E2 的贡献账本或 E3 的配对资格。判据、观测点与记录格式在运行前固定，运行后不放宽、不换分母、不追加钩子。
+> **状态：已实现、已构建（v67）、已部署并跑过一轮（2026-11-04 00:10）。首轮结果是"设计范围不足"而不是负结果**：窗口只覆盖了面板暂停期，引擎的帧路径在该期间不采样，因此 Q2（钉住源图是否真被采样）未被检验。Q1 得到部分证据（队列 flag=0、插件路径单线程）。详见[首轮运行](#c-g5-e1-run1)。本契约只回答 [audit29](behavior-graph-construction-audit.md#audit29) 第八节列出的三个未证问题——**采样线程、钉住的源图是否真的走本地循环、队列负载的消费者是否在别处重入采样**；它不产生 G5 通过结论，不承担 E2 的贡献账本或 E3 的配对资格。判据、观测点与记录格式在运行前固定，运行后不放宽、不换分母、不追加钩子。
 >
 > **实现（v67，2026-11-03）**：`probe_liveness_policy.h`（三态解析、计数器、环、配对账本、窗口、`encode_detour_thunk`）+ `probe_liveness.{h,cpp}`（63589/63856 两处只读 detour、队列快照、关闭行）+ `SamplingLiveness` 键 + `PLUGIN_SOURCES` 32→33 + 主线程接驳（`kDataLoaded` 装、`PreLoadGame/NewGame` 失效、render 每帧 drain、实验 arm、显示关闭 close）。Engine-free [7 例](../tests/probe_liveness_test.cpp) 在 `cl /std:c++latest /W4 /WX` 下通过（产物 `build/behavior-graph-v67-g5e1-liveness-20261103/`）；Release 构建通过，身份/哈希与两条环境修复见 [v67 构建记录](build.md#v67-g5e1-liveness-2026-11-03)。**同一用例发现了旧 detour 的实参槽位缺陷，见 [audit30](behavior-graph-construction-audit.md#audit30)。**
 
@@ -3392,3 +3392,32 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 - 不钩 `58343`/`63666`/`63582`/`59303`（槽轨道的最终填充点是 E2 的题目，见 audit29 第十节）。
 - 不改产品路径、不写候选/源字段、不增加依赖、不改变既有窗口语义。
 - 不把本探针的通过当作门 1 关闭：门 1 仍需 E2、E3 与联合验收。
+
+<a id="c-g5-e1-run1"></a>
+### 首轮运行（2026-11-04 00:10，v67，concurrent）
+
+**工件与设置**：DLL `e725066c…3457e`（1,501,696 字节，身份 `…-7dd5ea7458-…`）、PDB `1a4da885…7bc4`；运行 INI 9,465 字节 `ff3c6f34…`（`IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`、`SamplingLiveness=concurrent`，其余仪器全关）；日志 [221,958 字节 `b5318dcb…`](diagnostics/CharacterPanel-g5e1-liveness-first-20261104-0010.log)。部署记录见 [v67 build](build.md#v67-g5e1-liveness-2026-11-03)。
+
+**安装与窗口**：两条 detour 均按预注册头字节安装（63589 `head-size=5`、63856 `head-size=7`），地址 `0x7ff625842a40`/`0x7ff625852fe0`。00:11:34 读档触发 `invalidate-requested reason=world-reset`（窗口未开，无副作用）。00:12:00.314 面板打开（`panel-open`，源快照 `paused-source`），00:12:00.333 实验开始并 `concurrent-armed actor=00000014 epoch=1 graph=0x1ef241c4680 behavior=0x1ea737f5900 pinned=yes`；窗口于 00:12:20.345 到期关闭（20.012 s，995 帧）。
+
+**关闭行（原文）**：
+`window=close reason=abort actor=00000014 epoch=1 frames=995 entries=1314 e:engine=0/plugin=1314/other=0 pinned-engine=0 completions=1314 pinned=0 unattributed=1314 tracked-entries=1312 paired-completions=0 pair-mismatch=0 pair-no-slot=0 threads=1 queue-seen=yes queue=0x7ff627e4e0e0 flag=0 queue-flag-frames=0 detail=1312 detail-dropped=0 ring-dropped=0`
+
+**逐条判据**：
+
+| 判据 | 结果 | 依据 |
+| --- | --- | --- |
+| **P1 安装与存活** | **通过** | 两条 detour 按预注册头字节安装；`frames=995`、`entries=1314`；`reason=abort` 是**标签缺陷**（见下），不是窗口缺失 |
+| **P2 源命中（Q2）** | **未被检验（不是负结果）** | `pinned-engine=0`、`completions-pinned=0`、`e:engine=0`——引擎的帧路径在窗口内**一次也没调用 63589**；正控成立（`e:plugin=1314`） |
+| **P3 配对完整性** | 插件记录不可评 | 1312 条明细全是候选图 `0x1efc0dc9080`；`63856` 的明细只在钉住图时入环，故插件调用没有对应 completion 行（`paired-completions=0`） |
+| **P4 线程唯一性** | 部分 | 明细内只有一个 tid（14696）；钉住图无记录，不能据此断言"引擎单线程" |
+| **P5 队列状态** | **通过且关键** | `queue-seen=yes queue=0x7ff627e4e0e0 flag=0 queue-flag-frames=0`：延迟更新队列存在，模式字节**全程为 0**，即分派分支从未成立 |
+
+**两条独立事实（本轮真正收获）**：
+
+1. **面板是暂停语境**：`ANIMATION WORLD … snapshot=paused-source reason='panel-open'`；窗口期间引擎不跑帧路径，所以 `e:engine=0`。这同时解释了为什么历史上"面板内驱动"必须由插件自己调 63589——引擎在这段时间不采样。
+2. **`[q+0x430]` 在实机为 0**：995 帧里 `queue-flag-frames=0`，`q` 指针稳定在 `0x7ff627e4e0e0`。audit29 的分派分支在正常游玩状态下**不成立**，本地循环才是路径——与静态审计的"唯一可达采样入口"一致。
+
+**仪器缺陷（已修，未进入本轮二进制）**：`close_probe_liveness_window` 的字符串映射漏了 `"expired"`，导致到期关闭被标成 `reason=abort`。该 bug 只影响标签，不影响计数；修复已进源码（下一次构建生效）。另有一处可改进项：插件调用的 `63856` 不进明细，使 P3 无法评估插件侧配对——列入 v2。
+
+**结论与下一步**：本轮证明安装/窗口/队列快照可用，但**按设计无法回答 Q2**——`concurrent` 窗口由实验 arm，而实验发生在面板暂停期。要取得"钉住源图真被引擎采样"的证据，需要把窗口延伸到**面板关闭后的恢复游玩期**：这属于窗口语义变更，须先预注册 [C-G5-E1 v2](#c-g5-e1-probe)（v2 = 显示关闭后转入"恢复期"，再到期关闭；判据 P1–P5 不变），不得直接改代码后补测。
