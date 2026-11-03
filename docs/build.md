@@ -989,4 +989,17 @@ Attempt-3 run (2026-11-03 00:10:44–00:10:54, identity confirmed in the live lo
 - **部署已回到 dormant**：`CharacterPanel.ini` 已从备份恢复为 `27f481f5…`（2,147 字节）；v67 DLL/PDB 留在原位，等待 v2 窗口的第二次运行。
 - **补充运行（2026-11-04 00:22，`on` 模式，零代码改动）**：INI 9,456 字节 `11d94ec2…`（`SamplingLiveness=on`、`IndependentGraph=off`），游玩态 F7 窗口 19.99 s / 748 帧，`e:engine=161006`、`flag=0`；日志归档 [5,669 字节 `c0a07a85…`](diagnostics/CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log)。判读见 [补充运行 A](independent-behavior-graph.md#c-g5-e1-run2)。运行结束后 INI 再次恢复为 dormant `27f481f5…`。
 
+<a id="v68-g5e1-resumed-2026-11-04"></a>
+## v68 G5-E1 v2 resumed window (2026-11-04)
+
+**改动**：只改探针的窗口语义与记录器门（[v2 预注册](independent-behavior-graph.md#c-g5-e1-v2)）——`ProbeWindow` 增加 `display`/`resumed` 两段（首次 `display-close` 转段并重计时 10 秒）、`close_probe_liveness_window("display-close")` 在 concurrent 下转段而不是关闭、`expired` 标签补齐、记录器门改 `std::atomic<bool>`、插件发起的 `63856` 入明细。Engine-free 用例 8 例通过（`8 probe-liveness cases passed`，产物 `build/behavior-graph-v68-g5e1-resumed-20261104/`）。
+
+**构建**：同一套命令（toolset 14.51.36231、header-only spdlog、release detours、`FETCHCONTENT_FULLY_DISCONNECTED=ON`），configure/build 均 exit 0，仅既有警告。
+
+- 身份：`CharacterPanel-scenegraph-v68-g5e1-resumed-73bff1d32d-cl94faaed0c6-20261103T162754Z`（clean tree，无 `+dirty`）
+- DLL：1,503,232 字节，SHA-256 `63f2c1696a087718d338bf4f16cf59a424af81c0088ad4bdea81c69a7a64cec8`
+- PDB：48,918,528 字节，SHA-256 `9ef8305de63d6b05dfcf879de4b31a13491c237f91675908820790dd3f8a78ed`
+
+**部署（2026-11-04 00:2x）**：v67 三件套备份到 `dist/deploy-backup-20261104-v67/`（DLL `e725066c…`、PDB `1a4da885…`、dormant INI `27f481f5…`）；v68 DLL/PDB 就位；运行 INI 回到 concurrent 配置 9,465 字节 `ff3c6f34…`（`IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`、`SamplingLiveness=concurrent`）。**尚未运行**；运行结束后恢复 dormant `27f481f5…`。
+
 
