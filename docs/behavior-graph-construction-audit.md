@@ -1171,6 +1171,8 @@ C:/env/python312/python.exe -B -c "import sys; sys.path.insert(0,'build/behavior
 
 **结果：E1 的静态部分完成，门 1 仍 NOT_READY。** 本轮只读解包镜像与既有地址库，给出 E1 要求的状态/调用图、字段来源与寿命表、同代快照与计数证据；**源 producer 的运行时 liveness、最小探针、E2/E3、校准、冻结与正式验证均未做**。没有任何构建、部署、hook、游戏会话或校准；静态可达不等于运行命中，本节的零结论只覆盖已列出的静态范围。
 
+> **后续（2026-11-04）**：本节的运行侧问题已由 [C-G5-E1](independent-behavior-graph.md#c-g5-e1-probe) 的三轮运行回答，合并结论见 [E1 收官摘要](independent-behavior-graph.md#e1-closure)；其中"单帧线程"一条被运行证据推翻（6 个工作线程逐帧轮换），更正见第八节。
+
 输入：HEAD `5bb5171` 与 [audit28](#audit28) 同一解包镜像 `SkyrimSE.original.exe.unpacked.exe`（SHA-256 `843823c115dbc56b5e9740350db49170cc4eea013a79513b7fd066deec719a2b`）与 versionlib `c4093c56…d452`；capstone 5.0.7 解码，`C:/env/libclang/bin/llvm-objdump.exe`（LLVM 20.1.0）备查。审计脚本与中间产物在 ignored `build/g5-e1-audit-20261103/`（`audit_e1.py`/`annotate.py`/`raw_calls.py`/`validate_bounds.py` 等），不是产品依赖。
 
 **方法边界**：本镜像把多个过程切成相邻 `.pdata` 碎片，碎片以 `UNWIND_INFO` 首字节 `flags&4`（`UNW_FLAG_CHAININFO`）链接。按"相邻 + 链式"归组可**逐字节复现 audit28 的 21 个过程组**（`validate_bounds.py`：0/21 不符）；按链式父指针归组则不能（父指向更早区段）。下表所有跨度均为该归组口径；被 jump 到的 cold 碎片计入组内。
