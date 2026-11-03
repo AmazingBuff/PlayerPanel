@@ -1,8 +1,8 @@
 # Build CharacterPanel
 
-更新：2026-11-02。[当前证据交接](independent-behavior-graph.md#handoff-20261102-evidence)拥有运行结论：G1/G2 有界通过、G3-A 成立、G3-B/F 相位回放通过；G4 历史 PASSED 保留，numeric 全窗类型覆盖已由 [v63 运行](#v63-g4a4-numeric-types-2026-11-02)关闭，只剩兼容源事件窗口一项 PENDING。G5 可准备协议、运行验收后置，G6 待验。本轮新增 v63 的构建、离线回归、部署与一次上机会话。
+更新：2026-11-03。[当前证据交接](independent-behavior-graph.md#handoff-20261102-evidence)拥有运行结论：G1/G2 有界通过、G3-A 成立、G3-B/F 相位回放通过；G4 历史 PASSED 保留，A numeric 全窗覆盖由 [v63 运行](#v63-g4a4-numeric-types-2026-11-02)关闭，C 兼容源事件窗口由 [v66 运行](#v66-g4c1-pinned-graph-2026-11-02)关闭，范围见 [G4 收官](independent-behavior-graph.md#g4-closure)。[audit28](behavior-graph-construction-audit.md#audit28)完成 G5 首轮原生审计，门 1 NOT_READY；按 [E1→E2→E3→联合证据验收](independent-behavior-graph.md#g5-evidence-plan)继续，当前 E1 静态审计，三片探针均未实现。[G5 v2](independent-behavior-graph.md#g5-draft)仍须仪器→独立校准→完整冻结→新正式验证，G5 未冻结/未通过，G6 后置。本次仅修改文档。
 
-最新记录安装为 [v63](#v63-g4a4-numeric-types-2026-11-02)，DLL `2c81435c…` / PDB `c8e361ec…`，A4 裁定后部署 INI 回 dormant `27f481f5…`；不是重新读取安装目录的核验。当前 `PLUGIN_SOURCES` 实数 **32**，保留的未跟踪 util.cpp 不在编译清单。v45 的 30 与 v60 叙述的 33 保留为日期记录，后者计数误差以前述当前清单为准。
+最新记录安装为 [v66](#v66-g4c1-pinned-graph-2026-11-02)，DLL `190c7236…` / PDB `b4f2596d…`，C1 裁定后部署 INI 回 dormant `27f481f5…`；不是重新读取安装目录的核验。当前 `PLUGIN_SOURCES` 实数 **32**，保留的未跟踪 util.cpp 不在编译清单。v45 的 30 与 v60 叙述的 33 保留为日期记录，后者计数误差以前述当前清单为准。
 
 [v46 正常工作流](scene-graph.md#v46-manual-regression)已于 2026-10-30 用同源重建身份观察，非 20261029 归档逐字节验证。以下日期段落描述工件生成/当次操作；历史“未部署/未上机”不代表后来仍未执行，source commit 不会重建或重标 DLL/PDB。
 
@@ -12,11 +12,11 @@ Build the current Windows DLL from this checkout. Release is the only configure/
 
 <a id="current-research-status-2026-10-26"></a>
 <a id="current-research-status-2026-10-29"></a>
-## Current research status (2026-11-02)
+## Current research status (2026-11-03)
 
 [G1/G2 的限定通过、G3-A 与 G3-B/F 相位通过](independent-behavior-graph.md#verification-matrix)均有留存运行证据。G2 的 109/116 写骨与三未知缺失名、同 controller 来源/generation 替换和 frozen-only 等限制不变；G3-B 不能替代完整姿态验收。
 
-G4 的两项 [PENDING](independent-behavior-graph.md#handoff-20261102-evidence)涉及 numeric 类型明细被前 32 条总求值预算截断，以及源事件捕获关闭/安装门拒绝 inject 共存；需要另行评审兼容仪器，不是 INI-toggle 重跑。共享 data/绑定与候选哈希复现不证明源候选完整姿态/时钟/层一致。G5 未预注册/未运行，G6 保持完整非豁免生命周期范围；装载 teardown NO-GO。
+G4 的两项缺口已由 A4 全窗计数与 C1 并发钉图观察关闭，仍保留装备族/58377 路由等限定。共享 data/绑定与候选哈希复现不证明源候选完整姿态/时钟/层一致。[G5 v2](independent-behavior-graph.md#g5-draft)以有资格门的 R2 完整原生输出为正式主参照方向，R1 仅诊断；首轮审计后门 1 仍 NOT_READY，[E1–E3 方案及稍后验证前置/回传清单](independent-behavior-graph.md#g5-evidence-plan)拥有下一步。**记录安装 v66 不含新 E1–E3 探针，既有开关不能产生新证据；当前无新验证包或 INI 配方。** 未来实现须先评审 native 兼容性、通过聚焦检查并匹配归档/实际加载的 DLL/PDB、build identity、设置与资源，再按该片协议运行；完整仪器与独立校准后才冻结正式协议。G6 保持完整非豁免生命周期范围；装载 teardown NO-GO。
 
 <a id="v18-frame-trace-build"></a>
 ## V18 bounded frame-trace verification (2026-10-26)
@@ -948,6 +948,6 @@ Build (2026-11-02 23:43 local): configure + build exit 0, only the pre-existing 
 
 Attempt-3 acceptance (unchanged criteria): `installed mode=concurrent`, `window-open` before both `result=dispatched` rows with `words=652 nodes=106` (same source as the scan row), `window-closed reason=display-close` with `calls ≥ 2`, `other-graph ≥ 2`, `events=0`, `ring-dropped=0`.
 
-Attempt-3 run (2026-11-03 00:10:44–00:10:54, identity confirmed in the live log): **hit — the C-segment source-event gap is closed (PENDING 2 retired)**. `window-open` reported `words=652 nodes=106 data=0x1c4b4cb7510`, bit-identical to the `pre-activate` `behavior-data` and consistent with the scan row's `src-count=106`, so the pinned target really was the candidate's source graph; it was armed at 00:10:44.638, before `WeapEquip` (44.890) and `Unequip` (45.025). The window stayed open 10.1 s through the replay and the display phase and closed as `reason=display-close events=0 phases=0 calls=62 other-graph=55 ring-dropped=0`: the positive control (62 calls, 55 classified as other graphs, including our two candidate dispatches) proves the detour was live and discriminating, while zero source events is the isolation reading. No `identity-mismatch`, no `window-aborted`, no `source-not-in-manager`, zero `[E]`; the replay reproduced its pose hashes an eighth time and `source-drift=none` held. Log archived ([137,368 bytes](diagnostics/CharacterPanel-g4c1-attempt3-pinned-graph-20261103-0010.log), SHA-256 `d2fa2b03…`). After adjudication the deployed INI returned to dormant off (`27f481f5…`, 2,147 bytes) with the v66 pair installed. G4's two evidence gaps are now both closed; G5 pre-registration is next.
+Attempt-3 run (2026-11-03 00:10:44–00:10:54, identity confirmed in the live log): **hit — the C-segment source-event gap is closed (PENDING 2 retired)**. `window-open` reported `words=652 nodes=106 data=0x1c4b4cb7510`, bit-identical to the `pre-activate` `behavior-data` and consistent with the scan row's `src-count=106`, so the pinned target really was the candidate's source graph; it was armed at 00:10:44.638, before `WeapEquip` (44.890) and `Unequip` (45.025). The window stayed open 10.1 s through the replay and the display phase and closed as `reason=display-close events=0 phases=0 calls=62 other-graph=55 ring-dropped=0`: the positive control (62 calls, 55 classified as other graphs, including our two candidate dispatches) proves the detour was live and discriminating, while zero source events is the isolation reading. No `identity-mismatch`, no `window-aborted`, no `source-not-in-manager`, zero `[E]`; the replay reproduced its pose hashes an eighth time and `source-drift=none` held. Log archived ([137,368 bytes](diagnostics/CharacterPanel-g4c1-attempt3-pinned-graph-20261103-0010.log), SHA-256 `d2fa2b03…`). After adjudication the deployed INI returned to dormant off (`27f481f5…`, 2,147 bytes) with the v66 pair installed. G4's two evidence gaps are now both closed; the next work package is the [G5 v2 oracle/comparability and sampling audit](independent-behavior-graph.md#g5-draft).
 
 

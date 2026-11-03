@@ -1,20 +1,20 @@
 # 行为图构造与销毁的二进制审计（2026-10-23）
 
-更新：2026-10-29。本文保留 AE 1.6.1170 静态审计与历史推断；[当前证据](independent-behavior-graph.md#verification-matrix)优先。G1 只按方案 A 修订通过；v33 以语义运动 120/120、实际赋值 109/116、源不变和用户画面确认取得有界 G2 通过，v34 四条边界成立但确切拒绝原因未直接记录；v41 的 G3-A settled 相位观测成立，非完整外部输入 trace。G3-B/G4–G6 仍待验证。
+更新：2026-11-03。本文保留 AE 1.6.1170 静态审计与历史推断；[当前证据](independent-behavior-graph.md#verification-matrix)优先。G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过，G4 两项缺口已关闭（[收官与限定](independent-behavior-graph.md#g4-closure)）。[audit28](#audit28)完成 G5 首轮原生审计，门 1 NOT_READY；[E1–E3 方案/交接](independent-behavior-graph.md#g5-evidence-plan)探针均未实现，G5 未冻结/未通过、G6 待验。
 
 <a id="audit-current"></a>
-## 当前生成入口与后验边界（2026-10-29）
+## 当前生成入口与后验边界（2026-11-03）
 
 v32 收窄 raw119/120 与 bones=116 的推论，v33 随后分别测得语义运动与实际覆盖；missing=7 的旧 cap4 只列四名、另三未知，不证明可忽略。v34 的 reset/重开/F7/读档回落结果保留，同 controller 来源/generation 改变与 frozen-only 拒绝未验。新 [v42 有界诊断](independent-behavior-graph.md#v42-residual-corrections)仅提升后续可观测性，既有指令事实、native 配方和原始日志不改。
 
-当前复现入口为 [手工清单](independent-behavior-graph.md#v32-manual-checklist)与 [v42 待采项](independent-behavior-graph.md#v42-residual-corrections)。最新记录安装为 v41（SourceTimeline=true、其余三键 off）；最新本地产物为 [v46](build.md#v46-retained-copy-ledger-2026-10-29)，未部署。新增 [audit27](#audit27) 只证明三个变量至少各有一个静态外部整数 setter 调用点，没有新增运行代码或游戏结果。18 行窗口内最多一次拒绝理由，cap8 只影响未来 missing 名称。装载 teardown 仍 NO-GO；进程保留一张候选是 G6 显式例外，其余源恢复、请求/任务、引用/回调/sink/历史和重复会话收敛仍待验；全局引擎登记计数没有有效测量锚点。
+当前原生事实见 [audit28](#audit28)，下一动作是 [E1 静态源调度/输出寿命审计](independent-behavior-graph.md#g5-evidence-plan)；既有手工清单不构成新 E1–E3 验证包。最新记录安装 [v66](build.md#v66-g4c1-pinned-graph-2026-11-02) / INI dormant，本次未重新核验安装；新探针未实现。历史 [audit27](#audit27)仅证三个静态外部整数 setter 点，旧 missing/拒绝理由预算不能补齐旧数据。装载 teardown 仍 NO-GO；进程保留一张候选是 G6 显式例外，其余源恢复、请求/任务、引用/回调/sink/历史和重复会话收敛仍待验；全局引擎登记计数没有有效测量锚点。
 
 v31 是对调用路径和观测对象的源码更正，没有新增 native 入口或二进制审计。既有 63587 更新记录、63589 mode0 生成入口与行为图字段声明继续沿用；不可直接以 SDK 的简化 Generate 声明替代已审计的同步入口。
 
 - 成功批量每步含辅助管线、内部行为图子图标记、显式 `63587(dt/eye)`、骨数镜像和生成。v28–v30 显示路径漏掉更新及相关输入，故其负结果不能证明完整逐帧配方不可行。
 - v30 的 `active/children` 从外层对象取错基址，真正字段是内部 `hkbBehaviorGraph::isActive/updateActiveNodes`；`numData` 少读取 output 的 element 指针。值 17/62016 不能解释为门状态。
 - `b245=0/b246=0` 也可出现在正常 Path B；v30 成功批量 step 2/119 即有这组值。阶段后值不能替代调用前条件。
-- v31 让批量与显示复用同一单步并正确观察阶段，候选 world 字段单步借用后恢复。两个离线回归与 Release 构建通过，**尚无 v31/v32 游戏运行**；见[更正与待验项](independent-behavior-graph.md#g2-v31-correction)。
+- v31 让批量与显示复用同一单步并正确观察阶段，候选 world 字段单步借用后恢复。当时两个离线回归与 Release 构建通过，v31/v32 当时无游戏运行；后来 v33 重建与 v34 边界的有界通过见[验证总表](independent-behavior-graph.md#verification-matrix)，不改各日期工件结论。
 
 下文按日期保存历史审计和当时的推断；后验更正优先。指令事实、调用后观察、有效骨变换与视觉运动须分别举证。元数据 visitor 不能推出 manager 登记必要；输出头/f/t 不能独自证明完整姿态生成，已有审计22/23的限定继续有效。
 
@@ -1100,3 +1100,68 @@ C:/env/python312/python.exe -B -c "import sys; sys.path.insert(0,'build/behavior
 ```
 
 本次已逐项复核三条直接 call 的 rel32 目标、名字初始化引用、字面串、SDK 声明和 582 字节边界；现成 LLVM 的调用窗口与保留取证一致，主镜像/地址库哈希断言通过。下一步仍是源/候选运行时名字/类型映射、剩余 writer/角色和最小输入集/事件时序证据，然后另立写入契约。仅文档更新，无构建/测试重跑；最新本地 DLL/PDB 保持 [v46](build.md#v46-retained-copy-ledger-2026-10-29)，记录安装保持 v41。
+
+<a id="audit28"></a>
+<a id="g5-stage1-audit"></a>
+## 审计二十八：G5 首轮输出、贡献与 R2 资格审计（2026-11-03）
+
+**首轮只读审计完成；门 1 = NOT_READY**，不是插件运行失败或 G5 验收结果。下一有界工作为 E1 源调度/输出寿命静态审计；实施顺序与稍后验证清单由 [G5 证据方案](independent-behavior-graph.md#g5-evidence-plan)拥有。新 E1–E3 探针尚未实现/构建/部署/运行，正式协议未冻结，G5 未通过。
+
+**输入身份**：HEAD c372600d7d596210ce909c57010e88bfcb280fb5，含已接受的六份 G5 v2 文档；CommonLibSSE 94faaed0c60eddd8347767f2d4d29a97c93bde8c。目标为 AE 1.6.1170；解包镜像 SHA-256 **843823c115dbc56b5e9740350db49170cc4eea013a79513b7fd066deec719a2b**；同版地址库 SHA-256 **c4093c569a3c83b26587f4b9ea4c55de9ae6e73b84a2af9fb3fbd30e2fe0d452**，路径/工具前提沿用 [audit27](#audit27)。
+
+生成输入保留在 ignored build/g5-stage1-audit-20261103/，不是产品依赖或唯一事实来源；以下表格编码可复核的 native/SDK/源码与保留日志定位。该目录三个输入的原始字节 SHA-256 为：
+
+| 输入 | SHA-256 |
+| --- | --- |
+| audit-report.md | d098b9bc684602b1292c50a55bbd7e7db07bb38cef563ab63a3703f86e537df8 |
+| findings.json | 30bfd8aa92d04c3f914d2e453c961cdb930b57d98f8c8537e3fc43447c245598 |
+| verification.json | 272e771096d5c50712b90f1ba02d2339af1a36ddcadcacb18a33f7316b847d7d |
+
+| 事实 | 证据定位 | 边界 / 尚缺 |
+| --- | --- | --- |
+| 身份与寿命代数 | [controller.cpp](../src/animation/controller.cpp) 的 source_graph / AnimationController::request；[scene_graph.cpp](../src/character/scene_graph.cpp) 的 SceneGraph::update_source_graph；[钉图运行事实](independent-behavior-graph.md#g4-closure) | root/graph 替换递增的 generation 是 lifetime epoch，不是每次输出完成序号；持有外层对象不证明内部快照原子性 |
+| 源调度候选位置 | 32898@0x54c130 → 63358；63358@0xba3f69、63359@0xba4087 的直接 E8 目标均为 63589@0xbb2a40 | 63358 另有跳过本地循环的 dispatch/wait；未覆盖全部间接/job 路径，静态可达不证明运行命中或完成 |
+| 包装返回与候选采样 | [drive_step_policy.h](../src/animation/behavior_graph/drive_step_policy.h) 的 drive_graph_step；[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 drive_candidate_step / log_clip_reference | pre 在 Update 后、包装前；post 是包装返回，不等于纯 Generate 结束、新鲜或完整输出 |
+| 生成/插值/IK/copy/skip | 63581@0xbafda0，双槽、graph+0x1e8/+0x1ec → +0x230、63582/64112；路径分工见 [audit23](#audit23) | 当前 clip 时钟不必等于插值产物时间；需分槽版本/时间、实际写入与完成证据，不按字节相同推断未生成 |
+| 分配、默认填充与映射 | [hkbCharacter.h](../extern/CommonLibSSE/include/RE/H/hkbCharacter.h) 的 poseLocal+0x90 / numPoseLocal+0x98；58466@0xabdc90 拷 skeleton referencePose；[audit25](#audit25)映射 | buffer/骨表大小不是本次写入数量；现有记录缺完整父子/reference 指纹和逐帧通道账本 |
+| scalar / counter 与真实 ABI | [hkbGeneratorOutput.h](../extern/CommonLibSSE/include/RE/H/hkbGeneratorOutput.h) 的 onFraction（pose Tracks+0x38）；58376@0xab5607..0xab561f、0xab5753..0xab576c；[hkbGenerator.h](../extern/CommonLibSSE/include/RE/H/hkbGenerator.h) | activeNodes 条目+0x80 按整数 inc/reset，不是逐层/逐骨权重；Generate 分发还有活 r8/r9 和栈 float，不能直接套 SDK 单 context 声明 |
+| 临时状态 | 58343@0xab2f68..0xab30a7、58355@0xab38df..0xab3951、58376@0xab55f0..0xab561f | state+0x60 float 数组交给 58383；完整语义/消费者与寿命未闭合，58383 仍待审，不能凭 float 类型定名或返回后晚读 |
+| 现有采集完整性 | independent_graph.cpp 的 collect_active_clips(8)、256 node/pose 上限与 log_clip_step；[renderer.cpp](../src/render/renderer.cpp) 的 post_ui_draw；[source_event_capture.cpp](../src/animation/behavior_graph/source_event_capture.cpp) 的 managed_graph | leaf 名分组不识别实例；post-UI 不是已证完成屏障，尚缺全量遗漏计数和同代完成标记 |
+| 当前资源对不合格 | [v66 保留日志](diagnostics/CharacterPanel-g4c1-attempt3-pinned-graph-20261103-0010.log)行 484–506；[hooks.cpp](../src/animation/oar/hooks.cpp) 的 world_clip_report | 源 binding12220/SVFI/time13.06，候选1022/original/time1.8667；共享 15,203 项绑定集不证明相同 bound 资源/输入/时间，原名不是资产指纹；不追溯改判 G4 会话为 G5 失败 |
+| raw、post-IK 与显示范围 | 63856@0xbc308c..0xbc31eb；[clip.h](../src/animation/clip.h) 的 read_pose / ni_local_from_pose；详见 audit23 | 63856 写 rotation/translation、保留目标 scale；插件显示取 scaleX 写 uniform scale。三种截面不能混作最终姿态等价 |
+
+复核沿用 audit23 的只读 PE/地址库解析与已安装 LLVM，按链式 unwind 归组读取 **21 个完整过程组**；范围为 RVA 半开区间，记录数/代码字节如下，不把短窗口当完整函数：
+
+| AE ID | 根 RVA → 结束 RVA | unwind 记录 / 字节 |
+| --- | --- | --- |
+| 32898 | 0x54c130 → 0x54c1dd | 1 / 173 |
+| 58343 | 0xab2e00 → 0xab30cd | 1 / 717 |
+| 58355 | 0xab3520 → 0xab399c | 7 / 1148 |
+| 58359 | 0xab3fe0 → 0xab4019 | 1 / 57 |
+| 58376 | 0xab50b0 → 0xab5890 | 1 / 2016 |
+| 58466 | 0xabdc90 → 0xabdd0c | 3 / 124 |
+| 59284 | 0xad1390 → 0xad15dd | 3 / 589 |
+| 59297 | 0xad2760 → 0xad27d2 | 1 / 114 |
+| 59298 | 0xad27e0 → 0xad28c9 | 1 / 233 |
+| 59303 | 0xad2e30 → 0xad3751 | 7 / 2337 |
+| 63359 | 0xba4010 → 0xba40dc | 1 / 204 |
+| 63568 | 0xbae860 → 0xbaec08 | 1 / 936 |
+| 63569 | 0xbaec10 → 0xbaf315 | 5 / 1797 |
+| 63581 | 0xbafda0 → 0xbb030e | 1 / 1390 |
+| 63582 | 0xbb0320 → 0xbb0450 | 1 / 304 |
+| 63588 | 0xbb2920 → 0xbb2a37 | 1 / 279 |
+| 63589 | 0xbb2a40 → 0xbb2b1e | 1 / 222 |
+| 63856 | 0xbc2fe0 → 0xbc3237 | 3 / 599 |
+| 64112 | 0xbd52d0 → 0xbd54bf | 3 / 495 |
+| 65237 | 0xc28f30 → 0xc29fca | 1 / 4250 |
+| 63358 | 0xba3c50 → 0xba4003 | 1 / 947 |
+
+59305@0xad3790、58448@0xabceb0 无可用 .pdata 范围，未猜完整边界；本轮不声称全部 job/间接调用或全部 generator 类型已覆盖。现机 build/hkx-audit 缓存缺失，未下载/安装工具；SDK 名称只作线索，关键路径以固定镜像机器码为准。
+
+| 未关闭项 | 后续证据 |
+| --- | --- |
+| G01 完成 / 路径 / 寿命 | E1 追 63358 alternate dispatch 和 63568 job 完成，再证明分支、同代快照与源 producer liveness |
+| G02 完整贡献语义 | E2 续审 58355 → 58383 与实际 generator/mix 消费者，证明逐实例/骨/通道 weight、mask、additive 与寿命 |
+| G03 R2 资源 / 输入 / 时间资格 | E3 建立钉图自然轨迹及预定配对；参照缺失记证据不足，合格配对后的候选差异保留 |
+
+首轮保留校验通过：238 个 tracked 文件、两个 untracked util、既有六文档和 HEAD/index/status 均未变，21 组 listing 摘要匹配。没有新 native 调用/hook、构建、行为测试、游戏、校准或部署；静态审计不产生运行通过结论。后续仍须联合证据验收，不能用一个小切片关闭原 G5。
