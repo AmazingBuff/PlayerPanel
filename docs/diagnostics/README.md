@@ -74,3 +74,5 @@ git show 'ae5dac28356d0ebb1a5fd754ddb4882a8dae26f3:docs/diagnostics/CharacterPan
 - [CharacterPanel-g5e1-liveness-first-20261104-0010.log](CharacterPanel-g5e1-liveness-first-20261104-0010.log)（221,958 字节，SHA-256 5318dcb1e56bd625914b179f2467c6bd23cb60216e2279062572fe1a61bf6d6）：v67 SamplingLiveness=concurrent 窗口，00:12:00.333 武装、00:12:20.345 到期（995 帧）。判读、计数与两条独立事实见[首轮运行](../independent-behavior-graph.md#c-g5-e1-run1)；原文保留，不改写。
 
 - [CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log](CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log)（5,669 字节，SHA-256 c0a07a8559c2729611e7c521a98c56905bd10fc4f242ee164f03991d16bc7635）：v67 SamplingLiveness=on，游玩态 F7 窗口 19.99 s / 748 帧，引擎本地循环调用 63589 共 161,006 次、lag=0。判读见[补充运行 A](../independent-behavior-graph.md#c-g5-e1-run2)。
+
+- [CharacterPanel-g5e1-liveness-v2-resumed-20261104-0031.log](CharacterPanel-g5e1-liveness-v2-resumed-20261104-0031.log)（291,454 字节，SHA-256 603115178c0dc56747e2dcc78dd0aa5c9b0955ac5ab08395e3e7f7f5730e3d6e）：v68 concurrent + resumed 窗口，display 段 461 帧后转段、resumed 段 10.03 s；pinned-engine=411、completions-pinned=411、	hreads=7、lag=0。判读见 [v2 运行](../independent-behavior-graph.md#c-g5-e1-run3)。
