@@ -3314,9 +3314,9 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 <a id="c-g5-e1-probe"></a>
 ## C-G5-E1：源采样 producer liveness 最小探针（契约草案 v1，2026-11-03，未实现）
 
-> **状态：已实现（2026-11-03），engine-free 用例通过；Release 构建被本机依赖状态阻塞，无产物、未部署、未运行。** 本契约只回答 [audit29](behavior-graph-construction-audit.md#audit29) 第八节列出的三个未证问题——**采样线程、钉住的源图是否真的走本地循环、队列负载的消费者是否在别处重入采样**；它不产生 G5 通过结论，不承担 E2 的贡献账本或 E3 的配对资格。判据、观测点与记录格式在运行前固定，运行后不放宽、不换分母、不追加钩子。
+> **状态：已实现（2026-11-03），engine-free 用例通过，Release 构建通过；未部署、未运行。** 本契约只回答 [audit29](behavior-graph-construction-audit.md#audit29) 第八节列出的三个未证问题——**采样线程、钉住的源图是否真的走本地循环、队列负载的消费者是否在别处重入采样**；它不产生 G5 通过结论，不承担 E2 的贡献账本或 E3 的配对资格。判据、观测点与记录格式在运行前固定，运行后不放宽、不换分母、不追加钩子。
 >
-> **实现（v67，2026-11-03）**：`probe_liveness_policy.h`（三态解析、计数器、环、配对账本、窗口、`encode_detour_thunk`）+ `probe_liveness.{h,cpp}`（63589/63856 两处只读 detour、队列快照、关闭行）+ `SamplingLiveness` 键 + `PLUGIN_SOURCES` 32→33 + 主线程接驳（`kDataLoaded` 装、`PreLoadGame/NewGame` 失效、render 每帧 drain、实验 arm、显示关闭 close）。Engine-free [7 例](../tests/probe_liveness_test.cpp) 在 `cl /std:c++latest /W4 /WX` 下通过（产物 `build/behavior-graph-v67-g5e1-liveness-20261103/`）。**同一用例发现了旧 detour 的实参槽位缺陷，见 [audit30](behavior-graph-construction-audit.md#audit30)。** 构建阻塞的细节与未完成项见 [v67 构建尝试](build.md#v67-g5e1-liveness-2026-11-03)。
+> **实现（v67，2026-11-03）**：`probe_liveness_policy.h`（三态解析、计数器、环、配对账本、窗口、`encode_detour_thunk`）+ `probe_liveness.{h,cpp}`（63589/63856 两处只读 detour、队列快照、关闭行）+ `SamplingLiveness` 键 + `PLUGIN_SOURCES` 32→33 + 主线程接驳（`kDataLoaded` 装、`PreLoadGame/NewGame` 失效、render 每帧 drain、实验 arm、显示关闭 close）。Engine-free [7 例](../tests/probe_liveness_test.cpp) 在 `cl /std:c++latest /W4 /WX` 下通过（产物 `build/behavior-graph-v67-g5e1-liveness-20261103/`）；Release 构建通过，身份/哈希与两条环境修复见 [v67 构建记录](build.md#v67-g5e1-liveness-2026-11-03)。**同一用例发现了旧 detour 的实参槽位缺陷，见 [audit30](behavior-graph-construction-audit.md#audit30)。**
 
 ### 一、问题 → 观测点 → 判据
 

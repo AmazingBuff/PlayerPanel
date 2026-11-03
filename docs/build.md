@@ -953,21 +953,23 @@ Attempt-3 run (2026-11-03 00:10:44–00:10:54, identity confirmed in the live lo
 > **前向更正（2026-11-03，[audit30](behavior-graph-construction-audit.md#audit30)）**：上段的 `events=0` 与 `other-graph=55` 已被判为**仪器无效**——58377 detour 的 thunk 把入口实参读低一格，门拿到的是调用者 `rax` 残值。`calls=62`（门之前计数）仍有效；G4-C 回到"待重跑"。历史日志与本节读数保留不改。
 
 <a id="v67-g5e1-liveness-2026-11-03"></a>
-## v67 G5-E1 liveness probe (2026-11-03): engine-free cases pass, Release build blocked
+## v67 G5-E1 liveness probe (2026-11-03): engine-free cases pass, Release build succeeds
 
-**状态：源码与离线用例完成；没有 DLL/PDB、没有 build identity、没有部署。** 本节的失败属于**本机依赖状态**，不是代码诊断；不得据此声称探针"已构建"或"不可构建"。
+**状态：源码、离线用例与 Release 构建完成；未部署、未运行。** 首轮构建在链接阶段失败，根因是**本机依赖状态**，不是代码；下面按"失败 → 根因 → 修复 → 结果"记录，避免下一次重复踩坑。
 
 **改动**：`PLUGIN_SOURCES` 32→33（[probe_liveness.cpp](../src/animation/behavior_graph/probe_liveness.cpp)）；新策略头 [probe_liveness_policy.h](../src/animation/behavior_graph/probe_liveness_policy.h)（三态解析、计数器、SPSC 环、线程配对账本、单窗口状态机、`encode_detour_thunk`）；新键 `[Experiment] SamplingLiveness=off|on|concurrent`；接驳 `kDataLoaded` 安装、`PreLoadGame/NewGame` 失效、`renderer.cpp` 每帧 drain、实验 arm、显示关闭 close。同一轮修正了 `source_event_capture.cpp` / `source_write_capture.cpp` 的 thunk 实参槽位与 `source_write_capture` 的越界分配（[audit30](behavior-graph-construction-audit.md#audit30)）。
 
 **离线用例（通过）**：`cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\probe_liveness_test.cpp`，exit 0，输出 `7 probe-liveness cases passed (engine-free)`；产物在 `build/behavior-graph-v67-g5e1-liveness-20261103/`。其中 `thunk_passes_entry_arguments_and_returns` 在 `VirtualAlloc` 内存里执行**生产字节**，锁定入口实参槽位与返回地址；它同时是发现旧 thunk 缺陷的用例（旧布局实测收到 `[rax, this, arg2]`）。
 
-**Release 构建尝试（全部在链接阶段失败，未产出 DLL）**：
+**失败与根因（全部已解决）**：
 
-1. 预设 `Release`（toolset 14.44.35207）：`spdlog.lib` 报 `LNK2019` 三个 STL 内部实例（`??$_Find_first_of_pos_vectorized@DD@std@@…`、`??$_Find_last_of_pos_vectorized@DD@std@@…`、`??$_Find_last_vectorized@$$CBDD@std@@…`），`detours.lib` 报 `__imp__CrtDbgReport`。
-2. **detours 根因已定位并绕过**：清缓存后 `find_library(DETOURS_LIBRARY detours REQUIRED)` 解析到 `build/vcpkg_installed/x64-windows-static-md/**debug**/lib/detours.lib`（debug CRT）。显式传 `-DDETOURS_LIBRARY=<…>/lib/detours.lib` 后该错误消失。
-3. **spdlog 根因未解决**：vcpkg 的 `spdlog.lib`（2026-09-19，1.17.0）引用上述三个 STL 内部实例，而两个已装 toolset（14.44.35207 / 14.51.36231）的 `msvcprt.lib`、`libcpmt.lib` 都不含对应修饰名，程序的其它 TU 也不生成它们。**从 `C:\env\vcpkg\buildtrees\spdlog\src\v1.17.0-…\src` 用 `/std:c++17` 与 `/std:c++latest` 各重建一次 `spdlog.lib`（`/MD /O2`、`SPDLOG_COMPILED_LIB`+`SPDLOG_FMT_EXTERNAL`），重建产物同样引用这三个符号，链接仍失败**；原 `spdlog.lib` 已恢复（备份 `build/spdlog-rebuild/spdlog.lib.orig`）。
-4. 无法回到"干净 14.44 构建"：CMake 报告上一个构建树使用 **14.51.36231**（"toolset used previously"），而强制 14.44 时 vcpkg 的 manifest ABI 探测（`CMakeDetermineCompilerABI` try_compile）失败，配置无法完成。
+1. **`detours.lib` 选到 debug 库**：清缓存后 `find_library(DETOURS_LIBRARY detours REQUIRED)` 解析到 `build/vcpkg_installed/x64-windows-static-md/**debug**/lib/detours.lib`，于是 `__imp__CrtDbgReport` 未定义。修复：显式 `-DDETOURS_LIBRARY=<…>/lib/detours.lib`（release）。
+2. **`spdlog.lib` 的三个 STL 内部实例不可解析**：vcpkg 的 1.17.0 `spdlog.lib` 引用 `??$_Find_first_of_pos_vectorized@DD@std@@…`、`??$_Find_last_of_pos_vectorized@DD@std@@…`、`??$_Find_last_vectorized@$$CBDD@std@@…`，而两个已装 toolset（14.44.35207 / 14.51.36231）的 `msvcprt.lib`/`libcpmt.lib` 都不导出对应修饰名。已排除的做法：用 `/std:c++17` 与 `/std:c++latest` 从 buildtrees 各重建一次 `spdlog.lib`（`/MD /O2`、`SPDLOG_COMPILED_LIB`+`SPDLOG_FMT_EXTERNAL`）、加 `_USE_STD_VECTOR_ALGORITHMS=0`——重建产物仍引用这三个符号。**修复：改用 `spdlog::spdlog_header_only`**（[CMakeLists.txt](../CMakeLists.txt) 注释记录了原因）。同样三个用例在普通 TU 里能正常 emit（独立探针 `build/std-helper-probe/` 验证过），header-only 把 spdlog 代码编进我们自己的 TU，因此不再需要那个外来二进制。
+3. **FetchContent 需要 GitHub**：清缓存后 `_deps/hde64` 重新 populate 会 `git clone https://github.com/TsudaKageyu/minhook.git`，本机 TLS 不通。修复：已存在 `build/_deps/hde64-src` 的前提下加 `-DFETCHCONTENT_FULLY_DISCONNECTED=ON`。
+4. **vcpkg 全量 from-source 重建不可行**：`--binarysource=clear` 会在 `simpleini` 上需要下载 MSYS2/mingw `pkgconf`，`mirror.msys2.org` 不可达；因此保留二进制缓存（`vcpkg install` 180 ms 恢复全部包），只对 spdlog 用 header-only 绕过。
 
-**结论**：本轮不产生工件与身份；`build/Release/CharacterPanel.dll` 当前不存在（v66 的 DLL/PDB 仍在部署目录与 `dist/deploy-backup-20261102-*` 中）。修复路径是**先让 vcpkg 包与单一 toolset 一致**（删除 `build/vcpkg_installed` 后用同一 toolset 重新 configure，或对有问题的包做一次干净重装），再重跑构建、记录 DLL/PDB 身份与哈希，然后才谈部署与运行。
+**构建命令（本机实际使用）**：`vcvars64.bat`（VS18，默认 toolset 14.51.36231）→ `cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_CONFIGURATION_TYPES=Release -DCMAKE_CXX_FLAGS="/EHsc /MP /W4 /WX" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=C:/env/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_INSTALL=OFF -DVCPKG_INSTALLED_DIR=…/build/vcpkg_installed -DDETOURS_LIBRARY=…/lib/detours.lib -DFETCHCONTENT_FULLY_DISCONNECTED=ON` → `cmake --build build --config Release --target CharacterPanel`。
+
+**结果**：构建 exit 0，只出现既有 `D9025`／CommonLibSSE 的 `hde64.c` C4701/C4706 与安装规则警告；`build/Release/CharacterPanel.dll` 与 `.pdb` 生成（身份与哈希见下一条"clean rebuild"记录）。本轮**未部署、未运行**，`SamplingLiveness` 仍为 dormant `off`。
 
 

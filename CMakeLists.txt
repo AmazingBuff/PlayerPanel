@@ -231,7 +231,14 @@ find_package(fmt CONFIG REQUIRED)
 target_link_libraries(
 	CharacterPanel
 	PRIVATE
-	spdlog::spdlog
+	# v67: the vcpkg spdlog.lib (pinned 1.17.0) carries references to three STL
+	# internal find-first-of/last-of instantiations that the installed MSVC CRT
+	# import libraries do not export, so linking the compiled library fails with
+	# LNK2019 no matter which installed toolset or rebuilt spdlog.lib is used
+	# (docs/build.md#v67-g5e1-liveness-2026-11-03). The header-only target has no
+	# binary to mismatch: the same headers compile inside our translation units,
+	# where the helpers are emitted normally.
+	spdlog::spdlog_header_only
 	fmt::fmt
 	CommonLibSSE::CommonLibSSE
 	${DETOURS_LIBRARY}
