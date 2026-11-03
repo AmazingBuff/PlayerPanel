@@ -987,5 +987,6 @@ Attempt-3 run (2026-11-03 00:10:44–00:10:54, identity confirmed in the live lo
 - **运行 INI**：9,465 字节 `ff3c6f34a29bd67d4134b6a5a4e9de43e47c000d5bf6a445393a2b6d45ba2809`，由仓库样例派生并逐键读回断言：`IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`、`SamplingLiveness=concurrent`，`SourceTimeline/SourceEventCapture/SourceWriteCapture/OarContextWatch` 与全部 candidate 探针保持 off/空（契约禁止叠加 detour 仪器）。
 - **运行（2026-11-04 00:10，已测）**：面板打开于 00:12:00.314（源快照 `paused-source`），实验 00:12:00.333 武装窗口，00:12:20.345 到期（995 帧）；日志归档 [221,958 字节 `b5318dcb…`](diagnostics/CharacterPanel-g5e1-liveness-first-20261104-0010.log)。判读见 [C-G5-E1 首轮运行](independent-behavior-graph.md#c-g5-e1-run1)：P1/P5 通过、Q2 因窗口只覆盖暂停期而未被检验。
 - **部署已回到 dormant**：`CharacterPanel.ini` 已从备份恢复为 `27f481f5…`（2,147 字节）；v67 DLL/PDB 留在原位，等待 v2 窗口的第二次运行。
+- **补充运行（2026-11-04 00:22，`on` 模式，零代码改动）**：INI 9,456 字节 `11d94ec2…`（`SamplingLiveness=on`、`IndependentGraph=off`），游玩态 F7 窗口 19.99 s / 748 帧，`e:engine=161006`、`flag=0`；日志归档 [5,669 字节 `c0a07a85…`](diagnostics/CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log)。判读见 [补充运行 A](independent-behavior-graph.md#c-g5-e1-run2)。运行结束后 INI 再次恢复为 dormant `27f481f5…`。
 
 

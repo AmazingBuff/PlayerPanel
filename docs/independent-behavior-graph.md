@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-03。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为历史裁定，其 **A 项缺口已于 11-02 关闭**（[C-G4-A4](#c-g4-a4-numeric-types) v63：整窗 72/72 全 `type=0`、逐窗对账相等）；**C 项的 v66 关闭已被 [audit30](behavior-graph-construction-audit.md#audit30) 推翻**——58377 detour 的 thunk 实参槽位错位一格，源图零事件是门不成立的结果，修复后的仪器尚未重跑，G4-C 回到"待重跑"。下一阶段采用 [G5 执行方案 v2](#g5-draft)；[audit28](behavior-graph-construction-audit.md#audit28) 首轮原生审计完成（门 1 NOT_READY）；按 [E1→E2→E3→联合证据验收](#g5-evidence-plan)继续，**E1 的静态部分已完成**（[audit29](behavior-graph-construction-audit.md#audit29)），其最小探针已实现、构建并跑过一轮（[C-G5-E1](#c-g5-e1-probe)、[首轮运行](#c-g5-e1-run1)）：P1 安装与 P5 队列快照成立（`flag=0`、995 帧），但**窗口只覆盖面板暂停期**，引擎帧路径在该期间不采样，Q2 未被检验；需要 v2 窗口延伸（显示关闭后转入恢复游玩期）后再跑。三片探针的**运行证据**仍 PENDING；之后仍须经评审仪器、独立校准、完整冻结和新正式验证，G5 未冻结/未通过。G6 待验。历史实验与原始读数保留，前向更正见各节；冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
+更新：2026-11-03。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为历史裁定，其 **A 项缺口已于 11-02 关闭**（[C-G4-A4](#c-g4-a4-numeric-types) v63：整窗 72/72 全 `type=0`、逐窗对账相等）；**C 项的 v66 关闭已被 [audit30](behavior-graph-construction-audit.md#audit30) 推翻**——58377 detour 的 thunk 实参槽位错位一格，源图零事件是门不成立的结果，修复后的仪器尚未重跑，G4-C 回到"待重跑"。下一阶段采用 [G5 执行方案 v2](#g5-draft)；[audit28](behavior-graph-construction-audit.md#audit28) 首轮原生审计完成（门 1 NOT_READY）；按 [E1→E2→E3→联合证据验收](#g5-evidence-plan)继续，**E1 的静态部分已完成**（[audit29](behavior-graph-construction-audit.md#audit29)），其最小探针已实现、构建并跑过两轮（[C-G5-E1](#c-g5-e1-probe)）：[首轮](#c-g5-e1-run1) concurrent 证明安装/队列快照但窗口只覆盖暂停期；[补充运行 A](#c-g5-e1-run2) 在游玩态测得 **`e:engine=161006`/748 帧（≈215 次/帧）、`flag=0`**，**Q1 闭环**（引擎本地循环在跑、分派分支不成立），Q2（钉住源图与采样线程）待 v2 窗口。三片探针的**运行证据**仍 PENDING；之后仍须经评审仪器、独立校准、完整冻结和新正式验证，G5 未冻结/未通过。G6 待验。历史实验与原始读数保留，前向更正见各节；冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B 保留；C 的关闭失效（[audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷），待修复后重跑** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 只建立当前装备族选择稳定。**C：v66 的 `events=0` 判为仪器无效**——58377 detour 的 thunk 实参槽位错位，门拿 `rax` 残值与被钉图比较，故零事件是门不成立的结果；`calls=62`（计数在门之前）仍有效。修复后的仪器尚未上机重跑，见 [audit30 裁定](behavior-graph-construction-audit.md#audit30)。 |
-| G5 | **执行方案 v2；正式验收未就绪** | [方案](#g5-draft)与[审计处置](#g5-audit-pending)保留；[audit28](behavior-graph-construction-audit.md#audit28)完成首轮审计，门 1 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)完成 **E1 静态部分**；[C-G5-E1](#c-g5-e1-probe) 探针已实现/构建/部署并跑一轮（[首轮运行](#c-g5-e1-run1)：安装与队列快照成立、`flag=0`；但窗口只覆盖面板暂停期，Q2 未被检验），需要 v2 窗口延伸后再跑；E2/E3 未实现，完整 G5 未冻结/未通过。 |
+| G5 | **执行方案 v2；正式验收未就绪** | [方案](#g5-draft)与[审计处置](#g5-audit-pending)保留；[audit28](behavior-graph-construction-audit.md#audit28)完成首轮审计，门 1 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)完成 **E1 静态部分**；[C-G5-E1](#c-g5-e1-probe) 探针实现/构建/部署并跑两轮：[首轮](#c-g5-e1-run1)（concurrent，安装与队列快照成立，窗口只覆盖暂停期）、[补充运行 A](#c-g5-e1-run2)（on 模式，游玩态 `e:engine=161006`/748 帧 ≈215 次/帧、`flag=0`）；**Q1 已闭环**，Q2（钉住源图与线程）待 v2 窗口；E2/E3 未实现，完整 G5 未冻结/未通过。 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -37,7 +37,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
 | G3 | G3-A 成立；**G3-B PASSED（相位序列）** | [F](#c-g3b-f-full-replay)：两事件复现 0→10→1→12→0；完整姿态另验 |
 | G4 | **A/B 保留；C 证据无效，待重跑** | [numeric 全窗覆盖](#g4-followup-numeric)（v63：整窗 72/72 `type=0`、逐窗对账相等）、B 限装备族选择稳定；[源事件兼容观察](#g4-followup-source-events) 的 `events=0` 由 [audit30](behavior-graph-construction-audit.md#audit30) 判为仪器无效（thunk 实参错位），修复后未重跑 |
-| G5 | 首轮审计完成；门 1 NOT_READY；未通过 | [audit28](behavior-graph-construction-audit.md#audit28) 与 [audit29](behavior-graph-construction-audit.md#audit29)：**E1 静态部分已完成**；探针契约 [C-G5-E1](#c-g5-e1-probe) 已实现并跑一轮（[首轮运行](#c-g5-e1-run1)：P1/P5 通过、P2 因窗口只覆盖暂停期而未被检验）；E1 完整运行证据、E2、E3 仍 PENDING；完整目标保留，之后仪器→独立校准→完整冻结→新正式验证 |
+| G5 | 首轮审计完成；门 1 NOT_READY；未通过 | [audit28](behavior-graph-construction-audit.md#audit28) 与 [audit29](behavior-graph-construction-audit.md#audit29)：**E1 静态部分已完成**；探针 [C-G5-E1](#c-g5-e1-probe) 已跑两轮：[首轮](#c-g5-e1-run1)（P1/P5 通过、P2 因窗口只覆盖暂停期未被检验）与[补充运行 A](#c-g5-e1-run2)（`on` 模式，`e:engine=161006`/748 帧、`flag=0`，**Q1 闭环**）；Q2 待 v2；E2、E3 仍 PENDING；完整目标保留，之后仪器→独立校准→完整冻结→新正式验证 |
 | G6 | PENDING | 非豁免生命周期、源恢复与重复会话收敛未证 |
 
 ### 逐轮实验（本系列）
@@ -3314,7 +3314,7 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 <a id="c-g5-e1-probe"></a>
 ## C-G5-E1：源采样 producer liveness 最小探针（契约 v1 + 首轮运行，2026-11-03/04）
 
-> **状态：已实现、已构建（v67）、已部署并跑过一轮（2026-11-04 00:10）。首轮结果是"设计范围不足"而不是负结果**：窗口只覆盖了面板暂停期，引擎的帧路径在该期间不采样，因此 Q2（钉住源图是否真被采样）未被检验。Q1 得到部分证据（队列 flag=0、插件路径单线程）。详见[首轮运行](#c-g5-e1-run1)。本契约只回答 [audit29](behavior-graph-construction-audit.md#audit29) 第八节列出的三个未证问题——**采样线程、钉住的源图是否真的走本地循环、队列负载的消费者是否在别处重入采样**；它不产生 G5 通过结论，不承担 E2 的贡献账本或 E3 的配对资格。判据、观测点与记录格式在运行前固定，运行后不放宽、不换分母、不追加钩子。
+> **状态：已实现、已构建（v67）、已部署并跑过两轮（2026-11-04）。Q1 已闭环，Q2 待 v2。** 首轮（[concurrent](#c-g5-e1-run1)）只覆盖面板暂停期，引擎在该期间不采样，Q2 未被检验；补充运行 A（[`on` 模式](#c-g5-e1-run2)，游玩态）测得**引擎每帧经本地循环调用 63589 共 161,006 次（≈215 次/帧）**、`[q+0x430]` 全程 0——引擎采样确实在跑且分派分支不成立。仍未证的是"钉住的源图是否在其中"与采样线程，二者需要 v2 窗口（显示关闭后转入恢复游玩期）与 pin。本契约只回答 [audit29](behavior-graph-construction-audit.md#audit29) 第八节列出的三个未证问题；它不产生 G5 通过结论，不承担 E2 的贡献账本或 E3 的配对资格。判据、观测点与记录格式在运行前固定，运行后不放宽、不换分母、不追加钩子。
 >
 > **实现（v67，2026-11-03）**：`probe_liveness_policy.h`（三态解析、计数器、环、配对账本、窗口、`encode_detour_thunk`）+ `probe_liveness.{h,cpp}`（63589/63856 两处只读 detour、队列快照、关闭行）+ `SamplingLiveness` 键 + `PLUGIN_SOURCES` 32→33 + 主线程接驳（`kDataLoaded` 装、`PreLoadGame/NewGame` 失效、render 每帧 drain、实验 arm、显示关闭 close）。Engine-free [7 例](../tests/probe_liveness_test.cpp) 在 `cl /std:c++latest /W4 /WX` 下通过（产物 `build/behavior-graph-v67-g5e1-liveness-20261103/`）；Release 构建通过，身份/哈希与两条环境修复见 [v67 构建记录](build.md#v67-g5e1-liveness-2026-11-03)。**同一用例发现了旧 detour 的实参槽位缺陷，见 [audit30](behavior-graph-construction-audit.md#audit30)。**
 
@@ -3421,3 +3421,25 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 **仪器缺陷（已修，未进入本轮二进制）**：`close_probe_liveness_window` 的字符串映射漏了 `"expired"`，导致到期关闭被标成 `reason=abort`。该 bug 只影响标签，不影响计数；修复已进源码（下一次构建生效）。另有一处可改进项：插件调用的 `63856` 不进明细，使 P3 无法评估插件侧配对——列入 v2。
 
 **结论与下一步**：本轮证明安装/窗口/队列快照可用，但**按设计无法回答 Q2**——`concurrent` 窗口由实验 arm，而实验发生在面板暂停期。要取得"钉住源图真被引擎采样"的证据，需要把窗口延伸到**面板关闭后的恢复游玩期**：这属于窗口语义变更，须先预注册 [C-G5-E1 v2](#c-g5-e1-probe)（v2 = 显示关闭后转入"恢复期"，再到期关闭；判据 P1–P5 不变），不得直接改代码后补测。
+
+<a id="c-g5-e1-run2"></a>
+#### 补充运行 A（2026-11-04 00:22，v67，`on` 模式，零代码改动）
+
+**目的**：用已部署的 v67 二进制回答"引擎在正常游玩中到底调不调 63589"，即 Q1 的正面证据。INI 9,456 字节 `11d94ec2…`（`SamplingLiveness=on`、`IndependentGraph=off`，其余全关）；日志 [5,669 字节 `c0a07a85…`](diagnostics/CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log)。
+
+**过程**：00:21:08 加载时两条 detour 按预注册头字节安装；00:21:41 读档 `invalidate`；00:22:14.820 F7（`arm-requested mode=on`），00:22:14.839 开窗（`epoch=1 pinned=no`），00:22:34.864 到期关闭（19.99 s，748 帧）。
+
+**关闭行（原文）**：
+`window=close reason=abort actor=00000000 epoch=1 frames=748 entries=161006 e:engine=161006/plugin=0/other=0 pinned-engine=0 completions=155940 pinned=0 unattributed=155940 tracked-entries=0 paired-completions=0 pair-mismatch=0 pair-no-slot=0 threads=0 queue-seen=yes queue=0x7ff627e4e0e0 flag=0 queue-flag-frames=0 detail=0 detail-dropped=0 ring-dropped=0`
+
+**读数**：
+
+| 项 | 值 | 含义 |
+| --- | --- | --- |
+| `e:engine` | **161,006** | 748 帧内引擎经本地循环调用 63589 共 16.1 万次，**≈215 次/帧**——每帧把管理器里几乎所有图都采样一遍 |
+| `e:plugin` | 0 | 未开面板，无候选步进，符合预期（本模式无 pin，`detail=0`/`threads=0` 也是预期） |
+| `flag` / `queue-flag-frames` | 0 / 0 | **真实游玩态下 `[q+0x430]` 仍全程为 0**：延迟更新分派分支在游玩中不成立 |
+| `entries`−`completions` | 161,006 − 155,940 = **5,066（3.1%）** | 有 3.1% 的 63589 调用没有走到 63856（提前返回：`+0x240==0`、`63564` 谓词为真或门失败）——这正好支持契约把 P3 定为"存在与顺序"而不是比例 |
+| `reason=abort` | 标签缺陷 | 该二进制未含 `expired` 映射修复；按 19.99 s 间隔判定为到期关闭 |
+
+**Q1 由此闭合**：引擎的每帧采样在游玩中**确实运行**，且走的是 63358 的本地循环；audit29 的"唯一可达采样入口"与"分派分支不成立"两条静态结论都得到运行侧支持。**Q2 仍未证**：`on` 模式没有 pin，无法把 16.1 万次调用归属到"候选的源图"，也没有 tid 归属（明细不入环）。这两项正是 v2 的目标。
