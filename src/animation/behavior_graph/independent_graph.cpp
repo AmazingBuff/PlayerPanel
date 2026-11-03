@@ -15,6 +15,7 @@
 #include "animation/behavior_graph/observation_chain_policy.h"
 #include "animation/behavior_graph/pose_content_policy.h"
 #include "animation/behavior_graph/pose_motion_policy.h"
+#include "animation/behavior_graph/probe_liveness.h"
 #include "animation/behavior_graph/source_event_capture.h"
 #include "animation/behavior_graph/unequip_settle_policy.h"
 
@@ -1072,6 +1073,10 @@ public:
         // it before the display phase even starts.
         if (window.steps() > 0)
             close_source_event_capture_window("display-close");
+        // C-G5-E1: the same boundary closes the liveness window, so its counters describe exactly
+        // one replay-plus-display run.
+        if (window.steps() > 0)
+            close_probe_liveness_window("display-close");
         // C-G4-A: every display-window close path funnels here; the summary is the armed
         // evidence for "no OAR evaluation touched the candidate during display stepping".
         // Only the candidate-owning session may take (and emit) the tally.
@@ -1224,6 +1229,9 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     // any dispatch, so the experiment's own WeapEquip/Unequip calls are counted by the live gate
     // (they are the pre-registered liveness control). No-op unless SourceEventCapture=concurrent.
     (void)arm_source_event_capture_concurrent(source_graph, actor_id);
+    // C-G5-E1: pin the same source graph for the liveness probe and arm its counters before the
+    // first candidate step, so the plugin's own sampling calls are visible as the positive control.
+    (void)arm_probe_liveness_concurrent(source_graph, actor_id);
     struct ExperimentWindowSummary
     {
         std::uint32_t actor_id;

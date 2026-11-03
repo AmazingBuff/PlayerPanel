@@ -1340,3 +1340,62 @@ audit14 曾把 58423 的范围修正为"只有 0x65 字节，0xab7f95 起是另�
 | 分配/释放寿命、跨 epoch 复用 | 未证（只知 lazy 分配点） | E1 探针 + E3 配对前置 |
 
 **保留与边界**：本轮无构建、无部署、无 hook、无游戏、无校准；脚本与 listing 只在 ignored 目录，未改动任何产品源码或历史日志。上一行"audit28 首轮保留校验"的结论继续有效；本轮不产生运行通过结论，也不能据此关闭原 G5。
+
+<a id="audit30"></a>
+## 审计三十：手写 detour thunk 的参数槽缺陷与受影响证据（2026-11-03）
+
+**性质**：这是在实现 [C-G5-E1](independent-behavior-graph.md#c-g5-e1-probe) 时发现的**仪器缺陷**（不是引擎事实，也不是游戏运行结果）。结论直接影响两份既有"零读数"证据：`C-G3B-E2` 的 `writes=0` 与 `C-G4-C1`/G4-C 的 `events=0`。本轮只做离线取证、修复与 engine-free 用例；**修复后的仪器尚未上机重跑**。
+
+### 一、缺陷
+
+`source_event_capture.cpp`（58377）与 `source_write_capture.cpp`（63607/63609）使用同一套手写 thunk：`push rax,rcx,rdx` → `push r8..r11` → `pushfq` → 读三个"入口实参"槽 → `sub rsp,0x20` → `call recorder` → 复原 → 执行被搬走的首字节 → `jmp` 回原函数。
+
+bug 在**读槽与 `sub rsp,0x20` 的顺序**：三条 `mov` 写在 `sub rsp,0x20` **之前**，而它们的偏移（`0x38/0x30/0x28`）是按"已经 sub 过"算的。7 次 push + `pushfq` 后，入口实参实际位于 `+0x30`（rcx）、`+0x28`（rdx）、`+0x20`（r8），所以：
+
+| 槽位 | 期望（入口实参） | 实际读到 |
+| --- | --- | --- |
+| `[rsp+0x38]` → recorder 第 1 参 | rcx（`this`） | **rax（调用者的残留值）** |
+| `[rsp+0x30]` → 第 2 参 | rdx | rcx（`this`） |
+| `[rsp+0x28]` → 第 3 参 | r8 | rdx |
+
+同一布局还有两处次要问题：`call` 时 `rsp ≡ 8 (mod 16)`（不满足调用约定），以及 `source_write_capture` 的 `allocate(kBlockStride)` 之后把原字节块放在 `mem + kBlockStride`——**19 字节越界写入**。
+
+### 二、取证（可复现）
+
+新用例把**生产字节**在 `VirtualAlloc` 内存里执行并检查 recorder 收到的三个指针（`tests/probe_liveness_test.cpp` 的 `thunk_passes_entry_arguments_and_returns`）。对旧布局的独立复现给出：
+
+```
+existing-slot-layout : recorder got [0x1866a180000, 0x1111, 0x2222]   expected [1111, 2222, 3333]
+corrected-slot-layout: recorder got [0x1111, 0x2222, 0x3333]          expected [1111, 2222, 3333]
+```
+
+即 recorder 的第 1 参恒为调用者 `rax`，第 2 参才是 `this`。这不是推理：同一份字节被真实执行。
+
+### 三、受影响范围
+
+| 仪器 | 模块 | 受影响 | 后果 |
+| --- | --- | --- | --- |
+| 58377 事件观察（`SourceEventCapture`，含 C-G4-C1） | `source_event_capture.cpp` | **是** | `record_source_event` 的门是 `gate != a_behavior`，而 `a_behavior` 是 `rax` 残值 ⇒ **门永不匹配**；`events` 恒 0，`other-graph` 变成"所有武装期调用"（C1 的 `calls=62/other-graph=55` 与此一致：7 次在武装前） |
+| 63607/63609 setter 观察（`SourceWriteCapture`，C-G3B-E2） | `source_write_capture.cpp` | **是** | `write_gate().match(junk)` 恒假 ⇒ **`writes` 恒 0**；且若门恰巧匹配，第 2 参是图指针而非名字，`memcpy(64)` 会读图对象 |
+| OAR 条件求值（`OarContextWatch`，G4-A/A4） | `oar/hooks.cpp` | 否 | 使用 Microsoft Detours `DetourAttach`，不是手写 thunk |
+| 插件直调 58377（C-G3B-S6 / F 回放） | `independent_graph.cpp` | 否 | 直接 `event_dispatch(...)`，不经过观察钩子 |
+| 新探针 63589/63856 | `probe_liveness.cpp` | 否 | 新布局（8 push + 先 `sub` 再读槽）+ 可执行用例锁定 |
+
+### 四、裁定
+
+1. **`C-G3B-E2` 的 `writes=0` 判为仪器无效**，不再作为"引擎不调用 typed setter"的证据。该结论文档中另有结构性依据（58383/58343 的变量写路径），但**结构性依据不能替代那次运行**；要保留结论必须以修复后的仪器重跑。
+2. **`C-G4-C1` 的 `events=0` 与 `other-graph=55` 判为仪器无效**；`calls=62`（计数在门之前）仍然有效。因此 **G4-C 的"关闭"失效**：G4 回到"**A（v63）与 B 保留，C 待修复后重跑**"。
+3. 其余证据不受影响：A 段 numeric 分型（OAR detour）、B 段世界历史、E1/E3/S3–S6/F 的调用与相位读数、`source-drift`、pose 哈希复现。
+4. 旧日志不改写；本节的结论属于**前向更正**，`independent-behavior-graph` 的状态表已同步。
+
+### 五、修复与回归
+
+- 三个编码器统一为：8 次 push（含 rbx）+ `pushfq` → **`sub rsp,0x20`** → 读 `+0x50/+0x48/+0x40`（或 `+0x68` 取返回地址）→ `movabs/call` → `add rsp,0x20` → 复原。`call` 前 `rsp ≡ 0 (mod 16)`。
+- 编码器抽到 `probe_liveness_policy.h` 的 `encode_detour_thunk`，探针与用例共用同一份字节；`source_event_capture` / `source_write_capture` 保持各自副本但已同步为同样槽位（注释指向用例）。
+- `source_write_capture` 的 trampoline 改为 `allocate(2 * kBlockStride)`。
+- 新用例 `tests/probe_liveness_test.cpp`（7 例，engine-free）覆盖：三态解析、调用者分类、`rdx−0x160` 还原、线程配对账本、单窗口状态机、环溢出、**可执行 thunk 实参**。
+
+### 六、未关闭
+
+- 修复后的 58377 窗口与 setter 窗口**尚未重跑**；在重跑之前，任何"源图零事件"或"零 setter 写"的表述都不成立，只能写"仪器曾无效，已修复，待运行"。
+- 重跑所需的运行证据、正控与回传要求与 [C-G5-E1 契约](independent-behavior-graph.md#c-g5-e1-probe)同款：安装/武装身份、`calls` 正控、源图身份、窗口边界、完整计数器。

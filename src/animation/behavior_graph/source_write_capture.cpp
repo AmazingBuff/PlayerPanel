@@ -308,24 +308,28 @@ namespace animation::behavior_graph
 
         // The shared thunk shape: preserve every register and the flags, hand the three live
         // arguments to the recorder, then jump to the relocated original head.
-        constexpr std::size_t kThunkSize = 73;
+        constexpr std::size_t kThunkSize = 74;
         constexpr std::size_t kOrigBlockSize = 5 + 6 + 8;  // relocated head + far jmp + address
         constexpr std::size_t kBlockStride = 96;           // 16-aligned thunk, block behind it
 
         std::size_t encode_thunk(std::uint8_t* a_dst, std::uintptr_t a_recorder, std::uintptr_t a_original)
         {
+            // Eight pushes plus pushfq keep rsp 16-byte aligned for the recorder call, and the
+            // saved entry rcx/rdx/r8 slot at +0x50/+0x48/+0x40. The previous 0x38/0x30/0x28 slots
+            // named rax/rcx/rdx, so the recorder received the caller's rax as the graph pointer and
+            // the graph as the name - see the C-G5-E1 thunk-layout case.
             std::size_t o = 0;
             auto const emit = [&o, a_dst](std::initializer_list<std::uint8_t> const& a_bytes) {
                 for (std::uint8_t b : a_bytes)
                     a_dst[o++] = b;
             };
-            emit({ 0x50, 0x51, 0x52 });                                // push rax/rcx/rdx
+            emit({ 0x50, 0x53, 0x51, 0x52 });                          // push rax/rbx/rcx/rdx
             emit({ 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });  // push r8..r11
             emit({ 0x9C });                                            // pushfq
-            emit({ 0x48, 0x8B, 0x4C, 0x24, 0x38 });                    // mov rcx,[rsp+38h]
-            emit({ 0x48, 0x8B, 0x54, 0x24, 0x30 });                    // mov rdx,[rsp+30h]
-            emit({ 0x4C, 0x8B, 0x44, 0x24, 0x28 });                    // mov r8,[rsp+28h]
-            emit({ 0x48, 0x83, 0xEC, 0x20 });                          // sub rsp,20h
+            emit({ 0x48, 0x83, 0xEC, 0x20 });                          // sub rsp,20h (shadow space first)
+            emit({ 0x48, 0x8B, 0x4C, 0x24, 0x50 });                    // mov rcx,[rsp+50h] (entry rcx)
+            emit({ 0x48, 0x8B, 0x54, 0x24, 0x48 });                    // mov rdx,[rsp+48h] (entry rdx)
+            emit({ 0x4C, 0x8B, 0x44, 0x24, 0x40 });                    // mov r8,[rsp+40h]  (entry r8)
             emit({ 0x48, 0xB8 });                                      // movabs rax, recorder
             std::memcpy(a_dst + o, &a_recorder, sizeof(a_recorder));
             o += sizeof(a_recorder);
@@ -333,7 +337,7 @@ namespace animation::behavior_graph
             emit({ 0x48, 0x83, 0xC4, 0x20 });                          // add rsp,20h
             emit({ 0x9D });                                            // popfq
             emit({ 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58 });  // pop r11..r8
-            emit({ 0x5A, 0x59, 0x58 });                                // pop rdx/rcx/rax
+            emit({ 0x5A, 0x59, 0x5B, 0x58 });                          // pop rdx/rcx/rbx/rax
             emit({ 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 });              // jmp qword [rip+0]
             std::memcpy(a_dst + o, &a_original, sizeof(a_original));
             o += sizeof(a_original);
@@ -356,7 +360,9 @@ namespace animation::behavior_graph
                 return false;
             }
             auto& trampoline = SKSE::GetTrampoline();
-            auto* const mem = static_cast<std::uint8_t*>(trampoline.allocate(kBlockStride));
+            // Two strides: the thunk lives in the first, the relocated head plus far jump in the
+            // second. The earlier single-stride allocation wrote 19 bytes past its block.
+            auto* const mem = static_cast<std::uint8_t*>(trampoline.allocate(2 * kBlockStride));
             if (!mem)
             {
                 logger::warn("SOURCE WRITECAPTURE install-failed reason=trampoline-exhausted target='{}'", a_name);

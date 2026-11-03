@@ -3,6 +3,7 @@
 //
 #pragma once
 #include "animation/behavior_graph/independent_graph.h"
+#include "animation/behavior_graph/probe_liveness_policy.h"
 #include "animation/behavior_graph/source_event_capture_policy.h"
 #include "animation/idle_policy.h"
 
@@ -79,5 +80,10 @@ namespace animation
     // detour hits (OAR CONTEXT rows) and emit the display-branch suppression row. Default off;
     // restart after changing.
     [[nodiscard]] bool oar_context_watch();
+    // C-G5-E1: three-state minimal liveness probe on the sampling entry (63589) and the poseLocal
+    // last writer (63856). `on` opens an F7 window outside the panel; `concurrent` is armed by the
+    // candidate experiment before its own dispatches and closed at the display boundary.
+    [[nodiscard]] bool sampling_liveness();
+    [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

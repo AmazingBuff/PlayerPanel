@@ -451,19 +451,23 @@ namespace animation::behavior_graph
         {
             // The thunk preserves every register and the flags, hands (behavior, ctx, event) to
             // record_source_event and jumps to the relocated head. Entry rsp is 8 mod 16 (jmp
-            // from a call site), the nine pushes leave it 0 mod 16 for the call.
+            // from a call site); eight pushes plus pushfq leave it 0 mod 16, so the recorder call
+            // is made with the ABI-required alignment. The saved entry rcx/rdx/r8 sit at
+            // +0x50/+0x48/+0x40 once the 0x20 shadow space is reserved - the earlier 0x38/0x30/
+            // 0x28 slots named rax/rcx/rdx instead, which passed the caller's rax as the behavior
+            // pointer (see the C-G5-E1 thunk-layout case in tests/probe_liveness_test.cpp).
             std::size_t o = 0;
             auto const emit = [&o, stub](std::initializer_list<std::uint8_t> const& a_bytes) {
                 for (std::uint8_t b : a_bytes)
                     stub[o++] = b;
             };
-            emit({ 0x50, 0x51, 0x52 });                          // push rax/rcx/rdx
+            emit({ 0x50, 0x53, 0x51, 0x52 });                    // push rax/rbx/rcx/rdx
             emit({ 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });  // push r8..r11
             emit({ 0x9C });                                      // pushfq
-            emit({ 0x48, 0x8B, 0x4C, 0x24, 0x38 });              // mov rcx,[rsp+38h]
-            emit({ 0x48, 0x8B, 0x54, 0x24, 0x30 });              // mov rdx,[rsp+30h]
-            emit({ 0x4C, 0x8B, 0x44, 0x24, 0x28 });              // mov r8,[rsp+28h]
-            emit({ 0x48, 0x83, 0xEC, 0x20 });                    // sub rsp,20h
+            emit({ 0x48, 0x83, 0xEC, 0x20 });                    // sub rsp,20h (shadow space first)
+            emit({ 0x48, 0x8B, 0x4C, 0x24, 0x50 });              // mov rcx,[rsp+50h] (entry rcx)
+            emit({ 0x48, 0x8B, 0x54, 0x24, 0x48 });              // mov rdx,[rsp+48h] (entry rdx)
+            emit({ 0x4C, 0x8B, 0x44, 0x24, 0x40 });              // mov r8,[rsp+40h]  (entry r8)
             emit({ 0x48, 0xB8 });                                // movabs rax, recorder
             auto const recorder = reinterpret_cast<std::uintptr_t>(&record_source_event);
             std::memcpy(stub + o, &recorder, sizeof(recorder));
@@ -472,7 +476,7 @@ namespace animation::behavior_graph
             emit({ 0x48, 0x83, 0xC4, 0x20 });                    // add rsp,20h
             emit({ 0x9D });                                      // popfq
             emit({ 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58 });  // pop r11..r8
-            emit({ 0x5A, 0x59, 0x58 });                          // pop rdx/rcx/rax
+            emit({ 0x5A, 0x59, 0x5B, 0x58 });                    // pop rdx/rcx/rbx/rax
             emit({ 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 });        // jmp qword [rip+0]
             std::memcpy(stub + o, &original, sizeof(original));
             o += sizeof(original);
