@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-03。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为历史裁定，其 **两项证据缺口已于 11-02/11-03 全部关闭**（三段合并结论、限定与可复用仪器事实见 [G4 收官](#g4-closure)）：A 的 numeric 全窗覆盖由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭（整窗 72/72 全 `type=0`、逐窗对账相等），C 的源事件泄漏由 [C-G4-C1](#c-g4-c1-concurrent-events) 的 v66 运行关闭（同一窗口内正控 `calls=62/other-graph=55`、源图 `events=0`、`reason=display-close`）。下一阶段采用 [G5 执行方案 v2](#g5-draft)；[六项方案审计处置](#g5-audit-pending)已完成，首轮原生审计亦已完成（[audit28](behavior-graph-construction-audit.md#audit28)，门 1 NOT_READY）；按 [E1→E2→E3→联合证据验收](#g5-evidence-plan)继续，当前下一步是 E1 静态源调度/输出寿命审计。三片探针均 PENDING、未实现；之后仍须经评审仪器、独立校准、完整冻结和新正式验证，G5 未冻结/未通过。G6 待验。历史实验与原始读数保留，前向更正见各节；冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
+更新：2026-11-03。**新会话先读[当前证据交接](#handoff-20261102-evidence)**：G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过。G4 的 11-01 A/B/C PASSED 为历史裁定，其 **两项证据缺口已于 11-02/11-03 全部关闭**（三段合并结论、限定与可复用仪器事实见 [G4 收官](#g4-closure)）：A 的 numeric 全窗覆盖由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭（整窗 72/72 全 `type=0`、逐窗对账相等），C 的源事件泄漏由 [C-G4-C1](#c-g4-c1-concurrent-events) 的 v66 运行关闭（同一窗口内正控 `calls=62/other-graph=55`、源图 `events=0`、`reason=display-close`）。下一阶段采用 [G5 执行方案 v2](#g5-draft)；[六项方案审计处置](#g5-audit-pending)已完成，首轮原生审计亦已完成（[audit28](behavior-graph-construction-audit.md#audit28)，门 1 NOT_READY）；按 [E1→E2→E3→联合证据验收](#g5-evidence-plan)继续，**E1 的静态部分已完成**（[audit29](behavior-graph-construction-audit.md#audit29)：63359 无静态引用、生成在 58343、poseLocal 末写为 63856、原生无"完成序号"），下一包是 E1 最小探针的独立实现评审。三片探针的**运行证据**仍 PENDING、未实现；之后仍须经评审仪器、独立校准、完整冻结和新正式验证，G5 未冻结/未通过。G6 待验。历史实验与原始读数保留，前向更正见各节；冗余负日志的元数据/恢复见[诊断索引](diagnostics/README.md)。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **证据完整性成立（A/C 缺口均已关闭；三段合并见[收官](#g4-closure)）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；[C 源事件泄漏](#g4-followup-source-events)：v66 运行正控 `calls=62/other-graph=55`、源图 `events=0`、`display-close` 边界；B 只建立当前装备族选择稳定，不普遍证明 Random/sequence/PlayOnce 隔离。 |
-| G5 | **执行方案 v2；正式验收未就绪** | [方案](#g5-draft)与[审计处置](#g5-audit-pending)保留；[audit28](behavior-graph-construction-audit.md#audit28)完成首轮审计，门 1 NOT_READY；[E1→E2→E3→联合验收](#g5-evidence-plan)探针均未实现，当前续做 E1 静态审计，完整 G5 未冻结/未通过。 |
+| G5 | **执行方案 v2；正式验收未就绪** | [方案](#g5-draft)与[审计处置](#g5-audit-pending)保留；[audit28](behavior-graph-construction-audit.md#audit28)完成首轮审计，门 1 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)完成 **E1 静态部分**（分派/本地双路径、生成在 58343、poseLocal 末写 63856、原生无完成序号、三处计数须分开），E1 运行证据与 E2/E3 未实现，完整 G5 未冻结/未通过。 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -37,7 +37,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
 | G3 | G3-A 成立；**G3-B PASSED（相位序列）** | [F](#c-g3b-f-full-replay)：两事件复现 0→10→1→12→0；完整姿态另验 |
 | G4 | **历史 PASSED；A/C 两项缺口均已关闭（[收官合并](#g4-closure)）** | [numeric 全窗覆盖](#g4-followup-numeric)（v63：整窗 72/72 `type=0`、逐窗对账相等）、[源事件兼容观察](#g4-followup-source-events)（v66：正控 `calls=62/other-graph=55`、源图 `events=0`、`display-close`）；B 限装备族选择稳定 |
-| G5 | 首轮审计完成；门 1 NOT_READY；未通过 | [audit28](behavior-graph-construction-audit.md#audit28)与[E1–E3 证据交接](#g5-evidence-plan)：探针均 PENDING/未实现，先续做 E1 静态审计；完整目标保留，之后仪器→独立校准→完整冻结→新正式验证 |
+| G5 | 首轮审计完成；门 1 NOT_READY；未通过 | [audit28](behavior-graph-construction-audit.md#audit28) 与 [audit29](behavior-graph-construction-audit.md#audit29)：**E1 静态部分已完成**（三块事实 + 字段/寿命表 + 三种序号），E1 运行证据、E2、E3 仍 PENDING；完整目标保留，之后仪器→独立校准→完整冻结→新正式验证 |
 | G6 | PENDING | 非豁免生命周期、源恢复与重复会话收敛未证 |
 
 ### 逐轮实验（本系列）
@@ -1963,7 +1963,7 @@ BehaviorGraphProbe=true
 <a id="handoff-20261102-evidence"></a>
 ## 当前证据交接（更新至 2026-11-03）
 
-本节接替下方 11-01 收官摘要。G4 当次的两项证据缺口现已关闭，合并证据与限定见 [G4 收官](#g4-closure)；原 PENDING 的问题、仪器要求与关闭记录仍保留在下方。当前采用 [G5 执行方案 v2](#g5-draft)；[audit28](behavior-graph-construction-audit.md#audit28)已完成首轮原生审计，门 1 NOT_READY。[E1→E2→E3→联合验收与稍后验证清单](#g5-evidence-plan)已采纳，探针均未实现；下一包是 E1 静态源调度/输出寿命审计。
+本节接替下方 11-01 收官摘要。G4 当次的两项证据缺口现已关闭，合并证据与限定见 [G4 收官](#g4-closure)；原 PENDING 的问题、仪器要求与关闭记录仍保留在下方。当前采用 [G5 执行方案 v2](#g5-draft)；[audit28](behavior-graph-construction-audit.md#audit28)已完成首轮原生审计，门 1 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)已完成 **E1 静态部分**（分派/本地双路径与 63359 无引用、生成在 58343、poseLocal 末写 63856、计数三分、无原生完成序号），E1 运行证据仍未取得。[E1→E2→E3→联合验收与稍后验证清单](#g5-evidence-plan)已采纳；下一包是 E1 最小探针的独立实现评审。
 
 > **关闭记录**：PENDING 1 由 [C-G4-A4](#c-g4-a4-numeric-types) 的 v63 运行关闭，PENDING 2 由 [C-G4-C1](#c-g4-c1-concurrent-events) 的 v66 运行关闭（2026-11-03）；下方缺口描述属于当时证据，不代表当前仍待补测。
 
@@ -1971,7 +1971,7 @@ BehaviorGraphProbe=true
 - **资源与活态分开**：候选与控制器源图共享 `hkbBehaviorGraphData`（652 项、对齐 652/0/0）及 15,203 项绑定集，候选变量活值分储、激活前不存在并从 authored defaults 初始化。共享绑定、候选跨轮 pose 哈希相同只支持资源对应/候选确定性，不证明源候选完整姿态、时钟或全部层/权重一致；`owner=neither` 也不单独识别读值来源。
 - **G4 当前证据范围**：A4 整窗 72/72 numeric 全 type0、31/31 行总量对账；C1 第三轮在控制器源图取得 `calls=62/other-graph=55/events=0/ring-dropped=0` 并以 display-close 关闭，限定 58377 路由。B-v2 只证明弓→剑→法术装备族稳定，不普遍证明 Random/sequence/PlayOnce 历史隔离；捕获、EquipSink 和 DAC 恢复也不等于完整生命周期收敛。
 - **记录部署**：v66 DLL `190c7236…` / PDB `b4f2596d…`、dormant INI `27f481f5…`；完整身份见[部署](#deploy-state)，本次未重新检查安装目录。v46 两类正常工作流已在 **20261030 重建**观察，非 20261029 归档逐字节证据；普通副本仍无 native 内存上界。[DCMF](community-reference-supplement.md#dcmf-reference)仅参考/后置；[idle-start 每圈重放](animation.md#idle-start-replay)是独立未决问题。
-- **排序**：G4 两项缺口已关闭；[首轮原生审计](behavior-graph-construction-audit.md#audit28)完成但第一门 NOT_READY；先按[证据方案](#g5-evidence-plan)做 E1 静态证明→最小探针/运行证据，再 E2、E3 与联合验收，三片探针当前均未实现。之后才是经评审完整仪器→独立校准→完整协议冻结→新正式验证，G5 未冻结/未通过；之后 G6（源恢复、任务失效、引用/回调/sink/历史与重复会话收敛）。装载 teardown NO-GO；每进程一张保留候选只是显式例外。
+- **排序**：G4 两项缺口已关闭；[首轮原生审计](behavior-graph-construction-audit.md#audit28)完成但第一门 NOT_READY；[audit29](behavior-graph-construction-audit.md#audit29)已完成 E1 的**静态证明**（调用图/字段与寿命/三种序号/计数三分），接着做 E1 最小探针与运行证据，再 E2、E3 与联合验收；三片探针的运行证据当前均未取得。之后才是经评审完整仪器→独立校准→完整协议冻结→新正式验证，G5 未冻结/未通过；之后 G6（源恢复、任务失效、引用/回调/sink/历史与重复会话收敛）。装载 teardown NO-GO；每进程一张保留候选只是显式例外。
 
 <a id="g4-followup-numeric"></a>
 ### PENDING 1（**已关闭**，2026-11-02）：A 的全窗口 numeric 类型覆盖
@@ -3223,16 +3223,16 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 
 ### 八、当前下一步与导航
 
-**首轮审计已完成，门 1 NOT_READY**（[audit28](behavior-graph-construction-audit.md#audit28)）；当前继续[证据方案](#g5-evidence-plan)的 E1 有界静态源调度/输出完成与生命周期审计，再依次补 E2 完整贡献、E3 合格 R2 配对及联合证据验收。三片探针尚未实现；拿不到合格源对就保留缺项，不先冻结数值或读取猜测布局。
+**首轮审计已完成，门 1 NOT_READY**（[audit28](behavior-graph-construction-audit.md#audit28)）；**E1 的静态部分亦已完成**（[audit29](behavior-graph-construction-audit.md#audit29)），当前转入 E1 最小探针的独立实现评审，再依次补 E2 完整贡献、E3 合格 R2 配对及联合证据验收。三片探针的运行证据尚未取得；拿不到合格源对就保留缺项，不先冻结数值或读取猜测布局。
 
 代码审计入口：[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 `collect_active_clips`、`log_clip_reference`、`read_pose_local` 与两段循环；[drive_step_policy.h](../src/animation/behavior_graph/drive_step_policy.h) 的 `drive_graph_step`；[clip_reference_policy.h](../src/animation/behavior_graph/clip_reference_policy.h) 的 `clip_reference_agrees`；[clip.h](../src/animation/clip.h) 的 `read_pose`。本次验证只核对文档结构/链接/符号、保留证据与 Git/哈希边界，不构建、不跑行为测试/游戏/校准。后续协议变化同步本文与 README、history、build、SceneGraph、OAR 的当前导航，不改写原始日志。
 
 <a id="g5-evidence-plan"></a>
 ### 九、第一门证据实施与后续验证交接（2026-11-03）
 
-**首轮原生审计已完成，门 1 = NOT_READY**；原生事实、输入身份与限制由 [audit28](behavior-graph-construction-audit.md#audit28)拥有。下列实施方向已采纳，但 **E1/E2/E3 均 PENDING、尚未实现/构建/部署/运行**；完整 G5 观察器、独立校准、正式协议冻结与新正式验证均未完成，G5 未通过。
+**首轮原生审计已完成，门 1 = NOT_READY**；原生事实、输入身份与限制由 [audit28](behavior-graph-construction-audit.md#audit28)拥有，E1 的静态事实由 [audit29](behavior-graph-construction-audit.md#audit29)拥有。下列实施方向已采纳：**E1 静态部分已完成，E1 运行证据与 E2/E3 仍 PENDING、尚未实现/构建/部署/运行**；完整 G5 观察器、独立校准、正式协议冻结与新正式验证均未完成，G5 未通过。
 
-这里的 E1–E3 是第一门的研究证据切片，不是上文 G3-B 历史事件实验 E1。顺序为 **E1 → E2 → E3 → 联合证据验收**；未知 hook/ABI/布局仍须逐项证实并另行评审。当前下一动作仍是 **E1 的有界静态源调度、输出完成与生命周期审计**。
+这里的 E1–E3 是第一门的研究证据切片，不是上文 G3-B 历史事件实验 E1。顺序为 **E1 → E2 → E3 → 联合证据验收**；未知 hook/ABI/布局仍须逐项证实并另行评审。当前下一动作是 **E1 最小探针的实现评审**（必交证据与正控见 [audit29](behavior-graph-construction-audit.md#audit29) 第八节）。
 
 | 切片 | 前置依赖与目标 | 必交证据 / 退出条件 |
 | --- | --- | --- |
