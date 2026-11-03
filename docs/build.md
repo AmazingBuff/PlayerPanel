@@ -970,6 +970,14 @@ Attempt-3 run (2026-11-03 00:10:44–00:10:54, identity confirmed in the live lo
 
 **构建命令（本机实际使用）**：`vcvars64.bat`（VS18，默认 toolset 14.51.36231）→ `cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_CONFIGURATION_TYPES=Release -DCMAKE_CXX_FLAGS="/EHsc /MP /W4 /WX" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=C:/env/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_INSTALL=OFF -DVCPKG_INSTALLED_DIR=…/build/vcpkg_installed -DDETOURS_LIBRARY=…/lib/detours.lib -DFETCHCONTENT_FULLY_DISCONNECTED=ON` → `cmake --build build --config Release --target CharacterPanel`。
 
-**结果**：构建 exit 0，只出现既有 `D9025`／CommonLibSSE 的 `hde64.c` C4701/C4706 与安装规则警告；`build/Release/CharacterPanel.dll` 与 `.pdb` 生成（身份与哈希见下一条"clean rebuild"记录）。本轮**未部署、未运行**，`SamplingLiveness` 仍为 dormant `off`。
+**结果**：构建 exit 0，只出现既有 `D9025`／CommonLibSSE 的 `hde64.c` C4701/C4706 与安装规则警告。**clean-tree 重建**（提交 `7dd5ea7458`，子模块 `94faaed0`，无 `+dirty`）的身份与工件：
+
+- 身份：`CharacterPanel-scenegraph-v67-g5e1-liveness-7dd5ea7458-cl94faaed0c6-20261103T155041Z`
+- DLL：1,501,696 字节，SHA-256 `e725066c0428f4642bb4529b80c0419490ef4aa1be7b0ec9cd24fd49e4e3457e`
+- PDB：48,902,144 字节，SHA-256 `1a4da885394785146ad2dcf5cf7f7e030d87ccec0657ff4cb0fbf6cafcd47bc4`
+- CodeView：`{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 395（与 v18–v66 同一 GUID 家族）
+- 导出：`SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version` 三项齐全
+
+本轮**未部署、未运行**；`SamplingLiveness` 仍为 dormant `off`，v66 的 DLL/PDB 继续留在部署目录与 `dist/deploy-backup-20261102-*`。上机前须按 [C-G5-E1 契约](independent-behavior-graph.md#c-g5-e1-probe)第四节准备 INI 并重启。
 
 
