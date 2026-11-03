@@ -980,4 +980,11 @@ Attempt-3 run (2026-11-03 00:10:44–00:10:54, identity confirmed in the live lo
 
 本轮**未部署、未运行**；`SamplingLiveness` 仍为 dormant `off`，v66 的 DLL/PDB 继续留在部署目录与 `dist/deploy-backup-20261102-*`。上机前须按 [C-G5-E1 契约](independent-behavior-graph.md#c-g5-e1-probe)第四节准备 INI 并重启。
 
+### Deployment (2026-11-04 00:0x local)
+
+- **备份** v66 三件套到 `dist/deploy-backup-20261104-v66/`：DLL 1,474,048 字节 `190c7236…`、PDB 38,522,880 字节 `b4f2596d…`、部署 INI（dormant）2,147 字节 `27f481f5…`（另存 `deployed-dormant-27f481f5.ini`）。
+- **部署** v67：DLL 1,501,696 字节 `e725066c0428f4642bb4529b80c0419490ef4aa1be7b0ec9cd24fd49e4e3457e`、PDB 48,902,144 字节 `1a4da885…`（与 clean-tree 构建逐字节相同；DLL 内嵌身份字符串 `…-7dd5ea7458-…` 与 `PROBE LIVENESS` 目标串均已核对）。
+- **运行 INI**：9,465 字节 `ff3c6f34a29bd67d4134b6a5a4e9de43e47c000d5bf6a445393a2b6d45ba2809`，由仓库样例派生并逐键读回断言：`IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`、`SamplingLiveness=concurrent`，`SourceTimeline/SourceEventCapture/SourceWriteCapture/OarContextWatch` 与全部 candidate 探针保持 off/空（契约禁止叠加 detour 仪器）。
+- **尚未运行**：本次部署等待一次上机会话；结束后的第一步是从备份恢复 dormant INI（`27f481f5…`）并重启，再归档日志。
+
 
