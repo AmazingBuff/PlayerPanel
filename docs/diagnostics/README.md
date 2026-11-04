@@ -78,3 +78,7 @@ git show 'ae5dac28356d0ebb1a5fd754ddb4882a8dae26f3:docs/diagnostics/CharacterPan
 - [CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log](CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log)（5,669 字节，SHA-256 c0a07a8559c2729611e7c521a98c56905bd10fc4f242ee164f03991d16bc7635）：v67 SamplingLiveness=on，游玩态 F7 窗口 19.99 s / 748 帧，引擎本地循环调用 63589 共 161,006 次、`flag=0`。判读见[补充运行 A](../independent-behavior-graph.md#c-g5-e1-run2)。
 
 - [CharacterPanel-g5e1-liveness-v2-resumed-20261104-0031.log](CharacterPanel-g5e1-liveness-v2-resumed-20261104-0031.log)（291,454 字节，SHA-256 603115178c0dc56747e2dcc78dd0aa5c9b0955ac5ab08395e3e7f7f5730e3d6e）：v68 concurrent + resumed 窗口，display 段 461 帧后转段、resumed 段 10.03 s；pinned-engine=411、completions-pinned=411、`threads=7`、`flag=0`。判读见 [v2 运行](../independent-behavior-graph.md#c-g5-e1-run3)。
+
+## C-G5-E1 修复版首轮运行日志（2026-11-04，v69）
+
+- [CharacterPanel-g5e1-v69-repair-run1-20261104-2307.log](CharacterPanel-g5e1-v69-repair-run1-20261104-2307.log)（323,130 字节，SHA-256 f00960a725415822753e028a6c9923acc434574ada62ba299fa9f9e3edf07294）：v69（修复版首次上机）`SamplingLiveness=concurrent` 窗口，23:05:37.167 武装、23:05:57.167 到期（1040 帧，`reason=expired`，无转段）。新字段与关闭对账行完整：`eligible=recorded=drained=2628 missing=0 contention/full-dropped=0 transport-complete=yes`。判读见 [v69 首轮](../independent-behavior-graph.md#c-g5-e1-v69-run1)：修复版传送/对账在其覆盖范围内成立，但窗口未转段、对 Q2 无效（按预注册规则记"未检验"）。

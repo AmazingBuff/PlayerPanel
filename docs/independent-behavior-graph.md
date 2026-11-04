@@ -3539,3 +3539,31 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 4. **仪器余量**：`threads=7` 对 `Max_Threads=8` 只剩一格；更热闹的场景可能耗尽槽位（`pair-no-slot`）。若后续需要，v3 再扩槽——本轮判据不受影响。
 
 **未覆盖**：明细预算 2048 行，411 条钉住 entry 中只打印了 335 条（计数器完整、明细截断是可预注册的报告限制）；E2/E3 未做；"多线程采样由哪个调度机制派发"留作静态跟进（E2 范围）。
+
+<a id="c-g5-e1-v69-run1"></a>
+### v69 首轮（修复版首次上机，2026-11-04 23:05，无转段，Q2 未检验）
+
+**工件与设置**：v69 DLL `2490c38d…da11e`（1,590,272 字节，[干净重建](build.md#v69-g5e1-clean-rebuild-2026-11-04)，身份 `…-v69-g5e1-evidence-repair-a89fa5cba0-…`，CodeView age 397）、PDB `f69c9790…`；运行 INI 9,640 字节 `c3703b74…`（concurrent 配置，20 键派生断言 + 写后回读，[部署记录](build.md#v69-g5e1-clean-rebuild-2026-11-04)）；日志 [323,130 字节 `f00960a7…`](diagnostics/CharacterPanel-g5e1-v69-repair-run1-20261104-2307.log)。全程零 `[E]`。
+
+**过程**：23:04:11.818 两条 detour 按预注册头字节安装（63589 `head-size=5`、63856 `head-size=7`，thunk `0x7ff6de250000/0x7ff6de250100`——新 256 字节布局，original 块在 +128/+0x180）；23:04:43.206 读档 `invalidate-requested reason=world-reset`（窗口未开）；23:05:37.167 `concurrent-armed actor=00000014 epoch=1 graph=0x1e5a3f30680 behavior=0x1e0f4c4d900 pinned=yes`；**23:05:57.167 到期关闭（20.000 s，1040 帧，`reason=expired`）——面板显示窗口从未关闭，没有发生 `display-close`，无 `window=segment` 转段行，直接以到期收尾**。
+
+**关闭行（原文）**：
+`window=close reason=expired actor=00000014 epoch=1 frames=1040 entries=1314 e:engine=0/plugin=1314/other=0 pinned-engine=0 apply-entries=1314 pinned-apply-entries=0 other-apply-entries=1314 tracked-sample-entries=1314 paired-apply-entries=1314 pair-mismatch=0 pair-no-slot=0 threads=1 queue-seen=yes queue=0x7ff75fbbe0e0 flag=0 queue-flag-frames=0 detail=2048 detail-dropped=0 ring-dropped=0 contention-dropped=0 full-dropped=0 eligible-records=2628 recorded-records=2628 drained-records=2628 drained-samples=1314 drained-applies=1314 missing-records=0 orphan-applies=0 unpaired-samples=0 suppressed-rows=580 transport-complete=yes`
+
+**逐项判读**：
+
+| 项 | 结果 | 依据 |
+| --- | --- | --- |
+| **安装（P1 前半）** | **通过** | 两条 detour 头字节相符、thunk/original 地址齐全（修复版共享 256 字节块布局首次实机生效） |
+| **新对账恒等式** | **通过（全零缺口）** | `eligible(2628) = recorded(2628) + ring/contention/full-dropped(0)`；`recorded(2628) = drained(2628) + missing(0)`；`drained-samples(1314) + drained-applies(1314)`；`orphan-applies=0`、`unpaired-samples=0`、`pair-mismatch=0`、`pair-no-slot=0`；`transport-complete=yes`——**audit31 要求的传送/关闭对账在其覆盖范围内成立**（注意 `transport-complete` 只描述传送，按裁定不构成 E1 或 G5 通过） |
+| **插除旧案** | **不复现** | v68 的 1,100 入口/1,099 对缺口本轮消失：1,314 对 1,314（`tracked-sample-entries = paired-apply-entries = 1314`），关闭前无在途记录残留 |
+| **P2 源命中（Q2）** | **未检验（预注册无效分支）** | v2 规则："`display-close` 没有在 display 段内发生 → 没有 resumed 段，本窗口对 Q2 无效——只能按首轮的方式记'未检验'"。`pinned-engine=0`、无转段行、arm 后恰 20.000 s 到期，属设计内覆盖不到，**不是负结果，也不推翻 v68 已取得的 411 命中** |
+| **P3 配对** | 通过（全窗） | 1,314 对全部配对、零错配/零孤儿；2048 行明细内 sample→apply 逐对相邻，全部 `graph=0x1e644a5a200`（候选图）、`requested-count=116` |
+| **P4 线程** | 与 v67 一致 | 明细单 tid（渲染线程 18560）；钉住源图无引擎记录，不涉 Q3 |
+| **P5 队列** | 通过 | `queue-seen=yes`、`flag=0`、`queue-flag-frames=0`（1040/1040 帧） |
+
+**明细字段（新接口首次实机）**：120 条 `caller=0xe6012492` + 904 条 `caller=0xe60120b6`——两个插件内返回地址 = 插件自己的两个直调点（正控成立，插件调用区分有效）；`suppressed-rows=580` = 2,628 条记录 − 2,048 行打印预算，与 `detail=2048` 自洽（计数完整、打印截断，可预注册的报告限制照旧）。
+
+**过程事实**：面板打开于 23:05:37.179（`snapshot=paused-source`），整个 20 秒窗口面板保持打开（`SCOPY COMPOSITE` 持续到 23:07:08，`draws` 累计到 4800+）；`draws=1/600/1200/…/4800` 每 ~11.46 s 累计 600——显示循环稳定。关闭行之后（23:07:14.766）面板关闭，`DAC restore … epoch=2 … result=matched`，`ANIMATION … lifetime reset`——正常关闭路径，零错误。
+
+**结论与下一步**：修复版的跳板布局、原子门、接收封口、尾部 drain 和关闭对账在实机上按设计工作（v68 的配对缺口消失，恒等式全零缺口通过）；但本轮窗口结构未覆盖 resumed 段——**要关闭修复版的 E1 取证缺口，需要一次"开面板 → 关面板（触发转段）→ 留 10 秒游玩 → 等关闭行"的重跑**（同 v69 二进制零改动，只改操作时序；一次进程一个窗口，重跑需重启游戏）。之后再排 G4-C 修复仪器的正控重跑。
