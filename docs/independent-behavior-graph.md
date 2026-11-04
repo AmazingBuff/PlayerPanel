@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-04（夜）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。G4 A（v63）与 B 保留；C 的 v66 零事件以及旧 typed-setter 零写入受 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷影响，修复后尚未重跑。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数，本探针只观察它的入口。当前修复版 v69 已上机两轮：跳板/传送/关闭对账按新判据全部成立，[第二轮](#c-g5-e1-v69-run2)转段成功、resumed 段钉住源图 408 次引擎采样 + 788/788 全配对 + 对账恒等式全零缺口——**修复版 E1 取证缺口（入口活性/配对/对账）已闭合**；输出完成/寿命/同代快照仍未闭合（audit31 裁定不变），E2/E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-05。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 的 v66 零事件曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close` 边界完整、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数，本探针只观察它的入口。当前修复版 v69 已上机三轮：跳板/传送/关闭对账按新判据全部成立，[第二轮](#c-g5-e1-v69-run2)转段成功、resumed 段钉住源图 408 次引擎采样 + 788/788 全配对 + 对账恒等式全零缺口——**修复版 E1 取证缺口（入口活性/配对/对账）已闭合**；输出完成/寿命/同代快照仍未闭合（audit31 裁定不变），E2/E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -11,7 +11,7 @@
 | G1 | **PASSED，仅按方案 A 修订判据** | 空壳配对销毁、重复装载和所采源对照成立；装载图停用/销毁经 2026-10-28 审计**判为 NO-GO**（[理由](#g1-teardown-audit)）；"全局登记计数"的旧静态结论被 v35 上机读数证伪、判为无锚点（[更正](#g1-teardown-audit)）。 |
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
-| G4 | **A/B 保留；C 的关闭失效（[audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷），待修复后重跑** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 只建立当前装备族选择稳定。**C：v66 的 `events=0` 判为仪器无效**——58377 detour 的 thunk 实参槽位错位，门拿 `rax` 残值与被钉图比较，故零事件是门不成立的结果；`calls=62`（计数在门之前）仍有效。修复后的仪器尚未上机重跑，见 [audit30 裁定](behavior-graph-construction-audit.md#audit30)。 |
+| G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
 | G5 | 修复版取证缺口已闭合；门 1 NOT_READY；未通过 | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成，完成点/寿命/同代快照未证。E2/E3 未开始，之后仍须仪器→独立校准→完整冻结→新正式验证 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
@@ -36,7 +36,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G1 | **PASSED**（方案 A 修订） | 装载图停用/销毁、全局登记计数、资源收敛未证 |
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
 | G3 | G3-A 成立；**G3-B PASSED（相位序列）** | [F](#c-g3b-f-full-replay)：两事件复现 0→10→1→12→0；完整姿态另验 |
-| G4 | **A/B 保留；C 证据无效，待重跑** | [numeric 全窗覆盖](#g4-followup-numeric)（v63：整窗 72/72 `type=0`、逐窗对账相等）、B 限装备族选择稳定；[源事件兼容观察](#g4-followup-source-events) 的 `events=0` 由 [audit30](behavior-graph-construction-audit.md#audit30) 判为仪器无效（thunk 实参错位），修复后未重跑 |
+| G4 | **A/B/C 保留；C 已在修复版仪器上重跑关闭（v69 attempt 2，2026-11-05）** | [numeric 全窗覆盖](#g4-followup-numeric)（v63：整窗 72/72 `type=0`、逐窗对账相等）、B 限装备族选择稳定；[源事件兼容观察](#c-g4-c1-concurrent-events) 的 v66 `events=0` 曾由 [audit30](behavior-graph-construction-audit.md#audit30) 判无效（thunk 实参错位），**v69 修复版重跑判据 1–6 全部成立**：`calls=64/other-graph=64`、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现 |
 | G5 | 首轮审计完成；门 1 NOT_READY；未通过 | [E1 修复后边界](#g5-e1-evidence-repair)：源采样入口和多个 tid 有记录；**修复版 v69 两轮已上机（[第二轮](#c-g5-e1-v69-run2)完整）：跳板/传送/对账恒等式成立、resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现——修复版 E1 取证缺口闭合**；63856 应用入口 ≠ 输出完成，完成点/寿命/同代快照未证。E2/E3 未开始，之后仍须仪器→独立校准→完整冻结→新正式验证 |
 | G6 | PENDING | 非豁免生命周期、源恢复与重复会话收敛未证 |
 
@@ -86,7 +86,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | 场景应用（物理、武器挂载交互） | 未验 |
 | 装载图停用/销毁 | **判为 NO-GO（2026-10-28 审计）**：`Deactivate` 对 `activeNodes` 无空检查，且候选与源共享 `rootGenerator`，未证活动节点条目是克隆；污染源图比崩溃更糟。收益只是每进程一张图的登记与内存，不阻塞 G3–G6。见[审计](#g1-teardown-audit) |
 | 全局登记计数 | **无锚点、不立项**：v35 探针在 23:16 上机读回 `300474432->300474432`，重审指令确认 `[0x315C950]+0x228` 是不变的奇偶/序列值、`inc` 未写回、`63529` 只是无锁追加而非登记；旧审计那句话判为误读（[更正](#g1-teardown-audit)） |
-| G3–G6、独立 OAR 语境 | G3-A、G3-B/F 相位回放保留；G4 A/B 保留、C 待重跑；E1 修复版取证缺口已闭合（[v69 第二轮](#c-g5-e1-v69-run2)），输出完成/寿命/同代快照待原生审计，G5/G6 未通过 |
+| G3–G6、独立 OAR 语境 | G3-A、G3-B/F 相位回放保留；G4 A/B/C 保留（C 已在修复版仪器上重跑关闭）；E1 修复版取证缺口已闭合（[v69 第二轮](#c-g5-e1-v69-run2)），输出完成/寿命/同代快照待原生审计，G5/G6 未通过 |
 | 缺失项逐名与语义核对 | v33 的 `missing=7` 只按预算列了 4 个名字，其余 3 个未列名，不能逐一断言全部非骨 |
 | 帧率无关性 | [v44 本地代码](#v44-display-clock)按 eligible elapsed 时间累计 60 Hz，100 ms/六步上限；30/120 FPS 两个离线场景各在两秒产生 120 步。游戏速率/画面未验；v33/v34 的每调用记录仍为历史 |
 
@@ -1971,7 +1971,7 @@ BehaviorGraphProbe=true
 - **资源与活态分开**：候选与控制器源图共享 `hkbBehaviorGraphData`（652 项、对齐 652/0/0）及 15,203 项绑定集，候选变量活值分储、激活前不存在并从 authored defaults 初始化。共享绑定、候选跨轮 pose 哈希相同只支持资源对应/候选确定性，不证明源候选完整姿态、时钟或全部层/权重一致；`owner=neither` 也不单独识别读值来源。
 - **G4 当前证据范围**：A4 整窗 72/72 numeric 全 type0、31/31 行对账保留；C1/v66 的 `events=0/other-graph=55` 仪器无效，仅门前 `calls=62` 保留，修复后待有效正控重跑。B-v2 只证明当前装备族稳定；捕获、EquipSink、DAC restore 也不等于完整生命周期收敛。
 - **记录部署**：最新为 [v69](build.md#v69-g5e1-clean-rebuild-2026-11-04)（修复版，DLL 1,590,272 字节 `2490c38d…`，CodeView age 397），运行 INI 用后已恢复 dormant `27f481f5…`（[部署与两轮运行记录](build.md#v69-g5e1-clean-rebuild-2026-11-04)）。v46 正常工作流仍仅对应 20261030 重建。[DCMF](community-reference-supplement.md#dcmf-reference) 仅参考/后置；[idle-start 每圈重放](animation.md#idle-start-replay) 仍是独立未决问题。
-- **排序**：~~修复版离线核验 → 匹配工件上机核验入口活性与完整传送/关闭对账~~（**已完成**：[v69 首轮](#c-g5-e1-v69-run1) + [第二轮](#c-g5-e1-v69-run2)）→ E1 剩余完成点/寿命/同代快照证据 → E2 完整贡献、E3 合格 R2 配对 → 联合验收；之后才是完整仪器、独立校准、协议冻结与新正式验证。G4-C 与旧 setter 仪器另需有效正控重跑（下一步），G6 后置。
+- **排序**：~~修复版离线核验 → 匹配工件上机核验入口活性与完整传送/关闭对账~~（**已完成**：[v69 首轮](#c-g5-e1-v69-run1) + [第二轮](#c-g5-e1-v69-run2)）→ E1 剩余完成点/寿命/同代快照证据 → E2 完整贡献、E3 合格 R2 配对 → 联合验收；之后才是完整仪器、独立校准、协议冻结与新正式验证。~~G4-C 与旧 setter 仪器另需有效正控重跑~~（**G4-C 已完成**：[v69 attempt 2](#c-g4-c1-concurrent-events)；typed-setter 窗口 63607/63609 的同类修复正控仍待需要时重跑），G6 后置。
 
 <a id="g4-followup-numeric"></a>
 ### PENDING 1（**已关闭**，2026-11-02）：A 的全窗口 numeric 类型覆盖
@@ -2999,7 +2999,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 <a id="c-g4-c1-concurrent-events"></a>
 ## C-G4-C1：兼容的源事件观察窗口（评审 → 实现，2026-11-02）
 
-> **状态：评审定稿、已实现、已构建、已部署并已运行（v66）—— PENDING 2 已关闭。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定，运行结果回填在末尾。
+> **状态：评审定稿、已实现、已运行（v66 关闭 → [audit30](behavior-graph-construction-audit.md#audit30) 撤回 → v69 修复版重跑再次关闭，2026-11-05）。** 本节是 [PENDING 2](#g4-followup-source-events) 要求的"另立评审范围"；预注册判据在实现前固定，运行结果回填在末尾。
 
 **问题陈述（三个结构事实，缺一不可）**：
 
@@ -3081,6 +3081,21 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 | 6 身份 | 无 `identity-mismatch`、无 `window-aborted`；`nodes=106` 与同日志 `OAR CONTEXT scan src-count=106` 一致，`data=0x1c4b4cb7510` 与 `pre-activate` 的 `behavior-data` **逐位相同** → 观测对象确为候选所由来的那张图 |
 
 **裁定：PENDING 2 关闭 —— 候选活动期间源图事件为零，且观察器存活、分类有效、窗口覆盖完整。** 复用守门同构：恰好两次 `result=dispatched`（`WeapEquip` 2 / `Unequip` 144）；`drive-done` `bc160a8c…/63f638a6…/c407cb4e…`、`unequip-done` `8fb4cd33…/4f2aebde…/c407cb4e…`（**第八次逐位复现**）；`source-drift=none`、源姿态 before=after=`a8f8dabc8439246e`；零 `[E]`，15 条 `[W]` 均为既有 DAC/台账提示。零计数只限定 58377 路由（E1/A1 已示其覆盖不到全部 manager 级事件路径），**不得外推**。裁定后部署 INI 回 dormant（2,147 字节 `27f481f5…`），v66 DLL/PDB 留装。
+
+> **2026-11-04 前向更正**：上一段（v66 第三轮）的裁定因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回；下节 v69 修复版重跑重新取得同构证据。
+
+**修复版重跑（v69，2026-11-05 00:01–00:01.4，两轮；attempt 1 因 INI 派生漏键只注入一次，仪器判读有效但不构成 C 形状；attempt 2 判据 1–6 全部成立 —— PENDING 2 在修复版上再次关闭）**：
+
+| 判据 | attempt 2 读数（[日志](diagnostics/CharacterPanel-g4c1-v69-attempt2-two-dispatch-20261105-0001.log) 75,607 字节 `06a743c8…`） |
+| --- | --- |
+| 1 安装 | `installed mode=concurrent target=0x7ff75d4b58a0 … head=48 8b c4 48 89 48 08`（[audit30 修复版](build.md#v69-g5e1-clean-rebuild-2026-11-04)首次过 C1 窗口） |
+| 2 武装 | 00:01:10.510 `window-open … words=652 nodes=106 data=0x15734cf7510`（与 `load-try` 的 `behavior-data` 逐位相同）+ `concurrent-armed pinned=yes`，早于 10.521 `WeapEquip` 派发 |
+| 3 正控 | `calls=64 ≥ 2`、`other-graph=64 ≥ 2` |
+| 4 隔离 | `events=0`、`ring-dropped=0`、无 budget-exhausted、`reason=display-close`（16.2 s 窗口：两注入 + 两段 drive + 显示段 120 步 + 关闭 + `DAC restore matched`） |
+| 5 边界 | 仅 58377 路由，不外推 |
+| 6 身份 | 无 `identity-mismatch`/`window-aborted`；`source-drift=none`、显示窗 before=after=`cf4474599d2ba8ef` |
+
+回放形状完整：`WeapEquip`(2) → 装备段 settle（step 63，目标 49，`baseline-default=1`）→ `Unequip`(144) → 卸下段 12→0 于 step 21 自发、脉冲变量 step 33 落零；`drive-done` `bc160a8c…/63f638a6…/c407cb4e…` + `unequip-done` `8fb4cd33…/4f2aebde…/c407cb4e…` —— **第九次逐位复现，且为修复版仪器上的第一次**；显示段 `pose-summary semantic-changed=116/116`。attempt 1（[日志](diagnostics/CharacterPanel-g4c1-v69-attempt1-single-dispatch-20261104-2336.log) `0bfa8712…`）的 INI 派生漏掉卸下切片两键（`CandidateUnequipProbe`/`CandidateUnequipEvent`），只注入 `WeapEquip`、收于 readied 姿态——仪器四判据当时已成立（`calls=42/other-graph=42/events=0/display-close`），但不构成两注入形状，不用于关闭。视觉说明：回放在模拟时间 ~5 ms 内完成，面板显示的是卸下完成后的站姿——"面板里只有 idle"是两轮运行的预期外观，证据在日志行里。运行后 INI 恢复 dormant `27f481f5…`，v69 留装。
 
 <a id="g4-closure"></a>
 ## G4 收官合并（2026-11-03）：三段证据、限定与仪器事实
