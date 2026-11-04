@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 修复版取证缺口已闭合；门 1 NOT_READY；未通过 | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成，完成点/寿命/同代快照未证。E2/E3 未开始，之后仍须仪器→独立校准→完整冻结→新正式验证 |
+| G5 | 静态遗留四项已闭合（audit32）；门 1 NOT_READY；未通过 | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧待增补正控的新探针。E2/E3 未开始，之后仍须仪器→独立校准→完整冻结→新正式验证 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -3357,7 +3357,7 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 
 依赖仍为 C++23、既有 CommonLib/地址库与固定 AE 1.6.1170 头字节；原子语义依据 [C++ draft atomic flag](https://eel.is/c++draft/atomics.flag)、[release/acquire](https://eel.is/c++draft/atomics.order)，入口实参/栈约定对照 [Microsoft x64 ABI](https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170)。这些通用资料不证明 Skyrim 运行兼容性。修改时须同步上述源码/测试、本节、索引及日志格式，保留历史锚点和原件。
 
-**未部署、未上机。** ~~最新记录安装仍为 v68；后续先归档匹配 DLL/PDB/INI 与加载身份，再验证两处安装、唯一窗口、resumed 源命中、无丢失的最终对账及取消路径~~（**已完成**：v69 两轮，[首轮](#c-g5-e1-v69-run1)验证安装/对账、[第二轮](#c-g5-e1-v69-run2)转段完整、resumed 源命中 408、全零缺口对账；INI 已恢复 dormant）。~~不要使用旧日志套新字段。~~ G4-C 和 typed-setter 窗口仍须修复版有效正控重跑。入口活性子任务之外，E1 的完成点/有效输出范围/寿命/同代快照需要继续原生审计和另行评审；之后才有 E2/E3 及联合验收。G5 门 1 NOT_READY，G6 与装载 teardown 边界不变。
+**未部署、未上机。** ~~最新记录安装仍为 v68；后续先归档匹配 DLL/PDB/INI 与加载身份，再验证两处安装、唯一窗口、resumed 源命中、无丢失的最终对账及取消路径~~（**已完成**：v69 两轮，[首轮](#c-g5-e1-v69-run1)验证安装/对账、[第二轮](#c-g5-e1-v69-run2)转段完整、resumed 源命中 408、全零缺口对账；INI 已恢复 dormant）。~~不要使用旧日志套新字段。~~ G4-C 已在 v69 上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)，2026-11-05）；typed-setter 窗口（63607/63609）留待需要时按同款正控重跑。**静态遗留四项已由 [audit32](behavior-graph-construction-audit.md#audit32) 闭合（2026-11-05）**：完成点=63856 返回后的两处捕获窗（63589 尾 + 63568 尾；63856 全镜像共 5 个调用点，其中 63563 物理回调路径与 63572 两处列入探针计数正控）、有效输出范围三计数按路径三分（主路径 n=`[g+0x240]`、fallback n=槽 numData 不写回、63563 n=bp）、poseLocal 单点 lazy 分配无 free（mempool 57056，跨 epoch 复用=同缓冲重写）、`[g+0x148]` 四写点全在 58316 与 57148 之间顺序执行。下一步：按 audit32 §五增补正控清单实现/评审下一版探针 → 运行取证 → E2/E3。G5 门 1 NOT_READY，G6 与装载 teardown 边界不变。
 
 <a id="c-g5-e1-probe"></a>
 ## C-G5-E1：源采样 producer liveness 最小探针（契约 v1 + 首轮运行，2026-11-03/04）
