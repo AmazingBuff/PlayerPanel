@@ -1,13 +1,13 @@
 # 行为图构造与销毁的二进制审计（2026-10-23）
 
-更新：2026-11-03。本文保留 AE 1.6.1170 静态审计与历史推断；[当前证据](independent-behavior-graph.md#verification-matrix)优先。G1/G2 有界通过、G3-A 成立、G3-B 相位回放通过，G4 两项缺口已关闭（[收官与限定](independent-behavior-graph.md#g4-closure)）。[audit28](#audit28)完成 G5 首轮原生审计，门 1 NOT_READY；[E1–E3 方案/交接](independent-behavior-graph.md#g5-evidence-plan)探针均未实现，G5 未冻结/未通过、G6 待验。
+更新：2026-11-04。G1/G2 有界通过，G3-A 与 G3-B/F 相位回放保留；G4 A/B 保留、C 与旧 typed-setter 零读数受 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷影响，修复后待重跑。v67/v68 已有源采样入口活性和多个采样 tid 的记录，但 **E1 完整证据未闭合**；63856 是场景应用入口，不能称 poseLocal 末写或输出完成。本轮修复跳板、多生产者传送和关闭对账，尚未部署/上机，详见 [E1 当前边界](independent-behavior-graph.md#g5-e1-evidence-repair)。最新记录安装 v68，最近记录 INI dormant，本轮未重验安装。E1 剩余完成点/寿命/同代快照仍需取证，E2/E3 尚未开始；G5 门 1 NOT_READY、未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="audit-current"></a>
 ## 当前生成入口与后验边界（2026-11-03）
 
 v32 收窄 raw119/120 与 bones=116 的推论，v33 随后分别测得语义运动与实际覆盖；missing=7 的旧 cap4 只列四名、另三未知，不证明可忽略。v34 的 reset/重开/F7/读档回落结果保留，同 controller 来源/generation 改变与 frozen-only 拒绝未验。新 [v42 有界诊断](independent-behavior-graph.md#v42-residual-corrections)仅提升后续可观测性，既有指令事实、native 配方和原始日志不改。
 
-当前原生事实见 [audit28](#audit28)，下一动作是 [E1 静态源调度/输出寿命审计](independent-behavior-graph.md#g5-evidence-plan)；既有手工清单不构成新 E1–E3 验证包。最新记录安装 [v66](build.md#v66-g4c1-pinned-graph-2026-11-02) / INI dormant，本次未重新核验安装；新探针未实现。历史 [audit27](#audit27)仅证三个静态外部整数 setter 点，旧 missing/拒绝理由预算不能补齐旧数据。装载 teardown 仍 NO-GO；进程保留一张候选是 G6 显式例外，其余源恢复、请求/任务、引用/回调/sink/历史和重复会话收敛仍待验；全局引擎登记计数没有有效测量锚点。
+当前阶段与运行解释见 [E1 修复后边界](independent-behavior-graph.md#g5-e1-evidence-repair)及 [audit31](#audit31)；audit29 的 63856 末写/完成点解释被更正。最新记录安装 v68；当前修复未部署，完成点/寿命/同代快照仍未证。原生输入和历史审计保留，不代表新验证通过。
 
 v31 是对调用路径和观测对象的源码更正，没有新增 native 入口或二进制审计。既有 63587 更新记录、63589 mode0 生成入口与行为图字段声明继续沿用；不可直接以 SDK 的简化 Generate 声明替代已审计的同步入口。
 
@@ -1169,9 +1169,11 @@ C:/env/python312/python.exe -B -c "import sys; sys.path.insert(0,'build/behavior
 <a id="audit29"></a>
 ## 审计二十九：G5 第一门 E1 源调度、输出完成与寿命静态审计（2026-11-03）
 
+> **2026-11-04 更正**：本节历史“63856 为 poseLocal 末写”“63856 返回即产物完成”及据入口 tid 推断 32898 线程/工作池的解释不成立；当前事实见 [audit31](#audit31)。其余字段/流程只保留原审计范围，不能据本节关闭 E1。
+
 **结果：E1 的静态部分完成，门 1 仍 NOT_READY。** 本轮只读解包镜像与既有地址库，给出 E1 要求的状态/调用图、字段来源与寿命表、同代快照与计数证据；**源 producer 的运行时 liveness、最小探针、E2/E3、校准、冻结与正式验证均未做**。没有任何构建、部署、hook、游戏会话或校准；静态可达不等于运行命中，本节的零结论只覆盖已列出的静态范围。
 
-> **后续（2026-11-04）**：本节的运行侧问题已由 [C-G5-E1](independent-behavior-graph.md#c-g5-e1-probe) 的三轮运行回答，合并结论见 [E1 收官摘要](independent-behavior-graph.md#e1-closure)；其中"单帧线程"一条被运行证据推翻（6 个工作线程逐帧轮换），更正见第八节。
+> **后续解释更正（2026-11-04）**：三轮运行给出源采样入口活性与六个采样 tid；它们不证明 32898 由工作池轮换执行，也未关闭真正的输出完成/同代快照问题。当前判读见 [audit31](#audit31)与 [E1 当前边界](independent-behavior-graph.md#g5-e1-evidence-repair)。
 
 输入：HEAD `5bb5171` 与 [audit28](#audit28) 同一解包镜像 `SkyrimSE.original.exe.unpacked.exe`（SHA-256 `843823c115dbc56b5e9740350db49170cc4eea013a79513b7fd066deec719a2b`）与 versionlib `c4093c56…d452`；capstone 5.0.7 解码，`C:/env/libclang/bin/llvm-objdump.exe`（LLVM 20.1.0）备查。审计脚本与中间产物在 ignored `build/g5-e1-audit-20261103/`（`audit_e1.py`/`annotate.py`/`raw_calls.py`/`validate_bounds.py` 等），不是产品依赖。
 
@@ -1403,3 +1405,14 @@ corrected-slot-layout: recorder got [0x1111, 0x2222, 0x3333]          expected [
 
 - 修复后的 58377 窗口与 setter 窗口**尚未重跑**；在重跑之前，任何"源图零事件"或"零 setter 写"的表述都不成立，只能写"仪器曾无效，已修复，待运行"。
 - 重跑所需的运行证据、正控与回传要求与 [C-G5-E1 契约](independent-behavior-graph.md#c-g5-e1-probe)同款：安装/武装身份、`calls` 正控、源图身份、窗口边界、完整计数器。
+
+<a id="audit31"></a>
+## 审计三十一：E1 入口语义、跳板与关闭对账更正（2026-11-04）
+
+匹配输入仍为 AE 1.6.1170 解包镜像 SHA-256 `843823c115dbc56b5e9740350db49170cc4eea013a79513b7fd066deec719a2b` 与地址库 `c4093c56…d452`。重新读取 63856 全范围 `[0xbc2fe0,0xbc3237)`：输入 `rcx` 的 pose 经 `r9=rcx+0x18` 读取，节点来自 `rdx` 表，目的地址为节点 `+0x48`（或其分支目标），写矩阵与平移；**这是场景应用，不是 poseLocal 写入**。原探针 recorder 在入口原指令之前调用，因此旧 `completion/count` 只能解释为应用入口和钳制前请求数。不能合成真正产物完成序列或证明写满 116 条。
+
+代码审计确认：liveness 每钩子分配 128 字节而原指令放到 +256，两处均超出 256 字节池；setter 改成每次 192 后两次所需 384 仍挤入 256。另有单生产者队列未证明跨 tid 串行、关闭跳过尾部 drain/在途封口。v68 `689+411=1100` 而账本仅 1099 对，零 drop 不补齐这一缺口。新的布局、传送、接收/关闭和日志接口见 [E1 修复说明](independent-behavior-graph.md#g5-e1-evidence-repair)。
+
+**对 audit29 的裁定**：63856 末写和在其后合成完成序号的依据撤回；不能据其入口探针推断完整输出的新鲜度、阶段一致性或容量/更新覆盖。六个采样 tid 只证明观察到的调用线程不同，不识别工作池/32898 调度器；日志时间戳属于 render drain，不是原生生产时刻；轮询 flag 零不能提升为全调用分派分支恒零。audit30 关于旧事件/setter 零读数仪器无效的裁定保留，其 setter 池不足由本轮进一步修正。源采样入口活性保留，原始日志不改写。
+
+本轮只交付修复及离线验证；未部署、未上机。**E1 完整证据未闭合，G5 门 1 NOT_READY**，没有校准/冻结/正式通过结论；原生完成点、寿命、同代快照与有效更新范围仍须补证，E2/E3 后续进行。构建/验证限制见 [记录](build.md#g5-e1-evidence-repair-20261104)。

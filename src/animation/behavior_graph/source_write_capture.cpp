@@ -5,6 +5,7 @@
 #include "animation/behavior_graph/source_write_capture.h"
 
 #include "animation/behavior_graph/source_write_capture_policy.h"
+#include "animation/behavior_graph/detour_block_policy.h"
 
 #include "animation/behavior_graph/source_timeline_policy.h"
 
@@ -308,9 +309,7 @@ namespace animation::behavior_graph
 
         // The shared thunk shape: preserve every register and the flags, hand the three live
         // arguments to the recorder, then jump to the relocated original head.
-        constexpr std::size_t kThunkSize = 74;
-        constexpr std::size_t kOrigBlockSize = 5 + 6 + 8;  // relocated head + far jmp + address
-        constexpr std::size_t kBlockStride = 96;           // 16-aligned thunk, block behind it
+
 
         std::size_t encode_thunk(std::uint8_t* a_dst, std::uintptr_t a_recorder, std::uintptr_t a_original)
         {
@@ -362,19 +361,15 @@ namespace animation::behavior_graph
             auto& trampoline = SKSE::GetTrampoline();
             // Two strides: the thunk lives in the first, the relocated head plus far jump in the
             // second. The earlier single-stride allocation wrote 19 bytes past its block.
-            auto* const mem = static_cast<std::uint8_t*>(trampoline.allocate(2 * kBlockStride));
+            auto* const mem = static_cast<std::uint8_t*>(trampoline.allocate(Detour_Block_Size));
             if (!mem)
             {
                 logger::warn("SOURCE WRITECAPTURE install-failed reason=trampoline-exhausted target='{}'", a_name);
                 return false;
             }
             std::uint8_t* const thunk = mem;
-            std::uint8_t* const original = mem + kBlockStride;
-            std::memcpy(original, Source_Write_Head_Bytes.data(), Source_Write_Head_Bytes.size());
-            std::uint8_t const far_jmp[6] = { 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 };
-            std::memcpy(original + Source_Write_Head_Bytes.size(), far_jmp, sizeof(far_jmp));
-            std::uintptr_t const back = target.address() + Source_Write_Head_Bytes.size();
-            std::memcpy(original + Source_Write_Head_Bytes.size() + sizeof(far_jmp), &back, sizeof(back));
+            std::uint8_t* const original = relocate_detour_head(mem, Source_Write_Head_Bytes,
+                target.address() + Source_Write_Head_Bytes.size());
             encode_thunk(thunk, reinterpret_cast<std::uintptr_t>(a_recorder),
                 reinterpret_cast<std::uintptr_t>(original));
             std::uint8_t patch[5] = { 0xE9, 0x00, 0x00, 0x00, 0x00 };
@@ -410,7 +405,7 @@ namespace animation::behavior_graph
             return;
         }
         auto& trampoline = SKSE::GetTrampoline();
-        trampoline.create(256);
+        trampoline.create(Detour_Pool_Size);
         bool const ok = install_one_detour(REL::ID(63607), "SetGraphVariableBool", &record_write_bool) &&
             install_one_detour(REL::ID(63609), "SetGraphVariableInt", &record_write_int);
         if (!ok)

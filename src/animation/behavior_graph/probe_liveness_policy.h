@@ -4,6 +4,7 @@
 #pragma once
 
 #include "animation/behavior_graph/observation_chain_policy.h"
+#include "animation/behavior_graph/detour_block_policy.h"
 
 #include <array>
 #include <atomic>
@@ -18,10 +19,8 @@
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
 {
-    // C-G5-E1: minimal liveness probe for the source sampling producer. It answers exactly three
-    // questions audit29 left open - which thread runs the frame path, whether the pinned source
-    // graph is really sampled (not only the candidate), and whether a queue consumer re-enters
-    // sampling on another thread. It never compares poses and never produces a G5 verdict.
+    // Observes sampling/application entry liveness and observed thread identities only.
+    // Neither entry is an output-completion boundary or a coherent-pose snapshot.
 
     inline constexpr std::size_t Probe_Liveness_Ring_Depth = 4096;
     inline constexpr std::uint32_t Probe_Liveness_Detail_Budget = 2048;
@@ -175,22 +174,91 @@ namespace animation::behavior_graph
         std::uint32_t tid;
     };
 
-    // Single producer (the engine's sampling thread), single consumer (the render drain's drain).
-    // Overflow drops the newest record and counts it; nothing here blocks or allocates.
+    class ProbePushGate
+    {
+    public:
+        bool try_enter() noexcept
+        {
+            if (!m_busy.test_and_set(std::memory_order_acquire))
+                return true;
+            m_contended.fetch_add(1, std::memory_order_relaxed);
+            return false;
+        }
+        void leave() noexcept { m_busy.clear(std::memory_order_release); }
+        std::uint64_t contended() const noexcept { return m_contended.load(std::memory_order_relaxed); }
+        void reset() noexcept { m_contended.store(0, std::memory_order_relaxed); }
+
+    private:
+        std::atomic_flag m_busy{};
+        std::atomic<std::uint64_t> m_contended{ 0 };
+    };
+
+    // One atomic admission state linearizes close against entry. Rejected callbacks touch only
+    // this state. After close, acquire observation of zero accepted callbacks permits final drain.
+    class ProbeAdmission
+    {
+    public:
+        void open() noexcept { m_state.store(0, std::memory_order_release); }
+        bool try_enter() noexcept
+        {
+            if ((m_state.load(std::memory_order_acquire) & Closed_Bit) != 0)
+                return false;
+            std::uint64_t const before = m_state.fetch_add(1, std::memory_order_acquire);
+            if ((before & Closed_Bit) == 0)
+                return true;
+            leave();
+            return false;
+        }
+        void leave() noexcept { m_state.fetch_sub(1, std::memory_order_release); }
+        void close() noexcept { m_state.fetch_or(Closed_Bit, std::memory_order_acq_rel); }
+        bool quiescent() const noexcept
+        {
+            return m_state.load(std::memory_order_acquire) == Closed_Bit;
+        }
+
+    private:
+        static constexpr std::uint64_t Closed_Bit = std::uint64_t{ 1 } << 63;
+        std::atomic<std::uint64_t> m_state{ Closed_Bit };
+    };
+
+    class ProbeRecorderLease
+    {
+    public:
+        explicit ProbeRecorderLease(ProbeAdmission& a_admission) noexcept : m_ref_admission(a_admission),
+            m_admitted(a_admission.try_enter()) {}
+        ~ProbeRecorderLease() { if (m_admitted) m_ref_admission.leave(); }
+        ProbeRecorderLease(ProbeRecorderLease const&) = delete;
+        ProbeRecorderLease& operator=(ProbeRecorderLease const&) = delete;
+        explicit operator bool() const noexcept { return m_admitted; }
+
+    private:
+        ProbeAdmission& m_ref_admission;
+        bool m_admitted;
+    };
+
+    // Multiple producers make one try-only admission to push; contention/full both drop newest.
+    // The sole consumer reads only release-published slots and releases tail after its copy.
     class ProbeRing
     {
     public:
         bool push(ProbeRecord const& a_record)
         {
+            if (!m_producer.try_enter())
+            {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+                return false;
+            }
             std::size_t const head = m_head.load(std::memory_order_relaxed);
             std::size_t const tail = m_tail.load(std::memory_order_acquire);
             if (head - tail >= Probe_Liveness_Ring_Depth)
             {
                 m_dropped.fetch_add(1, std::memory_order_relaxed);
+                m_producer.leave();
                 return false;
             }
             m_slots[head % Probe_Liveness_Ring_Depth] = a_record;
             m_head.store(head + 1, std::memory_order_release);
+            m_producer.leave();
             return true;
         }
 
@@ -217,22 +285,22 @@ namespace animation::behavior_graph
             m_head.store(0, std::memory_order_relaxed);
             m_tail.store(0, std::memory_order_relaxed);
             m_dropped.store(0, std::memory_order_relaxed);
+            m_producer.reset();
         }
 
+        [[nodiscard]] std::uint64_t contended() const { return m_producer.contended(); }
         [[nodiscard]] std::uint64_t dropped() const { return m_dropped.load(std::memory_order_relaxed); }
         void reset_dropped() { m_dropped.store(0, std::memory_order_relaxed); }
 
     private:
+        ProbePushGate m_producer;
         std::array<ProbeRecord, Probe_Liveness_Ring_Depth> m_slots{};
         std::atomic<std::size_t> m_head{ 0 };
         std::atomic<std::size_t> m_tail{ 0 };
         std::atomic<std::uint64_t> m_dropped{ 0 };
     };
 
-    // Pairs each 63589 entry with the 63856 completion that follows it on the same thread. The
-    // engine's per-graph loop is sequential, so "last entry for this thread" is the correct
-    // attribution; a completion that does not match the pending entry is reported, never silently
-    // dropped. This is pure bookkeeping and carries no engine dependency.
+    // This ledger pairs two entry observations; it does not observe native return or completion.
     class ProbePairing
     {
     public:
@@ -251,12 +319,14 @@ namespace animation::behavior_graph
             Slot* const slot = find_or_insert(a_tid);
             if (!slot)
                 return Outcome::e_no_slot;
+            if (slot->pending)
+                ++m_unpaired;
             slot->graph = a_graph;
             slot->pending = true;
             return Outcome::e_paired;
         }
 
-        Outcome on_completion(std::uint32_t a_tid, void const* a_graph)
+        Outcome on_apply_entry(std::uint32_t a_tid, void const* a_graph)
         {
             Slot* const slot = find(a_tid);
             if (!slot || !slot->pending)
@@ -276,7 +346,15 @@ namespace animation::behavior_graph
             return used;
         }
 
-        void reset() { m_slots = {}; }
+        std::uint64_t unpaired_samples() const
+        {
+            std::uint64_t count = m_unpaired;
+            for (Slot const& slot : m_slots)
+                if (slot.pending) ++count;
+            return count;
+        }
+
+        void reset() { m_slots = {}; m_unpaired = 0; }
 
     private:
         struct Slot
@@ -310,6 +388,7 @@ namespace animation::behavior_graph
         }
 
         std::array<Slot, Max_Threads> m_slots{};
+        std::uint64_t m_unpaired{ 0 };
     };
 
     enum class ProbeWindowClose : std::uint8_t

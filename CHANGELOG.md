@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+> Evidence correction (2026-11-04): prior E1 closure entries below retain historical readings. [The current audit](docs/independent-behavior-graph.md#g5-e1-evidence-repair) supersedes the poseLocal-last-writer/completion, worker-pool, per-frame timing and uninterrupted-zero-flag interpretations. Source sampling-entry liveness remains observed; full E1 completion/lifetime/coherent-snapshot evidence remains pending. The current repair is not deployed or game-validated.
+
 > Research-status clarification (2026-10-26): dated experiment entries below retain their original implementation plans and then-current hypotheses. [Current G1/G2 evidence](docs/independent-behavior-graph.md#current-status) supersedes stale “awaiting run”, complete-isolation and single-root-cause interpretations; original contracts/logs remain intact. This clarification changes documentation only.
 
 > Posterior clarification (2026-10-27): the dated audit18–21 entries retain their original interpretations. Their unique-generation and manager-registration necessity claims are superseded by [audit22](docs/behavior-graph-construction-audit.md#audit22); audit21's scratch-shell behavior guard remains valid. [Audit23](docs/behavior-graph-construction-audit.md#audit23) adds complete chained-unwind ranges and separates poseLocal copies from outer scene application. These static corrections do not establish a runtime pass.
@@ -206,6 +208,9 @@
 - Remove Actor-based preview creation, equipment mirroring and puppet diagnostics; use SceneGraph previews in every build.
 
 ### Fixed
+
+- Fix opt-in sampling evidence capture with owned hook storage, counted producer contention and a final drain after accepted recorders retire; label scene-application entries separately from output completion. The repaired instrument still requires a matching game run.
+
 
 - Preserve complete retired-copy ownership tracking and report the true process-total retention count instead of a truncated bookkeeping count; native memory remains intentionally retained (v46, local only).
 

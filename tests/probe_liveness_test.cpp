@@ -83,13 +83,13 @@ namespace
         void* const a = reinterpret_cast<void*>(0x1000);
         void* const b = reinterpret_cast<void*>(0x2000);
         assert(pairing.on_entry(7, a) == ProbePairing::Outcome::e_paired);
-        assert(pairing.on_completion(7, a) == ProbePairing::Outcome::e_paired);
+        assert(pairing.on_apply_entry(7, a) == ProbePairing::Outcome::e_paired);
         // A completion with no pending entry for that thread is unattributed, not a success.
-        assert(pairing.on_completion(7, a) == ProbePairing::Outcome::e_unattributed);
+        assert(pairing.on_apply_entry(7, a) == ProbePairing::Outcome::e_unattributed);
         assert(pairing.on_entry(7, a) == ProbePairing::Outcome::e_paired);
-        assert(pairing.on_completion(7, b) == ProbePairing::Outcome::e_graph_mismatch);
+        assert(pairing.on_apply_entry(7, b) == ProbePairing::Outcome::e_graph_mismatch);
         // The pending entry is not consumed by a mismatch, so the correct completion still pairs.
-        assert(pairing.on_completion(7, a) == ProbePairing::Outcome::e_paired);
+        assert(pairing.on_apply_entry(7, a) == ProbePairing::Outcome::e_paired);
         // Threads beyond the fixed table are reported instead of silently shared.
         for (std::uint32_t tid = 1; tid <= ProbePairing::Max_Threads; ++tid)
             (void)pairing.on_entry(100 + tid, a);

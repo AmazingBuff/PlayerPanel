@@ -37,24 +37,21 @@ namespace
     constexpr std::uint32_t Queue_Global_Rva = 0x31be0d0;
     constexpr std::size_t Queue_Mode_Offset = 0x430;
 
-    // 63589 (sampling entry) and 63856 (poseLocal last writer). Both are address-library IDs.
+    // Sampling and scene-application entry sites; neither observes native return.
     constexpr std::uint64_t Sampling_Entry_Id = 63589;
-    constexpr std::uint64_t Pose_Verdict_Id = 63856;
-    constexpr std::size_t Block_Stride = 128;
+    constexpr std::uint64_t Pose_Apply_Entry_Id = 63856;
 
     enum RecordKind : std::uint8_t
     {
         k_entry = 0,
-        k_completion = 1
+        k_apply_entry = 1
     };
 
     std::atomic<bool> g_installed{ false };
+    std::atomic<bool> g_install_attempted{ false };
     std::atomic<bool> g_arm_requested{ false };
     std::atomic<bool> g_invalidate_requested{ false };
     std::atomic<void*> g_pinned{ nullptr };
-    // v2: the detour gate is atomic (the recorder may run on a different thread than the sampler),
-    // and the last plugin-originated graph lets completion details pair with plugin entries.
-    std::atomic<bool> g_gate{ false };
     std::atomic<void*> g_plugin_graph{ nullptr };
     std::atomic<std::uint32_t> g_epoch{ 0 };
     std::atomic<std::uint32_t> g_actor{ 0 };
@@ -68,12 +65,13 @@ namespace
         std::atomic<std::uint64_t> entries_plugin{ 0 };
         std::atomic<std::uint64_t> entries_other{ 0 };
         std::atomic<std::uint64_t> pinned_engine{ 0 };
-        std::atomic<std::uint64_t> completions_total{ 0 };
-        std::atomic<std::uint64_t> completions_pinned{ 0 };
-        std::atomic<std::uint64_t> unattributed_completions{ 0 };
+        std::atomic<std::uint64_t> apply_entries_total{ 0 };
+        std::atomic<std::uint64_t> apply_entries_pinned{ 0 };
+        std::atomic<std::uint64_t> other_apply_entries{ 0 };
         std::atomic<std::uint64_t> frames{ 0 };
         std::atomic<std::uint64_t> queue_flag_frames{ 0 };
         std::atomic<std::uint64_t> detail_dropped{ 0 };
+        std::atomic<std::uint64_t> eligible_records{ 0 };
 
         void reset()
         {
@@ -82,25 +80,32 @@ namespace
             entries_plugin.store(0, std::memory_order_relaxed);
             entries_other.store(0, std::memory_order_relaxed);
             pinned_engine.store(0, std::memory_order_relaxed);
-            completions_total.store(0, std::memory_order_relaxed);
-            completions_pinned.store(0, std::memory_order_relaxed);
-            unattributed_completions.store(0, std::memory_order_relaxed);
+            apply_entries_total.store(0, std::memory_order_relaxed);
+            apply_entries_pinned.store(0, std::memory_order_relaxed);
+            other_apply_entries.store(0, std::memory_order_relaxed);
             frames.store(0, std::memory_order_relaxed);
             queue_flag_frames.store(0, std::memory_order_relaxed);
             detail_dropped.store(0, std::memory_order_relaxed);
+            eligible_records.store(0, std::memory_order_relaxed);
         }
     };
 
     struct ProbeState
     {
         ProbeWindow window;
+        ProbeAdmission admission;
+        bool close_pending{ false };
         ProbeRing ring;
         ProbePairing pairing;
         Counters counters;
         std::uint64_t detail_lines{ 0 };
+        std::uint64_t drained_records{ 0 };
+        std::uint64_t drained_samples{ 0 };
+        std::uint64_t drained_applies{ 0 };
+        std::uint64_t orphan_applies{ 0 };
         std::uint64_t detail_seq{ 0 };
         std::uint64_t tracked_entries{ 0 };
-        std::uint64_t paired_completions{ 0 };
+        std::uint64_t paired_apply_entries{ 0 };
         std::uint64_t pairing_mismatch{ 0 };
         std::uint64_t pairing_no_slot{ 0 };
         bool queue_seen{ false };
@@ -116,9 +121,14 @@ namespace
             pairing.reset();
             counters.reset();
             detail_lines = 0;
+            drained_records = 0;
+            drained_samples = 0;
+            drained_applies = 0;
+            orphan_applies = 0;
+            close_pending = false;
             detail_seq = 0;
             tracked_entries = 0;
-            paired_completions = 0;
+            paired_apply_entries = 0;
             pairing_mismatch = 0;
             pairing_no_slot = 0;
             queue_seen = false;
@@ -172,7 +182,8 @@ namespace
     void record_sample_entry(void* a_graph, void* a_caller) noexcept
     {
         ProbeState& s = state();
-        if (!g_gate.load(std::memory_order_relaxed))
+        ProbeRecorderLease const lease(s.admission);
+        if (!lease)
             return;
         Counters& c = s.counters;
         c.entries_total.fetch_add(1, std::memory_order_relaxed);
@@ -185,7 +196,7 @@ namespace
         case ProbeCaller::e_engine_local_loop: c.entries_engine.fetch_add(1, std::memory_order_relaxed); break;
         case ProbeCaller::e_plugin:
             c.entries_plugin.fetch_add(1, std::memory_order_relaxed);
-            // v2: remember the plugin's graph so its 63856 completions can be detailed too.
+            // Identify application entries for the same plugin graph.
             g_plugin_graph.store(a_graph, std::memory_order_relaxed);
             break;
         default: c.entries_other.fetch_add(1, std::memory_order_relaxed); break;
@@ -211,26 +222,27 @@ namespace
             record.num240 = read_offset<std::uint16_t>(a_graph, 0x240);
             record.flag246 = read_offset<std::uint8_t>(a_graph, 0x246);
         }
+        c.eligible_records.fetch_add(1, std::memory_order_relaxed);
         if (!s.ring.push(record))
             c.detail_dropped.fetch_add(1, std::memory_order_relaxed);
     }
 
-    void record_pose_write(void* a_pose, void* a_table, std::uint32_t a_count) noexcept
+    void record_apply_entry(void* a_pose, void* a_table, std::uint32_t a_count) noexcept
     {
         ProbeState& s = state();
-        if (!g_gate.load(std::memory_order_relaxed))
+        ProbeRecorderLease const lease(s.admission);
+        if (!lease)
             return;
         Counters& c = s.counters;
-        c.completions_total.fetch_add(1, std::memory_order_relaxed);
+        c.apply_entries_total.fetch_add(1, std::memory_order_relaxed);
         void const* const pinned = g_pinned.load(std::memory_order_relaxed);
         void* const graph = probe_graph_from_table_argument(a_table);
         bool const is_pinned = pinned != nullptr && graph == pinned;
         if (is_pinned)
-            c.completions_pinned.fetch_add(1, std::memory_order_relaxed);
+            c.apply_entries_pinned.fetch_add(1, std::memory_order_relaxed);
         else
-            c.unattributed_completions.fetch_add(1, std::memory_order_relaxed);
-        // v2: plugin-originated completions are detailed as well, so P3 can be evaluated for the
-        // plugin path (the candidate's own 63589 call is the positive control of the window).
+            c.other_apply_entries.fetch_add(1, std::memory_order_relaxed);
+        // The argument count precedes the native table clamp and any scene writes.
         bool const is_plugin = g_plugin_graph.load(std::memory_order_relaxed) == graph;
         if (!is_pinned && !is_plugin)
             return;
@@ -239,20 +251,89 @@ namespace
         record.caller_or_count = a_count;
         record.num240 = a_count > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(a_count);
         record.tid = static_cast<std::uint32_t>(__readgsqword(0x48));
-        record.kind = k_completion;
+        record.kind = k_apply_entry;
         (void)a_pose;
+        c.eligible_records.fetch_add(1, std::memory_order_relaxed);
         if (!s.ring.push(record))
             c.detail_dropped.fetch_add(1, std::memory_order_relaxed);
     }
 
-    // ---- thunk encoding ------------------------------------------------------
-
-    // The shared encoder lives in the policy header so the engine-free layout case compiles the
-    // exact bytes this installer writes.
-    std::size_t encode_thunk(std::uint8_t* a_dst, std::uintptr_t a_recorder, std::uintptr_t a_original,
-        bool a_pose_arguments)
+    void drain_probe_records(ProbeState& s)
     {
-        return encode_detour_thunk(a_dst, a_recorder, a_original, a_pose_arguments);
+        ProbeRecord record{};
+        while (s.ring.pop(record))
+        {
+            ++s.drained_records;
+            if (record.kind == k_entry)
+                ++s.drained_samples;
+            else
+                ++s.drained_applies;
+            if (record.kind == k_entry)
+            {
+                ProbePairing::Outcome const outcome = s.pairing.on_entry(record.tid, reinterpret_cast<void*>(record.graph));
+                if (outcome == ProbePairing::Outcome::e_paired)
+                    ++s.tracked_entries;
+                else if (outcome == ProbePairing::Outcome::e_no_slot)
+                    ++s.pairing_no_slot;
+            }
+            else
+            {
+                ProbePairing::Outcome const outcome = s.pairing.on_apply_entry(record.tid, reinterpret_cast<void*>(record.graph));
+                if (outcome == ProbePairing::Outcome::e_paired)
+                    ++s.paired_apply_entries;
+                else if (outcome == ProbePairing::Outcome::e_graph_mismatch)
+                    ++s.pairing_mismatch;
+                else if (outcome == ProbePairing::Outcome::e_unattributed)
+                    ++s.orphan_applies;
+            }
+            if (s.detail_lines >= Probe_Liveness_Detail_Budget)
+                continue;
+            ++s.detail_lines;
+            ++s.detail_seq;
+            if (record.kind == k_entry)
+            {
+                logger::info("PROBE LIVENESS sample-entry drain-seq={} tid={} graph={:#x} caller={:#x} num240={} flag246={}",
+                    s.detail_seq, record.tid, record.graph, record.caller_or_count, record.num240, record.flag246);
+            }
+            else
+            {
+                logger::info("PROBE LIVENESS apply-entry drain-seq={} tid={} graph={:#x} requested-count={}",
+                    s.detail_seq, record.tid, record.graph, record.caller_or_count);
+            }
+        }
+    }
+
+    void finalize_probe_close(ProbeState& s)
+    {
+        if (!s.close_pending || !s.admission.quiescent())
+            return;
+        drain_probe_records(s);
+        std::uint64_t const eligible = s.counters.eligible_records.load(std::memory_order_relaxed);
+        std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
+        s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
+        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={}",
+            probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
+            g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
+            s.counters.entries_total.load(std::memory_order_relaxed),
+            s.counters.entries_engine.load(std::memory_order_relaxed),
+            s.counters.entries_plugin.load(std::memory_order_relaxed),
+            s.counters.entries_other.load(std::memory_order_relaxed),
+            s.counters.pinned_engine.load(std::memory_order_relaxed),
+            s.counters.apply_entries_total.load(std::memory_order_relaxed),
+            s.counters.apply_entries_pinned.load(std::memory_order_relaxed),
+            s.counters.other_apply_entries.load(std::memory_order_relaxed),
+            s.tracked_entries, s.paired_apply_entries, s.pairing_mismatch, s.pairing_no_slot, s.slots_used,
+            s.queue_seen ? "yes" : "no", s.queue_pointer, s.queue_flag,
+            s.counters.queue_flag_frames.load(std::memory_order_relaxed), s.detail_lines,
+            s.counters.detail_dropped.load(std::memory_order_relaxed), s.ring.dropped(),
+            s.ring.contended(), s.ring.dropped() - s.ring.contended(), eligible, eligible - s.ring.dropped(), s.drained_records,
+            s.drained_samples, s.drained_applies, missing, s.orphan_applies,
+            s.pairing.unpaired_samples(), s.drained_records - s.detail_lines,
+            (missing == 0 && s.ring.dropped() == 0) ? "yes" : "no");
+
+        g_plugin_graph.store(nullptr, std::memory_order_relaxed);
+        g_pinned.store(nullptr, std::memory_order_release);
+        s.close_pending = false;
     }
 
     bool install_one(REL::ID a_id, char const* a_name, std::uint8_t const* a_head, std::size_t a_head_size,
@@ -270,22 +351,16 @@ namespace
             return false;
         }
         auto& trampoline = SKSE::GetTrampoline();
-        auto* const mem = static_cast<std::uint8_t*>(trampoline.allocate(Block_Stride));
+        auto* const mem = static_cast<std::uint8_t*>(trampoline.allocate(Detour_Block_Size));
         if (!mem)
         {
             logger::warn("PROBE LIVENESS install-failed reason=trampoline-exhausted target='{}'", a_name);
             return false;
         }
         std::uint8_t* const thunk = mem;
-        std::uint8_t* const original = mem + 2 * Block_Stride;
-        std::memcpy(original, a_head, a_head_size);
-        {
-            std::uint8_t const far_jmp[6] = { 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 };
-            std::memcpy(original + a_head_size, far_jmp, sizeof(far_jmp));
-            std::uintptr_t const back = target.address() + a_head_size;
-            std::memcpy(original + a_head_size + sizeof(far_jmp), &back, sizeof(back));
-        }
-        (void)encode_thunk(thunk, reinterpret_cast<std::uintptr_t>(a_recorder),
+        std::uint8_t* const original = relocate_detour_head(mem, { a_head, a_head_size },
+            target.address() + a_head_size);
+        (void)encode_detour_thunk(thunk, reinterpret_cast<std::uintptr_t>(a_recorder),
             reinterpret_cast<std::uintptr_t>(original), a_pose_arguments);
         // The patch covers the whole verified head: a 5-byte jmp plus inert pads. 63589's head is
         // exactly 5 bytes (three pushes); 63856's is the 7-byte `sub rsp,0x88`.
@@ -304,7 +379,7 @@ namespace
     void install_probe_liveness()
     {
         bool expected = false;
-        if (!g_installed.compare_exchange_strong(expected, true))
+        if (!g_install_attempted.compare_exchange_strong(expected, true))
             return;
         if (sampling_liveness_mode() == ProbeLivenessMode::e_off)
         {
@@ -322,13 +397,15 @@ namespace
             return;
         }
         auto& trampoline = SKSE::GetTrampoline();
-        trampoline.create(256);
+        (void)state();
+        trampoline.create(Detour_Pool_Size);
         bool const sample = install_one(REL::ID(Sampling_Entry_Id), "63589-sampling-entry",
             Probe_Sample_Head_Bytes.data(), Probe_Sample_Head_Bytes.size(), &record_sample_entry, false);
-        bool const pose = sample && install_one(REL::ID(Pose_Verdict_Id), "63856-pose-write",
-            Probe_Pose_Head_Bytes.data(), Probe_Pose_Head_Bytes.size(), &record_pose_write, true);
+        bool const pose = sample && install_one(REL::ID(Pose_Apply_Entry_Id), "63856-apply-entry",
+            Probe_Pose_Head_Bytes.data(), Probe_Pose_Head_Bytes.size(), &record_apply_entry, true);
+        g_installed.store(sample && pose, std::memory_order_release);
         if (!sample || !pose)
-            logger::warn("PROBE LIVENESS install-incomplete sample={} pose={}", sample, pose);
+            logger::warn("PROBE LIVENESS install-incomplete sample={} apply={} ready=no", sample, pose);
     }
 
     void arm_probe_liveness()
@@ -386,7 +463,7 @@ namespace
         g_actor.store(a_actor_id, std::memory_order_relaxed);
         std::uint32_t const epoch = g_epoch.fetch_add(1, std::memory_order_relaxed) + 1;
         s.window.arm(std::chrono::steady_clock::now());
-        g_gate.store(true, std::memory_order_release);
+        s.admission.open();
         logger::info("PROBE LIVENESS concurrent-armed actor={:08x} epoch={} graph={:#x} behavior={:#x} pinned=yes",
             a_actor_id, epoch, reinterpret_cast<std::uintptr_t>(pinned),
             reinterpret_cast<std::uintptr_t>(pinned->behaviorGraph));
@@ -412,7 +489,7 @@ namespace
             && s.window.phase() == ProbePhase::e_display
             && s.window.enter_resumed(std::chrono::steady_clock::now()))
         {
-            logger::info("PROBE LIVENESS window=segment from=display to=resumed seconds={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} completions={} pinned={} unattributed={} detail={} detail-dropped={} ring-dropped={}",
+            logger::info("PROBE LIVENESS window=segment provisional=yes from=display to=resumed seconds={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} detail={} detail-dropped={} ring-dropped={}",
                 Probe_Liveness_Resumed.count(),
                 s.counters.frames.load(std::memory_order_relaxed),
                 s.counters.entries_total.load(std::memory_order_relaxed),
@@ -420,9 +497,9 @@ namespace
                 s.counters.entries_plugin.load(std::memory_order_relaxed),
                 s.counters.entries_other.load(std::memory_order_relaxed),
                 s.counters.pinned_engine.load(std::memory_order_relaxed),
-                s.counters.completions_total.load(std::memory_order_relaxed),
-                s.counters.completions_pinned.load(std::memory_order_relaxed),
-                s.counters.unattributed_completions.load(std::memory_order_relaxed),
+                s.counters.apply_entries_total.load(std::memory_order_relaxed),
+                s.counters.apply_entries_pinned.load(std::memory_order_relaxed),
+                s.counters.other_apply_entries.load(std::memory_order_relaxed),
                 s.detail_lines, s.counters.detail_dropped.load(std::memory_order_relaxed), s.ring.dropped());
             return;
         }
@@ -432,24 +509,9 @@ namespace
         else if (std::strcmp(a_reason, "world-reset") == 0) reason = ProbeWindowClose::e_world_reset;
         else if (std::strcmp(a_reason, "rearm") == 0) reason = ProbeWindowClose::e_rearm;
         s.window.cancel(reason);
-        g_gate.store(false, std::memory_order_release);
-        g_plugin_graph.store(nullptr, std::memory_order_relaxed);
-        s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} completions={} pinned={} unattributed={} tracked-entries={} paired-completions={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={}",
-            probe_window_close_name(reason), g_actor.load(std::memory_order_relaxed),
-            g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
-            s.counters.entries_total.load(std::memory_order_relaxed),
-            s.counters.entries_engine.load(std::memory_order_relaxed),
-            s.counters.entries_plugin.load(std::memory_order_relaxed),
-            s.counters.entries_other.load(std::memory_order_relaxed),
-            s.counters.pinned_engine.load(std::memory_order_relaxed),
-            s.counters.completions_total.load(std::memory_order_relaxed),
-            s.counters.completions_pinned.load(std::memory_order_relaxed),
-            s.counters.unattributed_completions.load(std::memory_order_relaxed),
-            s.tracked_entries, s.paired_completions, s.pairing_mismatch, s.pairing_no_slot, s.slots_used,
-            s.queue_seen ? "yes" : "no", s.queue_pointer, s.queue_flag,
-            s.counters.queue_flag_frames.load(std::memory_order_relaxed), s.detail_lines,
-            s.counters.detail_dropped.load(std::memory_order_relaxed), s.ring.dropped());
+        s.admission.close();
+        s.close_pending = true;
+        finalize_probe_close(s);
     }
 
     void invalidate_probe_liveness()
@@ -467,11 +529,10 @@ namespace
         ProbeState& s = state();
         if (g_invalidate_requested.exchange(false, std::memory_order_acq_rel))
         {
-            // Close first (it cancels and emits the row), then drop the pin so a stale graph can
-            // never match a later entry.
+            // Request close; final identity clearing waits for admitted callbacks and final drain.
             if (s.window.active())
                 close_probe_liveness_window("world-reset");
-            g_pinned.store(nullptr, std::memory_order_release);
+            finalize_probe_close(s);
             return;
         }
         if (g_arm_requested.exchange(false, std::memory_order_acq_rel) && !s.window.ever_armed())
@@ -481,10 +542,11 @@ namespace
             s.reset();
             g_epoch.fetch_add(1, std::memory_order_relaxed);
             s.window.arm(std::chrono::steady_clock::now());
-            g_gate.store(true, std::memory_order_release);
+            s.admission.open();
             logger::info("PROBE LIVENESS window=open mode=on epoch={} pinned=no",
                 g_epoch.load(std::memory_order_relaxed));
         }
+        finalize_probe_close(s);
         if (!s.window.active())
             return;
         auto const now = std::chrono::steady_clock::now();
@@ -510,42 +572,7 @@ namespace
                     s.counters.queue_flag_frames.fetch_add(1, std::memory_order_relaxed);
             }
         }
-        ProbeRecord record{};
-        while (s.ring.pop(record))
-        {
-            if (record.kind == k_entry)
-            {
-                ProbePairing::Outcome const outcome = s.pairing.on_entry(record.tid, reinterpret_cast<void*>(record.graph));
-                if (outcome == ProbePairing::Outcome::e_paired)
-                    ++s.tracked_entries;
-                else if (outcome == ProbePairing::Outcome::e_no_slot)
-                    ++s.pairing_no_slot;
-            }
-            else
-            {
-                ProbePairing::Outcome const outcome = s.pairing.on_completion(record.tid, reinterpret_cast<void*>(record.graph));
-                if (outcome == ProbePairing::Outcome::e_paired)
-                    ++s.paired_completions;
-                else if (outcome == ProbePairing::Outcome::e_graph_mismatch)
-                    ++s.pairing_mismatch;
-                else if (outcome == ProbePairing::Outcome::e_unattributed)
-                    ++s.pairing_mismatch;
-            }
-            if (s.detail_lines >= Probe_Liveness_Detail_Budget)
-                continue;
-            ++s.detail_lines;
-            ++s.detail_seq;
-            if (record.kind == k_entry)
-            {
-                logger::info("PROBE LIVENESS entry seq={} tid={} graph={:#x} caller={:#x} num240={} flag246={}",
-                    s.detail_seq, record.tid, record.graph, record.caller_or_count, record.num240, record.flag246);
-            }
-            else
-            {
-                logger::info("PROBE LIVENESS completion seq={} tid={} graph={:#x} count={}",
-                    s.detail_seq, record.tid, record.graph, record.caller_or_count);
-            }
-        }
+        drain_probe_records(s);
     }
 }
 PLUGIN_NAMESPACE_END

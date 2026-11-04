@@ -1,6 +1,6 @@
 # 诊断证据保留与恢复
 
-更新：2026-11-04。当前结论以[独立图证据交接](../independent-behavior-graph.md#handoff-20261102-evidence)为准：G3-B 相位回放通过；G4 的 A 项（v63 运行）保留，**C 项（v66 运行）的"缺口已关闭"已被 [audit30](../behavior-graph-construction-audit.md#audit30) 推翻**（58377 detour thunk 实参错位，零事件是门不成立），待修复后重跑；下一阶段 G5 预注册、G6 待验。本页仅管理证据导航，不生成替代原始日志。
+更新：2026-11-04。G1/G2 有界通过，G3-A 与 G3-B/F 相位回放保留；G4 A/B 保留、C 与旧 typed-setter 零读数受 [audit30](../behavior-graph-construction-audit.md#audit30) 仪器缺陷影响，修复后待重跑。v67/v68 已有源采样入口活性和多个采样 tid 的记录，但 **E1 完整证据未闭合**；63856 是场景应用入口，不能称 poseLocal 末写或输出完成。本轮修复跳板、多生产者传送和关闭对账，尚未部署/上机，详见 [E1 当前边界](../independent-behavior-graph.md#g5-e1-evidence-repair)。最新记录安装 v68，最近记录 INI dormant，本轮未重验安装。E1 剩余完成点/寿命/同代快照仍需取证，E2/E3 尚未开始；G5 门 1 NOT_READY、未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 ## 本次退役范围与理由
 
@@ -71,8 +71,10 @@ git show 'ae5dac28356d0ebb1a5fd754ddb4882a8dae26f3:docs/diagnostics/CharacterPan
 
 ## C-G5-E1 首轮运行日志（2026-11-04）
 
-- [CharacterPanel-g5e1-liveness-first-20261104-0010.log](CharacterPanel-g5e1-liveness-first-20261104-0010.log)（221,958 字节，SHA-256 5318dcb1e56bd625914b179f2467c6bd23cb60216e2279062572fe1a61bf6d6）：v67 SamplingLiveness=concurrent 窗口，00:12:00.333 武装、00:12:20.345 到期（995 帧）。判读、计数与两条独立事实见[首轮运行](../independent-behavior-graph.md#c-g5-e1-run1)；原文保留，不改写。
+> 原件哈希与字段保留；旧 `completion` 实为 63856 应用入口，完整 E1 收官解释已撤回。当前修复与补证要求见 [E1 边界](../independent-behavior-graph.md#g5-e1-evidence-repair)。
 
-- [CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log](CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log)（5,669 字节，SHA-256 c0a07a8559c2729611e7c521a98c56905bd10fc4f242ee164f03991d16bc7635）：v67 SamplingLiveness=on，游玩态 F7 窗口 19.99 s / 748 帧，引擎本地循环调用 63589 共 161,006 次、lag=0。判读见[补充运行 A](../independent-behavior-graph.md#c-g5-e1-run2)。
+- [CharacterPanel-g5e1-liveness-first-20261104-0010.log](CharacterPanel-g5e1-liveness-first-20261104-0010.log)（221,958 字节，SHA-256 b5318dcb1e56bd625914b179f2467c6bd23cb60216e2279062572fe1a61bf6d6）：v67 SamplingLiveness=concurrent 窗口，00:12:00.333 武装、00:12:20.345 到期（995 帧）。判读、计数与两条独立事实见[首轮运行](../independent-behavior-graph.md#c-g5-e1-run1)；原文保留，不改写。
 
-- [CharacterPanel-g5e1-liveness-v2-resumed-20261104-0031.log](CharacterPanel-g5e1-liveness-v2-resumed-20261104-0031.log)（291,454 字节，SHA-256 603115178c0dc56747e2dcc78dd0aa5c9b0955ac5ab08395e3e7f7f5730e3d6e）：v68 concurrent + resumed 窗口，display 段 461 帧后转段、resumed 段 10.03 s；pinned-engine=411、completions-pinned=411、	hreads=7、lag=0。判读见 [v2 运行](../independent-behavior-graph.md#c-g5-e1-run3)。
+- [CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log](CharacterPanel-g5e1-liveness-on-mode-20261104-0021.log)（5,669 字节，SHA-256 c0a07a8559c2729611e7c521a98c56905bd10fc4f242ee164f03991d16bc7635）：v67 SamplingLiveness=on，游玩态 F7 窗口 19.99 s / 748 帧，引擎本地循环调用 63589 共 161,006 次、`flag=0`。判读见[补充运行 A](../independent-behavior-graph.md#c-g5-e1-run2)。
+
+- [CharacterPanel-g5e1-liveness-v2-resumed-20261104-0031.log](CharacterPanel-g5e1-liveness-v2-resumed-20261104-0031.log)（291,454 字节，SHA-256 603115178c0dc56747e2dcc78dd0aa5c9b0955ac5ab08395e3e7f7f5730e3d6e）：v68 concurrent + resumed 窗口，display 段 461 帧后转段、resumed 段 10.03 s；pinned-engine=411、completions-pinned=411、`threads=7`、`flag=0`。判读见 [v2 运行](../independent-behavior-graph.md#c-g5-e1-run3)。

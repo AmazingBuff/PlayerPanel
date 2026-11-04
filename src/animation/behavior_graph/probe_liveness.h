@@ -14,9 +14,9 @@ namespace RE
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
 {
-    // C-G5-E1: install the two read-only liveness detours (63589 sampling entry, 63856 poseLocal
-    // last writer). Called once at kDataLoaded. Off leaves both functions unpatched; a head-byte
-    // mismatch or a missing trampoline leaves the process unpatched and logs the observed bytes.
+    // C-G5-E1: install the two read-only liveness detours (63589 sampling entry, 63856 scene-application
+    // entry; neither proves output completion). Called once at kDataLoaded. Off leaves both functions unpatched; a head-byte
+    // mismatch logs the observed bytes; partial installation cannot arm a window.
     // Refuses to install beside the other detour probes so one run cannot mix instruments.
     void install_probe_liveness();
 
@@ -35,7 +35,7 @@ namespace animation::behavior_graph
 
     [[nodiscard]] bool probe_liveness_window_open();
 
-    // Closes the open window and emits every counter. Ignores the call when no window is open.
+    // Requests close, then emits final counters after admitted recorders retire and the ring drains.
     void close_probe_liveness_window(char const* a_reason);
 
     // Queues cancellation across a world boundary, consumed before the next arm.
