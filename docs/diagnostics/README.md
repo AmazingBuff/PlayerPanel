@@ -82,3 +82,5 @@ git show 'ae5dac28356d0ebb1a5fd754ddb4882a8dae26f3:docs/diagnostics/CharacterPan
 ## C-G5-E1 修复版首轮运行日志（2026-11-04，v69）
 
 - [CharacterPanel-g5e1-v69-repair-run1-20261104-2307.log](CharacterPanel-g5e1-v69-repair-run1-20261104-2307.log)（323,130 字节，SHA-256 f00960a725415822753e028a6c9923acc434574ada62ba299fa9f9e3edf07294）：v69（修复版首次上机）`SamplingLiveness=concurrent` 窗口，23:05:37.167 武装、23:05:57.167 到期（1040 帧，`reason=expired`，无转段）。新字段与关闭对账行完整：`eligible=recorded=drained=2628 missing=0 contention/full-dropped=0 transport-complete=yes`。判读见 [v69 首轮](../independent-behavior-graph.md#c-g5-e1-v69-run1)：修复版传送/对账在其覆盖范围内成立，但窗口未转段、对 Q2 无效（按预注册规则记"未检验"）。
+
+- [CharacterPanel-g5e1-v69-repair-run2-resumed-20261104-2315.log](CharacterPanel-g5e1-v69-repair-run2-resumed-20261104-2315.log)（261,457 字节，SHA-256 ddede89bb2fefe4d835cb24bb5674c387d8d1a282ac13a2773273fa98eb629ef）：v69 两段窗口完整轮，23:15:28.432 转段（display 225 帧）、23:15:38.437 关闭；resumed 段 `pinned-engine=408` 全部 `caller=0xba3f6e`、6 工作线程、788/788 全配对、对账恒等式全零缺口。判读见 [v69 第二轮](../independent-behavior-graph.md#c-g5-e1-v69-run2)：修复版 E1 取证缺口（入口活性 + 配对 + 对账）闭合；运行后部署 INI 已恢复 dormant `27f481f5…`。
