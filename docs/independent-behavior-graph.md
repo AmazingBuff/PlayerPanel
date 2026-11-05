@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-05。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。当前修复版 v69 已上机三轮，[第二轮](#c-g5-e1-v69-run2)转段完整（resumed 段 408 次钉住采样、788/788 全配对、对账恒等式全零缺口）——**修复版 E1 取证缺口（入口活性/配对/对账）已闭合**；随后 [audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 63856 五个调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（`[g+0x148]` 四写点）四项静态闭合，**[v3 契约](#c-g5-e1-v3) 已预注册**（完成/范围/寿命/快照的运行侧取证，判据 R1–R7）。E2/E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-05（晚）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现（v70 `757b01481b`：三 detour、五路径分类、per-tid in-flight 对账、范围/寿命事实只读采集；新增 6 例 + 既有 2+8 例离线通过），未部署未上机**。E2/E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 静态遗留四项已闭合（audit32）；v3 已预注册；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（待实现评审）。E2/E3 未开始 |
+| G5 | 静态遗留四项已闭合（audit32）；v3 已实现（v70）待上机；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（待实现评审）。E2/E3 未开始 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -52,7 +52,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G2 | PASSED（v33 窗口 + v34 边界） | 无 |
 | G3 | G3-A 成立；G3-B PASSED（相位序列） | 无（v69 两注入回放为其第九次逐位复现） |
 | G4 | **A/B/C 三段保留** | **C 由"仪器无效待重跑"改为"修复版重跑关闭"** |
-| G5 | **门 1 NOT_READY（未通过）** | **E1 修复版取证缺口闭合 + 静态四项闭合**；运行侧完成点/寿命取证待探针 v3 |
+| G5 | **门 1 NOT_READY（未通过）** | **E1 修复版取证缺口闭合 + 静态四项闭合**；运行侧完成点/寿命取证待 v70 上机（探针 v3 已实现，6+2+8 例离线通过） |
 | G6 | PENDING | 无（teardown 维持 NO-GO） |
 
 **证据边界（不得外推）**：G4-C 的零事件只限 **58377** 路由；E1 的 `pinned-engine=408` 是**应用入口**计数，不是逐骨写满或输出完成；六工作线程只证明观察到的调用线程不同，不识别调度器；对账恒等式只覆盖已武装窗口内的传送与关闭；audit32 全部为静态可达，不等于运行命中；`fill ≤ cap`（`skeletonWord+0x40` vs `+0x30`）与 63563/63572 两个未列调用点仍是**待运行核验项**。
@@ -67,7 +67,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G2 | **PASSED**（v33 窗口 + v34 边界，限定范围） | 完整窗口：候选语义 120/120、实际写骨 109/116、源 before=after、画面连续。边界：`reset` 中断 `steps=61` 丢弃且无摘要、重开不拼接、F7 `reason=retarget`、读档后旧候选被拒回落 OAR。未覆盖：同 controller 来源替换、frozen-only 拒绝、物理/挂载交互、装载销毁与 G3-B/G4–G6；旧读档拒绝的确切原因未记录 |
 | G3 | G3-A 成立；**G3-B PASSED（相位序列）** | [F](#c-g3b-f-full-replay)：两事件复现 0→10→1→12→0；完整姿态另验 |
 | G4 | **A/B/C 保留；C 已在修复版仪器上重跑关闭（v69 attempt 2，2026-11-05）** | [numeric 全窗覆盖](#g4-followup-numeric)（v63：整窗 72/72 `type=0`、逐窗对账相等）、B 限装备族选择稳定；[源事件兼容观察](#c-g4-c1-concurrent-events) 的 v66 `events=0` 曾由 [audit30](behavior-graph-construction-audit.md#audit30) 判无效（thunk 实参错位），**v69 修复版重跑判据 1–6 全部成立**：`calls=64/other-graph=64`、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现 |
-| G5 | 门 1 NOT_READY；未通过 | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立、resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现——修复版 E1 取证缺口闭合；[audit32](behavior-graph-construction-audit.md#audit32) 静态闭合完成点/范围/寿命/快照四项，**[v3 契约](#c-g5-e1-v3) 已预注册（R1–R7）**；E2/E3 未开始，之后仍须仪器→独立校准→完整冻结→新正式验证 |
+| G5 | 门 1 NOT_READY；未通过 | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立、resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现——修复版 E1 取证缺口闭合；[audit32](behavior-graph-construction-audit.md#audit32) 静态闭合完成点/范围/寿命/快照四项，**[v3 契约](#c-g5-e1-v3) 已实现（v70 `757b01481b`，未上机）**；E2/E3 未开始，之后仍须仪器→独立校准→完整冻结→新正式验证 |
 | G6 | PENDING | 非豁免生命周期、源恢复与重复会话收敛未证 |
 
 ### 逐轮实验（本系列）
@@ -2008,7 +2008,7 @@ BehaviorGraphProbe=true
 - **资源与活态分开**：候选与控制器源图共享 `hkbBehaviorGraphData`（652 项、对齐 652/0/0）及 15,203 项绑定集，候选变量活值分储、激活前不存在并从 authored defaults 初始化。共享绑定、候选跨轮 pose 哈希相同只支持资源对应/候选确定性，不证明源候选完整姿态、时钟或全部层/权重一致；`owner=neither` 也不单独识别读值来源。
 - **G4 当前证据范围**：A4 整窗 72/72 numeric 全 type0、31/31 行对账保留；C1/v66 的 `events=0/other-graph=55` 仪器无效，仅门前 `calls=62` 保留，修复后待有效正控重跑。B-v2 只证明当前装备族稳定；捕获、EquipSink、DAC restore 也不等于完整生命周期收敛。
 - **记录部署**：最新为 [v69](build.md#v69-g5e1-clean-rebuild-2026-11-04)（修复版，DLL 1,590,272 字节 `2490c38d…`，CodeView age 397），运行 INI 用后已恢复 dormant `27f481f5…`（[部署与两轮运行记录](build.md#v69-g5e1-clean-rebuild-2026-11-04)）。v46 正常工作流仍仅对应 20261030 重建。[DCMF](community-reference-supplement.md#dcmf-reference) 仅参考/后置；[idle-start 每圈重放](animation.md#idle-start-replay) 仍是独立未决问题。
-- **排序**：~~修复版离线核验 → 匹配工件上机核验入口活性与完整传送/关闭对账~~（**已完成**：[v69 首轮](#c-g5-e1-v69-run1) + [第二轮](#c-g5-e1-v69-run2)）→ ~~E1 剩余完成点/寿命/同代快照证据~~（**静态四项已由 [audit32](behavior-graph-construction-audit.md#audit32) 闭合，运行侧 [v3 契约](#c-g5-e1-v3) 已预注册，下一步是实现评审**）→ E2 完整贡献、E3 合格 R2 配对 → 联合验收；之后才是完整仪器、独立校准、协议冻结与新正式验证。~~G4-C 与旧 setter 仪器另需有效正控重跑~~（**G4-C 已完成**：[v69 attempt 2](#c-g4-c1-concurrent-events)；typed-setter 窗口 63607/63609 的同类修复正控仍待需要时重跑），G6 后置。
+- **排序**：~~修复版离线核验 → 匹配工件上机核验入口活性与完整传送/关闭对账~~（**已完成**：[v69 首轮](#c-g5-e1-v69-run1) + [第二轮](#c-g5-e1-v69-run2)）→ ~~E1 剩余完成点/寿命/同代快照证据~~（**静态四项已由 [audit32](behavior-graph-construction-audit.md#audit32) 闭合，运行侧 [v3 契约](#c-g5-e1-v3) 已实现为 v70，下一步是上机取证**）→ E2 完整贡献、E3 合格 R2 配对 → 联合验收；之后才是完整仪器、独立校准、协议冻结与新正式验证。~~G4-C 与旧 setter 仪器另需有效正控重跑~~（**G4-C 已完成**：[v69 attempt 2](#c-g4-c1-concurrent-events)；typed-setter 窗口 63607/63609 的同类修复正控仍待需要时重跑），G6 后置。
 
 <a id="g4-followup-numeric"></a>
 ### PENDING 1（**已关闭**，2026-11-02）：A 的全窗口 numeric 类型覆盖
@@ -3648,7 +3648,7 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 **下一步**：~~G4-C 修复仪器正控重跑~~（**已完成**：[attempt 2](#c-g4-c1-concurrent-events) 判据 1–6 全成立，2026-11-05）；此后按排序进入 [v3 契约](#c-g5-e1-v3) 的实现评审与 E2/E3。
 
 <a id="c-g5-e1-v3"></a>
-### v3 修订（2026-11-05，预注册，先于实现与运行）
+### v3 修订（2026-11-05，预注册；离线实现与回归已完成，未部署未上机）
 
 **动机**：[audit32](behavior-graph-construction-audit.md#audit32) 闭合了 E1 的静态四项，同时改变了三件事的取证方式：① 合法完成捕获窗有**两处**（63589 尾 `0xbb2b06` 与 63568 尾 `0xbaebe7`），不是一处——生成路径在 63568 内完成并直接返回；② 63856 全镜像有 **5 个**直接调用点，除两处主路径外还有 63563（物理回调，经 `VTABLE___GraphPhysicsStepListener` 槽 2）、63572、`0xbae731`（无 .pdata），后三者若在会话内出现必须单独归因；③ 实际写 poseLocal 的 n 按路径三分，`[g+0x240]` 只代表主路径。因此 v1/v2 的"63856 入口命中"只能证明**应用开始**，不能证明完成，也不能把不同路径混入同一次配对。**v3 只扩展观测点与计数，不改窗口语义，也不重判 P1–P5**（它们已由 v69 两轮成立）。
 
@@ -3705,4 +3705,13 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 - **早退仍经同一 ret**：`0xbc2ffc` 的 `jle 0x140bc322f`（`clamped count ≤ 0` 时跳过全部节点写）直接落到 `0xbc322f: add rsp,0x88` → `0xbc3236: ret`。因此 completion 记录必须携带 **clamped count** 才能区分"应用完成"与"空应用"；该值可在**入口**按 audit31 的同一公式只读复算（`requested<0 ? cap : min(requested, cap)`，`cap = dword[rdx+0x10]`），不必在返回点读易失寄存器。
 - **插桩窗口**：`0xbc322f` 的 `48 81 c4 88 00 00 00`（`add rsp,0x88`，7 字节）——5 字节 `jmp` + 其后 2 字节 `nop`，跳板重放该 7 字节指令后 `jmp 0xbc3236`。跳板内调用记录器前须保存/恢复 `rsp`（该点栈帧已收至 63856 入口态，`add rsp,0x88` 会改变 `rsp`），并在跳板尾部保持 `rsp ≡ 0 (mod 16)` 于 `call` 前。
 - **补丁窗口安全性已核**：63856 内部全部跳转目标为 `{0xbc2ff7, 0xbc2ffa, 0xbc3050, 0xbc3088, 0xbc308c, 0xbc31f0, 0xbc322f}`，**没有目标落在窗口内部**（唯一跳入点是窗口起点 `0xbc322f`，来自 `0xbc2ffc: jle`）。窗口字节 `48 81 c4 88 00 00 00 c3`：5 字节 `jmp` 覆盖 `0xbc322f..0xbc3233`，残余 `0xbc3234..0xbc3235` 置 `nop nop`。
-- **待实现评审确认**：入口复算 clamped count 与 `0xbc2ff0: js` / `0xbc2ff5: jle` 两条边界（`requested<0`、`requested==cap`）的逐字节一致性；跳板内 `add rsp,0x88` 与记录器调用的栈序（`call` 前 `rsp ≡ 0 (mod 16)`，记录器返回后用同一 `add` 恢复而非再 `sub`）。
+- **栈序已按实现核实**：返回点 `rsp ≡ 8 (mod 16)`（入口 `sub rsp,0x88` 之后），返回跳板以 `sub rsp,0x28` 对齐后 `call` 记录器，返回后 `add rsp,0x28`、重放 relocated `add rsp,0x88`、再 `jmp 0xbc3236` 的 `ret`；volatile 寄存器与 flags 不保存（返回点之后无人读取），`rbx/rsi/rdi/rbp/r12-r15` 由记录器自身按调用约定保存。
+
+**十、实现与离线回归（2026-11-05，提交 `757b01481b`，v70 身份见 [build.md](build.md#v70-g5e1-v3-2026-11-05)）**
+
+- 三个 detour 块：63589 入口、63856 入口、**63856 返回**（`+0x24f`）。池常量改为 probe 私有的 3×256（共享 `Detour_Hook_Count` 仍为 2，typed-setter 探针不受影响）。
+- 应用入口 thunk 改为四参（`rcx/rdx/r8` + `r9` = 调用者返回地址，取 `[rsp+0x68]`，与既有 sample thunk 的返回地址槽同源）；`classify_apply_path` 把五个 caller RVA 分入五条路径，未命中即 `unclassified`（R2 硬停条件）。
+- 返回记录器消费 per-tid in-flight 表（`ProbeInFlight`）：同线程配对由结构保证，覆盖与孤儿各自计数；关闭行新增 `in-flight-now/max`、`overwritten-entries`、`orphan-returns` 等字段供 R6 读。
+- 范围事实在入口只读采集：`cap = [g+0x170]`、`slot numData = [[g+0x220]+0x32]`、`clamped = requested<0 ? cap : min(requested, cap)`；`pose` 指针窗口内变化即置 `pose-stable=no`（R4 反证）；`skeleton[+0x30/+0x40]` 在 arm 时读一次，`fill>cap` 记 `violation`（R5 停点）。
+- **离线回归**：新增 6 例通过（路径分类、clamp 形状、in-flight 配对/覆盖/孤儿、两个新 thunk 以生产字节执行——入口变体断言第四寄存器为调用者返回地址，返回变体断言记录器被调用且 `sub/add rsp,0x88` 栈配对往返正确）；既有 repair 2 例、legacy 8 例不变通过。Release 构建 exit 0。
+- **未部署、未上机**：部署需 concurrent INI（无新键）+ F/G3-B 卸下切片键；判读按 R1–R7，未上机前门 1 不变。
