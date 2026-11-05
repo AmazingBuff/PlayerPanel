@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-05（晚）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现（v70 `757b01481b`：三 detour、五路径分类、per-tid in-flight 对账、范围/寿命事实只读采集；新增 6 例 + 既有 2+8 例离线通过），未部署未上机**。E2/E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-05（晚）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现为 v70 并部署（`757b01481b`，DLL `cd57895d…`，待上机：三 detour、五路径分类、per-tid in-flight 对账、范围/寿命事实只读采集；新增 6 例 + 既有 2+8 例离线通过）**。E2/E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -3648,7 +3648,7 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 **下一步**：~~G4-C 修复仪器正控重跑~~（**已完成**：[attempt 2](#c-g4-c1-concurrent-events) 判据 1–6 全成立，2026-11-05）；此后按排序进入 [v3 契约](#c-g5-e1-v3) 的实现评审与 E2/E3。
 
 <a id="c-g5-e1-v3"></a>
-### v3 修订（2026-11-05，预注册；离线实现与回归已完成，未部署未上机）
+### v3 修订（2026-11-05，预注册；v70 已实现并部署，待上机）
 
 **动机**：[audit32](behavior-graph-construction-audit.md#audit32) 闭合了 E1 的静态四项，同时改变了三件事的取证方式：① 合法完成捕获窗有**两处**（63589 尾 `0xbb2b06` 与 63568 尾 `0xbaebe7`），不是一处——生成路径在 63568 内完成并直接返回；② 63856 全镜像有 **5 个**直接调用点，除两处主路径外还有 63563（物理回调，经 `VTABLE___GraphPhysicsStepListener` 槽 2）、63572、`0xbae731`（无 .pdata），后三者若在会话内出现必须单独归因；③ 实际写 poseLocal 的 n 按路径三分，`[g+0x240]` 只代表主路径。因此 v1/v2 的"63856 入口命中"只能证明**应用开始**，不能证明完成，也不能把不同路径混入同一次配对。**v3 只扩展观测点与计数，不改窗口语义，也不重判 P1–P5**（它们已由 v69 两轮成立）。
 
@@ -3714,4 +3714,4 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 - 返回记录器消费 per-tid in-flight 表（`ProbeInFlight`）：同线程配对由结构保证，覆盖与孤儿各自计数；关闭行新增 `in-flight-now/max`、`overwritten-entries`、`orphan-returns` 等字段供 R6 读。
 - 范围事实在入口只读采集：`cap = [g+0x170]`、`slot numData = [[g+0x220]+0x32]`、`clamped = requested<0 ? cap : min(requested, cap)`；`pose` 指针窗口内变化即置 `pose-stable=no`（R4 反证）；`skeleton[+0x30/+0x40]` 在 arm 时读一次，`fill>cap` 记 `violation`（R5 停点）。
 - **离线回归**：新增 6 例通过（路径分类、clamp 形状、in-flight 配对/覆盖/孤儿、两个新 thunk 以生产字节执行——入口变体断言第四寄存器为调用者返回地址，返回变体断言记录器被调用且 `sub/add rsp,0x88` 栈配对往返正确）；既有 repair 2 例、legacy 8 例不变通过。Release 构建 exit 0。
-- **未部署、未上机**：部署需 concurrent INI（无新键）+ F/G3-B 卸下切片键；判读按 R1–R7，未上机前门 1 不变。
+- **已部署（2026-11-05 21:4x，v70 DLL `cd57895d…`/PDB `b03080ca…`、运行 INI `c3703b74…` 9,640 B，v69 三件套备份 `dist/deploy-backup-20261105-v69-v70pre/`，目的地九门键回读正确），未上机**：一次两段窗口（开面板 → 关面板转段 → 10 秒 → 关闭行）后按 R1–R7 判读；门 1 不变。
