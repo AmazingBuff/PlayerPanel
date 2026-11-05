@@ -3698,3 +3698,11 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 | 文档同步 | 本节 + [audit32 §五](behavior-graph-construction-audit.md#audit32) 交叉引用 + README/CHANGELOG + G5 行 |
 
 **八、明确不做**：不做 E2 贡献账本（层/权重/通道）；不做 E3 配对 manifest；不采集姿态数值、不冻结容差；不钩 58343/63666/63582/59303；不改窗口语义；**不把本契约的通过当作门 1 关闭**（门 1 仍需 E2、E3 与联合验收）。
+
+**九、实现评审前置事实（2026-11-05，离线只读，未实现）**
+
+- **63856 出口唯一**：`[0xbc2fe0,0xbc3237)` 共 599 字节，唯一 `ret` 在 `0xbc3236`；`0xbc3086` 的 `jmp 0x140bc308c` 是函数体内跳转，不是出口。**候选 A 结构可行**，不再需要 B。
+- **早退仍经同一 ret**：`0xbc2ffc` 的 `jle 0x140bc322f`（`clamped count ≤ 0` 时跳过全部节点写）直接落到 `0xbc322f: add rsp,0x88` → `0xbc3236: ret`。因此 completion 记录必须携带 **clamped count** 才能区分"应用完成"与"空应用"；该值可在**入口**按 audit31 的同一公式只读复算（`requested<0 ? cap : min(requested, cap)`，`cap = dword[rdx+0x10]`），不必在返回点读易失寄存器。
+- **插桩窗口**：`0xbc322f` 的 `48 81 c4 88 00 00 00`（`add rsp,0x88`，7 字节）——5 字节 `jmp` + 其后 2 字节 `nop`，跳板重放该 7 字节指令后 `jmp 0xbc3236`。跳板内调用记录器前须保存/恢复 `rsp`（该点栈帧已收至 63856 入口态，`add rsp,0x88` 会改变 `rsp`），并在跳板尾部保持 `rsp ≡ 0 (mod 16)` 于 `call` 前。
+- **补丁窗口安全性已核**：63856 内部全部跳转目标为 `{0xbc2ff7, 0xbc2ffa, 0xbc3050, 0xbc3088, 0xbc308c, 0xbc31f0, 0xbc322f}`，**没有目标落在窗口内部**（唯一跳入点是窗口起点 `0xbc322f`，来自 `0xbc2ffc: jle`）。窗口字节 `48 81 c4 88 00 00 00 c3`：5 字节 `jmp` 覆盖 `0xbc322f..0xbc3233`，残余 `0xbc3234..0xbc3235` 置 `nop nop`。
+- **待实现评审确认**：入口复算 clamped count 与 `0xbc2ff0: js` / `0xbc2ff5: jle` 两条边界（`requested<0`、`requested==cap`）的逐字节一致性；跳板内 `add rsp,0x88` 与记录器调用的栈序（`call` 前 `rsp ≡ 0 (mod 16)`，记录器返回后用同一 `add` 恢复而非再 `sub`）。
