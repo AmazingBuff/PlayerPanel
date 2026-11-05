@@ -169,8 +169,12 @@ namespace animation::behavior_graph
         std::uintptr_t graph;
         std::uint32_t caller_or_count;
         std::uint16_t num240;
+        std::uint16_t clamped;
+        std::uint16_t capacity;
+        std::uint16_t slot_num_data;
         std::uint8_t kind;
         std::uint8_t flag246;
+        std::uint8_t path;
         std::uint32_t tid;
     };
 
@@ -491,5 +495,247 @@ namespace animation::behavior_graph
         ProbeWindowClose m_close{ ProbeWindowClose::e_none };
         std::chrono::steady_clock::time_point m_deadline{};
     };
+
+    // ---- C-G5-E1 v3: return-side completion, apply-path classification, range facts ------
+
+    // This probe owns three detour blocks (sampling entry, apply entry, apply return). The
+    // shared c-g5-e1 pool constant stays at two hooks because the typed-setter probe uses it.
+    inline constexpr std::size_t Probe_Liveness_Hook_Count = 3;
+    inline constexpr std::size_t Probe_Liveness_Pool_Size = Probe_Liveness_Hook_Count * Detour_Block_Size;
+
+    // 63856 has a single return site: its own `add rsp,0x88` at +0x24f from the entry
+    // (0xbc322f). The only other exit-looking instruction (0xbc3086) is an intra-body jmp, and
+    // the clamped-count<=0 early exit reaches the same add/ret pair. Patching this 7-byte window
+    // is safe because no branch targets its interior (the only jump into the window is its first
+    // byte, from 0xbc2ffc).
+    inline constexpr std::uint32_t Probe_Pose_Return_Offset = 0x24f;
+    inline constexpr std::array<std::uint8_t, 7> Probe_Pose_Return_Head_Bytes{ 0x48, 0x81, 0xC4, 0x88, 0x00, 0x00, 0x00 };
+
+    // The five direct callers of 63856 image-wide (audit32). Only the first two are the per-frame
+    // apply paths R1 covers; the other three must be attributed separately when they fire rather
+    // than folded into a generic "other" bucket.
+    enum class ProbeApplyPath : std::uint8_t
+    {
+        e_main_63589,
+        e_main_63568,
+        e_p63563,
+        e_p63572,
+        e_p_bae731,
+        e_unclassified
+    };
+
+    inline constexpr std::size_t Probe_Apply_Path_Count = 6;
+
+    [[nodiscard]] inline std::size_t probe_apply_path_index(ProbeApplyPath a_path) noexcept
+    {
+        return static_cast<std::size_t>(a_path);
+    }
+
+    [[nodiscard]] inline char const* probe_apply_path_name(ProbeApplyPath a_path) noexcept
+    {
+        switch (a_path)
+        {
+        case ProbeApplyPath::e_main_63589: return "63589-tail";
+        case ProbeApplyPath::e_main_63568: return "63568-tail";
+        case ProbeApplyPath::e_p63563: return "p63563";
+        case ProbeApplyPath::e_p63572: return "p63572";
+        case ProbeApplyPath::e_p_bae731: return "p_bae731";
+        default: return "unclassified";
+        }
+    }
+
+    [[nodiscard]] inline ProbeApplyPath classify_apply_path(std::uintptr_t a_caller,
+        std::uintptr_t a_game_base) noexcept
+    {
+        if (a_caller == 0 || a_game_base == 0 || a_caller < a_game_base)
+            return ProbeApplyPath::e_unclassified;
+        switch (a_caller - a_game_base)
+        {
+        case 0xbb2b01: return ProbeApplyPath::e_main_63589;
+        case 0xbaebe2: return ProbeApplyPath::e_main_63568;
+        case 0xbae395: return ProbeApplyPath::e_p63563;
+        case 0xbaf50f: return ProbeApplyPath::e_p63572;
+        case 0xbae731: return ProbeApplyPath::e_p_bae731;
+        default: return ProbeApplyPath::e_unclassified;
+        }
+    }
+
+    // 63856 clamps the requested count against the node-table capacity before writing:
+    // `requested < 0 ? capacity : min(requested, capacity)` (audit31, 0xbc2ff0..0xbc2ff7).
+    // Recomputed at the entry so a completion record separates "applied" from "empty apply"
+    // without reading volatile registers at the return site.
+    [[nodiscard]] inline std::uint32_t probe_clamped_count(std::int32_t a_requested,
+        std::uint32_t a_capacity) noexcept
+    {
+        if (a_requested < 0)
+            return a_capacity;
+        auto const requested = static_cast<std::uint32_t>(a_requested);
+        return requested > a_capacity ? a_capacity : requested;
+    }
+
+    // Per-thread in-flight entry consumed by the return recorder. The audit does not prove 63856
+    // cannot re-enter, so an overwritten pending entry is counted, never silently re-attributed to
+    // the later call.
+    class ProbeInFlight
+    {
+    public:
+        static constexpr std::size_t Max_Threads = 8;
+
+        struct Entry
+        {
+            void const* graph;
+            void const* pose;
+            std::uint32_t requested;
+            std::uint32_t clamped;
+            std::uint32_t slot_num_data;
+            std::uint32_t node_capacity;
+            ProbeApplyPath path;
+            std::uint64_t tsc;
+        };
+
+        enum class Outcome : std::uint8_t
+        {
+            e_stored,
+            e_overwritten,
+            e_no_slot
+        };
+
+        Outcome on_entry(std::uint32_t a_tid, Entry const& a_entry) noexcept
+        {
+            Slot* const slot = find_or_insert(a_tid);
+            if (!slot)
+                return Outcome::e_no_slot;
+            Outcome const outcome = slot->pending ? Outcome::e_overwritten : Outcome::e_stored;
+            if (slot->pending)
+                ++m_overwritten;
+            slot->entry = a_entry;
+            slot->pending = true;
+            return outcome;
+        }
+
+        // False when the thread has no pending entry: the return recorder then counts an orphan
+        // instead of inventing a completion.
+        bool on_return(std::uint32_t a_tid, Entry& a_out) noexcept
+        {
+            Slot* const slot = find(a_tid);
+            if (!slot || !slot->pending)
+                return false;
+            a_out = slot->entry;
+            slot->pending = false;
+            return true;
+        }
+
+        [[nodiscard]] std::size_t in_flight() const noexcept
+        {
+            std::size_t pending = 0;
+            for (Slot const& slot : m_slots)
+                if (slot.pending)
+                    ++pending;
+            return pending;
+        }
+
+        [[nodiscard]] std::uint64_t overwritten() const noexcept { return m_overwritten; }
+
+        void reset() noexcept
+        {
+            m_slots = {};
+            m_overwritten = 0;
+        }
+
+    private:
+        struct Slot
+        {
+            std::uint32_t tid;
+            bool pending;
+            Entry entry;
+        };
+
+        Slot* find(std::uint32_t a_tid) noexcept
+        {
+            for (Slot& slot : m_slots)
+                if (slot.tid == a_tid && slot.tid != 0)
+                    return &slot;
+            return nullptr;
+        }
+
+        Slot* find_or_insert(std::uint32_t a_tid) noexcept
+        {
+            if (Slot* const existing = find(a_tid))
+                return existing;
+            for (Slot& slot : m_slots)
+            {
+                if (slot.tid == 0)
+                {
+                    slot.tid = a_tid;
+                    return &slot;
+                }
+            }
+            return nullptr;
+        }
+
+        std::array<Slot, Max_Threads> m_slots{};
+        std::uint64_t m_overwritten{ 0 };
+    };
+
+    // Apply-entry thunk variant that also forwards the caller's return address as the fourth
+    // argument (r9). The three entry arguments keep the audited +0x50/+0x48/+0x40 slots and the
+    // caller's return address sits at +0x68, exactly like the sampled-entry thunk's second
+    // argument; eight pushes plus pushfq plus the 0x20 shadow space keep rsp 16-byte aligned.
+    inline std::size_t encode_detour_thunk_with_caller(std::uint8_t* a_dst, std::uintptr_t a_recorder,
+        std::uintptr_t a_original)
+    {
+        std::size_t o = 0;
+        auto const emit = [&o, a_dst](std::initializer_list<std::uint8_t> const& a_bytes) {
+            for (std::uint8_t b : a_bytes)
+                a_dst[o++] = b;
+        };
+        emit({ 0x50, 0x53, 0x51, 0x52 });                          // push rax/rbx/rcx/rdx
+        emit({ 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });  // push r8..r11
+        emit({ 0x9C });                                            // pushfq
+        emit({ 0x48, 0x83, 0xEC, 0x20 });                          // sub rsp,20h
+        emit({ 0x48, 0x8B, 0x4C, 0x24, 0x50 });                    // mov rcx,[rsp+50h] (entry rcx)
+        emit({ 0x48, 0x8B, 0x54, 0x24, 0x48 });                    // mov rdx,[rsp+48h] (entry rdx)
+        emit({ 0x44, 0x8B, 0x44, 0x24, 0x40 });                    // mov r8d,[rsp+40h] (entry r8)
+        emit({ 0x4C, 0x8B, 0x4C, 0x24, 0x68 });                    // mov r9,[rsp+68h] (return addr)
+        emit({ 0x48, 0xB8 });                                      // movabs rax, recorder
+        std::memcpy(a_dst + o, &a_recorder, sizeof(a_recorder));
+        o += sizeof(a_recorder);
+        emit({ 0xFF, 0xD0 });                                      // call rax
+        emit({ 0x48, 0x83, 0xC4, 0x20 });                          // add rsp,20h
+        emit({ 0x9D });                                            // popfq
+        emit({ 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58 });  // pop r11..r8
+        emit({ 0x5A, 0x59, 0x5B, 0x58 });                          // pop rdx/rcx/rbx/rax
+        emit({ 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 });              // jmp qword [rip+0]
+        std::memcpy(a_dst + o, &a_original, sizeof(a_original));
+        o += sizeof(a_original);
+        return o;
+    }
+
+    // Return-side thunk. The function's own frame is still intact at the patched `add rsp,0x88`,
+    // so rsp is 8 (mod 16) there; `sub rsp,28h` makes it 16-byte aligned for the recorder call,
+    // and the relocated `add rsp,0x88` runs afterwards so the caller's frame is restored before
+    // the jump to the original `ret`. Volatile registers and flags are not preserved on purpose:
+    // nothing reads them after the return site.
+    inline std::size_t encode_detour_return_thunk(std::uint8_t* a_dst, std::uintptr_t a_recorder,
+        std::uintptr_t a_original)
+    {
+        std::size_t o = 0;
+        auto const emit = [&o, a_dst](std::initializer_list<std::uint8_t> const& a_bytes) {
+            for (std::uint8_t b : a_bytes)
+                a_dst[o++] = b;
+        };
+        emit({ 0x48, 0x83, 0xEC, 0x28 });                          // sub rsp,28h
+        emit({ 0x48, 0xB8 });                                      // movabs rax, recorder
+        std::memcpy(a_dst + o, &a_recorder, sizeof(a_recorder));
+        o += sizeof(a_recorder);
+        emit({ 0xFF, 0xD0 });                                      // call rax
+        emit({ 0x48, 0x83, 0xC4, 0x28 });                          // add rsp,28h
+        emit({ 0xE9 });                                            // jmp original (rel32)
+        auto const next = reinterpret_cast<std::uintptr_t>(a_dst) + o + sizeof(std::int32_t);
+        std::int32_t const rel = static_cast<std::int32_t>(a_original - next);
+        std::memcpy(a_dst + o, &rel, sizeof(rel));
+        o += sizeof(rel);
+        return o;
+    }
 }
 PLUGIN_NAMESPACE_END
