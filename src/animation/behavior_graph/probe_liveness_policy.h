@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cmath>
 #include <cstring>
 #include <initializer_list>
 #include <optional>
@@ -177,6 +178,10 @@ namespace animation::behavior_graph
         std::uint8_t flag246;
         std::uint8_t path;
         std::uint32_t tid;
+        // C-G5-E2-A: the per-frame identity result carried by a mix-frame record.
+        float weight;
+        float max_delta;
+        std::uint32_t mix_failed;
     };
 
     class ProbePushGate
@@ -763,6 +768,224 @@ namespace animation::behavior_graph
         std::memcpy(a_dst + o, &rel, sizeof(rel));
         o += sizeof(rel);
         return o;
+    }
+    // ---- C-G5-E2-A: synthesised-pose identity (trans/rot of 64112) -------------------------
+
+    // 64112 mixes in single precision and normalises with `rsqrtss` plus one Newton step, so a
+    // component-wise absolute tolerance of 2e-6 covers the rou/trans rounding for unit-scale
+    // quaternions and character-scale translations; components above 100 units fall back to a
+    // relative 1e-5 so a large translation is not rejected by absolute error alone.
+    inline constexpr float Probe_Mix_Abs_Tolerance = 2.0e-6f;
+    inline constexpr float Probe_Mix_Rel_Tolerance = 1.0e-5f;
+    inline constexpr float Probe_Mix_Large_Component = 100.0f;
+
+    struct ProbeVec4
+    {
+        float x;
+        float y;
+        float z;
+        float w;
+    };
+
+    [[nodiscard]] inline float probe_dot4(ProbeVec4 const& a_left, ProbeVec4 const& a_right) noexcept
+    {
+        return a_left.x * a_right.x + a_left.y * a_right.y + a_left.z * a_right.z + a_left.w * a_right.w;
+    }
+
+    // 64112's transform mix: `(1-w)*A + w*B` per component (the same association order the engine
+    // uses, so the comparison is not biased by a different summation order).
+    [[nodiscard]] inline ProbeVec4 probe_mix_trans(ProbeVec4 const& a_a, ProbeVec4 const& a_b,
+        float a_weight) noexcept
+    {
+        float const rest = 1.0f - a_weight;
+        return { rest * a_a.x + a_weight * a_b.x, rest * a_a.y + a_weight * a_b.y,
+            rest * a_a.z + a_weight * a_b.z, rest * a_a.w + a_weight * a_b.w };
+    }
+
+    // 64112's rotation mix: sign-corrected nlerp, then `rsqrtss` + one Newton refinement, with the
+    // zero-length result written as the zero vector (`cmpeqss`/`andnps` at 0xbd545d..0xbd5487).
+    [[nodiscard]] inline ProbeVec4 probe_mix_rot(ProbeVec4 a_a, ProbeVec4 a_b, float a_weight) noexcept
+    {
+        if (probe_dot4(a_a, a_b) < 0.0f)
+        {
+            a_b.x = -a_b.x;
+            a_b.y = -a_b.y;
+            a_b.z = -a_b.z;
+            a_b.w = -a_b.w;
+        }
+        ProbeVec4 const mixed = probe_mix_trans(a_a, a_b, a_weight);
+        float const length_squared = probe_dot4(mixed, mixed);
+        if (length_squared == 0.0f)
+            return { 0.0f, 0.0f, 0.0f, 0.0f };
+        float const inverse = 1.0f / std::sqrt(length_squared);
+        return { mixed.x * inverse, mixed.y * inverse, mixed.z * inverse, mixed.w * inverse };
+    }
+
+    [[nodiscard]] inline float probe_mix_delta(float a_expected, float a_actual) noexcept
+    {
+        float const delta = std::fabs(a_expected - a_actual);
+        float const magnitude = std::fmax(std::fabs(a_expected), std::fabs(a_actual));
+        // Above 100 units the tolerance scales with magnitude (relative 1e-5); below it the fixed
+        // absolute 2e-6 applies.
+        if (magnitude > Probe_Mix_Large_Component)
+            return delta > Probe_Mix_Rel_Tolerance * magnitude ? delta : 0.0f;
+        return delta > Probe_Mix_Abs_Tolerance ? delta : 0.0f;
+    }
+
+    // One window's E2-A tally: how many frames/tracks were compared, how many components failed,
+    // the worst delta, and the first few failures. The detour fills this; the close row prints it.
+    struct ProbeMixTally
+    {
+        static constexpr std::size_t Max_Samples = 4;
+
+        struct Sample
+        {
+            std::uint32_t track;
+            std::uint8_t channel;
+            float expected;
+            float actual;
+            float delta;
+        };
+
+        std::uint64_t frames{ 0 };
+        std::uint64_t tracks{ 0 };
+        std::uint64_t failed{ 0 };
+        float max_delta{ 0.0f };
+        std::array<Sample, Max_Samples> samples{};
+        std::uint32_t sample_count{ 0 };
+        bool weight_out_of_range{ false };
+        bool non_finite{ false };
+        bool read_failed{ false };
+
+        void add_frame(std::uint32_t a_tracks) noexcept
+        {
+            ++frames;
+            tracks += a_tracks;
+        }
+
+        // Returns true when the component passed. A delta of zero means "within tolerance" (see
+        // probe_mix_delta), so a non-zero delta is a failure and is also recorded as a sample.
+        bool add_component(std::uint32_t a_track, std::uint8_t a_channel, float a_expected,
+            float a_actual) noexcept
+        {
+            if (!std::isfinite(a_expected) || !std::isfinite(a_actual))
+            {
+                non_finite = true;
+                return false;
+            }
+            float const delta = probe_mix_delta(a_expected, a_actual);
+            if (delta == 0.0f)
+                return true;
+            ++failed;
+            if (delta > max_delta)
+                max_delta = delta;
+            if (sample_count < Max_Samples)
+            {
+                samples[sample_count] = Sample{ a_track, a_channel, a_expected, a_actual, delta };
+                ++sample_count;
+            }
+            return false;
+        }
+
+        void reset() noexcept
+        {
+            frames = 0;
+            tracks = 0;
+            failed = 0;
+            max_delta = 0.0f;
+            samples = {};
+            sample_count = 0;
+            weight_out_of_range = false;
+            non_finite = false;
+            read_failed = false;
+        }
+
+        [[nodiscard]] bool clean() const noexcept
+        {
+            return failed == 0 && !weight_out_of_range && !non_finite && !read_failed;
+        }
+    };
+
+    // Slot accessors for the identity. A slot container holds a pointer to the slot structure at
+    // +0; the structure's word +0x34 is the track-array offset, word +0x32 the track count (only
+    // valid when dword +4 > 2, the same gate 63582 uses) and word +0x14 the payload offset.
+    struct ProbeSlotView
+    {
+        void const* tracks;
+        std::uint32_t count;
+        bool valid;
+    };
+
+    [[nodiscard]] inline ProbeSlotView probe_slot_view(void const* a_graph, std::size_t a_container_offset) noexcept
+    {
+        ProbeSlotView view{ nullptr, 0, false };
+        if (a_graph == nullptr)
+            return view;
+        auto const container = *reinterpret_cast<void const* const*>(
+            static_cast<std::byte const*>(a_graph) + a_container_offset);
+        if (!plausible_object_pointer(reinterpret_cast<std::uintptr_t>(container)))
+            return view;
+        auto const slot = *reinterpret_cast<void const* const*>(container);
+        if (!plausible_object_pointer(reinterpret_cast<std::uintptr_t>(slot)))
+            return view;
+        auto const count_gate = *reinterpret_cast<std::int32_t const*>(static_cast<std::byte const*>(slot) + 4);
+        auto const count = *reinterpret_cast<std::uint16_t const*>(static_cast<std::byte const*>(slot) + 0x32);
+        auto const track_offset = *reinterpret_cast<std::int16_t const*>(static_cast<std::byte const*>(slot) + 0x34);
+        view.tracks = static_cast<std::byte const*>(slot) + track_offset;
+        view.count = count_gate > 2 ? count : 0;
+        view.valid = true;
+        return view;
+    }
+
+    inline constexpr std::size_t Probe_Mix_Weight_Offset = 0x230;
+    inline constexpr std::size_t Probe_Mix_Slot0_Container_Offset = 0x220;
+    inline constexpr std::size_t Probe_Mix_Slot1_Container_Offset = 0x228;
+    inline constexpr std::size_t Probe_Mix_Track_Stride = 0x30;
+    // Channel ids used by the failure samples: 0..2 are translation xyz, 4..7 rotation xyzw.
+    inline constexpr std::uint8_t Probe_Mix_Channel_Trans_X = 0;
+    inline constexpr std::uint8_t Probe_Mix_Channel_Rot_X = 4;
+
+    [[nodiscard]] inline ProbeVec4 probe_track_vec(std::byte const* a_tracks, std::uint32_t a_index,
+        std::size_t a_segment) noexcept
+    {
+        auto const* const base = a_tracks + static_cast<std::size_t>(a_index) * Probe_Mix_Track_Stride
+            + a_segment * sizeof(ProbeVec4);
+        ProbeVec4 value{};
+        std::memcpy(&value, base, sizeof(value));
+        return value;
+    }
+
+    // Compares one track of poseLocal against the identity for the same index. Returns the number
+    // of failed components and feeds the tally.
+    inline std::uint32_t probe_compare_track(std::byte const* a_pose, std::byte const* a_slot1,
+        std::byte const* a_slot0, float a_weight, std::uint32_t a_index, ProbeMixTally& a_tally) noexcept
+    {
+        std::uint32_t failed = 0;
+        ProbeVec4 const pose_trans = probe_track_vec(a_pose, a_index, 0);
+        ProbeVec4 const slot1_trans = probe_track_vec(a_slot1, a_index, 0);
+        ProbeVec4 const slot0_trans = probe_track_vec(a_slot0, a_index, 0);
+        ProbeVec4 const expect_trans = probe_mix_trans(slot1_trans, slot0_trans, a_weight);
+        float const expect_xyz[3] = { expect_trans.x, expect_trans.y, expect_trans.z };
+        float const pose_xyz[3] = { pose_trans.x, pose_trans.y, pose_trans.z };
+        for (std::uint8_t i = 0; i < 3; ++i)
+        {
+            if (!a_tally.add_component(a_index, static_cast<std::uint8_t>(Probe_Mix_Channel_Trans_X + i),
+                    expect_xyz[i], pose_xyz[i]))
+                ++failed;
+        }
+        ProbeVec4 const pose_rot = probe_track_vec(a_pose, a_index, 1);
+        ProbeVec4 const slot1_rot = probe_track_vec(a_slot1, a_index, 1);
+        ProbeVec4 const slot0_rot = probe_track_vec(a_slot0, a_index, 1);
+        ProbeVec4 const expect_rot = probe_mix_rot(slot1_rot, slot0_rot, a_weight);
+        float const expect_quat[4] = { expect_rot.x, expect_rot.y, expect_rot.z, expect_rot.w };
+        float const pose_quat[4] = { pose_rot.x, pose_rot.y, pose_rot.z, pose_rot.w };
+        for (std::uint8_t i = 0; i < 4; ++i)
+        {
+            if (!a_tally.add_component(a_index, static_cast<std::uint8_t>(Probe_Mix_Channel_Rot_X + i),
+                    expect_quat[i], pose_quat[i]))
+                ++failed;
+        }
+        return failed;
     }
 }
 PLUGIN_NAMESPACE_END

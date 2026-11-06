@@ -47,7 +47,8 @@ namespace
     {
         k_entry = 0,
         k_apply_entry = 1,
-        k_apply_return = 2
+        k_apply_return = 2,
+        k_mix_frame = 3
     };
 
     std::atomic<bool> g_installed{ false };
@@ -132,12 +133,14 @@ namespace
         ProbeRing ring;
         ProbePairing pairing;
         ProbeInFlight in_flight;
+        ProbeMixTally mix;
         Counters counters;
         std::uint64_t detail_lines{ 0 };
         std::uint64_t drained_records{ 0 };
         std::uint64_t drained_samples{ 0 };
         std::uint64_t drained_applies{ 0 };
         std::uint64_t drained_returns{ 0 };
+        std::uint64_t drained_mix_frames{ 0 };
         std::uint64_t orphan_applies{ 0 };
         std::uint64_t detail_seq{ 0 };
         std::uint64_t tracked_entries{ 0 };
@@ -160,12 +163,14 @@ namespace
             ring.reset();
             pairing.reset();
             in_flight.reset();
+            mix.reset();
             counters.reset();
             detail_lines = 0;
             drained_records = 0;
             drained_samples = 0;
             drained_applies = 0;
             drained_returns = 0;
+            drained_mix_frames = 0;
             orphan_applies = 0;
             close_pending = false;
             detail_seq = 0;
@@ -349,6 +354,77 @@ namespace
             {
             }
         }
+        // ---- C-G5-E2-A: synthesised-pose identity (trans + rot of 64112) ----------------
+        // poseLocal, both slot track arrays and the weight are still the ones this call uses:
+        // 63587 swaps slots only on the next frame. The comparison runs here and is reported by
+        // the render drain as a mix-frame record; the detour itself never formats or prints.
+        if (is_pinned && clamped > 0)
+        {
+            float weight = 0.0f;
+            if (plausible_object_pointer(reinterpret_cast<std::uintptr_t>(graph)))
+                std::memcpy(&weight, static_cast<std::byte const*>(graph) + Probe_Mix_Weight_Offset,
+                    sizeof(weight));
+            ProbeSlotView const slot0 = probe_slot_view(graph, Probe_Mix_Slot0_Container_Offset);
+            ProbeSlotView const slot1 = probe_slot_view(graph, Probe_Mix_Slot1_Container_Offset);
+            bool const slots_ok = slot0.valid && slot1.valid;
+            bool const weight_ok = weight >= 0.0f && weight <= 1.0f;
+            if (!slots_ok)
+                s.mix.read_failed = true;
+            if (!weight_ok)
+                s.mix.weight_out_of_range = true;
+            std::uint32_t n = clamped;
+            if (slots_ok)
+            {
+                if (n > slot0.count)
+                    n = slot0.count;
+                if (n > slot1.count)
+                    n = slot1.count;
+            }
+            else
+            {
+                n = 0;
+            }
+            if (slots_ok && weight_ok && n > 0)
+            {
+                ProbeMixTally frame{};
+                frame.frames = 1;
+                frame.tracks = n;
+                std::uint32_t failed = 0;
+                for (std::uint32_t i = 0; i < n; ++i)
+                {
+                    failed += probe_compare_track(static_cast<std::byte const*>(a_pose),
+                        static_cast<std::byte const*>(slot1.tracks),
+                        static_cast<std::byte const*>(slot0.tracks), weight, i, frame);
+                }
+                s.mix.frames += frame.frames;
+                s.mix.tracks += frame.tracks;
+                s.mix.failed += frame.failed;
+                if (frame.max_delta > s.mix.max_delta)
+                    s.mix.max_delta = frame.max_delta;
+                if (frame.non_finite)
+                    s.mix.non_finite = true;
+                // The first four failing components are kept for the close row; the sample slots are
+                // diagnostic only and never feed a criterion.
+                if (frame.sample_count > 0)
+                {
+                    for (std::uint32_t k = 0; k < frame.sample_count
+                        && s.mix.sample_count < ProbeMixTally::Max_Samples; ++k)
+                        s.mix.samples[s.mix.sample_count++] = frame.samples[k];
+                }
+                ProbeRecord mix{};
+                mix.graph = reinterpret_cast<std::uintptr_t>(graph);
+                mix.weight = weight;
+                mix.max_delta = frame.max_delta;
+                mix.mix_failed = failed;
+                mix.num240 = n > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(n);
+                mix.path = static_cast<std::uint8_t>(path_index);
+                mix.tid = static_cast<std::uint32_t>(__readgsqword(0x48));
+                mix.kind = k_mix_frame;
+                c.eligible_records.fetch_add(1, std::memory_order_relaxed);
+                if (!s.ring.push(mix))
+                    c.detail_dropped.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
         // The argument count precedes the native table clamp and any scene writes.
         bool const is_plugin = g_plugin_graph.load(std::memory_order_relaxed) == graph;
         if (!is_pinned && !is_plugin)
@@ -442,6 +518,9 @@ namespace
             case k_apply_entry:
                 ++s.drained_applies;
                 break;
+            case k_mix_frame:
+                ++s.drained_mix_frames;
+                break;
             default:
                 ++s.drained_returns;
                 break;
@@ -482,6 +561,12 @@ namespace
                     record.caller_rva, record.caller_or_count, record.clamped, record.capacity,
                     record.slot_num_data);
             }
+            else if (record.kind == k_mix_frame)
+            {
+                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} n={} w={:.6f} mix-failed={} max-delta={:.3e}",
+                    record.tid, record.graph, probe_apply_path_name(static_cast<ProbeApplyPath>(record.path)),
+                    record.num240, record.weight, record.mix_failed, record.max_delta);
+            }
             else
             {
                 logger::info("PROBE LIVENESS apply-return drain-seq={} tid={} graph={:#x} path={} clamped={} capacity={} slot-num-data={}",
@@ -501,7 +586,7 @@ namespace
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         char const* fill_state = s.fill_cap_state == 1 ? "ok" : (s.fill_cap_state == 2 ? "violation" : "unread");
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}]",
+        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
             probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
             g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
             s.counters.entries_total.load(std::memory_order_relaxed),
@@ -543,7 +628,11 @@ namespace
             s.counters.count_over_capacity.load(std::memory_order_relaxed),
             s.counters.clamped_zero.load(std::memory_order_relaxed),
             s.counters.pose_unstable.load(std::memory_order_relaxed) ? "no" : "yes",
-            fill_state, s.skeleton_capacity, s.skeleton_fill);
+            fill_state, s.skeleton_capacity, s.skeleton_fill,
+            s.mix.frames, s.mix.tracks, s.mix.failed, s.mix.max_delta,
+            (s.mix.clean() ? "yes" : "no"), (s.mix.weight_out_of_range ? "violation" : "ok"),
+            (s.mix.non_finite ? "yes" : "no"), (s.mix.read_failed ? "yes" : "no"),
+            s.mix.sample_count);
 
         g_plugin_graph.store(nullptr, std::memory_order_relaxed);
         g_pinned.store(nullptr, std::memory_order_release);
