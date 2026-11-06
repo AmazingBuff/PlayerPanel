@@ -83,6 +83,7 @@ namespace
         std::atomic<std::uint64_t> completions_pinned{ 0 };
         std::atomic<std::uint64_t> paired_completions{ 0 };
         std::atomic<std::uint64_t> orphan_returns{ 0 };
+        std::atomic<std::uint64_t> returns_untracked{ 0 };
         std::atomic<std::uint64_t> unclassified_applies{ 0 };
         std::atomic<std::uint64_t> count_over_capacity{ 0 };
         std::atomic<std::uint64_t> clamped_zero{ 0 };
@@ -113,6 +114,7 @@ namespace
             completions_pinned.store(0, std::memory_order_relaxed);
             paired_completions.store(0, std::memory_order_relaxed);
             orphan_returns.store(0, std::memory_order_relaxed);
+            returns_untracked.store(0, std::memory_order_relaxed);
             unclassified_applies.store(0, std::memory_order_relaxed);
             count_over_capacity.store(0, std::memory_order_relaxed);
             clamped_zero.store(0, std::memory_order_relaxed);
@@ -221,6 +223,13 @@ namespace
         return value;
     }
 
+    std::uint32_t caller_rva_of(void* a_caller) noexcept
+    {
+        auto const value = reinterpret_cast<std::uintptr_t>(a_caller);
+        auto const base = game_base();
+        return (base != 0 && value >= base) ? static_cast<std::uint32_t>(value - base) : 0xFFFFFFFFu;
+    }
+
     // ---- detour recorders (no allocation, no locks, no engine calls) -----------
 
     void record_sample_entry(void* a_graph, void* a_caller) noexcept
@@ -291,12 +300,13 @@ namespace
             c.apply_entries_pinned.fetch_add(1, std::memory_order_relaxed);
         else
             c.other_apply_entries.fetch_add(1, std::memory_order_relaxed);
-        // Range facts (R3/R4): the node-table capacity is `[graph+0x160]+0x10`, i.e. the dword at
-        // graph+0x170, and the current slot's numData is `[[graph+0x220]+0x32]`. Both are read only
-        // behind the same plausibility rule that guards the graph pointer itself.
+        // Range facts (R3/R4) exist only for the pinned source graph: the clone/other graphs in
+        // this manager do not carry the same table contents (the first v70 run read capacity 0 and
+        // garbage slot words for them, which then produced 436 false count-over-capacity hits).
         std::uint32_t capacity = 0;
         std::uint32_t slot_num_data = 0;
-        if (graph != nullptr && plausible_object_pointer(reinterpret_cast<std::uintptr_t>(graph)))
+        std::uint32_t const caller_rva = caller_rva_of(a_caller);
+        if (is_pinned && plausible_object_pointer(reinterpret_cast<std::uintptr_t>(graph)))
         {
             capacity = read_offset<std::uint32_t>(graph, 0x170);
             if (void const* const slot = read_offset<void*>(graph, 0x220))
@@ -305,17 +315,16 @@ namespace
                 c.count_over_capacity.fetch_add(1, std::memory_order_relaxed);
             // R4: the audit's single-lazy-allocation claim means one pose buffer per graph. A
             // different pointer inside one window refutes it, so it is recorded, never smoothed.
-            if (is_pinned)
-            {
-                auto const pose = reinterpret_cast<std::uintptr_t>(a_pose);
-                if (s.expected_pose == 0)
-                    s.expected_pose = pose;
-                else if (s.expected_pose != pose)
-                    c.pose_unstable.store(true, std::memory_order_relaxed);
-            }
+            auto const pose = reinterpret_cast<std::uintptr_t>(a_pose);
+            if (s.expected_pose == 0)
+                s.expected_pose = pose;
+            else if (s.expected_pose != pose)
+                c.pose_unstable.store(true, std::memory_order_relaxed);
         }
-        std::uint32_t const clamped = probe_clamped_count(static_cast<std::int32_t>(a_count), capacity);
-        if (clamped == 0)
+        std::uint32_t const clamped = is_pinned
+            ? probe_clamped_count(static_cast<std::int32_t>(a_count), capacity)
+            : a_count;
+        if (is_pinned && clamped == 0)
             c.clamped_zero.fetch_add(1, std::memory_order_relaxed);
         // The in-flight entry the return recorder will consume; same-tid pairing is structural.
         if (is_pinned)
@@ -329,9 +338,16 @@ namespace
             entry.node_capacity = capacity;
             entry.path = path;
             entry.tsc = __rdtsc();
-            if (s.in_flight.on_entry(static_cast<std::uint32_t>(__readgsqword(0x48)), entry)
-                == ProbeInFlight::Outcome::e_overwritten)
+            auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
+            if (s.in_flight.on_entry(tid, entry) == ProbeInFlight::Outcome::e_overwritten)
                 c.overwritten_entries.fetch_add(1, std::memory_order_relaxed);
+            // High-water mark of concurrently pending entries, sampled while one is held.
+            std::uint32_t const pending = static_cast<std::uint32_t>(s.in_flight.in_flight());
+            std::uint32_t current = c.max_in_flight.load(std::memory_order_relaxed);
+            while (pending > current
+                && !c.max_in_flight.compare_exchange_weak(current, pending, std::memory_order_relaxed))
+            {
+            }
         }
         // The argument count precedes the native table clamp and any scene writes.
         bool const is_plugin = g_plugin_graph.load(std::memory_order_relaxed) == graph;
@@ -340,6 +356,7 @@ namespace
         ProbeRecord record{};
         record.graph = reinterpret_cast<std::uintptr_t>(graph);
         record.caller_or_count = a_count;
+        record.caller_rva = caller_rva;
         record.num240 = clamped > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(clamped);
         record.clamped = record.num240;
         record.capacity = capacity > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(capacity);
@@ -354,7 +371,10 @@ namespace
 
     // Return-side recorder (C-G5-E1 v3): consumes the thread's in-flight entry, so completion is
     // attributed to the same thread that entered 63856 without reading registers at the return
-    // site. It runs after the scene writes, before the relocated `add rsp,0x88`.
+    // site. It runs after the scene writes, before the relocated `add rsp,0x88`. A return with no
+    // pending entry is an orphan only for threads that have owned a tracked entry; every other
+    // thread belongs to a graph this window never pinned, and those returns are counted separately
+    // so they cannot drown the orphan signal.
     void record_apply_return() noexcept
     {
         ProbeState& s = state();
@@ -367,7 +387,10 @@ namespace
         ProbeInFlight::Entry entry{};
         if (!s.in_flight.on_return(tid, entry))
         {
-            c.orphan_returns.fetch_add(1, std::memory_order_relaxed);
+            if (s.in_flight.ever_tracked(tid))
+                c.orphan_returns.fetch_add(1, std::memory_order_relaxed);
+            else
+                c.returns_untracked.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         std::uint32_t const pending = static_cast<std::uint32_t>(s.in_flight.in_flight());
@@ -377,6 +400,8 @@ namespace
         {
         }
         c.path_completions[probe_apply_path_index(entry.path)].fetch_add(1, std::memory_order_relaxed);
+        // Completions are matched by path as well, so the close row can show entry/completion per
+        // path; the pinned flag is re-derived from the entry's graph rather than this thread.
         void const* const pinned = g_pinned.load(std::memory_order_relaxed);
         bool const is_pinned = pinned != nullptr && entry.graph == pinned;
         if (is_pinned)
@@ -451,10 +476,11 @@ namespace
             }
             else if (record.kind == k_apply_entry)
             {
-                logger::info("PROBE LIVENESS apply-entry drain-seq={} tid={} graph={:#x} path={} requested={} clamped={} capacity={} slot-num-data={}",
+                logger::info("PROBE LIVENESS apply-entry drain-seq={} tid={} graph={:#x} path={} caller={:#x} requested={} clamped={} capacity={} slot-num-data={}",
                     s.detail_seq, record.tid, record.graph,
                     probe_apply_path_name(static_cast<ProbeApplyPath>(record.path)),
-                    record.caller_or_count, record.clamped, record.capacity, record.slot_num_data);
+                    record.caller_rva, record.caller_or_count, record.clamped, record.capacity,
+                    record.slot_num_data);
             }
             else
             {
@@ -475,7 +501,7 @@ namespace
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         char const* fill_state = s.fill_cap_state == 1 ? "ok" : (s.fill_cap_state == 2 ? "violation" : "unread");
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}]",
+        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}]",
             probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
             g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
             s.counters.entries_total.load(std::memory_order_relaxed),
@@ -500,12 +526,19 @@ namespace
             s.counters.path_entries[probe_apply_path_index(ProbeApplyPath::e_p63572)].load(std::memory_order_relaxed),
             s.counters.path_entries[probe_apply_path_index(ProbeApplyPath::e_p_bae731)].load(std::memory_order_relaxed),
             s.counters.unclassified_applies.load(std::memory_order_relaxed),
+            s.counters.path_completions[probe_apply_path_index(ProbeApplyPath::e_main_63589)].load(std::memory_order_relaxed),
+            s.counters.path_completions[probe_apply_path_index(ProbeApplyPath::e_main_63568)].load(std::memory_order_relaxed),
+            s.counters.path_completions[probe_apply_path_index(ProbeApplyPath::e_p63563)].load(std::memory_order_relaxed),
+            s.counters.path_completions[probe_apply_path_index(ProbeApplyPath::e_p63572)].load(std::memory_order_relaxed),
+            s.counters.path_completions[probe_apply_path_index(ProbeApplyPath::e_p_bae731)].load(std::memory_order_relaxed),
+            s.counters.path_completions[probe_apply_path_index(ProbeApplyPath::e_unclassified)].load(std::memory_order_relaxed),
             s.counters.apply_returns_total.load(std::memory_order_relaxed),
             s.counters.completions_pinned.load(std::memory_order_relaxed),
             s.counters.paired_completions.load(std::memory_order_relaxed),
             s.drained_returns, s.in_flight.in_flight(),
             s.counters.max_in_flight.load(std::memory_order_relaxed),
             s.counters.orphan_returns.load(std::memory_order_relaxed),
+            s.counters.returns_untracked.load(std::memory_order_relaxed),
             s.counters.overwritten_entries.load(std::memory_order_relaxed),
             s.counters.count_over_capacity.load(std::memory_order_relaxed),
             s.counters.clamped_zero.load(std::memory_order_relaxed),

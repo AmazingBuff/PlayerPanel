@@ -168,6 +168,7 @@ namespace animation::behavior_graph
     {
         std::uintptr_t graph;
         std::uint32_t caller_or_count;
+        std::uint32_t caller_rva;
         std::uint16_t num240;
         std::uint16_t clamped;
         std::uint16_t capacity;
@@ -544,6 +545,20 @@ namespace animation::behavior_graph
         }
     }
 
+    // The five direct call sites image-wide are `0xbb2b01 / 0xbaebe2 / 0xbae395 / 0xbaf50f /
+    // 0xbae731` in *call-instruction* terms (audit32 table). What the callee observes on the
+    // stack is the *return address* — the instruction after the 5-byte rel32 call — so the
+    // classifier must match call+5. Using the call address itself classified all 81,034
+    // application entries as unclassified on the first v70 run (2026-11-05); the same +5 form
+    // is what makes `0xba3f6e` the sampled-entry caller in audit29.
+    inline constexpr std::array<std::uint32_t, 5> Probe_Apply_Return_Rvas{
+        0xbb2b06,  // 63589 tail (call at 0xbb2b01)
+        0xbaebe7,  // 63568 tail, generation path (call at 0xbaebe2)
+        0xbae39a,  // 63563, GraphPhysicsStepListener route (call at 0xbae395)
+        0xbaf514,  // 63572 (call at 0xbaf50f)
+        0xbae736   // 0xbae706, no .pdata (call at 0xbae731)
+    };
+
     [[nodiscard]] inline ProbeApplyPath classify_apply_path(std::uintptr_t a_caller,
         std::uintptr_t a_game_base) noexcept
     {
@@ -551,11 +566,11 @@ namespace animation::behavior_graph
             return ProbeApplyPath::e_unclassified;
         switch (a_caller - a_game_base)
         {
-        case 0xbb2b01: return ProbeApplyPath::e_main_63589;
-        case 0xbaebe2: return ProbeApplyPath::e_main_63568;
-        case 0xbae395: return ProbeApplyPath::e_p63563;
-        case 0xbaf50f: return ProbeApplyPath::e_p63572;
-        case 0xbae731: return ProbeApplyPath::e_p_bae731;
+        case 0xbb2b06: return ProbeApplyPath::e_main_63589;
+        case 0xbaebe7: return ProbeApplyPath::e_main_63568;
+        case 0xbae39a: return ProbeApplyPath::e_p63563;
+        case 0xbaf514: return ProbeApplyPath::e_p63572;
+        case 0xbae736: return ProbeApplyPath::e_p_bae731;
         default: return ProbeApplyPath::e_unclassified;
         }
     }
@@ -623,6 +638,18 @@ namespace animation::behavior_graph
             a_out = slot->entry;
             slot->pending = false;
             return true;
+        }
+
+        // True when this thread has ever owned a tracked (pinned) entry. A return without a
+        // pending entry is an orphan only for such threads: untracked threads belong to other
+        // graphs, whose returns were never registered and must not be counted as orphans (the
+        // first v70 run reported 80,651 of them and drowned the real signal).
+        [[nodiscard]] bool ever_tracked(std::uint32_t a_tid) const noexcept
+        {
+            for (Slot const& slot : m_slots)
+                if (slot.tid == a_tid && slot.tid != 0)
+                    return true;
+            return false;
         }
 
         [[nodiscard]] std::size_t in_flight() const noexcept

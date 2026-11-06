@@ -26,20 +26,26 @@ namespace
     void apply_paths_classify_the_five_pinned_callers()
     {
         constexpr std::uintptr_t base = 0x140000000ull;
-        assert(classify_apply_path(base + 0xbb2b01, base) == ProbeApplyPath::e_main_63589);
-        assert(classify_apply_path(base + 0xbaebe2, base) == ProbeApplyPath::e_main_63568);
-        assert(classify_apply_path(base + 0xbae395, base) == ProbeApplyPath::e_p63563);
-        assert(classify_apply_path(base + 0xbaf50f, base) == ProbeApplyPath::e_p63572);
-        assert(classify_apply_path(base + 0xbae731, base) == ProbeApplyPath::e_p_bae731);
-        // Anything else is unclassified: the contract forbids folding it into another path.
-        assert(classify_apply_path(base + 0xbb2b02, base) == ProbeApplyPath::e_unclassified);
+        // The recorded value is the return address (call instruction + 5), not the call address.
+        assert(classify_apply_path(base + 0xbb2b06, base) == ProbeApplyPath::e_main_63589);
+        assert(classify_apply_path(base + 0xbaebe7, base) == ProbeApplyPath::e_main_63568);
+        assert(classify_apply_path(base + 0xbae39a, base) == ProbeApplyPath::e_p63563);
+        assert(classify_apply_path(base + 0xbaf514, base) == ProbeApplyPath::e_p63572);
+        assert(classify_apply_path(base + 0xbae736, base) == ProbeApplyPath::e_p_bae731);
+        // The call-instruction addresses must NOT classify: the first v70 run classified all
+        // 81,034 application entries as unclassified for exactly this reason.
+        assert(classify_apply_path(base + 0xbb2b01, base) == ProbeApplyPath::e_unclassified);
+        assert(classify_apply_path(base + 0xbaebe2, base) == ProbeApplyPath::e_unclassified);
+        assert(classify_apply_path(base + 0xbae395, base) == ProbeApplyPath::e_unclassified);
+        assert(classify_apply_path(base + 0xbaf50f, base) == ProbeApplyPath::e_unclassified);
+        assert(classify_apply_path(base + 0xbae731, base) == ProbeApplyPath::e_unclassified);
+        // Anything else is unclassified too, and the contract forbids folding it elsewhere.
         assert(classify_apply_path(base + 0x0, base) == ProbeApplyPath::e_unclassified);
         assert(classify_apply_path(0, base) == ProbeApplyPath::e_unclassified);
-        assert(classify_apply_path(base + 0xbb2b01, 0) == ProbeApplyPath::e_unclassified);
+        assert(classify_apply_path(base + 0xbb2b06, 0) == ProbeApplyPath::e_unclassified);
         assert(classify_apply_path(base / 2, base) == ProbeApplyPath::e_unclassified);
         assert(std::strcmp(probe_apply_path_name(ProbeApplyPath::e_main_63589), "63589-tail") == 0);
         assert(std::strcmp(probe_apply_path_name(ProbeApplyPath::e_unclassified), "unclassified") == 0);
-        // Path indexes are the array positions used by the counters: 0..5, unclassified last.
         assert(probe_apply_path_index(ProbeApplyPath::e_main_63589) == 0);
         assert(probe_apply_path_index(ProbeApplyPath::e_unclassified) == Probe_Apply_Path_Count - 1);
     }
@@ -79,6 +85,12 @@ namespace
         // A different thread has no pending entry: the return recorder must count an orphan.
         ProbeInFlight::Entry out{};
         assert(!ledger.on_return(200, out));
+        // ever_tracked separates "a pinned thread whose entry vanished" (orphan) from "some other
+        // graph's thread" (untracked); the first v70 run reported 80,651 untracked returns as
+        // orphans, drowning the real signal.
+        assert(ledger.ever_tracked(100));
+        assert(!ledger.ever_tracked(200));
+        assert(!ledger.ever_tracked(999));
 
         // Same thread consumes its entry exactly once.
         assert(ledger.on_return(100, out));
