@@ -1104,3 +1104,20 @@ The resulting **local, uncommitted repair build** contains DLL 1,590,784 bytes S
 **Deployed 2026-11-06 22:1x local** (no game process): the v70 trio was backed up hash-verified to `dist/deploy-backup-20261106-v70-v71pre/`; v71 DLL `cbeba8a2…` / PDB `16a29f59…` and the concurrent run INI `c3703b74…` (9,640 bytes) were copied with destination-hash comparison and seven gate keys re-read correct.
 
 **Run 2026-11-06 22:23 (v71, two segments)**: all three hooks installed (return site `0x7ff7825f322f`), armed 22:23:07.995, transition at 22:23:15.151 (display 273 frames / 543 plugin entries), close 22:23:25.155 after 696 frames and 10.004 s resumed; display `semantic-changed=120/120`, `source-drift=none`, `DAC restore matched`, zero `[E]`. Close row: `apply-paths=63589:1356/63568:77481/p63563:10600/p63572:0/p_bae731:0/un:0` (Σ 89,437 = `apply-entries`), `apply-completions=63568:424` = `completions-pinned` = `pinned-apply-entries`, `in-flight-max=1`, `count-over-capacity=0`, `clamped-zero=0`, `pose-stable=yes`, `fill-le-cap=ok`, `skeleton=[cap:116 fill:116]`, `orphan-returns=65,195` (non-pinned returns on tracked threads, not lost pairs), `untracked-returns=23,818`, `transport-complete=yes`. **R1–R7 all satisfied** (see [§十二](independent-behavior-graph.md#c-g5-e1-v3)); INI restored to dormant `27f481f5…`. Log [391,487 bytes `2a64e0a3…`](diagnostics/CharacterPanel-g5e1-v71-v3-run2-20261106-2223.log).
+
+<a id="v72-g5e2-a-2026-11-06"></a>
+## v72 G5-E2-A synthesised-pose identity (2026-11-06, built and **deployed, awaiting the run**)
+
+**Changes** (committed `5dd64a60d0`, clean tree, submodule `94faaed0c6`): the 64112 mix is now expressed as pure functions in `probe_liveness_policy.h` — `probe_mix_trans` (`(1-w)·A + w·B`, the engine's association order), `probe_mix_rot` (sign-corrected nlerp: `dot<0` negates B, then `rsqrtss`-equivalent normalisation, zero length yields the zero vector) — with the tolerance shape (`probe_mix_delta`: absolute 2e-6, relative 1e-5 above 100 units), a slot view (`probe_slot_view`: container → slot → track array via the signed `+0x34` offset, count only when `dword[+4] > 2`), a per-window `ProbeMixTally` (frames, tracks, failed, max delta, four diagnostic samples, weight/non-finite/read flags) and `probe_compare_track` (translation xyz as channels 0–2, rotation xyzw as 4–7).
+
+`probe_liveness.cpp` reads the weight (`[g+0x230]`), both slot track arrays and poseLocal inside the existing **63856 entry** recorder for the pinned graph, compares every track (no sampling), accumulates the tally and pushes one `k_mix_frame` record per frame; the render drain prints `e2a` rows and the close row gains `e2a-frames/tracks/failed/max-delta/ok/w-domain/non-finite/read-failed/samples`. **No new detour, no native writes, no new INI key.**
+
+**Offline validation**: seven E2-A cases pass (`7 probe-liveness e2a cases passed (engine-free)`) — mix endpoints, sign correction, the zero-length convention, the tolerance switch at 100 units, the tally and its four-sample cap, an explicit hand-computed identity with two single-channel corruptions (rot w → channel 7, trans y → channel 1), and the slot-view plausibility gates. The existing v3 (6), repair (2) and legacy (8) suites still pass unchanged. Release build exits 0 with only the pre-existing `D9025` notices.
+
+- Identity: `CharacterPanel-scenegraph-v72-g5e2-a-mix-identity-5dd64a60d0-cl94faaed0c6-20261106T160252Z`
+- DLL: 1,704,960 bytes, SHA-256 `bb27a87fce260cbf03d53620030d8393be3c08b9b7f0eb2bb803d43b67538577`
+- PDB: 48,934,912 bytes, SHA-256 `7d809017b2249a60e93694b4238044f0161bc02957a20802e7de046c9f46fbba`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 401 (v71 was 400)
+- Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
+
+**Deployed 2026-11-06 23:5x local** (no game process): v71 trio backed up hash-verified to `dist/deploy-backup-20261106-v71-v72pre/`; v72 DLL/PDB and the concurrent run INI `c3703b74…` (9,640 bytes) copied with destination-hash comparison and seven gate keys re-read correct. One two-segment session supplies the A1–A6 rows from the `e2a` fields.

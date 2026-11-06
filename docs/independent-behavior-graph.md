@@ -3824,4 +3824,11 @@ poseLocal 的每条轨道是否等于"槽1 与槽0 按 `[g+0x230]` 的混合"？
 | 离线回归 | 混元复算（trans/rot、`dot<0` 取反、零长度、`w=0/1` 端点）、阈值边界、覆盖率计数器、`w` 越界判停 |
 | 文档同步 | 本节 + audit29/32 交叉引用 + README/CHANGELOG + G5 行 |
 
+
+**八、实现与部署（2026-11-06，提交 `5dd64a60d0`，v72 `bb27a87f…538577`）**
+
+- 混元落为纯函数：`probe_mix_trans`（`(1−w)·A + w·B`，沿用引擎的结合顺序）、`probe_mix_rot`（`dot<0` 取反 + `rsqrtss` 等价归一化 + 零长度零向量）、`probe_mix_delta`（2e-6 绝对 / >100 单位时 rel 1e-5）、`probe_slot_view`（容器→槽→轨道数组，`+0x34` 有符号偏移，`dword[+4] > 2` 才取计数）、`probe_compare_track`（trans xyz = 通道 0–2、rot xyzw = 4–7）。
+- 接线：既有 63856 入口记录器在 pinned 图内读 `[g+0x230]`、两槽轨道数组与 poseLocal，逐轨比对（不抽样），累加 `ProbeMixTally` 并每帧推一条 `k_mix_frame` 记录；渲染 drain 打印 `e2a` 行；关闭行新增 `e2a-frames/tracks/failed/max-delta/ok/w-domain/non-finite/read-failed/samples`。**零新增 detour、零原生写、零新 INI 键。**
+- 离线：7 例 E2-A 通过（混元端点、`dot<0` 取反、零长度、100 单位阈值切换、tally 与 4 样本上限、显式手算恒等式与两处单通道篡改归因、槽视图合理性门）；既有 v3 6 例、repair 2 例、legacy 8 例不变通过。Release 构建 exit 0。
+- **已部署**（v71 三件套备份 `dist/deploy-backup-20261106-v71-v72pre/`、运行 INI `c3703b74…`、七门键回读正确），未上机；一次两段窗口后按 A1–A6 判读 `e2a` 字段。
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。
