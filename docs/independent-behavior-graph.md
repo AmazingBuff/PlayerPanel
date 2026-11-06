@@ -3715,3 +3715,30 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 - 范围事实在入口只读采集：`cap = [g+0x170]`、`slot numData = [[g+0x220]+0x32]`、`clamped = requested<0 ? cap : min(requested, cap)`；`pose` 指针窗口内变化即置 `pose-stable=no`（R4 反证）；`skeleton[+0x30/+0x40]` 在 arm 时读一次，`fill>cap` 记 `violation`（R5 停点）。
 - **离线回归**：新增 6 例通过（路径分类、clamp 形状、in-flight 配对/覆盖/孤儿、两个新 thunk 以生产字节执行——入口变体断言第四寄存器为调用者返回地址，返回变体断言记录器被调用且 `sub/add rsp,0x88` 栈配对往返正确）；既有 repair 2 例、legacy 8 例不变通过。Release 构建 exit 0。
 - **已部署（2026-11-05 21:4x，v70 DLL `cd57895d…`/PDB `b03080ca…`、运行 INI `c3703b74…` 9,640 B，v69 三件套备份 `dist/deploy-backup-20261105-v69-v70pre/`，目的地九门键回读正确），未上机**：一次两段窗口（开面板 → 关面板转段 → 10 秒 → 关闭行）后按 R1–R7 判读；门 1 不变。
+
+**十一、首轮运行（v70，2026-11-05 21:52）——R2 硬停：仪器缺陷四处，判据全部不通过；返回侧完成边界已获零丢失证据**
+
+工件：v70 DLL `cd57895d…`、运行 INI `c3703b74…`、日志 [377,591 字节 `e07e71e8…`](diagnostics/CharacterPanel-g5e1-v70-v3-run1-20261105-2152.log)，零 `[E]`。21:51:38 三处安装成功（63589、63856 入口、**63856 返回 `0x7ff7603f322f` thunk `+0x200`/original `+0x280`**）；21:52:28.309 arm（`pinned=yes`）；21:52:33.692 转段（display 178 帧、436 插件 entry）；21:52:43.712 到期关闭（560 帧）。
+
+关闭行要点：`pinned-engine=383`、`apply-entries=81034`、`pinned-apply-entries=383`、**`apply-returns=81034`（与 apply-entries 逐一对齐）**、**`completions-pinned=383`（与 pinned-apply-entries 相等）**、`pose-stable=yes`、`fill-le-cap=ok`、`skeleton=[cap:116 fill:116]`、零 transport 缺口、`orphan-applies=0`。
+
+| 判据 | 读数 | 裁定 |
+| --- | --- | --- |
+| R1 完成点 | 返回侧对**每一次** 63856 调用都触发（81,034/81,034），源图 383/383 同线程配对；但路径归属全部未分类 | **不通过（路径未证）**；完成边界本身获得零丢失证据 |
+| R2 路径归属 | `apply-paths=…/un:81034`，`unclassified=81034` | **硬停**——按预注册，本轮无效 |
+| R3 输出范围 | `count-over-capacity=436`、`clamped-zero=436` 全部来自非钉住图 | 不通过（见缺陷 2） |
+| R4 寿命 | `pose-stable=yes`（383 次钉住应用同一 pose 指针） | **通过（限定钉住源图）** |
+| R5 fill≤cap | `fill=116 cap=116` | **通过（限定）：reference 填充恰等于容量，未见越界** |
+| R6 同线程在途 | `in-flight-max=0`（采样点缺陷） | 无效（见缺陷 4） |
+| R7 epoch | 无跨 epoch 配对 | 通过 |
+
+**四处仪器缺陷（全部代码侧，非引擎事实）**：
+
+1. **分类用错地址形态**：`classify_apply_path` 匹配 audit32 表里的 **call 指令地址**（`0xbb2b01`/`0xbaebe2`/…），而 63856 在栈上看到的是**返回地址 = call+5**（`0xbb2b06`/`0xbaebe7`/…）。同日志 `sample-entry caller=0xba3f6e` 正是这种 +5 形式，是直接旁证。修复：改匹配返回地址，并在回归里把 call 地址作为**负例**锁死。
+2. **范围事实越界采集**：候选/克隆图的 `[g+0x170]` 为 0、`[g+0x220]` 未初始化，导致 436 条假 `count-over-capacity`/`clamped-zero` 与垃圾 `slot-num-data`（29577/29523）。audit32 的节点表结论只对源图成立。修复：capacity/slot/pose 只在 `is_pinned` 时采集。
+3. **orphan 语义**：非钉住图的返回（80651）本不该计 orphan——它们从未登记 in-flight。修复：`ever_tracked(tid)` 分流为 `orphan-returns`（曾持有 tracked entry）与 `untracked-returns`。
+4. **in-flight 高水位采样点**：在返回后读取恒为 0。修复：改在 `on_entry` 后更新。
+
+**另加诊断能力**：`apply-entry` 明细行现在打印 `path=` 与 `caller={:#x}`（未分类时可见原始 RVA，不再需要靠推断）；关闭行新增 `apply-completions=63589:…/63568:…/…` 每路径完成数与 `untracked-returns`。
+
+**修复后身份**：v71（`0327e15fa3`，DLL `cbeba8a2…c722f4` 1,633,792 字节，PDB `16a29f59…`，CodeView age 400），6+2+8 例离线通过，[构建记录](build.md#v71-g5e1-v3-fix1-2026-11-06)。**下一轮按同一 R1–R7 判读；本轮不改变门 1。**

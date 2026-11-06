@@ -1079,3 +1079,26 @@ The resulting **local, uncommitted repair build** contains DLL 1,590,784 bytes S
 - Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
 
 **Deployed 2026-11-05 21:4x local** (no game process running): the v69 trio was backed up hash-verified to `dist/deploy-backup-20261105-v69-v70pre/` (DLL `2490c38d…`, PDB `f69c9790…`, dormant INI `27f481f5…`); v70 DLL `cd57895d…`, PDB `b03080ca…` and the concurrent run INI `c3703b74…` (9,640 bytes — the same four-key sample derivation the v69 E1 runs used; v3 adds no INI key) were copied to `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` with destination-hash comparison, and nine gate keys were re-read at the destination (`IndependentGraph=inject`, `DisplayPose/DisplayStep=true`, `SamplingLiveness=concurrent`, with `SourceTimeline/SourceEventCapture/SourceWriteCapture/CandidateUnequipProbe/OarContextWatch` off). **One game session is next**: open the panel → the experiment arms the concurrent window → first display close transitions into the 10 s resumed phase → final close. Judgement follows [C-G5-E1 v3 R1–R7](independent-behavior-graph.md#c-g5-e1-v3) on the new close-row fields; INI returns to dormant after the run and no gate changes until the rows are returned.
+
+<a id="v71-g5e1-v3-fix1-2026-11-06"></a>
+## v71 G5-E1 v3 fix 1 (2026-11-06, built and **deployed, awaiting the run**)
+
+**Why**: the first v70 run (2026-11-05 21:52, [log](diagnostics/CharacterPanel-g5e1-v70-v3-run1-20261105-2152.log)) hit the R2 hard stop — `apply-paths=…/un:81034` — and exposed three more instrument defects; see [§十一](independent-behavior-graph.md#c-g5-e1-v3) for the per-criterion reading. All four are code-side, not engine facts.
+
+**Changes** (committed `0327e15fa3`, clean tree, submodule `94faaed0c6`):
+
+1. `classify_apply_path` now matches the **return address** the callee sees (call+5: `0xbb2b06 / 0xbaebe7 / 0xbae39a / 0xbaf514 / 0xbae736`) instead of audit32's call-instruction addresses; the regression keeps the call addresses as explicit negatives.
+2. Capacity/slot/pose facts are collected only for the pinned source graph — the clone and other graphs carry an uninitialized table (`[g+0x170]=0`, `[g+0x220]` garbage), which produced 436 false `count-over-capacity`/`clamped-zero` hits.
+3. `ever_tracked(tid)` splits returns without a pending entry into `orphan-returns` (a thread that held a tracked entry) versus `untracked-returns` (other graphs; the run miscounted 80,651 of these as orphans).
+4. The in-flight high-water mark is sampled right after `on_entry`, not after the return.
+5. Diagnostics: every `apply-entry` row prints `path=` and `caller={:#x}`; the close row gains `apply-completions` per path and `untracked-returns`.
+
+**Offline validation**: six v3 cases pass (call-address negatives and never-tracked included), plus repair (2) and legacy (8) unchanged. Release build exits 0 with only the pre-existing `D9025` notices.
+
+- Identity: `CharacterPanel-scenegraph-v71-g5e1-v3-fix1-0327e15fa3-cl94faaed0c6-20261106T141309Z`
+- DLL: 1,633,792 bytes, SHA-256 `cbeba8a2bd75773cffd19780546f63bef910f798624e3eef96ea43851fc722f4`
+- PDB: 48,918,528 bytes, SHA-256 `16a29f593d342fa4389b9b0301ab2f4fba6a2e0f982be86e1ecda0d2198a7577`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 400 (v70 was 399)
+- Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
+
+**Deployed 2026-11-06 22:1x local** (no game process): v70 trio backed up hash-verified to `dist/deploy-backup-20261106-v70-v71pre/`; v71 DLL `cbeba8a2…` / PDB `16a29f59…` and the concurrent run INI `c3703b74…` (9,640 bytes) copied with destination-hash comparison and seven gate keys re-read correct. One two-segment session then supplies the R1–R7 rows.
