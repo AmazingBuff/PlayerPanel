@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-05（晚）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现为 v70 并部署（`757b01481b`，DLL `cd57895d…`，待上机：三 detour、五路径分类、per-tid in-flight 对账、范围/寿命事实只读采集；新增 6 例 + 既有 2+8 例离线通过）**。E2/E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-05（晚）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。E2/E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 静态遗留四项已闭合（audit32）；v3 已实现（v70）待上机；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（待实现评审）。E2/E3 未开始 |
+| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（待实现评审）。E2/E3 未开始 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -52,7 +52,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G2 | PASSED（v33 窗口 + v34 边界） | 无 |
 | G3 | G3-A 成立；G3-B PASSED（相位序列） | 无（v69 两注入回放为其第九次逐位复现） |
 | G4 | **A/B/C 三段保留** | **C 由"仪器无效待重跑"改为"修复版重跑关闭"** |
-| G5 | **门 1 NOT_READY（未通过）** | **E1 修复版取证缺口闭合 + 静态四项闭合**；运行侧完成点/寿命取证待 v70 上机（探针 v3 已实现，6+2+8 例离线通过） |
+| G5 | **门 1 NOT_READY（未通过）** | **E1 修复版取证缺口闭合 + 静态四项闭合 + [v3 运行通过](#c-g5-e1-v3)（v71：424/424 完成配对、五路径对账 89,437、un=0、count-over-capacity=0、pose-stable=yes、ill==cap==116、in-flight-max=1）**；E2/E3 与联合验收未做 |
 | G6 | PENDING | 无（teardown 维持 NO-GO） |
 
 **证据边界（不得外推）**：G4-C 的零事件只限 **58377** 路由；E1 的 `pinned-engine=408` 是**应用入口**计数，不是逐骨写满或输出完成；六工作线程只证明观察到的调用线程不同，不识别调度器；对账恒等式只覆盖已武装窗口内的传送与关闭；audit32 全部为静态可达，不等于运行命中；`fill ≤ cap`（`skeletonWord+0x40` vs `+0x30`）与 63563/63572 两个未列调用点仍是**待运行核验项**。
@@ -97,7 +97,8 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | v69 run2 | 修复版两段窗口（转段完整） | resumed `pinned-engine=408`（全 `0xba3f6e`/`num240=116`）、`tracked=paired=788` 零缺口、六线程反证复现、`suppressed-rows=0` → **修复版 E1 取证缺口（入口活性/配对/对账）闭合** |
 | v69 C1-a1 | G4-C 修复版首轮（INI 漏卸下切片） | 仪器四判据成立（`calls=42/other-graph=42`、`events=0`、`display-close`），但单注入、收于 readied 姿态 → 形状不完整，**不判通过** |
 | v69 C1-a2 | G4-C 修复版完整两注入轮 | 判据 1–6 全部成立：`calls=64/other-graph=64`、源图 `events=0`、`ring-dropped=0`、`reason=display-close`；`drive-done`/`unequip-done` 六哈希第九次逐位复现 → **G4-C 重关** |
-| v3 契约 | 完成/范围/寿命/快照的运行侧取证（预注册，未实现） | 判据 R1–R7：两捕获窗配对、五路径分类对账、`count≤容量`、`pose` 指针恒定、`fill≤cap`、in-flight 量化、epoch 隔离；返回侧插桩 A/B 二选一待实现评审 |
+| v70 run1 | v3 首轮（三钩子首版） | 返回侧对 81,034 次调用全触发、源图 383/383 配对；但 `apply-paths` 全 unclassified（R2 硬停），另有三处仪器缺陷 → 不通过 |
+| v71 run2 | v3 修复版（本文一轮） | **R1–R7 全部满足**：424/424 完成配对、五路径对账 89,437（`un=0`）、`count-over-capacity=0`、`pose-stable=yes`、`fill==cap==116`、`in-flight-max=1`；`p63563=10,600` 首次给出物理回调路径的运行证据 |
 | audit32 | 完成点/输出范围/寿命/快照静态审计（离线） | 四项闭合：63856 五个调用点与两处捕获窗、n 按路径三分、poseLocal 单点 lazy 分配且全镜像无 free、`[g+0x148]` 四写点全在拷贝前 |
 
 ### 已验证的引擎事实（指令级）
@@ -2008,7 +2009,7 @@ BehaviorGraphProbe=true
 - **资源与活态分开**：候选与控制器源图共享 `hkbBehaviorGraphData`（652 项、对齐 652/0/0）及 15,203 项绑定集，候选变量活值分储、激活前不存在并从 authored defaults 初始化。共享绑定、候选跨轮 pose 哈希相同只支持资源对应/候选确定性，不证明源候选完整姿态、时钟或全部层/权重一致；`owner=neither` 也不单独识别读值来源。
 - **G4 当前证据范围**：A4 整窗 72/72 numeric 全 type0、31/31 行对账保留；C1/v66 的 `events=0/other-graph=55` 仪器无效，仅门前 `calls=62` 保留，修复后待有效正控重跑。B-v2 只证明当前装备族稳定；捕获、EquipSink、DAC restore 也不等于完整生命周期收敛。
 - **记录部署**：最新为 [v69](build.md#v69-g5e1-clean-rebuild-2026-11-04)（修复版，DLL 1,590,272 字节 `2490c38d…`，CodeView age 397），运行 INI 用后已恢复 dormant `27f481f5…`（[部署与两轮运行记录](build.md#v69-g5e1-clean-rebuild-2026-11-04)）。v46 正常工作流仍仅对应 20261030 重建。[DCMF](community-reference-supplement.md#dcmf-reference) 仅参考/后置；[idle-start 每圈重放](animation.md#idle-start-replay) 仍是独立未决问题。
-- **排序**：~~修复版离线核验 → 匹配工件上机核验入口活性与完整传送/关闭对账~~（**已完成**：[v69 首轮](#c-g5-e1-v69-run1) + [第二轮](#c-g5-e1-v69-run2)）→ ~~E1 剩余完成点/寿命/同代快照证据~~（**静态四项已由 [audit32](behavior-graph-construction-audit.md#audit32) 闭合，运行侧 [v3 契约](#c-g5-e1-v3) 已实现为 v70，下一步是上机取证**）→ E2 完整贡献、E3 合格 R2 配对 → 联合验收；之后才是完整仪器、独立校准、协议冻结与新正式验证。~~G4-C 与旧 setter 仪器另需有效正控重跑~~（**G4-C 已完成**：[v69 attempt 2](#c-g4-c1-concurrent-events)；typed-setter 窗口 63607/63609 的同类修复正控仍待需要时重跑），G6 后置。
+- **排序**：~~修复版离线核验 → 匹配工件上机核验入口活性与完整传送/关闭对账~~（**已完成**：[v69 首轮](#c-g5-e1-v69-run1) + [第二轮](#c-g5-e1-v69-run2)）→ ~~E1 剩余完成点/寿命/同代快照证据~~（**静态四项已由 [audit32](behavior-graph-construction-audit.md#audit32) 闭合；运行侧 [v3 契约](#c-g5-e1-v3) 已由 v71 一轮通过**）→ E2 完整贡献、E3 合格 R2 配对 → 联合验收；之后才是完整仪器、独立校准、协议冻结与新正式验证。~~G4-C 与旧 setter 仪器另需有效正控重跑~~（**G4-C 已完成**：[v69 attempt 2](#c-g4-c1-concurrent-events)；typed-setter 窗口 63607/63609 的同类修复正控仍待需要时重跑），G6 后置。
 
 <a id="g4-followup-numeric"></a>
 ### PENDING 1（**已关闭**，2026-11-02）：A 的全窗口 numeric 类型覆盖
@@ -3648,7 +3649,7 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 **下一步**：~~G4-C 修复仪器正控重跑~~（**已完成**：[attempt 2](#c-g4-c1-concurrent-events) 判据 1–6 全成立，2026-11-05）；此后按排序进入 [v3 契约](#c-g5-e1-v3) 的实现评审与 E2/E3。
 
 <a id="c-g5-e1-v3"></a>
-### v3 修订（2026-11-05，预注册；v70 已实现并部署，待上机）
+### v3 修订（2026-11-05 预注册；v70 首轮 R2 硬停、v71 修复后 **R1–R7 全部满足**）
 
 **动机**：[audit32](behavior-graph-construction-audit.md#audit32) 闭合了 E1 的静态四项，同时改变了三件事的取证方式：① 合法完成捕获窗有**两处**（63589 尾 `0xbb2b06` 与 63568 尾 `0xbaebe7`），不是一处——生成路径在 63568 内完成并直接返回；② 63856 全镜像有 **5 个**直接调用点，除两处主路径外还有 63563（物理回调，经 `VTABLE___GraphPhysicsStepListener` 槽 2）、63572、`0xbae731`（无 .pdata），后三者若在会话内出现必须单独归因；③ 实际写 poseLocal 的 n 按路径三分，`[g+0x240]` 只代表主路径。因此 v1/v2 的"63856 入口命中"只能证明**应用开始**，不能证明完成，也不能把不同路径混入同一次配对。**v3 只扩展观测点与计数，不改窗口语义，也不重判 P1–P5**（它们已由 v69 两轮成立）。
 
@@ -3742,3 +3743,30 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 **另加诊断能力**：`apply-entry` 明细行现在打印 `path=` 与 `caller={:#x}`（未分类时可见原始 RVA，不再需要靠推断）；关闭行新增 `apply-completions=63589:…/63568:…/…` 每路径完成数与 `untracked-returns`。
 
 **修复后身份**：v71（`0327e15fa3`，DLL `cbeba8a2…c722f4` 1,633,792 字节，PDB `16a29f59…`，CodeView age 400），6+2+8 例离线通过，[构建记录](build.md#v71-g5e1-v3-fix1-2026-11-06)。**下一轮按同一 R1–R7 判读；本轮不改变门 1。**
+
+**十二、第二轮运行（v71，2026-11-06 22:23）—— R1–R7 全部满足（限定范围）：v3 通过**
+
+工件：v71 DLL `cbeba8a2…`、运行 INI `c3703b74…`、日志 [391,487 字节 `2a64e0a3…`](diagnostics/CharacterPanel-g5e1-v71-v3-run2-20261106-2223.log)，零 `[E]`。22:22:22.733 三钩子安装（返回点 `0x7ff7825f322f`、thunk `+0x200`/original `+0x280`）；22:22:45.996 invalidate；22:23:07.995 arm；22:23:15.151 转段（display 273 帧、543 插件 entry）；22:23:25.155 关闭（696 帧、resumed 10.004 s；显示段 `semantic-changed=120/120`、`source-drift=none`、`DAC restore matched`）。
+
+关闭行（原文）：
+`window=close reason=expired actor=00000014 epoch=1 frames=696 entries=92612 e:engine=92069/plugin=543/other=0 pinned-engine=424 apply-entries=89437 pinned-apply-entries=424 other-apply-entries=89013 tracked-sample-entries=967 paired-apply-entries=967 pair-mismatch=0 pair-no-slot=0 threads=7 queue-seen=yes queue=0x7ff784bee0e0 flag=0 queue-flag-frames=0 detail=2048 detail-dropped=0 ring-dropped=0 contention-dropped=0 full-dropped=0 eligible-records=2358 recorded-records=2358 drained-records=2358 drained-samples=967 drained-applies=967 missing-records=0 orphan-applies=0 unpaired-samples=0 suppressed-rows=310 transport-complete=yes apply-paths=63589:1356/63568:77481/p63563:10600/p63572:0/p_bae731:0/un:0 apply-completions=63589:0/63568:424/p63563:0/p63572:0/p_bae731:0/un:0 apply-returns=89437 completions-pinned=424 paired-completions=424 drained-returns=424 in-flight-now=0 in-flight-max=1 orphan-returns=65195 untracked-returns=23818 overwritten-entries=0 count-over-capacity=0 clamped-zero=0 pose-stable=yes fill-le-cap=ok skeleton=[cap:116 fill:116]`
+
+| 判据 | 读数 | 裁定 |
+| --- | --- | --- |
+| **R1 完成点** | `apply-completions=63568:424` = `completions-pinned` = `pinned-apply-entries` = **424**，`in-flight-now=0`；pinned 的 63589-tail 为 0（源图每帧 `flag246=1`，结构上走生成路径） | **通过（生成路径）**；63589-tail 记"未覆盖"，不失败 |
+| **R2 路径归属** | `apply-paths=63589:1356/63568:77481/p63563:10600/p63572:0/p_bae731:0/un:0`，Σ=**89,437** = `apply-entries`；明细 `caller=0xbb2b06/0xbaebe7` 与路径一一对应 | **通过**（`unclassified=0`、对账相等） |
+| **R3 有效输出范围** | `count-over-capacity=0`、`clamped-zero=0`；pinned 明细 `requested=116 clamped=116 capacity=116` | **通过（主路径）**；fallback 子判据无 pinned 样本 → 记"未覆盖" |
+| **R4 寿命** | `pose-stable=yes`（424 次钉住应用同一 pose 指针） | **通过** |
+| **R5 fill≤cap** | `fill-le-cap=ok`、`skeleton=[cap:116 fill:116]` | **通过**（reference 填充恰等于容量，全程未见越界） |
+| **R6 同线程在途** | `in-flight-max=1`、`in-flight-now=0`；钉住 424 / 全部 89,437 | **通过**：在途窗口恒为 1，跨线程读取风险已量化而非被否定 |
+| **R7 epoch** | 无跨 epoch 配对 | **通过** |
+
+**另有首次运行证据**：`p63563=10,600` —— [audit32](behavior-graph-construction-audit.md#audit32) 归因的**物理回调路径**（63563，仅经 `VTABLE___GraphPhysicsStepListener` 槽 2 进入）在本会话确实触发，且被正确归入自己的路径桶（未混入主路径）；`p63572` 与 `p_bae731` 为 0。
+
+**不证明 / 限定**：
+
+- 完成点证据只覆盖 **pinned 源图的生成路径**（63568-tail，424 次）；非生成路径（63589-tail）在 pinned 层面未出现，**不外推**到"任何图任何路径的完成点"。
+- `slot-num-data` 字段对源图读出 29,513 / 17,796（非 count 量级），说明该偏移的读法未对齐 audit29 的槽结构描述；**本字段不参与任何判据**，记为已知读数缺陷，下一版须先核对偏移或删除。
+- `orphan-returns=65,195` 是"曾经持有 tracked entry 的线程上、未登记的非 pinned 返回"（in-flight 只对 pinned 登记），**不是丢配**；pinned 配对完整性由 `424/424` 独立证明。
+- `count-over-capacity=0` 只覆盖 pinned 图（v71 修复 2 的限定）；其它角色/克隆图的表未初始化，不采集也不外推。
+- 门 1 仍 **NOT_READY**：E2/E3 与联合验收未做，本通过只关闭"修复版仪器的完成点/范围/寿命/快照运行侧取证"这一子项。
