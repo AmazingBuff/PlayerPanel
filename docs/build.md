@@ -1220,3 +1220,21 @@ The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!
 **Route-A session**: to obtain gate-closed frames, `byte[g+0x249]` (from ctx+0x2e) must be 0 — try an airborne/no-ground-IK position or a posture where footIK is inactive, then open the panel. Inspect the per-frame `ik=[…]` bytes first; with no `mode:0` frames the session is "undecidable in this configuration" and the IK-frame residuals must not be counted as a pass.
 
 **Route-A run 2026-11-08 00:30 (v77)**: armed 00:30:07.613, transition 00:30:13.519 (display 321 frames), log truncated at 00:30:18 (game exited before expiry, so no close row). All 195 `e2a` rows read `ik=[mode:1 count:116 global:1 root:1]` — `byte[g+0x249]` is 1 on every frame, matching the static finding that both 32898's ctx (`mov byte [rsp+0x56],1`) and 63602's tail record (`mov dword [rsp+0x6b],0x1000101`) hard-code it, and that the global `0x2022530` has no writer in the image. **Route A is closed**: no posture can produce a gate-closed frame, so the `failed-no-ik == 0` criterion is vacuous. 101 of 195 frames still had `mix-failed=0`, which is the useful residue (see [E2 §十四](independent-behavior-graph.md#c-g5-e2)).
+
+<a id="v78-g5e2-ap-2026-11-08"></a>
+## v78 G5-E2-A′ bone attribution (2026-11-08, built and **deployed, awaiting the run**)
+
+**Why**: route A closed the gate-based criterion (the 58423 gate is structurally always open: `record+0x2e` is hard-coded to 1 by both 32898 and 63602, and the global `0x2022530` has no writer). The identity therefore has to be judged by *where* a residual lands.
+
+**Changes** (committed `282163ca06`, clean tree): the window arm caches the pinned skeleton's bone names once (256 slots, render thread, object alive) and the comparator classifies every failing component as foot-chain (`foot/toe/ankle/calf/thigh/knee/leg`, case-insensitive substring) or other, keeping the first four other-bone names verbatim. Close row gains `e2a-fail-foot` / `e2a-fail-other`; `e2a-bone` rows print the refuting names.
+
+**Criterion**: `fail-other == 0 && fail-foot > 0` supports "identity holds except foot-IK correction"; any `fail-other` refutes. Foot-chain placement alone does not prove 58423 caused it — that needs E2-B's post-process observation.
+
+**Offline**: e2a 12 + v3 6 + repair 2 + legacy 8 pass; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v78-g5e2-ap-bone-attribution-282163ca06-cl94faaed0c6-20261107T171045Z`
+- DLL: 1,745,408 bytes, SHA-256 `237c110e4223263dcbd093788058c85720ca9d2ae67a9e4f47990acab8b636d6`
+- PDB: 49,164,288 bytes, SHA-256 `dcc9369597c20d2db5e239c10733e7cd31ac6ce4976a79a96038125bc7654099`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 413
+
+**Deployed 2026-11-08 01:2x local**: v77 trio backed up hash-verified to `dist/deploy-backup-20261108-v77-v78pre/`; v78 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
