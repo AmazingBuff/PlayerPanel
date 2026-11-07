@@ -168,6 +168,23 @@ namespace
             trans_dirty) == 1);
         assert(trans_dirty.samples[0].channel == 1);
     }
+    void track_count_only_caps_by_participating_slots()
+    {
+        // Fallback (w = 1): slot1 is inactive, so its zero count must not force n to zero. The v73
+        // run read slot0=116, slot1=0, w=1.0 on all 276 frames and therefore compared nothing.
+        assert(probe_mix_track_count(116, 1.0f, 116, 0) == 116);
+        // w = 0: slot0 is inactive and slot1 caps instead.
+        assert(probe_mix_track_count(116, 0.0f, 0, 116) == 116);
+        // A genuine two-slot blend is capped by both slots.
+        assert(probe_mix_track_count(116, 0.5f, 116, 0) == 0);
+        assert(probe_mix_track_count(116, 0.5f, 50, 116) == 50);
+        // The clamped count still caps when the slots are larger.
+        assert(probe_mix_track_count(50, 0.5f, 116, 116) == 50);
+        // Branch classification: only a strict interior weight blends two slots.
+        assert(probe_mix_mode(1.0f) == ProbeMixMode::e_fallback);
+        assert(probe_mix_mode(0.0f) == ProbeMixMode::e_fallback);
+        assert(probe_mix_mode(0.5f) == ProbeMixMode::e_main);
+    }
     void slot_view_rejects_missing_or_implausible_pointers()
     {
         assert(!probe_slot_view(nullptr, Probe_Mix_Slot0_Container_Offset).valid);
@@ -200,6 +217,7 @@ int main()
     tally_counts_failures_and_keeps_four_samples();
     non_finite_is_a_failure();
     compare_track_accepts_the_explicit_identity();
+    track_count_only_caps_by_participating_slots();
     slot_view_rejects_missing_or_implausible_pointers();
-    std::puts("7 probe-liveness e2a cases passed (engine-free)");
+    std::puts("8 probe-liveness e2a cases passed (engine-free)");
 }

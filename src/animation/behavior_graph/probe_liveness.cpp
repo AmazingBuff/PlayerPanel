@@ -367,24 +367,20 @@ namespace
                     sizeof(weight));
             ProbeSlotView const slot0 = probe_slot_view(graph, Probe_Mix_Slot0_Container_Offset);
             ProbeSlotView const slot1 = probe_slot_view(graph, Probe_Mix_Slot1_Container_Offset);
-            bool const slots_ok = slot0.valid && slot1.valid;
             bool const weight_ok = weight >= 0.0f && weight <= 1.0f;
+            // A slot only needs to be readable when it participates at this weight: the fallback
+            // branch is single-slot by construction (63581 writes 1.0), so requiring slot1 here
+            // would reject every fallback frame (the v73 run read slot1=0 on all 276 frames).
+            bool const need0 = weight_ok && weight > 0.0f;
+            bool const need1 = weight_ok && weight < 1.0f;
+            bool const slots_ok = (!need0 || slot0.valid) && (!need1 || slot1.valid);
             if (!slots_ok)
                 s.mix.read_failed = true;
             if (!weight_ok)
                 s.mix.weight_out_of_range = true;
-            std::uint32_t n = clamped;
-            if (slots_ok)
-            {
-                if (n > slot0.count)
-                    n = slot0.count;
-                if (n > slot1.count)
-                    n = slot1.count;
-            }
-            else
-            {
-                n = 0;
-            }
+            std::uint32_t n = slots_ok
+                ? probe_mix_track_count(clamped, weight, slot0.count, slot1.count)
+                : 0;
             std::uint32_t failed = 0;
             float worst = 0.0f;
             if (slots_ok && weight_ok && n > 0)
@@ -400,6 +396,10 @@ namespace
                 }
                 worst = frame.max_delta;
                 s.mix.frames += frame.frames;
+                if (probe_mix_mode(weight) == ProbeMixMode::e_main)
+                    ++s.mix.main_frames;
+                else
+                    ++s.mix.fallback_frames;
                 s.mix.tracks += frame.tracks;
                 s.mix.failed += frame.failed;
                 if (frame.max_delta > s.mix.max_delta)
@@ -593,7 +593,7 @@ namespace
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         char const* fill_state = s.fill_cap_state == 1 ? "ok" : (s.fill_cap_state == 2 ? "violation" : "unread");
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
+        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
             probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
             g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
             s.counters.entries_total.load(std::memory_order_relaxed),
@@ -636,7 +636,7 @@ namespace
             s.counters.clamped_zero.load(std::memory_order_relaxed),
             s.counters.pose_unstable.load(std::memory_order_relaxed) ? "no" : "yes",
             fill_state, s.skeleton_capacity, s.skeleton_fill,
-            s.mix.frames, s.mix.tracks, s.mix.failed, s.mix.max_delta,
+            s.mix.frames, s.mix.main_frames, s.mix.fallback_frames, s.mix.tracks, s.mix.failed, s.mix.max_delta,
             (s.mix.clean() ? "yes" : "no"), (s.mix.weight_out_of_range ? "violation" : "ok"),
             (s.mix.non_finite ? "yes" : "no"), (s.mix.read_failed ? "yes" : "no"),
             s.mix.sample_count);

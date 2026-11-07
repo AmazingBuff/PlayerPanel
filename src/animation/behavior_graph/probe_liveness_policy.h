@@ -853,6 +853,10 @@ namespace animation::behavior_graph
         };
 
         std::uint64_t frames{ 0 };
+        // Frames split by branch: the fallback branch never blends two slots, so a session may
+        // contain zero main-path frames and that must be visible rather than inferred.
+        std::uint64_t main_frames{ 0 };
+        std::uint64_t fallback_frames{ 0 };
         std::uint64_t tracks{ 0 };
         std::uint64_t failed{ 0 };
         float max_delta{ 0.0f };
@@ -895,6 +899,8 @@ namespace animation::behavior_graph
         void reset() noexcept
         {
             frames = 0;
+            main_frames = 0;
+            fallback_frames = 0;
             tracks = 0;
             failed = 0;
             max_delta = 0.0f;
@@ -960,6 +966,35 @@ namespace animation::behavior_graph
         return value;
     }
 
+    // The number of tracks the identity can be compared over. 63582 caps its count by both slot
+    // counts because it always blends both, but the fallback branch never reaches 63582: it sets
+    // the weight to 1.0 and copies slot0 alone. A slot therefore only caps the count when it
+    // actually participates at this weight — otherwise an empty inactive slot would force n to
+    // zero (the v73 run read slot0=116, slot1=0, w=1.0 on all 276 frames and compared nothing).
+    [[nodiscard]] inline std::uint32_t probe_mix_track_count(std::uint32_t a_clamped, float a_weight,
+        std::uint32_t a_slot0_count, std::uint32_t a_slot1_count) noexcept
+    {
+        std::uint32_t n = a_clamped;
+        if (a_weight > 0.0f && a_slot0_count < n)
+            n = a_slot0_count;
+        if (a_weight < 1.0f && a_slot1_count < n)
+            n = a_slot1_count;
+        return n;
+    }
+
+    // Which branch the frame took, for the per-mode counts: the fallback branch has weight 1.0 by
+    // construction (63581 writes `[g+0x230] = 1.0f`), so a whole session can legitimately contain
+    // no two-slot blend at all.
+    enum class ProbeMixMode : std::uint8_t
+    {
+        e_fallback,
+        e_main
+    };
+
+    [[nodiscard]] inline ProbeMixMode probe_mix_mode(float a_weight) noexcept
+    {
+        return a_weight >= 1.0f || a_weight <= 0.0f ? ProbeMixMode::e_fallback : ProbeMixMode::e_main;
+    }
     // Compares one track of poseLocal against the identity for the same index. Returns the number
     // of failed components and feeds the tally.
     inline std::uint32_t probe_compare_track(std::byte const* a_pose, std::byte const* a_slot1,
