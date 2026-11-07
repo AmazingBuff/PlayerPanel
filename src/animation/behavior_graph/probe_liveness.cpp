@@ -415,6 +415,8 @@ namespace
                 : 0;
             std::uint32_t failed = 0;
             float worst = 0.0f;
+            std::uint32_t frame_fail_foot = 0;
+            std::uint32_t frame_fail_other = 0;
             if (slots_ok && weight_ok && n > 0)
             {
                 ProbeMixTally frame{};
@@ -429,6 +431,8 @@ namespace
                         g_bone_name_ptrs, bone_count);
                 }
                 worst = frame.max_delta;
+                frame_fail_foot = static_cast<std::uint32_t>(frame.fail_foot);
+                frame_fail_other = static_cast<std::uint32_t>(frame.fail_other);
                 // v77 attribution: the real 58423 gate (four conditions, see ik_gate_open above),
                 // not the payload-overwrite gate v75/v76 used. A frame is only a strict test of the
                 // plain fallback copy when that gate is closed; gate-open residuals are E2-B input.
@@ -486,6 +490,8 @@ namespace
             mix.mix_failed = failed;
             mix.num240 = n > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(n);
             mix.clamped = clamped > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(clamped);
+            mix.mix_fail_foot = frame_fail_foot > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(frame_fail_foot);
+            mix.mix_fail_other = frame_fail_other > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(frame_fail_other);
             mix.slot0_count = slot0.count > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(slot0.count);
             mix.slot1_count = slot1.count > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(slot1.count);
             // The four 58423 gate bytes, so a gate-closed frame is directly readable.
@@ -643,12 +649,12 @@ namespace
             }
             else if (record.kind == k_mix_frame)
             {
-                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} n={} clamped={} slot0={} slot1={} w={:.6f} ik=[mode:{} count:{} global:{} root:{}] mix-failed={} max-delta={:.3e}",
+                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} n={} clamped={} slot0={} slot1={} w={:.6f} ik=[mode:{} count:{} global:{} root:{}] mix-failed={} foot={} other={} max-delta={:.3e}",
                     record.tid, record.graph, probe_apply_path_name(static_cast<ProbeApplyPath>(record.path)),
                     record.num240, record.clamped, record.slot0_count, record.slot1_count,
                     record.weight, static_cast<unsigned>(record.ik_mode), record.ik_count,
                     static_cast<unsigned>(record.ik_global), static_cast<unsigned>(record.ik_root),
-                    record.mix_failed, record.max_delta);
+                    record.mix_failed, record.mix_fail_foot, record.mix_fail_other, record.max_delta);
             }
             else
             {

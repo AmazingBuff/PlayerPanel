@@ -189,6 +189,10 @@ namespace animation::behavior_graph
         std::uint16_t slot1_count;
         // v77: the four 58423 gate bytes recorded per frame.
         std::uint16_t ik_count;
+        // E2-A′ per-frame bone attribution, so a frame is readable even if the window is
+        // interrupted before the close row (two sessions ended ~5 s after the transition).
+        std::uint16_t mix_fail_foot;
+        std::uint16_t mix_fail_other;
         std::uint8_t ik_mode;
         std::uint8_t ik_global;
         std::uint8_t ik_root;
