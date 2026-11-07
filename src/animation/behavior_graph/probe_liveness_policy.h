@@ -164,11 +164,11 @@ namespace animation::behavior_graph
             return nullptr;
         return reinterpret_cast<void*>(value - Probe_Table_Argument_Delta);
     }
-
-    // 16-byte aligned because ProbeRing copies whole records: at 64 bytes the compiler emits
-    // movaps for the four xmmwords, which faults with 0xC0000005 when the slot is only
-    // 8-aligned (exactly what happened on 2026-11-08 at CharacterPanel.dll+0x53f9c, twice).
-    struct alignas(16) ProbeRecord
+    // NOT alignas(16): declaring the alignment made MSVC assume the source was aligned and emit
+    // `movaps [rsp]`, which faults when the detour frame is not 16-aligned - the 0xC0000005 at
+    // CharacterPanel.dll+0x53f9c seen three times on 2026-11-08. The copies are memcpy and the
+    // struct keeps its natural 8-byte alignment, so the compiler emits movups.
+    struct ProbeRecord
     {
         std::uintptr_t graph;
         std::uint32_t caller_or_count;
@@ -203,8 +203,17 @@ namespace animation::behavior_graph
 
     // Guard the invariant that made ProbeRing::push compile to movaps: the record must fill whole
     // xmmwords and the element type must be 16-aligned, or the copy faults.
-    static_assert(sizeof(ProbeRecord) % 16 == 0, "ProbeRecord must be a whole number of 16-byte words");
-    static_assert(alignof(ProbeRecord) >= 16, "ProbeRecord must be 16-byte aligned");
+    // Copy helper: volatile byte-wise on purpose. Any whole-struct assignment or memcpy lets MSVC
+    // vectorise the 64-byte copy into movaps [rsp], which faults when the detour frame is not
+    // 16-aligned (the 0xC0000005 at CharacterPanel.dll+0x53f9c, three times on 2026-11-08).
+    // 64 bytes per record and a few thousand records per session make the loop cost irrelevant.
+    inline void copy_probe_record(ProbeRecord& a_dst, ProbeRecord const& a_src) noexcept
+    {
+        auto* const dst = reinterpret_cast<volatile std::uint8_t*>(&a_dst);
+        auto const* const src = reinterpret_cast<std::uint8_t const*>(&a_src);
+        for (std::size_t i = 0; i < sizeof(ProbeRecord); ++i)
+            dst[i] = src[i];
+    }
 
     class ProbePushGate
     {
@@ -288,7 +297,12 @@ namespace animation::behavior_graph
                 m_producer.leave();
                 return false;
             }
-            m_slots[head % Probe_Liveness_Ring_Depth] = a_record;
+            // memcpy rather than a whole-struct assignment: MSVC vectorises the 64-byte copy into
+            // movaps [rsp], which faults when the caller's frame is not 16-aligned. That is
+            // exactly the 0xC0000005 at CharacterPanel.dll+0x53f9c seen twice on 2026-11-08, and
+            // it survived an alignas(16) on the record because the faulting load is the source on
+            // the stack, not the ring slot.
+            copy_probe_record(m_slots[head % Probe_Liveness_Ring_Depth], a_record);
             m_head.store(head + 1, std::memory_order_release);
             m_producer.leave();
             return true;
@@ -300,7 +314,7 @@ namespace animation::behavior_graph
             std::size_t const head = m_head.load(std::memory_order_acquire);
             if (tail == head)
                 return false;
-            a_out = m_slots[tail % Probe_Liveness_Ring_Depth];
+            copy_probe_record(a_out, m_slots[tail % Probe_Liveness_Ring_Depth]);
             m_tail.store(tail + 1, std::memory_order_release);
             return true;
         }
