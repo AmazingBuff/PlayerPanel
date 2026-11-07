@@ -182,6 +182,11 @@ namespace animation::behavior_graph
         float weight;
         float max_delta;
         std::uint32_t mix_failed;
+        // C-G5-E2-A diagnostics: the slot track counts actually read, so an n==0 frame is
+        // explainable from the log instead of inferred (the v72 run reported zero comparisons
+        // with no way to see why).
+        std::uint16_t slot0_count;
+        std::uint16_t slot1_count;
     };
 
     class ProbePushGate

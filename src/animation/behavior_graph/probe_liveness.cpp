@@ -314,8 +314,7 @@ namespace
         if (is_pinned && plausible_object_pointer(reinterpret_cast<std::uintptr_t>(graph)))
         {
             capacity = read_offset<std::uint32_t>(graph, 0x170);
-            if (void const* const slot = read_offset<void*>(graph, 0x220))
-                slot_num_data = read_offset<std::uint16_t>(slot, 0x32);
+            slot_num_data = probe_slot_view(graph, Probe_Mix_Slot0_Container_Offset).count;
             if (a_count > capacity)
                 c.count_over_capacity.fetch_add(1, std::memory_order_relaxed);
             // R4: the audit's single-lazy-allocation claim means one pose buffer per graph. A
@@ -358,6 +357,8 @@ namespace
         // poseLocal, both slot track arrays and the weight are still the ones this call uses:
         // 63587 swaps slots only on the next frame. The comparison runs here and is reported by
         // the render drain as a mix-frame record; the detour itself never formats or prints.
+        // A frame is recorded even when nothing was compared, so the slot counts are visible and
+        // an n==0 outcome is explainable from the log instead of inferred.
         if (is_pinned && clamped > 0)
         {
             float weight = 0.0f;
@@ -384,18 +385,20 @@ namespace
             {
                 n = 0;
             }
+            std::uint32_t failed = 0;
+            float worst = 0.0f;
             if (slots_ok && weight_ok && n > 0)
             {
                 ProbeMixTally frame{};
                 frame.frames = 1;
                 frame.tracks = n;
-                std::uint32_t failed = 0;
                 for (std::uint32_t i = 0; i < n; ++i)
                 {
                     failed += probe_compare_track(static_cast<std::byte const*>(a_pose),
                         static_cast<std::byte const*>(slot1.tracks),
                         static_cast<std::byte const*>(slot0.tracks), weight, i, frame);
                 }
+                worst = frame.max_delta;
                 s.mix.frames += frame.frames;
                 s.mix.tracks += frame.tracks;
                 s.mix.failed += frame.failed;
@@ -411,19 +414,22 @@ namespace
                         && s.mix.sample_count < ProbeMixTally::Max_Samples; ++k)
                         s.mix.samples[s.mix.sample_count++] = frame.samples[k];
                 }
-                ProbeRecord mix{};
-                mix.graph = reinterpret_cast<std::uintptr_t>(graph);
-                mix.weight = weight;
-                mix.max_delta = frame.max_delta;
-                mix.mix_failed = failed;
-                mix.num240 = n > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(n);
-                mix.path = static_cast<std::uint8_t>(path_index);
-                mix.tid = static_cast<std::uint32_t>(__readgsqword(0x48));
-                mix.kind = k_mix_frame;
-                c.eligible_records.fetch_add(1, std::memory_order_relaxed);
-                if (!s.ring.push(mix))
-                    c.detail_dropped.fetch_add(1, std::memory_order_relaxed);
             }
+            ProbeRecord mix{};
+            mix.graph = reinterpret_cast<std::uintptr_t>(graph);
+            mix.weight = weight;
+            mix.max_delta = worst;
+            mix.mix_failed = failed;
+            mix.num240 = n > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(n);
+            mix.clamped = clamped > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(clamped);
+            mix.slot0_count = slot0.count > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(slot0.count);
+            mix.slot1_count = slot1.count > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(slot1.count);
+            mix.path = static_cast<std::uint8_t>(path_index);
+            mix.tid = static_cast<std::uint32_t>(__readgsqword(0x48));
+            mix.kind = k_mix_frame;
+            c.eligible_records.fetch_add(1, std::memory_order_relaxed);
+            if (!s.ring.push(mix))
+                c.detail_dropped.fetch_add(1, std::memory_order_relaxed);
         }
         // The argument count precedes the native table clamp and any scene writes.
         bool const is_plugin = g_plugin_graph.load(std::memory_order_relaxed) == graph;
@@ -563,9 +569,10 @@ namespace
             }
             else if (record.kind == k_mix_frame)
             {
-                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} n={} w={:.6f} mix-failed={} max-delta={:.3e}",
+                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} n={} clamped={} slot0={} slot1={} w={:.6f} mix-failed={} max-delta={:.3e}",
                     record.tid, record.graph, probe_apply_path_name(static_cast<ProbeApplyPath>(record.path)),
-                    record.num240, record.weight, record.mix_failed, record.max_delta);
+                    record.num240, record.clamped, record.slot0_count, record.slot1_count,
+                    record.weight, record.mix_failed, record.max_delta);
             }
             else
             {
