@@ -844,6 +844,46 @@ namespace animation::behavior_graph
 
     // One window's E2-A tally: how many frames/tracks were compared, how many components failed,
     // the worst delta, and the first few failures. The detour fills this; the close row prints it.
+    // C-G5-E2-A′: which bone a residual lands on. The 58423 post-process is foot IK, so a residual
+    // that only ever falls on the foot chain supports "identity holds except foot-IK correction",
+    // while a residual on an arm/head/spine bone refutes the identity outright. Names come from
+    // `characterInstance.setup->animationSkeleton->bones[i].name` and are matched case-insensitively
+    // as substrings, which is how Havok names look ("NPC L Foot [LFoot]", "NPC L Calf [LClf]").
+    [[nodiscard]] inline bool probe_bone_is_foot_related(char const* a_name) noexcept
+    {
+        if (a_name == nullptr || *a_name == '\0')
+            return false;
+        constexpr char const* kKeys[] = { "foot", "toe", "ankle", "calf", "thigh", "knee", "leg" };
+        for (char const* key : kKeys)
+        {
+            std::size_t const key_length = std::strlen(key);
+            for (char const* start = a_name; *start != '\0'; ++start)
+            {
+                std::size_t i = 0;
+                for (; i < key_length; ++i)
+                {
+                    char const c = start[i];
+                    if (c == '\0')
+                        break;
+                    char const lower = (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+                    if (lower != key[i])
+                        break;
+                }
+                if (i == key_length)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    inline constexpr std::size_t Probe_Bone_Name_Length = 40;
+
+    struct ProbeBoneSample
+    {
+        std::array<char, Probe_Bone_Name_Length> name{};
+        std::uint32_t count;
+    };
+
     struct ProbeMixTally
     {
         static constexpr std::size_t Max_Samples = 4;
@@ -881,6 +921,13 @@ namespace animation::behavior_graph
         // The number frames had their IK gate prepared (all three pointers present), regardless of
         // whether the frame failed.
         std::uint64_t ik_ready_frames{ 0 };
+        // C-G5-E2-A′: residuals split by the bone they landed on. fail_other is the refuting
+        // count — a non-zero value means the identity broke on a bone the foot-IK chain cannot
+        // reach, and the first few names are kept as evidence.
+        std::uint64_t fail_foot{ 0 };
+        std::uint64_t fail_other{ 0 };
+        std::array<ProbeBoneSample, 4> other_bones{};
+        std::uint32_t other_bone_count{ 0 };
         // v76: failures split by the IK/post-process gate. The identity can only be judged strictly
         // on frames where that gate is closed; an all-IK session is undecidable for E2-A and
         // its residuals become E2-B input.
@@ -933,6 +980,29 @@ namespace animation::behavior_graph
                 ++near_neither;
         }
 
+        // Attributes one failing component to the bone it landed on (E2-A′).
+        void classify_bone(std::uint32_t a_track, char const* const* a_names,
+            std::uint32_t a_name_count) noexcept
+        {
+            char const* const name = a_track < a_name_count ? a_names[a_track] : nullptr;
+            if (probe_bone_is_foot_related(name))
+            {
+                ++fail_foot;
+                return;
+            }
+            ++fail_other;
+            if (name != nullptr && other_bone_count < other_bones.size())
+            {
+                ProbeBoneSample& sample = other_bones[other_bone_count];
+                std::size_t i = 0;
+                for (; i + 1 < Probe_Bone_Name_Length && name[i] != '\0'; ++i)
+                    sample.name[i] = name[i];
+                sample.name[i] = '\0';
+                sample.count = 1;
+                ++other_bone_count;
+            }
+        }
+
         void reset() noexcept
         {
             frames = 0;
@@ -952,6 +1022,10 @@ namespace animation::behavior_graph
             fail_frames = 0;
             fail_frames_ik = 0;
             ik_ready_frames = 0;
+            fail_foot = 0;
+            fail_other = 0;
+            other_bones = {};
+            other_bone_count = 0;
             ik_frames = 0;
             failed_ik = 0;
             failed_no_ik = 0;
@@ -1056,10 +1130,12 @@ namespace animation::behavior_graph
         return a_count > 0 && a_mode != 0 && a_global != 0 && a_root;
     }
 
+
     // Compares one track of poseLocal against the identity for the same index. Returns the number
     // of failed components and feeds the tally.
     inline std::uint32_t probe_compare_track(std::byte const* a_pose, std::byte const* a_slot1,
-        std::byte const* a_slot0, float a_weight, std::uint32_t a_index, ProbeMixTally& a_tally) noexcept
+        std::byte const* a_slot0, float a_weight, std::uint32_t a_index, ProbeMixTally& a_tally,
+        char const* const* a_bone_names = nullptr, std::uint32_t a_bone_count = 0) noexcept
     {
         std::uint32_t failed = 0;
         ProbeVec4 const pose_trans = probe_track_vec(a_pose, a_index, 0);
@@ -1076,6 +1152,7 @@ namespace animation::behavior_graph
                     expect_xyz[i], pose_xyz[i]))
             {
                 a_tally.classify_failure(pose_xyz[i], slot0_xyz[i], slot1_xyz[i]);
+                a_tally.classify_bone(a_index, a_bone_names, a_bone_count);
                 ++failed;
             }
         }
@@ -1093,6 +1170,7 @@ namespace animation::behavior_graph
                     expect_quat[i], pose_quat[i]))
             {
                 a_tally.classify_failure(pose_quat[i], slot0_quat[i], slot1_quat[i]);
+                a_tally.classify_bone(a_index, a_bone_names, a_bone_count);
                 ++failed;
             }
         }

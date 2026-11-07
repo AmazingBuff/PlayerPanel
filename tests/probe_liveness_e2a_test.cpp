@@ -209,6 +209,37 @@ namespace
         // inputs above are the ones 63581 actually reads before calling 58423.
         assert(!probe_ik_gate_open(116, 0, 1, true));
     }
+    void foot_related_bone_names_are_matched_case_insensitively()
+    {
+        assert(probe_bone_is_foot_related("NPC L Foot [LFoot]"));
+        assert(probe_bone_is_foot_related("NPC R Calf [RClf]"));
+        assert(probe_bone_is_foot_related("Thigh"));
+        assert(probe_bone_is_foot_related("toe"));
+        assert(probe_bone_is_foot_related("NPC L Leg [LLeg]"));
+        assert(!probe_bone_is_foot_related("NPC Head [Head]"));
+        assert(!probe_bone_is_foot_related("NPC L Hand [LHnd]"));
+        assert(!probe_bone_is_foot_related("Weapon"));
+        assert(!probe_bone_is_foot_related(""));
+        assert(!probe_bone_is_foot_related(nullptr));
+    }
+
+    void bone_attribution_separates_foot_from_other()
+    {
+        char const* names[] = { "NPC L Foot [LFoot]", "NPC L Hand [LHnd]" };
+        ProbeMixTally tally{};
+        tally.classify_bone(0, names, 2);   // foot chain
+        assert(tally.fail_foot == 1 && tally.fail_other == 0);
+        tally.classify_bone(1, names, 2);   // hand: refuting
+        assert(tally.fail_other == 1);
+        assert(tally.other_bone_count == 1);
+        assert(std::strcmp(tally.other_bones[0].name.data(), "NPC L Hand [LHnd]") == 0);
+        // An out-of-range track counts as other but keeps no name slot.
+        tally.classify_bone(9, names, 2);
+        assert(tally.fail_other == 2);
+        assert(tally.other_bone_count == 1);
+        tally.reset();
+        assert(tally.fail_foot == 0 && tally.fail_other == 0 && tally.other_bone_count == 0);
+    }
     void slot_view_rejects_missing_or_implausible_pointers()
     {
         assert(!probe_slot_view(nullptr, Probe_Mix_Slot0_Container_Offset).valid);
@@ -244,6 +275,8 @@ int main()
     track_count_only_caps_by_participating_slots();
     failure_attribution_prefers_the_matching_slot();
     real_ik_gate_requires_all_four_conditions();
+    foot_related_bone_names_are_matched_case_insensitively();
+    bone_attribution_separates_foot_from_other();
     slot_view_rejects_missing_or_implausible_pointers();
-    std::puts("10 probe-liveness e2a cases passed (engine-free)");
+    std::puts("12 probe-liveness e2a cases passed (engine-free)");
 }

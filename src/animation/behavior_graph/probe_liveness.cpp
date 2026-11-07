@@ -10,7 +10,10 @@
 
 #include <RE/B/BSAnimationGraphManager.h>
 #include <RE/B/BShkbAnimationGraph.h>
+#include <RE/H/hkaBone.h>
+#include <RE/H/hkaSkeleton.h>
 #include <RE/H/hkbBehaviorGraph.h>
+#include <RE/H/hkbCharacterSetup.h>
 #include <REL/Relocation.h>
 #include <SKSE/SKSE.h>
 #include <SKSE/Trampoline.h>
@@ -194,6 +197,12 @@ namespace
         static ProbeState s_state;
         return s_state;
     }
+
+    // C-G5-E2-A′: the pinned skeleton's bone names, cached once per window on the render thread.
+    inline constexpr std::size_t Max_Cached_Bones = 256;
+    char g_bone_names[Max_Cached_Bones][Probe_Bone_Name_Length];
+    char const* g_bone_name_ptrs[Max_Cached_Bones];
+    std::atomic<std::uint32_t> g_bone_count{ 0 };
 
     std::uintptr_t game_base()
     {
@@ -411,11 +420,13 @@ namespace
                 ProbeMixTally frame{};
                 frame.frames = 1;
                 frame.tracks = n;
+                std::uint32_t const bone_count = g_bone_count.load(std::memory_order_relaxed);
                 for (std::uint32_t i = 0; i < n; ++i)
                 {
                     failed += probe_compare_track(static_cast<std::byte const*>(a_pose),
                         static_cast<std::byte const*>(slot1.tracks),
-                        static_cast<std::byte const*>(slot0.tracks), weight, i, frame);
+                        static_cast<std::byte const*>(slot0.tracks), weight, i, frame,
+                        g_bone_name_ptrs, bone_count);
                 }
                 worst = frame.max_delta;
                 // v77 attribution: the real 58423 gate (four conditions, see ik_gate_open above),
@@ -440,6 +451,11 @@ namespace
                     ++s.mix.fail_frames;
                 // v76: the per-component attribution was only ever accumulated into the local frame
                 // tally, so the window counters stayed zero while e2a-failed was non-zero.
+                s.mix.fail_foot += frame.fail_foot;
+                s.mix.fail_other += frame.fail_other;
+                for (std::uint32_t k = 0; k < frame.other_bone_count
+                    && s.mix.other_bone_count < s.mix.other_bones.size(); ++k)
+                    s.mix.other_bones[s.mix.other_bone_count++] = frame.other_bones[k];
                 s.mix.near_slot0 += frame.near_slot0;
                 s.mix.near_slot1 += frame.near_slot1;
                 s.mix.near_neither += frame.near_neither;
@@ -653,7 +669,7 @@ namespace
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         char const* fill_state = s.fill_cap_state == 1 ? "ok" : (s.fill_cap_state == 2 ? "violation" : "unread");
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-fail-no-ik={} e2a-ik-frames={} e2a-failed-ik={} e2a-failed-no-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
+        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-fail-no-ik={} e2a-ik-frames={} e2a-failed-ik={} e2a-failed-no-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-fail-foot={} e2a-fail-other={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
             probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
             g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
             s.counters.entries_total.load(std::memory_order_relaxed),
@@ -699,12 +715,12 @@ namespace
             s.mix.frames, s.mix.main_frames, s.mix.fallback_frames, s.mix.tracks, s.mix.failed, s.mix.max_delta,
             s.mix.fail_frames, s.mix.fail_frames_ik, s.mix.fail_frames_no_ik,
             s.mix.ik_frames, s.mix.failed_ik, s.mix.failed_no_ik, s.mix.ik_ready_frames,
-            s.mix.near_slot0, s.mix.near_slot1, s.mix.near_neither,
+            s.mix.near_slot0, s.mix.near_slot1, s.mix.near_neither, s.mix.fail_foot, s.mix.fail_other,
             (s.mix.clean() ? "yes" : "no"), (s.mix.weight_out_of_range ? "violation" : "ok"),
             (s.mix.non_finite ? "yes" : "no"), (s.mix.read_failed ? "yes" : "no"),
             s.mix.sample_count);
 
-        // v75: the failing components themselves, so attribution never depends on a summary.
+        // v75/v77: the failing components themselves, so attribution never depends on a summary.
         for (std::uint32_t i = 0; i < s.mix.sample_count; ++i)
         {
             ProbeMixTally::Sample const& sample = s.mix.samples[i];
@@ -712,6 +728,10 @@ namespace
                 i, sample.track, static_cast<unsigned>(sample.channel), sample.expected, sample.actual,
                 sample.delta);
         }
+        // E2-A′: the bones that a residual landed on outside the foot-IK chain. Any name here is
+        // refuting evidence for the identity, so it is printed verbatim.
+        for (std::uint32_t i = 0; i < s.mix.other_bone_count; ++i)
+            logger::info("PROBE LIVENESS e2a-bone index={} name='{}'", i, s.mix.other_bones[i].name.data());
 
         g_plugin_graph.store(nullptr, std::memory_order_relaxed);
         g_pinned.store(nullptr, std::memory_order_release);
@@ -872,6 +892,35 @@ namespace
             return false;
         }
         s.reset();
+        // C-G5-E2-A′: cache the pinned skeleton's bone names once per window so the detour can
+        // attribute a residual to a bone without touching engine strings or allocating. Reading
+        // them here (render thread, object alive) is the only safe place.
+        {
+            std::uint32_t bone_count = 0;
+            RE::hkbCharacterSetup const* const setup = pinned->characterInstance.setup.get();
+            if (setup != nullptr)
+            {
+                RE::hkaSkeleton const* const skeleton = setup->animationSkeleton.get();
+                if (skeleton != nullptr)
+                {
+                    auto const bone_size = static_cast<std::uint32_t>(skeleton->bones.size());
+                    for (std::uint32_t i = 0; i < bone_size && bone_count < Max_Cached_Bones; ++i)
+                    {
+                        char const* const name = skeleton->bones[static_cast<std::uint32_t>(i)].name.c_str();
+                        if (name == nullptr)
+                            continue;
+                        std::size_t k = 0;
+                        for (; k + 1 < Probe_Bone_Name_Length && name[k] != '\0'; ++k)
+                            g_bone_names[bone_count][k] = name[k];
+                        g_bone_names[bone_count][k] = '\0';
+                        g_bone_name_ptrs[bone_count] = g_bone_names[bone_count];
+                        ++bone_count;
+                    }
+                }
+            }
+            g_bone_count.store(bone_count, std::memory_order_release);
+            logger::info("PROBE LIVENESS bone-names cached={}", bone_count);
+        }
         // R5: reference fill vs pose capacity, read once per window. The chain is
         // graph+0xc0 -> character, [character+0x50] -> skeleton holder, [holder+0x20] -> word;
         // capacity is dword +0x30 and reference fill is dword +0x40 (audit29). Every step is
