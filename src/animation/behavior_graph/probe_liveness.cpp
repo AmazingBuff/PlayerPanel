@@ -432,7 +432,7 @@ namespace
                 }
                 worst = frame.max_delta;
                 frame_fail_foot = static_cast<std::uint32_t>(frame.fail_foot);
-                frame_fail_other = static_cast<std::uint32_t>(frame.fail_other);
+                frame_fail_other = static_cast<std::uint32_t>(frame.fail_cloth + frame.fail_unexplained);
                 // v77 attribution: the real 58423 gate (four conditions, see ik_gate_open above),
                 // not the payload-overwrite gate v75/v76 used. A frame is only a strict test of the
                 // plain fallback copy when that gate is closed; gate-open residuals are E2-B input.
@@ -456,10 +456,27 @@ namespace
                 // v76: the per-component attribution was only ever accumulated into the local frame
                 // tally, so the window counters stayed zero while e2a-failed was non-zero.
                 s.mix.fail_foot += frame.fail_foot;
-                s.mix.fail_other += frame.fail_other;
-                for (std::uint32_t k = 0; k < frame.other_bone_count
-                    && s.mix.other_bone_count < s.mix.other_bones.size(); ++k)
-                    s.mix.other_bones[s.mix.other_bone_count++] = frame.other_bones[k];
+                s.mix.fail_cloth += frame.fail_cloth;
+                s.mix.fail_unexplained += frame.fail_unexplained;
+                for (std::uint32_t k = 0; k < frame.unexplained_bone_count
+                    && s.mix.unexplained_bone_count < s.mix.unexplained_bones.size(); ++k)
+                {
+                    ProbeBoneSample const& src = frame.unexplained_bones[k];
+                    ProbeBoneSample* dst = nullptr;
+                    for (std::uint32_t j = 0; j < s.mix.unexplained_bone_count; ++j)
+                    {
+                        if (std::strncmp(s.mix.unexplained_bones[j].name.data(), src.name.data(),
+                                Probe_Bone_Name_Length - 1) == 0)
+                        {
+                            dst = &s.mix.unexplained_bones[j];
+                            break;
+                        }
+                    }
+                    if (dst != nullptr)
+                        dst->count += src.count;
+                    else
+                        s.mix.unexplained_bones[s.mix.unexplained_bone_count++] = src;
+                }
                 s.mix.near_slot0 += frame.near_slot0;
                 s.mix.near_slot1 += frame.near_slot1;
                 s.mix.near_neither += frame.near_neither;
@@ -675,7 +692,7 @@ namespace
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         char const* fill_state = s.fill_cap_state == 1 ? "ok" : (s.fill_cap_state == 2 ? "violation" : "unread");
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-fail-no-ik={} e2a-ik-frames={} e2a-failed-ik={} e2a-failed-no-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-fail-foot={} e2a-fail-other={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
+        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-fail-no-ik={} e2a-ik-frames={} e2a-failed-ik={} e2a-failed-no-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-fail-foot={} e2a-fail-cloth={} e2a-fail-unexplained={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
             probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
             g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
             s.counters.entries_total.load(std::memory_order_relaxed),
@@ -721,7 +738,8 @@ namespace
             s.mix.frames, s.mix.main_frames, s.mix.fallback_frames, s.mix.tracks, s.mix.failed, s.mix.max_delta,
             s.mix.fail_frames, s.mix.fail_frames_ik, s.mix.fail_frames_no_ik,
             s.mix.ik_frames, s.mix.failed_ik, s.mix.failed_no_ik, s.mix.ik_ready_frames,
-            s.mix.near_slot0, s.mix.near_slot1, s.mix.near_neither, s.mix.fail_foot, s.mix.fail_other,
+            s.mix.near_slot0, s.mix.near_slot1, s.mix.near_neither, s.mix.fail_foot, s.mix.fail_cloth,
+            s.mix.fail_unexplained,
             (s.mix.clean() ? "yes" : "no"), (s.mix.weight_out_of_range ? "violation" : "ok"),
             (s.mix.non_finite ? "yes" : "no"), (s.mix.read_failed ? "yes" : "no"),
             s.mix.sample_count);
@@ -736,8 +754,9 @@ namespace
         }
         // E2-A′: the bones that a residual landed on outside the foot-IK chain. Any name here is
         // refuting evidence for the identity, so it is printed verbatim.
-        for (std::uint32_t i = 0; i < s.mix.other_bone_count; ++i)
-            logger::info("PROBE LIVENESS e2a-bone index={} name='{}'", i, s.mix.other_bones[i].name.data());
+        for (std::uint32_t i = 0; i < s.mix.unexplained_bone_count; ++i)
+            logger::info("PROBE LIVENESS e2a-bone index={} name='{}' count={}", i,
+                s.mix.unexplained_bones[i].name.data(), s.mix.unexplained_bones[i].count);
 
         g_plugin_graph.store(nullptr, std::memory_order_relaxed);
         g_pinned.store(nullptr, std::memory_order_release);

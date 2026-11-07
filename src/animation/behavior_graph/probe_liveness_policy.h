@@ -902,6 +902,36 @@ namespace animation::behavior_graph
         return false;
     }
 
+    // Cloth/physics chains: the v81 run showed every 'other' failure landed on SkirtRBone01, i.e.
+    // a cloth bone, not an unexplained one. Kept separate from the foot chain so the criterion
+    // becomes a set-membership test over known post-process targets.
+    [[nodiscard]] inline bool probe_bone_is_cloth_related(char const* a_name) noexcept
+    {
+        if (a_name == nullptr || *a_name == '\0')
+            return false;
+        char const* const keys[] = { "skirt" };
+        for (char const* key : keys)
+        {
+            std::size_t const key_length = std::strlen(key);
+            for (char const* start = a_name; *start != '\0'; ++start)
+            {
+                std::size_t i = 0;
+                for (; i < key_length; ++i)
+                {
+                    char const c = start[i];
+                    if (c == '\0')
+                        break;
+                    char const lower = (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+                    if (lower != key[i])
+                        break;
+                }
+                if (i == key_length)
+                    return true;
+            }
+        }
+        return false;
+    }
+
     inline constexpr std::size_t Probe_Bone_Name_Length = 40;
 
     struct ProbeBoneSample
@@ -948,12 +978,15 @@ namespace animation::behavior_graph
         // whether the frame failed.
         std::uint64_t ik_ready_frames{ 0 };
         // C-G5-E2-A′: residuals split by the bone they landed on. fail_other is the refuting
-        // count — a non-zero value means the identity broke on a bone the foot-IK chain cannot
-        // reach, and the first few names are kept as evidence.
+        // Three-way split by the bone a residual landed on (v82): the v81 run showed every
+        // "other" failure was SkirtRBone01, i.e. a cloth bone rather than an unexplained one, so
+        // foot chain and cloth chain are separate buckets and only `fail_unexplained` refutes the
+        // identity. Names are aggregated by bone, not sampled per component.
         std::uint64_t fail_foot{ 0 };
-        std::uint64_t fail_other{ 0 };
-        std::array<ProbeBoneSample, 4> other_bones{};
-        std::uint32_t other_bone_count{ 0 };
+        std::uint64_t fail_cloth{ 0 };
+        std::uint64_t fail_unexplained{ 0 };
+        std::array<ProbeBoneSample, 8> unexplained_bones{};
+        std::uint32_t unexplained_bone_count{ 0 };
         // v76: failures split by the IK/post-process gate. The identity can only be judged strictly
         // on frames where that gate is closed; an all-IK session is undecidable for E2-A and
         // its residuals become E2-B input.
@@ -1007,7 +1040,7 @@ namespace animation::behavior_graph
         }
 
         // Attributes one failing component to the bone it landed on (E2-A′).
-        void classify_bone(std::uint32_t a_track, char const* const* a_names,
+void classify_bone(std::uint32_t a_track, char const* const* a_names,
             std::uint32_t a_name_count) noexcept
         {
             char const* const name = a_track < a_name_count ? a_names[a_track] : nullptr;
@@ -1016,16 +1049,32 @@ namespace animation::behavior_graph
                 ++fail_foot;
                 return;
             }
-            ++fail_other;
-            if (name != nullptr && other_bone_count < other_bones.size())
+            if (probe_bone_is_cloth_related(name))
             {
-                ProbeBoneSample& sample = other_bones[other_bone_count];
-                std::size_t i = 0;
-                for (; i + 1 < Probe_Bone_Name_Length && name[i] != '\0'; ++i)
-                    sample.name[i] = name[i];
-                sample.name[i] = '\0';
-                sample.count = 1;
-                ++other_bone_count;
+                ++fail_cloth;
+                return;
+            }
+            ++fail_unexplained;
+            if (name == nullptr)
+                return;
+            // Aggregate by name so the close row shows WHICH bones fail, not just one sample.
+            for (std::uint32_t i = 0; i < unexplained_bone_count; ++i)
+            {
+                if (std::strncmp(unexplained_bones[i].name.data(), name, Probe_Bone_Name_Length - 1) == 0)
+                {
+                    ++unexplained_bones[i].count;
+                    return;
+                }
+            }
+            if (unexplained_bone_count < unexplained_bones.size())
+            {
+                ProbeBoneSample& slot = unexplained_bones[unexplained_bone_count];
+                std::size_t k = 0;
+                for (; k + 1 < Probe_Bone_Name_Length && name[k] != '\0'; ++k)
+                    slot.name[k] = name[k];
+                slot.name[k] = '\0';
+                slot.count = 1;
+                ++unexplained_bone_count;
             }
         }
 
@@ -1049,9 +1098,10 @@ namespace animation::behavior_graph
             fail_frames_ik = 0;
             ik_ready_frames = 0;
             fail_foot = 0;
-            fail_other = 0;
-            other_bones = {};
-            other_bone_count = 0;
+            fail_cloth = 0;
+            fail_unexplained = 0;
+            unexplained_bones = {};
+            unexplained_bone_count = 0;
             ik_frames = 0;
             failed_ik = 0;
             failed_no_ik = 0;

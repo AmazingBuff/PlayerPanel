@@ -223,22 +223,31 @@ namespace
         assert(!probe_bone_is_foot_related(nullptr));
     }
 
-    void bone_attribution_separates_foot_from_other()
+    void bone_attribution_splits_foot_cloth_and_unexplained()
     {
-        char const* names[] = { "NPC L Foot [LFoot]", "NPC L Hand [LHnd]" };
+        char const* names[] = { "NPC L Foot [LFoot]", "SkirtRBone01", "NPC L Hand [LHnd]" };
         ProbeMixTally tally{};
-        tally.classify_bone(0, names, 2);   // foot chain
-        assert(tally.fail_foot == 1 && tally.fail_other == 0);
-        tally.classify_bone(1, names, 2);   // hand: refuting
-        assert(tally.fail_other == 1);
-        assert(tally.other_bone_count == 1);
-        assert(std::strcmp(tally.other_bones[0].name.data(), "NPC L Hand [LHnd]") == 0);
-        // An out-of-range track counts as other but keeps no name slot.
-        tally.classify_bone(9, names, 2);
-        assert(tally.fail_other == 2);
-        assert(tally.other_bone_count == 1);
+        tally.classify_bone(0, names, 3);   // foot chain
+        assert(tally.fail_foot == 1 && tally.fail_cloth == 0 && tally.fail_unexplained == 0);
+        tally.classify_bone(1, names, 3);   // cloth chain: known post-process, not refuting
+        assert(tally.fail_cloth == 1 && tally.fail_unexplained == 0);
+        tally.classify_bone(2, names, 3);   // hand: refuting
+        assert(tally.fail_unexplained == 1);
+        assert(tally.unexplained_bone_count == 1);
+        assert(std::strcmp(tally.unexplained_bones[0].name.data(), "NPC L Hand [LHnd]") == 0);
+        assert(tally.unexplained_bones[0].count == 1);
+        // The same unexplained bone aggregates instead of taking a second slot.
+        tally.classify_bone(2, names, 3);
+        assert(tally.fail_unexplained == 2);
+        assert(tally.unexplained_bone_count == 1);
+        assert(tally.unexplained_bones[0].count == 2);
+        // An out-of-range track has no name and takes no slot.
+        tally.classify_bone(9, names, 3);
+        assert(tally.fail_unexplained == 3);
+        assert(tally.unexplained_bone_count == 1);
         tally.reset();
-        assert(tally.fail_foot == 0 && tally.fail_other == 0 && tally.other_bone_count == 0);
+        assert(tally.fail_foot == 0 && tally.fail_cloth == 0 && tally.fail_unexplained == 0);
+        assert(tally.unexplained_bone_count == 0);
     }
     void slot_view_rejects_missing_or_implausible_pointers()
     {
@@ -276,7 +285,7 @@ int main()
     failure_attribution_prefers_the_matching_slot();
     real_ik_gate_requires_all_four_conditions();
     foot_related_bone_names_are_matched_case_insensitively();
-    bone_attribution_separates_foot_from_other();
+    bone_attribution_splits_foot_cloth_and_unexplained();
     slot_view_rejects_missing_or_implausible_pointers();
-    std::puts("12 probe-liveness e2a cases passed (engine-free)");
+    std::puts("13 probe-liveness e2a cases passed (engine-free)");
 }
