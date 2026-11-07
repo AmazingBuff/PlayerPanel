@@ -3831,4 +3831,23 @@ poseLocal 的每条轨道是否等于"槽1 与槽0 按 `[g+0x230]` 的混合"？
 - 接线：既有 63856 入口记录器在 pinned 图内读 `[g+0x230]`、两槽轨道数组与 poseLocal，逐轨比对（不抽样），累加 `ProbeMixTally` 并每帧推一条 `k_mix_frame` 记录；渲染 drain 打印 `e2a` 行；关闭行新增 `e2a-frames/tracks/failed/max-delta/ok/w-domain/non-finite/read-failed/samples`。**零新增 detour、零原生写、零新 INI 键。**
 - 离线：7 例 E2-A 通过（混元端点、`dot<0` 取反、零长度、100 单位阈值切换、tally 与 4 样本上限、显式手算恒等式与两处单通道篡改归因、槽视图合理性门）；既有 v3 6 例、repair 2 例、legacy 8 例不变通过。Release 构建 exit 0。
 - **已部署**（v71 三件套备份 `dist/deploy-backup-20261106-v71-v72pre/`、运行 INI `c3703b74…`、七门键回读正确），未上机；一次两段窗口后按 A1–A6 判读 `e2a` 字段。
+
+**九、首轮运行（v72，2026-11-07 22:24）—— E2-A 未产生比较（n=0），诊断缺失；E1 v3 判据再次复现**
+
+工件：v72 DLL `bb27a87f…`、运行 INI `c3703b74…`、日志 [392,225 字节 `68ec7d18…`](diagnostics/CharacterPanel-g5e2-a-v72-run1-20261107-2224.log)，零 `[E]`。22:20:30 三钩子安装；22:24:23.693 arm；22:24:29.572 转段（display 234 帧、465 插件 entry）；22:24:39.578 关闭（609 帧、resumed 10.006 s）。
+
+**E1 v3 复现（有效）**：`apply-paths=63589:1137/63568:69268/p63563:9400/p63572:0/p_bae731:0/un:0`（Σ=79,805=`apply-entries`）、`apply-completions=63568:376`=`completions-pinned`=`pinned-apply-entries`、`in-flight-max=1`、`count-over-capacity=0`、`pose-stable=yes`、`fill-le-cap=ok`、`skeleton=[cap:116 fill:116]`、`transport-complete=yes`、零错误 —— R1–R7 在第二个二进制上再次成立（`p63563=9,400` 亦复现）。
+
+**E2-A 结果**：`e2a-frames=0 e2a-tracks=0 e2a-failed=0 e2a-ok=yes e2a-w-domain=ok e2a-non-finite=no e2a-read-failed=no e2a-samples=0`，且日志里 **0 条 `e2a` 明细行**。
+
+**判读**：`is_pinned`（376 次）与 `clamped>0`（`clamped-zero=0`）都成立，说明块被执行；`slots_ok`/`weight_ok` 的失败标志均为否，说明 `probe_slot_view` 返回 `valid` 且权重在域内。因此 **`n = min(clamped, slot0.count, slot1.count) = 0`**，即两槽的轨道计数在 `dword[slot+4] > 2` 门下被判为 0。**但 v72 只在 `n>0` 时推 mix 记录，导致零轨迹时没有任何原始值可查**——这正是"零值必须带原始值"的教训在 E2-A 上的重演（与 v70 的 `unclassified` 同型）。
+
+**修复（v73，提交 `5cb55a717e`，DLL `2cc3e365…`，CodeView age 403，[构建记录](build.md#v73-g5e2-a-2026-11-07)）**：
+
+1. **每帧必记**：pinned 应用的 mix 帧无条件推记录，携带 `n`、`clamped`、`slot0.count`、`slot1.count`、`w`、`failed`、`max-delta`；`e2a` 行同时打印这些原始值。
+2. **修掉 v1 遗留的一级槽读**：apply-entry 明细的 `slot-num-data` 之前用 `[[g+0x220]+0x32]`（容器 + 偏移，得到 29,513/17,796 之类垃圾），改为一律走 `probe_slot_view` 的两级读（容器 → 槽 → `+0x32`）。
+3. 离线：e2a 7 例、v3 6 例、repair 2 例、legacy 8 例全部通过；Release exit 0。
+4. 已部署（v72 三件套备份 `dist/deploy-backup-20261107-v72-v73pre/`、INI `c3703b74…`、七门键回读正确）。
+
+**下一步**：一次同样操作的两段窗口，`e2a` 行会给出 `slot0/slot1` 的真实计数与 `n`。若仍为 0，则按原始计数定位（gate 值、`+0x32` 偏移语义或 `[g+0x220]` 的层级），不再靠推断；若 `n>0`，直接读 A1–A6。
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。

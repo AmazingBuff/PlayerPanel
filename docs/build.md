@@ -1121,3 +1121,20 @@ The resulting **local, uncommitted repair build** contains DLL 1,590,784 bytes S
 - Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
 
 **Deployed 2026-11-06 23:5x local** (no game process): v71 trio backed up hash-verified to `dist/deploy-backup-20261106-v71-v72pre/`; v72 DLL/PDB and the concurrent run INI `c3703b74…` (9,640 bytes) copied with destination-hash comparison and seven gate keys re-read correct. One two-segment session supplies the A1–A6 rows from the `e2a` fields.
+
+<a id="v73-g5e2-a-2026-11-07"></a>
+## v73 G5-E2-A diagnostics (2026-11-07, built and **deployed, awaiting the run**)
+
+**Why**: the v72 run ([log](diagnostics/CharacterPanel-g5e2-a-v72-run1-20261107-2224.log)) reported `e2a-frames=0` while `is_pinned` (376) and `clamped>0` held, so the block ran but `n = min(clamped, slot0.count, slot1.count)` was zero — and because a mix record was pushed only when a comparison happened, no raw slot count reached the log. E1's R1–R7 reproduced on v72 unchanged (`apply-paths` Σ 79,805 with `un=0`, 376/376 pairs, `fill==cap==116`, `in-flight-max=1`).
+
+**Changes** (committed `5cb55a717e`, clean tree): every pinned apply frame now pushes a mix record carrying `n`, `clamped`, `slot0.count`, `slot1.count`, `w`, `failed` and `max-delta`, and the `e2a` row prints all of them, so an `n==0` outcome is explainable from the log instead of inferred. The stale single-level slot read behind the apply-entry `slot-num-data` column (container + 0x32, which produced 29,513/17,796-style garbage) is replaced by the two-level `probe_slot_view` count.
+
+**Offline**: e2a (7), v3 (6), repair (2) and legacy (8) all pass; Release build exits 0 with only the pre-existing `D9025` notices.
+
+- Identity: `CharacterPanel-scenegraph-v73-g5e2-a-diagnostics-5cb55a717e-cl94faaed0c6-20261107T142719Z`
+- DLL: 1,705,472 bytes, SHA-256 `2cc3e36599187530dd9f93a95dece509ae2ddaeb0b00645ab31ec46f9737be3e`
+- PDB: 49,025,024 bytes, SHA-256 `226912aa8d9e79f7fb7b87b2e3c4a7cc06c6ab4bd792d5d1abdd33250d72fc30`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 403
+- Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
+
+**Deployed 2026-11-07 22:2x local**: v72 trio backed up hash-verified to `dist/deploy-backup-20261107-v72-v73pre/`; v73 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison and seven gate keys re-read correct.
