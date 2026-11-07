@@ -876,6 +876,13 @@ namespace animation::behavior_graph
         // The number frames had their IK gate prepared (all three pointers present), regardless of
         // whether the frame failed.
         std::uint64_t ik_ready_frames{ 0 };
+        // v76: failures split by the IK/post-process gate. The identity can only be judged strictly
+        // on frames where that gate is closed; an all-IK session is undecidable for E2-A and
+        // its residuals become E2-B input.
+        std::uint64_t ik_frames{ 0 };
+        std::uint64_t failed_ik{ 0 };
+        std::uint64_t failed_no_ik{ 0 };
+        std::uint64_t fail_frames_no_ik{ 0 };
 
         void add_frame(std::uint32_t a_tracks) noexcept
         {
@@ -940,6 +947,10 @@ namespace animation::behavior_graph
             fail_frames = 0;
             fail_frames_ik = 0;
             ik_ready_frames = 0;
+            ik_frames = 0;
+            failed_ik = 0;
+            failed_no_ik = 0;
+            fail_frames_no_ik = 0;
         }
 
         [[nodiscard]] bool clean() const noexcept
