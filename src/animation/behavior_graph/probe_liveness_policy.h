@@ -865,6 +865,17 @@ namespace animation::behavior_graph
         bool weight_out_of_range{ false };
         bool non_finite{ false };
         bool read_failed{ false };
+        // Failure attribution (v75): which slot a failing component is closer to, and how many
+        // failing frames had the IK/post-process gate prepared. Together with the sample rows these
+        // distinguish "the copy source is not slot0" from "a later writer touched poseLocal".
+        std::uint64_t near_slot0{ 0 };
+        std::uint64_t near_slot1{ 0 };
+        std::uint64_t near_neither{ 0 };
+        std::uint64_t fail_frames{ 0 };
+        std::uint64_t fail_frames_ik{ 0 };
+        // The number frames had their IK gate prepared (all three pointers present), regardless of
+        // whether the frame failed.
+        std::uint64_t ik_ready_frames{ 0 };
 
         void add_frame(std::uint32_t a_tracks) noexcept
         {
@@ -896,6 +907,20 @@ namespace animation::behavior_graph
             return false;
         }
 
+        // Attributes one failing component to the slot it actually matches, if any. Called by the
+        // comparator for every component that add_component rejected.
+        void classify_failure(float a_actual, float a_slot0, float a_slot1) noexcept
+        {
+            float const d0 = std::fabs(a_actual - a_slot0);
+            float const d1 = std::fabs(a_actual - a_slot1);
+            if (d0 <= d1 && probe_mix_delta(a_slot0, a_actual) == 0.0f)
+                ++near_slot0;
+            else if (d1 < d0 && probe_mix_delta(a_slot1, a_actual) == 0.0f)
+                ++near_slot1;
+            else
+                ++near_neither;
+        }
+
         void reset() noexcept
         {
             frames = 0;
@@ -909,6 +934,12 @@ namespace animation::behavior_graph
             weight_out_of_range = false;
             non_finite = false;
             read_failed = false;
+            near_slot0 = 0;
+            near_slot1 = 0;
+            near_neither = 0;
+            fail_frames = 0;
+            fail_frames_ik = 0;
+            ik_ready_frames = 0;
         }
 
         [[nodiscard]] bool clean() const noexcept
@@ -1007,11 +1038,16 @@ namespace animation::behavior_graph
         ProbeVec4 const expect_trans = probe_mix_trans(slot1_trans, slot0_trans, a_weight);
         float const expect_xyz[3] = { expect_trans.x, expect_trans.y, expect_trans.z };
         float const pose_xyz[3] = { pose_trans.x, pose_trans.y, pose_trans.z };
+        float const slot0_xyz[3] = { slot0_trans.x, slot0_trans.y, slot0_trans.z };
+        float const slot1_xyz[3] = { slot1_trans.x, slot1_trans.y, slot1_trans.z };
         for (std::uint8_t i = 0; i < 3; ++i)
         {
             if (!a_tally.add_component(a_index, static_cast<std::uint8_t>(Probe_Mix_Channel_Trans_X + i),
                     expect_xyz[i], pose_xyz[i]))
+            {
+                a_tally.classify_failure(pose_xyz[i], slot0_xyz[i], slot1_xyz[i]);
                 ++failed;
+            }
         }
         ProbeVec4 const pose_rot = probe_track_vec(a_pose, a_index, 1);
         ProbeVec4 const slot1_rot = probe_track_vec(a_slot1, a_index, 1);
@@ -1019,11 +1055,16 @@ namespace animation::behavior_graph
         ProbeVec4 const expect_rot = probe_mix_rot(slot1_rot, slot0_rot, a_weight);
         float const expect_quat[4] = { expect_rot.x, expect_rot.y, expect_rot.z, expect_rot.w };
         float const pose_quat[4] = { pose_rot.x, pose_rot.y, pose_rot.z, pose_rot.w };
+        float const slot0_quat[4] = { slot0_rot.x, slot0_rot.y, slot0_rot.z, slot0_rot.w };
+        float const slot1_quat[4] = { slot1_rot.x, slot1_rot.y, slot1_rot.z, slot1_rot.w };
         for (std::uint8_t i = 0; i < 4; ++i)
         {
             if (!a_tally.add_component(a_index, static_cast<std::uint8_t>(Probe_Mix_Channel_Rot_X + i),
                     expect_quat[i], pose_quat[i]))
+            {
+                a_tally.classify_failure(pose_quat[i], slot0_quat[i], slot1_quat[i]);
                 ++failed;
+            }
         }
         return failed;
     }

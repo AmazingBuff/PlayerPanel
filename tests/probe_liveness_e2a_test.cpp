@@ -185,6 +185,19 @@ namespace
         assert(probe_mix_mode(0.0f) == ProbeMixMode::e_fallback);
         assert(probe_mix_mode(0.5f) == ProbeMixMode::e_main);
     }
+    void failure_attribution_prefers_the_matching_slot()
+    {
+        ProbeMixTally tally{};
+        tally.classify_failure(5.0f, 5.0f, 1.0f);   // actual equals slot0
+        assert(tally.near_slot0 == 1 && tally.near_slot1 == 0 && tally.near_neither == 0);
+        tally.classify_failure(1.0f, 5.0f, 1.0f);   // actual equals slot1
+        assert(tally.near_slot1 == 1);
+        tally.classify_failure(3.0f, 5.0f, 1.0f);   // closer to neither
+        assert(tally.near_neither == 1);
+        tally.reset();
+        assert(tally.near_slot0 == 0 && tally.near_slot1 == 0 && tally.near_neither == 0);
+        assert(tally.fail_frames == 0 && tally.fail_frames_ik == 0 && tally.ik_ready_frames == 0);
+    }
     void slot_view_rejects_missing_or_implausible_pointers()
     {
         assert(!probe_slot_view(nullptr, Probe_Mix_Slot0_Container_Offset).valid);
@@ -218,6 +231,7 @@ int main()
     non_finite_is_a_failure();
     compare_track_accepts_the_explicit_identity();
     track_count_only_caps_by_participating_slots();
+    failure_attribution_prefers_the_matching_slot();
     slot_view_rejects_missing_or_implausible_pointers();
-    std::puts("8 probe-liveness e2a cases passed (engine-free)");
+    std::puts("9 probe-liveness e2a cases passed (engine-free)");
 }

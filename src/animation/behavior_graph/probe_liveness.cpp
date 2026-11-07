@@ -395,6 +395,23 @@ namespace
                         static_cast<std::byte const*>(slot0.tracks), weight, i, frame);
                 }
                 worst = frame.max_delta;
+                // v75 attribution: how many failing frames had the IK/post-process gate prepared
+                // ([g+0x110] -> [+0x40] -> [+0x88] with [g+0x100] present), versus frames where the
+                // copy source itself differed from slot0.
+                if (void const* const c110 = read_offset<void*>(graph, 0x110))
+                {
+                    if (void const* const gate = read_offset<void*>(c110, 0x40))
+                    {
+                        if (read_offset<std::uint8_t>(gate, 0x88) != 0 && read_offset<void*>(graph, 0x100) != nullptr)
+                        {
+                            ++s.mix.ik_ready_frames;
+                            if (failed > 0)
+                                ++s.mix.fail_frames_ik;
+                        }
+                    }
+                }
+                if (failed > 0)
+                    ++s.mix.fail_frames;
                 s.mix.frames += frame.frames;
                 if (probe_mix_mode(weight) == ProbeMixMode::e_main)
                     ++s.mix.main_frames;
@@ -593,7 +610,7 @@ namespace
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         char const* fill_state = s.fill_cap_state == 1 ? "ok" : (s.fill_cap_state == 2 ? "violation" : "unread");
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
+        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
             probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
             g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
             s.counters.entries_total.load(std::memory_order_relaxed),
@@ -637,9 +654,20 @@ namespace
             s.counters.pose_unstable.load(std::memory_order_relaxed) ? "no" : "yes",
             fill_state, s.skeleton_capacity, s.skeleton_fill,
             s.mix.frames, s.mix.main_frames, s.mix.fallback_frames, s.mix.tracks, s.mix.failed, s.mix.max_delta,
+            s.mix.fail_frames, s.mix.fail_frames_ik, s.mix.ik_ready_frames,
+            s.mix.near_slot0, s.mix.near_slot1, s.mix.near_neither,
             (s.mix.clean() ? "yes" : "no"), (s.mix.weight_out_of_range ? "violation" : "ok"),
             (s.mix.non_finite ? "yes" : "no"), (s.mix.read_failed ? "yes" : "no"),
             s.mix.sample_count);
+
+        // v75: the failing components themselves, so attribution never depends on a summary.
+        for (std::uint32_t i = 0; i < s.mix.sample_count; ++i)
+        {
+            ProbeMixTally::Sample const& sample = s.mix.samples[i];
+            logger::info("PROBE LIVENESS e2a-sample index={} track={} channel={} expected={:.6f} actual={:.6f} delta={:.6g}",
+                i, sample.track, static_cast<unsigned>(sample.channel), sample.expected, sample.actual,
+                sample.delta);
+        }
 
         g_plugin_graph.store(nullptr, std::memory_order_relaxed);
         g_pinned.store(nullptr, std::memory_order_release);
