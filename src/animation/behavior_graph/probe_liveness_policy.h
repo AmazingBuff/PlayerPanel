@@ -165,7 +165,10 @@ namespace animation::behavior_graph
         return reinterpret_cast<void*>(value - Probe_Table_Argument_Delta);
     }
 
-    struct ProbeRecord
+    // 16-byte aligned because ProbeRing copies whole records: at 64 bytes the compiler emits
+    // movaps for the four xmmwords, which faults with 0xC0000005 when the slot is only
+    // 8-aligned (exactly what happened on 2026-11-08 at CharacterPanel.dll+0x53f9c, twice).
+    struct alignas(16) ProbeRecord
     {
         std::uintptr_t graph;
         std::uint32_t caller_or_count;
@@ -197,6 +200,11 @@ namespace animation::behavior_graph
         std::uint8_t ik_global;
         std::uint8_t ik_root;
     };
+
+    // Guard the invariant that made ProbeRing::push compile to movaps: the record must fill whole
+    // xmmwords and the element type must be 16-aligned, or the copy faults.
+    static_assert(sizeof(ProbeRecord) % 16 == 0, "ProbeRecord must be a whole number of 16-byte words");
+    static_assert(alignof(ProbeRecord) >= 16, "ProbeRecord must be 16-byte aligned");
 
     class ProbePushGate
     {
