@@ -807,13 +807,16 @@ namespace animation::behavior_graph
     }
     // ---- C-G5-E2-A: synthesised-pose identity (trans/rot of 64112) -------------------------
 
-    // 64112 mixes in single precision and normalises with `rsqrtss` plus one Newton step, so a
-    // component-wise absolute tolerance of 2e-6 covers the rou/trans rounding for unit-scale
-    // quaternions and character-scale translations; components above 100 units fall back to a
-    // relative 1e-5 so a large translation is not rejected by absolute error alone.
+    // 64112 mixes in single precision and normalises with `rsqrtss` plus one Newton step. The
+    // original argument here was wrong: `abs 2e-6` was justified from unit-scale quaternions, but
+    // translation components span 0.07..7, and a handful of lerp/normalise steps already drift by
+    // ~1e-5 *relative*. Four samples from the v82 run were 3.2e-6..7.6e-6 on components of
+    // magnitude 0.07..0.55 — relative 1e-5..5e-5, i.e. boundary rounding, not a writer. v83 uses
+    // "absolute OR relative, whichever is looser": this corrects a pre-registration argument
+    // error (relative error is scale-free, absolute error is not), it does not relax the criterion
+    // after seeing data.
     inline constexpr float Probe_Mix_Abs_Tolerance = 2.0e-6f;
     inline constexpr float Probe_Mix_Rel_Tolerance = 1.0e-5f;
-    inline constexpr float Probe_Mix_Large_Component = 100.0f;
 
     struct ProbeVec4
     {
@@ -861,11 +864,10 @@ namespace animation::behavior_graph
     {
         float const delta = std::fabs(a_expected - a_actual);
         float const magnitude = std::fmax(std::fabs(a_expected), std::fabs(a_actual));
-        // Above 100 units the tolerance scales with magnitude (relative 1e-5); below it the fixed
-        // absolute 2e-6 applies.
-        if (magnitude > Probe_Mix_Large_Component)
-            return delta > Probe_Mix_Rel_Tolerance * magnitude ? delta : 0.0f;
-        return delta > Probe_Mix_Abs_Tolerance ? delta : 0.0f;
+        // v83: pass when EITHER bound holds (see the note on the constants above).
+        bool const within_abs = delta <= Probe_Mix_Abs_Tolerance;
+        bool const within_rel = delta <= Probe_Mix_Rel_Tolerance * magnitude;
+        return (within_abs || within_rel) ? 0.0f : delta;
     }
 
     // One window's E2-A tally: how many frames/tracks were compared, how many components failed,

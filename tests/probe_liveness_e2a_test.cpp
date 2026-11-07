@@ -62,19 +62,24 @@ namespace
             && degenerate.w == 0.0f);
     }
 
-    void tolerance_switches_at_one_hundred_units()
+    void tolerance_passes_when_either_bound_holds()
     {
-        // Below 100 units the absolute 2e-6 applies.
+        // Absolute bound: within 2e-6 always passes regardless of magnitude.
         assert(probe_mix_delta(1.0f, 1.0f + 1.0e-6f) == 0.0f);
-        assert(probe_mix_delta(1.0f, 1.0f + 3.0e-6f) > 0.0f);
-        // At 200 units the relative 1e-5 applies: 1.5e-3 passes, 3e-3 fails.
+        assert(probe_mix_delta(0.0001f, 0.0001f + 1.0e-6f) == 0.0f);
+        // Relative bound: 1e-5 of the magnitude, which is what the v82 samples needed
+        // (3.2e-6 on 0.074, 7.6e-6 on a near-zero component pass via the absolute bound).
+        assert(probe_mix_delta(0.5f, 0.5f + 3.0e-6f) == 0.0f);      // rel 6e-6 < 1e-5
+        // ...but 3.2e-6 on 0.074 is relative 4.3e-5, which exceeds BOTH bounds and must still be
+        // reported: the v82 samples are failures by the pre-registered criterion, not noise to
+        // absorb by widening it.
+        assert(probe_mix_delta(0.074f, 0.074f + 3.2e-6f) > 0.0f);
+        // A genuine writer must still be caught: 1% of a component is far outside both bounds.
+        assert(probe_mix_delta(0.5f, 0.505f) > 0.0f);
+        assert(probe_mix_delta(2.0f, 2.02f) > 0.0f);
+        // Large components stay covered by the relative bound only.
         assert(probe_mix_delta(200.0f, 200.0f + 1.5e-3f) == 0.0f);
         assert(probe_mix_delta(200.0f, 200.0f + 3.0e-3f) > 0.0f);
-        // Below the boundary the absolute rule still applies. 50.0f has a 3.8e-6 ulp, so adding
-        // 5e-6 is representable and lands above the 2e-6 tolerance (100.0f would quantise 3e-6
-        // away entirely, which is a test-input problem rather than an implementation one).
-        assert(probe_mix_delta(50.0f, 50.0f + 5.0e-6f) > 0.0f);
-        assert(probe_mix_delta(50.0f, 50.0f + 1.0e-6f) == 0.0f);
     }
 
     void tally_counts_failures_and_keeps_four_samples()
@@ -277,7 +282,7 @@ int main()
 {
     mix_matches_endpoints_and_midpoint();
     rot_mix_normalises_and_handles_sign();
-    tolerance_switches_at_one_hundred_units();
+    tolerance_passes_when_either_bound_holds();
     tally_counts_failures_and_keeps_four_samples();
     non_finite_is_a_failure();
     compare_track_accepts_the_explicit_identity();
