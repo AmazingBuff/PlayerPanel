@@ -1157,3 +1157,26 @@ The resulting **local, uncommitted repair build** contains DLL 1,590,784 bytes S
 **Deployed 2026-11-07 22:3x local**: v73 trio backed up hash-verified to `dist/deploy-backup-20261108-v73-v74pre/`; v74 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison and gate keys re-read.
 
 **Expectation for the next run**: `e2a-fallback-frames` should cover the pinned frames and `e2a-failed` should stay 0 (fallback is `poseLocal == slot0`); `e2a-main-frames` may legitimately stay 0, in which case the two-slot blend is *uncovered* and needs a transition-triggering sequence rather than being claimed as passing.
+
+<a id="v75-g5e2-a-2026-11-07"></a>
+## v75 G5-E2-A failure attribution (2026-11-07, built and **deployed, awaiting the run**)
+
+**Why**: v74 ([log](diagnostics/CharacterPanel-g5e2-a-v74-run3-20261108.log)) produced the first real identity comparison — 352 frames, 40,832 tracks, `e2a-failed=5,838` (2.04% of 285,824 components), `max-delta` up to 2.0, about 130 visible frames exactly matching — and `e2a-main-frames=0` (fallback only). The failing components were stored but never printed, so attribution had to be inferred again.
+
+**Changes** (committed `01001f16a3`, clean tree):
+
+1. The four failing components are emitted as `e2a-sample` rows at close (`track/channel/expected/actual/delta`).
+2. Every failing component is classified against both slots: `e2a-near-slot0` / `e2a-near-slot1` / `e2a-near-neither`, distinguishing "the copy source is not slot0" from "a later writer changed poseLocal".
+3. Each failing frame records whether the IK/post-process gate was prepared (`[g+0x110]` → `[+0x40]` → `[+0x88]` with `[g+0x100]` present): `e2a-fail-frames`, `e2a-fail-ik`, `e2a-ik-ready` (the last counts prepared frames regardless of outcome).
+
+All three are read-only and add no detour. **Offline**: e2a 9 cases (attribution included) + v3 6 + repair 2 + legacy 8 pass; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v75-g5e2-a-attribution-01001f16a3-cl94faaed0c6-20261107T144305Z`
+- DLL: 1,709,056 bytes, SHA-256 `04ea0b978f8b315af9eae44a9742ff83060a34908ba16b92e681d9ddadf78d69`
+- PDB: 49,082,368 bytes, SHA-256 `1403b769852d4a45bd96578d7eb9061a23d165fadf1edfba5ea5d036008391d7`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 406
+- Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
+
+**Deployed 2026-11-07 22:4x local**: v74 trio backed up hash-verified to `dist/deploy-backup-20261108-v74-v75pre/`; v75 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison and gate keys re-read.
+
+**Reading**: `e2a-near-slot0` dominant ⇒ the copy source is not slot0 (63666's output block); `e2a-near-neither` dominant with `e2a-fail-ik` matching the failing frames ⇒ a later writer (IK/post-process) touched poseLocal; `e2a-sample` rows name the exact tracks and channels either way.
