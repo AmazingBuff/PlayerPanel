@@ -1180,3 +1180,20 @@ All three are read-only and add no detour. **Offline**: e2a 9 cases (attribution
 **Deployed 2026-11-07 22:4x local**: v74 trio backed up hash-verified to `dist/deploy-backup-20261108-v74-v75pre/`; v75 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison and gate keys re-read.
 
 **Reading**: `e2a-near-slot0` dominant ⇒ the copy source is not slot0 (63666's output block); `e2a-near-neither` dominant with `e2a-fail-ik` matching the failing frames ⇒ a later writer (IK/post-process) touched poseLocal; `e2a-sample` rows name the exact tracks and channels either way.
+
+<a id="v76-g5e2-a-2026-11-07"></a>
+## v76 G5-E2-A IK-split attribution (2026-11-07, built and **deployed, awaiting the run**)
+
+**Why**: v75 ([log](diagnostics/CharacterPanel-g5e2-a-v75-run4-20261108.log)) showed the residual is deterministic and post-process-shaped: 354 fallback frames, 9,223 of 287,448 components mismatched, `fail-frames = fail-ik = 260`, `ik-ready = 354`, per-frame failures steady at 21–26 with `max-delta` ≈ 0.1795, and all four samples on track 6 (rotation deltas 0.003–0.077). Two defects also surfaced: the per-component attribution was accumulated into the local frame tally only (`e2a-near-*` stayed zero), and failures were not split by the gate.
+
+**Changes** (committed `92db871ea7`, clean tree): attribution now accumulates into the window tally; failures are split into `e2a-ik-frames`, `e2a-failed-ik`, `e2a-failed-no-ik` and `e2a-fail-no-ik` so **only gate-closed frames test the plain fallback copy** while gate-open residuals become E2-B input. The strict criterion is now `failed-no-ik == 0`.
+
+**Offline**: e2a 9 + v3 6 + repair 2 + legacy 8 pass; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v76-g5e2-a-ik-split-92db871ea7-cl94faaed0c6-20261107T145907Z`
+- DLL: 1,709,568 bytes, SHA-256 `e183927df6ae6f76a2aa69a2a9915ce8cb4599cc1ebba9f9f9b5ce915c6e6f0d`
+- PDB: 49,106,944 bytes, SHA-256 `a807f2c0eeca140717723cdf14c9b11815f5f4ec71e893e53e3dfe1752d7d1f4`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 408
+- Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
+
+**Deployed 2026-11-07 22:5x local**: v75 trio backed up hash-verified to `dist/deploy-backup-20261108-v75-v76pre/`; v76 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
