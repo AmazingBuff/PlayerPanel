@@ -1197,3 +1197,24 @@ All three are read-only and add no detour. **Offline**: e2a 9 cases (attribution
 - Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
 
 **Deployed 2026-11-07 22:5x local**: v75 trio backed up hash-verified to `dist/deploy-backup-20261108-v75-v76pre/`; v76 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
+
+<a id="v77-g5e2-a-2026-11-07"></a>
+## v77 G5-E2-A corrected 58423 gate (2026-11-07, built and **deployed, awaiting the run**)
+
+**Anti-pattern 12 correction**: offline re-reading of the 63581 dump shows the v75/v76 "IK gate" was the **payload-overwrite gate** at 0xbaffc3..0xbaffed (`[g+0x110] -> [+0x40] -> [+0x88]` with `[g+0x100]`), which copies `[g+0x148]` into the out **payload** and is unrelated to 58423. It was open on all 354 v75 frames, so `fail-ik == fail-frames` had no separating power and the §十二 attribution ("residual = IK post-process") is **withdrawn**; only the raw readings (9,223 mismatched components, 21–26 per frame, `max-delta` ≈ 0.1795, samples on track 6) survive.
+
+The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!=0 && byte[0x2022530]!=0 && [g+0x218]!=nullptr`. `byte[g+0x249]` is rewritten per frame by 63587 (from ctx+0x2e at 0xbb23b7 or the frame state at 0xbb28da); `0x2022530` is an engine-wide byte (static image value 1, three refs in 63581/63587).
+
+**Changes** (committed `236775890a`, clean tree): `probe_ik_gate_open(count, mode, global, root)` as an engine-free pure function; all four inputs read per frame and printed as `ik=[mode:… count:… global:… root:…]` on every `e2a` row; the `failed-ik`/`failed-no-ik` split now uses the corrected gate. Criterion unchanged (`failed-no-ik == 0`).
+
+**Offline**: e2a 10 + v3 6 + repair 2 + legacy 8 pass; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v77-g5e2-a-real-ik-gate-236775890a-cl94faaed0c6-20261107T153830Z`
+- DLL: 1,742,336 bytes, SHA-256 `ac96f2a4a1ec77062158b18a3c7a248d4192837a18446126ac4b7866f24262ca`
+- PDB: 49,115,136 bytes, SHA-256 `c5757848d4cd2935aaabffba38fcb2d56664a8f617aa2643b736e383e03b0841`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 411
+- Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
+
+**Deployed 2026-11-07 23:3x local**: v76 trio backed up hash-verified to `dist/deploy-backup-20261108-v76-v77pre/`; v77 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison and gate keys re-read.
+
+**Route-A session**: to obtain gate-closed frames, `byte[g+0x249]` (from ctx+0x2e) must be 0 — try an airborne/no-ground-IK position or a posture where footIK is inactive, then open the panel. Inspect the per-frame `ik=[…]` bytes first; with no `mode:0` frames the session is "undecidable in this configuration" and the IK-frame residuals must not be counted as a pass.
