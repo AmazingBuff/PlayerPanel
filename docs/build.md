@@ -1270,3 +1270,21 @@ The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!
 - CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 417
 
 **Deployed 2026-11-08 01:3x local**: v79 trio backed up to `dist/deploy-backup-20261108-v79-v80pre/`; v80 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
+
+<a id="v81-g5e2-ap-2026-11-08"></a>
+## v81 G5-E2-A′ byte-wise record copy (2026-11-08, built and **deployed**)
+
+**Why v80 failed**: the `alignas(16)` did not change code generation — the rebuilt DLL still had `movaps [rsp]` at the same `0x53f9c`, and a third crash (01:34, `0xC0000005`, `CharacterPanel.dll`, same offset) confirmed it. The faulting load reads the **source** on the stack (the ring slot stores are `movups`), so declaring alignment only made the compiler *more* confident about using `movaps`.
+
+**Fix** (committed `f7382f59cd`, clean tree): `copy_probe_record` copies volatile byte-wise and `ProbeRing::push`/`pop` use it, so no block vectorisation can occur; the two 16-byte static asserts are removed because they encoded the wrong invariant.
+
+**Offline verification**: scanning `.text` for the ring pattern now finds **zero `movaps`/`movups`** near it (previously 2 `movaps` + 6 `movups`). Suites: e2a 12 + v3 6 + repair 2 + legacy 8 pass.
+
+- Identity: `CharacterPanel-scenegraph-v81-g5e2-ap-bytecopy-f7382f59cd-cl94faaed0c6-20261107T173723Z`
+- DLL: 1,779,200 bytes, SHA-256 `2fcb029c4336511daee4c63a01944a0b4e8715724d05a738b68dacb41a23b7b7`
+- PDB: 49,172,480 bytes, SHA-256 `68d57d1e2c919e90cae4bca8cf3088bb20cb41c216ea9b63377424b815696090`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 420
+
+**Deployed 2026-11-08 01:5x local**: v80 trio backed up to `dist/deploy-backup-20261108-v80-v81pre/`; v81 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
+
+**Acceptance rule added**: for any fix aimed at a compiler-generated fault, re-disassemble the rebuilt DLL and prove the instruction changed — a passing `static_assert` is not evidence.
