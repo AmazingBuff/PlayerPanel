@@ -1238,3 +1238,19 @@ The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!
 - CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 413
 
 **Deployed 2026-11-08 01:2x local**: v77 trio backed up hash-verified to `dist/deploy-backup-20261108-v77-v78pre/`; v78 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
+
+<a id="v79-g5e2-ap-2026-11-08"></a>
+## v79 G5-E2-A′ per-frame bone attribution (2026-11-08, built and **deployed, awaiting the run**)
+
+**Why**: the v78 session ([log](diagnostics/CharacterPanel-g5e2-ap-v78-run6-20261108.log)) cached the bone names successfully (`bone-names cached=116`) and armed, but the log was truncated five seconds after the transition, so the close row never ran and `e2a-fail-foot`/`e2a-fail-other` were lost — the second session in a row to end early after the transition.
+
+**Change** (committed `c1bf46c5b7`, clean tree): the per-frame `fail_foot`/`fail_other` counts ride on the mix record and print as `foot={} other={}` on every `e2a` row, so a single frame is enough to judge A7a/A7b even if the window is interrupted. The close row keeps the cumulative values.
+
+**Offline**: e2a 12 + v3 6 pass; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v79-g5e2-ap-frame-bones-c1bf46c5b7-cl94faaed0c6-20261107T171924Z`
+- DLL: 1,779,200 bytes, SHA-256 `3e1d2eb229f9eaa9c542a95204e2e099125c0572780a5a8290b9d33ca4578a78`
+- PDB: 49,172,480 bytes, SHA-256 `329e0d8f4b74e053c6115f2a356ffb167f300bd946b9fc298f32f8714b17db82`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 415
+
+**Deployed 2026-11-08 01:2x local**: v78 trio backed up to `dist/deploy-backup-20261108-v78-v79pre/`; v79 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
