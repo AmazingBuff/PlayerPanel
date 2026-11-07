@@ -3850,4 +3850,24 @@ poseLocal 的每条轨道是否等于"槽1 与槽0 按 `[g+0x230]` 的混合"？
 4. 已部署（v72 三件套备份 `dist/deploy-backup-20261107-v72-v73pre/`、INI `c3703b74…`、七门键回读正确）。
 
 **下一步**：一次同样操作的两段窗口，`e2a` 行会给出 `slot0/slot1` 的真实计数与 `n`。若仍为 0，则按原始计数定位（gate 值、`+0x32` 偏移语义或 `[g+0x220]` 的层级），不再靠推断；若 `n>0`，直接读 A1–A6。
+
+**十、第二轮诊断（v73，2026-11-07 22:31）—— 零的原始值到手：全窗口都是 fallback 分支**
+
+工件：v73 DLL `2cc3e365…`、日志 [393,202 字节 `bb22593e…`](diagnostics/CharacterPanel-g5e2-a-v73-run2-20261108.log)，零 `[E]`。E1 v3 再次复现（`apply-paths` Σ 75,940 且 `un=0`、`apply-completions=63568:362`=`completions-pinned`=`pinned-apply-entries`、`p63563=9,102`、`fill==cap==116`、`in-flight-max=1`）。
+
+`e2a` 行给出原始值：**全部 276 条都是 `n=0 clamped=116 slot0=116 slot1=0 w=1.000000`**。据此：
+
+1. **`n=0` 的直接原因**：v73 的实现无条件用 `n = min(clamped, 槽0.count, 槽1.count)`，而槽1 为空（count=0）→ n=0。这是**实现缺陷**：`w=1` 时槽1 不参与混合，不该限制 n。
+2. **`w=1.000000` 的意义**：63581 只在 **fallback 分支**（双槽门 `max(tA,tB)≥0 && min(tA,tB)<0` 失败）写 `[g+0x230]=1.0f`（audit32 §二）。因此**整个 resumed 段源图每帧都走 fallback**，64112 的双槽 lerp/nlerp 一次也没有执行。
+3. **由此得到的结构性事实**（新）：源图在稳定 idle 采样下**不产生双槽混合帧**；E2-A 的双槽恒等式（A2/A3 的核心）不能靠"正常开面板采样"覆盖，只能在槽交接瞬间（切换/过渡）才可能出现。
+
+**修复（v74，提交 `22e234c2ea`，DLL `9a28389f…26cbfb`，CodeView age 404，[构建记录](build.md#v74-g5e2-a-2026-11-07)）**：
+
+1. `probe_mix_track_count(clamped, w, 槽0.count, 槽1.count)`：**只按参与混合的槽取上限**——`w>0` 才受槽0 约束、`w<1` 才受槽1 约束；fallback（`w=1`）退化为 `min(clamped, 槽0.count)`。
+2. `probe_mix_mode(w)`：`w∈{0,1}` 记 `fallback`，严格内部记 `main`；tally 分别累计 `main_frames`/`fallback_frames`，关闭行新增 `e2a-main-frames`/`e2a-fallback-frames`。
+3. 槽可读性同样按参与性检查（`need0/need1`），不再因不参与的槽无效而判 `read-failed`。
+4. 离线：e2a **8 例**（含权重感知计数与分支分类）+ v3 6 + repair 2 + legacy 8 全过；Release exit 0。
+5. 已部署（v73 三件套备份 `dist/deploy-backup-20261108-v73-v74pre/`、INI `c3703b74…`、门键回读正确）。
+
+**下一轮的读法（预注册）**：`e2a-fallback-frames` 应覆盖全部 276 帧左右，验证 "fallback ⇒ `poseLocal == 槽0`"（这是 A2/A3 在单槽分支上的实例）；`e2a-main-frames` 若仍为 0，则**必须在结论里写明"主路径双槽混合本窗口未覆盖"**，并另设计能触发槽交接的操作序列（例如面板内播放 equip/unequip 过渡、或在采样窗口内切换剪辑），不得把 fallback 通过当作双槽混合通过。
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。

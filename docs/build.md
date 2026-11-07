@@ -1138,3 +1138,22 @@ The resulting **local, uncommitted repair build** contains DLL 1,590,784 bytes S
 - Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
 
 **Deployed 2026-11-07 22:2x local**: v72 trio backed up hash-verified to `dist/deploy-backup-20261107-v72-v73pre/`; v73 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison and seven gate keys re-read correct.
+
+<a id="v74-g5e2-a-2026-11-07"></a>
+## v74 G5-E2-A slot-scoped identity (2026-11-07, built and **deployed, awaiting the run**)
+
+**Why**: the v73 diagnostics ([log](diagnostics/CharacterPanel-g5e2-a-v73-run2-20261108.log)) showed all 276 pinned frames as `slot0=116 slot1=0 w=1.000000`, i.e. the source graph ran the **fallback branch** for the whole resumed segment, and the identity count was capped by both slot counts regardless of weight — so the empty inactive slot forced `n=0`. The same log reproduced every E1 v3 criterion (`apply-paths` Σ 75,940 with `un=0`, 362/362 pairs, `p63563=9,102`, `fill==cap==116`).
+
+**Changes** (committed `22e234c2ea`, clean tree): `probe_mix_track_count(clamped, w, slot0, slot1)` caps the count only by slots that participate at that weight (`w>0` for slot0, `w<1` for slot1), so fallback degenerates to `min(clamped, slot0.count)`; `probe_mix_mode(w)` classifies `w∈{0,1}` as fallback and any strict interior weight as main; the tally keeps `main_frames`/`fallback_frames` and the close row gains `e2a-main-frames`/`e2a-fallback-frames`. Slot readability follows the same participation rule, so an inactive invalid slot no longer marks the frame as a read failure.
+
+**Offline**: e2a 8 cases (weight-aware count, branch classifier added) + v3 6 + repair 2 + legacy 8 all pass; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v74-g5e2-a-slot-scope-22e234c2ea-cl94faaed0c6-20261107T143434Z`
+- DLL: 1,705,984 bytes, SHA-256 `9a28389f4a4f1d508c957124579b965bce8a0291cb4fbb38e3cd81c93d26cbfb`
+- PDB: 49,049,600 bytes, SHA-256 `147a114d862ae19e5c3ada658b10a16f5512673e24455e16a5c4965faf5c5b3c`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 404
+- Exports: `SKSEPlugin_Load` / `SKSEPlugin_Query` / `SKSEPlugin_Version`
+
+**Deployed 2026-11-07 22:3x local**: v73 trio backed up hash-verified to `dist/deploy-backup-20261108-v73-v74pre/`; v74 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison and gate keys re-read.
+
+**Expectation for the next run**: `e2a-fallback-frames` should cover the pinned frames and `e2a-failed` should stay 0 (fallback is `poseLocal == slot0`); `e2a-main-frames` may legitimately stay 0, in which case the two-slot blend is *uncovered* and needs a transition-triggering sequence rather than being claimed as passing.
