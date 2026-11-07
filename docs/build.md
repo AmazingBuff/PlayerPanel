@@ -1254,3 +1254,19 @@ The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!
 - CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 415
 
 **Deployed 2026-11-08 01:2x local**: v78 trio backed up to `dist/deploy-backup-20261108-v78-v79pre/`; v79 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
+
+<a id="v80-g5e2-ap-2026-11-08"></a>
+## v80 G5-E2-A′ probe-record alignment fix (2026-11-08, built and **deployed**)
+
+**Crash**: two panel-close crashes (01:23:02, 01:25:51) reported by Windows Error Reporting as `SkyrimSE.exe` `0xC0000005` with the faulting module `CharacterPanel.dll` at **identical offset `0x53f9c`**. Disassembly of that RVA shows `movaps xmm0, [rsp]` inside the 4096-entry ring copy (`and eax,0xfff` / `shl rax,6` / `movups [rax+rbx+0x30]`). At 64 bytes per record the compiler vectorises the whole-record store and requires 16-byte alignment, but `ProbeRecord`'s widest member is `uintptr_t`, so its `alignof` was 8 and the static `ProbeState` carried that into the array storage. v79's two extra `uint16` counters made the record exactly 64 bytes, flipping `movups` to `movaps` and turning the latent defect into a hard fault (v78's 60-byte record did not trigger it). CrashLogger installed its handlers but produced only `CrashLogger.log`, no `crash-*.log` — WER was the reliable source.
+
+**Fix** (committed `357f3f1644`, clean tree): `struct alignas(16) ProbeRecord` plus `static_assert(sizeof(ProbeRecord) % 16 == 0)` and `static_assert(alignof(ProbeRecord) >= 16)` so no future field change can silently reintroduce it.
+
+**Offline**: e2a 12 + v3 6 + repair 2 + legacy 8 pass; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v80-g5e2-ap-align-fix-357f3f1644-cl94faaed0c6-20261107T172944Z`
+- DLL: 1,779,200 bytes, SHA-256 `8a83003902e9519b7d18150ea305b698cf3c07a21ec44f81ae62ac9c2ed7fb67`
+- PDB: 49,172,480 bytes, SHA-256 `9ec7ec57c8386361ff134386a10fd1e5d34f92fb448000eed046897b41d479fb`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 417
+
+**Deployed 2026-11-08 01:3x local**: v79 trio backed up to `dist/deploy-backup-20261108-v79-v80pre/`; v80 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.

@@ -4015,4 +4015,33 @@ poseLocal 的每条轨道是否等于"槽1 与槽0 按 `[g+0x230]` 的混合"？
 - 已部署（v78 三件套备份 `dist/deploy-backup-20261108-v78-v79pre/`、INI `c3703b74…`）。
 
 **下一轮的读法（不变）**：任一 `e2a` 行的 `other=` 为 0 且 `foot>`0 ⇒ A7a 成立；`other>0` ⇒ A7b 推翻，并给出该帧的 `mix-failed` 与骨名（v79 的 `e2a-bone` 仍只在关闭行输出，但 `other=` 计数已足够判断，骨名可在关闭行出现时获得）。
+
+**十七、v79 崩溃定位与修复（2026-11-08 01:23 / 01:25）—— 探针记录的对齐缺陷**
+
+**现象**：退出面板时进程崩溃，CrashLogger 已装 handler 但**未写出 crash 文件**。
+
+**证据链**：
+
+1. **Windows 事件日志**（`Application` / `Application Error`，Id 1000）给出：`SkyrimSE.exe 1.6.1170.0`、故障模块 **`CharacterPanel.dll`**、异常 **`0xC0000005`**、**错误偏移 `0x53f9c`**；两次崩溃（01:23:02、01:25:51）**偏移完全相同** → 稳定复现。
+2. **离线反汇编**该 RVA（DLL 基址 0x180000000，`.text` 起始 0x1000）得到崩溃指令：
+   ```
+   0x053f67: cmp rax, 0x1000          ; 环深度 4096
+   0x053f6d: jb  0x180053f9c
+   0x053f9c: movaps xmm0, [rsp]       ; <== FAULT（16 字节对齐要求）
+   ...
+   0x053fac: and eax, 0xfff           ; head % 4096
+   0x053fad: shl rax, 6               ; × 64（ProbeRecord 大小）
+   0x053fb1: movups [rax+rbx+0x30] …  ; 写环槽
+   ```
+   这是 **`ProbeRing::push` 的整记录拷贝**被向量化为 4×xmm + `movaps`。
+3. **根因**：`ProbeRecord` 最宽成员是 `std::uintptr_t` → `alignof` 仅 8；`static ProbeState` 因而只保证 8 对齐，`m_slots` 的 16 字节槽也可能只 8 对齐。**v79 给记录加了两个 `uint16` 使 `sizeof` 恰为 64（整 4 个 xmm）**，编译器于是把拷贝从 `movups` 换成要求对齐的 `movaps`，把一直潜伏的对齐缺陷暴露成硬崩溃；v78 的 60 字节记录不会触发。
+4. **为何没有 crash log**：`0xC0000005` 由 WER 记录，但 CrashLogger 本轮只写了 `CrashLogger.log`（未生成 `crash-*.log`）——**此路径不可依赖**；Windows 事件日志才是可靠的第一手段。
+
+**修复（v80，提交 `357f3f1644`，DLL `8a830039…d7fb67` 1,779,200 字节，CodeView age 417，[构建记录](build.md#v80-g5e2-ap-2026-11-08)）**：
+
+- `struct alignas(16) ProbeRecord`，使数组存储 16 对齐、`movaps` 安全。
+- 两条 `static_assert` 钉死不变量：`sizeof(ProbeRecord) % 16 == 0` 且 `alignof(ProbeRecord) >= 16`，**未来任何字段增删都不能再静默破坏它**。
+- 离线四个套件（12/6/2/8）全过；已部署（v79 三件套备份 `dist/deploy-backup-20261108-v79-v80pre/`）。
+
+**新增反模式 16**：记录/结构的布局变更会改变编译器的指令选择（`movups`↔`movaps`）；对会被整块拷贝、且位于静态或堆容器中的 POD，**对齐必须显式声明并 static_assert**，不能靠"以前没崩"推断。另：DLL 崩溃定位的第一手段是 Windows 事件日志的"故障模块 + 偏移"，配 capstone 反汇编即可精确到指令。
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。
