@@ -228,6 +228,29 @@ namespace
         return value;
     }
 
+    // 58423's IK/post-process gate (audit29/63581 at 0xbb0040..0xbb0076): four conditions, all
+    // read from the graph and one engine-wide byte. This is NOT the payload-overwrite gate at
+    // 0xbaffc3 (`[g+0x110] -> [+0x40] -> [+0x88]` with `[g+0x100]`), which v75/v76 mistakenly
+    // used: that one copies `[g+0x148]` into the out payload and is unrelated to 58423.
+    // `byte[g+0x249]` is rewritten every frame by 63587 from ctx+0x2e (0xbb23b7) or the frame
+    // state (0xbb28da), so this gate genuinely varies from frame to frame.
+    // Reads the four 58423 gate inputs (see probe_ik_gate_open in the policy header).
+    bool ik_gate_open(void const* a_graph) noexcept
+    {
+        if (a_graph == nullptr)
+            return false;
+        auto const* const g = static_cast<std::byte const*>(a_graph);
+        auto const count = read_offset<std::uint16_t>(g, 0x240);
+        auto const mode = read_offset<std::uint8_t>(g, 0x249);
+        auto const root = read_offset<void const*>(g, 0x218) != nullptr;
+        std::uint8_t global = 0;
+        // Engine-wide IK enable byte; an image RVA, read only on the pinned runtime.
+        constexpr std::uint32_t Ik_Global_Rva = 0x2022530;
+        if (exact_runtime())
+            global = *reinterpret_cast<std::uint8_t const*>(game_base() + Ik_Global_Rva);
+        return probe_ik_gate_open(count, mode, global, root);
+    }
+
     std::uint32_t caller_rva_of(void* a_caller) noexcept
     {
         auto const value = reinterpret_cast<std::uintptr_t>(a_caller);
@@ -395,19 +418,10 @@ namespace
                         static_cast<std::byte const*>(slot0.tracks), weight, i, frame);
                 }
                 worst = frame.max_delta;
-                // v75/v76 attribution: the IK/post-process gate decides whether the identity can be
-                // judged at all ([g+0x110] -> [+0x40] -> [+0x88] with [g+0x100] present). Failures on
-                // gate-open frames are residuals of that post-process (E2-B input); only gate-closed
-                // frames test the plain fallback copy.
-                bool ik_ready = false;
-                if (void const* const c110 = read_offset<void*>(graph, 0x110))
-                {
-                    if (void const* const gate = read_offset<void*>(c110, 0x40))
-                    {
-                        ik_ready = read_offset<std::uint8_t>(gate, 0x88) != 0
-                            && read_offset<void*>(graph, 0x100) != nullptr;
-                    }
-                }
+                // v77 attribution: the real 58423 gate (four conditions, see ik_gate_open above),
+                // not the payload-overwrite gate v75/v76 used. A frame is only a strict test of the
+                // plain fallback copy when that gate is closed; gate-open residuals are E2-B input.
+                bool const ik_ready = ik_gate_open(graph);
                 if (ik_ready)
                 {
                     ++s.mix.ik_ready_frames;
@@ -458,6 +472,16 @@ namespace
             mix.clamped = clamped > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(clamped);
             mix.slot0_count = slot0.count > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(slot0.count);
             mix.slot1_count = slot1.count > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(slot1.count);
+            // The four 58423 gate bytes, so a gate-closed frame is directly readable.
+            if (is_pinned && plausible_object_pointer(reinterpret_cast<std::uintptr_t>(graph)))
+            {
+                auto const* const g = static_cast<std::byte const*>(graph);
+                mix.ik_mode = read_offset<std::uint8_t>(g, 0x249);
+                mix.ik_count = read_offset<std::uint16_t>(g, 0x240);
+                mix.ik_global = static_cast<std::uint8_t>(exact_runtime()
+                    ? *reinterpret_cast<std::uint8_t const*>(game_base() + 0x2022530) : 0);
+                mix.ik_root = read_offset<void const*>(g, 0x218) != nullptr ? 1 : 0;
+            }
             mix.path = static_cast<std::uint8_t>(path_index);
             mix.tid = static_cast<std::uint32_t>(__readgsqword(0x48));
             mix.kind = k_mix_frame;
@@ -603,10 +627,12 @@ namespace
             }
             else if (record.kind == k_mix_frame)
             {
-                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} n={} clamped={} slot0={} slot1={} w={:.6f} mix-failed={} max-delta={:.3e}",
+                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} n={} clamped={} slot0={} slot1={} w={:.6f} ik=[mode:{} count:{} global:{} root:{}] mix-failed={} max-delta={:.3e}",
                     record.tid, record.graph, probe_apply_path_name(static_cast<ProbeApplyPath>(record.path)),
                     record.num240, record.clamped, record.slot0_count, record.slot1_count,
-                    record.weight, record.mix_failed, record.max_delta);
+                    record.weight, static_cast<unsigned>(record.ik_mode), record.ik_count,
+                    static_cast<unsigned>(record.ik_global), static_cast<unsigned>(record.ik_root),
+                    record.mix_failed, record.max_delta);
             }
             else
             {

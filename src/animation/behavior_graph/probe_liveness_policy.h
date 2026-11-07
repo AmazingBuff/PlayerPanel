@@ -187,6 +187,11 @@ namespace animation::behavior_graph
         // with no way to see why).
         std::uint16_t slot0_count;
         std::uint16_t slot1_count;
+        // v77: the four 58423 gate bytes recorded per frame.
+        std::uint16_t ik_count;
+        std::uint8_t ik_mode;
+        std::uint8_t ik_global;
+        std::uint8_t ik_root;
     };
 
     class ProbePushGate
@@ -1037,6 +1042,20 @@ namespace animation::behavior_graph
     {
         return a_weight >= 1.0f || a_weight <= 0.0f ? ProbeMixMode::e_fallback : ProbeMixMode::e_main;
     }
+    // C-G5-E2-A v77: the real 58423 IK/post-process gate, verified at 63581
+    // 0xbb0040..0xbb0076. Four conditions, one of them engine-wide:
+    //   word[g+0x240] > 0 && byte[g+0x249] != 0 && byte[0x2022530] != 0 && [g+0x218] != nullptr
+    // This is NOT the payload-overwrite gate at 0xbaffc3, which v75/v76 mistakenly used: that one
+    // copies [g+0x148] into the out payload and is unrelated to 58423. byte[g+0x249] is rewritten
+    // every frame by 63587 from ctx+0x2e (0xbb23b7) or the frame state (0xbb28da), so this gate
+    // genuinely varies; the previous one was open on every frame of the v75 run and had no power
+    // to separate anything.
+    [[nodiscard]] inline bool probe_ik_gate_open(std::uint16_t a_count, std::uint8_t a_mode,
+        std::uint8_t a_global, bool a_root) noexcept
+    {
+        return a_count > 0 && a_mode != 0 && a_global != 0 && a_root;
+    }
+
     // Compares one track of poseLocal against the identity for the same index. Returns the number
     // of failed components and feeds the tally.
     inline std::uint32_t probe_compare_track(std::byte const* a_pose, std::byte const* a_slot1,

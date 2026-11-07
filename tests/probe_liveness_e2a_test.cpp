@@ -198,6 +198,17 @@ namespace
         assert(tally.near_slot0 == 0 && tally.near_slot1 == 0 && tally.near_neither == 0);
         assert(tally.fail_frames == 0 && tally.fail_frames_ik == 0 && tally.ik_ready_frames == 0);
     }
+    void real_ik_gate_requires_all_four_conditions()
+    {
+        assert(probe_ik_gate_open(116, 1, 1, true));
+        assert(!probe_ik_gate_open(0, 1, 1, true));
+        assert(!probe_ik_gate_open(116, 0, 1, true));
+        assert(!probe_ik_gate_open(116, 1, 0, true));
+        assert(!probe_ik_gate_open(116, 1, 1, false));
+        // The payload-overwrite gate used by v75/v76 is a different object entirely; the four
+        // inputs above are the ones 63581 actually reads before calling 58423.
+        assert(!probe_ik_gate_open(116, 0, 1, true));
+    }
     void slot_view_rejects_missing_or_implausible_pointers()
     {
         assert(!probe_slot_view(nullptr, Probe_Mix_Slot0_Container_Offset).valid);
@@ -232,6 +243,7 @@ int main()
     compare_track_accepts_the_explicit_identity();
     track_count_only_caps_by_participating_slots();
     failure_attribution_prefers_the_matching_slot();
+    real_ik_gate_requires_all_four_conditions();
     slot_view_rejects_missing_or_implausible_pointers();
-    std::puts("9 probe-liveness e2a cases passed (engine-free)");
+    std::puts("10 probe-liveness e2a cases passed (engine-free)");
 }
