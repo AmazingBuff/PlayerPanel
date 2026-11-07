@@ -1288,3 +1288,21 @@ The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!
 **Deployed 2026-11-08 01:5x local**: v80 trio backed up to `dist/deploy-backup-20261108-v80-v81pre/`; v81 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
 
 **Acceptance rule added**: for any fix aimed at a compiler-generated fault, re-disassemble the rebuilt DLL and prove the instruction changed — a passing `static_assert` is not evidence.
+
+<a id="v82-g5e2-ap-2026-11-08"></a>
+## v82 G5-E2-A′ bone buckets (2026-11-08, built and **deployed**)
+
+**Why**: v81's close row showed `e2a-fail-foot=1,086` **and** `e2a-fail-other=2,479`, with all four `e2a-bone` slots taken by **`SkirtRBone01`** — every "other" residual was a cloth bone, not an unexplained one. The foot-IK-only split was too narrow and the sample slots were consumed by a single bone, so the actual failing bone set was invisible.
+
+**Changes** (committed `36cc25bbca`, clean tree): residuals are classified **foot chain / cloth chain (`Skirt*`) / unexplained**, unexplained ones are aggregated **by bone name** into up to eight entries with per-bone counts, and the close row gains `e2a-fail-cloth` / `e2a-fail-unexplained` in place of `e2a-fail-other`. `e2a-bone` rows print `name` plus `count`.
+
+**Criterion**: `fail-unexplained == 0` means every residual landed on a chain a known post-process writes (foot IK or cloth), so the identity holds off those chains; any unexplained bone name refutes it.
+
+**Offline**: e2a 13 + v3 6 + repair 2 + legacy 8 pass; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v82-g5e2-ap-bone-buckets-36cc25bbca-cl94faaed0c6-20261107T175838Z`
+- DLL: 1,780,224 bytes, SHA-256 `229547fed7e95abbc437a633c81cf9d589140e432e95581f1408b224a18505dd`
+- PDB: 49,205,248 bytes, SHA-256 `45c7be6656a1a674611e23325fe37c7838fc28d7be6c055eb92971612d6bc36e`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 422
+
+**Deployed 2026-11-08 02:0x local**: v81 trio backed up to `dist/deploy-backup-20261108-v81-v82pre/`; v82 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
