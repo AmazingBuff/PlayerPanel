@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-05（晚）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2-A 合成恒等式已预注册（[C-G5-E2](#c-g5-e2)，2026-11-06）**；E2 实现与 E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-08（夜）。**E1/E2 两切片已闭合，E3 契约已预注册**（[当前会话摘要](#status-20261108-session)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2-A 合成恒等式已预注册（[C-G5-E2](#c-g5-e2)，2026-11-06）**；E2 实现与 E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -4134,6 +4134,26 @@ Shield                 NPC L Pauldron
    - 因此 E2-A 的判据应表述为 **"残差 ⊆ 可枚举后处理骨集合"**，而不是"残差 = 0"；当前实现把第三类命名为 `unexplained` 已不再恰当（它其实已被解释），**下一版应改名为 `fail_limb_attach` 并把判据写成集合包含**。
 
 **下一步（E2-B）**：E2-A 的"严格相等"路线到此为止——要继续就必须**显式观测后处理**，即 hook `58423`（footIK）入口/返回，取得"post-process 输入（= mix 结果）"与"输出"，从而验证 `poseLocal == 58423(mix)` 并量化各链贡献；hand IK 与附着链的入口需另做静态定位。
+
+<a id="status-20261108-session"></a>
+## 当前会话摘要（2026-11-08，E2 收口 + E3 立项）
+
+**本会话完成**（v80–v85 六个二进制、七轮上机、E2 全部闭合、E3 契约预注册）：
+
+| 项 | 结果 |
+| --- | --- |
+| E2-A′ | 恒等式判定收敛：残差 100% 归因三类后处理链（足/布料/手臂-挂点），无后处理帧 148/223 逐分量相等 |
+| E2-B | B1/B2/B6 全过：footIK ~2.7 次/帧、平均改写 ~184 分量、`max-delta` 10.2——poseLocal 主导写入者；发现 out 轨道计数 116/98 双值（E3 输入） |
+| 崩溃修复 ×2 | v79 环拷贝 `movaps` 对齐（v81 volatile 逐字节）；v83 out 指针少解一层（v84） |
+| 反模式 | +16（alignas 是承诺不是修复，必须反汇编验收）；+17（钩子参数布局必须从消费方反推） |
+| E3 | 契约预注册（C1–C4 交付物、v66 反例锚点、manifest 索引缺口）；实现未授权 |
+
+**门 1 进度**：E1 ✅ / E2 ✅ / **E3 契约就绪（实现未开始）** / 联合验收待 E3。`strict poseLocal == mix` 不可达是引擎设计（后处理链写入 out），判据应表述为"残差 ⊆ 可枚举后处理骨集合"。
+
+**E3 实现评审的三个待决问题**：① manifest 索引方案（concurrent 窗口内同开 SourceTimeline 还是独立模式）；② 时间主轴对齐（源 settled 快照 vs 候选逐步序列）；③ footIK-seq 锚的双侧记录方式。
+
+**记录安装**：v85 DLL `e5552e89…ba638c`（age 429）；游戏 INI dormant `27f481f5…`。本地/远端同步至 `2dea193`。
+
 
 <a id="c-g5-e3"></a>
 ## C-G5-E3：自然源轨迹与预定输入/时间配对（2026-11-08 预注册）
