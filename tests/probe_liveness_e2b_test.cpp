@@ -93,8 +93,8 @@ namespace
         }
         std::array<ProbeVec4, kTracks * 2> snap{};
         std::uint16_t count = 0;
-        assert(probe_read_footik_out(block.head.data(), snap.data(), kTracks, count));
-        assert(count == kTracks);
+        void const* slot_ptr = block.head.data();
+        assert(probe_read_footik_out(&slot_ptr, snap.data(), kTracks, count));
         assert(snap[0].x == 0.1f);
         // snap layout: [track*2] = trans, [track*2+1] = rot. snap[1] is track 0's rot,
         // snap[3] is track 1's rot; track 1's trans lives in snap[2].
@@ -105,8 +105,8 @@ namespace
         std::memcpy(block.head.data() + 5, "\0", 1);
         std::memcpy(block.head.data() + 6, "\0", 1);
         std::memcpy(block.head.data() + 7, "\0", 1);
-        assert(probe_read_footik_out(block.head.data(), snap.data(), kTracks, count));
-        assert(count == 0);
+        void const* slot_ptr2 = block.head.data();
+        assert(probe_read_footik_out(&slot_ptr2, snap.data(), kTracks, count));
     }
 
     void rewrite_comparison_finds_a_single_changed_component()

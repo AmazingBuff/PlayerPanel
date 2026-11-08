@@ -1310,9 +1310,16 @@ void classify_bone(std::uint32_t a_track, char const* const* a_names,
         std::uint32_t a_capacity, std::uint16_t& a_count) noexcept
     {
         a_count = 0;
+        // The caller passes a *pointer to a pointer*: 63581 builds `r8 = &[rsp+0x30]` and after
+        // 58423 returns reads `rcx = [rsp+0x30]` before taking word[rcx+0x34] (0xbb00a1..0xbb00ab).
+        // The first dereference here mirrors that; treating the argument as the block itself read
+        // a garbage target and crashed at CharacterPanel.dll+0x55050 on 2026-11-08.
         if (a_out == nullptr || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(a_out)))
             return false;
-        auto const* const base = static_cast<std::byte const*>(a_out);
+        auto const* const slot = *reinterpret_cast<void const* const*>(a_out);
+        if (slot == nullptr || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(slot)))
+            return false;
+        auto const* const base = static_cast<std::byte const*>(slot);
         auto const gate = *reinterpret_cast<std::int32_t const*>(base + Probe_Mix_Weight_Slot_Count_Offset);
         if (gate <= 2)
             return true;
