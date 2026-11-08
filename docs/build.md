@@ -1333,3 +1333,10 @@ The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!
 **Offline**: all five suites pass. Identity `CharacterPanel-scenegraph-v85-g5e2-b-brows-7816fd240b-cl94faaed0c6-20261108T114258Z`, DLL 1,788,928 bytes SHA-256 `e5552e8983b71b1ff4164176b06cd72dc4f7f27acefe3960a0954f0bba638c6c`, PDB `ab1fd6e1…`, CodeView age 429. Deployed after backing up the v84 trio to `dist/deploy-backup-20261108-v84-v85pre/`.
 
 **Next-run reading**: `b-entry`/`b-return` rows should appear (~3 per frame); if `ring-dropped` is still > 0, the ring is the bottleneck and the next version should sample b-rows every N frames or widen the ring.
+
+<a id="v85-g5e2-b-run2-2026-11-08"></a>
+## v85 E2-B run 2 (2026-11-08 20:00, **B6 complete — B1/B2/B6 all pass**)
+
+Log [369,541 bytes `6d20f0f2…`](diagnostics/CharacterPanel-g5e2-b-v85-run2-20261108.log): `b-calls=2,736`, `b-compared=2,724`, `b-overwritten=0`, `b-rewritten=501,806` (~184/call), `b-max-delta=10.23`, `b-entries=2,657`, `b-returns=2,659` (217/213 rows visible, the rest budget-truncated), `b-last-rewritten=27`. The rewrite distribution is two-tier (~10–33 for minor foot corrections, 336–533 for full rewrites) and `tracks-entry == tracks-return` on all 213 visible rows. **New fact**: the out block's track count takes two values — `116` (188 rows) and `98` (29) — so 58423's scope has a second trim mechanism, an important input for E3 pairing. E1 v3 reproduced a sixth time (Σ 92,712, `un=0`, 439/439 pairs, `p63563=10,975`). `ring-dropped=164` remains the known bottleneck.
+
+**E2-B closes with B1/B2/B6 passing**; per the contract B3/B4 stay for the next version, but the rewrite magnitude makes "poseLocal ≈ 58423 output" the expected answer. Joint conclusion: the poseLocal-vs-mix difference is fully attributed to the three post-process chains (foot IK dominant, cloth, arm/attachment), and the mix→poseLocal copy is exact off those chains. E1/E2 parts of gate 1 are ready to close; next is the E3 contract.
