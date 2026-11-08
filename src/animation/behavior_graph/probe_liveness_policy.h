@@ -164,7 +164,144 @@ namespace animation::behavior_graph
             return nullptr;
         return reinterpret_cast<void*>(value - Probe_Table_Argument_Delta);
     }
-    // NOT alignas(16): declaring the alignment made MSVC assume the source was aligned and emit
+    // ---- C-G5-E2-B: 58423 (foot IK) input/output observation -------------------------------
+
+    // Head bytes verified offline (2026-11-08): 58423 begins with the chain-addressing prologue
+    // `mov r11,rsp; mov [r11+0x18],r8; mov [r11+0x10],rdx; mov [r11+8],rcx` (7 bytes, no interior
+    // jump target), and its 7731-byte body ends in a single `ret` at +0x1e32. The tail window
+    // +0x1e2d..+0x1e32 (`41 5d 5f 5e 5d`, mid-epilogue pops) has no interior jump target either.
+    inline constexpr std::array<std::uint8_t, 7> Probe_Footik_Entry_Head_Bytes{
+        0x4C, 0x8B, 0xDC, 0x4D, 0x89, 0x43, 0x18 };
+    inline constexpr std::array<std::uint8_t, 5> Probe_Footik_Return_Head_Bytes{
+        0x41, 0x5D, 0x5F, 0x5E, 0x5D };
+    inline constexpr std::uint32_t Probe_Footik_Return_Offset = 0x1e2d;
+
+    // 58423's third argument is `&out` — the same block 63581 later memcpy-s into poseLocal. The
+    // block layout matches the slot/out records used by 63582/63666: word +0x32 is the track
+    // count, word +0x34 the signed offset to the track array.
+    inline constexpr std::size_t Probe_Footik_Out_Count_Offset = 0x32;
+    inline constexpr std::size_t Probe_Footik_Out_Tracks_Offset = 0x34;
+    inline constexpr std::size_t Probe_Mix_Weight_Slot_Count_Offset = 4;
+
+    // Per-thread pending foot-IK call. Same design as ProbeInFlight but keyed on the out block
+    // pointer so the return side can find the entry even though 58423's own frame is gone.
+    class ProbeFootikInFlight
+    {
+    public:
+        static constexpr std::size_t Max_Threads = 8;
+
+        struct Entry
+        {
+            void const* out;
+            std::uint32_t tracks;
+            std::uint64_t tsc;
+        };
+
+        enum class Outcome : std::uint8_t
+        {
+            e_stored,
+            e_overwritten,
+            e_no_slot
+        };
+
+        Outcome on_entry(std::uint32_t a_tid, Entry const& a_entry) noexcept
+        {
+            Slot* const slot = find_or_insert(a_tid);
+            if (!slot)
+                return Outcome::e_no_slot;
+            Outcome const outcome = slot->pending ? Outcome::e_overwritten : Outcome::e_stored;
+            if (slot->pending)
+                ++m_overwritten;
+            slot->entry = a_entry;
+            slot->pending = true;
+            return outcome;
+        }
+
+        bool on_return(std::uint32_t a_tid, Entry& a_out) noexcept
+        {
+            Slot* const slot = find(a_tid);
+            if (!slot || !slot->pending)
+                return false;
+            a_out = slot->entry;
+            slot->pending = false;
+            return true;
+        }
+
+        [[nodiscard]] std::size_t in_flight() const noexcept
+        {
+            std::size_t pending = 0;
+            for (Slot const& slot : m_slots)
+                if (slot.pending)
+                    ++pending;
+            return pending;
+        }
+
+        [[nodiscard]] std::uint64_t overwritten() const noexcept { return m_overwritten; }
+
+        void reset() noexcept
+        {
+            m_slots = {};
+            m_overwritten = 0;
+        }
+
+    private:
+        struct Slot
+        {
+            std::uint32_t tid;
+            bool pending;
+            Entry entry;
+        };
+
+        Slot* find(std::uint32_t a_tid) noexcept
+        {
+            for (Slot& slot : m_slots)
+                if (slot.tid == a_tid && slot.tid != 0)
+                    return &slot;
+            return nullptr;
+        }
+
+        Slot* find_or_insert(std::uint32_t a_tid) noexcept
+        {
+            if (Slot* const existing = find(a_tid))
+                return existing;
+            for (Slot& slot : m_slots)
+            {
+                if (slot.tid == 0)
+                {
+                    slot.tid = a_tid;
+                    return &slot;
+                }
+            }
+            return nullptr;
+        }
+
+        std::array<Slot, Max_Threads> m_slots{};
+        std::uint64_t m_overwritten{ 0 };
+    };
+
+    // One foot-IK frame's comparison: entry tracks vs return tracks, component-wise. Shares the
+    // E2-A thresholds (a residual here is a 58423 rewrite, not rounding).
+    struct ProbeFootikTally
+    {
+        std::uint64_t calls{ 0 };
+        std::uint64_t compared{ 0 };
+        std::uint64_t rewritten_components{ 0 };
+        float max_delta{ 0.0f };
+        std::uint32_t last_frame_rewritten{ 0 };
+        bool non_finite{ false };
+
+        void reset() noexcept
+        {
+            calls = 0;
+            compared = 0;
+            rewritten_components = 0;
+            max_delta = 0.0f;
+            last_frame_rewritten = 0;
+            non_finite = false;
+        }
+
+        [[nodiscard]] bool clean() const noexcept { return rewritten_components == 0 && !non_finite; }
+    };    // NOT alignas(16): declaring the alignment made MSVC assume the source was aligned and emit
     // `movaps [rsp]`, which faults when the detour frame is not 16-aligned - the 0xC0000005 at
     // CharacterPanel.dll+0x53f9c seen three times on 2026-11-08. The copies are memcpy and the
     // struct keeps its natural 8-byte alignment, so the compiler emits movups.
@@ -542,7 +679,9 @@ namespace animation::behavior_graph
 
     // This probe owns three detour blocks (sampling entry, apply entry, apply return). The
     // shared c-g5-e1 pool constant stays at two hooks because the typed-setter probe uses it.
-    inline constexpr std::size_t Probe_Liveness_Hook_Count = 3;
+    // Entry hooks (63589, 63856, 58423) plus the two return sites (63856, 58423). The shared
+    // c-g5-e1 pool constant stays at two because the typed-setter probe uses it.
+    inline constexpr std::size_t Probe_Liveness_Hook_Count = 5;
     inline constexpr std::size_t Probe_Liveness_Pool_Size = Probe_Liveness_Hook_Count * Detour_Block_Size;
 
     // 63856 has a single return site: its own `add rsp,0x88` at +0x24f from the entry
@@ -1163,6 +1302,32 @@ void classify_bone(std::uint32_t a_track, char const* const* a_names,
         ProbeVec4 value{};
         std::memcpy(&value, base, sizeof(value));
         return value;
+    }
+
+    // Reads a 58423 out block: word +0x32 count, word +0x34 signed track offset, gated on
+    // dword +4 > 2 (the same gate 63582 uses). Returns the per-track trans+rot snapshots.
+    [[nodiscard]] inline bool probe_read_footik_out(void const* a_out, ProbeVec4* a_snapshot,
+        std::uint32_t a_capacity, std::uint16_t& a_count) noexcept
+    {
+        a_count = 0;
+        if (a_out == nullptr || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(a_out)))
+            return false;
+        auto const* const base = static_cast<std::byte const*>(a_out);
+        auto const gate = *reinterpret_cast<std::int32_t const*>(base + Probe_Mix_Weight_Slot_Count_Offset);
+        if (gate <= 2)
+            return true;
+        auto const count = *reinterpret_cast<std::uint16_t const*>(base + Probe_Footik_Out_Count_Offset);
+        auto const offset = *reinterpret_cast<std::int16_t const*>(base + Probe_Footik_Out_Tracks_Offset);
+        auto const* const tracks = base + offset;
+        if (!plausible_object_pointer(reinterpret_cast<std::uintptr_t>(tracks)))
+            return false;
+        a_count = count > a_capacity ? static_cast<std::uint16_t>(a_capacity) : count;
+        for (std::uint16_t i = 0; i < a_count; ++i)
+        {
+            a_snapshot[i * 2] = probe_track_vec(tracks, i, 0);
+            a_snapshot[i * 2 + 1] = probe_track_vec(tracks, i, 1);
+        }
+        return true;
     }
 
     // The number of tracks the identity can be compared over. 63582 caps its count by both slot

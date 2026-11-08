@@ -45,13 +45,16 @@ namespace
     // Sampling and scene-application entry sites; neither observes native return.
     constexpr std::uint64_t Sampling_Entry_Id = 63589;
     constexpr std::uint64_t Pose_Apply_Entry_Id = 63856;
+    constexpr std::uint64_t Foot_Ik_Entry_Id = 58423;
 
     enum RecordKind : std::uint8_t
     {
         k_entry = 0,
         k_apply_entry = 1,
         k_apply_return = 2,
-        k_mix_frame = 3
+        k_mix_frame = 3,
+        k_footik_entry = 4,
+        k_footik_return = 5
     };
 
     std::atomic<bool> g_installed{ false };
@@ -92,6 +95,7 @@ namespace
         std::atomic<std::uint64_t> count_over_capacity{ 0 };
         std::atomic<std::uint64_t> clamped_zero{ 0 };
         std::atomic<std::uint64_t> overwritten_entries{ 0 };
+        std::atomic<std::uint64_t> footik_overwritten{ 0 };
         std::atomic<std::uint32_t> max_in_flight{ 0 };
         std::atomic<bool> pose_unstable{ false };
 
@@ -123,6 +127,7 @@ namespace
             count_over_capacity.store(0, std::memory_order_relaxed);
             clamped_zero.store(0, std::memory_order_relaxed);
             overwritten_entries.store(0, std::memory_order_relaxed);
+            footik_overwritten.store(0, std::memory_order_relaxed);
             max_in_flight.store(0, std::memory_order_relaxed);
             pose_unstable.store(false, std::memory_order_relaxed);
         }
@@ -136,6 +141,8 @@ namespace
         ProbeRing ring;
         ProbePairing pairing;
         ProbeInFlight in_flight;
+        ProbeFootikInFlight footik;
+        ProbeFootikTally footik_tally;
         ProbeMixTally mix;
         Counters counters;
         std::uint64_t detail_lines{ 0 };
@@ -144,6 +151,8 @@ namespace
         std::uint64_t drained_applies{ 0 };
         std::uint64_t drained_returns{ 0 };
         std::uint64_t drained_mix_frames{ 0 };
+        std::uint64_t drained_footik_entries{ 0 };
+        std::uint64_t drained_footik_returns{ 0 };
         std::uint64_t orphan_applies{ 0 };
         std::uint64_t detail_seq{ 0 };
         std::uint64_t tracked_entries{ 0 };
@@ -166,6 +175,8 @@ namespace
             ring.reset();
             pairing.reset();
             in_flight.reset();
+            footik.reset();
+            footik_tally.reset();
             mix.reset();
             counters.reset();
             detail_lines = 0;
@@ -174,6 +185,8 @@ namespace
             drained_applies = 0;
             drained_returns = 0;
             drained_mix_frames = 0;
+            drained_footik_entries = 0;
+            drained_footik_returns = 0;
             orphan_applies = 0;
             close_pending = false;
             detail_seq = 0;
@@ -202,6 +215,11 @@ namespace
     inline constexpr std::size_t Max_Cached_Bones = 256;
     char g_bone_names[Max_Cached_Bones][Probe_Bone_Name_Length];
     char const* g_bone_name_ptrs[Max_Cached_Bones];
+    // E2-B: per-call snapshots of the 58423 out block (entry side and return side).
+    ProbeVec4 g_footik_entry_tracks[116 * 2];
+    ProbeVec4 g_footik_return_tracks[116 * 2];
+    ProbeVec4* entry_tracks() noexcept { return g_footik_entry_tracks; }
+    ProbeVec4* return_tracks() noexcept { return g_footik_return_tracks; }
     std::atomic<std::uint32_t> g_bone_count{ 0 };
 
     std::uintptr_t game_base()
@@ -606,6 +624,100 @@ namespace
         if (!s.ring.push(record))
             c.detail_dropped.fetch_add(1, std::memory_order_relaxed);
     }
+    // 58423 entry: record the out block and snapshot its tracks before foot IK runs.
+    void record_footik_entry(void* a_driver, void* a_ctx, void* a_out, std::uint32_t a_flag) noexcept
+    {
+        (void)a_driver;
+        (void)a_ctx;
+        (void)a_flag;
+        ProbeState& s = state();
+        ProbeRecorderLease const lease(s.admission);
+        if (!lease)
+            return;
+        ProbeFootikTally& tally = s.footik_tally;
+        ++tally.calls;
+        auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
+        ProbeFootikInFlight::Entry entry{};
+        entry.out = a_out;
+        entry.tsc = __rdtsc();
+        std::uint16_t snapshot_count = 0;
+        bool const entry_ok = probe_read_footik_out(a_out, entry_tracks(), 116, snapshot_count);
+        if (!entry_ok)
+            return;
+        entry.tracks = snapshot_count;
+        if (s.footik.on_entry(tid, entry) == ProbeFootikInFlight::Outcome::e_overwritten)
+            s.counters.footik_overwritten.fetch_add(1, std::memory_order_relaxed);
+        ProbeRecord record{};
+        record.graph = reinterpret_cast<std::uintptr_t>(a_out);
+        record.tid = tid;
+        record.kind = k_footik_entry;
+        record.num240 = entry.tracks > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(entry.tracks);
+        s.counters.eligible_records.fetch_add(1, std::memory_order_relaxed);
+        if (!s.ring.push(record))
+            s.counters.detail_dropped.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    // 58423 return: snapshot the out tracks again, compare against the entry snapshot, and push
+    // one b-row. The out block is what 63581 memcpy-s into poseLocal on the same frame.
+    void record_footik_return() noexcept
+    {
+        ProbeState& s = state();
+        ProbeRecorderLease const lease(s.admission);
+        if (!lease)
+            return;
+        auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
+        ProbeFootikInFlight::Entry entry{};
+        if (!s.footik.on_return(tid, entry))
+            return;
+        ProbeFootikTally& tally = s.footik_tally;
+        std::uint16_t count = 0;
+        bool const read_ok = probe_read_footik_out(entry.out, return_tracks(), 116, count);
+        std::uint32_t rewritten = 0;
+        if (read_ok && entry.tracks > 0 && entry.tracks == count)
+        {
+            ++tally.compared;
+            std::uint32_t const n = count > entry.tracks ? entry.tracks : count;
+            for (std::uint32_t i = 0; i < n; ++i)
+            {
+                float const e_t[3] = { entry_tracks()[i*2].x, entry_tracks()[i*2].y, entry_tracks()[i*2].z };
+                float const r_t[3] = { return_tracks()[i*2].x, return_tracks()[i*2].y, return_tracks()[i*2].z };
+                for (std::uint8_t c = 0; c < 3; ++c)
+                {
+                    float const delta = probe_mix_delta(e_t[c], r_t[c]);
+                    if (delta != 0.0f)
+                    {
+                        ++rewritten;
+                        if (delta > tally.max_delta)
+                            tally.max_delta = delta;
+                    }
+                }
+                float const e_r[4] = { entry_tracks()[i*2+1].x, entry_tracks()[i*2+1].y, entry_tracks()[i*2+1].z, entry_tracks()[i*2+1].w };
+                float const r_r[4] = { return_tracks()[i*2+1].x, return_tracks()[i*2+1].y, return_tracks()[i*2+1].z, return_tracks()[i*2+1].w };
+                for (std::uint8_t c = 0; c < 4; ++c)
+                {
+                    float const delta = probe_mix_delta(e_r[c], r_r[c]);
+                    if (delta != 0.0f)
+                    {
+                        ++rewritten;
+                        if (delta > tally.max_delta)
+                            tally.max_delta = delta;
+                    }
+                }
+            }
+            tally.rewritten_components += rewritten;
+            tally.last_frame_rewritten = rewritten;
+        }
+        ProbeRecord record{};
+        record.graph = reinterpret_cast<std::uintptr_t>(entry.out);
+        record.tid = tid;
+        record.kind = k_footik_return;
+        record.num240 = entry.tracks > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(entry.tracks);
+        record.clamped = count > 0xFFFFu ? 0xFFFFu : static_cast<std::uint16_t>(count);
+        record.mix_failed = rewritten;
+        s.counters.eligible_records.fetch_add(1, std::memory_order_relaxed);
+        if (!s.ring.push(record))
+            s.counters.detail_dropped.fetch_add(1, std::memory_order_relaxed);
+    }
 
     void drain_probe_records(ProbeState& s)
     {
@@ -692,7 +804,7 @@ namespace
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         char const* fill_state = s.fill_cap_state == 1 ? "ok" : (s.fill_cap_state == 2 ? "violation" : "unread");
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-fail-no-ik={} e2a-ik-frames={} e2a-failed-ik={} e2a-failed-no-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-fail-foot={} e2a-fail-cloth={} e2a-fail-unexplained={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={}",
+        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-fail-no-ik={} e2a-ik-frames={} e2a-failed-ik={} e2a-failed-no-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-fail-foot={} e2a-fail-cloth={} e2a-fail-unexplained={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={} b-calls={} b-compared={} b-rewritten={} b-max-delta={:.3e} b-clean={} b-overwritten={} b-entries={} b-returns={} b-last-rewritten={}",
             probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
             g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
             s.counters.entries_total.load(std::memory_order_relaxed),
@@ -742,7 +854,12 @@ namespace
             s.mix.fail_unexplained,
             (s.mix.clean() ? "yes" : "no"), (s.mix.weight_out_of_range ? "violation" : "ok"),
             (s.mix.non_finite ? "yes" : "no"), (s.mix.read_failed ? "yes" : "no"),
-            s.mix.sample_count);
+            s.mix.sample_count,
+            s.footik_tally.calls, s.footik_tally.compared, s.footik_tally.rewritten_components,
+            s.footik_tally.max_delta, (s.footik_tally.clean() ? "yes" : "no"),
+            s.counters.footik_overwritten.load(std::memory_order_relaxed),
+            s.drained_footik_entries, s.drained_footik_returns,
+            s.footik_tally.last_frame_rewritten);
 
         // v75/v77: the failing components themselves, so attribution never depends on a summary.
         for (std::uint32_t i = 0; i < s.mix.sample_count; ++i)
@@ -860,10 +977,20 @@ namespace
         bool const pose_return = pose && install_at(apply_site.address() + Probe_Pose_Return_Offset,
             "63856-apply-return", Probe_Pose_Return_Head_Bytes.data(), Probe_Pose_Return_Head_Bytes.size(),
             &record_apply_return, ProbeThunkKind::e_apply_return);
-        g_installed.store(sample && pose && pose_return, std::memory_order_release);
-        if (!sample || !pose || !pose_return)
-            logger::warn("PROBE LIVENESS install-incomplete sample={} apply={} apply-return={} ready=no",
-                sample, pose, pose_return);
+        // C-G5-E2-B: observe 58423 (foot IK) at its entry and its single return site.
+        REL::Relocation<std::uintptr_t> const footik_site{ REL::ID(Foot_Ik_Entry_Id) };
+        bool const footik_entry = pose_return && install_at(footik_site.address(), "58423-footik-entry",
+            Probe_Footik_Entry_Head_Bytes.data(), Probe_Footik_Entry_Head_Bytes.size(), &record_footik_entry,
+            ProbeThunkKind::e_sample_entry);
+        bool const footik_return = footik_entry && install_at(
+            footik_site.address() + Probe_Footik_Return_Offset, "58423-footik-return",
+            Probe_Footik_Return_Head_Bytes.data(), Probe_Footik_Return_Head_Bytes.size(),
+            &record_footik_return, ProbeThunkKind::e_apply_return);
+        g_installed.store(sample && pose && pose_return && footik_entry && footik_return,
+            std::memory_order_release);
+        if (!sample || !pose || !pose_return || !footik_entry || !footik_return)
+            logger::warn("PROBE LIVENESS install-incomplete sample={} apply={} apply-return={} footik-entry={} footik-return={} ready=no",
+                sample, pose, pose_return, footik_entry, footik_return);
     }
 
     void arm_probe_liveness()
