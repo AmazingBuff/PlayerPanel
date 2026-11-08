@@ -4186,6 +4186,26 @@ Shield                 NPC L Pauldron
 - **离线**：e2b 3 例（in-flight 配对、out 块读取含 gate 门与槽位映射、单分量改写检出）+ e2a 13 + v3 6 + repair 2 + legacy 8 = **42 例全过**；Release exit 0。
 - **已部署**（v82 三件套备份 `dist/deploy-backup-20261108-v82-v83pre/`、INI `c3703b74…`）：DLL 1,786,880 字节 `670d52aa…3be3bf`、PDB `c119a7bb…`、CodeView age 426、身份 `…-v83-g5e2-b-footik-8dcd91b682-…`。
 
-**B1–B6 的读法**：B1 = `b-calls ≥ 1`；B2 = `b-rewritten > 0`（或 `b-clean=yes` = 本会话 footIK 无修正）；B3/B4 归 E2-C（本实现未 hook memcpy 源，等价判定在下一版）；B6 = `b-entry/b-return` 明细行的逐帧改写数。
+
+**六、v84 运行（2026-11-08 19:31）—— B1/B2 通过（读数超预期），b-rows 缺失暴露两处缺陷**
+
+工件：v84 DLL `aca8a118…cb6a`、日志 [391,283 字节 `c6bd02e2…`](diagnostics/CharacterPanel-g5e2-b-v84-run1-20261108.log)，零 `[E]`、无崩溃（解引用修复生效）。关闭行完整。
+
+| 判据 | 读数 | 裁定 |
+| --- | --- | --- |
+| **B1 活性** | **`b-calls=2,698`、`b-compared=2,677`、`b-overwritten=0`** | **通过** —— 58423 每帧被调（2,698 次调用 / 910 帧 ≈ 3.0 次/帧），且 2,677 次成功完成入口/返回配对；无一次 in-flight 覆盖 |
+| **B2 改写证据** | **`b-rewritten=390,841`、`b-max-delta=36.04`、`b-clean=no`** | **通过（且量级远超预期）** —— footIK 每帧平均改写 390,841/2,677 ≈ **146 个分量/帧**（约 116 轨 × 7 通道），`max-delta` 达 36（位置类量级）——**footIK 是 poseLocal 最大的改写者** |
+| B6 明细 | **`b-entries=0`、`b-returns=0`** | **缺陷**：打印分支缺失（见下） |
+
+**三个新事实/缺陷**：
+
+1. **footIK 改写是主流而非例外**：E2-A′ 的 `fail-foot=2,880`（分量）与 B2 的 `b-rewritten=390,841`（分量）量级差 136 倍。**解释**：E2-A′ 只测"poseLocal 与 mix 的差"，而 mix 已是 63582 的输出——**footIK 改写的是 `out`（混合结果）**，其效果已包含在 poseLocal 里；只有改写"恰好落在阈值外"的分量才表现为 E2-A′ 失败。**B2 的 146 分量/帧才是 footIK 的真实工作量**，E2-A′ 的残差只是它的可见子集。
+2. **`ring-dropped=121`（`contention-dropped=121`）**：b-row + e2a-row + apply-row 的总产量（8,528 eligible）超过了 4,096 环容量，foot-IK 行（~5.3/帧）在会话前半段就写满环。`transport-complete=no` 是诚实结论。
+3. **`b-entries=0 / b-returns=0`**：打印分支缺失——上一次脚本化编辑在中途报错退出时，**drain 的两个 case 与 print 的两个分支没有写入**（与编译/提交之间缺一次"分支存在性复查"）。修复已提交（`7816fd240b`）。
+
+**v85（提交 `7816fd240b`，DLL `e5552e89…ba638c` 1,788,928 字节，CodeView age 429，[构建记录](build.md#v85-g5e2-b-2026-11-08)）**：补上 `b-entry`/`b-return` 两个 drain case 与打印分支；已部署（v84 三件套备份 `dist/deploy-backup-20261108-v84-v85pre/`）。
+
+**下一步读法**：v85 的会话应有 `b-entry`/`b-return` 明细行（每帧 3 条），`b-last-rewritten` 给出最后一帧的改写分量数；若 `ring-dropped` 仍 > 0，说明环容量是瓶颈，需在下一版把 foot-IK 行从"逐行打印"改为"每 N 帧采样一行"或扩大环。
+
 
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。

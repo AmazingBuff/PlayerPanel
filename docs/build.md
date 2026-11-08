@@ -1322,3 +1322,14 @@ The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!
 **Deployed 2026-11-08 19:0x local**: v82 trio backed up hash-verified to `dist/deploy-backup-20261108-v82-v83pre/`; v83 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
 
 **Expectation**: B1 = `b-calls ≥ 1`; B2 = `b-rewritten > 0` (or `b-clean=yes`, meaning foot IK made no correction this session); the per-frame `b-return` rows carry each frame's rewrite count.
+
+<a id="v85-g5e2-b-2026-11-08"></a>
+## v85 G5-E2-B b-row printing (2026-11-08, built and **deployed, awaiting the run**)
+
+**v84 reading** ([log](diagnostics/CharacterPanel-g5e2-b-v84-run1-20261108.log)): B1 and B2 pass — `b-calls=2,698`, `b-compared=2,677`, `b-overwritten=0`, `b-rewritten=390,841`, `b-max-delta=36.04`, `b-clean=no`. foot IK runs ~3.0 calls per frame and rewrites ~146 components per call on average (116 tracks × 7 channels), making it the largest single writer on poseLocal; the E2-A′ residuals are only the subset that exceeds the thresholds. Two defects: `ring-dropped=121` (contention; the combined row rate overflowed the 4,096 ring in the first half-second, so `transport-complete=no` is honest), and `b-entries=b-returns=0` because the print branches were lost in an aborted scripted edit.
+
+**Change** (committed `7816fd240b`, clean tree): restore the two drain cases and the two print branches for `k_footik_entry` / `k_footik_return`.
+
+**Offline**: all five suites pass. Identity `CharacterPanel-scenegraph-v85-g5e2-b-brows-7816fd240b-cl94faaed0c6-20261108T114258Z`, DLL 1,788,928 bytes SHA-256 `e5552e8983b71b1ff4164176b06cd72dc4f7f27acefe3960a0954f0bba638c6c`, PDB `ab1fd6e1…`, CodeView age 429. Deployed after backing up the v84 trio to `dist/deploy-backup-20261108-v84-v85pre/`.
+
+**Next-run reading**: `b-entry`/`b-return` rows should appear (~3 per frame); if `ring-dropped` is still > 0, the ring is the bottleneck and the next version should sample b-rows every N frames or widen the ring.
