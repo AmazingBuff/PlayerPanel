@@ -736,6 +736,12 @@ namespace
             case k_mix_frame:
                 ++s.drained_mix_frames;
                 break;
+            case k_footik_entry:
+                ++s.drained_footik_entries;
+                break;
+            case k_footik_return:
+                ++s.drained_footik_returns;
+                break;
             default:
                 ++s.drained_returns;
                 break;
@@ -784,6 +790,16 @@ namespace
                     record.weight, static_cast<unsigned>(record.ik_mode), record.ik_count,
                     static_cast<unsigned>(record.ik_global), static_cast<unsigned>(record.ik_root),
                     record.mix_failed, record.mix_fail_foot, record.mix_fail_other, record.max_delta);
+            }
+            else if (record.kind == k_footik_entry)
+            {
+                logger::info("PROBE LIVENESS b-entry tid={} out={:#x} tracks={}",
+                    record.tid, record.graph, record.num240);
+            }
+            else if (record.kind == k_footik_return)
+            {
+                logger::info("PROBE LIVENESS b-return tid={} out={:#x} tracks-entry={} tracks-return={} rewritten={}",
+                    record.tid, record.graph, record.num240, record.clamped, record.mix_failed);
             }
             else
             {
