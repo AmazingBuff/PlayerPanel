@@ -1306,3 +1306,19 @@ The real 58423 gate is at 0xbb0040..0xbb0076: `word[g+0x240]>0 && byte[g+0x249]!
 - CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 422
 
 **Deployed 2026-11-08 02:0x local**: v81 trio backed up to `dist/deploy-backup-20261108-v81-v82pre/`; v82 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
+
+<a id="v83-g5e2-b-2026-11-08"></a>
+## v83 G5-E2-B foot-IK observation (2026-11-08, built and **deployed, awaiting the run**)
+
+**Changes** (committed `8dcd91b682`, clean tree, submodule `94faaed0c6`): two new detours observe 58423 (foot IK) — entry `0xab7f30` (7-byte chain-addressing head, verified no interior jumps) and return window `0xab9d5d..0xab9d62` (`41 5d 5f 5e 5d`; the body has exactly one `ret`, verified). The entry recorder snapshots the out block via the policy reader `probe_read_footik_out` (`+0x32` count, `+0x34` signed track offset, `dword[+4]>2` gate) and registers a per-tid in-flight entry; the return recorder re-reads the block, compares component-wise with the E2-A thresholds and pushes `b-entry`/`b-return` pairs. The out block is what 63581 memcpy-s into poseLocal, so `entry != return` components are foot-IK rewrites — B3/B4 (memcpy-source and poseLocal consistency) are judged without a new hook on the copy sites. The probe pool grows from three to five blocks. Close row gains `b-calls`, `b-compared`, `b-rewritten`, `b-max-delta`, `b-clean`, `b-overwritten`, `b-entries`, `b-returns`, `b-last-rewritten`.
+
+**Offline**: e2b 3 cases (in-flight pairing, out-block reader incl. gate and slot mapping, single-component rewrite detection) + e2a 13 + v3 6 + repair 2 + legacy 8 = **42 pass**; Release exits 0.
+
+- Identity: `CharacterPanel-scenegraph-v83-g5e2-b-footik-8dcd91b682-cl94faaed0c6-20261108T110415Z`
+- DLL: 1,786,880 bytes, SHA-256 `670d52aa18f56a77267981cd0319765ab07f305783277c61c2de34f9e1dbe3bf`
+- PDB: 49,278,976 bytes, SHA-256 `c119a7bbf948a117637af71d1325aba1c536fe646f21fdb6b6ea0f4463d5156c`
+- CodeView: `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 426
+
+**Deployed 2026-11-08 19:0x local**: v82 trio backed up hash-verified to `dist/deploy-backup-20261108-v82-v83pre/`; v83 DLL/PDB and the concurrent run INI `c3703b74…` copied with destination-hash comparison.
+
+**Expectation**: B1 = `b-calls ≥ 1`; B2 = `b-rewritten > 0` (or `b-clean=yes`, meaning foot IK made no correction this session); the per-frame `b-return` rows carry each frame's rewrite count.

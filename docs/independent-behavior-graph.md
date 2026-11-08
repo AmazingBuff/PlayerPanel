@@ -4176,4 +4176,16 @@ Shield                 NPC L Pauldron
 | 离线回归 | 入口实参转发（rcx/rdx/r8/r9d）、返回点 out 读取、三点一致性计数、骨名归因复用 E2-A′ | |
 
 **四、明确不做**：不做 hand-IK/附着写入者的静态定位（E2-C）；不采集源图（源侧无后处理）；不改 E1/v3 判据；不把 B2 全等误读为"footIK 无用"——它只在"本会话无修正"下成立。
+
+**五、实现与部署（v83，2026-11-08，提交 `8dcd91b682`）**
+
+- **六个 detour 块**：63589 入口、63856 入口、63856 返回、**58423 入口**（7 字节链式序言头 `4c 8b dc 4d 89 43 18`）、**58423 返回**（唯一 `ret` 的尾窗 `0xab9d5d..0xab9d62`，`41 5d 5f 5e 5d`）。两处窗口的离线核验已入档（§二/上一提交），探针自有池 3→5。
+- **入口记录器**：读 out 快照（`probe_read_footik_out`，policy 纯函数：`+0x32` 计数、`+0x34` 有符号轨道偏移、`dword+4>2` 门），失败则不登记 in-flight；登记 per-tid in-flight。
+- **返回记录器**：再读 out，与入口快照**逐分量比对**（E2-A 阈值），差值即 footIK 改写；推 `b-entry`/`b-return` 记录对。
+- **关闭行新增**：`b-calls`、`b-compared`、`b-rewritten`、`b-max-delta`、`b-clean`、`b-overwritten`、`b-entries`、`b-returns`、`b-last-rewritten`。
+- **离线**：e2b 3 例（in-flight 配对、out 块读取含 gate 门与槽位映射、单分量改写检出）+ e2a 13 + v3 6 + repair 2 + legacy 8 = **42 例全过**；Release exit 0。
+- **已部署**（v82 三件套备份 `dist/deploy-backup-20261108-v82-v83pre/`、INI `c3703b74…`）：DLL 1,786,880 字节 `670d52aa…3be3bf`、PDB `c119a7bb…`、CodeView age 426、身份 `…-v83-g5e2-b-footik-8dcd91b682-…`。
+
+**B1–B6 的读法**：B1 = `b-calls ≥ 1`；B2 = `b-rewritten > 0`（或 `b-clean=yes` = 本会话 footIK 无修正）；B3/B4 归 E2-C（本实现未 hook memcpy 源，等价判定在下一版）；B6 = `b-entry/b-return` 明细行的逐帧改写数。
+
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。
