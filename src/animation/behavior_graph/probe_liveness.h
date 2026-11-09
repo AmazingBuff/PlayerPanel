@@ -31,7 +31,7 @@ namespace animation::behavior_graph
     // experiment's own dispatches. Returns false (and logs why) when the mode is not concurrent,
     // nothing is installed, or the graph is no longer managed.
     [[nodiscard]] bool arm_probe_liveness_concurrent(RE::BShkbAnimationGraph const& a_source_graph,
-        std::uint32_t a_actor_id);
+        std::uint32_t a_actor_id, std::uint64_t a_request);
 
     [[nodiscard]] bool probe_liveness_window_open();
 

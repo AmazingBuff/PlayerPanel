@@ -17,6 +17,7 @@
 #include "animation/behavior_graph/pose_motion_policy.h"
 #include "animation/behavior_graph/probe_liveness.h"
 #include "animation/behavior_graph/source_event_capture.h"
+#include "animation/behavior_graph/source_timeline.h"
 #include "animation/behavior_graph/unequip_settle_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
@@ -1077,6 +1078,10 @@ public:
         // one replay-plus-display run.
         if (window.steps() > 0)
             close_probe_liveness_window("display-close");
+        // C-G5-E3 (M1): the concurrent source window follows the same boundary. It is closed after
+        // the probe so the probe's manifest can still drain every settle the source published.
+        if (window.steps() > 0)
+            close_source_timeline_window("display-close");
         // C-G4-A: every display-window close path funnels here; the summary is the armed
         // evidence for "no OAR evaluation touched the candidate during display stepping".
         // Only the candidate-owning session may take (and emit) the tally.
@@ -1231,7 +1236,11 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     (void)arm_source_event_capture_concurrent(source_graph, actor_id);
     // C-G5-E1: pin the same source graph for the liveness probe and arm its counters before the
     // first candidate step, so the plugin's own sampling calls are visible as the positive control.
-    (void)arm_probe_liveness_concurrent(source_graph, actor_id);
+    // C-G5-E3 (M1): the source trajectory shares this window - it is armed on the same pinned
+    // source graph before the first candidate step and closed at the display boundary, so the
+    // pairing manifest has both sides' timestamps. No-op unless SourceTimeline=concurrent.
+    (void)arm_source_timeline_concurrent(source_graph, actor_id, request);
+    (void)arm_probe_liveness_concurrent(source_graph, actor_id, request);
     struct ExperimentWindowSummary
     {
         std::uint32_t actor_id;

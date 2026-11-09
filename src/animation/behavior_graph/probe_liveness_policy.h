@@ -16,6 +16,11 @@
 #include <initializer_list>
 #include <optional>
 #include <string_view>
+#include <thread>
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
@@ -26,6 +31,9 @@ namespace animation::behavior_graph
     inline constexpr std::size_t Probe_Liveness_Ring_Depth = 4096;
     inline constexpr std::uint32_t Probe_Liveness_Detail_Budget = 2048;
     inline constexpr std::chrono::seconds Probe_Liveness_Window{ 20 };
+    // C-G5-E3 (M2): 2048 steps covers a 60 Hz window well past the 20 s expiry; saturation is
+    // reported rather than wrapped.
+    inline constexpr std::uint32_t Probe_Step_Timeline = 2048;
 
     // Pre-registered head bytes, verified byte for byte against the fixed AE 1.6.1170 image
     // (SHA-256 843823c1...): 63589 begins with three pushes (5-byte boundary, no padding needed),
@@ -352,13 +360,25 @@ namespace animation::behavior_graph
             dst[i] = src[i];
     }
 
+    // C-G5-E3 (R-1): the gate is try-only admission shared by every producer (render thread plus
+    // the worker threads that reach 58423), and v84/v85 lost 121/164 records to contention while
+    // `full-dropped` stayed zero. A bounded spin absorbs that contention: the gate is held for one
+    // byte-wise 64-byte copy, so a few dozen pauses cover it without ever blocking a detour for
+    // long. Only the final failure is counted, so `contention-dropped` keeps its meaning.
+    inline constexpr std::uint32_t Probe_Push_Spin_Attempts = 64;
+
     class ProbePushGate
     {
     public:
         bool try_enter() noexcept
         {
-            if (!m_busy.test_and_set(std::memory_order_acquire))
-                return true;
+            for (std::uint32_t attempt = 0; attempt < Probe_Push_Spin_Attempts; ++attempt)
+            {
+                if (!m_busy.test_and_set(std::memory_order_acquire))
+                    return true;
+                if (attempt + 1 < Probe_Push_Spin_Attempts)
+                    pause();
+            }
             m_contended.fetch_add(1, std::memory_order_relaxed);
             return false;
         }
@@ -367,6 +387,15 @@ namespace animation::behavior_graph
         void reset() noexcept { m_contended.store(0, std::memory_order_relaxed); }
 
     private:
+        static void pause() noexcept
+        {
+#if defined(_MSC_VER)
+            _mm_pause();
+#else
+            std::this_thread::yield();
+#endif
+        }
+
         std::atomic_flag m_busy{};
         std::atomic<std::uint64_t> m_contended{ 0 };
     };
@@ -1007,6 +1036,44 @@ namespace animation::behavior_graph
         bool const within_abs = delta <= Probe_Mix_Abs_Tolerance;
         bool const within_rel = delta <= Probe_Mix_Rel_Tolerance * magnitude;
         return (within_abs || within_rel) ? 0.0f : delta;
+    }
+
+    // ---- C-G5-E3 (M2): the source/candidate pairing ledger ---------------------------------
+    //
+    // The rule is fixed before any pose error is looked at: each source settle confirmation pairs
+    // with the FIRST candidate step at or after its TSC, and each step is consumed at most once, so
+    // a settle can never borrow a step that already belongs to an earlier settle. Missing steps stay
+    // missing; there is no interpolation, no nearest-neighbour choice and no re-use.
+    struct ProbeSettlePairing
+    {
+        std::uint32_t settles{ 0 };
+        std::uint32_t paired{ 0 };
+        std::uint32_t unpaired{ 0 };
+    };
+
+    [[nodiscard]] inline ProbeSettlePairing probe_pair_settles(std::uint64_t const* a_settles,
+        std::uint32_t a_settle_count, std::uint64_t const* a_steps, std::uint32_t a_step_count) noexcept
+    {
+        ProbeSettlePairing tally{};
+        if (a_settle_count != 0 && a_settles == nullptr)
+            return tally;
+        if (a_step_count != 0 && a_steps == nullptr)
+            return tally;
+        tally.settles = a_settle_count;
+        std::uint32_t step = 0;
+        for (std::uint32_t settle = 0; settle < a_settle_count; ++settle)
+        {
+            while (step < a_step_count && a_steps[step] < a_settles[settle])
+                ++step;
+            if (step >= a_step_count)
+            {
+                ++tally.unpaired;
+                continue;
+            }
+            ++tally.paired;
+            ++step;
+        }
+        return tally;
     }
 
     // One window's E2-A tally: how many frames/tracks were compared, how many components failed,

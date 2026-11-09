@@ -5,6 +5,7 @@
 #include "animation/behavior_graph/independent_graph.h"
 #include "animation/behavior_graph/probe_liveness_policy.h"
 #include "animation/behavior_graph/source_event_capture_policy.h"
+#include "animation/behavior_graph/source_timeline_policy.h"
 #include "animation/idle_policy.h"
 
 #include <cstdint>
@@ -22,8 +23,13 @@ namespace animation
     [[nodiscard]] bool display_pose();
     // Pace fixed 1/60 steps by eligible elapsed time, capped at 100 ms / 6 steps per display call.
     [[nodiscard]] bool display_step();
-    // G3-A: log the player graph's variable/active-node changes during normal play.
+    // G3-A / C-G5-E3: log the source graph's variable/active-node changes. `on` keeps the F7
+    // lifecycle outside the panel; `concurrent` is armed by the candidate experiment with the
+    // pinned source graph and closed at the display boundary. `source_timeline()` is true for
+    // both states so the existing callers keep their meaning.
     [[nodiscard]] bool source_timeline();
+    [[nodiscard]] behavior_graph::SourceTimelineMode source_timeline_mode();
+    [[nodiscard]] bool source_timeline_concurrent();
     // C-G3B-E3: transient mode for the source timeline - BOOL/INT-typed variables log every
     // observed word change immediately (no settle rule), catching one-frame command writes
     // the settle-3 rule filters out. Requires SourceTimeline.

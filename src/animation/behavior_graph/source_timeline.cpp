@@ -18,11 +18,16 @@
 #include <RE/H/hkStringPtr.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <vector>
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
@@ -50,6 +55,38 @@ namespace animation::behavior_graph
             return value;
         }
 
+        // C-G5-E3 (M2): one TSC basis for both sides. The probe already stamps its steps with
+        // __rdtsc(), so the source publishes the same unit; the per-window ratio to steady_clock is
+        // printed for readability only and never takes part in the pairing decision.
+        std::uint64_t tsc_now()
+        {
+#if defined(_MSC_VER)
+            return static_cast<std::uint64_t>(__rdtsc());
+#else
+            return static_cast<std::uint64_t>(
+                std::chrono::steady_clock::now().time_since_epoch().count());
+#endif
+        }
+
+        // C-G5-E3 (M1): the experiment publishes one arm request with its pinned source graph.
+        // Only `concurrent` consumes it; `on` keeps the F7 path untouched.
+        struct ConcurrentArm
+        {
+            std::atomic<bool> pending{ false };
+            std::atomic<void*> graph{ nullptr };
+            std::atomic<std::uint32_t> actor{ 0 };
+            std::atomic<std::uint64_t> request{ 0 };
+        };
+
+        ConcurrentArm& concurrent_arm()
+        {
+            static ConcurrentArm s_arm;
+            return s_arm;
+        }
+
+        std::atomic<bool> g_close_pending{ false };
+        char const* g_close_reason = "none";
+
         struct Recorder
         {
             std::vector<std::int32_t> logged;
@@ -64,7 +101,20 @@ namespace animation::behavior_graph
             std::int32_t node_candidate = -1;
             std::uint8_t node_settled = 0;
             SourceTimelineWindow window;
+            // C-G5-E3 (M1): concurrent-mode pinning. The pointer is only ever compared against
+            // the manager's graph list; an unowned graph is never dereferenced.
+            std::uintptr_t pinned_graph{ 0 };
+            std::uint64_t request{ 0 };
+            bool concurrent{ false };
         };
+
+        // The settle ledger lives outside the Recorder because it holds atomics and the Recorder is
+        // rebuilt by assignment at arm/invalidate. It is reset explicitly at the same points.
+        SourceSettleRing& settle_ring()
+        {
+            static SourceSettleRing s_ring;
+            return s_ring;
+        }
 
         Recorder& recorder()
         {
@@ -112,6 +162,25 @@ namespace animation::behavior_graph
             return chosen;
         }
 
+        // C-G5-E3 (M1): resolve the pinned source graph by pointer comparison against the manager's
+        // list. A graph that is no longer owned (replaced, freed, world reset) resolves to nullptr,
+        // so the window aborts instead of dereferencing a stale pointer.
+        RE::BShkbAnimationGraph* pinned_source_graph(RE::Actor& actor, std::uintptr_t a_pinned)
+        {
+            if (a_pinned == 0)
+                return nullptr;
+            RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+            if (!actor.GetAnimationGraphManager(manager) || !manager)
+                return nullptr;
+            auto const* const wanted = reinterpret_cast<RE::BShkbAnimationGraph*>(a_pinned);
+            for (RE::BSTSmartPointer<RE::BShkbAnimationGraph> const& graph : manager->graphs)
+            {
+                if (graph && graph.get() == wanted)
+                    return graph.get();
+            }
+            return nullptr;
+        }
+
         char const* variable_name(RE::hkbBehaviorGraph const& a_graph, std::size_t a_index)
         {
             RE::hkbBehaviorGraphData const* const data = a_graph.data.get();
@@ -149,9 +218,10 @@ namespace animation::behavior_graph
             a_state.node_count = nodes ? field_at<std::int32_t>(nodes, kNodeCountOffset) : 0;
             a_state.node_candidate = a_state.node_count;
             a_state.node_settled = 0;
-            logger::info("SOURCE TIMELINE window-open actor={:08x} words={} nodes={} seconds={} mode={}",
+            logger::info("SOURCE TIMELINE window-open actor={:08x} words={} nodes={} seconds={} mode={} request={}",
                 a_actor_id, a_count, a_state.node_count, Source_Timeline_Window.count(),
-                source_transient_watch() ? "transient" : "settled");
+                a_state.concurrent ? "concurrent" : (source_transient_watch() ? "transient" : "settled"),
+                a_state.request);
         }
 
         void sample_variables(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
@@ -194,6 +264,10 @@ namespace animation::behavior_graph
                 a_state.logged[i] = current;
                 if (!take_line(a_state))
                     return;
+                // C-G5-E3 (M2): the confirmation instant is the pairing anchor, so it is published
+                // with the log line in one unit for both sides.
+                std::uint64_t const settle_tsc = tsc_now();
+                (void)settle_ring().push(settle_tsc);
                 float previous_float = 0.0f;
                 float current_float = 0.0f;
                 std::memcpy(&previous_float, &previous, sizeof(float));
@@ -202,11 +276,11 @@ namespace animation::behavior_graph
                 if (name)
                     a_state.named[i] = 1;
                 if (name)
-                    logger::info("SOURCE TIMELINE variable index={} name='{}' {}->{} float={:.4f}->{:.4f}", i, name,
-                        previous, current, previous_float, current_float);
+                    logger::info("SOURCE TIMELINE variable index={} name='{}' {}->{} float={:.4f}->{:.4f} tsc={}", i, name,
+                        previous, current, previous_float, current_float, settle_tsc);
                 else
-                    logger::info("SOURCE TIMELINE variable index={} {}->{} float={:.4f}->{:.4f}", i, previous, current,
-                        previous_float, current_float);
+                    logger::info("SOURCE TIMELINE variable index={} {}->{} float={:.4f}->{:.4f} tsc={}", i, previous, current,
+                        previous_float, current_float, settle_tsc);
             }
         }
 
@@ -226,17 +300,64 @@ namespace animation::behavior_graph
                 return;
             a_state.node_count = count;
             if (take_line(a_state))
-                logger::info("SOURCE TIMELINE nodes count={}", count);
+            {
+                std::uint64_t const settle_tsc = tsc_now();
+                (void)settle_ring().push(settle_tsc);
+                logger::info("SOURCE TIMELINE nodes count={} tsc={}", count, settle_tsc);
+            }
         }
     }
 
     void arm_source_timeline()
     {
-        if (!source_timeline())
+        // F7 belongs to the `on` lifecycle only; `concurrent` is armed by the experiment.
+        if (source_timeline_mode() != SourceTimelineMode::e_on)
             return;
         requests().arm();
         logger::info("SOURCE TIMELINE arm-requested");
     }
+
+    bool arm_source_timeline_concurrent(RE::BShkbAnimationGraph const& a_source_graph, std::uint32_t a_actor_id,
+        std::uint64_t a_request)
+    {
+        if (source_timeline_mode() != SourceTimelineMode::e_concurrent)
+            return false;
+        if (recorder().window.ever_armed())
+        {
+            logger::warn("SOURCE TIMELINE concurrent-arm-skip reason=window-already-used actor={:08x}", a_actor_id);
+            return false;
+        }
+        ConcurrentArm& arm = concurrent_arm();
+        arm.graph.store(const_cast<RE::BShkbAnimationGraph*>(&a_source_graph), std::memory_order_release);
+        arm.actor.store(a_actor_id, std::memory_order_release);
+        arm.request.store(a_request, std::memory_order_release);
+        arm.pending.store(true, std::memory_order_release);
+        logger::info("SOURCE TIMELINE concurrent-arm-requested actor={:08x} request={}", a_actor_id, a_request);
+        return true;
+    }
+
+    void close_source_timeline_window(char const* a_reason)
+    {
+        g_close_reason = a_reason ? a_reason : "none";
+        g_close_pending.store(true, std::memory_order_release);
+    }
+
+    std::size_t take_source_settles(std::uint64_t* a_out, std::size_t a_capacity)
+    {
+        if (a_out == nullptr || a_capacity == 0)
+            return 0;
+        std::size_t taken = 0;
+        while (taken < a_capacity)
+        {
+            std::uint64_t settle = 0;
+            if (!settle_ring().pop(settle))
+                break;
+            a_out[taken++] = settle;
+        }
+        return taken;
+    }
+
+    std::size_t source_settle_backlog() { return settle_ring().size(); }
 
     void invalidate_source_timeline()
     {
@@ -252,26 +373,66 @@ namespace animation::behavior_graph
         if (intent == SourceTimelineIntent::e_invalidate)
         {
             state = Recorder{};
+            settle_ring().reset();
+            concurrent_arm().pending.store(false, std::memory_order_release);
+            g_close_pending.store(false, std::memory_order_release);
             logger::info("SOURCE TIMELINE invalidated reason=world-reset");
             return;
         }
         if (intent == SourceTimelineIntent::e_arm)
         {
             state = Recorder{};
+            settle_ring().reset();
             state.window.arm(std::chrono::steady_clock::now());
+        }
+        // C-G5-E3 (M1): the experiment's arm carries the pinned graph; it is applied here so the
+        // window opens on the sampler thread with the source identity already pinned.
+        ConcurrentArm& arm = concurrent_arm();
+        if (arm.pending.exchange(false, std::memory_order_acquire))
+        {
+            state = Recorder{};
+            settle_ring().reset();
+            state.concurrent = true;
+            state.pinned_graph = reinterpret_cast<std::uintptr_t>(arm.graph.load(std::memory_order_acquire));
+            state.request = arm.request.load(std::memory_order_acquire);
+            state.window.arm(std::chrono::steady_clock::now());
+            logger::info("SOURCE TIMELINE concurrent-arm actor={:08x} request={} graph={:#x}",
+                arm.actor.load(std::memory_order_relaxed), state.request, state.pinned_graph);
+        }
+        if (g_close_pending.exchange(false, std::memory_order_acquire) && state.window.active())
+        {
+            std::uint32_t const lines = state.window.lines();
+            state.window.cancel();
+            logger::info("SOURCE TIMELINE window-closed reason={} lines={} settles-pending={} settles-dropped={}",
+                g_close_reason, lines, settle_ring().size(), settle_ring().dropped());
         }
         if (!state.window.active())
             return;
         if (state.window.expire(std::chrono::steady_clock::now()))
         {
-            logger::info("SOURCE TIMELINE window-closed lines={}", state.window.lines());
+            logger::info("SOURCE TIMELINE window-closed reason=expired lines={}", state.window.lines());
             return;
         }
-        RE::BShkbAnimationGraph* const graph = player_graph(actor);
-        if (!graph)
+        RE::BShkbAnimationGraph* graph = nullptr;
+        if (state.concurrent)
         {
-            abort_source(state);
-            return;
+            // C-G5-E3: pointer comparison only. An unowned graph is never dereferenced, so a
+            // replaced or freed source aborts the window instead of reading freed memory.
+            graph = pinned_source_graph(actor, state.pinned_graph);
+            if (!graph)
+            {
+                abort_source(state);
+                return;
+            }
+        }
+        else
+        {
+            graph = player_graph(actor);
+            if (!graph)
+            {
+                abort_source(state);
+                return;
+            }
         }
         RE::hkbBehaviorGraph* const behavior = graph->behaviorGraph;
         if (!behavior)

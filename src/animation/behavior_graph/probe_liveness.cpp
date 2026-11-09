@@ -5,6 +5,7 @@
 #include "animation/behavior_graph/probe_liveness.h"
 
 #include "animation/behavior_graph/probe_liveness_policy.h"
+#include "animation/behavior_graph/source_timeline.h"
 
 #include "animation/settings.h"
 
@@ -137,8 +138,7 @@ namespace
     {
         ProbeWindow window;
         ProbeAdmission admission;
-        bool close_pending{ false };
-        ProbeRing ring;
+        bool close_pending{ false };        ProbeRing ring;
         ProbePairing pairing;
         ProbeInFlight in_flight;
         ProbeFootikInFlight footik;
@@ -167,6 +167,27 @@ namespace
         std::uint8_t fill_cap_state{ 0 };  // 0 unread, 1 ok, 2 violation
         std::uint32_t skeleton_capacity{ 0 };
         std::uint32_t skeleton_fill{ 0 };
+
+        // C-G5-E3 (M2): the candidate's step timeline (one TSC per pose-producing step) and the
+        // window manifest identity. The manifest is written at arm and completed at close.
+        std::array<std::uint64_t, Probe_Step_Timeline> step_tsc{};
+        std::uint32_t step_count{ 0 };
+        std::uint64_t request{ 0 };
+        std::uint64_t arm_tsc{ 0 };
+        std::uint64_t arm_steady_ns{ 0 };
+        std::uint64_t close_tsc{ 0 };
+        std::uint64_t close_steady_ns{ 0 };
+
+        // Appends one step timestamp and returns its index. A saturated timeline returns the
+        // overflow marker (== Probe_Step_Timeline) instead of overwriting an earlier step, so a
+        // full timeline is visible in the manifest rather than silently truncated.
+        [[nodiscard]] std::uint32_t note_step(std::uint64_t a_tsc) noexcept
+        {
+            if (step_count >= Probe_Step_Timeline)
+                return Probe_Step_Timeline;
+            step_tsc[step_count] = a_tsc;
+            return step_count++;
+        }
 
         // Atomics are not assignable, so a new window resets members in place.
         void reset()
@@ -202,6 +223,12 @@ namespace
             fill_cap_state = 0;
             skeleton_capacity = 0;
             skeleton_fill = 0;
+            step_count = 0;
+            request = 0;
+            arm_tsc = 0;
+            arm_steady_ns = 0;
+            close_tsc = 0;
+            close_steady_ns = 0;
         }
     };
 
@@ -225,6 +252,17 @@ namespace
     std::uintptr_t game_base()
     {
         return REL::Module::get().base();
+    }
+
+    // C-G5-E3 (M2): the one clock basis shared with the source timeline.
+    std::uint64_t probe_tsc_now() noexcept
+    {
+#if defined(_MSC_VER)
+        return static_cast<std::uint64_t>(__rdtsc());
+#else
+        return static_cast<std::uint64_t>(
+            std::chrono::steady_clock::now().time_since_epoch().count());
+#endif
     }
 
     struct ModuleRange
@@ -542,6 +580,10 @@ namespace
             mix.path = static_cast<std::uint8_t>(path_index);
             mix.tid = static_cast<std::uint32_t>(__readgsqword(0x48));
             mix.kind = k_mix_frame;
+            // C-G5-E3 (M2): one TSC per pose-producing step for the pinned graph. The index rides
+            // in `caller_or_count`, which mix frames otherwise leave unused.
+            if (is_pinned)
+                mix.caller_or_count = s.note_step(probe_tsc_now());
             c.eligible_records.fetch_add(1, std::memory_order_relaxed);
             if (!s.ring.push(mix))
                 c.detail_dropped.fetch_add(1, std::memory_order_relaxed);
@@ -784,8 +826,9 @@ namespace
             }
             else if (record.kind == k_mix_frame)
             {
-                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} n={} clamped={} slot0={} slot1={} w={:.6f} ik=[mode:{} count:{} global:{} root:{}] mix-failed={} foot={} other={} max-delta={:.3e}",
+                logger::info("PROBE LIVENESS e2a tid={} graph={:#x} path={} step={} n={} clamped={} slot0={} slot1={} w={:.6f} ik=[mode:{} count:{} global:{} root:{}] mix-failed={} foot={} other={} max-delta={:.3e}",
                     record.tid, record.graph, probe_apply_path_name(static_cast<ProbeApplyPath>(record.path)),
+                    record.caller_or_count,
                     record.num240, record.clamped, record.slot0_count, record.slot1_count,
                     record.weight, static_cast<unsigned>(record.ik_mode), record.ik_count,
                     static_cast<unsigned>(record.ik_global), static_cast<unsigned>(record.ik_root),
@@ -891,6 +934,27 @@ namespace
             logger::info("PROBE LIVENESS e2a-bone index={} name='{}' count={}", i,
                 s.mix.unexplained_bones[i].name.data(), s.mix.unexplained_bones[i].count);
 
+        // C-G5-E3 (M2): the pairing manifest. The rule is fixed here and in the policy test, so the
+        // ledger cannot be tuned after seeing a pose error: each source settle confirmation pairs
+        // with the first candidate step at or after its TSC, and a step is consumed at most once.
+        {
+            std::array<std::uint64_t, 128> settles{};
+            std::size_t const settle_count = take_source_settles(settles.data(), settles.size());
+            ProbeSettlePairing const pairing = probe_pair_settles(settles.data(),
+                static_cast<std::uint32_t>(settle_count), s.step_tsc.data(), s.step_count);
+            double const seconds = s.close_steady_ns > s.arm_steady_ns
+                ? static_cast<double>(s.close_steady_ns - s.arm_steady_ns) / 1'000'000'000.0 : 0.0;
+            double const tsc_per_second = seconds > 0.0 && s.close_tsc > s.arm_tsc
+                ? static_cast<double>(s.close_tsc - s.arm_tsc) / seconds : 0.0;
+            logger::info("PROBE LIVENESS manifest actor={:08x} epoch={} request={} steps={} steps-saturated={} step-tsc-first={} step-tsc-last={} arm-tsc={} close-tsc={} arm-ns={} close-ns={} tsc-per-second={:.0f} source-settles={} paired={} unpaired={} source-settle-backlog={} pairing=first-step-at-or-after-settle",
+                g_actor.load(std::memory_order_relaxed), g_epoch.load(std::memory_order_relaxed), s.request,
+                s.step_count, s.step_count >= Probe_Step_Timeline ? "yes" : "no",
+                s.step_count > 0 ? s.step_tsc[0] : 0,
+                s.step_count > 0 ? s.step_tsc[s.step_count - 1] : 0,
+                s.arm_tsc, s.close_tsc, s.arm_steady_ns, s.close_steady_ns, tsc_per_second,
+                pairing.settles, pairing.paired, pairing.unpaired, source_settle_backlog());
+        }
+
         g_plugin_graph.store(nullptr, std::memory_order_relaxed);
         g_pinned.store(nullptr, std::memory_order_release);
         s.close_pending = false;
@@ -966,7 +1030,10 @@ namespace
             logger::info("PROBE LIVENESS install-skip reason=off");
             return;
         }
-        if (source_timeline() || source_event_capture() || source_write_capture())
+        // C-G5-E3 (M1): the timeline is admitted only in its `concurrent` state, where it installs
+        // no detour and is driven by the same experiment window. The legacy `on` lifecycle still
+        // wins the process, exactly as before.
+        if (source_timeline_mode() == SourceTimelineMode::e_on || source_event_capture() || source_write_capture())
         {
             logger::warn("PROBE LIVENESS install-skip reason=other-detour-probe-priority");
             return;
@@ -1019,7 +1086,8 @@ namespace
         logger::info("PROBE LIVENESS arm-requested mode=on");
     }
 
-    bool arm_probe_liveness_concurrent(RE::BShkbAnimationGraph const& a_source_graph, std::uint32_t a_actor_id)
+    bool arm_probe_liveness_concurrent(RE::BShkbAnimationGraph const& a_source_graph, std::uint32_t a_actor_id,
+        std::uint64_t a_request)
     {
         if (sampling_liveness_mode() != ProbeLivenessMode::e_concurrent || !g_installed.load(std::memory_order_acquire))
             return false;
@@ -1107,10 +1175,15 @@ namespace
         g_pinned.store(pinned, std::memory_order_release);
         g_actor.store(a_actor_id, std::memory_order_relaxed);
         std::uint32_t const epoch = g_epoch.fetch_add(1, std::memory_order_relaxed) + 1;
-        s.window.arm(std::chrono::steady_clock::now());
+        auto const armed_at = std::chrono::steady_clock::now();
+        s.request = a_request;
+        s.arm_tsc = probe_tsc_now();
+        s.arm_steady_ns = static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(armed_at.time_since_epoch()).count());
+        s.window.arm(armed_at);
         s.admission.open();
-        logger::info("PROBE LIVENESS concurrent-armed actor={:08x} epoch={} graph={:#x} behavior={:#x} pinned=yes",
-            a_actor_id, epoch, reinterpret_cast<std::uintptr_t>(pinned),
+        logger::info("PROBE LIVENESS concurrent-armed actor={:08x} epoch={} request={} graph={:#x} behavior={:#x} pinned=yes",
+            a_actor_id, epoch, a_request, reinterpret_cast<std::uintptr_t>(pinned),
             reinterpret_cast<std::uintptr_t>(pinned->behaviorGraph));
         return true;
     }
@@ -1153,6 +1226,10 @@ namespace
         else if (std::strcmp(a_reason, "expired") == 0) reason = ProbeWindowClose::e_expired;
         else if (std::strcmp(a_reason, "world-reset") == 0) reason = ProbeWindowClose::e_world_reset;
         else if (std::strcmp(a_reason, "rearm") == 0) reason = ProbeWindowClose::e_rearm;
+        s.close_tsc = probe_tsc_now();
+        s.close_steady_ns = static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
         s.window.cancel(reason);
         s.admission.close();
         s.close_pending = true;

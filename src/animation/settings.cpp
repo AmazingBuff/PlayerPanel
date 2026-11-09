@@ -14,7 +14,7 @@ namespace
     behavior_graph::IndependentGraphMode g_independent_graph = behavior_graph::IndependentGraphMode::off;
     bool g_display_pose = false;
     bool g_display_step = false;
-    bool g_source_timeline = false;
+    behavior_graph::SourceTimelineMode g_source_timeline_mode = behavior_graph::SourceTimelineMode::e_off;
     bool g_source_transient_watch = false;
     behavior_graph::SourceEventCaptureMode g_source_event_capture_mode = behavior_graph::SourceEventCaptureMode::e_off;
     bool g_source_write_capture = false;
@@ -45,7 +45,10 @@ void load_settings()
     g_independent_graph = parsed_experiment.value_or(behavior_graph::IndependentGraphMode::off);
     g_display_pose = ini.GetBoolValue("Experiment", "DisplayPose", false);
     g_display_step = ini.GetBoolValue("Experiment", "DisplayStep", false);
-    g_source_timeline = ini.GetBoolValue("Experiment", "SourceTimeline", false);
+    char const* const timeline = ini.GetValue("Experiment", "SourceTimeline", "off");
+    std::optional<behavior_graph::SourceTimelineMode> const parsed_timeline =
+        behavior_graph::parse_source_timeline(timeline ? std::string_view{ timeline } : std::string_view{});
+    g_source_timeline_mode = parsed_timeline.value_or(behavior_graph::SourceTimelineMode::e_off);
     g_source_transient_watch = ini.GetBoolValue("Experiment", "SourceTransientWatch", false);
     char const* const event_capture = ini.GetValue("Experiment", "SourceEventCapture", "off");
     std::optional<behavior_graph::SourceEventCaptureMode> const parsed_event_capture =
@@ -76,6 +79,9 @@ void load_settings()
     if (!parsed_event_capture)
         logger::warn("EXPERIMENT invalid Experiment.SourceEventCapture='{}'; using off (expected off|on|concurrent)",
             event_capture ? event_capture : "");
+    if (!parsed_timeline)
+        logger::warn("EXPERIMENT invalid Experiment.SourceTimeline='{}'; using off (expected off|on|concurrent)",
+            timeline ? timeline : "");
     if (!parsed_sampling_liveness)
         logger::warn("EXPERIMENT invalid Experiment.SamplingLiveness='{}'; using off (expected off|on|concurrent)",
             sampling_liveness ? sampling_liveness : "");
@@ -85,7 +91,7 @@ void load_settings()
     logger::info("EXPERIMENT setting IndependentGraph={}", behavior_graph::independent_graph_name(g_independent_graph));
     logger::info("EXPERIMENT setting DisplayPose={}", g_display_pose);
     logger::info("EXPERIMENT setting DisplayStep={}", g_display_step);
-    logger::info("EXPERIMENT setting SourceTimeline={} transient={}", g_source_timeline,
+    logger::info("EXPERIMENT setting SourceTimeline={} transient={}", behavior_graph::source_timeline_mode_name(g_source_timeline_mode),
         g_source_transient_watch);
     logger::info("EXPERIMENT setting SourceEventCapture={}", behavior_graph::source_event_capture_mode_name(g_source_event_capture_mode));
     logger::info("EXPERIMENT setting SourceWriteCapture={}", g_source_write_capture);
@@ -104,7 +110,12 @@ bool behavior_graph_probe() { return g_behavior_graph_probe; }
 behavior_graph::IndependentGraphMode independent_graph_setting() { return g_independent_graph; }
 bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }
-bool source_timeline() { return g_source_timeline; }
+bool source_timeline() { return g_source_timeline_mode != behavior_graph::SourceTimelineMode::e_off; }
+behavior_graph::SourceTimelineMode source_timeline_mode() { return g_source_timeline_mode; }
+bool source_timeline_concurrent()
+{
+    return g_source_timeline_mode == behavior_graph::SourceTimelineMode::e_concurrent;
+}
 bool source_transient_watch() { return g_source_transient_watch; }
 bool source_event_capture() { return g_source_event_capture_mode != behavior_graph::SourceEventCaptureMode::e_off; }
 behavior_graph::SourceEventCaptureMode source_event_capture_mode() { return g_source_event_capture_mode; }
