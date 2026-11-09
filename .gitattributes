@@ -1,0 +1,4 @@
+# This document accumulated mixed line endings plus three NUL bytes and a stray
+# CR, which made Git classify it as binary (-text) and bury every real change
+# behind a whole-file diff. Pin it to LF so future edits stay reviewable.
+docs/independent-behavior-graph.md text eol=lf

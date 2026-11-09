@@ -4209,7 +4209,7 @@ Shield                 NPC L Pauldron
 
 **二、观测点（预注册）**
 
-1. **58423 入口与返回**——两处窗口已离线核验（2026-11-08）：入口  xab7f30（4c 8b dc 4d 89 43 18，7 字节头，无跳入）；**返回点唯一**：全函数仅 1 个 et（ xab9d62），其前 5 字节为 415f 5e 5d 的尾部（pop rdi/rsi/rbp 交错，非 5 字节整指令边界——**补丁窗口取  xab9d5d（415d 5f 5e 5d c3）不可行，实际可用窗口为 [0xab9d5d, 0xab9d62) 的 5 字节**，逐字节为 41 5d 5f 5e 5d（pop r13/pop rdi/pop rsi/pop rbp 的中段），**有跳入检查：无**），detour 记录：
+1. **58423 入口与返回**——两处窗口已离线核验（2026-11-08）：入口 0xab7f30（4c 8b dc 4d 89 43 18，7 字节头，无跳入）；**返回点唯一**：全函数仅 1 个 ret（0xab9d62），其前 5 字节为 415f 5e 5d 的尾部（pop rdi/rsi/rbp 交错，非 5 字节整指令边界——**补丁窗口取 0xab9d5d（415d 5f 5e 5d c3）不可行，实际可用窗口为 [0xab9d5d, 0xab9d62) 的 5 字节**，逐字节为 41 5d 5f 5e 5d（pop r13/pop rdi/pop rsi/pop rbp 的中段），**有跳入检查：无**），detour 记录：
    - 入口：`rcx=[g+0x100]`（footIkDriver）、`rdx=&ctx`、`r8=&out`（**mix 结果**）、`r9d=0`。
    - **返回：`out` 的 116 轨道**（此刻 footIK 已改写）。
    - 配对：同线程 in-flight（E2-A′ 的机制复用）。
@@ -4382,4 +4382,4 @@ Shield                 NPC L Pauldron
 - 本节**不授权实现**；实现前需明确批准 M1–M3 与 R-1 处置。
 - 不改 E1/E2 已闭合判据与阈值，不改窗口语义，不对 G5 门 1 下任何结论。
 - 若评审认为 C2 必须逐 step 取证，则最小实现面要扩容；该决定须先写回本节，再动代码（避免实现过程中顺手加需求）。
-- 该文件仍含 3 个 NUL 与 1 个游离 CR（都在上一节"58423 入口与返回"段内）；它们使 git 把此文件判为二进制（`-text`），一旦清除就会触发整文件 CRLF→LF 归一化。修复需要单独一次"只改行尾与字节"的提交（先加 `.gitattributes` 或先 `git add --renormalize`），不与本轮文档混在一起。
+- 该文件的原生字节与行尾已归一（单独提交 `docs: normalize line endings and repair four mangled bytes`）：评审时发现的 3 个 NUL 与 1 个游离 CR 在同一次提交修复，"入口 `0xab7f30`""仅 1 个 `ret`""`0xab9d62`""`0xab9d5d`"恢复前缀与字符；文件现为纯 LF 文本并由 `.gitattributes` 固定，后续可直接用常规编辑工具与 `git diff` 审阅。
