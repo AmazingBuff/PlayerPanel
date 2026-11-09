@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-08（夜）。**E1/E2 两切片已闭合，E3 契约已预注册**（[当前会话摘要](#status-20261108-session)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2-A 合成恒等式已预注册（[C-G5-E2](#c-g5-e2)，2026-11-06）**；E2 实现与 E3 尚未开始，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-08（夜）。**E1/E2 两切片已闭合，E3 契约已预注册并出实现评审草案**（[C-G5-E3-R](#c-g5-e3-r)；[当前会话摘要](#status-20261108-session)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（待实现评审）。E2/E3 未开始 |
+| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1/E2 已闭合；E3 契约 + [实现评审草案](#c-g5-e3-r) 就绪、实现未授权 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -4293,3 +4293,93 @@ Shield                 NPC L Pauldron
 
 
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。
+
+<a id="c-g5-e3-r"></a>
+## C-G5-E3-R：实现评审草案（2026-11-09，文档；不授权实现）
+
+**状态**：[C-G5-E3](#c-g5-e3) 已预注册，实现未开始。本节只回答该契约"五、实现影响面"留下的三个待决问题，并记录评审中查到的两条**取证更正**。**本节不授权任何代码、构建、部署或上机**；批准 M1–M3 与 R-1 处置后才进入实现。
+
+### 一、两条先决更正（须先于三个问题，否则会按错误前提设计）
+
+**R-1 `ring-dropped` 是生产者竞争，不是环容量。** 现行记录把 v84/v85 的丢弃写成"8,528 条产量超出 4,096 环容量"。逐字段核对两次运行的关闭行：
+
+| 运行 | `eligible-records` | `drained-records` | `ring-dropped` | `contention-dropped` | `full-dropped` |
+| --- | --- | --- | --- | --- | --- |
+| v84 | 8,528 | 8,407 | 121 | 121 | **0** |
+| v85 | 8,722 | 8,558 | 164 | 164 | **0** |
+
+`full-dropped=0` 说明环从未写满；丢掉的 121/164 条全部来自 [`ProbePushGate::try_enter`](../../src/animation/behavior_graph/probe_liveness_policy.h#L358)：抢不到门就丢，`m_contended` 同步加一。环深 4,096、记录 64 B，容量不是瓶颈。
+
+后果：**扩环不是解**。若沿用"每窗口固定丢约 1.9%"，C4 的"采集丢失 ⇒ 证据不足"会每轮触发，账本永远不完整。处置选项：
+
+| # | 方案 | 代价 |
+| --- | --- | --- |
+| a | 门改**有界自旋**（≤N 次 `pause`，超限才丢并计数） | detour 内多几十纳秒，最坏仍丢 |
+| b | 抢门失败时写 per-tid **二次机会槽**（锁外、单生产者独占） | 一个静态槽/线程 + drain 合并逻辑 |
+| c | 预注册"可接受丢失率与归属" | 等于放宽 C4，**不建议** |
+
+建议 a 先做、b 兜底，关闭行保留 `contention/full` 分列，下一轮验证是否真归零。
+
+**R-2 `b-*` 是跨 tid、跨 out 块的合计，尚未建立与候选的归属。** [`record_footik_entry`](../../src/animation/behavior_graph/probe_liveness.cpp#L628) 既不判图也不判块，只把 `a_out` 存入 per-tid in-flight，因此 `b-calls/b-compared/b-rewritten` 统计的是**本进程所有 58423 调用**。v85 日志中 217 条可见 `b-entry` 的分布是 **6 个 tid、18 个不同 `out` 地址**，`tracks` 取 116（188 次）/98（29 次）。
+
+这已足以证明 `b-*` 不是"候选那一块"的读数；至于是同一角色的多条调用路径、还是同场景多个角色，现有数据无法区分。
+
+后果：E2-B 的"footIK 是 poseLocal 的主导写入者"应降级为**量级参照**（改写量确实大，但分母不是候选）；[E2-B 的 B5 归因闭合](#c-g5-e2-b) 因此没有取证基础，B3/B4 也未实现。**E3 不应把 footIK 序当配对锚**——锚必须能归属到候选。
+
+### 二、三个待决问题（M1–M3，均为建议，待批准）
+
+**M1（Q1）manifest 索引：给 `SourceTimeline` 加第三态 `concurrent`，而不是"两个开关同时开"。**
+
+冲突点：[`install_probe_liveness`](../../src/animation/behavior_graph/probe_liveness.cpp#L969) 在 `SourceTimeline`/`SourceEventCapture`/`SourceWriteCapture` 任一开启时拒绝安装。但 `SourceTimeline` **不安装任何 detour**（`source_timeline.cpp` 内无 `safe_write`/`Trampoline`/`REL::ID`），所以这是**策略性**互斥，不是钩子冲突。v64 已为 `SourceEventCapture` 建立同形先例（三态与理由见 [source_event_capture.cpp:412](../../src/animation/behavior_graph/source_event_capture.cpp#L412)）。
+
+建议：
+- `SourceTimeline` 解析为三态（`false`/`on` 保持旧义，新增 `concurrent`）；**值域扩展，不新增 INI 键**。
+- `concurrent` 由实验在 [independent_graph.cpp:1234](../../src/animation/behavior_graph/independent_graph.cpp#L1234) 一带 arm，**传入 pinned source graph**；在 [independent_graph.cpp:1079](../../src/animation/behavior_graph/independent_graph.cpp#L1079) 的 `display-close` 关闭，`world-reset` 走 invalidate。`on` 的 F7 生命周期不变。
+- `install_probe_liveness` 的守卫改为"允许 `SourceTimeline=concurrent`，其余仍拒"。
+- `concurrent` 下**不得**沿用 [`player_graph`](../../src/animation/behavior_graph/source_timeline.cpp#L270) 的解析（它挑"最后一个非 1stperson 图"，v64 尝试 1 就是第一帧 `source-lost-or-replaced`）；改为观察传入指针，每帧只做**指针比较**验证 manager 仍持有它，不 deref 陌生指针。
+
+**M2（Q2）时间主轴：TSC 基准 + 输入历史为主轴 + 代数组锚。**
+
+源 settled 是"变化驱动 + settle-3 确认"（`kSettleSamples=3`），候选是 60 Hz 逐步，不能按墙钟插值。建议：
+- 两侧都用 `__rdtsc()` 打点（探针已在用，[probe_liveness.cpp:642](../../src/animation/behavior_graph/probe_liveness.cpp#L642)）；源侧在 **settle 确认帧**打点，候选在每个 step 后打点。
+- 配对规则（**先于看误差**固定）：`源快照 ↔ settle 确认时刻之后第一个候选 step`；不插值、不取最近邻、不因缺失挑邻帧。源无 settle 或候选无 step ⇒ 记 `missing`，不补。
+- 每窗口做**一次** tsc↔steady_clock 比例标定（记录标定值与残差），只用于人读换算，**不参与配对判定**。
+- 代数锚用现成字段：`epoch`（探针窗口）、`request`/`actor_id`（arm 处）、`view`（display 窗口）。三者写入**每请求一行** `manifest`；`step` 追加到现有 `e2a` 行，**不新增每帧记录类型**。
+
+**M3（Q3）footIK 序：不做，双侧都不做。** 见 R-2。代价是 manifest 少一个锚；但该锚目前无法归属候选，写进去就是把未定义量当证据。若将来要做，前置条件是"out 块 ↔ 图"的归属映射，那需要另一份契约。
+
+### 三、最小实现面
+
+| 项 | 内容 | 新增 detour | 新增 INI 键 | 新增记录类型 |
+| --- | --- | --- | --- | --- |
+| `probe_liveness_policy.h` | 有界自旋门 + per-tid 二次机会槽（R-1 a/b） | 否 | 否 | 否 |
+| `source_timeline_policy.h` / `.cpp` | 三态解析、pinned-graph 观察、tsc 打点 | 否 | 否（值域扩展） | 否 |
+| `independent_graph.cpp` | concurrent arm/close 接线、每请求一行 `manifest` | 否 | 否 | 是（每请求 1 行） |
+| `probe_liveness.cpp` | `e2a` 行追加 `epoch/request/step` | 否 | 否 | 否 |
+| 离线用例 | 生命周期、配对规则、缺失账本、不合格对判停 | — | — | — |
+
+硬约束：`ProbeRecord` **保持 64 B**——加字段会改变拷贝指令形状，正是 v79→v81 三次 `movaps` 崩溃的成因（反模式 16）；若确需加字段，必须重新反汇编验收。
+
+### 四、离线回归清单（对应 C3"不得事后改规则"）
+
+1. manifest 索引唯一性：同一 `epoch+request` 重复 arm 必须被拒并计数。
+2. 缺失账本：源无 settle / 候选无 step / 跨 epoch ⇒ 计 `missing`，不得补。
+3. **不合格对判停**：以 v66 反例形态（源 `12220/SVFI/13.06` vs 候选 `1022/original/1.8667`）为输入，必须判 `not-qualified` 并停，不得进入误差比较。
+4. `SourceTimeline=concurrent` 生命周期：arm / display-close / expired / world-reset 四条路径与旧 `on` 不交叉；两态同时配置时的优先级要有单测。
+5. tsc 标定：单调性、回绕处理、残差上报。
+
+### 五、C1–C4 与现有机制的对照
+
+| 交付物 | 现有机制 | 缺口 |
+| --- | --- | --- |
+| C1 资格声明 | `pre-activate`/baseline/scan 行 | 初态（装备、骨架、project/behavior/OAR 配置）分散在多行，缺一行汇总 |
+| C2 bound-resource 身份 | `log_clip_reference` 只在 drive 循环的 0/60/120 三个检查点调用 | 需要逐 step 的 clip 实例身份/时钟/dt/模式，或明确"C2 只按检查点取证"并由评审接受 |
+| C3 配对 manifest | 无 | M1/M2 |
+| C4 完整记录 + 缺失账本 | `SourceTimeline` + `e2a`/`b-*` | R-1（丢率）与 R-2（归属）未解前不完整 |
+
+### 六、停点与授权边界
+
+- 本节**不授权实现**；实现前需明确批准 M1–M3 与 R-1 处置。
+- 不改 E1/E2 已闭合判据与阈值，不改窗口语义，不对 G5 门 1 下任何结论。
+- 若评审认为 C2 必须逐 step 取证，则最小实现面要扩容；该决定须先写回本节，再动代码（避免实现过程中顺手加需求）。
+- 该文件仍含 3 个 NUL 与 1 个游离 CR（都在上一节"58423 入口与返回"段内）；它们使 git 把此文件判为二进制（`-text`），一旦清除就会触发整文件 CRLF→LF 归一化。修复需要单独一次"只改行尾与字节"的提交（先加 `.gitattributes` 或先 `git add --renormalize`），不与本轮文档混在一起。
