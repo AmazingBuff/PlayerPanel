@@ -1342,7 +1342,7 @@ Log [369,541 bytes `6d20f0f2…`](diagnostics/CharacterPanel-g5e2-b-v85-run2-202
 **E2-B closes with B1/B2/B6 passing**; per the contract B3/B4 stay for the next version, but the rewrite magnitude makes "poseLocal ≈ 58423 output" the expected answer. Joint conclusion: the poseLocal-vs-mix difference is fully attributed to the three post-process chains (foot IK dominant, cloth, arm/attachment), and the mix→poseLocal copy is exact off those chains. E1/E2 parts of gate 1 are ready to close; next is the E3 contract.
 
 <a id="v86-g5e3-manifest-2026-11-09"></a>
-## v86 G5-E3 manifest (2026-11-09, built, **not deployed**)
+## v86 G5-E3 manifest (2026-11-09, built and **deployed, awaiting the run**)
 
 **Change** (committed `1e645a6d48`, clean tree): implements the approved M1-M3 and R-1a of [C-G5-E3-R](independent-behavior-graph.md#c-g5-e3-r). `SourceTimeline` gains a `concurrent` state that the experiment arms on the pinned source graph before its dispatches and that closes at the display boundary; the sampler re-validates the pointer by comparison against the manager's list and aborts on replacement. Both sides stamp `__rdtsc()`: the probe keeps a 2048-step timeline, and the close sequence emits one `manifest` row that drains the source settle ring and counts paired/unpaired with the pre-registered rule. The producer gate now spins up to 64 pauses before it drops.
 
@@ -1352,6 +1352,6 @@ Log [369,541 bytes `6d20f0f2…`](diagnostics/CharacterPanel-g5e2-b-v85-run2-202
 
 **Offline**: 4 new engine-free cases (tri-state parse including typo rejection, the pairing rule with the no-reuse and late-settle cases, gate contention counted once, settle-ring order/overflow/reset) plus the existing 34 (8 legacy + 6 v3 + 2 repair + 13 e2a + 3 e2b + 2 timeline session) pass under `cl /W4 /WX`; the Release build exits 0.
 
-**Identity**: `CharacterPanel-scenegraph-v86-g5e3-manifest-1e645a6d48-1e645a6d48-cl94faaed0c6-20261109T145833Z`, DLL 1,812,992 bytes SHA-256 `57a2b11ae4aa11cf8c11b0022122bd68cdd1e38711238b0db60cb1acc1eea645`, PDB 49,377,280 bytes SHA-256 `04f12c175b8fa7bdba5809774cf2617b1d711008cdd1da9d9de401ed375d6805`, CodeView `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 431. **Not deployed**: the DLL/PDB swap and the E3 run INI are a separate approved step.
+**Identity**: `CharacterPanel-scenegraph-v86-g5e3-manifest-1e645a6d48-1e645a6d48-cl94faaed0c6-20261109T145833Z`, DLL 1,812,992 bytes SHA-256 `57a2b11ae4aa11cf8c11b0022122bd68cdd1e38711238b0db60cb1acc1eea645`, PDB 49,377,280 bytes SHA-256 `04f12c175b8fa7bdba5809774cf2617b1d711008cdd1da9d9de401ed375d6805`, CodeView `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 431. **Deployed 2026-11-09**: the v85 trio was backed up to `dist/deploy-backup-20261109-v85-v86pre/`, the v86 DLL/PDB now sit in `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` (hashes equal to the build outputs above), and the run INI `68be6ee9…` (10,105 bytes, no BOM, CRLF) changes only `SourceTimeline=false → concurrent` plus five comment lines; 13 run keys were read back.
 
 **Next-run reading**: `manifest` must show `steps>0` with `tsc-per-second` in the expected GHz range; `source-settles` must be non-zero once the window covers a transition; `ring-dropped` should fall to 0 with the bounded spin (if it does not, implement R-1b); `transport-complete=yes` is the precondition for judging anything else.

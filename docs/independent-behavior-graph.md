@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-08（夜）。**E1/E2 两切片已闭合，E3 评审已出并获批准、实现已构建**（[C-G5-E3-R](#c-g5-e3-r)、[v86 构建](build.md#v86-g5e3-manifest-2026-11-09)；未部署/未上机；[当前会话摘要](#status-20261108-session)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-08（夜）。**E1/E2 两切片已闭合，E3 评审已获批准、实现已构建并部署**（[C-G5-E3-R](#c-g5-e3-r)、[v86 构建](build.md#v86-g5e3-manifest-2026-11-09)；未上机；[当前会话摘要](#status-20261108-session)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1/E2 已闭合；E3 实现已构建（v86）、待部署与上机 |
+| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1/E2 已闭合；E3 实现已部署（v86）、待上机 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -131,8 +131,10 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **最新记录安装：v69**（[构建/部署/运行记录](build.md#v69-g5e1-clean-rebuild-2026-11-04)）：DLL 1,590,272 字节 `2490c38d…`、PDB `f69c9790…`、CodeView age 397；运行 INI 用后已恢复 dormant `27f481f5…`（v69 两轮运行 INI `c3703b74…` 已归档记录）。
-- **最近记录的部署 INI：dormant**，2,147 字节 `27f481f5…`（v68 判读后的恢复记录；本轮未重新核验）。v68 运行使用 9,465 字节 `ff3c6f34…` concurrent 配置。后续必须归档匹配新 DLL/PDB/INI 身份，不能用 v68 日志替代修复版验证。
+- **最新记录安装：v86（G5-E3 manifest）**：DLL 1,812,992 字节 `57a2b11ae4aa11cf…1eea645`、PDB 49,377,280 字节 `04f12c175b8fa7bd…375d6805`、CodeView age 431、身份 `…-v86-g5e3-manifest-1e645a6d48-1e645a6d48-cl94faaed0c6-20261109T145833Z`（[构建记录](build.md#v86-g5e3-manifest-2026-11-09)）；v85 三件套备份于 `dist/deploy-backup-20261109-v85-v86pre/`。
+- **部署 INI：E3 运行档** `68be6ee9…`，10,105 字节、无 BOM、全 CRLF；相对上一版只把 `SourceTimeline=false` 改成 `concurrent` 并补 5 行注释。13 个运行键回读通过（`IndependentGraph=inject`、`DisplayPose/DisplayStep=true`、`SamplingLiveness=concurrent`、`SourceTimeline=concurrent`，其余仪器全 off）。
+- **上机状态：已部署、未上机**。E3 首轮按 [C-G5-E3-R §七](#c-g5-e3-r) 的顺序判读；`source-settles` 是第一个分叉点（>0 ⇒ 面板期源图仍在推进、并发配对轴成立；=0 ⇒ 该轴为空，C3 须改按输入历史配对）。
+- **历史**：v85（E2-B，`e5552e89…`）已由本轮取代；v69 及更早的 dormant 记录只描述当时工件。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
 
@@ -4399,3 +4401,5 @@ Shield                 NPC L Pauldron
 **边界**：`ProbeRecord` 仍为 64 B；无新 detour、无新 INI 键、无新每帧记录类型。`SourceTimeline=concurrent` 须与 `SamplingLiveness=concurrent` 同时开启（probe 仍拒绝旧 `on`；`SourceEventCapture`/`SourceWriteCapture` 也仍拒绝与任何 timeline 共存）。
 
 **下一轮的判读顺序**（预注册，按序停）：`manifest steps>0` 且 `tsc-per-second` 数量级合理 → `source-settles>0`（窗口确实覆盖转段）→ `ring-dropped=0`（否则实现 R-1b）→ `unpaired=0` → 才谈 C1–C4 账本。任何一步不成立即停，不得把"manifest 有行"当作配对成立。
+
+**部署（2026-11-09）**：v86 DLL/PDB 已装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（哈希与构建产物逐字节一致），v85 三件套备份于 `dist/deploy-backup-20261109-v85-v86pre/`；运行 INI `68be6ee9…`（10,105 字节、无 BOM、全 CRLF）相对上一版只把 `SourceTimeline` 改成 `concurrent` 并补 5 行注释，13 个运行键回读通过。部署未改产品路径：两个开关都只读，`IndependentGraph=inject` 与 v85 时相同。
