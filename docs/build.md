@@ -1456,3 +1456,19 @@ Log [90,252 bytes `7ce80813…`](diagnostics/CharacterPanel-g5e3-c-run1-20261110
 **C2 (candidate half)**: `clip-ref` rows at steps 0/60/120 carry clip names, binding indices, durations, modes and speeds (`H2H_Equip`, `MT_Idle`, `H2H_Idle`, `1HM_Idle`, `SCAR_1hmReadyDummy`), so the bound-resource identity is recorded on the candidate side. Source-side clip identity stays uncovered, as the contract states.
 
 **Observed but not adjudicated**: the candidate leaves the unequip state at step 21 (0.35 s) while the source needed 1.26 s (`1->12` at 25.073, `12->0` at 26.330) — a timing difference for the later clock ledger (E2-C), not an E3 criterion.
+<a id="v89-g5e4-source-capture-2026-11-10"></a>
+## v89 G5-E4 source capture (2026-11-10, built, **not deployed**)
+
+**Change** (committed `aaf7b009fd`, clean tree): [C-G5-E4](independent-behavior-graph.md#c-g5-e4) implemented inside `SourceTimeline`. No detour: the rows come from the existing post-UI sample, so `poseLocal` is read after the frame's apply as a completed output and the instruments-do-not-stack rule is untouched. The pose is read through `hkbCharacter::poseLocal` / `numPoseLocal`; the clip table walks the active-node list and keeps only entries whose vtable is `hkbClipGenerator`; the quad components are copied out with `memcpy` because `hkVector4`/`hkQuaternion` expose no named members (the first build failed on exactly that).
+
+**Anchoring**: one snapshot per settle. Several variables settling on the same frame count as one anchor; a settle arriving while an anchor is still pending is counted as a drop; the snapshot is emitted on the first sample after the settle (`anchor-delta-frames` = 1). Clock samples follow a fixed 10-frame stride.
+
+**Rows**: `pose-snapshot ... frame= anchor-delta-frames= anchor-tsc= pose-local= n= clips=shown/found lines=`, then one `track=` row per bone (`trans/rot/scale`, six decimals) and one `clip name= time= mode= speed= enforced=`, plus `clock-sample ... frame= found= entries='name:time|...'`. The `window-closed` row now carries `snapshots / clocks / capture-lines / snapshot-dropped / clock-dropped / line-dropped`.
+
+**Budgets**: 8 snapshots, 120 clock rows, 1,500 lines - the pre-registered numbers, pinned by an offline case so a later edit cannot drift silently.
+
+**Offline**: 4 new capture cases (stride, snapshot limit, line-budget refusal with both counters, constants) plus the existing 40 pass under `cl /W4 /WX`; the Release build exits 0.
+
+**Identity**: `CharacterPanel-scenegraph-v89-g5e4-source-capture-aaf7b009fd-aaf7b009fd-cl94faaed0c6-20261110T153008Z`, DLL 1,829,888 bytes SHA-256 `9e35db4c9d815d18515bfdc355e0c2daff1965d2e32d5f9a485962fe970a32ca`, PDB 49,414,784 bytes SHA-256 `0378125ac7eb29d38528a79707924a274d85f2cab367dc636874eae5a8b97ffd`, CodeView age 437.
+
+**Next**: deploy with an R-run INI that sets `SourceTimeline=on`, `SourceTimelineGraph=DefaultFemale`, `SourcePoseCapture=true`, `SamplingLiveness=off`; one F7 window with the equip/unequip script then yields two pose snapshots plus the clock samples.

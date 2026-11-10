@@ -4679,6 +4679,7 @@ T1–T5 在 equip 窗口上成立（`N` 与 `?` 均未出现，无非法字符�
 | 离线 | 锚点选择（含"一个 settle 一个快照"）、预算外溢计数、clip 表格式化截断、`n` 越界判停 |
 | 预算 | 每窗口 ≤1,500 行；20 s 窗口下 120 条时钟行 + ≤8 块快照（每块约 125 行，合计约 1,120 行） |
 | 文档 | 本节 + E2-C §一 的"阻塞"改为"由 E4 解" + README/CHANGELOG |
+**实现（v89，2026-11-10）**：落在 `SourceTimeline`，零 detour；`poseLocal` 走 `hkbCharacter::poseLocal`/`numPoseLocal`，clip 表按 vtable 过滤，四元组/向量用 `memcpy` 取出（首版直接读 `.x/.y/.z` 编译失败，已改）。锚点为「一个 settle 一个快照」：同帧多变 settle 记一次，悬而未取时再来 settle 记 drop；快照在 settle 之后的第一个采样帧发出（`anchor-delta-frames` 应为 1）。关闭行新增 `snapshots/clocks/capture-lines/snapshot-dropped/clock-dropped/line-dropped`；预算 8/120/1,500 由离线用例钉住。提交 `aaf7b009fd`，[构建记录](build.md#v89-g5e4-source-capture-2026-11-10)，离线 44 例通过。
 
 ### 九、明确不做
 
