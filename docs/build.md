@@ -1391,3 +1391,17 @@ Log [24,192 bytes `4cedd700…`](diagnostics/CharacterPanel-g5e3-r-run1-20261110
 **Consequence**: the `on` lifecycle needs a deterministic graph selector. Proposed minimal change — an `on`-only graph census line at window-open (index / `projectName` / words / nodes for every managed non-1stperson graph) plus one selector key (`SourceTimelineGraph=<projectName>`, empty keeps today's last-non-1stperson behaviour). Read-only, no detour, no product-path change. **Not implemented yet**: it needs its own review line in the contract.
 
 **Deployment note**: the R INI (`81e03db5…`) is still installed; the dormant file is preserved at `dist/CharacterPanel-dormant-26625f09.ini`.
+<a id="v87-g5e3-graph-select-2026-11-10"></a>
+## v87 G5-E3 graph selector (2026-11-10, built and **deployed; the next session is a census run**)
+
+**Change** (committed `4324aa19ac`, clean tree): `SourceTimeline=on` now prints a graph census once per window and honours `SourceTimelineGraph=<projectName>` (case-insensitive, exact length). `concurrent` still observes the experiment's pinned graph and prints no census, so the v86 pinning semantics are untouched. A selector that matches nothing falls back to the legacy last-match rule, and the census says so (`origin=selector-miss-fallback`) instead of silently swapping the observed graph.
+
+**Rows**: `SOURCE TIMELINE graph-census actor=... found=N shown=M selector='...' origin=last|selector|selector-miss-fallback chosen=i`, followed by one `graph-census index=i name='...' words=... nodes=... selected=yes|no` per managed non-1stperson graph (up to 8 stored, `found` stays exact). `window-open` also gained `request=`.
+
+**Offline**: the e3 suite is now 5 cases (selector match, case folding, prefix rejection, empty selector, no-pick paths); all 39 engine-free cases pass under `cl /W4 /WX`, and the Release build exits 0.
+
+**Identity**: `CharacterPanel-scenegraph-v87-g5e3-graph-select-4324aa19ac-4324aa19ac-cl94faaed0c6-20261110T145958Z`, DLL 1,817,088 bytes SHA-256 `f1ef74e93652974f13a25b6c31b57b872fe2e28ba104c09af3ff07bff8e90db7`, PDB 49,410,048 bytes SHA-256 `ffb51ddab2aac5ab6ce86ad4e39f0abb41ff8f09ebf02a344403736e6518a247`, CodeView `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 433.
+
+**Deployed 2026-11-10**: the v86 trio was backed up to `dist/deploy-backup-20261110-v86-v87pre/` (DLL `57a2b11a…`, PDB `04f12c17…`, R INI `81e03db5…`), then the v87 DLL/PDB and the R run INI `abc42052…` (10,664 bytes; `SourceTimeline=on`, `SourceTimelineGraph=` empty) were installed with destination-hash comparison.
+
+**Next**: one **census run** — F7 outside the panel, read the `graph-census` names, and identify which one carries `words=652 nodes=106`; then set `SourceTimelineGraph=<that name>` and rerun R with the equip/unequip script from [C-G5-E3 v2](independent-behavior-graph.md#c-g5-e3-v2).
