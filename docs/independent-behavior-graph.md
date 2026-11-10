@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 普查已定位根因（漏掉 `FirstPerson`），v88 修复已部署**（[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10)、[v88](build.md#v88-g5e3-firstperson-2026-11-10)、[§九 更正](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 普查已定位根因（漏掉 `FirstPerson`）并修复（v88），**E3 的 C3/C4 已交付：R/C 两次运行配对 2/2**（[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10)、[v88](build.md#v88-g5e3-firstperson-2026-11-10)、[§九 更正](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1/E2 已闭合；E3 首轮已跑（v86）：停在第一分叉 `source-settles=0`，C3 改按输入历史并已预注册 [v2](#c-g5-e3-v2) |
+| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1/E2 已闭合；E3 配对账本 **2/2**（[v2](#c-g5-e3-v2) §十，v88，R/C 两次运行）；源侧 clip 与姿态 oracle 仍未覆盖 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -133,7 +133,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 
 - **最新记录安装：v86（G5-E3 manifest）**：DLL 1,812,992 字节 `57a2b11ae4aa11cf…1eea645`、PDB 49,377,280 字节 `04f12c175b8fa7bd…375d6805`、CodeView age 431、身份 `…-v86-g5e3-manifest-1e645a6d48-1e645a6d48-cl94faaed0c6-20261109T145833Z`（[构建记录](build.md#v86-g5e3-manifest-2026-11-09)）；v85 三件套备份于 `dist/deploy-backup-20261109-v85-v86pre/`。
 - **部署 INI：E3 运行档** `68be6ee9…`，10,105 字节、无 BOM、全 CRLF；相对上一版只把 `SourceTimeline=false` 改成 `concurrent` 并补 5 行注释。13 个运行键回读通过（`IndependentGraph=inject`、`DisplayPose/DisplayStep=true`、`SamplingLiveness=concurrent`、`SourceTimeline=concurrent`，其余仪器全 off）。
-- **上机状态：R attempt 1 不合格 → 普查定位 → 修复已部署（v88）**：[attempt 1](build.md#v86-g5e3-r1-2026-11-10) 三条签名齐全但看的是 `463/36`；[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10) 给出 `DefaultFemale` 652/106 与 `FirstPerson` 463/36，根因是小写 `"1stperson"` 过滤漏掉 `FirstPerson`；[v88](build.md#v88-g5e3-firstperson-2026-11-10) 改为大小写不敏感并统一三处。当前盘上：v88 DLL `1c93ba38…` + R 运行档 `a14ba59e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`），下一步重跑 R。
+- **上机状态：E3 两段运行完成（R attempt 2 ＋ C run 1，配对 2/2）；INI 已回 dormant `be26ac09…`**（[账本](#c-g5-e3-v2) §十）。历史：R attempt 1 因图不符被停：[attempt 1](build.md#v86-g5e3-r1-2026-11-10) 三条签名齐全但看的是 `463/36`；[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10) 给出 `DefaultFemale` 652/106 与 `FirstPerson` 463/36，根因是小写 `"1stperson"` 过滤漏掉 `FirstPerson`；[v88](build.md#v88-g5e3-firstperson-2026-11-10) 改为大小写不敏感并统一三处。当前盘上：v88 DLL `1c93ba38…` + R 运行档 `a14ba59e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`），下一步重跑 R。
 - **历史**：v85（E2-B，`e5552e89…`）已由本轮取代；v69 及更早的 dormant 记录只描述当时工件。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
@@ -4515,3 +4515,23 @@ C 运行合格的前提是：每个输入都有 `step=0` 行，且 `default=` �
 **不改写历史读数**：以上只更正"观测的是哪张图"，不重判任何当时的通过/失败；`DefaultFemale` 上的同一脚本尚未观测（v88 的 R 重跑就是为此）。
 
 **R attempt 2（2026-11-10 23:12）已合格**：[日志](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log)，`selector='DefaultFemale' origin=selector chosen=0`、`window-open words=652 nodes=106`——与候选的源同身份；三条签名各出现一次（`currentDefaultState 0→10`、`iRightHandEquipped 0→1`＋`iState 0→9`、`currentDefaultState 1→12`），`lines=282` 预算内、零 `[E]`。P1/P2 与 P3 的源侧成立，**只等 C 跑的 `step=0` 行**。
+### 十、账本（R attempt 2 ＋ C run 1，2026-11-10）
+
+配对键 = 序数，不涉时间。两侧日志：[R](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log)、[C](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log)。
+
+| k | 输入 | 源（R，`DefaultFemale` 652/106） | 候选（C，同一源图的克隆） | `S_k` | 状态 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `WeapEquip`（id 2） | L62 `currentDefaultState 0→10`；L69 `iRightHandEquipped 0→1`（L80 `iState 0→9`）；L81 稳定 `10→1` | L126 `step=0 default=10 nodes=113`；step 49 起 `default=1`；step 120 `default=1 nodes=111` | 120 | **paired** |
+| 2 | `Unequip`（id 144） | L92 `currentDefaultState 1→12`（同帧 `IsUnequipping 0→1`、`bEquipUnequip 0→1`）；L109 `12→0` | L313 `step=0 default=12 nodes=126`；step 20 是最后一个 `12`，step 21 首个 `0`；step 120 `default=0 nodes=97` | 121 | **paired** |
+
+`paired = 2`，`missing = 0`。
+
+| # | 判据 | 结果 | 依据 |
+| --- | --- | --- | --- |
+| P1 | 两运行合格 | ✅ | R：零 `[E]`、`reason=expired`、`lines=282`；C：零 `[E]`、两个窗口各 121 行无缺口 |
+| P2 | 签名唯一 | ✅ | 三条签名在 R 各出现一次 |
+| P3 | 端点覆盖 | ✅ | 两个 `step=0` 行的 `default` 分别为 10 / 12，与源端点同值 |
+| P4 | 账本完整 | ✅ | `paired + missing = 2`，每条都指到两侧日志行号 |
+| P5 | 无时间对齐 | ✅ | 表内只用序数与行号；两侧时间戳只记录、不参与配对 |
+
+**交付边界（不得外推）**：本账本只证明"这两个端点在状态与资源上可比较"，**不含姿态误差**。源侧 clip 身份仍未覆盖（C2 只有候选一半）；姿态 oracle 需要另一次"源侧 `poseLocal` 捕获"（探针 `on` 生命周期读 63856），属下一份契约。候选在卸下段第 21 步即回到 0，而源侧用了 1.26 s（`1→12` 25.073 → `12→0` 26.330）——该时序差异登记给时钟账本（E2-C），不在 E3 判据内。

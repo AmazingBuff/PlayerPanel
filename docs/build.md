@@ -1439,3 +1439,20 @@ Log [37,503 bytes `0b742663…`](diagnostics/CharacterPanel-g5e3-r-run2-20261110
 **All three signatures appear exactly once**: `currentDefaultState 0->10` (23:12:19.074), `iRightHandEquipped 0->1` (23:12:19.568) together with `iState 0->9` (23:12:20.120), the equip settle `10->1` (20.120), then `currentDefaultState 1->12` (23:12:25.073) alongside `IsUnequipping 0->1` and `bEquipUnequip 0->1`, and the return `12->0` (26.330). Later rows of the same variable carry only `index=113` because the recorder prints the name once per window — that is why the raw grep for `name='currentDefaultState'` sees a single row.
 
 **Verdict**: P1 (R clean, no abort, budget intact), P2 (each signature unique) and the source half of P3 hold. The pair is complete only when the C run contributes its `step=0` rows and the endpoint comparison.
+<a id="v88-g5e3-c1-2026-11-10"></a>
+## v88 E3-C run 1 (2026-11-10 23:17, **qualified — the pair is complete**)
+
+Log [90,252 bytes `7ce80813…`](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log), zero `[E]`. The experiment armed the observe-only input probe (`CANDIDATE INPUT … outcome=observe-only reason=empty-input-name`) and the unequip slice (`CANDIDATE UNEQUIP … outcome=arm`), then drove the equip window and, after `phase=settle outcome=settled target-step=49 settled-step=63 baseline-default=1`, the unequip window.
+
+**Coverage**: equip `step=0..120` = 121 rows, no duplicates; unequip `step=0..120` = 121 rows, no duplicates.
+
+**Endpoints against the R run**:
+
+| k | source (R run 2) | candidate (this run) |
+| --- | --- | --- |
+| 1 equip | `currentDefaultState 0->10` (line 62), `iRightHandEquipped 0->1` (69) with `iState 0->9` (80), settle `10->1` (81) | `step=0 default=10 nodes=113` (line 126), `default=1` from step 49, `step=120 default=1 nodes=111` |
+| 2 unequip | `currentDefaultState 1->12` (92) with `IsUnequipping 0->1` and `bEquipUnequip 0->1`, return `12->0` (109) | `step=0 default=12 nodes=126` (line 313), last `12` at step 20, first `0` at step 21, `step=120 default=0 nodes=97` |
+
+**C2 (candidate half)**: `clip-ref` rows at steps 0/60/120 carry clip names, binding indices, durations, modes and speeds (`H2H_Equip`, `MT_Idle`, `H2H_Idle`, `1HM_Idle`, `SCAR_1hmReadyDummy`), so the bound-resource identity is recorded on the candidate side. Source-side clip identity stays uncovered, as the contract states.
+
+**Observed but not adjudicated**: the candidate leaves the unequip state at step 21 (0.35 s) while the source needed 1.26 s (`1->12` at 25.073, `12->0` at 26.330) — a timing difference for the later clock ledger (E2-C), not an E3 criterion.
