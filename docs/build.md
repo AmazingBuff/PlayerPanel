@@ -1405,3 +1405,27 @@ Log [24,192 bytes `4cedd700…`](diagnostics/CharacterPanel-g5e3-r-run1-20261110
 **Deployed 2026-11-10**: the v86 trio was backed up to `dist/deploy-backup-20261110-v86-v87pre/` (DLL `57a2b11a…`, PDB `04f12c17…`, R INI `81e03db5…`), then the v87 DLL/PDB and the R run INI `abc42052…` (10,664 bytes; `SourceTimeline=on`, `SourceTimelineGraph=` empty) were installed with destination-hash comparison.
 
 **Next**: one **census run** — F7 outside the panel, read the `graph-census` names, and identify which one carries `words=652 nodes=106`; then set `SourceTimelineGraph=<that name>` and rerun R with the equip/unequip script from [C-G5-E3 v2](independent-behavior-graph.md#c-g5-e3-v2).
+<a id="v88-g5e3-firstperson-2026-11-10"></a>
+## v88 G5-E3 first-person filter fix (2026-11-10, built and **deployed, R rerun next**)
+
+**Census reading** (v87, log 20,163 bytes `27a9116a…`, zero `[E]`, window 23:05:08 → 23:05:28, `lines=67`):
+
+```
+graph-census actor=00000014 found=2 shown=2 selector='' origin=last chosen=1
+graph-census index=0 name='DefaultFemale' words=652 nodes=106 selected=no
+graph-census index=1 name='FirstPerson'   words=463 nodes=36  selected=yes
+```
+
+Two graphs on the player, and the pairing run's `463/36` is the **first-person** graph. The candidate's source is `DefaultFemale` (652/106).
+
+**Root cause** (committed `dae61755fa`): every historical resolver filtered with `std::strstr(name, "1stperson")` — case-sensitive, and the real project name is `FirstPerson`, so the filter never fired. The legacy "last managed non-1stperson graph" rule therefore selected the first-person graph. `concurrent` windows were unaffected because they observe the experiment-pinned pointer (run 1's `652/106` is the proof).
+
+**Fix**: `source_graph_is_first_person()` matches `firstperson` and `1stperson` case-insensitively and is used by the timeline collector, the event capture and the write capture. No product-path change; `controller.cpp`'s fallback still uses its own name test but the primary `rootNode` match governs the panel.
+
+**Offline**: the e3 suite gained a sixth case (both spellings, mixed case, embedded names, non-matches); all nine suites pass under `cl /W4 /WX` and the Release build exits 0.
+
+**Identity**: `CharacterPanel-scenegraph-v88-g5e3-firstperson-dae61755fa-dae61755fa-cl94faaed0c6-20261110T150855Z`, DLL 1,818,112 bytes SHA-256 `1c93ba389b87c39df5bd75410d6c32692993a59ac3fe344bbff0f8e6c8b1c52a`, PDB 49,410,048 bytes SHA-256 `52e17dbdb858191755febc68f5e88b8b0d190b397ef4a31a0f772610f5d1cf77`, CodeView age 435.
+
+**Deployed 2026-11-10**: the v87 trio was backed up to `dist/deploy-backup-20261110-v87-v88pre/`, then the v88 DLL/PDB and the R run INI `a14ba59e…` (10,677 bytes; `SourceTimeline=on`, `SourceTimelineGraph=DefaultFemale`) were installed with destination-hash comparison.
+
+**Next**: rerun R with the equip/unequip script. The census should now read `origin=selector chosen=0 name='DefaultFemale' words=652 nodes=106`, and `window-open` must show `words=652 nodes=106` — the same identity the candidate's source reports.

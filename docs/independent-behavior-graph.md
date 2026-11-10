@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 图普查/选择键已部署**（[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87](build.md#v87-g5e3-graph-select-2026-11-10)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 普查已定位根因（漏掉 `FirstPerson`），v88 修复已部署**（[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10)、[v88](build.md#v88-g5e3-firstperson-2026-11-10)、[§九 更正](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -133,7 +133,7 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 
 - **最新记录安装：v86（G5-E3 manifest）**：DLL 1,812,992 字节 `57a2b11ae4aa11cf…1eea645`、PDB 49,377,280 字节 `04f12c175b8fa7bd…375d6805`、CodeView age 431、身份 `…-v86-g5e3-manifest-1e645a6d48-1e645a6d48-cl94faaed0c6-20261109T145833Z`（[构建记录](build.md#v86-g5e3-manifest-2026-11-09)）；v85 三件套备份于 `dist/deploy-backup-20261109-v85-v86pre/`。
 - **部署 INI：E3 运行档** `68be6ee9…`，10,105 字节、无 BOM、全 CRLF；相对上一版只把 `SourceTimeline=false` 改成 `concurrent` 并补 5 行注释。13 个运行键回读通过（`IndependentGraph=inject`、`DisplayPose/DisplayStep=true`、`SamplingLiveness=concurrent`、`SourceTimeline=concurrent`，其余仪器全 off）。
-- **上机状态：R attempt 1 不合格（2026-11-10 22:51），仪器缺口已修并部署 v87**：[attempt 1](build.md#v86-g5e3-r1-2026-11-10) 三条签名齐全但看的是 `463/36`（候选源为 `652/106`），按停点终止；[v87](build.md#v87-g5e3-graph-select-2026-11-10) 加了图普查与 `SourceTimelineGraph` 选择键。当前盘上是 v87 DLL `f1ef74e9…` + R 运行档 `abc42052…`（`SourceTimeline=on`、选择键空），下一步是**普查运行**。
+- **上机状态：R attempt 1 不合格 → 普查定位 → 修复已部署（v88）**：[attempt 1](build.md#v86-g5e3-r1-2026-11-10) 三条签名齐全但看的是 `463/36`；[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10) 给出 `DefaultFemale` 652/106 与 `FirstPerson` 463/36，根因是小写 `"1stperson"` 过滤漏掉 `FirstPerson`；[v88](build.md#v88-g5e3-firstperson-2026-11-10) 改为大小写不敏感并统一三处。当前盘上：v88 DLL `1c93ba38…` + R 运行档 `a14ba59e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`），下一步重跑 R。
 - **历史**：v85（E2-B，`e5552e89…`）已由本轮取代；v69 及更早的 dormant 记录只描述当时工件。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
@@ -4496,3 +4496,20 @@ C 运行合格的前提是：每个输入都有 `step=0` 行，且 `default=` �
 **仪器缺口与修法（v87 已实现，2026-11-10）**：`on` 模式在每窗口打开时打印一行**图普查**——`graph-census actor=… found=N shown=M selector='…' origin=last|selector|selector-miss-fallback chosen=i`，随后每个受管非 1stperson 图一行 `index/name/words/nodes/selected`；并用只作用于 `on` 的选择键 `SourceTimelineGraph=<projectName>`（大小写不敏感、长度精确；空值保持"最后一个非 1stperson"）。选择不到时**回落**旧规则并在普查里标 `selector-miss-fallback`，不会静默换图。只读、无 detour、不影响产品路径，`concurrent` 仍观察 pin 住的图且不打印普查。构建 `4324aa19ac` / 身份 `…-v87-g5e3-graph-select-…`（[构建与部署](build.md#v87-g5e3-graph-select-2026-11-10)），离线 39 例通过。
 
 **下一步**：一次**普查运行**（F7 即可，不必走脚本）读出哪个名字对应 `words=652 nodes=106`，填入 `SourceTimelineGraph` 后按 §一 的脚本重跑 R。
+
+**普查结果（v87，2026-11-10 23:05）与根因**：`found=2`——`DefaultFemale` 是 `652/106`（候选的源），`FirstPerson` 是 `463/36`（attempt 1 看的那张）。旧解析器的过滤写的是**小写** `strstr(name, "1stperson")`，而真实项目名是 `FirstPerson`，大小写不匹配 → 过滤从未生效，"最后一个非 1stperson 图"实际取到的是**第一人称图**。`concurrent` 不受影响（它看实验 pin 的指针，run 1 的 `652/106` 即为证）。
+
+**修复（v88，`dae61755fa`）**：`source_graph_is_first_person()` 同时匹 `firstperson`/`1stperson` 且大小写不敏感，时间线采集、事件捕获、写观察三处统一改用它。产品路径不改（`controller.cpp` 的兜底仍用自己的名字判断，但面板主判据是 `rootNode` 匹配）。离线 6 例 e3（含两种拼写、混合大小写、嵌入名、非匹配）与其余 8 套件全过；身份 `…-v88-g5e3-firstperson-…`（[构建与部署](build.md#v88-g5e3-firstperson-2026-11-10)）。运行档已改为 `SourceTimelineGraph=DefaultFemale`。
+
+### 九、更正：历史 `on` 窗口看的是第一人称图
+
+上面的根因不是本轮引入的，它一直存在。凡走 `player_graph()` 的 `on` 窗口，观测对象都是 `FirstPerson`（463/36），因此在结论里必须改写来源：
+
+| 历史切片 | 原表述 | 更正 |
+| --- | --- | --- |
+| G3-A v37–v41 源轨迹 | "源图时间线" | 观测的是 **`FirstPerson`**（463/36）。相位序列（`currentDefaultState` 0→10→1→12→0、`iState` 0→9→0）在两张图上都有，故**序列结论不变**，但"源图"应写成"第一人称图" |
+| G3B-E2 写观察（v58） | `writes=0` | 本就因 audit30 的 thunk 缺陷判仪器无效；现另加一条：它看的也是 `FirstPerson` |
+| G4-C1 `on` 模式 | 源事件观察 | 仅早期的 `on` 窗口受影响；v66 起 `concurrent` 用实验 pin 的图（`DefaultFemale`），故 C 段的零事件结论**不受本更正影响** |
+| E3-R attempt 1 | 三条签名齐全但图不符 | 现解释为 `FirstPerson`；这也是为什么它的 `words/nodes` 是 463/36 |
+
+**不改写历史读数**：以上只更正"观测的是哪张图"，不重判任何当时的通过/失败；`DefaultFemale` 上的同一脚本尚未观测（v88 的 R 重跑就是为此）。

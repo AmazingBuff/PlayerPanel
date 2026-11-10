@@ -1,0 +1,170 @@
+[23:03:11.483] [4804 ] [I] CharacterPanel v1-2-1-0
+[23:03:11.483] [4804 ] [I] CharacterPanel loaded
+[2026-11-10 23:03:11.483] [thread 4804] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(84): [info] CharacterPanel v1-2-1-0
+[23:03:22.997] [4804 ] [I] OAR Animations V1 mapping API available
+[23:03:22.997] [4804 ] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[23:03:22.997] [4804 ] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[23:04:13.885] [9316 ] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[23:04:13.885] [9316 ] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[23:04:13.885] [9316 ] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[23:04:13.885] [9316 ] [I] EXPERIMENT setting IndependentGraph=off
+[23:04:13.885] [9316 ] [I] EXPERIMENT setting DisplayPose=false
+[23:04:13.885] [9316 ] [I] EXPERIMENT setting DisplayStep=false
+[23:04:13.885] [9316 ] [I] EXPERIMENT setting SourceTimeline=on transient=false graph=''
+[23:04:13.885] [9316 ] [I] EXPERIMENT setting SourceEventCapture=off
+[23:04:13.885] [9316 ] [I] EXPERIMENT setting SourceWriteCapture=false
+[23:04:13.885] [9316 ] [I] EXPERIMENT setting CandidateVariableCensus=false
+[23:04:13.885] [9316 ] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[23:04:13.886] [9316 ] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[23:04:13.886] [9316 ] [I] EXPERIMENT setting CandidateUnequipProbe=false variable='' prime='' event=''
+[23:04:13.886] [9316 ] [I] EXPERIMENT setting OarContextWatch=false
+[23:04:13.886] [9316 ] [I] EXPERIMENT setting SamplingLiveness=off
+[23:04:13.886] [9316 ] [I] SOURCE EVENTCAPTURE install-skip reason=off
+[23:04:13.886] [9316 ] [I] SOURCE WRITECAPTURE install-skip reason=off
+[23:04:13.886] [9316 ] [I] PROBE LIVENESS install-skip reason=off
+[23:04:13.891] [9316 ] [I] DAC native inventory lifecycle sink installed
+[23:04:13.895] [9316 ] [I] All shaders compiled
+[23:04:13.895] [9316 ] [I] Installed pre-UI renderer hook
+[23:04:13.895] [9316 ] [I] Panel menu sink installed
+[23:04:13.895] [9316 ] [I] CharacterManager equipment sink installed
+[23:04:13.895] [9316 ] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-v87-g5e3-graph-select-4324aa19ac-4324aa19ac-cl94faaed0c6-20261110T145958Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[23:04:13.947] [20856] [I] Studio host changed: 0x0 -> 0x1e729406980 (paused=true)
+[23:04:13.947] [20856] [I] Studio light node has been created
+[23:04:13.947] [20856] [I] CP-LIGHT slot 0: registered, shell 0x1e8a9fef880 queued (ledger stays the authority)
+[23:04:13.947] [20856] [I] CP-LIGHT slot 1: registered, shell 0x1e8a9fef740 queued (ledger stays the authority)
+[23:04:13.947] [20856] [I] CP-LIGHT slot 2: registered, shell 0x1e8a9fef600 queued (ledger stays the authority)
+[23:04:13.947] [20856] [I] Studio lights registered on the ledger (scene=0x1dd6ceb6e80 -- ledger fetch will populate the slots)
+[23:04:13.947] [20856] [I] CP-LIGHT slot 0: ledger shell fetched 0x1e8a9fef880 (after 0 miss frames)
+[23:04:13.947] [20856] [I] CP-LIGHT slot 1: ledger shell fetched 0x1e8a9fef740 (after 0 miss frames)
+[23:04:13.947] [20856] [I] CP-LIGHT slot 2: ledger shell fetched 0x1e8a9fef600 (after 0 miss frames)
+[23:04:32.188] [4804 ] [I] DAC old-world sessions discarded world=2
+[23:04:32.350] [20856] [I] SOURCE TIMELINE invalidated reason=world-reset
+[23:04:32.566] [20856] [I] CP-LIGHT slot 0: ledger shell dropped
+[23:04:32.566] [20856] [I] CP-LIGHT slot 1: ledger shell dropped
+[23:04:32.566] [20856] [I] CP-LIGHT slot 2: ledger shell dropped
+[23:04:32.566] [20856] [W] Studio lights not fully served by the ledger yet
+[23:04:38.960] [20856] [W] Studio lights not fully served by the ledger yet
+[23:04:43.002] [20856] [I] CharacterManager watch actor=00000014
+[23:04:43.014] [20856] [I] OAR bases stage=world-prewarm project=0x1e6d6dce2d0 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.072
+[23:04:43.014] [20856] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1e8a9fefb00 filed to lightQueueAdd)
+[23:04:43.014] [20856] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1e8a9fefc40 filed to lightQueueAdd)
+[23:04:43.014] [20856] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1e8a9fef240 filed to lightQueueAdd)
+[23:04:43.085] [20856] [I] CP-LIGHT slot 0: ledger shell fetched 0x1e8a9fefb00 (after 1 miss frames)
+[23:04:43.085] [20856] [I] CP-LIGHT slot 1: ledger shell fetched 0x1e8a9fefc40 (after 1 miss frames)
+[23:04:43.085] [20856] [I] CP-LIGHT slot 2: ledger shell fetched 0x1e8a9fef240 (after 1 miss frames)
+[23:04:52.124] [25956] [W] DAC native rule event='Reverse_On' unsupported for preview: native rule has non-restorable costs/chance/cooldown/target/dynamic casting
+[23:04:52.125] [25956] [W] DAC native spell fe0bb80a 'Exhaustion State Check' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=1 type=0)
+[23:04:52.125] [25956] [W] DAC native rule event='HitFrame' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:04:52.125] [25956] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[23:04:52.125] [25956] [W] DAC native rule event='MCO_WinOpen' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:04:52.125] [25956] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[23:04:52.125] [25956] [W] DAC native rule event='SBF_BlockStart' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:04:52.125] [25956] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[23:04:52.125] [25956] [W] DAC native rule event='SBF_NormalAttackStop' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:04:52.125] [25956] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[23:04:52.125] [25956] [W] DAC native rule event='SBF_PowerAttackStop' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:04:52.125] [25956] [W] DAC native spell fe0bb808 'Exhaustion State Dispell' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=1 type=0)
+[23:04:52.125] [25956] [W] DAC native rule event='FootRight' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:04:52.127] [25956] [I] DAC original NG Plus matched rules=33 handler=0x61fa0 stride=232
+[23:04:52.127] [25956] [I] DAC snapshot actor=00000014 epoch=1 effects=0 scope=19
+[23:04:52.127] [25956] [I] Panel menu opening=true revision=1
+[23:04:52.156] [4804 ] [I] ANIMATION actor=00000014 request=1 reason='panel-open' source-generation=1 equipment-target=1h
+[23:04:52.170] [4804 ] [I] ANIMATION WORLD actor=00000014 request=1 snapshot=paused-source reason='panel-open' hands=(560c2a4c,00043324) drawn=false build-ms=14.185 clips=|original='Animations\male\MT_Idle.HKX' index=12221 bound='data\meshes\actors\character\animations\OpenAnimationReplacer\SDB SVFI\SVFI 2 EXT Both Hands Hip\female\mt_idle.hkx' oar-api=available oar-result=replacement oar-path='data\meshes\actors\character\animations\OpenAnimationReplacer\SDB SVFI\SVFI 2 EXT Both Hands Hip\female\mt_idle.hkx' oar-project='DefaultFemale' oar-variant='' oar-submod='Idle 2' oar-mod='Seamless Varied Feminine Idles' t=1.37
+[23:04:52.170] [4804 ] [I] DAC actor=00000014 request=1 Smooth_loop preparation requested
+[23:04:52.171] [4804 ] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x1ea5de89180 parent=0x1ea3835bc80 nodes=1851 geoms=123 api=NiObject::Clone id=68835/70187
+[23:04:52.174] [4804 ] [I] SCOPY CLONE-RETURN capture=1 copy=0x1ec5eea3700
+[23:04:52.174] [4804 ] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1851 skin-bones=886
+[23:04:52.174] [4804 ] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[23:04:52.174] [4804 ] [I] SCOPY CENSUS source-nodes=1851 copy-nodes=1851 source-geoms=123 copy-geoms=123 source-skins=60 copy-skins=60 source-dynamic=10 copy-dynamic=10
+[23:04:52.174] [4804 ] [I] SCOPY HELD actor=00000014 attached=1 missing=0 source-graph=read-only
+[23:04:52.174] [4804 ] [I] SCOPY READY actor=00000014 capture=1 controllers-removed=118 collisions-removed=19
+[23:04:52.175] [4804 ] [I] SCOPY FRAME actor=00000014 skinned-bound valid=true radius=79.6 center=(1232.7,9591.5,-107.9) graph-bound radius=272.7 scale=0.35 pruned-nodes=71
+[23:04:52.175] [4804 ] [I] ANIMATION actor=00000014 request=1 graph retarget=0x1ec5eea3700 time=0.00
+[23:04:52.181] [4804 ] [I] DAC actor=00000014 request=1 Smooth_loop preparation ready
+[23:04:52.181] [4804 ] [I] DAC actor=00000014 epoch=1 native-effect revision=2
+[23:04:52.181] [4804 ] [I] DAC actor=00000014 epoch=1 request=1 event='Smooth_loop' native call completed revision=2
+[23:04:52.194] [4804 ] [I] ANIMATION actor=00000014 request=1 goal=non-combat-idle family=1h direct=false drawn=true
+[23:04:52.212] [4804 ] [I] ANIMATION actor=00000014 request=1 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:04:52.213] [4804 ] [I] ANIMATION actor=00000014 request=1 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:04:52.222] [4804 ] [I] ANIMATION actor=00000014 request=1 asset ready index=9041 base=23 replaced=true duration=19.80 path='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:04:52.223] [4804 ] [I] ANIMATION PANEL actor=00000014 request=1 accepted action=1 original='Animations\1hm_idle.hkx' base-index=23 logical='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' variant='none' index=9041 bound='data\meshes\actors\character\animations\OpenAnimationReplacer\Smooth Moveset - 1hm\1hm Non-Combat idle Loop\1hm_idle.hkx' status=replacement clip-time=0.000 blend=0.000 build-ms=1.827
+[23:04:52.225] [4804 ] [I] SCOPY FRAME calibrated offset=(0.3,-1.7,0.9) radius=28.3
+[23:04:52.231] [4804 ] [I] FIGURE transparency geometries=47 blended=14 tested=25 render-flags=0x204 depth=opaque-write/alpha-read
+[23:04:52.231] [4804 ] [I] SceneGraph draw OM check: bound=0x1e8003d34a0 studio=0x1e8003d34a0 match=true
+[23:04:52.231] [4804 ] [I] SCOPY COMPOSITE src=0x1e8170e26e8 bound=0x1e8170e26e8 match=1 draws=1
+[23:04:55.084] [4804 ] [I] DAC restore actor=00000014 epoch=2 baseline=0 spell-groups=3 result=matched
+[23:04:55.084] [4804 ] [I] Panel menu opening=false revision=2
+[23:04:55.099] [4804 ] [I] ANIMATION actor=00000014 request=1 lifetime reset
+[23:05:08.261] [28328] [I] SOURCE TIMELINE arm-requested
+[23:05:08.281] [4804 ] [I] SOURCE TIMELINE graph-census actor=00000014 found=2 shown=2 selector='' origin=last chosen=1
+[23:05:08.281] [4804 ] [I] SOURCE TIMELINE graph-census index=0 name='DefaultFemale' words=652 nodes=106 selected=no
+[23:05:08.281] [4804 ] [I] SOURCE TIMELINE graph-census index=1 name='FirstPerson' words=463 nodes=36 selected=yes
+[23:05:08.281] [4804 ] [I] SOURCE TIMELINE window-open actor=00000014 words=463 nodes=36 seconds=20 mode=settled request=0
+[23:05:08.705] [4804 ] [I] SOURCE TIMELINE variable index=53 name='TimeDelta' 1017638814->1017907251 float=0.0205->0.0210 tsc=16566473317819
+[23:05:10.871] [4804 ] [I] SOURCE TIMELINE variable index=53 1017907251->1018354644 float=0.0210->0.0218 tsc=16575767076979
+[23:05:11.178] [4804 ] [I] SOURCE TIMELINE variable index=53 1018354644->1018444121 float=0.0218->0.0220 tsc=16577086838071
+[23:05:11.589] [4804 ] [I] SOURCE TIMELINE variable index=53 1018444121->1018802035 float=0.0220->0.0227 tsc=16578851158816
+[23:05:12.481] [4804 ] [I] SOURCE TIMELINE variable index=53 1018802035->1018354644 float=0.0227->0.0218 tsc=16582677265172
+[23:05:12.637] [4804 ] [I] SOURCE TIMELINE variable index=53 1018354644->1018623077 float=0.0218->0.0223 tsc=16583346511987
+[23:05:16.549] [4804 ] [I] SOURCE TIMELINE variable index=53 1018623077->1018891512 float=0.0223->0.0228 tsc=16600140185212
+[23:05:17.106] [4804 ] [I] SOURCE TIMELINE variable index=53 1018891512->1018712556 float=0.0228->0.0225 tsc=16602528775464
+[23:05:19.101] [4804 ] [I] SOURCE TIMELINE variable index=53 1018712556->1018891512 float=0.0225->0.0228 tsc=16611089170163
+[23:05:20.579] [4804 ] [I] SOURCE TIMELINE variable index=53 1018891512->1018623077 float=0.0228->0.0223 tsc=16617433245556
+[23:05:23.242] [4804 ] [I] SOURCE TIMELINE variable index=177 name='bInJumpState' 0->1 float=0.0000->0.0000 tsc=16628863760072
+[23:05:23.242] [4804 ] [I] SOURCE TIMELINE variable index=206 name='bHumanoidFootIKDisable' 0->1 float=0.0000->0.0000 tsc=16628863991885
+[23:05:23.242] [4804 ] [I] SOURCE TIMELINE variable index=231 name='BFCO_IsJumpFalling' 0->1 float=0.0000->0.0000 tsc=16628864018760
+[23:05:23.242] [4804 ] [I] SOURCE TIMELINE nodes count=47 tsc=16628864042840
+[23:05:23.422] [4804 ] [I] SOURCE TIMELINE variable index=70 name='bVoiceReady' 1->0 float=0.0000->0.0000 tsc=16629635579388
+[23:05:23.422] [4804 ] [I] SOURCE TIMELINE variable index=200 name='bIsInMT' 1->0 float=0.0000->0.0000 tsc=16629635810255
+[23:05:23.422] [4804 ] [I] SOURCE TIMELINE nodes count=27 tsc=16629635840441
+[23:05:23.443] [4804 ] [I] SOURCE TIMELINE variable index=180 name='iLeftHandEquipped' 0->9 float=0.0000->0.0000 tsc=16629726259939
+[23:05:23.758] [4804 ] [I] SOURCE TIMELINE nodes count=22 tsc=16631076427172
+[23:05:24.040] [4804 ] [I] SOURCE TIMELINE variable index=53 1018623077->1019070471 float=0.0223->0.0232 tsc=16632289819321
+[23:05:24.137] [4804 ] [I] SOURCE TIMELINE variable index=70 0->1 float=0.0000->0.0000 tsc=16632705291104
+[23:05:24.137] [4804 ] [I] SOURCE TIMELINE variable index=176 name='VelocityZ' -1045625126->-1011624976 float=-21.6283->-359.6558 tsc=16632705495612
+[23:05:24.137] [4804 ] [I] SOURCE TIMELINE variable index=199 name='BlendJump' 1058642330->1061997773 float=0.6000->0.8000 tsc=16632705533581
+[23:05:24.137] [4804 ] [I] SOURCE TIMELINE variable index=200 0->1 float=0.0000->0.0000 tsc=16632705554608
+[23:05:24.161] [4804 ] [I] SOURCE TIMELINE variable index=180 9->0 float=0.0000->0.0000 tsc=16632806378858
+[23:05:24.239] [4804 ] [I] SOURCE TIMELINE variable index=231 1->0 float=0.0000->0.0000 tsc=16633142487497
+[23:05:24.261] [4804 ] [I] SOURCE TIMELINE nodes count=44 tsc=16633235456292
+[23:05:24.605] [4804 ] [I] SOURCE TIMELINE variable index=231 0->1 float=0.0000->0.0000 tsc=16634715279707
+[23:05:24.606] [4804 ] [I] SOURCE TIMELINE nodes count=54 tsc=16634715556670
+[23:05:24.788] [4804 ] [I] SOURCE TIMELINE variable index=70 1->0 float=0.0000->0.0000 tsc=16635498624123
+[23:05:24.788] [4804 ] [I] SOURCE TIMELINE variable index=199 1061997773->1058642330 float=0.8000->0.6000 tsc=16635498911578
+[23:05:24.788] [4804 ] [I] SOURCE TIMELINE variable index=200 1->0 float=0.0000->0.0000 tsc=16635498937378
+[23:05:24.788] [4804 ] [I] SOURCE TIMELINE nodes count=27 tsc=16635498981969
+[23:05:24.810] [4804 ] [I] SOURCE TIMELINE variable index=180 0->9 float=0.0000->0.0000 tsc=16635592510044
+[23:05:25.122] [4804 ] [I] SOURCE TIMELINE nodes count=22 tsc=16636932104051
+[23:05:25.506] [4804 ] [I] SOURCE TIMELINE variable index=70 0->1 float=0.0000->0.0000 tsc=16638579509752
+[23:05:25.506] [4804 ] [I] SOURCE TIMELINE variable index=176 -1011624976->-1011728849 float=-359.6558->-356.4858 tsc=16638579739501
+[23:05:25.506] [4804 ] [I] SOURCE TIMELINE variable index=199 1058642330->1061997773 float=0.6000->0.8000 tsc=16638579772826
+[23:05:25.506] [4804 ] [I] SOURCE TIMELINE variable index=200 0->1 float=0.0000->0.0000 tsc=16638579793423
+[23:05:25.527] [4804 ] [I] SOURCE TIMELINE variable index=180 9->0 float=0.0000->0.0000 tsc=16638671488428
+[23:05:25.593] [4804 ] [I] SOURCE TIMELINE variable index=231 1->0 float=0.0000->0.0000 tsc=16638954774194
+[23:05:25.615] [4804 ] [I] SOURCE TIMELINE nodes count=44 tsc=16639049476016
+[23:05:25.750] [4804 ] [I] SOURCE TIMELINE variable index=53 1019070471->1018623077 float=0.0232->0.0223 tsc=16639626372358
+[23:05:25.967] [4804 ] [I] SOURCE TIMELINE variable index=231 0->1 float=0.0000->0.0000 tsc=16640560050105
+[23:05:25.967] [4804 ] [I] SOURCE TIMELINE nodes count=54 tsc=16640560268846
+[23:05:26.178] [4804 ] [I] SOURCE TIMELINE variable index=70 1->0 float=0.0000->0.0000 tsc=16641463992880
+[23:05:26.178] [4804 ] [I] SOURCE TIMELINE variable index=199 1061997773->1058642330 float=0.8000->0.6000 tsc=16641464255438
+[23:05:26.178] [4804 ] [I] SOURCE TIMELINE variable index=200 1->0 float=0.0000->0.0000 tsc=16641464285839
+[23:05:26.178] [4804 ] [I] SOURCE TIMELINE nodes count=27 tsc=16641464312929
+[23:05:26.201] [4804 ] [I] SOURCE TIMELINE variable index=180 0->9 float=0.0000->0.0000 tsc=16641562755969
+[23:05:26.487] [4804 ] [I] SOURCE TIMELINE nodes count=22 tsc=16642788861925
+[23:05:26.869] [4804 ] [I] SOURCE TIMELINE variable index=70 0->1 float=0.0000->0.0000 tsc=16644429284621
+[23:05:26.869] [4804 ] [I] SOURCE TIMELINE variable index=176 -1011728849->-1011783595 float=-356.4858->-354.8151 tsc=16644429511274
+[23:05:26.869] [4804 ] [I] SOURCE TIMELINE variable index=199 1058642330->1061997773 float=0.6000->0.8000 tsc=16644429544427
+[23:05:26.869] [4804 ] [I] SOURCE TIMELINE variable index=200 0->1 float=0.0000->0.0000 tsc=16644429564379
+[23:05:26.891] [4804 ] [I] SOURCE TIMELINE variable index=180 9->0 float=0.0000->0.0000 tsc=16644525849891
+[23:05:26.959] [4804 ] [I] SOURCE TIMELINE variable index=231 1->0 float=0.0000->0.0000 tsc=16644814426933
+[23:05:26.981] [4804 ] [I] SOURCE TIMELINE nodes count=44 tsc=16644912440016
+[23:05:27.139] [4804 ] [I] SOURCE TIMELINE variable index=53 1018623077->1018802035 float=0.0223->0.0227 tsc=16645590210745
+[23:05:27.500] [4804 ] [I] SOURCE TIMELINE variable index=231 0->1 float=0.0000->0.0000 tsc=16647139573544
+[23:05:27.500] [4804 ] [I] SOURCE TIMELINE nodes count=54 tsc=16647139891486
+[23:05:27.680] [4804 ] [I] SOURCE TIMELINE variable index=70 1->0 float=0.0000->0.0000 tsc=16647910234079
+[23:05:27.680] [4804 ] [I] SOURCE TIMELINE variable index=199 1061997773->1058642330 float=0.8000->0.6000 tsc=16647910916274
+[23:05:27.680] [4804 ] [I] SOURCE TIMELINE variable index=200 1->0 float=0.0000->0.0000 tsc=16647910972088
+[23:05:27.680] [4804 ] [I] SOURCE TIMELINE nodes count=27 tsc=16647910996426
+[23:05:27.701] [4804 ] [I] SOURCE TIMELINE variable index=180 0->9 float=0.0000->0.0000 tsc=16648001516327
+[23:05:28.034] [4804 ] [I] SOURCE TIMELINE nodes count=22 tsc=16649429958913
+[23:05:28.281] [4804 ] [I] SOURCE TIMELINE window-closed reason=expired lines=67
