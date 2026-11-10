@@ -120,6 +120,7 @@ namespace animation::behavior_graph
             bool snapshot_armed{ false };
             std::uint64_t anchor_tsc{ 0 };
             std::uint32_t anchor_frame{ 0 };
+            std::chrono::steady_clock::time_point armed_at{};
         };
 
         // The settle ledger lives outside the Recorder because it holds atomics and the Recorder is
@@ -382,8 +383,9 @@ namespace animation::behavior_graph
                     clips[i]->localTime);
                 entries += buffer;
             }
-            logger::info("SOURCE TIMELINE clock-sample actor={:08x} frame={} found={} entries='{}'",
-                a_actor_id, a_state.frame, found, entries);
+            std::uint64_t const elapsed_ms = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - a_state.armed_at).count());
+            logger::info("SOURCE TIMELINE clock-sample actor={:08x} frame={} ms={} found={} entries='{}'",
+                a_actor_id, a_state.frame, elapsed_ms, found, entries);
         }
 
         char const* variable_name(RE::hkbBehaviorGraph const& a_graph, std::size_t a_index)
@@ -592,7 +594,8 @@ namespace animation::behavior_graph
             state = Recorder{};
             settle_ring().reset();
             state.pose_capture = source_pose_capture();
-            state.window.arm(std::chrono::steady_clock::now());
+            state.armed_at = std::chrono::steady_clock::now();
+            state.window.arm(state.armed_at);
         }
         // C-G5-E3 (M1): the experiment's arm carries the pinned graph; it is applied here so the
         // window opens on the sampler thread with the source identity already pinned.
@@ -605,7 +608,8 @@ namespace animation::behavior_graph
             state.pinned_graph = reinterpret_cast<std::uintptr_t>(arm.graph.load(std::memory_order_acquire));
             state.request = arm.request.load(std::memory_order_acquire);
             state.pose_capture = source_pose_capture();
-            state.window.arm(std::chrono::steady_clock::now());
+            state.armed_at = std::chrono::steady_clock::now();
+            state.window.arm(state.armed_at);
             logger::info("SOURCE TIMELINE concurrent-arm actor={:08x} request={} graph={:#x}",
                 arm.actor.load(std::memory_order_relaxed), state.request, state.pinned_graph);
         }
