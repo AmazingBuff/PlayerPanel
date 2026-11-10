@@ -1457,7 +1457,7 @@ Log [90,252 bytes `7ce80813…`](diagnostics/CharacterPanel-g5e3-c-run1-20261110
 
 **Observed but not adjudicated**: the candidate leaves the unequip state at step 21 (0.35 s) while the source needed 1.26 s (`1->12` at 25.073, `12->0` at 26.330) — a timing difference for the later clock ledger (E2-C), not an E3 criterion.
 <a id="v89-g5e4-source-capture-2026-11-10"></a>
-## v89 G5-E4 source capture (2026-11-10, built, **not deployed**)
+## v89 G5-E4 source capture (2026-11-10, built and **deployed, capture run next**)
 
 **Change** (committed `aaf7b009fd`, anchor refined in `5a52136d73`, clean tree): [C-G5-E4](independent-behavior-graph.md#c-g5-e4) implemented inside `SourceTimeline`. No detour: the rows come from the existing post-UI sample, so `poseLocal` is read after the frame's apply as a completed output and the instruments-do-not-stack rule is untouched. The pose is read through `hkbCharacter::poseLocal` / `numPoseLocal`; the clip table walks the active-node list and keeps only entries whose vtable is `hkbClipGenerator`; the quad components are copied out with `memcpy` because `hkVector4`/`hkQuaternion` expose no named members (the first build failed on exactly that).
 
@@ -1471,4 +1471,4 @@ Log [90,252 bytes `7ce80813…`](diagnostics/CharacterPanel-g5e3-c-run1-20261110
 
 **Identity**: `CharacterPanel-scenegraph-v89-g5e4-source-capture-5a52136d73-5a52136d73-cl94faaed0c6-20261110T153236Z`, DLL 1,830,400 bytes SHA-256 `a39dbdfeb3e36f1d1ac60fb7cea36e73af2cc01a65da95f720c560718af6be46`, PDB 49,549,312 bytes SHA-256 `a6331e175e56fd9d760161685c4fd3c1cb9e5246a1e6be34c13e102bc04fda7a`, CodeView age 439. The first v89 build (`9e35db4c…`) was discarded before deployment because it armed a snapshot on every settle.
 
-**Next**: deploy with an R-run INI that sets `SourceTimeline=on`, `SourceTimelineGraph=DefaultFemale`, `SourcePoseCapture=true`, `SamplingLiveness=off`; one F7 window with the equip/unequip script then yields two pose snapshots plus the clock samples.
+**Deployed 2026-11-10**: the v88 trio was backed up to `dist/deploy-backup-20261110-v88-v89pre/` (DLL `1c93ba38…`, PDB `52e17dbd…`, dormant INI `be26ac09…`), then the v89 DLL/PDB and the E4 run INI `8864075e…` (11,183 bytes; `SourceTimeline=on`, `SourceTimelineGraph=DefaultFemale`, `SourcePoseCapture=true`, `SamplingLiveness=off`) were installed with destination-hash comparison. **Next**: one F7 window with the equip/unequip script yields two pose snapshots plus the clock samples; the close row must read `snapshots=2` with zero drops.
