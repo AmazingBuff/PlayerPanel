@@ -1550,3 +1550,23 @@ The 88 `clock-sample` rows of [run 3](diagnostics/CharacterPanel-g5e4-capture-ru
 **Identity**: `CharacterPanel-scenegraph-v92-g5e2c-ms-0ebe565ed1-0ebe565ed1-cl94faaed0c6-20261110T162207Z`, DLL 1,830,400 bytes SHA-256 `fe697ba91ffdd36c0eccd62c4a458405bbab946702a27327140e8ce72d8bcb38`, PDB 49,557,504 bytes SHA-256 `f57673ce1a618203e4c278d70138793cc0fd03731bbca88c8256cab8a1e11914`.
 
 **Deployed 2026-11-11 00:2x**: the v91 trio was backed up to `dist/deploy-backup-20261111-v91-v92pre/`, the v92 DLL/PDB installed with destination-hash comparison, the E4 run INI `8864075e…` kept as-is. **Next**: rerun one F7 capture; the new `ms=` field plus the existing clip times then give the source-side rate and lifetimes, closing E2-C's source half alongside the four pose snapshots.
+<a id="v92-g5e2c-run1-20261111"></a>
+## v92 E2-C source clock run 1 (2026-11-11 00:26, **rate computable: 1.001x on continuous clips**)
+
+Log [124,353 bytes `65a6fab9…`](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log), zero `[E]`. Window closed with `snapshots=4 clocks=100 capture-lines=584`, zero drops - the four E4 snapshots reproduced (`n=116`, one pointer, `anchor-delta-frames=1`).
+
+**Clock rows now carry `ms`** (182..19,923). Decoding `sum(dt) x 60` against `delta_ms` per clip, counting only non-decreasing consecutive samples:
+
+| clip | samples | resets | span ms | frames | rate |
+| --- | --- | --- | --- | --- | --- |
+| `1HM_Idle.hkx` | 32 | 1 | 5,703 | 342.5 | **1.001** |
+| `MLh_Idle.hkx` | 32 | 1 | 5,703 | 342.5 | **1.001** |
+| `SCAR_1hmReadyDummy.hkx` | 32 | 0 | 5,892 | 353.9 | **1.001** |
+| `1HM_Unequip.hkx` | 8 | 0 | 1,322 | 79.2 | **0.999** |
+| `1HM_Equip.hkx` | 7 | 0 | 1,132 | 56.0 | 0.825 |
+| `MT_Idle.HKX` | 42 | 6 | 8,365 | 415.8 | 0.828 |
+| `MT_RunForward` / `MT_TurnLeft60` | 14 | 3 / 6 | 3,430 / 2,337 | 82.7 / 65.1 | 0.402 / 0.464 |
+
+**Reading**: the wall-clock basis fixes what the frame-based attempt could not - continuously playing clips land on **1.001x**, and `1HM_Unequip` on 0.999x, matching the candidate side. The sub-1.0 rows are **decode artefacts, not clock findings**: (a) `1HM_Equip` is single-play, so its row includes the hold-after-end tail (the same advance-window rule the candidate ledger uses for T4); (b) `MT_*` locomotion clips reset `localTime` mid-window (6 resets for `MT_Idle`), and the current decoder mixes the segments.
+
+**Consequence**: E2-C's source half is no longer blocked by instrumentation. Two **decode rules** must be pre-registered before any verdict: exclude the post-end hold window for single-play clips, and segment a lifetime at every `localTime` reset (a decrease) rather than summing across it. No code change is needed for either.
