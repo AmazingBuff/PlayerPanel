@@ -4513,3 +4513,5 @@ C 运行合格的前提是：每个输入都有 `step=0` 行，且 `default=` �
 | E3-R attempt 1 | 三条签名齐全但图不符 | 现解释为 `FirstPerson`；这也是为什么它的 `words/nodes` 是 463/36 |
 
 **不改写历史读数**：以上只更正"观测的是哪张图"，不重判任何当时的通过/失败；`DefaultFemale` 上的同一脚本尚未观测（v88 的 R 重跑就是为此）。
+
+**R attempt 2（2026-11-10 23:12）已合格**：[日志](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log)，`selector='DefaultFemale' origin=selector chosen=0`、`window-open words=652 nodes=106`——与候选的源同身份；三条签名各出现一次（`currentDefaultState 0→10`、`iRightHandEquipped 0→1`＋`iState 0→9`、`currentDefaultState 1→12`），`lines=282` 预算内、零 `[E]`。P1/P2 与 P3 的源侧成立，**只等 C 跑的 `step=0` 行**。

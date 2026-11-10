@@ -1429,3 +1429,13 @@ Two graphs on the player, and the pairing run's `463/36` is the **first-person**
 **Deployed 2026-11-10**: the v87 trio was backed up to `dist/deploy-backup-20261110-v87-v88pre/`, then the v88 DLL/PDB and the R run INI `a14ba59e…` (10,677 bytes; `SourceTimeline=on`, `SourceTimelineGraph=DefaultFemale`) were installed with destination-hash comparison.
 
 **Next**: rerun R with the equip/unequip script. The census should now read `origin=selector chosen=0 name='DefaultFemale' words=652 nodes=106`, and `window-open` must show `words=652 nodes=106` — the same identity the candidate's source reports.
+<a id="v88-g5e3-r2-2026-11-10"></a>
+## v88 E3-R attempt 2 (2026-11-10 23:12, **qualified**)
+
+Log [37,503 bytes `0b742663…`](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log), zero `[E]`, window 23:12:17.317 → 23:12:37.319, `lines=282` inside the 800 budget.
+
+**Identity now matches the candidate source**: `graph-census actor=00000014 found=1 shown=1 selector='DefaultFemale' origin=selector chosen=0` with `index=0 name='DefaultFemale' words=652 nodes=106 selected=yes`, and `window-open actor=00000014 words=652 nodes=106 seconds=20 mode=settled request=0`. Only one managed non-1stperson graph existed at census time, so `found=1` rather than the earlier 2 — the selector still resolved it.
+
+**All three signatures appear exactly once**: `currentDefaultState 0->10` (23:12:19.074), `iRightHandEquipped 0->1` (23:12:19.568) together with `iState 0->9` (23:12:20.120), the equip settle `10->1` (20.120), then `currentDefaultState 1->12` (23:12:25.073) alongside `IsUnequipping 0->1` and `bEquipUnequip 0->1`, and the return `12->0` (26.330). Later rows of the same variable carry only `index=113` because the recorder prints the name once per window — that is why the raw grep for `name='currentDefaultState'` sees a single row.
+
+**Verdict**: P1 (R clean, no abort, budget intact), P2 (each signature unique) and the source half of P3 hold. The pair is complete only when the C run contributes its `step=0` rows and the endpoint comparison.
