@@ -4679,7 +4679,10 @@ T1–T5 在 equip 窗口上成立（`N` 与 `?` 均未出现，无非法字符�
 | 离线 | 锚点选择（含"一个 settle 一个快照"）、预算外溢计数、clip 表格式化截断、`n` 越界判停 |
 | 预算 | 每窗口 ≤1,500 行；20 s 窗口下 120 条时钟行 + ≤8 块快照（每块约 125 行，合计约 1,120 行） |
 | 文档 | 本节 + E2-C §一 的"阻塞"改为"由 E4 解" + README/CHANGELOG |
-**实现（v89，2026-11-10）**：落在 `SourceTimeline`，零 detour；**锚点只认装备链变量**（`currentDefaultState`/`iRightHandEquipped`/`iState`/`IsEquipping`/`IsUnequipping`/`bEquipUnequip`），节点计数 settle 不锚——否则 117 条 settle 行（首条是 `TimeDelta`）会先把 8 个槽吃光（`5a52136d73` 修）；`poseLocal` 走 `hkbCharacter::poseLocal`/`numPoseLocal`，clip 表按 vtable 过滤，四元组/向量用 `memcpy` 取出（首版直接读 `.x/.y/.z` 编译失败，已改）。锚点为「一个 settle 一个快照」：同帧多变 settle 记一次，悬而未取时再来 settle 记 drop；快照在 settle 之后的第一个采样帧发出（`anchor-delta-frames` 应为 1）。关闭行新增 `snapshots/clocks/capture-lines/snapshot-dropped/clock-dropped/line-dropped`；预算 8/120/1,500 由离线用例钉住。提交 `aaf7b009fd`，[构建记录](build.md#v89-g5e4-source-capture-2026-11-10)，离线 44 例通过。
+
+**首轮运行（v89，2026-11-10 23:43）不合格**：[日志](diagnostics/CharacterPanel-g5e4-capture-run1-20261110-2343.log)。图正确（`DefaultFemale` 652/106）、`n=116`、`pose-local` 指针全程同一、`anchor-delta-frames=1`、`clocks=86`、928 条 track 行与 18 条 clip 行解码正常——但 **`snapshots=8` 且 `snapshot-dropped=1`**，而 S1 要求"每个输入恰好一块"、S5 要求零丢失。根因：锚点规则对六个装备链变量的**每次变化**都开锚（`0→10`、`10→1`、`iState 0→9`、`1→12`、`12→0` …），一次输入产生多块。按停点判**证据不足**，本轮快照不作任何姿态参照。
+
+**E4 v2 修订（预注册，未实现）**：锚点只认 `currentDefaultState` 的**命令边**——`0→10`（装备）与 `1→12`（卸下），与 [E3 账本](#c-g5-e3-v2) §十 的两个输入一一对应；其余装备链变量只作确认，不再开锚。这样每窗口恰好两块，槽位预算不可能被耗尽。**实现（v89，2026-11-10）**：落在 `SourceTimeline`，零 detour；**锚点只认装备链变量**（`currentDefaultState`/`iRightHandEquipped`/`iState`/`IsEquipping`/`IsUnequipping`/`bEquipUnequip`），节点计数 settle 不锚——否则 117 条 settle 行（首条是 `TimeDelta`）会先把 8 个槽吃光（`5a52136d73` 修）；`poseLocal` 走 `hkbCharacter::poseLocal`/`numPoseLocal`，clip 表按 vtable 过滤，四元组/向量用 `memcpy` 取出（首版直接读 `.x/.y/.z` 编译失败，已改）。锚点为「一个 settle 一个快照」：同帧多变 settle 记一次，悬而未取时再来 settle 记 drop；快照在 settle 之后的第一个采样帧发出（`anchor-delta-frames` 应为 1）。关闭行新增 `snapshots/clocks/capture-lines/snapshot-dropped/clock-dropped/line-dropped`；预算 8/120/1,500 由离线用例钉住。提交 `aaf7b009fd`，[构建记录](build.md#v89-g5e4-source-capture-2026-11-10)，离线 44 例通过。
 
 ### 九、明确不做
 

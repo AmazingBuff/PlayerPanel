@@ -1472,3 +1472,15 @@ Log [90,252 bytes `7ce80813…`](diagnostics/CharacterPanel-g5e3-c-run1-20261110
 **Identity**: `CharacterPanel-scenegraph-v89-g5e4-source-capture-5a52136d73-5a52136d73-cl94faaed0c6-20261110T153236Z`, DLL 1,830,400 bytes SHA-256 `a39dbdfeb3e36f1d1ac60fb7cea36e73af2cc01a65da95f720c560718af6be46`, PDB 49,549,312 bytes SHA-256 `a6331e175e56fd9d760161685c4fd3c1cb9e5246a1e6be34c13e102bc04fda7a`, CodeView age 439. The first v89 build (`9e35db4c…`) was discarded before deployment because it armed a snapshot on every settle.
 
 **Deployed 2026-11-10**: the v88 trio was backed up to `dist/deploy-backup-20261110-v88-v89pre/` (DLL `1c93ba38…`, PDB `52e17dbd…`, dormant INI `be26ac09…`), then the v89 DLL/PDB and the E4 run INI `8864075e…` (11,183 bytes; `SourceTimeline=on`, `SourceTimelineGraph=DefaultFemale`, `SourcePoseCapture=true`, `SamplingLiveness=off`) were installed with destination-hash comparison. **Next**: one F7 window with the equip/unequip script yields two pose snapshots plus the clock samples; the close row must read `snapshots=2` with zero drops.
+<a id="v89-g5e4-run1-20261110"></a>
+## v89 E4 capture run 1 (2026-11-10 23:43, **invalid: eight anchors instead of two**)
+
+Log [201,480 bytes `0c4031c2…`](diagnostics/CharacterPanel-g5e4-capture-run1-20261110-2343.log), zero `[E]`. Window 23:43:24.404 to 23:43:44.408, `lines=154`; census `selector='DefaultFemale' origin=selector chosen=0` with `words=652 nodes=106`, so the graph was right.
+
+**What worked**: `snapshots=8`, `clocks=86`, `capture-lines=1048`; every snapshot header shows `n=116`, the same `pose-local=0x2c2973c8010` and `anchor-delta-frames=1`; 928 `track=` rows and 18 `clip=` rows decoded cleanly (e.g. `1HM_Equip.hkx` 0.1070/0.6130/1.0667, `1HM_Unequip.hkx` 0.1228/0.3228/0.9673/1.3770, `MT_Idle` 1.8197 s all `speed=1.000`, `enforced=0`).
+
+**Why it is invalid**: S1 requires exactly one snapshot per input and S5 requires zero drops. The window produced **eight** snapshots and one `status=dropped`. The equipment-chain anchor rule fires on *every* change of those six variables — `currentDefaultState 0->10`, then `10->1`, `iState 0->9`, `iRightHandEquipped 0->1`, `IsUnequipping 0->1`, `bEquipUnequip 0->1`, `1->12`, `12->0` … — so one input spawns several anchors and the ninth was refused by the eight-slot budget.
+
+**Verdict**: evidence insufficient for E4 as pre-registered; **no snapshot is used as a pose reference from this run**.
+
+**Proposed revision (E4 v2, not implemented)**: an anchor must be a *command edge* of `currentDefaultState` only — `0->10` (equip) and `1->12` (unequip) — which is exactly the two inputs of the [E3 ledger](independent-behavior-graph.md#c-g5-e3-v2) §十. Other equipment variables then act as confirmation, never as anchors, so a window yields exactly two snapshots and the slot budget cannot be exhausted.
