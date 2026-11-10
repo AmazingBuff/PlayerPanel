@@ -59,19 +59,21 @@ namespace
         assert(full.clock_dropped() == 1);
     }
 
-    void only_command_edges_anchor_a_snapshot()
+    void the_four_currentDefaultState_edges_anchor_a_snapshot()
     {
         // C-G5-E4 v2: the 2026-11-10 run took eight snapshots because any change of the six
         // equipment-chain variables anchored. Only the two command edges do now, matching the two
         // inputs of the E3 ledger; everything else is confirmation.
         assert(source_settle_is_anchor("currentDefaultState", 0, 10));
+        assert(source_settle_is_anchor("currentDefaultState", 10, 1));
         assert(source_settle_is_anchor("currentDefaultState", 1, 12));
-        assert(source_settle_is_anchor("CURRENTDEFAULTSTATE", 0, 10));
-        // Same variable, but not a command edge: equip settle, unequip return, transient edges.
-        assert(!source_settle_is_anchor("currentDefaultState", 10, 1));
-        assert(!source_settle_is_anchor("currentDefaultState", 12, 0));
+        assert(source_settle_is_anchor("currentDefaultState", 12, 0));
+        assert(source_settle_is_anchor("CURRENTDEFAULTSTATE", 10, 1));
+        // Not anchors: unrelated edges of the same variable.
         assert(!source_settle_is_anchor("currentDefaultState", 0, 1));
         assert(!source_settle_is_anchor("currentDefaultState", 10, 12));
+        assert(!source_settle_is_anchor("currentDefaultState", 1, 0));
+        assert(!source_settle_is_anchor("currentDefaultState", 12, 10));
         // Other equipment variables confirm, never anchor.
         assert(!source_settle_is_anchor("iState", 0, 9));
         assert(!source_settle_is_anchor("iRightHandEquipped", 0, 1));
@@ -99,7 +101,7 @@ int main()
     clock_samples_follow_the_declared_stride();
     snapshots_stop_at_the_declared_limit_and_count_the_overflow();
     the_line_budget_refuses_rather_than_truncates();
-    only_command_edges_anchor_a_snapshot();
+    the_four_currentDefaultState_edges_anchor_a_snapshot();
     the_declared_limits_match_the_contract();
     std::puts("5 source-timeline capture cases passed (engine-free)");
 }

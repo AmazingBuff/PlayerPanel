@@ -238,16 +238,20 @@ namespace animation::behavior_graph
     inline constexpr std::uint32_t Source_Capture_Max_Clips = 8;
     inline constexpr std::uint32_t Source_Capture_Max_Tracks = 116;
 
-    // C-G5-E4 v2: an anchor is a COMMAND EDGE of currentDefaultState - 0->10 for equip and 1->12
-    // for unequip, the same two inputs the E3 ledger keys on. v1 accepted any change of the six
-    // equipment-chain variables, so one input spawned several anchors and the 2026-11-10 run took
-    // eight snapshots where the contract requires one per input. Per-frame scalars never anchor.
+    // C-G5-E4 v3: an anchor is one of the four currentDefaultState edges that bracket the two
+    // inputs - 0->10 (equip starts), 10->1 (equip settled), 1->12 (unequip starts), 12->0 (unequip
+    // settled). The E3 ledger pairs two endpoints per input (candidate step 0 at state 10/12 and
+    // its settled step at state 1/0), so the command edges alone only cover the transition's first
+    // frame; four anchors still fit the eight-slot budget. v1 accepted any change of the six
+    // equipment-chain variables and took eight snapshots, which is what v2 corrected. Per-frame
+    // scalars never anchor.
     [[nodiscard]] inline bool source_settle_is_anchor(std::string_view a_name, std::int32_t a_previous,
         std::int32_t a_current) noexcept
     {
         if (!source_timeline_name_matches(a_name, "currentDefaultState"))
             return false;
-        return (a_previous == 0 && a_current == 10) || (a_previous == 1 && a_current == 12);
+        return (a_previous == 0 && a_current == 10) || (a_previous == 10 && a_current == 1) ||
+            (a_previous == 1 && a_current == 12) || (a_previous == 12 && a_current == 0);
     }
     [[nodiscard]] inline bool source_clock_sample_due(std::uint32_t a_frame) noexcept
     {
