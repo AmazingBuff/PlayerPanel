@@ -1543,10 +1543,10 @@ The 88 `clock-sample` rows of [run 3](diagnostics/CharacterPanel-g5e4-capture-ru
 
 **Minimal fix for a future revision**: make the source clock row carry the same three things the candidate's `clip-steps` already carries - a per-clip lifetime key, a `-` marker for absence, and a delta expressed in engine steps rather than UI frames (or record the step counter alongside `frame`). No pose change is needed; the four pose snapshots are unaffected.
 <a id="v92-g5e2c-ms-2026-11-10"></a>
-## v92 G5-E2-C clock-row time base (2026-11-10, built, **not deployed**)
+## v92 G5-E2-C clock-row time base (2026-11-10, built and **deployed, clock run next**)
 
 **Change** (committed `0ebe565ed1`, clean tree): `clock-sample` now carries `ms=<elapsed since arm>`. The 2026-11-11 attempt divided `localTime` deltas by UI frames and got 0.918 / 0.131, which is not a clock finding - the UI sample cadence is not the engine's step cadence. With a wall-clock stamp the source-side rate becomes `sum(dt) / (delta_ms/1000)` per clip lifetime, and a lifetime can be segmented offline (a clip that disappears and returns resets `localTime` while `ms` keeps increasing). The first attempt at this patch failed `/WX` on line 371 only because the replacement had mixed CRLF/space indentation and split the format arguments; redone with exact CRLF text it builds clean with no warnings.
 
 **Identity**: `CharacterPanel-scenegraph-v92-g5e2c-ms-0ebe565ed1-0ebe565ed1-cl94faaed0c6-20261110T162207Z`, DLL 1,830,400 bytes SHA-256 `fe697ba91ffdd36c0eccd62c4a458405bbab946702a27327140e8ce72d8bcb38`, PDB 49,557,504 bytes SHA-256 `f57673ce1a618203e4c278d70138793cc0fd03731bbca88c8256cab8a1e11914`.
 
-**Next**: deploy with the same E4 run INI (`8864075e…`) and rerun one F7 capture; the new `ms=` field plus the existing clip times then give the source-side rate and lifetimes, closing E2-C's source half alongside the four pose snapshots.
+**Deployed 2026-11-11 00:2x**: the v91 trio was backed up to `dist/deploy-backup-20261111-v91-v92pre/`, the v92 DLL/PDB installed with destination-hash comparison, the E4 run INI `8864075e…` kept as-is. **Next**: rerun one F7 capture; the new `ms=` field plus the existing clip times then give the source-side rate and lifetimes, closing E2-C's source half alongside the four pose snapshots.
