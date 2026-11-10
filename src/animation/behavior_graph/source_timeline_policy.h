@@ -238,6 +238,23 @@ namespace animation::behavior_graph
     inline constexpr std::uint32_t Source_Capture_Max_Clips = 8;
     inline constexpr std::uint32_t Source_Capture_Max_Tracks = 116;
 
+    // C-G5-E4: only the equipment-chain settles are inputs. TimeDelta, Pitch, Speed and the other
+    // per-frame scalars settle constantly and would fill the eight snapshot slots before the
+    // script even starts (the 2026-11-10 pairing run logged 117 settle lines, the first of them
+    // TimeDelta), so an anchor must name one of these variables.
+    [[nodiscard]] inline bool source_settle_is_anchor(std::string_view a_name) noexcept
+    {
+        constexpr std::string_view anchors[] = {
+            "currentDefaultState", "iRightHandEquipped", "iState",
+            "IsEquipping", "IsUnequipping", "bEquipUnequip"
+        };
+        for (std::string_view const anchor_name : anchors)
+        {
+            if (source_timeline_name_matches(a_name, anchor_name))
+                return true;
+        }
+        return false;
+    }
     [[nodiscard]] inline bool source_clock_sample_due(std::uint32_t a_frame) noexcept
     {
         return Source_Clock_Sample_Stride != 0 && a_frame % Source_Clock_Sample_Stride == 0;

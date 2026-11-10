@@ -59,6 +59,24 @@ namespace
         assert(full.clock_dropped() == 1);
     }
 
+    void only_equipment_chain_settles_anchor_a_snapshot()
+    {
+        // C-G5-E4: per-frame scalars settle constantly (117 settle lines on 2026-11-10, the first
+        // one TimeDelta), so they must never consume one of the eight snapshot slots.
+        assert(source_settle_is_anchor("currentDefaultState"));
+        assert(source_settle_is_anchor("iRightHandEquipped"));
+        assert(source_settle_is_anchor("iState"));
+        assert(source_settle_is_anchor("IsEquipping"));
+        assert(source_settle_is_anchor("IsUnequipping"));
+        assert(source_settle_is_anchor("bEquipUnequip"));
+        assert(source_settle_is_anchor("CURRENTDEFAULTSTATE"));
+        assert(!source_settle_is_anchor("TimeDelta"));
+        assert(!source_settle_is_anchor("Pitch"));
+        assert(!source_settle_is_anchor("Speed"));
+        assert(!source_settle_is_anchor("iStateX"));
+        assert(!source_settle_is_anchor(""));
+    }
+
     void the_declared_limits_match_the_contract()
     {
         // These constants are the pre-registered budget of C-G5-E4 section 3.
@@ -76,6 +94,7 @@ int main()
     clock_samples_follow_the_declared_stride();
     snapshots_stop_at_the_declared_limit_and_count_the_overflow();
     the_line_budget_refuses_rather_than_truncates();
+    only_equipment_chain_settles_anchor_a_snapshot();
     the_declared_limits_match_the_contract();
-    std::puts("4 source-timeline capture cases passed (engine-free)");
+    std::puts("5 source-timeline capture cases passed (engine-free)");
 }

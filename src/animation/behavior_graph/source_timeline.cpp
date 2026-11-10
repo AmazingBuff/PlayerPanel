@@ -473,7 +473,9 @@ namespace animation::behavior_graph
                 // with the log line in one unit for both sides.
                 std::uint64_t const settle_tsc = tsc_now();
                 (void)settle_ring().push(settle_tsc);
-                arm_source_snapshot(a_state, settle_tsc);
+                char const* const anchor_name = variable_name(a_behavior, i);
+                if (anchor_name != nullptr && source_settle_is_anchor(std::string_view{ anchor_name }))
+                    arm_source_snapshot(a_state, settle_tsc);
                 float previous_float = 0.0f;
                 float current_float = 0.0f;
                 std::memcpy(&previous_float, &previous, sizeof(float));
@@ -509,7 +511,6 @@ namespace animation::behavior_graph
             {
                 std::uint64_t const settle_tsc = tsc_now();
                 (void)settle_ring().push(settle_tsc);
-                arm_source_snapshot(a_state, settle_tsc);
                 logger::info("SOURCE TIMELINE nodes count={} tsc={}", count, settle_tsc);
             }
         }
