@@ -1485,7 +1485,7 @@ Log [201,480 bytes `0c4031c2…`](diagnostics/CharacterPanel-g5e4-capture-run1-2
 
 **Proposed revision (E4 v2, not implemented)**: an anchor must be a *command edge* of `currentDefaultState` only — `0->10` (equip) and `1->12` (unequip) — which is exactly the two inputs of the [E3 ledger](independent-behavior-graph.md#c-g5-e3-v2) §十. Other equipment variables then act as confirmation, never as anchors, so a window yields exactly two snapshots and the slot budget cannot be exhausted.
 <a id="v90-g5e4-anchor-v2-2026-11-10"></a>
-## v90 G5-E4 anchor v2 (2026-11-10, built, **not deployed**)
+## v90 G5-E4 anchor v2 (2026-11-10, built and **deployed, capture rerun next**)
 
 **Change** (committed `eb67deeecd`, clean tree): an anchor is now a command edge of `currentDefaultState` only - `0->10` (equip) and `1->12` (unequip), the two inputs the [E3 ledger](independent-behavior-graph.md#c-g5-e3-v2) keys on. v89 accepted any change of the six equipment-chain variables, which is why run 1 took eight snapshots where the contract requires one per input. Other equipment variables confirm and never anchor; per-frame scalars never do.
 
@@ -1493,4 +1493,4 @@ Log [201,480 bytes `0c4031c2…`](diagnostics/CharacterPanel-g5e4-capture-run1-2
 
 **Identity**: `CharacterPanel-scenegraph-v90-g5e4-anchor-v2-eb67deeecd-eb67deeecd-cl94faaed0c6-20261110T154538Z`, DLL 1,830,400 bytes SHA-256 `48bbf4288b39d0b38153a21e49e9fe61313cfddc3452a1a3f833564eae32cd0c`, PDB 49,549,312 bytes SHA-256 `28c892dd2aa7ae54ab1e96c8f4a8d196f05d7c4b4e56aeda491a1ff943fb74a2`, CodeView age 441.
 
-**Next**: deploy v90 with the same E4 run INI (`8864075e…`) and rerun the F7 capture. A valid window must read `snapshots=2`, `snapshot-dropped=0`, `clocks` on the 10-frame stride, and both snapshots at `anchor-delta-frames=1`.
+**Deployed 2026-11-10**: the v89 trio was backed up to `dist/deploy-backup-20261110-v89-v90pre/`, then the v90 DLL/PDB were installed with destination-hash comparison and the E4 run INI `8864075e…` was kept as-is. **Next**: rerun the F7 capture; A valid window must read `snapshots=2`, `snapshot-dropped=0`, `clocks` on the 10-frame stride, and both snapshots at `anchor-delta-frames=1`.
