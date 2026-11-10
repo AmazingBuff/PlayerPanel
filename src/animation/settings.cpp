@@ -16,6 +16,7 @@ namespace
     bool g_display_step = false;
     behavior_graph::SourceTimelineMode g_source_timeline_mode = behavior_graph::SourceTimelineMode::e_off;
     std::string g_source_timeline_graph;
+    bool g_source_pose_capture = false;
     bool g_source_transient_watch = false;
     behavior_graph::SourceEventCaptureMode g_source_event_capture_mode = behavior_graph::SourceEventCaptureMode::e_off;
     bool g_source_write_capture = false;
@@ -52,6 +53,7 @@ void load_settings()
     g_source_timeline_mode = parsed_timeline.value_or(behavior_graph::SourceTimelineMode::e_off);
     char const* const timeline_graph = ini.GetValue("Experiment", "SourceTimelineGraph", "");
     g_source_timeline_graph = timeline_graph ? timeline_graph : "";
+    g_source_pose_capture = ini.GetBoolValue("Experiment", "SourcePoseCapture", false);
     g_source_transient_watch = ini.GetBoolValue("Experiment", "SourceTransientWatch", false);
     char const* const event_capture = ini.GetValue("Experiment", "SourceEventCapture", "off");
     std::optional<behavior_graph::SourceEventCaptureMode> const parsed_event_capture =
@@ -94,8 +96,8 @@ void load_settings()
     logger::info("EXPERIMENT setting IndependentGraph={}", behavior_graph::independent_graph_name(g_independent_graph));
     logger::info("EXPERIMENT setting DisplayPose={}", g_display_pose);
     logger::info("EXPERIMENT setting DisplayStep={}", g_display_step);
-    logger::info("EXPERIMENT setting SourceTimeline={} transient={} graph='{}'", behavior_graph::source_timeline_mode_name(g_source_timeline_mode),
-        g_source_transient_watch, g_source_timeline_graph);
+    logger::info("EXPERIMENT setting SourceTimeline={} transient={} graph='{}' pose-capture={}", behavior_graph::source_timeline_mode_name(g_source_timeline_mode),
+        g_source_transient_watch, g_source_timeline_graph, g_source_pose_capture);
     logger::info("EXPERIMENT setting SourceEventCapture={}", behavior_graph::source_event_capture_mode_name(g_source_event_capture_mode));
     logger::info("EXPERIMENT setting SourceWriteCapture={}", g_source_write_capture);
     logger::info("EXPERIMENT setting CandidateVariableCensus={}", g_candidate_variable_census);
@@ -120,6 +122,7 @@ bool source_timeline_concurrent()
     return g_source_timeline_mode == behavior_graph::SourceTimelineMode::e_concurrent;
 }
 std::string const& source_timeline_graph() { return g_source_timeline_graph; }
+bool source_pose_capture() { return g_source_pose_capture; }
 bool source_transient_watch() { return g_source_transient_watch; }
 bool source_event_capture() { return g_source_event_capture_mode != behavior_graph::SourceEventCaptureMode::e_off; }
 behavior_graph::SourceEventCaptureMode source_event_capture_mode() { return g_source_event_capture_mode; }

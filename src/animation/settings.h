@@ -33,6 +33,9 @@ namespace animation
     // C-G5-E3 v2: `on`-only graph selector by project name. Empty keeps the legacy "last managed
     // non-1stperson graph" rule; a value that matches nothing is logged and falls back to it.
     [[nodiscard]] std::string const& source_timeline_graph();
+    // C-G5-E4: capture the source graph's poseLocal and clip clocks at settle anchors. Requires
+    // SourceTimeline; the probe instruments stay off in the same process (no stacking).
+    [[nodiscard]] bool source_pose_capture();
     // C-G3B-E3: transient mode for the source timeline - BOOL/INT-typed variables log every
     // observed word change immediately (no settle rule), catching one-frame command writes
     // the settle-3 rule filters out. Requires SourceTimeline.

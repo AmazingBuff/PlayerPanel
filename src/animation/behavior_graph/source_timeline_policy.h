@@ -228,6 +228,83 @@ namespace animation::behavior_graph
         e_aborted
     };
 
+    // C-G5-E4: source-side pose and clock capture, produced by the existing post-UI sample (no
+    // detour). Budgets are declared here so an overflow is counted rather than silently truncated;
+    // the criteria treat any drop as insufficient evidence.
+    inline constexpr std::uint32_t Source_Pose_Snapshot_Limit = 8;
+    inline constexpr std::uint32_t Source_Clock_Sample_Stride = 10;
+    inline constexpr std::uint32_t Source_Clock_Sample_Limit = 120;
+    inline constexpr std::uint32_t Source_Capture_Line_Budget = 1500;
+    inline constexpr std::uint32_t Source_Capture_Max_Clips = 8;
+    inline constexpr std::uint32_t Source_Capture_Max_Tracks = 116;
+
+    [[nodiscard]] inline bool source_clock_sample_due(std::uint32_t a_frame) noexcept
+    {
+        return Source_Clock_Sample_Stride != 0 && a_frame % Source_Clock_Sample_Stride == 0;
+    }
+
+    class SourceCaptureBudget
+    {
+    public:
+        // Returns false when the snapshot cannot be taken; the reason is counted so the close row
+        // can distinguish "limit reached" from "line budget exhausted".
+        [[nodiscard]] bool take_snapshot(std::uint32_t a_lines) noexcept
+        {
+            if (m_snapshots >= Source_Pose_Snapshot_Limit)
+            {
+                ++m_snapshot_dropped;
+                return false;
+            }
+            if (m_lines + a_lines > Source_Capture_Line_Budget)
+            {
+                ++m_snapshot_dropped;
+                ++m_line_dropped;
+                return false;
+            }
+            ++m_snapshots;
+            m_lines += a_lines;
+            return true;
+        }
+
+        [[nodiscard]] bool take_clock(std::uint32_t a_lines) noexcept
+        {
+            if (m_clocks >= Source_Clock_Sample_Limit)
+            {
+                ++m_clock_dropped;
+                return false;
+            }
+            if (m_lines + a_lines > Source_Capture_Line_Budget)
+            {
+                ++m_clock_dropped;
+                ++m_line_dropped;
+                return false;
+            }
+            ++m_clocks;
+            m_lines += a_lines;
+            return true;
+        }
+
+        void drop_snapshot() noexcept { ++m_snapshot_dropped; }
+        void drop_clock() noexcept { ++m_clock_dropped; }
+
+        [[nodiscard]] std::uint32_t snapshots() const noexcept { return m_snapshots; }
+        [[nodiscard]] std::uint32_t clocks() const noexcept { return m_clocks; }
+        [[nodiscard]] std::uint32_t lines() const noexcept { return m_lines; }
+        [[nodiscard]] std::uint32_t snapshot_dropped() const noexcept { return m_snapshot_dropped; }
+        [[nodiscard]] std::uint32_t clock_dropped() const noexcept { return m_clock_dropped; }
+        [[nodiscard]] std::uint32_t line_dropped() const noexcept { return m_line_dropped; }
+
+        void reset() noexcept { *this = SourceCaptureBudget{}; }
+
+    private:
+        std::uint32_t m_snapshots{ 0 };
+        std::uint32_t m_clocks{ 0 };
+        std::uint32_t m_lines{ 0 };
+        std::uint32_t m_snapshot_dropped{ 0 };
+        std::uint32_t m_clock_dropped{ 0 };
+        std::uint32_t m_line_dropped{ 0 };
+    };
+
     class SourceTimelineWindow
     {
     public:

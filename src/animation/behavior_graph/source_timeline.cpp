@@ -14,6 +14,7 @@
 #include <RE/H/hkbBehaviorGraph.h>
 #include <RE/H/hkbBehaviorGraphData.h>
 #include <RE/H/hkbBehaviorGraphStringData.h>
+#include <RE/H/hkbClipGenerator.h>
 #include <RE/H/hkbVariableValueSet.h>
 #include <RE/H/hkStringPtr.h>
 
@@ -22,7 +23,10 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #if defined(_MSC_VER)
@@ -108,6 +112,14 @@ namespace animation::behavior_graph
             bool concurrent{ false };
             // C-G5-E3 v2 §八: the `on` census prints once per window, before the first sample.
             bool census_logged{ false };
+            // C-G5-E4: source-side pose/clock capture state. `snapshot_armed` means a settle is
+            // waiting for its anchor sample; the anchor rule is "first post-UI sample after it".
+            bool pose_capture{ false };
+            SourceCaptureBudget capture;
+            std::uint32_t frame{ 0 };
+            bool snapshot_armed{ false };
+            std::uint64_t anchor_tsc{ 0 };
+            std::uint32_t anchor_frame{ 0 };
         };
 
         // The settle ledger lives outside the Recorder because it holds atomics and the Recorder is
@@ -241,6 +253,139 @@ namespace animation::behavior_graph
             return nullptr;
         }
 
+        // C-G5-E4: the active clip table, typed access only (NodeList -> nodeClone -> vtable gate),
+        // bounded at 256 entries and at the caller's slot count.
+        std::size_t collect_source_clips(RE::BShkbAnimationGraph& a_graph, RE::hkbClipGenerator** a_out,
+            std::size_t a_capacity)
+        {
+            if (a_out == nullptr || a_capacity == 0)
+                return 0;
+            RE::hkbBehaviorGraph* const behavior = a_graph.behaviorGraph;
+            if (!behavior || !behavior->activeNodes)
+                return 0;
+            RE::NodeList const& nodes = *behavior->activeNodes;
+            std::size_t const active = static_cast<std::size_t>(nodes.size());
+            std::size_t const count = active < 256 ? active : 256;
+            std::size_t found = 0;
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                RE::hkbNode* const node = nodes.data()[i].nodeClone;
+                if (!node)
+                    continue;
+                if (*reinterpret_cast<std::uintptr_t const*>(node) != RE::VTABLE_hkbClipGenerator[0].address())
+                    continue;
+                if (found < a_capacity)
+                    a_out[found] = static_cast<RE::hkbClipGenerator*>(node);
+                ++found;
+            }
+            return found;
+        }
+
+        std::string_view clip_leaf_name(RE::hkbClipGenerator const& a_clip)
+        {
+            char const* const name = a_clip.animationName.c_str();
+            if (!name)
+                return {};
+            std::string_view view{ name };
+            std::size_t const slash = view.find_last_of("\\/");
+            return slash == std::string_view::npos ? view : view.substr(slash + 1);
+        }
+
+        // One anchor per settle. Several variables settle on the same frame for one input, so a
+        // same-frame repeat is the same anchor; a settle while an anchor is still pending breaks the
+        // one-snapshot-per-settle rule and is counted.
+        void arm_source_snapshot(Recorder& a_state, std::uint64_t a_tsc)
+        {
+            if (!a_state.pose_capture)
+                return;
+            if (a_state.snapshot_armed)
+            {
+                if (a_state.anchor_frame != a_state.frame)
+                    a_state.capture.drop_snapshot();
+                return;
+            }
+            a_state.snapshot_armed = true;
+            a_state.anchor_tsc = a_tsc;
+            a_state.anchor_frame = a_state.frame;
+        }
+
+        void emit_pose_snapshot(Recorder& a_state, RE::BShkbAnimationGraph& a_graph, std::uint32_t a_actor_id)
+        {
+            a_state.snapshot_armed = false;
+            RE::hkbCharacter& character = a_graph.characterInstance;
+            RE::hkQsTransform const* const pose = character.poseLocal;
+            std::int32_t const n = character.numPoseLocal;
+            std::uint32_t const delta = a_state.frame >= a_state.anchor_frame ? a_state.frame - a_state.anchor_frame : 0;
+            if (pose == nullptr || n <= 0 || n > static_cast<std::int32_t>(Source_Capture_Max_Tracks))
+            {
+                a_state.capture.drop_snapshot();
+                logger::info("SOURCE TIMELINE pose-snapshot actor={:08x} status=unavailable reason=bad-pose pose-local={:#x} n={}",
+                    a_actor_id, reinterpret_cast<std::uintptr_t>(pose), n);
+                return;
+            }
+            RE::hkbClipGenerator* clips[Source_Capture_Max_Clips]{};
+            std::size_t const found = collect_source_clips(a_graph, clips, Source_Capture_Max_Clips);
+            std::size_t const shown = found < Source_Capture_Max_Clips ? found : Source_Capture_Max_Clips;
+            std::uint32_t const lines = 2u + static_cast<std::uint32_t>(n) + static_cast<std::uint32_t>(shown);
+            if (!a_state.capture.take_snapshot(lines))
+            {
+                logger::info("SOURCE TIMELINE pose-snapshot actor={:08x} status=dropped frame={} snapshots={} lines={} line-dropped={}",
+                    a_actor_id, a_state.frame, a_state.capture.snapshots(), a_state.capture.lines(), a_state.capture.line_dropped());
+                return;
+            }
+            logger::info("SOURCE TIMELINE pose-snapshot actor={:08x} frame={} anchor-delta-frames={} anchor-tsc={} pose-local={:#x} n={} clips={}/{} lines={}",
+                a_actor_id, a_state.frame, delta, a_state.anchor_tsc, reinterpret_cast<std::uintptr_t>(pose), n, shown, found,
+                a_state.capture.lines());
+            for (std::int32_t i = 0; i < n; ++i)
+            {
+                // hkVector4/hkQuaternion store a 128-bit quad with no named components, so the
+                // four floats are copied out the same way the candidate side reads a pose sample.
+                RE::hkQsTransform const& t = pose[i];
+                float trans[4]{};
+                float rot[4]{};
+                float scale[4]{};
+                std::memcpy(trans, &t.translation, sizeof(trans));
+                std::memcpy(rot, &t.rotation, sizeof(rot));
+                std::memcpy(scale, &t.scale, sizeof(scale));
+                logger::info("SOURCE TIMELINE pose-snapshot track={} trans={:.6f},{:.6f},{:.6f} rot={:.6f},{:.6f},{:.6f},{:.6f} scale={:.6f},{:.6f},{:.6f}",
+                    i, trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], rot[3],
+                    scale[0], scale[1], scale[2]);
+            }
+            for (std::size_t i = 0; i < shown; ++i)
+            {
+                RE::hkbClipGenerator const& clip = *clips[i];
+                logger::info("SOURCE TIMELINE pose-snapshot clip name='{}' time={:.4f} mode={} speed={:.3f} enforced={:.4f}",
+                    clip_leaf_name(clip), clip.localTime, static_cast<std::uint32_t>(clip.mode.get()),
+                    clip.playbackSpeed, clip.enforcedDuration);
+            }
+        }
+
+        void emit_clock_sample(Recorder& a_state, RE::BShkbAnimationGraph& a_graph, std::uint32_t a_actor_id)
+        {
+            RE::hkbClipGenerator* clips[Source_Capture_Max_Clips]{};
+            std::size_t const found = collect_source_clips(a_graph, clips, Source_Capture_Max_Clips);
+            std::size_t const shown = found < Source_Capture_Max_Clips ? found : Source_Capture_Max_Clips;
+            if (!a_state.capture.take_clock(1))
+            {
+                logger::info("SOURCE TIMELINE clock-sample actor={:08x} status=dropped frame={} clocks={}",
+                    a_actor_id, a_state.frame, a_state.capture.clocks());
+                return;
+            }
+            std::string entries;
+            for (std::size_t i = 0; i < shown; ++i)
+            {
+                if (i != 0)
+                    entries += '|';
+                char buffer[96]{};
+                (void)std::snprintf(buffer, sizeof(buffer), "%.*s:%.4f",
+                    static_cast<int>(clip_leaf_name(*clips[i]).size()), clip_leaf_name(*clips[i]).data(),
+                    clips[i]->localTime);
+                entries += buffer;
+            }
+            logger::info("SOURCE TIMELINE clock-sample actor={:08x} frame={} found={} entries='{}'",
+                a_actor_id, a_state.frame, found, entries);
+        }
+
         char const* variable_name(RE::hkbBehaviorGraph const& a_graph, std::size_t a_index)
         {
             RE::hkbBehaviorGraphData const* const data = a_graph.data.get();
@@ -328,6 +473,7 @@ namespace animation::behavior_graph
                 // with the log line in one unit for both sides.
                 std::uint64_t const settle_tsc = tsc_now();
                 (void)settle_ring().push(settle_tsc);
+                arm_source_snapshot(a_state, settle_tsc);
                 float previous_float = 0.0f;
                 float current_float = 0.0f;
                 std::memcpy(&previous_float, &previous, sizeof(float));
@@ -363,6 +509,7 @@ namespace animation::behavior_graph
             {
                 std::uint64_t const settle_tsc = tsc_now();
                 (void)settle_ring().push(settle_tsc);
+                arm_source_snapshot(a_state, settle_tsc);
                 logger::info("SOURCE TIMELINE nodes count={} tsc={}", count, settle_tsc);
             }
         }
@@ -443,6 +590,7 @@ namespace animation::behavior_graph
         {
             state = Recorder{};
             settle_ring().reset();
+            state.pose_capture = source_pose_capture();
             state.window.arm(std::chrono::steady_clock::now());
         }
         // C-G5-E3 (M1): the experiment's arm carries the pinned graph; it is applied here so the
@@ -455,6 +603,7 @@ namespace animation::behavior_graph
             state.concurrent = true;
             state.pinned_graph = reinterpret_cast<std::uintptr_t>(arm.graph.load(std::memory_order_acquire));
             state.request = arm.request.load(std::memory_order_acquire);
+            state.pose_capture = source_pose_capture();
             state.window.arm(std::chrono::steady_clock::now());
             logger::info("SOURCE TIMELINE concurrent-arm actor={:08x} request={} graph={:#x}",
                 arm.actor.load(std::memory_order_relaxed), state.request, state.pinned_graph);
@@ -463,14 +612,18 @@ namespace animation::behavior_graph
         {
             std::uint32_t const lines = state.window.lines();
             state.window.cancel();
-            logger::info("SOURCE TIMELINE window-closed reason={} lines={} settles-pending={} settles-dropped={}",
-                g_close_reason, lines, settle_ring().size(), settle_ring().dropped());
+            logger::info("SOURCE TIMELINE window-closed reason={} lines={} settles-pending={} settles-dropped={} snapshots={} clocks={} capture-lines={} snapshot-dropped={} clock-dropped={} line-dropped={}",
+                g_close_reason, lines, settle_ring().size(), settle_ring().dropped(), state.capture.snapshots(),
+                state.capture.clocks(), state.capture.lines(), state.capture.snapshot_dropped(),
+                state.capture.clock_dropped(), state.capture.line_dropped());
         }
         if (!state.window.active())
             return;
         if (state.window.expire(std::chrono::steady_clock::now()))
         {
-            logger::info("SOURCE TIMELINE window-closed reason=expired lines={}", state.window.lines());
+            logger::info("SOURCE TIMELINE window-closed reason=expired lines={} snapshots={} clocks={} capture-lines={} snapshot-dropped={} clock-dropped={} line-dropped={}",
+                state.window.lines(), state.capture.snapshots(), state.capture.clocks(), state.capture.lines(),
+                state.capture.snapshot_dropped(), state.capture.clock_dropped(), state.capture.line_dropped());
             return;
         }
         RE::BShkbAnimationGraph* graph = nullptr;
@@ -520,6 +673,18 @@ namespace animation::behavior_graph
         {
             abort_source(state);
             return;
+        }
+
+        // C-G5-E4: the capture runs after this frame's apply, so `poseLocal` already holds the
+        // completed output. The snapshot goes out on the first sample after a settle was armed;
+        // clock samples are taken on a fixed stride.
+        ++state.frame;
+        if (state.pose_capture)
+        {
+            if (state.snapshot_armed)
+                emit_pose_snapshot(state, *graph, actor.GetFormID());
+            else if (source_clock_sample_due(state.frame))
+                emit_clock_sample(state, *graph, actor.GetFormID());
         }
 
         SourceTimelineIdentity const source{
