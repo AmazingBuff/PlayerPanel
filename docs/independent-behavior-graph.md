@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 普查已定位根因（漏掉 `FirstPerson`）并修复（v88），**E3 的 C3/C4 已交付：R/C 两次运行配对 2/2**；[C-G5-E2-C](#c-g5-e2-c) 时钟账本已预注册，候选侧首轮账本成立、源侧时钟仍阻塞（[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10)、[v88](build.md#v88-g5e3-firstperson-2026-11-10)、[§九 更正](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 普查已定位根因（漏掉 `FirstPerson`）并修复（v88），**E3 的 C3/C4 已交付：R/C 两次运行配对 2/2**；[C-G5-E2-C](#c-g5-e2-c) 时钟账本已预注册（候选侧首轮账本成立、源侧阻塞），[C-G5-E4](#c-g5-e4) 源侧姿态/时钟捕获已预注册（[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10)、[v88](build.md#v88-g5e3-firstperson-2026-11-10)、[§九 更正](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1 已闭合；E2-A/B 已闭合、E2-C 已预注册（[候选侧账本成立](#c-g5-e2-c)，源侧时钟阻塞）；E3 配对账本 **2/2**（[v2](#c-g5-e3-v2) §十，v88）；源侧 clip 与姿态 oracle 仍未覆盖 |
+| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1 已闭合；E2-A/B 已闭合、E2-C 已预注册（[候选侧账本成立](#c-g5-e2-c)，源侧时钟阻塞）；E3 配对账本 **2/2**（[v2](#c-g5-e3-v2) §十，v88）；源侧 clip 与姿态 oracle 仍缺，[E4](#c-g5-e4) 已预注册待实现 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -4545,7 +4545,7 @@ C 运行合格的前提是：每个输入都有 `step=0` 行，且 `default=` �
 | 侧 | 现状 | 本节处置 |
 | --- | --- | --- |
 | 候选（C 运行，drive 循环） | 已有 `clip-ref`（step 0/60/120，含 name/binding-index/map-len/mapping/time/duration/enforced/crop-sum/eff-duration/mode/speed/tracks）、`clip-clock`（每 20 步的每个 active clip 的 `localTime`）、`clip-steps`（每步单字符推进编码） | **本轮可交付账本**，见 §四 |
-| 源（R 运行，自然游玩） | **无任何 clip 时钟采集**：`SourceTimeline` 只读词变量与活动节点计数 | **阻塞**：与 E4（源侧姿态捕获）共用同一个"源侧 63856 捕获"仪器，本节不实现、不假装覆盖 |
+| 源（R 运行，自然游玩） | **无任何 clip 时钟采集**：`SourceTimeline` 只读词变量与活动节点计数 | **阻塞**：由 [E4](#c-g5-e4) 的源侧捕获（post-UI，非 63856 detour）解；本节不实现、不假装覆盖 |
 
 ### 二、观测与编码（已审计，2026-11-10 复核源码）
 
@@ -4609,3 +4609,77 @@ T1–T5 在 equip 窗口上成立（`N` 与 `?` 均未出现，无非法字符�
 2. **稳定 clip 实例身份**：当前追踪以 `leaf name + first_step` 为键，同名片段在同一窗口重复出现时会合并——这是已知限制，换稳定实例 id 属下一版；
 3. **姿态、权重、混合**（属 E2-A/E2-B/E4）；
 4. **跨侧速率比较**（等 1 落地）。
+<a id="c-g5-e4"></a>
+## C-G5-E4：源侧姿态与时钟捕获（2026-11-10 预注册，文档；不授权实现）
+
+**依据**：G5 要求"同阶段快照 + 完整覆盖"，而源侧至今**没有任何姿态或 clip 时钟数据**——`SourceTimeline` 只读 652 个词变量与活动节点计数。这同时卡住两件事：E3 账本只能证明"端点可比较"而给不出参照姿态；[E2-C](#c-g5-e2-c) 的源侧时钟半边也没有采集。E4 就是补这一块：**一次捕获，同时供 E2-C 的源侧速率与后续姿态对照使用**。
+
+### 一、观测点与安全（不用新 detour）
+
+| 项 | 决定 | 理由 |
+| --- | --- | --- |
+| 观测点 | `SourceTimeline` 的**每帧 post-UI 采样**（已有，`sample_source_timeline`） | 该时刻引擎本帧的 apply 已完成，`poseLocal` 是"已完成输出"的一致快照；不读 apply 中途，避免撕裂 |
+| 不叠加 | **不安装 63856 detour**，`SamplingLiveness` 保持 off | E1 的"仪器不叠加"硬约束继续有效；时序代价（比 apply 晚 ≤1 帧）用 §四 的锚点规则抵消 |
+| 读取方式 | `graph->characterInstance.poseLocal` / `numPoseLocal`（CommonLib 类型化成员），`hkQsTransform` 0x30/轨 | 不猜偏移；与候选侧 `read_pose_local` 同一套访问器 |
+| 写/分配 | 无写入、detour 内无分配；行在渲染线程拼装 | 沿用现有日志纪律 |
+
+**相位声明**（必须写进结论）：源侧快照是"本帧 apply 完成之后"的读数，与 63856 入口的 `poseLocal` 相差 ≤1 帧；每行记录 `frame` 与 `applies-seen` 两个计数，供离线判断相位差。
+
+### 二、捕获内容（两种行）
+
+1. **`pose-snapshot`（锚点快照，每窗口 ≤8 行块）**：`graph/behavior/pose-local` 指针、`n`、以及 `n` 条轨道的 `trans xyz`、`rot xyzw`、`scale xyz`（各 6 位小数）；同一块内附**当时的 clip 表**：最多 8 个活动片段的 `name / localTime / mode / speed / eff-duration`（`node_is_clip_generator` 的 vtable 判定，非片段节点不列）。
+2. **`clock-sample`（时钟采样，每 10 帧一行，每窗口 ≤120 行）**：`frame` 与活动片段的 `name:localTime` 列表——用于算源侧速率，不携带姿态。
+
+### 三、预算与丢失（先声明，事后不放宽）
+
+| 项 | 上限 | 超出时 |
+| --- | --- | --- |
+| 快照块 | 8 / 窗口 | 计 `snapshot-dropped`，**该轮判证据不足** |
+| 时钟行 | 120 / 窗口 | 计 `clock-dropped`，速率判据降级为"未覆盖" |
+| 行预算 | 1,500 / 窗口 | 计 `line-dropped`，同上 |
+
+### 四、锚点规则（先固定，不看值再定）
+
+1. 时间线把一个 settle 确认写入 settle 环的那一帧记为 `T_k`（现有 `tsc`）。
+2. 快照取 **`T_k` 之后第一个 post-UI 采样帧**，并在行内记 `anchor-delta-frames = snapshot_frame - T_k_frame`（应为 0 或 1）。
+3. 一个 settle 只允许一个快照；同一输入出现第二个快照即该窗口作废（防止事后挑帧）。
+4. 快照**不得**用"姿态看起来最稳的帧"替换——锚点与姿态数值无关。
+
+### 五、判据（预注册）
+
+| # | 判据 | 通过条件 |
+| --- | --- | --- |
+| S1 锚点完整 | 每个输入的 settle 各产生恰好一个快照 | 缺/多 ⇒ 证据不足 |
+| S2 同一代 | 各快照的 `pose-local` 指针与 `n` 完全相同，且窗口内无 `window-aborted` | 变化 ⇒ 该轮作废（图被替换） |
+| S3 覆盖完整 | 每块 `n` 条轨道 × 10 个分量齐全，`1 ≤ n ≤ 116`，无截断 | 缺轨 ⇒ 不足 |
+| S4 相位可查 | `anchor-delta-frames ∈ {0,1}` 且每块都记 `frame`/`applies-seen` | 越界 ⇒ 记录并停 |
+| S5 无丢失 | `snapshot-dropped = clock-dropped = line-dropped = 0` | 任一非零 ⇒ 不足 |
+| S6 时钟可算 | 每个活跃片段在窗口内 ≥10 条 `clock-sample`，区间速率可算 | 不足 ⇒ 源侧时钟"未覆盖" |
+
+**S1–S5 只证明"取到了合格快照"，不证明姿态相等**；姿态对照需要独立容差与校准（门 3），不在本节。
+
+### 六、已知限制（结论里必须写明）
+
+1. **clip 身份仍以名字为键**：同名片段重复出现会合并（E2-C §七 同款限制），换稳定实例 id 属后续修订。
+2. **源侧权重/层/混合仍未覆盖**（E2-B 只有候选侧）。
+3. **相位差 ≤1 帧**：快照是 post-UI，不是 63856 入口；对照时必须用同一锚点规则选取候选侧对应 step，不得按最近邻挑。
+4. **`scale` 取存储值**（未做 Ni uniform-scale 转换），与 G5 §五 的"转换前 XYZ"要求一致。
+
+### 七、停点
+
+`[E]`、`window-aborted`、`snapshot-dropped`/`clock-dropped`/`line-dropped` 任一非零、`n` 越界、指针在两块之间变化、`anchor-delta-frames > 1` —— 任一即停，保留已收行数，不降级为"部分通过"。
+
+### 八、实现影响面（评审用）
+
+| 项 | 内容 |
+| --- | --- |
+| 源码 | `source_timeline.cpp/.h`（快照与采样）、`source_timeline_policy.h`（锚点选择、clip 表格式化、预算计数的纯函数） |
+| 设置 | 新键 `SourcePoseCapture=on|off`（默认 off，要求 `SourceTimeline=on`；与 `SamplingLiveness` 互斥，保持仪器不叠加） |
+| detour | **零**；不新增原生调用或写入 |
+| 离线 | 锚点选择（含"一个 settle 一个快照"）、预算外溢计数、clip 表格式化截断、`n` 越界判停 |
+| 预算 | 每窗口 ≤1,500 行；20 s 窗口下 120 条时钟行 + ≤8 块快照（每块约 125 行，合计约 1,120 行） |
+| 文档 | 本节 + E2-C §一 的"阻塞"改为"由 E4 解" + README/CHANGELOG |
+
+### 九、明确不做
+
+不做姿态比较与容差（门 3）、不做源侧权重/层、不引入新 detour 或与 `SamplingLiveness` 同跑、不改 E1/E2/E3 已闭合判据、不用快照值反推配对（配对仍由 [C-G5-E3 v2](#c-g5-e3-v2) 的序数规则给出）。
