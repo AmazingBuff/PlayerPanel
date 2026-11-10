@@ -1379,3 +1379,15 @@ Log [358,712 bytes `eba02d06…`](diagnostics/CharacterPanel-g5e3-run1-20261110-
 **INI restored to dormant** `26625f09…` (10,092 bytes, no BOM, CRLF; `IndependentGraph=off`, `DisplayPose/DisplayStep=false`, `SourceTimeline=false`, `SamplingLiveness=off`). The E3 run INI is kept for provenance at `dist/CharacterPanel-e3-run-20261109.ini`.
 
 **Consequence**: C3 must pair on the recorded **input history**, not on a shared window — see [C-G5-E3-R §八](independent-behavior-graph.md#c-g5-e3-r) for the proposed revision.
+<a id="v86-g5e3-r1-2026-11-10"></a>
+## v86 E3-R attempt 1 (2026-11-10 22:51, **invalid: the timeline watched the wrong graph**)
+
+Log [24,192 bytes `4cedd700…`](diagnostics/CharacterPanel-g5e3-r-run1-20261110-2251.log), zero `[E]`. F7 opened the window at 22:51:55.072 and it expired at 22:52:15.098 with `lines=174` — comfortably inside the 800-line budget, so the recorder itself is healthy.
+
+**All three required signatures appeared, exactly once each**: `currentDefaultState 0->10` (22:51:57.523), `iRightHandEquipped 0->1` (22:51:58.018) together with `iState 0->9` (22:51:58.827), and `currentDefaultState 1->12` (22:52:03.613) alongside `IsUnequipping 0->1` and `bEquipUnequip 0->1`. So the operator script and the settle rule both work.
+
+**Why the round is invalid**: `window-open … words=463 nodes=36`, while the candidate's source graph reads `words=652 nodes=106` (run 1's pinned `window-open`, 22:30:12.762). Two graphs, same actor. `player_graph()` returns the **last** non-1stperson graph of the actor; the object the experiment is handed is a different one in the same manager — the split v66 already recorded (`463/36` vs `652/106`). The pairing contract's stop condition ("两次运行的源图 `words/nodes` 不同值") therefore ends this round before any ledger.
+
+**Consequence**: the `on` lifecycle needs a deterministic graph selector. Proposed minimal change — an `on`-only graph census line at window-open (index / `projectName` / words / nodes for every managed non-1stperson graph) plus one selector key (`SourceTimelineGraph=<projectName>`, empty keeps today's last-non-1stperson behaviour). Read-only, no detour, no product-path change. **Not implemented yet**: it needs its own review line in the contract.
+
+**Deployment note**: the R INI (`81e03db5…`) is still installed; the dormant file is preserved at `dist/CharacterPanel-dormant-26625f09.ini`.

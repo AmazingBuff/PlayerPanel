@@ -4487,3 +4487,10 @@ C 运行合格的前提是：每个输入都有 `step=0` 行，且 `default=` �
 | INI | 两套运行配置，均为既有键；`SourceTimeline` 用 `on`（不是 `concurrent`） |
 | 离线 | 账本由两份日志手工/脚本汇总；无新增单元测试（没有新纯函数） |
 | 风险 | C 侧 120 步内若未到稳定态，属**被测差异**，如实记录，不缩步数 |
+### 八、首次尝试（2026-11-10 22:51）—— 图选择不合格
+
+[日志](diagnostics/CharacterPanel-g5e3-r-run1-20261110-2251.log)，零 `[E]`，`lines=174`（800 预算内）。三条签名各出现一次：`currentDefaultState 0→10`、`iRightHandEquipped 0→1`（同帧 `iState 0→9`）、`currentDefaultState 1→12`。脚本与 settle 规则都成立。
+
+但 `window-open … words=463 nodes=36`，而候选的源图是 `words=652 nodes=106`（run 1 的 pinned 窗口，22:30:12.762）。**同一 actor 的两个图**：`player_graph()` 取"最后一个非 1stperson 图"，实验拿到的却是同一 manager 里的另一个对象——这正是 v66 记录过的 `463/36` vs `652/106` 分裂。按 §五 停点"两次运行的源图 `words/nodes` 不同值"，本轮在账本之前终止，**不判 P1–P5**。
+
+**仪器缺口与修法（待评审，未实现）**：`on` 模式在窗口打开时打印一行**图普查**（每个受管非 1stperson 图的 `index / projectName / words / nodes`），并新增一个只作用于 `on` 的选择键 `SourceTimelineGraph=<projectName>`（空值保持今天的"最后一个非 1stperson"）。只读、无 detour、不影响产品路径，也不改变 `concurrent` 的 pin 语义。
