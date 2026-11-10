@@ -1494,3 +1494,13 @@ Log [201,480 bytes `0c4031c2…`](diagnostics/CharacterPanel-g5e4-capture-run1-2
 **Identity**: `CharacterPanel-scenegraph-v90-g5e4-anchor-v2-eb67deeecd-eb67deeecd-cl94faaed0c6-20261110T154538Z`, DLL 1,830,400 bytes SHA-256 `48bbf4288b39d0b38153a21e49e9fe61313cfddc3452a1a3f833564eae32cd0c`, PDB 49,549,312 bytes SHA-256 `28c892dd2aa7ae54ab1e96c8f4a8d196f05d7c4b4e56aeda491a1ff943fb74a2`, CodeView age 441.
 
 **Deployed 2026-11-10**: the v89 trio was backed up to `dist/deploy-backup-20261110-v89-v90pre/`, then the v90 DLL/PDB were installed with destination-hash comparison and the E4 run INI `8864075e…` was kept as-is. **Next**: rerun the F7 capture; A valid window must read `snapshots=2`, `snapshot-dropped=0`, `clocks` on the 10-frame stride, and both snapshots at `anchor-delta-frames=1`.
+<a id="v90-g5e4-run2-20261110"></a>
+## v90 E4 capture run 2 (2026-11-10 23:51, **valid: two snapshots, zero drops**)
+
+Log [71,916 bytes `33874d15…`](diagnostics/CharacterPanel-g5e4-capture-run2-20261110-2351.log), zero `[E]`. Window 23:51:20.070 to 23:51:40.076, `lines=93`.
+
+**Criteria**: S1 exactly two snapshots (frames 77 and 322, one per command edge); S2 both at `n=116` with the same `pose-local=0x2b613316010`; S3 232 `track=` rows = 2 x 116 x 10 components, no truncation; S4 both `anchor-delta-frames=1`; S5 `snapshot-dropped=0 clock-dropped=0 line-dropped=0`; S6 `clocks=105`. Close row: `snapshots=2 clocks=105 capture-lines=347`.
+
+**Content**: snapshot 1 carries `1HM_Equip.hkx 0.0927` and `MT_Idle 3.3327`; snapshot 2 carries `1HM_Unequip.hkx 0.0935`, `MLh_Idle 1.3393`, `1HM_Idle 1.3393`, `SCAR_1hmReadyDummy 3.8423`. Every clip row is `speed=1.000 enforced=0.0000`.
+
+**Semantic gap found while reading (v3 proposal, not implemented)**: the two anchors are the *command* edges (`0->10`, `1->12`), so each snapshot shows the **start** of the transition (`1HM_Equip` at 0.09 s), not the settled state. The E3 ledger pairs *two* endpoints per input - the candidate's `step=0` (state 10/12) and its settled step (state 1/0) - so covering both ends of each input needs four anchors: `0->10`, `10->1`, `1->12`, `12->0`. Four fits the eight-slot budget, and the pose comparison (gate 3) needs the settled pose, not only the command-edge pose.
