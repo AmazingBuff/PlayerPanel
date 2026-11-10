@@ -4545,7 +4545,7 @@ C 运行合格的前提是：每个输入都有 `step=0` 行，且 `default=` �
 | 侧 | 现状 | 本节处置 |
 | --- | --- | --- |
 | 候选（C 运行，drive 循环） | 已有 `clip-ref`（step 0/60/120，含 name/binding-index/map-len/mapping/time/duration/enforced/crop-sum/eff-duration/mode/speed/tracks）、`clip-clock`（每 20 步的每个 active clip 的 `localTime`）、`clip-steps`（每步单字符推进编码） | **本轮可交付账本**，见 §四 |
-| 源（R 运行，自然游玩） | **无任何 clip 时钟采集**：`SourceTimeline` 只读词变量与活动节点计数 | **阻塞**：由 [E4](#c-g5-e4) 的源侧捕获（post-UI，非 63856 detour）解；本节不实现、不假装覆盖 |
+| 源（R 运行，自然游玩） | E4 已提供 `clock-sample`（每 10 个 post-UI 帧一行，含各活动 clip 的 `localTime`）与四块锚点快照 | **仍阻塞，但原因已精确定位**（[attempt](build.md#v91-g5e4-e2c-source-20261111)）：该行缺"生命周期键 + 缺席标记 + 以引擎步为单位的 Δ"，首末相除会混入多次生命期（`1HM_Idle` 读 0.918、`MT_Idle` 读 0.131 均非时钟结论）。修法：让源侧时钟行带上 `clip-steps` 已有的三件（lifetime key、`-` 缺席、步为单位的 delta） |
 
 ### 二、观测与编码（已审计，2026-11-10 复核源码）
 

@@ -1529,3 +1529,16 @@ Log [113,108 bytes `224b7e0e…`](diagnostics/CharacterPanel-g5e4-capture-run3-2
 | 4 | 565 | `1HM_Unequip 1.3517`, `MT_Idle 0.0817` | unequip settled (`12->0`) |
 
 All clip rows read `speed=1.000 enforced=0.0000`. **E4 now has a qualified source pose at both endpoints of both inputs**, which is what the pose comparison needs; the pairing itself stays with the [E3 ledger](independent-behavior-graph.md#c-g5-e3-v2).
+<a id="v91-g5e4-e2c-source-20261111"></a>
+## E2-C source-side attempt from run 3 (2026-11-11, **not computable: the clock rows lack lifetimes and a step basis**)
+
+The 88 `clock-sample` rows of [run 3](diagnostics/CharacterPanel-g5e4-capture-run3-20261111-0017.log) were decoded per clip (first/last `localTime` against the sample frames). The naive rate is not the pre-registered 1.000: `1HM_Idle`/`MLh_Idle` read 0.918, `1HM_Equip` 1.06, `1HM_Unequip` 1.24, `SCAR_1hmReadyDummy` 0.127, `MT_Idle` 0.131, and `MT_WalkForward`/`MT_TurnRight360` are single-digit-sample blips.
+
+**This is a defect of the row, not a clock finding.** Two independent reasons:
+
+1. **No lifetime identity**: a clip can leave the active list and come back with `localTime` reset (`MT_Idle` appears at frames 10..880 but with resets between), and the row has no `-` gap marker, so first-to-last mixes separate lifetimes.
+2. **No step basis**: `frame` is the timeline's post-UI sample counter, not the engine's animation step. Between two samples 10 UI frames apart the clip does not necessarily advance 10/60 s, so dividing by frames assumes a rate the instrument never measured.
+
+**Consequence**: E2-C's source half stays **blocked**, now with a precise reason instead of a generic "no instrument". The candidate half (from `clip-steps`, which *does* carry per-step deltas, `-` gaps and `first`) is unaffected and still stands at 1.000x.
+
+**Minimal fix for a future revision**: make the source clock row carry the same three things the candidate's `clip-steps` already carries - a per-clip lifetime key, a `-` marker for absence, and a delta expressed in engine steps rather than UI frames (or record the step counter alongside `frame`). No pose change is needed; the four pose snapshots are unaffected.
