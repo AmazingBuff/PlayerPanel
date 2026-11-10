@@ -1355,3 +1355,27 @@ Log [369,541 bytes `6d20f0f2…`](diagnostics/CharacterPanel-g5e2-b-v85-run2-202
 **Identity**: `CharacterPanel-scenegraph-v86-g5e3-manifest-1e645a6d48-1e645a6d48-cl94faaed0c6-20261109T145833Z`, DLL 1,812,992 bytes SHA-256 `57a2b11ae4aa11cf8c11b0022122bd68cdd1e38711238b0db60cb1acc1eea645`, PDB 49,377,280 bytes SHA-256 `04f12c175b8fa7bdba5809774cf2617b1d711008cdd1da9d9de401ed375d6805`, CodeView `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 431. **Deployed 2026-11-09**: the v85 trio was backed up to `dist/deploy-backup-20261109-v85-v86pre/`, the v86 DLL/PDB now sit in `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` (hashes equal to the build outputs above), and the run INI `68be6ee9…` (10,105 bytes, no BOM, CRLF) changes only `SourceTimeline=false → concurrent` plus five comment lines; 13 run keys were read back.
 
 **Next-run reading**: `manifest` must show `steps>0` with `tsc-per-second` in the expected GHz range; `source-settles` must be non-zero once the window covers a transition; `ring-dropped` should fall to 0 with the bounded spin (if it does not, implement R-1b); `transport-complete=yes` is the precondition for judging anything else.
+<a id="v86-g5e3-run1-2026-11-10"></a>
+## v86 E3 run 1 (2026-11-10 22:30, **stop at the first fork: `source-settles=0`**)
+
+Log [358,712 bytes `eba02d06…`](diagnostics/CharacterPanel-g5e3-run1-20261110-2230.log), zero `[E]`, 15 pre-existing `[W]` (DAC/studio only).
+
+**Lifecycle**: 22:30:12.704 the experiment starts, 22:30:12.721 `PROBE LIVENESS concurrent-armed actor=00000014 epoch=1 request=1 graph=0x17246215300 behavior=0x16d93f49900 pinned=yes` and `SOURCE TIMELINE concurrent-arm-requested actor=00000014 request=1`, 22:30:12.762 `SOURCE TIMELINE window-open actor=00000014 words=652 nodes=106 seconds=20 mode=concurrent request=1` (the same 652/106 identity the v66 pin used, so the timeline watched the pinned graph), 22:30:20.038 `window=segment provisional=yes from=display to=resumed seconds=10 frames=316 entries=553 ... ring-dropped=0`, **22:30:20.057 `SOURCE TIMELINE window-closed reason=display-close lines=0 settles-pending=0 settles-dropped=0`**, 22:30:30.055 final `window=close reason=expired`.
+
+**The stop**: `manifest ... steps=377 steps-saturated=no step-tsc-first=7602302005089 step-tsc-last=7645219946512 tsc-per-second=4291836689 source-settles=0 paired=0 unpaired=0 source-settle-backlog=0`. The manifest itself is healthy — 377 steps over 17.3 s of window, 4.29 GHz TSC ratio, first/last stamps ordered — but the source side contributed **nothing**: not a single settled variable line and not a single node-count line in the 7.3 s / 316 display frames the timeline covered.
+
+**New engine fact (direct)**: while the panel is open the pinned source graph's 652 words and its active-node count do **not change at all**. E1 had only indirect evidence (the engine's 63589 loop does not run while paused); this run measures the consequence directly. The concurrent settle→step pairing axis of M2 is therefore structurally empty, which is exactly the first fork the review pre-registered. **Per the pre-registered order the run stops here**; no C1–C4 ledger is judged and no G5 conclusion is drawn.
+
+**Secondary readings** (recorded, not adjudicated):
+
+| 项 | 读数 | 说明 |
+| --- | --- | --- |
+| E1 v3 复现 | `apply-paths=63589:1255/63568:68751/p63563:9485/.../un:0` Σ 79,491 = `apply-entries`；`apply-completions=63568:377` = `completions-pinned` = `pinned-apply-entries`；`in-flight-max=1`；`fill==cap==116`；`pose-stable=yes`；`count-over-capacity=0` | 第七次复现 |
+| R-1a 效果 | `ring-dropped=13`（`contention-dropped=13`、`full-dropped=0`）对 v85 的 164 | 有界自旋去掉 92%，仍非零；`transport-complete=no`（另有 `suppressed-rows=5085`） |
+| 候选侧 | `e2a-frames=377`（`main=0`/`fallback=377`）、`e2a-failed=5,815 / 43,732`（13.3%）、`fail-foot=1,760`/`cloth=745`/`unexplained=3,310`、`near-slot0=4,344`、`max-delta=2.0` | 与本轮判据无关，只记录 |
+| footIK | `b-calls=2,265`、`b-compared=2,243`、`b-rewritten=380,340`、`b-max-delta=33.48` | 与 v85 同量级 |
+| 线程 | `threads=7`、`orphan-returns=57,859`、`untracked-returns=21,255` | 非钉住图的正常计数 |
+
+**INI restored to dormant** `26625f09…` (10,092 bytes, no BOM, CRLF; `IndependentGraph=off`, `DisplayPose/DisplayStep=false`, `SourceTimeline=false`, `SamplingLiveness=off`). The E3 run INI is kept for provenance at `dist/CharacterPanel-e3-run-20261109.ini`.
+
+**Consequence**: C3 must pair on the recorded **input history**, not on a shared window — see [C-G5-E3-R §八](independent-behavior-graph.md#c-g5-e3-r) for the proposed revision.
