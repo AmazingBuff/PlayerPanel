@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 普查已定位根因（漏掉 `FirstPerson`）并修复（v88），**E3 的 C3/C4 已交付：R/C 两次运行配对 2/2**；[C-G5-E2-C](#c-g5-e2-c) 时钟账本已预注册（候选侧首轮账本成立、源侧阻塞），[C-G5-E4](#c-g5-e4) 源侧姿态/时钟捕获已预注册（[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10)、[v88](build.md#v88-g5e3-firstperson-2026-11-10)、[§九 更正](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 普查已定位根因（漏掉 `FirstPerson`）并修复（v88），**E3 的 C3/C4 已交付：R/C 两次运行配对 2/2**；[C-G5-E2-C](#c-g5-e2-c) 时钟账本已预注册（候选侧首轮账本成立、源侧阻塞），[C-G5-E4](#c-g5-e4) 源侧姿态/时钟捕获已预注册（[本会话摘要](#status-20261111-session)；[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10)、[v88](build.md#v88-g5e3-firstperson-2026-11-10)、[§九 更正](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -4699,3 +4699,25 @@ v92 给 `clock-sample` 加了 `ms`（墙钟基准）后，源侧速率**首次�
 **判定范围（防止外推）**：本轮 E2-C 的裁定对象是**装备链片段**（`1HM_Equip`、`1HM_Unequip`、`1HM_Idle`、`MLh_Idle`、`SCAR_1hmReadyDummy`）。`MT_*` 属于移动/转向，其重置形态与装备链不同，**不在本轮判据内**，只作为 R8 的例证登记。
 
 **判据补充**：源侧按 R7/R8 逐段算速率后，与候选侧同片段同区间的速率比较，容差沿用 T4（`1.000 ± 0.017`）；任一段无法切分或跨段求和即记 `missing`，不补。
+<a id="status-20261111-session"></a>
+## 会话摘要（2026-11-09 → 11-11，E3 收口 + E2-C/E4 闭合）
+
+**一句话**：E3 的配对账本闭合（`paired=2 missing=0`），E4 的源侧姿态捕获闭合（四块快照），E2-C 两侧时钟对上（候选 1.000×、源侧 1.001×/0.999×），期间修掉一个潜伏很久的第一人称图过滤缺陷。
+
+| 阶段 | 做了什么 | 结果 |
+| --- | --- | --- |
+| E3 评审 | [C-G5-E3-R](#c-g5-e3-r)：两条取证更正（`ring-dropped` 是抢门竞争不是环满；`b-*` 是全进程合计）＋ M1–M3 建议 | 通过 |
+| E3 实现 | v86：`SourceTimeline=concurrent`、TSC 打点、`manifest` 行、门有界自旋（R-1a） | 构建并部署 |
+| E3 run 1 | 面板期源图 316 帧 `lines=0`，`source-settles=0` | **停**：并发轴结构为空 |
+| C3 v2 | 改按输入历史的序数配对（R/C 两次运行、`S_k` 先固定、禁止跨运行时钟） | 预注册 |
+| 图身份 | v87 普查：`DefaultFemale` 652/106 vs `FirstPerson` 463/36；v88 修掉大小写过滤（三处统一） | 修复并部署 |
+| E3 账本 | R attempt 2（三条签名各一次）+ C run 1（两步端点全对） | **`paired=2 missing=0`，P1–P5 全过** |
+| E2-C | 契约 + 候选侧账本（`H2H_Equip` 49/49=1.000×，三个 idle 72/72=1.000×）；v92 给时钟行加 `ms` | 候选侧成立 |
+| E2-C 源侧 | run 1：`1HM_Idle`/`MLh_Idle`/`SCAR` **1.001×**、`1HM_Unequip` **0.999×**；R7（剔除保持段）/R8（回退即切段）预注册 | 可算、规则就位 |
+| E4 | 契约 + v89/v90/v91 三次锚点迭代（全变量 → 两命令边 → 四边）＋ 三次运行 | run 1 不合格（8 块）；run 2 合格（2 块）；**run 3 合格（4 块，零丢弃）** |
+
+**关闭判据**：E3 的 P1–P5 与 E4 的 S1–S6 均有合格运行；E2-C 候选侧 T1–T5 成立、源侧按 R7/R8 可判。**未闭合**：E2-B 的 B3/B4、源侧 clip 身份（C2 只有候选一半）、门 3 姿态对照（未立项）。
+
+**部署终态**：v92 DLL `fe697ba9…8bcb38` + E4 运行档 `8864075e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourcePoseCapture=true`、`SamplingLiveness=off`）；备份链 `dist/deploy-backup-20261111-v91-v92pre/` 等。
+
+**下一步排序**：① 门 3 姿态对照契约（容差/空间/旋转度量/独立校准）；② 源侧 clip 身份与 E2-B 的 B3/B4；③ 联合验收 → 协议冻结 → 新正式验证。
