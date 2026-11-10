@@ -474,7 +474,7 @@ namespace animation::behavior_graph
                 std::uint64_t const settle_tsc = tsc_now();
                 (void)settle_ring().push(settle_tsc);
                 char const* const anchor_name = variable_name(a_behavior, i);
-                if (anchor_name != nullptr && source_settle_is_anchor(std::string_view{ anchor_name }))
+                if (anchor_name != nullptr && source_settle_is_anchor(std::string_view{ anchor_name }, previous, current))
                     arm_source_snapshot(a_state, settle_tsc);
                 float previous_float = 0.0f;
                 float current_float = 0.0f;
