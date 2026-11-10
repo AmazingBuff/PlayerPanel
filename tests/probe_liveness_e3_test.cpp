@@ -118,6 +118,22 @@ namespace
         assert(source_timeline_name_matches("DefaultFemale", "defaultfemale"));
         assert(!source_timeline_name_matches("DefaultFemale", "DefaultFemale "));
     }
+
+    void first_person_filter_matches_both_spellings_case_insensitively()
+    {
+        // C-G5-E3 v3: the census showed `FirstPerson` 463/36 and `DefaultFemale` 652/106 on the
+        // same actor, while every historical filter matched only the lowercase "1stperson" - so the
+        // first-person graph slipped through and the source instruments watched it.
+        assert(source_graph_is_first_person("FirstPerson"));
+        assert(source_graph_is_first_person("firstperson"));
+        assert(source_graph_is_first_person("FIRSTPERSON"));
+        assert(source_graph_is_first_person("1stperson"));
+        assert(source_graph_is_first_person("DefaultFemale_FirstPerson"));
+        assert(!source_graph_is_first_person("DefaultFemale"));
+        assert(!source_graph_is_first_person(""));
+        assert(!source_graph_is_first_person("First"));
+        assert(!source_graph_is_first_person("person"));
+    }
 }
 
 int main()
@@ -127,5 +143,6 @@ int main()
     push_gate_spins_then_counts_one_contention();
     settle_ring_keeps_order_and_counts_overflow();
     graph_selector_matches_by_project_name_and_reports_no_pick();
-    std::puts("5 probe-liveness e3 cases passed (engine-free)");
+    first_person_filter_matches_both_spellings_case_insensitively();
+    std::puts("6 probe-liveness e3 cases passed (engine-free)");
 }

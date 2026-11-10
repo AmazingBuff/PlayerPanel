@@ -170,7 +170,7 @@ namespace animation::behavior_graph
                 if (!graph || !graph->behaviorGraph || graph->holder != &actor)
                     continue;
                 char const* const name = graph->projectName.c_str();
-                if (name && std::strstr(name, "1stperson"))
+                if (name && source_graph_is_first_person(std::string_view{ name }))
                     continue;
                 if (out.stored < kMaxManagedGraphs)
                 {

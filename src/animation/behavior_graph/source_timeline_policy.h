@@ -60,6 +60,39 @@ namespace animation::behavior_graph
         }
     }
 
+    // C-G5-E3 v3: the first-person graph's project name is "FirstPerson", but every historical
+    // resolver filtered on the lowercase substring "1stperson" with a case-sensitive strstr. The
+    // 2026-11-10 census showed both graphs on the same actor — `DefaultFemale` 652/106 and
+    // `FirstPerson` 463/36 — so the filter never fired and the `on` timeline, the event capture and
+    // the write capture all watched the first-person graph. Match both spellings case-insensitively.
+    [[nodiscard]] inline bool source_graph_is_first_person(std::string_view a_name) noexcept
+    {
+        auto contains_ci = [](std::string_view a_hay, std::string_view a_needle) {
+            if (a_needle.empty() || a_hay.size() < a_needle.size())
+                return false;
+            for (std::size_t i = 0; i + a_needle.size() <= a_hay.size(); ++i)
+            {
+                bool match = true;
+                for (std::size_t k = 0; k < a_needle.size(); ++k)
+                {
+                    char left = a_hay[i + k];
+                    char right = a_needle[k];
+                    if (left >= 'A' && left <= 'Z') left = static_cast<char>(left - 'A' + 'a');
+                    if (right >= 'A' && right <= 'Z') right = static_cast<char>(right - 'A' + 'a');
+                    if (left != right)
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match)
+                    return true;
+            }
+            return false;
+        };
+        return contains_ci(a_name, "firstperson") || contains_ci(a_name, "1stperson");
+    }
+
     // C-G5-E3 v2 §八: one actor can own more than one managed non-1stperson graph (the `on`
     // resolver used to take the last, which was the wrong object for the pairing run: 463/36 vs the
     // candidate source's 652/106). The selector picks by project name; an empty selector returns
