@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 实现已跑首轮并停在第一分叉**（`source-settles=0`，并发配对轴结构为空，C3 待改按输入历史；[C-G5-E3-R §八](#c-g5-e3-r)、[run 1](build.md#v86-g5e3-run1-2026-11-10)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2**（[C-G5-E3-R §八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1/E2 已闭合；E3 首轮已跑（v86）：停在第一分叉 `source-settles=0`，C3 待改按输入历史 |
+| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1/E2 已闭合；E3 首轮已跑（v86）：停在第一分叉 `source-settles=0`，C3 改按输入历史并已预注册 [v2](#c-g5-e3-v2) |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -4415,3 +4415,75 @@ Shield                 NPC L Pauldron
 **对 C3 的后果**（新契约方向，待评审）：配对轴改为**输入历史**，即 ① 源侧一次自然游玩运行（`SourceTimeline=on` + F7）执行固定输入脚本，记录每次 settle 的时刻与变量；② 候选侧一次面板运行注入同一脚本，`e2a` 的 `step` 以注入时刻为 0；③ 配对按**序数**（第 k 次输入的源 settled 快照 ↔ 候选第 k 次注入后的 step 区间），**不比较跨运行的墙钟/TSC**；④ 缺失或多义按 C3 记 `missing`，不补、不挑邻帧。v86 的器件仍有价值：`step=`、`manifest steps/tsc`、settle 行的 `tsc=` 各自都是独立证据，只是不再用并发窗口当锚。
 
 **R-1a 读数**：`ring-dropped=13`（contention）对 v85 的 164，去掉 92% 但仍非零，`transport-complete=no`（另有 `suppressed-rows=5085`）。若后续仍要并发窗口，R-1b 才有必要；改按输入历史后，离线账本不依赖满环。
+
+<a id="c-g5-e3-v2"></a>
+## C-G5-E3 v2：输入序数配对（2026-11-10 预注册，文档；不授权实现）
+
+**依据**：[§八](#c-g5-e3-r) 的首轮运行证明并发 settle→step 轴结构为空（面板开启期源图 316 帧 `lines=0`）。契约原文要求的主轴本来就是"固定输入/时间历史"（[C-G5-E3](#c-g5-e3) §五），v2 把配对从并发窗口改回该主轴，并写成可判读的规程。
+
+**范围**：交付一份**有资格的源/候选配对表 + 缺失账本**（C3/C4），**不含姿态数值**、不含 R1 诊断。配对单位是"第 k 次外部输入"，不是时间。
+
+### 一、两次运行
+
+| 运行 | 目的 | `[Experiment]` 键 | 操作 |
+| --- | --- | --- | --- |
+| **R（源）** | 自然游玩下的源轨迹 | `IndependentGraph=off`、`SourceTimeline=on`、`SourceTransientWatch=false`、`SamplingLiveness=off`，其余全 off | 正常游玩中按 F7 开 20 s 窗口，再执行固定脚本：等约 2 s → **装备单手武器** → 等约 5 s → **卸下** → 等约 5 s |
+| **C（候选）** | 同一脚本的注入回放 | `IndependentGraph=inject`、`CandidateInputProbe=true`、`CandidateInputVariable=`（空 ⇒ 只观察不写）、`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`、`DisplayPose=false`、`DisplayStep=false`、`SamplingLiveness=off`、`SourceTimeline=off`，其余全 off | 打开面板一次；实验注入 `WeapEquip` → 驱动 120 步 → 稳定后派发 `Unequip` → 再驱动 121 步 |
+
+两次运行用同一存档、同一装备与骨架、同一 project/OAR 配置。**同一张源图**的判据：R 的 `SOURCE TIMELINE window-open … words=652 nodes=106` 与 C 的 `scan` 行同值。
+
+**零代码**：R 侧的 settle 行已带 `tsc=`；C 侧 [`arm_candidate_input_probe`](../../src/animation/behavior_graph/independent_graph.cpp#L842) 的空变量分支以 `outcome=observe-only` 武装采样器（不写任何变量），此后每步打印 `CANDIDATE INPUT … step= istate= default= nodes=`，`clip-ref` 在 step 0/60/120 各一行，卸下切片另有 `CANDIDATE UNEQUIP … step=` 行。本契约不新增 detour、不新增 INI 键、不改产品路径。
+
+### 二、资格与签名（C1）
+
+R 运行合格的前提是**两个输入的签名都出现且唯一**：
+
+| 输入 | 签名（源侧 settle 行） | 期望 |
+| --- | --- | --- |
+| k=1 装备 | `currentDefaultState` | `0→10`（随后 `10→1` 只记录、不作必需） |
+| k=1 装备 | `iRightHandEquipped` 或 `iState`，二选一 | `0→1` / `0→9`，必须写明实际命中的是哪一条 |
+| k=2 卸下 | `currentDefaultState` | `1→12` |
+
+C 运行合格的前提是：每个输入都有 `step=0` 行，且 `default=` 与上表端点一致（装备窗口 `10`、卸下窗口 `12`）；`CANDIDATE INPUT` 覆盖 `step=0..120` 无缺口。
+
+窗口 `budget-exhausted`、`window-aborted`、任意 `[E]` ⇒ 该运行**不合格**，不得用部分行凑对。
+
+### 三、配对与账本（C3/C4）
+
+- 配对键 = `(k, 输入名, 注入事件 id)`。每条记录含：R 的签名与前后值、R 的窗口内行号与 `tsc=`、C 的 step 区间 `[0, S_k]`、C 在 step 0 与 `S_k` 的 `default/istate/nodes`。
+- `S_k` **预先固定**：装备窗口 120、卸下窗口 121；不看误差再定，也不允许按结果收缩。
+- **不跨运行比较时间**：R 的 `tsc=` 与 C 的 `step` 分属两个域，`tsc=` 只用于运行内排序；任何按墙钟/TSC 对齐的做法都判为不合格配对。
+- 缺失：签名缺失或多义、`step=0` 缺失、行预算耗尽 ⇒ 记 `missing`，不补、不取最近邻、不用另一轮替代。
+- 账本逐条列出 `k / 签名 / step 区间 / missing 原因`，并给 `paired`、`missing` 两个计数。
+
+### 四、判据（预注册，不得事后放宽）
+
+| # | 判据 | 通过条件 |
+| --- | --- | --- |
+| P1 两运行合格 | 各自无 `[E]`、无 abort、无 budget-exhausted | 任一不满足 ⇒ 本轮无效，重跑 |
+| P2 签名唯一 | 上表三条签名各出现恰好一次 | 多义 ⇒ 该输入记 `missing` |
+| P3 端点覆盖 | 每个输入都有 `step=0` 行，`default` 与签名端点一致 | 不一致 ⇒ 该对不合格 |
+| P4 账本完整 | `paired + missing = 输入数`，每条都能指到日志行号 | 有未归属行 ⇒ 账本不完整 |
+| P5 无时间对齐 | 记录中不含任何跨运行时间派生量 | 出现即该对不合格 |
+
+**本契约不产生姿态误差，也不对 G5 门 1 下任何结论**：它只交付"这两个端点在状态与资源上可比较"的资格。
+
+### 五、停点
+
+`[E]`、窗口 abort、budget-exhausted、签名多义、`step=0` 缺失、两次运行的源图 `words/nodes` 不同值——任一即停；保留原因与已收行数，不得降级成"部分通过"。
+
+### 六、明确不覆盖（结论里必须写明）
+
+1. **源侧 clip 身份**（C2 的一半）：`SourceTimeline` 不记录 clip 实例/时钟/dt，源侧 C2 只能记"未覆盖"，**不得声称 C2 闭合**。
+2. **姿态 oracle**：源侧没有 `poseLocal` 快照；姿态对照需要另一次"源侧姿态捕获"（探针 `on` 生命周期读 63856 的 `poseLocal`），属后续契约。
+3. **R1 诊断**：不扩展，也不用同剪辑重采样替代源 oracle。
+4. **并发窗口**：v86 的 `SourceTimeline=concurrent` 与 `manifest` 保留为诊断，不再当配对锚。
+
+### 七、实现影响面（评审用）
+
+| 项 | 判定 |
+| --- | --- |
+| 代码 | **零**：两侧行都已在产（R 的 settle 行、C 的 `CANDIDATE INPUT`/`clip-ref`/`CANDIDATE UNEQUIP` 行） |
+| INI | 两套运行配置，均为既有键；`SourceTimeline` 用 `on`（不是 `concurrent`） |
+| 离线 | 账本由两份日志手工/脚本汇总；无新增单元测试（没有新纯函数） |
+| 风险 | C 侧 120 步内若未到稳定态，属**被测差异**，如实记录，不缩步数 |
