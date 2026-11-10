@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <string_view>
 
 using namespace test_plugin::animation::behavior_graph;
 
@@ -99,6 +100,24 @@ namespace
         assert(ring.size() == 0);
         assert(ring.dropped() == 0);
     }
+
+    void graph_selector_matches_by_project_name_and_reports_no_pick()
+    {
+        // C-G5-E3 v2 §八: one actor can own two managed graphs (463/36 and 652/106 on 2026-11-10).
+        // The selector must pick by project name, ignore case, and never silently fall back to a
+        // different graph when the name does not match.
+        std::string_view const names[] = { "DefaultFemale", "DefaultFemaleAlternate" };
+        assert(source_timeline_pick(names, 2, "DefaultFemale") == 0);
+        assert(source_timeline_pick(names, 2, "defaultfemalealternate") == 1);
+        assert(source_timeline_pick(names, 2, "DEFFAULTFEMALE") == Source_Timeline_No_Pick);
+        assert(source_timeline_pick(names, 2, "") == Source_Timeline_No_Pick);
+        assert(source_timeline_pick(names, 0, "DefaultFemale") == Source_Timeline_No_Pick);
+        assert(source_timeline_pick(nullptr, 2, "DefaultFemale") == Source_Timeline_No_Pick);
+        // Exact length matters: a prefix is not a match.
+        assert(source_timeline_pick(names, 2, "Default") == Source_Timeline_No_Pick);
+        assert(source_timeline_name_matches("DefaultFemale", "defaultfemale"));
+        assert(!source_timeline_name_matches("DefaultFemale", "DefaultFemale "));
+    }
 }
 
 int main()
@@ -107,5 +126,6 @@ int main()
     pairing_takes_the_first_step_at_or_after_each_settle_without_reuse();
     push_gate_spins_then_counts_one_contention();
     settle_ring_keeps_order_and_counts_overflow();
-    std::puts("4 probe-liveness e3 cases passed (engine-free)");
+    graph_selector_matches_by_project_name_and_reports_no_pick();
+    std::puts("5 probe-liveness e3 cases passed (engine-free)");
 }

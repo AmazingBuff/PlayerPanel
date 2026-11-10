@@ -106,6 +106,8 @@ namespace animation::behavior_graph
             std::uintptr_t pinned_graph{ 0 };
             std::uint64_t request{ 0 };
             bool concurrent{ false };
+            // C-G5-E3 v2 §八: the `on` census prints once per window, before the first sample.
+            bool census_logged{ false };
         };
 
         // The settle ledger lives outside the Recorder because it holds atomics and the Recorder is
@@ -144,12 +146,25 @@ namespace animation::behavior_graph
             logger::info("SOURCE TIMELINE window-aborted reason=source-lost-or-replaced lines={}", state.window.lines());
         }
 
-        RE::BShkbAnimationGraph* player_graph(RE::Actor& actor)
+        // C-G5-E3 v2 §八: one actor can own several managed non-1stperson graphs. Collect them
+        // once so the census and the selector see the same list; `found` stays exact even when the
+        // stored list is truncated.
+        inline constexpr std::size_t kMaxManagedGraphs = 8;
+
+        struct ManagedGraphs
         {
+            std::array<RE::BShkbAnimationGraph*, kMaxManagedGraphs> graphs{};
+            std::array<std::string_view, kMaxManagedGraphs> names{};
+            std::size_t found{ 0 };
+            std::size_t stored{ 0 };
+        };
+
+        ManagedGraphs collect_managed_graphs(RE::Actor& actor)
+        {
+            ManagedGraphs out{};
             RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
             if (!actor.GetAnimationGraphManager(manager) || !manager)
-                return nullptr;
-            RE::BShkbAnimationGraph* chosen = nullptr;
+                return out;
             for (RE::BSTSmartPointer<RE::BShkbAnimationGraph> const& graph : manager->graphs)
             {
                 if (!graph || !graph->behaviorGraph || graph->holder != &actor)
@@ -157,9 +172,54 @@ namespace animation::behavior_graph
                 char const* const name = graph->projectName.c_str();
                 if (name && std::strstr(name, "1stperson"))
                     continue;
-                chosen = graph.get();
+                if (out.stored < kMaxManagedGraphs)
+                {
+                    out.graphs[out.stored] = graph.get();
+                    out.names[out.stored] = name ? std::string_view{ name } : std::string_view{};
+                    ++out.stored;
+                }
+                ++out.found;
             }
-            return chosen;
+            return out;
+        }
+
+        // Read-only census: every managed non-1stperson graph with the counts the pairing contract
+        // compares (`words` from the variable set, `nodes` from the active-node list), plus which
+        // one the selector picks and through which rule.
+        void log_graph_census(RE::Actor& actor, std::uint32_t a_actor_id, std::string_view a_selector)
+        {
+            ManagedGraphs const managed = collect_managed_graphs(actor);
+            std::size_t const picked = source_timeline_pick(managed.names.data(), managed.stored, a_selector);
+            char const* const origin = a_selector.empty() ? "last" :
+                (picked == Source_Timeline_No_Pick ? "selector-miss-fallback" : "selector");
+            std::size_t const chosen = picked != Source_Timeline_No_Pick ? picked :
+                (managed.stored != 0 ? managed.stored - 1 : Source_Timeline_No_Pick);
+            logger::info("SOURCE TIMELINE graph-census actor={:08x} found={} shown={} selector='{}' origin={} chosen={}",
+                a_actor_id, managed.found, managed.stored, a_selector, origin, chosen);
+            for (std::size_t i = 0; i < managed.stored; ++i)
+            {
+                RE::hkbBehaviorGraph const* const behavior = managed.graphs[i] ? managed.graphs[i]->behaviorGraph : nullptr;
+                RE::hkbVariableValueSet const* const set = behavior ? behavior->variableValueSet.get() : nullptr;
+                std::int32_t const words = set ? field_at<std::int32_t>(set, kWordCountOffset) : -1;
+                void* const nodes = behavior ? behavior->activeNodes : nullptr;
+                std::int32_t const node_count = nodes ? field_at<std::int32_t>(nodes, kNodeCountOffset) : -1;
+                logger::info("SOURCE TIMELINE graph-census index={} name='{}' words={} nodes={} selected={}",
+                    i, managed.names[i], words, node_count, i == chosen ? "yes" : "no");
+            }
+        }
+
+        // Legacy rule: the last managed non-1stperson graph. With a selector, the matching graph
+        // wins; a selector that matches nothing falls back to the legacy rule, so a typo can never
+        // silently swap the observed graph (the census reports which rule fired).
+        RE::BShkbAnimationGraph* player_graph(RE::Actor& actor, std::string_view a_selector)
+        {
+            ManagedGraphs const managed = collect_managed_graphs(actor);
+            if (managed.stored == 0)
+                return nullptr;
+            std::size_t const picked = source_timeline_pick(managed.names.data(), managed.stored, a_selector);
+            if (picked != Source_Timeline_No_Pick)
+                return managed.graphs[picked];
+            return managed.graphs[managed.stored - 1];
         }
 
         // C-G5-E3 (M1): resolve the pinned source graph by pointer comparison against the manager's
@@ -427,7 +487,14 @@ namespace animation::behavior_graph
         }
         else
         {
-            graph = player_graph(actor);
+            // C-G5-E3 v2 §八: the `on` lifecycle owns the graph choice, so the census prints once
+            // before the first sample and the selector decides which managed graph is observed.
+            if (!state.census_logged)
+            {
+                log_graph_census(actor, actor.GetFormID(), source_timeline_graph());
+                state.census_logged = true;
+            }
+            graph = player_graph(actor, source_timeline_graph());
             if (!graph)
             {
                 abort_source(state);

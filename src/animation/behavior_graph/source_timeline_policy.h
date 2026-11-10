@@ -60,6 +60,44 @@ namespace animation::behavior_graph
         }
     }
 
+    // C-G5-E3 v2 §八: one actor can own more than one managed non-1stperson graph (the `on`
+    // resolver used to take the last, which was the wrong object for the pairing run: 463/36 vs the
+    // candidate source's 652/106). The selector picks by project name; an empty selector returns
+    // Source_Timeline_No_Pick, so the caller keeps its legacy last-match rule.
+    inline constexpr std::size_t Source_Timeline_No_Pick = static_cast<std::size_t>(-1);
+
+    [[nodiscard]] inline bool source_timeline_name_matches(std::string_view a_name,
+        std::string_view a_selector) noexcept
+    {
+        if (a_selector.empty() || a_name.size() != a_selector.size())
+            return false;
+        for (std::size_t i = 0; i < a_name.size(); ++i)
+        {
+            char left = a_name[i];
+            char right = a_selector[i];
+            if (left >= 'A' && left <= 'Z') left = static_cast<char>(left - 'A' + 'a');
+            if (right >= 'A' && right <= 'Z') right = static_cast<char>(right - 'A' + 'a');
+            if (left != right)
+                return false;
+        }
+        return true;
+    }
+
+    // First case-insensitive match wins. Returns Source_Timeline_No_Pick when the selector is empty
+    // or nothing matches, so a typo can never silently select a different graph than intended.
+    [[nodiscard]] inline std::size_t source_timeline_pick(std::string_view const* a_names,
+        std::size_t a_count, std::string_view a_selector) noexcept
+    {
+        if (a_selector.empty() || a_names == nullptr)
+            return Source_Timeline_No_Pick;
+        for (std::size_t i = 0; i < a_count; ++i)
+        {
+            if (source_timeline_name_matches(a_names[i], a_selector))
+                return i;
+        }
+        return Source_Timeline_No_Pick;
+    }
+
     // C-G5-E3 (M2): every logged source settle publishes its TSC so the candidate probe can judge
     // "first candidate step at or after the settle confirmation" inside the same window. A settle
     // costs one slot; 64 is far above the settle count of a 20 s window, and overflow only drops
