@@ -1504,3 +1504,13 @@ Log [71,916 bytes `33874d15…`](diagnostics/CharacterPanel-g5e4-capture-run2-20
 **Content**: snapshot 1 carries `1HM_Equip.hkx 0.0927` and `MT_Idle 3.3327`; snapshot 2 carries `1HM_Unequip.hkx 0.0935`, `MLh_Idle 1.3393`, `1HM_Idle 1.3393`, `SCAR_1hmReadyDummy 3.8423`. Every clip row is `speed=1.000 enforced=0.0000`.
 
 **Semantic gap found while reading (v3 proposal, not implemented)**: the two anchors are the *command* edges (`0->10`, `1->12`), so each snapshot shows the **start** of the transition (`1HM_Equip` at 0.09 s), not the settled state. The E3 ledger pairs *two* endpoints per input - the candidate's `step=0` (state 10/12) and its settled step (state 1/0) - so covering both ends of each input needs four anchors: `0->10`, `10->1`, `1->12`, `12->0`. Four fits the eight-slot budget, and the pose comparison (gate 3) needs the settled pose, not only the command-edge pose.
+<a id="v91-g5e4-anchor-v3-2026-11-10"></a>
+## v91 G5-E4 anchor v3 (2026-11-10, built, **not deployed**)
+
+**Change** (committed `a44b3e932a`, clean tree): anchors now cover the four `currentDefaultState` edges that bracket both inputs - `0->10` (equip starts), `10->1` (equip settled), `1->12` (unequip starts), `12->0` (unequip settled). v2 anchored only on the command edges, so each snapshot froze the transition's first frame (`1HM_Equip` at 0.09 s) and the pose comparison would have had no settled source pose at all; four anchors still fit the eight-slot budget.
+
+**Offline**: the capture case covers the four edges, the case-varied name and four non-edges (`0->1`, `10->12`, `1->0`, `12->10`); 5 capture cases plus the existing 40 pass under `cl /W4 /WX`; Release exits 0.
+
+**Identity**: `CharacterPanel-scenegraph-v91-g5e4-anchor-v3-a44b3e932a-a44b3e932a-cl94faaed0c6-20261110T155336Z`, DLL 1,830,400 bytes SHA-256 `66776f5e99f952c6dc77ceb600902978281fc18d2aeb847cb49df65bbf65c5e9`, PDB 49,549,312 bytes SHA-256 `a410ec385f67a191df7a91e635bbaa1caa91d2110c1a5920390778a9f65b42fc`, CodeView age 443.
+
+**Next**: deploy v91 with the same E4 run INI (`8864075e…`) and rerun the F7 capture. A valid window reads `snapshots=4`, zero drops, and four blocks at `anchor-delta-frames=1`: equip start (`1HM_Equip` ~0.09 s), equip settled (`1HM_Idle` moving), unequip start (`1HM_Unequip` ~0.09 s), unequip settled.
