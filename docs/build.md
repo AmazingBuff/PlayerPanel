@@ -1514,3 +1514,18 @@ Log [71,916 bytes `33874d15…`](diagnostics/CharacterPanel-g5e4-capture-run2-20
 **Identity**: `CharacterPanel-scenegraph-v91-g5e4-anchor-v3-a44b3e932a-a44b3e932a-cl94faaed0c6-20261110T155336Z`, DLL 1,830,400 bytes SHA-256 `66776f5e99f952c6dc77ceb600902978281fc18d2aeb847cb49df65bbf65c5e9`, PDB 49,549,312 bytes SHA-256 `a410ec385f67a191df7a91e635bbaa1caa91d2110c1a5920390778a9f65b42fc`, CodeView age 443.
 
 **Deployed 2026-11-11 00:0x**: the v90 trio was backed up to `dist/deploy-backup-20261110-v90-v91pre/`, then the v91 DLL/PDB were installed with destination-hash comparison and the E4 run INI `8864075e…` kept as-is. **Next**: rerun the F7 capture; A valid window reads `snapshots=4`, zero drops, and four blocks at `anchor-delta-frames=1`: equip start (`1HM_Equip` ~0.09 s), equip settled (`1HM_Idle` moving), unequip start (`1HM_Unequip` ~0.09 s), unequip settled.
+<a id="v91-g5e4-run3-20261111"></a>
+## v91 E4 capture run 3 (2026-11-11 00:17, **valid: four snapshots, zero drops**)
+
+Log [113,108 bytes `224b7e0e…`](diagnostics/CharacterPanel-g5e4-capture-run3-20261111-0017.log), zero `[E]`. Window 00:17:43.697 to 00:18:03.711, `lines=101`; `window-closed … snapshots=4 clocks=88 capture-lines=572 snapshot-dropped=0 clock-dropped=0 line-dropped=0`.
+
+**Four snapshots, each at `n=116`, the same `pose-local=0x2ce135fa010` and `anchor-delta-frames=1`** (464 track rows = 4 x 116):
+
+| block | frame | clip table | edge |
+| --- | --- | --- | --- |
+| 1 | 156 | `1HM_Equip 0.1027`, `MT_Idle 1.5127` | equip start (`0->10`) |
+| 2 | 209 | `1HM_Equip 1.0667`, `MLh_Idle/1HM_Idle/SCAR 0.1022` | equip settled (`10->1`) |
+| 3 | 504 | `1HM_Unequip 0.1108`, idles `4.6535` | unequip start (`1->12`) |
+| 4 | 565 | `1HM_Unequip 1.3517`, `MT_Idle 0.0817` | unequip settled (`12->0`) |
+
+All clip rows read `speed=1.000 enforced=0.0000`. **E4 now has a qualified source pose at both endpoints of both inputs**, which is what the pose comparison needs; the pairing itself stays with the [E3 ledger](independent-behavior-graph.md#c-g5-e3-v2).
