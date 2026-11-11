@@ -3,6 +3,7 @@
 //
 #include "animation/behavior_graph/independent_graph.h"
 
+#include "animation/behavior_graph/candidate_equip_prime_policy.h"
 #include "animation/behavior_graph/candidate_variable_census.h"
 #include "animation/behavior_graph/candidate_window.h"
 #include "animation/behavior_graph/clip_reference_policy.h"
@@ -820,6 +821,82 @@ namespace
         if (!words || a_index >= count) return false;
         a_out = static_cast<std::int32_t>(words[a_index]);
         return true;
+    }
+
+    // C-G5-CAL D2: the source's real equip wrote these three words before/around the WeapEquip
+    // transition. The candidate's own value set starts from authored defaults, so the event alone
+    // still selects H2H_Equip; this helper primes the words before the dispatch.
+    enum class TypedWriteStatus : std::uint8_t
+    {
+        e_written,
+        e_missing,
+        e_unsupported,
+        e_setter_failed
+    };
+
+    struct TypedWriteResult
+    {
+        TypedWriteStatus status{ TypedWriteStatus::e_missing };
+        std::size_t index{};
+        std::int8_t type{ -1 };
+        bool readable{ false };
+        std::int32_t readback{};
+    };
+
+    TypedWriteResult write_named_int(RE::BShkbAnimationGraph& a_graph, RE::hkbBehaviorGraphData const* a_data,
+        std::string_view a_name, std::int32_t a_value)
+    {
+        TypedWriteResult result;
+        if (!a_data || a_name.empty()) return result;
+        std::string const name{ a_name };
+        if (!variable_index(a_data, name.c_str(), result.index)) return result;
+        result.type = static_cast<std::int8_t>(a_data->variableInfos.data()[result.index].m_type.get());
+        bool wrote = false;
+        if (result.type == 0)
+            wrote = a_graph.SetGraphVariableBool(RE::BSFixedString{ name.c_str() }, a_value != 0);
+        else if (result.type >= 1 && result.type <= 3)
+            wrote = a_graph.SetGraphVariableInt(RE::BSFixedString{ name.c_str() }, a_value);
+        else
+        {
+            result.status = TypedWriteStatus::e_unsupported;
+            return result;
+        }
+        result.status = wrote ? TypedWriteStatus::e_written : TypedWriteStatus::e_setter_failed;
+        result.readable = read_variable_int(a_graph, result.index, result.readback);
+        return result;
+    }
+
+    char const* typed_write_status_name(TypedWriteStatus a_status)
+    {
+        switch (a_status)
+        {
+        case TypedWriteStatus::e_written: return "written";
+        case TypedWriteStatus::e_missing: return "missing";
+        case TypedWriteStatus::e_unsupported: return "unsupported";
+        case TypedWriteStatus::e_setter_failed: return "setter-failed";
+        }
+        return "unknown";
+    }
+
+    bool apply_candidate_equip_prime(RE::BShkbAnimationGraph& a_graph, std::uint32_t a_actor_id, std::uint64_t a_request)
+    {
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        RE::hkbBehaviorGraphData const* const data = behavior ? behavior->data.get() : nullptr;
+        bool ready = true;
+        for (auto const& write : Candidate_Equip_Prime_Writes)
+        {
+            TypedWriteResult const result = write_named_int(a_graph, data, write.name, write.value);
+            ready = ready && result.status == TypedWriteStatus::e_written;
+            std::string const index_text = result.status == TypedWriteStatus::e_missing ? "-" : std::to_string(result.index);
+            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=equip-prime name='{}' index={} type={} value={} result={} readback={}",
+                a_actor_id, a_request, write.name, index_text,
+                result.type >= 0 ? census_type_name(result.type) : std::string_view{ "none" },
+                write.value, typed_write_status_name(result.status),
+                result.readable ? std::to_string(result.readback) : std::string{ "unreadable" });
+        }
+        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=equip-prime outcome={} reason={}",
+            a_actor_id, a_request, ready ? "ready" : "skip", ready ? "none" : "write-failed");
+        return ready;
     }
 
     CandidateInputProbe arm_candidate_input_probe(RE::BShkbAnimationGraph& a_graph, std::uint32_t a_actor_id,
@@ -1657,14 +1734,25 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 }
                                 if (chosen_name)
                                 {
-                                    InjectedEvent event{ static_cast<std::uint32_t>(chosen_id), 0, nullptr, nullptr };
-                                    static REL::Relocation<event_dispatch_t> event_dispatch{ REL::ID(EventDispatchID) };
+                                    bool prime_ready = true;
+                                    if (candidate_equip_prime())
+                                        prime_ready = apply_candidate_equip_prime(*candidate, actor_id, request);
+                                    if (!prime_ready)
                                     {
-                                        ScopedCandidateWindow const dispatch_window;
-                                        event_dispatch(behavior, context, &event);
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=skip reason=equip-prime-failed",
+                                            actor_id, request);
                                     }
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=inject event='{}' id={} result=dispatched",
-                                        actor_id, request, chosen_name, chosen_id);
+                                    else
+                                    {
+                                        InjectedEvent event{ static_cast<std::uint32_t>(chosen_id), 0, nullptr, nullptr };
+                                        static REL::Relocation<event_dispatch_t> event_dispatch{ REL::ID(EventDispatchID) };
+                                        {
+                                            ScopedCandidateWindow const dispatch_window;
+                                            event_dispatch(behavior, context, &event);
+                                        }
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=inject event='{}' id={} result=dispatched",
+                                            actor_id, request, chosen_name, chosen_id);
+                                    }
                                 }
                                 else
                                 {

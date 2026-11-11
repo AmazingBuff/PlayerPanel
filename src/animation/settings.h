@@ -63,6 +63,10 @@ namespace animation
     // variable's own m_type (BOOL -> bool setter, INT8/16/32 -> int setter).
     [[nodiscard]] std::string const& candidate_input_variable();
     [[nodiscard]] std::int32_t candidate_input_value();
+    // C-G5-CAL D2: before the inject event, prime the three equipment words the source observed
+    // during a real 1H equip (iMagicEquipped=1, iRightHandEquipped=1, iLeftHandEquipped=9).
+    // Requires IndependentGraph=inject; a missing/unsupported/failed write skips the event.
+    [[nodiscard]] bool candidate_equip_prime();
     // C-G3B-S1: let drive mode run the engine generation entry so the candidate actually produces
     // output. inject already implies it; keeping it explicit and off by default leaves historical
     // drive runs comparable.

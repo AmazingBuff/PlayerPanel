@@ -5008,4 +5008,28 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **明确不做**：不新增 detour、不写源图、不把 D2 实验代码伪装成产品改动、不在未评审时部署新构建、不把旧 E3/E4 日志当校准样本、不从源候选差反算容差、不把 H2H/1HM 说成测量噪声、不用删帧/换资源/偏移时间消除差异。
 
+### 六、D2 仪器范围（预注册，2026-11-11；代码已按此写定，待构建/上机）
+
+**目标**：只回答“在 `WeapEquip` 之前补齐源侧三个装备变量，是否足以让候选选中 `1HM_Equip`”。不比较姿态，不产生容差，不关闭 K1/K2。
+
+| 项 | 规定 |
+| --- | --- |
+| 开关 | `[Experiment] CandidateEquipPrime=false`，默认 off；要求 `IndependentGraph=inject`，其他模式忽略 |
+| 写入顺序 | 在 `WeapEquip` 分发前，按固定表写 `iMagicEquipped=1`、`iRightHandEquipped=1`、`iLeftHandEquipped=9`；按变量自身 `m_type` 选 `SetGraphVariableBool/Int` |
+| 失败 | 任一名字缺失、类型不支持或 setter 失败 → 逐项记 `phase=equip-prime ... result=...` 与 `outcome=skip`，**不分发事件**，该轮判无效 |
+| 日志 | 每个变量一行 `name/index/type/value/result/readback` + 一行 summary；无新 detour、无源图写入、无产品路径改动 |
+| 成功 | 3/3 `result=written`，事件分发，正常 121 步 equip + 121 步 unequip |
+| 判据 | D2-A `clip-ref step=0` 为 `1HM_Equip`；D2-B unequip 为 `1HM_Unequip`；D2-C 3/3 written；D2-D 一次窗口、零 `[E]`、`source-drift=none` |
+| 停止 | 任一写入失败、事件未分发、崩溃、`[E]`、drift、多次窗口 |
+
+| 代码入口 | 用途 |
+| --- | --- |
+| [candidate_equip_prime_policy.h](../src/animation/behavior_graph/candidate_equip_prime_policy.h) | 固定三项 name/value 表；源侧 R run 2 的顺序与值 |
+| [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) | `apply_candidate_equip_prime` 在 `event_dispatch` 之前调用；失败跳过事件 |
+| [settings.cpp](../src/animation/settings.cpp) / [settings.h](../src/animation/settings.h) | `CandidateEquipPrime` 解析、日志与访问器；默认 off |
+| [behavior_graph_equip_prime_test.cpp](../tests/behavior_graph_equip_prime_test.cpp) | 固定三项顺序/值/唯一性 3 例 |
+| [config/CharacterPanel.ini](../config/CharacterPanel.ini) | 默认 off 的样例键与注释 |
+
+**明确不做**：不写源图、不新增 detour、不改事件顺序之外的切片、不把 D2 当产品路径、不产生 `tau_p/tau_r/tau_s/epsilon_t`。
+
 **证据索引**：[E3 v2 账本](#c-g5-e3-v2)、[E4 契约](#c-g5-e4)、[E2-C 契约](#c-g5-e2-c)、[离线 A](#c-g5-cal-a-run1-20261111)、[R run 2](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log)、[C run 1](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log)、[v92 clock run](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log)。
