@@ -5030,7 +5030,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 | [behavior_graph_equip_prime_test.cpp](../tests/behavior_graph_equip_prime_test.cpp) | 固定三项顺序/值/唯一性 3 例 |
 | [config/CharacterPanel.ini](../config/CharacterPanel.ini) | 默认 off 的样例键与注释 |
 
-**实现状态（2026-11-11）**：策略测试 3/3 通过；Release 构建为 v93，identity `CharacterPanel-scenegraph-v93-g5cal-d2-equip-prime-5ba89b48db-cl94faaed0c6-20261111T150019Z`，DLL 1,836,032 B SHA-256 `93637d2f…4cd397`，PDB 49,614,848 B `e9159ce4…afb185`。本地 D2 运行档 `dist/CharacterPanel-g5cal-d2-candidate.ini`（10,689 B，SHA-256 `842ed93c…0bf3df`，`CandidateEquipPrime=true`）已准备，**尚未部署、尚未上机**；安装仍为 v92 + D1 档。
+**实现状态（2026-11-11）**：策略测试 3/3 通过；Release 构建为 v93，identity `CharacterPanel-scenegraph-v93-g5cal-d2-equip-prime-7e878cc04a-cl94faaed0c6-20261111T150314Z`，DLL 1,835,520 B SHA-256 `638e562f…ef0ac05`，PDB 49,614,848 B `0b75c57f…45d073f`。本地 D2 运行档 `dist/CharacterPanel-g5cal-d2-candidate.ini`（10,689 B，SHA-256 `842ed93c…0bf3df`，`CandidateEquipPrime=true`）已准备，**尚未部署、尚未上机**；安装仍为 v92 + D1 档。
 
 **明确不做**：不写源图、不新增 detour、不改事件顺序之外的切片、不把 D2 当产品路径、不产生 `tau_p/tau_r/tau_s/epsilon_t`。
 
