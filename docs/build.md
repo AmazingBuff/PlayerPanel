@@ -1642,7 +1642,7 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 **Verdict**: the phase capture is valid but the D3 question is **not covered**. D3 v2 should add one read-only `window-open` probe that reads those four values directly, then decide the next candidate prime. K1/K2 remain NOT_READY; no tolerance.
 
 <a id="v94-g5cal-d3-window-probe-20261111"></a>
-## v94 G5-CAL D3 window-open probe (2026-11-11, built; **not deployed**)
+## v94 G5-CAL D3 window-open probe (2026-11-11, built and deployed; **not run**)
 
 **Change** (committed `20035ab`, clean tree): `source_timeline.cpp` reads `iRightHandType`(35), `iLeftHandType`(60), `Is1HM`(76) and `i1HMState`(77) once at `window-open` when `SourceTransientWatch=true`, emitting one `SOURCE TIMELINE probe actor=... values='...'` line. The fixed name table is in [source_timeline_probe_policy.h](../src/animation/behavior_graph/source_timeline_probe_policy.h); the probe is read-only, adds no detour, writes nothing, and does not consume the 800-line event budget. The line includes `missing` for any name the graph does not expose.
 
@@ -1650,4 +1650,4 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 
 **Build**: `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v94-g5cal-d3-window-probe`, then `cmake --build --preset Release --parallel 2`; configure/build exit 0, only the pre-existing D9025 `/Ob2`→`/Ob3` warnings. Identity `CharacterPanel-scenegraph-v94-g5cal-d3-window-probe-20035abe4a-cl94faaed0c6-20261111T152720Z`; DLL 1,837,056 bytes SHA-256 `1c3b67ab…6018372`; PDB 49,631,232 bytes SHA-256 `0fc936bb…c886033`.
 
-**Not deployed, not run**: the installed pair remains v93 + D3 source probe. Reusing the D3 INI is enough (`SourceTransientWatch=true`); the next run should return the four initial values.
+**Deployed 2026-11-11**: the v93 + D3 trio was backed up hash-verified to `dist/deploy-backup-20261111-v93d3-v94pre/` (DLL `638e562f…ef0ac05`, PDB `0b75c57f…45d073f`, INI `4c7ad794…13b0400`); v94 DLL `1c3b67ab…6018372` and PDB `0fc936bb…c886033` were copied with destination-hash comparison. The INI was left unchanged (`SourceTransientWatch=true`), and the installed DLL contains the v94 identity string. **Not run yet**; the next run should return the four initial values.
