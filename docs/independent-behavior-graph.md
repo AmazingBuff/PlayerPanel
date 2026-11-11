@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 已跑并判负——实际装备为 1H，候选仍选 `H2H_Equip`；D2 pre-event prime 已实现并构建为 v93，待部署/上机；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v92 + D1 候选诊断档（E4 源档备份保留）；v93 尚未部署。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
+更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 已跑并判负——实际装备为 1H，候选仍选 `H2H_Equip`；D2 pre-event prime 已实现、构建为 v93 并部署，待上机；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v93 + D2 候选诊断档（v92 + D1 三件套备份保留）；D2 尚未上机。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -4908,7 +4908,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 | 项 | 现有证据 | 状态 / 缺项 |
 | --- | --- | --- |
 | 运行身份 | E3 的源/候选各一次运行均为 v88（[R](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log#L30)、[C](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L30)）；E4 源姿态来自 v91/v92（[v92 clock run](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log)） | E3 的 v88 只覆盖配对；E4 的源姿态不能与 v88 候选拼成同一次 Generate。K1 要求匹配的 DLL/PDB/build/INI/runtime/OAR/资源哈希，尚缺 |
-| 当前安装 | v92 DLL 1,830,400 B SHA-256 `fe697ba9…8bcb38`；PDB 49,557,504 B `f57673ce…11914`；运行档为 D1 候选 `dist/CharacterPanel-g5cal-d1-candidate.ini` 10,663 B `98ba7a30…7d52a0`（2026-11-11 已部署；`IndependentGraph=inject`、`CandidateInputProbe` 空变量、`CandidateUnequipProbe`、`OarContextWatch=true`；`SourcePoseCapture` 键缺失，按默认 false） | 这是 **D1 诊断档**，不是校准档；E4 源档已备份为 `dist/CharacterPanel-e4-installed-20261111.ini`（11,183 B `8864075e…465f58`）。D1 已跑并判负（见下文） |
+| 当前安装 | v93 DLL 1,835,520 B SHA-256 `638e562f…ef0ac05`；PDB 49,614,848 B `0b75c57f…45d073f`；运行档为 D2 候选 `dist/CharacterPanel-g5cal-d2-candidate.ini` 10,689 B `842ed93c…0bf3df`（2026-11-11 已部署；`IndependentGraph=inject`、`CandidateInputProbe` 空变量、`CandidateEquipPrime=true`、`CandidateUnequipProbe`、`OarContextWatch=true`） | 这是 **D2 诊断档**，不是校准档；v92 + D1 三件套备份在 `dist/deploy-backup-20261111-v92-v93pre/`（DLL `fe697ba9…8bcb38`、PDB `f57673ce…11914`、INI `98ba7a30…7d52a0`）。D1 已跑并判负；D2 尚未上机 |
 | 源图身份 | R 运行 `DefaultFemale` 652 words / 106 nodes；`FirstPerson` 463/36 已被 v88 过滤器排除（[R L58](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log#L58)） | “源图确属 controller”沿用 [G4 钉图](#g4-closure)；本次没有同时打印 controller 持有的 `source_graph`、generation、request、view。C 运行也没有 census 行 |
 | 候选图身份 | 候选与控制器源图共享 `data`/`string-data`/`infos`/`initial`（v47，652/652 名字与类型对齐）；本次激活后 97 active nodes、`poseLocal` 116 轨、`request=1`（[C L103](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L103)） | 候选 generation/view、候选重载后的实例身份、候选图与源图的同代关系未登记 |
 | 骨架与映射 | 116 条姿态轨；G2 的 v33 记录实际写骨 109/116，缺失 7 条，已列名的是 `x_NPC Rotate/LookNode/Translate` 与 `Weapon`（[当前结论](#current-status)） | 完整骨名、父索引、reference pose、binding/默认填充规则未在本次运行中落盘；不能用 116 或 109 当全局分母 |
@@ -5030,7 +5030,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 | [behavior_graph_equip_prime_test.cpp](../tests/behavior_graph_equip_prime_test.cpp) | 固定三项顺序/值/唯一性 3 例 |
 | [config/CharacterPanel.ini](../config/CharacterPanel.ini) | 默认 off 的样例键与注释 |
 
-**实现状态（2026-11-11）**：策略测试 3/3 通过；Release 构建为 v93，identity `CharacterPanel-scenegraph-v93-g5cal-d2-equip-prime-7e878cc04a-cl94faaed0c6-20261111T150314Z`，DLL 1,835,520 B SHA-256 `638e562f…ef0ac05`，PDB 49,614,848 B `0b75c57f…45d073f`。本地 D2 运行档 `dist/CharacterPanel-g5cal-d2-candidate.ini`（10,689 B，SHA-256 `842ed93c…0bf3df`，`CandidateEquipPrime=true`）已准备，**尚未部署、尚未上机**；安装仍为 v92 + D1 档。
+**实现状态（2026-11-11）**：策略测试 3/3 通过；Release 构建为 v93，identity `CharacterPanel-scenegraph-v93-g5cal-d2-equip-prime-7e878cc04a-cl94faaed0c6-20261111T150314Z`，DLL 1,835,520 B SHA-256 `638e562f…ef0ac05`，PDB 49,614,848 B `0b75c57f…45d073f`。D2 运行档 `dist/CharacterPanel-g5cal-d2-candidate.ini`（10,689 B，SHA-256 `842ed93c…0bf3df`，`CandidateEquipPrime=true`）已于 2026-11-11 部署，v92 + D1 三件套备份在 `dist/deploy-backup-20261111-v92-v93pre/`；**尚未上机**，D2 判定仍开放。
 
 **明确不做**：不写源图、不新增 detour、不改事件顺序之外的切片、不把 D2 当产品路径、不产生 `tau_p/tau_r/tau_s/epsilon_t`。
 
