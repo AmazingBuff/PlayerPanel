@@ -4981,7 +4981,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 ### 五、下一步与明确不做
 
 1. **评审本节并选择 D1/D2/D3。** 推荐 D1；D2 需要另立契约，D3 只能保留差异。
-2. **D1 诊断运行**：匹配构建和同一初态，先只做一次候选 equip/unequip 片段诊断，确认是否转为 `1HM_*`；这不是校准运行，不产生容差。本地已准备候选运行档 `dist/CharacterPanel-g5cal-d1-candidate.ini`（10,663 B，SHA-256 `98ba7a30…7d52a0`；相对 `CharacterPanel-g5e3-c-run.ini` 只把 `OarContextWatch` 从 `false` 改为 `true`），**未部署**；当前安装仍是 v92 + E4 源捕获档。
+2. **D1 诊断运行**：匹配构建和同一初态，先只做一次候选 equip/unequip 片段诊断，确认是否转为 `1HM_*`；这不是校准运行，不产生容差。本地已准备候选运行档 `dist/CharacterPanel-g5cal-d1-candidate.ini`（10,663 B，SHA-256 `98ba7a30…7d52a0`；相对 `CharacterPanel-g5e3-c-run.ini` 只把 `OarContextWatch` 从 `false` 改为 `true`），**未部署**；当前安装仍是 v92 + E4 源捕获档。只读字符串检查确认 v92 DLL 含 `CANDIDATE INPUT`/`CANDIDATE UNEQUIP`/`clip-ref`/`OarContextWatch`，因此 D1 诊断不需要新构建；这只证明标签存在，不证明行为语义，仍需上机。
 3. **控制 B 登记**：与控制 A 一样，先写清单再看值；没有合格资源就保持 NOT_READY。
 4. **K3–K6 与 B3/B4**：候选 `e_post_sample` 快照、源侧等价完成边界/generation、完整计数/寿命、`58423 return.out` 对 `63581 memcpy.src`/`poseLocal` 的逐分量对账；经评审后再实现。
 5. **之后**：原生控制 B → 时间量化 → 容差推导 → CAL1–CAL7 → 联合验收 → 协议冻结 → 新正式运行。
