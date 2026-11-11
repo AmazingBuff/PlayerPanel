@@ -851,11 +851,12 @@ namespace
         std::string const name{ a_name };
         if (!variable_index(a_data, name.c_str(), result.index)) return result;
         result.type = static_cast<std::int8_t>(a_data->variableInfos.data()[result.index].m_type.get());
+        RE::BSFixedString const fixed_name{ name.c_str() };
         bool wrote = false;
         if (result.type == 0)
-            wrote = a_graph.SetGraphVariableBool(RE::BSFixedString{ name.c_str() }, a_value != 0);
+            wrote = a_graph.SetGraphVariableBool(fixed_name, a_value != 0);
         else if (result.type >= 1 && result.type <= 3)
-            wrote = a_graph.SetGraphVariableInt(RE::BSFixedString{ name.c_str() }, a_value);
+            wrote = a_graph.SetGraphVariableInt(fixed_name, a_value);
         else
         {
             result.status = TypedWriteStatus::e_unsupported;
