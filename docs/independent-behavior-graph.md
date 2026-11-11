@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 已跑并判负——实际装备为 1H，候选仍选 `H2H_Equip`；D2 pre-event prime 已实现、部署并判负——三项变量写入并保持，片段仍为 H2H；D3 源侧只读探针已部署，待上机捕获 `iRightHandType`；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v93 + D3 源侧探针档（v93 + D2 三件套备份保留）；D2 已上机并判负，D3 尚未上机。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
+更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 已跑并判负——实际装备为 1H，候选仍选 `H2H_Equip`；D2 pre-event prime 已实现、部署并判负——三项变量写入并保持，片段仍为 H2H；D3 源侧探针已跑，但未覆盖 `iRightHandType` 初始值；下一步 D3 v2 `window-open` 初始值探针；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v93 + D3 源侧探针档（v93 + D2 三件套备份保留）；D2 已上机并判负，D3 已上机但未覆盖初始值。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -4995,7 +4995,21 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **下一步 D3（审计，不是继续盲写变量）**：离线 dump 已显示 `0_Master` 的 `root/Root/mg` manual selector 由 `iRightHandType`(var 35) 选支（`0_master_v2.txt` L8687；同表 L41），`iLeftHandType`(60) 选下一级；`weapequip.hkx` 的 right-hand force-equip 分支同时包含 `1HM_Equip` 与 `H2H_Equip`。D3 应先只读捕获源侧 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 在真实 1H equip 边的值（`SourceTimeline=on` + `SourceTransientWatch=true`，或等价只读探针），再决定是否把 `iRightHandType` 作为下一次 prime；不得猜一个值直接写。
 
-源侧只读探针档 `dist/CharacterPanel-g5cal-d3-source-probe.ini`（11,183 B，SHA-256 `4c7ad794…13b0400`；`IndependentGraph=off`、`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourceTransientWatch=true`、`SourcePoseCapture=false`）**已于 2026-11-11 部署**，v93 + D2 三件套备份在 `dist/deploy-backup-20261111-v93d2-v93d3pre/`；**尚未上机**。运行单：武器先不装备 → F7 开窗 → 装备 1H → 等 1–2 s → 卸下 → 等 1–2 s；只读记录 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 的变化。若窗口被 800 行预算截断，保留原始行并另立定向探针，不猜值。
+源侧只读探针档 `dist/CharacterPanel-g5cal-d3-source-probe.ini`（11,183 B，SHA-256 `4c7ad794…13b0400`；`IndependentGraph=off`、`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourceTransientWatch=true`、`SourcePoseCapture=false`）**已于 2026-11-11 部署**，v93 + D2 三件套备份在 `dist/deploy-backup-20261111-v93d2-v93d3pre/`。运行单：武器先不装备 → F7 开窗 → 装备 1H → 等 1–2 s → 卸下 → 等 1–2 s；只读记录 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 的变化。若窗口被 800 行预算截断，保留原始行并另立定向探针，不猜值。
+
+#### D3 源侧探针运行（2026-11-11 23:19，v93，**未覆盖初始值**）
+
+工件：[日志](diagnostics/CharacterPanel-g5cal-d3-run1-20261111-2319.log) 21,605 B，SHA-256 `0cbe40c3…2b9b71`；v93 DLL/PDB；D3 源侧探针档 `4c7ad794…13b0400`；一次窗口，零 `[E]`，`window-closed reason=expired lines=166`，`snapshots=0 clocks=0`。
+
+| 项 | 读数 | 裁定 |
+| --- | --- | --- |
+| 图身份 | `DefaultFemale` 652 words / 106 nodes，`selector='DefaultFemale' origin=selector`；`mode=transient`（[L57–L59](diagnostics/CharacterPanel-g5cal-d3-run1-20261111-2319.log#L57)） | 通过：源图正确 |
+| 装备段 | `IsEquipping 0→1` + `currentDefaultState 0→10` @35.389；`iMagicEquipped 0→1`、`iRightHandEquipped 0→1`、`iLeftHandEquipped 0→9` @35.886；`iState 0→9` + `10→1` @36.437（[L65–L82](diagnostics/CharacterPanel-g5cal-d3-run1-20261111-2319.log#L65)） | 通过：相位序列与 R run 一致 |
+| 卸下段 | `currentDefaultState 1→12` @43.009；`12→0` @44.262（[L89–L111](diagnostics/CharacterPanel-g5cal-d3-run1-20261111-2319.log#L89)） | 通过 |
+| 探测变量 | **没有** `iRightHandType`(35)、`iLeftHandType`(60)、`Is1HM`(76)、`i1HMState`(77) 的 transient 行 | **未覆盖**：transient 只记录变化，初始值不在窗口内 |
+| 预算/错误 | 166/800 行，`reason=expired`，零 `[E]` | 通过 |
+
+**结论：D3 运行对相位有效，但没有回答 `iRightHandType` 的初始值。** 该变量在窗口内没有变化，或变化被同帧覆盖；不能据此断言它是 0/1。下一步 D3 v2 需要在 `window-open` 做一次只读初始值探针（四个名字各读一次），再决定候选 prime；不猜值。
 
 ### 四、控制 A/B 与 K1/K2 关闭条件
 
@@ -5018,10 +5032,10 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 ### 五、下一步与明确不做
 
-1. **D1/D2 均已判负；下一步 D3 审计 `iRightHandType` 分支。** 不再盲目增加变量写。
+1. **D1/D2 均已判负；D3 源侧探针已跑但未覆盖初始值；下一步 D3 v2 `window-open` 初始值探针。** 不再盲目增加变量写。
 2. **D1 结果**：v92 + D1 运行档，一次窗口，实际装备已由产品路径确认为 `family=1h drawn=true`，候选仍选 `H2H_Equip`；`rh=0` 121/121；零 `[E]`、`source-drift=none`。详见下文 D1 首轮运行。
 3. **D2 结果**：v93，三项 prime 全部 written/readback 1/1/9，事件正常分发，候选仍选 `H2H_Equip`，`rh=1` 121/121；D2 判负。详见下文 D2 首轮运行。
-4. **D3 审计**：先只读捕获源侧 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 在真实 1H equip 边的值，再决定下一次 prime；不得猜值。
+4. **D3 v2**：在 `window-open` 一次性只读源侧 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 的值（不依赖 transient 变化），再决定下一次 prime；不得猜值。
 5. **控制 B 登记**：与控制 A 一样，先写清单再看值；没有合格资源就保持 NOT_READY。
 6. **K3–K6 与 B3/B4**：候选 `e_post_sample` 快照、源侧等价完成边界/generation、完整计数/寿命、`58423 return.out` 对 `63581 memcpy.src`/`poseLocal` 的逐分量对账；经评审后再实现。
 7. **之后**：原生控制 B → 时间量化 → 容差推导 → CAL1–CAL7 → 联合验收 → 协议冻结 → 新正式运行。

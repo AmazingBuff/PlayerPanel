@@ -1,0 +1,226 @@
+[23:19:49.167] [4296 ] [I] CharacterPanel v1-2-1-0
+[23:19:49.167] [4296 ] [I] CharacterPanel loaded
+[2026-11-11 23:19:49.166] [thread 4296] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(84): [info] CharacterPanel v1-2-1-0
+[23:19:59.406] [4296 ] [I] OAR Animations V1 mapping API available
+[23:19:59.406] [4296 ] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[23:19:59.406] [4296 ] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[23:20:39.223] [7600 ] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[23:20:39.223] [7600 ] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[23:20:39.223] [7600 ] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting IndependentGraph=off
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting DisplayPose=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting DisplayStep=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting SourceTimeline=on transient=true graph='DefaultFemale' pose-capture=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting SourceEventCapture=off
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting SourceWriteCapture=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting CandidateVariableCensus=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting CandidateEquipPrime=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting CandidateUnequipProbe=false variable='' prime='' event=''
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting OarContextWatch=false
+[23:20:39.223] [7600 ] [I] EXPERIMENT setting SamplingLiveness=off
+[23:20:39.223] [7600 ] [I] SOURCE EVENTCAPTURE install-skip reason=off
+[23:20:39.223] [7600 ] [I] SOURCE WRITECAPTURE install-skip reason=off
+[23:20:39.223] [7600 ] [I] PROBE LIVENESS install-skip reason=off
+[23:20:39.224] [7600 ] [I] DAC native inventory lifecycle sink installed
+[23:20:39.228] [7600 ] [I] All shaders compiled
+[23:20:39.228] [7600 ] [I] Installed pre-UI renderer hook
+[23:20:39.228] [7600 ] [I] Panel menu sink installed
+[23:20:39.228] [7600 ] [I] CharacterManager equipment sink installed
+[23:20:39.228] [7600 ] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-v93-g5cal-d2-equip-prime-7e878cc04a-cl94faaed0c6-20261111T150314Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[23:20:39.264] [41288] [I] Studio host changed: 0x0 -> 0x1b789586980 (paused=true)
+[23:20:39.264] [41288] [I] Studio light node has been created
+[23:20:39.264] [41288] [I] CP-LIGHT slot 0: registered, shell 0x1b8c9567880 queued (ledger stays the authority)
+[23:20:39.264] [41288] [I] CP-LIGHT slot 1: registered, shell 0x1b8c9567740 queued (ledger stays the authority)
+[23:20:39.264] [41288] [I] CP-LIGHT slot 2: registered, shell 0x1b8c9567600 queued (ledger stays the authority)
+[23:20:39.264] [41288] [I] Studio lights registered on the ledger (scene=0x1ada6b46e80 -- ledger fetch will populate the slots)
+[23:20:39.264] [41288] [I] CP-LIGHT slot 0: ledger shell fetched 0x1b8c9567880 (after 0 miss frames)
+[23:20:39.264] [41288] [I] CP-LIGHT slot 1: ledger shell fetched 0x1b8c9567740 (after 0 miss frames)
+[23:20:39.264] [41288] [I] CP-LIGHT slot 2: ledger shell fetched 0x1b8c9567600 (after 0 miss frames)
+[23:20:58.391] [4296 ] [I] DAC old-world sessions discarded world=2
+[23:20:58.548] [41288] [I] SOURCE TIMELINE invalidated reason=world-reset
+[23:20:58.708] [41288] [I] CP-LIGHT slot 0: ledger shell dropped
+[23:20:58.708] [41288] [I] CP-LIGHT slot 1: ledger shell dropped
+[23:20:58.708] [41288] [I] CP-LIGHT slot 2: ledger shell dropped
+[23:20:58.708] [41288] [W] Studio lights not fully served by the ledger yet
+[23:21:05.092] [41288] [W] Studio lights not fully served by the ledger yet
+[23:21:08.440] [41288] [I] CharacterManager watch actor=00000014
+[23:21:08.450] [41288] [I] OAR bases stage=world-prewarm project=0x1b7369760d0 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=3.966
+[23:21:08.450] [41288] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1b8c9567c40 filed to lightQueueAdd)
+[23:21:08.450] [41288] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1b8c9567240 filed to lightQueueAdd)
+[23:21:08.450] [41288] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1b8c9567100 filed to lightQueueAdd)
+[23:21:08.526] [41288] [I] CP-LIGHT slot 0: ledger shell fetched 0x1b8c9567c40 (after 1 miss frames)
+[23:21:08.526] [41288] [I] CP-LIGHT slot 1: ledger shell fetched 0x1b8c9567240 (after 1 miss frames)
+[23:21:08.526] [41288] [I] CP-LIGHT slot 2: ledger shell fetched 0x1b8c9567100 (after 1 miss frames)
+[23:21:33.353] [35896] [I] SOURCE TIMELINE arm-requested
+[23:21:33.372] [4296 ] [I] SOURCE TIMELINE graph-census actor=00000014 found=1 shown=1 selector='DefaultFemale' origin=selector chosen=0
+[23:21:33.372] [4296 ] [I] SOURCE TIMELINE graph-census index=0 name='DefaultFemale' words=652 nodes=106 selected=yes
+[23:21:33.372] [4296 ] [I] SOURCE TIMELINE window-open actor=00000014 words=652 nodes=106 seconds=20 mode=transient request=0
+[23:21:33.604] [4296 ] [I] SOURCE TIMELINE variable index=53 name='TimeDelta' 1018175685->1017817772 float=0.0215->0.0208 tsc=27625671104527
+[23:21:33.688] [4296 ] [I] SOURCE TIMELINE variable index=53 1017817772->1017907251 float=0.0208->0.0210 tsc=27626031924620
+[23:21:33.871] [4296 ] [I] SOURCE TIMELINE variable index=53 1017907251->1017549335 float=0.0210->0.0203 tsc=27626820321923
+[23:21:34.416] [4296 ] [I] SOURCE TIMELINE variable index=383 name='TDM_Roll' -1131223955->0 float=-0.0179->0.0000 tsc=27629159148808
+[23:21:34.567] [4296 ] [I] SOURCE TIMELINE variable index=382 name='TDM_Pitch' 1023844214->0 float=0.0329->0.0000 tsc=27629805257138
+[23:21:35.389] [4296 ] [I] SOURCE TIMELINE variable index=110 name='IsEquipping' 0->1 mode=transient
+[23:21:35.389] [4296 ] [I] SOURCE TIMELINE variable index=113 name='currentDefaultState' 0->10 mode=transient
+[23:21:35.523] [4296 ] [I] SOURCE TIMELINE nodes count=121 tsc=27633907859876
+[23:21:35.585] [4296 ] [I] SOURCE TIMELINE variable index=70 name='bVoiceReady' 1->0 mode=transient
+[23:21:35.585] [4296 ] [I] SOURCE TIMELINE variable index=200 name='bIsInMT' 1->0 mode=transient
+[23:21:35.585] [4296 ] [I] SOURCE TIMELINE variable index=589 name='bIdleBeforeConversation' 1->0 mode=transient
+[23:21:35.648] [4296 ] [I] SOURCE TIMELINE nodes count=94 tsc=27634446611004
+[23:21:35.886] [4296 ] [I] SOURCE TIMELINE variable index=117 name='iMagicEquipped' 0->1 mode=transient
+[23:21:35.886] [4296 ] [I] SOURCE TIMELINE variable index=179 name='iRightHandEquipped' 0->1 mode=transient
+[23:21:35.886] [4296 ] [I] SOURCE TIMELINE variable index=180 name='iLeftHandEquipped' 0->9 mode=transient
+[23:21:35.909] [4296 ] [I] SOURCE TIMELINE variable index=126 name='bAttached' 0->1 mode=transient
+[23:21:35.952] [4296 ] [I] SOURCE TIMELINE nodes count=95 tsc=27635750571599
+[23:21:36.437] [4296 ] [I] SOURCE TIMELINE variable index=38 name='IsAttackReady' 0->1 mode=transient
+[23:21:36.437] [4296 ] [I] SOURCE TIMELINE variable index=70 0->1 mode=transient
+[23:21:36.437] [4296 ] [I] SOURCE TIMELINE variable index=92 name='bMLh_Ready' 0->1 mode=transient
+[23:21:36.437] [4296 ] [I] SOURCE TIMELINE variable index=93 name='bMRh_Ready' 0->1 mode=transient
+[23:21:36.437] [4296 ] [I] SOURCE TIMELINE variable index=94 name='iState' 0->9 mode=transient
+[23:21:36.437] [4296 ] [I] SOURCE TIMELINE variable index=113 10->1 mode=transient
+[23:21:36.458] [4296 ] [I] SOURCE TIMELINE variable index=126 1->0 mode=transient
+[23:21:36.562] [4296 ] [I] SOURCE TIMELINE nodes count=129 tsc=27638368815154
+[23:21:36.658] [4296 ] [I] SOURCE TIMELINE variable index=110 1->0 mode=transient
+[23:21:36.729] [4296 ] [I] SOURCE TIMELINE nodes count=114 tsc=27639085257546
+[23:21:40.173] [4296 ] [I] SOURCE TIMELINE variable index=53 1017549335->1019428384 float=0.0203->0.0238 tsc=27653863671907
+[23:21:42.221] [4296 ] [I] SOURCE TIMELINE variable index=53 1019428384->1018980992 float=0.0238->0.0230 tsc=27662656611148
+[23:21:43.009] [4296 ] [I] SOURCE TIMELINE variable index=65 name='PitchManualOverride' 0->1 mode=transient
+[23:21:43.009] [4296 ] [I] SOURCE TIMELINE variable index=111 name='IsUnequipping' 0->1 mode=transient
+[23:21:43.009] [4296 ] [I] SOURCE TIMELINE variable index=113 1->12 mode=transient
+[23:21:43.009] [4296 ] [I] SOURCE TIMELINE variable index=125 name='bEquipUnequip' 0->1 mode=transient
+[23:21:43.091] [4296 ] [I] SOURCE TIMELINE nodes count=133 tsc=27666391065856
+[23:21:43.202] [4296 ] [I] SOURCE TIMELINE variable index=38 1->0 mode=transient
+[23:21:43.202] [4296 ] [I] SOURCE TIMELINE variable index=70 1->0 mode=transient
+[23:21:43.202] [4296 ] [I] SOURCE TIMELINE variable index=92 1->0 mode=transient
+[23:21:43.202] [4296 ] [I] SOURCE TIMELINE variable index=93 1->0 mode=transient
+[23:21:43.202] [4296 ] [I] SOURCE TIMELINE variable index=94 9->0 mode=transient
+[23:21:43.272] [4296 ] [I] SOURCE TIMELINE nodes count=98 tsc=27667164493359
+[23:21:43.611] [4296 ] [I] SOURCE TIMELINE variable index=53 1018980992->1018175687 float=0.0230->0.0215 tsc=27668619070182
+[23:21:43.737] [4296 ] [I] SOURCE TIMELINE variable index=53 1018175687->1017907251 float=0.0215->0.0210 tsc=27669160836601
+[23:21:43.865] [4296 ] [I] SOURCE TIMELINE variable index=117 1->0 mode=transient
+[23:21:43.865] [4296 ] [I] SOURCE TIMELINE variable index=179 1->0 mode=transient
+[23:21:43.865] [4296 ] [I] SOURCE TIMELINE variable index=180 9->0 mode=transient
+[23:21:43.887] [4296 ] [I] SOURCE TIMELINE variable index=126 0->1 mode=transient
+[23:21:43.929] [4296 ] [I] SOURCE TIMELINE variable index=53 1017907251->1018086208 float=0.0210->0.0213 tsc=27669984157552
+[23:21:43.929] [4296 ] [I] SOURCE TIMELINE nodes count=99 tsc=27669984451242
+[23:21:44.075] [4296 ] [I] SOURCE TIMELINE variable index=53 1018086208->1017907251 float=0.0213->0.0210 tsc=27670612976314
+[23:21:44.096] [4296 ] [I] SOURCE TIMELINE nodes count=96 tsc=27670703075928
+[23:21:44.262] [4296 ] [I] SOURCE TIMELINE variable index=70 0->1 mode=transient
+[23:21:44.262] [4296 ] [I] SOURCE TIMELINE variable index=113 12->0 mode=transient
+[23:21:44.262] [4296 ] [I] SOURCE TIMELINE variable index=200 0->1 mode=transient
+[23:21:44.262] [4296 ] [I] SOURCE TIMELINE variable index=589 0->1 mode=transient
+[23:21:44.283] [4296 ] [I] SOURCE TIMELINE variable index=126 1->0 mode=transient
+[23:21:44.325] [4296 ] [I] SOURCE TIMELINE nodes count=122 tsc=27671683906579
+[23:21:44.481] [4296 ] [I] SOURCE TIMELINE variable index=65 1->0 mode=transient
+[23:21:44.481] [4296 ] [I] SOURCE TIMELINE variable index=111 1->0 mode=transient
+[23:21:44.481] [4296 ] [I] SOURCE TIMELINE variable index=125 1->0 mode=transient
+[23:21:44.548] [4296 ] [I] SOURCE TIMELINE nodes count=106 tsc=27672642171037
+[23:21:44.904] [4296 ] [I] SOURCE TIMELINE variable index=53 1017907251->1017996729 float=0.0210->0.0212 tsc=27674171935082
+[23:21:45.110] [4296 ] [I] SOURCE TIMELINE variable index=53 1017996729->1017549335 float=0.0212->0.0203 tsc=27675056647527
+[23:21:45.694] [4296 ] [I] SOURCE TIMELINE variable index=53 1017549335->1017728293 float=0.0203->0.0207 tsc=27677560208662
+[23:21:45.915] [4296 ] [I] SOURCE TIMELINE variable index=53 1017728293->1017370379 float=0.0207->0.0200 tsc=27678508077271
+[23:21:47.185] [4296 ] [I] SOURCE TIMELINE variable index=53 1017370379->1016475593 float=0.0200->0.0183 tsc=27683962176415
+[23:21:47.556] [4296 ] [I] SOURCE TIMELINE variable index=3 name='iSyncIdleLocomotion' 0->1 mode=transient
+[23:21:47.556] [4296 ] [I] SOURCE TIMELINE variable index=185 name='bHeadTrackSpine' 1->0 mode=transient
+[23:21:47.632] [4296 ] [I] SOURCE TIMELINE nodes count=122 tsc=27685879117958
+[23:21:47.861] [4296 ] [I] SOURCE TIMELINE variable index=589 1->0 mode=transient
+[23:21:47.919] [4296 ] [I] SOURCE TIMELINE nodes count=110 tsc=27687110424295
+[23:21:47.957] [4296 ] [I] SOURCE TIMELINE variable index=3 1->0 mode=transient
+[23:21:47.957] [4296 ] [I] SOURCE TIMELINE variable index=589 0->1 mode=transient
+[23:21:48.027] [4296 ] [I] SOURCE TIMELINE nodes count=121 tsc=27687574505708
+[23:21:48.155] [4296 ] [I] SOURCE TIMELINE variable index=48 name='iSyncTurnState' 1->2 mode=transient
+[23:21:48.211] [4296 ] [I] SOURCE TIMELINE nodes count=128 tsc=27688363418151
+[23:21:48.229] [4296 ] [I] SOURCE TIMELINE variable index=0 name='Speed' 0->1072235567 float=0.0000->1.8204 tsc=27688441532983
+[23:21:48.246] [4296 ] [I] SOURCE TIMELINE variable index=185 0->1 mode=transient
+[23:21:48.283] [4296 ] [I] SOURCE TIMELINE variable index=3 0->1 mode=transient
+[23:21:48.283] [4296 ] [I] SOURCE TIMELINE variable index=185 1->0 mode=transient
+[23:21:48.340] [4296 ] [I] SOURCE TIMELINE variable index=589 1->0 mode=transient
+[23:21:48.395] [4296 ] [I] SOURCE TIMELINE nodes count=120 tsc=27689152747217
+[23:21:48.449] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:48.449] [4296 ] [I] SOURCE TIMELINE variable index=589 0->1 mode=transient
+[23:21:48.522] [4296 ] [I] SOURCE TIMELINE nodes count=129 tsc=27689697217947
+[23:21:48.577] [4296 ] [I] SOURCE TIMELINE variable index=589 1->0 mode=transient
+[23:21:48.633] [4296 ] [I] SOURCE TIMELINE nodes count=110 tsc=27690176100695
+[23:21:48.725] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:48.932] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:48.986] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:49.271] [4296 ] [I] SOURCE TIMELINE variable index=0 1072235567->1136003909 float=1.8204->364.0880 tsc=27692914357676
+[23:21:49.271] [4296 ] [I] SOURCE TIMELINE variable index=40 name='SpeedSampled' 0->1136003909 float=0.0000->364.0880 tsc=27692914563818
+[23:21:49.381] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:49.453] [4296 ] [I] SOURCE TIMELINE variable index=53 1016475593->1016296638 float=0.0183->0.0180 tsc=27693695475599
+[23:21:49.529] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:49.736] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:49.811] [4296 ] [I] SOURCE TIMELINE variable index=380 name='TDM_VelocityX' -2147483648->1072551960 float=-0.0000->1.8582 tsc=27695232338986
+[23:21:50.002] [4296 ] [I] SOURCE TIMELINE variable index=53 1016296638->1016922987 float=0.0180->0.0192 tsc=27696050548443
+[23:21:50.062] [4296 ] [I] SOURCE TIMELINE variable index=3 1->0 mode=transient
+[23:21:50.062] [4296 ] [I] SOURCE TIMELINE variable index=589 0->1 mode=transient
+[23:21:50.119] [4296 ] [I] SOURCE TIMELINE variable index=40 1136003909->0 float=364.0880->0.0000 tsc=27696552182319
+[23:21:50.139] [4296 ] [I] SOURCE TIMELINE variable index=0 1136003909->0 float=364.0880->0.0000 tsc=27696639190542
+[23:21:50.139] [4296 ] [I] SOURCE TIMELINE variable index=379 name='TDM_VelocityY' -2147483648->0 float=-0.0000->0.0000 tsc=27696639351749
+[23:21:50.139] [4296 ] [I] SOURCE TIMELINE variable index=380 1072551960->0 float=1.8582->0.0000 tsc=27696639377162
+[23:21:50.139] [4296 ] [I] SOURCE TIMELINE nodes count=121 tsc=27696639397974
+[23:21:50.308] [4296 ] [I] SOURCE TIMELINE variable index=48 1->0 mode=transient
+[23:21:50.350] [4296 ] [I] SOURCE TIMELINE variable index=185 0->1 mode=transient
+[23:21:50.388] [4296 ] [I] SOURCE TIMELINE variable index=0 0->1072235567 float=0.0000->1.8204 tsc=27697705199973
+[23:21:50.406] [4296 ] [I] SOURCE TIMELINE nodes count=113 tsc=27697785542419
+[23:21:50.446] [4296 ] [I] SOURCE TIMELINE variable index=3 0->1 mode=transient
+[23:21:50.446] [4296 ] [I] SOURCE TIMELINE variable index=185 1->0 mode=transient
+[23:21:50.504] [4296 ] [I] SOURCE TIMELINE variable index=589 1->0 mode=transient
+[23:21:50.565] [4296 ] [I] SOURCE TIMELINE nodes count=120 tsc=27698466181115
+[23:21:50.611] [4296 ] [I] SOURCE TIMELINE variable index=48 0->1 mode=transient
+[23:21:50.611] [4296 ] [I] SOURCE TIMELINE variable index=589 0->1 mode=transient
+[23:21:50.631] [4296 ] [I] SOURCE TIMELINE variable index=3 1->0 mode=transient
+[23:21:50.695] [4296 ] [I] SOURCE TIMELINE variable index=0 1072235567->0 float=1.8204->0.0000 tsc=27699023201137
+[23:21:50.695] [4296 ] [I] SOURCE TIMELINE variable index=379 0->-2147483648 float=0.0000->-0.0000 tsc=27699023466404
+[23:21:50.695] [4296 ] [I] SOURCE TIMELINE variable index=380 0->-2147483648 float=0.0000->-0.0000 tsc=27699023489538
+[23:21:50.718] [4296 ] [I] SOURCE TIMELINE nodes count=129 tsc=27699121552463
+[23:21:50.803] [4296 ] [I] SOURCE TIMELINE nodes count=128 tsc=27699488017469
+[23:21:50.823] [4296 ] [I] SOURCE TIMELINE variable index=53 1016922987->1017996729 float=0.0192->0.0212 tsc=27699574097443
+[23:21:50.843] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:50.905] [4296 ] [I] SOURCE TIMELINE variable index=0 0->1072235567 float=0.0000->1.8204 tsc=27699926393347
+[23:21:50.927] [4296 ] [I] SOURCE TIMELINE variable index=185 0->1 mode=transient
+[23:21:50.946] [4296 ] [I] SOURCE TIMELINE variable index=3 0->1 mode=transient
+[23:21:50.946] [4296 ] [I] SOURCE TIMELINE variable index=185 1->0 mode=transient
+[23:21:51.028] [4296 ] [I] SOURCE TIMELINE variable index=589 1->0 mode=transient
+[23:21:51.089] [4296 ] [I] SOURCE TIMELINE variable index=3 1->0 mode=transient
+[23:21:51.132] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:51.132] [4296 ] [I] SOURCE TIMELINE variable index=589 0->1 mode=transient
+[23:21:51.173] [4296 ] [I] SOURCE TIMELINE variable index=0 1072235567->0 float=1.8204->0.0000 tsc=27701075218634
+[23:21:51.173] [4296 ] [I] SOURCE TIMELINE variable index=379 -2147483648->0 float=-0.0000->0.0000 tsc=27701075414198
+[23:21:51.173] [4296 ] [I] SOURCE TIMELINE variable index=380 -2147483648->0 float=-0.0000->0.0000 tsc=27701075436343
+[23:21:51.212] [4296 ] [I] SOURCE TIMELINE nodes count=129 tsc=27701242604685
+[23:21:51.293] [4296 ] [I] SOURCE TIMELINE nodes count=128 tsc=27701589702453
+[23:21:51.353] [4296 ] [I] SOURCE TIMELINE variable index=53 1017996729->1017370379 float=0.0212->0.0200 tsc=27701848738451
+[23:21:51.373] [4296 ] [I] SOURCE TIMELINE variable index=185 0->1 mode=transient
+[23:21:51.476] [4296 ] [I] SOURCE TIMELINE nodes count=106 tsc=27702374430776
+[23:21:51.495] [4296 ] [I] SOURCE TIMELINE variable index=53 1017370379->1017549337 float=0.0200->0.0203 tsc=27702458521705
+[23:21:51.577] [4296 ] [I] SOURCE TIMELINE variable index=53 1017549337->1017459857 float=0.0203->0.0202 tsc=27702807822100
+[23:21:51.656] [4296 ] [I] SOURCE TIMELINE variable index=53 1017459857->1017370379 float=0.0202->0.0200 tsc=27703147476821
+[23:21:51.676] [4296 ] [I] SOURCE TIMELINE variable index=3 0->1 mode=transient
+[23:21:51.676] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:51.676] [4296 ] [I] SOURCE TIMELINE variable index=185 1->0 mode=transient
+[23:21:51.757] [4296 ] [I] SOURCE TIMELINE nodes count=129 tsc=27703580571408
+[23:21:51.860] [4296 ] [I] SOURCE TIMELINE variable index=589 1->0 mode=transient
+[23:21:51.880] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:51.880] [4296 ] [I] SOURCE TIMELINE variable index=589 0->1 mode=transient
+[23:21:51.899] [4296 ] [I] SOURCE TIMELINE variable index=53 1017370379->1017459857 float=0.0200->0.0202 tsc=27704192183713
+[23:21:51.962] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:51.962] [4296 ] [I] SOURCE TIMELINE variable index=589 1->0 mode=transient
+[23:21:52.023] [4296 ] [I] SOURCE TIMELINE nodes count=110 tsc=27704724371450
+[23:21:52.084] [4296 ] [I] SOURCE TIMELINE variable index=53 1017459857->1017638814 float=0.0202->0.0205 tsc=27704984370644
+[23:21:52.266] [4296 ] [I] SOURCE TIMELINE variable index=0 0->1136003909 float=0.0000->364.0880 tsc=27705766132793
+[23:21:52.266] [4296 ] [I] SOURCE TIMELINE variable index=40 0->1136003909 float=0.0000->364.0880 tsc=27705766287765
+[23:21:52.367] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:52.450] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:52.781] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:52.823] [4296 ] [I] SOURCE TIMELINE variable index=379 0->1059454667 float=0.0000->0.6484 tsc=27708156861716
+[23:21:52.823] [4296 ] [I] SOURCE TIMELINE variable index=380 0->1072551958 float=0.0000->1.8582 tsc=27708157073792
+[23:21:52.925] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:53.066] [4296 ] [I] SOURCE TIMELINE variable index=53 1017638814->1017549337 float=0.0205->0.0203 tsc=27709201080767
+[23:21:53.129] [4296 ] [I] SOURCE TIMELINE variable index=48 2->1 mode=transient
+[23:21:53.149] [4296 ] [I] SOURCE TIMELINE variable index=48 1->2 mode=transient
+[23:21:53.170] [4296 ] [I] SOURCE TIMELINE variable index=53 1017549337->1017549335 float=0.0203->0.0203 tsc=27709644919108
+[23:21:53.334] [4296 ] [I] SOURCE TIMELINE variable index=53 1017549335->1017638814 float=0.0203->0.0205 tsc=27710350135839
+[23:21:53.376] [4296 ] [I] SOURCE TIMELINE window-closed reason=expired lines=166 snapshots=0 clocks=0 capture-lines=0 snapshot-dropped=0 clock-dropped=0 line-dropped=0
