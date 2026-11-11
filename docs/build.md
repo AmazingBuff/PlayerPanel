@@ -1650,4 +1650,13 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 
 **Build**: `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v94-g5cal-d3-window-probe`, then `cmake --build --preset Release --parallel 2`; configure/build exit 0, only the pre-existing D9025 `/Ob2`→`/Ob3` warnings. Identity `CharacterPanel-scenegraph-v94-g5cal-d3-window-probe-20035abe4a-cl94faaed0c6-20261111T152720Z`; DLL 1,837,056 bytes SHA-256 `1c3b67ab…6018372`; PDB 49,631,232 bytes SHA-256 `0fc936bb…c886033`.
 
-**Deployed 2026-11-11**: the v93 + D3 trio was backed up hash-verified to `dist/deploy-backup-20261111-v93d3-v94pre/` (DLL `638e562f…ef0ac05`, PDB `0b75c57f…45d073f`, INI `4c7ad794…13b0400`); v94 DLL `1c3b67ab…6018372` and PDB `0fc936bb…c886033` were copied with destination-hash comparison. The INI was left unchanged (`SourceTransientWatch=true`), and the installed DLL contains the v94 identity string. **Not run yet**; the next run should return the four initial values.
+**Deployed 2026-11-11**: the v93 + D3 trio was backed up hash-verified to `dist/deploy-backup-20261111-v93d3-v94pre/` (DLL `638e562f…ef0ac05`, PDB `0b75c57f…45d073f`, INI `4c7ad794…13b0400`); v94 DLL `1c3b67ab…6018372` and PDB `0fc936bb…c886033` were copied with destination-hash comparison. The INI was left unchanged (`SourceTransientWatch=true`), and the installed DLL contains the v94 identity string. The D3 v2 run followed; see the next section.
+
+<a id="g5-cal-d3v2-run1-20261111"></a>
+## G5 CAL D3 v2 initial-value run 1 (2026-11-11 23:31, **hit**)
+
+**Artifact**: [log](diagnostics/CharacterPanel-g5cal-d3v2-run1-20261111-2331.log) 16,263 bytes SHA-256 `906e470767b3e9e90a5c284bba7793df28277482a91ba56ff69e409e950697d2`; v94 DLL/PDB; D3 probe `4c7ad794…13b0400`. One window, zero `[E]`, `window-closed reason=expired lines=98`.
+
+**Reading**: the new `window-open` row read `iRightHandType=1 iLeftHandType=9 Is1HM=0 i1HMState=0` on `DefaultFemale` 652/106 (`mode=transient`). The equip/unequip sequence reproduced the R run (`IsEquipping 0→1`, `currentDefaultState 0→10`, `iRightHandEquipped 0→1`, `iLeftHandEquipped 0→9`, `iState 0→9`, `10→1`, then `1→12`, `9→0`, `12→0`).
+
+**Verdict**: the missing branch words are now identified as `iRightHandType=1` and `iLeftHandType=9`; the candidate's authored defaults are 0/0, and D2 only wrote the three `*Equipped` words. The next step is a D3 candidate pre-event prime of these two branch words (values captured, not guessed), then check `clip-ref step=0` for `1HM_Equip`. K1/K2 remain NOT_READY; no tolerance.
