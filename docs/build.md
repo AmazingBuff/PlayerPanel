@@ -1609,3 +1609,14 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 **Readings**: `clip-ref step=0` is still `Animations\H2H_Equip.hkx` (`binding-index=11046`), and `clip-steps` keeps the same `.C...F...` H2H transition; the settled stack from step 49 is `H2H_Idle`+`1HM_Idle`+`SCAR_1hmReadyDummy`, and the unequip returns `12→0` at step 21. `CANDIDATE UNEQUIP` logs `rh=0` on 121/121 steps. The product path records `ANIMATION ... goal=non-combat-idle family=1h ... drawn=true` and OAR resolves `Smooth Moveset - 1hm`, so the actor's real equipment was one-handed. `load-bindings` reports source and candidate sharing one 15,203-binding set.
 
 **Verdict**: **D1 fails** — real equipment context alone did not make the candidate select `1HM_Equip`; it still follows its own empty-hand initial state. The binding indices differ from C run 1 (`H2H_Equip` 11046 vs 11040, `SCAR` 15075 vs 15076), so cross-run resource identity remains open (K1). The next candidate is D2 pre-event priming of `iMagicEquipped`/`iRightHandEquipped`/`iLeftHandEquipped` before `WeapEquip`; it needs a separate instrument scope and review. K1/K2 remain NOT_READY; no tolerance is produced.
+
+<a id="v93-g5cal-d2-equip-prime-20261111"></a>
+## v93 G5-CAL D2 equip prime (2026-11-11, built; **not deployed**)
+
+**Change** (committed `5ba89b4`, clean tree): the experiment gains `[Experiment] CandidateEquipPrime=false` (requires `IndependentGraph=inject`). When on, it writes the source-observed equipment words `iMagicEquipped=1`, `iRightHandEquipped=1`, `iLeftHandEquipped=9` through the candidate graph's typed setters **before** the `WeapEquip` dispatch; a missing/unsupported/failed write logs `phase=equip-prime` and skips the event. The fixed table lives in [candidate_equip_prime_policy.h](../src/animation/behavior_graph/candidate_equip_prime_policy.h); no new detour, no source write, no product-path change. The setting is logged at load.
+
+**Offline**: `behavior_graph_equip_prime_test` checks the three names, values and uniqueness — 3/3 cases pass under `/std:c++latest /EHsc /W4 /WX`; object/executable are retained under `build/g5-cal-d2-20261111/`.
+
+**Build**: `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v93-g5cal-d2-equip-prime`, then `cmake --build --preset Release --parallel 2`; configure/build exit 0, only the pre-existing D9025 `/Ob2`→`/Ob3` warnings. The required build needed the sandbox-escalated MSBuild path because the user-local `Microsoft SDKs` directory is denied inside the sandbox. Identity `CharacterPanel-scenegraph-v93-g5cal-d2-equip-prime-5ba89b48db-cl94faaed0c6-20261111T150019Z`; DLL 1,836,032 bytes SHA-256 `93637d2f…4cd397`; PDB 49,614,848 bytes SHA-256 `e9159ce4…afb185`.
+
+**Not deployed, not run**: the installed pair remains v92 + D1 profile. A D2 profile must set `CandidateEquipPrime=true` before the run; the first D2 verdict is still open.

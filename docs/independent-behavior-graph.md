@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 已跑并判负——实际装备为 1H，候选仍选 `H2H_Equip`；下一步 D2 pre-event prime；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v92 + D1 候选诊断档（E4 源档备份保留）；本次离线编译通过，Release 兼容构建因 SDK 访问受限未完成。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
+更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 已跑并判负——实际装备为 1H，候选仍选 `H2H_Equip`；D2 pre-event prime 已实现并构建为 v93，待部署/上机；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v92 + D1 候选诊断档（E4 源档备份保留）；v93 尚未部署。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -4999,7 +4999,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 ### 五、下一步与明确不做
 
-1. **D1 已完成并判负；D2 待评审/实现。** D3 只能保留差异，不进入姿态比较。
+1. **D1 已完成并判负；D2 已实现并构建为 v93，待部署/上机。** D3 只能保留差异，不进入姿态比较。
 2. **D1 结果**：v92 + D1 运行档，一次窗口，实际装备已由产品路径确认为 `family=1h drawn=true`，候选仍选 `H2H_Equip`；`rh=0` 121/121；零 `[E]`、`source-drift=none`。详见下文 D1 首轮运行。
 3. **D2 pre-event prime**：在 `WeapEquip` 之前写入 `iMagicEquipped=1`、`iRightHandEquipped=1`、`iLeftHandEquipped=9`，再发事件；判据是 `clip-ref step=0` 是否转为 `1HM_Equip`。这需要另立仪器范围并评审；现有 `CandidateInputProbe` 的单变量写太晚，不能回答。
 4. **控制 B 登记**：与控制 A 一样，先写清单再看值；没有合格资源就保持 NOT_READY。
@@ -5008,7 +5008,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **明确不做**：不新增 detour、不写源图、不把 D2 实验代码伪装成产品改动、不在未评审时部署新构建、不把旧 E3/E4 日志当校准样本、不从源候选差反算容差、不把 H2H/1HM 说成测量噪声、不用删帧/换资源/偏移时间消除差异。
 
-### 六、D2 仪器范围（预注册，2026-11-11；代码已按此写定，待构建/上机）
+### 六、D2 仪器范围（预注册，2026-11-11；代码已写定并构建为 v93，待部署/上机）
 
 **目标**：只回答“在 `WeapEquip` 之前补齐源侧三个装备变量，是否足以让候选选中 `1HM_Equip`”。不比较姿态，不产生容差，不关闭 K1/K2。
 
@@ -5029,6 +5029,8 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 | [settings.cpp](../src/animation/settings.cpp) / [settings.h](../src/animation/settings.h) | `CandidateEquipPrime` 解析、日志与访问器；默认 off |
 | [behavior_graph_equip_prime_test.cpp](../tests/behavior_graph_equip_prime_test.cpp) | 固定三项顺序/值/唯一性 3 例 |
 | [config/CharacterPanel.ini](../config/CharacterPanel.ini) | 默认 off 的样例键与注释 |
+
+**实现状态（2026-11-11）**：策略测试 3/3 通过；Release 构建为 v93，identity `CharacterPanel-scenegraph-v93-g5cal-d2-equip-prime-5ba89b48db-cl94faaed0c6-20261111T150019Z`，DLL 1,836,032 B SHA-256 `93637d2f…4cd397`，PDB 49,614,848 B `e9159ce4…afb185`。本地 D2 运行档 `dist/CharacterPanel-g5cal-d2-candidate.ini`（10,689 B，SHA-256 `842ed93c…0bf3df`，`CandidateEquipPrime=true`）已准备，**尚未部署、尚未上机**；安装仍为 v92 + D1 档。
 
 **明确不做**：不写源图、不新增 detour、不改事件顺序之外的切片、不把 D2 当产品路径、不产生 `tau_p/tau_r/tau_s/epsilon_t`。
 
