@@ -1660,3 +1660,14 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 **Reading**: the new `window-open` row read `iRightHandType=1 iLeftHandType=9 Is1HM=0 i1HMState=0` on `DefaultFemale` 652/106 (`mode=transient`). The equip/unequip sequence reproduced the R run (`IsEquipping 0→1`, `currentDefaultState 0→10`, `iRightHandEquipped 0→1`, `iLeftHandEquipped 0→9`, `iState 0→9`, `10→1`, then `1→12`, `9→0`, `12→0`).
 
 **Verdict**: the missing branch words are now identified as `iRightHandType=1` and `iLeftHandType=9`; the candidate's authored defaults are 0/0, and D2 only wrote the three `*Equipped` words. The next step is a D3 candidate pre-event prime of these two branch words (values captured, not guessed), then check `clip-ref step=0` for `1HM_Equip`. K1/K2 remain NOT_READY; no tolerance.
+
+<a id="v95-g5cal-d3-candidate-prime-20261111"></a>
+## v95 G5-CAL D3 candidate prime (2026-11-11, built; **not deployed**)
+
+**Change** (committed `381ba2e`, clean tree): `[Experiment] CandidateEquipPrimeBranch=false` (requires `CandidateEquipPrime=true` and `IndependentGraph=inject`) adds a pre-event write of the source branch words `iRightHandType=1`, `iLeftHandType=9` after the D2 three-word prime. The branch table lives in [candidate_equip_prime_policy.h](../src/animation/behavior_graph/candidate_equip_prime_policy.h); D2's three-word profile is unchanged when the branch key is off. Any missing/unsupported/failed write logs `phase=equip-prime` and skips the event.
+
+**Offline**: `behavior_graph_equip_prime_test` checks the three D2 names, the two D3 branch names, uniqueness across both tables and the captured values — 4/4 cases pass under `/std:c++latest /EHsc /W4 /WX`.
+
+**Build**: `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v95-g5cal-d3-candidate-prime`, then `cmake --build --preset Release --parallel 2`; configure/build exit 0, only the pre-existing D9025 warnings. Identity `CharacterPanel-scenegraph-v95-g5cal-d3-candidate-prime-381ba2ed3a-cl94faaed0c6-20261111T153804Z`; DLL 1,837,568 bytes SHA-256 `f8e2e386…81a8ee0`; PDB 49,639,424 bytes SHA-256 `eaa57847…3efddd5c`.
+
+**Profile prepared**: `dist/CharacterPanel-g5cal-d3-candidate-prime.ini` (10,721 B, SHA-256 `84e45be3…6852ab`, `CandidateEquipPrime=true`, `CandidateEquipPrimeBranch=true`). **Not deployed, not run**; the installed pair remains v94 + D3 source probe.
