@@ -4968,7 +4968,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 | D1-A 首个装备片段 | `clip-ref step=0 slot=0 name='Animations\H2H_Equip.hkx'`，binding-index=11046；`clip-steps` 仍是 `H2H_Equip` 的 `.C...F...` 模式（[L163/L341](diagnostics/CharacterPanel-g5cal-d1-run1-20261111-2246.log#L163)） | **FAIL**：仍是 H2H |
 | D1-B settled 栈 | step 49 起 `H2H_Idle`+`1HM_Idle`+`SCAR_1hmReadyDummy`；`default 10→1`；卸下 step 21 起 `default=0` | 部分：后续栈含 1HM，但过渡首选仍是 H2H |
 | D1-C 实际装备 | 产品路径在面板开启后记录 `ANIMATION ... goal=non-combat-idle family=1h ... drawn=true`（[L520](diagnostics/CharacterPanel-g5cal-d1-run1-20261111-2246.log#L520)），OAR 命中 `Smooth Moveset - 1hm`（[L523–L524](diagnostics/CharacterPanel-g5cal-d1-run1-20261111-2246.log#L523)） | **实际装备为 1H**；候选仍未选 `1HM_Equip` |
-| D1-D 图变量 | `CANDIDATE UNEQUIP` 121/121 行 `rh=0`；装备段没有装备变量写入行 | 候选图的装备变量仍为 0 |
+| D1-D 图变量 | `CANDIDATE UNEQUIP` 121/121 行 `rh=0`；装备段没有装备变量写入行；`iMagicEquipped`/`iLeftHandEquipped` 本次未记录 | 候选图的 `iRightHandEquipped` 仍为 0；其余两个变量待 D2 仪器补齐 |
 | D1-E 身份 | `load-bindings source-count=15203 candidate-count=15203`，两侧同一 binding set（[L92](diagnostics/CharacterPanel-g5cal-d1-run1-20261111-2246.log#L92)）；但 `H2H_Equip` binding 11046 对 C run 1 的 11040、`SCAR` 15075 对 15076 | 本次两侧同 binding；跨 C run 资源身份不一致，K1 仍不闭合 |
 | D1-F 完整性 | 121 个 input step + 121 个 unequip step；一次 activation/inject/unequip；`[E]=0` | 通过 |
 
