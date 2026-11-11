@@ -1,6 +1,6 @@
 # 历史研究总结
 
-更新：2026-11-11。[最新运行摘要](independent-behavior-graph.md#status-20261111-session)记录 E3 配对 2/2、E4 四块源快照与装备链速率；[CAL v1](independent-behavior-graph.md#c-g5-cal-v1)的[离线 A 已完成](independent-behavior-graph.md#c-g5-cal-a-run1-20261111)，当前分析器三次往返共 12/12 行、120/120 分量，[工件完整保留](diagnostics/g5-calibration-a-20261111/attempt-002/result.md)。[K1/K2 资格账本](independent-behavior-graph.md#c-g5-cal-k1k2)的 D1 判负（实际 1H，候选仍 H2H），D2 判负（三项装备变量写入并保持，片段仍 H2H）；D3 v2 源侧初始值命中 `iRightHandType=1`、`iLeftHandType=9`，D3 候选 prime 已实现并构建为 v95、待部署/上机。K1–K6、原生 B、时间校准仍 NOT_READY，数值容差未产生。G1/G2 有界通过、G3-B 相位回放和 G4 A/B/C 证据保留；G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。历史条目的日期/限定保留。
+更新：2026-11-11。[最新运行摘要](independent-behavior-graph.md#status-20261111-session)记录 E3 配对 2/2、E4 四块源快照与装备链速率；[CAL v1](independent-behavior-graph.md#c-g5-cal-v1)的[离线 A 已完成](independent-behavior-graph.md#c-g5-cal-a-run1-20261111)，当前分析器三次往返共 12/12 行、120/120 分量，[工件完整保留](diagnostics/g5-calibration-a-20261111/attempt-002/result.md)。[K1/K2 资格账本](independent-behavior-graph.md#c-g5-cal-k1k2)的 D1 判负（实际 1H，候选仍 H2H），D2 判负（三项装备变量写入并保持，片段仍 H2H）；D3 v2 源侧初始值命中 `iRightHandType=1`、`iLeftHandType=9`，D3 候选 prime 已实现、构建为 v95 并部署、待上机。K1–K6、原生 B、时间校准仍 NOT_READY，数值容差未产生。G1/G2 有界通过、G3-B 相位回放和 G4 A/B/C 证据保留；G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。历史条目的日期/限定保留。
 
 - [渲染、展示实例与外观](history-rendering.md)：M0状态/合成、Actor与StudioHome、灯光、native Clone、AFP9取景/蒙皮、UBE，以及不同的回收边界。
 - [动画、OAR与暂停行为图](history-animation.md)：HKX取数/采样/映射反转、第二Actor暂停推图、最终输出、OAR/DAC/IED、r1/r2遗留与无Actor独立图关卡。
@@ -10,7 +10,7 @@
 
 | 要了解的内容 | 文档 |
 | --- | --- |
-| **当前状态、部署与后续规划（新会话先读这个）** | [最新运行摘要](independent-behavior-graph.md#status-20261111-session)、[当前部署记录](independent-behavior-graph.md#deploy-state)、[CAL v1](independent-behavior-graph.md#c-g5-cal-v1)与 [K1/K2 资格账本](independent-behavior-graph.md#c-g5-cal-k1k2)：安装 v94 + D3 源侧只读探针（v93 + D3 三件套备份）；[离线 A 已完成](independent-behavior-graph.md#c-g5-cal-a-run1-20261111)，D1 判负，D2 判负（变量写入并保持，片段仍 H2H），D3 v2 命中 `iRightHandType=1`/`iLeftHandType=9`，D3 候选 prime 已构建为 v95、待部署/上机，K1–K6/原生 B/时间资格待补，数值容差未产生。历史交接与原日志保留 |
+| **当前状态、部署与后续规划（新会话先读这个）** | [最新运行摘要](independent-behavior-graph.md#status-20261111-session)、[当前部署记录](independent-behavior-graph.md#deploy-state)、[CAL v1](independent-behavior-graph.md#c-g5-cal-v1)与 [K1/K2 资格账本](independent-behavior-graph.md#c-g5-cal-k1k2)：安装 v95 + D3 候选 prime（v94 + D3 三件套备份）；[离线 A 已完成](independent-behavior-graph.md#c-g5-cal-a-run1-20261111)，D1 判负，D2 判负（变量写入并保持，片段仍 H2H），D3 v2 命中 `iRightHandType=1`/`iLeftHandType=9`，D3 候选 prime 已部署、待上机，K1–K6/原生 B/时间资格待补，数值容差未产生。历史交接与原日志保留 |
 | **全部测试与验证状态** | [最新运行摘要](independent-behavior-graph.md#status-20261111-session)与[验证总表](independent-behavior-graph.md#verification-matrix)：总表中的日期条目保留当时裁定；新增[离线 A 结果](diagnostics/g5-calibration-a-20261111/attempt-002/result.md)，仅限固定控制的采集/格式/解析与算术，不是原生或 G5 通过记录 |
 | 构建、依赖和验证入口 | [Build](build.md) |
 | 复制显示图、取景、装备与生命周期 | [SceneGraph](scene-graph.md) |

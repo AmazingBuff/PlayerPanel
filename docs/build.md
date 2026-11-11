@@ -1662,7 +1662,7 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 **Verdict**: the missing branch words are now identified as `iRightHandType=1` and `iLeftHandType=9`; the candidate's authored defaults are 0/0, and D2 only wrote the three `*Equipped` words. The next step is a D3 candidate pre-event prime of these two branch words (values captured, not guessed), then check `clip-ref step=0` for `1HM_Equip`. K1/K2 remain NOT_READY; no tolerance.
 
 <a id="v95-g5cal-d3-candidate-prime-20261111"></a>
-## v95 G5-CAL D3 candidate prime (2026-11-11, built; **not deployed**)
+## v95 G5-CAL D3 candidate prime (2026-11-11, built and deployed; **not run**)
 
 **Change** (committed `381ba2e`, clean tree): `[Experiment] CandidateEquipPrimeBranch=false` (requires `CandidateEquipPrime=true` and `IndependentGraph=inject`) adds a pre-event write of the source branch words `iRightHandType=1`, `iLeftHandType=9` after the D2 three-word prime. The branch table lives in [candidate_equip_prime_policy.h](../src/animation/behavior_graph/candidate_equip_prime_policy.h); D2's three-word profile is unchanged when the branch key is off. Any missing/unsupported/failed write logs `phase=equip-prime` and skips the event.
 
@@ -1670,4 +1670,4 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 
 **Build**: `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v95-g5cal-d3-candidate-prime`, then `cmake --build --preset Release --parallel 2`; configure/build exit 0, only the pre-existing D9025 warnings. Identity `CharacterPanel-scenegraph-v95-g5cal-d3-candidate-prime-381ba2ed3a-cl94faaed0c6-20261111T153804Z`; DLL 1,837,568 bytes SHA-256 `f8e2e386…81a8ee0`; PDB 49,639,424 bytes SHA-256 `eaa57847…3efddd5c`.
 
-**Profile prepared**: `dist/CharacterPanel-g5cal-d3-candidate-prime.ini` (10,721 B, SHA-256 `84e45be3…6852ab`, `CandidateEquipPrime=true`, `CandidateEquipPrimeBranch=true`). **Not deployed, not run**; the installed pair remains v94 + D3 source probe.
+**Deployed 2026-11-11**: the v94 + D3 source-probe trio was backed up hash-verified to `dist/deploy-backup-20261111-v94d3-v95pre/` (DLL `1c3b67ab…6018372`, PDB `0fc936bb…c886033`, INI `4c7ad794…13b0400`); v95 DLL `f8e2e386…81a8ee0`, PDB `eaa57847…3efddd5c` and the D3 candidate profile `dist/CharacterPanel-g5cal-d3-candidate-prime.ini` (10,721 B, SHA-256 `84e45be3…6852ab`) were copied with destination-hash comparison. Installed keys read `inject / CandidateEquipPrime=true / CandidateEquipPrimeBranch=true / CandidateUnequipProbe=true / OarContextWatch=true / SourceTimeline=false / SamplingLiveness=off`; the DLL contains the v95 identity string. **Not run yet**.
