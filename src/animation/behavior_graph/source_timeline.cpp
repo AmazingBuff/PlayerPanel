@@ -5,6 +5,7 @@
 #include "animation/behavior_graph/source_timeline.h"
 
 #include "animation/behavior_graph/pose_capture_policy.h"
+#include "animation/behavior_graph/source_timeline_probe_policy.h"
 #include "animation/behavior_graph/source_timeline_policy.h"
 
 #include "animation/settings.h"
@@ -389,6 +390,33 @@ namespace animation::behavior_graph
             return names[static_cast<std::uint32_t>(a_index)].c_str();
         }
 
+        // C-G5-CAL D3 v2: transient mode records changes only, so read the four branch-selection
+        // words once at window-open. This is read-only, runs before the baseline changes anything,
+        // and adds one line that does not consume the event budget.
+        void log_initial_probe(RE::hkbBehaviorGraph const& a_behavior, std::int32_t const* a_words,
+            std::size_t a_count, std::uint32_t a_actor_id)
+        {
+            std::string values;
+            for (std::string_view const wanted : Source_Timeline_Probe_Names)
+            {
+                std::size_t index = a_count;
+                for (std::size_t i = 0; i < a_count; ++i)
+                {
+                    char const* const name = variable_name(a_behavior, i);
+                    if (name && wanted == name)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index < a_count)
+                    values += fmt::format("{}={} ", wanted, a_words[index]);
+                else
+                    values += fmt::format("{}=missing ", wanted);
+            }
+            logger::info("SOURCE TIMELINE probe actor={:08x} values='{}'", a_actor_id, values);
+        }
+
         void baseline(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
             std::size_t a_count, std::uint32_t a_actor_id)
         {
@@ -419,6 +447,8 @@ namespace animation::behavior_graph
                 a_actor_id, a_count, a_state.node_count, Source_Timeline_Window.count(),
                 a_state.concurrent ? "concurrent" : (source_transient_watch() ? "transient" : "settled"),
                 a_state.request);
+            if (source_transient_watch())
+                log_initial_probe(a_behavior, a_words, a_count, a_actor_id);
         }
 
         void sample_variables(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
