@@ -4995,6 +4995,8 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **下一步 D3（审计，不是继续盲写变量）**：离线 dump 已显示 `0_Master` 的 `root/Root/mg` manual selector 由 `iRightHandType`(var 35) 选支（`0_master_v2.txt` L8687；同表 L41），`iLeftHandType`(60) 选下一级；`weapequip.hkx` 的 right-hand force-equip 分支同时包含 `1HM_Equip` 与 `H2H_Equip`。D3 应先只读捕获源侧 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 在真实 1H equip 边的值（`SourceTimeline=on` + `SourceTransientWatch=true`，或等价只读探针），再决定是否把 `iRightHandType` 作为下一次 prime；不得猜一个值直接写。
 
+本地已准备源侧只读探针档 `dist/CharacterPanel-g5cal-d3-source-probe.ini`（11,183 B，SHA-256 `4c7ad794…13b0400`；`IndependentGraph=off`、`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourceTransientWatch=true`、`SourcePoseCapture=false`），**尚未部署**。运行单：武器先不装备 → F7 开窗 → 装备 1H → 等 1–2 s → 卸下 → 等 1–2 s；只读记录 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 的变化。若窗口被 800 行预算截断，保留原始行并另立定向探针，不猜值。
+
 ### 四、控制 A/B 与 K1/K2 关闭条件
 
 **控制 A**：已完成离线固定两组变换的三轮往返（12/12 track 行、120/120 分量，零 missing/dropped/truncated）；它只证明共享采集、六位小数格式和离线解析路径，不证明原生 SDK/ABI、generation、线程或寿命（[离线 A](#c-g5-cal-a-run1-20261111)）。
