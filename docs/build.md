@@ -1640,3 +1640,14 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 **Readings**: the pinned graph was `DefaultFemale` 652 words / 106 nodes with `selector='DefaultFemale' origin=selector` and `mode=transient`. The equip sequence reproduced the R run: `IsEquipping 0→1` + `currentDefaultState 0→10` at 35.389; `iMagicEquipped 0→1`, `iRightHandEquipped 0→1`, `iLeftHandEquipped 0→9` at 35.886; `iState 0→9` + `10→1` at 36.437; the unequip `1→12` at 43.009 and `12→0` at 44.262. **No `iRightHandType`(35), `iLeftHandType`(60), `Is1HM`(76) or `i1HMState`(77) transient row appeared**, so this run cannot say whether they were 0 or 1 at window open — transient mode logs changes only.
 
 **Verdict**: the phase capture is valid but the D3 question is **not covered**. D3 v2 should add one read-only `window-open` probe that reads those four values directly, then decide the next candidate prime. K1/K2 remain NOT_READY; no tolerance.
+
+<a id="v94-g5cal-d3-window-probe-20261111"></a>
+## v94 G5-CAL D3 window-open probe (2026-11-11, built; **not deployed**)
+
+**Change** (committed `20035ab`, clean tree): `source_timeline.cpp` reads `iRightHandType`(35), `iLeftHandType`(60), `Is1HM`(76) and `i1HMState`(77) once at `window-open` when `SourceTransientWatch=true`, emitting one `SOURCE TIMELINE probe actor=... values='...'` line. The fixed name table is in [source_timeline_probe_policy.h](../src/animation/behavior_graph/source_timeline_probe_policy.h); the probe is read-only, adds no detour, writes nothing, and does not consume the 800-line event budget. The line includes `missing` for any name the graph does not expose.
+
+**Offline**: `source_timeline_probe_test` checks the four names and uniqueness — 2/2 cases pass under `/std:c++latest /EHsc /W4 /WX`; object/executable are under `build/g5-cal-d3v2-20261111/`.
+
+**Build**: `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v94-g5cal-d3-window-probe`, then `cmake --build --preset Release --parallel 2`; configure/build exit 0, only the pre-existing D9025 `/Ob2`→`/Ob3` warnings. Identity `CharacterPanel-scenegraph-v94-g5cal-d3-window-probe-20035abe4a-cl94faaed0c6-20261111T152720Z`; DLL 1,837,056 bytes SHA-256 `1c3b67ab…6018372`; PDB 49,631,232 bytes SHA-256 `0fc936bb…c886033`.
+
+**Not deployed, not run**: the installed pair remains v93 + D3 source probe. Reusing the D3 INI is enough (`SourceTransientWatch=true`); the next run should return the four initial values.

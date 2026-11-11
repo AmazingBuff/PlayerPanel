@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 已跑并判负——实际装备为 1H，候选仍选 `H2H_Equip`；D2 pre-event prime 已实现、部署并判负——三项变量写入并保持，片段仍为 H2H；D3 源侧探针已跑，但未覆盖 `iRightHandType` 初始值；下一步 D3 v2 `window-open` 初始值探针；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v93 + D3 源侧探针档（v93 + D2 三件套备份保留）；D2 已上机并判负，D3 已上机但未覆盖初始值。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
+更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 已跑并判负——实际装备为 1H，候选仍选 `H2H_Equip`；D2 pre-event prime 已实现、部署并判负——三项变量写入并保持，片段仍为 H2H；D3 源侧探针已跑，但未覆盖 `iRightHandType` 初始值；D3 v2 已实现并构建为 v94，待部署/上机；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v93 + D3 源侧探针档（v93 + D2 三件套备份保留）；D2 已上机并判负，D3 已上机但未覆盖初始值，v94 尚未部署。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -5035,7 +5035,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 1. **D1/D2 均已判负；D3 源侧探针已跑但未覆盖初始值；下一步 D3 v2 `window-open` 初始值探针。** 不再盲目增加变量写。
 2. **D1 结果**：v92 + D1 运行档，一次窗口，实际装备已由产品路径确认为 `family=1h drawn=true`，候选仍选 `H2H_Equip`；`rh=0` 121/121；零 `[E]`、`source-drift=none`。详见下文 D1 首轮运行。
 3. **D2 结果**：v93，三项 prime 全部 written/readback 1/1/9，事件正常分发，候选仍选 `H2H_Equip`，`rh=1` 121/121；D2 判负。详见下文 D2 首轮运行。
-4. **D3 v2**：在 `window-open` 一次性只读源侧 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 的值（不依赖 transient 变化），再决定下一次 prime；不得猜值。
+4. **D3 v2**：已实现并构建为 v94；在 `window-open` 一次性只读源侧 `iRightHandType`/`iLeftHandType`/`Is1HM`/`i1HMState` 的值（不依赖 transient 变化），待部署/上机后再决定下一次 prime；不得猜值。
 5. **控制 B 登记**：与控制 A 一样，先写清单再看值；没有合格资源就保持 NOT_READY。
 6. **K3–K6 与 B3/B4**：候选 `e_post_sample` 快照、源侧等价完成边界/generation、完整计数/寿命、`58423 return.out` 对 `63581 memcpy.src`/`poseLocal` 的逐分量对账；经评审后再实现。
 7. **之后**：原生控制 B → 时间量化 → 容差推导 → CAL1–CAL7 → 联合验收 → 协议冻结 → 新正式运行。
@@ -5067,5 +5067,19 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 **实现状态（2026-11-11）**：策略测试 3/3 通过；Release 构建为 v93，identity `CharacterPanel-scenegraph-v93-g5cal-d2-equip-prime-7e878cc04a-cl94faaed0c6-20261111T150314Z`，DLL 1,835,520 B SHA-256 `638e562f…ef0ac05`，PDB 49,614,848 B `0b75c57f…45d073f`。D2 运行档 `dist/CharacterPanel-g5cal-d2-candidate.ini`（10,689 B，SHA-256 `842ed93c…0bf3df`，`CandidateEquipPrime=true`）已于 2026-11-11 部署，v92 + D1 三件套备份在 `dist/deploy-backup-20261111-v92-v93pre/`；**已上机并判负**，见下文 D2 首轮运行。
 
 **明确不做**：不写源图、不新增 detour、不改事件顺序之外的切片、不把 D2 当产品路径、不产生 `tau_p/tau_r/tau_s/epsilon_t`。
+
+### 七、D3 v2 源侧 `window-open` 初始值探针（2026-11-11，已实现并构建为 v94，待部署/上机）
+
+**目标**：补上 D3 未覆盖的初始值——在源时间线窗口打开时，一次性读取 `iRightHandType`(35)、`iLeftHandType`(60)、`Is1HM`(76)、`i1HMState`(77) 的当前 word；不依赖 transient 变化，不写源图，不新增 detour。
+
+| 项 | 规定 |
+| --- | --- |
+| 开关 | 复用 `SourceTransientWatch=true`；只在 transient 模式输出，避免改变历史 settled 窗口 |
+| 输出 | 一行 `SOURCE TIMELINE probe actor=... values='iRightHandType=... iLeftHandType=... Is1HM=... i1HMState=...'`；缺名记 `missing` |
+| 预算 | 该行不消耗 800 行事件预算；窗口仍按原规则关闭 |
+| 判据 | D3v2-A 行存在且四名各出现一次；D3v2-B 图仍为 `DefaultFemale` 652/106；D3v2-C 零 `[E]`；D3v2-D 值与随后 equip 边一致（只记录，不反推） |
+| 不做 | 不写任何变量、不创建候选图、不比较姿态、不产生容差 |
+
+**实现状态（2026-11-11）**：策略表在 [source_timeline_probe_policy.h](../src/animation/behavior_graph/source_timeline_probe_policy.h)，探针在 [source_timeline.cpp](../src/animation/behavior_graph/source_timeline.cpp)；离线测试 `source_timeline_probe_test` 2/2 通过。Release 构建为 v94，identity `CharacterPanel-scenegraph-v94-g5cal-d3-window-probe-20035abe4a-cl94faaed0c6-20261111T152720Z`，DLL 1,837,056 B SHA-256 `1c3b67ab…6018372`，PDB 49,631,232 B `0fc936bb…c886033`。**尚未部署、尚未上机**；安装仍为 v93 + D3 探针档。
 
 **证据索引**：[E3 v2 账本](#c-g5-e3-v2)、[E4 契约](#c-g5-e4)、[E2-C 契约](#c-g5-e2-c)、[离线 A](#c-g5-cal-a-run1-20261111)、[R run 2](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log)、[C run 1](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log)、[v92 clock run](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log)。
