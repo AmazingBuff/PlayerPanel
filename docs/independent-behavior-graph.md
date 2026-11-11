@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B 与卸下完成点覆盖；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v95 + D3 候选 prime 档（v94 + D3 三件套备份保留）；D2 已上机并判负，D3 v2 已上机并命中，v95 已上机并取得 clip-family PASS。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
+更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B 与卸下完成点覆盖；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v95 + D3 候选 prime 档（v94 + D3 三件套备份保留）；D2 已上机并判负，D3 v2 已上机并命中，v95 已上机并取得 clip-family PASS。**本轮按用户要求暂停，不再推进实现或上机。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -5130,3 +5130,49 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 **未闭合的覆盖问题**：`1HM_Unequip` 时长 2.0 s，121 个采样/120 个推进步在 step 120 只到 `localTime=1.9833`，`default` 仍为 12；`12→0` 的剪辑尾触发器没有被窗口覆盖。这不是片段选择错误，而是 K3/K5 的窗口长度/完成点问题；下一次 1HM 卸下需要至少 121 个推进步或按完成事件截断，且必须另立预注册，不能把 `default=12` 记成失败或成功。K2-C3 通过后，K1（资源/实例身份）与 K2-C1/C2/C4（控制 B、初态/输入账本）仍开放；K3–K6 与 B3/B4 仍是下一阶段。
 
 **证据索引**：[E3 v2 账本](#c-g5-e3-v2)、[E4 契约](#c-g5-e4)、[E2-C 契约](#c-g5-e2-c)、[离线 A](#c-g5-cal-a-run1-20261111)、[R run 2](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log)、[C run 1](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log)、[v92 clock run](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log)。
+
+<a id="status-20261111-d3-session"></a>
+## 会话摘要（2026-11-11，G5-CAL D1 → D3）
+
+**一句话**：D1/D2 判负后，D3 源侧 `window-open` 探针命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选五字 pre-event prime 使候选从 `H2H_Equip` 转为 `1HM_Equip`/`1HM_Unequip`（clip-family PASS），但 1HM 卸下完成点在 120 步窗口内差一帧，K1/K2 其余项与 K3–K6/B3/B4/控制 B 仍未闭合。
+
+| 阶段 | 变更 | 结果 |
+| --- | --- | --- |
+| D1 | 实际装备 1H，仅注入 `WeapEquip` | **判负**：`H2H_Equip`；`rh=0` 121/121；实际装备 `family=1h` |
+| D2 | 事件前写 `iMagicEquipped=1`、`iRightHandEquipped=1`、`iLeftHandEquipped=9` | **判负**：3/3 written、readback 1/1/9、`rh=1`，片段仍 `H2H_Equip` |
+| D3 源侧 | `SourceTransientWatch` 变化窗口 | 相位序列有效，但 `iRightHandType` 初始值未出现（只记录变化） |
+| D3 v2 | `window-open` 一次性只读探针 | **命中**：`iRightHandType=1`、`iLeftHandType=9`、`Is1HM=0`、`i1HMState=0` |
+| D3 候选 | 五字 pre-event prime（D2 三字 + 分支两字） | **clip-family PASS**：`1HM_Equip` step 0、`iState=9` step 86、`1HM_Unequip` step 120；`default=12` 仍在 120 步窗口内 |
+
+### 工件与身份
+
+| 工件 | 身份/哈希 |
+| --- | --- |
+| D1 日志 | [97,027 B `4e48cd5c…c7be6c`](diagnostics/CharacterPanel-g5cal-d1-run1-20261111-2246.log) |
+| D2 日志 | [97,402 B `147bba2a…341e92fd`](diagnostics/CharacterPanel-g5cal-d2-run1-20261111-2307.log) |
+| D3 源侧日志 | [21,605 B `0cbe40c3…2b9b71`](diagnostics/CharacterPanel-g5cal-d3-run1-20261111-2319.log) |
+| D3 v2 日志 | [16,263 B `906e4707…50697d2`](diagnostics/CharacterPanel-g5cal-d3v2-run1-20261111-2331.log) |
+| D3 候选日志 | [97,512 B `26c365d6…0a2eb7`](diagnostics/CharacterPanel-g5cal-d3-candidate-run1-20261111-2342.log) |
+| v93 DLL/PDB | `638e562f…ef0ac05` / `0b75c57f…45d073f` |
+| v94 DLL/PDB | `1c3b67ab…6018372` / `0fc936bb…c886033` |
+| v95 DLL/PDB | `f8e2e386…81a8ee0` / `eaa57847…3efddd5c` |
+| D3 源侧档 | `dist/CharacterPanel-g5cal-d3-source-probe.ini` `4c7ad794…13b0400` |
+| D3 候选档 | `dist/CharacterPanel-g5cal-d3-candidate-prime.ini` `84e45be3…6852ab` |
+| 备份 | `dist/deploy-backup-20261111-v92-v93pre/`、`…-v93d2-v93d3pre/`、`…-v93d3-v94pre/`、`…-v94d3-v95pre/` |
+
+### 结论与仍然开放
+
+1. **原因已定位**：`0_Master` 的 `root/Root/mg` manual selector 由 `iRightHandType`(35) 选支，下一级由 `iLeftHandType`(60) 选支；`weapequip.hkx` 的 right-hand force-equip 分支同时包含 `1HM_Equip` 与 `H2H_Equip`。D2 的三个 `*Equipped` 是状态输出，不足以选支；D3 的两个分支字来自源侧窗口初始值，五字 prime 才能进入 1HM。
+2. **K2-C3 正结果**：候选在冻结的 1H + 左手 9 状态下选中 `1HM_Equip`/`1HM_Unequip`，并进入 `iState=9`；H2H 片段消失。
+3. **1HM 卸下完成点未覆盖**：`1HM_Unequip` 2.0 s，121 采样/120 推进步在 step 120 只到 `localTime=1.9833`，`default` 仍为 12；需要预注册至少 121 个推进步或按完成事件截断，不能把 `default=12` 记成成功/失败。
+4. **K1 未闭合**：同一 binding set 15203，但跨 run 的 binding-index 仍在变（`H2H_Equip` 11045/11046/11040；`SCAR` 15072/15075/15076）；资源完整哈希、稳定 clip 实例 id、generation/view 仍缺。
+5. **K2-C1/C2/C4 未闭合**：控制 B 未登记，装备初态/输入账本仍不完整；G5 门 3 容差未产生，G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。
+6. **所有本轮运行**：一次窗口、零 `[E]`、`source-drift=none`；D1/D2/D3 候选均为 v93/v95 匹配档。
+
+### 当前部署
+
+- 安装：**v95 DLL/PDB + D3 候选 prime 档** `84e45be3…6852ab`。
+- 回退：`dist/deploy-backup-20261111-v94d3-v95pre/`（v94 + D3 源侧探针）；更早备份见上表。
+- 本轮最后提交：`3bf7ce8 docs(g5-cal): record the D3 candidate clip-family pass`（后续仅本摘要/入口同步）。
+
+**暂停点**：不再推进实现或上机。下一次工作的预注册顺序是：1HM 卸下完成点窗口 → K3–K6/B3/B4/控制 B；K1/K2 其余项保持 NOT_READY。
