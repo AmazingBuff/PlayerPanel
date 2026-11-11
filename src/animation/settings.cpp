@@ -25,6 +25,7 @@ namespace
     std::string g_candidate_input_variable = "IsEquipping";
     std::int32_t g_candidate_input_value = 1;
     bool g_candidate_equip_prime = false;
+    bool g_candidate_equip_prime_branch = false;
     bool g_candidate_generation_entry = false;
     bool g_candidate_unequip_probe = false;
     std::string g_candidate_unequip_variable;
@@ -68,6 +69,7 @@ void load_settings()
     g_candidate_input_variable = input_variable ? input_variable : "IsEquipping";
     g_candidate_input_value = static_cast<std::int32_t>(ini.GetLongValue("Experiment", "CandidateInputValue", 1));
     g_candidate_equip_prime = ini.GetBoolValue("Experiment", "CandidateEquipPrime", false);
+    g_candidate_equip_prime_branch = ini.GetBoolValue("Experiment", "CandidateEquipPrimeBranch", false);
     g_candidate_generation_entry = ini.GetBoolValue("Experiment", "CandidateGenerationEntry", false);
     g_candidate_unequip_probe = ini.GetBoolValue("Experiment", "CandidateUnequipProbe", false);
     char const* const unequip_variable = ini.GetValue("Experiment", "CandidateUnequipVariable", "");
@@ -106,6 +108,7 @@ void load_settings()
     logger::info("EXPERIMENT setting CandidateInputProbe={} variable='{}' value={}", g_candidate_input_probe,
         g_candidate_input_variable, g_candidate_input_value);
     logger::info("EXPERIMENT setting CandidateEquipPrime={}", g_candidate_equip_prime);
+    logger::info("EXPERIMENT setting CandidateEquipPrimeBranch={}", g_candidate_equip_prime_branch);
     logger::info("EXPERIMENT setting CandidateGenerationEntry={}", g_candidate_generation_entry);
     logger::info("EXPERIMENT setting CandidateUnequipProbe={} variable='{}' prime='{}' event='{}'", g_candidate_unequip_probe,
         g_candidate_unequip_variable, g_candidate_unequip_prime, g_candidate_unequip_event);
@@ -139,6 +142,7 @@ bool candidate_input_probe() { return g_candidate_input_probe; }
 std::string const& candidate_input_variable() { return g_candidate_input_variable; }
 std::int32_t candidate_input_value() { return g_candidate_input_value; }
 bool candidate_equip_prime() { return g_candidate_equip_prime; }
+bool candidate_equip_prime_branch() { return g_candidate_equip_prime_branch; }
 bool candidate_generation_entry() { return g_candidate_generation_entry; }
 bool candidate_unequip_probe() { return g_candidate_unequip_probe; }
 std::string const& candidate_unequip_variable() { return g_candidate_unequip_variable; }

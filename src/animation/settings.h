@@ -67,6 +67,10 @@ namespace animation
     // during a real 1H equip (iMagicEquipped=1, iRightHandEquipped=1, iLeftHandEquipped=9).
     // Requires IndependentGraph=inject; a missing/unsupported/failed write skips the event.
     [[nodiscard]] bool candidate_equip_prime();
+    // C-G5-CAL D3: additionally prime iRightHandType=1 and iLeftHandType=9, the source values
+    // captured at window-open on 2026-11-11. Kept separate so D2's three-word profile remains
+    // reproducible; requires CandidateEquipPrime=true.
+    [[nodiscard]] bool candidate_equip_prime_branch();
     // C-G3B-S1: let drive mode run the engine generation entry so the candidate actually produces
     // output. inject already implies it; keeping it explicit and off by default leaves historical
     // drive runs comparable.

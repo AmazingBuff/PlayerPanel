@@ -24,5 +24,14 @@ namespace animation::behavior_graph
         { "iRightHandEquipped", 1 },
         { "iLeftHandEquipped", 9 },
     } };
+
+    // C-G5-CAL D3: captured from the source graph at window-open on 2026-11-11.
+    // iRightHandType selects the root/Root/mg branch (1 = one-handed); iLeftHandType
+    // selects the next branch (9 = the source's left-hand state). These are not universal
+    // defaults; they belong to the frozen 1H + left-hand loadout of this run.
+    inline constexpr std::array<CandidateEquipPrimeWrite, 2> Candidate_Equip_Prime_Branch_Writes{ {
+        { "iRightHandType", 1 },
+        { "iLeftHandType", 9 },
+    } };
 }
 PLUGIN_NAMESPACE_END

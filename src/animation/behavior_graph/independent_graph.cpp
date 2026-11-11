@@ -879,12 +879,13 @@ namespace
         return "unknown";
     }
 
-    bool apply_candidate_equip_prime(RE::BShkbAnimationGraph& a_graph, std::uint32_t a_actor_id, std::uint64_t a_request)
+    bool apply_candidate_equip_prime(RE::BShkbAnimationGraph& a_graph, std::uint32_t a_actor_id,
+        std::uint64_t a_request, bool a_include_branch)
     {
         RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
         RE::hkbBehaviorGraphData const* const data = behavior ? behavior->data.get() : nullptr;
         bool ready = true;
-        for (auto const& write : Candidate_Equip_Prime_Writes)
+        auto const write_one = [&](CandidateEquipPrimeWrite const& write)
         {
             TypedWriteResult const result = write_named_int(a_graph, data, write.name, write.value);
             ready = ready && result.status == TypedWriteStatus::e_written;
@@ -894,6 +895,17 @@ namespace
                 result.type >= 0 ? census_type_name(result.type) : std::string_view{ "none" },
                 write.value, typed_write_status_name(result.status),
                 result.readable ? std::to_string(result.readback) : std::string{ "unreadable" });
+        };
+        for (auto const& write : Candidate_Equip_Prime_Writes)
+        {
+            write_one(write);
+        }
+        if (a_include_branch)
+        {
+            for (auto const& write : Candidate_Equip_Prime_Branch_Writes)
+            {
+                write_one(write);
+            }
         }
         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=equip-prime outcome={} reason={}",
             a_actor_id, a_request, ready ? "ready" : "skip", ready ? "none" : "write-failed");
@@ -1737,7 +1749,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 {
                                     bool prime_ready = true;
                                     if (candidate_equip_prime())
-                                        prime_ready = apply_candidate_equip_prime(*candidate, actor_id, request);
+                                        prime_ready = apply_candidate_equip_prime(*candidate, actor_id, request,
+                                            candidate_equip_prime_branch());
                                     if (!prime_ready)
                                     {
                                         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=skip reason=equip-prime-failed",
