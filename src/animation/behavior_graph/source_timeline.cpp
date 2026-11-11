@@ -4,6 +4,7 @@
 
 #include "animation/behavior_graph/source_timeline.h"
 
+#include "animation/behavior_graph/pose_capture_policy.h"
 #include "animation/behavior_graph/source_timeline_policy.h"
 
 #include "animation/settings.h"
@@ -339,18 +340,7 @@ namespace animation::behavior_graph
                 a_state.capture.lines());
             for (std::int32_t i = 0; i < n; ++i)
             {
-                // hkVector4/hkQuaternion store a 128-bit quad with no named components, so the
-                // four floats are copied out the same way the candidate side reads a pose sample.
-                RE::hkQsTransform const& t = pose[i];
-                float trans[4]{};
-                float rot[4]{};
-                float scale[4]{};
-                std::memcpy(trans, &t.translation, sizeof(trans));
-                std::memcpy(rot, &t.rotation, sizeof(rot));
-                std::memcpy(scale, &t.scale, sizeof(scale));
-                logger::info("SOURCE TIMELINE pose-snapshot track={} trans={:.6f},{:.6f},{:.6f} rot={:.6f},{:.6f},{:.6f},{:.6f} scale={:.6f},{:.6f},{:.6f}",
-                    i, trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], rot[3],
-                    scale[0], scale[1], scale[2]);
+                logger::info("{}", format_source_pose_track(i, capture_pose_sample(pose[i])));
             }
             for (std::size_t i = 0; i < shown; ++i)
             {

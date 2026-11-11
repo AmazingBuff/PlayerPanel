@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-08（夜）。**E1/E2 两切片已闭合；E3 首轮停在第一分叉，配对轴已改按输入历史并预注册 v2；R attempt 1 因看错图被停，v87 普查已定位根因（漏掉 `FirstPerson`）并修复（v88），**E3 的 C3/C4 已交付：R/C 两次运行配对 2/2**；[C-G5-E2-C](#c-g5-e2-c) 时钟账本已预注册（候选侧首轮账本成立、源侧阻塞），[C-G5-E4](#c-g5-e4) 源侧姿态/时钟捕获已预注册（[本会话摘要](#status-20261111-session)；[§八](#c-g5-e3-r) 的 `source-settles=0`、[run 1](build.md#v86-g5e3-run1-2026-11-10)、[C-G5-E3 v2](#c-g5-e3-v2)、[R attempt 1](build.md#v86-g5e3-r1-2026-11-10)、[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10)、[v88](build.md#v88-g5e3-firstperson-2026-11-10)、[§九 更正](#c-g5-e3-v2)）。**新会话先读[当前证据交接](#handoff-20261102-evidence)与 [E1 修复后边界](#g5-e1-evidence-repair)**。G1/G2 有界通过，G3-A 成立、G3-B 相位回放通过。**G4 A/B/C 保留：C 已在 v69 修复版上重跑关闭（[attempt 2](#c-g4-c1-concurrent-events)：`calls=64/other-graph=64`、源图 `events=0`、`display-close`、两注入回放第九次逐位复现）**。v67/v68 保留源采样入口活性及六个采样线程 ID 的记录；**撤回 E1 完整收官和 411 次输出完成的解释**。63856 是读取 poseLocal、写场景节点的应用函数。v69 三轮上机后，[audit32](behavior-graph-construction-audit.md#audit32) 把完成点（两捕获窗 + 5 调用点）、输出范围（n 路径三分）、寿命（单点 lazy 分配、无 free）、快照顺序（四写点）四项静态闭合；**[v3 契约](#c-g5-e1-v3) 已实现并通过运行（v71 `cbeba8a2…`，[R1–R7 全部满足](#c-g5-e1-v3)：三 detour、五路径分类 `un=0`、per-tid 完成配对 424/424、主路径范围零越界、`pose-stable`、`fill==cap==116`、`in-flight-max=1`）**；v70 首轮因分类用 call 地址而 R2 硬停，四处仪器缺陷已修。**E2 已闭合**（[C-G5-E2](#c-g5-e2)：E2-A 收敛，E2-B 的 B1/B2/B6 通过、B3/B4 顺延）；**E3 契约已预注册并出[实现评审草案](#c-g5-e3-r)（实现未授权）**，门 1 NOT_READY。G5 未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)与[离线 A 结果](#c-g5-cal-a-run1-20261111)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v92 + E4 运行档；本次离线编译通过，Release 兼容构建因 SDK 访问受限未完成，没有重验安装、部署或上机。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -12,14 +12,14 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | 静态四项闭合 + **v3 运行通过（v71，R1–R7）**；门 1 NOT_READY | [E1 修复后边界](#g5-e1-evidence-repair) + [v69 两轮](#c-g5-e1-v69-run2)：跳板/传送/对账恒等式成立，resumed 段钉住源图 408 次引擎采样、788/788 全配对、六工作线程反证复现；63856 应用入口 ≠ 输出完成——**完成点（两捕获窗+5 调用点）、输出范围（路径三分 n）、poseLocal 寿命（无 free）、快照顺序（四写点）已由 [audit32](behavior-graph-construction-audit.md#audit32) 静态闭合**，运行侧按 [v3 契约](#c-g5-e1-v3) 判据 R1–R7 取证（v71 通过）。E1 已闭合；E2-A/B 已闭合、E2-C 已预注册（[候选侧账本成立](#c-g5-e2-c)，源侧时钟阻塞）；E3 配对账本 **2/2**（[v2](#c-g5-e3-v2) §十，v88）；源侧 clip 与姿态 oracle 仍缺，[E4](#c-g5-e4) 已预注册待实现 |
+| G5 | **离线 A 已完成；原生校准 NOT_READY，G5 未冻结/未通过** | [E1 v3](#c-g5-e1-v3) 有界通过；[E3](#c-g5-e3-v2) 配对 2/2；[E4/v92](build.md#v92-g5e2c-run1-20261111) 四块 116 轨快照、零丢失，装备链速率可算。[离线 A](#c-g5-cal-a-run1-20261111)仅校准固定控制的采集/格式/解析；[CAL v1](#c-g5-cal-v1) 的 K1–K6、原生 B、时间资格、B3/B4 与完整贡献仍缺，既有证据不证明姿态等价 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
 [v33](#g2-v33-run)（v32 代码的重建）在 2026-10-28 22:28 上机取得第一个非中断窗口：120 次 eligible 显示调用里候选语义运动 120/120（1e-6、符号不变）、实际写骨 109/116（`missing=7`，旧日志只列 4 个控制/挂点标签、另 3 个未知；标签不能证明可忽略，`109+7+0=116` 自洽）、源侧 `drift=none` 且 before=after、**画面连续运动经用户确认**。同一窗口的门读数 `active/children=true`、`numAnim=numData=116`，从运行侧确认 v30 那组 `children=0`/`numData=62016` 是读错对象。G2 因此按原范围判 PASSED；v34 后续补齐四条已观察边界，确切拒绝原因、同 controller 来源替换和 frozen-only 拒绝仍未验，装载销毁及 G3-B/G4–G6 不由此通过。
 
-[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口。相同代码重建为 v33 后，完整窗口与 v34 四条边界均已有运行记录。最新记录安装为 v68、最近记录 INI dormant（见[部署](#deploy-state)）；v42/v43 的“本地未部署”只描述当时工件，后续 v46-20261030 已观察正常工作流。默认产品仍走装备驱动 OAR 路径；缓存回放不作为既定方向。
+[v32](#g2-v32-display-session)让冻结和逐步显示共用带 generation/owner 的来源有效性；测量随 request/controller 重置，F7 重捕获重开 view 窗口。相同代码重建为 v33 后，完整窗口与 v34 四条边界均已有运行记录。最近记录部署为 v92 + E4 运行档（见[部署](#deploy-state)，本次未重验安装）；v42/v43 的“本地未部署”只描述当时工件，后续 v46-20261030 已观察正常工作流。默认产品仍走装备驱动 OAR 路径；缓存回放不作为既定方向。
 
 
 
@@ -131,10 +131,10 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **最新记录安装：v86（G5-E3 manifest）**：DLL 1,812,992 字节 `57a2b11ae4aa11cf…1eea645`、PDB 49,377,280 字节 `04f12c175b8fa7bd…375d6805`、CodeView age 431、身份 `…-v86-g5e3-manifest-1e645a6d48-1e645a6d48-cl94faaed0c6-20261109T145833Z`（[构建记录](build.md#v86-g5e3-manifest-2026-11-09)）；v85 三件套备份于 `dist/deploy-backup-20261109-v85-v86pre/`。
-- **部署 INI：E3 运行档** `68be6ee9…`，10,105 字节、无 BOM、全 CRLF；相对上一版只把 `SourceTimeline=false` 改成 `concurrent` 并补 5 行注释。13 个运行键回读通过（`IndependentGraph=inject`、`DisplayPose/DisplayStep=true`、`SamplingLiveness=concurrent`、`SourceTimeline=concurrent`，其余仪器全 off）。
-- **上机状态：E3 两段运行完成（R attempt 2 ＋ C run 1，配对 2/2）；INI 已回 dormant `be26ac09…`**（[账本](#c-g5-e3-v2) §十）。历史：R attempt 1 因图不符被停：[attempt 1](build.md#v86-g5e3-r1-2026-11-10) 三条签名齐全但看的是 `463/36`；[v87 普查](build.md#v87-g5e3-graph-select-2026-11-10) 给出 `DefaultFemale` 652/106 与 `FirstPerson` 463/36，根因是小写 `"1stperson"` 过滤漏掉 `FirstPerson`；[v88](build.md#v88-g5e3-firstperson-2026-11-10) 改为大小写不敏感并统一三处。当前盘上：v88 DLL `1c93ba38…` + R 运行档 `a14ba59e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`），下一步重跑 R。
-- **历史**：v85（E2-B，`e5552e89…`）已由本轮取代；v69 及更早的 dormant 记录只描述当时工件。
+- **最近记录部署：v92（G5-E2-C clock ms）**：DLL `fe697ba91ffdd36c0eccd62c4a458405bbab946702a27327140e8ce72d8bcb38`，PDB `f57673ce1a618203e4c278d70138793cc0fd03731bbca88c8256cab8a1e11914`，身份与备份见 [v92 构建/部署](build.md#v92-g5e2c-ms-2026-11-10)。这是历史部署记录，本次文档工作未重新核验安装目录。
+- **最近记录 INI：E4 运行档** `8864075e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourcePoseCapture=true`、`SamplingLiveness=off`）；不是校准配置。仓库样例仍为 dormant 默认；修改设置需重启，不能直接用旧仪器运行 CAL v1。
+- **最近上机：v92 2026-11-11 00:26**，四块 116 轨快照、100 条时钟行、零丢失；[运行记录](build.md#v92-g5e2c-run1-20261111)。E3 两段运行已配对 2/2；[离线校准 A 已完成](#c-g5-cal-a-run1-20261111)，[CAL v1](#c-g5-cal-v1) 的原生 B/K1–K6/时间仍 NOT_READY。
+- **历史**：v86 E3 concurrent 运行、v88 R/C 运行与回 dormant、v89–v91 捕获迭代分别保留当时配置/工件；[最新摘要](#status-20261111-session)拥有后续顺序。更早的 dormant 记录不代表最近部署状态。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
 
@@ -3175,7 +3175,7 @@ G3-B 确定性姿态哈希（装备段 `bc160a8c/63f638a6/c407cb4e`、卸下段 
 <a id="g5-draft"></a>
 ## G5 完整输出姿态对照（执行方案 v2，2026-11-03）
 
-> **状态：G5 执行方案 v2 保留，未冻结/未通过。** [audit28](behavior-graph-construction-audit.md#audit28) 与 [audit29](behavior-graph-construction-audit.md#audit29) 已做静态审计，v67/v68 入口探针已有运行记录；[后续审计更正](#g5-e1-evidence-repair)撤回 E1 完整收官，当前修复代码待部署/上机。E1 剩余证据、E2/E3、校准及正式验证均未完成。v1 历史仍在 `c372600d7d596210ce909c57010e88bfcb280fb5`，旧日志不改写。
+> **状态：G5 执行方案 v2 保留，未冻结/未通过。** [2026-11-11 运行摘要](#status-20261111-session)记录 E1 v3、E3 2/2、E4 四块源快照与装备链速率的有界进展；[CAL v1](#c-g5-cal-v1)已写定校准规则，但输入/资源、完整贡献、同代阶段与后处理边界等前置资格尚缺。不能据此跳过门 1/2，原生校准运行 NOT_READY。v1 历史仍在 `c372600d7d596210ce909c57010e88bfcb280fb5`，旧日志不改写。
 
 ### 一、目标与参照职责
 
@@ -3283,7 +3283,7 @@ v1 的 `1e-4 / 1e-3 / 1e-5` 只保留为**历史示意值**，不是本方案的
 
 ### 八、当前下一步与导航
 
-**门 1 NOT_READY。** E1 静态审计和 v67/v68 入口活性运行已做；本轮修复与剩余缺口见 [E1 修复后边界](#g5-e1-evidence-repair)。不能把 63856 入口称为完成点，或直接复用旧线程/配对结论关闭 E1；E2/E3 依赖完整的阶段、寿命和同代证据。
+**门 1/2 仍有未关闭的前置项。** 以 [CAL v1 的 K1–K6](#c-g5-cal-v1)作为当前缺项清单，先核对输入/资源/控制资格，再补齐同阶段同代完整观测和 B3/B4；满足前置后才运行独立校准。E1/E3/E4 的历史通过范围保留，不能扩成完整 G5 或门 3 通过。下面 2026-11-03/04 的校验说明只描述当时状态。
 
 **历史方案校验（2026-11-03）**仅做文档链接/锚点与原件保留检查，当时未构建或运行行为测试。**本轮修复（2026-11-04）**已经执行两个定向离线回归、旧驱动兼容编译和本地 CharacterPanel 构建，结果与限制见 [修复验证](build.md#g5-e1-evidence-repair-20261104)；仍未部署/上机，不产生新的游戏通过结论。
 
@@ -4716,8 +4716,184 @@ v92 给 `clock-sample` 加了 `ms`（墙钟基准）后，源侧速率**首次�
 | E2-C 源侧 | run 1：`1HM_Idle`/`MLh_Idle`/`SCAR` **1.001×**、`1HM_Unequip` **0.999×**；R7（剔除保持段）/R8（回退即切段）预注册 | 可算、规则就位 |
 | E4 | 契约 + v89/v90/v91 三次锚点迭代（全变量 → 两命令边 → 四边）＋ 三次运行 | run 1 不合格（8 块）；run 2 合格（2 块）；**run 3 合格（4 块，零丢弃）** |
 
-**关闭判据**：E3 的 P1–P5 与 E4 的 S1–S6 均有合格运行；E2-C 候选侧 T1–T5 成立、源侧按 R7/R8 可判。**未闭合**：E2-B 的 B3/B4、源侧 clip 身份（C2 只有候选一半）、门 3 姿态对照（未立项）。
+**关闭判据**：E3 的 P1–P5 与 E4 的 S1–S6 均有合格运行；E2-C 候选侧 T1–T5 成立、源侧按 R7/R8 可判。**未闭合**：E2-B 的 B3/B4、源侧 clip 身份（C2 只有候选一半）、[CAL v1](#c-g5-cal-v1) 已写定规则，但前置资格未齐、原生校准未运行。
 
 **部署终态**：v92 DLL `fe697ba9…8bcb38` + E4 运行档 `8864075e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourcePoseCapture=true`、`SamplingLiveness=off`）；备份链 `dist/deploy-backup-20261111-v91-v92pre/` 等。
 
-**下一步排序**：① 门 3 姿态对照契约（容差/空间/旋转度量/独立校准）；② 源侧 clip 身份与 E2-B 的 B3/B4；③ 联合验收 → 协议冻结 → 新正式验证。
+**下一步排序（2026-11-11 离线结果更新）**：[C-G5-CAL v1](#c-g5-cal-v1) 的[离线 A 已完成](#c-g5-cal-a-run1-20261111)；原生 B/K1–K6/时间仍 NOT_READY。先补输入/资源与控制资格、同代完整采样及 B3/B4 边界，再原生独立校准 → 联合验收 → 完整协议冻结 → 新正式验证。
+
+<a id="c-g5-cal-v1"></a>
+## C-G5-CAL v1：姿态测量与时间量化的独立校准契约（2026-11-11）
+
+**状态：研究规则已写定，校准运行 NOT_READY；数值容差未产生，G5 门 3 未通过。** 本契约属于 [G5 v2](#g5-draft) 的仪器准备与独立校准，沿用门 1 → 门 2 → 门 3 → 完整冻结 → 新正式验证的顺序；写成契约不代替前两门退出。本文只登记研究范围、前置证据和执行规则，不授权产品代码修改、原生 hook、构建部署或上机运行。需要补充仪器时另立实施范围；本次没有新二进制、INI 或测试结果。
+
+### 一、目标、范围与退出物
+
+目标是独立确定 **parent-local 位置、旋转、原生 XYZ 缩放的测量误差，以及采样时间的量化界**，交付可复核的容差提案与适用范围。先核对输入/资源与观测阶段，再校准，最后才准备正式协议。
+
+本契约不测定源与候选是否姿态等价，不调节候选来追随源输出，不把单层重采样当混合姿态 oracle，不替代完整层/逐骨通道权重、blend/mask/additive、最终渲染姿态或 G6 验证。层与权重的资格和数值规则继续属于 G5 完整目标，未覆盖项必须带入门 4 的阻塞清单。
+
+退出物为：资格与缺项账本、控制资源清单、完整采样及映射对账、独立控制的误差/时间分布、容差推导表、适用阶段/资源/数值范围和停止原因。**“本契约完成”最多表示限定测量范围已校准，不表示 G5 或整个门 3 通过。**
+
+### 二、证据基线与当前缺项
+
+本契约基于仓库 `a7dbf557f4` 的文档和源码，以及保留的 v88/v91/v92 运行。旧数据只用于识别缺项，不作为本契约的校准样本或未来正式样本。
+
+| 已有证据 | 可以保留 | 本契约不能据此推定 |
+| --- | --- | --- |
+| [E3 v2 账本](#c-g5-e3-v2)：`paired=2 missing=0` | 两输入的序数、签名和状态端点配对 | 相同装备初态、剪辑实例、采样时刻或逐骨输出 |
+| [v91 E4 run 3](build.md#v91-g5e4-run3-20261111) 与 [v92 run 1](build.md#v92-g5e2c-run1-20261111) | 每轮四块、每块 116 轨、零丢失的源姿态；锚点差一个 UI 采样帧 | 完整过渡覆盖，或两侧元数据与 pose 属于同次 Generate；UI 帧差也不是引擎 dt |
+| [E2-C](#c-g5-e2-c) 的候选装备段账本及源装备链速率 | 已声明范围内的速率证据与 R7/R8 解码规则 | 同一片段、完整生命周期/循环回绕证明，或可直接沿用的姿态/时间容差 |
+| [E2-B](#c-g5-e2-b) 的 B1/B2/B6 | footIK 活性和 out 改写已观察 | B3/B4 的 memcpy 输入与最终 poseLocal 一致性；后处理全部归因已完成 |
+
+当前已出现必须登记的差异：[候选日志](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log) 的装备片段为 `H2H_Equip`，候选输入探针是空变量的 observe-only；[源日志](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log) 有 `iRightHandEquipped 0→1`，[源捕获](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log) 是 `1HM_Equip`。卸下段还保留候选第 21 步返回 0 与源约 1.26 s 的阶段时长差。**这些是待解释的输入/行为差异，不是测量噪声。** 资格查明后，候选选错片段或时序偏差必须保留为被测差异，不能通过删帧、换资源或偏移时间消除。
+
+### 三、校准运行的前置资格（K1–K6）
+
+| 编号 | 开跑前必须提供的证据 | 当前状态 |
+| --- | --- | --- |
+| K1 身份与映射 | 匹配 DLL/PDB/build/INI、runtime/OAR/资源清单；源图确属 controller，源与候选各有 actor/graph/generation/request/view；骨架完整清单、父索引、reference pose、binding/默认填充规则 | 缺源侧完整资源/实例身份与实际映射清单 |
+| K2 受控输入与独立控制 | 冻结装备初态及外部输入的内容/顺序/相对时刻，区分外部输入和图内输出；两项控制具备独立真值、资源哈希和可审计承载路径 | H2H/1HM 输入差异待核对；控制资源尚未登记 |
+| K3 同阶段与同代快照 | 候选在 Generate 返回的 `e_post_sample` 取得完整快照；源有已审计的等价完成边界、寿命和 generation 关联；pose、clip 元数据及贡献信息在更新前固定为同代快照 | 候选现有 0/60 步细节在 `e_pre_sample`；源 post-UI 行尚不能单凭指针/帧号证明上述关联 |
+| K4 后处理边界 | B3/B4 的逐分量证据，或另经审计证明两侧都在同一、明确命名的边界；未验证链保持开放，不能当噪声或排骨 | 未闭合；本契约不批准另选阶段 |
+| K5 完整计数与生命周期 | 应有/访问/记录/遗漏逐项对账，generation 失效可取消，完整层/权重/混合资格仍按门 1 审计；所有上限与丢失都可见 | 现有稀疏快照和容量上限不能代表完整仪器 |
+| K6 实施与数据计划 | 先有经评审的仪器范围、两个控制的就绪清单、采集/分析版本及预算，再采集本契约的新数据 | 尚无本契约的实现或运行记录 |
+
+K1–K6 未全部满足时，不启动门 3 原生校准；可先做解析控制和仪器离线准备，但须标为前置工作。控制资源名称、哈希、真值来源、承载路径或实际观测边界尚未登记时，状态必须为 NOT_READY，不能用现有装备链输出代替控制。
+
+身份分两层记录：进程内用图 generation、clip 节点身份与激活序号区分实例及复用；跨运行用资源完整相对路径/内容哈希、binding 身份与逻辑激活序号对应。**指针、leaf 名、binding 数量均不能单独充当跨运行身份。** 同名不同实例、资源重载、mirror/additive/mask 或 OAR 变体必须可区分；字段不可观测就登记缺项，不猜偏移。
+
+### 四、预先固定的两个控制
+
+**控制 A：解析已知变换的采集/序列化控制。** 在隔离的离线载体中，把独立编制的已知 `hkQsTransform` 数据送过实际采集、序列化和离线度量路径，不写游戏源图。固定非零位置、非恒等旋转和非均匀 XYZ 缩放；真值和期望误差用解析计算登记，不能调用被测比较函数生成答案。控制必须能检出一个已知非零差：例如位置差 `(0,3,4)` 的欧氏误差为 5，旋转夹角 60° 的误差为 `1-cos(30°)`，单独 Z 缩放差 0.125 的误差为 0.125；相同旋转的 `q/-q` 表示应保持等价。所有数据行是这一个固定控制的数据，不扩展成参数矩阵。
+
+A 区分“度量/通道读取错误”和“表示精度损失”，只证明它实际经过的传输路径；离线通过不能代替源侧完成/线程/寿命证据。
+
+**控制 B：已知单层、固定时间的原生控制。** 先登记一个真值可独立确定的控制资源，证明只有一个有效层、已知权重和 binding/reference/default-fill，且没有未建模的 IK、物理、OAR 变体或随机输入。真值来自固定的 authored 数据及其可审计采样语义；仅重复调用同一个 sampler 只能证明重复性，不能单独证明正确性。现有 `SamplePartialTracks` 可作为实现审计入口，不自动取得独立 oracle 资格；不能把其单层结果直接对照任意混合 `poseLocal`。
+
+B 在隔离控制载体上执行，源 Actor 仍自然运行且只读，不创建第二 Actor、不手动推进源图。若需要控制图，沿用每进程一张保留候选的生命周期边界，不执行 NO-GO 的装载 teardown。**目前没有已登记且具备上述资格的控制资源/路径，因此 B 未就绪。** 资源及承载路径须在任何控制输出值被查看前写入不可变运行清单；无法找到合格控制则停止原生校准。
+
+### 五、采样、配对、覆盖与预算
+
+1. **重复规则**：A 的同一固定数据经过三次独立往返；B 预定三个独立进程，每进程一个窗口，保持同一控制/资源/采样版本。三个尝试全部保留；失败不得静默替换为第四个“好窗口”，重跑须先登记原因和新批次。
+2. **B 的时间网格**：独立 baseline 记 `t=0`；之后完成 120 次 `dt=1/60 s` 的控制推进。第 `j=0..119` 次完成输出归属 `t=(j+1)/60 s`，不是旧 `e_pre_sample step=0` 的 bind/前次输出。每代在下一次更新前取得两份读数，以验证读取一致性；不能用相隔两帧的姿态差当读取噪声。
+3. **时间配对**：B 以预定控制输入序数、完成代号及累计已交付 dt 为主键；不按姿态、候选状态或最小误差选样。时间戳须有同一进程内的单调基准、频率/单位及采集时刻，记录实际调用前后界；不能直接相减不同运行的 TSC/墙钟。E3 的序数配对保持原义，不由本契约追加跨运行时钟对齐。
+4. **原生源采样量化**：另行证明输入锚点到已完成输出的时间区间，以及输出到读取的延迟区间，作为 B 的同一计时控制记录。现有 `anchor-delta-frames=1` 与每 10 UI 帧时钟采样不能代替该证明。无法观测时只交付离线/控制载体结果，原生源计时资格仍 NOT_READY。
+5. **全量分母**：应有骨数来自已登记 skeleton；每个 baseline/完成输出保存全部应有轨道的 3+4+3 分量、骨索引/父级和映射原因。116 是当前资源观测值，109/116 是历史场景写骨覆盖，二者都不是全局默认分母。reference/default-fill 轨道不能因未 author 而删除；重名必须以骨架/索引/父路径消歧。
+6. **对账**：B 每进程应有 1 个 baseline、120 个完成代、每代 2 份读数；按快照、骨、分量、clip/贡献实例统计 expected/visited/recorded/missing。任何非有限值、重复/缺失主键、无效映射或截断单独计数，不进入正常误差分布，也不能被计为成功或零误差。
+7. **预算**：新仪器须在 K6 评审前确定格式；本契约每进程完整变换工件上限 8 MiB、身份/时间/对账工件上限 1 MiB，文本摘要最多 200 行。上限不足时整轮无效，保留已收计数；不能截断后继续裁定。不得复用 E4 的 8 块/120 时钟行/1,500 行预算宣称完成此采样，也不修改其历史预算。
+
+控制数据保留序列化前的原始 float 位值、序列化后的十进制值和分析版本，以便分离真实数值、格式舍入与度量误差。若具体资源/记录格式无法满足预算，必须在采集前修订本契约和清单；不能边看数据边扩容。
+
+### 六、空间、度量与无效值规则
+
+| 项 | 本契约定义 | 边界 |
+| --- | --- | --- |
+| 位置 `E_p` | 相同骨父级的 parent-local 三分量欧氏距离 `sqrt(dx²+dy²+dz²)`，用 double 累加 | 使用原生存储单位；单位换算须有审计依据。root 的原始轨道保留，extracted motion 的额外贡献另列；不能未经证明剥离 |
+| 旋转 `E_r` | 有限、非零范数的四元数先归一化，`c=clamp(abs(dot(q_a,q_b)),0,1)`，`E_r=1-c` | `q/-q` 等价；诊断角 `theta=2*acos(c)`（弧度）。clamp 只处理舍入，不能掩盖非有限值/零范数 |
+| 缩放 `E_s` | `max(abs(sx_a-sx_b),abs(sy_a-sy_b),abs(sz_a-sz_b))` | 原生 XYZ 全保留，在 Ni uniform-scale/scaleX 转换前读取 |
+| 时间 `E_t` | 已知控制的输入/完成/读取区间与预定累计 dt 的偏差及区间宽度，单位秒 | 区分时钟分辨率、读取延迟、量化与真实行为时钟偏差；未知的代/阶段不能压成一个容差 |
+
+未匹配骨/通道、身份/阶段歧义、非有限值和零范数不是“大误差样本”。控制或仪器存在这些情况就停止校准、报告原因；未来正式运行中，合格观测下的候选无效值仍按正式失败处理，不能借“校准无效”删掉被测缺陷。
+
+位置旧 `pose_component_delta` 是分量最大差，与本契约的欧氏距离不同；`clip_reference_policy.h` 既有 epsilon 和 G5 v1 示例值都不作为本契约的默认阈值。
+
+### 七、统计与容差推导（先固定方法，后产生数值）
+
+- **样本分组**：按控制/运行/阶段/骨/通道及已知时间点保留原始键。报告三次运行各自与合并的 count、min、median、P95、P99、max；分位数用升序 nearest-rank（秩为 `ceil(p*N)`）。记录全部尝试，不删离群值、不取“最好一轮”；本样本量不声称总体置信保证。
+- **表示界 Q**：从原始位值到实际序列化/解析/度量路径独立求上界。若两侧均采用已验证的六位小数最近舍入，每侧每分量界为 `5e-7`，则位置对的表示界为 `sqrt(3)*1e-6`、XYZ 缩放为 `1e-6`；不同精度、格式截断或分析算术需重新证明。旋转须计入归一化、原始范数范围及 dot 的舍入，不能照搬分量界。
+- **重复性界 N**：来自合格已知控制在相同输入、同一预定时间上的跨运行测量差，取全样本最大值。**同代两次原始读取必须逐位一致**；不一致先判撕裂/生命周期问题，不纳入 N。解析控制的系统偏差不能被 N 吸收；原生控制偏离独立真值而无已知误差来源时，先审计，不能直接增大阈值。
+- **姿态提案**：`tau_p=round_up(Q_p+N_p)`，`tau_s=round_up(Q_s+N_s)`。旋转先在角度空间合成：`tau_theta=min(pi,Q_theta+N_theta)`，再换为 `tau_r=1-cos(tau_theta/2)`，避免直接相加 `1-abs(dot)`。`round_up` 表示在报告保留位数向外舍入，不是额外乘安全系数；提案同时保留未舍入值和推导过程。
+- **计时提案**：`epsilon_t` 分列已证明的时间戳表示界和合格控制的时间区间上界；读取滞后、输入量化和批量交付各有来源。未知或随阶段改变的延迟不能当固定偏移扣掉；批量交付须先有审计过的代/时间归属，不能以观测到的最大停顿直接放宽到“通过”。
+- **时间不自动变成姿态噪声**：若正式比较需要把 `epsilon_t` 传播为运动误差，须在门 4 前独立证明适用资源/骨/通道的速度或插值误差上界及组合方法。当前提案不把源候选差、相邻帧最大差或现有相位时长差加进姿态容差。
+
+上述数值均是限定仪器、精度、资源和范数/运动范围内的**测量容差提案**。控制不覆盖正式条件时必须标为不适用，不能用低运动控制推定所有片段；已有 E2-C 的 `1.000 ± 0.017` 也不自动变成本契约的 `epsilon_t`。
+
+当前数值表应明确登记为 `tau_p/tau_r/tau_s/epsilon_t = 未产生`，不得填 0、沿用历史 epsilon 或从源候选差反算。控制清单和推导方法变更须在新校准批次前升版本；已看过的数据不得按新规则重新充当预注册样本。
+
+### 八、判据与停止规则（CAL1–CAL7）
+
+| 编号 | 退出条件 | 不满足时 |
+| --- | --- | --- |
+| CAL1 资格 | K1–K6 都有明确证据与实际控制清单 | NOT_READY，不开原生校准 |
+| CAL2 已知真值 | A 的解析度量与通道传输正确；B 的单层/真值/时间有独立依据 | 控制/仪器待修复；不推导容差 |
+| CAL3 同代与覆盖 | 每代两次读取逐位一致，全部骨/通道和贡献计数对账，映射明确 | 无效，回门 1/2 |
+| CAL4 重复性与计时 | 三个预定尝试完整，无未解释偏差；时间区间与批量归属可证 | NOT_READY，保留全部尝试 |
+| CAL5 无丢失 | 完整工件可读、哈希匹配，missing/dropped/truncated 均为 0 | 整轮证据不足，不报部分成功 |
+| CAL6 容差可追溯 | Q/N、旋转角合成、向外舍入、时间界及适用范围可独立复算；未解决范围显式开放 | 数值不冻结 |
+| CAL7 裁定边界 | 只报告本契约的校准结果；完整层/权重/混合、后处理与正式配对缺项另列，未拿校准数据做 G5 验收 | 不允许进入完整冻结 |
+
+任一 `[E]`、崩溃、源污染、需要写源或未知 ABI、采集中资源/graph/generation 失效，以及 reset/close/PreLoadGame/NewGame 都停止当前原生窗口并保留原因、已收与缺失计数；不拼接下一窗口，不继续解引用 stale 记录。已知控制不符合预期时可以修复仪器后另登记新批次，不改变本批次裁定，也不直接宣称产品失败。
+
+### 九、交付、后续顺序与维护
+
+校准报告至少包含：
+
+1. 本契约版本、运行清单与分析版本，DLL/PDB/INI/build/runtime/OAR/资源哈希，独立控制真值及其来源。
+2. K1–K6 的证据/缺项与 H2H/1HM 输入差异处置；源/候选/控制载体身份、骨架/binding/实例映射、观测阶段与同代证明。
+3. 原始位值和完整变换/计时工件、全部三个尝试及取消记录，expected/visited/recorded/missing/dropped/truncated 对账和工件 SHA-256。
+4. 按骨/通道/阶段分布与极值位置，Q/N/时间界的来源、未舍入和向外舍入数值、适用范围、未覆盖项。
+5. 唯一裁定：`NOT_READY`、`INVALID`，或 `CALIBRATED（仅列明范围）`；最后一种也必须附 G5/门 3 仍开放的项目，不能写成 G5 PASSED。
+
+**下一步顺序**：先形成 K1/K2 的输入/资源/控制清单并定位 H2H/1HM 差异 → 经评审补齐 K3–K6 仪器及 B3/B4 边界 → 独立校准 → 联合证据验收、完整协议冻结 → 另采新的正式运行。E3/E4 的历史裁定不变，G6 后置，装载 teardown NO-GO。
+
+文档维护为 `Documentation Impact: update`：本节是 canonical 契约，入口同步至 [README](../README.md) 与 [历史索引](history.md)，研究登记同步 [Changelog](../CHANGELOG.md)。改动计量、时序、控制、分母、预算或资格规则时须升契约版本并同步这些入口；不可回写旧运行结论。本文仅依据本地已审计边界规定研究要求，不引入依赖；未来原生实施若涉及新 API/ABI、hook 或未知布局，必须另行补齐兼容性与来源证据。
+
+| 现有代码/验证入口 | 审计用途与限制 |
+| --- | --- |
+| [source_timeline.cpp](../src/animation/behavior_graph/source_timeline.cpp)：`emit_pose_snapshot` / `emit_clock_sample` / `collect_source_clips` | 源捕获与时钟；核对 116 轨/8 clip/256 node 上限、精度和完整计数，不能默认为本契约就绪 |
+| [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp)：`read_pose_local` / `log_pose_content` / `log_clip_reference` | 候选读数、稀疏明细与 pre-Generate 边界 |
+| [drive_step_policy.h](../src/animation/behavior_graph/drive_step_policy.h)：`drive_graph_step` | Update → pre-sample → Generate → post-sample 的真实顺序 |
+| [clip_reference_policy.h](../src/animation/behavior_graph/clip_reference_policy.h)：`pose_component_delta` / `pose_rotation_agreement_error` | 既有位置/旋转定义与历史 epsilon，不能直接冒称新契约 |
+| [clip.cpp](../src/animation/clip.cpp)：`sample_animation_clip` | 单层采样的审计入口，不能自行取得混合输出 oracle 资格 |
+| [source_timeline_capture_test.cpp](../tests/source_timeline_capture_test.cpp) / [behavior_graph_clip_reference_test.cpp](../tests/behavior_graph_clip_reference_test.cpp) | 既有预算/度量检查入口；本契约无新增可执行测试，未运行校准或构建 |
+
+<a id="c-g5-cal-a-run1-20261111"></a>
+## C-G5-CAL A：离线控制结果（2026-11-11）
+
+**裁定：`CALIBRATED_OFFLINE_A_ONLY`。** 本节追加实际实施/运行证据，不改写上方 CAL v1 的资格、控制、预算、统计或停止规则；上方“尚无实现/运行”描述契约登记时的基线。仅完成控制 A 实际经过的 typed 采集 → 六位小数 track 文本 → 离线解析/度量。**K1–K6、原生控制 B、时间校准和 G5 仍 NOT_READY；`tau_p/tau_r/tau_s/epsilon_t` 未产生，门 3 未通过。**
+
+### 实施边界与预先登记
+
+[pose_capture_policy.h](../src/animation/behavior_graph/pose_capture_policy.h) 的 `capture_pose_sample` 是唯一的 translation XYZ / rotation XYZW / scale XYZ 提取实现，`format_source_pose_track` 统一原有 SOURCE TIMELINE track 消息及 `.6f` 精度。[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 `pose_sample_from_transform` 和 [source_timeline.cpp](../src/animation/behavior_graph/source_timeline.cpp) 的 `emit_pose_snapshot` 只改为调用共享入口；既有 clip-reference 度量/epsilon、设置、时钟、预算和原生读取边界未改。
+
+[pose_calibration_capture.cpp](../tests/pose_calibration_capture.cpp) 使用明确标为 offline substitute 的 16 字节对齐、0x30 三 quad 载体；没有 SDK/native 调用、未知偏移或游戏源写入。translation/scale 第四 lane 填入各异 NaN/Infinity poison，十个有效分量的 raw bits 与独立清单逐位吻合且无 poison；这不证明 SDK/ABI、原生完成、线程或寿命安全。共享 track 消息经过本控制，实际日志 sink/envelope 未经过。
+
+[calibrate_pose.py](../tools/calibration/calibrate_pose.py) 在第一次调用可执行文件**之前**冻结 fixture `g5-cal-a-analytic-sign-v1`、解析理想值来源、独立 expected binary32 bits、源文件/可执行文件哈希、版本和计划计数。只使用两组固定 pair：解析扰动 `(0,3,4)` / 60° / Z 缩放 `+0.125`，以及相同变换的精确 `q/-q`。double 度量逐侧归一化；独立 Decimal(80) oracle 用 `abs(dot)/sqrt(norm2_a*norm2_b)`，不调用被测 double 度量生成答案。
+
+### 运行、计数与工件
+
+当前分析器的 [attempt-002 report](diagnostics/g5-calibration-a-20261111/attempt-002/result.md)、[预冻结 plan](diagnostics/g5-calibration-a-20261111/attempt-002/plan.json)、[manifest](diagnostics/g5-calibration-a-20261111/attempt-002/manifest.json) 与 [完整 metrics](diagnostics/g5-calibration-a-20261111/attempt-002/metrics.json) 为当前入口；manifest SHA-256 为 `ee3e8d62383567012d5fcf2e82bc7bda5b1c98828a2e8574293c0de4d1b5936d`。原始 [round 1](diagnostics/g5-calibration-a-20261111/attempt-002/round-1.stdout.jsonl)、[round 2](diagnostics/g5-calibration-a-20261111/attempt-002/round-2.stdout.jsonl)、[round 3](diagnostics/g5-calibration-a-20261111/attempt-002/round-3.stdout.jsonl) 与各自空 stderr 全保留。
+
+| 计数（当前批次） | expected | visited | recorded | missing / dropped / truncated |
+| --- | --- | --- | --- | --- |
+| 独立进程往返 | 3 | 3 | 3（各 exit 0） | 0 / 0 / 0 |
+| pair（每次 2） | 6 | 6 | 6 | 0 / 0 / 0 |
+| track 行（每次 4） | 12 | 12 | 12 | 0 / 0 / 0 |
+| 有效分量（每行 10） | 120 | 120 | 120 | 0 / 0 / 0 |
+
+[首次完整有效 attempt-001](diagnostics/g5-calibration-a-20261111/attempt-001/result.md) 与[首次有效索引](diagnostics/g5-calibration-a-20261111/result.md) 未覆盖。首次通过后，评审要求补明 runner 的完整性失败原因，并允许后续有理由的批次识别“已有原始文件但尚无最终 manifest”的不完整前批次。该小修不改 fixture/数值规则；在 attempt-002 plan 中先登记原因和新源哈希，再做相同两 pair 的三次新往返。**两批各自有效，无失败 capture 被替换，结果一致；不把两批拼成一个新的样本矩阵。**
+
+### 表示、算术与重复性结果
+
+| pair / 度量 | 解析理想值 | raw binary32 的 Decimal oracle | 文本解析后 double | ideal → binary32 | raw → 六位文本的 oracle 差 |
+| --- | --- | --- | --- | --- | --- |
+| analytic / 位置 L2 | 5 | 5 | 5 | 0 | 0 |
+| analytic / 旋转 `1-abs(dot)` | 0.1339745962155613532363 | 0.1339745951678763855369 | 0.133974640478251583 | -1.0476849676993885e-9 | +4.531037500337656e-8 |
+| analytic / XYZ scale Linf | 0.125 | 0.125 | 0.125 | 0 | 0 |
+| sign / 位置、缩放 | 0、0 | 0、0 | 0、0 | 0、0 | 0、0 |
+| sign / 旋转 | 0 | 0 | 3.3306690738754696e-16 | 0 | 0 |
+
+`q/-q` 的 raw/text Decimal oracle 均为 0；double 的 `3.3306690738754696e-16` 是归一化/dot 算术残差，不能填成理想差或原生噪声。全部观测的 raw double 数值残差最大 `7.907067087577111e-17`，text double 最大 `3.3306690738754696e-16`；位置/缩放的本例数值残差为 0。
+
+**pair 误差漂移为 0 不等于逐变换没有舍入损失。** 实际最大分量舍入为 `4.76837158203125e-7`，单个变换的位置 L2 舍入最大 `5.3312014997000448618e-7`，scale 分量最大 `3.5762786865234375e-7`；本 fixture 的共同舍入项在位置/缩放差中抵消。文本 Decimal → binary64 分量解析残差最大 `4.869349368163967e-17`。
+
+六位最近舍入的每侧分量界 `5e-7` 均满足；位置 pair 表示界 `sqrt(3)*1e-6`、XYZ scale pair 界 `1e-6`。旋转仅在本 fixture 的原始范数约 `0.9999999829..0.9999999865` 下检查归一化 chord/dot 表示界，观察到 raw→text 漂移 `4.531037500337656e-8`，不推广成一般四元数界。[plan](diagnostics/g5-calibration-a-20261111/attempt-002/plan.json) 和[数值推导说明](diagnostics/g5-calibration-a-20261111/execution.md#numerical-interpretation) 分列 binary64 `u=2^-53`、`gamma(n)` 的运算计数及输入解析项；text 旋转算术界约 `3.552713678800507e-15`，所有残差满足该精度推导，未使用 G5 阈值。
+
+metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（nearest-rank）。三次 raw bits、文本和 compiler 身份一致，每个固定 case 的三项度量跨轮 range 均为 0；这是有限控制的重复性观察，不是总体保证、原生噪声估计或一般位置/缩放零误差结论。解析理想→binary32、raw→文本和 double→高精度 oracle 三阶段分别保留，不相互吸收。
+
+### 命令、构建与未覆盖项
+
+[构建记录](build.md#g5-calibration-a-20261111)与[完整执行记录](diagnostics/g5-calibration-a-20261111/execution.md#actual-commands-and-exits)保存实际命令/退出码。VS 2022 toolset `14.44.35207` 的 focused `/std:c++latest /W4 /WX` 编译 exit 0；Python 3.12.10 两批分析均 exit 0，每批三个 capture 均 exit 0。使用现有 pinned cache/local dependencies、关闭 vcpkg manifest install 的 configure exit 0；必跑 Release 构建与一次显式 installed-SDK retry 均在 MSBuild SDK discovery 因用户本地 `Microsoft SDKs` 目录拒绝访问而 exit 1，**生产调用者兼容编译仍 UNVERIFIED**，未扩大权限/工具链/依赖。
+
+没有新部署身份、游戏运行、源/候选配对、时间控制或 native control B；现有 v46 cache 标签仅用于本地兼容尝试，未重标或部署。K1/K2 输入/资源资格、K3–K6 同阶段同代完整观测、B3/B4、完整层/权重/mapping 与时间界都保持开放，G6 后置、装载 teardown NO-GO。后续按 CAL v1 顺序补齐前置，离线 A 不能跳过门 1/2 或冻结 G5。

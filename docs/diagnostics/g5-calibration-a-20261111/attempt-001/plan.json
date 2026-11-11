@@ -1,0 +1,214 @@
+{
+  "schema": 1,
+  "fixture": "g5-cal-a-analytic-sign-v1",
+  "status": "FROZEN_BEFORE_CAPTURE",
+  "created_utc": "2026-11-11T08:36:52.307304+00:00",
+  "control": "offline A only; no SDK/ABI, native runtime, time or G5 qualification",
+  "batch_reason": "first registered offline batch",
+  "prior_batches": [],
+  "analysis_command": [
+    "C:\\env\\python312\\python.exe",
+    "tools/calibration/calibrate_pose.py",
+    "--capture",
+    "build/g5-calibration-a-20261111/pose_calibration_capture.exe",
+    "--output",
+    "docs/diagnostics/g5-calibration-a-20261111"
+  ],
+  "analysis_version": 1,
+  "capture": {
+    "path": "D:\\code\\cpp\\skyrim\\PlayerPanel\\build\\g5-calibration-a-20261111\\pose_calibration_capture.exe",
+    "sha256": "3f92424f62b28eb9fc822573e0049c365a47931882a8fc5c0df00fcedd738749"
+  },
+  "source_sha256": {
+    "src/animation/behavior_graph/pose_capture_policy.h": "b36a3003bfdc85b780b67be6e3f92db3a0039d4f1adf57a774c76868fd1107df",
+    "src/animation/behavior_graph/pose_content_policy.h": "56d9575933e74b9a56414fbcfde16ef837b7365ea0f0a20b6615034d22aab378",
+    "src/animation/behavior_graph/independent_graph.cpp": "d81de77e1dbac8480035b83fe868faaa866447944bbcefbcda3d5d7040d7b354",
+    "src/animation/behavior_graph/source_timeline.cpp": "f0ece8105ab554d260a57c6dac363cf3d85a3ed16211ca00247fc424fa50c6e7",
+    "tests/pose_calibration_capture.cpp": "054913360dcc9e6e8e9174e5a11f4a9a894c5093f928a242f62cf0189c13cbd7",
+    "tools/calibration/calibrate_pose.py": "df7685877ce160330283f4d58ef53d443c53742031aa5ef297b88a6bb56abda1"
+  },
+  "runtime": {
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "executable": "C:\\env\\python312\\python.exe",
+    "os": "Windows-11-10.0.26300-SP0",
+    "machine": "",
+    "float_mant_dig": 53,
+    "float_radix": 2,
+    "decimal_precision": 80
+  },
+  "compiler_identity_source": "each retained header: _MSC_FULL_VER, _MSVC_STL_VERSION, _MSVC_STL_UPDATE",
+  "planned": {
+    "rounds": 3,
+    "case_pairs_per_round": 2,
+    "track_rows_per_round": 4,
+    "components_per_row": 10,
+    "track_rows_total": 12,
+    "components_total": 120
+  },
+  "authored": {
+    "reference_translation_literals": [
+      "3.1250003f",
+      "-4.2500003f",
+      "12.5000003f"
+    ],
+    "reference_rotation_literals": [
+      "0f",
+      "0f",
+      "0.25881904510252074f",
+      "0.9659258262890683f"
+    ],
+    "reference_scale_literals": [
+      "0.75000036f",
+      "1.00000036f",
+      "1.25000036f"
+    ],
+    "analytic_observed": "binary32 reference + translation(0,3,4), rotation(0,0,0.7071067811865475f,0.7071067811865475f), scale(0,0,0.125)",
+    "sign_observed": "identical binary32 translation/scale; exact negation of all four reference quaternion lanes",
+    "ideal_metric_source": "analytic 3-4-5 triangle; 60-degree relative rotation => 1-sqrt(3)/2; Z scale delta 1/8; q/-q same rotation",
+    "expected_bits_source": "independently frozen IEEE-754 binary32 values in analyzer, before executable invocation; never generated from capture or double_metrics"
+  },
+  "expected_tracks": [
+    {
+      "case": "analytic",
+      "role": "reference",
+      "track": 0,
+      "channels": [
+        "tx",
+        "ty",
+        "tz",
+        "qx",
+        "qy",
+        "qz",
+        "qw",
+        "sx",
+        "sy",
+        "sz"
+      ],
+      "raw_bits": [
+        "40480001",
+        "c0880001",
+        "41480000",
+        "00000000",
+        "00000000",
+        "3e8483ee",
+        "3f7746ea",
+        "3f400006",
+        "3f800003",
+        "3fa00003"
+      ],
+      "padding_bits": [
+        "7fc01234",
+        "7f800000"
+      ]
+    },
+    {
+      "case": "analytic",
+      "role": "observed",
+      "track": 0,
+      "channels": [
+        "tx",
+        "ty",
+        "tz",
+        "qx",
+        "qy",
+        "qz",
+        "qw",
+        "sx",
+        "sy",
+        "sz"
+      ],
+      "raw_bits": [
+        "40480001",
+        "bfa00004",
+        "41840000",
+        "00000000",
+        "00000000",
+        "3f3504f3",
+        "3f3504f3",
+        "3f400006",
+        "3f800003",
+        "3fb00003"
+      ],
+      "padding_bits": [
+        "7fc05678",
+        "ff800000"
+      ]
+    },
+    {
+      "case": "sign",
+      "role": "reference",
+      "track": 0,
+      "channels": [
+        "tx",
+        "ty",
+        "tz",
+        "qx",
+        "qy",
+        "qz",
+        "qw",
+        "sx",
+        "sy",
+        "sz"
+      ],
+      "raw_bits": [
+        "40480001",
+        "c0880001",
+        "41480000",
+        "00000000",
+        "00000000",
+        "3e8483ee",
+        "3f7746ea",
+        "3f400006",
+        "3f800003",
+        "3fa00003"
+      ],
+      "padding_bits": [
+        "7fc09abc",
+        "7f800000"
+      ]
+    },
+    {
+      "case": "sign",
+      "role": "observed",
+      "track": 0,
+      "channels": [
+        "tx",
+        "ty",
+        "tz",
+        "qx",
+        "qy",
+        "qz",
+        "qw",
+        "sx",
+        "sy",
+        "sz"
+      ],
+      "raw_bits": [
+        "40480001",
+        "c0880001",
+        "41480000",
+        "80000000",
+        "80000000",
+        "be8483ee",
+        "bf7746ea",
+        "3f400006",
+        "3f800003",
+        "3fa00003"
+      ],
+      "padding_bits": [
+        "7fc0def0",
+        "ff800000"
+      ]
+    }
+  ],
+  "numerics": {
+    "oracle": "Decimal precision 80; independent dot/sqrt(norm2_a*norm2_b), analytic ideal constants",
+    "rounding": "six-decimal nearest: <=5e-7 per component; parse-to-binary64 accounted separately",
+    "position_Q": "sqrt(3)*1e-6 from two three-component rounding errors",
+    "scale_Q": "1e-6 from two XYZ component rounding errors",
+    "rotation_Q": "fixture norms only: per-side ||dq||<=sqrt(4)*5e-7=1e-6, normalized chord<=2*||dq||/||q||; abs-dot error<=sum of chords",
+    "arithmetic": "binary64 u=2^-53, gamma(n)=n*u/(1-n*u); normal finite fixture values, round-to-nearest operations and sqrt. Position <=gamma(12)*norm plus Lipschitz input parse error (9 arithmetic operations). Scale <=gamma(1)*delta plus component input parse error. Quaternion normalization relative-vector bound gamma(10) (4 squares,3 adds,sqrt,division); dot <=gamma(7)*(1+gamma(10))^2; add 2*gamma(10)+gamma(10)^2 and u for 1-c. Text parse adds <=4u in rotation via normalized chords. Decimal oracle roundoff at 80 digits is negligible beside these binary64 bounds; sign exact-zero comparison is retained.",
+    "statistics": "nearest-rank median/P95/P99; absolute discrepancies; no population guarantee",
+    "tolerances": "tau_p/tau_r/tau_s/epsilon_t not produced; native B, K1-K6 and G5 remain NOT_READY"
+  }
+}

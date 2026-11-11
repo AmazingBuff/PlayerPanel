@@ -2,3 +2,13 @@
 # CR, which made Git classify it as binary (-text) and bury every real change
 # behind a whole-file diff. Pin it to LF so future edits stay reviewable.
 docs/independent-behavior-graph.md text eol=lf
+
+# Calibration manifests hash raw artifact and working-tree source bytes.
+# Keep the captured CRLF and terminal blank lines in archived outputs.
+docs/diagnostics/g5-calibration-a-20261111/** -text whitespace=cr-at-eol,-blank-at-eof
+src/animation/behavior_graph/pose_capture_policy.h text eol=lf
+tests/pose_calibration_capture.cpp text eol=lf
+tools/calibration/calibrate_pose.py text eol=lf
+src/animation/behavior_graph/pose_content_policy.h text eol=crlf
+src/animation/behavior_graph/independent_graph.cpp text eol=crlf
+src/animation/behavior_graph/source_timeline.cpp text eol=crlf

@@ -6,14 +6,14 @@ C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), w
 
 The default product path uses the copied scene tree, OAR clip selection/sampling and native DAC preparation. [Animation](docs/animation.md) owns equipment policy, torch composition, accepted clocks and configuration; [SceneGraph](docs/scene-graph.md) owns capture, placement, attachments and drawing.
 
-更新：2026-11-04。G1/G2 有界通过，G3-A 与 G3-B/F 相位回放保留；G4 A/B 保留、C 与旧 typed-setter 零读数受 [audit30](docs/behavior-graph-construction-audit.md#audit30) 仪器缺陷影响，修复后待重跑。v67/v68 已有源采样入口活性和多个采样 tid 的记录，但 **E1 完整证据未闭合**；63856 是场景应用入口，不能称 poseLocal 末写或输出完成。本轮修复跳板、多生产者传送和关闭对账，尚未部署/上机，详见 [E1 当前边界](docs/independent-behavior-graph.md#g5-e1-evidence-repair)。最新记录安装 v68，最近记录 INI dormant，本轮未重验安装。E1 剩余完成点/寿命/同代快照仍需取证，E2/E3 尚未开始；G5 门 1 NOT_READY、未冻结/未通过，G6 待验，装载 teardown NO-GO。
+更新：2026-11-11。[最新运行摘要](docs/independent-behavior-graph.md#status-20261111-session)记录 E3 配对 2/2、E4 四块完整源姿态快照与装备链速率的有界证据。[C-G5-CAL v1](docs/independent-behavior-graph.md#c-g5-cal-v1)的[离线控制 A 已完成](docs/independent-behavior-graph.md#c-g5-cal-a-run1-20261111)：固定两组变换经共享采集/六位小数格式/解析，当前分析器三次往返为 12/12 行、120/120 分量。输入/资源/控制资格、同代完整采样和 B3/B4 后处理边界尚缺，**K1–K6、原生控制 B 与时间校准仍 NOT_READY，数值容差未产生**。G1/G2 有界通过、G3-B 相位回放及 G4 A/B/C 保留；G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。本地离线编译通过；Release 兼容构建因 SDK 目录访问受限未完成，没有部署或上机。
 
-G4 与 G5 的历史裁定及限定分别见 [G4 收官](docs/independent-behavior-graph.md#g4-closure)、[G5 v2](docs/independent-behavior-graph.md#g5-draft)。新取证格式、离线验证和后续匹配工件验证要求由 [E1 修复说明](docs/independent-behavior-graph.md#g5-e1-evidence-repair)拥有；原日志保留。
+G4 的历史裁定及限定见 [G4 收官](docs/independent-behavior-graph.md#g4-closure)；[G5 v2](docs/independent-behavior-graph.md#g5-draft)拥有完整验证目标，[CAL v1](docs/independent-behavior-graph.md#c-g5-cal-v1)拥有当前校准要求和缺项。E1–E4 的日期记录与原始日志保留各自边界，不能用旧“待运行”摘要覆盖后续证据。
 
 
 候选与控制器源图共享行为 data 和绑定集，变量活值分储、从 authored defaults 初始化；共享资源与重复候选 pose 哈希均不能证明与源完整姿态、时钟或层混合一致。G2 的实际写骨 109/116、三条缺失名未知，以及同 controller 来源替换/frozen-only 等边界限制继续保留。
 
-最新**记录安装为 v66**（[身份/哈希与三轮尝试记录](docs/build.md#v66-g4c1-pinned-graph-2026-11-02)，DLL `190c7236…` / PDB `b4f2596d…`），C1 裁定后部署 INI 已回 dormant `27f481f5…`（2,147 字节）；三轮 C1 尝试用的是同一份 C1 运行配置 `f714e05f…`，每轮只换二进制，v65/v64/v63 三件套分别备份在 `dist/deploy-backup-20261102-v65/`、`-v64/`、`-v63/`。A4 与 C1 的运行记录分别见 [C-G4-A4](docs/independent-behavior-graph.md#c-g4-a4-numeric-types) 与 [C-G4-C1](docs/independent-behavior-graph.md#c-g4-c1-concurrent-events)。下面列出主要关闭键（仓库样例仍为 dormant 默认）；完整部署记录见[当前部署与开关](docs/independent-behavior-graph.md#deploy-state)。
+最近**记录部署为 v92**（[身份/哈希与部署](docs/build.md#v92-g5e2c-ms-2026-11-10)），使用 E4 运行档 `8864075e…`，其 [2026-11-11 00:26 运行](docs/build.md#v92-g5e2c-run1-20261111)已有源捕获和时钟记录；该档不是校准配置。本次未重验安装目录。下面列出仓库 dormant 样例的主要关闭键；完整状态见[当前部署与开关](docs/independent-behavior-graph.md#deploy-state)。
 
 ```ini
 [Experiment]
@@ -55,7 +55,7 @@ cmake --preset Release
 cmake --build --preset Release
 ```
 
-Release is the sole configure/build preset; CharacterPanel is the sole first-party target. Outputs are `build/Release/CharacterPanel.dll` and its matching PDB. Keep that pair with its configure-time `SCENEGRAPH BUILD` identity. The latest recorded installed pair is [v66](docs/build.md#v66-g4c1-pinned-graph-2026-11-02); dated v41–v65 artifacts retain their own identities, hashes and build-time limits. A later commit does not relabel existing artifacts.
+Release is the sole configure/build preset; CharacterPanel is the sole first-party target. Outputs are `build/Release/CharacterPanel.dll` and its matching PDB. Keep that pair with its configure-time `SCENEGRAPH BUILD` identity. The latest recorded deployed pair is [v92](docs/build.md#v92-g5e2c-ms-2026-11-10); earlier artifacts retain their own identities, hashes and build-time limits. A later commit does not relabel existing artifacts.
 
 Preserve existing settings when updating [CharacterPanel.ini](config/CharacterPanel.ini). Settings load once at DataLoaded; restart after edits. Outside the panel, **F7** arms a 20-second source timeline when enabled; inside a paused inventory it queues recapture. In the v43 local code, re-arm resets baselines/settle counters; source loss/replacement or PreLoadGame/NewGame cancellation requires a later explicit F7. **F8** toggles display; **F9** remains the game quickload key. Compatible recapture retains normal playback clocks; the experimental measurement window and coverage refresh when the copied view changes.
 
@@ -66,6 +66,7 @@ Accepted panel mappings and paused-source WORLD snapshots are logged normally. `
 | Area | Entry points |
 | --- | --- |
 | Default animation | [Animation](docs/animation.md), [controller.cpp](src/animation/controller.cpp): `AnimationController::request`, `retarget`, `advance`; [OAR](docs/oar-hooks.md), [DAC](docs/dac.md) |
+| G5 calibration | [C-G5-CAL v1](docs/independent-behavior-graph.md#c-g5-cal-v1) and [offline A result](docs/independent-behavior-graph.md#c-g5-cal-a-run1-20261111): shared capture/format/parser passes three fixed-control round trips; [current raw/metrics](docs/diagnostics/g5-calibration-a-20261111/attempt-002/result.md). K1–K6, native B, time calibration and G5 remain NOT_READY |
 | Experimental session | [v32](docs/independent-behavior-graph.md#g2-v32-display-session), [independent_graph.h](src/animation/behavior_graph/independent_graph.h): `DisplaySession`; [display_state_policy.h](src/animation/behavior_graph/display_state_policy.h): `DisplaySourceIdentity`, `DisplaySourceRejection`, `DisplayWindow`, `apply_named_display_pose` |
 | Display pacing | [display_step_clock.h](src/animation/behavior_graph/display_step_clock.h): `DisplayStepClock`; [independent_graph.cpp](src/animation/behavior_graph/independent_graph.cpp): `DisplaySession::step_display_pose`; [two clock cases](tests/behavior_graph_display_clock_test.cpp), [commands/results](docs/build.md#v44-display-clock-2026-10-29) |
 | Source timeline | [v43 invariants](docs/independent-behavior-graph.md#v43-source-sessions), [source_timeline.cpp](src/animation/behavior_graph/source_timeline.cpp): `sample_source_timeline`, `invalidate_source_timeline`; [policy](src/animation/behavior_graph/source_timeline_policy.h): `SourceTimelineWindow`, `SourceTimelineRequests`; [two regressions](tests/source_timeline_session_test.cpp), [commands/results](docs/build.md#v43-source-sessions-2026-10-29) |

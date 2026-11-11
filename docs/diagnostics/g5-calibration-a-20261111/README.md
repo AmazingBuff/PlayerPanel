@@ -1,0 +1,7 @@
+# G5 offline calibration A evidence (2026-11-11)
+
+The current analyzer completed **CALIBRATED_OFFLINE_A_ONLY** in [attempt-002](attempt-002/result.md). [Its frozen plan](attempt-002/plan.json), [manifest](attempt-002/manifest.json) and [metrics](attempt-002/metrics.json) are authoritative for the current source hashes. Manifest SHA-256: `ee3e8d62383567012d5fcf2e82bc7bda5b1c98828a2e8574293c0de4d1b5936d`.
+
+The [first complete valid batch](result.md) and [attempt-001](attempt-001/result.md) remain intact. After that valid batch, evidence-finalization review requested explicit integrity-failure reasons and identification of a prior incomplete batch without assuming a final manifest exists. This small runner repair changed no fixture, metric, numerical bound or research rule. A reason was registered in attempt-002's plan before three new observations; no failed capture was replaced. Each batch independently has three captures, two case pairs per capture, 12/12 track rows and 120/120 components, zero missing/dropped/truncated rows and zero invalid rounds. Their numerical results agree.
+
+The [execution record](execution.md) gives exact commands, actual exits, numerical interpretation and build limitations. The [canonical result](../../independent-behavior-graph.md#c-g5-cal-a-run1-20261111) owns the conclusion. K1-K6, native B, time calibration and G5 remain NOT_READY; no native or G5 tolerance is produced.

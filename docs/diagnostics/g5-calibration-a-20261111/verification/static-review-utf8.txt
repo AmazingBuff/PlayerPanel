@@ -1,0 +1,7 @@
+PASS: 147 changed/generated local links and anchors
+PASS: 16 named symbols in 5 code/test entry paths
+PASS: exact prior track message literal and six-decimal format preserved
+PASS: both retained artifact manifests and all 6 current source hashes match
+PASS: both forbidden util hashes, HEAD and empty staged state preserved
+PASS: touched/generated source/docs whitespace and 200-line report budget
+PASS: static/retained-evidence inspection only; no extra behavioral cases

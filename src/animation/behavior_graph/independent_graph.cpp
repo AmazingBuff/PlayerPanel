@@ -13,6 +13,7 @@
 #include "animation/behavior_graph/generation_entry_policy.h"
 #include "animation/behavior_graph/graph_observation_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
+#include "animation/behavior_graph/pose_capture_policy.h"
 #include "animation/behavior_graph/pose_content_policy.h"
 #include "animation/behavior_graph/pose_motion_policy.h"
 #include "animation/behavior_graph/probe_liveness.h"
@@ -477,17 +478,7 @@ namespace
 
     PoseSample pose_sample_from_transform(RE::hkQsTransform const& entry)
     {
-        float translation[4]{};
-        float rotation[4]{};
-        float scale[4]{};
-        std::memcpy(translation, &entry.translation, sizeof(translation));
-        std::memcpy(rotation, &entry.rotation, sizeof(rotation));
-        std::memcpy(scale, &entry.scale, sizeof(scale));
-        PoseSample sample;
-        sample.translation = { translation[0], translation[1], translation[2] };
-        sample.rotation = { rotation[0], rotation[1], rotation[2], rotation[3] };
-        sample.scale = { scale[0], scale[1], scale[2] };
-        return sample;
+        return capture_pose_sample(entry);
     }
 
     // Decisive G2 discriminator (v3): did the update change ANY node/variable state?

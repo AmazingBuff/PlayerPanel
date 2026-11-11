@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "fixture": "g5-cal-a-analytic-sign-v1",
+  "status": "CALIBRATED_OFFLINE_A_ONLY",
+  "counts": {
+    "expected_rows": 12,
+    "visited_rows": 12,
+    "recorded_rows": 12,
+    "expected_components": 120,
+    "visited_components": 120,
+    "recorded_components": 120,
+    "invalid_rounds": 0,
+    "dropped_rows": 0,
+    "truncated_rows": 0,
+    "missing_rows": 0,
+    "missing_components": 0
+  },
+  "plan_sha256": "da46a567b194fed906ab44efad334fe9913d27c9856bdce6f1ed7cd054f665b6",
+  "source_sha256": {
+    "src/animation/behavior_graph/pose_capture_policy.h": "b36a3003bfdc85b780b67be6e3f92db3a0039d4f1adf57a774c76868fd1107df",
+    "src/animation/behavior_graph/pose_content_policy.h": "56d9575933e74b9a56414fbcfde16ef837b7365ea0f0a20b6615034d22aab378",
+    "src/animation/behavior_graph/independent_graph.cpp": "d81de77e1dbac8480035b83fe868faaa866447944bbcefbcda3d5d7040d7b354",
+    "src/animation/behavior_graph/source_timeline.cpp": "f0ece8105ab554d260a57c6dac363cf3d85a3ed16211ca00247fc424fa50c6e7",
+    "tests/pose_calibration_capture.cpp": "054913360dcc9e6e8e9174e5a11f4a9a894c5093f928a242f62cf0189c13cbd7",
+    "tools/calibration/calibrate_pose.py": "a4ced37e81044b535aeddf0740a51a2aa0de0fc53c6383a02c5f5dada8da4eb8"
+  },
+  "capture": {
+    "path": "D:\\code\\cpp\\skyrim\\PlayerPanel\\build\\g5-calibration-a-20261111\\pose_calibration_capture.exe",
+    "sha256": "3f92424f62b28eb9fc822573e0049c365a47931882a8fc5c0df00fcedd738749"
+  },
+  "runtime": {
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "executable": "C:\\env\\python312\\python.exe",
+    "os": "Windows-11-10.0.26300-SP0",
+    "machine": "",
+    "float_mant_dig": 53,
+    "float_radix": 2,
+    "decimal_precision": 80
+  },
+  "compiler": [
+    {
+      "type": "header",
+      "schema": 1,
+      "fixture": "g5-cal-a-analytic-sign-v1",
+      "pairs": 2,
+      "tracks": 4,
+      "components": 40,
+      "carrier_bytes": 48,
+      "carrier_alignment": 16,
+      "msvc_full_ver": 194435229,
+      "stl_version": 143,
+      "stl_update": 202503,
+      "native": false
+    },
+    {
+      "type": "header",
+      "schema": 1,
+      "fixture": "g5-cal-a-analytic-sign-v1",
+      "pairs": 2,
+      "tracks": 4,
+      "components": 40,
+      "carrier_bytes": 48,
+      "carrier_alignment": 16,
+      "msvc_full_ver": 194435229,
+      "stl_version": 143,
+      "stl_update": 202503,
+      "native": false
+    },
+    {
+      "type": "header",
+      "schema": 1,
+      "fixture": "g5-cal-a-analytic-sign-v1",
+      "pairs": 2,
+      "tracks": 4,
+      "components": 40,
+      "carrier_bytes": 48,
+      "carrier_alignment": 16,
+      "msvc_full_ver": 194435229,
+      "stl_version": 143,
+      "stl_update": 202503,
+      "native": false
+    }
+  ],
+  "analysis_command": [
+    "C:\\env\\python312\\python.exe",
+    "tools/calibration/calibrate_pose.py",
+    "--capture",
+    "build/g5-calibration-a-20261111/pose_calibration_capture.exe",
+    "--output",
+    "docs/diagnostics/g5-calibration-a-20261111",
+    "--reason",
+    "Evidence-finalization review repair: record integrity-failure reasons and identify incomplete prior batches; same frozen fixtures and numerical rules; preserve valid attempt-001."
+  ],
+  "finished_utc": "2026-11-11T08:40:02.407257+00:00",
+  "source_and_executable_unchanged": true,
+  "failure_reasons": [],
+  "artifact_sha256": {
+    "metrics.json": "02d142c6c84fec85db8c86d9ee66bfca4b6441d67188ebd9681f9fc40a7d1317",
+    "plan.json": "da46a567b194fed906ab44efad334fe9913d27c9856bdce6f1ed7cd054f665b6",
+    "result.md": "422e758a2f8120cccdb6bd55bf5900eee068c666e17006cbe5eb15542c8d9382",
+    "round-1.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "round-1.stdout.jsonl": "d32f767dafe7adddacf1863e425d251d9e688653efec01d5999d5b33f0b84fe8",
+    "round-2.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "round-2.stdout.jsonl": "d32f767dafe7adddacf1863e425d251d9e688653efec01d5999d5b33f0b84fe8",
+    "round-3.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "round-3.stdout.jsonl": "d32f767dafe7adddacf1863e425d251d9e688653efec01d5999d5b33f0b84fe8"
+  },
+  "scope": "offline A only; no SDK/ABI, native runtime, time or G5 qualification",
+  "batch_reason": "Evidence-finalization review repair: record integrity-failure reasons and identify incomplete prior batches; same frozen fixtures and numerical rules; preserve valid attempt-001.",
+  "prior_batches": [
+    {
+      "path": "attempt-001",
+      "state": "finalized",
+      "artifact_sha256": {
+        "manifest.json": "3e95ccc93d9cac3cbbe8d427e9d96a239522c9f55554cba8d19a98db4af1c8fe",
+        "metrics.json": "5d7062a4141e8a0b3c5c9025485c724137c26cd922c82457fb921f860667582a",
+        "plan.json": "df40bcd7cefbf0b809bc140c0942a40c501a84dd1aa045c50f795c5d4d5d03e2",
+        "result.md": "3be5f7eec72fdcaf7ef4fea94e831f3470d5e4a2695854dc03acaf6f7972d234",
+        "round-1.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "round-1.stdout.jsonl": "d32f767dafe7adddacf1863e425d251d9e688653efec01d5999d5b33f0b84fe8",
+        "round-2.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "round-2.stdout.jsonl": "d32f767dafe7adddacf1863e425d251d9e688653efec01d5999d5b33f0b84fe8",
+        "round-3.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "round-3.stdout.jsonl": "d32f767dafe7adddacf1863e425d251d9e688653efec01d5999d5b33f0b84fe8"
+      }
+    }
+  ]
+}

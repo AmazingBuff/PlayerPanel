@@ -1570,3 +1570,33 @@ Log [124,353 bytes `65a6fab9…`](diagnostics/CharacterPanel-g5e2c-clock-run1-20
 **Reading**: the wall-clock basis fixes what the frame-based attempt could not - continuously playing clips land on **1.001x**, and `1HM_Unequip` on 0.999x, matching the candidate side. The sub-1.0 rows are **decode artefacts, not clock findings**: (a) `1HM_Equip` is single-play, so its row includes the hold-after-end tail (the same advance-window rule the candidate ledger uses for T4); (b) `MT_*` locomotion clips reset `localTime` mid-window (6 resets for `MT_Idle`), and the current decoder mixes the segments.
 
 **Consequence**: E2-C's source half is no longer blocked by instrumentation. Two **decode rules** must be pre-registered before any verdict: exclude the post-end hold window for single-play clips, and segment a lifetime at every `localTime` reset (a decrease) rather than summing across it. No code change is needed for either.
+
+<a id="g5-calibration-a-20261111"></a>
+## G5 offline calibration A (2026-11-11, completed offline; native compatibility unverified)
+
+The [canonical result](independent-behavior-graph.md#c-g5-cal-a-run1-20261111) covers exactly the two fixed analytic/sign pairs. Shared [capture/formatter](../src/animation/behavior_graph/pose_capture_policy.h), [capture executable](../tests/pose_calibration_capture.cpp) and [Python analyzer](../tools/calibration/calibrate_pose.py) use standard libraries only. This standalone 0x30 aligned carrier proves no native SDK/ABI, generation or lifetime property. K1-K6, native B, time calibration and G5 remain NOT_READY.
+
+From the repository root, in the pinned VS 2022 x64 developer environment:
+
+```powershell
+cmd /d /s /c 'call "D:\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.44.35207 && cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\pose_calibration_capture.cpp /Fo:build\g5-calibration-a-20261111\pose_calibration_capture.obj /Fe:build\g5-calibration-a-20261111\pose_calibration_capture.exe'
+python tools/calibration/calibrate_pose.py --capture build/g5-calibration-a-20261111/pose_calibration_capture.exe --output docs/diagnostics/g5-calibration-a-20261111
+```
+
+Create `build/g5-calibration-a-20261111` before compilation on a new checkout. The output directory is retained: a subsequent batch requires `--reason '<registered reason>'`; the [execution record](diagnostics/g5-calibration-a-20261111/execution.md#actual-commands-and-exits) preserves the exact reasoned second command. The current [attempt-002 report](diagnostics/g5-calibration-a-20261111/attempt-002/result.md), [plan](diagnostics/g5-calibration-a-20261111/attempt-002/plan.json), [manifest](diagnostics/g5-calibration-a-20261111/attempt-002/manifest.json) and [metrics](diagnostics/g5-calibration-a-20261111/attempt-002/metrics.json) retain all three raw round trips and source hashes; the [first valid batch](diagnostics/g5-calibration-a-20261111/result.md) remains intact. The second batch follows only a runner evidence-finalization review repair, with unchanged fixtures/numerics. Each batch separately records 12/12 rows, 120/120 components and zero missing/dropped/truncated rows.
+
+**Actual exits**: focused compile 0 ([output](diagnostics/g5-calibration-a-20261111/verification/compile.txt)); each analysis 0; all six capture subprocesses 0 with empty stderr. Compiler header `_MSC_FULL_VER=194435229` (19.44.35229), STL 143/update 202503; developer prompt v17.14.42, toolset directory 14.44.35207, Python 3.12.10. Raw bits/text repeat exactly; scoped representation and arithmetic results are in the canonical report. This is two cases repeated by the research contract, not a broader test suite.
+
+The required local compatibility attempt used existing cached dependencies without fetching:
+
+```powershell
+cmake -S . -B build -DVCPKG_MANIFEST_INSTALL=OFF
+cmake --build --preset Release --parallel 2
+cmake --build --preset Release --parallel 2 -- /p:_LatestWindowsTargetPlatformVersion=10.0.26100.0
+```
+
+Offline configure exits 0 ([output](diagnostics/g5-calibration-a-20261111/verification/compatibility-configure.txt), existing skip-install warning). The [required build](diagnostics/g5-calibration-a-20261111/verification/compatibility-build.txt) exits 1 at `GetLatestSDKTargetPlatformVersion`; the one [explicit installed-SDK retry](diagnostics/g5-calibration-a-20261111/verification/compatibility-build-sdk-pin.txt) exits 1 at `GetPlatformSDKLocation`. Both deny access to `C:\Users\lhq49\AppData\Local\Microsoft SDKs`, before production compilation. **Production-caller compatibility is UNVERIFIED.** CMake 4.1.0/MSBuild 17.14.60, VS 2022/v143 remain pinned; no permission/toolchain/dependency expansion was attempted.
+
+The old cache label `behavior-graph-v46-retained-copy-ledger-20261029` was not changed. Generated metadata is local only; no new DLL/runtime identity is qualified, and there was no game launch, deployment, staging, commit or push. The recorded v92 install remains unverified by this offline work.
+
+The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#final-static-review) checks local links/anchors, named symbols, exact prior track text, retained hashes, scope/whitespace and unchanged user/Git state; `git diff --check` passes. The diagnostic's initial default-codepage decoding failure and its explicit-UTF-8 correction are retained separately from the successful calibration runs.
