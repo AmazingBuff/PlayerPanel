@@ -1600,3 +1600,12 @@ Offline configure exits 0 ([output](diagnostics/g5-calibration-a-20261111/verifi
 The old cache label `behavior-graph-v46-retained-copy-ledger-20261029` was not changed. Generated metadata is local only; no new DLL/runtime identity is qualified, and there was no game launch, deployment, staging, commit or push. The recorded v92 install remains unverified by this offline work.
 
 The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#final-static-review) checks local links/anchors, named symbols, exact prior track text, retained hashes, scope/whitespace and unchanged user/Git state; `git diff --check` passes. The diagnostic's initial default-codepage decoding failure and its explicit-UTF-8 correction are retained separately from the successful calibration runs.
+
+<a id="g5-cal-d1-run1-20261111"></a>
+## G5 CAL D1 run 1 (2026-11-11 22:46, **D1 negative**)
+
+**Artifact**: [log](diagnostics/CharacterPanel-g5cal-d1-run1-20261111-2246.log) 97,027 bytes SHA-256 `4e48cd5c949851e54d03907bccc4af327c896e712340a14fc687c35a58c7be6c`; v92 DLL/PDB unchanged; D1 run profile `98ba7a30…7d52a0`. One window, zero `[E]`, no crash, `post-drive source-drift=none`, `unequip-done steps=120`.
+
+**Readings**: `clip-ref step=0` is still `Animations\H2H_Equip.hkx` (`binding-index=11046`), and `clip-steps` keeps the same `.C...F...` H2H transition; the settled stack from step 49 is `H2H_Idle`+`1HM_Idle`+`SCAR_1hmReadyDummy`, and the unequip returns `12→0` at step 21. `CANDIDATE UNEQUIP` logs `rh=0` on 121/121 steps. The product path records `ANIMATION ... goal=non-combat-idle family=1h ... drawn=true` and OAR resolves `Smooth Moveset - 1hm`, so the actor's real equipment was one-handed. `load-bindings` reports source and candidate sharing one 15,203-binding set.
+
+**Verdict**: **D1 fails** — real equipment context alone did not make the candidate select `1HM_Equip`; it still follows its own empty-hand initial state. The binding indices differ from C run 1 (`H2H_Equip` 11046 vs 11040, `SCAR` 15075 vs 15076), so cross-run resource identity remains open (K1). The next candidate is D2 pre-event priming of `iMagicEquipped`/`iRightHandEquipped`/`iLeftHandEquipped` before `WeapEquip`; it needs a separate instrument scope and review. K1/K2 remain NOT_READY; no tolerance is produced.

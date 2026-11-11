@@ -6,14 +6,14 @@ C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), w
 
 The default product path uses the copied scene tree, OAR clip selection/sampling and native DAC preparation. [Animation](docs/animation.md) owns equipment policy, torch composition, accepted clocks and configuration; [SceneGraph](docs/scene-graph.md) owns capture, placement, attachments and drawing.
 
-更新：2026-11-11。[最新运行摘要](docs/independent-behavior-graph.md#status-20261111-session)记录 E3 配对 2/2、E4 四块完整源姿态快照与装备链速率的有界证据。[C-G5-CAL v1](docs/independent-behavior-graph.md#c-g5-cal-v1)的[离线控制 A 已完成](docs/independent-behavior-graph.md#c-g5-cal-a-run1-20261111)：固定两组变换经共享采集/六位小数格式/解析，当前分析器三次往返为 12/12 行、120/120 分量。[K1/K2 资格账本](docs/independent-behavior-graph.md#c-g5-cal-k1k2)已登记：H2H/1HM 差异初步归因于候选图缺少源侧真实装备上下文，D1 诊断未运行。输入/资源/控制资格、同代完整采样和 B3/B4 后处理边界尚缺，**K1–K6、原生控制 B 与时间校准仍 NOT_READY，数值容差未产生**。G1/G2 有界通过、G3-B 相位回放及 G4 A/B/C 保留；G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。本地离线编译通过；Release 兼容构建因 SDK 目录访问受限未完成，没有部署或上机。
+更新：2026-11-11。[最新运行摘要](docs/independent-behavior-graph.md#status-20261111-session)记录 E3 配对 2/2、E4 四块完整源姿态快照与装备链速率的有界证据。[C-G5-CAL v1](docs/independent-behavior-graph.md#c-g5-cal-v1)的[离线控制 A 已完成](docs/independent-behavior-graph.md#c-g5-cal-a-run1-20261111)：固定两组变换经共享采集/六位小数格式/解析，当前分析器三次往返为 12/12 行、120/120 分量。[K1/K2 资格账本](docs/independent-behavior-graph.md#c-g5-cal-k1k2)已登记，[D1 首轮](docs/independent-behavior-graph.md#c-g5-cal-k1k2)判负：产品路径确认实际装备 `family=1h drawn=true`，候选仍选 `H2H_Equip`；下一步 D2 pre-event prime。输入/资源/控制资格、同代完整采样和 B3/B4 后处理边界尚缺，**K1–K6、原生控制 B 与时间校准仍 NOT_READY，数值容差未产生**。G1/G2 有界通过、G3-B 相位回放及 G4 A/B/C 保留；G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。本地离线编译通过；Release 兼容构建因 SDK 目录访问受限未完成。
 
 G4 的历史裁定及限定见 [G4 收官](docs/independent-behavior-graph.md#g4-closure)；[G5 v2](docs/independent-behavior-graph.md#g5-draft)拥有完整验证目标，[CAL v1](docs/independent-behavior-graph.md#c-g5-cal-v1)拥有当前校准要求和缺项。E1–E4 的日期记录与原始日志保留各自边界，不能用旧“待运行”摘要覆盖后续证据。
 
 
 候选与控制器源图共享行为 data 和绑定集，变量活值分储、从 authored defaults 初始化；共享资源与重复候选 pose 哈希均不能证明与源完整姿态、时钟或层混合一致。G2 的实际写骨 109/116、三条缺失名未知，以及同 controller 来源替换/frozen-only 等边界限制继续保留。
 
-最近**记录部署为 v92**（[身份/哈希与部署](docs/build.md#v92-g5e2c-ms-2026-11-10)），当前运行档已切到 D1 候选诊断 `98ba7a30…`（E4 源档 `8864075e…` 备份在 `dist/CharacterPanel-e4-installed-20261111.ini`），D1 尚未上机；该档不是校准配置。下面列出仓库 dormant 样例的主要关闭键；完整状态见[当前部署与开关](docs/independent-behavior-graph.md#deploy-state)。
+最近**记录部署为 v92**（[身份/哈希与部署](docs/build.md#v92-g5e2c-ms-2026-11-10)），当前运行档已切到 D1 候选诊断 `98ba7a30…`（E4 源档 `8864075e…` 备份在 `dist/CharacterPanel-e4-installed-20261111.ini`），D1 已跑并判负；该档不是校准配置。下面列出仓库 dormant 样例的主要关闭键；完整状态见[当前部署与开关](docs/independent-behavior-graph.md#deploy-state)。
 
 ```ini
 [Experiment]
