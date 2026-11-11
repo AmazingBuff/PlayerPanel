@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)与[离线 A 结果](#c-g5-cal-a-run1-20261111)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v92 + E4 运行档；本次离线编译通过，Release 兼容构建因 SDK 访问受限未完成，没有重验安装、部署或上机。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
+更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记，H2H/1HM 差异初步归因于候选图缺少源侧真实装备上下文；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v92 + E4 运行档；本次离线编译通过，Release 兼容构建因 SDK 访问受限未完成，没有重验安装、部署或上机。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | **离线 A 已完成；原生校准 NOT_READY，G5 未冻结/未通过** | [E1 v3](#c-g5-e1-v3) 有界通过；[E3](#c-g5-e3-v2) 配对 2/2；[E4/v92](build.md#v92-g5e2c-run1-20261111) 四块 116 轨快照、零丢失，装备链速率可算。[离线 A](#c-g5-cal-a-run1-20261111)仅校准固定控制的采集/格式/解析；[CAL v1](#c-g5-cal-v1) 的 K1–K6、原生 B、时间资格、B3/B4 与完整贡献仍缺，既有证据不证明姿态等价 |
+| G5 | **离线 A 已完成；K1/K2 账本已登记；原生校准 NOT_READY，G5 未冻结/未通过** | [E1 v3](#c-g5-e1-v3) 有界通过；[E3](#c-g5-e3-v2) 配对 2/2；[E4/v92](build.md#v92-g5e2c-run1-20261111) 四块 116 轨快照、零丢失，装备链速率可算。[离线 A](#c-g5-cal-a-run1-20261111)仅校准固定控制的采集/格式/解析；[K1/K2 账本](#c-g5-cal-k1k2)把 H2H/1HM 差异归因于候选图缺少源侧真实装备上下文，D1 诊断未运行；[CAL v1](#c-g5-cal-v1) 的 K1–K6、原生 B、时间资格、B3/B4 与完整贡献仍缺，既有证据不证明姿态等价 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -4897,3 +4897,95 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 [构建记录](build.md#g5-calibration-a-20261111)与[完整执行记录](diagnostics/g5-calibration-a-20261111/execution.md#actual-commands-and-exits)保存实际命令/退出码。VS 2022 toolset `14.44.35207` 的 focused `/std:c++latest /W4 /WX` 编译 exit 0；Python 3.12.10 两批分析均 exit 0，每批三个 capture 均 exit 0。使用现有 pinned cache/local dependencies、关闭 vcpkg manifest install 的 configure exit 0；必跑 Release 构建与一次显式 installed-SDK retry 均在 MSBuild SDK discovery 因用户本地 `Microsoft SDKs` 目录拒绝访问而 exit 1，**生产调用者兼容编译仍 UNVERIFIED**，未扩大权限/工具链/依赖。
 
 没有新部署身份、游戏运行、源/候选配对、时间控制或 native control B；现有 v46 cache 标签仅用于本地兼容尝试，未重标或部署。K1/K2 输入/资源资格、K3–K6 同阶段同代完整观测、B3/B4、完整层/权重/mapping 与时间界都保持开放，G6 后置、装载 teardown NO-GO。后续按 CAL v1 顺序补齐前置，离线 A 不能跳过门 1/2 或冻结 G5。
+
+<a id="c-g5-cal-k1k2"></a>
+## C-G5-CAL K1/K2：输入、资源与控制资格账本（2026-11-11，文档；不授权实现/上机）
+
+**裁定：K1/K2 NOT_READY。** 本节只登记 [CAL v1](#c-g5-cal-v1) §三 K1/K2 的现有证据、H2H/1HM 差异的初步归因和关闭条件；没有新二进制、INI、部署、上机、控制 B 输出或数值容差。历史 E3/E4 日志只用于识别缺项，不作为校准样本。
+
+### 一、K1 身份与映射
+
+| 项 | 现有证据 | 状态 / 缺项 |
+| --- | --- | --- |
+| 运行身份 | E3 的源/候选各一次运行均为 v88（[R](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log#L30)、[C](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L30)）；E4 源姿态来自 v91/v92（[v92 clock run](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log)） | E3 的 v88 只覆盖配对；E4 的源姿态不能与 v88 候选拼成同一次 Generate。K1 要求匹配的 DLL/PDB/build/INI/runtime/OAR/资源哈希，尚缺 |
+| 当前安装 | v92 DLL 1,830,400 B SHA-256 `fe697ba9…8bcb38`；PDB 49,557,504 B `f57673ce…11914`；INI 11,183 B `8864075e…465f58`（E4 源捕获档：`SourceTimeline=on`、`SourcePoseCapture=true`、`SamplingLiveness=off`） | 这是**源侧**运行档，不是候选/校准档；候选侧要另配 INI。本次只读核对安装目录，未重部署 |
+| 源图身份 | R 运行 `DefaultFemale` 652 words / 106 nodes；`FirstPerson` 463/36 已被 v88 过滤器排除（[R L58](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log#L58)） | “源图确属 controller”沿用 [G4 钉图](#g4-closure)；本次没有同时打印 controller 持有的 `source_graph`、generation、request、view。C 运行也没有 census 行 |
+| 候选图身份 | 候选与控制器源图共享 `data`/`string-data`/`infos`/`initial`（v47，652/652 名字与类型对齐）；本次激活后 97 active nodes、`poseLocal` 116 轨、`request=1`（[C L103](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L103)） | 候选 generation/view、候选重载后的实例身份、候选图与源图的同代关系未登记 |
+| 骨架与映射 | 116 条姿态轨；G2 的 v33 记录实际写骨 109/116，缺失 7 条，已列名的是 `x_NPC Rotate/LookNode/Translate` 与 `Weapon`（[当前结论](#current-status)） | 完整骨名、父索引、reference pose、binding/默认填充规则未在本次运行中落盘；不能用 116 或 109 当全局分母 |
+| Binding 身份 | v47：源与候选共享同一 `hkbBehaviorGraphData`，名字/类型/初始值一致 | 本 C 运行 `OarContextWatch=false`，没有 `load-bindings` 行；源/候选实际 binding set 指针、数量、OAR 替换/变体未登记 |
+| 资源清单 | 运行 `1-6-1170-0`、OAR `3.1.6`；候选片段 `H2H_Equip`、`H2H_Idle`、`1HM_Idle`、`SCAR_1hmReadyDummy`、`MT_Idle`；源捕获片段 `1HM_Equip`、`1HM_Unequip`、`1HM_Idle`、`MLh_Idle`、`SCAR_1hmReadyDummy`、`MT_Idle`（[C L134](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L134)、[v92 L189](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log#L189)） | 资源完整相对路径/内容哈希、project/behavior 文件、OAR 配置与变体、实际命中的 replacement 未登记 |
+| Clip 实例身份 | 当前只按 leaf name + first step 记录；同名片段在同一窗口重复出现会合并（[E2-C §七](#c-g5-e2-c)） | 稳定 clip 实例 id、binding 身份、逻辑激活序号未实现；K1 的跨运行身份仍未满足 |
+| 控制 A/B | 控制 A 已完成离线三轮往返；控制 B 未登记 | B 缺资源、哈希、独立真值、承载路径；不得用现有装备链输出代替 |
+
+**K1 结论**：身份、映射和资源清单都只有局部证据，不能关闭。尤其不能用“共享 behavior data”或“116 条姿态轨”代替逐资源、逐 binding、逐骨的身份证明。
+
+### 二、K2 受控输入与装备初态
+
+| 项 | 源侧 R（v88） | 候选侧 C（v88） |
+| --- | --- | --- |
+| 运行模式 | `SourceTimeline=on`，`SourceTimelineGraph=DefaultFemale`，自然游玩（[R L13](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log#L13)） | `IndependentGraph=inject`；`CandidateInputProbe=true` 且变量名为空（observe-only）；`CandidateUnequipProbe=true`、事件 `Unequip`（[C L17–L19](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L17)） |
+| 装备初态 | 窗口开始时 `currentDefaultState=0`、`iState=0`、`iMagicEquipped/iRightHandEquipped/iLeftHandEquipped=0`；随后真实装备单手武器 | 只注入 `WeapEquip` 图事件（[C L114](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L114)）；日志中没有真实装备写入，也没有装备变量的写入行 |
+| 输入序列 | `0→10` @19.074；`iMagicEquipped 0→1`、`iRightHandEquipped 0→1` @19.568；`iLeftHandEquipped 0→9` @19.568；`10→1`、`iState 0→9` @20.120；`1→12` @25.073；`12→0` @26.330（[R L61–L109](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log#L61)） | `WeapEquip` → step 0 `default=10`、`H2H_Equip`；step 49 起 `default=1`；`Unequip` → step 0 `default=12`；step 21 起 `default=0`（[C L126–L334](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L126)） |
+| 装备上下文 | 引擎真实装备写入了三个装备变量；`1HM_Equip`/`1HM_Unequip` 在 v91/v92 源捕获中出现（[v92 L189/L505](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log#L189)） | `rh` 在卸下段 121/121 行为 0（[C L313](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L313)）；装备段没有 `iMagicEquipped`/`iRightHandEquipped`/`iLeftHandEquipped` 的写入或读数 |
+| 外部输入 vs 图内输出 | 三个装备变量由引擎实际装备写入；`currentDefaultState` 的转移是图内结果 | 只有图事件；装备变量没有外部写入。历史 v52/S5 已证：单独写 `iRightHandEquipped=1` 或 `bEquipUnequip=1` 不能推进相位（[§2026-10-30/31](#session-20261030)） |
+
+### 三、H2H/1HM 差异的初步归因
+
+1. **不是测量噪声。** 候选 step 0 的 `H2H_Equip` 与源侧的 `1HM_Equip` 是不同资源、不同状态机路径；E3 的 `paired=2` 只证明状态端点可比，不证明装备上下文相同。
+2. **候选图没有收到与源相同的装备上下文。** C 运行只用 `inject` 向候选图派发 `WeapEquip`，没有记录到真实装备写入或装备变量写入；`rh` 全程 0 说明候选图值集里的装备变量没有被外部写入（这不能单独证明角色实际是否持械，但足以证明候选图没有拿到源的装备状态）。候选随后在 step 49 进入 `1HM_Idle`/`SCAR` 栈，说明它并不是完全不会选 1HM，而是**装备过渡的首个片段**按候选图的空手初态选了 `H2H_Equip`。
+3. **源侧的片段选择不能只用 `iRightHandEquipped` 变量解释。** 源侧 `1HM_Equip` 所在的 equip 边在 19.074 已出现，而 `iRightHandEquipped 0→1` 的 settled 行在 19.568；时间戳本身受 settle 记录影响，不能单独证明先后，但 v52/S5 的变量写负结果已经排除了“只写这个变量就能复现”的方案。
+4. **变量回放不能作为替代方案。** v52 的组合轮虽然得到 `default 10→1`，但 `iState` 仍为 0；S5 的 `iRightHandEquipped=1 + bEquipUnequip=1` 两写序列没有推进卸下相位。两者都没有得到与源相同的完整装备相位；历史结论已写明“候选若确需装备上下文，那是独立议题”。
+
+**处置决定（待评审）**：
+
+| 方案 | 内容 | 当前判断 |
+| --- | --- | --- |
+| D1 真实装备上下文 | 在同一存档/同一初态下，让候选运行具备与源相同的真实 1H 武器（角色实际装备，而非只写变量），再做 equip/unequip 诊断 | **推荐**；最符合源侧机制，但需要新的运行档和评审 |
+| D2 变量/事件等价回放 | 设计一个经审计的输入序列，证明它能等价于真实装备上下文 | 现有证据不支持；若采用须另立契约，先证明最小充分输入，不得直接假定 |
+| D3 保留差异 | 不补装备上下文，把 H2H/1HM 作为被测差异保留 | 只能用于“候选缺装备上下文”的结论，不能作为姿态等价证据；G5 继续 NOT_READY |
+
+**D1 的诊断判据（不是校准判据）**：在冻结的同一初态下，候选在 `0→10` 边应选 `1HM_Equip`，在 `1→12` 边应选 `1HM_Unequip`，并同时记录 `iMagicEquipped`/`iRightHandEquipped`/`iLeftHandEquipped`；若仍选 `H2H_*`，停在 K2，不进入姿态比较。该诊断只用于定位输入差异，不产生容差、不关闭 G5。
+
+**D1 诊断运行单（草案；未授权，需评审）**：
+
+| 项 | 固定内容 |
+| --- | --- |
+| 存档与初态 | 同一存档；同一把 1H 武器（记录 FormID、来源模组、左右手）；护甲、火把、左手物品保持不变；打开面板前武器已实际装备 |
+| 构建与 INI | 匹配 DLL/PDB/INI；`IndependentGraph=inject`、`CandidateInputProbe=true` 且变量名为空、`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`、`OarContextWatch=true`（只读）；`SourceTimeline`/`SourcePoseCapture`/`SamplingLiveness` off |
+| 操作 | 装备 1H 武器 → 打开面板触发候选实验 → equip 窗口结束 → 卸下 → unequip 窗口结束 → 关闭；一次进程只跑一个窗口 |
+| 记录 | `clip-ref` step 0/60/120、`CANDIDATE INPUT`、`CANDIDATE UNEQUIP`、`OAR CONTEXT`/`load-bindings`（若开启）以及实际装备状态 |
+| 判据 | `step=0` 为 `1HM_Equip`；settled 栈含 `1HM_Idle`/`SCAR_1hmReadyDummy`；unequip 为 `1HM_Unequip`；仍为 `H2H_*` 即 D1 失败，停在 K2 |
+| 停止 | `[E]`、崩溃、`source-drift` 非 `none`、重复面板、实际装备状态未记录 |
+
+该运行单只回答“真实装备上下文是否足以改变首个装备片段”，不比较姿态、不产生容差；正式配对仍需 K3–K6 的仪器和新的同代运行。
+
+### 四、控制 A/B 与 K1/K2 关闭条件
+
+**控制 A**：已完成离线固定两组变换的三轮往返（12/12 track 行、120/120 分量，零 missing/dropped/truncated）；它只证明共享采集、六位小数格式和离线解析路径，不证明原生 SDK/ABI、generation、线程或寿命（[离线 A](#c-g5-cal-a-run1-20261111)）。
+
+**控制 B**：仍未就绪。必须先登记一个单层、固定时间、真值可独立确定的原生控制资源，证明只有一个有效层、已知权重和 binding/reference/default-fill，且没有未建模的 IK、物理、OAR 变体或随机输入；资源名、哈希、真值来源、承载路径须在任何控制输出值被查看前写入不可变清单。`SamplePartialTracks` 只能作实现审计入口，不能自行取得 oracle 资格。
+
+| 关闭条件 | 通过条件 |
+| --- | --- |
+| K1-C1 运行身份 | 两侧使用匹配的 DLL/PDB/build/INI/runtime/OAR/资源哈希；姿态数据来自同一次或明确可配对的 Generate |
+| K1-C2 图身份 | 源图确属 controller，记录 actor/graph/generation/request/view；候选记录同一组身份与生命周期 |
+| K1-C3 骨架与映射 | 完整骨名、父索引、reference pose、binding/默认填充规则、应有/访问/记录分母 |
+| K1-C4 资源与 clip 实例 | 资源完整路径/哈希、OAR 变体、稳定 clip 实例 id（不能只用 leaf name） |
+| K2-C1 装备初态 | 冻结武器 Form、左右手、火把、护甲、背包和初始相位；两侧一致 |
+| K2-C2 输入账本 | 外部输入内容/顺序/相对时刻、装备变量写入、图内输出分开记录 |
+| K2-C3 片段一致性 | 候选在 equip/unequip 段选中与源同族的 `1HM_Equip`/`1HM_Unequip`；残余时序差保留为被测差异 |
+| K2-C4 独立控制 | 控制 A 保持；控制 B 在查看数值前完成资源/真值/路径登记 |
+
+全部满足前，K1/K2 维持 **NOT_READY**；不得启动原生校准、不得产生 `tau_p/tau_r/tau_s/epsilon_t`。
+
+### 五、下一步与明确不做
+
+1. **评审本节并选择 D1/D2/D3。** 推荐 D1；D2 需要另立契约，D3 只能保留差异。
+2. **D1 诊断运行**：匹配构建和同一初态，先只做一次候选 equip/unequip 片段诊断，确认是否转为 `1HM_*`；这不是校准运行，不产生容差。
+3. **控制 B 登记**：与控制 A 一样，先写清单再看值；没有合格资源就保持 NOT_READY。
+4. **K3–K6 与 B3/B4**：候选 `e_post_sample` 快照、源侧等价完成边界/generation、完整计数/寿命、`58423 return.out` 对 `63581 memcpy.src`/`poseLocal` 的逐分量对账；经评审后再实现。
+5. **之后**：原生控制 B → 时间量化 → 容差推导 → CAL1–CAL7 → 联合验收 → 协议冻结 → 新正式运行。
+
+**明确不做**：不新增 detour、不写源图、不改产品代码、不部署、不上机、不把旧 E3/E4 日志当校准样本、不从源候选差反算容差、不把 H2H/1HM 说成测量噪声、不用删帧/换资源/偏移时间消除差异。
+
+**证据索引**：[E3 v2 账本](#c-g5-e3-v2)、[E4 契约](#c-g5-e4)、[E2-C 契约](#c-g5-e2-c)、[离线 A](#c-g5-cal-a-run1-20261111)、[R run 2](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log)、[C run 1](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log)、[v92 clock run](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log)。
