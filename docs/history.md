@@ -10,7 +10,7 @@
 
 | 要了解的内容 | 文档 |
 | --- | --- |
-| **当前状态、部署与后续规划（新会话先读这个）** | [最新运行摘要](independent-behavior-graph.md#status-20261111-session)、[当前部署记录](independent-behavior-graph.md#deploy-state)、[CAL v1](independent-behavior-graph.md#c-g5-cal-v1)与 [K1/K2 资格账本](independent-behavior-graph.md#c-g5-cal-k1k2)：v92 + E4 运行档；[离线 A 已完成](independent-behavior-graph.md#c-g5-cal-a-run1-20261111)，H2H/1HM 差异已登记，K1–K6/原生 B/时间资格待补，数值容差未产生。历史交接与原日志保留 |
+| **当前状态、部署与后续规划（新会话先读这个）** | [最新运行摘要](independent-behavior-graph.md#status-20261111-session)、[当前部署记录](independent-behavior-graph.md#deploy-state)、[CAL v1](independent-behavior-graph.md#c-g5-cal-v1)与 [K1/K2 资格账本](independent-behavior-graph.md#c-g5-cal-k1k2)：v92 + D1 候选诊断档（E4 源档备份）；[离线 A 已完成](independent-behavior-graph.md#c-g5-cal-a-run1-20261111)，H2H/1HM 差异已登记，D1 尚未上机，K1–K6/原生 B/时间资格待补，数值容差未产生。历史交接与原日志保留 |
 | **全部测试与验证状态** | [最新运行摘要](independent-behavior-graph.md#status-20261111-session)与[验证总表](independent-behavior-graph.md#verification-matrix)：总表中的日期条目保留当时裁定；新增[离线 A 结果](diagnostics/g5-calibration-a-20261111/attempt-002/result.md)，仅限固定控制的采集/格式/解析与算术，不是原生或 G5 通过记录 |
 | 构建、依赖和验证入口 | [Build](build.md) |
 | 复制显示图、取景、装备与生命周期 | [SceneGraph](scene-graph.md) |

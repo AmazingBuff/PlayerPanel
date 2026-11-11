@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记，H2H/1HM 差异初步归因于候选图缺少源侧真实装备上下文；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v92 + E4 运行档；本次离线编译通过，Release 兼容构建因 SDK 访问受限未完成，没有重验安装、部署或上机。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
+更新：2026-11-11。先读[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记，H2H/1HM 差异初步归因于候选图缺少源侧真实装备上下文；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v92 + D1 候选诊断档（E4 源档备份保留）；D1 尚未上机；本次离线编译通过，Release 兼容构建因 SDK 访问受限未完成。历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -4908,7 +4908,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 | 项 | 现有证据 | 状态 / 缺项 |
 | --- | --- | --- |
 | 运行身份 | E3 的源/候选各一次运行均为 v88（[R](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log#L30)、[C](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L30)）；E4 源姿态来自 v91/v92（[v92 clock run](diagnostics/CharacterPanel-g5e2c-clock-run1-20261111-0026.log)） | E3 的 v88 只覆盖配对；E4 的源姿态不能与 v88 候选拼成同一次 Generate。K1 要求匹配的 DLL/PDB/build/INI/runtime/OAR/资源哈希，尚缺 |
-| 当前安装 | v92 DLL 1,830,400 B SHA-256 `fe697ba9…8bcb38`；PDB 49,557,504 B `f57673ce…11914`；INI 11,183 B `8864075e…465f58`（E4 源捕获档：`SourceTimeline=on`、`SourcePoseCapture=true`、`SamplingLiveness=off`） | 这是**源侧**运行档，不是候选/校准档；候选侧要另配 INI。本次只读核对安装目录，未重部署 |
+| 当前安装 | v92 DLL 1,830,400 B SHA-256 `fe697ba9…8bcb38`；PDB 49,557,504 B `f57673ce…11914`；运行档为 D1 候选 `dist/CharacterPanel-g5cal-d1-candidate.ini` 10,663 B `98ba7a30…7d52a0`（2026-11-11 已部署；`IndependentGraph=inject`、`CandidateInputProbe` 空变量、`CandidateUnequipProbe`、`OarContextWatch=true`；`SourcePoseCapture` 键缺失，按默认 false） | 这是 **D1 诊断档**，不是校准档；E4 源档已备份为 `dist/CharacterPanel-e4-installed-20261111.ini`（11,183 B `8864075e…465f58`）。D1 尚未上机 |
 | 源图身份 | R 运行 `DefaultFemale` 652 words / 106 nodes；`FirstPerson` 463/36 已被 v88 过滤器排除（[R L58](diagnostics/CharacterPanel-g5e3-r-run2-20261110-2312.log#L58)） | “源图确属 controller”沿用 [G4 钉图](#g4-closure)；本次没有同时打印 controller 持有的 `source_graph`、generation、request、view。C 运行也没有 census 行 |
 | 候选图身份 | 候选与控制器源图共享 `data`/`string-data`/`infos`/`initial`（v47，652/652 名字与类型对齐）；本次激活后 97 active nodes、`poseLocal` 116 轨、`request=1`（[C L103](diagnostics/CharacterPanel-g5e3-c-run1-20261110-2317.log#L103)） | 候选 generation/view、候选重载后的实例身份、候选图与源图的同代关系未登记 |
 | 骨架与映射 | 116 条姿态轨；G2 的 v33 记录实际写骨 109/116，缺失 7 条，已列名的是 `x_NPC Rotate/LookNode/Translate` 与 `Weapon`（[当前结论](#current-status)） | 完整骨名、父索引、reference pose、binding/默认填充规则未在本次运行中落盘；不能用 116 或 109 当全局分母 |
@@ -4981,7 +4981,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 ### 五、下一步与明确不做
 
 1. **评审本节并选择 D1/D2/D3。** 推荐 D1；D2 需要另立契约，D3 只能保留差异。
-2. **D1 诊断运行**：匹配构建和同一初态，先只做一次候选 equip/unequip 片段诊断，确认是否转为 `1HM_*`；这不是校准运行，不产生容差。本地已准备候选运行档 `dist/CharacterPanel-g5cal-d1-candidate.ini`（10,663 B，SHA-256 `98ba7a30…7d52a0`；相对 `CharacterPanel-g5e3-c-run.ini` 只把 `OarContextWatch` 从 `false` 改为 `true`），**未部署**；当前安装仍是 v92 + E4 源捕获档。只读字符串检查确认 v92 DLL 含 `CANDIDATE INPUT`/`CANDIDATE UNEQUIP`/`clip-ref`/`OarContextWatch`，因此 D1 诊断不需要新构建；这只证明标签存在，不证明行为语义，仍需上机。
+2. **D1 诊断运行**：匹配构建和同一初态，先只做一次候选 equip/unequip 片段诊断，确认是否转为 `1HM_*`；这不是校准运行，不产生容差。候选运行档 `dist/CharacterPanel-g5cal-d1-candidate.ini`（10,663 B，SHA-256 `98ba7a30…7d52a0`；相对 `CharacterPanel-g5e3-c-run.ini` 只把 `OarContextWatch` 从 `false` 改为 `true`）**已于 2026-11-11 部署**，E4 源档备份为 `dist/CharacterPanel-e4-installed-20261111.ini`；**D1 尚未上机**。只读字符串检查确认 v92 DLL 含 `CANDIDATE INPUT`/`CANDIDATE UNEQUIP`/`clip-ref`/`OarContextWatch`，因此 D1 诊断不需要新构建；这只证明标签存在，不证明行为语义，仍需上机。
 3. **控制 B 登记**：与控制 A 一样，先写清单再看值；没有合格资源就保持 NOT_READY。
 4. **K3–K6 与 B3/B4**：候选 `e_post_sample` 快照、源侧等价完成边界/generation、完整计数/寿命、`58423 return.out` 对 `63581 memcpy.src`/`poseLocal` 的逐分量对账；经评审后再实现。
 5. **之后**：原生控制 B → 时间量化 → 容差推导 → CAL1–CAL7 → 联合验收 → 协议冻结 → 新正式运行。

@@ -13,7 +13,7 @@ G4 的历史裁定及限定见 [G4 收官](docs/independent-behavior-graph.md#g4
 
 候选与控制器源图共享行为 data 和绑定集，变量活值分储、从 authored defaults 初始化；共享资源与重复候选 pose 哈希均不能证明与源完整姿态、时钟或层混合一致。G2 的实际写骨 109/116、三条缺失名未知，以及同 controller 来源替换/frozen-only 等边界限制继续保留。
 
-最近**记录部署为 v92**（[身份/哈希与部署](docs/build.md#v92-g5e2c-ms-2026-11-10)），使用 E4 运行档 `8864075e…`，其 [2026-11-11 00:26 运行](docs/build.md#v92-g5e2c-run1-20261111)已有源捕获和时钟记录；该档不是校准配置。本次未重验安装目录。下面列出仓库 dormant 样例的主要关闭键；完整状态见[当前部署与开关](docs/independent-behavior-graph.md#deploy-state)。
+最近**记录部署为 v92**（[身份/哈希与部署](docs/build.md#v92-g5e2c-ms-2026-11-10)），当前运行档已切到 D1 候选诊断 `98ba7a30…`（E4 源档 `8864075e…` 备份在 `dist/CharacterPanel-e4-installed-20261111.ini`），D1 尚未上机；该档不是校准配置。下面列出仓库 dormant 样例的主要关闭键；完整状态见[当前部署与开关](docs/independent-behavior-graph.md#deploy-state)。
 
 ```ini
 [Experiment]
