@@ -201,6 +201,7 @@ namespace animation::behavior_graph
         struct Entry
         {
             void const* out;
+            void const* behavior;
             std::uint32_t tracks;
             std::uint64_t tsc;
         };

@@ -4,6 +4,7 @@
 
 #include "animation/behavior_graph/probe_liveness.h"
 
+#include "animation/behavior_graph/b3b4_policy.h"
 #include "animation/behavior_graph/probe_liveness_policy.h"
 #include "animation/behavior_graph/source_timeline.h"
 
@@ -143,6 +144,13 @@ namespace
         ProbeInFlight in_flight;
         ProbeFootikInFlight footik;
         ProbeFootikTally footik_tally;
+        ProbeB3B4Ledger b3b4;
+        ProbeB3B4Tally b3b4_tally;
+        std::uint64_t b3_overwritten{ 0 };
+        std::uint64_t b3_no_out{ 0 };
+        std::uint64_t b3_stale{ 0 };
+        std::uint64_t b3_multi{ 0 };
+        std::uint64_t b3_behavior_mismatch{ 0 };
         ProbeMixTally mix;
         Counters counters;
         std::uint64_t detail_lines{ 0 };
@@ -198,6 +206,13 @@ namespace
             in_flight.reset();
             footik.reset();
             footik_tally.reset();
+            b3b4.reset();
+            b3b4_tally.reset();
+            b3_overwritten = 0;
+            b3_no_out = 0;
+            b3_stale = 0;
+            b3_multi = 0;
+            b3_behavior_mismatch = 0;
             mix.reset();
             counters.reset();
             detail_lines = 0;
@@ -247,6 +262,10 @@ namespace
     ProbeVec4 g_footik_return_tracks[116 * 2];
     ProbeVec4* entry_tracks() noexcept { return g_footik_entry_tracks; }
     ProbeVec4* return_tracks() noexcept { return g_footik_return_tracks; }
+    // C-G5-E2-B B3/B4: return-side snapshot and apply-side re-read buffers. Both are static and
+    // bounded by the pre-registered 116-track capacity; the re-read buffer is detour-local.
+    ProbeVec4 g_b3b4_return_snapshot[Probe_B3B4_Track_Capacity * 2];
+    ProbeVec4 g_b3b4_reread[Probe_B3B4_Track_Capacity * 2];
     std::atomic<std::uint32_t> g_bone_count{ 0 };
 
     std::uintptr_t game_base()
@@ -439,6 +458,46 @@ namespace
             while (pending > current
                 && !c.max_in_flight.compare_exchange_weak(current, pending, std::memory_order_relaxed))
             {
+            }
+        }
+        // ---- C-G5-E2-B B3/B4: the out-block boundary at the memcpy source ----------------
+        // Runs before any of the 63856 scene writes. B3 re-reads the 58423-return `out` block
+        // and compares it against the stored return snapshot; B4 compares poseLocal (a_pose)
+        // against the same snapshot. No slot: counts as stale, never as success.
+        if (is_pinned)
+        {
+            auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
+            ProbeB3B4Slot const* const slot = s.b3b4.match(tid, pinned);
+            if (slot == nullptr)
+            {
+                ++s.b3_stale;
+            }
+            else
+            {
+                std::uint16_t reread_count = 0;
+                bool const reread_ok = probe_read_footik_out(slot->out, g_b3b4_reread,
+                    Probe_B3B4_Track_Capacity, reread_count);
+                if (!reread_ok)
+                {
+                    s.b3b4_tally.read_failed = true;
+                    ++s.b3_no_out;
+                }
+                else if (reread_count != slot->tracks)
+                {
+                    // The out block's count changed between 58423's return and the apply: the
+                    // stored snapshot no longer describes the block. Count, never resolve.
+                    ++s.b3_stale;
+                }
+                else
+                {
+                    (void)s.b3b4_tally.compare(0, slot->tracks, slot->snapshot.data(), g_b3b4_reread);
+                    if (clamped > 0)
+                    {
+                        std::uint32_t const n = clamped < slot->tracks ? clamped : slot->tracks;
+                        (void)s.b3b4_tally.compare(1, n, slot->snapshot.data(),
+                            static_cast<ProbeVec4 const*>(static_cast<void const*>(a_pose)));
+                    }
+                }
             }
         }
         // ---- C-G5-E2-A: synthesised-pose identity (trans + rot of 64112) ----------------
@@ -670,7 +729,6 @@ namespace
     void record_footik_entry(void* a_driver, void* a_ctx, void* a_out, std::uint32_t a_flag) noexcept
     {
         (void)a_driver;
-        (void)a_ctx;
         (void)a_flag;
         ProbeState& s = state();
         ProbeRecorderLease const lease(s.admission);
@@ -681,6 +739,7 @@ namespace
         auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
         ProbeFootikInFlight::Entry entry{};
         entry.out = a_out;
+        entry.behavior = probe_b3b4_context_behavior(a_ctx);
         entry.tsc = __rdtsc();
         std::uint16_t snapshot_count = 0;
         bool const entry_ok = probe_read_footik_out(a_out, entry_tracks(), 116, snapshot_count);
@@ -748,6 +807,39 @@ namespace
             }
             tally.rewritten_components += rewritten;
             tally.last_frame_rewritten = rewritten;
+        }
+        // C-G5-E2-B B3/B4: store the return snapshot only for the pinned graph's calls. The
+        // behavior identity comes from 58423's hkbContext (second argument, +0x08). A pending
+        // slot from an earlier return on the same thread that never reached apply is overwritten
+        // and counted; the pre-registration forbids picking one of several returns.
+        void const* const pinned = g_pinned.load(std::memory_order_relaxed);
+        void const* const behavior = entry.behavior;
+        if (pinned != nullptr && behavior == pinned)
+        {
+            if (read_ok && count > 0)
+            {
+                if (s.b3b4.match(tid, pinned) != nullptr)
+                    ++s.b3_multi;
+                switch (s.b3b4.on_return(tid, entry.out, behavior, count, return_tracks()))
+                {
+                case ProbeB3B4Ledger::Outcome::e_overwritten:
+                    ++s.b3_overwritten;
+                    break;
+                case ProbeB3B4Ledger::Outcome::e_no_slot:
+                    ++s.b3_no_out;
+                    break;
+                default:
+                    break;
+                }
+            }
+            else
+            {
+                ++s.b3_no_out;
+            }
+        }
+        else if (pinned != nullptr)
+        {
+            ++s.b3_behavior_mismatch;
         }
         ProbeRecord record{};
         record.graph = reinterpret_cast<std::uintptr_t>(entry.out);
@@ -863,7 +955,7 @@ namespace
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
         char const* fill_state = s.fill_cap_state == 1 ? "ok" : (s.fill_cap_state == 2 ? "violation" : "unread");
-        logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-fail-no-ik={} e2a-ik-frames={} e2a-failed-ik={} e2a-failed-no-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-fail-foot={} e2a-fail-cloth={} e2a-fail-unexplained={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={} b-calls={} b-compared={} b-rewritten={} b-max-delta={:.3e} b-clean={} b-overwritten={} b-entries={} b-returns={} b-last-rewritten={}",
+            logger::info("PROBE LIVENESS window=close reason={} actor={:08x} epoch={} frames={} entries={} e:engine={}/plugin={}/other={} pinned-engine={} apply-entries={} pinned-apply-entries={} other-apply-entries={} tracked-sample-entries={} paired-apply-entries={} pair-mismatch={} pair-no-slot={} threads={} queue-seen={} queue={:#x} flag={} queue-flag-frames={} detail={} detail-dropped={} ring-dropped={} contention-dropped={} full-dropped={} eligible-records={} recorded-records={} drained-records={} drained-samples={} drained-applies={} missing-records={} orphan-applies={} unpaired-samples={} suppressed-rows={} transport-complete={} apply-paths=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-completions=63589:{}/63568:{}/p63563:{}/p63572:{}/p_bae731:{}/un:{} apply-returns={} completions-pinned={} paired-completions={} drained-returns={} in-flight-now={} in-flight-max={} orphan-returns={} untracked-returns={} overwritten-entries={} count-over-capacity={} clamped-zero={} pose-stable={} fill-le-cap={} skeleton=[cap:{} fill:{}] e2a-frames={} e2a-main-frames={} e2a-fallback-frames={} e2a-tracks={} e2a-failed={} e2a-max-delta={:.3e} e2a-fail-frames={} e2a-fail-ik={} e2a-fail-no-ik={} e2a-ik-frames={} e2a-failed-ik={} e2a-failed-no-ik={} e2a-ik-ready={} e2a-near-slot0={} e2a-near-slot1={} e2a-near-neither={} e2a-fail-foot={} e2a-fail-cloth={} e2a-fail-unexplained={} e2a-ok={} e2a-w-domain={} e2a-non-finite={} e2a-read-failed={} e2a-samples={} b-calls={} b-compared={} b-rewritten={} b-max-delta={:.3e} b-clean={} b-overwritten={} b-entries={} b-returns={} b-last-rewritten={} b3-checked={} b3-equal={} b3-failed={} b3-max-delta={:.3e} b3-stale={} b3-multi={} b3-no-out={} b3-overwritten={} b3-behavior-mismatch={} b4-checked={} b4-equal={} b4-failed={} b4-max-delta={:.3e} b3b4-read-failed={} b3b4-non-finite={} b3b4-samples={}",
             probe_window_close_name(s.window.close_reason()), g_actor.load(std::memory_order_relaxed),
             g_epoch.load(std::memory_order_relaxed), s.counters.frames.load(std::memory_order_relaxed),
             s.counters.entries_total.load(std::memory_order_relaxed),
@@ -918,7 +1010,35 @@ namespace
             s.footik_tally.max_delta, (s.footik_tally.clean() ? "yes" : "no"),
             s.counters.footik_overwritten.load(std::memory_order_relaxed),
             s.drained_footik_entries, s.drained_footik_returns,
-            s.footik_tally.last_frame_rewritten);
+            s.footik_tally.last_frame_rewritten,
+            s.b3b4_tally.b3_checked, s.b3b4_tally.b3_equal, s.b3b4_tally.b3_failed,
+            s.b3b4_tally.b3_max_delta, s.b3_stale, s.b3_multi, s.b3_no_out, s.b3_overwritten,
+            s.b3_behavior_mismatch, s.b3b4_tally.b4_checked, s.b3b4_tally.b4_equal,
+            s.b3b4_tally.b4_failed, s.b3b4_tally.b4_max_delta,
+            s.b3b4_tally.read_failed ? "yes" : "no",
+            s.b3b4_tally.non_finite ? "yes" : "no",
+            s.b3b4_tally.sample_count);
+
+        char const* const b3_verdict =
+            (s.b3b4_tally.b3_checked > 0 && s.b3b4_tally.b3_failed == 0
+                && !s.b3b4_tally.read_failed && !s.b3b4_tally.non_finite)
+            ? (s.b3b4_tally.b4_checked > 0 && s.b3b4_tally.b4_failed == 0
+                ? "B3+B4-PASS" : "B3-PASS-B4-OPEN")
+            : "B3-INVALID";
+        logger::info("PROBE LIVENESS b3b4-window b3-checked={} b3-stable={} b3-changed={} b4-checked={} b4-equal={} b4-failed={} b4-max-delta={:.3e} verdict={}",
+            s.b3b4_tally.b3_checked,
+            s.b3b4_tally.b3_checked > 0 && s.b3b4_tally.b3_failed == 0 ? "yes" : "no",
+            s.b3b4_tally.b3_failed,
+            s.b3b4_tally.b4_checked, s.b3b4_tally.b4_equal, s.b3b4_tally.b4_failed,
+            s.b3b4_tally.b4_max_delta, b3_verdict);
+
+        for (std::uint32_t i = 0; i < s.b3b4_tally.sample_count; ++i)
+        {
+            ProbeB3B4Sample const& sample = s.b3b4_tally.samples[i];
+            logger::info("PROBE LIVENESS b3b4-sample track={} channel={} expected={:.6f} actual={:.6f} delta={:.6g}",
+                sample.track, static_cast<unsigned>(sample.channel), sample.expected, sample.actual,
+                sample.delta);
+        }
 
         // v75/v77: the failing components themselves, so attribution never depends on a summary.
         for (std::uint32_t i = 0; i < s.mix.sample_count; ++i)
