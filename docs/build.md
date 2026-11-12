@@ -1927,7 +1927,7 @@ Identity `CharacterPanel-scenegraph-v98-g5k3c-snapshot-bcbe1850d8-cl94faaed0c6-2
 | [CharacterPanel.pdb](../dist/g5-k3c-v98-20261113/CharacterPanel.pdb) | 50294784 | `660ed38ceca60498d0e497718601328f2870fe9565e2887c36987fb756de50c9` |
 | [CharacterPanel.ini](../dist/g5-k3c-v98-20261113/CharacterPanel.ini) | 12057 | `9745d52a18c6ab709cb9e8c88654a216a18a6eb1f6c5d2bdb677d8748f7ae5ba` |
 
-The run INI is derived from the committed sample with exactly eight overrides (`inject`, probe on, empty input variable, both prime switches, unequip probe on, `Unequip`, `ObservationSnapshot=true`); every other instrument stays dormant. [MANUAL.md](../dist/g5-k3c-v98-20261113/MANUAL.md). **Not deployed or game-run yet**; this batch is candidate-side only, so K3 stays NOT_READY until K3-S.
+The run INI is derived from the committed sample with exactly eight overrides (`inject`, probe on, empty input variable, both prime switches, unequip probe on, `Unequip`, `ObservationSnapshot=true`); every other instrument stays dormant. [MANUAL.md](../dist/g5-k3c-v98-20261113/MANUAL.md). **Deployed 2026-11-13** (Skyrim not running; MO2 open): the v97d trio was backed up hash-verified to `dist/deploy-backup-20261113-v97d-v98pre/`; the three v98 files were copied with source+destination hash comparison and the installed DLL contains the v98 identity. Installed key readback: `IndependentGraph=inject`, `ObservationSnapshot=true`, five-word prime/unequip probe on, `SamplingLiveness=off`, all display/source instruments off. **No game run yet**; this batch is candidate-side only, so K3 stays NOT_READY until K3-S.
 
 
 <a id="g5-e2b-b3b4-v97d-run1-20261113"></a>
