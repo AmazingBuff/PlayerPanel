@@ -1771,3 +1771,23 @@ The installed DLL contains `CharacterPanel-scenegraph-v96a-g5cal-observation-v2-
 Unequip: settle `target-step=87 settled-step=101`, baseline `default=12 istate=9`, `1HM_Unequip` binding-index=75 duration 2.0; completed 128 still `default=12`, completed 129 `default=0`; segment-end `outcome=completed stop-reason=state-12-to-0 active-state-seen=true first-return-zero=129 last-state=0 completion-evidence=state-12-to-0-only`. At the same point the clip reads `local-time=2 f32=40000000`, 99/99 tracks compared/agreed, `max-dpos=0.000009`, `max-drot=0.000006`. Coverage: equip 140 nodes/4 clips/6 traces/121 points; unequip 141/4/5/130; all overflow flags false, `name-invalid=false`.
 
 **Verdict**: v96a reproduces the frozen-loadout clip-family result (`1HM_Equip` then `1HM_Unequip`) and closes the previous 1HM-unequip completion coverage gap: native state 12→0 at completed 129, with the clip at exactly 2.0 s. The completion evidence is the `currentDefaultState` output only; it does not capture `Unequip_Out` or a clip-end event. Clock rate/quantization remains unjudged (the 130-point unequip trace contains holds, e.g. 1.9833 repeated about 14 points), and no tolerance is produced. Control B, B3/B4, same-generation source/output pairing, K1/K2 residuals and pose equivalence/G5/G6 remain open; G5 is neither frozen nor passed.
+
+
+<a id="v97-g5e2b-b3b4-20261112"></a>
+## v97 G5-E2-B B3/B4 implementation and deployment (2026-11-12, not yet run)
+
+**Commits**: `d076c6d feat(g5-e2b): implement the B3/B4 boundary` + `8eef9d3 fix(g5-e2b): pin the source graph in on mode for B3/B4`. Canonical contract: [C-G5-E2-B B3/B4](independent-behavior-graph.md#c-g5-e2-b-b3b4).
+
+**Implementation**: new [b3b4_policy.h](../src/animation/behavior_graph/b3b4_policy.h) holds a per-thread (8-slot) return-snapshot ledger keyed on `out` + `ctx->behavior`, a phase-split tally (B3 = out re-read vs return snapshot, B4 = poseLocal vs same snapshot, E2-A thresholds) and the `hkbContext+0x08` behavior accessor. [probe_liveness.cpp](../src/animation/behavior_graph/probe_liveness.cpp) stores the 58423-return snapshot only when `behavior == pinned graph`, and at the pinned 63856 apply entry re-reads the out block before any scene write (B3) and compares `poseLocal` (B4). Stale/no-out/multi/behavior-mismatch/read-failure/non-finite are counted; the close row gains `b3-*`/`b4-*` counters, a `b3b4-window ... verdict=` line and up to 8 `b3b4-sample` rows. `ProbeFootikInFlight::Entry` gained a `behavior` field so the entry-side context reaches the return-side recorder.
+
+**Blocking fix found before deployment**: the pre-registered run profile (`SamplingLiveness=on`, `IndependentGraph=off`) arms via `arm_probe_liveness()` (F7), which historically set `pinned=no`; `g_pinned` stayed null and every B3/B4 comparison would have been skipped. `8eef9d3` adds `player_source_graph()` (render-thread resolution of `PlayerCharacter`'s third-person graph, reusing `source_graph_is_first_person`) and pins it at arm time; a missing graph now refuses to arm. No new detour, no source-graph write, no candidate experiment.
+
+**Verification**: `probe_liveness_b3b4_test.cpp` 4/4 and existing `probe_liveness_e2b_test.cpp` 3/3 pass under `/W4 /WX`; Release configure/build exit 0 (only existing D9025 notices). Identity `CharacterPanel-scenegraph-v97-g5e2b-b3b4-8eef9d3ad7-cl94faaed0c6-20261112T145215Z` is embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-e2b-b3b4-20261112/CharacterPanel.dll) | 1889792 | `aefa19ee65d134bce9b62dd54cdf66216ac24fd5543ab6ff9216941a7325c650` |
+| [CharacterPanel.pdb](../dist/g5-e2b-b3b4-20261112/CharacterPanel.pdb) | 50114560 | `28d5a0682a91b98d758257bcfceb4e88401a992c833bf571fb6d1a72d003d519` |
+| [CharacterPanel.ini](../dist/g5-e2b-b3b4-20261112/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
+
+**Deployed 2026-11-12** (Skyrim not running; MO2 open): the v96a trio was backed up hash-verified to `dist/deploy-backup-20261112-v96a-v97pre/` (DLL `2c5112ae…eab33f5`, PDB `e7803453…1814cf8`, INI `f41990d2…bb04b7e90c`). The three v97 files were copied with source+destination hash comparison; the installed DLL contains the v97 identity. Installed key readback: `IndependentGraph=off`, `SamplingLiveness=on`, all display/source/candidate/OAR instruments off, UTF-8 no BOM. Run INI derives from the committed sample with exactly those two overrides. [MANUAL.md](../dist/g5-e2b-b3b4-20261112/MANUAL.md) has the one-window procedure and pre-registered judgement. **No game run yet**; B3/B4 native results are pending.

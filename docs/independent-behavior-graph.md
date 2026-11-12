@@ -4300,7 +4300,9 @@ Shield                 NPC L Pauldron
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。
 
 <a id="c-g5-e2-b-b3b4"></a>
-## C-G5-E2-B B3/B4：源图后处理边界预注册（2026-11-12，文档；不授权实现/上机）
+## C-G5-E2-B B3/B4：源图后处理边界预注册（2026-11-12）
+
+> **状态（2026-11-12 晚）**：本节规则已按原样实现、离线验证并[部署为 v97](build.md#v97-g5e2b-b3b4-20261112)，尚未上机。部署前发现并修复了一个契约前提缺口——`SamplingLiveness=on` 的 F7 生命周期原本 `pinned=no`，`g_pinned` 为空会使 B3/B4 全部跳过；`8eef9d3` 令其在 arm 时 pin 玩家第三人称源图（只读、无新 detour、无源图写入），缺失图则拒绝开窗。运行档为 `SamplingLiveness=on` + `IndependentGraph=off`，其余仪器全部 dormant。判据、停止规则与边界不变。
 
 **目标**：在**源图**上闭合 E2-B 的 B3/B4——`58423-return.out == 63581-memcpy.src` 与 `poseLocal == 63581-memcpy.src`。本契约只使用已部署的 E2-B detour（58423 entry/return、63856 apply entry）和已审计的静态路径，不新增 detour、不改窗口语义、不写源图。
 
