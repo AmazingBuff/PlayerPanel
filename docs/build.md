@@ -1999,3 +1999,19 @@ Run profile is exactly `SamplingLiveness=on` with `IndependentGraph=off`, `Obser
 **Fix**: `encode_detour_return_thunk` now aligns dynamically — `push rbp; mov rbp,rsp; and rsp,-16; sub rsp,20h; call; mov rsp,rbp; pop rbp; jmp original` — independent of the site's alignment. The existing `return_thunk_preserves_the_caller_frame` case (6/6 v3) passes with the new bytes. Criteria/thresholds unchanged; this attempt is INVALID and produces no K3-S evidence.
 
 **Next**: rebuild as v99a, redeploy, and run one new F7 window.
+
+
+<a id="v99a-g5k3s-20261113"></a>
+## v99a G5-CAL K3-S repaired build and deployment (2026-11-13, not yet run)
+
+**Commit**: `0b017bc fix(g5-k3s): align the return thunk stack dynamically`. `encode_detour_return_thunk` now saves rbp, snapshots rsp, aligns down to 16, reserves shadow space, calls the recorder, restores rsp/rbp and jumps to the relocated instruction; the v3 return-thunk regression still passes (6/6). Release build exit 0; `k3_snapshot_test` 4/4.
+
+Identity `CharacterPanel-scenegraph-v99a-g5k3s-source-0b017bcbf0-cl94faaed0c6-20261112T170415Z` (clean tree), embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-k3s-v99a-20261113/CharacterPanel.dll) | 1912832 | `7f8d158dd48d25e2ffb36a564b8b646c7b3d1cda599bdb706b933dd7000c4bb9` |
+| [CharacterPanel.pdb](../dist/g5-k3s-v99a-20261113/CharacterPanel.pdb) | 50352128 | `0df6089ddfe0ab314c945638371c54800512456fb7ab9f0643241599d8115cf3` |
+| [CharacterPanel.ini](../dist/g5-k3s-v99a-20261113/CharacterPanel.ini) | 12069 | `ebe0afb733c91ebe1176f0d205529b2b8ae083b8f33305d6a89885fd9773a050` |
+
+**Deployed 2026-11-13**: the v99 trio was backed up hash-verified to `dist/deploy-backup-20261113-v99-v99apre/`; the three v99a files were copied with source+destination hash comparison and the installed DLL contains the v99a identity. Run INI is unchanged (`SamplingLiveness=on` only; `IndependentGraph=off`, `ObservationSnapshot=false`). [MANUAL.md](../dist/g5-k3s-v99a-20261113/MANUAL.md). **No game run yet.**
