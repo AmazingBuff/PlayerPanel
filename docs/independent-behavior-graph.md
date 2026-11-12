@@ -4302,7 +4302,7 @@ Shield                 NPC L Pauldron
 <a id="c-g5-e2-b-b3b4"></a>
 ## C-G5-E2-B B3/B4：源图后处理边界预注册（2026-11-12）
 
-> **状态（2026-11-12 晚）**：本节规则已按原样实现、离线验证并[部署为 v97](build.md#v97-g5e2b-b3b4-20261112)，尚未上机。部署前发现并修复了一个契约前提缺口——`SamplingLiveness=on` 的 F7 生命周期原本 `pinned=no`，`g_pinned` 为空会使 B3/B4 全部跳过；`8eef9d3` 令其在 arm 时 pin 玩家第三人称源图（只读、无新 detour、无源图写入），缺失图则拒绝开窗。运行档为 `SamplingLiveness=on` + `IndependentGraph=off`，其余仪器全部 dormant。判据、停止规则与边界不变。
+> **状态（2026-11-12 夜）**：本节规则已实现、离线验证并部署。部署前修复了契约前提缺口（`SamplingLiveness=on` 原 `pinned=no`，`8eef9d3` 令其在 arm 时 pin 玩家第三人称源图）。[v97 run 1](build.md#g5-e2b-b3b4-v97-run1-20261112)（23:02）为 **INVALID——纯仪器缺陷**：实现把 58423 的 `hkbContext+0x08`（`hkbBehaviorGraph*`）与 pin 的 `BShkbAnimationGraph*` 直接比较，指针层级不同，导致 `b3-behavior-mismatch=6670`、`b3-stale=962`、`b3-checked=0`，B3/B4 一次未评。按契约“修仪器须另立批次”，run 1 保留 INVALID 且不改判据；`c49ec71` 新增 `g_pinned_behavior` 修复，重建为 [v97a](build.md#v97a-g5e2b-b3b4-20261112) 并已部署，**等待一次新的 F7 窗口**。运行档始终为 `SamplingLiveness=on` + `IndependentGraph=off`，其余仪器 dormant。判据、停止规则与边界不变。
 
 **目标**：在**源图**上闭合 E2-B 的 B3/B4——`58423-return.out == 63581-memcpy.src` 与 `poseLocal == 63581-memcpy.src`。本契约只使用已部署的 E2-B detour（58423 entry/return、63856 apply entry）和已审计的静态路径，不新增 detour、不改窗口语义、不写源图。
 

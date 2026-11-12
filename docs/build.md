@@ -1805,3 +1805,19 @@ Unequip: settle `target-step=87 settled-step=101`, baseline `default=12 istate=9
 **Other readings (context only, not judged)**: `b-calls=6664`, `b-compared=6605`, `b-rewritten=1451891`, `b-max-delta=1.745e+01`, `b-entries=6626`, `b-returns=6628` — E2-B footIK activity reproduces; `pinned-apply-entries=962`, `pinned-engine=962`, `pair-mismatch=0`, `pose-stable=yes`, `e2a-frames=962` (all fallback). `b3-multi=0`, `b3-no-out=0`, `b3-overwritten=0`, `b3b4-read-failed=no`, `b3b4-non-finite=no` — no other invalidation path fired.
 
 **Fix and re-run**: a new commit stores `g_pinned_behavior` (the `behaviorGraph` member) at both arm sites, and both the 58423-return filter and the apply-side ledger lookup now compare against it. Per the contract's "instrument repair needs a new batch" rule, this run keeps its `INVALID` verdict; the repaired build is deployed as a separately numbered package and requires one new window. No criteria, thresholds or boundary rules were changed.
+
+
+<a id="v97a-g5e2b-b3b4-20261112"></a>
+## v97a G5-E2-B B3/B4 repaired build and deployment (2026-11-12, not yet run)
+
+**Commit**: `c49ec71 fix(g5-e2b): compare B3/B4 against the pinned behavior graph pointer` (+ `b12889a` byte-exact log attribute). `g_pinned_behavior` now holds `pinned->behaviorGraph` (`hkbBehaviorGraph*`) and is set at both arm sites, cleared at close; the 58423-return filter (`behavior == pinned`) and the apply-side `b3b4.match(tid, ...)` both use it, while `g_pinned` still identifies the 63856 apply entry. No criteria, thresholds, budgets or boundary rules changed. Release build exit 0.
+
+Identity `CharacterPanel-scenegraph-v97a-g5e2b-b3b4-b12889a623-cl94faaed0c6-20261112T151107Z` (clean tree), embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-e2b-b3b4-v97a-20261112/CharacterPanel.dll) | 1889792 | `195df66f0d6976ced7b01cae8460f9a956b37653eefa30c102f8cef50042820e` |
+| [CharacterPanel.pdb](../dist/g5-e2b-b3b4-v97a-20261112/CharacterPanel.pdb) | 50114560 | `5ffc6735d3a4f1f557a46b068d9d19b63678bb4ed4bed0d240cff516ce5bae78` |
+| [CharacterPanel.ini](../dist/g5-e2b-b3b4-v97a-20261112/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
+
+**Deployed 2026-11-12** (Skyrim not running; MO2 open): the v97 trio was backed up hash-verified to `dist/deploy-backup-20261112-v97-v97apre/`; the three v97a files were copied with source+destination hash comparison and the installed DLL contains the v97a identity. The run INI is byte-identical to v97's (`ba93289b…`), i.e. still exactly `SamplingLiveness=on` + `IndependentGraph=off` with all other instruments dormant. [MANUAL.md](../dist/g5-e2b-b3b4-v97a-20261112/MANUAL.md) records the unchanged one-window procedure and judgement. **No game run yet**; this is a new batch, so v97 run 1 keeps its `INVALID` verdict.
