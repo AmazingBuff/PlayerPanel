@@ -1913,7 +1913,7 @@ Identity `CharacterPanel-scenegraph-v97d-g5e2b-b3b4-e1526f2bdd-cl94faaed0c6-2026
 
 
 <a id="v98-g5k3c-20261113"></a>
-## v98 G5-CAL K3-C candidate snapshot build (2026-11-13, not yet deployed/run)
+## v98 G5-CAL K3-C candidate snapshot build (2026-11-13, deployed; run below)
 
 **Commit**: `502bdd5 feat(g5-k3c): write the per-generation full candidate snapshot`. New [k3_snapshot_policy.h](../src/animation/behavior_graph/k3_snapshot_policy.h) defines the fixed little-endian artifact (`CPK3` v1 header 116 B, record 5,280 B = 32 B counters + 8×76 B clip slots + 116×40 B tracks). [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) captures at `e_post_sample`: two immediate `poseLocal` reads must match bitwise, all `min(numPoseLocal,116)` tracks' trans/rot/scale float32, up to 8 active `hkbClipGenerator` records (name/binding/localTime/mode), and the segment counters. The file is written lazily to the SKSE log directory as `CharacterPanel-g5k3-<identity>-<UTC>.bin`, capped at 512 records; open/write/two-read/clip/record failures invalidate the segment. New key `[Experiment] ObservationSnapshot=false` (sample default off).
 
@@ -1927,7 +1927,26 @@ Identity `CharacterPanel-scenegraph-v98-g5k3c-snapshot-bcbe1850d8-cl94faaed0c6-2
 | [CharacterPanel.pdb](../dist/g5-k3c-v98-20261113/CharacterPanel.pdb) | 50294784 | `660ed38ceca60498d0e497718601328f2870fe9565e2887c36987fb756de50c9` |
 | [CharacterPanel.ini](../dist/g5-k3c-v98-20261113/CharacterPanel.ini) | 12057 | `9745d52a18c6ab709cb9e8c88654a216a18a6eb1f6c5d2bdb677d8748f7ae5ba` |
 
-The run INI is derived from the committed sample with exactly eight overrides (`inject`, probe on, empty input variable, both prime switches, unequip probe on, `Unequip`, `ObservationSnapshot=true`); every other instrument stays dormant. [MANUAL.md](../dist/g5-k3c-v98-20261113/MANUAL.md). **Deployed 2026-11-13** (Skyrim not running; MO2 open): the v97d trio was backed up hash-verified to `dist/deploy-backup-20261113-v97d-v98pre/`; the three v98 files were copied with source+destination hash comparison and the installed DLL contains the v98 identity. Installed key readback: `IndependentGraph=inject`, `ObservationSnapshot=true`, five-word prime/unequip probe on, `SamplingLiveness=off`, all display/source instruments off. **No game run yet**; this batch is candidate-side only, so K3 stays NOT_READY until K3-S.
+The run INI is derived from the committed sample with exactly eight overrides (`inject`, probe on, empty input variable, both prime switches, unequip probe on, `Unequip`, `ObservationSnapshot=true`); every other instrument stays dormant. [MANUAL.md](../dist/g5-k3c-v98-20261113/MANUAL.md). **Deployed 2026-11-13** (Skyrim not running; MO2 open): the v97d trio was backed up hash-verified to `dist/deploy-backup-20261113-v97d-v98pre/`; the three v98 files were copied with source+destination hash comparison and the installed DLL contains the v98 identity. Installed key readback: `IndependentGraph=inject`, `ObservationSnapshot=true`, five-word prime/unequip probe on, `SamplingLiveness=off`, all display/source instruments off. The follow-up run is recorded below.
+
+
+<a id="g5-k3c-v98-run1-20261113"></a>
+## G5-CAL K3-C v98 run 1 (2026-11-13 00:48, **PASS — candidate side only**)
+
+**Artifact**: v98 DLL `66357548…8db2c73`, PDB `660ed38c…756de50c9`, INI `9745d52a…48f7ae5ba`, identity `CharacterPanel-scenegraph-v98-g5k3c-snapshot-bcbe1850d8-cl94faaed0c6-20261112T164251Z`. Log [CharacterPanel-g5k3c-v98-run1-20261113-0048.log](diagnostics/CharacterPanel-g5k3c-v98-run1-20261113-0048.log), 178,088 B, SHA-256 `3bd0997588cc7732d7b07f0649c1a8ff27b334cebf86629f6442050459a6fd09`; snapshot [CharacterPanel-g5k3c-v98-run1-20261113-0048.bin](diagnostics/CharacterPanel-g5k3c-v98-run1-20261113-0048.bin), 1,314,836 B, SHA-256 `4cba0203f4e5c1c64c9c9927817f2a712877eaf0f502a64d3d29e5e9e1ae8e8d`. Zero `[E]`, 15 known `[W]` (2 studio-light, 13 DAC preview). One `K3 SNAPSHOT open/close`, `records=249 attempted=249 overflow=false write-failed=no`.
+
+| 判据 | 读数 | 裁定 |
+| --- | --- | --- |
+| K3C-1 完整性 | 249 records = equip 120 + unequip 129; `track_count=116` on every record; file size 1,314,836 = 116 + 249×5,280 | PASS |
+| K3C-2 同代双读 | `two_read_equal=1` on all 249 records (`two_read_bad=0`) | PASS |
+| K3C-3 覆盖 | equip `completed=1..120` contiguous, unequip `1..129` contiguous, `commanded == completed` | PASS |
+| K3C-4 身份 | header magic `CPK3` v1, header size 116, identity matches the DLL, file in the SKSE log directory | PASS |
+
+Additional parse: `clip_count ∈ {1,2,3,4}` (limit 8), `nonfinite=0`, record capacity 512 (no overflow).
+
+**Meaning**: the candidate produced one complete, same-generation snapshot per Generate return across both segments, with bit-identical double reads and all 116 `poseLocal` tracks (translation/rotation/scale raw float32) plus per-generation clip metadata. This satisfies the **K3-C candidate-side** pre-registration.
+
+**Boundaries**: candidate side only. K3 overall remains **NOT_READY** until K3-S (audited source completion boundary, lifetime and generation association) exists; this run does not pair source and candidate generations, does not produce a tolerance and does not close K5/K6 or G5. Single session/loadout; no repetition.
 
 
 <a id="g5-e2b-b3b4-v97d-run1-20261113"></a>

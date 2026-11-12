@@ -5088,7 +5088,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **裁定：K3 仍 NOT_READY。** 本节只实现并预注册 CAL v1 §三 K3 的**候选侧**：每次 full Generate 返回后的 `e_post_sample` 取得完整 `poseLocal` 与 clip 元数据。源侧等价完成边界/generation 关联（K3-S）**不在本批范围**，因此 K3-C 通过也不能单独关闭 K3、不能启动校准。
 
-> **状态（2026-11-13）**：已实现并离线验证（`502bdd5`，`k3_snapshot_test` 2/2 + observation 2/2），构建为 [v98](build.md#v98-g5k3c-20261113) 并已部署，等待一次上机。`ObservationSnapshot=true` 时按上述格式写 `CharacterPanel-g5k3-*.bin`；源侧 K3-S 仍未实现。
+> **状态（2026-11-13 00:48）：K3-C 候选侧 PASS**。[v98 run 1](build.md#g5-k3c-v98-run1-20261113) 产出 249 条记录（equip 120 + unequip 129），`record_count == completed`、每段 `completed` 连续、每条 `two_read_equal=1`、`track_count=116`（全部 poseLocal 轨）、`clip_count∈{1..4}`、`nonfinite=0`、无溢出，文件大小精确等于 `116 + 249×5280`，header identity 与 DLL 一致。工件：[日志](diagnostics/CharacterPanel-g5k3c-v98-run1-20261113-0048.log) 178,088 B `3bd09975…59a6fd09`、[快照](diagnostics/CharacterPanel-g5k3c-v98-run1-20261113-0048.bin) 1,314,836 B `4cba0203…e1ae8e8d`。**边界**：仅候选侧；K3 整体仍 **NOT_READY**，K3-S（源侧完成边界/寿命/generation 关联）未实现，本轮不做源候选配对、不产生容差、不关闭 K5/K6 或 G5；单会话/单装备、无重复。
 
 ### 观测点与同代约束
 
@@ -5138,7 +5138,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **K1/K2 结论**：v96a 把 K2-C3 从 D3 的 clip-family 正结果推进为同一进程内的 clip-family + state-12-to-0 完成证据，并给 K2-C1/C2 留下可复核的初态与输入顺序；但它不证明 K1 的跨运行资源/实例身份，也不提供控制 B 的独立真值。K1-C1–C4 与 K2-C4 仍是原生校准的硬前置。
 
-**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739，单窗口）。剩余顺序：先补 **K3 同代完整快照**（候选每次 `e_post_sample` 的完整 116 轨与 clip 元数据；源侧等价完成边界/generation 关联），再登记 **控制 B**；K1-C1–C4 与 K2-C1/C2 的清单继续补齐。K3 需另立仪器契约，不能把 v96a 的稀疏 checkpoint 或 E2-B 的全局 footIK tally 当作同代证据；B3/B4 的 PASS 不自动资格化源侧同代输出。
+**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739，单窗口）；**K3-C 候选侧已 PASS**（[v98](build.md#g5-k3c-v98-run1-20261113)，249/249 记录、双读一致、116 轨、零溢出）。剩余：**K3-S 源侧完成边界/generation 关联**（需另立仪器契约，不能由 K3-C 或 B3/B4 的 PASS 代替），**控制 B 登记**，以及 K1-C1–C4 与 K2-C1/C2 的清单补齐。
 
 ### 五、下一步与明确不做
 
