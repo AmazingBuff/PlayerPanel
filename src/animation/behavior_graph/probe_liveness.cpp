@@ -66,6 +66,11 @@ namespace
     std::atomic<bool> g_arm_requested{ false };
     std::atomic<bool> g_invalidate_requested{ false };
     std::atomic<void*> g_pinned{ nullptr };
+    // C-G5-E2-B B3/B4: the pinned BShkbAnimationGraph's hkbBehaviorGraph pointer (+0x208).
+    // 58423 receives an hkbContext whose +0x08 is this behavior pointer, NOT the outer
+    // BShkbAnimationGraph pointer. Comparing against g_pinned directly (v97 run 1) made all
+    // 6,670 foot-IK calls look like graph mismatches and no B3/B4 pair was ever stored.
+    std::atomic<void*> g_pinned_behavior{ nullptr };
     std::atomic<void*> g_plugin_graph{ nullptr };
     std::atomic<std::uint32_t> g_epoch{ 0 };
     std::atomic<std::uint32_t> g_actor{ 0 };
@@ -494,7 +499,10 @@ namespace
         if (is_pinned)
         {
             auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
-            ProbeB3B4Slot const* const slot = s.b3b4.match(tid, pinned);
+            // The ledger is keyed on the hkbBehaviorGraph pointer (ctx->behavior), not the outer
+            // BShkbAnimationGraph pointer used to identify the 63856 apply entry.
+            void const* const pinned_behavior = g_pinned_behavior.load(std::memory_order_relaxed);
+            ProbeB3B4Slot const* const slot = s.b3b4.match(tid, pinned_behavior);
             if (slot == nullptr)
             {
                 ++s.b3_stale;
@@ -839,7 +847,7 @@ namespace
         // behavior identity comes from 58423's hkbContext (second argument, +0x08). A pending
         // slot from an earlier return on the same thread that never reached apply is overwritten
         // and counted; the pre-registration forbids picking one of several returns.
-        void const* const pinned = g_pinned.load(std::memory_order_relaxed);
+        void const* const pinned = g_pinned_behavior.load(std::memory_order_relaxed);
         void const* const behavior = entry.behavior;
         if (pinned != nullptr && behavior == pinned)
         {
@@ -1104,6 +1112,7 @@ namespace
 
         g_plugin_graph.store(nullptr, std::memory_order_relaxed);
         g_pinned.store(nullptr, std::memory_order_release);
+        g_pinned_behavior.store(nullptr, std::memory_order_release);
         s.close_pending = false;
     }
 
@@ -1239,6 +1248,7 @@ namespace
             return;
         }
         g_pinned.store(pinned, std::memory_order_release);
+        g_pinned_behavior.store(pinned->behaviorGraph, std::memory_order_release);
         logger::info("PROBE LIVENESS pinned mode=on graph={:#x} behavior={:#x}",
             reinterpret_cast<std::uintptr_t>(pinned),
             reinterpret_cast<std::uintptr_t>(pinned->behaviorGraph));
@@ -1333,6 +1343,7 @@ namespace
             }
         }
         g_pinned.store(pinned, std::memory_order_release);
+        g_pinned_behavior.store(pinned->behaviorGraph, std::memory_order_release);
         g_actor.store(a_actor_id, std::memory_order_relaxed);
         std::uint32_t const epoch = g_epoch.fetch_add(1, std::memory_order_relaxed) + 1;
         auto const armed_at = std::chrono::steady_clock::now();

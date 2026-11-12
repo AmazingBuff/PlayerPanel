@@ -1791,3 +1791,17 @@ Unequip: settle `target-step=87 settled-step=101`, baseline `default=12 istate=9
 | [CharacterPanel.ini](../dist/g5-e2b-b3b4-20261112/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
 
 **Deployed 2026-11-12** (Skyrim not running; MO2 open): the v96a trio was backed up hash-verified to `dist/deploy-backup-20261112-v96a-v97pre/` (DLL `2c5112ae…eab33f5`, PDB `e7803453…1814cf8`, INI `f41990d2…bb04b7e90c`). The three v97 files were copied with source+destination hash comparison; the installed DLL contains the v97 identity. Installed key readback: `IndependentGraph=off`, `SamplingLiveness=on`, all display/source/candidate/OAR instruments off, UTF-8 no BOM. Run INI derives from the committed sample with exactly those two overrides. [MANUAL.md](../dist/g5-e2b-b3b4-20261112/MANUAL.md) has the one-window procedure and pre-registered judgement. **No game run yet**; B3/B4 native results are pending.
+
+
+<a id="g5-e2b-b3b4-v97-run1-20261112"></a>
+## G5-E2-B B3/B4 v97 run 1 (2026-11-12 23:02, **INVALID — instrument defect, not a verdict**)
+
+**Artifact**: v97 DLL `aefa19ee…a7325c650`, PDB `28d5a068…d003d519`, INI `ba93289b…b458d017bf7`, identity `CharacterPanel-scenegraph-v97-g5e2b-b3b4-8eef9d3ad7-cl94faaed0c6-20261112T145215Z`. Log [CharacterPanel-g5e2b-b3b4-v97-run1-20261112-2302.log](diagnostics/CharacterPanel-g5e2b-b3b4-v97-run1-20261112-2302.log), 263,967 B, SHA-256 `155154c0ecbaab692706005e53650ce0cacbb40d7ab38cdc6ac41e2434c373d8`. One F7 window, zero `[E]`, two unrelated studio-light `[W]`, `window=close reason=expired frames=962`, `transport-complete=no` (90 contention drops).
+
+**Pin fix confirmed**: `PROBE LIVENESS pinned mode=on graph=0x204cbe11580 behavior=0x20013e63900` and `window=open mode=on epoch=1 pinned=yes`. The `8eef9d3` fix worked; the source graph was pinned under `SamplingLiveness=on` + `IndependentGraph=off` as the contract requires.
+
+**Defect**: `b3-checked=0 b4-checked=0 verdict=B3-INVALID`, with `b3-stale=962` and `b3-behavior-mismatch=6670`. Root cause is an identity-level mismatch in my implementation: `g_pinned` holds a `BShkbAnimationGraph*`, while 58423's `hkbContext+0x08` is that graph's `hkbBehaviorGraph*` member (`BShkbAnimationGraph+0x208`). Comparing the two pointers directly can never be true, so no return snapshot was stored and every pinned apply found no slot. This is a pure instrumentation bug; it does **not** judge B3/B4, does not close the boundary and does not produce a G5 result.
+
+**Other readings (context only, not judged)**: `b-calls=6664`, `b-compared=6605`, `b-rewritten=1451891`, `b-max-delta=1.745e+01`, `b-entries=6626`, `b-returns=6628` — E2-B footIK activity reproduces; `pinned-apply-entries=962`, `pinned-engine=962`, `pair-mismatch=0`, `pose-stable=yes`, `e2a-frames=962` (all fallback). `b3-multi=0`, `b3-no-out=0`, `b3-overwritten=0`, `b3b4-read-failed=no`, `b3b4-non-finite=no` — no other invalidation path fired.
+
+**Fix and re-run**: a new commit stores `g_pinned_behavior` (the `behaviorGraph` member) at both arm sites, and both the 58423-return filter and the apply-side ledger lookup now compare against it. Per the contract's "instrument repair needs a new batch" rule, this run keeps its `INVALID` verdict; the repaired build is deployed as a separately numbered package and requires one new window. No criteria, thresholds or boundary rules were changed.
