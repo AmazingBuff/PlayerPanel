@@ -1836,3 +1836,19 @@ Identity `CharacterPanel-scenegraph-v97a-g5e2b-b3b4-b12889a623-cl94faaed0c6-2026
 2. **Thunk argument loss.** `58423-footik-entry` used `ProbeThunkKind::e_sample_entry`, whose `encode_detour_thunk(..., false)` forwards only `rcx` and the **return address** into `rdx`; `record_footik_entry(void*, a_ctx, a_out, ...)` therefore read the return address as `a_ctx`. The apply thunk truncates `r8` to 32 bits and replaces `r9` with the caller, so it was not a fix either. The old E2-B tally happened to work only because those registers were left untouched by coincidence; the context read was always garbage.
 
 **Repair (third batch)**: a dedicated `encode_detour_footik_thunk` forwards all four original slots (`rcx/rdx/r8` full 64-bit, `r9d`), and `g_pinned_character` (+ `probe_b3b4_context_character`) uses the audited `ctx->character` identity. A new engine-free case executes the production thunk bytes and asserts all four arguments arrive; all 16 focused cases pass (5 B3B4 + 3 E2B + 8 base). No criteria, thresholds, budgets or boundary rules changed. v97a keeps `INVALID`; the repaired build is deployed separately and needs one new window.
+
+
+<a id="v97b-g5e2b-b3b4-20261112"></a>
+## v97b G5-E2-B B3/B4 repaired build and deployment (2026-11-12, not yet run)
+
+**Commit**: `a339674 fix(g5-e2b): forward 58423 ctx and use the audited character identity`. `encode_detour_footik_thunk` forwards all four 58423 entry arguments (verified by an executed engine-free case); `g_pinned_character` holds `pinned + 0xC0` and `probe_b3b4_context_character` reads `hkbContext+0x00`. 16 focused offline cases pass (5 B3B4 + 3 E2B + 8 base), Release build exit 0.
+
+Identity `CharacterPanel-scenegraph-v97b-g5e2b-b3b4-a3396741d5-cl94faaed0c6-20261112T154431Z` (clean tree), embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-e2b-b3b4-v97b-20261112/CharacterPanel.dll) | 1890816 | `977b534a399e325289378cfb817e56e8ba6eee2bac3ffdce0239b4d3ca048f07` |
+| [CharacterPanel.pdb](../dist/g5-e2b-b3b4-v97b-20261112/CharacterPanel.pdb) | 50114560 | `902b8f91ce14ccae35072f5a5cacbd589f7e9a7bf0dd76e942d369fddd746827` |
+| [CharacterPanel.ini](../dist/g5-e2b-b3b4-v97b-20261112/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
+
+**Deployed 2026-11-12** (Skyrim not running; MO2 open): the v97a trio was backed up hash-verified to `dist/deploy-backup-20261112-v97a-v97bpre/`; the three v97b files were copied with source+destination hash comparison and the installed DLL contains the v97b identity. The run INI stays byte-identical (`ba93289b…`). [MANUAL.md](../dist/g5-e2b-b3b4-v97b-20261112/MANUAL.md) records the unchanged one-window procedure and judgement. **No game run yet**; v97 and v97a both keep their `INVALID` verdicts.

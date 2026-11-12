@@ -4302,7 +4302,7 @@ Shield                 NPC L Pauldron
 <a id="c-g5-e2-b-b3b4"></a>
 ## C-G5-E2-B B3/B4：源图后处理边界预注册（2026-11-12）
 
-> **状态（2026-11-12 夜）**：本节规则已实现、离线验证并部署。部署前修复了契约前提缺口（`SamplingLiveness=on` 原 `pinned=no`，`8eef9d3` 令其在 arm 时 pin 玩家第三人称源图）。[v97 run 1](build.md#g5-e2b-b3b4-v97-run1-20261112)（23:02）为 **INVALID——纯仪器缺陷**：实现把 58423 的 `hkbContext+0x08`（`hkbBehaviorGraph*`）与 pin 的 `BShkbAnimationGraph*` 直接比较，指针层级不同，导致 `b3-behavior-mismatch=6670`、`b3-stale=962`、`b3-checked=0`，B3/B4 一次未评。按契约“修仪器须另立批次”，run 1 保留 INVALID 且不改判据；`c49ec71` 新增 `g_pinned_behavior` 修复，重建为 [v97a](build.md#v97a-g5e2b-b3b4-20261112) 并已部署，**等待一次新的 F7 窗口**。运行档始终为 `SamplingLiveness=on` + `IndependentGraph=off`，其余仪器 dormant。判据、停止规则与边界不变。
+> **状态（2026-11-12 深夜）**：本节规则已实现、离线验证并部署，但 **v97 / v97a 两次运行均为 INVALID（纯仪器缺陷，均非 B3/B4 判定）**，按契约各保留 INVALID 且不改判据。(1) [v97 run 1](build.md#g5-e2b-b3b4-v97-run1-20261112)：把 58423 的 `hkbContext+0x08` 与 `BShkbAnimationGraph*` 比较，指针层级不同。(2) [v97a run 1](build.md#g5-e2b-b3b4-v97a-run1-20261112)：改用 `behaviorGraph` 仍不成立——审计 220/222 明确 58315 构造的 context **把 `ctx->behavior` 置零**；且通用 `e_sample_entry` thunk 把返回地址当作 `a_ctx` 传给 recorder，从未转发 58423 的真实 `rdx`。`a339674` 用专用 `encode_detour_footik_thunk` 转发全部四个入口实参（含 `rdx`），并把身份键改为审计可证的 `ctx->character (+0x00) == &pinned->characterInstance`（`pinned + 0xC0`）；新增执行生产 thunk 字节的离线用例，16 个 focused 用例全过。第三批 [v97b](build.md#v97b-g5e2b-b3b4-20261112) 已重建并部署，**等待一次新的 F7 窗口**。运行档始终为 `SamplingLiveness=on` + `IndependentGraph=off`，其余仪器 dormant。判据、停止规则与边界不变。
 
 **目标**：在**源图**上闭合 E2-B 的 B3/B4——`58423-return.out == 63581-memcpy.src` 与 `poseLocal == 63581-memcpy.src`。本契约只使用已部署的 E2-B detour（58423 entry/return、63856 apply entry）和已审计的静态路径，不新增 detour、不改窗口语义、不写源图。
 
