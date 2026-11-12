@@ -1967,3 +1967,21 @@ Additional parse: `clip_count ∈ {1,2,3,4}` (limit 8), `nonfinite=0`, record ca
 **Meaning**: for the pinned source graph in this window, the 58423 foot-IK output block is unchanged from its return to the 63856 apply, and poseLocal matches that same block component-wise within the pre-registered E2-A thresholds (739/739 pairs). This closes **K4's component-wise evidence** for this session: no second writer touched the out block before the apply, and the memcpy target equals the copied source. E2-A's residuals are the footIK rewrite itself (`b-rewritten=876,519` over 4,787 comparisons), consistent with E2-B.
 
 **Boundaries**: `transport-complete=no` (5 contention drops in the detail ring) affects only detail rows; the B3/B4 tallies are detour-side counters and are not ring records, so the verdict does not depend on the ring. This is one window on one session/graph/loadout, with no repetition. It does **not** close K1 (resource/instance identity), K2-C4 (native control B), K3 (same-generation source snapshots), K5/K6, pose equivalence or G5. `B3/B4` closing is a K4 session-boundary result only.
+
+
+<a id="v99-g5k3s-20261113"></a>
+## v99 G5-CAL K3-S source completion snapshots (2026-11-13, built; not deployed/run)
+
+**Commit**: `ba4dddf feat(g5-k3s): capture the source apply-return snapshot`. [k3_snapshot_policy.h](../src/animation/behavior_graph/k3_snapshot_policy.h) adds the `CPK3` v2 source format (124 B header: source=1, record size 5,268, capacity 1,024; record = seq/tsc/path/two-read/flags + 8 clip slots + 116 tracks). [probe_liveness.cpp](../src/animation/behavior_graph/probe_liveness.cpp) captures at the pinned graph's **63856 apply return** (the single audited exit): two immediate reads of the apply entry's `poseLocal` must match bitwise, all `min(clamped,116)` tracks' raw trans/rot/scale, up to 8 active `hkbClipGenerator` records, monotonic `seq` and `__rdtsc`. The detour only copies the fixed record into a 1,024-slot lock-free ring (no allocation, no locks, no file I/O); the render-thread drain writes `CharacterPanel-g5k3s-<identity>-<UTC>.bin`. Ring/file overflow, two-read mismatch, clip overflow, missing pose or write failure are counted and reported at `K3S SNAPSHOT close`.
+
+**Offline**: `k3_snapshot_test.cpp` now 4/4 (v1 candidate round-trip/overflow + v2 source round-trip/1,024 cap) and `behavior_graph_observation_test.cpp` 2/2 pass under `/W4 /WX`; Release build exit 0.
+
+Identity `CharacterPanel-scenegraph-v99-g5k3s-source-ba4dddf433-cl94faaed0c6-20261112T165526Z` (clean tree), embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-k3s-v99-20261113/CharacterPanel.dll) | 1912832 | `fb0ec54b2d3700a8fd9069bee58da12476e821014f9b929f939975f25e7f7ffc` |
+| [CharacterPanel.pdb](../dist/g5-k3s-v99-20261113/CharacterPanel.pdb) | 50352128 | `28dfb5f0a803748c5174e1dc81375eec6ce616657de781a0ddb152e7a6aa732c` |
+| [CharacterPanel.ini](../dist/g5-k3s-v99-20261113/CharacterPanel.ini) | 12069 | `ebe0afb733c91ebe1176f0d205529b2b8ae083b8f33305d6a89885fd9773a050` |
+
+Run profile is exactly `SamplingLiveness=on` with `IndependentGraph=off`, `ObservationSnapshot=false` and every other instrument dormant. [MANUAL.md](../dist/g5-k3s-v99-20261113/MANUAL.md). **Not deployed or game-run yet**; source side only, so K3 stays NOT_READY until source/candidate pairing.
