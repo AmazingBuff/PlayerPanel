@@ -1882,3 +1882,21 @@ Identity `CharacterPanel-scenegraph-v97c-g5e2b-b3b4-0253e171bb-cl94faaed0c6-2026
 | [CharacterPanel.ini](../dist/g5-e2b-b3b4-v97c-20261113/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
 
 **Deployed 2026-11-13** (Skyrim not running): the v97b trio was backed up hash-verified to `dist/deploy-backup-20261113-v97b-v97cpre/`; the three v97c files were copied with source+destination hash comparison and the installed DLL contains the v97c identity. The run INI is unchanged (`ba93289b…`). [MANUAL.md](../dist/g5-e2b-b3b4-v97c-20261113/MANUAL.md) records the run and the layout question. **No game run yet**.
+
+
+<a id="g5-e2b-b3b4-v97c-run1-20261113"></a>
+## G5-E2-B B3/B4 v97c run 1 (2026-11-13 00:23, **INVALID — stride defect; B3 stable, layout resolved**)
+
+**Artifact**: v97c DLL `c36231b0…5eea707f`, PDB `0a57daa9…673460efe`, INI `ba93289b…`, identity `CharacterPanel-scenegraph-v97c-g5e2b-b3b4-0253e171bb-cl94faaed0c6-20261112T161620Z`. Log [CharacterPanel-g5e2b-b3b4-v97c-run1-20261113-0023.log](diagnostics/CharacterPanel-g5e2b-b3b4-v97c-run1-20261113-0023.log), 264,726 B, SHA-256 `2d9b8d81185056f2f0a2dfa1141ceca058ea0febafdca0918c9f3fc2fe12bea6`. One F7 window, zero `[E]`, `frames=894`.
+
+**Consumption fix works**: `b3-multi=0`, `b3-stale=0`, `b3-no-out=0`, `b3-overwritten=0` — the counter now measures genuine double returns and none occurred. `b3-checked=894`, `b3-equal=894`, `b3-failed=0`, `b3-max-delta=0`: the out block is bit-identical between the 58423 return and the 63856 apply on every pinned pair.
+
+**Layout resolved by the raw dump**: `b3b4-first out0=(0,0,0,0) out1=(0,0,0,1) out2=(0,0,0,0) pose0=(0,0,0,0) pose1=(0,0,0,1) pose2=(1,1,1,0)`. `pose2=(1,1,1,0)` is track 0's **scale**, so poseLocal is an `hkQsTransform` array with three vec4 per track (translation, rotation, scale), while the out snapshot stores two (translation, rotation). `ProbeB3B4Tally::compare` indexed both at stride 2; B4 therefore read track 1's "translation" from track 0's scale, which is exactly the `(0,0,0)` vs `(1,1,1)` sample pattern of the v97b/v97c runs. `b4-failed=894` is an instrument artifact, not a second writer.
+
+**Fix (v97d)**: `compare` takes explicit per-track strides; B3 uses (2,2), B4 uses snapshot 2 / poseLocal 3. A new engine-free regression constructs a stride-3 pose with a scale vector and asserts stride-3 passes while the old stride-2 read fails; 6/6 B3B4 + 3/3 E2B cases pass. Criteria, thresholds and boundary rules unchanged; this run keeps INVALID.
+
+
+<a id="v97d-g5e2b-b3b4-20261113"></a>
+## v97d G5-E2-B B3/B4 build and deployment (2026-11-13, not yet run)
+
+**Commit**: `2f27b79 fix(g5-e2b): compare poseLocal at its hkQsTransform stride`. `ProbeB3B4Tally::compare` now takes explicit per-track strides (B3 2/2, B4 snapshot 2 / poseLocal 3); the new engine-free regression asserts the stride-3 pose matches while the old stride-2 read fails. 6/6 B3B4 + 3/3 E2B cases pass; Release build exit 0.
