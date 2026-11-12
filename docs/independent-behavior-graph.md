@@ -1,8 +1,8 @@
 # 独立行为图验证
 
-**当前更新（2026-11-12）**：[C-G5-OBS v2](#c-g5-observation-v2-20261112)修复候选诊断的时钟编码、完成阶段、分段和有界停止语义；离线两场景通过，本地 v96 包供用户自行上机。未部署、未运行游戏。下方 11-11 摘要保留当时日期；其中“差一帧”、五字最小性或独占 writer 的推断由新节的限定取代。K1–K6、原生控制 B、B3/B4 和姿态等价仍待验证，G5 未通过。
+**当前更新（2026-11-12）**：[C-G5-OBS v2](#c-g5-observation-v2-20261112)修复候选诊断的时钟编码、完成阶段、分段和有界停止语义；离线两场景通过，v96a 已部署并完成[首次原生运行](build.md#g5-cal-v96a-observation-v2-run1-20261112)：clip-family 与 state-12-to-0 均 PASS（completed=129）。[K1/K2 账本](#c-g5-cal-k1k2)已按本次运行更新，K2-C3 PASS，K1-C1–C4 与 K2-C4 仍 NOT_READY。下方 11-11 摘要保留当时日期；其中“差一帧”、五字最小性或独占 writer 的推断由新节的限定取代。K3–K6、原生控制 B、B3/B4 和姿态等价仍待验证，G5 未通过。
 
-更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B 与卸下完成点覆盖；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v95 + D3 候选 prime 档（v94 + D3 三件套备份保留）；D2 已上机并判负，D3 v2 已上机并命中，v95 已上机并取得 clip-family PASS。**本轮按用户要求暂停，不再推进实现或上机。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
+更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。**v96a 后续已部署并完成首次原生运行，关闭“差一帧”覆盖缺口；见[运行记录](build.md#g5-cal-v96a-observation-v2-run1-20261112)。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
 
@@ -4906,6 +4906,8 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **裁定：K1/K2 NOT_READY。** 本节只登记 [CAL v1](#c-g5-cal-v1) §三 K1/K2 的现有证据、H2H/1HM 差异的初步归因和关闭条件；没有新二进制、INI、部署、上机、控制 B 输出或数值容差。历史 E3/E4 日志只用于识别缺项，不作为校准样本。
 
+> 下表保留 **2026-11-11** 的登记状态；v96a（2026-11-12）的运行证据、K2-C1/C2/C3 更新和 K1 剩余缺项见本节末的 **§五**。
+
 ### 一、K1 身份与映射
 
 | 项 | 现有证据 | 状态 / 缺项 |
@@ -5046,6 +5048,27 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 | K2-C4 独立控制 | 控制 A 保持；控制 B 在查看数值前完成资源/真值/路径登记 |
 
 全部满足前，K1/K2 维持 **NOT_READY**；不得启动原生校准、不得产生 `tau_p/tau_r/tau_s/epsilon_t`。
+
+### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
+
+**裁定**：v96a run 1 为 **K2-C1/C2/C3 提供了一次可复核的正面证据**，并把 D3 的 1HM 卸下完成点覆盖补齐；**K1-C1–C4 与 K2-C4（控制 B）仍未闭合**，因此 K1/K2 整体仍 **NOT_READY**，不能启动原生校准。
+
+**运行身份与工件**：v96a DLL `2c5112ae…eab33f5`、PDB `e7803453…1814cf8`、INI `f41990d2…bb04b7e90c`，identity `CharacterPanel-scenegraph-v96a-g5cal-observation-v2-f39ffa8b36-cl94faaed0c6-20261112T134517Z`，runtime `1-6-1170-0`，OAR `3.1.6`；[日志](diagnostics/CharacterPanel-g5cal-v96a-observation-v2-run1-20261112-2157.log) 180,111 B `d34994f4…d17f6f`。一次候选激活/段对，零 `[E]`，五处 `source-drift=none`。
+
+| 关闭条件 | v96a 读数 | 状态 |
+| --- | --- | --- |
+| K1-C1 运行身份 | 本次 DLL/PDB/INI/build/runtime/OAR 与日志身份全部匹配；但资源完整哈希、project/behavior 文件与 OAR replacement 清单仍未登记 | **部分**，不关闭 |
+| K1-C2 图身份 | actor `00000014`、request `1`、候选指针 `0x2085c399300`；`gen0`/`gen1` 哈希、`src-anim=0074`/`cand-anim=0074`、active/pose/vars 计数已记录；源图 controller 指针、generation/view 与候选同代关系仍未打印 | **部分**，不关闭 |
+| K1-C3 骨架与映射 | 116 条姿态轨；仅抽样 `NPC Root`/`NPC L Hand`/`NPC L Finger30`/`Belly` 四骨；完整骨名、父索引、reference pose、binding/默认填充规则仍未落盘 | **否** |
+| K1-C4 资源与 clip 实例 | 本次候选片段 `1HM_Equip`（binding 22）、`1HM_Unequip`（75）、`1HM_Idle`（23）、`MLh_Idle`（949）、`MT_Idle`（11916）、`SCAR_1hmReadyDummy`（15073）；key 为进程内 clip 名+node+binding-index；跨 run 的 binding-index 漂移仍未解决，资源哈希/OAR 变体未登记 | **否** |
+| K2-C1 装备初态 | 产品行记录 `hands=(560c2a4c,00043324)`、`drawn=false`，即 **1H 已装备但收鞘**；候选段 baseline `default=10 istate=0`，五字 prime 后进入 1HM 路径 | **部分**：FormID/来源模组/左右手/火把/护甲/背包与 OAR 命中尚未写入固定清单 |
+| K2-C2 输入账本 | 事件前依次写 `iMagicEquipped=1`、`iRightHandEquipped=1`、`iLeftHandEquipped=9`、`iRightHandType=1`、`iLeftHandType=9`（readback 1/1/9/1/9），随后 `WeapEquip` id=2 dispatched；settle 87/101 后 `Unequip` id=144 unequip-inject dispatched；`currentDefaultState`/`iState` 作为图内输出单列 | **部分**：顺序/内容有记录，源侧同序列与相对墙钟未登记；未做五字消融，不能宣称最小集 |
+| K2-C3 片段一致性 | `1HM_Equip`/`1HM_Unequip`，全日志无 `H2H_*`；equip 120/120 固定预算，unequip completed=129、`state-12-to-0`、`default=0`、clip `local-time=2 f32=40000000` | **PASS（冻结 1H+左手 9 场景）** |
+| K2-C4 独立控制 | 控制 A 保持；控制 B 仍无合格资源、独立真值、承载路径与哈希 | **NOT_READY** |
+
+**K1/K2 结论**：v96a 把 K2-C3 从 D3 的 clip-family 正结果推进为同一进程内的 clip-family + state-12-to-0 完成证据，并给 K2-C1/C2 留下可复核的初态与输入顺序；但它不证明 K1 的跨运行资源/实例身份，也不提供控制 B 的独立真值。K1-C1–C4 与 K2-C4 仍是原生校准的硬前置。
+
+**下一步（按 CAL v1 顺序）**：先补 **K3 同代完整快照**（候选每次 `e_post_sample` 的完整 116 轨与 clip 元数据；源侧等价完成边界/generation 关联），再做 **K4 B3/B4**（`58423-return.out` 对 `63581-memcpy.src` 与 `poseLocal` 的逐分量对账），最后登记控制 B。K3/K4 都需要另立仪器契约，不能直接把 v96a 的稀疏 checkpoint 或现有 E2-B 全局 footIK tally 当作同代证据；本文不授权实现或上机。
 
 ### 五、下一步与明确不做
 
