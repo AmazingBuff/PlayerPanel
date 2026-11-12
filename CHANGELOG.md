@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+> Observation correction (2026-11-12): [C-G5-OBS v2](docs/independent-behavior-graph.md#c-g5-observation-v2-20261112) supersedes the dated “one frame short” prediction and five-word minimality/writer-role interpretations below. Historical logs remain unchanged; v96 is local only and game-unvalidated.
+
 > Evidence correction (2026-11-04): prior E1 closure entries below retain historical readings. [The current audit](docs/independent-behavior-graph.md#g5-e1-evidence-repair) supersedes the poseLocal-last-writer/completion, worker-pool, per-frame timing and uninterrupted-zero-flag interpretations. Source sampling-entry liveness remains observed; full E1 completion/lifetime/coherent-snapshot evidence remains pending. The current repair is not deployed or game-validated.
 
 > Research-status clarification (2026-10-26): dated experiment entries below retain their original implementation plans and then-current hypotheses. [Current G1/G2 evidence](docs/independent-behavior-graph.md#current-status) supersedes stale “awaiting run”, complete-isolation and single-root-cause interpretations; original contracts/logs remain intact. This clarification changes documentation only.
@@ -274,6 +276,8 @@
 - Remove Actor-based preview creation, equipment mirroring and puppet diagnostics; use SceneGraph previews in every build.
 
 ### Fixed
+
+- Fix candidate diagnostic clocks with exact float32 traces, independent equip/unequip histories and post-Generate completed-output checkpoints; report state-12-to-0 completion, invalid observations or a predeclared 180-advance timeout honestly. The matching v96 manual-test package is local only; native behavior remains unvalidated.
 
 - Fix opt-in sampling evidence capture with owned hook storage, counted producer contention and a final drain after accepted recorders retire; label scene-application entries separately from output completion. The repaired instrument still requires a matching game run.
 

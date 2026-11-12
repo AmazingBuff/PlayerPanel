@@ -1,0 +1,4 @@
+A PASS: Generate-gated equip=120, unequip=123 state-12-to-0; exact fractional/+23/negative bits, absence, distinct same-leaf instances; original +23=N collision reproduced
+B PASS: state 12 held through 180 Generate returns; timeout, no completion, elapsed=3
+2 observation scenarios passed (engine-free; native behavior unverified)
+exit=0

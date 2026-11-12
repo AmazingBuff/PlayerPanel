@@ -1,0 +1,22 @@
+**********************************************************************
+** Visual Studio 2022 Developer Command Prompt v17.14.42
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+behavior_graph_observation_test.cpp
+D:\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\optional(853): error C2220: 以下警告被视为错误
+D:\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\optional(853): warning C4389: “==”: 有符号/无符号不匹配
+D:\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\optional(853): note: 模板实例化上下文(最早的实例化上下文)为
+tests\behavior_graph_observation_test.cpp(135): note: 查看对正在编译的函数 模板 实例化“bool std::operator ==<uint32_t,int,0>(const std::optional<uint32_t> &,const _Ty2 &) noexcept(<expr>)”的引用
+        with
+        [
+            _Ty2=int
+        ]
+D:\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\optional(855): warning C4389: “==”: 有符号/无符号不匹配
+D:\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\optional(855): note: 模板实例化上下文(最早的实例化上下文)为
+tests\behavior_graph_observation_test.cpp(135): note: 查看对正在编译的函数 模板 实例化“bool std::operator ==<uint32_t,int,0>(const std::optional<uint32_t> &,const _Ty2 &) noexcept”的引用
+        with
+        [
+            _Ty2=int
+        ]
+exit=2

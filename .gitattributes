@@ -12,3 +12,8 @@ tools/calibration/calibrate_pose.py text eol=lf
 src/animation/behavior_graph/pose_content_policy.h text eol=crlf
 src/animation/behavior_graph/independent_graph.cpp text eol=crlf
 src/animation/behavior_graph/source_timeline.cpp text eol=crlf
+
+src/animation/behavior_graph/observation_policy.h text eol=lf
+tests/behavior_graph_observation_test.cpp text eol=lf
+config/CharacterPanel.ini text eol=crlf
+docs/diagnostics/g5-observation-v2-20261112/** -text whitespace=cr-at-eol,-blank-at-eof

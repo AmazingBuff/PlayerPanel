@@ -1680,3 +1680,33 @@ The [bounded final review](diagnostics/g5-calibration-a-20261111/execution.md#fi
 **Readings**: all five pre-event writes succeeded (`iMagicEquipped` 1/1, `iRightHandEquipped` 1/1, `iLeftHandEquipped` 9/9, `iRightHandType` 1/1, `iLeftHandType` 9/9, `outcome=ready`) and `WeapEquip` was dispatched. The candidate selected `1HM_Equip` at step 0 (`binding-index=22`, duration 1.4333), reached `iState=9` at step 86, settled at `target-step=86 settled-step=100 baseline-nodes=122`, and selected `1HM_Unequip` at step 120 (`binding-index=75`, duration 2.0, `localTime=1.9833`). The H2H clips are gone. The unequip did not return to `default=0` inside the 120-step window because the 2.0 s clip is one frame short; that is a coverage/completion gap, not a clip-selection failure.
 
 **Verdict**: **K2-C3 positive** for the frozen 1H + left-hand-9 loadout: the five-word pre-event prime changes the candidate from H2H to the 1HM family on both equip and unequip. K1 and K2-C1/C2/C4, K3–K6 and B3/B4 remain open. The next 1HM unequip run must pre-register at least 121 advance steps (or a completion-event cutoff) before judging `12→0`; no tolerance is produced.
+
+
+<a id="v96-g5-observation-v2-20261112"></a>
+## v96 G5 observation v2 (2026-11-12, offline verified; native pending)
+
+**Result**: [C-G5-OBS v2](independent-behavior-graph.md#c-g5-observation-v2-20261112) replaces the ambiguous clip-step characters with exact binary32 traces, moves checkpoints after Generate, separates equip/unequip histories and uses a fixed 120 equip / at-most-180 unequip budget. Only observed state 12-to-0 completes unequip; timeout and invalid are distinct. This build is local only, not deployed or game-run.
+
+**Focused offline verification**: [behavior_graph_observation_test.cpp](../tests/behavior_graph_observation_test.cpp) uses production `drive_graph_step`, `SegmentObservation` and `ClipClockHistory`. Exactly two coherent scenarios run: A covers Generate gating, separate counters/histories, fractional/+23/negative clocks, absence/reappearance, same-leaf instance distinction, old +23=`N` collision and delayed scripted completion at 123; B holds state 12 through 180 and times out without any completion. The initial strict compile exited 2 on an unsigned optional/literal comparison; the `123u` correction compiled cleanly (exit 0) and both scenarios exited 0. [All outputs](diagnostics/g5-observation-v2-20261112/result.md) are retained. No historical suite, matrix or offline-control-A rerun was performed.
+
+Commands from the repository root (normal host permissions, no elevation/network/dependency install):
+
+```powershell
+cmd /d /s /c 'call "D:\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.44.35207 && cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\behavior_graph_observation_test.cpp /Fo:build\g5-observation-v2-20261112\behavior_graph_observation_test.obj /Fe:build\g5-observation-v2-20261112\behavior_graph_observation_test.exe'
+& build/g5-observation-v2-20261112/behavior_graph_observation_test.exe
+$env:VCPKG_ROOT='D:\Microsoft Visual Studio\2022\Community\VC\vcpkg'
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v96-g5cal-observation-v2 -DVCPKG_MANIFEST_INSTALL=OFF
+cmake --build --preset Release --parallel 2
+```
+
+**Release**: configure/build both exit 0, using existing VS 2022/v143 14.44.35207, Windows SDK 10.0.26100.0, `x64-windows-static-md` and disconnected FetchContent; no dependency changed. Configure retains the existing `CMAKE_SKIP_INSTALL_RULES` note, build the existing D9025 `/Ob2` to `/Ob3` notices. Identity `CharacterPanel-scenegraph-v96-g5cal-observation-v2-dfd37acc16+dirty-cl94faaed0c6-20261112T102128Z`; full baseline HEAD `dfd37acc166f2ca8dbc40ff1ac94fb54ad095626` plus the approved uncommitted changes. The complete source/build/package identities and raw-byte hashes are in [manifest.json](diagnostics/g5-observation-v2-20261112/manifest.json).
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-observation-v2-20261112/CharacterPanel.dll) | 1849856 | `c90df26cf8fc1f2ef5ed1f87edf6ba5e7fc989a52301c591a8ddd8b95c6bd745` |
+| [CharacterPanel.pdb](../dist/g5-observation-v2-20261112/CharacterPanel.pdb) | 38907904 | `90c8eab2b2c0f85b1c4217143f878c1f18daa513d59a1d0680129f17b6a5203f` |
+| [CharacterPanel.ini](../dist/g5-observation-v2-20261112/CharacterPanel.ini) | 11710 | `49dc98558078cfb6c7914e4483b3cff5a1bba889378cd551aab336890b21746c` |
+
+The DLL/PDB copies hash-match `build/Release`. The UTF-8/no-BOM manual INI derives from the repository sample with exactly seven value overrides; sample defaults remain unchanged. [MANUAL.md](../dist/g5-observation-v2-20261112/MANUAL.md) keeps clip family, native completion, clock semantics, independent control B, B3/B4, input/resource identity and pose equivalence separate. All actual game validation remains user-owned and pending; installed files were not touched.
+
+**Historical clarification**: earlier dated “one frame short”/“not run” entries above keep their historical provenance. Current D1/D2 negative and D3 clip-family results are in the [D1-to-D3 record](independent-behavior-graph.md#status-20261111-d3-session); a one-extra-frame native fix and five-word minimality/writer roles remain unproven. v96 does not requalify the dated offline A source hashes or close G5.

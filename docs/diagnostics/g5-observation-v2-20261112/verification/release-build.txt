@@ -1,0 +1,57 @@
+MSBuild version 17.14.60+43b635718 for .NET Framework
+
+  Checking File Globs
+  1>Checking Build System
+  Building Custom Rule D:/code/cpp/skyrim/PlayerPanel/extern/CommonLibSSE/CMakeLists.txt
+  CommonLibSSE.vcxproj -> D:\code\cpp\skyrim\PlayerPanel\build\extern\CommonLibSSE\Release\CommonLibSSE.lib
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+  cmake_pch.cxx
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+  frame_trace.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+  independent_graph.cpp
+  ownership_probe.cpp
+  probe_liveness.cpp
+  source_event_capture.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+  source_timeline.cpp
+  source_write_capture.cpp
+  clip.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+  controller.cpp
+  effects.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [D:\code\cpp\skyrim\PlayerPanel\build\CharacterPanel.vcxproj]
+  native.cpp
+  script_attachment.cpp
+  session.cpp
+  event_clock.cpp
+  hooks.cpp
+  settings.cpp
+  character_manager.cpp
+  equipment_state.cpp
+  figure_audit.cpp
+  held_equipment.cpp
+  scene_graph.cpp
+  scene_graph_capture.cpp
+  input.cpp
+  main.cpp
+  panel_monitor.cpp
+  common_states.cpp
+  d3d11_util.cpp
+  composite.cpp
+  render_hook.cpp
+  renderer.cpp
+  shader_manager.cpp
+  figure_passes.cpp
+  light.cpp
+    ????? D:/code/cpp/skyrim/PlayerPanel/build/Release/CharacterPanel.lib ??? D:/code/cpp/skyrim/PlayerPanel/build/Release/CharacterPanel.exp
+  CharacterPanel.vcxproj -> D:\code\cpp\skyrim\PlayerPanel\build\Release\CharacterPanel.dll
+exit=0

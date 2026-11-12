@@ -1,0 +1,9 @@
+PASS worktree scope: baseline HEAD/branch, empty staged state, protected util/frame-policy hashes, historical artifacts unchanged
+PASS package identity: matching Release DLL/PDB copies, embedded v96 identity, exact source/package hashes and duplicated manifest
+PASS configuration: sample values unchanged; exactly seven manual overrides; display/source instruments/liveness off; UTF-8 without BOM
+Traceback (most recent call last):
+  File "D:\code\cpp\skyrim\PlayerPanel\docs\diagnostics\g5-observation-v2-20261112\verify_artifacts.py", line 102, in <module>
+    assert destination.is_file(), (path, target)
+           ^^^^^^^^^^^^^^^^^^^^^
+AssertionError: (WindowsPath('D:/code/cpp/skyrim/PlayerPanel/docs/diagnostics/g5-observation-v2-20261112/result.md'), 'verification/artifacts-and-docs.txt')
+exit=1

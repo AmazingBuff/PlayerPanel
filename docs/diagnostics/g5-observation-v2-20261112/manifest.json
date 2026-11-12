@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "task_id": "g5-observation-v2-20261112",
+  "contract_revision": 1,
+  "status": "OFFLINE_VERIFIED_NATIVE_PENDING",
+  "build_label": "v96-g5cal-observation-v2",
+  "build_identity": "CharacterPanel-scenegraph-v96-g5cal-observation-v2-dfd37acc16+dirty-cl94faaed0c6-20261112T102128Z",
+  "source_revision": "dfd37acc166f2ca8dbc40ff1ac94fb54ad095626",
+  "source_state": "dirty; uncommitted approved observation-v2 work",
+  "commonlib_revision": "94faaed0c60eddd8347767f2d4d29a97c93bde8c",
+  "toolchain": {
+    "preset": "Release",
+    "msvc": "14.44.35207",
+    "generator": "Visual Studio 17 2022",
+    "triplet": "x64-windows-static-md",
+    "vcpkg_manifest_install": "OFF",
+    "fetchcontent_fully_disconnected": "ON"
+  },
+  "source_files": {
+    "src/animation/behavior_graph/observation_policy.h": {
+      "bytes": 8052,
+      "sha256": "2057765b738af7fc3c319fc286fb0442365856b9d38b17f1fed7a3e35522aa2b"
+    },
+    "src/animation/behavior_graph/independent_graph.cpp": {
+      "bytes": 180370,
+      "sha256": "6966e27b0ecb9e2734e9151e59b5d46f35b900e47c95979c394afd2f1bda82f6"
+    },
+    "tests/behavior_graph_observation_test.cpp": {
+      "bytes": 8102,
+      "sha256": "c968653cb792caa0ded00a6825cae66c840a2513b5ed5cd2c326ba5bd6aae932"
+    },
+    "config/CharacterPanel.ini": {
+      "bytes": 11715,
+      "sha256": "3796a3148ecd8285f6ad98a7d800c95f19ad25a414602c42110010bc64f16984"
+    }
+  },
+  "package_files": {
+    "CharacterPanel.dll": {
+      "bytes": 1849856,
+      "sha256": "c90df26cf8fc1f2ef5ed1f87edf6ba5e7fc989a52301c591a8ddd8b95c6bd745",
+      "source": "build/Release/CharacterPanel.dll"
+    },
+    "CharacterPanel.pdb": {
+      "bytes": 38907904,
+      "sha256": "90c8eab2b2c0f85b1c4217143f878c1f18daa513d59a1d0680129f17b6a5203f",
+      "source": "build/Release/CharacterPanel.pdb"
+    },
+    "CharacterPanel.ini": {
+      "bytes": 11710,
+      "sha256": "49dc98558078cfb6c7914e4483b3cff5a1bba889378cd551aab336890b21746c",
+      "source": "config/CharacterPanel.ini plus manual_ini_overrides"
+    }
+  },
+  "generated_build_header_sha256": "03077dbc192b92ca59ef334a19a7b0a95cf1742b6bc37e1704dc9ce677957339",
+  "manual_ini_overrides": {
+    "IndependentGraph": "inject",
+    "CandidateInputProbe": "true",
+    "CandidateInputVariable": "",
+    "CandidateEquipPrime": "true",
+    "CandidateEquipPrimeBranch": "true",
+    "CandidateUnequipProbe": "true",
+    "CandidateUnequipEvent": "Unequip"
+  },
+  "limits": {
+    "equip_commands": 120,
+    "unequip_commands_max": 180,
+    "nodes": 256,
+    "clips": 8,
+    "instance_traces_per_segment": 32,
+    "clip_name_bytes": 1024
+  },
+  "verification": {
+    "focused_compile_initial_exit": 2,
+    "focused_compile_fixed_exit": 0,
+    "scenarios": 2,
+    "focused_run_exit": 0,
+    "release_configure_exit": 0,
+    "release_build_exit": 0,
+    "artifacts_and_docs_initial_exit": 1,
+    "artifacts_and_docs_final_exit": 0
+  },
+  "native_validation": "PENDING; user-owned. No deployment or game launch performed.",
+  "pending_axes": [
+    "v96 clip family",
+    "native state-12-to-0 completion",
+    "native clock semantics/rate",
+    "native independent control B",
+    "B3/B4",
+    "K1 input/resource/instance identity",
+    "same-generation source/output pairing",
+    "pose equivalence/G5/G6"
+  ],
+  "protected_baseline": {
+    "src/base/util.cpp": "4f15cd5d05b32365c59d35bfbd8aec31548079b9693333c1b3d6cc6de5dd6b18",
+    "src/base/util.h": "0ba950ff1cee776c62aec3808d7a99764fb478a33ab68ce587dad85721338dc7",
+    "index": "",
+    "historical_control_a": "unchanged dated evidence; not rerun or relabelled"
+  }
+}

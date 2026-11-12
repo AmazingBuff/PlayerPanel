@@ -1,5 +1,7 @@
 # 独立行为图验证
 
+**当前更新（2026-11-12）**：[C-G5-OBS v2](#c-g5-observation-v2-20261112)修复候选诊断的时钟编码、完成阶段、分段和有界停止语义；离线两场景通过，本地 v96 包供用户自行上机。未部署、未运行游戏。下方 11-11 摘要保留当时日期；其中“差一帧”、五字最小性或独占 writer 的推断由新节的限定取代。K1–K6、原生控制 B、B3/B4 和姿态等价仍待验证，G5 未通过。
+
 更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B 与卸下完成点覆盖；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。最近记录部署为 v95 + D3 候选 prime 档（v94 + D3 三件套备份保留）；D2 已上机并判负，D3 v2 已上机并命中，v95 已上机并取得 clip-family PASS。**本轮按用户要求暂停，不再推进实现或上机。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>
@@ -12,7 +14,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | **离线 A 已完成；K1/K2 账本已登记；原生校准 NOT_READY，G5 未冻结/未通过** | [E1 v3](#c-g5-e1-v3) 有界通过；[E3](#c-g5-e3-v2) 配对 2/2；[E4/v92](build.md#v92-g5e2c-run1-20261111) 四块 116 轨快照、零丢失，装备链速率可算。[离线 A](#c-g5-cal-a-run1-20261111)仅校准固定控制的采集/格式/解析；[K1/K2 账本](#c-g5-cal-k1k2)把 H2H/1HM 差异归因于候选图缺少源侧真实装备上下文，D1 诊断未运行；[CAL v1](#c-g5-cal-v1) 的 K1–K6、原生 B、时间资格、B3/B4 与完整贡献仍缺，既有证据不证明姿态等价 |
+| G5 | **离线 A 已完成；K1/K2 账本已登记；原生校准 NOT_READY，G5 未冻结/未通过** | [E1 v3](#c-g5-e1-v3) 有界通过；[E3](#c-g5-e3-v2) 配对 2/2；[E4/v92](build.md#v92-g5e2c-run1-20261111) 四块 116 轨快照、零丢失，装备链速率可算。[离线 A](#c-g5-cal-a-run1-20261111)仅校准固定控制的采集/格式/解析；[K1/K2 账本](#c-g5-cal-k1k2)把 H2H/1HM 差异归因于候选图缺少源侧真实装备上下文；D1/D2 已运行并判负，D3 候选五字组合取得 clip-family 正结果（不证明最小性或 writer 角色）；[CAL v1](#c-g5-cal-v1) 的 K1–K6、原生 B、时间资格、B3/B4 与完整贡献仍缺，既有证据不证明姿态等价 |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -5176,3 +5178,87 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 - 本轮最后提交：`3bf7ce8 docs(g5-cal): record the D3 candidate clip-family pass`（后续仅本摘要/入口同步）。
 
 **暂停点**：不再推进实现或上机。下一次工作的预注册顺序是：1HM 卸下完成点窗口 → K3–K6/B3/B4/控制 B；K1/K2 其余项保持 NOT_READY。
+
+
+<a id="c-g5-observation-v2-20261112"></a>
+## C-G5-OBS v2：候选完成输出与无歧义时钟（2026-11-12）
+
+**状态**：离线实现与两场景回归通过；本地构建标签 `v96-g5cal-observation-v2`。用户拥有全部实际游戏测试，本轮未部署、未启动游戏。[结果与完整清单](diagnostics/g5-observation-v2-20261112/result.md)、[构建](build.md#v96-g5-observation-v2-20261112)、[手工包](../dist/g5-observation-v2-20261112/MANUAL.md)记录匹配身份、命令退出值与哈希。原生行为仍 **UNVERIFIED**。
+
+### 取代的解释与保留的历史
+
+- 旧 `clip-steps` 用 `lround(delta*60)` 丢失分数；负数编码 `N`，正 23 也编码 `N`。旧日志的这些字符不能反解成可靠时钟，不改写旧日志、不按旧字符求速率。新 schema=2 从下一份原生数据开始生效。
+- v95 只观察到卸下尾读数 `localTime=1.9833`、`default=12`；“再一帧即可完成”是未证假说。此次 180 上限是预先选定的下一次实验预算，不预测原生会在哪一步返回，也不修正时钟速度。
+- D1/D2 已跑且判负；D3 的五字 **组合** 在冻结场景足以选中 1HM 族。没有逐项消融证据，不能宣称五字为最小集；变量名、元数据或时序相关性不能证明独占 writer、外部输入/内部输出的完整因果角色。源侧分支读数与当前组合的正结果保留，后续不再自动增加 prime 字。
+- 旧 `step=120` clip/pose 读数位于 unequip 与清理之后，不能充当 equip 的第 120 个完成输出；旧 checkpoint 多在 Generate 之前。保留日期结论和原工件，只以本节取代这些轴/完成点解释。
+
+### schema=2 的公共日志语义
+
+实现入口：[observation_policy.h](../src/animation/behavior_graph/observation_policy.h) 中 `SegmentObservation` / `ClipClockHistory`，生产调用在 [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 的 `run_independent_graph_experiment`。共享 `drive_graph_step` 的原有阶段审计 trace 保留，原生入口选择不变。`FRAME TRACE step` 仍为 equip 的旧零基调用序号，独立于 schema=2 的 completed；`probe checkpoint=activate` 是激活审计基线，clock point 0 则来自 segment-start 后的明确 baseline。
+
+| 字段/行 | 解释 |
+| --- | --- |
+| `schema=2 candidate=... segment=equip/unequip` | 与 actor/request 合起来划定一段本进程候选诊断。每段重新建立 pose、alias-watch 与时钟历史 |
+| `observation=baseline completed=0 commanded=0` | 事件后、推进前基线；可确实读到 state 12，但不是完成输出，不为首次出现的 clip 推定 delta |
+| `observation=post-sample completed=N` | 只在 `FrameStage::e_post_sample`、本次 full Generate 返回后采集，且在清理或下一次 update 前；1 表示第一轮 Generate 已返回 |
+| `commanded=N elapsed=...` | 实际下达的推进数与逐次累加的 float32 `DriveTimestep`，不是 UI 帧或墙钟。合格注入段的 commanded 与 completed 相等 |
+| `phase=segment-start` | 先记录固定上限、dt 的 round-trip 数字/8 位 hex bits，以及所有采集上限 |
+| `phase=clip-clock` | baseline、完成 1/60/段尾及每 20 次完成的辅助行；每实例完整名/node/binding、`.9g` localTime、bits、相邻有效点的 double delta，缺 delta 为 `n/a` |
+| `phase=clip-clock-trace` | 段末每实例一行 `times-f32`，按逗号分隔。point 0 是 baseline；point 1..N 对应第 1..N 次完成输出；尚未出现/已消失均为 `-`。共 N+1 点，最多 121/181 点 |
+| `phase=pose-content/pose-bone/clip-ref/probe/slots` | baseline 单独标记；生成结果只取 completed 1、60、实际段尾，同一点只取一次。有限骨点、稀疏内容与 raw hash 都不是完整 R2 姿态 oracle |
+| `phase=pose-motion/pose-steps` | 实际相邻可用姿态比较数与变化数，baseline 不计为一次输出；缺姿态记 `-` 并使 motion valid=false，不跨缺口伪造比较 |
+| `phase=segment-end` | outcome、stop-reason、实际 completed/commanded/elapsed、cap、active-state-seen、first-return-zero、last-state、baseline/60/end hashes、source-drift。equip 的 completed 只指固定预算跑完 |
+
+`IndependentGraph=inject` 使用 full Generate。`drive` 若未启用既有 `CandidateGenerationEntry`，仍走原 SamplingBranch 路径：新观察资格为 `invalid/full-generate-required`，completed=0，只报告 baseline 和 120 个 commanded，不能用同名 `e_post_sample` 冒充 full Generate 完成。未增加 native call 或 hook。
+
+### 精确时钟与本进程实例身份
+
+`times-f32` 每个有效项恰为 8 个 hex 数字，是 `std::bit_cast<uint32_t>(clip->localTime)`，保留二进制 32 位值（包括符号）。例如 `3c000000` 解码为 `0.0078125` 秒：
+
+```python
+import struct
+value = struct.unpack('<f', bytes.fromhex('3c000000')[::-1])[0]
+assert value == 0.0078125
+```
+
+只有两个相邻点都存在时才可求 `double(current)-double(previous)`。首次出现、缺口后重现均无推定 delta；负差只是观察，不能自动归类为 loop/restart。dt 的 bits 与累计 commanded 时间可用于以后分析；本轮不推导速度、时间容差或任何 G5 pass。
+
+key 至少为完整 clip 名 + clip-node 指针 + binding-index，并以 actor/request/candidate/segment 为作用域；不会仅按 leaf name 合并并行 clip。这是 **PROCESS-LOCAL** 地址身份：不保证对象复用后的跨生命周期识别，不是资源内容哈希、跨 run 稳定实例或完整 K1。继续只使用现有 typed active-node/clip 访问。
+
+### 采集上限与停止判据
+
+每次最多扫描 **256 active nodes**，保留 **8 active clips**；在扫描范围内继续计数以暴露第 9 个 clip。每段最多 **32 instance traces**、每 trace 最多 cap+1 点；名称最多扫描 **1024 bytes**，未在限内终止或不可读均 invalid。`segment-start` 公布这些值；`observation-coverage` 给出 peak nodes、扫描范围内 peak clips、trace/point 数与 node/clip/trace overflow、name-invalid。node 超限时 clip 计数只是已扫描部分，不宣称完整覆盖。任何超限均使整段 invalid，不能以部分观测作成功。
+
+- **equip**：固定 120 个 commanded advances（名义 2 s）。即使观察无效仍保留原推进预算，invalid 状态不会升级为成功，也不继续 unequip 注入。
+- **unequip**：在原 settle gate 与单次输入分发之后新开段，最多 180 advances（名义 3 s；日志保留 float dt 的真实累计值）。baseline 可建立 active-state=12；初始 0 不能完成。
+- **completed**：本段确实观察到 12，此后 post-Generate 读到 `currentDefaultState=0`，reason=`state-12-to-0`。记录首次返回步，提前结束该段循环；这不声称捕获了 `Unequip_Out`。
+- **timeout**：第 180 次完成后仍无上述返回，reason=`advance-limit-without-state-return`。只是实验预算耗尽，不证明候选/引擎失败。
+- **invalid**：必需状态不可读、采集超限/缺失或非 full Generate 等。reason 明示；状态返回也不能覆盖 invalid。实际段尾在仍借用 world 的最后回调中采完；所有退出继续执行原 ragdoll/world 清理，没有新早退。
+
+### 两个离线回归与本次边界
+
+[behavior_graph_observation_test.cpp](../tests/behavior_graph_observation_test.cpp)只包含两个连贯 scripted fake 观察场景，使用生产的 `drive_graph_step`、`SegmentObservation` 与 `ClipClockHistory`，不复制规则：
+
+1. **A 成功序列**：各 pre 阶段均不能算完成；Generate 后采样；equip 正好 120，unequip 在 scripted 123 才 12→0。核对段/计数/累计 dt、1/60/段尾 checkpoint、分数/正 23/负差 exact bits、absence 后重现不补 delta、同 leaf 不同实例不合并；同场景重现旧正 23/负差都为 `N` 的碰撞。
+2. **B 固定上限**：baseline 到 180 次 Generate 都保持 state 12，只能 timeout，始终没有 completion 或 first-return-zero。
+
+严格 MSVC `/W4 /WX /utf-8` 编译与两场景 exit=0；首次编译的 unsigned optional 比较 warning 按 /WX 导致 exit=2，修复后干净重编译，所有输出均在[验证目录](diagnostics/g5-observation-v2-20261112/verification/focused-scenarios.txt)留存。没有运行历史全套，也不重跑/重标离线 A；[A 的原始源码哈希与工件](diagnostics/g5-calibration-a-20261111/attempt-002/result.md)保留当时含义。
+
+### 用户手工窗口与尚未验证项
+
+匹配 DLL/PDB/UTF-8 无 BOM INI 位于 [dist/g5-observation-v2-20261112](../dist/g5-observation-v2-20261112/MANUAL.md)。运行档从样例派生，只启用 inject、既有五字 prime、空 CandidateInputVariable 的 observe-only probe 与 Unequip 事件；DisplayPose/DisplayStep、所有源仪器/liveness 关闭，其余值保留。样例值仍全部 dormant。
+
+1. 用户自行核对 manifest 哈希/identity、备份并安排安装后，重启游戏；冻结与 D3 相同的 1H + 左手 9 场景，只开一次 panel 窗口。
+2. 保存完整启动到 segment-end/cleanup 的日志。先核对一次 activation/WeapEquip/Unequip、5/5 prime written、零 `[E]`/source-drift，以及 schema、计数、覆盖上限与段完整性。
+3. 分别记录 **clip-family**（equip/unequip 是否 1HM）与 **状态完成**（state 12→0、completed 步、outcome）。timeout/invalid 如实保留，不加步、不临时换事件或 prime 重试。
+4. 原样保留 clock bits、absent、dt/commanded/completed，之后才能讨论 clock 语义；不从旧 `N` 字符、duration 或 UI 帧补值。
+
+| 验证轴 | 本轮资格 |
+| --- | --- |
+| clip-family | D3 有日期化正结果；v96 待用户验证 |
+| 原生 state 12→0 / completion | 待用户验证；不等于捕获 clip-end event |
+| 时钟语义/速率 | 离线表示修复通过，原生数据未采；无速度结论或时间容差 |
+| 原生独立控制 B | 未登记/未通过；SamplePartialTracks 仍不是独立真值 |
+| B3/B4、同代源输出与后处理边界 | 未闭合；本地后 Generate 不自动资格化源侧 |
+| K1 输入/资源/实例、K2 其余项 | 未闭合；本进程 key 与五字组合不替代完整身份与输入账本 |
+| 姿态等价/G5/G6 | unjudged；没有容差、G5 pass 或冻结；G6 后置，装载 teardown NO-GO |

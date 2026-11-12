@@ -1,0 +1,7 @@
+PASS worktree scope: baseline HEAD/branch, empty staged state, protected util/frame-policy hashes, historical artifacts unchanged
+PASS package identity: matching Release DLL/PDB copies, embedded v96 identity, exact source/package hashes and duplicated manifest
+PASS configuration: sample values unchanged; exactly seven manual overrides; display/source instruments/liveness off; UTF-8 without BOM
+PASS documentation: 58 added/current local links and anchors; canonical section, code/test paths and symbols current; stale D1-not-run corrected
+PASS formatting: policy/test/canonical LF, integration CRLF, evidence exact-byte attributes, git diff --check exit 0
+Native validation remains PENDING; no extra behavioral scenario or historical suite run.
+exit=0

@@ -14,6 +14,7 @@
 #include "animation/behavior_graph/generation_entry_policy.h"
 #include "animation/behavior_graph/graph_observation_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
+#include "animation/behavior_graph/observation_policy.h"
 #include "animation/behavior_graph/pose_capture_policy.h"
 #include "animation/behavior_graph/pose_content_policy.h"
 #include "animation/behavior_graph/pose_motion_policy.h"
@@ -145,7 +146,6 @@ namespace
     // and 63564 returns false (v12 proved slot 3 leaves the track headers intact).
     constexpr std::uint64_t PosePredicateID = 63564;
     // Pre-registered G2 drive budget: 120 fixed steps of 1/60 s (2 simulated seconds).
-    constexpr std::uint32_t DriveSteps = 120;
     constexpr float DriveTimestep = 1.0f / 60.0f;
     constexpr std::int32_t GraphAlignment = 0x10;
 
@@ -974,7 +974,7 @@ namespace
     }
 
     void sample_candidate_input_probe(CandidateInputProbe const& a_probe, RE::BShkbAnimationGraph const& a_graph,
-        std::uint32_t a_actor_id, std::uint64_t a_request, std::uint32_t a_step)
+        std::uint32_t a_actor_id, std::uint64_t a_request, std::string const& observation)
     {
         if (!a_probe.armed) return;
         std::int32_t input = 0;
@@ -988,16 +988,16 @@ namespace
         bool const readable = phases && (!a_probe.has_input || read_variable_int(a_graph, a_probe.index, input));
         if (!readable)
         {
-            logger::info("CANDIDATE INPUT actor={:08x} request={} step={} outcome=unreadable nodes={}",
-                a_actor_id, a_request, a_step, nodes);
+            logger::info("CANDIDATE INPUT actor={:08x} request={} {} outcome=unreadable nodes={}",
+                a_actor_id, a_request, observation, nodes);
             return;
         }
         if (a_probe.has_input)
-            logger::info("CANDIDATE INPUT actor={:08x} request={} step={} input={} istate={} default={} nodes={}",
-                a_actor_id, a_request, a_step, input, state, default_state, nodes);
+            logger::info("CANDIDATE INPUT actor={:08x} request={} {} input={} istate={} default={} nodes={}",
+                a_actor_id, a_request, observation, input, state, default_state, nodes);
         else
-            logger::info("CANDIDATE INPUT actor={:08x} request={} step={} input=none istate={} default={} nodes={}",
-                a_actor_id, a_request, a_step, state, default_state, nodes);
+            logger::info("CANDIDATE INPUT actor={:08x} request={} {} input=none istate={} default={} nodes={}",
+                a_actor_id, a_request, observation, state, default_state, nodes);
     }
 
     // C-G3B-S3: the second slice of the event route. After the equip phase settles, ONE more
@@ -1059,20 +1059,20 @@ namespace
         return probe;
     }
 
-    void sample_unequip_probe(UnequipProbe const& a_probe, RE::BShkbAnimationGraph const& a_graph,
-        std::uint32_t const a_actor_id, std::uint64_t const a_request, std::uint32_t const a_step)
+    std::optional<std::int32_t> sample_unequip_probe(UnequipProbe const& a_probe, RE::BShkbAnimationGraph const& a_graph,
+        std::uint32_t const a_actor_id, std::uint64_t const a_request, std::string const& observation)
     {
         if (!a_probe.armed)
-            return;
+            return std::nullopt;
         RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
         std::int32_t const nodes = behavior && behavior->activeNodes ?
             generation_field<std::int32_t>(behavior->activeNodes, 8) : 0;
         std::int32_t default_state = 0;
         if (!read_variable_int(a_graph, a_probe.default_state, default_state))
         {
-            logger::info("CANDIDATE UNEQUIP actor={:08x} request={} step={} outcome=unreadable nodes={}",
-                a_actor_id, a_request, a_step, nodes);
-            return;
+            logger::info("CANDIDATE UNEQUIP actor={:08x} request={} {} outcome=unreadable nodes={}",
+                a_actor_id, a_request, observation, nodes);
+            return std::nullopt;
         }
         std::int32_t state = 0;
         std::int32_t unequipping = 0;
@@ -1087,14 +1087,15 @@ namespace
         bool const has_pitch = a_probe.has_pitch && read_variable_int(a_graph, a_probe.pitch, pitch);
         bool const has_right_hand =
             a_probe.has_right_hand && read_variable_int(a_graph, a_probe.right_hand, right_hand);
-        logger::info("CANDIDATE UNEQUIP actor={:08x} request={} step={} default={} istate={} uneq={} bequip={} pitch={} rh={} nodes={}",
-            a_actor_id, a_request, a_step, default_state,
+        logger::info("CANDIDATE UNEQUIP actor={:08x} request={} {} default={} istate={} uneq={} bequip={} pitch={} rh={} nodes={}",
+            a_actor_id, a_request, observation, default_state,
             has_state ? std::to_string(state) : std::string{ "none" },
             has_unequipping ? std::to_string(unequipping) : std::string{ "none" },
             has_equip_unequip ? std::to_string(equip_unequip) : std::string{ "none" },
             has_pitch ? std::to_string(pitch) : std::string{ "none" },
             has_right_hand ? std::to_string(right_hand) : std::string{ "none" },
             nodes);
+        return default_state;
     }
 
 }
@@ -1596,6 +1597,12 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             const auto source_anim_index = [source_base]() {
                                 return *reinterpret_cast<const std::uint16_t*>(reinterpret_cast<std::uintptr_t>(source_base) + 0x240);
                             };
+                            SegmentObservation observation(ObservationSegment::e_equip, generation_profile);
+                            const auto observation_fields = [&]() {
+                                return fmt::format("schema=2 candidate={:#x} segment={} observation={} completed={} commanded={} elapsed={:.17g}",
+                                    address(candidate.get()), observation.segment_name(), observation.stage_name(),
+                                    observation.completed(), observation.commanded(), observation.elapsed());
+                            };
                             const auto log_state_probe = [&](char const* step) {
                                 const RE::hkbBehaviorGraph* const behavior_state =
                                     candidate->characterInstance.behaviorGraph.get();
@@ -1628,8 +1635,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 const unsigned src_anim = source_anim_index();
                                 const unsigned cand_anim =
                                     *reinterpret_cast<const std::uint16_t*>(reinterpret_cast<std::uintptr_t>(candidate_base) + 0x240);
-                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=probe step={} src-anim={:04x} cand-anim={:04x} active[{}] vars[{}] gen0={} gen0elem={} gen1={}",
-                                    actor_id, request, step, src_anim, cand_anim, active, word_vars,
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=probe checkpoint={} src-anim={:04x} cand-anim={:04x} active[{}] vars[{}] gen0={} gen0elem={} gen1={}",
+                                    actor_id, request, observation_fields(), step, src_anim, cand_anim, active, word_vars,
                                     format_gen_dump(candidate->generatorOutputs[0]),
                                     format_gen_element(candidate->generatorOutputs[0]),
                                     format_gen_dump(candidate->generatorOutputs[1]));
@@ -1924,7 +1931,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // n/f are the read slot's first output track header (+0x32 word,
                             // +0x38 float), h is the 0x100-byte element-head FNV per slot;
                             // the sampling path reads [0x220] after each Path-A swap.
-                            const auto log_slots = [&](std::uint32_t const step) {
+                            const auto log_slots = [&]() {
                                 const auto slot_fields = [&](std::size_t const slot_index) {
                                     const void* const output = candidate->generatorOutputs[slot_index];
                                     if (!output)
@@ -1941,8 +1948,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 };
                                 const auto [ptr0, hash0] = slot_fields(0);
                                 const auto [ptr1, hash1] = slot_fields(1);
-                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=slots step={} p0={} h0={:016x} p1={} h1={:016x}",
-                                    actor_id, request, step, ptr0, hash0, ptr1, hash1);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=slots p0={} h0={:016x} p1={} h1={:016x}",
+                                    actor_id, request, observation_fields(), ptr0, hash0, ptr1, hash1);
                             };
                             // v21 pose-content contract (2026-10-27): a raw FNV over
                             // poseLocal is padding-sensitive, so it proves bytes changed, not
@@ -1961,7 +1968,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             const auto or_missing = [](bool const known, std::string const& value) {
                                 return known ? value : std::string("n/a");
                             };
-                            const auto log_pose_content = [&](std::uint32_t const step) {
+                            const auto log_pose_content = [&]() {
                                 std::vector<PoseSample> current_candidate;
                                 std::vector<PoseSample> current_source;
                                 read_pose_local(candidate->characterInstance, current_candidate);
@@ -1974,8 +1981,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     source_base->characterInstance.poseLocal);
                                 const PoseAliasWatch watch =
                                     watch_aliasing(current_candidate, current_source, baseline_candidate_pose, buffer_alias);
-                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-content step={} entries={} finite={} nonfinite={} moved={} max-delta={} source-entries={} source-finite={} source-moved={} source-equal={} source-equal-moving={} source-equal-static={} alias={}",
-                                    actor_id, request, step, comparison.entries, comparison.finite, comparison.non_finite,
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=pose-content entries={} finite={} nonfinite={} moved={} max-delta={} source-entries={} source-finite={} source-moved={} source-equal={} source-equal-moving={} source-equal-static={} alias={}",
+                                    actor_id, request, observation_fields(), comparison.entries, comparison.finite, comparison.non_finite,
                                     or_missing(comparison.has_previous, fmt::format("{}", comparison.moved)),
                                     or_missing(comparison.has_previous, fmt::format("{:.6f}", comparison.max_delta)),
                                     source_comparison.entries, source_comparison.finite,
@@ -1998,8 +2005,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         ? (pose_sample_differs(sample, previous_candidate_pose[index]) ? "yes" : "no")
                                         : "n/a";
                                     const bool matches_source = pose_sample_identical(sample, current_source[index]);
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-bone step={} index={} name='{}' p=({:.4f},{:.4f},{:.4f}) q=({:.4f},{:.4f},{:.4f},{:.4f}) s=({:.3f},{:.3f},{:.3f}) finite={} moved={} source-equal={} source-p=({:.4f},{:.4f},{:.4f})",
-                                        actor_id, request, step, index, name,
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=pose-bone index={} name='{}' p=({:.4f},{:.4f},{:.4f}) q=({:.4f},{:.4f},{:.4f},{:.4f}) s=({:.3f},{:.3f},{:.3f}) finite={} moved={} source-equal={} source-p=({:.4f},{:.4f},{:.4f})",
+                                        actor_id, request, observation_fields(), index, name,
                                         sample.translation[0], sample.translation[1], sample.translation[2],
                                         sample.rotation[0], sample.rotation[1], sample.rotation[2], sample.rotation[3],
                                         sample.scale[0], sample.scale[1], sample.scale[2],
@@ -2007,7 +2014,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         current_source[index].translation[0], current_source[index].translation[1],
                                         current_source[index].translation[2]);
                                 }
-                                if (step == 0)
+                                if (observation.completed() == 0)
                                     baseline_candidate_pose = current_candidate;
                                 previous_candidate_pose = current_candidate;
                                 previous_source_pose = current_source;
@@ -2018,24 +2025,48 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // generator when its vtable matches REL's hkbClipGenerator. The single
                             // native call is SamplePartialTracks - the same API the display player
                             // already uses every frame - and it samples a copy, not the live clip.
-                            // v24: one scan shared by the comparison and the clock rows. A node
-                            // counts as a clip generator only when its vtable matches REL's
-                            // hkbClipGenerator; the walk is bounded at 256 active entries and at
-                            // the caller's slot limit so a malformed list cannot drive it.
-                            const auto collect_active_clips = [&](std::size_t const limit) {
-                                std::vector<std::pair<std::size_t, const RE::hkbClipGenerator*>> found;
+                            struct ClipObservation
+                            {
+                                std::vector<std::pair<std::size_t, RE::hkbClipGenerator const*>> clips;
+                                std::size_t active_nodes;
+                                std::size_t active_clips;
+                            };
+                            std::size_t peak_active_nodes = 0;
+                            std::size_t peak_active_clips = 0;
+                            bool node_overflow = false;
+                            bool clip_overflow = false;
+                            bool name_invalid = false;
+                            const auto collect_active_clips = [&]() {
+                                ClipObservation found{ {}, 0, 0 };
                                 RE::hkbBehaviorGraph* const graph = candidate->characterInstance.behaviorGraph.get();
                                 if (!graph || !graph->activeNodes)
+                                {
+                                    observation.invalidate("active-nodes-unavailable");
                                     return found;
+                                }
                                 RE::NodeList const& nodes = *graph->activeNodes;
-                                const std::size_t active = static_cast<std::size_t>(nodes.size());
-                                const std::size_t count = active < 256 ? active : 256;
-                                for (std::size_t i = 0; i < count && found.size() < limit; ++i)
+                                found.active_nodes = static_cast<std::size_t>(nodes.size());
+                                peak_active_nodes = std::max(peak_active_nodes, found.active_nodes);
+                                if (found.active_nodes > Observation_Node_Limit)
+                                {
+                                    node_overflow = true;
+                                    observation.invalidate("active-node-overflow");
+                                }
+                                const std::size_t count = std::min(found.active_nodes, Observation_Node_Limit);
+                                for (std::size_t i = 0; i < count; ++i)
                                 {
                                     RE::hkbNode* const node = nodes.data()[i].nodeClone;
                                     if (!node_is_clip_generator(node))
                                         continue;
-                                    found.emplace_back(i, static_cast<const RE::hkbClipGenerator*>(node));
+                                    ++found.active_clips;
+                                    if (found.clips.size() < Observation_Clip_Limit)
+                                        found.clips.emplace_back(i, static_cast<RE::hkbClipGenerator const*>(node));
+                                }
+                                peak_active_clips = std::max(peak_active_clips, found.active_clips);
+                                if (found.active_clips > Observation_Clip_Limit)
+                                {
+                                    clip_overflow = true;
+                                    observation.invalidate("active-clip-overflow");
                                 }
                                 return found;
                             };
@@ -2043,20 +2074,20 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // of an active clip at that clip's own time? The only native call is
                             // SamplePartialTracks - const, the same API the display player uses
                             // every frame - and it writes a local copy, never the live clip.
-                            const auto log_clip_reference = [&](std::uint32_t const step) {
+                            const auto log_clip_reference = [&](ClipObservation const& collected) {
                                 std::vector<PoseSample> pose;
                                 read_pose_local(candidate->characterInstance, pose);
                                 if (pose.empty())
                                 {
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} status=unavailable reason=no-pose",
-                                        actor_id, request, step);
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=clip-ref status=unavailable reason=no-pose",
+                                        actor_id, request, observation_fields());
                                     return;
                                 }
-                                const auto clips = collect_active_clips(8);
+                                const auto& clips = collected.clips;
                                 if (clips.empty())
                                 {
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} status=unavailable reason=no-clip-generator",
-                                        actor_id, request, step);
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=clip-ref status=unavailable reason=no-clip-generator",
+                                        actor_id, request, observation_fields());
                                     return;
                                 }
                                 std::size_t slot = 0;
@@ -2073,11 +2104,11 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         plausible_object_pointer(reinterpret_cast<std::uintptr_t>(animation));
                                     const std::int32_t tracks = animation_plausible ? animation->numberOfTransformTracks : 0;
                                     const float local_time = clip->localTime;
-                                    const std::string name = read_string(clip->animationName, 96);
+                                    const std::string name = read_string(clip->animationName, Observation_Clip_Name_Limit);
                                     if (!binding || !animation_plausible || tracks <= 0 || tracks > 512 || !std::isfinite(local_time))
                                     {
-                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} slot={} index={} status=unavailable reason=bad-binding name='{}' tracks={} time={:.4f}",
-                                            actor_id, request, step, slot, index, name, tracks, local_time);
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=clip-ref slot={} index={} node={:#x} status=unavailable reason=bad-binding name='{}' tracks={} time={:.9g}",
+                                            actor_id, request, observation_fields(), slot, index, address(clip), name, tracks, local_time);
                                         ++slot;
                                         continue;
                                     }
@@ -2118,8 +2149,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     const float effective_duration = control
                                         ? std::max(animation->duration - crop_sum, 0.0f)
                                         : animation->duration;
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-ref step={} slot={} index={} status=compared name='{}' binding-index={} map-len={} mapping={} time={:.4f} duration={:.4f} enforced={:.4f} crop-sum={:.4f} eff-duration={:.4f} mode={} speed={:.3f} tracks={} mapped={} compared={} agreed={} unmapped={} max-dpos={:.6f} max-drot={:.6f} max-dscale={:.6f}",
-                                        actor_id, request, step, slot, index, name,
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=clip-ref slot={} index={} node={:#x} status=compared name='{}' binding-index={} map-len={} mapping={} time={:.9g} duration={:.4f} enforced={:.4f} crop-sum={:.4f} eff-duration={:.4f} mode={} speed={:.3f} tracks={} mapped={} compared={} agreed={} unmapped={} max-dpos={:.6f} max-drot={:.6f} max-dscale={:.6f}",
+                                        actor_id, request, observation_fields(), slot, index, address(clip), name,
                                         static_cast<std::uint32_t>(clip->animationBindingIndex),
                                         static_cast<std::uint32_t>(map.size()),
                                         identity ? "identity" : "table",
@@ -2131,121 +2162,69 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     ++slot;
                                 }
                             };
-                            // v24 clock row: every active clip's own localTime on one line, so the
-                            // clip clock can be compared with the drive budget instead of inferred.
-                            const auto log_clip_clock = [&](std::uint32_t const step) {
-                                const auto clips = collect_active_clips(8);
-                                if (clips.empty())
+                            ClipClockHistory clock_history(observation.limit());
+                            const auto record_clip_clocks = [&](ClipObservation const& collected) {
+                                std::vector<ObservedClipClock> clocks;
+                                for (auto const& [index, clip] : collected.clips)
                                 {
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-clock step={} status=unavailable",
-                                        actor_id, request, step);
-                                    return;
-                                }
-                                std::string entries;
-                                for (auto const& [index, clip] : clips)
-                                {
-                                    const std::string full = read_string(clip->animationName, 96);
-                                    const std::size_t slash = full.find_last_of("\\/");
-                                    const std::string leaf = slash == std::string::npos ? full : full.substr(slash + 1);
-                                    if (!entries.empty())
-                                        entries.push_back('|');
-                                    entries += fmt::format("{}:{:.4f}", leaf, clip->localTime);
-                                }
-                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-clock step={} found={} entries='{}'",
-                                    actor_id, request, step, clips.size(), entries);
-                            };
-                            // v25: one character per drive step for each clip's localTime delta.
-                            // audit26 established that the clock consumes dt and nothing else, so
-                            // an uneven advance can only come from how often that Update is
-                            // reached; the bitstring shows the pattern without 121 log rows.
-                            // Code: '.' = 0 frames, '1'..'9' = frames, 'A'..'Z' = 10..35 frames,
-                            // 'N' = time went backwards (wrap or restart), '-' = clip absent.
-                            struct ClipStepTrace
-                            {
-                                std::string name;
-                                std::string deltas;
-                                std::uint32_t first_step{};
-                                float last_time{};
-                            };
-                            std::vector<ClipStepTrace> clip_step_traces;
-                            const auto log_clip_step = [&](std::uint32_t const step) {
-                                const auto clips = collect_active_clips(8);
-                                std::vector<bool> seen(clip_step_traces.size(), false);
-                                for (auto const& [index, clip] : clips)
-                                {
-                                    const std::string full = read_string(clip->animationName, 96);
-                                    const std::size_t slash = full.find_last_of("\\/");
-                                    const std::string leaf = slash == std::string::npos ? full : full.substr(slash + 1);
-                                    std::size_t at = 0;
-                                    for (; at < clip_step_traces.size(); ++at)
+                                    (void)index;
+                                    char const* const raw = clip->animationName.c_str();
+                                    if (!plausible_object_pointer(reinterpret_cast<std::uintptr_t>(raw)))
                                     {
-                                        if (clip_step_traces[at].name == leaf)
-                                            break;
-                                    }
-                                    if (at == clip_step_traces.size())
-                                    {
-                                        ClipStepTrace fresh;
-                                        fresh.name = leaf;
-                                        fresh.first_step = step;
-                                        fresh.last_time = clip->localTime;
-                                        fresh.deltas.push_back('.');
-                                        clip_step_traces.push_back(fresh);
-                                        seen.push_back(true);
+                                        name_invalid = true;
+                                        observation.invalidate("clip-name-unreadable");
                                         continue;
                                     }
-                                    seen[at] = true;
-                                    ClipStepTrace& trace = clip_step_traces[at];
-                                    const float now = clip->localTime;
-                                    const long frames = std::lround((now - trace.last_time) * 60.0f);
-                                    trace.last_time = now;
-                                    char code = '.';
-                                    if (frames < 0)
-                                        code = 'N';
-                                    else if (frames > 35)
-                                        code = '?';
-                                    else if (frames > 9)
-                                        code = static_cast<char>('A' + (frames - 10));
-                                    else if (frames > 0)
-                                        code = static_cast<char>('0' + frames);
-                                    trace.deltas.push_back(code);
+                                    std::string const name = read_string(clip->animationName, Observation_Clip_Name_Limit);
+                                    if (name.size() == Observation_Clip_Name_Limit)
+                                    {
+                                        name_invalid = true;
+                                        observation.invalidate("clip-name-truncated");
+                                        continue;
+                                    }
+                                    clocks.push_back({ { name, address(clip),
+                                        static_cast<std::uint32_t>(clip->animationBindingIndex) }, clip->localTime });
                                 }
-                                for (std::size_t i = 0; i < clip_step_traces.size(); ++i)
+                                if (!clock_history.record(clocks))
+                                    observation.invalidate("clock-trace-capacity");
+                            };
+                            const auto log_clip_clock = [&]() {
+                                for (ClipClockTrace const& trace : clock_history.traces())
                                 {
-                                    if (!seen[i])
-                                        clip_step_traces[i].deltas.push_back('-');
+                                    std::size_t const point = trace.time_bits.size() - 1;
+                                    std::optional<std::uint32_t> const bits = trace.time_bits.back();
+                                    std::optional<double> const delta = clock_delta(trace, point);
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=clip-clock name='{}' node={:#x} binding-index={} local-time={} f32={} delta={}",
+                                        actor_id, request, observation_fields(), trace.key.full_name, trace.key.node,
+                                        trace.key.binding_index,
+                                        bits ? fmt::format("{:.9g}", std::bit_cast<float>(*bits)) : "absent",
+                                        bits ? fmt::format("{:08x}", *bits) : "-",
+                                        delta ? fmt::format("{:.17g}", *delta) : "n/a");
                                 }
                             };
-                            const auto emit_clip_steps = [&] {
-                                for (auto const& trace : clip_step_traces)
-                                {
-                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=clip-steps name='{}' first={} steps={} deltas='{}'",
-                                        actor_id, request, trace.name, trace.first_step, trace.deltas.size(), trace.deltas);
-                                }
-                            };
-                            // v26: does poseLocal follow the clock every step, or only at the batch
-                            // boundary v25 found? One character per drive step, bucketed by the
-                            // largest single-component change since the previous step:
-                            // '.' = 0, '1' <= 1e-5, '2' <= 1e-4, '3' <= 1e-3, '4' <= 1e-2, '5' > 1e-2.
                             std::vector<PoseSample> pose_step_previous;
                             std::string pose_step_deltas;
                             std::size_t pose_step_changed = 0;
-                            std::uint32_t pose_step_first = 0;
-                            bool pose_step_started = false;
                             float pose_step_max = 0.0f;
                             std::size_t semantic_step_comparisons = 0;
                             std::size_t semantic_step_changed = 0;
                             bool semantic_steps_valid = true;
-                            const auto log_pose_step = [&](std::uint32_t const step) {
+                            std::string segment_pose_baseline;
+                            std::string segment_pose_mid;
+                            std::string segment_pose_end;
+                            const auto record_pose_step = [&]() {
                                 std::vector<PoseSample> current;
                                 read_pose_local(candidate->characterInstance, current);
-                                if (current.empty())
-                                    return;
-                                if (!pose_step_started)
+                                if (observation.completed() == 0)
                                 {
-                                    pose_step_started = true;
-                                    pose_step_first = step;
                                     pose_step_previous = std::move(current);
-                                    pose_step_deltas.push_back('.');
+                                    return;
+                                }
+                                if (current.empty() || pose_step_previous.empty())
+                                {
+                                    semantic_steps_valid = false;
+                                    pose_step_deltas.push_back('-');
+                                    pose_step_previous = std::move(current);
                                     return;
                                 }
                                 PoseMotionComparison const motion = compare_display_motion(current, pose_step_previous);
@@ -2257,31 +2236,96 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 for (std::size_t i = 0; i < limit; ++i)
                                     worst = std::max(worst, pose_sample_max_delta(current[i], pose_step_previous[i]));
                                 pose_step_max = std::max(pose_step_max, worst);
-                                char code = '.';
-                                if (worst > 1.0e-2f)
-                                    code = '5';
-                                else if (worst > 1.0e-3f)
-                                    code = '4';
-                                else if (worst > 1.0e-4f)
-                                    code = '3';
-                                else if (worst > 1.0e-5f)
-                                    code = '2';
-                                else if (worst > 0.0f)
-                                    code = '1';
-                                if (code != '.')
-                                    ++pose_step_changed;
+                                char const code = worst > 1.0e-2f ? '5' : worst > 1.0e-3f ? '4' :
+                                    worst > 1.0e-4f ? '3' : worst > 1.0e-5f ? '2' : worst > 0.0f ? '1' : '.';
+                                if (code != '.') ++pose_step_changed;
                                 pose_step_deltas.push_back(code);
                                 pose_step_previous = std::move(current);
                             };
-                            const auto emit_pose_steps = [&] {
-                                if (!pose_step_started)
-                                    return;
-                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-steps first={} steps={} changed={} max-delta={:.6f} deltas='{}'",
-                                    actor_id, request, pose_step_first, pose_step_deltas.size(), pose_step_changed,
-                                    pose_step_max, pose_step_deltas);
-                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pose-motion comparisons={} changed={} valid={} epsilon={} channels=translation/quaternion-chord/scale-x acceptance=unjudged",
-                                    actor_id, request, semantic_step_comparisons, semantic_step_changed, semantic_steps_valid,
-                                    Display_Motion_Epsilon);
+                            const auto record_output = [&]() {
+                                ClipObservation const clips = collect_active_clips();
+                                record_clip_clocks(clips);
+                                record_pose_step();
+                                if (observation.completed() > 0)
+                                {
+                                    segment_pose_end = format_pose_hash(candidate->characterInstance);
+                                    if (observation.completed() == 60) segment_pose_mid = segment_pose_end;
+                                    observation.finish_point();
+                                }
+                                bool const checkpoint = observation.completed() == 0 || observation.checkpoint();
+                                if (checkpoint)
+                                {
+                                    const std::uint8_t predicate = pose_predicate(candidate_base);
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=pred r={:#04x}",
+                                        actor_id, request, observation_fields(), predicate);
+                                    log_state_probe(observation.completed() == 0 ? "baseline" : "completed-output");
+                                    log_slots();
+                                    log_pose_content();
+                                    log_clip_reference(clips);
+                                }
+                                if (checkpoint || observation.completed() % 20 == 0)
+                                    log_clip_clock();
+                            };
+                            const auto start_observations = [&]() {
+                                previous_candidate_pose.clear();
+                                previous_source_pose.clear();
+                                baseline_candidate_pose.clear();
+                                pose_step_previous.clear();
+                                pose_step_deltas.clear();
+                                pose_step_changed = 0;
+                                pose_step_max = 0.0f;
+                                semantic_step_comparisons = 0;
+                                semantic_step_changed = 0;
+                                semantic_steps_valid = true;
+                                peak_active_nodes = 0;
+                                peak_active_clips = 0;
+                                node_overflow = false;
+                                clip_overflow = false;
+                                name_invalid = false;
+                                clock_history = ClipClockHistory(observation.limit());
+                                segment_pose_baseline = format_pose_hash(candidate->characterInstance);
+                                segment_pose_mid = "not-observed";
+                                segment_pose_end = "not-generated";
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=segment-start max-advances={} dt={:.9g} dt-f32={:08x} full-generate={} node-limit={} clip-limit={} trace-limit={} name-byte-limit={} trace-point-limit={}",
+                                    actor_id, request, observation_fields(), observation.limit(), DriveTimestep,
+                                    std::bit_cast<std::uint32_t>(DriveTimestep), generation_profile,
+                                    Observation_Node_Limit, Observation_Clip_Limit, Observation_Trace_Limit,
+                                    Observation_Clip_Name_Limit, observation.limit() + 1);
+                                record_output();
+                            };
+                            const auto end_observations = [&]() {
+                                if (observation.outcome() == ObservationOutcome::e_running)
+                                    observation.invalidate("drive-ended-before-limit");
+                                for (ClipClockTrace const& trace : clock_history.traces())
+                                {
+                                    std::string bits;
+                                    for (std::optional<std::uint32_t> const time : trace.time_bits)
+                                    {
+                                        if (!bits.empty()) bits.push_back(',');
+                                        bits += time ? fmt::format("{:08x}", *time) : "-";
+                                    }
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=clip-clock-trace key-scope=process-local name='{}' node={:#x} binding-index={} points={} point0=baseline points1-on=completed-output times-f32='{}'",
+                                        actor_id, request, observation_fields(), trace.key.full_name, trace.key.node,
+                                        trace.key.binding_index, trace.time_bits.size(), bits);
+                                }
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=observation-coverage peak-nodes={} peak-clips-in-scanned-nodes={} traces={} points={} node-overflow={} clip-overflow={} trace-overflow={} name-invalid={}",
+                                    actor_id, request, observation_fields(), peak_active_nodes, peak_active_clips,
+                                    clock_history.traces().size(), clock_history.points(), node_overflow, clip_overflow,
+                                    clock_history.overflow(), name_invalid);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=pose-steps comparisons={} changed={} valid={} max-delta={:.6f} deltas='{}'",
+                                    actor_id, request, observation_fields(), semantic_step_comparisons, pose_step_changed,
+                                    semantic_steps_valid, pose_step_max, pose_step_deltas);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=pose-motion comparisons={} changed={} valid={} epsilon={} channels=translation/quaternion-chord/scale-x acceptance=unjudged",
+                                    actor_id, request, observation_fields(), semantic_step_comparisons, semantic_step_changed,
+                                    semantic_steps_valid, Display_Motion_Epsilon);
+                                logger::info("INDEPENDENT GRAPH actor={:08x} request={} {} phase=segment-end outcome={} stop-reason={} max-advances={} active-state-seen={} first-return-zero={} last-state={} cand-pose-baseline={} cand-pose-60={} cand-pose-end={} source-drift={} completion-evidence={}",
+                                    actor_id, request, observation_fields(), observation.outcome_name(), observation.reason(),
+                                    observation.limit(), observation.active_seen(),
+                                    observation.first_zero() ? std::to_string(*observation.first_zero()) : "none",
+                                    observation.last_state() ? std::to_string(*observation.last_state()) : "unreadable",
+                                    segment_pose_baseline, segment_pose_mid, segment_pose_end,
+                                    first_drift(source_before, identify(source_graph)),
+                                    std::string_view(observation.segment_name()) == "unequip" ? "state-12-to-0-only" : "fixed-budget-only");
                             };
                             const bool eye_arm = generation_profile;
                             EyePoint const eye = candidate_eye_point(*candidate);
@@ -2301,69 +2345,48 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     logger::info("CANDIDATE UNEQUIP actor={:08x} request={} outcome=skip reason=mode-not-inject mode={}",
                                         actor_id, request, independent_graph_name(mode));
                             }
-                            for (std::uint32_t step = 0; behavior && step < DriveSteps; ++step)
+                            start_observations();
+                            sample_candidate_input_probe(input_probe, *candidate_base, actor_id, request, observation_fields());
+                            for (std::uint32_t step = 0; behavior && observation.can_advance(); ++step)
                             {
+                                observation.command_advance(DriveTimestep);
                                 const auto observe_step = [&](FrameStage stage) {
-                                    if (stage == FrameStage::e_pre_sample)
-                                    {
-                                        sample_candidate_input_probe(input_probe, *candidate_base, actor_id,
-                                            request, step);
-                                        if (unequip_probe.armed)
-                                        {
-                                            std::int32_t gate_default = 0;
-                                            std::int32_t const gate_nodes = behavior && behavior->activeNodes ?
-                                                generation_field<std::int32_t>(behavior->activeNodes, 8) : 0;
-                                            if (read_variable_int(*candidate_base, unequip_probe.default_state, gate_default))
-                                                settle_gate.observe(step, gate_default, gate_nodes);
-                                        }
-                                        if (step == 0 || step == 60)
-                                        {
-                                            const std::uint8_t predicate = pose_predicate(candidate_base);
-                                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pred step={} r={:#04x}",
-                                                actor_id, request, step, predicate);
-                                            log_slots(step);
-                                            log_pose_content(step);
-                                            log_clip_reference(step);
-                                        }
-                                        if (step % 20 == 0)
-                                            log_clip_clock(step);
-                                    }
                                     if (stage == FrameStage::e_post_sample)
                                         frame_trace.sampled_pose(candidate->characterInstance);
                                     frame_trace.phase(*candidate_base, step, stage);
                                     if (stage == FrameStage::e_post_pipeline && step == 0)
                                         log_bookkeeping("post-pipeline1");
-                                    if (stage == FrameStage::e_post_update)
+                                    if (stage == FrameStage::e_post_update && step == 0)
+                                        log_bookkeeping("post-update1");
+                                    if (!observation.observe_stage(stage)) return;
+                                    sample_candidate_input_probe(input_probe, *candidate_base, actor_id,
+                                        request, observation_fields());
+                                    if (unequip_probe.armed)
                                     {
-                                        if (step == 1 || step == 2)
-                                            log_slots(step);
-                                        if (step == 0)
-                                            log_bookkeeping("post-update1");
+                                        std::int32_t gate_default = 0;
+                                        if (read_variable_int(*candidate_base, unequip_probe.default_state, gate_default))
+                                        {
+                                            observation.observe_state(gate_default);
+                                            std::int32_t const gate_nodes = behavior && behavior->activeNodes ?
+                                                generation_field<std::int32_t>(behavior->activeNodes, 8) : 0;
+                                            settle_gate.observe(observation.completed(), gate_default, gate_nodes);
+                                        }
+                                        else
+                                            observation.invalidate("state-unreadable");
                                     }
+                                    record_output();
                                 };
                                 drive_candidate_step(*candidate_base, source_graph, generation_profile,
                                     eye_arm ? &eye : nullptr, observe_step);
-                                if (step + 1 == DriveSteps / 2)
-                                {
-                                    candidate_pose_mid = format_pose_hash(candidate->characterInstance);
-                                    log_state_probe("60");
-                                }
-                                log_clip_step(step);
-                                log_pose_step(step);
                             }
                             step_ready = generation_profile && behavior;
-                            log_clip_step(120);
-                            log_pose_step(120);
-                            sample_candidate_input_probe(input_probe, *candidate_base, actor_id, request, DriveSteps);
-                            emit_clip_steps();
-                            emit_pose_steps();
-                            // C-G3B-S3: the settle gate arbitrates the single unequip dispatch. Only
-                            // a settled tail arms it; a no-settle window ends the slice instead of
-                            // upgrading to a timed injection. The second window runs under the
-                            // still-borrowed world and the same generation entry as the equip
-                            // phase, observed only by the unequip sampler and a fresh pose trace —
-                            // no frame-trace, clip or slots budget is spent on it.
-                            if (unequip_probe.armed)
+                            end_observations();
+                            candidate_pose_mid = segment_pose_mid;
+                            candidate_pose_end = segment_pose_end;
+                            std::uint32_t const equip_completed = observation.completed();
+                            std::uint32_t unequip_completed = 0;
+                            // Both segments finish before the borrowed world is released.
+                            if (unequip_probe.armed && observation.outcome() != ObservationOutcome::e_invalid)
                             {
                                 const UnequipSettleVerdict settle_verdict = settle_gate.verdict();
                                 // S4/S5: one typed by-name write on the candidate - resolved in the
@@ -2473,53 +2496,24 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     }
                                     if (input_delivered)
                                     {
-                                        const std::string unequip_pose_0 = format_pose_hash(candidate->characterInstance);
-                                        std::string unequip_pose_mid = "not-run";
-                                        std::string unequip_pose_end = "not-run";
-                                        std::vector<PoseSample> unequip_previous;
-                                        std::size_t unequip_comparisons = 0;
-                                        std::size_t unequip_moved = 0;
-                                        bool unequip_motion_valid = true;
-                                        bool unequip_pose_started = false;
-                                        for (std::uint32_t unequip_step = 0; behavior && unequip_step < DriveSteps; ++unequip_step)
+                                        observation = SegmentObservation(ObservationSegment::e_unequip, generation_profile);
+                                        start_observations();
+                                        observation.observe_state(sample_unequip_probe(unequip_probe, *candidate_base,
+                                            actor_id, request, observation_fields()));
+                                        while (behavior && observation.can_advance())
                                         {
+                                            observation.command_advance(DriveTimestep);
                                             const auto observe_unequip = [&](FrameStage stage) {
-                                                if (stage == FrameStage::e_pre_sample)
-                                                    sample_unequip_probe(unequip_probe, *candidate_base, actor_id,
-                                                        request, unequip_step);
+                                                if (!observation.observe_stage(stage)) return;
+                                                observation.observe_state(sample_unequip_probe(unequip_probe,
+                                                    *candidate_base, actor_id, request, observation_fields()));
+                                                record_output();
                                             };
                                             drive_candidate_step(*candidate_base, source_graph, generation_profile,
                                                 eye_arm ? &eye : nullptr, observe_unequip);
-                                            std::vector<PoseSample> pose_current;
-                                            read_pose_local(candidate->characterInstance, pose_current);
-                                            if (!pose_current.empty())
-                                            {
-                                                if (!unequip_pose_started)
-                                                {
-                                                    unequip_pose_started = true;
-                                                    unequip_previous = std::move(pose_current);
-                                                }
-                                                else
-                                                {
-                                                    PoseMotionComparison const motion =
-                                                        compare_display_motion(pose_current, unequip_previous);
-                                                    ++unequip_comparisons;
-                                                    unequip_moved += motion.moved > 0 ? 1u : 0u;
-                                                    unequip_motion_valid = unequip_motion_valid && motion.valid;
-                                                    unequip_previous = std::move(pose_current);
-                                                }
-                                            }
-                                            if (unequip_step + 1 == DriveSteps / 2)
-                                                unequip_pose_mid = format_pose_hash(candidate->characterInstance);
                                         }
-                                        unequip_pose_end = format_pose_hash(candidate->characterInstance);
-                                        sample_unequip_probe(unequip_probe, *candidate_base, actor_id, request, DriveSteps);
-                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-motion comparisons={} changed={} valid={} epsilon={}",
-                                            actor_id, request, unequip_comparisons, unequip_moved, unequip_motion_valid,
-                                            Display_Motion_Epsilon);
-                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-done steps={} cand-pose-0={} cand-pose-60={} cand-pose-120={} source-drift={}",
-                                            actor_id, request, DriveSteps, unequip_pose_0, unequip_pose_mid,
-                                            unequip_pose_end, first_drift(source_before, identify(source_graph)));
+                                        end_observations();
+                                        unequip_completed = observation.completed();
                                     }
                                 }
                                 else
@@ -2534,18 +2528,12 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             // bodies afterwards; the call feeds the pipeline row only.
                             const bool slot2_removed = remove_ragdoll(candidate.get());
                             candidate->physicsWorld = nullptr;
-                            candidate_pose_end = format_pose_hash(candidate->characterInstance);
-                            log_state_probe("120");
-                            log_slots(120);
-                            log_pose_content(120);
-                            log_clip_reference(120);
-                            log_clip_clock(120);
-                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pipeline steps={} shell=pairs world-restored=true ragdoll-removed={} tracks-end[{}]",
-                                actor_id, request, DriveSteps, slot2_removed, pose_track_fields(candidate.get()));
+                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=pipeline equip-completed={} unequip-completed={} shell=pairs world-restored=true ragdoll-removed={} tracks-end[{}]",
+                                actor_id, request, equip_completed, unequip_completed, slot2_removed, pose_track_fields(candidate.get()));
 
                             const std::string source_pose_after = format_pose_hash(source_graph.characterInstance);
-                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=drive-done steps={} dt={:.6f} source-pose-before={} source-pose-after={} candidate-pose-0={} candidate-pose-60={} candidate-pose-120={}",
-                                actor_id, request, DriveSteps, DriveTimestep, source_pose_before, source_pose_after,
+                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=drive-summary schema=2 equip-completed={} unequip-completed={} dt={:.9g} source-pose-before={} source-pose-after={} equip-pose-activated={} equip-pose-60={} equip-pose-end={}",
+                                actor_id, request, equip_completed, unequip_completed, DriveTimestep, source_pose_before, source_pose_after,
                                 candidate_pose_before, candidate_pose_mid, candidate_pose_end);
                             log_drive_state(actor_id, request, "post-drive", activated,
                                 first_drift(source_before, identify(source_graph)), observe_drive(*candidate));
