@@ -6,10 +6,12 @@
 
 #include "animation/behavior_graph/b3b4_policy.h"
 #include "animation/behavior_graph/probe_liveness_policy.h"
+#include "animation/behavior_graph/source_timeline_policy.h"
 #include "animation/behavior_graph/source_timeline.h"
 
 #include "animation/settings.h"
 
+#include <RE/P/PlayerCharacter.h>
 #include <RE/B/BSAnimationGraphManager.h>
 #include <RE/B/BShkbAnimationGraph.h>
 #include <RE/H/hkaBone.h>
@@ -271,6 +273,31 @@ namespace
     std::uintptr_t game_base()
     {
         return REL::Module::get().base();
+    }
+
+    // C-G5-E2-B B3/B4: the `on` (F7) lifecycle must also pin the player's third-person source
+    // graph, otherwise `g_pinned` stays null and every B3/B4 comparison is skipped. This resolves
+    // the same graph the concurrent lifecycle pins, from the render thread at arm time (objects
+    // alive, no dereference of stale pointers). Read-only: no graph write, no new detour.
+    RE::BShkbAnimationGraph* player_source_graph()
+    {
+        RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton();
+        if (player == nullptr)
+            return nullptr;
+        RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+        if (!player->GetAnimationGraphManager(manager) || !manager)
+            return nullptr;
+        RE::BShkbAnimationGraph* chosen = nullptr;
+        for (RE::BSTSmartPointer<RE::BShkbAnimationGraph> const& graph : manager->graphs)
+        {
+            if (!graph || !graph->behaviorGraph || graph->holder != player)
+                continue;
+            char const* const name = graph->projectName.c_str();
+            if (name != nullptr && source_graph_is_first_person(std::string_view{ name }))
+                continue;
+            chosen = graph.get();
+        }
+        return chosen;
     }
 
     // C-G5-E3 (M2): the one clock basis shared with the source timeline.
@@ -1202,6 +1229,19 @@ namespace
             return;
         if (independent_graph_setting() != IndependentGraphMode::off)
             return;
+        // C-G5-E2-B B3/B4: pin the source graph before arming. `on` mode used to arm with
+        // pinned=no, which made every B3/B4 comparison a no-op. A missing graph is a hard stop:
+        // the window must not open without a pinned identity.
+        RE::BShkbAnimationGraph* const pinned = player_source_graph();
+        if (pinned == nullptr)
+        {
+            logger::warn("PROBE LIVENESS arm-skip reason=no-pinned-source-graph mode=on");
+            return;
+        }
+        g_pinned.store(pinned, std::memory_order_release);
+        logger::info("PROBE LIVENESS pinned mode=on graph={:#x} behavior={:#x}",
+            reinterpret_cast<std::uintptr_t>(pinned),
+            reinterpret_cast<std::uintptr_t>(pinned->behaviorGraph));
         g_arm_requested.store(true, std::memory_order_release);
         logger::info("PROBE LIVENESS arm-requested mode=on");
     }
@@ -1385,7 +1425,7 @@ namespace
             g_epoch.fetch_add(1, std::memory_order_relaxed);
             s.window.arm(std::chrono::steady_clock::now());
             s.admission.open();
-            logger::info("PROBE LIVENESS window=open mode=on epoch={} pinned=no",
+            logger::info("PROBE LIVENESS window=open mode=on epoch={} pinned=yes",
                 g_epoch.load(std::memory_order_relaxed));
         }
         finalize_probe_close(s);
