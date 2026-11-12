@@ -5,6 +5,7 @@
 #include "animation/behavior_graph/probe_liveness.h"
 
 #include "animation/behavior_graph/b3b4_policy.h"
+#include "animation/behavior_graph/k3_snapshot_policy.h"
 #include "animation/behavior_graph/probe_liveness_policy.h"
 #include "animation/behavior_graph/source_timeline_policy.h"
 #include "animation/behavior_graph/source_timeline.h"
@@ -18,6 +19,7 @@
 #include <RE/H/hkaSkeleton.h>
 #include <RE/H/hkbBehaviorGraph.h>
 #include <RE/H/hkbCharacterSetup.h>
+#include <RE/H/hkbClipGenerator.h>
 #include <REL/Relocation.h>
 #include <SKSE/SKSE.h>
 #include <SKSE/Trampoline.h>
@@ -27,7 +29,9 @@
 
 #include <atomic>
 #include <array>
+#include <bit>
 #include <chrono>
+#include <ctime>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -159,6 +163,7 @@ namespace
         std::uint64_t b3_multi{ 0 };
         std::uint64_t b3_behavior_mismatch{ 0 };
         bool b3b4_first_logged{ false };
+        bool k3s_closed{ false };
         ProbeMixTally mix;
         Counters counters;
         std::uint64_t detail_lines{ 0 };
@@ -222,6 +227,7 @@ namespace
             b3_multi = 0;
             b3_behavior_mismatch = 0;
             b3b4_first_logged = false;
+            k3s_closed = false;
             mix.reset();
             counters.reset();
             detail_lines = 0;
@@ -276,6 +282,81 @@ namespace
     ProbeVec4 g_b3b4_return_snapshot[Probe_B3B4_Track_Capacity * 2];
     ProbeVec4 g_b3b4_reread[Probe_B3B4_Track_Capacity * 2];
     std::atomic<std::uint32_t> g_bone_count{ 0 };
+
+    // ---- C-G5-CAL K3-S: per-apply source snapshot ring and writer ---------------------------
+    // The detour only copies a fixed record into this ring (no allocation, no locks, no file
+    // I/O); the render drain writes it to disk. 1,024 records x 5,268 B is about 5.4 MiB, under
+    // the pre-registered 8 MiB budget.
+    class K3SourceRing
+    {
+    public:
+        bool push(K3SourceRecord const& a_record) noexcept
+        {
+            if (!m_gate.try_enter())
+            {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+                return false;
+            }
+            std::size_t const head = m_head.load(std::memory_order_relaxed);
+            std::size_t const tail = m_tail.load(std::memory_order_acquire);
+            if (head - tail >= K3S_Record_Capacity)
+            {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+                m_gate.leave();
+                return false;
+            }
+            std::memcpy(&m_slots[head % K3S_Record_Capacity], &a_record, sizeof(a_record));
+            m_head.store(head + 1, std::memory_order_release);
+            m_gate.leave();
+            return true;
+        }
+
+        bool pop(K3SourceRecord& a_out) noexcept
+        {
+            std::size_t const tail = m_tail.load(std::memory_order_relaxed);
+            std::size_t const head = m_head.load(std::memory_order_acquire);
+            if (tail == head)
+                return false;
+            std::memcpy(&a_out, &m_slots[tail % K3S_Record_Capacity], sizeof(a_out));
+            m_tail.store(tail + 1, std::memory_order_release);
+            return true;
+        }
+
+        void drain_discard() noexcept
+        {
+            m_tail.store(m_head.load(std::memory_order_acquire), std::memory_order_release);
+        }
+
+        void reset() noexcept
+        {
+            m_head.store(0, std::memory_order_relaxed);
+            m_tail.store(0, std::memory_order_relaxed);
+            m_dropped.store(0, std::memory_order_relaxed);
+            m_gate.reset();
+        }
+
+        [[nodiscard]] std::uint64_t dropped() const noexcept
+        {
+            return m_dropped.load(std::memory_order_relaxed);
+        }
+
+    private:
+        std::array<K3SourceRecord, K3S_Record_Capacity> m_slots{};
+        std::atomic<std::size_t> m_head{ 0 };
+        std::atomic<std::size_t> m_tail{ 0 };
+        std::atomic<std::uint64_t> m_dropped{ 0 };
+        ProbePushGate m_gate;
+    };
+
+    K3SourceRing g_k3s_ring;
+    K3SourceWriter g_k3s_writer;
+    std::atomic<std::uint32_t> g_k3s_seq{ 0 };
+    std::atomic<std::uint64_t> g_k3s_records{ 0 };
+    std::atomic<std::uint64_t> g_k3s_two_read_bad{ 0 };
+    std::atomic<std::uint64_t> g_k3s_clip_overflow{ 0 };
+    std::atomic<std::uint64_t> g_k3s_no_pose{ 0 };
+    std::atomic<std::uint64_t> g_k3s_write_failed{ 0 };
+    std::atomic<bool> g_k3s_open_failed{ false };
 
     std::uintptr_t game_base()
     {
@@ -734,6 +815,81 @@ namespace
             c.detail_dropped.fetch_add(1, std::memory_order_relaxed);
     }
 
+    // C-G5-CAL K3-S: source-side per-apply snapshot. Runs at the pinned graph's 63856 apply
+    // return, after the scene writes and before the next update. The detour only copies a fixed
+    // record into the ring; the render drain writes it to disk.
+    void record_k3s_return(ProbeInFlight::Entry const& a_entry) noexcept
+    {
+        if (sampling_liveness_mode() == ProbeLivenessMode::e_off)
+            return;
+        if (a_entry.pose == nullptr)
+        {
+            g_k3s_no_pose.fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
+        auto const* const pose = static_cast<RE::hkQsTransform const*>(a_entry.pose);
+        std::uint32_t const count = a_entry.clamped < K3S_Track_Capacity
+            ? a_entry.clamped : K3S_Track_Capacity;
+        if (count == 0)
+            return;
+        alignas(16) RE::hkQsTransform first[K3S_Track_Capacity]{};
+        alignas(16) RE::hkQsTransform second[K3S_Track_Capacity]{};
+        std::memcpy(first, pose, count * sizeof(RE::hkQsTransform));
+        std::memcpy(second, pose, count * sizeof(RE::hkQsTransform));
+        bool const same = std::memcmp(first, second, count * sizeof(RE::hkQsTransform)) == 0;
+        if (!same)
+            g_k3s_two_read_bad.fetch_add(1, std::memory_order_relaxed);
+        K3SourceRecord record{};
+        record.seq = g_k3s_seq.fetch_add(1, std::memory_order_relaxed) + 1;
+        record.tsc = __rdtsc();
+        record.path = static_cast<std::uint8_t>(probe_apply_path_index(a_entry.path));
+        record.two_read_equal = same ? 1u : 0u;
+        record.track_count = static_cast<std::uint16_t>(count);
+        for (std::uint32_t i = 0; i < count; ++i)
+        {
+            float* const v = record.tracks[i].value;
+            std::memcpy(v, &first[i].translation, 3 * sizeof(float));
+            std::memcpy(v + 3, &first[i].rotation, 4 * sizeof(float));
+            std::memcpy(v + 7, &first[i].scale, 3 * sizeof(float));
+        }
+        auto const* const graph = static_cast<RE::BShkbAnimationGraph const*>(a_entry.graph);
+        RE::hkbBehaviorGraph* const behavior = graph ? graph->characterInstance.behaviorGraph.get() : nullptr;
+        if (behavior && behavior->activeNodes)
+        {
+            RE::NodeList const& nodes = *behavior->activeNodes;
+            std::size_t const limit = std::min<std::size_t>(nodes.size(), 256);
+            for (std::size_t i = 0; i < limit; ++i)
+            {
+                RE::hkbNode* const node = nodes.data()[i].nodeClone;
+                if (node == nullptr)
+                    continue;
+                if (*reinterpret_cast<std::uintptr_t const*>(node) != RE::VTABLE_hkbClipGenerator[0].address())
+                    continue;
+                if (record.clip_count >= K3S_Clip_Capacity)
+                {
+                    record.flags |= K3S_Flag_Clip_Overflow;
+                    g_k3s_clip_overflow.fetch_add(1, std::memory_order_relaxed);
+                    break;
+                }
+                auto const* const clip = static_cast<RE::hkbClipGenerator const*>(node);
+                K3ClipRecord& out = record.clips[record.clip_count];
+                out.binding_index = clip->animationBindingIndex;
+                out.local_time_bits = std::bit_cast<std::uint32_t>(clip->localTime);
+                out.mode = static_cast<std::uint8_t>(clip->mode.get());
+                char const* const name = clip->animationName.c_str();
+                if (name != nullptr)
+                {
+                    std::size_t k = 0;
+                    for (; k + 1 < K3_Clip_Name_Length && name[k] != '\0'; ++k)
+                        out.name[k] = name[k];
+                    out.name[k] = '\0';
+                }
+                ++record.clip_count;
+            }
+        }
+        (void)g_k3s_ring.push(record);
+    }
+
     // Return-side recorder (C-G5-E1 v3): consumes the thread's in-flight entry, so completion is
     // attributed to the same thread that entered 63856 without reading registers at the return
     // site. It runs after the scene writes, before the relocated `add rsp,0x88`. A return with no
@@ -774,6 +930,7 @@ namespace
             c.completions_pinned.fetch_add(1, std::memory_order_relaxed);
             if (entry.clamped != 0)
                 c.paired_completions.fetch_add(1, std::memory_order_relaxed);
+            record_k3s_return(entry);
         }
         bool const is_plugin = g_plugin_graph.load(std::memory_order_relaxed) == entry.graph;
         if (!is_pinned && !is_plugin)
@@ -920,6 +1077,63 @@ namespace
             s.counters.detail_dropped.fetch_add(1, std::memory_order_relaxed);
     }
 
+    // C-G5-CAL K3-S: render-thread drain. Opens the artifact lazily and writes one fixed record
+    // per drained slot; any failure stops the drain and marks the window invalid.
+    void drain_k3s_records() noexcept
+    {
+        if (sampling_liveness_mode() == ProbeLivenessMode::e_off)
+            return;
+        K3SourceRecord record{};
+        while (g_k3s_ring.pop(record))
+        {
+            if (!g_k3s_writer.is_open())
+            {
+                auto const log_dir = SKSE::log::log_directory();
+                if (!log_dir)
+                {
+                    g_k3s_open_failed.store(true, std::memory_order_relaxed);
+                    g_k3s_ring.drain_discard();
+                    return;
+                }
+                std::time_t const now = std::time(nullptr);
+                std::tm utc{};
+                (void)gmtime_s(&utc, &now);
+                char stamp[32]{};
+                (void)std::strftime(stamp, sizeof(stamp), "%Y%m%dT%H%M%SZ", &utc);
+                std::string const path = fmt::format("{}/CharacterPanel-g5k3s-{}-{}.bin",
+                    log_dir->string(), Plugin::Plugin_Build_Identity, stamp);
+                if (!g_k3s_writer.open(path, Plugin::Plugin_Build_Identity))
+                {
+                    g_k3s_open_failed.store(true, std::memory_order_relaxed);
+                    g_k3s_ring.drain_discard();
+                    return;
+                }
+                logger::info("K3S SNAPSHOT open path='{}' identity='{}'", path,
+                    Plugin::Plugin_Build_Identity);
+            }
+            if (!g_k3s_writer.append(record))
+            {
+                g_k3s_write_failed.fetch_add(1, std::memory_order_relaxed);
+                g_k3s_ring.drain_discard();
+                return;
+            }
+            g_k3s_records.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+
+    void reset_k3s() noexcept
+    {
+        g_k3s_ring.reset();
+        g_k3s_seq.store(0, std::memory_order_relaxed);
+        g_k3s_records.store(0, std::memory_order_relaxed);
+        g_k3s_two_read_bad.store(0, std::memory_order_relaxed);
+        g_k3s_clip_overflow.store(0, std::memory_order_relaxed);
+        g_k3s_no_pose.store(0, std::memory_order_relaxed);
+        g_k3s_write_failed.store(0, std::memory_order_relaxed);
+        g_k3s_open_failed.store(false, std::memory_order_relaxed);
+        (void)g_k3s_writer.close();
+    }
+
     void drain_probe_records(ProbeState& s)
     {
         ProbeRecord record{};
@@ -1018,6 +1232,22 @@ namespace
         if (!s.close_pending || !s.admission.quiescent())
             return;
         drain_probe_records(s);
+        drain_k3s_records();
+        if (sampling_liveness_mode() != ProbeLivenessMode::e_off && !s.k3s_closed)
+        {
+            s.k3s_closed = true;
+            bool const had_file = g_k3s_writer.is_open();
+            (void)g_k3s_writer.close();
+            logger::info("K3S SNAPSHOT close path='{}' records={} dropped={} overflow={} two-read-bad={} clip-overflow={} no-pose={} write-failed={} open-failed={}",
+                had_file ? g_k3s_writer.path() : std::string{},
+                g_k3s_records.load(std::memory_order_relaxed),
+                g_k3s_ring.dropped(), g_k3s_writer.overflow(),
+                g_k3s_two_read_bad.load(std::memory_order_relaxed),
+                g_k3s_clip_overflow.load(std::memory_order_relaxed),
+                g_k3s_no_pose.load(std::memory_order_relaxed),
+                g_k3s_write_failed.load(std::memory_order_relaxed),
+                g_k3s_open_failed.load(std::memory_order_relaxed));
+        }
         std::uint64_t const eligible = s.counters.eligible_records.load(std::memory_order_relaxed);
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();
         s.slots_used = static_cast<std::uint32_t>(s.pairing.slots_used());
@@ -1480,6 +1710,7 @@ namespace
             // The F7 window observes the player's own graph like the legacy E1 lifecycle; the
             // pinned set is empty, so counters run but no detail records can match.
             s.reset();
+            reset_k3s();
             g_epoch.fetch_add(1, std::memory_order_relaxed);
             s.window.arm(std::chrono::steady_clock::now());
             s.admission.open();
@@ -1513,6 +1744,7 @@ namespace
             }
         }
         drain_probe_records(s);
+        drain_k3s_records();
     }
 }
 PLUGIN_NAMESPACE_END

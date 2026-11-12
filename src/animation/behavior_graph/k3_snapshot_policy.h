@@ -154,5 +154,114 @@ namespace animation::behavior_graph
         std::uint32_t m_records{ 0 };
         bool m_overflow{ false };
     };
+
+    // ---- K3-S: source-side per-apply snapshot (v2) ---------------------------------------
+
+    inline constexpr std::uint32_t K3S_Record_Capacity = 1024;
+    inline constexpr std::uint32_t K3S_Track_Capacity = K3_Track_Capacity;
+    inline constexpr std::uint32_t K3S_Clip_Capacity = K3_Clip_Capacity;
+    inline constexpr std::uint16_t K3S_Version = 2;
+    inline constexpr std::uint8_t K3S_Flag_Clip_Overflow = 1u << 0;
+    inline constexpr std::uint8_t K3S_Flag_No_Pose = 1u << 1;
+
+#pragma pack(push, 1)
+    struct K3SourceRecord
+    {
+        std::uint64_t tsc;
+        std::uint32_t seq;
+        std::uint16_t track_count;
+        std::uint16_t clip_count;
+        std::uint8_t path;
+        std::uint8_t two_read_equal;
+        std::uint8_t flags;
+        std::uint8_t pad;
+        K3ClipRecord clips[K3S_Clip_Capacity];
+        K3TrackRecord tracks[K3S_Track_Capacity];
+    };
+    static_assert(sizeof(K3SourceRecord) == 20 + 8 * 76 + 116 * 40);
+
+    struct K3SourceHeader
+    {
+        char magic[4];
+        std::uint16_t version;
+        std::uint16_t header_size;
+        std::uint32_t source;
+        std::uint32_t record_capacity;
+        std::uint32_t track_capacity;
+        std::uint32_t record_size;
+        std::uint32_t record_count;
+        char identity[K3_Identity_Length];
+    };
+    static_assert(sizeof(K3SourceHeader) == 124);
+#pragma pack(pop)
+
+    class K3SourceWriter
+    {
+    public:
+        K3SourceWriter() = default;
+        ~K3SourceWriter() { (void)close(); }
+        K3SourceWriter(K3SourceWriter const&) = delete;
+        K3SourceWriter& operator=(K3SourceWriter const&) = delete;
+
+        [[nodiscard]] bool open(std::string a_path, std::string_view a_identity)
+        {
+            (void)close();
+            m_path = std::move(a_path);
+            m_file.open(m_path, std::ios::binary | std::ios::trunc);
+            if (!m_file)
+                return false;
+            K3SourceHeader header{};
+            std::memcpy(header.magic, "CPK3", 4);
+            header.version = K3S_Version;
+            header.header_size = static_cast<std::uint16_t>(sizeof(K3SourceHeader));
+            header.source = 1;
+            header.record_capacity = K3S_Record_Capacity;
+            header.track_capacity = K3S_Track_Capacity;
+            header.record_size = static_cast<std::uint32_t>(sizeof(K3SourceRecord));
+            header.record_count = 0;
+            std::memset(header.identity, 0, sizeof(header.identity));
+            std::memcpy(header.identity, a_identity.data(),
+                a_identity.size() < sizeof(header.identity) ? a_identity.size() : sizeof(header.identity) - 1);
+            m_file.write(reinterpret_cast<char const*>(&header), sizeof(header));
+            return static_cast<bool>(m_file);
+        }
+
+        [[nodiscard]] bool append(K3SourceRecord const& a_record)
+        {
+            if (!m_file || m_overflow)
+                return false;
+            if (m_records >= K3S_Record_Capacity)
+            {
+                m_overflow = true;
+                return false;
+            }
+            m_file.write(reinterpret_cast<char const*>(&a_record), sizeof(a_record));
+            if (!m_file)
+                return false;
+            ++m_records;
+            return true;
+        }
+
+        [[nodiscard]] bool close()
+        {
+            if (!m_file)
+                return false;
+            m_file.seekp(static_cast<std::streamoff>(offsetof(K3SourceHeader, record_count)), std::ios::beg);
+            m_file.write(reinterpret_cast<char const*>(&m_records), sizeof(m_records));
+            m_file.close();
+            return !m_file.fail();
+        }
+
+        [[nodiscard]] std::uint32_t records() const { return m_records; }
+        [[nodiscard]] bool overflow() const { return m_overflow; }
+        [[nodiscard]] bool is_open() const { return m_file.is_open(); }
+        [[nodiscard]] std::string const& path() const { return m_path; }
+
+    private:
+        std::ofstream m_file;
+        std::string m_path;
+        std::uint32_t m_records{ 0 };
+        bool m_overflow{ false };
+    };
 }
 PLUGIN_NAMESPACE_END

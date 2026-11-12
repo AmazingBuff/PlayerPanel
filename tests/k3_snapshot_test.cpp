@@ -121,11 +121,86 @@ namespace
         assert(writer.overflow());
         assert(writer.close());
     }
+
+    // K3-S: v2 header + source record round-trip and the 1,024-record cap.
+    void source_round_trip_writes_v2_header_and_record()
+    {
+        std::filesystem::create_directories("build/g5-k3-20261113");
+        std::string const path = "build/g5-k3-20261113/k3s_test.bin";
+        std::remove(path.c_str());
+        K3SourceWriter writer;
+        assert(writer.open(path, "source-identity"));
+        K3SourceRecord record{};
+        record.seq = 7;
+        record.tsc = 0x1122334455667788ull;
+        record.track_count = 4;
+        record.clip_count = 1;
+        record.path = 1;
+        record.two_read_equal = 1;
+        record.clips[0].binding_index = 75;
+        record.clips[0].local_time_bits = 0x40000000u;  // 2.0f
+        record.clips[0].mode = 0;
+        std::memcpy(record.clips[0].name, "Animations\\1HM_Unequip.hkx", 26);
+        for (std::uint32_t i = 0; i < 4; ++i)
+            for (std::uint32_t c = 0; c < 10; ++c)
+                record.tracks[i].value[c] = static_cast<float>(i * 10 + c) * 0.25f;
+        assert(writer.append(record));
+        assert(writer.records() == 1);
+        assert(writer.close());
+
+        std::ifstream file(path, std::ios::binary);
+        assert(file);
+        K3SourceHeader header{};
+        file.read(reinterpret_cast<char*>(&header), sizeof(header));
+        assert(std::memcmp(header.magic, "CPK3", 4) == 0);
+        assert(header.version == 2);
+        assert(header.header_size == sizeof(K3SourceHeader));
+        assert(header.source == 1);
+        assert(header.record_capacity == K3S_Record_Capacity);
+        assert(header.track_capacity == K3S_Track_Capacity);
+        assert(header.record_size == sizeof(K3SourceRecord));
+        assert(header.record_count == 1);
+        assert(std::strcmp(header.identity, "source-identity") == 0);
+        K3SourceRecord back{};
+        file.read(reinterpret_cast<char*>(&back), sizeof(back));
+        assert(back.seq == 7);
+        assert(back.tsc == 0x1122334455667788ull);
+        assert(back.track_count == 4 && back.clip_count == 1 && back.path == 1);
+        assert(back.two_read_equal == 1 && back.flags == 0);
+        assert(back.clips[0].binding_index == 75);
+        assert(back.clips[0].local_time_bits == 0x40000000u);
+        assert(std::strcmp(back.clips[0].name, "Animations\\1HM_Unequip.hkx") == 0);
+        assert(back.tracks[3].value[9] == 9.75f);  // (3*10+9) * 0.25
+    }
+
+    void source_writer_caps_at_1024_records()
+    {
+        std::filesystem::create_directories("build/g5-k3-20261113");
+        std::string const path = "build/g5-k3-20261113/k3s_overflow.bin";
+        std::remove(path.c_str());
+        K3SourceWriter writer;
+        assert(writer.open(path, "overflow"));
+        K3SourceRecord record{};
+        std::uint32_t written = 0;
+        for (std::uint32_t i = 0; i < K3S_Record_Capacity + 3; ++i)
+        {
+            record.seq = i + 1;
+            if (writer.append(record))
+                ++written;
+            else
+                break;
+        }
+        assert(written == K3S_Record_Capacity);
+        assert(writer.overflow());
+        assert(writer.close());
+    }
 }
 
 int main()
 {
     round_trip_writes_header_records_and_count();
     overflow_stops_writing_and_is_reported();
-    std::puts("2 K3 snapshot cases passed (engine-free)");
+    source_round_trip_writes_v2_header_and_record();
+    source_writer_caps_at_1024_records();
+    std::puts("4 K3 snapshot cases passed (engine-free)");
 }

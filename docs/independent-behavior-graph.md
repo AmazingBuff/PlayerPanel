@@ -5119,6 +5119,45 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **边界**：K3-C 只证明候选在每次 Generate 返回后有一份完整、同代、双读一致的快照；它不证明源侧完成边界/generation 关联，不提供姿态容差，不关闭 K3/K5/K6 或 G5。
 
+<a id="c-g5-cal-k3s"></a>
+## C-G5-CAL K3-S：源侧完成边界与逐帧快照（2026-11-13 预注册）
+
+**裁定：K3 仍 NOT_READY。** 本节只补 CAL v1 §三 K3 的**源侧**：在已审计的等价完成边界上取得源图的完整 `poseLocal`、clip 元数据与单调 generation 序号。它不把源/候选逐代配对（K3-P 另批），不产生容差，不关闭 K5/K6 或 G5。
+
+### 边界与寿命
+
+- 边界 = pinned 源图的 **63856 apply 返回点**（单一 `add rsp,0x88` + `ret` 出口，audit/E1 已逐字节核验，无内部跳入）。此刻场景应用已写完，本次采样的 `poseLocal` 是帧内最终值，下一次 update 尚未开始。
+- 只在 `graph == g_pinned`（manager 持有的玩家第三人称源图）且 `ProbeInFlight` 的 `pose` 指针可读时取数；返回点消费的是 apply 入口登记的同一线程 entry，因此 `pose`、`clamped`、`path` 与本次 apply 同源。
+- 取数前再次确认 `g_pinned` 非空；窗口关闭/世界重置时停止，不读取已释放对象。
+
+### 记录
+
+每条 = 单调 `seq`（窗口内自 1 递增）、`tsc`、`path`、`two_read_equal`、`track_count`、`clip_count`、8 个固定 clip 槽（binding/localTime bits/mode/name 64 B）、`min(clamped,116)` 条轨道 × 10 个 float32（trans xyz / rot xyzw / scale xyz）。
+
+- 两遍读取同一 `pose` 缓冲、逐字节比较；不一致即该窗口 INVALID。
+- clip 元数据来自该图 `behaviorGraph->activeNodes` 的 `hkbClipGenerator`（≤256 节点扫描，≤8 个 clip）；超过上限即 INVALID。
+- `tsc` 必须严格递增（同窗口内），作为后续与候选 `e_post_sample` 配对的时间键。
+
+### 工件与传输
+
+`CharacterPanel-g5k3s-<identity>-<UTC>.bin`，SKSE 日志目录，`CPK3` v2 header（source=1、record size 5,268、容量 1,024）+ 上述记录。
+
+- detour 只做定长拷贝并推入 **1,024 槽无锁环**（不分配、不加锁、不做文件 I/O）；渲染线程在 `sample_probe_liveness` 的 drain 中落盘。
+- 环或文件溢出、写失败、读失败、非有限值、`[E]`、崩溃、world reset 均使本窗口 INVALID；不拼接窗口、不补帧。
+- 预算：1,024 × 5,268 ≈ 5.4 MiB（< 8 MiB）；关闭行报告 `k3s-records/overflow/write-failed/two-read-bad`。
+
+### 判据
+
+| # | 判据 | 通过条件 |
+| --- | --- | --- |
+| K3S-1 活性 | `k3s-records > 0`，每个 pinned apply 至多一条 | 否则 NOT_READY |
+| K3S-2 双读 | 每条 `two_read_equal=1` | 任一 0 ⇒ INVALID |
+| K3S-3 完整性 | `track_count == min(clamped,116)`，`clip_count≤8`，无非有限值 | 否则 INVALID |
+| K3S-4 边界/身份 | 仅 pinned 图、`path != unclassified`、`tsc` 严格递增、header identity 匹配 | 否则 INVALID |
+| K3S-5 无丢失 | 环/文件无溢出、无写失败 | 否则 INVALID |
+
+**边界**：K3-S 只证明源侧存在逐帧、同代、双读一致的完成边界快照与 generation 序号；源/候选配对、时钟量化、容差与 G5 均不在本批。K3-C + K3-S 都通过也只表示两侧各自合格，不表示同代配对成立。
+
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 
 **裁定**：v96a run 1 为 **K2-C1/C2/C3 提供了一次可复核的正面证据**，并把 D3 的 1HM 卸下完成点覆盖补齐；**K1-C1–C4 与 K2-C4（控制 B）仍未闭合**，因此 K1/K2 整体仍 **NOT_READY**，不能启动原生校准。
