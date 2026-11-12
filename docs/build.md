@@ -2029,3 +2029,19 @@ Identity `CharacterPanel-scenegraph-v99a-g5k3s-source-0b017bcbf0-cl94faaed0c6-20
 **Verdict**: K3S-5 fails because the 1,024-record cap truncated the ~1,050-apply window; per the pre-registered rule this window is **INVALID**, not a partial pass. No K3-S evidence is claimed.
 
 **Fix (v99b)**: capacity 1,024 → **1,536** (1,536 × 5,268 = 8,091,648 B ≈ 7.72 MiB, still under the 8 MiB budget), and capacity rejection is no longer counted as `write-failed` (only `overflow`). Criteria unchanged.
+
+
+<a id="v99b-g5k3s-20261113"></a>
+## v99b G5-CAL K3-S build and deployment (2026-11-13, not yet run)
+
+**Commit**: `be5cdf8 fix(g5-k3s): raise the source ring capacity for a full window`. Capacity 1,536 records (≈7.72 MiB); capacity rejection reports `overflow` only. `k3_snapshot_test` 4/4 (including the 1,536 cap) and `probe_liveness_v3_test` 6/6 pass; Release build exit 0.
+
+Identity `CharacterPanel-scenegraph-v99b-g5k3s-source-be5cdf8ca6-cl94faaed0c6-20261112T171059Z` (clean tree), embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-k3s-v99b-20261113/CharacterPanel.dll) | 1912832 | `cffe2eae8c9fdb723188bc462cdec6808539286de2601243c3cd25b29f928aab` |
+| [CharacterPanel.pdb](../dist/g5-k3s-v99b-20261113/CharacterPanel.pdb) | 50352128 | `7337af7ba13ada90a7ff2a45fb020e09b022dd2dbc6b0b16da48540e9cef953b` |
+| [CharacterPanel.ini](../dist/g5-k3s-v99b-20261113/CharacterPanel.ini) | 12069 | `ebe0afb733c91ebe1176f0d205529b2b8ae083b8f33305d6a89885fd9773a050` |
+
+**Deployed 2026-11-13**: the v99a trio was backed up hash-verified to `dist/deploy-backup-20261113-v99a-v99bpre/`; the three v99b files were copied with source+destination hash comparison and the installed DLL contains the v99b identity. Run INI unchanged (`SamplingLiveness=on` only). [MANUAL.md](../dist/g5-k3s-v99b-20261113/MANUAL.md). **No game run yet.**
