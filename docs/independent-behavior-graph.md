@@ -4299,6 +4299,38 @@ Shield                 NPC L Pauldron
 
 **七、明确不做**：不做 scale 归因（E2-B）；不做层权重与 63666/59303 内部（E2-B）；不做播放速度/时钟（E2-C）；不做 IK/后处理的贡献分解（E2-B）；不做源候选配对（E3）；不改窗口语义、不改已有判据、不把 E2-A 通过当作门 1 关闭。
 
+<a id="c-g5-e2-b-b3b4"></a>
+## C-G5-E2-B B3/B4：源图后处理边界预注册（2026-11-12，文档；不授权实现/上机）
+
+**目标**：在**源图**上闭合 E2-B 的 B3/B4——`58423-return.out == 63581-memcpy.src` 与 `poseLocal == 63581-memcpy.src`。本契约只使用已部署的 E2-B detour（58423 entry/return、63856 apply entry）和已审计的静态路径，不新增 detour、不改窗口语义、不写源图。
+
+**运行档与前提**：`SamplingLiveness=on`、`IndependentGraph=off`、`SourceTimeline=off`、`SourceEventCapture=off`、`SourceWriteCapture=false`；源 Actor 自然运行，不创建第二 Actor、不手动推进源图；每进程一个窗口。pin 的源图必须由 manager 持有；`58423` 的 `ctx->behavior`（`hkbContext::behavior`）必须等于该 pinned 图，否则该次调用不进入本判据。
+
+**数据流（只读）**：
+
+1. `58423` entry：沿用 `probe_read_footik_out` 读取 `out` 块（116 轨上限，`+0x32` 计数/`+0x34` 偏移门），把 `out` 指针、计数、tid、`ctx->behavior` 与 TSC 放入 per-tid in-flight。
+2. `58423` return：再次读取同一 `out` 块，保存为 per-tid 的 `last-out`（指针、计数、完整 116×2×vec4 快照、TSC）；这是 B3 的“return 侧”基准。
+3. `63856` apply entry（pinned 图）：重新读取 `last-out` 指针处的当前内容（B3 的“memcpy 前/后同块”读数），并与 `a_pose`（poseLocal）逐分量比较（B4）。
+
+**判据**：
+
+| # | 判据 | 通过条件 |
+| --- | --- | --- |
+| B3-1 活性 | 至少一次 pinned `58423` entry/return 与一次 pinned `63856` apply 配对 | 无配对 ⇒ 不评，`NOT_READY` |
+| B3-2 out 未变 | `last-out` 的 return 快照与 apply 前重读逐分量一致（沿用 E2-A 阈值 `probe_mix_delta`） | 任一分量变化 ⇒ B3 FAIL，保留首个 `track/channel/expected/actual` |
+| B4-1 poseLocal 一致 | `poseLocal` 与同一 `last-out` 快照逐分量一致（同阈值） | 任一分量不一致 ⇒ B4 FAIL，保留首个失败样本与 max-delta |
+| B4-2 完整性 | 读取计数/last-out 有效、无非有限值、无 read-failed、无 stale/no-out | 任一失败 ⇒ 本窗口 INVALID，不报部分通过 |
+
+**计数/日志**：关闭行新增 `b3-checked/stable/changed/max-delta`、`b4-checked/equal/failed/max-delta`、`b3-samples`、`b4-samples`、`b3-stale`、`b3-no-out`、`b3-multi`、`b3-read-failed`、`b4-read-failed`、`b3-non-finite`、`b4-non-finite`。每个失败最多保留 8 条 `b3-row`/`b4-row`（track、channel、expected、actual、delta），超出只计数；detail 预算与环上限沿用 E2-B，不扩环。
+
+**停止规则**：`[E]`、崩溃、源图未被 pin、`ctx->behavior` 与 pinned 图不一致、`58423`/`63856` 未配对、`last-out` 被新的 58423 覆盖而 apply 尚未发生、同一 tid 在相邻 apply 之间出现多次 pinned `58423` return 而无法确定最后一次属于该 apply、非有限值或读取失败，任一发生即停止当前窗口并保留计数；多次调用计入 `b3-multi`，不得任选一次凑通过。不拼接下一窗口、不把缺失计为 0 误差。
+
+**边界**：本契约证明的是“58423 返回后到 63856 apply 前 out 块未变，且 poseLocal 等于该块”。它依赖审计事实——63581 的三条 memcpy 路径都读取同一个 out 块；不直接 hook memcpy 源，也不证明该指针身份在任意重载/多图复用下不变。若要直接读取 `63581` 的 memcpy 源，须另立含新 detour 的契约。B3/B4 通过只关闭 K4 的本会话边界，不等于 K1/K3、控制 B、姿态等价或 G5 通过。
+
+**预算**：不新增工件文件；沿用 E2-B 的日志与环预算，per-tid `last-out` 最多 8 个线程；每线程一份 116×2×vec4 快照。
+
+**明确不做**：不比较候选图；不做 K3 同代快照；不做控制 B；不做五字消融；不把 B3/B4 结果加入姿态容差；不改 E2-A/E2-B 既有判据。
+
 <a id="c-g5-e3-r"></a>
 ## C-G5-E3-R：实现评审草案（2026-11-09，文档；不授权实现）
 
@@ -5068,7 +5100,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **K1/K2 结论**：v96a 把 K2-C3 从 D3 的 clip-family 正结果推进为同一进程内的 clip-family + state-12-to-0 完成证据，并给 K2-C1/C2 留下可复核的初态与输入顺序；但它不证明 K1 的跨运行资源/实例身份，也不提供控制 B 的独立真值。K1-C1–C4 与 K2-C4 仍是原生校准的硬前置。
 
-**下一步（按 CAL v1 顺序）**：先补 **K3 同代完整快照**（候选每次 `e_post_sample` 的完整 116 轨与 clip 元数据；源侧等价完成边界/generation 关联），再做 **K4 B3/B4**（`58423-return.out` 对 `63581-memcpy.src` 与 `poseLocal` 的逐分量对账），最后登记控制 B。K3/K4 都需要另立仪器契约，不能直接把 v96a 的稀疏 checkpoint 或现有 E2-B 全局 footIK tally 当作同代证据；本文不授权实现或上机。
+**下一步（按 CAL v1 顺序）**：先补 **K3 同代完整快照**（候选每次 `e_post_sample` 的完整 116 轨与 clip 元数据；源侧等价完成边界/generation 关联），再做 **K4 B3/B4**（`58423-return.out` 对 `63581-memcpy.src` 与 `poseLocal` 的逐分量对账；源图侧契约已[预注册](#c-g5-e2-b-b3b4)），最后登记控制 B。K3/K4 都需要另立仪器契约，不能直接把 v96a 的稀疏 checkpoint 或现有 E2-B 全局 footIK tally 当作同代证据；本文不授权实现或上机。
 
 ### 五、下一步与明确不做
 
