@@ -158,6 +158,7 @@ namespace
         std::uint64_t b3_stale{ 0 };
         std::uint64_t b3_multi{ 0 };
         std::uint64_t b3_behavior_mismatch{ 0 };
+        bool b3b4_first_logged{ false };
         ProbeMixTally mix;
         Counters counters;
         std::uint64_t detail_lines{ 0 };
@@ -220,6 +221,7 @@ namespace
             b3_stale = 0;
             b3_multi = 0;
             b3_behavior_mismatch = 0;
+            b3b4_first_logged = false;
             mix.reset();
             counters.reset();
             detail_lines = 0;
@@ -502,7 +504,7 @@ namespace
             // The ledger is keyed on &pinned->characterInstance (ctx->character), not the outer
             // BShkbAnimationGraph pointer used to identify the 63856 apply entry.
             void const* const pinned_character = g_pinned_character.load(std::memory_order_relaxed);
-            ProbeB3B4Slot const* const slot = s.b3b4.match(tid, pinned_character);
+            ProbeB3B4Slot const* const slot = s.b3b4.consume(tid, pinned_character);
             if (slot == nullptr)
             {
                 ++s.b3_stale;
@@ -525,6 +527,34 @@ namespace
                 }
                 else
                 {
+                    // v97c one-shot layout diagnostic: the v97b run failed B4 on all 1,167
+                    // applies with a systematic 0/1 sample pattern, which is more consistent
+                    // with an out-block/poseLocal layout mismatch than with a real rewrite.
+                    // Print the raw header and the first tracks once so the next run can settle
+                    // the layout instead of guessing again.
+                    if (!s.b3b4_first_logged)
+                    {
+                        s.b3b4_first_logged = true;
+                        auto const* const head = static_cast<std::byte const*>(
+                            *reinterpret_cast<void const* const*>(slot->out));
+                        auto const* const pose = static_cast<ProbeVec4 const*>(
+                            static_cast<void const*>(a_pose));
+                        logger::info("PROBE LIVENESS b3b4-first out-ptr={:#x} block={:#x} tracks={} pose={:#x} clamped={} hdr32={} hdr34={} out0=({:.4f},{:.4f},{:.4f},{:.4f}) out1=({:.4f},{:.4f},{:.4f},{:.4f}) out2=({:.4f},{:.4f},{:.4f},{:.4f}) pose0=({:.4f},{:.4f},{:.4f},{:.4f}) pose1=({:.4f},{:.4f},{:.4f},{:.4f}) pose2=({:.4f},{:.4f},{:.4f},{:.4f})",
+                            reinterpret_cast<std::uintptr_t>(slot->out),
+                            reinterpret_cast<std::uintptr_t>(head), slot->tracks,
+                            reinterpret_cast<std::uintptr_t>(pose), clamped,
+                            read_offset<std::uint16_t>(head, Probe_Footik_Out_Count_Offset),
+                            read_offset<std::int16_t>(head, Probe_Footik_Out_Tracks_Offset),
+                            slot->snapshot[0].x, slot->snapshot[0].y, slot->snapshot[0].z,
+                            slot->snapshot[0].w,
+                            slot->snapshot[1].x, slot->snapshot[1].y, slot->snapshot[1].z,
+                            slot->snapshot[1].w,
+                            slot->snapshot[2].x, slot->snapshot[2].y, slot->snapshot[2].z,
+                            slot->snapshot[2].w,
+                            pose[0].x, pose[0].y, pose[0].z, pose[0].w,
+                            pose[1].x, pose[1].y, pose[1].z, pose[1].w,
+                            pose[2].x, pose[2].y, pose[2].z, pose[2].w);
+                    }
                     (void)s.b3b4_tally.compare(0, slot->tracks, slot->snapshot.data(), g_b3b4_reread);
                     if (clamped > 0)
                     {
@@ -1054,15 +1084,20 @@ namespace
             s.b3b4_tally.non_finite ? "yes" : "no",
             s.b3b4_tally.sample_count);
 
+        // v97c: the pre-registered stop rule for multiple/unattributed returns and stale slots
+        // now actually gates the verdict. The v97b run reported multi=1161 because the slot was
+        // never consumed; that is fixed in the ledger, but a genuine multi still invalidates.
+        bool const b3_clean = s.b3b4_tally.b3_checked > 0 && s.b3b4_tally.b3_failed == 0
+            && !s.b3b4_tally.read_failed && !s.b3b4_tally.non_finite
+            && s.b3_multi == 0 && s.b3_stale == 0 && s.b3_no_out == 0 && s.b3_overwritten == 0;
         char const* const b3_verdict =
-            (s.b3b4_tally.b3_checked > 0 && s.b3b4_tally.b3_failed == 0
-                && !s.b3b4_tally.read_failed && !s.b3b4_tally.non_finite)
+            b3_clean
             ? (s.b3b4_tally.b4_checked > 0 && s.b3b4_tally.b4_failed == 0
                 ? "B3+B4-PASS" : "B3-PASS-B4-OPEN")
             : "B3-INVALID";
         logger::info("PROBE LIVENESS b3b4-window b3-checked={} b3-stable={} b3-changed={} b4-checked={} b4-equal={} b4-failed={} b4-max-delta={:.3e} verdict={}",
             s.b3b4_tally.b3_checked,
-            s.b3b4_tally.b3_checked > 0 && s.b3b4_tally.b3_failed == 0 ? "yes" : "no",
+            b3_clean ? "yes" : "no",
             s.b3b4_tally.b3_failed,
             s.b3b4_tally.b4_checked, s.b3b4_tally.b4_equal, s.b3b4_tally.b4_failed,
             s.b3b4_tally.b4_max_delta, b3_verdict);

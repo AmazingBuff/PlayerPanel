@@ -180,6 +180,23 @@ namespace animation::behavior_graph
             return nullptr;
         }
 
+        // v97c: consume the pending snapshot at the apply. Without this the slot stayed pending
+        // forever, so every later 58423 return counted as `b3-multi` even when an apply had
+        // already used the previous snapshot (v97b run: multi=1161 of 1167). Consumption makes
+        // `multi` mean exactly "two returns before one apply", as the contract intends.
+        ProbeB3B4Slot const* consume(std::uint32_t a_tid, void const* a_character) noexcept
+        {
+            for (Slot& slot : m_slots)
+            {
+                if (slot.tid == a_tid && slot.tid != 0 && slot.pending && slot.character == a_character)
+                {
+                    slot.pending = false;
+                    return &slot;
+                }
+            }
+            return nullptr;
+        }
+
         void reset() noexcept { m_slots = {}; m_overwritten = 0; }
 
         [[nodiscard]] std::uint64_t overwritten() const noexcept { return m_overwritten; }

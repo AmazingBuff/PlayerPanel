@@ -1852,3 +1852,17 @@ Identity `CharacterPanel-scenegraph-v97b-g5e2b-b3b4-a3396741d5-cl94faaed0c6-2026
 | [CharacterPanel.ini](../dist/g5-e2b-b3b4-v97b-20261112/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
 
 **Deployed 2026-11-12** (Skyrim not running; MO2 open): the v97a trio was backed up hash-verified to `dist/deploy-backup-20261112-v97a-v97bpre/`; the three v97b files were copied with source+destination hash comparison and the installed DLL contains the v97b identity. The run INI stays byte-identical (`ba93289b…`). [MANUAL.md](../dist/g5-e2b-b3b4-v97b-20261112/MANUAL.md) records the unchanged one-window procedure and judgement. **No game run yet**; v97 and v97a both keep their `INVALID` verdicts.
+
+
+<a id="g5-e2b-b3b4-v97b-run1-20261113"></a>
+## G5-E2-B B3/B4 v97b run 1 (2026-11-13 00:03, **INVALID — counter defect; B3 stable, B4 pattern unresolved**)
+
+**Artifact**: v97b DLL `977b534a…3ca048f07`, PDB `902b8f91…fddd746827`, INI `ba93289b…`, identity `CharacterPanel-scenegraph-v97b-g5e2b-b3b4-a3396741d5-cl94faaed0c6-20261112T154431Z`. Log [CharacterPanel-g5e2b-b3b4-v97b-run1-20261113-0003.log](diagnostics/CharacterPanel-g5e2b-b3b4-v97b-run1-20261113-0003.log), 263,966 B, SHA-256 `0d4155bd6bb40c87f33659fc6b8bbcafb582774106132505b5048041af2ceb48`. One F7 window, zero `[E]`, two unrelated studio-light `[W]`, `frames=1167`, `transport-complete=no` (109 contention drops).
+
+**First real B3/B4 evaluation**: pin succeeded with the new identity (`graph=0x206cc101a80 character=0x206cc101b40 behavior=0x2021813f900`). `b3-checked=1167`, `b3-equal=1167`, `b3-failed=0`, `b3-max-delta=0` — the 58423-return `out` block is bit-identical at the 63856 apply entry on every pinned pair. `b4-checked=1167`, `b4-equal=0`, `b4-failed=1167`, `b4-max-delta=1.200e+02`.
+
+**Why the window is INVALID**: `b3-multi=1161` and `b3-overwritten=1161` are an artifact, not real multi-return: the ledger slot was never consumed by the apply, so every return after the first saw a pending slot. This also means `multi` did not test the pre-registered stop rule. The verdict line did not gate on multi/stale, so `B3-PASS-B4-OPEN` was printed when the contract requires INVALID. Both are implementation defects.
+
+**B4 evidence is not adjudicated**: all 1,167 pairs fail with a systematic low-track pattern — `track=1` expected trans `(0,0,0)` vs poseLocal `(1,1,1)`; `track=1` rot w expected 1 vs 0; `track=2` channels 3–6 expected 0 vs 1. That is not the footprint of a subtle second writer; it suggests the `out` block's per-track field order/stride differs from `poseLocal`'s (a `(1,1,1)` triple is a scale-like vector, not a plausible translation). E2-A in the same run shows poseLocal ≈ slot mix with ~7 residual components per frame, i.e. poseLocal does contain the footIK corrections relative to the mix, so a wholesale layout mismatch between poseLocal and the slot tracks is ruled out; the open question is the out-block field order.
+
+**Fix (v97c)**: `ProbeB3B4Ledger::consume` clears the pending snapshot at the apply so `multi` now means two returns before one apply; the verdict gates on `multi/stale/no-out/overwritten`; and a one-shot `b3b4-first` row prints the out pointer, block base, header words (+0x32 count, +0x34 offset), and the raw first three vec4 of both the out snapshot and poseLocal, so the next run settles the layout without guessing. Criteria, thresholds and boundary rules unchanged; this run keeps INVALID.
