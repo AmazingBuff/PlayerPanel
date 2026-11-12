@@ -5124,7 +5124,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **裁定：K3 仍 NOT_READY。** 本节只补 CAL v1 §三 K3 的**源侧**：在已审计的等价完成边界上取得源图的完整 `poseLocal`、clip 元数据与单调 generation 序号。它不把源/候选逐代配对（K3-P 另批），不产生容差，不关闭 K5/K6 或 G5。
 
-> **状态（2026-11-13）**：已实现并离线验证（`ba4dddf`，K3 快照用例 4/4 + observation 2/2），构建为 [v99](build.md#v99-g5k3s-20261113)，尚未部署/上机。运行档为 `SamplingLiveness=on` + `IndependentGraph=off`；工件 `CharacterPanel-g5k3s-*.bin` 由 detour 环 + 渲染线程落盘。
+> **状态（2026-11-13）**：已实现并离线验证（`ba4dddf`，K3 快照用例 4/4 + observation 2/2），构建为 [v99](build.md#v99-g5k3s-20261113) 并已部署，等待一次上机。运行档为 `SamplingLiveness=on` + `IndependentGraph=off`；工件 `CharacterPanel-g5k3s-*.bin` 由 detour 环 + 渲染线程落盘。
 
 ### 边界与寿命
 
