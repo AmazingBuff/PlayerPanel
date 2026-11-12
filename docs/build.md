@@ -1900,3 +1900,13 @@ Identity `CharacterPanel-scenegraph-v97c-g5e2b-b3b4-0253e171bb-cl94faaed0c6-2026
 ## v97d G5-E2-B B3/B4 build and deployment (2026-11-13, not yet run)
 
 **Commit**: `2f27b79 fix(g5-e2b): compare poseLocal at its hkQsTransform stride`. `ProbeB3B4Tally::compare` now takes explicit per-track strides (B3 2/2, B4 snapshot 2 / poseLocal 3); the new engine-free regression asserts the stride-3 pose matches while the old stride-2 read fails. 6/6 B3B4 + 3/3 E2B cases pass; Release build exit 0.
+
+Identity `CharacterPanel-scenegraph-v97d-g5e2b-b3b4-e1526f2bdd-cl94faaed0c6-20261112T162725Z` (clean tree), embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-e2b-b3b4-v97d-20261113/CharacterPanel.dll) | 1893376 | `f0d2ec7017dfd4a42453d10445037b3014994e05a18cd2da4107df07ef11e7c8` |
+| [CharacterPanel.pdb](../dist/g5-e2b-b3b4-v97d-20261113/CharacterPanel.pdb) | 50155520 | `31a89ca24873c24a6c30c83f2f511509037fb5c3c451af20f32a6887a2e302f6` |
+| [CharacterPanel.ini](../dist/g5-e2b-b3b4-v97d-20261113/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
+
+**Deployed 2026-11-13** (Skyrim not running): the v97c trio was backed up hash-verified to `dist/deploy-backup-20261113-v97c-v97dpre/`; the three v97d files were copied with source+destination hash comparison and the installed DLL contains the v97d identity. The run INI is unchanged (`ba93289b…`). [MANUAL.md](../dist/g5-e2b-b3b4-v97d-20261113/MANUAL.md). **No game run yet.**
