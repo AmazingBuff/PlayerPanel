@@ -1912,6 +1912,16 @@ Identity `CharacterPanel-scenegraph-v97d-g5e2b-b3b4-e1526f2bdd-cl94faaed0c6-2026
 **Deployed 2026-11-13** (Skyrim not running): the v97c trio was backed up hash-verified to `dist/deploy-backup-20261113-v97c-v97dpre/`; the three v97d files were copied with source+destination hash comparison and the installed DLL contains the v97d identity. The run INI is unchanged (`ba93289b…`). [MANUAL.md](../dist/g5-e2b-b3b4-v97d-20261113/MANUAL.md). The follow-up run is recorded below.
 
 
+<a id="v98-g5k3c-20261113"></a>
+## v98 G5-CAL K3-C candidate snapshot build (2026-11-13, not yet deployed/run)
+
+**Commit**: `502bdd5 feat(g5-k3c): write the per-generation full candidate snapshot`. New [k3_snapshot_policy.h](../src/animation/behavior_graph/k3_snapshot_policy.h) defines the fixed little-endian artifact (`CPK3` v1 header 116 B, record 5,280 B = 32 B counters + 8×76 B clip slots + 116×40 B tracks). [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) captures at `e_post_sample`: two immediate `poseLocal` reads must match bitwise, all `min(numPoseLocal,116)` tracks' trans/rot/scale float32, up to 8 active `hkbClipGenerator` records (name/binding/localTime/mode), and the segment counters. The file is written lazily to the SKSE log directory as `CharacterPanel-g5k3-<identity>-<UTC>.bin`, capped at 512 records; open/write/two-read/clip/record failures invalidate the segment. New key `[Experiment] ObservationSnapshot=false` (sample default off).
+
+**Offline**: `k3_snapshot_test.cpp` 2/2 (header/record round-trip, patched count, two-read flag, name truncation, 512-record overflow) and the existing `behavior_graph_observation_test.cpp` 2/2 pass under `/W4 /WX`; Release build exit 0.
+
+Identity and hashes are recorded after the clean-tree rebuild; the run profile is `IndependentGraph=inject` + the v96a five-word prime/unequip keys + `ObservationSnapshot=true`, all other instruments dormant. **This batch is candidate-side only; K3 stays NOT_READY until K3-S.**
+
+
 <a id="g5-e2b-b3b4-v97d-run1-20261113"></a>
 ## G5-E2-B B3/B4 v97d run 1 (2026-11-13 00:31, **B3+B4 PASS — K4 session boundary**)
 

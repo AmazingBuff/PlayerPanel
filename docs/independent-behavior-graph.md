@@ -5088,6 +5088,8 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **裁定：K3 仍 NOT_READY。** 本节只实现并预注册 CAL v1 §三 K3 的**候选侧**：每次 full Generate 返回后的 `e_post_sample` 取得完整 `poseLocal` 与 clip 元数据。源侧等价完成边界/generation 关联（K3-S）**不在本批范围**，因此 K3-C 通过也不能单独关闭 K3、不能启动校准。
 
+> **状态（2026-11-13）**：已实现并离线验证（`502bdd5`，`k3_snapshot_test` 2/2 + observation 2/2），构建为 [v98](build.md#v98-g5k3c-20261113)，尚未部署/上机。`ObservationSnapshot=true` 时按上述格式写 `CharacterPanel-g5k3-*.bin`；源侧 K3-S 仍未实现。
+
 ### 观测点与同代约束
 
 - 只在 `IndependentGraph=inject` 且 `SegmentObservation::observe_stage(e_post_sample)` 返回真的位置取数：即本次 `drive_graph_step` 的 full Generate 已返回、下一次 update 或清理之前。
