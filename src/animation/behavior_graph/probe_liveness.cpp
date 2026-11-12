@@ -1113,7 +1113,9 @@ namespace
             }
             if (!g_k3s_writer.append(record))
             {
-                g_k3s_write_failed.fetch_add(1, std::memory_order_relaxed);
+                // Capacity rejection is reported by overflow=true, not as an I/O failure.
+                if (!g_k3s_writer.overflow())
+                    g_k3s_write_failed.fetch_add(1, std::memory_order_relaxed);
                 g_k3s_ring.drain_discard();
                 return;
             }

@@ -2015,3 +2015,17 @@ Identity `CharacterPanel-scenegraph-v99a-g5k3s-source-0b017bcbf0-cl94faaed0c6-20
 | [CharacterPanel.ini](../dist/g5-k3s-v99a-20261113/CharacterPanel.ini) | 12069 | `ebe0afb733c91ebe1176f0d205529b2b8ae083b8f33305d6a89885fd9773a050` |
 
 **Deployed 2026-11-13**: the v99 trio was backed up hash-verified to `dist/deploy-backup-20261113-v99-v99apre/`; the three v99a files were copied with source+destination hash comparison and the installed DLL contains the v99a identity. Run INI is unchanged (`SamplingLiveness=on` only; `IndependentGraph=off`, `ObservationSnapshot=false`). [MANUAL.md](../dist/g5-k3s-v99a-20261113/MANUAL.md). **No game run yet.**
+
+
+<a id="g5-k3s-v99a-run1-20261113"></a>
+## G5-CAL K3-S v99a run 1 (2026-11-13 01:08, **INVALID — capacity overflow; data otherwise clean**)
+
+**Artifact**: v99a DLL `7f8d158d…000c4bb9`, identity `CharacterPanel-scenegraph-v99a-g5k3s-source-0b017bcbf0-cl94faaed0c6-20261112T170415Z`. Log [CharacterPanel-g5k3s-v99a-run1-20261113-0108.log](diagnostics/CharacterPanel-g5k3s-v99a-run1-20261113-0108.log), 264,901 B, SHA-256 `42d917857f76496939ecd09d787a36b81397fa51a4aacd213ca7cf1e73736e21`. Snapshot `dist/g5-k3s-v99a-run1/CharacterPanel-g5k3s-v99a-run1.bin`, 5,394,556 B, SHA-256 `13f0fbd078ed809aa0a1d4766438e87e9d7b72891c4bcf5e1f4f99c459af8a44` (local artifact, not committed). Zero `[E]`; the F7 window opened and `K3S SNAPSHOT open/close` both appeared — the alignment fix works.
+
+**Close row**: `records=1024 dropped=0 overflow=true two-read-bad=0 clip-overflow=0 no-pose=0 write-failed=26 open-failed=false`.
+
+**Artifact parse**: 1,024 records; `two_read_bad=0`; `track_count=116` on every record; `clip_count∈{1,2,3,4}`; `nonfinite=0`; `paths={1:1024}` (all `63568-tail`, classified); `flags=0`; `seq=1..1024` contiguous; `tsc` strictly increasing; file size exactly `124 + 1024×5,268`; header identity matches. The data quality is clean — the only failure is coverage.
+
+**Verdict**: K3S-5 fails because the 1,024-record cap truncated the ~1,050-apply window; per the pre-registered rule this window is **INVALID**, not a partial pass. No K3-S evidence is claimed.
+
+**Fix (v99b)**: capacity 1,024 → **1,536** (1,536 × 5,268 = 8,091,648 B ≈ 7.72 MiB, still under the 8 MiB budget), and capacity rejection is no longer counted as `write-failed` (only `overflow`). Criteria unchanged.

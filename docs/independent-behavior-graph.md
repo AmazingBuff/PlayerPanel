@@ -5144,9 +5144,9 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 `CharacterPanel-g5k3s-<identity>-<UTC>.bin`，SKSE 日志目录，`CPK3` v2 header（source=1、record size 5,268、容量 1,024）+ 上述记录。
 
-- detour 只做定长拷贝并推入 **1,024 槽无锁环**（不分配、不加锁、不做文件 I/O）；渲染线程在 `sample_probe_liveness` 的 drain 中落盘。
+- detour 只做定长拷贝并推入 **1,536 槽无锁环**（不分配、不加锁、不做文件 I/O）；渲染线程在 `sample_probe_liveness` 的 drain 中落盘。v99a 首轮用 1,024 槽，在 20 s 窗口内被截断（`overflow=true`），故 v99b 起升为 1,536。
 - 环或文件溢出、写失败、读失败、非有限值、`[E]`、崩溃、world reset 均使本窗口 INVALID；不拼接窗口、不补帧。
-- 预算：1,024 × 5,268 ≈ 5.4 MiB（< 8 MiB）；关闭行报告 `k3s-records/overflow/write-failed/two-read-bad`。
+- 预算：1,536 × 5,268 ≈ 7.72 MiB（< 8 MiB）；关闭行报告 `k3s-records/overflow/write-failed/two-read-bad`，容量拒绝只计入 `overflow`，不冒充 I/O 失败。
 
 ### 判据
 

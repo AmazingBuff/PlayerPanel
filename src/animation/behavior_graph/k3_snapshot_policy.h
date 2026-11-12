@@ -157,7 +157,10 @@ namespace animation::behavior_graph
 
     // ---- K3-S: source-side per-apply snapshot (v2) ---------------------------------------
 
-    inline constexpr std::uint32_t K3S_Record_Capacity = 1024;
+    // v99b: the 20 s F7 window produced ~1,050 source applies at the observed ~52.5/s, so the
+    // original 1,024 cap truncated the tail (v99a run 1: overflow=true, records=1024). 1,536
+    // records x 5,268 B = 8,091,648 B (7.72 MiB), still under the pre-registered 8 MiB budget.
+    inline constexpr std::uint32_t K3S_Record_Capacity = 1536;
     inline constexpr std::uint32_t K3S_Track_Capacity = K3_Track_Capacity;
     inline constexpr std::uint32_t K3S_Clip_Capacity = K3_Clip_Capacity;
     inline constexpr std::uint16_t K3S_Version = 2;

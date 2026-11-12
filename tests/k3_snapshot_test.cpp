@@ -173,7 +173,7 @@ namespace
         assert(back.tracks[3].value[9] == 9.75f);  // (3*10+9) * 0.25
     }
 
-    void source_writer_caps_at_1024_records()
+    void source_writer_caps_at_its_capacity()
     {
         std::filesystem::create_directories("build/g5-k3-20261113");
         std::string const path = "build/g5-k3-20261113/k3s_overflow.bin";
@@ -201,6 +201,6 @@ int main()
     round_trip_writes_header_records_and_count();
     overflow_stops_writing_and_is_reported();
     source_round_trip_writes_v2_header_and_record();
-    source_writer_caps_at_1024_records();
+    source_writer_caps_at_its_capacity();
     std::puts("4 K3 snapshot cases passed (engine-free)");
 }
