@@ -1985,3 +1985,17 @@ Identity `CharacterPanel-scenegraph-v99-g5k3s-source-ba4dddf433-cl94faaed0c6-202
 | [CharacterPanel.ini](../dist/g5-k3s-v99-20261113/CharacterPanel.ini) | 12069 | `ebe0afb733c91ebe1176f0d205529b2b8ae083b8f33305d6a89885fd9773a050` |
 
 Run profile is exactly `SamplingLiveness=on` with `IndependentGraph=off`, `ObservationSnapshot=false` and every other instrument dormant. [MANUAL.md](../dist/g5-k3s-v99-20261113/MANUAL.md). **Deployed 2026-11-13**: the v98 trio was backed up hash-verified to `dist/deploy-backup-20261113-v98-v99pre/`; the three v99 files were copied with source+destination hash comparison and the installed DLL contains the v99 identity. Installed keys: `SamplingLiveness=on`, `IndependentGraph=off`, `ObservationSnapshot=false`, all display/source/candidate instruments off. **No game run yet**; source side only, so K3 stays NOT_READY until source/candidate pairing.
+
+
+<a id="g5-k3s-v99-crash-20261113"></a>
+## G5-CAL K3-S v99 attempt 1 (2026-11-13 01:00, **CRASH — return-thunk stack alignment**)
+
+**Artifact**: v99 DLL `fb0ec54b…5e7f7ffc`, identity `CharacterPanel-scenegraph-v99-g5k3s-source-ba4dddf433-cl94faaed0c6-20261112T165526Z`. Log [CharacterPanel-g5k3s-v99-crash-20261113-0100.log](diagnostics/CharacterPanel-g5k3s-v99-crash-20261113-0100.log), 6,501 B, SHA-256 `c63ebd0940e5dd03183691ee94bf80beac2b21c5b488a4ec51f93aa7d9afa242`. The log ends immediately after `b3b4-first` (01:00:11.267); no `K3S SNAPSHOT open` and no `K3S SNAPSHOT close`, and no `.bin` file was produced.
+
+**Windows event log**: `APPCRASH SkyrimSE.exe` faulting module `CharacterPanel.dll`, exception `c0000005`, **offset `0x6083f`**. Symbolizing that RVA gives `record_k3s_return` (probe_liveness.cpp:822); the instruction is `0f 29 b4 24 b0 2b 00 00` = `movaps %xmm6, 0x2bb0(%rsp)`.
+
+**Root cause**: the return-site thunk assumed the patched epilogue left `rsp ≡ 8 (mod 16)` and used a fixed `sub rsp,28h`. At the 63856 return site the actual alignment differs with the function's frame, so the callee's large stack frame (`sub rsp,0x2bc0` plus aligned locals) ended up 8 bytes off and `movaps` faulted. The existing small return recorders never used aligned SIMD stores, so the latent assumption had never been exercised.
+
+**Fix**: `encode_detour_return_thunk` now aligns dynamically — `push rbp; mov rbp,rsp; and rsp,-16; sub rsp,20h; call; mov rsp,rbp; pop rbp; jmp original` — independent of the site's alignment. The existing `return_thunk_preserves_the_caller_frame` case (6/6 v3) passes with the new bytes. Criteria/thresholds unchanged; this attempt is INVALID and produces no K3-S evidence.
+
+**Next**: rebuild as v99a, redeploy, and run one new F7 window.

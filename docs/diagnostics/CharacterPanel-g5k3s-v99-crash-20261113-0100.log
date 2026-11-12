@@ -1,0 +1,65 @@
+[00:58:35.627] [33000] [I] CharacterPanel v1-2-1-0
+[00:58:35.627] [33000] [I] CharacterPanel loaded
+[2026-11-13 00:58:35.626] [thread 33000] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(84): [info] CharacterPanel v1-2-1-0
+[00:58:45.720] [33000] [I] OAR Animations V1 mapping API available
+[00:58:45.720] [33000] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[00:58:45.720] [33000] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[00:59:25.150] [33404] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[00:59:25.150] [33404] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[00:59:25.150] [33404] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting IndependentGraph=off
+[00:59:25.150] [33404] [I] EXPERIMENT setting DisplayPose=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting DisplayStep=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting SourceTimeline=off transient=false graph='' pose-capture=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting SourceEventCapture=off
+[00:59:25.150] [33404] [I] EXPERIMENT setting SourceWriteCapture=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting CandidateVariableCensus=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[00:59:25.150] [33404] [I] EXPERIMENT setting CandidateEquipPrime=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting CandidateEquipPrimeBranch=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting CandidateUnequipProbe=false variable='' prime='' event=''
+[00:59:25.150] [33404] [I] EXPERIMENT setting OarContextWatch=false
+[00:59:25.150] [33404] [I] EXPERIMENT setting SamplingLiveness=on
+[00:59:25.150] [33404] [I] EXPERIMENT setting ObservationSnapshot=false
+[00:59:25.150] [33404] [I] SOURCE EVENTCAPTURE install-skip reason=off
+[00:59:25.150] [33404] [I] SOURCE WRITECAPTURE install-skip reason=off
+[00:59:25.152] [33404] [I] PROBE LIVENESS installed target='63589-sampling-entry' address=0x7ff7304b2a40 thunk=0x7ff6b1150000 original=0x7ff6b1150080 head-size=5
+[00:59:25.152] [33404] [I] PROBE LIVENESS installed target='63856-apply-entry' address=0x7ff7304c2fe0 thunk=0x7ff6b1150100 original=0x7ff6b1150180 head-size=7
+[00:59:25.152] [33404] [I] PROBE LIVENESS installed target='63856-apply-return' address=0x7ff7304c322f thunk=0x7ff6b1150200 original=0x7ff6b1150280 head-size=7
+[00:59:25.152] [33404] [I] PROBE LIVENESS installed target='58423-footik-entry' address=0x7ff7303b7f30 thunk=0x7ff6b1150300 original=0x7ff6b1150380 head-size=7
+[00:59:25.152] [33404] [I] PROBE LIVENESS installed target='58423-footik-return' address=0x7ff7303b9d5d thunk=0x7ff6b1150400 original=0x7ff6b1150480 head-size=5
+[00:59:25.152] [33404] [I] DAC native inventory lifecycle sink installed
+[00:59:25.156] [33404] [I] All shaders compiled
+[00:59:25.156] [33404] [I] Installed pre-UI renderer hook
+[00:59:25.156] [33404] [I] Panel menu sink installed
+[00:59:25.156] [33404] [I] CharacterManager equipment sink installed
+[00:59:25.156] [33404] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-v99-g5k3s-source-ba4dddf433-cl94faaed0c6-20261112T165526Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[00:59:25.174] [7916 ] [I] Studio host changed: 0x0 -> 0x19a0896e980 (paused=true)
+[00:59:25.174] [7916 ] [I] Studio light node has been created
+[00:59:25.174] [7916 ] [I] CP-LIGHT slot 0: registered, shell 0x19aaffb7880 queued (ledger stays the authority)
+[00:59:25.174] [7916 ] [I] CP-LIGHT slot 1: registered, shell 0x19aaffb7740 queued (ledger stays the authority)
+[00:59:25.174] [7916 ] [I] CP-LIGHT slot 2: registered, shell 0x19aaffb7600 queued (ledger stays the authority)
+[00:59:25.174] [7916 ] [I] Studio lights registered on the ledger (scene=0x18f60686e80 -- ledger fetch will populate the slots)
+[00:59:25.174] [7916 ] [I] CP-LIGHT slot 0: ledger shell fetched 0x19aaffb7880 (after 0 miss frames)
+[00:59:25.174] [7916 ] [I] CP-LIGHT slot 1: ledger shell fetched 0x19aaffb7740 (after 0 miss frames)
+[00:59:25.174] [7916 ] [I] CP-LIGHT slot 2: ledger shell fetched 0x19aaffb7600 (after 0 miss frames)
+[00:59:50.576] [33000] [I] PROBE LIVENESS invalidate-requested reason=world-reset
+[00:59:50.576] [33000] [I] DAC old-world sessions discarded world=2
+[00:59:50.894] [7916 ] [I] CP-LIGHT slot 0: ledger shell dropped
+[00:59:50.894] [7916 ] [I] CP-LIGHT slot 1: ledger shell dropped
+[00:59:50.894] [7916 ] [I] CP-LIGHT slot 2: ledger shell dropped
+[00:59:50.894] [7916 ] [W] Studio lights not fully served by the ledger yet
+[00:59:57.277] [7916 ] [W] Studio lights not fully served by the ledger yet
+[01:00:00.366] [7916 ] [I] CharacterManager watch actor=00000014
+[01:00:00.376] [7916 ] [I] OAR bases stage=world-prewarm project=0x198d7141730 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.071
+[01:00:00.376] [7916 ] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x19aaffb7c40 filed to lightQueueAdd)
+[01:00:00.376] [7916 ] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x19aaffb7240 filed to lightQueueAdd)
+[01:00:00.376] [7916 ] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x19aaffb7100 filed to lightQueueAdd)
+[01:00:00.451] [7916 ] [I] CP-LIGHT slot 0: ledger shell fetched 0x19aaffb7c40 (after 1 miss frames)
+[01:00:00.451] [7916 ] [I] CP-LIGHT slot 1: ledger shell fetched 0x19aaffb7240 (after 1 miss frames)
+[01:00:00.451] [7916 ] [I] CP-LIGHT slot 2: ledger shell fetched 0x19aaffb7100 (after 1 miss frames)
+[01:00:11.240] [13840] [I] PROBE LIVENESS pinned mode=on graph=0x19dc6815800 character=0x19dc68158c0 behavior=0x19913ebd900
+[01:00:11.240] [13840] [I] PROBE LIVENESS arm-requested mode=on
+[01:00:11.257] [33000] [I] PROBE LIVENESS window=open mode=on epoch=1 pinned=yes
+[01:00:11.267] [7356 ] [I] PROBE LIVENESS b3b4-first out-ptr=0x52ad5ff230 block=0x19d3c375400 tracks=116 pose=0x199131f8010 clamped=116 hdr32=116 hdr34=448 out0=(0.0000,0.0000,0.0000,0.0000) out1=(0.0000,0.0000,0.0000,1.0000) out2=(0.0000,0.0000,0.0000,0.0000) pose0=(0.0000,0.0000,0.0000,0.0000) pose1=(0.0000,0.0000,0.0000,1.0000) pose2=(1.0000,1.0000,1.0000,0.0000)

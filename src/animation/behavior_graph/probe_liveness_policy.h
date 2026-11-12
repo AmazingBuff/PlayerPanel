@@ -985,11 +985,12 @@ namespace animation::behavior_graph
         return o;
     }
 
-    // Return-side thunk. The function's own frame is still intact at the patched `add rsp,0x88`,
-    // so rsp is 8 (mod 16) there; `sub rsp,28h` makes it 16-byte aligned for the recorder call,
-    // and the relocated `add rsp,0x88` runs afterwards so the caller's frame is restored before
-    // the jump to the original `ret`. Volatile registers and flags are not preserved on purpose:
-    // nothing reads them after the return site.
+    // Return-side thunk. The patched sites are epilogues whose rsp alignment varies with the
+    // function's own frame (the old fixed `sub rsp,28h` assumed 8 mod 16 and made a large recorder
+    // with `movaps` fault at CharacterPanel.dll+0x6083f on 2026-11-13). Align dynamically instead:
+    // save rbp, snapshot rsp, align down to 16, reserve shadow space, call, restore rsp and rbp,
+    // then jump to the relocated instruction. Volatile registers and flags are not preserved on
+    // purpose: nothing reads them after the return site.
     inline std::size_t encode_detour_return_thunk(std::uint8_t* a_dst, std::uintptr_t a_recorder,
         std::uintptr_t a_original)
     {
@@ -998,12 +999,16 @@ namespace animation::behavior_graph
             for (std::uint8_t b : a_bytes)
                 a_dst[o++] = b;
         };
-        emit({ 0x48, 0x83, 0xEC, 0x28 });                          // sub rsp,28h
+        emit({ 0x55 });                                            // push rbp
+        emit({ 0x48, 0x89, 0xE5 });                                // mov rbp,rsp
+        emit({ 0x48, 0x83, 0xE4, 0xF0 });                          // and rsp,-16
+        emit({ 0x48, 0x83, 0xEC, 0x20 });                          // sub rsp,20h (shadow)
         emit({ 0x48, 0xB8 });                                      // movabs rax, recorder
         std::memcpy(a_dst + o, &a_recorder, sizeof(a_recorder));
         o += sizeof(a_recorder);
         emit({ 0xFF, 0xD0 });                                      // call rax
-        emit({ 0x48, 0x83, 0xC4, 0x28 });                          // add rsp,28h
+        emit({ 0x48, 0x89, 0xEC });                                // mov rsp,rbp
+        emit({ 0x5D });                                            // pop rbp
         emit({ 0xE9 });                                            // jmp original (rel32)
         auto const next = reinterpret_cast<std::uintptr_t>(a_dst) + o + sizeof(std::int32_t);
         std::int32_t const rel = static_cast<std::int32_t>(a_original - next);
