@@ -5083,6 +5083,40 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 全部满足前，K1/K2 维持 **NOT_READY**；不得启动原生校准、不得产生 `tau_p/tau_r/tau_s/epsilon_t`。
 
+<a id="c-g5-cal-k3c"></a>
+## C-G5-CAL K3-C：候选同代全量快照（2026-11-13 预注册；只覆盖候选侧）
+
+**裁定：K3 仍 NOT_READY。** 本节只实现并预注册 CAL v1 §三 K3 的**候选侧**：每次 full Generate 返回后的 `e_post_sample` 取得完整 `poseLocal` 与 clip 元数据。源侧等价完成边界/generation 关联（K3-S）**不在本批范围**，因此 K3-C 通过也不能单独关闭 K3、不能启动校准。
+
+### 观测点与同代约束
+
+- 只在 `IndependentGraph=inject` 且 `SegmentObservation::observe_stage(e_post_sample)` 返回真的位置取数：即本次 `drive_graph_step` 的 full Generate 已返回、下一次 update 或清理之前。
+- 每次完成输出先读两遍 `poseLocal`（同一位置、无中间调用），逐字节比较；两遍必须完全一致，否则该段 INVALID。第二遍不重新采样、不推进图。
+- 全量轨道 = `min(numPoseLocal, 116)`；每轨保存 `translation xyz + rotation xyzw + scale xyz` 的**原始 float32 bit**（10 个 uint32），不做文本舍入。
+- clip 元数据每次完成输出采集一次：活动节点中 `hkbClipGenerator` 的 `animationName`、`animationBindingIndex`、`localTime` bits、`mode`；上限 8 个，超过即 INVALID。
+- 记录 `segment/completed/commanded/elapsed(double bits)`、`track_count`、`two_read_equal`、`clip_count`，与 v96 段的计数同一来源。
+
+### 工件格式（小端，二进制）
+
+`CharacterPanel-g5k3-<identity>-<UTC stamp>.bin`，位于 SKSE 日志目录。
+
+- Header：magic `CPK3`、version 1、header size、record capacity 512、track capacity 116、identity（96 B，NUL 填充）、record count（关闭时回填）。
+- 每条记录：segment/completed/commanded/track_count/two_read_equal/clip_count + `elapsed` 的 float64 bit + 8 个固定 76 B clip 槽（binding u32、local_time bits u32、mode u8、3 B 对齐、name 64 B）+ `track_count × 10` 个 float32。
+- 预算：≤ 512 条记录（约 2.7 MiB），超过即停止写入并 INVALID；关闭后由外部对文件做 SHA-256/字节数登记，不在插件内哈希。
+
+### 判据与停止
+
+| # | 判据 | 通过条件 |
+| --- | --- | --- |
+| K3C-1 完整性 | `record_count` 等于该段 `completed` 总数，`track_count == numPoseLocal`（≤116），无截断 | 否则 INVALID |
+| K3C-2 同代双读 | 每条记录 `two_read_equal=1` | 任一 0 ⇒ INVALID |
+| K3C-3 覆盖 | 每个完成输出恰好一条记录，`completed` 连续无缺口 | 否则 INVALID |
+| K3C-4 身份 | header 内 identity 与运行 DLL 一致；文件位于日志目录 | 否则 INVALID |
+
+`[E]`、崩溃、读失败、clip/node 溢出、记录溢出、非有限值、world reset 或关闭窗口均停止本段并保留已写记录；不拼接窗口、不补帧、不把截断当成功。
+
+**边界**：K3-C 只证明候选在每次 Generate 返回后有一份完整、同代、双读一致的快照；它不证明源侧完成边界/generation 关联，不提供姿态容差，不关闭 K3/K5/K6 或 G5。
+
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 
 **裁定**：v96a run 1 为 **K2-C1/C2/C3 提供了一次可复核的正面证据**，并把 D3 的 1HM 卸下完成点覆盖补齐；**K1-C1–C4 与 K2-C4（控制 B）仍未闭合**，因此 K1/K2 整体仍 **NOT_READY**，不能启动原生校准。

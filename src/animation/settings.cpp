@@ -32,6 +32,7 @@ namespace
     std::string g_candidate_unequip_prime;
     std::string g_candidate_unequip_event;
     bool g_oar_context_watch = false;
+    bool g_observation_snapshot = false;
     behavior_graph::ProbeLivenessMode g_sampling_liveness_mode = behavior_graph::ProbeLivenessMode::e_off;
 }
 void load_settings()
@@ -79,6 +80,7 @@ void load_settings()
     char const* const unequip_event = ini.GetValue("Experiment", "CandidateUnequipEvent", "");
     g_candidate_unequip_event = unequip_event ? unequip_event : "";
     g_oar_context_watch = ini.GetBoolValue("Experiment", "OarContextWatch", false);
+    g_observation_snapshot = ini.GetBoolValue("Experiment", "ObservationSnapshot", false);
     char const* const sampling_liveness = ini.GetValue("Experiment", "SamplingLiveness", "off");
     std::optional<behavior_graph::ProbeLivenessMode> const parsed_sampling_liveness =
         behavior_graph::parse_probe_liveness(sampling_liveness ? std::string_view{ sampling_liveness } : std::string_view{});
@@ -114,10 +116,12 @@ void load_settings()
         g_candidate_unequip_variable, g_candidate_unequip_prime, g_candidate_unequip_event);
     logger::info("EXPERIMENT setting OarContextWatch={}", g_oar_context_watch);
     logger::info("EXPERIMENT setting SamplingLiveness={}", behavior_graph::probe_liveness_mode_name(g_sampling_liveness_mode));
+    logger::info("EXPERIMENT setting ObservationSnapshot={}", g_observation_snapshot);
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
 bool behavior_graph_probe() { return g_behavior_graph_probe; }
+bool observation_snapshot() { return g_observation_snapshot; }
 behavior_graph::IndependentGraphMode independent_graph_setting() { return g_independent_graph; }
 bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }

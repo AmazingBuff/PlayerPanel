@@ -7,6 +7,7 @@
 #include "animation/behavior_graph/candidate_variable_census.h"
 #include "animation/behavior_graph/candidate_window.h"
 #include "animation/behavior_graph/clip_reference_policy.h"
+#include "animation/behavior_graph/k3_snapshot_policy.h"
 #include "animation/behavior_graph/drive_step_policy.h"
 #include "animation/behavior_graph/display_step_clock.h"
 #include "animation/clip.h"
@@ -47,8 +48,10 @@
 
 #include <array>
 #include <chrono>
+#include <ctime>
 #include <cstring>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -2266,6 +2269,122 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 if (checkpoint || observation.completed() % 20 == 0)
                                     log_clip_clock();
                             };
+                            // C-G5-CAL K3-C: per-generation full candidate snapshot. The writer
+                            // opens lazily in the log directory and patches its record count at
+                            // close; the destructor is the backstop for early exits.
+                            K3SnapshotWriter k3_writer;
+                            bool const k3_enabled = observation_snapshot() && generation_profile;
+                            std::uint32_t k3_attempted = 0;
+                            std::string k3_path;
+                            struct K3CloseLog
+                            {
+                                K3SnapshotWriter& writer;
+                                std::uint32_t& attempted;
+                                bool enabled;
+                                ~K3CloseLog()
+                                {
+                                    if (!enabled) return;
+                                    (void)writer.close();
+                                    logger::info("K3 SNAPSHOT close path='{}' records={} attempted={} overflow={} write-failed={}",
+                                        writer.path(), writer.records(), attempted, writer.overflow(),
+                                        writer.records() != attempted ? "yes" : "no");
+                                }
+                            } k3_close_log{ k3_writer, k3_attempted, k3_enabled };
+                            const auto record_k3_snapshot = [&]() {
+                                if (!k3_enabled) return;
+                                ++k3_attempted;
+                                if (!k3_writer.is_open())
+                                {
+                                    auto const log_dir = SKSE::log::log_directory();
+                                    if (!log_dir)
+                                    {
+                                        observation.invalidate("k3-no-log-dir");
+                                        return;
+                                    }
+                                    std::time_t const now = std::time(nullptr);
+                                    std::tm utc{};
+                                    (void)gmtime_s(&utc, &now);
+                                    char stamp[32]{};
+                                    (void)std::strftime(stamp, sizeof(stamp), "%Y%m%dT%H%M%SZ", &utc);
+                                    k3_path = fmt::format("{}/CharacterPanel-g5k3-{}-{}.bin",
+                                        log_dir->string(), Plugin::Plugin_Build_Identity, stamp);
+                                    if (!k3_writer.open(k3_path, Plugin::Plugin_Build_Identity))
+                                    {
+                                        observation.invalidate("k3-open-failed");
+                                        return;
+                                    }
+                                    logger::info("K3 SNAPSHOT open path='{}' identity='{}'", k3_path,
+                                        Plugin::Plugin_Build_Identity);
+                                }
+                                std::vector<PoseSample> first;
+                                std::vector<PoseSample> second;
+                                read_pose_local(candidate->characterInstance, first);
+                                read_pose_local(candidate->characterInstance, second);
+                                bool const same = first.size() == second.size() &&
+                                    (first.empty() || std::memcmp(first.data(), second.data(),
+                                        first.size() * sizeof(PoseSample)) == 0);
+                                if (!same)
+                                    observation.invalidate("k3-two-read-mismatch");
+                                std::array<K3TrackRecord, K3_Track_Capacity> tracks{};
+                                std::uint32_t const track_count = static_cast<std::uint32_t>(
+                                    std::min(first.size(), static_cast<std::size_t>(K3_Track_Capacity)));
+                                for (std::uint32_t i = 0; i < track_count; ++i)
+                                {
+                                    PoseSample const& sample = first[i];
+                                    float* const v = tracks[i].value;
+                                    v[0] = sample.translation[0];
+                                    v[1] = sample.translation[1];
+                                    v[2] = sample.translation[2];
+                                    v[3] = sample.rotation[0];
+                                    v[4] = sample.rotation[1];
+                                    v[5] = sample.rotation[2];
+                                    v[6] = sample.rotation[3];
+                                    v[7] = sample.scale[0];
+                                    v[8] = sample.scale[1];
+                                    v[9] = sample.scale[2];
+                                }
+                                std::array<K3ClipRecord, K3_Clip_Capacity> clips{};
+                                std::uint32_t clip_count = 0;
+                                bool clip_overflow_k3 = false;
+                                RE::hkbBehaviorGraph* const behavior_now =
+                                    candidate->characterInstance.behaviorGraph.get();
+                                if (behavior_now && behavior_now->activeNodes)
+                                {
+                                    RE::NodeList const& nodes = *behavior_now->activeNodes;
+                                    std::size_t const limit = std::min<std::size_t>(nodes.size(),
+                                        Observation_Node_Limit);
+                                    for (std::size_t i = 0; i < limit; ++i)
+                                    {
+                                        RE::hkbNode* const node = nodes.data()[i].nodeClone;
+                                        if (!node_is_clip_generator(node)) continue;
+                                        if (clip_count >= K3_Clip_Capacity)
+                                        {
+                                            clip_overflow_k3 = true;
+                                            break;
+                                        }
+                                        auto const* const clip = static_cast<RE::hkbClipGenerator const*>(node);
+                                        K3ClipRecord& out = clips[clip_count];
+                                        out.binding_index = clip->animationBindingIndex;
+                                        out.local_time_bits = std::bit_cast<std::uint32_t>(clip->localTime);
+                                        out.mode = static_cast<std::uint8_t>(clip->mode.get());
+                                        std::string const name = read_string(clip->animationName,
+                                            K3_Clip_Name_Length);
+                                        std::memcpy(out.name, name.data(),
+                                            std::min(name.size(), K3_Clip_Name_Length - 1));
+                                        ++clip_count;
+                                    }
+                                }
+                                if (clip_overflow_k3)
+                                    observation.invalidate("k3-clip-overflow");
+                                std::uint8_t const segment = std::strcmp(observation.segment_name(), "equip") == 0
+                                    ? 0 : 1;
+                                if (!k3_writer.append(segment, observation.completed(),
+                                        observation.commanded(), observation.elapsed(), same,
+                                        std::span<K3ClipRecord const>{ clips.data(), clip_count },
+                                        std::span<K3TrackRecord const>{ tracks.data(), track_count }))
+                                    observation.invalidate(k3_writer.overflow()
+                                        ? "k3-record-overflow" : "k3-write-failed");
+                            };
                             const auto start_observations = [&]() {
                                 previous_candidate_pose.clear();
                                 previous_source_pose.clear();
@@ -2359,6 +2478,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     if (stage == FrameStage::e_post_update && step == 0)
                                         log_bookkeeping("post-update1");
                                     if (!observation.observe_stage(stage)) return;
+                                    record_k3_snapshot();
                                     sample_candidate_input_probe(input_probe, *candidate_base, actor_id,
                                         request, observation_fields());
                                     if (unequip_probe.armed)
@@ -2505,6 +2625,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                             observation.command_advance(DriveTimestep);
                                             const auto observe_unequip = [&](FrameStage stage) {
                                                 if (!observation.observe_stage(stage)) return;
+                                                record_k3_snapshot();
                                                 observation.observe_state(sample_unequip_probe(unequip_probe,
                                                     *candidate_base, actor_id, request, observation_fields()));
                                                 record_output();

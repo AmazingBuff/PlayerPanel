@@ -104,6 +104,8 @@ namespace animation
     // last writer (63856). `on` opens an F7 window outside the panel; `concurrent` is armed by the
     // candidate experiment before its own dispatches and closed at the display boundary.
     [[nodiscard]] bool sampling_liveness();
+    // C-G5-CAL K3-C: write the per-generation full candidate snapshot artifact.
+    [[nodiscard]] bool observation_snapshot();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END
