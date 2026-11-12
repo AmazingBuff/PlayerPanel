@@ -1909,4 +1909,24 @@ Identity `CharacterPanel-scenegraph-v97d-g5e2b-b3b4-e1526f2bdd-cl94faaed0c6-2026
 | [CharacterPanel.pdb](../dist/g5-e2b-b3b4-v97d-20261113/CharacterPanel.pdb) | 50155520 | `31a89ca24873c24a6c30c83f2f511509037fb5c3c451af20f32a6887a2e302f6` |
 | [CharacterPanel.ini](../dist/g5-e2b-b3b4-v97d-20261113/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
 
-**Deployed 2026-11-13** (Skyrim not running): the v97c trio was backed up hash-verified to `dist/deploy-backup-20261113-v97c-v97dpre/`; the three v97d files were copied with source+destination hash comparison and the installed DLL contains the v97d identity. The run INI is unchanged (`ba93289b…`). [MANUAL.md](../dist/g5-e2b-b3b4-v97d-20261113/MANUAL.md). **No game run yet.**
+**Deployed 2026-11-13** (Skyrim not running): the v97c trio was backed up hash-verified to `dist/deploy-backup-20261113-v97c-v97dpre/`; the three v97d files were copied with source+destination hash comparison and the installed DLL contains the v97d identity. The run INI is unchanged (`ba93289b…`). [MANUAL.md](../dist/g5-e2b-b3b4-v97d-20261113/MANUAL.md). The follow-up run is recorded below.
+
+
+<a id="g5-e2b-b3b4-v97d-run1-20261113"></a>
+## G5-E2-B B3/B4 v97d run 1 (2026-11-13 00:31, **B3+B4 PASS — K4 session boundary**)
+
+**Artifact**: v97d DLL `f0d2ec70…ef11e7c8`, PDB `31a89ca2…7a2e302f6`, INI `ba93289b…`, identity `CharacterPanel-scenegraph-v97d-g5e2b-b3b4-e1526f2bdd-cl94faaed0c6-20261112T162725Z`. Log [CharacterPanel-g5e2b-b3b4-v97d-run1-20261113-0031.log](diagnostics/CharacterPanel-g5e2b-b3b4-v97d-run1-20261113-0031.log), 267,805 B, SHA-256 `ac9996ceecc1f8a3c6d65c5a786c674c51fdc771091b1036ba9cc397ff182728`. One F7 window, zero `[E]`, two unrelated studio-light `[W]`, `frames=739`, `reason=expired`.
+
+| 判据 | 读数 | 裁定 |
+| --- | --- | --- |
+| B3-1 活性 | `b3-checked=739` / `b4-checked=739`，与 `pinned-apply-entries=739` 一致 | PASS |
+| B3-2 out 未变 | `b3-equal=739`、`b3-failed=0`、`b3-max-delta=0` | PASS |
+| B4-1 poseLocal 一致 | `b4-equal=739`、`b4-failed=0`、`b4-max-delta=0` | PASS |
+| B4-2 完整性 | `b3-stale=0`、`b3-multi=0`、`b3-no-out=0`、`b3-overwritten=0`、`b3b4-read-failed=no`、`b3b4-non-finite=no` | PASS |
+| 总判定 | `verdict=B3+B4-PASS` | **PASS（本会话）** |
+
+`b3-behavior-mismatch=4111` is expected: other graphs' 58423 calls are filtered out. The one-shot dump confirms identity: `out0=(0,0,0,0)` / `pose0=(0,0,0,0)`, `out1=(0,0,0,1)` / `pose1=(0,0,0,1)`, `pose2=(1,1,1,0)` (track 0 scale).
+
+**Meaning**: for the pinned source graph in this window, the 58423 foot-IK output block is unchanged from its return to the 63856 apply, and poseLocal matches that same block component-wise within the pre-registered E2-A thresholds (739/739 pairs). This closes **K4's component-wise evidence** for this session: no second writer touched the out block before the apply, and the memcpy target equals the copied source. E2-A's residuals are the footIK rewrite itself (`b-rewritten=876,519` over 4,787 comparisons), consistent with E2-B.
+
+**Boundaries**: `transport-complete=no` (5 contention drops in the detail ring) affects only detail rows; the B3/B4 tallies are detour-side counters and are not ring records, so the verdict does not depend on the ring. This is one window on one session/graph/loadout, with no repetition. It does **not** close K1 (resource/instance identity), K2-C4 (native control B), K3 (same-generation source snapshots), K5/K6, pose equivalence or G5. `B3/B4` closing is a K4 session-boundary result only.

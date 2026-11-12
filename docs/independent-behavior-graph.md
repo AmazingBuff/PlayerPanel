@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-**当前更新（2026-11-12）**：[C-G5-OBS v2](#c-g5-observation-v2-20261112)修复候选诊断的时钟编码、完成阶段、分段和有界停止语义；离线两场景通过，v96a 已部署并完成[首次原生运行](build.md#g5-cal-v96a-observation-v2-run1-20261112)：clip-family 与 state-12-to-0 均 PASS（completed=129）。[K1/K2 账本](#c-g5-cal-k1k2)已按本次运行更新，K2-C3 PASS，K1-C1–C4 与 K2-C4 仍 NOT_READY。下方 11-11 摘要保留当时日期；其中“差一帧”、五字最小性或独占 writer 的推断由新节的限定取代。K3–K6、原生控制 B、B3/B4 和姿态等价仍待验证，G5 未通过。
+**当前更新（2026-11-13）**：**源图 B3/B4 后处理边界在 [v97d 单窗口](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 PASS（K4 本会话边界）**——58423 的 foot-IK 输出块在返回与 63856 apply 之间未被改写，poseLocal 与同一块逐分量一致。[C-G5-OBS v2](#c-g5-observation-v2-20261112) 的候选诊断已由 [v96a 原生运行](build.md#g5-cal-v96a-observation-v2-run1-20261112)验证 clip-family 与 state-12-to-0（completed=129）。[K1/K2 账本](#c-g5-cal-k1k2) 中 K2-C3 PASS，K1-C1–C4 与 K2-C4 仍 NOT_READY；v97/v97a/v97b/v97c 四轮均保留 INVALID。K3、K5/K6、原生控制 B 与姿态等价仍待验证，G5 未通过。
 
 更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。**v96a 后续已部署并完成首次原生运行，关闭“差一帧”覆盖缺口；见[运行记录](build.md#g5-cal-v96a-observation-v2-run1-20261112)。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
@@ -4302,7 +4302,7 @@ Shield                 NPC L Pauldron
 <a id="c-g5-e2-b-b3b4"></a>
 ## C-G5-E2-B B3/B4：源图后处理边界预注册（2026-11-12）
 
-> **状态（2026-11-13 凌晨）**：规则已实现并部署，**v97 / v97a / v97b / v97c 四次运行均保留 INVALID**（前两次为指针身份缺陷，第三次为计数器缺陷，第四次为 stride 缺陷），判据与阈值始终未改。(1) [v97](build.md#g5-e2b-b3b4-v97-run1-20261112)：`ctx->behavior` 与 `BShkbAnimationGraph*` 层级不同。(2) [v97a](build.md#g5-e2b-b3b4-v97a-run1-20261112)：58315 把 `ctx->behavior` 置零，通用 thunk 从未转发 58423 的真实 `rdx`；`a339674` 加专用四参数 thunk 并改用 `ctx->character == pinned + 0xC0`。(3) [v97b run 1](build.md#g5-e2b-b3b4-v97b-run1-20261113)：首次真正评到 B3/B4，`b3-equal=1167/1167`；`b3-multi=1161` 却因槽未被消费而失真。(4) [v97c run 1](build.md#g5-e2b-b3b4-v97c-run1-20261113)：消费修复生效（`b3-multi=0`），B3 稳定 **894/894**；`b3b4-first` dump 解出布局——poseLocal 是 `hkQsTransform` 每轨 3 个 vec4，out 快照是 2 个，而比较器按 2 索引 pose，导致把 track 0 的 scale `(1,1,1)` 读成 track 1 的 translation。`2f27b79` 改为显式 stride（B3 2/2、B4 2/3）并加 stride-3 回归；[v97d](build.md#v97d-g5e2b-b3b4-20261113) 已部署，**等待一次新的 F7 窗口**。运行档始终为 `SamplingLiveness=on` + `IndependentGraph=off`。
+> **状态（2026-11-13 00:31）：B3/B4 PASS（本会话）**。[v97d run 1](build.md#g5-e2b-b3b4-v97d-run1-20261113) 在 739 个 pinned 对上得到 `b3-equal=739/739`、`b4-equal=739/739`、`b3/b4-failed=0`、`max-delta=0`，`multi/stale/no-out/overwritten=0`、无读取失败/非有限值，`verdict=B3+B4-PASS`：源图 58423 的 foot-IK 输出块从返回到 63856 apply 之间未被改写，poseLocal 与同一块在预注册 E2-A 阈值内逐分量一致。前四轮（[v97](build.md#g5-e2b-b3b4-v97-run1-20261112) 指针层级、[v97a](build.md#g5-e2b-b3b4-v97a-run1-20261112) `ctx->behavior` 置零+thunk 丢参、[v97b](build.md#g5-e2b-b3b4-v97b-run1-20261113) 槽未消费、[v97c](build.md#g5-e2b-b3b4-v97c-run1-20261113) pose stride）均保留 INVALID，判据与阈值始终未改。**边界**：单窗口、单会话/图/装备，无重复；`transport-complete=no` 仅影响 detail 环，B3/B4 计数在 detour 侧、不依赖环。本结果只关闭 **K4 的本会话边界**，不关闭 K1、K2-C4（控制 B）、K3（同代源输出）、K5/K6、姿态等价或 G5。运行档始终为 `SamplingLiveness=on` + `IndependentGraph=off`。
 
 **目标**：在**源图**上闭合 E2-B 的 B3/B4——`58423-return.out == 63581-memcpy.src` 与 `poseLocal == 63581-memcpy.src`。本契约只使用已部署的 E2-B detour（58423 entry/return、63856 apply entry）和已审计的静态路径，不新增 detour、不改窗口语义、不写源图。
 
@@ -4792,7 +4792,7 @@ v92 给 `clock-sample` 加了 `ms`（墙钟基准）后，源侧速率**首次�
 | K1 身份与映射 | 匹配 DLL/PDB/build/INI、runtime/OAR/资源清单；源图确属 controller，源与候选各有 actor/graph/generation/request/view；骨架完整清单、父索引、reference pose、binding/默认填充规则 | 缺源侧完整资源/实例身份与实际映射清单 |
 | K2 受控输入与独立控制 | 冻结装备初态及外部输入的内容/顺序/相对时刻，区分外部输入和图内输出；两项控制具备独立真值、资源哈希和可审计承载路径 | H2H/1HM 输入差异待核对；控制资源尚未登记 |
 | K3 同阶段与同代快照 | 候选在 Generate 返回的 `e_post_sample` 取得完整快照；源有已审计的等价完成边界、寿命和 generation 关联；pose、clip 元数据及贡献信息在更新前固定为同代快照 | 候选现有 0/60 步细节在 `e_pre_sample`；源 post-UI 行尚不能单凭指针/帧号证明上述关联 |
-| K4 后处理边界 | B3/B4 的逐分量证据，或另经审计证明两侧都在同一、明确命名的边界；未验证链保持开放，不能当噪声或排骨 | 未闭合；本契约不批准另选阶段 |
+| K4 后处理边界 | B3/B4 的逐分量证据，或另经审计证明两侧都在同一、明确命名的边界；未验证链保持开放，不能当噪声或排骨 | **本会话闭合**：[v97d run 1](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 对 B3+B4 PASS（源图 58423→63856 边界）；单窗口、无重复，其他阶段/图仍未验 |
 | K5 完整计数与生命周期 | 应有/访问/记录/遗漏逐项对账，generation 失效可取消，完整层/权重/混合资格仍按门 1 审计；所有上限与丢失都可见 | 现有稀疏快照和容量上限不能代表完整仪器 |
 | K6 实施与数据计划 | 先有经评审的仪器范围、两个控制的就绪清单、采集/分析版本及预算，再采集本契约的新数据 | 尚无本契约的实现或运行记录 |
 
@@ -5102,7 +5102,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **K1/K2 结论**：v96a 把 K2-C3 从 D3 的 clip-family 正结果推进为同一进程内的 clip-family + state-12-to-0 完成证据，并给 K2-C1/C2 留下可复核的初态与输入顺序；但它不证明 K1 的跨运行资源/实例身份，也不提供控制 B 的独立真值。K1-C1–C4 与 K2-C4 仍是原生校准的硬前置。
 
-**下一步（按 CAL v1 顺序）**：先补 **K3 同代完整快照**（候选每次 `e_post_sample` 的完整 116 轨与 clip 元数据；源侧等价完成边界/generation 关联），再做 **K4 B3/B4**（`58423-return.out` 对 `63581-memcpy.src` 与 `poseLocal` 的逐分量对账；源图侧契约已[预注册](#c-g5-e2-b-b3b4)），最后登记控制 B。K3/K4 都需要另立仪器契约，不能直接把 v96a 的稀疏 checkpoint 或现有 E2-B 全局 footIK tally 当作同代证据；本文不授权实现或上机。
+**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739，单窗口）。剩余顺序：先补 **K3 同代完整快照**（候选每次 `e_post_sample` 的完整 116 轨与 clip 元数据；源侧等价完成边界/generation 关联），再登记 **控制 B**；K1-C1–C4 与 K2-C1/C2 的清单继续补齐。K3 需另立仪器契约，不能把 v96a 的稀疏 checkpoint 或 E2-B 的全局 footIK tally 当作同代证据；B3/B4 的 PASS 不自动资格化源侧同代输出。
 
 ### 五、下一步与明确不做
 
@@ -5321,7 +5321,7 @@ key 至少为完整 clip 名 + clip-node 指针 + binding-index，并以 actor/r
 | 原生 state 12→0 / completion | **v96a 原生 PASS（本场景）**：completed=129，first-return-zero=129，last-state=0；不等于捕获 clip-end event |
 | 时钟语义/速率 | v96a 已采 121/130 点原始 bits，unequip 末点 exact 2.0；存在保持段，速率/量化未判，无时间容差 |
 | 原生独立控制 B | 未登记/未通过；SamplePartialTracks 仍不是独立真值 |
-| B3/B4、同代源输出与后处理边界 | 未闭合；本地后 Generate 不自动资格化源侧 |
+| B3/B4、同代源输出与后处理边界 | **B3/B4 本会话 PASS**（v97d，739/739，单窗口）；同代源输出/K3 仍开放，本地后 Generate 不自动资格化源侧 |
 | K1 输入/资源/实例、K2 其余项 | 未闭合；本进程 key 与五字组合不替代完整身份与输入账本 |
 | 姿态等价/G5/G6 | unjudged；没有容差、G5 pass 或冻结；G6 后置，装载 teardown NO-GO |
 

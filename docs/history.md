@@ -1,6 +1,6 @@
 # 历史研究总结
 
-更新：2026-11-12。[C-G5-OBS v2](independent-behavior-graph.md#c-g5-observation-v2-20261112)的两场景离线验证已完成；原 v96 包缺失，已从同一提交源码重建 [v96a](diagnostics/g5-observation-v2a-20261112/result.md) 并[部署](build.md#deploy-20261112-v96a)。首次[原生运行](build.md#g5-cal-v96a-observation-v2-run1-20261112)取得 clip-family PASS 与本场景 `state 12→0` PASS（completed=129，`default=0`，unequip 时钟 exact 2.0），关闭了此前“差一帧”的覆盖缺口。新 schema 保留精确 clocks、分段/完成计数与 180 unequip 上限，区分 completed/timeout/invalid；时钟速率/量化、K1–K6 其余项、原生控制 B、B3/B4、时间资格与姿态等价仍待验证，G5 未通过。
+更新：2026-11-13。[C-G5-OBS v2](independent-behavior-graph.md#c-g5-observation-v2-20261112)的两场景离线验证已完成；原 v96 包缺失，已从同一提交源码重建 [v96a](diagnostics/g5-observation-v2a-20261112/result.md) 并[部署](build.md#deploy-20261112-v96a)。首次[原生运行](build.md#g5-cal-v96a-observation-v2-run1-20261112)取得 clip-family PASS 与本场景 `state 12→0` PASS（completed=129，`default=0`，unequip 时钟 exact 2.0），关闭了此前“差一帧”的覆盖缺口。新 schema 保留精确 clocks、分段/完成计数与 180 unequip 上限，区分 completed/timeout/invalid；源图后处理边界 **B3/B4 已在 v97d 单窗口 739/739 PASS（K4 本会话边界）**，四轮 INVALID 的前置缺陷与修复保留在各构建记录中。时钟速率/量化、K1、K2-C4 控制 B、K3 同代源输出、K5/K6、时间资格与姿态等价仍待验证，G5 未通过。
 
 - [渲染、展示实例与外观](history-rendering.md)：M0状态/合成、Actor与StudioHome、灯光、native Clone、AFP9取景/蒙皮、UBE，以及不同的回收边界。
 - [动画、OAR与暂停行为图](history-animation.md)：HKX取数/采样/映射反转、第二Actor暂停推图、最终输出、OAR/DAC/IED、r1/r2遗留与无Actor独立图关卡。
