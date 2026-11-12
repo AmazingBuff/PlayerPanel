@@ -133,9 +133,10 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **最近记录部署：v92（G5-E2-C clock ms）**：DLL `fe697ba91ffdd36c0eccd62c4a458405bbab946702a27327140e8ce72d8bcb38`，PDB `f57673ce1a618203e4c278d70138793cc0fd03731bbca88c8256cab8a1e11914`，身份与备份见 [v92 构建/部署](build.md#v92-g5e2c-ms-2026-11-10)。这是历史部署记录，本次文档工作未重新核验安装目录。
-- **最近记录 INI：E4 运行档** `8864075e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourcePoseCapture=true`、`SamplingLiveness=off`）；不是校准配置。仓库样例仍为 dormant 默认；修改设置需重启，不能直接用旧仪器运行 CAL v1。
-- **最近上机：v92 2026-11-11 00:26**，四块 116 轨快照、100 条时钟行、零丢失；[运行记录](build.md#v92-g5e2c-run1-20261111)。E3 两段运行已配对 2/2；[离线校准 A 已完成](#c-g5-cal-a-run1-20261111)，[CAL v1](#c-g5-cal-v1) 的原生 B/K1–K6/时间仍 NOT_READY。
+- **当前安装（2026-11-12，已部署未上机）：v96a**：DLL `2c5112ae…eab33f5`，PDB `e7803453…1814cf8`，INI `f41990d2…bb04b7e90c`；v95 三件套已备份到 `dist/deploy-backup-20261112-v95-v96apre/`，详见 [部署记录](build.md#deploy-20261112-v96a)。
+- **历史记录部署：v92（G5-E2-C clock ms）**：DLL `fe697ba91ffdd36c0eccd62c4a458405bbab946702a27327140e8ce72d8bcb38`，PDB `f57673ce1a618203e4c278d70138793cc0fd03731bbca88c8256cab8a1e11914`，身份与备份见 [v92 构建/部署](build.md#v92-g5e2c-ms-2026-11-10)。
+- **历史记录 INI：E4 运行档** `8864075e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourcePoseCapture=true`、`SamplingLiveness=off`）；不是校准配置。仓库样例仍为 dormant 默认；修改设置需重启，不能直接用旧仪器运行 CAL v1。
+- **最近上机：v95 D3 候选 2026-11-11 23:42**，clip-family PASS，但 1HM 卸下完成点未覆盖；[运行记录](build.md#g5-cal-d3-candidate-run1-20261111)。v96a 尚未上机；[离线校准 A 已完成](#c-g5-cal-a-run1-20261111)，[CAL v1](#c-g5-cal-v1) 的原生 B/K1–K6/时间仍 NOT_READY。
 - **历史**：v86 E3 concurrent 运行、v88 R/C 运行与回 dormant、v89–v91 捕获迭代分别保留当时配置/工件；[最新摘要](#status-20261111-session)拥有后续顺序。更早的 dormant 记录不代表最近部署状态。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
@@ -5173,7 +5174,8 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 ### 当前部署
 
-- 安装：**v95 DLL/PDB + D3 候选 prime 档** `84e45be3…6852ab`。
+- **2026-11-12 更新：安装已切换为 v96a**（DLL `2c5112ae…` / PDB `e7803453…` / INI `f41990d2…`），尚未上机；部署与回退见 [部署记录](build.md#deploy-20261112-v96a)。
+- 以下为 2026-11-11 的历史部署：**v95 DLL/PDB + D3 候选 prime 档** `84e45be3…6852ab`。
 - 回退：`dist/deploy-backup-20261111-v94d3-v95pre/`（v94 + D3 源侧探针）；更早备份见上表。
 - 本轮最后提交：`3bf7ce8 docs(g5-cal): record the D3 candidate clip-family pass`（后续仅本摘要/入口同步）。
 
@@ -5185,7 +5187,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **状态**：离线实现与两场景回归通过；本地构建标签 `v96-g5cal-observation-v2`。用户拥有全部实际游戏测试，本轮未部署、未启动游戏。[结果与完整清单](diagnostics/g5-observation-v2-20261112/result.md)、[构建](build.md#v96-g5-observation-v2-20261112)、[手工包](../dist/g5-observation-v2-20261112/MANUAL.md)记录匹配身份、命令退出值与哈希。原生行为仍 **UNVERIFIED**。
 
-**v96a 本地重建（2026-11-12）**：原 v96 包及其 `build/Release` 产物不在当前检出中，安装目录仍是 v95；因此从已提交的同一份 observation-v2 源码在干净树 `f39ffa8b36` 重建，身份为 `CharacterPanel-scenegraph-v96a-g5cal-observation-v2-f39ffa8b36-cl94faaed0c6-20261112T134517Z`。四个源码哈希与 v96 清单一致，仅身份时间戳与二进制哈希不同；INI 仍是同样的七项覆盖。构建/包/哈希与“未部署”边界见 [v96a 结果](diagnostics/g5-observation-v2a-20261112/result.md) 与 [构建记录](build.md#v96a-g5-observation-v2a-20261112)。本节所有 schema=2 语义不变。
+**v96a 本地重建与部署（2026-11-12）**：原 v96 包及其 `build/Release` 产物不在当前检出中，安装目录仍是 v95；因此从已提交的同一份 observation-v2 源码在干净树 `f39ffa8b36` 重建，身份为 `CharacterPanel-scenegraph-v96a-g5cal-observation-v2-f39ffa8b36-cl94faaed0c6-20261112T134517Z`。四个源码哈希与 v96 清单一致，仅身份时间戳与二进制哈希不同；INI 仍是同样的七项覆盖。随后已备份 v95 并部署该 v96a 三件套（安装哈希与包一致，DLL 内含上述身份），但尚未上机。构建/包/哈希见 [v96a 结果](diagnostics/g5-observation-v2a-20261112/result.md) 与 [构建记录](build.md#v96a-g5-observation-v2a-20261112)，部署/回退见 [部署记录](build.md#deploy-20261112-v96a)。本节所有 schema=2 语义不变。
 
 
 ### 取代的解释与保留的历史

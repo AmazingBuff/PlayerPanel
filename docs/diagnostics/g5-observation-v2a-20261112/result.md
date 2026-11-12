@@ -1,6 +1,6 @@
 # G5 observation v2a local rebuild — 2026-11-12
 
-**OFFLINE REBUILT AND VERIFIED; NATIVE VALIDATION PENDING.** Task `g5-observation-v2a-20261112`, contract revision 1; baseline `oar-idle3` / `f39ffa8b36b691b9968064ee0a2a59a67a87578d`, clean tracked worktree. This rebuild exists because the v96 package and its `build/Release` artifacts were not present in this checkout; the committed observation-v2 source is unchanged. No deployment or game launch was performed.
+**OFFLINE REBUILT AND VERIFIED; NATIVE VALIDATION PENDING.** Task `g5-observation-v2a-20261112`, contract revision 1; baseline `oar-idle3` / `f39ffa8b36b691b9968064ee0a2a59a67a87578d`, clean tracked worktree. This rebuild exists because the v96 package and its `build/Release` artifacts were not present in this checkout; the committed observation-v2 source is unchanged. No deployment or game launch was performed during the rebuild itself; the later deployment is recorded below.
 
 [Canonical specification](../../independent-behavior-graph.md#c-g5-observation-v2-20261112), [build record](../../build.md#v96a-g5-observation-v2a-20261112), [manual package](../../../dist/g5-observation-v2a-20261112/MANUAL.md), [source/build/package manifest](manifest.json).
 
@@ -21,3 +21,5 @@ The manual INI is derived from the committed sample with exactly the seven v96 o
 The first MSBuild attempt inside the command sandbox failed while MSBuild queried the user Windows SDK directory; rerunning the same build outside the sandbox exited 0. That was an environment permission failure, not a source failure, and no source was changed to work around it.
 
 Native validation remains **UNVERIFIED** on every axis: clip-family selection, state-12-to-0 completion, clock semantics/rate, control B, B3/B4, source completion pairing, input/resource/instance identity and pose equivalence. This rebuild does not add evidence to any of them and does not change the G5/G6 verdict.
+
+**Deployment follow-up (2026-11-12)**: the v96a trio was subsequently backed up/copied into `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` with destination-hash checks; the installed identity and keys match. The v95 backup is `dist/deploy-backup-20261112-v95-v96apre/`. See the [deployment record](../../build.md#deploy-20261112-v96a). No game run has been made.

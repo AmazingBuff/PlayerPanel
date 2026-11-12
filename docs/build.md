@@ -1701,6 +1701,8 @@ cmake --build --preset Release --parallel 2
 
 **Release**: configure/build both exit 0, using existing VS 2022/v143 14.44.35207, Windows SDK 10.0.26100.0, `x64-windows-static-md` and disconnected FetchContent; no dependency changed. Configure retains the existing `CMAKE_SKIP_INSTALL_RULES` note, build the existing D9025 `/Ob2` to `/Ob3` notices. Identity `CharacterPanel-scenegraph-v96-g5cal-observation-v2-dfd37acc16+dirty-cl94faaed0c6-20261112T102128Z`; full baseline HEAD `dfd37acc166f2ca8dbc40ff1ac94fb54ad095626` plus the approved uncommitted changes. The complete source/build/package identities and raw-byte hashes are in [manifest.json](diagnostics/g5-observation-v2-20261112/manifest.json).
 
+**Local absence**: this v96 package is not present in the current checkout (nor are its `build/Release` copies); the [v96a rebuild below](#v96a-g5-observation-v2a-20261112) is the local equivalent and preserves the same source hashes.
+
 | Matching local file | Bytes | SHA-256 |
 | --- | ---: | --- |
 | [CharacterPanel.dll](../dist/g5-observation-v2-20261112/CharacterPanel.dll) | 1849856 | `c90df26cf8fc1f2ef5ed1f87edf6ba5e7fc989a52301c591a8ddd8b95c6bd745` |
@@ -1734,4 +1736,26 @@ cmake --build --preset Release --parallel 2
 | [CharacterPanel.pdb](../dist/g5-observation-v2a-20261112/CharacterPanel.pdb) | 50016256 | `e7803453ef7436bf7b702a7237c2c309fca4b8c7256bcf5cfb1a6e8ef1814cf8` |
 | [CharacterPanel.ini](../dist/g5-observation-v2a-20261112/CharacterPanel.ini) | 11703 | `f41990d2f82533efb35e8f68e4b40855656f09a08558734120d446bb4b7e90c` |
 
-The DLL/PDB copies hash-match `build/Release`; the UTF-8/no-BOM INI has exactly the seven v96 overrides and no other value changes. **Not deployed**: the installed trio remains v95 and no game run was made. Native clip family, state-12-to-0 completion, clock semantics, control B, B3/B4, source pairing, identity and pose equivalence all remain pending.
+The DLL/PDB copies hash-match `build/Release`; the UTF-8/no-BOM INI has exactly the seven v96 overrides and no other value changes. At build time this was not deployed; it was deployed later the same day (see below), and no game run was made. Native clip family, state-12-to-0 completion, clock semantics, control B, B3/B4, source pairing, identity and pose equivalence all remain pending.
+
+
+<a id="deploy-20261112-v96a"></a>
+## Deployment 2026-11-12: v95 → v96a
+
+**Deployed, not run.** The installed v95 trio was backed up and hash-verified to `dist/deploy-backup-20261112-v95-v96apre/`:
+
+| Backup file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `CharacterPanel.dll` (v95) | 1837568 | `f8e2e386e26f2abf4a47d3b150555d68d30913ba38a6ec16d30ca9e3581a8ee0` |
+| `CharacterPanel.pdb` (v95) | 49639424 | `eaa578472f17a68ff00f0c4c15c21aac680d706587d7c52a5348d7c43efddd5c` |
+| `CharacterPanel.ini` (D3 candidate) | 10721 | `84e45be30e8fba5d0316f9a195754c26effb72226ba47d5dfa8afe7cbc6852ab` |
+
+The [v96a package](../dist/g5-observation-v2a-20261112/MANUAL.md) was copied to `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\` with source and destination hash checks:
+
+| Installed file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `CharacterPanel.dll` | 1850368 | `2c5112ae571b30a84fc089d1122ee9fa6201914974e04b6beca3e0d32eab33f5` |
+| `CharacterPanel.pdb` | 50016256 | `e7803453ef7436bf7b702a7237c2c309fca4b8c7256bcf5cfb1a6e8ef1814cf8` |
+| `CharacterPanel.ini` | 11703 | `f41990d2f82533efb35e8f68e4b40855656f09a08558734120d446bb4b7e90c` |
+
+The installed DLL contains `CharacterPanel-scenegraph-v96a-g5cal-observation-v2-f39ffa8b36-cl94faaed0c6-20261112T134517Z`. Installed key readback: `IndependentGraph=inject`, `CandidateInputProbe=true`, `CandidateInputVariable=` (empty), `CandidateEquipPrime=true`, `CandidateEquipPrimeBranch=true`, `CandidateUnequipProbe=true`, `CandidateUnequipEvent=Unequip`, `OarContextWatch=false`, `SamplingLiveness=off`; `DisplayPose`, `DisplayStep` and all source instruments remain off. Skyrim was not running during the copy; MO2 was open. No game launch was made, so every native axis remains pending.
