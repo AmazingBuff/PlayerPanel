@@ -133,10 +133,10 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 <a id="deploy-state"></a>
 ### 当前部署与开关
 
-- **当前安装（2026-11-12，已部署未上机）：v96a**：DLL `2c5112ae…eab33f5`，PDB `e7803453…1814cf8`，INI `f41990d2…bb04b7e90c`；v95 三件套已备份到 `dist/deploy-backup-20261112-v95-v96apre/`，详见 [部署记录](build.md#deploy-20261112-v96a)。
+- **当前安装（2026-11-12，已部署并首次上机）：v96a**：DLL `2c5112ae…eab33f5`，PDB `e7803453…1814cf8`，INI `f41990d2…bb04b7e90c`；v95 三件套已备份到 `dist/deploy-backup-20261112-v95-v96apre/`，详见 [部署记录](build.md#deploy-20261112-v96a)。
 - **历史记录部署：v92（G5-E2-C clock ms）**：DLL `fe697ba91ffdd36c0eccd62c4a458405bbab946702a27327140e8ce72d8bcb38`，PDB `f57673ce1a618203e4c278d70138793cc0fd03731bbca88c8256cab8a1e11914`，身份与备份见 [v92 构建/部署](build.md#v92-g5e2c-ms-2026-11-10)。
 - **历史记录 INI：E4 运行档** `8864075e…`（`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourcePoseCapture=true`、`SamplingLiveness=off`）；不是校准配置。仓库样例仍为 dormant 默认；修改设置需重启，不能直接用旧仪器运行 CAL v1。
-- **最近上机：v95 D3 候选 2026-11-11 23:42**，clip-family PASS，但 1HM 卸下完成点未覆盖；[运行记录](build.md#g5-cal-d3-candidate-run1-20261111)。v96a 尚未上机；[离线校准 A 已完成](#c-g5-cal-a-run1-20261111)，[CAL v1](#c-g5-cal-v1) 的原生 B/K1–K6/时间仍 NOT_READY。
+- **最近上机：v96a 2026-11-12 21:57**，clip-family PASS、state 12→0 PASS（completed=129）；[运行记录](build.md#g5-cal-v96a-observation-v2-run1-20261112)。此前 v95 D3 候选（2026-11-11 23:42）的 clip-family 正结果与未覆盖的卸下完成点保留为历史；[离线校准 A 已完成](#c-g5-cal-a-run1-20261111)，[CAL v1](#c-g5-cal-v1) 的原生 B/K1–K6/时间仍 NOT_READY。
 - **历史**：v86 E3 concurrent 运行、v88 R/C 运行与回 dormant、v89–v91 捕获迭代分别保留当时配置/工件；[最新摘要](#status-20261111-session)拥有后续顺序。更早的 dormant 记录不代表最近部署状态。
 - v41/v42/v43 与 v46-20261029 工件的原身份和当时状态保留；v46 正常工作流实际使用 [20261030 重建](scene-graph.md#v46-manual-regression)，不可混为逐字节相同。
 - 2026-11-02 本轮：实现/构建/部署 [C-G4-A4](#c-g4-a4-numeric-types)，并完成一次上机会话（22:32–22:37，[日志](diagnostics/CharacterPanel-g4a4-numeric-types-20261102-2232.log) 已归档）→ A 项关闭；其余仪器范围仍须另立评审/实现范围。
@@ -5174,7 +5174,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 ### 当前部署
 
-- **2026-11-12 更新：安装已切换为 v96a**（DLL `2c5112ae…` / PDB `e7803453…` / INI `f41990d2…`），尚未上机；部署与回退见 [部署记录](build.md#deploy-20261112-v96a)。
+- **2026-11-12 更新：安装已切换为 v96a**（DLL `2c5112ae…` / PDB `e7803453…` / INI `f41990d2…`），并于 21:57 首次上机；部署/回退见 [部署记录](build.md#deploy-20261112-v96a)，运行见 [v96a run 1](build.md#g5-cal-v96a-observation-v2-run1-20261112)。
 - 以下为 2026-11-11 的历史部署：**v95 DLL/PDB + D3 候选 prime 档** `84e45be3…6852ab`。
 - 回退：`dist/deploy-backup-20261111-v94d3-v95pre/`（v94 + D3 源侧探针）；更早备份见上表。
 - 本轮最后提交：`3bf7ce8 docs(g5-cal): record the D3 candidate clip-family pass`（后续仅本摘要/入口同步）。
@@ -5260,10 +5260,26 @@ key 至少为完整 clip 名 + clip-node 指针 + binding-index，并以 actor/r
 
 | 验证轴 | 本轮资格 |
 | --- | --- |
-| clip-family | D3 有日期化正结果；v96 待用户验证 |
-| 原生 state 12→0 / completion | 待用户验证；不等于捕获 clip-end event |
-| 时钟语义/速率 | 离线表示修复通过，原生数据未采；无速度结论或时间容差 |
+| clip-family | **v96a 原生 PASS**（2026-11-12 21:57，`1HM_Equip`/`1HM_Unequip`，H2H=0） |
+| 原生 state 12→0 / completion | **v96a 原生 PASS（本场景）**：completed=129，first-return-zero=129，last-state=0；不等于捕获 clip-end event |
+| 时钟语义/速率 | v96a 已采 121/130 点原始 bits，unequip 末点 exact 2.0；存在保持段，速率/量化未判，无时间容差 |
 | 原生独立控制 B | 未登记/未通过；SamplePartialTracks 仍不是独立真值 |
 | B3/B4、同代源输出与后处理边界 | 未闭合；本地后 Generate 不自动资格化源侧 |
 | K1 输入/资源/实例、K2 其余项 | 未闭合；本进程 key 与五字组合不替代完整身份与输入账本 |
 | 姿态等价/G5/G6 | unjudged；没有容差、G5 pass 或冻结；G6 后置，装载 teardown NO-GO |
+
+### v96a 首次原生运行（2026-11-12 21:57，clip-family + state 12→0 PASS）
+
+**工件**：v96a DLL/PDB/INI（identity `CharacterPanel-scenegraph-v96a-g5cal-observation-v2-f39ffa8b36-cl94faaed0c6-20261112T134517Z`）。日志 [CharacterPanel-g5cal-v96a-observation-v2-run1-20261112-2157.log](diagnostics/CharacterPanel-g5cal-v96a-observation-v2-run1-20261112-2157.log)，180,111 B，SHA-256 `d34994f43319e5e83f6f13162fad9d22ce6b47dfd4c64b1850eff705d7d17f6f`。一次激活、一次 `WeapEquip` 分发、一次 `Unequip` 分发、一个 equip 段和一个 unequip 段；零 `[E]`，15 条 `[W]` 均为既有 studio-light/DAC 预览提示，与本实验无关；五处 `source-drift=none`。
+
+**读数**：
+
+- 五字 prime 全部 `written`，readback `1/1/9/1/9`，`outcome=ready`；`WeapEquip` id=2 一次 dispatched，`Unequip` id=144 一次 unequip-inject dispatched。
+- **equip**：baseline `1HM_Equip`，binding-index=22，duration 1.4333；120/120 commanded，elapsed `2.0000001`，dt f32 `3c888889`；completed 87 达到 `istate=9 default=1`；段尾 `outcome=completed stop-reason=fixed-equip-budget active-state-seen=false last-state=1 completion-evidence=fixed-budget-only`。这是固定预算结束，**不是** equip 完成事件。全日志无 `H2H_Equip`/`H2H_Unequip`。
+- **unequip**：settle `target-step=87 settled-step=101`，baseline `default=12 istate=9`，baseline 已有 `1HM_Unequip`（binding-index=75，duration 2.0）；completed 128 仍 `default=12`，completed 129 变为 `default=0`；段尾 `outcome=completed stop-reason=state-12-to-0 active-state-seen=true first-return-zero=129 last-state=0 completion-evidence=state-12-to-0-only`。同点 `local-time=2 f32=40000000`，99/99 tracks compared/agreed，max-dpos=0.000009，max-drot=0.000006。
+- **覆盖**：equip peak-nodes=140、peak-clips=4、traces=6、points=121；unequip 141/4/5/130；全部 `node/clip/trace-overflow=false`、`name-invalid=false`。unequip 的 130 点 trace 保留 point0 baseline 与 point1..129 completed-output 对应关系。
+- **时钟**：unequip 末点精确 2.0（`40000000`），与 duration 对齐；中段有保持段（如 `1.9833` 连续约 14 点），本轮只保留原始 bits，不据此推导速率、量化或容差。
+
+**判定**：v96a 在冻结的 1H + 左手 9 场景取得 **clip-family PASS** 和 **本场景 state-12-to-0 完成 PASS**，此前“差一帧”的卸下完成覆盖缺口已关闭。该完成证据仅是 `currentDefaultState` 输出，不声称捕获 `Unequip_Out` 或 clip-end event。时钟语义/速率、原生控制 B、B3/B4、同代源输出配对、K1/K2 其余项与姿态等价/G5/G6 仍未闭合；无容差、无 G5 冻结/通过。
+
+**不可外推**：单次运行、单一装备状态、单次候选窗口；五字 prime 未做逐项消融，不能宣称最小集或独占 writer；`1HM_Equip` 的 “completed” 只是固定预算结束；unequip 的中段时钟保持段不能用于速率结论。
