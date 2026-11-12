@@ -76,16 +76,21 @@ namespace animation::behavior_graph
         // counter set: 0 = B3 (out re-read), 1 = B4 (poseLocal). The phase max uses the worst
         // failing component of THIS call, not a cross-call accumulator, so a later clean call
         // cannot lower or mask an earlier phase's worst delta.
-        std::uint32_t compare(std::uint8_t a_phase, std::uint32_t a_track_count, ProbeVec4 const* a_expected,
-            ProbeVec4 const* a_actual) noexcept
+        // a_expected_stride / a_actual_stride are in vec4 units per track. The 58423 out snapshot
+        // is [translation, rotation] (2), while poseLocal is an hkQsTransform array
+        // [translation, rotation, scale] (3). v97c compared both at stride 2, so poseLocal track 1
+        // read track 0's scale (1,1,1) — the exact 0/1 sample pattern of the v97b/v97c runs.
+        std::uint32_t compare(std::uint8_t a_phase, std::uint32_t a_track_count,
+            ProbeVec4 const* a_expected, std::uint32_t a_expected_stride,
+            ProbeVec4 const* a_actual, std::uint32_t a_actual_stride) noexcept
         {
             std::uint32_t bad = 0;
             for (std::uint32_t track = 0; track < a_track_count; ++track)
             {
                 for (std::uint8_t segment = 0; segment < 2; ++segment)
                 {
-                    ProbeVec4 const& expected = a_expected[track * 2 + segment];
-                    ProbeVec4 const& actual = a_actual[track * 2 + segment];
+                    ProbeVec4 const& expected = a_expected[track * a_expected_stride + segment];
+                    ProbeVec4 const& actual = a_actual[track * a_actual_stride + segment];
                     float const* e = &expected.x;
                     float const* a = &actual.x;
                     std::uint8_t const base = segment == 0 ? Probe_Mix_Channel_Trans_X : Probe_Mix_Channel_Rot_X;

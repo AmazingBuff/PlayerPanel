@@ -61,12 +61,12 @@ namespace
         std::array<ProbeVec4, kTracks * 2> actual{};
         fill(expected.data(), 1.0f);
         fill(actual.data(), 1.0f);
-        assert(tally.compare(0, kTracks, expected.data(), actual.data()) == 0);
+        assert(tally.compare(0, kTracks, expected.data(), 2, actual.data(), 2) == 0);
         assert(tally.b3_checked == 1 && tally.b3_equal == 1 && tally.b3_failed == 0);
         assert(tally.b4_checked == 0);
         // One component beyond both bounds: vec 1's y is 1.11, so 2.02 is a 0.91 drift.
         actual[1].y = 2.02f;
-        assert(tally.compare(1, kTracks, expected.data(), actual.data()) == 1);
+        assert(tally.compare(1, kTracks, expected.data(), 2, actual.data(), 2) == 1);
         assert(tally.b4_checked == 1 && tally.b4_failed == 1);
         assert(tally.sample_count == 1);
         assert(tally.samples[0].track == 0 && tally.samples[0].channel == Probe_Mix_Channel_Rot_X + 1);
@@ -89,9 +89,35 @@ namespace
             actual[i] = expected[i];
         }
         actual[0].z = std::numeric_limits<float>::quiet_NaN();
-        (void)tally.compare(0, 1, expected.data(), actual.data());
+        (void)tally.compare(0, 1, expected.data(), 2, actual.data(), 2);
         assert(tally.non_finite);
         assert(tally.b3_failed == 1);
+    }
+
+    // v97c regression: poseLocal is hkQsTransform (translation, rotation, scale per track) while
+    // the 58423 out snapshot stores only translation and rotation. Comparing pose at stride 2 read
+    // the previous track's scale (1,1,1), producing the systematic 0/1 sample pattern.
+    void pose_stride_three_matches_two_vec4_snapshot()
+    {
+        std::array<ProbeVec4, kTracks * 2> snapshot{};
+        std::array<ProbeVec4, kTracks * 3> pose{};
+        for (std::uint32_t t = 0; t < kTracks; ++t)
+        {
+            ProbeVec4 const trans{ static_cast<float>(t), 0.0f, 0.0f, 0.0f };
+            ProbeVec4 const rot{ 0.0f, 0.0f, 0.0f, 1.0f };
+            snapshot[t * 2] = trans;
+            snapshot[t * 2 + 1] = rot;
+            pose[t * 3] = trans;
+            pose[t * 3 + 1] = rot;
+            pose[t * 3 + 2] = { 1.0f, 1.0f, 1.0f, 0.0f };  // scale: must be ignored
+        }
+        ProbeB3B4Tally tally;
+        assert(tally.compare(1, kTracks, snapshot.data(), 2, pose.data(), 3) == 0);
+        assert(tally.b4_checked == 1 && tally.b4_equal == 1 && tally.b4_failed == 0);
+        // The old stride-2 read of the same pose fails on every track after the first.
+        ProbeB3B4Tally wrong;
+        assert(wrong.compare(1, kTracks, snapshot.data(), 2, pose.data(), 2) != 0);
+        assert(wrong.b4_failed == 1);
     }
 
     void context_behavior_reads_plus_8()
@@ -154,9 +180,10 @@ int main()
     ledger_stores_one_return_per_thread_and_matches_behavior();
     tally_splits_phases_and_keeps_samples();
     tally_flags_non_finite();
+    pose_stride_three_matches_two_vec4_snapshot();
     context_behavior_reads_plus_8();
 #ifdef _WIN32
     footik_thunk_forwards_four_arguments();
 #endif
-    std::puts("5 probe-liveness b3b4 cases passed (engine-free)");
+    std::puts("6 probe-liveness b3b4 cases passed (engine-free)");
 }

@@ -555,12 +555,14 @@ namespace
                             pose[1].x, pose[1].y, pose[1].z, pose[1].w,
                             pose[2].x, pose[2].y, pose[2].z, pose[2].w);
                     }
-                    (void)s.b3b4_tally.compare(0, slot->tracks, slot->snapshot.data(), g_b3b4_reread);
+                    (void)s.b3b4_tally.compare(0, slot->tracks, slot->snapshot.data(), 2,
+                        g_b3b4_reread, 2);
                     if (clamped > 0)
                     {
                         std::uint32_t const n = clamped < slot->tracks ? clamped : slot->tracks;
-                        (void)s.b3b4_tally.compare(1, n, slot->snapshot.data(),
-                            static_cast<ProbeVec4 const*>(static_cast<void const*>(a_pose)));
+                        // poseLocal is hkQsTransform: translation, rotation, scale per track.
+                        (void)s.b3b4_tally.compare(1, n, slot->snapshot.data(), 2,
+                            static_cast<ProbeVec4 const*>(static_cast<void const*>(a_pose)), 3);
                     }
                 }
             }
