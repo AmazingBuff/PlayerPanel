@@ -1866,3 +1866,19 @@ Identity `CharacterPanel-scenegraph-v97b-g5e2b-b3b4-a3396741d5-cl94faaed0c6-2026
 **B4 evidence is not adjudicated**: all 1,167 pairs fail with a systematic low-track pattern — `track=1` expected trans `(0,0,0)` vs poseLocal `(1,1,1)`; `track=1` rot w expected 1 vs 0; `track=2` channels 3–6 expected 0 vs 1. That is not the footprint of a subtle second writer; it suggests the `out` block's per-track field order/stride differs from `poseLocal`'s (a `(1,1,1)` triple is a scale-like vector, not a plausible translation). E2-A in the same run shows poseLocal ≈ slot mix with ~7 residual components per frame, i.e. poseLocal does contain the footIK corrections relative to the mix, so a wholesale layout mismatch between poseLocal and the slot tracks is ruled out; the open question is the out-block field order.
 
 **Fix (v97c)**: `ProbeB3B4Ledger::consume` clears the pending snapshot at the apply so `multi` now means two returns before one apply; the verdict gates on `multi/stale/no-out/overwritten`; and a one-shot `b3b4-first` row prints the out pointer, block base, header words (+0x32 count, +0x34 offset), and the raw first three vec4 of both the out snapshot and poseLocal, so the next run settles the layout without guessing. Criteria, thresholds and boundary rules unchanged; this run keeps INVALID.
+
+
+<a id="v97c-g5e2b-b3b4-20261113"></a>
+## v97c G5-E2-B B3/B4 build and deployment (2026-11-13, not yet run)
+
+**Commit**: `0253e17 fix(g5-e2b): consume B3/B4 slots and gate the verdict on multi`. Ledger slots are consumed by the apply (`multi` now measures genuine double returns), the verdict requires `multi/stale/no-out/overwritten` to be zero, and one `b3b4-first` row dumps the out pointer, block base, header words and the raw first three vec4 of both the out snapshot and poseLocal. Offline 5/5 B3B4 + 3/3 E2B cases pass; Release build exit 0.
+
+Identity `CharacterPanel-scenegraph-v97c-g5e2b-b3b4-0253e171bb-cl94faaed0c6-20261112T161620Z` (clean tree), embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-e2b-b3b4-v97c-20261113/CharacterPanel.dll) | 1893376 | `c36231b07cecfe0ea6f7945a7069a0867dd5726876ec1fad5db519ab5eea707f` |
+| [CharacterPanel.pdb](../dist/g5-e2b-b3b4-v97c-20261113/CharacterPanel.pdb) | 50155520 | `0a57daa955c81249a41dd8150bc9586230749b551d3ea02eb0990f9673460efe` |
+| [CharacterPanel.ini](../dist/g5-e2b-b3b4-v97c-20261113/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
+
+**Deployed 2026-11-13** (Skyrim not running): the v97b trio was backed up hash-verified to `dist/deploy-backup-20261113-v97b-v97cpre/`; the three v97c files were copied with source+destination hash comparison and the installed DLL contains the v97c identity. The run INI is unchanged (`ba93289b…`). [MANUAL.md](../dist/g5-e2b-b3b4-v97c-20261113/MANUAL.md) records the run and the layout question. **No game run yet**.
