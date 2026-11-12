@@ -5185,6 +5185,9 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **状态**：离线实现与两场景回归通过；本地构建标签 `v96-g5cal-observation-v2`。用户拥有全部实际游戏测试，本轮未部署、未启动游戏。[结果与完整清单](diagnostics/g5-observation-v2-20261112/result.md)、[构建](build.md#v96-g5-observation-v2-20261112)、[手工包](../dist/g5-observation-v2-20261112/MANUAL.md)记录匹配身份、命令退出值与哈希。原生行为仍 **UNVERIFIED**。
 
+**v96a 本地重建（2026-11-12）**：原 v96 包及其 `build/Release` 产物不在当前检出中，安装目录仍是 v95；因此从已提交的同一份 observation-v2 源码在干净树 `f39ffa8b36` 重建，身份为 `CharacterPanel-scenegraph-v96a-g5cal-observation-v2-f39ffa8b36-cl94faaed0c6-20261112T134517Z`。四个源码哈希与 v96 清单一致，仅身份时间戳与二进制哈希不同；INI 仍是同样的七项覆盖。构建/包/哈希与“未部署”边界见 [v96a 结果](diagnostics/g5-observation-v2a-20261112/result.md) 与 [构建记录](build.md#v96a-g5-observation-v2a-20261112)。本节所有 schema=2 语义不变。
+
+
 ### 取代的解释与保留的历史
 
 - 旧 `clip-steps` 用 `lround(delta*60)` 丢失分数；负数编码 `N`，正 23 也编码 `N`。旧日志的这些字符不能反解成可靠时钟，不改写旧日志、不按旧字符求速率。新 schema=2 从下一份原生数据开始生效。

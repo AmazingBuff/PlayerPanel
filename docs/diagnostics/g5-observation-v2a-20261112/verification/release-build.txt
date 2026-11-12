@@ -1,0 +1,76 @@
+适用于 .NET Framework MSBuild 版本 17.14.60+43b635718
+
+  Checking File Globs
+  CommonLibSSE.vcxproj -> E:\SkyrimTools\Proj\CharacterPanel\build\extern\CommonLibSSE\Release\CommonLibSSE.lib
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  cmake_pch.cxx
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  frame_trace.cpp
+  independent_graph.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  ownership_probe.cpp
+  probe_liveness.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  source_event_capture.cpp
+  source_timeline.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  source_write_capture.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  clip.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  controller.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  effects.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  native.cpp
+  script_attachment.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  session.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  event_clock.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  hooks.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  settings.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  character_manager.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  equipment_state.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  figure_audit.cpp
+  held_equipment.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  scene_graph.cpp
+  scene_graph_capture.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  input.cpp
+  main.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  panel_monitor.cpp
+  common_states.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  d3d11_util.cpp
+  composite.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  render_hook.cpp
+  renderer.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  shader_manager.cpp
+cl : 命令行  warning D9025: 正在重写“/Ob2”(用“/Ob3”) [E:\SkyrimTools\Proj\CharacterPanel\build\CharacterPanel.vcxproj]
+  figure_passes.cpp
+  light.cpp
+    正在创建库 E:/SkyrimTools/Proj/CharacterPanel/build/Release/CharacterPanel.lib 和对象 E:/SkyrimTools/Proj/CharacterPanel/build/Release/CharacterPanel.exp
+  CharacterPanel.vcxproj -> E:\SkyrimTools\Proj\CharacterPanel\build\Release\CharacterPanel.dll
+  E:/SkyrimTools/Proj/CharacterPanel/build/Release/CharacterPanel.dll: message: deploying dependencies
+exit=0

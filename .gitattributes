@@ -17,3 +17,4 @@ src/animation/behavior_graph/observation_policy.h text eol=lf
 tests/behavior_graph_observation_test.cpp text eol=lf
 config/CharacterPanel.ini text eol=crlf
 docs/diagnostics/g5-observation-v2-20261112/** -text whitespace=cr-at-eol,-blank-at-eof
+docs/diagnostics/g5-observation-v2a-20261112/** -text whitespace=cr-at-eol,-blank-at-eof

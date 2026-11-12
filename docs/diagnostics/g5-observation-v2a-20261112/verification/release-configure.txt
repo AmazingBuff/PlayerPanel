@@ -1,0 +1,25 @@
+Preset CMake variables:
+
+  CMAKE_CONFIGURATION_TYPES="Release"
+  CMAKE_CXX_FLAGS="/EHsc /MP /W4 /WX"
+  CMAKE_MSVC_RUNTIME_LIBRARY="MultiThreadedDLL"
+  CMAKE_TOOLCHAIN_FILE="C:\env\vcpkg/scripts/buildsystems/vcpkg.cmake"
+  VCPKG_TARGET_TRIPLET="x64-windows-static-md"
+
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26300.
+Options:
+	Enable Xbyak: OFF
+	Enable Patch Safety Checks: ON
+	Enable Skyrim SE: ON
+	Enable Skyrim AE: ON
+	Enable Skyrim VR: OFF
+	Build Tests: OFF
+CMake Warning in CMakeLists.txt:
+-- Configuring done (0.7s)
+  CMAKE_SKIP_INSTALL_RULES was enabled even though installation rules have
+  been specified
+
+
+-- Generating done (0.2s)
+-- Build files have been written to: E:/SkyrimTools/Proj/CharacterPanel/build
+exit=0

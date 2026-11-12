@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "task_id": "g5-observation-v2a-20261112",
+  "contract_revision": 1,
+  "status": "OFFLINE_VERIFIED_NATIVE_PENDING",
+  "build_label": "v96a-g5cal-observation-v2",
+  "build_identity": "CharacterPanel-scenegraph-v96a-g5cal-observation-v2-f39ffa8b36-cl94faaed0c6-20261112T134517Z",
+  "source_revision": "f39ffa8b36b691b9968064ee0a2a59a67a87578d",
+  "source_state": "clean",
+  "rebuild_of": {
+    "task_id": "g5-observation-v2-20261112",
+    "build_identity": "CharacterPanel-scenegraph-v96-g5cal-observation-v2-dfd37acc16+dirty-cl94faaed0c6-20261112T102128Z",
+    "reason": "The original v96 package and build/Release artifacts were not present in this checkout; v96a rebuilds the same committed source so a local native run is possible."
+  },
+  "commonlib_revision": "94faaed0c60eddd8347767f2d4d29a97c93bde8c",
+  "toolchain": {
+    "preset": "Release",
+    "msvc": "14.44.35207",
+    "generator": "Visual Studio 17 2022",
+    "triplet": "x64-windows-static-md",
+    "vcpkg_manifest_install": "OFF",
+    "fetchcontent_fully_disconnected": "ON"
+  },
+  "source_files": {
+    "src/animation/behavior_graph/observation_policy.h": {
+      "bytes": 8052,
+      "sha256": "2057765b738af7fc3c319fc286fb0442365856b9d38b17f1fed7a3e35522aa2b"
+    },
+    "src/animation/behavior_graph/independent_graph.cpp": {
+      "bytes": 180370,
+      "sha256": "6966e27b0ecb9e2734e9151e59b5d46f35b900e47c95979c394afd2f1bda82f6"
+    },
+    "tests/behavior_graph_observation_test.cpp": {
+      "bytes": 8102,
+      "sha256": "c968653cb792caa0ded00a6825cae66c840a2513b5ed5cd2c326ba5bd6aae932"
+    },
+    "config/CharacterPanel.ini": {
+      "bytes": 11715,
+      "sha256": "3796a3148ecd8285f6ad98a7d800c95f19ad25a414602c42110010bc64f16984"
+    }
+  },
+  "package_files": {
+    "CharacterPanel.dll": {
+      "bytes": 1850368,
+      "sha256": "2c5112ae571b30a84fc089d1122ee9fa6201914974e04b6beca3e0d32eab33f5",
+      "source": "build/Release/CharacterPanel.dll"
+    },
+    "CharacterPanel.pdb": {
+      "bytes": 50016256,
+      "sha256": "e7803453ef7436bf7b702a7237c2c309fca4b8c7256bcf5cfb1a6e8ef1814cf8",
+      "source": "build/Release/CharacterPanel.pdb"
+    },
+    "CharacterPanel.ini": {
+      "bytes": 11703,
+      "sha256": "f41990d2f82533efb35e8f68e4b40855656f09a08558734120d446bb04b7e90c",
+      "source": "config/CharacterPanel.ini plus manual_ini_overrides"
+    }
+  },
+  "generated_build_header_sha256": "a506848a7805f02a9491b4b30e00c6c64dd5e5bf657f4e43a2d57e236e5eb50e",
+  "manual_ini_overrides": {
+    "IndependentGraph": "inject",
+    "CandidateInputProbe": "true",
+    "CandidateInputVariable": "",
+    "CandidateEquipPrime": "true",
+    "CandidateEquipPrimeBranch": "true",
+    "CandidateUnequipProbe": "true",
+    "CandidateUnequipEvent": "Unequip"
+  },
+  "limits": {
+    "equip_commands": 120,
+    "unequip_commands_max": 180,
+    "nodes": 256,
+    "clips": 8,
+    "instance_traces_per_segment": 32,
+    "clip_name_bytes": 1024
+  },
+  "verification": {
+    "focused_compile_exit": 0,
+    "scenarios": 2,
+    "focused_run_exit": 0,
+    "release_configure_exit": 0,
+    "release_build_exit": 0,
+    "artifacts_and_docs_exit": 0
+  },
+  "native_validation": "PENDING; user-owned. No deployment or game launch performed.",
+  "pending_axes": [
+    "v96a/v96 clip family",
+    "native state-12-to-0 completion",
+    "native clock semantics/rate",
+    "native independent control B",
+    "B3/B4",
+    "K1 input/resource/instance identity",
+    "same-generation source/output pairing",
+    "pose equivalence/G5/G6"
+  ],
+  "notes": [
+    "src/base/util.cpp and src/base/util.h were absent in this checkout; no such files were created or modified.",
+    "The committed source hashes are identical to the v96 manifest; only HEAD, dirty-state, configure stamp and resulting binary hashes differ.",
+    "A post-build configure would re-stamp the generated identity; this record is from the clean-tree 13:45:17Z configure and matching 21:45:54 local build."
+  ]
+}

@@ -1,0 +1,6 @@
+PASS worktree scope: clean baseline f39ffa8b36 on oar-idle3, empty staged state, absent protected util files, only approved docs/evidence changes
+PASS package identity: clean-tree identity embedded in DLL and generated header, matching Release DLL/PDB copies, exact source/package hashes and duplicated manifest
+PASS configuration: committed sample unchanged; exactly seven manual overrides; display/source instruments/liveness off; UTF-8 without BOM and line count preserved
+PASS documentation: 29 local links and anchors resolve; canonical/build sections and code/test paths current
+PASS boundary: native validation still PENDING, no deployment claimed, git diff --check exit 0
+exit=0

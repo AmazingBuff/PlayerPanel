@@ -1710,3 +1710,28 @@ cmake --build --preset Release --parallel 2
 The DLL/PDB copies hash-match `build/Release`. The UTF-8/no-BOM manual INI derives from the repository sample with exactly seven value overrides; sample defaults remain unchanged. [MANUAL.md](../dist/g5-observation-v2-20261112/MANUAL.md) keeps clip family, native completion, clock semantics, independent control B, B3/B4, input/resource identity and pose equivalence separate. All actual game validation remains user-owned and pending; installed files were not touched.
 
 **Historical clarification**: earlier dated “one frame short”/“not run” entries above keep their historical provenance. Current D1/D2 negative and D3 clip-family results are in the [D1-to-D3 record](independent-behavior-graph.md#status-20261111-d3-session); a one-extra-frame native fix and five-word minimality/writer roles remain unproven. v96 does not requalify the dated offline A source hashes or close G5.
+
+
+<a id="v96a-g5-observation-v2a-20261112"></a>
+## v96a G5 observation v2a local rebuild (2026-11-12, offline verified; native pending)
+
+**Why rebuilt**: the v96 package and its `build/Release` copies were not present in this checkout (the installed trio remained v95). v96a rebuilds the same committed observation-v2 source at `f39ffa8b36b691b9968064ee0a2a59a67a87578d` with a clean tree. The four source hashes match the v96 manifest; only the identity stamp and binary hashes differ. [Rebuild result and boundaries](diagnostics/g5-observation-v2a-20261112/result.md), [manifest](diagnostics/g5-observation-v2a-20261112/manifest.json), [manual package](../dist/g5-observation-v2a-20261112/MANUAL.md).
+
+**Commands** (this host uses `C:\Program Files\Microsoft Visual Studio\2022\Community` and `C:\env\vcpkg`):
+
+```powershell
+cmd /d /s /c 'call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.44.35207 && cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\behavior_graph_observation_test.cpp /Fo:build\g5-observation-v2a-20261112\behavior_graph_observation_test.obj /Fe:build\g5-observation-v2a-20261112\behavior_graph_observation_test.exe'
+& build/g5-observation-v2a-20261112/behavior_graph_observation_test.exe
+cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v96a-g5cal-observation-v2 -DVCPKG_MANIFEST_INSTALL=OFF
+cmake --build --preset Release --parallel 2
+```
+
+**Verification**: strict compile exit 0; both scenarios exit 0 (A equip=120 / unequip=123, B timeout=180); configure exit 0 with the existing `CMAKE_SKIP_INSTALL_RULES` warning; build exit 0 with only the existing D9025 `/Ob2`→`/Ob3` notices. The first MSBuild attempt was blocked inside the command sandbox while querying the user SDK directory; the identical build outside the sandbox exited 0, with no source change. Identity `CharacterPanel-scenegraph-v96a-g5cal-observation-v2-f39ffa8b36-cl94faaed0c6-20261112T134517Z`; the string is embedded in the DLL and matches `build/src/plugin.h`.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-observation-v2a-20261112/CharacterPanel.dll) | 1850368 | `2c5112ae571b30a84fc089d1122ee9fa6201914974e04b6beca3e0d32eab33f5` |
+| [CharacterPanel.pdb](../dist/g5-observation-v2a-20261112/CharacterPanel.pdb) | 50016256 | `e7803453ef7436bf7b702a7237c2c309fca4b8c7256bcf5cfb1a6e8ef1814cf8` |
+| [CharacterPanel.ini](../dist/g5-observation-v2a-20261112/CharacterPanel.ini) | 11703 | `f41990d2f82533efb35e8f68e4b40855656f09a08558734120d446bb4b7e90c` |
+
+The DLL/PDB copies hash-match `build/Release`; the UTF-8/no-BOM INI has exactly the seven v96 overrides and no other value changes. **Not deployed**: the installed trio remains v95 and no game run was made. Native clip family, state-12-to-0 completion, clock semantics, control B, B3/B4, source pairing, identity and pose equivalence all remain pending.
