@@ -15,6 +15,10 @@
 #include <cstring>
 #include <limits>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 using namespace test_plugin::animation::behavior_graph;
 
 namespace
@@ -94,14 +98,55 @@ namespace
     {
         alignas(16) std::array<std::byte, 0x50> ctx{};
         void const* const graph = reinterpret_cast<void const*>(0x40000);
-        std::memcpy(ctx.data() + 0x08, &graph, sizeof(graph));
-        assert(probe_b3b4_context_behavior(ctx.data()) == graph);
-        assert(probe_b3b4_context_behavior(nullptr) == nullptr);
-        // An implausible behavior pointer is reported absent, never dereferenced.
+        std::memcpy(ctx.data() + 0x00, &graph, sizeof(graph));
+        assert(probe_b3b4_context_character(ctx.data()) == graph);
+        assert(probe_b3b4_context_character(nullptr) == nullptr);
+        // An implausible character pointer is reported absent, never dereferenced.
         void const* const bad = reinterpret_cast<void const*>(0x20);
-        std::memcpy(ctx.data() + 0x08, &bad, sizeof(bad));
-        assert(probe_b3b4_context_behavior(ctx.data()) == nullptr);
+        std::memcpy(ctx.data() + 0x00, &bad, sizeof(bad));
+        assert(probe_b3b4_context_character(ctx.data()) == nullptr);
     }
+
+#ifdef _WIN32
+    void* g_thunk[4] = { nullptr, nullptr, nullptr, nullptr };
+
+    void footik_recorder(void* a, void* b, void* c, std::uint32_t d) noexcept
+    {
+        g_thunk[0] = a;
+        g_thunk[1] = b;
+        g_thunk[2] = c;
+        g_thunk[3] = reinterpret_cast<void*>(static_cast<std::uintptr_t>(d));
+    }
+
+    // The v97/v97a runs never reached B3/B4 because 58423's entry thunk forwarded only rcx and
+    // the return address, so `a_ctx` was garbage. Execute the production bytes to prove all four
+    // original argument slots reach the recorder before ever deploying again.
+    void footik_thunk_forwards_four_arguments()
+    {
+        auto* const ret = static_cast<std::uint8_t*>(
+            VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+        assert(ret != nullptr);
+        *ret = 0xC3;
+        FlushInstructionCache(GetCurrentProcess(), ret, 1);
+        auto* const code = static_cast<std::uint8_t*>(
+            VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+        assert(code != nullptr);
+        (void)encode_detour_footik_thunk(code, reinterpret_cast<std::uintptr_t>(&footik_recorder),
+            reinterpret_cast<std::uintptr_t>(ret));
+        FlushInstructionCache(GetCurrentProcess(), code, 4096);
+        using quad_fn = void (*)(void*, void*, void*, std::uint32_t);
+        void* const driver = reinterpret_cast<void*>(0x11110000);
+        void* const ctx = reinterpret_cast<void*>(0x22220000);
+        void* const out = reinterpret_cast<void*>(0x33330000);
+        reinterpret_cast<quad_fn>(code)(driver, ctx, out, 7);
+        assert(g_thunk[0] == driver);
+        assert(g_thunk[1] == ctx);
+        assert(g_thunk[2] == out);
+        assert(g_thunk[3] == reinterpret_cast<void*>(7));
+        (void)VirtualFree(code, 0, MEM_RELEASE);
+        (void)VirtualFree(ret, 0, MEM_RELEASE);
+    }
+#endif
 }
 
 int main()
@@ -110,5 +155,8 @@ int main()
     tally_splits_phases_and_keeps_samples();
     tally_flags_non_finite();
     context_behavior_reads_plus_8();
-    std::puts("4 probe-liveness b3b4 cases passed (engine-free)");
+#ifdef _WIN32
+    footik_thunk_forwards_four_arguments();
+#endif
+    std::puts("5 probe-liveness b3b4 cases passed (engine-free)");
 }

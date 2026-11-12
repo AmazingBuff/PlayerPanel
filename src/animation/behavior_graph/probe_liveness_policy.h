@@ -201,7 +201,7 @@ namespace animation::behavior_graph
         struct Entry
         {
             void const* out;
-            void const* behavior;
+            void const* character;
             std::uint32_t tracks;
             std::uint64_t tsc;
         };
@@ -934,6 +934,43 @@ namespace animation::behavior_graph
         emit({ 0x48, 0x8B, 0x54, 0x24, 0x48 });                    // mov rdx,[rsp+48h] (entry rdx)
         emit({ 0x44, 0x8B, 0x44, 0x24, 0x40 });                    // mov r8d,[rsp+40h] (entry r8)
         emit({ 0x4C, 0x8B, 0x4C, 0x24, 0x68 });                    // mov r9,[rsp+68h] (return addr)
+        emit({ 0x48, 0xB8 });                                      // movabs rax, recorder
+        std::memcpy(a_dst + o, &a_recorder, sizeof(a_recorder));
+        o += sizeof(a_recorder);
+        emit({ 0xFF, 0xD0 });                                      // call rax
+        emit({ 0x48, 0x83, 0xC4, 0x20 });                          // add rsp,20h
+        emit({ 0x9D });                                            // popfq
+        emit({ 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58 });  // pop r11..r8
+        emit({ 0x5A, 0x59, 0x5B, 0x58 });                          // pop rdx/rcx/rbx/rax
+        emit({ 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 });              // jmp qword [rip+0]
+        std::memcpy(a_dst + o, &a_original, sizeof(a_original));
+        o += sizeof(a_original);
+        return o;
+    }
+
+    // C-G5-E2-B B3/B4: 58423's four entry arguments are (rcx=driver, rdx=&hkbContext,
+    // r8=&out, r9d=0). The generic sample thunk forwards only rcx + the return address, and the
+    // apply thunk truncates r8 to 32 bits and replaces r9 with the caller's return address. Both
+    // make `a_ctx` a garbage return address, which is why the first two v97 runs saw 100% graph
+    // mismatches. This thunk forwards all four original slots: rcx/rdx/r8 as full 64-bit values
+    // and r9d as the original dword. Stack layout after eight pushes + pushfq + 0x20 shadow:
+    // rcx=+0x50, rdx=+0x48, r8=+0x40, r9=+0x38, return address=+0x68.
+    inline std::size_t encode_detour_footik_thunk(std::uint8_t* a_dst, std::uintptr_t a_recorder,
+        std::uintptr_t a_original)
+    {
+        std::size_t o = 0;
+        auto const emit = [&o, a_dst](std::initializer_list<std::uint8_t> const& a_bytes) {
+            for (std::uint8_t b : a_bytes)
+                a_dst[o++] = b;
+        };
+        emit({ 0x50, 0x53, 0x51, 0x52 });                          // push rax/rbx/rcx/rdx
+        emit({ 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });  // push r8..r11
+        emit({ 0x9C });                                            // pushfq
+        emit({ 0x48, 0x83, 0xEC, 0x20 });                          // sub rsp,20h
+        emit({ 0x48, 0x8B, 0x4C, 0x24, 0x50 });                    // mov rcx,[rsp+50h] entry rcx
+        emit({ 0x48, 0x8B, 0x54, 0x24, 0x48 });                    // mov rdx,[rsp+48h] entry rdx
+        emit({ 0x4C, 0x8B, 0x44, 0x24, 0x40 });                    // mov r8,[rsp+40h] entry r8 (64-bit)
+        emit({ 0x44, 0x8B, 0x4C, 0x24, 0x38 });                    // mov r9d,[rsp+38h] entry r9d
         emit({ 0x48, 0xB8 });                                      // movabs rax, recorder
         std::memcpy(a_dst + o, &a_recorder, sizeof(a_recorder));
         o += sizeof(a_recorder);

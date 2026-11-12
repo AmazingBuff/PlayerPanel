@@ -7,7 +7,10 @@
 // B4: poseLocal (63856's first argument) must equal the same snapshot component-wise.
 //
 // The stored snapshot is keyed per thread on the out-block pointer. Only pairs whose
-// `ctx->behavior` equals the pinned graph are admitted, per the pre-registration. Stale, missing,
+// `hkbContext+0x00` (character) equals the pinned graph's characterInstance are admitted.
+// Audit fact (audit 210/220/222): 58315 builds the context with `character = &graph->characterInstance`
+// and explicitly zeroes `ctx->behavior (+0x08)`, so `ctx->behavior == graph` can never hold. The
+// first v97/v97a runs used that impossible identity and invalidated themselves. Stale, missing,
 // multi-return and read-failure outcomes are counted, never silently resolved.
 //
 #pragma once
@@ -130,7 +133,7 @@ namespace animation::behavior_graph
     {
         std::uint32_t tid;
         void const* out;
-        void const* behavior;
+        void const* character;
         std::uint16_t tracks;
         bool pending;
         std::array<ProbeVec4, Probe_B3B4_Track_Capacity * 2> snapshot;
@@ -146,7 +149,7 @@ namespace animation::behavior_graph
             e_no_slot
         };
 
-        Outcome on_return(std::uint32_t a_tid, void const* a_out, void const* a_behavior,
+        Outcome on_return(std::uint32_t a_tid, void const* a_out, void const* a_character,
             std::uint16_t a_tracks, ProbeVec4 const* a_snapshot) noexcept
         {
             Slot* const slot = find_or_insert(a_tid);
@@ -155,7 +158,7 @@ namespace animation::behavior_graph
             Outcome const outcome = slot->pending ? Outcome::e_overwritten : Outcome::e_stored;
             slot->tid = a_tid;
             slot->out = a_out;
-            slot->behavior = a_behavior;
+            slot->character = a_character;
             slot->tracks = a_tracks;
             slot->pending = true;
             std::memcpy(slot->snapshot.data(), a_snapshot,
@@ -167,11 +170,11 @@ namespace animation::behavior_graph
         // snapshot belongs to a different out block (or graph). The slot is NOT consumed here:
         // the same snapshot serves the B3 re-read and the B4 comparison, and it expires only by
         // the next 58423 return on the same thread.
-        ProbeB3B4Slot const* match(std::uint32_t a_tid, void const* a_behavior) const noexcept
+        ProbeB3B4Slot const* match(std::uint32_t a_tid, void const* a_character) const noexcept
         {
             for (Slot const& slot : m_slots)
             {
-                if (slot.tid == a_tid && slot.tid != 0 && slot.pending && slot.behavior == a_behavior)
+                if (slot.tid == a_tid && slot.tid != 0 && slot.pending && slot.character == a_character)
                     return &slot;
             }
             return nullptr;
@@ -204,15 +207,15 @@ namespace animation::behavior_graph
         std::uint64_t m_overwritten{ 0 };
     };
 
-    // Reads `ctx->behavior` (+0x08) from an hkbContext built by 58315. The entry recorder passes
-    // 58423's second argument; null or implausible values are reported as absent.
-    [[nodiscard]] inline void const* probe_b3b4_context_behavior(void const* a_ctx) noexcept
+    // Reads `ctx->character` (+0x00) from an hkbContext built by 58315. The entry recorder passes
+    // 58423's second argument; null or implausible values are reported as absent. The identity is
+    // compared against `&pinned->characterInstance` (== pinned + 0xC0), never against the graph.
+    [[nodiscard]] inline void const* probe_b3b4_context_character(void const* a_ctx) noexcept
     {
         if (a_ctx == nullptr || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(a_ctx)))
             return nullptr;
-        auto const* const behavior = *reinterpret_cast<void const* const*>(
-            static_cast<std::byte const*>(a_ctx) + 0x08);
-        return plausible_object_pointer(reinterpret_cast<std::uintptr_t>(behavior)) ? behavior : nullptr;
+        auto const* const character = *reinterpret_cast<void const* const*>(a_ctx);
+        return plausible_object_pointer(reinterpret_cast<std::uintptr_t>(character)) ? character : nullptr;
     }
 }
 PLUGIN_NAMESPACE_END

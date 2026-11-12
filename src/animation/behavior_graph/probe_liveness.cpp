@@ -66,11 +66,11 @@ namespace
     std::atomic<bool> g_arm_requested{ false };
     std::atomic<bool> g_invalidate_requested{ false };
     std::atomic<void*> g_pinned{ nullptr };
-    // C-G5-E2-B B3/B4: the pinned BShkbAnimationGraph's hkbBehaviorGraph pointer (+0x208).
-    // 58423 receives an hkbContext whose +0x08 is this behavior pointer, NOT the outer
-    // BShkbAnimationGraph pointer. Comparing against g_pinned directly (v97 run 1) made all
-    // 6,670 foot-IK calls look like graph mismatches and no B3/B4 pair was ever stored.
-    std::atomic<void*> g_pinned_behavior{ nullptr };
+    // C-G5-E2-B B3/B4: `&pinned->characterInstance`, i.e. pinned + 0xC0. Audit 220/222: 58315
+    // builds the 58423 hkbContext with `character = &graph->characterInstance` and zeroes
+    // `ctx->behavior`, so the only usable same-graph identity is this character pointer. Both the
+// v97 (`g_pinned`) and v97a (`g_pinned_behavior`) runs used identities that can never match.
+    std::atomic<void*> g_pinned_character{ nullptr };
     std::atomic<void*> g_plugin_graph{ nullptr };
     std::atomic<std::uint32_t> g_epoch{ 0 };
     std::atomic<std::uint32_t> g_actor{ 0 };
@@ -499,10 +499,10 @@ namespace
         if (is_pinned)
         {
             auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
-            // The ledger is keyed on the hkbBehaviorGraph pointer (ctx->behavior), not the outer
+            // The ledger is keyed on &pinned->characterInstance (ctx->character), not the outer
             // BShkbAnimationGraph pointer used to identify the 63856 apply entry.
-            void const* const pinned_behavior = g_pinned_behavior.load(std::memory_order_relaxed);
-            ProbeB3B4Slot const* const slot = s.b3b4.match(tid, pinned_behavior);
+            void const* const pinned_character = g_pinned_character.load(std::memory_order_relaxed);
+            ProbeB3B4Slot const* const slot = s.b3b4.match(tid, pinned_character);
             if (slot == nullptr)
             {
                 ++s.b3_stale;
@@ -774,7 +774,7 @@ namespace
         auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
         ProbeFootikInFlight::Entry entry{};
         entry.out = a_out;
-        entry.behavior = probe_b3b4_context_behavior(a_ctx);
+        entry.character = probe_b3b4_context_character(a_ctx);
         entry.tsc = __rdtsc();
         std::uint16_t snapshot_count = 0;
         bool const entry_ok = probe_read_footik_out(a_out, entry_tracks(), 116, snapshot_count);
@@ -844,18 +844,18 @@ namespace
             tally.last_frame_rewritten = rewritten;
         }
         // C-G5-E2-B B3/B4: store the return snapshot only for the pinned graph's calls. The
-        // behavior identity comes from 58423's hkbContext (second argument, +0x08). A pending
+        // character identity comes from 58423's hkbContext (second argument, +0x00). A pending
         // slot from an earlier return on the same thread that never reached apply is overwritten
         // and counted; the pre-registration forbids picking one of several returns.
-        void const* const pinned = g_pinned_behavior.load(std::memory_order_relaxed);
-        void const* const behavior = entry.behavior;
-        if (pinned != nullptr && behavior == pinned)
+        void const* const pinned = g_pinned_character.load(std::memory_order_relaxed);
+        void const* const character = entry.character;
+        if (pinned != nullptr && character == pinned)
         {
             if (read_ok && count > 0)
             {
                 if (s.b3b4.match(tid, pinned) != nullptr)
                     ++s.b3_multi;
-                switch (s.b3b4.on_return(tid, entry.out, behavior, count, return_tracks()))
+                switch (s.b3b4.on_return(tid, entry.out, character, count, return_tracks()))
                 {
                 case ProbeB3B4Ledger::Outcome::e_overwritten:
                     ++s.b3_overwritten;
@@ -1112,7 +1112,7 @@ namespace
 
         g_plugin_graph.store(nullptr, std::memory_order_relaxed);
         g_pinned.store(nullptr, std::memory_order_release);
-        g_pinned_behavior.store(nullptr, std::memory_order_release);
+        g_pinned_character.store(nullptr, std::memory_order_release);
         s.close_pending = false;
     }
 
@@ -1120,7 +1120,8 @@ namespace
     {
         e_sample_entry,
         e_apply_entry,
-        e_apply_return
+        e_apply_return,
+        e_footik_entry
     };
 
     bool install_at(std::uintptr_t a_address, char const* a_name, std::uint8_t const* a_head,
@@ -1154,6 +1155,10 @@ namespace
             break;
         case ProbeThunkKind::e_apply_entry:
             (void)encode_detour_thunk_with_caller(thunk, reinterpret_cast<std::uintptr_t>(a_recorder),
+                reinterpret_cast<std::uintptr_t>(original));
+            break;
+        case ProbeThunkKind::e_footik_entry:
+            (void)encode_detour_footik_thunk(thunk, reinterpret_cast<std::uintptr_t>(a_recorder),
                 reinterpret_cast<std::uintptr_t>(original));
             break;
         default:
@@ -1220,7 +1225,7 @@ namespace
         REL::Relocation<std::uintptr_t> const footik_site{ REL::ID(Foot_Ik_Entry_Id) };
         bool const footik_entry = pose_return && install_at(footik_site.address(), "58423-footik-entry",
             Probe_Footik_Entry_Head_Bytes.data(), Probe_Footik_Entry_Head_Bytes.size(), &record_footik_entry,
-            ProbeThunkKind::e_sample_entry);
+            ProbeThunkKind::e_footik_entry);
         bool const footik_return = footik_entry && install_at(
             footik_site.address() + Probe_Footik_Return_Offset, "58423-footik-return",
             Probe_Footik_Return_Head_Bytes.data(), Probe_Footik_Return_Head_Bytes.size(),
@@ -1248,9 +1253,13 @@ namespace
             return;
         }
         g_pinned.store(pinned, std::memory_order_release);
-        g_pinned_behavior.store(pinned->behaviorGraph, std::memory_order_release);
-        logger::info("PROBE LIVENESS pinned mode=on graph={:#x} behavior={:#x}",
+        // characterInstance is an embedded hkbCharacter at BShkbAnimationGraph+0xC0; its address
+        // is exactly what 58315 writes into hkbContext::character for this graph.
+        g_pinned_character.store(reinterpret_cast<void*>(reinterpret_cast<std::uintptr_t>(pinned) + 0xC0),
+            std::memory_order_release);
+        logger::info("PROBE LIVENESS pinned mode=on graph={:#x} character={:#x} behavior={:#x}",
             reinterpret_cast<std::uintptr_t>(pinned),
+            reinterpret_cast<std::uintptr_t>(reinterpret_cast<std::byte const*>(pinned) + 0xC0),
             reinterpret_cast<std::uintptr_t>(pinned->behaviorGraph));
         g_arm_requested.store(true, std::memory_order_release);
         logger::info("PROBE LIVENESS arm-requested mode=on");
@@ -1343,7 +1352,8 @@ namespace
             }
         }
         g_pinned.store(pinned, std::memory_order_release);
-        g_pinned_behavior.store(pinned->behaviorGraph, std::memory_order_release);
+        g_pinned_character.store(reinterpret_cast<void*>(reinterpret_cast<std::uintptr_t>(pinned) + 0xC0),
+            std::memory_order_release);
         g_actor.store(a_actor_id, std::memory_order_relaxed);
         std::uint32_t const epoch = g_epoch.fetch_add(1, std::memory_order_relaxed) + 1;
         auto const armed_at = std::chrono::steady_clock::now();

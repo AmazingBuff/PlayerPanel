@@ -1821,3 +1821,18 @@ Identity `CharacterPanel-scenegraph-v97a-g5e2b-b3b4-b12889a623-cl94faaed0c6-2026
 | [CharacterPanel.ini](../dist/g5-e2b-b3b4-v97a-20261112/CharacterPanel.ini) | 11712 | `ba93289b9f961ffa69fd42414a5fd9ed5490850c70f10ce3fa2efb458d017bf7` |
 
 **Deployed 2026-11-12** (Skyrim not running; MO2 open): the v97 trio was backed up hash-verified to `dist/deploy-backup-20261112-v97-v97apre/`; the three v97a files were copied with source+destination hash comparison and the installed DLL contains the v97a identity. The run INI is byte-identical to v97's (`ba93289b…`), i.e. still exactly `SamplingLiveness=on` + `IndependentGraph=off` with all other instruments dormant. [MANUAL.md](../dist/g5-e2b-b3b4-v97a-20261112/MANUAL.md) records the unchanged one-window procedure and judgement. **No game run yet**; this is a new batch, so v97 run 1 keeps its `INVALID` verdict.
+
+
+<a id="g5-e2b-b3b4-v97a-run1-20261112"></a>
+## G5-E2-B B3/B4 v97a run 1 (2026-11-12 23:18, **INVALID — second instrument defect, not a verdict**)
+
+**Artifact**: v97a DLL `195df66f…50042820e`, PDB `5ffc6735…ce5bae78`, INI `ba93289b…`, identity `CharacterPanel-scenegraph-v97a-g5e2b-b3b4-b12889a623-cl94faaed0c6-20261112T151107Z`. Log [CharacterPanel-g5e2b-b3b4-v97a-run1-20261112-2317.log](diagnostics/CharacterPanel-g5e2b-b3b4-v97a-run1-20261112-2317.log), 263,698 B, SHA-256 `5ebf328528c5a9e7d3317c9ba28ee883d06d59501227cc0bbd76f3bf8f9f54ed`. One F7 window, zero `[E]`, two unrelated studio-light `[W]`, `frames=1080`, `transport-complete=no` (91 contention drops).
+
+**Readings**: pin succeeded (`pinned mode=on`, `pinned=yes`); `b3-checked=0 b4-checked=0 verdict=B3-INVALID`, `b3-stale=1080`, `b3-behavior-mismatch=7515` of `b-calls=7516`. footIK activity otherwise reproduced (`b-compared=7456`, `b-rewritten=1802673`).
+
+**Root cause (two inherited defects, both in my implementation)**:
+
+1. **Wrong identity kind.** The pre-registration said `ctx->behavior == pinned graph`, but audit 220/222 is explicit: 58315 builds the 58423 `hkbContext` with `character = &graph->characterInstance` and **zeroes `ctx->behavior (+0x08)`**. v97 compared against the outer `BShkbAnimationGraph*`; v97a compared against `pinned->behaviorGraph` — neither can equal a zeroed field. The only usable identity is `ctx->character (+0x00) == &pinned->characterInstance` (`pinned + 0xC0`).
+2. **Thunk argument loss.** `58423-footik-entry` used `ProbeThunkKind::e_sample_entry`, whose `encode_detour_thunk(..., false)` forwards only `rcx` and the **return address** into `rdx`; `record_footik_entry(void*, a_ctx, a_out, ...)` therefore read the return address as `a_ctx`. The apply thunk truncates `r8` to 32 bits and replaces `r9` with the caller, so it was not a fix either. The old E2-B tally happened to work only because those registers were left untouched by coincidence; the context read was always garbage.
+
+**Repair (third batch)**: a dedicated `encode_detour_footik_thunk` forwards all four original slots (`rcx/rdx/r8` full 64-bit, `r9d`), and `g_pinned_character` (+ `probe_b3b4_context_character`) uses the audited `ctx->character` identity. A new engine-free case executes the production thunk bytes and asserts all four arguments arrive; all 16 focused cases pass (5 B3B4 + 3 E2B + 8 base). No criteria, thresholds, budgets or boundary rules changed. v97a keeps `INVALID`; the repaired build is deployed separately and needs one new window.
