@@ -5124,7 +5124,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **裁定：K3 仍 NOT_READY。** 本节只补 CAL v1 §三 K3 的**源侧**：在已审计的等价完成边界上取得源图的完整 `poseLocal`、clip 元数据与单调 generation 序号。它不把源/候选逐代配对（K3-P 另批），不产生容差，不关闭 K5/K6 或 G5。
 
-> **状态（2026-11-13）**：已实现并离线验证（`ba4dddf`）。[v99 首轮](build.md#g5-k3s-v99-crash-20261113) 在 F7 后 **崩溃**（`CharacterPanel.dll+0x6083f` 的 `movaps`，返回 thunk 固定 `sub rsp,28h` 与实际栈对齐不符），无证据；动态对齐后 [v99a 首轮](build.md#g5-k3s-v99a-run1-20261113) 成功采集，1,024 条数据本身干净（双读 0 失败、116 轨、clip 1–4、seq 连续、tsc 递增），但被 1,024 容量截断（`overflow=true`），按 K3S-5 判 **INVALID**。容量升到 1,536 的 [v99b](build.md#v99b-g5k3s-20261113) 已部署，等待一次新的 F7 窗口。运行档为 `SamplingLiveness=on` + `IndependentGraph=off`。
+> **状态（2026-11-13 01:15）：K3-S 源侧 PASS**。[v99b run 1](build.md#g5-k3s-v99b-run1-20261113) 采集 **1151 条记录**（一比一对应 1151 个 pinned apply）：`two_read_equal=1` 全部、`track_count=116` 全部、`clip_count=1`、`nonfinite=0`、全部 `path=63568-tail`、`seq=1..1151` 连续、`tsc` 严格递增、`overflow=false`、`write-failed=0`、文件大小精确 `124 + 1151×5268`。工件：[日志](diagnostics/CharacterPanel-g5k3s-v99b-run1-20261113-0115.log) 264,168 B `4cadb1c8…5c196f`、[快照](diagnostics/CharacterPanel-g5k3s-v99b-run1-20261113-0115.bin) 6,063,592 B `499c950a…ecd773`。**K3-C 与 K3-S 两半各自 PASS，但 K3 整体仍 NOT_READY**：逐代源/候选配对（K3-P）未实现，两轮均为单会话，无容差、不关闭 K5/K6 或 G5。
 
 ### 边界与寿命
 

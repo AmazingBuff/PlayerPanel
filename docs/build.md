@@ -2032,7 +2032,7 @@ Identity `CharacterPanel-scenegraph-v99a-g5k3s-source-0b017bcbf0-cl94faaed0c6-20
 
 
 <a id="v99b-g5k3s-20261113"></a>
-## v99b G5-CAL K3-S build and deployment (2026-11-13, not yet run)
+## v99b G5-CAL K3-S build and deployment (2026-11-13, deployed; run below)
 
 **Commit**: `be5cdf8 fix(g5-k3s): raise the source ring capacity for a full window`. Capacity 1,536 records (≈7.72 MiB); capacity rejection reports `overflow` only. `k3_snapshot_test` 4/4 (including the 1,536 cap) and `probe_liveness_v3_test` 6/6 pass; Release build exit 0.
 
@@ -2045,3 +2045,21 @@ Identity `CharacterPanel-scenegraph-v99b-g5k3s-source-be5cdf8ca6-cl94faaed0c6-20
 | [CharacterPanel.ini](../dist/g5-k3s-v99b-20261113/CharacterPanel.ini) | 12069 | `ebe0afb733c91ebe1176f0d205529b2b8ae083b8f33305d6a89885fd9773a050` |
 
 **Deployed 2026-11-13**: the v99a trio was backed up hash-verified to `dist/deploy-backup-20261113-v99a-v99bpre/`; the three v99b files were copied with source+destination hash comparison and the installed DLL contains the v99b identity. Run INI unchanged (`SamplingLiveness=on` only). [MANUAL.md](../dist/g5-k3s-v99b-20261113/MANUAL.md). **No game run yet.**
+
+
+<a id="g5-k3s-v99b-run1-20261113"></a>
+## G5-CAL K3-S v99b run 1 (2026-11-13 01:15, **PASS — source side**)
+
+**Artifact**: v99b DLL `cffe2eae…9f928aab`, PDB `7337af7b…9cef953b`, INI `ebe0afb7…fd9773a050`, identity `CharacterPanel-scenegraph-v99b-g5k3s-source-be5cdf8ca6-cl94faaed0c6-20261112T171059Z`. Log [CharacterPanel-g5k3s-v99b-run1-20261113-0115.log](diagnostics/CharacterPanel-g5k3s-v99b-run1-20261113-0115.log), 264,168 B, SHA-256 `4cadb1c86d0237d55e2eb733420d2b11846ab8aa6c0bcbedd6894680065c196f`; snapshot [CharacterPanel-g5k3s-v99b-run1-20261113-0115.bin](diagnostics/CharacterPanel-g5k3s-v99b-run1-20261113-0115.bin), 6,063,592 B, SHA-256 `499c950adf5a1184a9dd8389cd86a96273dac53f36171d6a8101923a21ecd773`. Zero `[E]`, 2 studio-light `[W]`, 1,151 frames, `reason=expired`.
+
+| 判据 | 读数 | 裁定 |
+| --- | --- | --- |
+| K3S-1 活性 | `records=1151`，`pinned-apply-entries=1151`（一比一） | PASS |
+| K3S-2 双读 | 1,151/1,151 `two_read_equal=1` | PASS |
+| K3S-3 完整性 | 每条 `track_count=116`；`clip_count=1`（≤8）；`nonfinite=0` | PASS |
+| K3S-4 边界/身份 | 仅 pinned 图；`paths={1:1151}`（全为 `63568-tail`，已分类）；`seq=1..1151` 连续；`tsc` 严格递增；header `CPK3` v2 source=1、identity 匹配 | PASS |
+| K3S-5 无丢失 | `overflow=false`（容量 1,536 未触顶）、`write-failed=0`、`dropped=0`、文件大小 6,063,592 = 124 + 1151×5,268 | PASS |
+
+**Meaning**: the pinned source graph now has a per-apply, same-generation, bit-identical double-read snapshot of all 116 `poseLocal` tracks plus per-frame clip metadata, written to a bounded artifact with monotonic `seq`/`tsc` keys. Together with K3-C (candidate side, v98 PASS) both halves of K3's instrument exist and have each passed on their own side; **K3 itself still stays NOT_READY** because the generation pairing (K3-P) and any tolerance work are separate, and both runs are single sessions.
+
+**Boundaries**: single window/session/loadout; `transport-complete=no` affects detail rows only, not the K3-S tallies. This run does not pair source and candidate generations, does not produce a tolerance and does not close K5/K6 or G5.

@@ -28,3 +28,5 @@ docs/diagnostics/CharacterPanel-g5k3c-v98-run1-20261113-0048.log -text whitespac
 docs/diagnostics/CharacterPanel-g5k3c-v98-run1-20261113-0048.bin -text -diff
 docs/diagnostics/CharacterPanel-g5k3s-v99-crash-20261113-0100.log -text whitespace=cr-at-eol,-blank-at-eof
 docs/diagnostics/CharacterPanel-g5k3s-v99a-run1-20261113-0108.log -text whitespace=cr-at-eol,-blank-at-eof
+docs/diagnostics/CharacterPanel-g5k3s-v99b-run1-20261113-0115.log -text whitespace=cr-at-eol,-blank-at-eof
+docs/diagnostics/CharacterPanel-g5k3s-v99b-run1-20261113-0115.bin -text -diff
