@@ -19,3 +19,4 @@ config/CharacterPanel.ini text eol=crlf
 docs/diagnostics/g5-observation-v2-20261112/** -text whitespace=cr-at-eol,-blank-at-eof
 docs/diagnostics/g5-observation-v2a-20261112/** -text whitespace=cr-at-eol,-blank-at-eof
 docs/diagnostics/CharacterPanel-g5cal-v96a-observation-v2-run1-20261112-2157.log -text whitespace=cr-at-eol,-blank-at-eof
+docs/diagnostics/CharacterPanel-g5e2b-b3b4-v97-run1-20261112-2302.log -text whitespace=cr-at-eol,-blank-at-eof
