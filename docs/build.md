@@ -1919,7 +1919,15 @@ Identity `CharacterPanel-scenegraph-v97d-g5e2b-b3b4-e1526f2bdd-cl94faaed0c6-2026
 
 **Offline**: `k3_snapshot_test.cpp` 2/2 (header/record round-trip, patched count, two-read flag, name truncation, 512-record overflow) and the existing `behavior_graph_observation_test.cpp` 2/2 pass under `/W4 /WX`; Release build exit 0.
 
-Identity and hashes are recorded after the clean-tree rebuild; the run profile is `IndependentGraph=inject` + the v96a five-word prime/unequip keys + `ObservationSnapshot=true`, all other instruments dormant. **This batch is candidate-side only; K3 stays NOT_READY until K3-S.**
+Identity `CharacterPanel-scenegraph-v98-g5k3c-snapshot-bcbe1850d8-cl94faaed0c6-20261112T164251Z` (clean tree), embedded in the DLL.
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-k3c-v98-20261113/CharacterPanel.dll) | 1905664 | `66357548325079044bda70a37740fb7007bdd7ccadbb43c02203d64ee8db2c73` |
+| [CharacterPanel.pdb](../dist/g5-k3c-v98-20261113/CharacterPanel.pdb) | 50294784 | `660ed38ceca60498d0e497718601328f2870fe9565e2887c36987fb756de50c9` |
+| [CharacterPanel.ini](../dist/g5-k3c-v98-20261113/CharacterPanel.ini) | 12057 | `9745d52a18c6ab709cb9e8c88654a216a18a6eb1f6c5d2bdb677d8748f7ae5ba` |
+
+The run INI is derived from the committed sample with exactly eight overrides (`inject`, probe on, empty input variable, both prime switches, unequip probe on, `Unequip`, `ObservationSnapshot=true`); every other instrument stays dormant. [MANUAL.md](../dist/g5-k3c-v98-20261113/MANUAL.md). **Not deployed or game-run yet**; this batch is candidate-side only, so K3 stays NOT_READY until K3-S.
 
 
 <a id="g5-e2b-b3b4-v97d-run1-20261113"></a>
