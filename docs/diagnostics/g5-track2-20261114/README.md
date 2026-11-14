@@ -168,3 +168,57 @@
 2. **Run 0a**（候选侧 census + T2-C5 装备重验）：Save116 → panel 窗口（inject 链同 v96a）→ 关窗；判据 T2-C1/C2/C3（候选侧）、T2-C5、T2-C7。
 3. **Run 0b**（源侧 census）：换 `CharacterPanel-track2-census-source.ini`，Save116 → F7 20 s 窗口自然装备/卸下；判据 T2-C1/C2/C3（源侧）+ T2-C4（跨侧逐族 `data FNV` 相等，离线裁定）。
 4. 全部通过 → 新档断言集合登记进 reconcile 工具 → Run 1/2 姿态采集。
+
+## 十一、Run 0a run 1（2026-11-14 23:29，**INVALID——两项判据失败；仪器与解析全部成功，产出三项设计级发现**）
+
+**运行身份**：v103 DLL（`8c3857a3…`）+ track2-census-inject 档（`c05b9b91…`；首次部署未落位——安装位仍是 v103 source 档，安装位哈希核验抓出后由 Agent 补部署，备份 `dist/deploy-backup-20261114-v103-run0apre/`）。档位 `AE-Track2`。日志 [归档](../CharacterPanel-g5track2-census-inject-run1-20261114-2329.log)（202,711 B，SHA-256 `830ccc3356c94f6f…`）。
+
+### 判据裁定
+
+| # | 判据 | 读数 | 裁定 |
+| --- | --- | --- | --- |
+| T2-C1 | census 骨架/图身份 | 两侧 `bones=116 recorded=116 invalid-parent=0 nonfinite=0`；四段齐全（source pre-activate、candidate post-activate/equip-clips/unequip-clips）；overflow=0 | PASS |
+| T2-C2 | clip 身份自相对 | equip-clips `clips=2 missing=0`；unequip-clips `clips=4 unique=4 **missing=1**`——`SCAR_1hmReadyDummy` 行 `identity=false`、`binding=0x0 animation=0x0 data-fnv=0`（裸名 `Animations\SCAR_1hmReadyDummy.hkx` 无任何磁盘来源，见 §11.2） | **FAIL** |
+| T2-C3 | 家族逐相位 | equip-clips 含 `1HM_Equip`、unequip-clips 含 `1HM_Unequip`；相位序列完成（equip 120/120、unequip `state-12-to-0` completed=120 first-return-zero=120）；H2H=0；drift=none ×5 | PASS |
+| T2-C4 | 跨侧资源相等 | Run 0a 不裁（源侧 equip/unequip 相位在 Run 0b）；旁证：source pre-activate 的 MT_Idle `data-fnv=F56EE150…` 与候选一致 | 待 Run 0b |
+| T2-C5 | 装备初态重验 | dump 行 `hands=(00000000,00000000) drawn=false armor=slots=31 worn=2 2:0003c9fe,7:0003ca00` —— **与 K2-C1 冻结场景（`560c2a4c,00043324`、worn=9）不符：本次会话未处于冻结场景** | **FAIL** |
+| 完整性 | 零 `[E]` | **1 条**：L4 `failed to get plugin info for OpenAnimationReplacer`（23:28:44，SKSE 装载期、任何采集之前）——OAR 缺失时插件 OAR API 探测的确定性伴生行（伴生 `[I]` 行 `OAR hooks unavailable: Open Animation Replacer is not loaded`）；运行中零 `[E]` | 按字面 FAIL（修订见 §十二） |
+
+**裁定：Run 0a run 1 = INVALID**（T2-C2、T2-C5、完整性判据），按 §七停止规则不进入 Run 1/2，已收数据不进入姿态批次。但仪器链路全部成功（census/装备 dump/inject 链/schema=2 观察全链无缺陷），且产出三项设计级发现（§11.1–11.3），修订后重跑。
+
+### 11.1 发现一：候选侧资源与 OAR 无关（K1-C1 归属更正）
+
+OAR 关闭后候选 FNV **与 Track 1 逐位不变**：MT_Idle=`F56EE150…`（`Animations\female\mt_idle.hkx` 普通路径 loose，Vanargand）、MLh_Idle=`DAD1F1C9…`（`mlh_idle.hkx` 普通路径 loose，Pretty Combat——与 Diverse Magic Casting 的 DAR 文件同字节）、1HM_Equip=`12A77CD1…`、1HM_Unequip=`4DED5EAF…`、1HM_Idle=`C62C233B…`。
+
+本轮从原版 `Skyrim - Animations.bsa` 定点提取并解码（`build/k1-c1-track2/out/vanilla-fnv.tsv`）：**原版第三人称 `1hm_equip.hkx`/`1hm_unequip.hkx`/`1hm_idle.hkx` 的 data FNV 就是 `12A77CD1…`/`4DED5EAF…`/`C62C233B…`**（1.4333 s / 2.0 s / 9.0 s 全对齐）。即这三个 clip 的运行时来源是**原版 BSA**（普通路径无 loose 赢家 → 引擎回落 BSA）；[K1-C1 §六](../g5-k1-c1-20261114/README.md#六执行结果与裁定) 把 `12A77CD1…`/`4DED5EAF…` 归属到 SCAR DAR / Elden Rim OAR 路径属"多选一"归属偏差——那些模组复制了原版同字节文件。**候选图从未被 OAR 替换过；源/候选资源差异的全部来源是源图被 OAR 替换。**
+
+### 11.2 发现二：SCAR dummy 是唯一无来源 clip
+
+`Animations\SCAR_1hmReadyDummy.hkx` 在普通路径、gender 变体、原版 BSA、全部 102 个模组 BSA 中均不存在（本轮穷举）；唯一磁盘来源是 OAR 内容目录（Dummy Animation SCAR - OAR / BFCO Elden Rim Dual Wield），须 OAR DLL 才会被装载。K1-C4 中它"两侧字节相同"的原因正是两侧都经 OAR 拿到同一文件；OAR 关闭后两侧都 `identity=false`（对称缺失）。这是预注册 §2.3 风险 2 的命中形态，处置修订见 §十二。
+
+### 11.3 发现三：OAR 停用的运行时证明齐全
+
+`OAR hooks unavailable`（启动 `[I]`）+ 启动期唯一 `[E]`（OAR plugin info 探测失败）+ ANIMATION WORLD 行 `oar-api=unavailable oar-result=unavailable-unknown oar-path='' oar-project='' oar-variant='' oar-submod='' oar-mod=''` + 全日志零 `oar-result=replacement`。产品路径 unarmed 回落行为按预期出现（`unarmed replacement unavailable; direct MT_Idle fallback`——非冻结场景手部为空所致；冻结场景 1H 在手不会出现）。
+
+## 十二、预注册修订 v2（草案，待用户批准；批准前 Run 0 不重跑）
+
+Run 0a run 1 的三项发现需要修订批次设计。修订只发生在任何姿态采集之前；已收 run 1 数据保持 INVALID 原判，不回填。
+
+### 12.1 启动期 `[E]` 伴生行容忍（设计后果，收窄到精确字符串）
+
+**修订**：T2-C1/K1C-4 与 T2-C7 的"零 `[E]`"判据豁免唯一精确行——`[E] failed to get plugin info for OpenAnimationReplacer`（SKSE 装载期、任何采集之前、OAR 缺失的确定性探测伴生；其存在与 §11.3 的 `[I]` 伴生行同为 T2-C5 的停用证明材料）。其余任何 `[E]`（含运行期）仍然停止。**理由**：该行是批准设计（移除 OAR 引擎）的必然后果，与被测数据无关；不豁免则任何 Track 2 会话都无法满足判据，判据将失去检出力。
+
+### 12.2 SCAR dummy 处置（二选一，用户决策）
+
+| 方案 | 内容 | 优点 | 代价 |
+| --- | --- | --- | --- |
+| **b（推荐）** | 新建本地模组 `CharacterPanel-Track2Dummy`：把 BFCO 的 dummy 文件（29,008 B，`4061ce1b…`）逐字节复制到普通路径 `meshes\actors\character\animations\SCAR_1hmReadyDummy.hkx`，**仅在 `AE-Track2` 启用**（modlist 追加 1 行；主档 `AE` 不动） | census 判据不动（missing=0 恢复）；两侧同字节（`data FNV 8728A54A…`）→ dummy 族跨侧配对成立（Track 1 唯一配对族的连续性）；姿态对照覆盖全部 4 clip 槽位 | 磁盘视图新增 1 行 winner（须重跑 enum 重登记；行为闭包不受影响——behaviors/ 目录无变化）；触碰用户环境（新模组文件夹） |
+| c | 修订 T2-C2：声明 dummy 槽为设计性对称缺失（两侧 `identity=false` 对称、data-fnv=0 → C 规则排除出配对资格），census 其余判据不变 | 零环境改动 | 判据修订（缺项合法化）；姿态对照少 1 个 clip 槽位（两侧对称，对照仍自洽）；Track 1 唯一配对族消失 |
+
+### 12.3 冻结场景重跑要求（T2-C5）
+
+Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save116_61F78427_0_456C6966_Folgunthur01_011659_20261112151836_26_1.ess`，AE-Track2 档内 saves/ 已有）、panel-open dump 行逐字等于 K2-C1 登记（`hands=(560c2a4c,00043324) drawn=false`、`armor=slots=31 worn=9 1:0201989e,2:fe030801,3:5f006643,5:000f1b33,6:fe032823,7:fe030800,12:0201989e,17:fe01280b,20:fe0fe81b`）。不满足即再次 INVALID，不采姿态数据。
+
+### 12.4 方案 b 的重登记义务
+
+若选 b：① 建模组后重跑 `enum_track2.py`（modlist 977→978），winner-map diff 须为**恰好 1 行新增**（dummy 普通路径）且其余逐行不变；② 闭包走链复跑仍须 23/23；③ census 断言集合登记时 dummy 以新普通路径落位。**方案 b 落地前 Run 0b 不上机。**
