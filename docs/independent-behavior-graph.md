@@ -4,7 +4,7 @@
 
 > **2026-11-14 会话完整总结**：[第一会话](diagnostics/session-summary-20261114.md)（控制 B 方案 A + K1 身份普查）、[第二会话](diagnostics/session-summary-20261114-k2c1c2.md)（K1-C1 + K2-C1/C2 关闭、v102 仪器）与[第三会话](diagnostics/session-summary-20261114-k6.md)（**K6 计划评审 → K5 仪器实现 → v103 两侧运行 → K6 关闭**，新会话先读后者）。
 
-> **Track 2 预注册（2026-11-14，评审通过）**：[C-G5 Track 2：同资源姿态对照批次预注册](diagnostics/g5-track2-20261114/README.md)——落实 K6 计划 §二两轨制的 Track 2 = B + C；用户已批准 MO2 档方案，`AE-Track2` 已建档（modlist diff 恰 4 行），**离线登记已完成（[§十](diagnostics/g5-track2-20261114/README.md#十执行登记-ae-track2-建档与离线资源身份登记2026-11-14)）**：winner-map 赋值 24,204 路径逐行一致（仅 `pos` 序号漂移，4 引擎模组贡献 0 内容行）、oar-config 逐字节一致、行为闭包走链 23/23 逐位一致（**T2-C6 成立**，转移声明前提成立）、双锚点逐字一致。当前停点：**Run 0 上机**（Run 0a census-inject + Run 0b census-source，判据 T2-C1..C5/C7 + T2-C4 离线裁定）→ 断言集合登记 → Run 1/2。
+> **Track 2 批次（2026-11-14/15，收官）**：[C-G5 Track 2：同资源姿态对照批次](diagnostics/g5-track2-20261114/README.md)——落实 K6 §二两轨制 Track 2 = B + C。经修订 v2/v3（Track2Dummy 占位模组 + RaySenseEsp 占位模组，均仅在 `AE-Track2` 档启用）后：Run 0a/0b PASS（census 重登记 + T2-C5 逐字重验 + **T2-C4 六族跨侧 data FNV 相等**）、Run 1 候选 249 代 / Run 2 源 1065 apply 全 116 轨双读全等（K5-1..8 PASS，IDUN=3 有界记账）、**C 分组账本六族全 PAIRED**（§19）——K1-C4 NOT MATCHED 在 Track 2 环境反转，确定性资源条件成立，两侧 poseLocal 进入可配对状态。边界：不产生 `tau_*`、不做等价裁定（门 4 冻结的输入材料已就位）、不做同刻逐代配对。下一入口：门 4 协议设计 + CAL2 预注册。
 
 更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。**v96a 后续已部署并完成首次原生运行，关闭“差一帧”覆盖缺口；见[运行记录](build.md#g5-cal-v96a-observation-v2-run1-20261112)。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
@@ -58,7 +58,8 @@ v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿�
 | G2 | PASSED（v33 窗口 + v34 边界） | 无 |
 | G3 | G3-A 成立；G3-B PASSED（相位序列） | 无（v69 两注入回放为其第九次逐位复现） |
 | G4 | **A/B/C 三段保留** | **C 由"仪器无效待重跑"改为"修复版重跑关闭"** |
-| G5 | **门 1 NOT_READY（未通过）** | **E1 修复版取证缺口闭合 + 静态四项闭合 + [v3 运行通过](#c-g5-e1-v3)（v71：424/424 完成配对、五路径对账 89,437、un=0、count-over-capacity=0、pose-stable=yes、ill==cap==116、in-flight-max=1）**；E2/E3 与联合验收未做 |
+| G5 | **门 1 NOT_READY（未通过）** | **E1 修复版取证缺口闭合 + 静态四项闭合 + [v3 运行通过](#c-g5-e1-v3)（v71：424/424 完成配对、五路径对账 89,437、un=0、count-over-capacity=0、pose-stable=yes、
+ill==cap==116、in-flight-max=1）**；E2/E3 与联合验收未做 |
 | G6 | PENDING | 无（teardown 维持 NO-GO） |
 
 **证据边界（不得外推）**：G4-C 的零事件只限 **58377** 路由；E1 的 `pinned-engine=408` 是**应用入口**计数，不是逐骨写满或输出完成；六工作线程只证明观察到的调用线程不同，不识别调度器；对账恒等式只覆盖已武装窗口内的传送与关闭；audit32 全部为静态可达，不等于运行命中；`fill ≤ cap`（`skeletonWord+0x40` vs `+0x30`）与 63563/63572 两个未列调用点仍是**待运行核验项**。
