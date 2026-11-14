@@ -2188,3 +2188,18 @@ Identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0
 1. **候选侧 run 1**（inject 档已在安装位）：Save116 加载 → panel 窗口按 v96a/v102 同链（inject → 同帧 5 写 prime + `WeapEquip` → equip 120 步 → settle 87/101 → `Unequip` id=144 → unequip 129 步 completed）→ 关窗。判据：`K5 SNAPSHOT open/close`、`K5 RECON side=candidate`、4 组 `K5 AUDIT`（post-activate/equip-mid/equip-settle/unequip-complete）、JSON 账本写出；零 `[E]`；equip 120/120 + unequip completed=129（state-12-to-0）；clip 族 1HM、零 H2H。
 2. **源侧 run 2**：换装 source 档（`cp dist/g5-k5-20261114/CharacterPanel-source.ini` → 安装位 `CharacterPanel.ini`），Save116 加载 → F7 开 probe 窗口（v99b 式自然游玩：装备→稳定→卸下→稳定）→ 20 s 窗口正常关闭。判据：`K5 SOURCE open/close`、`K5 RECON side=source`（K5Reconciliation on）、JSON 账本；零 `[E]`；记录数在 cap 1,400 内且卸下完成覆盖在窗口内。
 3. 两个运行档都**不是默认产品档**；`config/CharacterPanel.ini` 保持全键默认 off。运行后日志/工件归档进 `docs/diagnostics/`，按 K5-1…K5-8 裁定 K6 关闭。
+
+## Track 2 运行档派生（2026-11-14，纯 INI，零代码/零构建）
+
+[Track 2 预注册](diagnostics/g5-track2-20261114/README.md)（评审已通过，§九决策 1 批准）§六 的四个运行档派生入 `dist/g5-track2-20261114/`（`/dist/` 为 gitignored 部署区，本节按哈希登记）。v103（DLL `8c3857a3…`）已含全部所需仪器键，本步零构建。
+
+| 运行档 | 用途 | 派生基线 | 字节 | SHA-256 |
+| --- | --- | --- | ---: | --- |
+| CharacterPanel-track2-census-inject.ini | Run 0a 候选侧 census + T2-C5 装备重验 | `dist/CharacterPanel-g5k1-census.ini`（v101 协议档）+ 唯一新增 `EquipmentStateDump=true`（3 行注释） | 13,313 | `c05b9b91…03a6a` |
+| CharacterPanel-track2-census-source.ini | Run 0b 源侧 census（F7 自然游玩窗口） | `dist/CharacterPanel-g5k1-source-census.ini` 逐字节复制 | — | `2964009c…a854e`（与 v101b 运行档登记哈希一致） |
+| CharacterPanel-track2-k5-inject.ini | Run 1 候选姿态采集 | `dist/g5-k5-20261114/CharacterPanel-inject.ini` 逐字节复制 | 12,125 | `76f2bebb…be0b885`（与 v103 inject 档一致） |
+| CharacterPanel-track2-k5-source.ini | Run 2 源姿态采集 | `dist/g5-k5-20261114/CharacterPanel-source.ini` 逐字节复制 | 12,322 | `21bd938b…fc626ec2b`（与 v103 source 档一致） |
+
+全部 UTF-8 无 BOM、CRLF（census 基线档为 CRLF，插入行以 `\r\n` 保留）；census-inject 与基线逐行 diff 仅为新增 4 行。启用键表与换档/核验流程见 `dist/g5-track2-20261114/README.md`（本地清单）。三个逐字节复制档的哈希与既有登记值一致，构成运行身份连续性锚点。
+
+**换档纪律（v103 run 2"换档未落位"教训）**：覆盖安装位 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\CharacterPanel.ini` 前先备份；换档后以日志身份行与安装位哈希核对确认落位，再启动游戏。
