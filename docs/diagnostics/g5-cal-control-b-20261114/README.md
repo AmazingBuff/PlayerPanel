@@ -77,3 +77,53 @@ clip-ref ... name='Animations\male\MT_Idle.HKX' binding-index=1022 map-len=99 ma
 
 - `tests/control_sample_policy_test.cpp`：4/4 通过（时间表/规模、资源登记格式、FNV 参考向量、frame/block 结构关系）。
 - 真值文件 891 行；`t=0` 的 track 4 为 `C012B5B4,4068755E,42897BE4`，与 HavokLib 导出的第 0 个控制点 `(-2.29234028, 3.63216352, 68.7419739)` 逐位一致。
+
+## 七、B1 首次原生运行（2026-11-14 13:49；**bit-exact FAILED**）
+
+**运行身份**：v100 `CharacterPanel-scenegraph-v100-g5cal-control-b-3378889e91-cl94faaed0c6-20261114T054321Z`，runtime `1-6-1170-0`，OAR `3.1.6`；DLL `409C2684975886E4C5AA093FB2232289D04FC127423A1423448ADCE85D0E476F`，PDB `0EE6284249B1C46EFD5DF815FF6DA2A3CB178607BA42B63371A84EC4D06B801D`，INI `D8B6B7A7CA857BFE06E6ED15E9520158AA3C0E3581EC9614C572E96EE502B752`。日志归档 [CharacterPanel-g5cal-control-b-v100-run1-20261114-1349.log](../CharacterPanel-g5cal-control-b-v100-run1-20261114-1349.log)，345,735 B，SHA-256 `DD3008CBA6AFB4DA38A3DDC7A13F6BEF8A1437706B1F9275501C0E643321D901`；零 `[E]`，120 equip + 129 unequip，`source-drift=none`。
+
+### 承载与读取
+
+| 项 | 读数 | 裁定 |
+| --- | --- | --- |
+| 载体 | `phase=scan`：`clip='Animations\male\MT_Idle.HKX'`，`index=14`，binding `0x1e845f832a0`，`binding_index=1022` | 唯一 |
+| 资源身份 | `data_fnv1a64=F56EE1500EB5A3D0`、`block_offsets_fnv1a64=F17EBD9ADA8CF785`、`map_fnv1a64=077954859409395E`、duration/tracks/spline 字段全部等于登记值 | **PASS（逐位）** |
+| 读取完整性 | 891 条 `phase=track`（9×99×10），`two_read_equal=9/9`，`nonfinite=0` | **PASS** |
+| 运行完整性 | 一次候选实验、零 `[E]`、身份匹配 | **PASS** |
+| B-C 独立真值 | `bits_fnv1a64=0FAB995615D7BFB2` vs `expected=8E2E1D12B040807D`，`hash_match=false` | **FAIL（位精确）** |
+
+### 数值差异（8910 个分量，runtime − offline）
+
+| 通道 | 总数 | 逐位相同 | 不同 | 最大绝对差 |
+| --- | --- | --- | --- | --- |
+| translation | 2673 | 1970 | 703 | 1.76429749e-05（t=25，track 4，t.x：`C01B766A` vs `C01B76B4`） |
+| rotation | 3564 | 1095 | 2469 | 3.16649675e-06 |
+| scale | 2673 | 2353 | 320 | 3.57827869e-07 |
+| 合计 | 8910 | 5418（60.81%） | 3492 | 1.76429749e-05 |
+
+**结论：差异是 float32 实现顺序，不是资源/时间/映射错误。** 证据：
+
+1. 资源三个 FNV、duration、tracks、spline 字段全部逐位匹配；binding map 也是 authored 0..98。
+2. t=0 的 translation 有 272/297 逐位相同，剩余为 1 ULP（最大 9.54e-7）；若时间映射或 binding 选错，端点不可能只有 1 ULP。
+3. runtime 与 offline 的四元数范数误差几乎相同（t=25 最大 |q|−1 分别为 3.9807e-4 与 3.9814e-4），说明双方都没有额外归一化；差异来自解码/求值的运算顺序，而不是语义（normalize/sign）差异。
+4. 差异随 bbox 绝对量级增长（最大 1.76e-5 出现在 |x|≈2.43、bbox 跨度≈5.99 的轨道），符合仿射解码 `min + (max−min)·q` 与三次 B-spline 求值的 float32 舍入。
+5. HavokLib 使用 `localTime / frameDuration`；若引擎误用派生 `60 fps`，t=25 会差约 1 帧，远大于实测 1.76e-5，因此时间映射也被排除。
+
+**裁定：B1 的位精确判据 B-C FAILED，K2-C4 仍 NOT_READY。** 不产生容差，不把 60.81% 的逐位一致当作 PASS，也不回改 B1 的时间/资源判据。
+
+## 八、B2 有界判据（2026-11-14 预注册；待新进程运行）
+
+B1 证明了两件事：资源/载体/读取路径合格，且两个独立实现只在 float32 末位上分歧。B2 不使用“观测到的最大差”当阈值，而是从 **authored bbox + 量化类型 + float32 运算界** 解析地给出逐分量上界：
+
+| 分量类型 | B2 上界 | 依据 |
+| --- | --- | --- |
+| rotation（本资源全部 40-bit，dynamic/static） | `3.45436e-4` | 40-bit 四元数分量的 authored 量化步长 |
+| position/scale，dynamic 16-bit | `max(2·(max−min)/65535, 32·eps·(|min|+|max|))` | 两个 authored 量化步长 + 仿射解码/三次求值的 float32 舍入界；`eps=2^-24` |
+| position/scale，static float32 | `32·eps·|value|` | 直接 float32 读取 + 求值舍入 |
+| identity（0 或 1） | `32·eps` | 常量通道的浮点舍入 |
+
+**判据**：8910 个分量全部满足 `|runtime − offline| ≤ bound`；同时 B-A/B-B/B-D 保持通过。否则 B2 FAILED，控制 B 仍 NOT_READY。**边界**：B2 只证明“该资源、该 9 个固定时间、该单层直接采样路径”在 float32 解析界内一致；不证明 120 代驱动协议、三次独立进程（CAL2）、时间量化、层/权重/混合或 G5。
+
+**可行性核对（不是 B2 裁定）**：把 B1 的 8910 个分量离线代入上述界，最大比值 `0.4860`（t=25、track 92、t.x；diff 1.718e-7 / bound 3.536e-7）。这只说明界不是空集，B2 仍需新进程重新采集。
+
+**安全系数的时点说明（不得隐去）**：上界的形式来自 authored 数据与 float32 误差分析；`2×step` 和 `32×eps` 的具体系数是在看到 B1 的 0.97×step 最坏比值后确定的，因此 B2 明确是**新批次**，不是对 B1 位精确判据的重判或放宽。B2 必须用新进程重新采集，且结果不得回写 B1。

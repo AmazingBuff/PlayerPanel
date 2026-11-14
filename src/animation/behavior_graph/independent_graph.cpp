@@ -2246,6 +2246,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 pose_step_deltas.push_back(code);
                                 pose_step_previous = std::move(current);
                             };
+                            bool control_sample_attempted = false;
                             const auto record_output = [&]() {
                                 ClipObservation const clips = collect_active_clips();
                                 record_clip_clocks(clips);
@@ -2254,8 +2255,11 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 // point where the OAR-replaced MT_Idle binding (25.0167 s, 99 tracks)
                                 // is active. It is sampled once; a failure is logged separately and
                                 // never invalidates the existing K3 observation.
-                                if (observation.completed() == 1 && control_sample())
+                                if (observation.completed() == 1 && control_sample() && !control_sample_attempted)
+                                {
+                                    control_sample_attempted = true;
                                     (void)run_control_sample(candidate->characterInstance, actor_id, request, observation.completed());
+                                }
                                 if (observation.completed() > 0)
                                 {
                                     segment_pose_end = format_pose_hash(candidate->characterInstance);

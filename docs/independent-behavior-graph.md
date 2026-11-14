@@ -5230,6 +5230,21 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **边界**：即使 B-A–B-D 全通过，也只证明该资源、该 9 个固定时间、该单层直接采样路径在本次会话逐位一致；不证明 120 代驱动协议、三次独立进程、时间量化、层/权重/混合、K1 资源清单或 G5。`tau_p/tau_r/tau_s/epsilon_t` 仍未产生。离线策略测试 `control_sample_policy_test` 4/4 通过。
 
+### 方案 A B1 运行（2026-11-14 13:49；**bit-exact FAILED**）
+
+**裁定：B1 的位精确判据 B-C FAILED，K2-C4 仍 NOT_READY。** v100 运行一次干净窗口（`equip=120` / `unequip=129`、零 `[E]`、`source-drift=none`），日志 [归档](diagnostics/CharacterPanel-g5cal-control-b-v100-run1-20261114-1349.log)（345,735 B，SHA-256 `DD3008CB…21D901`）。
+
+| 项 | 读数 | 裁定 |
+| --- | --- | --- |
+| 载体/资源身份 | `phase=scan` 唯一 MT_Idle，`binding_index=1022`；`data_fnv1a64=F56EE1500EB5A3D0`、`block_offsets_fnv1a64=F17EBD9ADA8CF785`、`map_fnv1a64=077954859409395E`，duration/spline 字段逐位相同 | **PASS** |
+| 读取完整性 | 891 条 track 记录，`two_read_equal=9/9`，`nonfinite=0` | **PASS** |
+| 运行完整性 | 一次候选实验、零 `[E]`、DLL/PDB/INI 身份匹配 | **PASS** |
+| 独立真值（位精确） | `bits_fnv1a64=0FAB995615D7BFB2` vs `8E2E1D12B040807D`，`hash_match=false`；8910 分量中 5418 逐位相同（60.81%），最大绝对差 1.7643e-05 | **FAIL** |
+
+**归因**：资源/时间/映射均正确，差异是 float32 实现顺序。t=0 translation 272/297 逐位相同、其余 1 ULP；runtime 与 offline 的四元数范数误差几乎相同（t=25 为 3.9807e-4 vs 3.9814e-4），排除归一化/符号语义差；若引擎误用派生 60 fps，t=25 会差约 1 帧，远大于实测 1.76e-5。详见 [B1 数值表](diagnostics/g5-cal-control-b-20261114/README.md#七b1-首次原生运行2026-11-14-1349bit-exact-failed)。
+
+**B2 预注册（待新进程）**：[B2 有界判据](diagnostics/g5-cal-control-b-20261114/README.md#八b2-有界判据2026-11-14-预注册待新进程运行) 使用 authored bbox/量化类型 + float32 解析界：rotation 40-bit 步长 `3.45436e-4`；dynamic 16-bit position/scale `max(2·(max−min)/65535, 32·eps·(|min|+|max|))`；static/identity 用 `32·eps·|value|`。8910 分量全部满足即 B2 PASS，否则仍 NOT_READY。系数是在 B1 后确定的，故 B2 明确为新批次，不回写 B1；即使 B2 PASS 也不产生 `tau_*`、不证明 CAL2 的三进程/120 代协议。
+
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 
 **裁定**：v96a run 1 为 **K2-C1/C2/C3 提供了一次可复核的正面证据**，并把 D3 的 1HM 卸下完成点覆盖补齐；**K1-C1–C4 与 K2-C4（控制 B）仍未闭合**，因此 K1/K2 整体仍 **NOT_READY**，不能启动原生校准。
