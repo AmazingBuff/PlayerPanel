@@ -1,0 +1,100 @@
+START	meshes/actors/character/behaviors/0_master.hkx	Pandora_Output	12951504	466cf1169ee0a0afad01532d3f1b9a1b1d410dc8dcc3ad3045bb1aae65775e61
+REF	meshes/actors/character/behaviors/0_master.hkx	behaviors\skyparkour_behavior.hkx	meshes/actors/character/behaviors/skyparkour_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/skyparkour_behavior.hkx	SkyParkour V3 - Parkour Framework	41744	8f60c051a09bd9285e291f4553b922ca7fc4345a6b49185a207968cad56a97dd
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\FNIS_SeranaHoodFixWithAnim_Behavior.hkx	meshes/actors/character/behaviors/fnis_seranahoodfixwithanim_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/fnis_seranahoodfixwithanim_behavior.hkx	Serana Dialogue Add-On SE	5920	4a91ff90a7010ded7d29ffc469d3f03c9bbff02f2ab1a6f31b77b708cbf71ab3
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\FNIS_AsheFireandBlood_Behavior.hkx	meshes/actors/character/behaviors/fnis_ashefireandblood_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/fnis_ashefireandblood_behavior.hkx	Ashe - Crystal Heart	17104	1be9f74827ee0a70eb8c24062de1cb87aea96ffaef79d760b577670f7804f7b6
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\FNIS_DrG_furnitureETP_Behavior.hkx	meshes/actors/character/behaviors/fnis_drg_furnitureetp_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/fnis_drg_furnitureetp_behavior.hkx	Drago's Enchant Those Potions for OStim Standalone	86944	971502d2a031762becc9b5277ccdac2602d67b4b1d458ecdb0e3f005f9fad965
+REF	meshes/actors/character/behaviors/0_master.hkx	behaviors\ItemUse.hkx	meshes/actors/character/behaviors/itemuse.hkx
+CLOSURE	meshes/actors/character/behaviors/itemuse.hkx	Ultimate Animated Potions NG	61184	f054761fed18d324b4d3ac3c12462b5394e90544ea650b112c6e8344bf6f0593
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\ShoutMounted_Behavior.hkx	meshes/actors/character/behaviors/shoutmounted_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/shoutmounted_behavior.hkx	Pandora_Output	34432	2a9a2b3530e9710c52d2bc9c8fdcb4134fd3052f4659dc67fa1b1d9173bf47a7
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\MagicMountedBehavior.hkx	meshes/actors/character/behaviors/magicmountedbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/magicmountedbehavior.hkx	Pandora_Output	121744	77595eb9fbfa525bb4435c897431e5bc7773cf028446f5921ae315038b95d452
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\modernstaggerlock_behavior.hkx	meshes/actors/character/behaviors/modernstaggerlock_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/modernstaggerlock_behavior.hkx	Moddern.Stagger.Lock.Framework	19824	388471230ce128cc084b58d9a219158407fc50c3c818012ead63572b8f9b5a4a
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\SprintBehavior.hkx	meshes/actors/character/behaviors/sprintbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/sprintbehavior.hkx	Pandora_Output	36688	126e9a5e15f966a6cbcb4023614420db2274eff5096a0678d3381cc4641a0b8f
+REF	meshes/actors/character/behaviors/0_master.hkx	behaviors\magicbehavior.hkx	meshes/actors/character/behaviors/magicbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/magicbehavior.hkx	Pandora_Output	350352	fa5eb2ec5e5b9e4d230a9b5c1a35763a38487a8e0961b2b7e93a34e1c7441176
+REF	meshes/actors/character/behaviors/0_master.hkx	behaviors\magicbehavior.hkx	meshes/actors/character/behaviors/magicbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/magicbehavior.hkx	Pandora_Output	350352	fa5eb2ec5e5b9e4d230a9b5c1a35763a38487a8e0961b2b7e93a34e1c7441176
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\BashBehavior.hkx	meshes/actors/character/behaviors/bashbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/bashbehavior.hkx	Pandora_Output	37056	f59b161aab3437a974997b7a08a4a10702357a0cd82740fb2b7979eb726f758c
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\BlockBehavior.hkx	meshes/actors/character/behaviors/blockbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/blockbehavior.hkx	Pandora_Output	199792	735499f17d9dccc5ea1ced7724a4581ec8e349d4432476f207f3656593a36dcc
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\1HM_Behavior.hkx	meshes/actors/character/behaviors/1hm_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/1hm_behavior.hkx	Pandora_Output	1505120	c56f96bbd2e291e5d9ad5ea45907c1e2b147ca4ad50e0d2e03d86e7566ca1d0f
+REF	meshes/actors/character/behaviors/0_master.hkx	behaviors\weapequip.hkx	meshes/actors/character/behaviors/weapequip.hkx
+CLOSURE	meshes/actors/character/behaviors/weapequip.hkx	Pandora_Output	75456	fd0f0e096eca0c5863b33e854883002ab9e19512aebc2d7161ae0a6ee5bb36e6
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\1HM_Locomotion.hkx	meshes/actors/character/behaviors/1hm_locomotion.hkx
+CLOSURE	meshes/actors/character/behaviors/1hm_locomotion.hkx	Pandora_Output	182704	45233d1389028593057210efa6cb40048daa723c33785bb859b876e10a3c9886
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\MT_Behavior.hkx	meshes/actors/character/behaviors/mt_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/mt_behavior.hkx	Pandora_Output	1172704	6217f8ad03493c03228f1c2b1b9efce3fd16457ad91df2f8916a96d6bfd462fb
+REF	meshes/actors/character/behaviors/0_master.hkx	Behaviors\HorseBehavior.hkx	meshes/actors/character/behaviors/horsebehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/horsebehavior.hkx	Pandora_Output	200928	6d6871f5449ebf8a14caa948be9cdb20a362b5b648493a502c5ccfeaf0d773d5
+WALKED	meshes/actors/character/behaviors/0_master.hkx	refs=18 visited=140370
+WALKED	meshes/actors/character/behaviors/skyparkour_behavior.hkx	refs=0 visited=428
+WALKED	meshes/actors/character/behaviors/fnis_seranahoodfixwithanim_behavior.hkx	refs=0 visited=88
+WALKED	meshes/actors/character/behaviors/fnis_ashefireandblood_behavior.hkx	refs=0 visited=239
+WALKED	meshes/actors/character/behaviors/fnis_drg_furnitureetp_behavior.hkx	refs=0 visited=753
+WALKED	meshes/actors/character/behaviors/itemuse.hkx	refs=0 visited=564
+WALKED	meshes/actors/character/behaviors/shoutmounted_behavior.hkx	refs=0 visited=557
+REF	meshes/actors/character/behaviors/magicmountedbehavior.hkx	Behaviors\ShoutMounted_Behavior.hkx	meshes/actors/character/behaviors/shoutmounted_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/shoutmounted_behavior.hkx	Pandora_Output	34432	2a9a2b3530e9710c52d2bc9c8fdcb4134fd3052f4659dc67fa1b1d9173bf47a7
+WALKED	meshes/actors/character/behaviors/magicmountedbehavior.hkx	refs=1 visited=1788
+WALKED	meshes/actors/character/behaviors/modernstaggerlock_behavior.hkx	refs=0 visited=275
+WALKED	meshes/actors/character/behaviors/sprintbehavior.hkx	refs=0 visited=409
+REF	meshes/actors/character/behaviors/magicbehavior.hkx	behaviors\shout_behavior.hkx	meshes/actors/character/behaviors/shout_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/shout_behavior.hkx	Pandora_Output	67072	a1ee2d5518a52e03945634945fd529856b3c9755cb0fbae3a573335efae9337a
+REF	meshes/actors/character/behaviors/magicbehavior.hkx	Behaviors\SprintBehavior.hkx	meshes/actors/character/behaviors/sprintbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/sprintbehavior.hkx	Pandora_Output	36688	126e9a5e15f966a6cbcb4023614420db2274eff5096a0678d3381cc4641a0b8f
+WALKED	meshes/actors/character/behaviors/magicbehavior.hkx	refs=2 visited=4715
+WALKED	meshes/actors/character/behaviors/bashbehavior.hkx	refs=0 visited=497
+REF	meshes/actors/character/behaviors/blockbehavior.hkx	Behaviors\SprintBehavior.hkx	meshes/actors/character/behaviors/sprintbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/sprintbehavior.hkx	Pandora_Output	36688	126e9a5e15f966a6cbcb4023614420db2274eff5096a0678d3381cc4641a0b8f
+REF	meshes/actors/character/behaviors/blockbehavior.hkx	Behaviors\1HM_Locomotion.hkx	meshes/actors/character/behaviors/1hm_locomotion.hkx
+CLOSURE	meshes/actors/character/behaviors/1hm_locomotion.hkx	Pandora_Output	182704	45233d1389028593057210efa6cb40048daa723c33785bb859b876e10a3c9886
+WALKED	meshes/actors/character/behaviors/blockbehavior.hkx	refs=2 visited=2457
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	Behaviors\maxsuBlockHit_behavior.hkx	meshes/actors/character/behaviors/maxsublockhit_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/maxsublockhit_behavior.hkx	MaxsuBlockOverhaul	7888	8621c43b43af7af0a6d7874db407be4724ac17d3d703b7bb64f35d3c5473e68e
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	Behaviors\CrossBow_Direction_Behavior.hkx	meshes/actors/character/behaviors/crossbow_direction_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/crossbow_direction_behavior.hkx	Pandora_Output	46400	6bd25a67fe67731517844dcbd31724466dcd4dccc4f92704d28fb589aa979c32
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	Behaviors\Bow_Direction_Behavior.hkx	meshes/actors/character/behaviors/bow_direction_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/bow_direction_behavior.hkx	Pandora_Output	46320	16dc2c008803bfed3a43cead020c335c00665df89e9778b88b2a00fe7421b53a
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	Behaviors\Shout_Behavior.hkx	meshes/actors/character/behaviors/shout_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/shout_behavior.hkx	Pandora_Output	67072	a1ee2d5518a52e03945634945fd529856b3c9755cb0fbae3a573335efae9337a
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	Behaviors\BashBehavior.hkx	meshes/actors/character/behaviors/bashbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/bashbehavior.hkx	Pandora_Output	37056	f59b161aab3437a974997b7a08a4a10702357a0cd82740fb2b7979eb726f758c
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	Behaviors\BlockBehavior.hkx	meshes/actors/character/behaviors/blockbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/blockbehavior.hkx	Pandora_Output	199792	735499f17d9dccc5ea1ced7724a4581ec8e349d4432476f207f3656593a36dcc
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	Behaviors\1HM_Locomotion.hkx	meshes/actors/character/behaviors/1hm_locomotion.hkx
+CLOSURE	meshes/actors/character/behaviors/1hm_locomotion.hkx	Pandora_Output	182704	45233d1389028593057210efa6cb40048daa723c33785bb859b876e10a3c9886
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	Behaviors\SprintBehavior.hkx	meshes/actors/character/behaviors/sprintbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/sprintbehavior.hkx	Pandora_Output	36688	126e9a5e15f966a6cbcb4023614420db2274eff5096a0678d3381cc4641a0b8f
+REF	meshes/actors/character/behaviors/1hm_behavior.hkx	behaviors\magicbehavior.hkx	meshes/actors/character/behaviors/magicbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/magicbehavior.hkx	Pandora_Output	350352	fa5eb2ec5e5b9e4d230a9b5c1a35763a38487a8e0961b2b7e93a34e1c7441176
+WALKED	meshes/actors/character/behaviors/1hm_behavior.hkx	refs=9 visited=24334
+REF	meshes/actors/character/behaviors/weapequip.hkx	behaviors\1hm_locomotion.hkx	meshes/actors/character/behaviors/1hm_locomotion.hkx
+CLOSURE	meshes/actors/character/behaviors/1hm_locomotion.hkx	Pandora_Output	182704	45233d1389028593057210efa6cb40048daa723c33785bb859b876e10a3c9886
+WALKED	meshes/actors/character/behaviors/weapequip.hkx	refs=1 visited=930
+REF	meshes/actors/character/behaviors/1hm_locomotion.hkx	Behaviors\SprintBehavior.hkx	meshes/actors/character/behaviors/sprintbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/sprintbehavior.hkx	Pandora_Output	36688	126e9a5e15f966a6cbcb4023614420db2274eff5096a0678d3381cc4641a0b8f
+WALKED	meshes/actors/character/behaviors/1hm_locomotion.hkx	refs=1 visited=2218
+REF	meshes/actors/character/behaviors/mt_behavior.hkx	Behaviors\Shout_Behavior.hkx	meshes/actors/character/behaviors/shout_behavior.hkx
+CLOSURE	meshes/actors/character/behaviors/shout_behavior.hkx	Pandora_Output	67072	a1ee2d5518a52e03945634945fd529856b3c9755cb0fbae3a573335efae9337a
+REF	meshes/actors/character/behaviors/mt_behavior.hkx	Behaviors\SprintBehavior.hkx	meshes/actors/character/behaviors/sprintbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/sprintbehavior.hkx	Pandora_Output	36688	126e9a5e15f966a6cbcb4023614420db2274eff5096a0678d3381cc4641a0b8f
+REF	meshes/actors/character/behaviors/mt_behavior.hkx	Behaviors\IdleBehavior.hkx	meshes/actors/character/behaviors/idlebehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/idlebehavior.hkx	Pandora_Output	319248	5149a46bc6ace873a74cef7cdb8235d19518d8c08a1c708392f934d47d4e62ed
+WALKED	meshes/actors/character/behaviors/mt_behavior.hkx	refs=3 visited=17065
+WALKED	meshes/actors/character/behaviors/horsebehavior.hkx	refs=0 visited=3063
+REF	meshes/actors/character/behaviors/shout_behavior.hkx	Behaviors\SprintBehavior.hkx	meshes/actors/character/behaviors/sprintbehavior.hkx
+CLOSURE	meshes/actors/character/behaviors/sprintbehavior.hkx	Pandora_Output	36688	126e9a5e15f966a6cbcb4023614420db2274eff5096a0678d3381cc4641a0b8f
+WALKED	meshes/actors/character/behaviors/shout_behavior.hkx	refs=1 visited=789
+WALKED	meshes/actors/character/behaviors/maxsublockhit_behavior.hkx	refs=0 visited=206
+WALKED	meshes/actors/character/behaviors/crossbow_direction_behavior.hkx	refs=0 visited=483
+WALKED	meshes/actors/character/behaviors/bow_direction_behavior.hkx	refs=0 visited=481
+WALKED	meshes/actors/character/behaviors/idlebehavior.hkx	refs=0 visited=3516

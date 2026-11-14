@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-**当前更新（2026-11-14）**：**源图 B3/B4 后处理边界在 [v97d 单窗口](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 PASS（K4 本会话边界）**。[K1/K2 账本](#c-g5-cal-k1k2) 中 K2-C3 PASS；**K2-C4 控制 B 已 READY（bounded，B2 v100a）**，B1 位精确 FAIL 保留在案。**K1-C2/C3 census 与 K1-C4 资源清单已由 [v101 + v101b](diagnostics/g5-k1-census-20261114/README.md) 登记：两侧 116 骨骨架/参考姿态齐全、活动 clip 身份无丢失；K1-C4 裁定 NOT MATCHED（源/候选 clip 家族对齐但 data FNV 除 SCAR dummy 外无一对齐，源侧 OAR 窗口内自行切换资源）**；K1-C1 完整运行资源清单仍 NOT_READY。K3 两侧（候选 v98 + 源 v99b）已闭合，K5/K6 与姿态等价仍待验证，`tau_*` 未产生，G5 未通过。
+**当前更新（2026-11-14）**：**K1-C1 完整运行资源清单已离线登记为 REGISTERED（限定范围）：行为闭包 23 文件与 A1 逐位一致、OAR 150 模块/8,373 级别全量登记（providers-all 24,375 行）、v101/v101b 全部 14 个观测 data FNV 落位（13 loose winner + 1 原版 BSA 1hm_idle），源侧=Smooth Moveset/SVFI、候选侧=SCAR/Elden Rim/Ashe/Vanargand/原版——K1-C4 NOT MATCHED 的资源来源已具体到文件；两条登记偏差与全部工件见 [K1-C1 登记](diagnostics/g5-k1-c1-20261114/README.md)**。**源图 B3/B4 后处理边界在 [v97d 单窗口](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 PASS（K4 本会话边界）**。[K1/K2 账本](#c-g5-cal-k1k2) 中 K2-C3 PASS；**K2-C4 控制 B 已 READY（bounded，B2 v100a）**，B1 位精确 FAIL 保留在案。**K1-C2/C3 census 与 K1-C4 资源清单已由 [v101 + v101b](diagnostics/g5-k1-census-20261114/README.md) 登记：两侧 116 骨骨架/参考姿态齐全、活动 clip 身份无丢失；K1-C4 裁定 NOT MATCHED（源/候选 clip 家族对齐但 data FNV 除 SCAR dummy 外无一对齐，源侧 OAR 窗口内自行切换资源）**。K3 两侧（候选 v98 + 源 v99b）已闭合，K5/K6 与姿态等价仍待验证，`tau_*` 未产生，G5 未通过。
 
 > **2026-11-14 会话完整总结**：[diagnostics/session-summary-20261114.md](diagnostics/session-summary-20261114.md)（控制 B 方案 A + K1 身份普查的逐轮判据、5 个版本部署哈希、11 个提交清单、当前 MO2 安装状态与剩余前置）。
 

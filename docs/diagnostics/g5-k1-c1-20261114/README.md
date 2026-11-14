@@ -1,6 +1,8 @@
 # C-G5-CAL K1-C1 完整运行资源清单（2026-11-14 预注册）
 
-**状态（2026-11-14）：预注册，未执行。** 本轮闭合 [CAL v1 §三 K1](../../independent-behavior-graph.md) 的 "runtime/OAR/资源清单" 项：[K1 census](../g5-k1-census-20261114/README.md) §八指明 K1-C1 缺 **project/behavior 文件与全部 OAR 替换源的逐一登记**；同时落实其裁定（跨运行身份只按 `data FNV` 或完整路径+内容哈希，不用 leaf 名/binding-index）。**纯离线：零游戏运行、零插件代码改动。**
+**状态（2026-11-14 15:47）：已执行，C1-1..C1-5 全部成立 → K1-C1 = REGISTERED（限定范围，含两条登记偏差，见 §六）。**
+
+本轮闭合 [CAL v1 §三 K1](../../independent-behavior-graph.md) 的 "runtime/OAR/资源清单" 项：[K1 census](../g5-k1-census-20261114/README.md) §八指明 K1-C1 缺 **project/behavior 文件与全部 OAR 替换源的逐一登记**；同时落实其裁定（跨运行身份只按 `data FNV` 或完整路径+内容哈希，不用 leaf 名/binding-index）。**纯离线：零游戏运行、零插件代码改动。**
 
 ## 一、目标与边界
 
@@ -49,3 +51,56 @@
 | FNV 映射 TSV | 20,000 行 | 超限即停 |
 | 本 README | 200 行 | 分轮追加，不改写历史 |
 | conditions 摘要 | 200 字符/条 | 截断标记 `…` |
+
+## 六、执行结果与裁定（2026-11-14 15:47）
+
+### 执行轨迹（离线，零游戏运行）
+
+| 步 | 内容 | 结果 |
+| --- | --- | --- |
+| 1 | 预注册提交 `496e68d` | 判据 C1-1..C1-5 预先固定 |
+| 2 | 锚点校验 | SCAR dummy → `8728A54A50D85C22` ✓、Vanargand female mt_idle → `F56EE1500EB5A3D0` ✓（blockOffsets FNV `F17EBD9ADA8CF785` 亦与控制 B 登记常量一致；SHA-256 `0EF8248C…BCD73C7` ✓）→ **映射方法有效** |
+| 3 | 全量枚举（`build/k1-c1/enum_k1c1.py`，本地 gitignored） | 24,375 provider 行 / 24,204 生效路径；MO2 优先方向以 A1 运行时证据校准（**modlist.txt 先者赢**，BFCO/Pandora 冲突裁定与 S3 load-try 佐证一致） |
+| 4 | 全量解码（`build/hkx-audit/HkxInventory`，本地 gitignored） | 19,973 文件 / 19,821 动画 / 19,062 spline；错误 150 全部逐条列明（146 ERR-XML = mnbv 系 Havok XML 假 .hkx，4 EndOfStream = jumpfallfix×3 + Left Hand Equipment Swap×1 截断文件） |
+| 5 | 行为闭包走链（生效 `0_Master.hkx`，38 REF） | **23 文件**（Pandora_Output 16 含 0_master + 松散 7：modernstaggerlock/ItemUse/FNIS×3/skyparkour/maxsuBlockHit），0 未解析、0 歧义、0 加载错误；**与 A1 旧转储逐文件哈希对照 23/23 逐位一致**（A1 文本"17+6"为其枚举笔误，其成员集即 16+7） |
+| 6 | 观测 FNV 对账（v101 候选 8 + v101b 源 8，并集 14） | **14/14 落位**：13 个 loose winner + 1 个原版 BSA（`Skyrim - Animations.bsa` 内 `meshes\actors\character\animations\1hm_idle.hkx`，LZ4 帧解压 20,576 B，spline data 14,448 B、9.0 s，FNV `C62C233B06FAE9A9` = 候选 1HM_Idle） |
+
+### 判据裁定
+
+| # | 判据 | 裁定 |
+| --- | --- | --- |
+| C1-1 | 闭包 23 文件全部在 B1 登记内、哈希与 A1 一致 | **成立**（missing=0 hash-diff=0） |
+| C1-2 | OAR 枚举完整、config 解析失败 ≤1% | **成立**（150 个 OAR 模块 / 1,322 子模块 config / 1,472 行；解析失败 1 条 = `ashedialogueanims02/idle_barter`，0.07%；零文件读取错误） |
+| C1-3 | 解码错误逐条列明 + 锚点 2/2 | **成立** |
+| C1-4 | 14 个观测 FNV 全部有裁决 | **成立**（`fnv-reconcile.tsv`，matched 均为 winner 或原版 BSA 唯一来源） |
+| C1-5 | 纯离线、插件零改动、工件哈希登记 | **成立** |
+
+### 登记偏差（不隐藏，两项）
+
+1. **预算行失效**：预注册 TSV 上限 20,000 行按预扫 8,373 估算，该预扫受 find `-maxdepth 8` 截断；全量深扫实际 providers-all 24,375 行、fnv-decode 39,794 行。**未截断、全部保留**；判据本身无行数条款，此为估算基数过时的登记失误，如实记录。
+2. **mod 自带 BSA 只计总数**：磁盘存在 102 个 mod BSA，本轮未逐一展开内容。已证 14 个观测 FNV 全部由 loose winner 或原版 BSA 覆盖，无需 mod BSA 资源；工具已具备 BSA 列举/定点提取能力（LZ4 帧解码），未来对账未命中时可直接扩展。
+
+### 对账要点（解释 K1-C4 NOT MATCHED 的具体来源）
+
+- **源侧（v101b 自然游玩）全部来自 Smooth Moveset - OAR 与 Seamless Varied Feminine Idles OAR**：1HM_Equip `81FD1988…` = Smooth 1hm equip base（1.07 s）；1HM_Unequip `4D885DE5…` = Smooth equip base（1.47 s）；equip 稳定 MLh/1HM_Idle `22C9C4BF…` = Smooth non-combat idle start（3.33 s）；unequip MLh_Idle `13D0592A…` = Smooth non-combat idle loop2（22.9 s）；1HM_Idle `AE1527A6…` = Smooth combat idle loop（19.8 s）；MT_Idle 20.0 s `9F6236C9…` 与 18.0 s `95E20CF7…` = SVFI（svfi 1 base idle / svfi 3 right hand hip，female 路径但 clip 名走 `male\MT_Idle` 引用）。
+- **候选侧来自另一组资源**：1HM_Equip `12A77CD1…` / 1HM_Unequip `4DED5EAF…` = Elden Rim/SCAR 同字节家族（1.43 s / 2.0 s，多路径同内容）；baseline MT_Idle `722C8A1E…` = Ashe conditional `i_no_mv`（11.67 s）；equip MT_Idle `F56EE150…` = Vanargand female（25.02 s）；MLh_Idle `DAD1F1C9…` = Diverse Magic Casting / Pretty Combat Spell Master（2.53 s）；1HM_Idle `C62C233B…` = **原版 BSA**（9.0 s）。
+- 同一 FNV 可命中多个 winner 路径（同字节复制）：`data FNV` 是内容身份，不是文件唯一性；跨运行登记以 FNV+字节为准，文件归属记"多选一"。
+
+### 工件（SHA-256）
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| providers-all.tsv | 3,567,290 | `c7a74461…dcd5cb` |
+| winner-map.tsv | 8,734,740 | `c0285fa0…7298642` |
+| oar-config.tsv | 487,477 | `839090d6…6d05538` |
+| b1-behavior.tsv | 7,376 | `ea4da70d…6e6c6bf3` |
+| b2-oar-winners.tsv | 3,683,759 | `496bfde5…794304e6` |
+| b3-loose-winners.tsv | 3,551,547 | `bbc25bb9…71c89330` |
+| fnv-decode.tsv | 4,593,225 | `acf53ceb…16783d` |
+| fnv-reconcile.tsv | 44,256 | `9c7ec167…ff1d6bbe` |
+| behavior-closure.txt | 35,372 | `0b7bb404…2db30198` |
+| closure-files.txt | 3,396 | `58ef0174…7054c512` |
+
+工具与脚本留在 gitignored `build/k1-c1/enum_k1c1.py` 与 `build/hkx-audit/HkxInventory/`（net10，HKX2-Enhanced-Library `91fa5b0`），不进仓库。
+
+**裁定：K1-C1 = REGISTERED（限定范围）。** 本机、本 modlist、此时点的运行资源清单可复核且无丢失；不表示 OAR 已冻结、不证明跨运行资源未变（后续运行须重跑本清单并 diff）、不产生 `tau_*`、不关闭 K5/K6/G5。
