@@ -234,3 +234,17 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 | 安装位 | census-inject 档 `c05b9b91…` / v103 DLL `8c3857a3…` / PDB `49581217…` 复核一致（Run 0a 重跑无需换档） |
 
 **裁定：方案 b 落地完成，Run 0a 重跑资格就绪。** 预期：census 的 dummy 槽 `identity=true`、`data-fnv=8728A54A50D85C22`（两侧同字节，跨侧配对族恢复）；T2-C2 `missing=0` 恢复。
+
+## 十三、Run 0a run 2（2026-11-15 00:54，**方案 b 生效：T2-C2 恢复 PASS；仍 INVALID——T2-C5 场景不符（第三次）**）
+
+**运行身份**：同 v103 + census-inject 档（安装位复核 `c05b9b91…`/`8c3857a3…`/`49581217…`）。日志 [归档](../CharacterPanel-g5track2-census-inject-run2-20261115-0054.log)（218,278 B，SHA-256 `1ea1b1ba86aea126…`）。
+
+| # | 判据 | 读数 | 裁定 |
+| --- | --- | --- | --- |
+| T2-C1 | census 完整 | 两侧 116 骨、四段齐全、overflow=0；**一次 census 链**（inject 实验一次） | PASS |
+| T2-C2 | clip 身份 | **全部 `missing=0`**（clips=1/2/4 三摘要）；dummy 槽 `identity=true data-fnv=8728A54A50D85C22 data-bytes=25168 frames=190`（= Track 1 登记字节）——**方案 b 生效** | **PASS（恢复）** |
+| T2-C3 | 家族/相位 | equip-clips 含 `1HM_Equip`、unequip-clips 含 `1HM_Unequip`（五族 + MT_Idle）；equip 120/120 `fixed-equip-budget`、unequip **completed=129** `state-12-to-0`（与 Track 1 同值）；H2H=0；drift=none ×5 | PASS |
+| T2-C5 | 装备初态 | dump（request=4）：`hands=(000a69d3,00043324) drawn=false armor=slots=31 worn=2 2:0003c9fe,7:0003ca00` —— 右手非 `560c2a4c`（Crimson Tide）、护甲 2 件原版物品非 9 件登记集；与 run 1 同一非冻结存档（状态从空手演化为右手持某剑） | **FAIL（第三次）** |
+| 完整性 | `[E]`/窗口 | 唯一 `[E]` = 豁免行 ✓；但 ANIMATION WORLD 出现 **4 次 panel-open**（request=1..4，request=1 空手、request=4 持剑）——非"一次窗口"协议 | 场景协议不符 |
+
+**裁定：Run 0a run 2 = INVALID（仅 T2-C5 与窗口数）**。仪器、census、方案 b、inject 链全部就绪；**唯一剩余缺口是冻结场景本身**。重跑要求不变：加载 `Save116_61F78427_0_456C6966_Folgunthur01_011659_20261112151836_26_1.ess`（AE-Track2 档内存档列表中，角色 Elif、#116、Folgunthur01、2026-11-12 15:18 存）、不改动任何装备、panel 只开一次；dump 行必须逐字等于 K2-C1 登记（`hands=(560c2a4c,00043324) drawn=false` + `worn=9 1:0201989e,2:fe030801,3:5f006643,5:000f1b33,6:fe032823,7:fe030800,12:0201989e,17:fe01280b,20:fe0fe81b`）。
