@@ -2063,3 +2063,61 @@ Identity `CharacterPanel-scenegraph-v99b-g5k3s-source-be5cdf8ca6-cl94faaed0c6-20
 **Meaning**: the pinned source graph now has a per-apply, same-generation, bit-identical double-read snapshot of all 116 `poseLocal` tracks plus per-frame clip metadata, written to a bounded artifact with monotonic `seq`/`tsc` keys. Together with K3-C (candidate side, v98 PASS) both halves of K3's instrument exist and have each passed on their own side; **K3 itself still stays NOT_READY** because the generation pairing (K3-P) and any tolerance work are separate, and both runs are single sessions.
 
 **Boundaries**: single window/session/loadout; `transport-complete=no` affects detail rows only, not the K3-S tallies. This run does not pair source and candidate generations, does not produce a tolerance and does not close K5/K6 or G5.
+
+<a id="v100-g5cal-control-b-20261114"></a>
+## v100 G5-CAL control B plan A build and deployment (2026-11-14, deployed; B1 run below)
+
+**Commit**: `3378889 feat(g5-cal): add control B plan A carrier and register offline truth`. New `[Experiment] ControlSample` (default off) and `src/animation/behavior_graph/control_sample.*`; the candidate's first completed Generate resolves the unique MT_Idle carrier by animation-byte identity and samples the registered 9 times × 99 tracks twice. Offline `control_sample_policy_test` 4/4; Release build exit 0.
+
+Identity `CharacterPanel-scenegraph-v100-g5cal-control-b-3378889e91-cl94faaed0c6-20261114T054321Z` (clean tree), embedded in the DLL.
+
+| Matching file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `build/Release/CharacterPanel.dll` (not retained; hash from the B1 log) | 1931264 | `409C2684975886E4C5AA093FB2232289D04FC127423A1423448ADCE85D0E476F` |
+| `build/Release/CharacterPanel.pdb` (not retained) | 50589696 | `0EE6284249B1C46EFD5DF815FF6DA2A3CB178607BA42B63371A84EC4D06B801D` |
+| [CharacterPanel.ini](../dist/CharacterPanel-g5cal-control-b.ini) | 12596 | `d8b6b7a7ca857bfe06e6ed15e9520158aa3c0e3581ec9614c572e96ee502b752` |
+
+**Deployed 2026-11-14**: v99b trio backed up hash-verified to `dist/deploy-backup-20261114-v99b-v100pre/` (DLL `cffe2eae…9f928aab`, PDB `7337af7b…9cef953b`, INI `ebe0afb7…fd9773a050`); v100 files copied with source+destination hash checks. Run INI: `IndependentGraph=inject`, `CandidateEquipPrime=true`, `CandidateEquipPrimeBranch=true`, `CandidateUnequipProbe=true`, `CandidateUnequipEvent=Unequip`, `ControlSample=true`, `SamplingLiveness=off`, `ObservationSnapshot=false`.
+
+<a id="g5-cal-control-b-v100-b1-run1-20261114"></a>
+## G5-CAL control B v100 B1 run 1 (2026-11-14 13:49, **bit-exact FAILED**)
+
+**Artifact**: v100 DLL `409C2684…0E476F`, PDB `0EE62842…6B801D`, INI `D8B6B7A7…02B752`, identity `CharacterPanel-scenegraph-v100-g5cal-control-b-3378889e91-cl94faaed0c6-20261114T054321Z`. Log [CharacterPanel-g5cal-control-b-v100-run1-20261114-1349.log](diagnostics/CharacterPanel-g5cal-control-b-v100-run1-20261114-1349.log), 345,735 B, SHA-256 `DD3008CBA6AFB4DA38A3DDC7A13F6BEF8A1437706B1F9275501C0E643321D901`. Zero `[E]`, 120 equip + 129 unequip, `source-drift=none`.
+
+| 判据 | 读数 | 裁定 |
+| --- | --- | --- |
+| B-A 资源/载体 | 唯一 `MT_Idle.HKX`，`binding_index=1022`；`data_fnv1a64=F56EE1500EB5A3D0`、`block_offsets_fnv1a64=F17EBD9ADA8CF785`、`map_fnv1a64=077954859409395E`；duration/spline 字段逐位相同 | PASS |
+| B-B 读取完整性 | 891 条 track，`two_read_equal=9/9`，`nonfinite=0` | PASS |
+| B-C 独立真值（位精确） | `bits_fnv1a64=0FAB995615D7BFB2` vs `8E2E1D12B040807D`；5418/8910 逐位相同（60.81%），max abs `1.76429749e-05` | **FAIL** |
+| B-D 运行完整性 | 一次候选实验、零 `[E]`、身份匹配 | PASS |
+
+**Channel totals**: translation 1970/2673 exact, max abs 1.764e-05; rotation 1095/3564 exact, max abs 3.166e-06; scale 2353/2673 exact, max abs 3.578e-07. The differences are float32 arithmetic order: t=0 translation 272/297 exact (rest 1 ULP), runtime/offline quaternion norm errors match (3.9807e-4 vs 3.9814e-4 at t=25), and a derived-60fps mapping would differ by ~1 frame at t=25, far above 1.76e-05. **K2-C4 remains NOT_READY under B1; no tolerance.**
+
+<a id="v100a-g5cal-control-b2-20261114"></a>
+## v100a G5-CAL control B B2 build and deployment (2026-11-14, deployed; B2 run below)
+
+**Commit**: `9db4adf feat(g5-cal): record control B B1 failure and register B2 bound`. Single-attempt gating (`control_sample_attempted`) so the probe no longer re-runs in the unequip segment; B2 analytic bound registered in the diagnostics README before the new run. Release build exit 0.
+
+Identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0c6-20261114T055621Z` (clean tree).
+
+| Matching local file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.dll](../dist/g5-cal-control-b-v100a-20261114/CharacterPanel.dll) | 1931264 | `12b394446e88aedfc4e2a07f0b5abfe736a2c31e1172d3d0b8bf58ba30b0ab6d` |
+| [CharacterPanel.pdb](../dist/g5-cal-control-b-v100a-20261114/CharacterPanel.pdb) | 50589696 | `aaba572da020e0de6f81152a342b19d9692abbf9c1a46d882829813f9b8afab6` |
+| [CharacterPanel.ini](../dist/g5-cal-control-b-v100a-20261114/CharacterPanel.ini) | 12596 | `d8b6b7a7ca857bfe06e6ed15e9520158aa3c0e3581ec9614c572e96ee502b752` |
+
+**Deployed 2026-11-14**: v100a DLL/PDB copied with source+destination hash checks; INI unchanged from B1. [MANUAL.md](../dist/g5-cal-control-b-v100a-20261114/MANUAL.md).
+
+<a id="g5-cal-control-b-v100a-b2-run2-20261114"></a>
+## G5-CAL control B v100a B2 run 2 (2026-11-14 13:59, **PASS — bounded**)
+
+**Artifact**: v100a DLL `12B39444…0B0AB6D`, PDB `AABA572D…B8AFAB6`, INI `D8B6B7A7…02B752`, identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0c6-20261114T055621Z`. Log [CharacterPanel-g5cal-control-b-v100a-run2-20261114-1359.log](diagnostics/CharacterPanel-g5cal-control-b-v100a-run2-20261114-1359.log), 343,700 B, SHA-256 `655E9C52102EE21EE1C593A05F2DE27A4D871499AE02873EC8DAB137711618B4`. One manifest, zero `[E]`, 120 equip + 129 unequip, `source-drift=none`.
+
+| 判据 | 读数 | 裁定 |
+| --- | --- | --- |
+| B-A 资源/载体 | `binding_index=1022`，`map_match=true`，`data_fnv1a64=F56EE1500EB5A3D0`，`block_offsets_fnv1a64=F17EBD9ADA8CF785` | PASS |
+| B-B 读取完整性 | 891 条 track，`two_read_equal=9/9`，`nonfinite=0` | PASS |
+| B-C2 有界真值 | 3492 个非零差分量，0 violation；最大比值 `0.4860`（t=25、track 92、t.x；diff 1.718e-7 / bound 3.536e-7） | **PASS** |
+| B-D 运行完整性 | 一次 manifest、零 `[E]`、DLL/PDB/INI 与部署逐字节一致 | PASS |
+
+**Verdict**: K2-C4 control B = **READY (bounded)** for `female\mt_idle.hkx` (113,920 B, `0EF8248C…BCD73C7`), the 9 fixed times, the candidate MT_Idle binding (`binding_index=1022`, map 0..98), single-layer direct `SamplePartialTracks`, and this v100a process. B1's bit-exact FAIL remains on record; B2 is a new batch with an analytic bound (`2·step`/`32·eps` chosen after B1 and disclosed). No `tau_p/tau_r/tau_s/epsilon_t`, no CAL2 three-process/120-generation claim, no K1/K5/K6/G5 closure.

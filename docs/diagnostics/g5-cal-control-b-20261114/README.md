@@ -1,6 +1,6 @@
-# C-G5-CAL K2-C4 控制 B：方案 A 预注册（2026-11-14）
+# C-G5-CAL K2-C4 控制 B：方案 A 预注册与 B1/B2 结果（2026-11-14）
 
-**状态：PRE-REGISTERED，尚未查看任何原生控制输出。** 本目录只登记离线真值、资源身份、承载路径与判据；本轮不产生 `tau_p/tau_r/tau_s/epsilon_t`，不关闭 K1/K2、CAL2 或 G5。
+**状态（2026-11-14）：B1 位精确 FAILED（保留在案）；B2 有界判据在新进程 PASS（0/8910 violations，最大比值 0.4860）；K2-C4 = READY（bounded）。** 本目录保留预注册、离线真值、两次运行和判据；仍不产生 `tau_p/tau_r/tau_s/epsilon_t`，不证明 CAL2 三进程/120 代协议，不关闭 K1/K5/K6 或 G5。
 
 ## 一、为什么不是此前的 `male\mt_idle.hkx`
 
@@ -78,6 +78,7 @@ clip-ref ... name='Animations\male\MT_Idle.HKX' binding-index=1022 map-len=99 ma
 - `tests/control_sample_policy_test.cpp`：4/4 通过（时间表/规模、资源登记格式、FNV 参考向量、frame/block 结构关系）。
 - 真值文件 891 行；`t=0` 的 track 4 为 `C012B5B4,4068755E,42897BE4`，与 HavokLib 导出的第 0 个控制点 `(-2.29234028, 3.63216352, 68.7419739)` 逐位一致。
 
+<a id="b1-run"></a>
 ## 七、B1 首次原生运行（2026-11-14 13:49；**bit-exact FAILED**）
 
 **运行身份**：v100 `CharacterPanel-scenegraph-v100-g5cal-control-b-3378889e91-cl94faaed0c6-20261114T054321Z`，runtime `1-6-1170-0`，OAR `3.1.6`；DLL `409C2684975886E4C5AA093FB2232289D04FC127423A1423448ADCE85D0E476F`，PDB `0EE6284249B1C46EFD5DF815FF6DA2A3CB178607BA42B63371A84EC4D06B801D`，INI `D8B6B7A7CA857BFE06E6ED15E9520158AA3C0E3581EC9614C572E96EE502B752`。日志归档 [CharacterPanel-g5cal-control-b-v100-run1-20261114-1349.log](../CharacterPanel-g5cal-control-b-v100-run1-20261114-1349.log)，345,735 B，SHA-256 `DD3008CBA6AFB4DA38A3DDC7A13F6BEF8A1437706B1F9275501C0E643321D901`；零 `[E]`，120 equip + 129 unequip，`source-drift=none`。
@@ -111,7 +112,8 @@ clip-ref ... name='Animations\male\MT_Idle.HKX' binding-index=1022 map-len=99 ma
 
 **裁定：B1 的位精确判据 B-C FAILED，K2-C4 仍 NOT_READY。** 不产生容差，不把 60.81% 的逐位一致当作 PASS，也不回改 B1 的时间/资源判据。
 
-## 八、B2 有界判据（2026-11-14 预注册；待新进程运行）
+<a id="b2-bound"></a>
+## 八、B2 有界判据（2026-11-14 预注册；**PASS**）
 
 B1 证明了两件事：资源/载体/读取路径合格，且两个独立实现只在 float32 末位上分歧。B2 不使用“观测到的最大差”当阈值，而是从 **authored bbox + 量化类型 + float32 运算界** 解析地给出逐分量上界：
 
@@ -127,3 +129,16 @@ B1 证明了两件事：资源/载体/读取路径合格，且两个独立实现
 **可行性核对（不是 B2 裁定）**：把 B1 的 8910 个分量离线代入上述界，最大比值 `0.4860`（t=25、track 92、t.x；diff 1.718e-7 / bound 3.536e-7）。这只说明界不是空集，B2 仍需新进程重新采集。
 
 **安全系数的时点说明（不得隐去）**：上界的形式来自 authored 数据与 float32 误差分析；`2×step` 和 `32×eps` 的具体系数是在看到 B1 的 0.97×step 最坏比值后确定的，因此 B2 明确是**新批次**，不是对 B1 位精确判据的重判或放宽。B2 必须用新进程重新采集，且结果不得回写 B1。
+
+### B2 运行结果（v100a，2026-11-14 13:59；**PASS**）
+
+**运行身份**：v100a `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0c6-20261114T055621Z`，DLL `12B394446E88AEDFC4E2A07F0B5ABFE736A2C31E1172D3D0B8BF58BA30B0AB6D`，PDB `AABA572DA020E0DE6F81152A342B19D9692ABBF9C1A46D882829813F9B8AFAB6`，INI 同 B1（`D8B6B7A7…02B752`，`ControlSample=true`）。日志 [归档](../CharacterPanel-g5cal-control-b-v100a-run2-20261114-1359.log)，343,700 B，SHA-256 `655E9C52102EE21EE1C593A05F2DE27A4D871499AE02873EC8DAB137711618B4`；一次 manifest（每个实验只尝试一次）、零 `[E]`、120 equip + 129 unequip、`source-drift=none`。
+
+| # | 判据 | 读数 | 裁定 |
+| --- | --- | --- | --- |
+| B-A | 唯一载体；`data`/`blockOffsets` FNV 与登记值一致；map 可读并记录 | `binding_index=1022`，`map_match=true`，`data_fnv1a64=F56EE1500EB5A3D0`，`block_offsets_fnv1a64=F17EBD9ADA8CF785` | **PASS** |
+| B-B | 9×99×10 = 8,910 个值；每个时间两次读取逐字节相同；全部有限 | 891 条 track，`two_read_equal=9/9`，`nonfinite=0` | **PASS** |
+| B-C2 | 8910 个分量全部满足第 B2 节解析界 | 3492 个非零差分量，**0 violation**，最大比值 `0.4860` | **PASS** |
+| B-D | 一次窗口/进程、零 `[E]`、身份匹配 | 一次 manifest，零 `[E]`，DLL/PDB/INI 与部署逐字节一致 | **PASS** |
+
+**裁定：B2 PASS，K2-C4 控制 B 达到 READY（bounded）。** 适用范围严格限定为：`female\mt_idle.hkx`（113,920 B / `0EF8248C…BCD73C7`）、9 个固定时间、候选图 MT_Idle binding（`binding_index=1022`，map 0..98）、单层直接 `SamplePartialTracks`、本次 v100a 进程。**B1 的位精确 FAIL 保留在案，不被 B2 覆盖；B2 不产生 `tau_p/tau_r/tau_s/epsilon_t`，不证明 CAL2 的三进程/120 代驱动协议，也不关闭 K1/K5/K6 或 G5。**

@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-**当前更新（2026-11-13）**：**源图 B3/B4 后处理边界在 [v97d 单窗口](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 PASS（K4 本会话边界）**——58423 的 foot-IK 输出块在返回与 63856 apply 之间未被改写，poseLocal 与同一块逐分量一致。[C-G5-OBS v2](#c-g5-observation-v2-20261112) 的候选诊断已由 [v96a 原生运行](build.md#g5-cal-v96a-observation-v2-run1-20261112)验证 clip-family 与 state-12-to-0（completed=129）。[K1/K2 账本](#c-g5-cal-k1k2) 中 K2-C3 PASS，K1-C1–C4 与 K2-C4 仍 NOT_READY；v97/v97a/v97b/v97c 四轮均保留 INVALID。K3 两侧（候选 v98 + 源 v99b）已闭合，K5/K6、原生控制 B 与姿态等价仍待验证，G5 未通过。
+**当前更新（2026-11-14）**：**源图 B3/B4 后处理边界在 [v97d 单窗口](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 PASS（K4 本会话边界）**——58423 的 foot-IK 输出块在返回与 63856 apply 之间未被改写，poseLocal 与同一块逐分量一致。[C-G5-OBS v2](#c-g5-observation-v2-20261112) 的候选诊断已由 [v96a 原生运行](build.md#g5-cal-v96a-observation-v2-run1-20261112)验证 clip-family 与 state-12-to-0（completed=129）。[K1/K2 账本](#c-g5-cal-k1k2) 中 K2-C3 PASS；**K2-C4 控制 B 已 READY（bounded，B2 v100a，2026-11-14）**，B1 位精确 FAIL 保留在案，K1-C1–C4 仍 NOT_READY；v97/v97a/v97b/v97c 四轮均保留 INVALID。K3 两侧（候选 v98 + 源 v99b）已闭合，K5/K6 与姿态等价仍待验证，G5 未通过。
 
 更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。**v96a 后续已部署并完成首次原生运行，关闭“差一帧”覆盖缺口；见[运行记录](build.md#g5-cal-v96a-observation-v2-run1-20261112)。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
@@ -5241,9 +5241,13 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 | 运行完整性 | 一次候选实验、零 `[E]`、DLL/PDB/INI 身份匹配 | **PASS** |
 | 独立真值（位精确） | `bits_fnv1a64=0FAB995615D7BFB2` vs `8E2E1D12B040807D`，`hash_match=false`；8910 分量中 5418 逐位相同（60.81%），最大绝对差 1.7643e-05 | **FAIL** |
 
-**归因**：资源/时间/映射均正确，差异是 float32 实现顺序。t=0 translation 272/297 逐位相同、其余 1 ULP；runtime 与 offline 的四元数范数误差几乎相同（t=25 为 3.9807e-4 vs 3.9814e-4），排除归一化/符号语义差；若引擎误用派生 60 fps，t=25 会差约 1 帧，远大于实测 1.76e-5。详见 [B1 数值表](diagnostics/g5-cal-control-b-20261114/README.md#七b1-首次原生运行2026-11-14-1349bit-exact-failed)。
+**归因**：资源/时间/映射均正确，差异是 float32 实现顺序。t=0 translation 272/297 逐位相同、其余 1 ULP；runtime 与 offline 的四元数范数误差几乎相同（t=25 为 3.9807e-4 vs 3.9814e-4），排除归一化/符号语义差；若引擎误用派生 60 fps，t=25 会差约 1 帧，远大于实测 1.76e-5。详见 [B1 数值表](diagnostics/g5-cal-control-b-20261114/README.md#b1-run)。
 
-**B2 预注册（待新进程）**：[B2 有界判据](diagnostics/g5-cal-control-b-20261114/README.md#八b2-有界判据2026-11-14-预注册待新进程运行) 使用 authored bbox/量化类型 + float32 解析界：rotation 40-bit 步长 `3.45436e-4`；dynamic 16-bit position/scale `max(2·(max−min)/65535, 32·eps·(|min|+|max|))`；static/identity 用 `32·eps·|value|`。8910 分量全部满足即 B2 PASS，否则仍 NOT_READY。系数是在 B1 后确定的，故 B2 明确为新批次，不回写 B1；即使 B2 PASS 也不产生 `tau_*`、不证明 CAL2 的三进程/120 代协议。
+**B2 预注册（待新进程）**：[B2 有界判据](diagnostics/g5-cal-control-b-20261114/README.md#b2-bound) 使用 authored bbox/量化类型 + float32 解析界：rotation 40-bit 步长 `3.45436e-4`；dynamic 16-bit position/scale `max(2·(max−min)/65535, 32·eps·(|min|+|max|))`；static/identity 用 `32·eps·|value|`。8910 分量全部满足即 B2 PASS，否则仍 NOT_READY。系数是在 B1 后确定的，故 B2 明确为新批次，不回写 B1；即使 B2 PASS 也不产生 `tau_*`、不证明 CAL2 的三进程/120 代协议。
+
+**B2 运行（2026-11-14 13:59）：PASS。** v100a（`…9db4adfd5e…`，DLL `12B39444…0B0AB6D`）新进程一次窗口：一次 manifest、891 条 track、`two_read_equal=9/9`、`nonfinite=0`、零 `[E]`、120 equip + 129 unequip；载体与三个 FNV 同 B1 逐位一致（`map_match=true`）。8910 个分量代入 B2 解析界：3492 个非零差分量、**0 violation**、最大比值 `0.4860`（t=25、track 92、t.x）。日志 [归档](diagnostics/CharacterPanel-g5cal-control-b-v100a-run2-20261114-1359.log)（343,700 B，SHA-256 `655E9C52…1618B4`）。
+
+**裁定：K2-C4 控制 B = READY（bounded）**，适用范围严格限定为 `female\mt_idle.hkx`（113,920 B / `0EF8248C…BCD73C7`）、9 个固定时间、候选图 MT_Idle binding（`binding_index=1022`、map 0..98）、单层直接 `SamplePartialTracks`、本次 v100a 进程。**B1 的位精确 FAIL 保留在案、不被 B2 覆盖；不产生 `tau_p/tau_r/tau_s/epsilon_t`，不证明 CAL2 的三进程/120 代驱动协议，不关闭 K1/K5/K6 或 G5。**
 
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 
@@ -5264,7 +5268,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **K1/K2 结论**：v96a 把 K2-C3 从 D3 的 clip-family 正结果推进为同一进程内的 clip-family + state-12-to-0 完成证据，并给 K2-C1/C2 留下可复核的初态与输入顺序；但它不证明 K1 的跨运行资源/实例身份，也不提供控制 B 的独立真值。K1-C1–C4 与 K2-C4 仍是原生校准的硬前置。
 
-**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739）；**K3 两侧已闭合**（[v98](build.md#g5-k3c-v98-run1-20261113) 候选 249 条 + [v99b](build.md#g5-k3s-v99b-run1-20261113) 源 1,151 条，双读一致、116 轨、零溢出；跨侧逐代配对不在 K3，见 [K3 收官](#g5-cal-k3-closure)）。剩余：**K2-C4 控制 B**——已完成[资格审计](#c-g5-cal-b-qual)，**仍 NOT_READY**（运行时 `mt_idle` 被 Vanargand loose 覆盖 + OAR 引用；spline 真值解码器与任意 HKX loader 均缺）；**K5/K6**（完整计数、层/权重/混合、寿命/丢失）；以及 K1-C1–C4 与 K2-C1/C2 的清单补齐。
+**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739）；**K3 两侧已闭合**（[v98](build.md#g5-k3c-v98-run1-20261113) 候选 249 条 + [v99b](build.md#g5-k3s-v99b-run1-20261113) 源 1,151 条，双读一致、116 轨、零溢出；跨侧逐代配对不在 K3，见 [K3 收官](#g5-cal-k3-closure)）。**K2-C4 控制 B 已 READY（bounded）**：[B1 位精确 FAIL 保留](#b1-run)，[B2 v100a PASS](#b2-bound)（8,910 分量、0 violation、最大比值 0.4860；范围限 `female\mt_idle.hkx` / 9 个固定时间 / 单层直接采样 / 单进程）；仍不产生 `tau_*`、不证明 CAL2 三进程/120 代协议。剩余：**K5/K6**（完整计数、层/权重/混合、寿命/丢失）；以及 K1-C1–C4 与 K2-C1/C2 的清单补齐。
 
 ### 五、下一步与明确不做
 

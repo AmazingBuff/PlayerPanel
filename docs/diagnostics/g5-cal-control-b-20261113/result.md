@@ -2,6 +2,8 @@
 
 **Verdict: NOT_READY. No native control output was viewed and no control was run.**
 
+> **2026-11-14 update (superseding status)**: plan A found the runtime resource is the **female** loose `mt_idle.hkx`, not this male BSA file. B1 (v100) passed resource/read/run but failed the bit-exact truth check; B2 (v100a) passed an analytic float32 bound with 0/8910 violations. **K2-C4 is READY (bounded)**. See [g5-cal-control-b-20261114](../g5-cal-control-b-20261114/README.md). This file remains the 2026-11-13 baseline and is not rewritten.
+
 Canonical record: [C-G5-CAL K2-C4](../../independent-behavior-graph.md#c-g5-cal-b-qual).
 
 ## Base-game candidate (offline authored data)
