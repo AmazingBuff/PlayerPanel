@@ -137,3 +137,74 @@
 | 1 | 本计划评审（重点：§二两轨制裁定与 Track 2=B 方向确认） | 未评审不实施 |
 | 2 | Track 2 关闭 OAR 替换的 MO2 档（K5 之后才需要；否决则姿态等价按门 1 停止规则另立审计范围） | 用户环境变更，需批准 |
 | 3 | （会话外既挂）52 提交 push 与否；`build/hkx-audit/`、`build/k1-c1/` 遗产收编与否 | 与 K6 无耦合 |
+
+## 十、实现预注册（2026-11-14，评审通过后冻结；实现前零采集）
+
+本节冻结实现细节：代码触点、键名、字节布局、行格式与预算精确值。所有变更先于任何采集；采集开始后本节不改（变更 → 新批次）。
+
+### 10.1 新增 INI 键（`[Experiment]`，全部默认 off；off 时输出与 v102 逐字节一致）
+
+| 键 | 类型 | 语义 |
+| --- | --- | --- |
+| `K5FullSample` | bool | 快照写入器切换为 **K5 格式 v1**（magic `CPK5`）。与 `ObservationSnapshot` 共享全部触发点/两读规则/轨道提取；同 on 时 K3 写入器被抑制并输出 `K5 MODE k3-suppressed` 声明行。候选侧逐代 `e_post_sample`、源侧逐 apply（`SamplingLiveness=on` 且 `record_k3s_return` 命中 pinned 时） |
+| `K5LayerAudit` | bool | 候选侧 4 个审计点（§10.4）输出 `K5 LAYER`（逐节点）+ `K5 AUDIT`（摘要）行 |
+| `K5Reconciliation` | bool | 进程内对账计数器；窗口/实验关闭时输出 `K5 RECON` 行 + JSON 账本工件（≤0.4 MiB）。`K5FullSample` on 时自动生效（写入器 close 行即含对账）；此键独立用于源侧 F7 窗口 |
+
+### 10.2 代码触点（7 处，不触碰产品路径）
+
+| # | 文件 | 改动 |
+| --- | --- | --- |
+| 1 | [settings.h](../../../src/animation/settings.h) / [settings.cpp](../../../src/animation/settings.cpp) | 3 键 getter + 3 条 `EXPERIMENT setting` 日志行（模式与 EquipmentStateDump 完全一致） |
+| 2 | `k5_snapshot_policy.h`（**新文件**，src/animation/behavior_graph/） | K5ClipRecord/K5Header/K5 record 布局 + `K5SnapshotWriter`/`K5SourceWriter` + 身份缓存 + 对账账本结构 |
+| 3 | [independent_graph.cpp](../../../src/animation/behavior_graph/independent_graph.cpp) | `record_k3_snapshot` 分支（K5 on → K5 writer，同一两读/轨道提取）；审计点 ×4；关闭行 `K5 SNAPSHOT close` + `K5 RECON` |
+| 4 | [probe_liveness.cpp](../../../src/animation/behavior_graph/probe_liveness.cpp) | `record_k3s_return` 分支（K5 on → K5 source record，in-detour 身份缓存）；drain/close 行 `K5 SOURCE close` |
+| 5 | [control_sample.h](../../../src/animation/behavior_graph/control_sample.h) / .cpp | **零改动**（复用 `read_animation_resource_identity`；不新增字段不改签名） |
+| 6 | [config/CharacterPanel.ini](../../../config/CharacterPanel.ini) | 3 键默认 off + 注释（风格同 EquipmentStateDump 条目） |
+| 7 | 文档（实现提交内） | 本节已在文档冻结，无需另改 |
+
+### 10.3 字节布局（pack(1)，全部 static_assert 到位）
+
+**K5ClipRecord = 124 B**（K3ClipRecord 76 B + 身份列）：
+
+```
+node_ptr u64 | binding_ptr u64 | binding_index u32 | local_time_bits u32
+mode u8 | pad[3] | name[64] | duration_bits u32
+data_fnv u64 | blockoff_fnv u64 | map_fnv u64 | map_count u32
+```
+
+进程内 stable-id 三组件（node/binding 指针 + binding-index）入记录，离线可重组；`data_fnv` 是 K1-C4 的资源身份；`duration_bits` 是缓存校验字段。
+
+**候选记录 K5Record = 5,664 B** = meta 32（segment/completed/commanded/track_count/two_read_equal/clip_count/elapsed_raw，同 K3 meta）+ 8×124 clips + 116×40 tracks。`K5Header` 布局同 `K3Header`（116 B，magic=CPK5，version=1，track_capacity=116），**record_capacity = 384**。
+
+**源记录 K5SourceRecord = 5,652 B** = meta 20（tsc/seq/track_count/clip_count/path/two_read_equal/flags/pad，同 K3S meta）+ 8×124 clips + 116×40 tracks。`K5SourceHeader` 同 `K3SourceHeader`（124 B，record_size 字段），record_capacity = **1,400**。
+
+**预算精确值（修正 K6 计划 §四 的近似）**：候选 cap 384×5,664 = 2,174,976 B ≈ **2.07 MiB**（预期 250 条 ≈ 1.35 MiB）；源 cap 1,400×5,652 = 7,912,800 B ≈ **7.55 MiB**（计划稿按 5,268 B 估 ≈7.0，精确布局后 7.55，仍在 8 MiB 内——cap 条数不变）。flag 位沿用 `K3S_Flag_Clip_Overflow=1<<0`、`K3S_Flag_No_Pose=1<<1`，新增 `K5_Flag_Identity_Failed=1<<2`（binding/动画不可读，FNV 列=0）。
+
+### 10.4 身份缓存与审计点
+
+**身份缓存**（`k5_snapshot_policy.h` 内，两实例互不共享）：固定 64 项 ring，键 = binding 指针；未命中 → 调 `read_animation_resource_identity` 填入；命中时校验 `duration_bits/data_bytes/map_count` 三字段，不等则重算（覆盖同址 ABA 的常见形态；逐 apply 重哈希不可负担）。distinct bindings > 64 只降性能不错记（逐出后重 sight 重算）。源侧实例在 detour 内使用（`read_animation_resource_identity` 无分配、全部 deref 有 `readable()` 守卫，逐字段核对后可 detour 调用）；候选侧实例在 drive 线程。
+
+**审计点（候选侧 4 处，`K5LayerAudit` on 时）**：
+
+| # | phase | 位置 |
+| --- | --- | --- |
+| 1 | post-activate | census `post-activate` 同点（independent_graph.cpp ~L1575） |
+| 2 | equip-mid | equip 段 `observation.completed()==60`（checkpoint 值） |
+| 3 | equip-settle | settle 达成后、`Unequip` 派发前 |
+| 4 | unequip-complete | unequip 段 outcome 转 completed 的同一 post-sample |
+
+每点：activeNodes 全走（cap 512，census 风格）逐节点一行；vtable 精确匹配分类：`clip`（VTABLE_hkbClipGenerator）/`state-machine`/`manual-selector`/`modifier-gen`/`pose-match`/`behavior-graph`/`generator-unclassified`（精确 VTABLE_hkbGenerator）/`node-other`（VTABLE_hkbNode）/`unknown`（记 vtable 地址）。clip 节点行附 §10.3 全部身份列。**`hkbBlendingBehavior` 无 CommonLibSSE 布局与 VTABLE 常量 → 只能落 `unknown`，逐骨/通道权重与 blend/mask/additive 语义登记为显式缺项清单（K5-5 的预期缺项，实现不猜偏移）**。摘要行 `K5 AUDIT … walked=… clips=… cross-clips=… missing=… unclassified=… overflow=…`；cross-clips = `collect_active_clips()`（cap 256）同点读数，missing = 审计 walk 中 256-cap 看不到的 clip 数。
+
+### 10.5 K5-7 资源断言的执行者修订
+
+运行时**只记 drift 事实，不做集合裁定**：记录与审计行携带全部 `data FNV`，对账计数器只统计 `identity-failed`（读不出身份）。"`data FNV` ∈ 登记集合"的比对与 drift→INVALID 判定在**离线**执行：`tools/k5_reconcile.py`（实现提交内入仓，版本+SHA-256 随运行记录登记）内置 v101 候选 7 FNV / v101b 源 8 FNV 登记表（按相位分列）+ 已声明源侧栈名集 {MT_Idle, 1HM_Equip, MLh_Idle, 1HM_Idle, 1HM_Unequip, SCAR_1hmReadyDummy}；候选侧出集 → INVALID，源侧出集但 clip 名 ∈ 已声明栈 → 登记为声明缺口（K1-C1 已登记"源侧栈随世界状态变化"），出集且名不在栈名集 → INVALID。修订理由：源侧 Smooth 栈（v96a 时点）的逐 clip FNV 未在 census 登记，运行时内嵌不完整集合会把已声明现象误判为未声明漂移；裁定放离线符合"代码不携带裁定"纪律。**判据文本 K5-7 不变，只明确执行者。**
+
+### 10.6 对账账本
+
+`K5 RECON side=… expected=… visited=… recorded=… missing=… dropped=… truncated=… two-read-bad=… clip-overflow=… identity-failed=… drift=… invalidations=… reasons='…'`；JSON 工件 = 同字段 + 逐 invalidation 原因计数 + cap 表 + 工件 SHA-256，≤0.4 MiB。`reasons` 来自 `observation.invalidate` 调用点的既有 reason 字符串（不改写）。
+
+### 10.7 判据与不变量
+
+- 判据仍为 K5-1…K5-8（§六），本节不改任何通过条件。
+- **off 路径字节不变断言**：三键全 off 时，本次改动产生的全部输出行不存在；既有输出（含 `K3 SNAPSHOT`、`K1 CENSUS`、`ANIMATION WORLD`、`INDEPENDENT GRAPH` 各行）逐字节与 v102 同键位行为一致。构建后以 v96a 基线 INI（全 off）+ K5 三键 on 各起一次短窗验证（不采正式数据）。
+- K3/K5 互斥：`K5FullSample` on 且 `ObservationSnapshot` on → K3 抑制行；只 K3 on → 行为与 v98 完全一致（K3 代码路径零改动）。
