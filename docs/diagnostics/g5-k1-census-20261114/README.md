@@ -16,10 +16,10 @@
 
 ## 二、触发与采集点
 
-- 开关：`[Experiment] ClipIdentityCensus=true`，默认 off；要求 `IndependentGraph=inject`。
-- 源侧：`observe_source_baseline` 之后，`side=source phase=pre-activate`，dump 骨架 + 活动 clip。
-- 候选侧：`post-activate`，dump 骨架 + 活动 clip；随后在 equip 段第一个 completed Generate（`completed=1`）与 unequip 段第一个 completed Generate 各 dump 一次活动 clip（`phase=equip-clips` / `unequip-clips`，不重复骨架）。
-- 次数：每次实验源 1 次、候选 3 次（post-activate + equip-clips + unequip-clips）；同一进程只跑一次实验。
+- 开关：`[Experiment] ClipIdentityCensus=true`，默认 off。
+- **候选模式**（`IndependentGraph=inject`）：源侧 `observe_source_baseline` 之后 `side=source phase=pre-activate`（骨架 + 活动 clip）；候选 `post-activate`（骨架 + 活动 clip）；随后 equip/unequip 各第一个 completed Generate（`phase=equip-clips` / `unequip-clips`，只 dump 活动 clip）。
+- **源侧自然游玩模式**（`IndependentGraph=off` + `SourceTimeline=on`）：F7 窗口打开时 `side=source phase=window-open`（骨架 + 活动 clip）；装备链变量 settle 时追加 `phase=settle` 的 clip-only dump。触发名：`currentDefaultState`、`iRightHandEquipped`、`iLeftHandEquipped`、`iRightHandType`、`iLeftHandType`、`iState`、`iMagicEquipped`、`IsEquipping`、`bEquipUnequip`、`IsUnequipping`；每窗口最多 8 次，超限打印 `SOURCE TIMELINE census-cap`。
+- 次数：候选模式每次实验源 1 次、候选 3 次；源侧自然游玩模式每窗口 1 次 window-open + ≤8 次 settle。
 
 ## 三、记录格式
 

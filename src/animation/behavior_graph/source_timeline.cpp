@@ -5,6 +5,7 @@
 #include "animation/behavior_graph/source_timeline.h"
 
 #include "animation/behavior_graph/pose_capture_policy.h"
+#include "animation/behavior_graph/k1_census.h"
 #include "animation/behavior_graph/source_timeline_probe_policy.h"
 #include "animation/behavior_graph/source_timeline_policy.h"
 
@@ -114,6 +115,9 @@ namespace animation::behavior_graph
             bool concurrent{ false };
             // C-G5-E3 v2 §八: the `on` census prints once per window, before the first sample.
             bool census_logged{ false };
+            // C-G5-CAL K1: bounded source-side clip census at equipment settles.
+            std::uint8_t k1_census_calls{ 0 };
+            bool k1_census_cap_logged{ false };
             // C-G5-E4: source-side pose/clock capture state. `snapshot_armed` means a settle is
             // waiting for its anchor sample; the anchor rule is "first post-UI sample after it".
             bool pose_capture{ false };
@@ -452,7 +456,7 @@ namespace animation::behavior_graph
         }
 
         void sample_variables(Recorder& a_state, RE::hkbBehaviorGraph& a_behavior, std::int32_t const* a_words,
-            std::size_t a_count)
+            std::size_t a_count, RE::BShkbAnimationGraph* a_graph, std::uint32_t a_actor_id)
         {
             for (std::size_t i = 0; i < a_count; ++i)
             {
@@ -511,6 +515,20 @@ namespace animation::behavior_graph
                 else
                     logger::info("SOURCE TIMELINE variable index={} {}->{} float={:.4f}->{:.4f} tsc={}", i, previous, current,
                         previous_float, current_float, settle_tsc);
+                if (clip_identity_census() && anchor_name != nullptr &&
+                    k1_census_trigger(std::string_view{ anchor_name }))
+                {
+                    if (a_state.k1_census_calls < 8)
+                    {
+                        ++a_state.k1_census_calls;
+                        log_k1_census(*a_graph, "source", a_actor_id, a_state.request, "settle", false);
+                    }
+                    else if (!a_state.k1_census_cap_logged)
+                    {
+                        a_state.k1_census_cap_logged = true;
+                        logger::info("SOURCE TIMELINE census-cap calls={} limit=8", a_state.k1_census_calls);
+                    }
+                }
             }
         }
 
@@ -727,11 +745,13 @@ namespace animation::behavior_graph
         if (sample == SourceTimelineSample::e_baseline)
         {
             baseline(state, *behavior, words, source.count, actor.GetFormID());
+            if (clip_identity_census())
+                log_k1_census(*graph, "source", actor.GetFormID(), state.request, "window-open", true);
             return;
         }
         if (state.window.exhausted())
             return;
-        sample_variables(state, *behavior, words, static_cast<std::size_t>(count));
+        sample_variables(state, *behavior, words, static_cast<std::size_t>(count), graph, actor.GetFormID());
         sample_nodes(state, *behavior);
     }
 }
