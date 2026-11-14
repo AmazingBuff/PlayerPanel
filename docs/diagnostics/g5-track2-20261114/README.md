@@ -274,3 +274,26 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 | T2-C4 | 跨侧资源相等 | **待 Run 0b**（源侧 equip/unequip 相位）；旁证：source pre-activate MT_Idle `data-fnv=F56EE150…` 与候选一致 | 待定 |
 
 **裁定：Run 0a = PASS（T2-C1/C2/C3/C5/C6/C7 候选侧），T2-C4 待 Run 0b。** 候选侧断言集合登记：六 (裸名, data FNV) —— MT_Idle=`F56EE150…`、MLh_Idle=`DAD1F1C9…`、1HM_Equip=`12A77CD1…`、1HM_Unequip=`4DED5EAF…`、1HM_Idle=`C62C233B…`、SCAR_1hmReadyDummy=`8728A54A…`（来源：3 普通路径 loose + 3 原版 BSA + 1 Track2Dummy 占位）。
+
+## 十六、Run 0b run 1（2026-11-15 00:19，**PASS——T2-C4 达成，Run 0 收官**）
+
+**运行身份**：v103 DLL `8c3857a3…` + census-source 档 `2964009c…`（安装位换档由 Agent 执行并核验，备份 `dist/deploy-backup-20261115-run0apost/`）。日志 [归档](../CharacterPanel-g5track2-census-source-run1-20261115-0019.log)（65,344 B，SHA-256 `9766edf88c0ce828…`）。
+
+**协议读数**：Save116 加载成功（占位 esp 生效）；一次 F7 窗口 20 s 正常 `expired lines=72`；`window-open` 1 次 + `settle` 10 次（= v101b 覆盖形态）；`[E]` 唯一 = 豁免行；零 census-cap；skeleton `bones=116 recorded=116 invalid-parent=0 nonfinite=0`；11 个 clips-summary 全部 `missing=0`、`overflow=0`；dummy `identity=true` ×5。
+
+**T2-C4 跨侧资源相等（B 路线核心判据）：六族全部逐字节相等**：
+
+| clip | 源侧（Run 0b） | 候选侧（Run 0a run 3） | 相等 |
+| --- | --- | --- | --- |
+| MT_Idle | `F56EE150…` | `F56EE150…` | ✓ |
+| 1HM_Equip | `12A77CD1…` | `12A77CD1…` | ✓ |
+| 1HM_Unequip | `4DED5EAF…` | `4DED5EAF…` | ✓ |
+| MLh_Idle | `DAD1F1C9…` | `DAD1F1C9…` | ✓ |
+| 1HM_Idle | `C62C233B…` | `C62C233B…` | ✓ |
+| SCAR_1hmReadyDummy | `8728A54A…` | `8728A54A…` | ✓ |
+
+源侧六族无一来自 OAR 替换内容（Smooth/SVFI/Elden Rim/Ashe 零出现）——与 [K1-C4 NOT MATCHED](../g5-k1-census-20261114/README.md#八k1-c4-源候选资源对照与裁定)（六族中五族不同）完全反转，**确定性资源条件成立**。1HM_Unequip 覆盖 ×4（unequip 相位在窗口内）；graph=`DefaultFemale`。
+
+**裁定：Run 0b = PASS；T2-C1..C7 全部成立（T2-C4 六族相等）→ Run 0 收官，确定性资源条件（B 路线）正式成立。** 新档断言集合 = 候选/源共用六 (裸名, data FNV)（§十五登记 + 本表源侧确认）；K5-7 断言集合按此执行（裸名 ∈ {MT_Idle, 1HM_Equip, 1HM_Unequip, MLh_Idle, 1HM_Idle, SCAR_1hmReadyDummy}，data FNV ∈ 上述六值；出集 → drift 行 + C 规则排除）。
+
+**下一步：Run 1/2 姿态采集**（K5-1..K5-8 逐字复用，K5-7 用本集合）：Run 1 = k5-inject 档（`76f2bebb…`）Save116 + panel 窗口一次；Run 2 = k5-source 档（`21bd938b…`）F7 20 s 窗口。
