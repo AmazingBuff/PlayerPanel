@@ -1,6 +1,6 @@
 # C-G5-CAL K2-C1/C2：装备初态与输入账本（2026-11-14 预注册）
 
-**状态（2026-11-14）：预注册 + 离线登记完成。C2 = REGISTERED（离线关闭）；C1 = 部分（缺护甲/存档身份，待仪器上机，见 §四）。** 本轮闭合 [CAL v1 §三 K2](../../independent-behavior-graph.md) 的前两子项：C1 装备初态清单、C2 输入账本。**纯离线：零游戏运行、零插件代码改动**（第 2 步仪器已预注册但未实现）。
+**状态（2026-11-14 20:1x）：C2 = REGISTERED（离线关闭）；C1 = REGISTERED（v102 run 1 仪器上机后关闭，含一项偏差登记，见 §六）。** 本轮闭合 [CAL v1 §三 K2](../../independent-behavior-graph.md) 的前两子项：C1 装备初态清单、C2 输入账本。第 1 步离线登记（零插件改动）；第 2 步仪器（提交 `bd630da`）已实现、部署并上机一次。
 
 **用户决策（2026-11-14）**：① 背包以**存档身份冻结**（不逐项枚举背包内容）；② 先离线登记，仪器实现与上机后行。
 
@@ -38,8 +38,8 @@
 | 候选初始相位 | baseline：`istate=0 default=10 nodes=112`（装备事件注入后首帧） | v96a L142 |
 | 候选图变量初值 | authored `iRightHandType=0 iLeftHandType=0`（D1/D2 判负根因），prime 后 1/9 | [K1/K2 §三](../../independent-behavior-graph.md#c-g5-cal-k1k2) D2/D3 记录 |
 | 两侧初态一致性 | 候选 prime readback `1/1/9/1/9` = 源侧观察值 `1/1/9`（L74-L76）+ `1/9`（L60） | v96a L116-L120；D3v2 L60/L74-L76 |
-| 护甲 42 槽 | **缺**（待第 2 步仪器） | — |
-| 存档身份 | **缺**（待第 2 步运行时由用户登记槽位名；背包以存档身份冻结） | — |
+| 护甲 31 槽 | worn=9，见 §六 全表 | v102 run 1 dump 行（L608） |
+| 存档身份 | `Save116_61F78427_0_456C6966_Folgunthur01_011659_20261112151836_26_1.ess`（角色 Elif，#116，Folgunthur01，playtime 040.59.48）；背包 = 存档身份冻结 + 该存档同时给出已装备 CC 背包（slot 17） | 存档表交叉解析（§六）；背包语义按用户决策 |
 | OAR 命中（源侧 panel-open） | `MLh_Idle`/`1HM_Idle` → Smooth Moveset - 1hm「1hm Non-Combat idle Start」；`SCAR_1hmReadyDummy` → Dummy/DumDum；`oar-project=DefaultFemale`、`oar-api=available oar-result=replacement` | v96a L604 |
 | 候选 clip 资源来源 | 按 data FNV：equip/unequip = SCAR/Elden Rim 同字节家族、baseline MT_Idle = Ashe conditional、equip MT_Idle = Vanargand female、1HM_Idle = 原版 BSA | [K1-C1 对账](g5-k1-c1-20261114/README.md#六执行结果与裁定) |
 
@@ -105,3 +105,40 @@ v101b（2026-11-14 14:24，第 2 次复现；用户节奏不同）：`IsEquippin
 | K2C2-3 | 外部输入与图内输出分栏 | 候选/源两表均分离 | **成立** |
 
 **裁定语义**：C2 = **REGISTERED**（冻结场景的输入账本可复核）；C1 = **部分**（缺护甲 42 槽 + 存档身份，待第 2 步仪器上机后关闭）。不关闭 K2 整体（K2-C4 控制 B 已 READY-bounded，C1 待补）；不关闭 K1/K5/K6/G5；不产生 `tau_*`。
+
+**裁定语义（离线轮，2026-11-14 15:47）**：C2 = **REGISTERED**（冻结场景的输入账本可复核）；C1 = **部分**（缺护甲 42 槽 + 存档身份，待第 2 步仪器上机后关闭）。不关闭 K2 整体（K2-C4 控制 B 已 READY-bounded，C1 待补）；不关闭 K1/K5/K6/G5；不产生 `tau_*`。
+
+## 六、v102 run 1（2026-11-14 20:11-20:14；仪器上机，C1 关闭）
+
+**运行身份**：v102 DLL `32ff383e…c4185c`（`…-v102-g5k2c1-equipdump-bd630daacc-cl94faaed0c6-20261114T082611Z`）+ PDB `c3a7ed45…85b1` + 运行档 `0e789f8a…57cf35`（v96a 基线 + `EquipmentStateDump=true`，逐键断言见 [build.md v102 节](../build.md#v102-g5k2c1-equipdump-20261114)）。日志 [归档](CharacterPanel-g5k2c1c2-equipdump-v102-run1-20261114-2011.log) 177,630 B，SHA-256 `b33c452c…2e2d4385`。
+
+**实验读数**：一次 panel 窗口；inject → equip 120/120（`istate=9 default=1`）→ settle target 87 / settled 101 → `Unequip` id=144 → unequip completed=129、`state-12-to-0`、`default=0`；clip 族 `1HM_Equip`/`1HM_Unequip`/`1HM_Idle`，全日志零 `H2H_*`；零 `[E]`；无崩溃（clean tail）；`source-drift=none`。15 条 `[W]` 全部为既有 DAC 台账限制（与本仪器无关）。
+
+**dump 行**（L608，`reason='panel-open'`）：`hands=(560c2a4c,00043324) drawn=false` 与 v96a L604 **逐字一致**；`armor=slots=31 worn=9 1:0201989e,2:fe030801,3:5f006643,5:000f1b33,6:fe032823,7:fe030800,12:0201989e,17:fe01280b,20:fe0fe81b`。
+
+### 护甲 9 件全解析（归属 = 存档表 + 记录扫描；FormID 为运行时值）
+
+| 槽位 | FormID | 归属插件 | EDID |
+| --- | --- | --- | --- |
+| 1 hair + 12 circlet | `0201989e` | Dawnguard.esm（USSEP 覆盖同记录） | `DLC1ArmorDawnguardHelmetLight`（BOD2=`0x1002`=hair+circlet，双槽实测自洽） |
+| 2 body | `fe030801` | ccbgssse055-ba_orcishscaled.esl | `ccBGSSSE055_ArmorBladesCuirass` |
+| 3 hands | `5f006643` | DIS_RealisticArmor.esp | `DIS_SteelScaledGauntlets` |
+| 5 amulet | `000f1b33` | Skyrim.esm（USSEP 覆盖同记录） | `MG05RewardAmulet` |
+| 6 ring | `fe032823` | ccbgssse051-ba_daedricmail.esl | `ccBGSSSE051_Ring` |
+| 7 feet | `fe030800` | ccbgssse055-ba_orcishscaled.esl | `ccBGSSSE055_ArmorBladesBoots` |
+| 17 mod back | `fe01280b` | ccfsvsse001-backpacks.esl | `ccFSVSSE001_Backpack_Mage`（**"背包"= 已装备的 CC Survival 法师背包**） |
+| 20 | `fe0fe81b` | 3BBB.esp | `SMP3BONObjectP50`（3BA 身体物理填充对象） |
+| 火把 | 未装备 | 左手被 Candlelight 占用 | — |
+
+**存档身份与表解析（K2C1-3 + 方法学）**：运行存档 = `Save116_…Folgunthur01….ess`（Elif，#116）。AE v12 存档头的插件表为 **LZ4 压缩块**（起始 @245879，解压 3,998,360 B）：常规表 133 项 + 光表 766 项（u16 计数、u16 长度名）。运行时 FormID 表 = 存档表：`REG 0x02=Dawnguard.esm`、`REG 0x56=DBM_CC_HallOfWonders.esp`、`REG 0x5f=DIS_RealisticArmor.esp` 三处独立命中 → **§三"静态重算 0x47 vs 运行时 0x56 差 15"待查项关闭**（静态 plugins.txt 分类与存档表序不一致；运行时身份以存档表为准）。ESL 映射 = 存档光表 0-based，双锚点验证：`fe0bb800`（DAC warning）→ light[187] = SCAR NPC Exhaustion System（Spell "Exhaustion State" local 0x800 语义命中）；`fe030800/801` → CC Blades Boots/Cuirass local 0x800/0x801 命中。
+
+### 判定
+
+| # | 子项 | 裁定 |
+| --- | --- | --- |
+| K2C1-2 | dump 行存在、31 槽全枚举、零 `[E]`、无崩溃、hands/drawn 与 v96a 逐字一致 | **PASS** |
+| K2C1-2 子项 | OAR 命中与 v96a 逐字一致 | **FAIL（登记为偏差）**：本次 panel-open 源侧栈 = `MT_Idle` → SVFI（`Seamless Varied Feminine Idles`），v96a = Smooth Moveset 1HM idle 栈；源侧面板时刻 idle 栈随世界状态变化，与 K1-C4"源侧 OAR 窗口内自切资源"同类。装备初态冻结项（hands/drawn/armor/相位）不受影响 |
+| K2C1-3 | 存档身份登记、背包以存档身份冻结 | **PASS**（存档 = Save116；slot 17 背包同时以装备身份登记） |
+| **C1 整体** | CAL v1 关闭条件"武器 Form、左右手、火把、护甲、背包和初始相位；两侧一致" | **全部满足 → C1 = REGISTERED（含上述偏差登记）** |
+
+**边界**：C1/C2 关闭不关闭 K1-C2/C3/C4（census 已登记但跨运行身份未证）、不关闭 K5/K6/G5；不产生 `tau_*`；五字 prime 消融仍不做（非关闭条件）。

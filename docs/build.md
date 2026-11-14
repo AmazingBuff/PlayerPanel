@@ -2162,4 +2162,6 @@ Identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0
 
 **部署（2026-11-14 16:2x）**：先备份当前 v101b 安装 → `dist/deploy-backup-20261114-v101b-v102pre/`（DLL `87d1b417…`、PDB `e3cb4df0…`、INI `2964009c…`，与[会话总结](diagnostics/session-summary-20261114.md)登记一致）；随后安装 v102 三件套，安装后哈希逐位核对一致，DLL 身份串在安装位提取确认。
 
-**上机协议（待运行）**：与 v96a run 1 相同的冻结场景——同存档（1H+Candlelight 收鞘）、一次 panel 窗口（F7 开 20 秒时间线不可用，本档走 panel-open）、装备/卸下路径与 v96a 相同；唯一变化是 `EquipmentStateDump=true`。运行后判据：`ANIMATION WORLD` 行含 `armor=slots=31`、零 `[E]`、无崩溃、hands/drawn 与 v96a L604 逐字一致；日志归档进 `docs/diagnostics/` 后按 K2C1-2/K2C1-3 裁定 C1 关闭。运行档不是默认产品档；`config/CharacterPanel.ini` 保持全键默认 off。
+**运行记录（v102 run 1，2026-11-14 20:11-20:14）**：一次 panel 窗口按协议完成；`EXPERIMENT setting EquipmentStateDump=true`，`ANIMATION WORLD` 行含 `armor=slots=31 worn=9`，零 `[E]`、无崩溃；equip 120/120 + unequip completed=129（state-12-to-0）；clip 族 1HM、零 H2H。护甲 9 件经存档表解析全部落位、存档身份 Save116 登记，K2-C1 关闭（一项 OAR 命中偏差登记）。详见 [K2-C1/C2 登记 §六](diagnostics/g5-k2c1c2-20261114/README.md)。日志归档 [CharacterPanel-g5k2c1c2-equipdump-v102-run1-20261114-2011.log](diagnostics/CharacterPanel-g5k2c1c2-equipdump-v102-run1-20261114-2011.log)（177,630 B，SHA-256 `b33c452c…2e2d4385`）。
+
+**上机协议（已执行，存档）**：与 v96a run 1 相同的冻结场景——同存档（1H+Candlelight 收鞘）、一次 panel 窗口（F7 开 20 秒时间线不可用，本档走 panel-open）、装备/卸下路径与 v96a 相同；唯一变化是 `EquipmentStateDump=true`。运行后判据：`ANIMATION WORLD` 行含 `armor=slots=31`、零 `[E]`、无崩溃、hands/drawn 与 v96a L604 逐字一致；日志归档进 `docs/diagnostics/` 后按 K2C1-2/K2C1-3 裁定 C1 关闭。运行档不是默认产品档；`config/CharacterPanel.ini` 保持全键默认 off。
