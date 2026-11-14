@@ -1,6 +1,6 @@
 # 独立行为图验证
 
-**当前更新（2026-11-14）**：**源图 B3/B4 后处理边界在 [v97d 单窗口](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 PASS（K4 本会话边界）**——58423 的 foot-IK 输出块在返回与 63856 apply 之间未被改写，poseLocal 与同一块逐分量一致。[C-G5-OBS v2](#c-g5-observation-v2-20261112) 的候选诊断已由 [v96a 原生运行](build.md#g5-cal-v96a-observation-v2-run1-20261112)验证 clip-family 与 state-12-to-0（completed=129）。[K1/K2 账本](#c-g5-cal-k1k2) 中 K2-C3 PASS；**K2-C4 控制 B 已 READY（bounded，B2 v100a，2026-11-14）**，B1 位精确 FAIL 保留在案，K1-C1–C4 仍 NOT_READY；v97/v97a/v97b/v97c 四轮均保留 INVALID。K3 两侧（候选 v98 + 源 v99b）已闭合，K5/K6 与姿态等价仍待验证，G5 未通过。
+**当前更新（2026-11-14）**：**源图 B3/B4 后处理边界在 [v97d 单窗口](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 PASS（K4 本会话边界）**。[K1/K2 账本](#c-g5-cal-k1k2) 中 K2-C3 PASS；**K2-C4 控制 B 已 READY（bounded，B2 v100a）**，B1 位精确 FAIL 保留在案。**K1-C2/C3 census 与 K1-C4 资源清单已由 [v101 + v101b](diagnostics/g5-k1-census-20261114/README.md) 登记：两侧 116 骨骨架/参考姿态齐全、活动 clip 身份无丢失；K1-C4 裁定 NOT MATCHED（源/候选 clip 家族对齐但 data FNV 除 SCAR dummy 外无一对齐，源侧 OAR 窗口内自行切换资源）**；K1-C1 完整运行资源清单仍 NOT_READY。K3 两侧（候选 v98 + 源 v99b）已闭合，K5/K6 与姿态等价仍待验证，`tau_*` 未产生，G5 未通过。
 
 更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。**v96a 后续已部署并完成首次原生运行，关闭“差一帧”覆盖缺口；见[运行记录](build.md#g5-cal-v96a-observation-v2-run1-20261112)。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
@@ -5263,6 +5263,12 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **关键发现**：源侧 MT_Idle 是 20.0 s / 1000 帧 / 4 block / 211,328 B（FNV `9F6236C9E2D68F7D`，binding-index 12219）；候选侧同一节点 `0x21072841900` 在 post-activate 是 11.6667 s / 351 帧 / 16,992 B（binding `0x2103efe0080`，11909），在 equip-clips 变为 25.0167 s / 1501 帧 / 82,400 B（binding `0x21045141f50`，1022，Vanargand）。同一节点、不同 binding + data FNV 正是 OAR 替换的进程内形态，`stable-id` 已能把两个实例分开。但源/候选 MT_Idle 不是同一资源，且源侧 equip/unequip 阶段的活动 clip 在源图暂停时不可得；**K1-C4 需要一次源侧自然游玩窗口（F7 + 固定装备/卸下脚本）补齐源侧逐阶段资源哈希后再配对**。v101 的 `node/index` 标签顺序写反（`stable-id` 正确），v101a 修复。
 
+**源侧自然游玩普查（v101b，2026-11-14 14:24）：S1–S4 PASS；K1-C4 裁定 NOT MATCHED。** v101a 因 8 次 census cap 在 unequip 前耗尽判 INVALID（unequip 未覆盖）；v101b 把触发收敛为 `IsEquipping`/`IsUnequipping`/`currentDefaultState`/`iState` 并把上限提到 24，一次 F7 窗口取得 `window-open` 全量 + 10 次 settle，`1HM_Equip`/`1HM_Unequip` 均覆盖、无 `census-cap`、零 `[E]`、20 s 正常 expired。日志 [归档](diagnostics/CharacterPanel-g5k1-source-census-v101b-run2-20261114-1424.log)（67,974 B，SHA-256 `8B3AC063…E9E2F15`）。
+
+**源/候选资源对照**（完整表见 [g5-k1-census-20261114/README.md](diagnostics/g5-k1-census-20261114/README.md#八k1-c4-源候选资源对照与裁定)）：两侧 **clip 家族对齐**（equip→`1HM_Equip`、unequip→`1HM_Unequip`，K2-C3 保持），但 `data FNV` 无一对齐——`1HM_Equip` 源 `81FD1988…`（12,512 B）vs 候选 `12A77CD1…`（15,728 B）、`1HM_Unequip` 源 `4D885DE5…`（14,896 B）vs 候选 `4DED5EAF…`（13,744 B）、MT_Idle 源 20.0/18.0 s vs 候选 11.6667/25.0167 s、1HM_Idle/MLh_Idle 也各不同；**唯一相同是 SCAR_1hmReadyDummy `8728A54A…`**。源侧 OAR 还在窗口内把 MLh_Idle/1HM_Idle 从 3.3333 s 短版切到 22.9/19.8 s 长版、MT_Idle 从 20.0 s 切到 18.0 s，binding-index 同步漂移，证明 leaf name 与 binding-index 都不能当跨阶段身份。
+
+**裁定：K1-C4 资源清单已登记，但源/候选资源不一致（NOT MATCHED）。** 不能把两侧 `poseLocal` 当作同一动画资源的两次采样来比较或反推容差；未来姿态对照须先冻结 OAR 配置 / 关闭动态替换，或按 `data FNV` 分组。边界：不闭合 K1-C1 完整运行清单、不证明跨运行 ID、不完成 K5 层/权重/混合计数、不产生 `tau_*`、不关闭 G5。
+
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 
 **裁定**：v96a run 1 为 **K2-C1/C2/C3 提供了一次可复核的正面证据**，并把 D3 的 1HM 卸下完成点覆盖补齐；**K1-C1–C4 与 K2-C4（控制 B）仍未闭合**，因此 K1/K2 整体仍 **NOT_READY**，不能启动原生校准。
@@ -5282,7 +5288,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **K1/K2 结论**：v96a 把 K2-C3 从 D3 的 clip-family 正结果推进为同一进程内的 clip-family + state-12-to-0 完成证据，并给 K2-C1/C2 留下可复核的初态与输入顺序；但它不证明 K1 的跨运行资源/实例身份，也不提供控制 B 的独立真值。K1-C1–C4 与 K2-C4 仍是原生校准的硬前置。
 
-**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739）；**K3 两侧已闭合**（[v98](build.md#g5-k3c-v98-run1-20261113) 候选 249 条 + [v99b](build.md#g5-k3s-v99b-run1-20261113) 源 1,151 条，双读一致、116 轨、零溢出；跨侧逐代配对不在 K3，见 [K3 收官](#g5-cal-k3-closure)）。**K2-C4 控制 B 已 READY（bounded）**：[B1 位精确 FAIL 保留](#b1-run)，[B2 v100a PASS](#b2-bound)（8,910 分量、0 violation、最大比值 0.4860；范围限 `female\mt_idle.hkx` / 9 个固定时间 / 单层直接采样 / 单进程）；仍不产生 `tau_*`、不证明 CAL2 三进程/120 代协议。剩余：**K5/K6**（完整计数、层/权重/混合、寿命/丢失）；以及 K1-C1–C4 与 K2-C1/C2 的清单补齐。
+**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739）；**K3 两侧已闭合**（[v98](build.md#g5-k3c-v98-run1-20261113) 候选 249 条 + [v99b](build.md#g5-k3s-v99b-run1-20261113) 源 1,151 条，双读一致、116 轨、零溢出；跨侧逐代配对不在 K3，见 [K3 收官](#g5-cal-k3-closure)）。**K2-C4 控制 B 已 READY（bounded）**：[B1 位精确 FAIL 保留](#b1-run)，[B2 v100a PASS](#b2-bound)（8,910 分量、0 violation、最大比值 0.4860）；仍不产生 `tau_*`、不证明 CAL2 三进程/120 代协议。**K1-C2/C3 census 与 K1-C4 资源清单已登记**：[v101](diagnostics/CharacterPanel-g5k1-census-v101-run1-20261114-1411.log) 候选侧 + [v101b](diagnostics/CharacterPanel-g5k1-source-census-v101b-run2-20261114-1424.log) 源侧自然游玩两侧 116 骨骨架/参考姿态齐全、活动 clip 身份无丢失；**K1-C4 裁定 NOT MATCHED**（源/候选 clip 家族对齐但 `data FNV` 除 SCAR dummy 外无一对齐，且源侧 OAR 窗口内自行切换资源）。剩余：**K5/K6**（完整计数、层/权重/混合、寿命/丢失）；K1-C1 完整运行资源清单与 K2-C1/C2 清单补齐；以及按 `data FNV` 冻结 OAR 配置后再设计姿态对照。`tau_*` 仍未产生。
 
 ### 五、下一步与明确不做
 
