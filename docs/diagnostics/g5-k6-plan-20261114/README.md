@@ -248,3 +248,50 @@ equip 段 87–98 为 `1HM_Equip` 与 idle 栈的重叠混合（settle 点前后
 **离线对账工具**：[tools/k5_reconcile.py](../../../tools/k5_reconcile.py)（SHA-256 `c977c9ea1ce67c0c7070884749ec071c781cd95c330a54c917e194f6e978a9af`）。登记两条实现事实：① 运行时 `animationName` 为完整动画路径（`Animations\1HM_Equip.hkx`），节点 `hkbNode::name` 才是裸名（`DG_1hmEquip` 等）——工具以裸名（剥前缀/扩展名、大小写折叠）作匹配键、data FNV 为身份（K1-C4 不变），属比较侧归一化，不判据变更；② SCAR dummy 的 binding-index 本轮 = 15073（v101 = 15078）、MT_Idle = 11915（v101 = 11909）——跨运行 binding-index 漂移再现，K1-C4"binding-index 非身份"结论再次成立。
 
 **裁定（候选侧）**：K5-1/2/3/4/6/7/8 = PASS，K5-5 = PASS（带缺项清单）。**K5 整体仍开放**——源侧（run 2：`SamplingLiveness=on` + source 档，F7 probe 窗口）未运行；`tau_*` 不产生；姿态等价/G5 不关闭。
+
+## 十二、v103 run 2（源侧）记录与 K6 收官（2026-11-14 22:29–22:30）
+
+**运行身份**：v103 同 DLL（`8c3857a3…`）+ source 运行档 `21bd938b…`（`IndependentGraph=off`、`SamplingLiveness=on`、`K5FullSample=true`、`K5Reconciliation=true`）。登记一条过程事实：22:25 的第一次启动仍加载 inject 档（换档未落位），无任何 K5 数据产生，作废重跑；换档后本轮为首个源侧窗口。存档 = Save116；F7 probe 窗口 20 s 正常 `expired`，`pinned-apply-entries=906 = paired-completions=906`（配对零失配）。零 `[E]`、无崩溃。
+
+| # | 判据（源侧） | 读数 | 裁定 |
+| --- | --- | --- | --- |
+| K5-1 | 完整采样、cap 未在完成前耗尽 | `K5 SOURCE close records=906 attempted=906 dropped=0 overflow=false no-pose=0 write-failed=0 open-failed=false`；`K5 RECON side=source expected=906 recorded=906 missing=0 truncated=0`；cap 1,400 实用 906，**equip（56 条）与 unequip（67 条）及收鞘 idle 全部在窗口内** | **PASS** |
+| K5-2 | 双读逐位一致 | `two-read-bad=0`（全 906 apply） | **PASS** |
+| K5-3 | 分母完整 | 全部记录 `track_count=116`（离线复核 0 失配） | **PASS** |
+| K5-4 | 对账闭合 | 工件精确 = 124 + 906×5,652 = 5,120,836 B（预算 8 MiB 实用 4.88 MiB）；JSON 账本与 RECON 行互洽 | **PASS** |
+| K5-6 | 寿命/generation | seq 1..906 连续无缺口；TSC 严格单调；clip 时间线完整（见下表）；失效/取消未触发 | **PASS（取消未触发，如实登记）** |
+| K5-7 | 资源断言 | 9 个唯一 (名,bidx,FNV)：**7 个命中 v101b 登记集合**（1HM_Equip `81FD1988…`、1HM_Unequip `4D885DE5…`、1HM_Idle `AE1527A6…`、MLh_Idle `13D0592A…`、短版 idle 对 `22C9C4BF…`、SCAR dummy `8728A54A…`）；**2 个声明缺口** = MT_Idle 新 FNV `08E65508BDEB4443`（bidx 12219）与 `C95CED0358CB90A6`（bidx 12222）——裸名在已声明栈名集内，按 §10.5 登记为声明缺口（K1-C4"源侧栈随世界状态切换"再现：MT_Idle 资源跨窗口第三、四个版本），不是未声明漂移；出集未声明 = 0 | **PASS（2 声明缺口登记）** |
+| K5-8 | 运行完整 | 零 `[E]`、无崩溃、DLL/INI 身份匹配、预算未超 | **PASS** |
+
+**clip 时间线（seq 1..906，离线自 bin 导出）**：
+
+| seq 区间 | clip | data FNV | 裁定 |
+| --- | --- | --- | --- |
+| 1..217 | mt_idle（bidx 12222） | `C95CED03…` | 声明缺口（装备前 idle） |
+| 209..264 | 1hm_equip | `81FD1988…` | REG |
+| 257..354 | mlh_idle / 1hm_idle（短版，bidx 11611/9040） | `22C9C4BF…` | REG |
+| 257..598 | scar_1hmreadydummy | `8728A54A…` | REG |
+| 355..598 | mlh_idle / 1hm_idle（长版，bidx 8975/8995） | `13D0592A…` / `AE1527A6…` | REG |
+| 592..658 | 1hm_unequip | `4D885DE5…` | REG |
+| 649..906 | mt_idle（bidx 12219） | `08E65508…` | 声明缺口（收鞘 idle） |
+
+短版→长版 idle 栈切换（355 处）与 v101b 观察的 OAR 窗口内自切资源现象一致；1HM_Equip/1HM_Unequip 与 idle 栈的重叠区间为层混合带（门 1 预期形态）。**旁注（不改变既有裁定）**：本窗口 `b3-equal=906/906`、`b4-equal=906/906`——B3/B4 在第二会话同链再现，K4 的 v97d 登记范围不变，此为额外复现观察。
+
+**工件**：
+
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| [日志](../CharacterPanel-g5k5s-v103-run1-20261114-2229.log) | 265,950 | `bdfbd64fec6cc1ea4152c651f1dc232fab8c0e1c2b39b3815a5b6312154dd5e0` |
+| [CPK5 源快照](../CharacterPanel-g5k5s-v103-run1-20261114-2229.bin) | 5,120,836 | `44d5c33723346fc4daaa108c62d1fb99b23bb0edb70e7b7176c06fc8304c4c53` |
+| [JSON 账本](../CharacterPanel-g5k5s-v103-run1-20261114-2229.json) | 618 | `91849ee6a7aa7fe4e511da8957b0286d6c7dfcc5df3a01e6d582d405246162e4` |
+
+## 十三、K6 关闭裁定
+
+**K5-1…K5-8 两侧全部 PASS → K6 关闭（限定范围）**：
+
+1. **K5 仪器资格成立**：完整计数/层/权重（可观测面）/混合/寿命对账在候选与源两侧各一次会话取得零丢失、零截断、零未声明漂移的完整证据；写骨分母 116/116、双读逐位一致全部成立。
+2. **K6 关闭即 CAL v1 §三 K1–K6 全部有证据**：K1-C1/C2/C3/C4 登记（C4 NOT MATCHED）、K2-C1/C2/C3/C4 登记/READY、K3 两侧、K4 本会话边界 + 本轮 b3/b4 复现、K5 收官、K6 本文档。**CAL1 资格门形式上齐备，但 K2-C4 控制 B 仍为 bounded READY（1 个合格进程，3 进程要求归 CAL2）、K1-C4 NOT MATCHED 与 K5-5 缺项清单是姿态对照/校准的实质限制**——姿态等价与门 3 原生校准仍不可启动，下一步按 §二两轨制推进：**Track 2 预注册（关闭 OAR 替换的对照批次，待用户批准 MO2 档）** 与 **CAL2 协议预注册**。
+3. **带缺项转移清单**：① 逐骨/通道权重与 blend/mask/additive 语义（`hkbBlendingBehavior` 等无 CommonLibSSE 布局，K5-5 缺项清单）→ Track 2/CAL2 的门 1 未闭合子项；② 源侧 MT_Idle 资源两新 FNV（`08E65508…`/`C95CED03…`）已并入声明清单，Track 2 的资源断言集合须包含或关闭该栈；③ 控制 B 三进程缺口 → CAL2。
+4. **不产生** `tau_p/tau_r/tau_s/epsilon_t`；**不关闭** 姿态等价、G5、G6；装载 teardown NO-GO 不变。
+
+**文档维护同步**：[主文档](../../independent-behavior-graph.md) 文首状态行与 [会话总结](../session-summary-20261114-k6.md) 指针、[README](../../README.md) Current status、[CHANGELOG](../../CHANGELOG.md)、[history](../../history.md) 已同步本节。

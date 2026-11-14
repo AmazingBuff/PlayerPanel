@@ -4,7 +4,7 @@ C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), w
 
 ## Current status
 
-> **2026-11-14 最新状态**（详见 [会话总结](docs/diagnostics/session-summary-20261114.md) 与 [独立行为图验证](docs/independent-behavior-graph.md) 顶部）：K2-C4 控制 B 已 **READY（bounded）**（方案 A，B2 v100a 有界 PASS）；K1 身份普查仪器 PASS，但 **K1-C4 源/候选资源裁定 NOT MATCHED**（除 SCAR dummy 外 `data FNV` 全不同、源侧 OAR 窗口内自行替换）。K1-C1、K5/K6、时间量化、姿态等价、G5 仍未闭合，`tau_*` 未产生。当前 MO2 安装为 v101b 源侧自然游玩档（非默认产品档）。下方 11-12 段落为历史状态，保留作时间线，不再代表当前判定。
+> **2026-11-14 最新状态**（详见[第三会话总结](docs/diagnostics/session-summary-20261114-k6.md) 与 [独立行为图验证](docs/independent-behavior-graph.md) 顶部）：**K6 关闭（限定范围）**——[K6 计划](docs/diagnostics/g5-k6-plan-20261114/README.md)评审通过（OAR 两轨制），v103 三仪器（CPK5 v1 快照 + 层审计 + RECON 对账）候选/源两侧各一次运行**全判据 PASS**（候选 249/249、7/7 data FNV 命中 v101 集合；源 906/906、7 命中 + 2 个 MT_Idle 声明缺口），K5 仪器资格成立；CAL v1 §三 K1–K6 形式齐备，但姿态等价与门 3 校准仍不可启动（控制 B bounded、K1-C4 NOT MATCHED、K5-5 权重缺项），下一步 **Track 2 与 CAL2 预注册**。`tau_*` 未产生，G5/G6 不关闭。当前 MO2 安装为 v103 source 运行档（非默认产品档）。下方 11-14 前段与 11-12 段落为历史状态，保留作时间线。
 
 The default product path uses the copied scene tree, OAR clip selection/sampling and native DAC preparation. [Animation](docs/animation.md) owns equipment policy, torch composition, accepted clocks and configuration; [SceneGraph](docs/scene-graph.md) owns capture, placement, attachments and drawing.
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+> K6 closure (2026-11-14): [C-G5-CAL K6](docs/diagnostics/g5-k6-plan-20261114/README.md) reviewed and executed — the two-track OAR strategy was preregistered, the K5 instruments (CPK5 v1 snapshot with per-clip resource identity, four-point layer audit, RECON/JSON reconciliation) were implemented as v103 and run on both sides (candidate 249/249, source 906/906, all criteria K5-1..K5-8 PASS; K5-5 with an explicit gap list). K6 is closed within scope; CAL v1 §三 K1–K6 is formally evidenced, but pose equivalence and the gate-3 calibration remain unstarted (control B bounded, K1-C4 NOT MATCHED, K5-5 weights gap). `tau_*` remains unproduced; G5/G6 stay open.
+
 > Observation correction (2026-11-12): [C-G5-OBS v2](docs/independent-behavior-graph.md#c-g5-observation-v2-20261112) supersedes the dated “one frame short” prediction and five-word minimality/writer-role interpretations below. Historical logs remain unchanged; v96 is local only and game-unvalidated.
 
 > Evidence correction (2026-11-04): prior E1 closure entries below retain historical readings. [The current audit](docs/independent-behavior-graph.md#g5-e1-evidence-repair) supersedes the poseLocal-last-writer/completion, worker-pool, per-frame timing and uninterrupted-zero-flag interpretations. Source sampling-entry liveness remains observed; full E1 completion/lifetime/coherent-snapshot evidence remains pending. The current repair is not deployed or game-validated.
