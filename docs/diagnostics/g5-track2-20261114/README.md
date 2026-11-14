@@ -258,3 +258,19 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 **实施状态**：占位模组已由 Agent 创建并校验；待用户在 MO2 的 `AE-Track2` 档勾选 `CharacterPanel-Track2RaySenseEsp` 并在插件页勾选 `RaySense.esp`（排序位置无关）。完成后重跑 Run 0a（Save116、一次窗口、装备不动）。
 
 **新存档路径（后备，未启用）**：若占位后 Save116 仍不可读，再评估"新存档登记为 Track 2 场景"修订（§13 已记录其可行性旁证：run 2 在新存档下 unequip completed=129 与 Track 1 同值）。占位方案成立则不启动。
+
+## 十五、Run 0a run 3（2026-11-15 00:11，**PASS——Run 0a 关闭**）
+
+**运行身份**：v103 DLL `8c3857a3…` + census-inject 档 `c05b9b91…`（安装位复核一致）+ 修订 v2/v3 环境（Track2Dummy + RaySenseEsp 占位，AE-Track2 modlist 979 项、plugins.txt 含 `*RaySense.esp` 第 182 行）。日志 [归档](../CharacterPanel-g5track2-census-inject-run3-20261115-0011.log)（205,761 B，SHA-256 `6ee1c9843fca9c2c…`）。
+
+| # | 判据 | 读数 | 裁定 |
+| --- | --- | --- | --- |
+| T2-C1 | census 完整 | 两侧 116 骨 `recorded=116 invalid-parent=0 nonfinite=0`；四段齐全；一次实验；`[E]` 唯一 = 豁免行（`failed to get plugin info for OpenAnimationReplacer`，00:11:25 启动期） | PASS |
+| T2-C2 | clip 身份 | 三摘要全 `missing=0`；dummy `identity=true data-fnv=8728A54A50D85C22` | PASS |
+| T2-C3 | 家族/相位 | equip-clips 含 `1HM_Equip`、unequip-clips 含 `1HM_Unequip`；equip 120/120 `fixed-equip-budget`；unequip **completed=129 `state-12-to-0` first-return-zero=129 last-state=0**（与 Track 1 v96a/v103 同值）；H2H=0；drift=none ×5 | PASS |
+| T2-C5 | 装备初态 | `hands=(560c2a4c,00043324) drawn=false`（= v96a L604 逐字）；`armor=slots=31 worn=9 1:0201989e,2:fe030801,3:5f006643,5:000f1b33,6:fe032823,7:fe030800,12:0201989e,17:fe01280b,20:fe0fe81b`（= K2-C1 v102 登记逐字）；OAR 停用签名齐全（`oar-api=unavailable oar-result=unavailable-unknown` 五字段空、全日志零 `oar-result=replacement`） | **PASS** |
+| T2-C6 | 行为闭包 | 已登记（§12.5，+1 行视图下 23/23） | PASS |
+| T2-C7 | 候选侧落位 | census 六 FNV = {`F56EE150…`(Vanargand female loose)、`DAD1F1C9…`(Pretty Combat mlh loose)、`12A77CD1…`/`4DED5EAF…`/`C62C233B…`(原版 BSA，§11.1)、`8728A54A…`(Track2Dummy 普通路径)}——全部落位（BSA 来源按 §11.1 归属登记进断言集合） | PASS（候选侧） |
+| T2-C4 | 跨侧资源相等 | **待 Run 0b**（源侧 equip/unequip 相位）；旁证：source pre-activate MT_Idle `data-fnv=F56EE150…` 与候选一致 | 待定 |
+
+**裁定：Run 0a = PASS（T2-C1/C2/C3/C5/C6/C7 候选侧），T2-C4 待 Run 0b。** 候选侧断言集合登记：六 (裸名, data FNV) —— MT_Idle=`F56EE150…`、MLh_Idle=`DAD1F1C9…`、1HM_Equip=`12A77CD1…`、1HM_Unequip=`4DED5EAF…`、1HM_Idle=`C62C233B…`、SCAR_1hmReadyDummy=`8728A54A…`（来源：3 普通路径 loose + 3 原版 BSA + 1 Track2Dummy 占位）。
