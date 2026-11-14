@@ -248,3 +248,13 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 | 完整性 | `[E]`/窗口 | 唯一 `[E]` = 豁免行 ✓；但 ANIMATION WORLD 出现 **4 次 panel-open**（request=1..4，request=1 空手、request=4 持剑）——非"一次窗口"协议 | 场景协议不符 |
 
 **裁定：Run 0a run 2 = INVALID（仅 T2-C5 与窗口数）**。仪器、census、方案 b、inject 链全部就绪；**唯一剩余缺口是冻结场景本身**。重跑要求不变：加载 `Save116_61F78427_0_456C6966_Folgunthur01_011659_20261112151836_26_1.ess`（AE-Track2 档内存档列表中，角色 Elif、#116、Folgunthur01、2026-11-12 15:18 存）、不改动任何装备、panel 只开一次；dump 行必须逐字等于 K2-C1 登记（`hands=(560c2a4c,00043324) drawn=false` + `worn=9 1:0201989e,2:fe030801,3:5f006643,5:000f1b33,6:fe032823,7:fe030800,12:0201989e,17:fe01280b,20:fe0fe81b`）。
+
+## 十四、预注册修订 v3（2026-11-15 批准生效）：RaySense.esp 占位与场景连续性恢复
+
+**方法失误登记（§2.1 事实表更正）**：§2.1 事实 2 的 plugins.txt 排查关键词（"open animation replacer|oar"）未覆盖 "RaySense" 命名——**`Open Animation Replacer - RaySense` 模组含真 esp `RaySense.esp`（805 B 空壳：仅插件头、零记录、不参与 FormID 分配）**，其余三模组为纯 DLL 的结论对该模组不成立。后果：AE-Track2 停用四模组后 `RaySense.esp` 从 plugins.txt 消失，而 Save116 的插件表含它（AE 主档 plugins.txt 第 181 行）→ 存档"依赖缺失内容"无法进入（Run 0a run 2 后用户报"进不了"，改用新存档导致 T2-C5 第三次失败）。
+
+**修订内容（用户批准方案 A）**：新建占位模组 `CharacterPanel-Track2RaySenseEsp`——仅含 `RaySense.esp` 逐字节副本（805 B，SHA-256 `111195f62b7b744a…` 与源一致）+ `README.txt`；**仅在 `AE-Track2` 启用**（原 RaySense 模组保持停用，其 DLL 不回归 → §2.3 风险 1 不触发；esp 空壳 → 零 OAR 引擎影响、零 FormID 影响）。Save116 插件表重新匹配 → 场景连续性保留（K2-C1 不动）。**T2-C5 基线不变**（仍对 K2-C1 逐字比对）。winner map/闭包零变化（esp 非 hkx，枚举范围不变）。
+
+**实施状态**：占位模组已由 Agent 创建并校验；待用户在 MO2 的 `AE-Track2` 档勾选 `CharacterPanel-Track2RaySenseEsp` 并在插件页勾选 `RaySense.esp`（排序位置无关）。完成后重跑 Run 0a（Save116、一次窗口、装备不动）。
+
+**新存档路径（后备，未启用）**：若占位后 Save16 仍不可读，再评估"新存档登记为 Track 2 场景"修订（§13 已记录其可行性旁证：run 2 在新存档下 unequip completed=129 与 Track 1 同值）。占位方案成立则不启动。
