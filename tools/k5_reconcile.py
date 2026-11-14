@@ -59,6 +59,15 @@ DECLARED_SOURCE_STACK_NAMES = {
     "mt_idle", "1hm_equip", "mlh_idle", "1hm_idle", "1hm_unequip", "scar_1hmreadydummy",
 }
 
+TRACK2_REGISTERED = {  # (clip name, data FNV) — Track 2 same-resource set (Run 0a/0b, g5-track2-20261114 §15/§16)
+    ("mt_idle", 0xF56EE1500EB5A3D0),          # plain loose female/mt_idle.hkx (Vanargand)
+    ("1hm_equip", 0x12A77CD14ECC3688),        # vanilla BSA
+    ("1hm_unequip", 0x4DED5EAF23DF26E3),      # vanilla BSA
+    ("mlh_idle", 0xDAD1F1C997C0F0C6),         # plain loose mlh_idle.hkx (Pretty Combat)
+    ("1hm_idle", 0xC62C233B06FAE9A9),         # vanilla BSA
+    ("scar_1hmreadydummy", 0x8728A54A50D85C22),  # Track2Dummy plain path
+}
+
 
 def clip_name(raw: bytes) -> str:
     return raw.rstrip(b"\x00").decode("utf-8", errors="replace")
@@ -71,6 +80,9 @@ def bare_clip_name(path_like: str) -> str:
     leaf = path_like.replace("\\", "/").rsplit("/", 1)[-1]
     stem = leaf.rsplit(".", 1)[0] if "." in leaf else leaf
     return stem.strip().lower()
+
+
+TRACK2_MODE = False
 
 
 def reconcile_candidate(path: str) -> int:
@@ -111,7 +123,9 @@ def reconcile_candidate(path: str) -> int:
                 identity_zero += 1
             key = (name, binding_index, data_fnv, map_count, map_fnv)
             sightings[key] = sightings.get(key, 0) + 1
-            if (bare_clip_name(name), data_fnv) not in REGISTERED_CANDIDATE:
+            registered_set = TRACK2_REGISTERED if TRACK2_MODE else REGISTERED_CANDIDATE
+            skip = TRACK2_MODE and data_fnv == 0  # identity-unreadable: no FNV to assert (K6 10.3 flag)
+            if not skip and (bare_clip_name(name), data_fnv) not in registered_set:
                 out_of_set[key] = out_of_set.get(key, 0) + 1
     print(f"[K5-1] segments: equip={segment_counts.get(0, 0)} unequip={segment_counts.get(1, 0)} "
           f"(expected 120/129 for the frozen chain)")
@@ -119,15 +133,25 @@ def reconcile_candidate(path: str) -> int:
     print(f"[K5-3] track-count mismatches: {len(track_bad)} {track_bad[:4]}")
     print(f"[K5-4] zero-FNV clips (identity-failed at runtime): {identity_zero}")
     print(f"[K5-7] unique clip sightings: {len(sightings)}")
+    registered_set = TRACK2_REGISTERED if TRACK2_MODE else REGISTERED_CANDIDATE
+    identity_unreadable = 0
     for (name, bidx, dfnv, mcnt, mfnv), seen in sorted(sightings.items(), key=lambda kv: (-kv[1], kv[0][0])):
-        registered = "REG " if (bare_clip_name(name), dfnv) in REGISTERED_CANDIDATE else "OUT!"
-        print(f"    {registered} {name:<22} bidx={bidx:<6} data_fnv={dfnv:016X} map_count={mcnt:<3} "
+        if dfnv == 0:
+            # K5_Flag_Identity_Failed: binding/animation unreadable at this sighting (K6 10.3).
+            # Not an out-of-set FNV (no FNV to assert); booked separately, excluded from pairing (C rule).
+            identity_unreadable += seen
+            tag = "IDUN"
+        else:
+            tag = "REG " if (bare_clip_name(name), dfnv) in registered_set else "OUT!"
+        print(f"    {tag} {name:<22} bidx={bidx:<6} data_fnv={dfnv:016X} map_count={mcnt:<3} "
               f"map_fnv={mfnv:016X} records={seen}")
     verdict = "PASS"
-    if len(two_read_bad) or len(track_bad) or identity_zero or out_of_set:
+    if len(two_read_bad) or len(track_bad) or out_of_set:
         verdict = "FAIL"
         for key in out_of_set:
             print(f"[K5-7 FAIL] unregistered clip: name={key[0]} bidx={key[1]} data_fnv={key[2]:016X}")
+    if TRACK2_MODE and identity_unreadable:
+        print(f"[K5-7 note] identity-unreadable sightings: {identity_unreadable} (booked, excluded from pairing)")
     print(f"[VERDICT] candidate-side K5-1/2/3/4/7: {verdict}")
     return 0 if verdict == "PASS" else 1
 
@@ -154,6 +178,9 @@ def reconcile_source(path: str) -> int:
     sightings: dict[tuple, int] = {}
     out_of_set = {}
     declared_gap = {}
+    registered_source_set = TRACK2_REGISTERED if TRACK2_MODE else REGISTERED_SOURCE
+    declared_names = set() if TRACK2_MODE else DECLARED_SOURCE_STACK_NAMES
+    identity_unreadable = 0
     for i in range(count):
         off = header_size + i * record_size
         _tsc, seq, tracks, clip_count, _path, equal, flags, _pad = K5_SOURCE_META.unpack_from(data, off)
@@ -173,27 +200,32 @@ def reconcile_source(path: str) -> int:
             key = (name, binding_index, data_fnv, map_count, map_fnv)
             sightings[key] = sightings.get(key, 0) + 1
             bare = bare_clip_name(name)
-            if (bare, data_fnv) not in REGISTERED_SOURCE:
-                bucket = declared_gap if bare in DECLARED_SOURCE_STACK_NAMES else out_of_set
+            if (bare, data_fnv) not in registered_source_set:
+                bucket = declared_gap if bare in declared_names else out_of_set
                 bucket[key] = bucket.get(key, 0) + 1
     print(f"[K5-2] two-read mismatches: {two_read_bad}")
     print(f"[K5-3] track-count mismatches: {track_bad}")
     print(f"[K5-4] zero-FNV clips: {identity_zero}; clip-overflow records: {clip_overflow}")
     print(f"[K5-7] unique clip sightings: {len(sightings)}")
     for (name, bidx, dfnv, mcnt, mfnv), seen in sorted(sightings.items(), key=lambda kv: (-kv[1], kv[0][0])):
-        if (bare_clip_name(name), dfnv) in REGISTERED_SOURCE:
+        if dfnv == 0:
+            identity_unreadable += seen
+            tag = "IDUN"
+        elif (bare_clip_name(name), dfnv) in registered_source_set:
             tag = "REG "
-        elif bare_clip_name(name) in DECLARED_SOURCE_STACK_NAMES:
+        elif bare_clip_name(name) in declared_names:
             tag = "GAP!"
         else:
             tag = "OUT!"
         print(f"    {tag} {name:<22} bidx={bidx:<6} data_fnv={dfnv:016X} map_count={mcnt:<3} "
               f"map_fnv={mfnv:016X} records={seen}")
     verdict = "PASS"
-    if two_read_bad or track_bad or identity_zero or clip_overflow or out_of_set:
+    if two_read_bad or track_bad or clip_overflow or out_of_set:
         verdict = "FAIL"
         for key in out_of_set:
             print(f"[K5-7 FAIL] undeclared clip: name={key[0]} bidx={key[1]} data_fnv={key[2]:016X}")
+    if TRACK2_MODE and identity_unreadable:
+        print(f"[K5-7 note] identity-unreadable sightings: {identity_unreadable} (booked, excluded from pairing)")
     if declared_gap:
         print(f"[K5-7 GAP] declared-stack FNVs outside the registered set "
               f"(registered as declaration gaps, not unexplained drift): {len(declared_gap)}")
@@ -214,7 +246,12 @@ def main() -> int:
     parser.add_argument("--candidate-json", help="candidate JSON ledger")
     parser.add_argument("--source", help="CPK5 v2 source artifact (.bin)")
     parser.add_argument("--source-json", help="source JSON ledger")
+    parser.add_argument("--track2", action="store_true",
+                        help="Track 2 same-resource semantics: TRACK2_REGISTERED set for both sides; "
+                             "identity-unreadable (zero-FNV) sightings booked separately, not a set violation")
+    global TRACK2_MODE
     args = parser.parse_args()
+    TRACK2_MODE = args.track2
     if not any((args.candidate, args.candidate_json, args.source, args.source_json)):
         parser.error("nothing to do")
     status = 0

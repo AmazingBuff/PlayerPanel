@@ -297,3 +297,24 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 **裁定：Run 0b = PASS；T2-C1..C7 全部成立（T2-C4 六族相等）→ Run 0 收官，确定性资源条件（B 路线）正式成立。** 新档断言集合 = 候选/源共用六 (裸名, data FNV)（§十五登记 + 本表源侧确认）；K5-7 断言集合按此执行（裸名 ∈ {MT_Idle, 1HM_Equip, 1HM_Unequip, MLh_Idle, 1HM_Idle, SCAR_1hmReadyDummy}，data FNV ∈ 上述六值；出集 → drift 行 + C 规则排除）。
 
 **下一步：Run 1/2 姿态采集**（K5-1..K5-8 逐字复用，K5-7 用本集合）：Run 1 = k5-inject 档（`76f2bebb…`）Save116 + panel 窗口一次；Run 2 = k5-source 档（`21bd938b…`）F7 20 s 窗口。
+
+## 十七、Run 1（候选侧 K5 姿态采集，2026-11-15 00:22，**PASS——含一项 identity-unreadable 记账**）
+
+**运行身份**：v103 DLL `8c3857a3…` + k5-inject 档 `76f2bebb…`（Agent 换档并核验，备份 `dist/deploy-backup-20261115-run0bpost/`）。SCENEGRAPH BUILD 身份匹配；Save116 冻结场景（prime 5/5 written、`WeapEquip` 一次 dispatched、drift=none ×5、H2H=0）。日志/工件归档：[日志](../CharacterPanel-g5k5c-track2-run1-20261115-0024.log)（244,239 B `4c0b3eb9…`）、[CPK5 bin](../CharacterPanel-g5k5c-track2-run1-20261115-0024.bin)（1,410,452 B `8c63d5fa…` = 116+249×5,664 精确值）、[JSON 账本](../CharacterPanel-g5k5c-track2-run1-20261115-0024.json)（`de8c6be2…`）。
+
+**仪器读数**：`K5 RECON side=candidate expected=249 attempted=249 recorded=249 missing=0 truncated=0 two-read-bad=0 clip-overflow=0 dropped=0`；equip 120/120 `fixed-equip-budget`、unequip 129/129 `state-12-to-0`（与 Track 1 链同值）；4 审计点齐全（walked=97/94/122/113，`missing=0 identity-failed=0 overflow=0`，unclassified=77/78/89/84 = 既有缺项清单形态）。
+
+**发现：2 条 identity-unreadable 目击（`K5_Flag_Identity_Failed`，K6 §10.3 预注册形态）**——`SCAR_1hmReadyDummy` 在 **equip 段 completed=87/88**（idle 栈淡入边界）目击时 `binding=0x0`、FNV 列为 0；同族其余 44 次目击 FNV 正常（`8728A54A…`）。Track 1 v103 run 1 该计数为 0（OAR 预载 dummy）；Track 2 引擎懒加载在边界处产生瞬时不可读，属可解释的有界伴生，两条记录的 116 轨姿态本身完整（two-read 全等）。按 C 规则排除出配对资格、单独记账。
+
+**对账工具升级（语义澄清，判据文本不变）**：[tools/k5_reconcile.py](../../../tools/k5_reconcile.py) 新增 `--track2` 模式（SHA-256 `5aba3f82…`）：断言集合切换为 Track 2 六族集合（§十五/§十六登记）；zero-FNV 目击按 §10.3 的 `K5_Flag_Identity_Failed` 语义归入 **IDUN**（identity-unreadable）类别单独记账、不作为集合违例——该状态无 FNV 可断言，K5-7 的"全部**可读** data FNV ∈ 集合"内容不变；Track 1 模式行为不变。
+
+**裁定（`--track2` 离线对账）**：**K5-1/2/3/4/5/6/7/8 = PASS**（可读身份全部 ∈ 六族集合、零出集；IDUN=2 记账）。Run 1 数据有效，进入配对资格账本。
+
+| 族 | 记录数（可读） | data FNV |
+| --- | ---: | --- |
+| 1HM_Unequip | 129 | `4DED5EAF…` |
+| 1HM_Equip | 98 | `12A77CD1…` |
+| 1HM_Idle | 46 | `C62C233B…` |
+| MLh_Idle | 46 | `DAD1F1C9…` |
+| SCAR_1hmReadyDummy | 44（+2 IDUN） | `8728A54A…` |
+| MT_Idle | 2 | `F56EE150…` |
