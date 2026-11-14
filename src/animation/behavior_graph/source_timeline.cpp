@@ -518,7 +518,7 @@ namespace animation::behavior_graph
                 if (clip_identity_census() && anchor_name != nullptr &&
                     k1_census_trigger(std::string_view{ anchor_name }))
                 {
-                    if (a_state.k1_census_calls < 8)
+                    if (a_state.k1_census_calls < 24)
                     {
                         ++a_state.k1_census_calls;
                         log_k1_census(*a_graph, "source", a_actor_id, a_state.request, "settle", false);
@@ -526,7 +526,7 @@ namespace animation::behavior_graph
                     else if (!a_state.k1_census_cap_logged)
                     {
                         a_state.k1_census_cap_logged = true;
-                        logger::info("SOURCE TIMELINE census-cap calls={} limit=8", a_state.k1_census_calls);
+                        logger::info("SOURCE TIMELINE census-cap calls={} limit=24", a_state.k1_census_calls);
                     }
                 }
             }

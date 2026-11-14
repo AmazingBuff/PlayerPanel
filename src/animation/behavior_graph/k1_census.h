@@ -20,17 +20,14 @@ namespace animation::behavior_graph
 {
     // Settled equipment-chain variables that trigger a source-side clip census during an
     // F7 window. The list is deliberately narrow: it is the same chain used by D2/D3.
-    inline constexpr std::array<std::string_view, 10> K1_Census_Trigger_Names{ {
-        "currentDefaultState",
-        "iRightHandEquipped",
-        "iLeftHandEquipped",
-        "iRightHandType",
-        "iLeftHandType",
-        "iState",
-        "iMagicEquipped",
+    // Phase-level triggers only. The per-word equipment flags settle in bursts and
+    // exhausted the first v101a budget before the unequip phase; these four cover the
+    // phase start and the clip-family transitions without redundant snapshots.
+    inline constexpr std::array<std::string_view, 4> K1_Census_Trigger_Names{ {
         "IsEquipping",
-        "bEquipUnequip",
         "IsUnequipping",
+        "currentDefaultState",
+        "iState",
     } };
 
     [[nodiscard]] inline bool k1_census_trigger(std::string_view a_name) noexcept

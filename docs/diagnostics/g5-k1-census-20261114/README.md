@@ -18,7 +18,7 @@
 
 - 开关：`[Experiment] ClipIdentityCensus=true`，默认 off。
 - **候选模式**（`IndependentGraph=inject`）：源侧 `observe_source_baseline` 之后 `side=source phase=pre-activate`（骨架 + 活动 clip）；候选 `post-activate`（骨架 + 活动 clip）；随后 equip/unequip 各第一个 completed Generate（`phase=equip-clips` / `unequip-clips`，只 dump 活动 clip）。
-- **源侧自然游玩模式**（`IndependentGraph=off` + `SourceTimeline=on`）：F7 窗口打开时 `side=source phase=window-open`（骨架 + 活动 clip）；装备链变量 settle 时追加 `phase=settle` 的 clip-only dump。触发名：`currentDefaultState`、`iRightHandEquipped`、`iLeftHandEquipped`、`iRightHandType`、`iLeftHandType`、`iState`、`iMagicEquipped`、`IsEquipping`、`bEquipUnequip`、`IsUnequipping`；每窗口最多 8 次，超限打印 `SOURCE TIMELINE census-cap`。
+- **源侧自然游玩模式**（`IndependentGraph=off` + `SourceTimeline=on`）：F7 窗口打开时 `side=source phase=window-open`（骨架 + 活动 clip）；阶段级变量 settle 时追加 `phase=settle` 的 clip-only dump。触发名：`IsEquipping`、`IsUnequipping`、`currentDefaultState`、`iState`；每窗口最多 24 次，超限打印 `SOURCE TIMELINE census-cap`。
 - 次数：候选模式每次实验源 1 次、候选 3 次；源侧自然游玩模式每窗口 1 次 window-open + ≤8 次 settle。
 
 ## 三、记录格式
@@ -104,6 +104,10 @@ K1 CENSUS ... phase=clips-summary nodes=... clips=... unique=... missing=... ove
 
 - 运行档：`IndependentGraph=off`、`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourceTransientWatch=false`、`ClipIdentityCensus=true`、其余实验键 off。
 - 操作：加载同一存档 → 按 **F7** 开 20 秒窗口 → 等约 2 s → **装备单手武器** → 等约 5 s → **卸下** → 等约 5 s。
-- 记录：`side=source phase=window-open` 全量（图+骨架+活动 clip）；装备链变量 settle 时 `phase=settle` 的 clip-only dump（≤8 次；触发名见 §二）。
+- 记录：`side=source phase=window-open` 全量（图+骨架+活动 clip）；阶段级变量 settle 时 `phase=settle` 的 clip-only dump（≤24 次；触发名见 §二）。
 - 判据：S1 `window-open` + ≥1 次 `settle` 存在；S2 至少一次 settle 出现 `1HM_Equip`，至少一次出现 `1HM_Unequip`（按 clip 名）；S3 每个活动 clip `identity=true`、`unique==clips`、`missing=0`、`overflow=0`，无 `census-cap`；S4 一次窗口、20 s 内正常关闭、零 `[E]`、无崩溃。
 - 不覆盖：不写图、不推进图、不采样姿态、不产生容差；只补 K1-C4 的源侧逐阶段资源清单。
+
+### v101a 首轮（14:20，**INVALID — unequip 未覆盖**）
+
+v101a 的 10 个逐字触发名在 equip 阶段产生 8 次 census，14:20:10.173 触发 `census-cap calls=8 limit=8`；14:20:16.192 的 `IsUnequipping 0->1` / `currentDefaultState 1->12` 未能再采样，`1HM_Unequip` 未出现，S2 失败。该轮只保留 equip 侧发现：源侧 `MT_Idle` 20.0 s / 1000 帧 / 211,328 B（`9F6236C9E2D68F7D`）、`1HM_Equip` 1.4333 s / 33 帧 / 12,512 B（`81FD19882A9ED2B1`）、`1HM_Idle` 9.0 s / 271 帧 / 22,656 B（`C714568869986D08`）、`SCAR_1hmReadyDummy` 25,168 B（`8728A54A50D85C22`）。候选侧对应为 `1HM_Equip` 87 帧 / 15,728 B（`12A77CD14ECC3688`）、`1HM_Idle` 14,448 B（`C62C233B06FAE9A9`），即 **1HM_Equip/1HM_Idle 也不是同一资源**；只有 SCAR dummy 的 data FNV 相同。v101b 把触发收敛为 `IsEquipping`/`IsUnequipping`/`currentDefaultState`/`iState` 并提高上限到 24，重跑后再判 S1–S4。

@@ -1,0 +1,533 @@
+[14:18:21.009] [5876 ] [I] CharacterPanel v1-2-1-0
+[14:18:21.009] [5876 ] [I] CharacterPanel loaded
+[2026-11-14 14:18:21.008] [thread 5876] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(84): [info] CharacterPanel v1-2-1-0
+[14:18:32.414] [5876 ] [I] OAR Animations V1 mapping API available
+[14:18:32.414] [5876 ] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[14:18:32.414] [5876 ] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[14:19:09.230] [13092] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[14:19:09.230] [13092] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[14:19:09.230] [13092] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting IndependentGraph=off
+[14:19:09.230] [13092] [I] EXPERIMENT setting DisplayPose=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting DisplayStep=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting SourceTimeline=on transient=false graph='DefaultFemale' pose-capture=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting SourceEventCapture=off
+[14:19:09.230] [13092] [I] EXPERIMENT setting SourceWriteCapture=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting CandidateVariableCensus=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[14:19:09.230] [13092] [I] EXPERIMENT setting CandidateEquipPrime=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting CandidateEquipPrimeBranch=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting CandidateUnequipProbe=false variable='' prime='' event=''
+[14:19:09.230] [13092] [I] EXPERIMENT setting OarContextWatch=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting SamplingLiveness=off
+[14:19:09.230] [13092] [I] EXPERIMENT setting ObservationSnapshot=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting ControlSample=false
+[14:19:09.230] [13092] [I] EXPERIMENT setting ClipIdentityCensus=true
+[14:19:09.230] [13092] [I] SOURCE EVENTCAPTURE install-skip reason=off
+[14:19:09.230] [13092] [I] SOURCE WRITECAPTURE install-skip reason=off
+[14:19:09.230] [13092] [I] PROBE LIVENESS install-skip reason=off
+[14:19:09.232] [13092] [I] DAC native inventory lifecycle sink installed
+[14:19:09.235] [13092] [I] All shaders compiled
+[14:19:09.235] [13092] [I] Installed pre-UI renderer hook
+[14:19:09.235] [13092] [I] Panel menu sink installed
+[14:19:09.235] [13092] [I] CharacterManager equipment sink installed
+[14:19:09.235] [13092] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-v101a-g5k1-source-census-4f42e9615f-cl94faaed0c6-20261114T061655Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[14:19:09.283] [35768] [I] Studio host changed: 0x0 -> 0x1ee08e76980 (paused=true)
+[14:19:09.283] [35768] [I] Studio light node has been created
+[14:19:09.283] [35768] [I] CP-LIGHT slot 0: registered, shell 0x1ef93e17880 queued (ledger stays the authority)
+[14:19:09.283] [35768] [I] CP-LIGHT slot 1: registered, shell 0x1ef93e17740 queued (ledger stays the authority)
+[14:19:09.283] [35768] [I] CP-LIGHT slot 2: registered, shell 0x1ef93e17600 queued (ledger stays the authority)
+[14:19:09.283] [35768] [I] Studio lights registered on the ledger (scene=0x1e453a96e80 -- ledger fetch will populate the slots)
+[14:19:09.283] [35768] [I] CP-LIGHT slot 0: ledger shell fetched 0x1ef93e17880 (after 0 miss frames)
+[14:19:09.283] [35768] [I] CP-LIGHT slot 1: ledger shell fetched 0x1ef93e17740 (after 0 miss frames)
+[14:19:09.283] [35768] [I] CP-LIGHT slot 2: ledger shell fetched 0x1ef93e17600 (after 0 miss frames)
+[14:19:34.315] [5876 ] [I] DAC old-world sessions discarded world=2
+[14:19:34.454] [35768] [I] SOURCE TIMELINE invalidated reason=world-reset
+[14:19:34.616] [35768] [I] CP-LIGHT slot 0: ledger shell dropped
+[14:19:34.616] [35768] [I] CP-LIGHT slot 1: ledger shell dropped
+[14:19:34.616] [35768] [I] CP-LIGHT slot 2: ledger shell dropped
+[14:19:34.616] [35768] [W] Studio lights not fully served by the ledger yet
+[14:19:41.015] [35768] [W] Studio lights not fully served by the ledger yet
+[14:19:43.883] [35768] [I] CharacterManager watch actor=00000014
+[14:19:43.892] [35768] [I] OAR bases stage=world-prewarm project=0x1edb6ecc050 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.052
+[14:19:43.892] [35768] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1ef93e17c40 filed to lightQueueAdd)
+[14:19:43.892] [35768] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1ef93e17240 filed to lightQueueAdd)
+[14:19:43.892] [35768] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1ef93e17100 filed to lightQueueAdd)
+[14:19:43.958] [35768] [I] CP-LIGHT slot 0: ledger shell fetched 0x1ef93e17c40 (after 1 miss frames)
+[14:19:43.958] [35768] [I] CP-LIGHT slot 1: ledger shell fetched 0x1ef93e17240 (after 1 miss frames)
+[14:19:43.958] [35768] [I] CP-LIGHT slot 2: ledger shell fetched 0x1ef93e17100 (after 1 miss frames)
+[14:20:06.736] [30124] [I] SOURCE TIMELINE arm-requested
+[14:20:06.751] [5876 ] [I] SOURCE TIMELINE graph-census actor=00000014 found=1 shown=1 selector='DefaultFemale' origin=selector chosen=0
+[14:20:06.751] [5876 ] [I] SOURCE TIMELINE graph-census index=0 name='DefaultFemale' words=652 nodes=106 selected=yes
+[14:20:06.751] [5876 ] [I] SOURCE TIMELINE window-open actor=00000014 words=652 nodes=106 seconds=20 mode=settled request=0
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=window-open graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=106 skeleton=0x1edb70d5e30 bones=116
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=window-open skeleton=0x1edb70d5e30 name='NPC Root [Root]' bones=116 parents=116 reference=116 floats=8 slots=8
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=0 name='NPC Root [Root]' parent=-1 bits=00000000,00000000,00000000,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=1 name='x_NPC LookNode [Look]' parent=0 bits=BE5D1AEB,3ED2AB04,00000000,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=2 name='x_NPC Translate [Pos ]' parent=0 bits=BE5D1AEB,3ED2AB04,00000000,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=3 name='x_NPC Rotate [Rot ]' parent=0 bits=BE5D1AEB,3ED2AB04,00000000,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=4 name='NPC COM [COM ]' parent=0 bits=B649539C,BEB32357,4289D296,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=5 name='NPC Pelvis [Pelv]' parent=4 bits=00000000,00000000,00000000,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=6 name='NPC L Thigh [LThg]' parent=5 bits=C0D3AEA9,39D4562E,00000000,BCA2A0A9,3F7F980F,BC8F1F58,BD4B8F15,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=7 name='NPC L Calf [LClf]' parent=6 bits=37FBA882,370637BD,420E6185,3D8513B6,39473ABD,3BFA15DB,3F7F738E,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=8 name='NPC L Foot [Lft ]' parent=7 bits=368637BD,36C9539C,41DF991C,BF073190,3B98B2EA,BE0892EF,3F56B075,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=9 name='NPC R Thigh [RThg]' parent=5 bits=40D3AEA9,39D3CFF6,00000000,3CA2A2C2,3F7F9820,BC8F0A5F,3D4B8280,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=10 name='NPC R Calf [RClf]' parent=9 bits=B68637BD,360637BD,420E618C,3D850269,B9462E4D,BBFA82E8,3F7F73B0,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=11 name='NPC R Foot [Rft ]' parent=10 bits=B58637BD,358637BD,41DF990E,BF072F45,BB996B76,3E089481,3F56B1D5,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=12 name='SkirtRBone01' parent=5 bits=417152C4,BFA62F94,40EA4AE0,3F34549B,3F34549B,3D7C71D6,3D7C6EB1,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=13 name='SkirtRBone02' parent=12 bits=00000000,B6C9539C,414EAAA8,3D3352A8,80000000,00000000,3F7FC127,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=14 name='SkirtRBone03' parent=13 bits=B60637BD,3727C5AC,414EAAA8,3D31FFF8,B60637BD,80000000,3F7FC212,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=15 name='SkirtLBone01' parent=5 bits=C17152C4,BFA62F7B,40EA4AE0,BF34549B,3F34549B,3D7C6EB1,BD7C6DA4,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=16 name='SkirtLBone02' parent=15 bits=80000000,B60637BD,414EAAAC,3D3353B5,00000000,00000000,3F7FC127,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=17 name='SkirtLBone03' parent=16 bits=36C9539C,370637BD,414EAAB0,BD320104,B649539C,80000000,BF7FC212,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=18 name='SkirtBBone01' parent=5 bits=358637BD,C133F0C0,410F2C70,3F7F4F72,00000000,00000000,3D96390D,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=19 name='SkirtBBone02' parent=18 bits=00000000,00000000,414EAAAC,80000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=20 name='SkirtBBone03' parent=19 bits=00000000,00000000,414EAA98,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=21 name='SkirtFBone01' parent=5 bits=368637BD,413EE7BC,40B7721F,360637BD,3F7FF9F8,3C5EC1C2,B6EAE18B,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=22 name='SkirtFBone02' parent=21 bits=00000000,360637BD,414EAA9C,80000000,00000000,80000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=23 name='SkirtFBone03' parent=22 bits=360637BD,B68637BD,414EAAB4,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=24 name='NPC Spine [Spn0]' parent=4 bits=3716FEB5,C0A7ACDC,4072A9C1,BCB293D1,00000000,00000000,3F7FF067,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=25 name='NPC Spine1 [Spn1]' parent=24 bits=B58637BD,368637BD,410BFAC0,3D9A5DAF,00000000,00000000,3F7F458D,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=26 name='NPC Spine2 [Spn2]' parent=25 bits=00000000,BC8C1DB0,411DD350,BDF67EC8,00000000,00000000,3F7E238E,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=27 name='NPC L Clavicle [LClv]' parent=26 bits=BFD8F8CF,40BC6645,419BA268,3D80CE0C,BF4DD228,3E8F17DF,3F05667B,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=28 name='NPC L UpperArm [LUar]' parent=27 bits=00000000,B68637BD,4160B40C,3EA2E6A7,3EB8B5EE,3DA8BA84,BF5F71C9,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=29 name='NPC L Forearm [LLar]' parent=28 bits=370637BD,B6C9539C,41B6AC0C,BE5EF805,80000000,80000000,3F79DB87,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=30 name='NPC R Clavicle [RClv]' parent=26 bits=3FD8F8F0,40BC6643,419BA25C,3D80CB6C,3F4DD228,BE8F177A,3F05668C,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=31 name='NPC R UpperArm [RUar]' parent=30 bits=B77BA882,B7388CA4,4160B406,BEA2E686,3EB8B631,3DA8BC17,3F5F71C9,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=32 name='NPC R Forearm [RLar]' parent=31 bits=37388CA4,368637BD,41B6AC10,BE5F2021,B60637BD,38991794,3F79D94D,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=33 name='AnimObjectA' parent=0 bits=C0A00000,00000000,00000000,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=34 name='AnimObjectB' parent=0 bits=40A00000,B58637BD,00000000,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=35 name='NPC Neck [Neck]' parent=26 bits=B75A1A93,3CDCDF6A,41B050D4,BCEEA63B,B9324207,BBAD70E7,3F7FE34C,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=36 name='NPC Head [Head]' parent=35 bits=B649539C,360637BD,40EC9171,3DC3A216,39E9D51B,B8841EDE,3F7ED44E,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=37 name='NPCEyeBone' parent=36 bits=BDA8711D,41018A41,406D97E1,39F7FCFC,3A19E0E7,3BADBC66,3F7FFF15,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=38 name='NPC L Hand [LHnd]' parent=29 bits=370637BD,368637BD,41805F94,3D325E57,BD5B7282,BF271A2A,3F412221,3F5A07B3,3F5A07B3,3F5A07B3
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=39 name='NPC R Hand [RHnd]' parent=32 bits=00000000,B60637BD,41805F9C,3D3268D3,3D5B7282,3F271A09,3F412232,3F5A07B3,3F5A07B3,3F5A07B3
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=40 name='AnimObjectL' parent=38 bits=BE3204F3,BFEEDCE4,40C52B28,3F144849,BF144849,3ECFA82F,3ECFA82F,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=41 name='AnimObjectR' parent=39 bits=3E321B7E,BFEED984,40C52B58,BEFE7F2C,BF0B6439,3EE5B22D,BF01521A,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=42 name='Shield' parent=38 bits=BE320360,BFEEDD1E,40C52B39,3F103B92,BF1D4717,3EBC169C,3ED3356E,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=43 name='Weapon' parent=39 bits=3E321B7E,BFEED984,40C52B58,BEFE7F0B,BF0B6439,3EE5B22D,BF01521A,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=44 name='NPC L Pauldron' parent=27 bits=BFCA5A04,3FE221E2,413BEC4D,BDB84A0E,3F2D0D5A,BEA6EB92,3F279BDC,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=45 name='NPC R Pauldron' parent=30 bits=3FCA5B42,3FE21EA3,413BEC2F,BDB8476F,BF2D0D6B,3EA6EB4F,3F279BED,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=46 name='MagicEffectsNode' parent=24 bits=37388CA4,409E9F8C,409B9C6F,3CB293D1,00000000,00000000,3F7FF067,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=47 name='NPC L MagicNode [LMag]' parent=38 bits=BF388C61,C057399F,40F206A1,00000000,00000000,80000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=48 name='NPC R MagicNode [RMag]' parent=39 bits=3F389364,C0573750,40F206E0,00000000,80000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=49 name='NPC Head MagicNode [Hmag]' parent=36 bits=368637BD,4138A1B2,C0519781,80000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=50 name='NPC L Toe0 [LToe]' parent=8 bits=B812CCF7,BC85B185,412A940B,BE97034B,BADAA0CB,BA070111,3F749C6F,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=51 name='NPC R Toe0 [RToe]' parent=11 bits=381F6230,BC85B7D0,412A9409,BE97034B,3ADAA0CB,3A070111,3F749C6F,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=52 name='NPC L ForearmTwist1 [LLt1]' parent=29 bits=37E27E0F,B78E9B39,4121E058,BF34E27E,BCDF505D,BF34E27E,3CDF548F,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=53 name='NPC L ForearmTwist2 [LLt2]' parent=29 bits=37E27E0F,B75A1A93,40946FA0,BF34D317,BD0651F4,BF34D317,3D065519,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=54 name='NPC L UpperarmTwist1 [LUt1]' parent=28 bits=B70637BD,358637BD,377BA882,BF3504F7,00000000,BF3504F7,80000000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=55 name='NPC L UpperarmTwist2 [LUt2]' parent=54 bits=40E14A4F,B58637BD,B68637BD,00000000,00000000,80000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=56 name='NPC R ForearmTwist1 [RLt1]' parent=32 bits=395C3372,3851B717,4121E020,BCC4A83B,BF34E9C4,BCC4A83B,3F34EAC0,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=57 name='NPC R ForearmTwist2 [RLt2]' parent=32 bits=B967BC3C,377BA882,409470A0,BCA2DB62,BF34F28C,BCA2DB62,3F34F2AE,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=58 name='NPC R UpperarmTwist1 [RUt1]' parent=31 bits=368637BD,36A7C5AC,370637BD,BB8A04D1,BF35041D,BB8A04D1,3F35041D,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=59 name='NPC R UpperarmTwist2 [RUt2]' parent=58 bits=40E14A80,B60637BD,B68637BD,3816FEB5,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=60 name='Quiver' parent=26 bits=C0E8E8D1,C0C189B1,C186857C,3E17C0F4,BF39B0FF,3F27AF86,3E1AC2DF,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=61 name='WeaponAxe' parent=5 bits=4197EE93,C03F968D,C1986430,3F17224B,BEDF351A,BE420CD0,3F26FD65,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=62 name='WeaponBack' parent=26 bits=4148C873,C0CB0C00,41E53544,BF2D53AC,3E01BD62,3E0588A0,3F368EC5,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=63 name='WeaponBow' parent=26 bits=C063B70F,C1293E50,401DC6C1,3DC7CBF7,BF300304,3F2DF0E5,3E728A61,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=64 name='WeaponDagger' parent=5 bits=C109BF56,40B932C8,403F723F,3ECA6352,BF1FAC3F,3F26CBDA,BE31F645,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=65 name='WeaponMace' parent=5 bits=4145E899,C0594BF1,404AC2C2,3F18CD85,3EDF7836,BF0D7C91,BEC4D120,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=66 name='WeaponSword' parent=5 bits=C13E437C,3FF55CD1,40D55040,3F2EC7DA,BEBEE4C1,3F12541E,BE85A661,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=67 name='NPC L Finger00 [LF00]' parent=38 bits=C0116FC1,BF096E48,401A10CF,3D337DA6,BEBC182F,3F046573,3F459392,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=68 name='NPC L Finger01 [LF01]' parent=67 bits=BD32FBA0,3DC73605,40161301,3E20B1BC,3D965882,BC4C6C55,3F7C1BCA,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=69 name='NPC L Finger02 [LF02]' parent=68 bits=BCBE0371,3D50EBAB,4003A6CE,3D2AA8EB,3CBED528,BA8D4BAD,3F7FB54A,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=70 name='NPC L Finger10 [LF10]' parent=38 bits=BFFB64AE,3E8266FD,40C437A8,3E6078D9,BC976FF4,BD55AC04,3F795F03,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=71 name='NPC L Finger11 [LF11]' parent=70 bits=BD294BBE,3CCBBC2C,3FE4263E,3E024D90,BB9E5E24,3AB7E4DE,3F7DEA68,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=72 name='NPC L Finger12 [LF12]' parent=71 bits=BD39B670,3B873366,3FAFA33C,3DFB163C,BB870111,3B238327,3F7E10CF,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=73 name='NPC L Finger20 [LF20]' parent=38 bits=BE85EC81,3E1537E3,40C0DF40,3E784BE4,3B85553F,BDB07076,3F77607C,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=74 name='NPC L Finger21 [LF21]' parent=73 bits=BD6C6DE7,3CC258D6,401493AF,3E0FFB05,BBB87BDD,3B027B70,3F7D73C9,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=75 name='NPC L Finger22 [LF22]' parent=74 bits=BD7F1C76,BB421E1D,3FD8BB02,3E0FD5CB,BB9F40A3,3B6A8DA8,3F7D7508,3F800000,3F800000,3F7FFFEF
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=76 name='NPC L Finger30 [LF30]' parent=38 bits=3F8C0BDD,BEE0AEFB,40B9D497,BE7B16C2,BD5F5276,3E757258,BF7012F1,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=77 name='NPC L Finger31 [LF31]' parent=76 bits=BB986FCE,BD43E20D,3FF7FF82,3E1E518F,3BBE61D0,BB230DB7,3F7CEAAF,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=78 name='NPC L Finger32 [LF32]' parent=77 bits=3C7FC116,BD6DADB8,3FBA353F,3DD2FD33,3B750A03,BB451117,3F7EA27F,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=79 name='NPC L Finger40 [LF40]' parent=38 bits=400D5269,BFABFF1E,40ABBF68,BE56238E,BDAEC398,3E8F075B,BF6EE936,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=80 name='NPC L Finger41 [LF41]' parent=79 bits=BB815E39,BCCC1CA4,3FA37282,3E162CBA,3BA0D34A,BAD972CD,3F7D3A82,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=81 name='NPC L Finger42 [LF42]' parent=80 bits=3C257215,BD30AE53,3FA57A03,3E54A72F,3BDAFD11,BBB92C06,3F7A68B2,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=82 name='NPC R Finger00 [RF00]' parent=39 bits=40117050,BF096B44,401A100E,3D337974,3EBC1787,BF0465B6,3F459392,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=83 name='NPC R Finger01 [RF01]' parent=82 bits=3D32F017,3DC74E23,40161340,3E20B179,BD965882,3C4C7086,3F7C1BCA,3F7FFFEF,3F800000,3F7FFFEF
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=84 name='NPC R Finger02 [RF02]' parent=83 bits=3CBE058A,3D51105E,4003A6A0,3D2AA8EB,BCBED741,3A8D4BAD,3F7FB539,3F800008,3F800000,3F800008
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=85 name='NPC R Finger10 [RF10]' parent=39 bits=3FFB6712,3E827610,40C43731,3E6078D9,3C97720D,3D55AC04,3F795F03,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=86 name='NPC R Finger11 [RF11]' parent=85 bits=3D296E59,3CCBFB16,3FE4261C,3E024D4D,3B9E5E24,BAB7E4DE,3F7DEA68,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=87 name='NPC R Finger12 [RF12]' parent=86 bits=3D39D1B3,3B87C201,3FAFA2BE,3DFB163C,3B870111,BB238327,3F7E10CF,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=88 name='NPC R Finger20 [RF20]' parent=39 bits=3E85F677,3E1552E3,40C0DEF8,3E784BE4,BB854CDB,3DB07076,3F77607C,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=89 name='NPC R Finger21 [RF21]' parent=88 bits=3D6C8A37,3CC2A455,4014939F,3E0FFB05,3BB87BDD,BB027B70,3F7D73C9,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=90 name='NPC R Finger22 [RF22]' parent=89 bits=3D59018E,BB22FCF0,3FB838C1,3E0FD60F,3B9F383F,BB6A8DA8,3F7D7508,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=91 name='NPC R Finger30 [RF30]' parent=39 bits=BF8C095F,BEE0A287,40B9D46F,3E7B1359,BD5F5169,3E757258,3F701334,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=92 name='NPC R Finger31 [RF31]' parent=91 bits=3B999DCB,BD43F1C7,3FF8007E,3E1E514C,BBBE61D0,3B231E7E,3F7CEAAF,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=93 name='NPC R Finger32 [RF32]' parent=92 bits=BC7F8EC1,BD6DCE3A,3FBA34A0,3DD2FCAD,BB750A03,3B451117,3F7EA290,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=94 name='NPC R Finger40 [RF40]' parent=39 bits=C00D5148,BFABFC5D,40ABBF87,3E562068,BDAEC311,3E8F075B,3F6EE968,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=95 name='NPC R Finger41 [RF41]' parent=94 bits=3B81D3AA,BCCC33B5,3FA37300,3E162C77,BBA0DBAD,3AD972CD,3F7D3A82,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=96 name='NPC R Finger42 [RF42]' parent=95 bits=BC252696,BD30BE0E,3FA57A03,3E54A665,BBDB0575,3BB9346A,3F7A68C2,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=97 name='Camera3rd [Cam3]' parent=-1 bits=00000000,00000000,42F20000,80000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=98 name='Camera Control' parent=0 bits=00000000,00000000,00000000,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=99 name='NPC L Item01' parent=-1 bits=C1F2D22E,4056505D,428A8378,BF1D32C6,3F3DD228,3E894DD7,3D0EC95C,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=100 name='NPC L Item02' parent=99 bits=BC7EC99F,3E8476F3,40880438,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=101 name='NPC L Item03' parent=100 bits=BC7EEF5F,3E8474FB,40880438,80000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=102 name='NPC R Item01' parent=-1 bits=41F2D236,4056B0EA,428A8504,3F1D3251,3F3DCF68,3E895D2D,BD0F398F,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=103 name='NPC R Item02' parent=102 bits=3C804103,3E8487FD,40880438,00000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=104 name='NPC R Item03' parent=103 bits=3C8023A7,3E84868C,40880419,80000000,00000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=105 name='LeftWing1' parent=26 bits=C0B98175,C109B056,419DE054,3F1770EF,BE50D8CB,BE7F1130,3F3D3BC1,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=106 name='LeftWing2' parent=105 bits=BDD57A35,BE81B6F6,41458558,3EA74949,BE7D909F,3C976790,3F697343,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=107 name='LeftWing3' parent=106 bits=BE8658C5,3EF07F02,41B53AD4,BF15A5FC,BDBF2FDC,BC8A393F,3F4E47BB,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=108 name='LeftWing4' parent=107 bits=BEA29479,BE97B97C,41EBB798,3EE7A54C,BCA87C20,3C8C7193,3F643287,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=109 name='LeftWing5' parent=108 bits=BF47EF07,BF5061FA,41DA3418,3EADCBFF,3E37D3D4,BC0C9B84,3F6C5D20,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=110 name='RightWing1' parent=26 bits=40B98186,C109B05A,419DE05C,3F1770EF,3E50D8CB,3E7F1130,3F3D3BC1,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=111 name='RightWing2' parent=110 bits=3DD573EB,BE81B6F6,41458574,3EA74949,3E7D909F,BC976790,3F697343,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=112 name='RightWing3' parent=111 bits=3E8658C5,3EF08206,41B53AC3,BF15A5FC,3DBF3062,3C8A393F,3F4E47BB,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=113 name='RightWing4' parent=112 bits=3EA291FB,BE97BC7F,41EBB798,3EE7A54C,3CA87E39,BC8C7193,3F643298,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=114 name='RightWing5' parent=113 bits=3F47EDC8,BF505C03,41DA3420,3EADCBFF,BE37D3D4,3C0C9B84,3F6C5D20,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=bone index=115 name='Belly' parent=25 bits=00000000,00000000,380205FF,80000000,80000000,00000000,3F800000,3F800000,3F800000,3F800000
+[14:20:06.751] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=skeleton-summary bones=116 recorded=116 invalid-parent=0 nonfinite=0 overflow=false
+[14:20:06.753] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf2755540 index=0 name='Animations\male\MT_Idle.HKX' binding=0x1edc43b6650 animation=0x1edc4388690 binding-index=12220 mode=1 local-time-bits=3EFBD195 speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=41900000 tracks=99 floats=0 spline=true frames=900 blocks=4 max-frames=256 block-duration-bits=40A361AC block-inverse-bits=3E488FAC frame-duration-bits=3CA405B2 data-bytes=168640 data-fnv=95E20CF7492CAE83 blockoff-fnv=89AACDDED92864A2 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf2755540:1edc43b6650:12220:95E20CF7492CAE83'
+[14:20:06.753] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=106 clips=1 unique=1 missing=0 overflow=0
+[14:20:07.353] [5876 ] [I] SOURCE TIMELINE variable index=3 name='iSyncIdleLocomotion' 0->1 float=0.0000->0.0000 tsc=26929406017829
+[14:20:07.353] [5876 ] [I] SOURCE TIMELINE variable index=48 name='iSyncTurnState' 1->0 float=0.0000->0.0000 tsc=26929406225476
+[14:20:07.353] [5876 ] [I] SOURCE TIMELINE variable index=185 name='bHeadTrackSpine' 1->0 float=0.0000->0.0000 tsc=26929406250244
+[14:20:07.374] [5876 ] [I] SOURCE TIMELINE nodes count=129 tsc=26929498875899
+[14:20:07.532] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26930173681865
+[14:20:07.573] [5876 ] [I] SOURCE TIMELINE variable index=0 name='Speed' 0->1136003909 float=0.0000->364.0880 tsc=26930352430586
+[14:20:07.573] [5876 ] [I] SOURCE TIMELINE variable index=40 name='SpeedSampled' 0->1136003909 float=0.0000->364.0880 tsc=26930352581215
+[14:20:07.610] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26930508607317
+[14:20:07.630] [5876 ] [I] SOURCE TIMELINE variable index=589 name='bIdleBeforeConversation' 1->0 float=0.0000->0.0000 tsc=26930594442177
+[14:20:07.630] [5876 ] [I] SOURCE TIMELINE nodes count=110 tsc=26930594591989
+[14:20:08.164] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26932887105362
+[14:20:08.367] [5876 ] [I] SOURCE TIMELINE variable index=53 name='TimeDelta' 1017101943->1017459857 float=0.0195->0.0202 tsc=26933760698908
+[14:20:08.429] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26934025475407
+[14:20:08.429] [5876 ] [I] SOURCE TIMELINE variable index=40 1136003909->0 float=364.0880->0.0000 tsc=26934025680431
+[14:20:08.429] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26934025712165
+[14:20:08.449] [5876 ] [I] SOURCE TIMELINE variable index=0 1136003909->1072235567 float=364.0880->1.8204 tsc=26934112613187
+[14:20:08.450] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26934112837475
+[14:20:08.450] [5876 ] [I] SOURCE TIMELINE nodes count=128 tsc=26934112868048
+[14:20:08.553] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26934554826328
+[14:20:08.636] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26934913714218
+[14:20:08.636] [5876 ] [I] SOURCE TIMELINE nodes count=121 tsc=26934913989266
+[14:20:08.739] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26935353169100
+[14:20:08.739] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26935353444988
+[14:20:08.820] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26935704318792
+[14:20:08.840] [5876 ] [I] SOURCE TIMELINE variable index=0 1072235567->0 float=1.8204->0.0000 tsc=26935788891991
+[14:20:08.840] [5876 ] [I] SOURCE TIMELINE variable index=379 name='TDM_VelocityY' -2147483648->0 float=-0.0000->0.0000 tsc=26935789169599
+[14:20:08.840] [5876 ] [I] SOURCE TIMELINE variable index=380 name='TDM_VelocityX' -2147483648->0 float=-0.0000->0.0000 tsc=26935789196474
+[14:20:08.860] [5876 ] [I] SOURCE TIMELINE variable index=53 1017459857->1017638814 float=0.0202->0.0205 tsc=26935873361514
+[14:20:08.899] [5876 ] [I] SOURCE TIMELINE variable index=110 name='IsEquipping' 0->1 float=0.0000->0.0000 tsc=26936041074840
+[14:20:08.899] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=settle graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=143 skeleton=0x1edb70d5e30 bones=116
+[14:20:08.900] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf27cd7c0 index=0 name='Animations\1HM_Equip.hkx' binding=0x1edc32772f0 animation=0x1edc3273770 binding-index=8904 mode=0 local-time-bits=3DA6E97A speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F88888B tracks=99 floats=0 spline=true frames=33 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888B data-bytes=12512 data-fnv=81FD19882A9ED2B1 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cd7c0:1edc32772f0:8904:81FD19882A9ED2B1'
+[14:20:08.901] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=1 node=0x1edf27ccdc0 index=14 name='Animations\male\MT_Idle.HKX' binding=0x1edc49b6800 animation=0x1edc497db40 binding-index=12218 mode=1 local-time-bits=3E276C8C speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=41A00000 tracks=99 floats=0 spline=true frames=1000 blocks=4 max-frames=256 block-duration-bits=40A35D05 block-inverse-bits=3E489563 frame-duration-bits=3CA40106 data-bytes=211328 data-fnv=9F6236C9E2D68F7D blockoff-fnv=2DE4E2542C52743B map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27ccdc0:1edc49b6800:12218:9F6236C9E2D68F7D'
+[14:20:08.902] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=2 node=0x1edf27cca00 index=22 name='Animations\MT_TurnLeft60.hkx' binding=0x1edc55495c0 animation=0x1edc5546330 binding-index=1092 mode=1 local-time-bits=3C85F07A speed=0.100000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=40000000 tracks=99 floats=4 spline=true frames=61 blocks=1 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0F1 frame-duration-bits=3D088889 data-bytes=8784 data-fnv=42A39EB2B62D3F84 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cca00:1edc55495c0:1092:42A39EB2B62D3F84'
+[14:20:08.902] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=3 node=0x1edf273a8c0 index=32 name='Animations\male\MT_WalkForward.hkx' binding=0x1edc47a1bd0 animation=0x1edc479e690 binding-index=12700 mode=1 local-time-bits=3F4E1EF7 speed=0.100000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F99999A tracks=99 floats=0 spline=true frames=37 blocks=1 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0E9 frame-duration-bits=3D08882F data-bytes=10976 data-fnv=FC60D76695BB213B blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf273a8c0:1edc47a1bd0:12700:FC60D76695BB213B'
+[14:20:08.902] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=143 clips=4 unique=4 missing=0 overflow=0
+[14:20:08.902] [5876 ] [I] SOURCE TIMELINE variable index=113 name='currentDefaultState' 0->10 float=0.0000->0.0000 tsc=26936056396385
+[14:20:08.902] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=settle graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=143 skeleton=0x1edb70d5e30 bones=116
+[14:20:08.903] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf27cd7c0 index=0 name='Animations\1HM_Equip.hkx' binding=0x1edc32772f0 animation=0x1edc3273770 binding-index=8904 mode=0 local-time-bits=3DA6E97A speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F88888B tracks=99 floats=0 spline=true frames=33 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888B data-bytes=12512 data-fnv=81FD19882A9ED2B1 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cd7c0:1edc32772f0:8904:81FD19882A9ED2B1'
+[14:20:08.904] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=1 node=0x1edf27ccdc0 index=14 name='Animations\male\MT_Idle.HKX' binding=0x1edc49b6800 animation=0x1edc497db40 binding-index=12218 mode=1 local-time-bits=3E276C8C speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=41A00000 tracks=99 floats=0 spline=true frames=1000 blocks=4 max-frames=256 block-duration-bits=40A35D05 block-inverse-bits=3E489563 frame-duration-bits=3CA40106 data-bytes=211328 data-fnv=9F6236C9E2D68F7D blockoff-fnv=2DE4E2542C52743B map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27ccdc0:1edc49b6800:12218:9F6236C9E2D68F7D'
+[14:20:08.904] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=2 node=0x1edf27cca00 index=22 name='Animations\MT_TurnLeft60.hkx' binding=0x1edc55495c0 animation=0x1edc5546330 binding-index=1092 mode=1 local-time-bits=3C85F07A speed=0.100000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=40000000 tracks=99 floats=4 spline=true frames=61 blocks=1 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0F1 frame-duration-bits=3D088889 data-bytes=8784 data-fnv=42A39EB2B62D3F84 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cca00:1edc55495c0:1092:42A39EB2B62D3F84'
+[14:20:08.905] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=3 node=0x1edf273a8c0 index=32 name='Animations\male\MT_WalkForward.hkx' binding=0x1edc47a1bd0 animation=0x1edc479e690 binding-index=12700 mode=1 local-time-bits=3F4E1EF7 speed=0.100000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F99999A tracks=99 floats=0 spline=true frames=37 blocks=1 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0E9 frame-duration-bits=3D08882F data-bytes=10976 data-fnv=FC60D76695BB213B blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf273a8c0:1edc47a1bd0:12700:FC60D76695BB213B'
+[14:20:08.905] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=143 clips=4 unique=4 missing=0 overflow=0
+[14:20:09.019] [5876 ] [I] SOURCE TIMELINE variable index=53 1017638814->1017280901 float=0.0205->0.0198 tsc=26936558970925
+[14:20:09.079] [5876 ] [I] SOURCE TIMELINE variable index=70 name='bVoiceReady' 1->0 float=0.0000->0.0000 tsc=26936816158702
+[14:20:09.079] [5876 ] [I] SOURCE TIMELINE variable index=185 0->1 float=0.0000->0.0000 tsc=26936816343344
+[14:20:09.079] [5876 ] [I] SOURCE TIMELINE variable index=200 name='bIsInMT' 1->0 float=0.0000->0.0000 tsc=26936816457122
+[14:20:09.079] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26936816479138
+[14:20:09.079] [5876 ] [I] SOURCE TIMELINE nodes count=94 tsc=26936816497413
+[14:20:09.404] [5876 ] [I] SOURCE TIMELINE variable index=117 name='iMagicEquipped' 0->1 float=0.0000->0.0000 tsc=26938210822547
+[14:20:09.404] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=settle graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=95 skeleton=0x1edb70d5e30 bones=116
+[14:20:09.406] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf27cd7c0 index=0 name='Animations\1HM_Equip.hkx' binding=0x1edc32772f0 animation=0x1edc3273770 binding-index=8904 mode=0 local-time-bits=3F140DAA speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F88888B tracks=99 floats=0 spline=true frames=33 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888B data-bytes=12512 data-fnv=81FD19882A9ED2B1 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cd7c0:1edc32772f0:8904:81FD19882A9ED2B1'
+[14:20:09.406] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=95 clips=1 unique=1 missing=0 overflow=0
+[14:20:09.406] [5876 ] [I] SOURCE TIMELINE variable index=179 name='iRightHandEquipped' 0->1 float=0.0000->0.0000 tsc=26938217527064
+[14:20:09.406] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=settle graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=95 skeleton=0x1edb70d5e30 bones=116
+[14:20:09.407] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf27cd7c0 index=0 name='Animations\1HM_Equip.hkx' binding=0x1edc32772f0 animation=0x1edc3273770 binding-index=8904 mode=0 local-time-bits=3F140DAA speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F88888B tracks=99 floats=0 spline=true frames=33 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888B data-bytes=12512 data-fnv=81FD19882A9ED2B1 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cd7c0:1edc32772f0:8904:81FD19882A9ED2B1'
+[14:20:09.407] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=95 clips=1 unique=1 missing=0 overflow=0
+[14:20:09.407] [5876 ] [I] SOURCE TIMELINE variable index=180 name='iLeftHandEquipped' 0->9 float=0.0000->0.0000 tsc=26938221063685
+[14:20:09.407] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=settle graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=95 skeleton=0x1edb70d5e30 bones=116
+[14:20:09.408] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf27cd7c0 index=0 name='Animations\1HM_Equip.hkx' binding=0x1edc32772f0 animation=0x1edc3273770 binding-index=8904 mode=0 local-time-bits=3F140DAA speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F88888B tracks=99 floats=0 spline=true frames=33 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888B data-bytes=12512 data-fnv=81FD19882A9ED2B1 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cd7c0:1edc32772f0:8904:81FD19882A9ED2B1'
+[14:20:09.408] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=95 clips=1 unique=1 missing=0 overflow=0
+[14:20:09.408] [5876 ] [I] SOURCE TIMELINE nodes count=95 tsc=26938224477799
+[14:20:09.425] [5876 ] [I] SOURCE TIMELINE variable index=126 name='bAttached' 0->1 float=0.0000->0.0000 tsc=26938300404365
+[14:20:09.773] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26939790969738
+[14:20:09.809] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26939949507362
+[14:20:09.810] [5876 ] [I] SOURCE TIMELINE variable index=94 name='iState' 0->6 float=0.0000->0.0000 tsc=26939949657862
+[14:20:09.810] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=settle graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=110 skeleton=0x1edb70d5e30 bones=116
+[14:20:09.811] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf27cd7c0 index=0 name='Animations\1HM_Equip.hkx' binding=0x1edc32772f0 animation=0x1edc3273770 binding-index=8904 mode=0 local-time-bits=3F7D3A0B speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F88888B tracks=99 floats=0 spline=true frames=33 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888B data-bytes=12512 data-fnv=81FD19882A9ED2B1 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cd7c0:1edc32772f0:8904:81FD19882A9ED2B1'
+[14:20:09.812] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=1 node=0x1edf278d7c0 index=5 name='Animations\1HM_WalkForward.hkx' binding=0x1edc39ec100 animation=0x1edc39e82e0 binding-index=9660 mode=1 local-time-bits=3CF59DAF speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3FC8888B tracks=99 floats=0 spline=true frames=48 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888A data-bytes=13056 data-fnv=5918FDD49D51726B blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf278d7c0:1edc39ec100:9660:5918FDD49D51726B'
+[14:20:09.813] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=2 node=0x1edf2ef6f00 index=6 name='Animations\1HM_RunForward.HKX' binding=0x1edc2fee5c0 animation=0x1edc2febb90 binding-index=9184 mode=1 local-time-bits=3C46953E speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F22221D tracks=99 floats=0 spline=true frames=20 blocks=1 max-frames=256 block-duration-bits=4107FFFC block-inverse-bits=3DF0F0F8 frame-duration-bits=3D088884 data-bytes=8080 data-fnv=31CFC17835962329 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf2ef6f00:1edc2fee5c0:9184:31CFC17835962329'
+[14:20:09.813] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=110 clips=3 unique=3 missing=0 overflow=0
+[14:20:09.813] [5876 ] [I] SOURCE TIMELINE variable index=98 name='bInMoveState' 0->1 float=0.0000->0.0000 tsc=26939962771658
+[14:20:09.829] [5876 ] [I] SOURCE TIMELINE nodes count=110 tsc=26940032059730
+[14:20:09.956] [5876 ] [I] SOURCE TIMELINE variable index=38 name='IsAttackReady' 0->1 float=0.0000->0.0000 tsc=26940577600128
+[14:20:09.956] [5876 ] [I] SOURCE TIMELINE variable index=70 0->1 float=0.0000->0.0000 tsc=26940577768860
+[14:20:09.956] [5876 ] [I] SOURCE TIMELINE variable index=92 name='bMLh_Ready' 0->1 float=0.0000->0.0000 tsc=26940577792166
+[14:20:09.956] [5876 ] [I] SOURCE TIMELINE variable index=93 name='bMRh_Ready' 0->1 float=0.0000->0.0000 tsc=26940577810140
+[14:20:09.956] [5876 ] [I] SOURCE TIMELINE variable index=94 6->9 float=0.0000->0.0000 tsc=26940577826265
+[14:20:09.956] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=settle graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=146 skeleton=0x1edb70d5e30 bones=116
+[14:20:09.958] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf27f8000 index=0 name='Animations\Mag_WalkForward.hkx' binding=0x1edbe9b8c60 animation=0x1edbe9b5c90 binding-index=11298 mode=1 local-time-bits=3DE14B2F speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3FC88889 tracks=99 floats=4 spline=true frames=48 blocks=1 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0F1 frame-duration-bits=3D088889 data-bytes=8080 data-fnv=335CABA04E6EDC1A blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27f8000:1edbe9b8c60:11298:335CABA04E6EDC1A'
+[14:20:09.959] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=1 node=0x1edf27f8140 index=1 name='Animations\Mag_RunForward.HKX' binding=0x1edbed74b20 animation=0x1edbed72130 binding-index=11178 mode=1 local-time-bits=3D3626FF speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F222222 tracks=99 floats=4 spline=true frames=20 blocks=1 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0F1 frame-duration-bits=3D088888 data-bytes=6576 data-fnv=47D289C2A818F7A5 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27f8140:1edbed74b20:11178:47D289C2A818F7A5'
+[14:20:09.960] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=2 node=0x1edf27f8280 index=21 name='Animations\1HM_Idle.hkx' binding=0x1edc3d000f0 animation=0x1edc3cf9830 binding-index=9053 mode=1 local-time-bits=3D64B180 speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=41100000 tracks=99 floats=4 spline=true frames=271 blocks=2 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0F1 frame-duration-bits=3D088889 data-bytes=22656 data-fnv=C714568869986D08 blockoff-fnv=16777430B33A9F01 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27f8280:1edc3d000f0:9053:C714568869986D08'
+[14:20:09.962] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=3 node=0x1edf27fda40 index=30 name='Animations\SCAR_1hmReadyDummy.hkx' binding=0x1edb8a80ef0 animation=0x1edb8a7a150 binding-index=15076 mode=0 local-time-bits=3D64B17F speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=40CAAAAA tracks=97 floats=0 spline=true frames=190 blocks=1 max-frames=256 block-duration-bits=4108B836 block-inverse-bits=3DEFAC4E frame-duration-bits=3D094177 data-bytes=25168 data-fnv=8728A54A50D85C22 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27fda40:1edb8a80ef0:15076:8728A54A50D85C22'
+[14:20:09.963] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=4 node=0x1edf27cd7c0 index=37 name='Animations\1HM_Equip.hkx' binding=0x1edc32772f0 animation=0x1edc3273770 binding-index=8904 mode=0 local-time-bits=3F88888B speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F88888B tracks=99 floats=0 spline=true frames=33 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888B data-bytes=12512 data-fnv=81FD19882A9ED2B1 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cd7c0:1edc32772f0:8904:81FD19882A9ED2B1'
+[14:20:09.963] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=5 node=0x1edf278d7c0 index=42 name='Animations\1HM_WalkForward.hkx' binding=0x1edc39ec100 animation=0x1edc39e82e0 binding-index=9660 mode=1 local-time-bits=3E88DE01 speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3FC8888B tracks=99 floats=0 spline=true frames=48 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888A data-bytes=13056 data-fnv=5918FDD49D51726B blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf278d7c0:1edc39ec100:9660:5918FDD49D51726B'
+[14:20:09.964] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=6 node=0x1edf2ef6f00 index=43 name='Animations\1HM_RunForward.HKX' binding=0x1edc2fee5c0 animation=0x1edc2febb90 binding-index=9184 mode=1 local-time-bits=3DDD5128 speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F22221D tracks=99 floats=0 spline=true frames=20 blocks=1 max-frames=256 block-duration-bits=4107FFFC block-inverse-bits=3DF0F0F8 frame-duration-bits=3D088884 data-bytes=8080 data-fnv=31CFC17835962329 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf2ef6f00:1edc2fee5c0:9184:31CFC17835962329'
+[14:20:09.964] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=146 clips=7 unique=7 missing=0 overflow=0
+[14:20:09.964] [5876 ] [I] SOURCE TIMELINE variable index=113 10->1 float=0.0000->0.0000 tsc=26940613297137
+[14:20:09.964] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=settle graph=0x1f2a22c6480 holder=0x1ef600d2080 root=0x1f13cb80a00 project='DefaultFemale' project-db=0x1edf3664400 behavior=0x1edf3d01900 char-behavior=0x1edf3d01900 setup=0x1edf3120480 bindings=0x1edf30e5780 pose-local=0x1edf338e010/116 bone-nodes=116 num-anim-bones=116 active-nodes=146 skeleton=0x1edb70d5e30 bones=116
+[14:20:09.965] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=0 node=0x1edf27f8000 index=0 name='Animations\Mag_WalkForward.hkx' binding=0x1edbe9b8c60 animation=0x1edbe9b5c90 binding-index=11298 mode=1 local-time-bits=3DE14B2F speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3FC88889 tracks=99 floats=4 spline=true frames=48 blocks=1 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0F1 frame-duration-bits=3D088889 data-bytes=8080 data-fnv=335CABA04E6EDC1A blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27f8000:1edbe9b8c60:11298:335CABA04E6EDC1A'
+[14:20:09.967] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=1 node=0x1edf27f8140 index=1 name='Animations\Mag_RunForward.HKX' binding=0x1edbed74b20 animation=0x1edbed72130 binding-index=11178 mode=1 local-time-bits=3D3626FF speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F222222 tracks=99 floats=4 spline=true frames=20 blocks=1 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0F1 frame-duration-bits=3D088888 data-bytes=6576 data-fnv=47D289C2A818F7A5 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27f8140:1edbed74b20:11178:47D289C2A818F7A5'
+[14:20:09.967] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=2 node=0x1edf27f8280 index=21 name='Animations\1HM_Idle.hkx' binding=0x1edc3d000f0 animation=0x1edc3cf9830 binding-index=9053 mode=1 local-time-bits=3D64B180 speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=41100000 tracks=99 floats=4 spline=true frames=271 blocks=2 max-frames=256 block-duration-bits=41080000 block-inverse-bits=3DF0F0F1 frame-duration-bits=3D088889 data-bytes=22656 data-fnv=C714568869986D08 blockoff-fnv=16777430B33A9F01 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27f8280:1edc3d000f0:9053:C714568869986D08'
+[14:20:09.969] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=3 node=0x1edf27fda40 index=30 name='Animations\SCAR_1hmReadyDummy.hkx' binding=0x1edb8a80ef0 animation=0x1edb8a7a150 binding-index=15076 mode=0 local-time-bits=3D64B17F speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=40CAAAAA tracks=97 floats=0 spline=true frames=190 blocks=1 max-frames=256 block-duration-bits=4108B836 block-inverse-bits=3DEFAC4E frame-duration-bits=3D094177 data-bytes=25168 data-fnv=8728A54A50D85C22 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27fda40:1edb8a80ef0:15076:8728A54A50D85C22'
+[14:20:09.970] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=4 node=0x1edf27cd7c0 index=37 name='Animations\1HM_Equip.hkx' binding=0x1edc32772f0 animation=0x1edc3273770 binding-index=8904 mode=0 local-time-bits=3F88888B speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F88888B tracks=99 floats=0 spline=true frames=33 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888B data-bytes=12512 data-fnv=81FD19882A9ED2B1 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf27cd7c0:1edc32772f0:8904:81FD19882A9ED2B1'
+[14:20:09.971] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=5 node=0x1edf278d7c0 index=42 name='Animations\1HM_WalkForward.hkx' binding=0x1edc39ec100 animation=0x1edc39e82e0 binding-index=9660 mode=1 local-time-bits=3E88DE01 speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3FC8888B tracks=99 floats=0 spline=true frames=48 blocks=1 max-frames=256 block-duration-bits=41080002 block-inverse-bits=3DF0F0ED frame-duration-bits=3D08888A data-bytes=13056 data-fnv=5918FDD49D51726B blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf278d7c0:1edc39ec100:9660:5918FDD49D51726B'
+[14:20:09.971] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clip slot=6 node=0x1edf2ef6f00 index=43 name='Animations\1HM_RunForward.HKX' binding=0x1edc2fee5c0 animation=0x1edc2febb90 binding-index=9184 mode=1 local-time-bits=3DDD5128 speed=1.000000 enforced=0.000000 crop=0.000000 identity=true type=5 duration-bits=3F22221D tracks=99 floats=0 spline=true frames=20 blocks=1 max-frames=256 block-duration-bits=4107FFFC block-inverse-bits=3DF0F0F8 frame-duration-bits=3D088884 data-bytes=8080 data-fnv=31CFC17835962329 blockoff-fnv=4D25767F9DCE13F5 map-count=0 map-fnv=0000000000000000 blend=0 stable-id='1edf2ef6f00:1edc2fee5c0:9184:31CFC17835962329'
+[14:20:09.971] [5876 ] [I] K1 CENSUS actor=00000014 request=0 side=source phase=clips-summary nodes=146 clips=7 unique=7 missing=0 overflow=0
+[14:20:09.986] [5876 ] [I] SOURCE TIMELINE variable index=126 1->0 float=0.0000->0.0000 tsc=26940708180614
+[14:20:10.002] [5876 ] [I] SOURCE TIMELINE variable index=48 2->0 float=0.0000->0.0000 tsc=26940775713125
+[14:20:10.002] [5876 ] [I] SOURCE TIMELINE nodes count=146 tsc=26940775857218
+[14:20:10.040] [5876 ] [I] SOURCE TIMELINE variable index=53 1017280901->1016565072 float=0.0198->0.0185 tsc=26940938439488
+[14:20:10.061] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1135810186 float=0.0000->358.1761 tsc=26941027431901
+[14:20:10.061] [5876 ] [I] SOURCE TIMELINE variable index=40 0->1135810186 float=0.0000->358.1761 tsc=26941027625530
+[14:20:10.173] [5876 ] [I] SOURCE TIMELINE variable index=98 1->0 float=0.0000->0.0000 tsc=26941508787575
+[14:20:10.173] [5876 ] [I] SOURCE TIMELINE variable index=110 1->0 float=0.0000->0.0000 tsc=26941508981161
+[14:20:10.173] [5876 ] [I] SOURCE TIMELINE census-cap calls=8 limit=8
+[14:20:10.173] [5876 ] [I] SOURCE TIMELINE nodes count=117 tsc=26941509023946
+[14:20:10.211] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26941672813779
+[14:20:10.378] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26942391224522
+[14:20:10.515] [5876 ] [I] SOURCE TIMELINE nodes count=124 tsc=26942978213756
+[14:20:10.659] [5876 ] [I] SOURCE TIMELINE variable index=0 1135810186->0 float=358.1761->0.0000 tsc=26943595214865
+[14:20:10.659] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26943595397959
+[14:20:10.659] [5876 ] [I] SOURCE TIMELINE variable index=40 1135810186->0 float=358.1761->0.0000 tsc=26943595422340
+[14:20:10.659] [5876 ] [I] SOURCE TIMELINE variable index=379 0->-2147483648 float=0.0000->-0.0000 tsc=26943595443969
+[14:20:10.659] [5876 ] [I] SOURCE TIMELINE variable index=380 0->-2147483648 float=0.0000->-0.0000 tsc=26943595461857
+[14:20:10.716] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26943840369737
+[14:20:10.793] [5876 ] [I] SOURCE TIMELINE nodes count=127 tsc=26944168713738
+[14:20:10.930] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1071987602 float=0.0000->1.7909 tsc=26944760418033
+[14:20:10.930] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26944760575155
+[14:20:11.024] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26945160704174
+[14:20:11.114] [5876 ] [I] SOURCE TIMELINE nodes count=123 tsc=26945546205795
+[14:20:11.223] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26946014224288
+[14:20:11.223] [5876 ] [I] SOURCE TIMELINE nodes count=128 tsc=26946014383130
+[14:20:11.245] [5876 ] [I] SOURCE TIMELINE variable index=0 1071987602->0 float=1.7909->0.0000 tsc=26946109608737
+[14:20:11.245] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26946109830574
+[14:20:11.245] [5876 ] [I] SOURCE TIMELINE variable index=379 -2147483648->0 float=-0.0000->0.0000 tsc=26946109856632
+[14:20:11.245] [5876 ] [I] SOURCE TIMELINE variable index=380 -2147483648->0 float=-0.0000->0.0000 tsc=26946109877874
+[14:20:11.316] [5876 ] [I] SOURCE TIMELINE nodes count=127 tsc=26946413590873
+[14:20:11.471] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1071987602 float=0.0000->1.7909 tsc=26947080312779
+[14:20:11.471] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26947080619885
+[14:20:11.471] [5876 ] [I] SOURCE TIMELINE variable index=151 name='bHeadTracking' 0->1 float=0.0000->0.0000 tsc=26947080669206
+[14:20:11.577] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26947534821287
+[14:20:11.595] [5876 ] [I] SOURCE TIMELINE variable index=151 1->0 float=0.0000->0.0000 tsc=26947612075542
+[14:20:11.649] [5876 ] [I] SOURCE TIMELINE variable index=16 name='Pitch' -1041973035->-1042468688 float=-28.5942->-27.6488 tsc=26947844162040
+[14:20:11.649] [5876 ] [I] SOURCE TIMELINE variable index=359 name='Collision_PitchMult' -1041973034->-1042468687 float=-28.5942->-27.6488 tsc=26947844375234
+[14:20:11.699] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26948057007744
+[14:20:11.727] [5876 ] [I] SOURCE TIMELINE variable index=0 1071987602->0 float=1.7909->0.0000 tsc=26948177839460
+[14:20:11.727] [5876 ] [I] SOURCE TIMELINE variable index=379 0->-2147483648 float=0.0000->-0.0000 tsc=26948178003462
+[14:20:11.727] [5876 ] [I] SOURCE TIMELINE variable index=380 0->-2147483648 float=0.0000->-0.0000 tsc=26948178026596
+[14:20:11.771] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26948369708556
+[14:20:12.010] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26949392229984
+[14:20:12.028] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26949469037230
+[14:20:12.055] [5876 ] [I] SOURCE TIMELINE nodes count=128 tsc=26949587095837
+[14:20:12.081] [5876 ] [I] SOURCE TIMELINE variable index=151 0->1 float=0.0000->0.0000 tsc=26949699733687
+[14:20:12.152] [5876 ] [I] SOURCE TIMELINE variable index=16 -1042468688->-1043054458 float=-27.6488->-26.5315 tsc=26950002305233
+[14:20:12.152] [5876 ] [I] SOURCE TIMELINE variable index=359 -1042468687->-1043054457 float=-27.6488->-26.5315 tsc=26950002524533
+[14:20:12.208] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26950245248031
+[14:20:12.305] [5876 ] [I] SOURCE TIMELINE nodes count=117 tsc=26950658385190
+[14:20:12.323] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26950739156931
+[14:20:12.416] [5876 ] [I] SOURCE TIMELINE variable index=16 -1043054458->-1043076987 float=-26.5315->-26.4885 tsc=26951134806962
+[14:20:12.416] [5876 ] [I] SOURCE TIMELINE variable index=359 -1043054457->-1043076986 float=-26.5315->-26.4885 tsc=26951135045354
+[14:20:12.522] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26951590460027
+[14:20:12.673] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1071987602 float=0.0000->1.7909 tsc=26952239231944
+[14:20:12.673] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26952239452663
+[14:20:12.673] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26952239477001
+[14:20:12.795] [5876 ] [I] SOURCE TIMELINE variable index=151 1->0 float=0.0000->0.0000 tsc=26952763534943
+[14:20:12.892] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26953179369672
+[14:20:12.938] [5876 ] [I] SOURCE TIMELINE nodes count=125 tsc=26953377873712
+[14:20:12.996] [5876 ] [I] SOURCE TIMELINE variable index=151 0->1 float=0.0000->0.0000 tsc=26953627215080
+[14:20:13.360] [5876 ] [I] SOURCE TIMELINE variable index=151 1->0 float=0.0000->0.0000 tsc=26955188215829
+[14:20:13.522] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26955883706232
+[14:20:13.613] [5876 ] [I] SOURCE TIMELINE nodes count=117 tsc=26956274052001
+[14:20:13.733] [5876 ] [I] SOURCE TIMELINE variable index=0 1071987602->0 float=1.7909->0.0000 tsc=26956787390537
+[14:20:13.733] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26956787593884
+[14:20:13.756] [5876 ] [I] SOURCE TIMELINE nodes count=123 tsc=26956886526306
+[14:20:14.019] [5876 ] [I] SOURCE TIMELINE nodes count=114 tsc=26958017231366
+[14:20:14.063] [5876 ] [I] SOURCE TIMELINE variable index=53 1016565072->1018533600 float=0.0185->0.0222 tsc=26958206266117
+[14:20:14.435] [5876 ] [I] SOURCE TIMELINE variable index=53 1018533600->1017638814 float=0.0222->0.0205 tsc=26959801280726
+[14:20:14.733] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26961081482552
+[14:20:14.733] [5876 ] [I] SOURCE TIMELINE nodes count=118 tsc=26961081625828
+[14:20:14.750] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1071987602 float=0.0000->1.7909 tsc=26961152492926
+[14:20:14.844] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26961555111406
+[14:20:14.899] [5876 ] [I] SOURCE TIMELINE variable index=53 1017638814->1016744030 float=0.0205->0.0188 tsc=26961794392196
+[14:20:14.919] [5876 ] [I] SOURCE TIMELINE nodes count=123 tsc=26961878913211
+[14:20:15.009] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26962266274259
+[14:20:15.009] [5876 ] [I] SOURCE TIMELINE nodes count=128 tsc=26962266478810
+[14:20:15.098] [5876 ] [I] SOURCE TIMELINE variable index=0 1071987602->0 float=1.7909->0.0000 tsc=26962645677664
+[14:20:15.098] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26962645899372
+[14:20:15.098] [5876 ] [I] SOURCE TIMELINE variable index=379 -2147483648->0 float=-0.0000->0.0000 tsc=26962645933600
+[14:20:15.098] [5876 ] [I] SOURCE TIMELINE variable index=380 -2147483648->0 float=-0.0000->0.0000 tsc=26962645983050
+[14:20:15.151] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26962873201543
+[14:20:15.168] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1071987602 float=0.0000->1.7909 tsc=26962945547303
+[14:20:15.314] [5876 ] [I] SOURCE TIMELINE variable index=0 1071987602->0 float=1.7909->0.0000 tsc=26963573099752
+[14:20:15.314] [5876 ] [I] SOURCE TIMELINE variable index=379 0->-2147483648 float=0.0000->-0.0000 tsc=26963573247629
+[14:20:15.314] [5876 ] [I] SOURCE TIMELINE variable index=380 0->-2147483648 float=0.0000->-0.0000 tsc=26963573270247
+[14:20:15.453] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26964171556467
+[14:20:15.577] [5876 ] [I] SOURCE TIMELINE nodes count=118 tsc=26964700854300
+[14:20:15.732] [5876 ] [I] SOURCE TIMELINE variable index=53 1016744030->1015938722 float=0.0188->0.0173 tsc=26965367443312
+[14:20:15.751] [5876 ] [I] SOURCE TIMELINE nodes count=114 tsc=26965449241696
+[14:20:16.192] [5876 ] [I] SOURCE TIMELINE variable index=65 name='PitchManualOverride' 0->1 float=0.0000->0.0000 tsc=26967341986454
+[14:20:16.192] [5876 ] [I] SOURCE TIMELINE variable index=111 name='IsUnequipping' 0->1 float=0.0000->0.0000 tsc=26967342166108
+[14:20:16.192] [5876 ] [I] SOURCE TIMELINE variable index=113 1->12 float=0.0000->0.0000 tsc=26967342188253
+[14:20:16.192] [5876 ] [I] SOURCE TIMELINE variable index=125 name='bEquipUnequip' 0->1 float=0.0000->0.0000 tsc=26967342207861
+[14:20:16.192] [5876 ] [I] SOURCE TIMELINE nodes count=133 tsc=26967342231941
+[14:20:16.387] [5876 ] [I] SOURCE TIMELINE variable index=38 1->0 float=0.0000->0.0000 tsc=26968177713642
+[14:20:16.387] [5876 ] [I] SOURCE TIMELINE variable index=70 1->0 float=0.0000->0.0000 tsc=26968177912775
+[14:20:16.387] [5876 ] [I] SOURCE TIMELINE variable index=92 1->0 float=0.0000->0.0000 tsc=26968177934834
+[14:20:16.387] [5876 ] [I] SOURCE TIMELINE variable index=93 1->0 float=0.0000->0.0000 tsc=26968177951647
+[14:20:16.387] [5876 ] [I] SOURCE TIMELINE variable index=94 9->0 float=0.0000->0.0000 tsc=26968177967557
+[14:20:16.387] [5876 ] [I] SOURCE TIMELINE nodes count=98 tsc=26968177989057
+[14:20:16.749] [5876 ] [I] SOURCE TIMELINE variable index=53 1015938722->1017907251 float=0.0173->0.0210 tsc=26969731426275
+[14:20:17.025] [5876 ] [I] SOURCE TIMELINE variable index=382 name='TDM_Pitch' 1029980698->0 float=0.0557->0.0000 tsc=26970918409996
+[14:20:17.046] [5876 ] [I] SOURCE TIMELINE variable index=117 1->0 float=0.0000->0.0000 tsc=26971006623915
+[14:20:17.046] [5876 ] [I] SOURCE TIMELINE variable index=179 1->0 float=0.0000->0.0000 tsc=26971006821758
+[14:20:17.046] [5876 ] [I] SOURCE TIMELINE variable index=180 9->0 float=0.0000->0.0000 tsc=26971006843946
+[14:20:17.046] [5876 ] [I] SOURCE TIMELINE nodes count=99 tsc=26971006865704
+[14:20:17.067] [5876 ] [I] SOURCE TIMELINE variable index=126 0->1 float=0.0000->0.0000 tsc=26971095678718
+[14:20:17.130] [5876 ] [I] SOURCE TIMELINE variable index=383 name='TDM_Roll' 1009038421->0 float=0.0101->0.0000 tsc=26971366056187
+[14:20:17.215] [5876 ] [I] SOURCE TIMELINE nodes count=96 tsc=26971732018500
+[14:20:17.445] [5876 ] [I] SOURCE TIMELINE variable index=70 0->1 float=0.0000->0.0000 tsc=26972718255209
+[14:20:17.445] [5876 ] [I] SOURCE TIMELINE variable index=113 12->0 float=0.0000->0.0000 tsc=26972718489989
+[14:20:17.445] [5876 ] [I] SOURCE TIMELINE variable index=200 0->1 float=0.0000->0.0000 tsc=26972718513811
+[14:20:17.445] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26972718535870
+[14:20:17.445] [5876 ] [I] SOURCE TIMELINE nodes count=122 tsc=26972718553973
+[14:20:17.466] [5876 ] [I] SOURCE TIMELINE variable index=126 1->0 float=0.0000->0.0000 tsc=26972809549416
+[14:20:17.550] [5876 ] [I] SOURCE TIMELINE variable index=53 1017907251->1017817771 float=0.0210->0.0208 tsc=26973169791268
+[14:20:17.659] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26973639565302
+[14:20:17.659] [5876 ] [I] SOURCE TIMELINE variable index=65 1->0 float=0.0000->0.0000 tsc=26973639766370
+[14:20:17.659] [5876 ] [I] SOURCE TIMELINE variable index=111 1->0 float=0.0000->0.0000 tsc=26973639788601
+[14:20:17.659] [5876 ] [I] SOURCE TIMELINE variable index=125 1->0 float=0.0000->0.0000 tsc=26973639806446
+[14:20:17.659] [5876 ] [I] SOURCE TIMELINE variable index=185 1->0 float=0.0000->0.0000 tsc=26973639826699
+[14:20:17.887] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1136003909 float=0.0000->364.0880 tsc=26974618605813
+[14:20:17.887] [5876 ] [I] SOURCE TIMELINE variable index=40 0->1136003909 float=0.0000->364.0880 tsc=26974618777684
+[14:20:17.887] [5876 ] [I] SOURCE TIMELINE variable index=379 -2147483648->-1079017582 float=-0.0000->-1.3711 tsc=26974618809246
+[14:20:17.887] [5876 ] [I] SOURCE TIMELINE variable index=380 -2147483648->-1078675547 float=-0.0000->-1.4119 tsc=26974618833627
+[14:20:17.950] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26974886582070
+[14:20:17.950] [5876 ] [I] SOURCE TIMELINE nodes count=110 tsc=26974886816893
+[14:20:18.171] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26975837759267
+[14:20:18.304] [5876 ] [I] SOURCE TIMELINE nodes count=121 tsc=26976405702389
+[14:20:18.455] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26977053028497
+[14:20:18.455] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26977053188070
+[14:20:18.519] [5876 ] [I] SOURCE TIMELINE variable index=379 -1079017582->1068466070 float=-1.3711->1.3711 tsc=26977328477466
+[14:20:18.519] [5876 ] [I] SOURCE TIMELINE variable index=380 -1078675547->1068808099 float=-1.4119->1.4119 tsc=26977328612830
+[14:20:18.562] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26977514595695
+[14:20:18.562] [5876 ] [I] SOURCE TIMELINE nodes count=110 tsc=26977514761589
+[14:20:18.746] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26978303300539
+[14:20:19.106] [5876 ] [I] SOURCE TIMELINE variable index=379 1068466070->-1079017579 float=1.3711->-1.3711 tsc=26979848164075
+[14:20:19.106] [5876 ] [I] SOURCE TIMELINE variable index=380 1068808099->-1078675549 float=1.4119->-1.4119 tsc=26979848393136
+[14:20:19.126] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26979936346493
+[14:20:19.252] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26980476269118
+[14:20:19.594] [5876 ] [I] SOURCE TIMELINE variable index=379 -1079017579->1068466076 float=-1.3711->1.3711 tsc=26981942381380
+[14:20:19.594] [5876 ] [I] SOURCE TIMELINE variable index=380 -1078675549->1068808091 float=-1.4119->1.4119 tsc=26981942578277
+[14:20:19.615] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26982035492973
+[14:20:19.838] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26982992581813
+[14:20:20.065] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26983964196913
+[14:20:20.272] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26984854329962
+[14:20:20.402] [5876 ] [I] SOURCE TIMELINE nodes count=121 tsc=26985410633192
+[14:20:20.766] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26986972621995
+[14:20:20.766] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26986972776924
+[14:20:20.856] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26987359013249
+[14:20:20.856] [5876 ] [I] SOURCE TIMELINE variable index=40 1136003909->0 float=364.0880->0.0000 tsc=26987359225927
+[14:20:20.911] [5876 ] [I] SOURCE TIMELINE variable index=0 1136003909->1072235567 float=364.0880->1.8204 tsc=26987594302321
+[14:20:20.911] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26987594582122
+[14:20:20.911] [5876 ] [I] SOURCE TIMELINE nodes count=135 tsc=26987594614845
+[14:20:21.008] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26988012351460
+[14:20:21.096] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26988389878306
+[14:20:21.201] [5876 ] [I] SOURCE TIMELINE variable index=0 1072235567->0 float=1.8204->0.0000 tsc=26988841506747
+[14:20:21.201] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26988841659784
+[14:20:21.201] [5876 ] [I] SOURCE TIMELINE variable index=379 1068466076->-2147483648 float=1.3711->-0.0000 tsc=26988841687648
+[14:20:21.201] [5876 ] [I] SOURCE TIMELINE variable index=380 1068808091->-2147483648 float=1.4119->-0.0000 tsc=26988841706783
+[14:20:21.229] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26988961899390
+[14:20:21.229] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26988962050363
+[14:20:21.378] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1072235567 float=0.0000->1.8204 tsc=26989598009871
+[14:20:21.378] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26989598354172
+[14:20:21.378] [5876 ] [I] SOURCE TIMELINE nodes count=129 tsc=26989598384702
+[14:20:21.412] [5876 ] [I] SOURCE TIMELINE variable index=16 -1043076987->-1043054458 float=-26.4885->-26.5315 tsc=26989746002072
+[14:20:21.412] [5876 ] [I] SOURCE TIMELINE variable index=359 -1043076986->-1043054457 float=-26.4885->-26.5315 tsc=26989746214234
+[14:20:21.440] [5876 ] [I] SOURCE TIMELINE variable index=151 0->1 float=0.0000->0.0000 tsc=26989866782618
+[14:20:21.496] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26990105726892
+[14:20:21.571] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26990429806730
+[14:20:21.622] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26990645354378
+[14:20:21.650] [5876 ] [I] SOURCE TIMELINE variable index=0 1072235567->0 float=1.8204->0.0000 tsc=26990766419674
+[14:20:21.650] [5876 ] [I] SOURCE TIMELINE variable index=379 -2147483648->0 float=-0.0000->0.0000 tsc=26990766574990
+[14:20:21.650] [5876 ] [I] SOURCE TIMELINE variable index=380 -2147483648->0 float=-0.0000->0.0000 tsc=26990766598339
+[14:20:21.677] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26990884404837
+[14:20:21.677] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26990884614505
+[14:20:21.839] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1072235567 float=0.0000->1.8204 tsc=26991576974450
+[14:20:21.839] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26991577175905
+[14:20:21.971] [5876 ] [I] SOURCE TIMELINE variable index=16 -1043054458->-1042671453 float=-26.5315->-27.2620 tsc=26992146375097
+[14:20:21.971] [5876 ] [I] SOURCE TIMELINE variable index=151 1->0 float=0.0000->0.0000 tsc=26992146517642
+[14:20:21.971] [5876 ] [I] SOURCE TIMELINE variable index=359 -1043054457->-1042671452 float=-26.5315->-27.2620 tsc=26992146544087
+[14:20:22.018] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26992344776943
+[14:20:22.049] [5876 ] [I] SOURCE TIMELINE variable index=0 1072235567->0 float=1.8204->0.0000 tsc=26992477913030
+[14:20:22.049] [5876 ] [I] SOURCE TIMELINE variable index=379 0->-2147483648 float=0.0000->-0.0000 tsc=26992478112421
+[14:20:22.049] [5876 ] [I] SOURCE TIMELINE variable index=380 0->-2147483648 float=0.0000->-0.0000 tsc=26992478135254
+[14:20:22.123] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=26992798083054
+[14:20:22.123] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26992798276683
+[14:20:22.287] [5876 ] [I] SOURCE TIMELINE variable index=185 0->1 float=0.0000->0.0000 tsc=26993500563800
+[14:20:22.363] [5876 ] [I] SOURCE TIMELINE variable index=0 0->1072235567 float=0.0000->1.8204 tsc=26993828103269
+[14:20:22.363] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26993828263702
+[14:20:22.409] [5876 ] [I] SOURCE TIMELINE variable index=151 0->1 float=0.0000->0.0000 tsc=26994023266296
+[14:20:22.468] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26994277184627
+[14:20:22.468] [5876 ] [I] SOURCE TIMELINE variable index=185 1->0 float=0.0000->0.0000 tsc=26994277357358
+[14:20:22.542] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26994596716595
+[14:20:22.542] [5876 ] [I] SOURCE TIMELINE nodes count=123 tsc=26994596858624
+[14:20:22.647] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26995046939086
+[14:20:22.647] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26995047147163
+[14:20:22.701] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=26995276942643
+[14:20:22.795] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=26995679602475
+[14:20:22.795] [5876 ] [I] SOURCE TIMELINE nodes count=133 tsc=26995679845167
+[14:20:22.900] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=26996134019207
+[14:20:22.932] [5876 ] [I] SOURCE TIMELINE variable index=151 1->0 float=0.0000->0.0000 tsc=26996267527153
+[14:20:22.979] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26996472188212
+[14:20:22.979] [5876 ] [I] SOURCE TIMELINE nodes count=123 tsc=26996472362620
+[14:20:23.086] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=26996929182021
+[14:20:23.086] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=26996929358063
+[14:20:23.183] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=26997347747418
+[14:20:23.183] [5876 ] [I] SOURCE TIMELINE nodes count=110 tsc=26997347918128
+[14:20:23.344] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=26998036664199
+[14:20:23.630] [5876 ] [I] SOURCE TIMELINE variable index=53 1017817771->1018265165 float=0.0208->0.0217 tsc=26999264488973
+[14:20:23.694] [5876 ] [I] SOURCE TIMELINE variable index=0 1072235567->1136003909 float=1.8204->364.0880 tsc=26999541127409
+[14:20:23.694] [5876 ] [I] SOURCE TIMELINE variable index=40 0->1136003909 float=0.0000->364.0880 tsc=26999541292959
+[14:20:23.716] [5876 ] [I] SOURCE TIMELINE variable index=53 1018265165->1018175687 float=0.0217->0.0215 tsc=26999633349570
+[14:20:23.863] [5876 ] [I] SOURCE TIMELINE variable index=53 1018175687->1017907251 float=0.0215->0.0210 tsc=27000266610226
+[14:20:24.009] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=27000892063569
+[14:20:24.127] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=27001397710826
+[14:20:24.256] [5876 ] [I] SOURCE TIMELINE nodes count=121 tsc=27001951532399
+[14:20:24.403] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=27002583179136
+[14:20:24.403] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=27002583341117
+[14:20:24.454] [5876 ] [I] SOURCE TIMELINE nodes count=131 tsc=27002803198893
+[14:20:24.472] [5876 ] [I] SOURCE TIMELINE variable index=48 1->2 float=0.0000->0.0000 tsc=27002877839108
+[14:20:24.676] [5876 ] [I] SOURCE TIMELINE variable index=48 2->1 float=0.0000->0.0000 tsc=27003756416936
+[14:20:24.693] [5876 ] [I] SOURCE TIMELINE variable index=53 1017907251->1015670287 float=0.0210->0.0168 tsc=27003827084963
+[14:20:24.765] [5876 ] [I] SOURCE TIMELINE variable index=40 1136003909->0 float=364.0880->0.0000 tsc=27004135361812
+[14:20:24.785] [5876 ] [I] SOURCE TIMELINE variable index=3 1->0 float=0.0000->0.0000 tsc=27004222998177
+[14:20:24.827] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=27004404396214
+[14:20:24.827] [5876 ] [I] SOURCE TIMELINE nodes count=138 tsc=27004404607215
+[14:20:24.848] [5876 ] [I] SOURCE TIMELINE variable index=0 1136003909->1072235567 float=364.0880->1.8204 tsc=27004492673537
+[14:20:24.972] [5876 ] [I] SOURCE TIMELINE variable index=3 0->1 float=0.0000->0.0000 tsc=27005022851388
+[14:20:25.033] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=27005288651224
+[14:20:25.183] [5876 ] [I] SOURCE TIMELINE nodes count=122 tsc=27005931115792
+[14:20:25.314] [5876 ] [I] SOURCE TIMELINE variable index=589 0->1 float=0.0000->0.0000 tsc=27006493180918
+[14:20:25.418] [5876 ] [I] SOURCE TIMELINE variable index=16 -1042671453->-1042716513 float=-27.2620->-27.1761 tsc=27006936896264
+[14:20:25.418] [5876 ] [I] SOURCE TIMELINE variable index=359 -1042671452->-1042716512 float=-27.2620->-27.1761 tsc=27006937050376
+[14:20:25.418] [5876 ] [I] SOURCE TIMELINE variable index=589 1->0 float=0.0000->0.0000 tsc=27006937075230
+[14:20:25.418] [5876 ] [I] SOURCE TIMELINE nodes count=110 tsc=27006937096429
+[14:20:25.540] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=27007463378885
+[14:20:25.624] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=27007822199657
+[14:20:25.663] [5876 ] [I] SOURCE TIMELINE variable index=16 -1042716513->-1042761572 float=-27.1761->-27.0901 tsc=27007989042364
+[14:20:25.663] [5876 ] [I] SOURCE TIMELINE variable index=359 -1042716512->-1042761571 float=-27.1761->-27.0901 tsc=27007989240680
+[14:20:25.727] [5876 ] [I] SOURCE TIMELINE variable index=151 0->1 float=0.0000->0.0000 tsc=27008263620090
+[14:20:25.831] [5876 ] [I] SOURCE TIMELINE variable index=0 1072235567->1136003909 float=1.8204->364.0880 tsc=27008712714520
+[14:20:25.831] [5876 ] [I] SOURCE TIMELINE variable index=40 0->1136003909 float=0.0000->364.0880 tsc=27008712917007
+[14:20:25.874] [5876 ] [I] SOURCE TIMELINE variable index=53 1015670287->1017907248 float=0.0168->0.0210 tsc=27008895513131
+[14:20:26.016] [5876 ] [I] SOURCE TIMELINE variable index=48 0->1 float=0.0000->0.0000 tsc=27009505228427
+[14:20:26.095] [5876 ] [I] SOURCE TIMELINE variable index=48 1->0 float=0.0000->0.0000 tsc=27009844501051
+[14:20:26.334] [5876 ] [I] SOURCE TIMELINE variable index=151 1->0 float=0.0000->0.0000 tsc=27010872386769
+[14:20:26.614] [5876 ] [I] SOURCE TIMELINE variable index=151 0->1 float=0.0000->0.0000 tsc=27012072368199
+[14:20:26.718] [5876 ] [I] SOURCE TIMELINE variable index=151 1->0 float=0.0000->0.0000 tsc=27012516734977
+[14:20:26.758] [5876 ] [I] SOURCE TIMELINE window-closed reason=expired lines=303 snapshots=0 clocks=0 capture-lines=0 snapshot-dropped=0 clock-dropped=0 line-dropped=0
