@@ -81,15 +81,17 @@ v101b（2026-11-14 14:24，第 2 次复现；用户节奏不同）：`IsEquippin
 
 **分离原则**：外部输入 = 表中"外部写/外部事件"两类；图内输出 = `currentDefaultState`/`iState`/clip 选择/步数，单列不混入输入。装备变量的"源侧写入者是引擎真实装备行为"，候选侧写入者是插件 typed setter——两者都登记为外部输入，语义差异（真实装备 vs prime）保留为被测差异。
 
-## 四、第 2 步预注册：装备全态仪器（待实现/待上机）
+## 四、第 2 步预注册：装备全态仪器（已实现，待上机）
+
+**采集前修订（2026-11-14，实现时）**：CommonLib 的 `Actor::GetWornArmor` 取 `BGSBipedObjectForm::BipedObjectSlot` **掩码枚举**（31 个位槽，`kFX01=1<<31` 含），不是 42 值索引枚举——上文"42 槽"修订为 **31 槽**。此修订发生在任何采集之前，不触碰已收数据。
 
 | 项 | 固定内容 |
 | --- | --- |
 | 新键 | `[Experiment] EquipmentStateDump=true`，默认 off；只读 |
-| 观测点 | 现有 `ANIMATION WORLD` panel-open 快照（[controller.cpp L880](../../src/animation/controller.cpp#L880)）追加 `armor=(slot:formid,…)`：`GetWornArmor(BipedObjectSlot)` 枚举 0..41，非空槽记 slot:FormID；行追加 `save=`（用户在运行记录里登记存档槽位名） |
-| 上界 | armor 字段 ≤42 项；不新增 hook、不写图、不采样姿态 |
-| 运行协议 | 与 v96a 完全相同的冻结场景（同存档、1H+Candlelight 收鞘、同 INI 基线 + `EquipmentStateDump=on`）；一次 panel 窗口 |
-| 判据 K2C1-2 | dump 行存在、42 槽全枚举、零 `[E]`、无崩溃；与 v96a 的 hands/drawn/OAR 命中逐字一致 |
+| 观测点 | 现有 `ANIMATION WORLD` panel-open/equipment 快照（[controller.cpp](../../src/animation/controller.cpp) `ANIMATION WORLD` 行）行尾追加 ` armor=slots=31 worn=N <slot>:<formid>,…`：`GetWornArmor` 逐掩码槽枚举，非空槽记 slot:FormID；键 off 时行与历史格式逐字节一致 |
+| 上界 | armor 字段 ≤31 项；不新增 hook、不写图、不采样姿态 |
+| 运行协议 | 与 v96a 完全相同的冻结场景（同存档、1H+Candlelight 收鞘、同 INI 基线 + `EquipmentStateDump=on`）；一次 panel 窗口；存档槽位名由用户在运行记录登记（背包以存档身份冻结） |
+| 判据 K2C1-2 | dump 行存在、31 槽全枚举、零 `[E]`、无崩溃；与 v96a 的 hands/drawn/OAR 命中逐字一致 |
 | 判据 K2C1-3 | 存档槽位名登记进账本，背包以存档身份冻结 |
 | 关闭语义 | 两判据成立 → C1 由"部分"转 REGISTERED；仍不关闭 K5/K6/G5 |
 

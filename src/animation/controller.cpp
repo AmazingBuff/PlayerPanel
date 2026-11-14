@@ -71,6 +71,30 @@ namespace
             rotation.x, rotation.y, rotation.z, rotation.w, transform.scale);
     }
 
+    // C-G5-CAL K2-C1: read-only worn-armor snapshot for the ANIMATION WORLD row.
+    // Enumerates every BipedObjectSlot mask bit (31 slots, kFX01 included) through
+    // Actor::GetWornArmor and lists the non-null ones as slot:formid. Empty when the
+    // EquipmentStateDump key is off so historical rows stay byte-identical.
+    std::string equipment_armor_dump(RE::Actor& actor)
+    {
+        if (!equipment_state_dump())
+            return {};
+        int worn = 0;
+        std::string items;
+        for (std::uint32_t slot = 0; slot < 31; ++slot)
+        {
+            const RE::TESObjectARMO* const item =
+                actor.GetWornArmor(static_cast<RE::BGSBipedObjectForm::BipedObjectSlot>(1u << slot));
+            if (!item)
+                continue;
+            if (worn > 0)
+                items += ',';
+            items += fmt::format("{}:{:08x}", slot, item->GetFormID());
+            ++worn;
+        }
+        return fmt::format(" armor=slots=31 worn={} {}", worn, items);
+    }
+
     bool readable(void const* address, std::size_t size)
     {
         if (!address)
@@ -877,9 +901,10 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
         const auto started = std::chrono::steady_clock::now();
         const std::string report = oar::world_clip_report(state.graph->characterInstance);
         const double build_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
-        logger::info("ANIMATION WORLD actor={:08x} request={} snapshot=paused-source reason='{}' hands=({:08x},{:08x}) drawn={} build-ms={:.3f} clips={}",
+        logger::info("ANIMATION WORLD actor={:08x} request={} snapshot=paused-source reason='{}' hands=({:08x},{:08x}) drawn={} build-ms={:.3f} clips={}{}",
             state.actor_id, state.generation, observation.reason, observation.hands[0], observation.hands[1],
-            source.IsWeaponDrawn(), build_ms, report);
+            source.IsWeaponDrawn(), build_ms, report,
+            equipment_armor_dump(source));
     }
     // Panel-open forces the observed loop phase; an equipment change must NOT, or the equip
     // clip's own Start markers (cast by its annotations) are overwritten by loop markers before

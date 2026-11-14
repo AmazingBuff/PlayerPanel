@@ -113,6 +113,11 @@ namespace animation
     // C-G5-CAL K1 (2026-11-14): one-shot read-only graph/skeleton/clip identity census.
     // Requires IndependentGraph != off; defaults off and never writes or advances the graph.
     [[nodiscard]] bool clip_identity_census();
+    // C-G5-CAL K2-C1 (2026-11-14): read-only worn-armor snapshot appended to the
+    // ANIMATION WORLD rows. `armor=slots=31 worn=N <slot>:<formid>,…` enumerates every
+    // BipedObjectSlot mask bit via Actor::GetWornArmor; defaults off. With the key off the
+    // row is byte-identical to the historical format, so past runs stay comparable.
+    [[nodiscard]] bool equipment_state_dump();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END
