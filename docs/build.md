@@ -2144,3 +2144,22 @@ Identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0
 | CharacterPanel.ini | 13,176 | `2964009c49ef55ff3befd1f648059dbc13ba97e3fa0769d8f6ec15d2a91a854e` |
 
 运行档 = v101b 源侧自然游玩档：`IndependentGraph=off`、`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourceTransientWatch=false`、`ClipIdentityCensus=true`、`ControlSample=false`、`SamplingLiveness=off`、`ObservationSnapshot=false`，其余实验键 off。该档**不是默认产品档**；`config/CharacterPanel.ini` 保持全键默认 off。分支 `oar-idle3` 领先 `origin/oar-idle3` 43 提交、未推送。
+
+<a id="v102-g5k2c1-equipdump-20261114"></a>
+## v102：K2-C1 EquipmentStateDump 仪器（2026-11-14 构建并部署）
+
+[C-G5-CAL K2-C1/C2 登记](independent-behavior-graph.md) §四 预注册的装备全态仪器：新键 `[Experiment] EquipmentStateDump`（默认 off）在既有 `ANIMATION WORLD` panel-open/equipment 快照行尾追加只读 ` armor=slots=31 worn=N <slot>:<formid>,…`（`Actor::GetWornArmor` 逐掩码槽枚举，31 槽含 kFX01；采集前把预注册的"42 槽"修订为 31，见该节修订说明）。键 off 时行与历史格式逐字节一致；不新增 hook、不写图、不采样姿态。提交 `bd630da`（settings.h/.cpp、controller.cpp、config/CharacterPanel.ini、K2-C1/C2 README 修订）。
+
+**构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v102-g5k2c1-equipdump -DVCPKG_MANIFEST_INSTALL=OFF` + `cmake --build --preset Release --parallel 2`，均 exit 0（VS 2022/v143 14.44.35207、Windows SDK 10.0.26100.0、`x64-windows-static-md`、断网 FetchContent）。身份 `CharacterPanel-scenegraph-v102-g5k2c1-equipdump-bd630daacc-cl94faaed0c6-20261114T082611Z`（首次构建带 `+dirty` 的 DLL 未部署，干净重建后部署）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 1,969,152 | `32ff383e4edffd2de43e380eb3ffc75366f02b3944220b961b7ffa13aec4185c` |
+| CharacterPanel.pdb | 50,991,104 | `c3a7ed4579bb20ccfa8709e5e182386715471f3f22db71d39774bc92d6ba85b1` |
+| 运行档 CharacterPanel.ini | 11,767 | `0e789f8a0673bac822173e2353f90bca1b0ba32905dbfde3fcbf50474457cf35` |
+
+**运行档**：v96a 候选档（`deploy-backup-20261112-v96a-v97pre/` 的 `f41990d2…`，逐键断言打印核对）+ 尾部追加 `EquipmentStateDump=true`，存 `dist/g5-k2c1c2-20261114/CharacterPanel.ini`。键面：`IndependentGraph=inject`、`CandidateInputProbe=true`（空变量 observe-only）、`CandidateEquipPrime=true`、`CandidateEquipPrimeBranch=true`、`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`、`EquipmentStateDump=true`；`DisplayPose/Step/SourceTimeline/SourceTransientWatch/SourceEventCapture/SourceWriteCapture/OarContextWatch/SamplingLiveness` 全 off，`ControlSample/ClipIdentityCensus/ObservationSnapshot` 缺省（=off）。
+
+**部署（2026-11-14 16:2x）**：先备份当前 v101b 安装 → `dist/deploy-backup-20261114-v101b-v102pre/`（DLL `87d1b417…`、PDB `e3cb4df0…`、INI `2964009c…`，与[会话总结](diagnostics/session-summary-20261114.md)登记一致）；随后安装 v102 三件套，安装后哈希逐位核对一致，DLL 身份串在安装位提取确认。
+
+**上机协议（待运行）**：与 v96a run 1 相同的冻结场景——同存档（1H+Candlelight 收鞘）、一次 panel 窗口（F7 开 20 秒时间线不可用，本档走 panel-open）、装备/卸下路径与 v96a 相同；唯一变化是 `EquipmentStateDump=true`。运行后判据：`ANIMATION WORLD` 行含 `armor=slots=31`、零 `[E]`、无崩溃、hands/drawn 与 v96a L604 逐字一致；日志归档进 `docs/diagnostics/` 后按 K2C1-2/K2C1-3 裁定 C1 关闭。运行档不是默认产品档；`config/CharacterPanel.ini` 保持全键默认 off。
