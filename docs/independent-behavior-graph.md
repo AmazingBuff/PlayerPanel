@@ -5249,7 +5249,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **裁定：K2-C4 控制 B = READY（bounded）**，适用范围严格限定为 `female\mt_idle.hkx`（113,920 B / `0EF8248C…BCD73C7`）、9 个固定时间、候选图 MT_Idle binding（`binding_index=1022`、map 0..98）、单层直接 `SamplePartialTracks`、本次 v100a 进程。**B1 的位精确 FAIL 保留在案、不被 B2 覆盖；不产生 `tau_p/tau_r/tau_s/epsilon_t`，不证明 CAL2 的三进程/120 代驱动协议，不关闭 K1/K5/K6 或 G5。**
 
-## C-G5-CAL K1 identity census（2026-11-14 预注册；待运行）
+## C-G5-CAL K1 identity census（2026-11-14 预注册；census PASS，K1-C4 资源配对 NOT READY）
 
 **范围**：只读补齐 K1-C2 图身份、K1-C3 完整骨架/参考姿态、K1-C4 活动 clip 资源与实例身份。开关 `[Experiment] ClipIdentityCensus=true`（默认 off，要求 `IndependentGraph=inject`）；源侧 `pre-activate`、候选侧 `post-activate` + equip/unequip 首个 completed Generate 各一次；不采样姿态、不调用 `SamplePartialTracks`、不写图、不新增 hook。
 
@@ -5258,6 +5258,10 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 **判据**：K1C-1 四段图身份齐全；K1C-2 两侧 `bones==parents==reference`、`recorded==bones`、`invalid-parent=0`、`nonfinite=0`、`overflow=0`；K1C-3 每个活动 clip `identity=true`、`unique==clips`、`missing=0`、`overflow=0`，equip/unequip 段分别含 `1HM_Equip`/`1HM_Unequip`；K1C-4 一次实验、零 `[E]`、身份匹配。
 
 **边界**：只覆盖本进程活动图/骨架/活动 clip；不闭合 K1-C1 的完整运行/资源清单，不证明跨运行 stable-id，不完成 K5 的层/权重/混合计数，不产生容差或关闭 G5。完整登记见 [g5-k1-census-20261114/README.md](diagnostics/g5-k1-census-20261114/README.md)。
+
+**v101 运行（2026-11-14 14:11）：census 仪器 PASS，K1-C4 资源配对 NOT READY。** K1C-1–4 全过：四段图身份齐全（candidate post-activate 的 holder/root/bone-nodes 为显式 0）、两侧同一 116 骨 skeleton（`bones=parents=reference=116`、`recorded=116`、`invalid-parent=0`、`nonfinite=0`）、活动 clip `identity=true`/`unique==clips`/`missing=0`/`overflow=0`（equip 含 `1HM_Equip`、unequip 含 `1HM_Unequip`）、一次实验零 `[E]`。日志 [归档](diagnostics/CharacterPanel-g5k1-census-v101-run1-20261114-1411.log)（209,572 B，SHA-256 `AF9433E9…6455F379`）。
+
+**关键发现**：源侧 MT_Idle 是 20.0 s / 1000 帧 / 4 block / 211,328 B（FNV `9F6236C9E2D68F7D`，binding-index 12219）；候选侧同一节点 `0x21072841900` 在 post-activate 是 11.6667 s / 351 帧 / 16,992 B（binding `0x2103efe0080`，11909），在 equip-clips 变为 25.0167 s / 1501 帧 / 82,400 B（binding `0x21045141f50`，1022，Vanargand）。同一节点、不同 binding + data FNV 正是 OAR 替换的进程内形态，`stable-id` 已能把两个实例分开。但源/候选 MT_Idle 不是同一资源，且源侧 equip/unequip 阶段的活动 clip 在源图暂停时不可得；**K1-C4 需要一次源侧自然游玩窗口（F7 + 固定装备/卸下脚本）补齐源侧逐阶段资源哈希后再配对**。v101 的 `node/index` 标签顺序写反（`stable-id` 正确），v101a 修复。
 
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 

@@ -237,8 +237,8 @@ namespace
                 "crop={:.6f} identity={} type={} duration-bits={:08X} tracks={} floats={} spline={} frames={} blocks={} "
                 "max-frames={} block-duration-bits={:08X} block-inverse-bits={:08X} frame-duration-bits={:08X} "
                 "data-bytes={} data-fnv={} blockoff-fnv={} map-count={} map-fnv={} blend={} stable-id='{}'",
-                a_actor_id, a_request, a_side, clips - 1, i,
-                reinterpret_cast<std::uintptr_t>(clip), read_string(clip->animationName, 128),
+                a_actor_id, a_request, a_side, clips - 1,
+                reinterpret_cast<std::uintptr_t>(clip), i, read_string(clip->animationName, 128),
                 reinterpret_cast<std::uintptr_t>(binding),
                 reinterpret_cast<std::uintptr_t>(binding ? binding->animation.get() : nullptr),
                 static_cast<std::uint32_t>(clip->animationBindingIndex),
