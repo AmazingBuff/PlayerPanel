@@ -318,3 +318,54 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 | MLh_Idle | 46 | `DAD1F1C9…` |
 | SCAR_1hmReadyDummy | 44（+2 IDUN） | `8728A54A…` |
 | MT_Idle | 2 | `F56EE150…` |
+
+## 十八、Run 2（源侧 K5 姿态采集，2026-11-15 00:31，**PASS**）
+
+**运行身份**：v103 DLL `8c3857a3…` + k5-source 档 `21bd938b…`（Agent 换档核验，备份 `dist/deploy-backup-20261115-run1post/`）；PROBE LIVENESS 钩子安装（63856-apply-entry/return 等，与 v103 run 2 同构）。日志/工件归档：[日志](../CharacterPanel-g5k5s-track2-run1-20261115-0033.log)（265,832 B `2939c2e5…`）、[CPK5S bin](../CharacterPanel-g5k5s-track2-run1-20261115-0033.bin)（6,019,504 B = 124+1065×5,652 精确值，`--track2` 对账通过）、[JSON 账本](../CharacterPanel-g5k5s-track2-run1-20261115-0033.json)。
+
+**登记一条执行偏差（如实）**：本批 Run 2 指令沿用会话摘要的"F7 probe 窗口"表述，但 k5-source 档 `SourceTimeline=false`（SamplingLiveness 与 SourceTimeline 互斥，INI 注释明示）——实际捕获机制是 PROBE LIVENESS 钩子直采（与 Track 1 v103 run 2 同构，该轮日志同样无窗口行）。用户自然游玩（拔剑/收剑）被完整捕获，F7 指令为无操作。后续 Track 2 文档以"liveness 直采"为准。
+
+**仪器读数**：`K5 RECON side=source expected=1065 attempted=1065 recorded=1065 missing=0 truncated=0 two-read-bad=0 clip-overflow=0 dropped=0 no-pose=0`（cap 1,400 内）；`[E]` 唯一 = 豁免行；`identity-failed=1`（dummy 同族瞬时不可读，IDUN 记账）。
+
+**对账（`--track2 --source`，工具 `14797a23…`）**：**K5-1..K5-8 = PASS**——可读身份六族全部 ∈ 集合、零出集；双读 0 失配、116/116 轨、零溢出；IDUN=1 记账。
+
+| 族 | 源侧记录数（可读） | data FNV | binding-index |
+| --- | ---: | --- | --- |
+| MT_Idle | 525 | `F56EE150…` | 1022 |
+| 1HM_Idle | 388 | `C62C233B…` | 23 |
+| MLh_Idle | 388 | `DAD1F1C9…` | 949 |
+| SCAR_1hmReadyDummy | 387（+1 IDUN） | `8728A54A…` | 8682 |
+| 1HM_Unequip | 118 | `4DED5EAF…` | 75 |
+| 1HM_Equip | 72 | `12A77CD1…` | 22 |
+
+（旁注：两侧 binding-index 完全一致——同工程同加载序的确定性表现；K1-C4"binding-index 非身份"结论不变，此处仅作旁证。）
+
+## 十九、C 分组跨侧配对资格账本（Track 2 收官交付）
+
+键 = `data FNV`（资源身份）+ 裸名族；同名多实例按进程内 stable-id 消歧（本批两侧各一个 dummy 实例 + MT_Idle 各一实例，无同名并行实例）；IDUN 目击（候选 2、源 1）排除出配对样本、不进任何误差分布。
+
+| 族 | 候选 FNV | 源 FNV | 交集 | 配对资格 |
+| --- | --- | --- | --- | --- |
+| MT_Idle | `F56EE150…` | `F56EE150…` | 非空 | **PAIRED** |
+| 1HM_Equip | `12A77CD1…` | `12A77CD1…` | 非空 | **PAIRED** |
+| 1HM_Unequip | `4DED5EAF…` | `4DED5EAF…` | 非空 | **PAIRED** |
+| MLh_Idle | `DAD1F1C9…` | `DAD1F1C9…` | 非空 | **PAIRED** |
+| 1HM_Idle | `C62C233B…` | `C62C233B…` | 非空 | **PAIRED** |
+| SCAR_1hmReadyDummy | `8728A54A…` | `8728A54A…` | 非空 | **PAIRED** |
+
+**裁定：六族全 PAIRED（预期达成）**——与 Track 1"C-only 仅 SCAR dummy 可配对"形成完整反转。K1-C4 NOT MATCHED 在 Track 2 环境下不再成立：两侧 poseLocal 可按"同一动画资源的两次采样"进入后续配对设计。
+
+## 二十、Track 2 批次收官裁定
+
+| 交付 | 状态 |
+| --- | --- |
+| 确定性资源条件（B） | **成立**：OAR 引擎停用（运行时证明 §15）、六族两侧同 FNV（§16 T2-C4） |
+| census 重登记 | **完成**（Run 0a/0b：两侧 116 骨、四段/窗口齐全、missing=0） |
+| 新档重验 | **完成**（T2-C5 逐字 = K2-C1；占位 esp 修复后 Save116 连续性保留） |
+| 两侧完整姿态/身份证据 | **完成**（Run 1 候选 249 代 + Run 2 源 1065 apply，全 116 轨、双读全等、零丢失） |
+| C 分组配对资格账本 | **完成**（§十九：六族全 PAIRED，IDUN=3 记账排除） |
+| 层/混合资格转移声明 | **生效**（T2-C6 闭包 23/23 两次复验；K5-5 结论转移，缺项清单随移） |
+
+**边界（不得外推）**：不产生 `tau_p/tau_r/tau_s/epsilon_t`；不做姿态等价裁定（配对/比较协议属门 4 完整冻结，本批数据是其输入材料）；不做同刻逐代配对（K3 收官裁定另立契约）；IDUN 瞬时不可读是有界伴生（equip 边界 2 条 + 源侧 1 条），不计入误差样本；Track 1 全部历史裁定（K1-C4 NOT MATCHED 等）保持原样，本批仅在其限定环境（OAR 停用新档）内建立新事实。
+
+**下一阶段入口**：门 4 配对/比较协议设计（输入 = 本批两侧工件 + §十九 账本）与 CAL2 三进程协议预注册（独立推进）。

@@ -200,7 +200,8 @@ def reconcile_source(path: str) -> int:
             key = (name, binding_index, data_fnv, map_count, map_fnv)
             sightings[key] = sightings.get(key, 0) + 1
             bare = bare_clip_name(name)
-            if (bare, data_fnv) not in registered_source_set:
+            skip = TRACK2_MODE and data_fnv == 0  # identity-unreadable: no FNV to assert (K6 10.3 flag)
+            if not skip and (bare, data_fnv) not in registered_source_set:
                 bucket = declared_gap if bare in declared_names else out_of_set
                 bucket[key] = bucket.get(key, 0) + 1
     print(f"[K5-2] two-read mismatches: {two_read_bad}")
