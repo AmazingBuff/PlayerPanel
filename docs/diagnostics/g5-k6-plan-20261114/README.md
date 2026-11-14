@@ -208,3 +208,43 @@ data_fnv u64 | blockoff_fnv u64 | map_fnv u64 | map_count u32
 - 判据仍为 K5-1…K5-8（§六），本节不改任何通过条件。
 - **off 路径字节不变断言**：三键全 off 时，本次改动产生的全部输出行不存在；既有输出（含 `K3 SNAPSHOT`、`K1 CENSUS`、`ANIMATION WORLD`、`INDEPENDENT GRAPH` 各行）逐字节与 v102 同键位行为一致。构建后以 v96a 基线 INI（全 off）+ K5 三键 on 各起一次短窗验证（不采正式数据）。
 - K3/K5 互斥：`K5FullSample` on 且 `ObservationSnapshot` on → K3 抑制行；只 K3 on → 行为与 v98 完全一致（K3 代码路径零改动）。
+
+## 十一、v103 run 1（候选侧）记录（2026-11-14 22:00–22:01）
+
+**运行身份**：v103 `CharacterPanel-scenegraph-v103-g5k5-fullsample-9e83ff8e8f-cl94faaed0c6-20261114T134329Z`（DLL `8c3857a3…` / PDB `49581217…` / inject 运行档 `76f2bebb…`，见 [build.md v103 节](../../build.md#v103-g5k5-fullsample-20261114)）。存档 = Save116（Elif #116）；panel 窗口链 = v96a/v102 同链：inject → 同帧 5 写 prime + `WeapEquip` → equip 120/120（`fixed-equip-budget`）→ settle target 87 / settled 101（`baseline-default=1 baseline-nodes=122`）→ `Unequip` id=144 → unequip completed=129（`state-12-to-0`）。`hands=(560c2a4c,00043324) drawn=false` 与 v102 run 1 **逐字一致**；源侧 panel-open OAR 栈本轮 = SVFI（K1-C4 已登记的世界状态漂移现象，第三次观测）。零 `[E]`、无崩溃（clean tail）。
+
+| # | 判据（候选侧） | 读数 | 裁定 |
+| --- | --- | --- | --- |
+| K5-1 | expected==visited==recorded | `K5 RECON side=candidate expected=249 attempted=249 recorded=249 missing=0 truncated=0 dropped=0`；分段 equip 120 + unequip 129（与 v98 的 249 一致） | **PASS** |
+| K5-2 | 双读逐位一致 | `two-read-bad=0`（全 249 代） | **PASS** |
+| K5-3 | 分母完整 | 全部记录 `track_count=116`（离线复核 0 失配）；reference/default-fill 轨在 raw 位值中保留 | **PASS** |
+| K5-4 | 对账闭合 | 工件大小精确 = 116 + 249×5,664 = 1,410,452 B；JSON 账本与 RECON 行互洽；`clip-overflow=0 write-failed=0 identity-failed=0 drift-records=0` | **PASS** |
+| K5-5 | 层/混合资格 | 4 审计点齐全（post-activate/equip-mid/equip-settle/unequip-complete），`missing=0 overflow=0 identity-failed=0` 全部；walked=97/94/122/113。unknown 类 328 行（约 12 个 vtable 地址，主簇 `7ff6a66306d8`×142、`7ff6a6630aa0`×84）= 无 CommonLibSSE VTABLE 常量的类（`hkbBlendingBehavior` 等）——**显式缺项清单按 §10.4 声明成立**，逐骨/通道权重与 blend/mask/additive 语义带缺项转门 1 未闭合项 | **PASS（带缺项清单）** |
+| K5-6 | 寿命/generation | 逐代连续无缺口（equip 1..120、unequip 1..129 离线复核）；clip 激活窗口完整可导出（见下表）；失效/取消**未触发**（两段 outcome=completed、零 invalidation）——登记"未触发"，不记"通过" | **PASS（取消未触发，如实登记）** |
+| K5-7 | 资源断言 | 离线对账 7 个唯一 (名,bidx,FNV,map_count,map_fnv)，**7/7 data FNV 命中 v101 登记集合**（含 Vanargand MT_Idle map_count=99 + map FNV `077954859409395E`）；出集 = 0 | **PASS** |
+| K5-8 | 运行完整 | 零 `[E]`、无崩溃、DLL/PDB/INI 身份匹配、预算未超（2.07 MiB cap 实际 1.35 MiB） | **PASS** |
+
+**clip 激活窗口（离线自 bin 导出；层重叠 = 门 1 预期形态）**：
+
+| 段 | clip（裸名） | data FNV | bidx | 窗口（completed 步） | 条数 |
+| --- | --- | --- | ---: | --- | ---: |
+| equip | mt_idle（Vanargand） | `F56EE150…` | 1022 | 1..1 | 1 |
+| equip | 1hm_equip | `12A77CD1…` | 22 | 1..98 | 98 |
+| equip | 1hm_idle / mlh_idle / scar dummy | `C62C233B…` / `DAD1F1C9…` / `8728A54A…` | 23/949/15073 | 87..120 | 各 34 |
+| unequip | 1hm_unequip | `4DED5EAF…` | 75 | 1..129 | 129 |
+| unequip | 1hm_idle / mlh_idle / scar dummy | 同上 | 同上 | 1..12 | 各 12 |
+| unequip | mt_idle（Ashe） | `722C8A1E…` | 11915 | 129..129 | 1 |
+
+equip 段 87–98 为 `1HM_Equip` 与 idle 栈的重叠混合（settle 点前后混合带）；unequip 段 1–12 为 idle 栈 blend-out 残留；step 129 回到 MT_Idle（Ashe）与 state-12→0 完成点一致。
+
+**工件**（归档于 [docs/diagnostics/](../)）：
+
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| [日志](../CharacterPanel-g5k5c-v103-run1-20261114-2200.log) | 247,907 | `c867daf6939f673552d9cd1b89873e873a5669f4daa4bf6114d3e5d810a12d2b` |
+| [CPK5 快照](../CharacterPanel-g5k5c-v103-run1-20261114-2200.bin) | 1,410,452 | `71998840f32b3725fe6944e9721b5fdf772dbbacfde83393be781135979f0be5` |
+| [JSON 账本](../CharacterPanel-g5k5c-v103-run1-20261114-2200.json) | 771 | `48b7d295922649f24ab3e8598ce6179198f868e07365a510feb92082bdfe2a97` |
+
+**离线对账工具**：[tools/k5_reconcile.py](../../../tools/k5_reconcile.py)（SHA-256 `c977c9ea1ce67c0c7070884749ec071c781cd95c330a54c917e194f6e978a9af`）。登记两条实现事实：① 运行时 `animationName` 为完整动画路径（`Animations\1HM_Equip.hkx`），节点 `hkbNode::name` 才是裸名（`DG_1hmEquip` 等）——工具以裸名（剥前缀/扩展名、大小写折叠）作匹配键、data FNV 为身份（K1-C4 不变），属比较侧归一化，不判据变更；② SCAR dummy 的 binding-index 本轮 = 15073（v101 = 15078）、MT_Idle = 11915（v101 = 11909）——跨运行 binding-index 漂移再现，K1-C4"binding-index 非身份"结论再次成立。
+
+**裁定（候选侧）**：K5-1/2/3/4/6/7/8 = PASS，K5-5 = PASS（带缺项清单）。**K5 整体仍开放**——源侧（run 2：`SamplingLiveness=on` + source 档，F7 probe 窗口）未运行；`tau_*` 不产生；姿态等价/G5 不关闭。
