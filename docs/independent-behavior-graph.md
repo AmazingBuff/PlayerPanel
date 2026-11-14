@@ -2,6 +2,8 @@
 
 **当前更新（2026-11-14）**：**源图 B3/B4 后处理边界在 [v97d 单窗口](build.md#g5-e2b-b3b4-v97d-run1-20261113) 739/739 PASS（K4 本会话边界）**。[K1/K2 账本](#c-g5-cal-k1k2) 中 K2-C3 PASS；**K2-C4 控制 B 已 READY（bounded，B2 v100a）**，B1 位精确 FAIL 保留在案。**K1-C2/C3 census 与 K1-C4 资源清单已由 [v101 + v101b](diagnostics/g5-k1-census-20261114/README.md) 登记：两侧 116 骨骨架/参考姿态齐全、活动 clip 身份无丢失；K1-C4 裁定 NOT MATCHED（源/候选 clip 家族对齐但 data FNV 除 SCAR dummy 外无一对齐，源侧 OAR 窗口内自行切换资源）**；K1-C1 完整运行资源清单仍 NOT_READY。K3 两侧（候选 v98 + 源 v99b）已闭合，K5/K6 与姿态等价仍待验证，`tau_*` 未产生，G5 未通过。
 
+> **2026-11-14 会话完整总结**：[diagnostics/session-summary-20261114.md](diagnostics/session-summary-20261114.md)（控制 B 方案 A + K1 身份普查的逐轮判据、5 个版本部署哈希、11 个提交清单、当前 MO2 安装状态与剩余前置）。
+
 更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。**v96a 后续已部署并完成首次原生运行，关闭“差一帧”覆盖缺口；见[运行记录](build.md#g5-cal-v96a-observation-v2-run1-20261112)。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
 <a id="current-status"></a>

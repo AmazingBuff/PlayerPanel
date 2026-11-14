@@ -2121,3 +2121,26 @@ Identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0
 | B-D 运行完整性 | 一次 manifest、零 `[E]`、DLL/PDB/INI 与部署逐字节一致 | PASS |
 
 **Verdict**: K2-C4 control B = **READY (bounded)** for `female\mt_idle.hkx` (113,920 B, `0EF8248C…BCD73C7`), the 9 fixed times, the candidate MT_Idle binding (`binding_index=1022`, map 0..98), single-layer direct `SamplePartialTracks`, and this v100a process. B1's bit-exact FAIL remains on record; B2 is a new batch with an analytic bound (`2·step`/`32·eps` chosen after B1 and disclosed). No `tau_p/tau_r/tau_s/epsilon_t`, no CAL2 three-process/120-generation claim, no K1/K5/K6/G5 closure.
+
+<a id="deploy-state-20261114-session"></a>
+## 2026-11-14 会话部署轨迹与当前安装
+
+本次会话（详见 [会话总结](diagnostics/session-summary-20261114.md)）依次构建并部署 5 个版本，每次部署前备份上一版三件套并做源/目标哈希核对：
+
+| 版本 | 身份 | 用途 | DLL SHA-256（前 8） | 备份目录 |
+| --- | --- | --- | --- | --- |
+| v100 | `…3378889e91…` | 控制 B 方案 A / B1 位精确 FAIL | `409C2684` | `deploy-backup-20261114-v99b-v100pre/` |
+| v100a | `…9db4adfd5e…` | B2 有界 PASS → K2-C4 READY（bounded） | `12B39444` | — （见 `deploy-backup-20261114-v100a-v101pre/`） |
+| v101 | `…9d0d2219cb…` | 候选侧 K1 census（K1C-1–4 PASS） | `C38C179C` | `deploy-backup-20261114-v101-v101apre/` |
+| v101a | `…4f42e9615f…` | 源自然游玩 census（首轮 INVALID，cap 耗尽） | `07EB7633` | `deploy-backup-20261114-v101a-v101bpre/` |
+| v101b | `…4d92f4ad8c…` | 触发收敛 + cap 24（源 S1–S4 PASS） | `87D1B417` | — （当前安装） |
+
+**当前 MO2 安装（会话结束状态，`E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`）**：
+
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 1,956,864 | `87d1b4178c4198772af0c60e3937d7e35d41d01af3c0f04a2694f884456e8d72` |
+| CharacterPanel.pdb | 50,974,720 | `e3cb4df02fca612819de974b297315da4f47e6f63277a1808af35a19af6f17d1` |
+| CharacterPanel.ini | 13,176 | `2964009c49ef55ff3befd1f648059dbc13ba97e3fa0769d8f6ec15d2a91a854e` |
+
+运行档 = v101b 源侧自然游玩档：`IndependentGraph=off`、`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourceTransientWatch=false`、`ClipIdentityCensus=true`、`ControlSample=false`、`SamplingLiveness=off`、`ObservationSnapshot=false`，其余实验键 off。该档**不是默认产品档**；`config/CharacterPanel.ini` 保持全键默认 off。分支 `oar-idle3` 领先 `origin/oar-idle3` 43 提交、未推送。
