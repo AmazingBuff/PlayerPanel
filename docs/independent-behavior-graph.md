@@ -5249,6 +5249,16 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **裁定：K2-C4 控制 B = READY（bounded）**，适用范围严格限定为 `female\mt_idle.hkx`（113,920 B / `0EF8248C…BCD73C7`）、9 个固定时间、候选图 MT_Idle binding（`binding_index=1022`、map 0..98）、单层直接 `SamplePartialTracks`、本次 v100a 进程。**B1 的位精确 FAIL 保留在案、不被 B2 覆盖；不产生 `tau_p/tau_r/tau_s/epsilon_t`，不证明 CAL2 的三进程/120 代驱动协议，不关闭 K1/K5/K6 或 G5。**
 
+## C-G5-CAL K1 identity census（2026-11-14 预注册；待运行）
+
+**范围**：只读补齐 K1-C2 图身份、K1-C3 完整骨架/参考姿态、K1-C4 活动 clip 资源与实例身份。开关 `[Experiment] ClipIdentityCensus=true`（默认 off，要求 `IndependentGraph=inject`）；源侧 `pre-activate`、候选侧 `post-activate` + equip/unequip 首个 completed Generate 各一次；不采样姿态、不调用 `SamplePartialTracks`、不写图、不新增 hook。
+
+**记录**：`K1 CENSUS` 行给出 graph/holder/root/project/behavior/setup/bindings/pose 计数、完整骨名/父索引/reference pose raw bits、每个活动 clip 的动画 header + spline `data`/`blockOffsets` FNV + binding map FNV + 进程内 `stable-id`，以及 `clips/unique/missing/overflow` 汇总。上限 512 节点、64 clip、512 骨；超限即 INVALID。
+
+**判据**：K1C-1 四段图身份齐全；K1C-2 两侧 `bones==parents==reference`、`recorded==bones`、`invalid-parent=0`、`nonfinite=0`、`overflow=0`；K1C-3 每个活动 clip `identity=true`、`unique==clips`、`missing=0`、`overflow=0`，equip/unequip 段分别含 `1HM_Equip`/`1HM_Unequip`；K1C-4 一次实验、零 `[E]`、身份匹配。
+
+**边界**：只覆盖本进程活动图/骨架/活动 clip；不闭合 K1-C1 的完整运行/资源清单，不证明跨运行 stable-id，不完成 K5 的层/权重/混合计数，不产生容差或关闭 G5。完整登记见 [g5-k1-census-20261114/README.md](diagnostics/g5-k1-census-20261114/README.md)。
+
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 
 **裁定**：v96a run 1 为 **K2-C1/C2/C3 提供了一次可复核的正面证据**，并把 D3 的 1HM 卸下完成点覆盖补齐；**K1-C1–C4 与 K2-C4（控制 B）仍未闭合**，因此 K1/K2 整体仍 **NOT_READY**，不能启动原生校准。

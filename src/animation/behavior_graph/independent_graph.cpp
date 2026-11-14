@@ -8,6 +8,7 @@
 #include "animation/behavior_graph/candidate_window.h"
 #include "animation/behavior_graph/clip_reference_policy.h"
 #include "animation/behavior_graph/control_sample.h"
+#include "animation/behavior_graph/k1_census.h"
 #include "animation/behavior_graph/k3_snapshot_policy.h"
 #include "animation/behavior_graph/drive_step_policy.h"
 #include "animation/behavior_graph/display_step_clock.h"
@@ -1350,6 +1351,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
 
     const Identity source_before = identify(source_graph);
     observe_source_baseline(source_graph, actor_id, request, source_generation);
+    if (clip_identity_census())
+        log_k1_census(source_graph, "source", actor_id, request, "pre-activate", true);
 
     Identity candidate_final;
     bool constructed = false;
@@ -1569,6 +1572,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                         log_oar_context_segment("post-activate", actor_id, request);
                         if (candidate_variable_census())
                             log_candidate_census_after_activate(*candidate, actor_id, request);
+            if (clip_identity_census())
+                log_k1_census(*candidate, "candidate", actor_id, request, "post-activate", true);
                         const std::string candidate_pose_before = format_pose_hash(candidate->characterInstance);
                         std::string candidate_pose_mid = "not-run";
                         std::string candidate_pose_end = "not-run";
@@ -2247,6 +2252,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 pose_step_previous = std::move(current);
                             };
                             bool control_sample_attempted = false;
+                            std::size_t k1_clip_census_count = 0;
                             const auto record_output = [&]() {
                                 ClipObservation const clips = collect_active_clips();
                                 record_clip_clocks(clips);
@@ -2259,6 +2265,12 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 {
                                     control_sample_attempted = true;
                                     (void)run_control_sample(candidate->characterInstance, actor_id, request, observation.completed());
+                                }
+                                if (observation.completed() == 1 && clip_identity_census() && k1_clip_census_count < 2)
+                                {
+                                    ++k1_clip_census_count;
+                                    log_k1_census(*candidate, "candidate", actor_id, request,
+                                        k1_clip_census_count == 1 ? "equip-clips" : "unequip-clips", false);
                                 }
                                 if (observation.completed() > 0)
                                 {

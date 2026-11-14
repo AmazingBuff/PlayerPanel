@@ -110,6 +110,9 @@ namespace animation
     // animation through the candidate's loaded binding. Requires IndependentGraph != off;
     // defaults off and never writes or advances the graph.
     [[nodiscard]] bool control_sample();
+    // C-G5-CAL K1 (2026-11-14): one-shot read-only graph/skeleton/clip identity census.
+    // Requires IndependentGraph != off; defaults off and never writes or advances the graph.
+    [[nodiscard]] bool clip_identity_census();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END
