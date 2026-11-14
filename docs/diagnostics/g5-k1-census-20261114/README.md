@@ -97,3 +97,13 @@ K1 CENSUS ... phase=clips-summary nodes=... clips=... unique=... missing=... ove
 3. 因此本轮的 **census 仪器 PASS**，但 **K1-C4 的源/候选资源配对仍 NOT_READY**：源侧在 equip/unequip 阶段的活动 clip 没有在候选驱动时自然出现（源图暂停，`source-drift=none`），源侧 MT_Idle 20.0 s 与候选 25.0167 s 也不能直接当作同一资源。需要一次**源侧自然游玩窗口**（F7 + 固定装备/卸下脚本）来捕获源侧 equip/unequip 的活动 clip 资源哈希，再与候选逐阶段比较。
 
 **裁定：K1C-1–4 PASS（census 仪器）；K1-C4 资源配对 NOT READY。** 不产生容差，不关闭 K1/K5/K6 或 G5。
+
+## 七、源侧自然游玩普查（v101a 预注册；待运行）
+
+**目的**：在源图自然运行时捕获源侧 equip/unequip 阶段的活动 clip 资源哈希，解释并配对源侧 MT_Idle 20.0 s 与候选 25.0167 s 的差异。
+
+- 运行档：`IndependentGraph=off`、`SourceTimeline=on`、`SourceTimelineGraph=DefaultFemale`、`SourceTransientWatch=false`、`ClipIdentityCensus=true`、其余实验键 off。
+- 操作：加载同一存档 → 按 **F7** 开 20 秒窗口 → 等约 2 s → **装备单手武器** → 等约 5 s → **卸下** → 等约 5 s。
+- 记录：`side=source phase=window-open` 全量（图+骨架+活动 clip）；装备链变量 settle 时 `phase=settle` 的 clip-only dump（≤8 次；触发名见 §二）。
+- 判据：S1 `window-open` + ≥1 次 `settle` 存在；S2 至少一次 settle 出现 `1HM_Equip`，至少一次出现 `1HM_Unequip`（按 clip 名）；S3 每个活动 clip `identity=true`、`unique==clips`、`missing=0`、`overflow=0`，无 `census-cap`；S4 一次窗口、20 s 内正常关闭、零 `[E]`、无崩溃。
+- 不覆盖：不写图、不推进图、不采样姿态、不产生容差；只补 K1-C4 的源侧逐阶段资源清单。
