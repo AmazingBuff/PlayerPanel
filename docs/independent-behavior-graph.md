@@ -5177,6 +5177,45 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **K3 不覆盖**：K5（完整计数、层/权重/混合、寿命与丢失）、K1 资源/实例身份、K2-C4 控制 B、时间量化、容差与 G5。
 
+<a id="c-g5-cal-b-qual"></a>
+## C-G5-CAL K2-C4 控制 B 资格（2026-11-13，离线；**B NOT_READY**）
+
+**裁定：控制 B 仍 NOT_READY；本轮未查看任何原生控制输出、未运行控制、未产生容差。**
+
+[离线资格结果与结构 dump](diagnostics/g5-cal-control-b-20261113/result.md)。
+
+### 要求回顾（CAL v1 §四）
+
+单层、固定时间、已知权重与 binding/reference/default-fill；无未建模的 IK、物理、OAR 变体或随机输入；真值来自固定 authored 数据及其可审计采样语义；`SamplePartialTracks` 只能作实现审计入口，不能作独立 oracle；资源/承载路径必须在查看输出前写入不可变清单。
+
+### 资源候选审计（离线，仅 authored 数据）
+
+候选：`meshes\actors\character\animations\male\mt_idle.hkx`（`Skyrim - Animations.bsa` 基础资源）。
+
+| 项 | 读数 | 资格 |
+| --- | --- | --- |
+| 字节/哈希 | 30,944 B，SHA-256 `18acc5a60644a5a9d3b10c6bfa1d35ce891c7687869084893ab1cc602433c18c` | 已登记 |
+| 容器 | `hkaAnimationContainer`：animations=1、bindings=1、skeletons=0、attachments=0、skins=0 | 单动画/单 binding |
+| 动画 | `hkaSplineCompressedAnimation`，type=5，duration=9.133333 s，99 transform + 4 float tracks，275 frames / 2 blocks，frameDuration=1/30 | 单层、固定帧率 |
+| 事件 | `annotationTracks=99`，但 `annotations=0` | 无事件 |
+| binding | skeleton=`NPC Root [Root]`，transformTrackToBoneIndices=0（identity），blendHint=0 | 无混合 |
+| IK/物理/随机 | 独立 clip 采样不经过图更新；无 extracted motion、无 IK/物理节点 | 满足 |
+
+**运行时反证（决定性）**：MO2 的 `Vanargand Animations II - Male Idle Walk and Run` 提供了 loose `male\mt_idle.hkx`，110,320 B，SHA-256 `24e892368499091949882ea43a6087c84be03429afed48bc10e101a7f1b64235`，与审计的基础文件**不是同一字节**；OAR 配置（Ashe 等）也引用 `mt_idle`。因此运行时该路径不能保证是已登记的 30,944 B 资源，不满足“无 OAR 变体 + 资源哈希可审计”。
+
+### 真值与承载路径缺口
+
+1. **独立真值不可得**：spline-compressed 关键帧需要独立解码器；若用运行时 `SamplePartialTracks` 的输出当“真值”就是循环论证。当前没有已审计的 Havok spline 解码器。
+2. **承载路径不可得**：CommonLibSSE 未暴露把任意 HKX 加载为 `hkaAnimation*` 的 API；`SamplePartialTracks` 只能作用于已加载的 animation。控制不能在不新增/审计 loader 的情况下运行。
+
+以上任一未满足即不得查看原生控制输出；本轮按契约停在登记阶段。
+
+### 处置与下一步（需另立契约）
+
+- **B 保持 NOT_READY**；不启动原生校准（CAL1），不产生 `tau_p/tau_r/tau_s/epsilon_t`。
+- 方案 A（推荐）：离线实现并审计 Havok spline 解码器；选一个运行时字节与审计文件一致的 binding（loose/OAR 未替换），在固定关键帧时间采样并独立比对。
+- 方案 B：作者一个 `hkaInterleavedUncompressedAnimation` 控制 HKX（已知关键帧、端点采样），并审计一条能加载任意 HKX 的引擎路径；当前无公开 API，成本更高。
+
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 
 **裁定**：v96a run 1 为 **K2-C1/C2/C3 提供了一次可复核的正面证据**，并把 D3 的 1HM 卸下完成点覆盖补齐；**K1-C1–C4 与 K2-C4（控制 B）仍未闭合**，因此 K1/K2 整体仍 **NOT_READY**，不能启动原生校准。
@@ -5196,7 +5235,7 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 
 **K1/K2 结论**：v96a 把 K2-C3 从 D3 的 clip-family 正结果推进为同一进程内的 clip-family + state-12-to-0 完成证据，并给 K2-C1/C2 留下可复核的初态与输入顺序；但它不证明 K1 的跨运行资源/实例身份，也不提供控制 B 的独立真值。K1-C1–C4 与 K2-C4 仍是原生校准的硬前置。
 
-**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739）；**K3 两侧已闭合**（[v98](build.md#g5-k3c-v98-run1-20261113) 候选 249 条 + [v99b](build.md#g5-k3s-v99b-run1-20261113) 源 1,151 条，双读一致、116 轨、零溢出；跨侧逐代配对不在 K3，见 [K3 收官](#g5-cal-k3-closure)）。剩余：**K2-C4 控制 B 登记**、**K5/K6**（完整计数、层/权重/混合、寿命/丢失），以及 K1-C1–C4 与 K2-C1/C2 的清单补齐。
+**下一步（按 CAL v1 顺序）**：**K4 B3/B4 已在本会话闭合**（[v97d](build.md#g5-e2b-b3b4-v97d-run1-20261113)，739/739）；**K3 两侧已闭合**（[v98](build.md#g5-k3c-v98-run1-20261113) 候选 249 条 + [v99b](build.md#g5-k3s-v99b-run1-20261113) 源 1,151 条，双读一致、116 轨、零溢出；跨侧逐代配对不在 K3，见 [K3 收官](#g5-cal-k3-closure)）。剩余：**K2-C4 控制 B**——已完成[资格审计](#c-g5-cal-b-qual)，**仍 NOT_READY**（运行时 `mt_idle` 被 Vanargand loose 覆盖 + OAR 引用；spline 真值解码器与任意 HKX loader 均缺）；**K5/K6**（完整计数、层/权重/混合、寿命/丢失）；以及 K1-C1–C4 与 K2-C1/C2 的清单补齐。
 
 ### 五、下一步与明确不做
 

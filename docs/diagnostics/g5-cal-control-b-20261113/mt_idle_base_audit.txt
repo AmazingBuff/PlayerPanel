@@ -1,0 +1,7 @@
+FILE E:\SkyrimTools\Proj\CharacterPanel\build\hkx-audit\male_mt_idle.hkx
+VARIANT Merged Animation Container hkaAnimationContainer
+VARIANT Resource Data hkMemoryResourceContainer
+SKELETONS 0 ANIMATIONS 1 BINDINGS 1 ATTACHMENTS 0 SKINS 0
+ANIMATION 0 class=hkaSplineCompressedAnimation type=5 duration=9.133333 transformTracks=99 floatTracks=4 annotationTracks=99 annotations=0
+  SPLINE numFrames=275 numBlocks=2 maxFramesPerBlock=256 blockDuration=8.500000 frameDuration=0.033333
+BINDING 0 skeleton='NPC Root [Root]' animationDuration=9.133333 transformTracks=0 floatTracks=4 blendHint=0
