@@ -200,9 +200,9 @@ OAR 关闭后候选 FNV **与 Track 1 逐位不变**：MT_Idle=`F56EE150…`（`
 
 `OAR hooks unavailable`（启动 `[I]`）+ 启动期唯一 `[E]`（OAR plugin info 探测失败）+ ANIMATION WORLD 行 `oar-api=unavailable oar-result=unavailable-unknown oar-path='' oar-project='' oar-variant='' oar-submod='' oar-mod=''` + 全日志零 `oar-result=replacement`。产品路径 unarmed 回落行为按预期出现（`unarmed replacement unavailable; direct MT_Idle fallback`——非冻结场景手部为空所致；冻结场景 1H 在手不会出现）。
 
-## 十二、预注册修订 v2（草案，待用户批准；批准前 Run 0 不重跑）
+## 十二、预注册修订 v2（2026-11-14 批准生效）
 
-Run 0a run 1 的三项发现需要修订批次设计。修订只发生在任何姿态采集之前；已收 run 1 数据保持 INVALID 原判，不回填。
+用户于 2026-11-14 批准：§12.1 `[E]` 伴生行豁免、§12.2 **方案 b**（环境修复）、§12.3 冻结场景重跑要求。Run 0a run 1 的三项发现需要修订批次设计。修订只发生在任何姿态采集之前；已收 run 1 数据保持 INVALID 原判，不回填。
 
 ### 12.1 启动期 `[E]` 伴生行容忍（设计后果，收窄到精确字符串）
 
@@ -212,7 +212,7 @@ Run 0a run 1 的三项发现需要修订批次设计。修订只发生在任何�
 
 | 方案 | 内容 | 优点 | 代价 |
 | --- | --- | --- | --- |
-| **b（推荐）** | 新建本地模组 `CharacterPanel-Track2Dummy`：把 BFCO 的 dummy 文件（29,008 B，`4061ce1b…`）逐字节复制到普通路径 `meshes\actors\character\animations\SCAR_1hmReadyDummy.hkx`，**仅在 `AE-Track2` 启用**（modlist 追加 1 行；主档 `AE` 不动） | census 判据不动（missing=0 恢复）；两侧同字节（`data FNV 8728A54A…`）→ dummy 族跨侧配对成立（Track 1 唯一配对族的连续性）；姿态对照覆盖全部 4 clip 槽位 | 磁盘视图新增 1 行 winner（须重跑 enum 重登记；行为闭包不受影响——behaviors/ 目录无变化）；触碰用户环境（新模组文件夹） |
+| **b（已批准）** | 新建本地模组 `CharacterPanel-Track2Dummy`：把 BFCO 的 dummy 文件（29,008 B，`4061ce1b…`）逐字节复制到普通路径 `meshes\actors\character\animations\SCAR_1hmReadyDummy.hkx`，**仅在 `AE-Track2` 启用**（modlist 追加 1 行；主档 `AE` 不动） | census 判据不动（missing=0 恢复）；两侧同字节（`data FNV 8728A54A…`）→ dummy 族跨侧配对成立（Track 1 唯一配对族的连续性）；姿态对照覆盖全部 4 clip 槽位 | 磁盘视图新增 1 行 winner（须重跑 enum 重登记；行为闭包不受影响——behaviors/ 目录无变化）；触碰用户环境（新模组文件夹） |
 | c | 修订 T2-C2：声明 dummy 槽为设计性对称缺失（两侧 `identity=false` 对称、data-fnv=0 → C 规则排除出配对资格），census 其余判据不变 | 零环境改动 | 判据修订（缺项合法化）；姿态对照少 1 个 clip 槽位（两侧对称，对照仍自洽）；Track 1 唯一配对族消失 |
 
 ### 12.3 冻结场景重跑要求（T2-C5）
@@ -221,4 +221,4 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 
 ### 12.4 方案 b 的重登记义务
 
-若选 b：① 建模组后重跑 `enum_track2.py`（modlist 977→978），winner-map diff 须为**恰好 1 行新增**（dummy 普通路径）且其余逐行不变；② 闭包走链复跑仍须 23/23；③ census 断言集合登记时 dummy 以新普通路径落位。**方案 b 落地前 Run 0b 不上机。**
+方案 b 落地记录：模组文件夹 `E:\SkyrimAE\mods\CharacterPanel-Track2Dummy\` 已由 Agent 创建（含 `README.txt` 与逐字节副本文件，源 = BFCO `…/OpenAnimationReplacer/050 ermoveset_crossnaginata/base/SCAR_1hmReadyDummy.hkx`，29,008 B，副本 SHA-256 `4061ce1b…` 与源一致）；**待用户在 MO2 的 `AE-Track2` 档中勾选启用**。之后：① 建模组后重跑 `enum_track2.py`（modlist 977→978），winner-map diff 须为**恰好 1 行新增**（dummy 普通路径）且其余逐行不变；② 闭包走链复跑仍须 23/23；③ census 断言集合登记时 dummy 以新普通路径落位。**方案 b 落地前 Run 0b 不上机。**
