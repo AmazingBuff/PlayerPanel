@@ -4,7 +4,7 @@
 
 > **2026-11-14 会话完整总结**：[第一会话](diagnostics/session-summary-20261114.md)（控制 B 方案 A + K1 身份普查）、[第二会话](diagnostics/session-summary-20261114-k2c1c2.md)（K1-C1 + K2-C1/C2 关闭、v102 仪器）与[第三会话](diagnostics/session-summary-20261114-k6.md)（**K6 计划评审 → K5 仪器实现 → v103 两侧运行 → K6 关闭**，新会话先读后者）。
 
-> **Track 2 预注册（2026-11-14，草案待评审）**：[C-G5 Track 2：同资源姿态对照批次预注册](diagnostics/g5-track2-20261114/README.md)——落实 K6 计划 §二两轨制的 Track 2 = B + C；MO2 档方案（新建 `AE-Track2`、仅停用 4 个 OAR 模组，其余 977 项不动）待用户批准，批准前不实施、不上机。
+> **Track 2 预注册（2026-11-14，评审通过）**：[C-G5 Track 2：同资源姿态对照批次预注册](diagnostics/g5-track2-20261114/README.md)——落实 K6 计划 §二两轨制的 Track 2 = B + C；用户已批准 MO2 档方案（新建 `AE-Track2`、仅停用 4 个 OAR 模组，其余 977 项不动），四个运行档已派生（[build.md Track 2 节](build.md#track-2-运行档派生2026-11-14纯-ini零代码零构建)，三个与既有登记哈希逐字一致）。当前停点：**待用户在 MO2 建 `AE-Track2` 并停用 4 模组** → 离线 winner-map 重 diff + 闭包复跑 → Run 0 census 前置门（T2-C1..C7）→ Run 1/2。
 
 更新：2026-11-11。先读[本轮 D1→D3 摘要](#status-20261111-d3-session)、[最新运行摘要](#status-20261111-session)、[C-G5-CAL v1 校准契约](#c-g5-cal-v1)、[离线 A 结果](#c-g5-cal-a-run1-20261111)与 [K1/K2 资格账本](#c-g5-cal-k1k2)。E1 v3 在 v71 有界通过；E2-B 的 B1/B2/B6 保留，B3/B4 未闭合；E3 输入序数配对 2/2，E4 在 v91/v92 取得四块完整的 116 轨源快照，E2-C 装备链速率已有有界证据。**离线 A 已完成；K1/K2 资格账本已登记；D1 判负（实际 1H，候选仍 H2H）；D2 判负（三项变量写入并保持，片段仍 H2H）；D3 v2 命中 `iRightHandType=1`、`iLeftHandType=9`；D3 候选 prime 已跑，clip-family PASS（`1HM_Equip`/`1HM_Unequip`），但 1HM 卸下在 120 步窗口内未完成（`default=12`）。下一步 K3–K6/B3/B4/控制 B；K1–K6、原生 B 与时间校准仍 NOT_READY，数值容差未产生。** G1/G2 有界通过、G3-B 相位回放与 G4 A/B/C 证据保留；完整层/权重/混合、输入/资源/实例身份、同代阶段和后处理边界仍须按契约补齐。G5 未冻结/未通过，G6 后置，装载 teardown NO-GO。**v96a 后续已部署并完成首次原生运行，关闭“差一帧”覆盖缺口；见[运行记录](build.md#g5-cal-v96a-observation-v2-run1-20261112)。** 历史记录保留各自日期与限定，不用旧摘要覆盖新运行。
 
