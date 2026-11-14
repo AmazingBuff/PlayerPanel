@@ -6,6 +6,7 @@
 
 #include "animation/behavior_graph/b3b4_policy.h"
 #include "animation/behavior_graph/k3_snapshot_policy.h"
+#include "animation/behavior_graph/k5_snapshot_policy.h"
 #include "animation/behavior_graph/probe_liveness_policy.h"
 #include "animation/behavior_graph/source_timeline_policy.h"
 #include "animation/behavior_graph/source_timeline.h"
@@ -357,6 +358,79 @@ namespace
     std::atomic<std::uint64_t> g_k3s_no_pose{ 0 };
     std::atomic<std::uint64_t> g_k3s_write_failed{ 0 };
     std::atomic<bool> g_k3s_open_failed{ false };
+
+    // ---- C-G5-CAL K5: per-apply source snapshot, CPK5 format v1 ------------------------------
+    // Same ring/drain split as K3-S with the extended record (per-clip identity columns,
+    // K6 plan §10.3). The identity cache is detour-owned and validated against three live
+    // header fields on every hit, so a same-address ABA mostly recomputes instead of
+    // aliasing a stale identity.
+    class K5SourceRing
+    {
+    public:
+        bool push(K5SourceRecord const& a_record) noexcept
+        {
+            if (!m_gate.try_enter())
+            {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+                return false;
+            }
+            std::size_t const head = m_head.load(std::memory_order_relaxed);
+            std::size_t const tail = m_tail.load(std::memory_order_acquire);
+            if (head - tail >= K5S_Record_Capacity)
+            {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+                m_gate.leave();
+                return false;
+            }
+            std::memcpy(&m_slots[head % K5S_Record_Capacity], &a_record, sizeof(a_record));
+            m_head.store(head + 1, std::memory_order_release);
+            m_gate.leave();
+            return true;
+        }
+
+        bool pop(K5SourceRecord& a_out) noexcept
+        {
+            std::size_t const tail = m_tail.load(std::memory_order_relaxed);
+            std::size_t const head = m_head.load(std::memory_order_acquire);
+            if (tail == head)
+                return false;
+            std::memcpy(&a_out, &m_slots[tail % K5S_Record_Capacity], sizeof(a_out));
+            m_tail.store(tail + 1, std::memory_order_release);
+            return true;
+        }
+
+        void drain_discard() noexcept
+        {
+            m_tail.store(m_head.load(std::memory_order_acquire), std::memory_order_release);
+        }
+
+        void reset() noexcept
+        {
+            m_head.store(0, std::memory_order_relaxed);
+            m_tail.store(0, std::memory_order_relaxed);
+            m_dropped.store(0, std::memory_order_relaxed);
+            m_gate.reset();
+        }
+
+        [[nodiscard]] std::uint64_t dropped() const noexcept
+        {
+            return m_dropped.load(std::memory_order_relaxed);
+        }
+
+    private:
+        std::array<K5SourceRecord, K5S_Record_Capacity> m_slots{};
+        std::atomic<std::size_t> m_head{ 0 };
+        std::atomic<std::size_t> m_tail{ 0 };
+        std::atomic<std::uint64_t> m_dropped{ 0 };
+        ProbePushGate m_gate;
+    };
+
+    K5SourceRing g_k5s_ring;
+    K5SourceWriter g_k5s_writer;
+    K5IdentityCache g_k5s_cache;
+    K5ReconCounters g_k5s_counters;
+    std::atomic<std::uint32_t> g_k5s_seq{ 0 };
+    std::atomic<bool> g_k5s_open_failed{ false };
 
     std::uintptr_t game_base()
     {
@@ -824,7 +898,101 @@ namespace
             return;
         if (a_entry.pose == nullptr)
         {
-            g_k3s_no_pose.fetch_add(1, std::memory_order_relaxed);
+            if (k5_full_sample())
+                g_k5s_counters.no_pose.fetch_add(1, std::memory_order_relaxed);
+            else
+                g_k3s_no_pose.fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
+        // C-G5-CAL K5: CPK5 format v1 replaces the K3-S record when K5FullSample is on.
+        // Same pose copy/two-read rule and clip walk, plus per-clip identity columns from
+        // the detour-owned cache. K5 counters replace the K3S counters; the two paths never
+        // run in the same window.
+        if (k5_full_sample())
+        {
+            auto const* const pose = static_cast<RE::hkQsTransform const*>(a_entry.pose);
+            std::uint32_t const count = a_entry.clamped < K5_Track_Capacity
+                ? a_entry.clamped : K5_Track_Capacity;
+            if (count == 0)
+                return;
+            alignas(16) RE::hkQsTransform first[K5_Track_Capacity]{};
+            alignas(16) RE::hkQsTransform second[K5_Track_Capacity]{};
+            std::memcpy(first, pose, count * sizeof(RE::hkQsTransform));
+            std::memcpy(second, pose, count * sizeof(RE::hkQsTransform));
+            bool const same = std::memcmp(first, second, count * sizeof(RE::hkQsTransform)) == 0;
+            if (!same)
+                g_k5s_counters.two_read_bad.fetch_add(1, std::memory_order_relaxed);
+            K5SourceRecord record{};
+            record.seq = g_k5s_seq.fetch_add(1, std::memory_order_relaxed) + 1;
+            record.tsc = __rdtsc();
+            record.path = static_cast<std::uint8_t>(probe_apply_path_index(a_entry.path));
+            record.two_read_equal = same ? 1u : 0u;
+            record.track_count = static_cast<std::uint16_t>(count);
+            for (std::uint32_t i = 0; i < count; ++i)
+            {
+                float* const v = record.tracks[i].value;
+                std::memcpy(v, &first[i].translation, 3 * sizeof(float));
+                std::memcpy(v + 3, &first[i].rotation, 4 * sizeof(float));
+                std::memcpy(v + 7, &first[i].scale, 3 * sizeof(float));
+            }
+            auto const* const graph = static_cast<RE::BShkbAnimationGraph const*>(a_entry.graph);
+            RE::hkbBehaviorGraph* const behavior = graph ? graph->characterInstance.behaviorGraph.get() : nullptr;
+            if (behavior && behavior->activeNodes)
+            {
+                RE::NodeList const& nodes = *behavior->activeNodes;
+                std::size_t const limit = std::min<std::size_t>(nodes.size(), 256);
+                bool identity_failed_record = false;
+                for (std::size_t i = 0; i < limit; ++i)
+                {
+                    RE::hkbNode* const node = nodes.data()[i].nodeClone;
+                    if (node == nullptr)
+                        continue;
+                    if (*reinterpret_cast<std::uintptr_t const*>(node) != RE::VTABLE_hkbClipGenerator[0].address())
+                        continue;
+                    if (record.clip_count >= K5_Clip_Capacity)
+                    {
+                        record.flags |= K5_Flag_Clip_Overflow;
+                        g_k5s_counters.clip_overflow.fetch_add(1, std::memory_order_relaxed);
+                        break;
+                    }
+                    auto const* const clip = static_cast<RE::hkbClipGenerator const*>(node);
+                    K5ClipRecord& out = record.clips[record.clip_count];
+                    out.node_ptr = reinterpret_cast<std::uintptr_t>(clip);
+                    out.binding_ptr = plausible_object_pointer(reinterpret_cast<std::uintptr_t>(clip->binding))
+                        ? reinterpret_cast<std::uintptr_t>(clip->binding)
+                        : 0;
+                    out.binding_index = clip->animationBindingIndex;
+                    out.local_time_bits = std::bit_cast<std::uint32_t>(clip->localTime);
+                    out.mode = static_cast<std::uint8_t>(clip->mode.get());
+                    char const* const name = clip->animationName.c_str();
+                    if (name != nullptr)
+                    {
+                        std::size_t k = 0;
+                        for (; k + 1 < K5_Clip_Name_Length && name[k] != '\0'; ++k)
+                            out.name[k] = name[k];
+                        out.name[k] = '\0';
+                    }
+                    K5IdentityCache::Entry const entry = out.binding_ptr != 0
+                        ? g_k5s_cache.identity_for(reinterpret_cast<
+                            RE::hkaAnimationBinding const*>(out.binding_ptr))
+                        : K5IdentityCache::Entry{ false, AnimationResourceIdentity{} };
+                    if (!entry.ok)
+                    {
+                        identity_failed_record = true;
+                        g_k5s_counters.identity_failed_clips.fetch_add(1, std::memory_order_relaxed);
+                    }
+                    out.duration_bits = entry.identity.duration_bits;
+                    out.data_fnv = entry.identity.data_hash;
+                    out.blockoff_fnv = entry.identity.block_offsets_hash;
+                    out.map_fnv = entry.identity.map_hash;
+                    out.map_count = entry.identity.map_count;
+                    ++record.clip_count;
+                }
+                if (identity_failed_record)
+                    g_k5s_counters.drift_records.fetch_add(1, std::memory_order_relaxed);
+            }
+            g_k5s_counters.attempted.fetch_add(1, std::memory_order_relaxed);
+            (void)g_k5s_ring.push(record);
             return;
         }
         auto const* const pose = static_cast<RE::hkQsTransform const*>(a_entry.pose);
@@ -1123,6 +1291,52 @@ namespace
         }
     }
 
+    // C-G5-CAL K5: render-thread drain for the CPK5 source artifact (mirror of the K3-S
+    // drain; the record type and capacity differ, nothing else).
+    void drain_k5s_records() noexcept
+    {
+        if (sampling_liveness_mode() == ProbeLivenessMode::e_off || !k5_full_sample())
+            return;
+        K5SourceRecord record{};
+        while (g_k5s_ring.pop(record))
+        {
+            if (!g_k5s_writer.is_open())
+            {
+                auto const log_dir = SKSE::log::log_directory();
+                if (!log_dir)
+                {
+                    g_k5s_open_failed.store(true, std::memory_order_relaxed);
+                    g_k5s_ring.drain_discard();
+                    return;
+                }
+                std::time_t const now = std::time(nullptr);
+                std::tm utc{};
+                (void)gmtime_s(&utc, &now);
+                char stamp[32]{};
+                (void)std::strftime(stamp, sizeof(stamp), "%Y%m%dT%H%M%SZ", &utc);
+                std::string const path = fmt::format("{}/CharacterPanel-g5k5s-{}-{}.bin",
+                    log_dir->string(), Plugin::Plugin_Build_Identity, stamp);
+                if (!g_k5s_writer.open(path, Plugin::Plugin_Build_Identity))
+                {
+                    g_k5s_open_failed.store(true, std::memory_order_relaxed);
+                    g_k5s_ring.drain_discard();
+                    return;
+                }
+                logger::info("K5 SOURCE open path='{}' identity='{}'", path,
+                    Plugin::Plugin_Build_Identity);
+            }
+            if (!g_k5s_writer.append(record))
+            {
+                // Capacity rejection is reported by overflow=true, not as an I/O failure.
+                if (!g_k5s_writer.overflow())
+                    g_k5s_counters.write_failed.fetch_add(1, std::memory_order_relaxed);
+                g_k5s_ring.drain_discard();
+                return;
+            }
+            g_k5s_counters.recorded.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+
     void reset_k3s() noexcept
     {
         g_k3s_ring.reset();
@@ -1134,6 +1348,18 @@ namespace
         g_k3s_write_failed.store(0, std::memory_order_relaxed);
         g_k3s_open_failed.store(false, std::memory_order_relaxed);
         (void)g_k3s_writer.close();
+        g_k5s_ring.reset();
+        g_k5s_seq.store(0, std::memory_order_relaxed);
+        g_k5s_open_failed.store(false, std::memory_order_relaxed);
+        g_k5s_counters.attempted.store(0, std::memory_order_relaxed);
+        g_k5s_counters.recorded.store(0, std::memory_order_relaxed);
+        g_k5s_counters.two_read_bad.store(0, std::memory_order_relaxed);
+        g_k5s_counters.clip_overflow.store(0, std::memory_order_relaxed);
+        g_k5s_counters.no_pose.store(0, std::memory_order_relaxed);
+        g_k5s_counters.write_failed.store(0, std::memory_order_relaxed);
+        g_k5s_counters.identity_failed_clips.store(0, std::memory_order_relaxed);
+        g_k5s_counters.drift_records.store(0, std::memory_order_relaxed);
+        (void)g_k5s_writer.close();
     }
 
     void drain_probe_records(ProbeState& s)
@@ -1235,7 +1461,9 @@ namespace
             return;
         drain_probe_records(s);
         drain_k3s_records();
-        if (sampling_liveness_mode() != ProbeLivenessMode::e_off && !s.k3s_closed)
+        drain_k5s_records();
+        if (sampling_liveness_mode() != ProbeLivenessMode::e_off && !s.k3s_closed &&
+            !k5_full_sample())
         {
             s.k3s_closed = true;
             bool const had_file = g_k3s_writer.is_open();
@@ -1249,6 +1477,85 @@ namespace
                 g_k3s_no_pose.load(std::memory_order_relaxed),
                 g_k3s_write_failed.load(std::memory_order_relaxed),
                 g_k3s_open_failed.load(std::memory_order_relaxed));
+        }
+        // C-G5-CAL K5: source-window close row, RECON row and JSON ledger. The close row
+        // always accompanies a K5 window; the RECON row and ledger follow the
+        // K5Reconciliation key (K6 plan §10.1). Artifact hashes are registered offline.
+        if (sampling_liveness_mode() != ProbeLivenessMode::e_off && k5_full_sample())
+        {
+            (void)g_k5s_writer.close();
+            std::uint64_t const attempted = g_k5s_counters.attempted.load(std::memory_order_relaxed);
+            std::uint64_t const recorded = g_k5s_counters.recorded.load(std::memory_order_relaxed);
+            std::uint64_t const dropped = g_k5s_ring.dropped();
+            logger::info("K5 SOURCE close path='{}' records={} attempted={} dropped={} overflow={} two-read-bad={} clip-overflow={} no-pose={} write-failed={} identity-failed={} drift-records={} open-failed={}",
+                recorded > 0 || attempted > 0 ? g_k5s_writer.path() : std::string{},
+                recorded, attempted, dropped, g_k5s_writer.overflow(),
+                g_k5s_counters.two_read_bad.load(std::memory_order_relaxed),
+                g_k5s_counters.clip_overflow.load(std::memory_order_relaxed),
+                g_k5s_counters.no_pose.load(std::memory_order_relaxed),
+                g_k5s_counters.write_failed.load(std::memory_order_relaxed),
+                g_k5s_counters.identity_failed_clips.load(std::memory_order_relaxed),
+                g_k5s_counters.drift_records.load(std::memory_order_relaxed),
+                g_k5s_open_failed.load(std::memory_order_relaxed));
+            if (k5_reconciliation())
+            {
+                logger::info("K5 RECON side=source expected={} attempted={} recorded={} missing={} truncated={} "
+                    "two-read-bad={} clip-overflow={} identity-failed={} drift-records={} dropped={} no-pose={}",
+                    attempted, attempted, recorded,
+                    attempted > recorded + dropped ? attempted - recorded - dropped : 0,
+                    g_k5s_writer.overflow() ? 1u : 0u,
+                    g_k5s_counters.two_read_bad.load(std::memory_order_relaxed),
+                    g_k5s_counters.clip_overflow.load(std::memory_order_relaxed),
+                    g_k5s_counters.identity_failed_clips.load(std::memory_order_relaxed),
+                    g_k5s_counters.drift_records.load(std::memory_order_relaxed),
+                    dropped,
+                    g_k5s_counters.no_pose.load(std::memory_order_relaxed));
+                if (g_k5s_writer.path().empty())
+                {
+                    logger::info("K5 RECON ledger path='' status=no-artifact");
+                }
+                else
+                {
+                    std::string json_path = g_k5s_writer.path();
+                    json_path.replace(json_path.size() - 4, 4, ".json");
+                    std::ofstream json(json_path.c_str(), std::ios::binary | std::ios::trunc);
+                    if (!json)
+                    {
+                        logger::info("K5 RECON ledger path='{}' status=write-failed", json_path);
+                    }
+                    else
+                    {
+                        std::string escaped;
+                        escaped.reserve(g_k5s_writer.path().size());
+                        for (char const c : g_k5s_writer.path())
+                        {
+                            if (c == '\\' || c == '"')
+                                escaped.push_back('\\');
+                            escaped.push_back(c);
+                        }
+                        json << fmt::format(
+                            "{{\"magic\":\"CPK5\",\"side\":\"source\",\"identity\":\"{}\",\"artifact\":\"{}\","
+                            "\"record_capacity\":{},\"track_capacity\":{},\"clip_capacity\":{},"
+                            "\"expected\":{},\"attempted\":{},\"recorded\":{},\"missing\":{},\"dropped\":{},"
+                            "\"overflow\":{},\"write_failed\":{},\"truncated\":{},\"two_read_bad\":{},"
+                            "\"clip_overflow\":{},\"no_pose\":{},\"identity_failed_clips\":{},\"drift_records\":{}}}\n",
+                            Plugin::Plugin_Build_Identity, escaped,
+                            K5S_Record_Capacity, K5_Track_Capacity, K5_Clip_Capacity,
+                            attempted, attempted, recorded,
+                            attempted > recorded + dropped ? attempted - recorded - dropped : 0,
+                            dropped,
+                            g_k5s_writer.overflow() ? 1 : 0,
+                            g_k5s_counters.write_failed.load(std::memory_order_relaxed),
+                            g_k5s_writer.overflow() ? 1 : 0,
+                            g_k5s_counters.two_read_bad.load(std::memory_order_relaxed),
+                            g_k5s_counters.clip_overflow.load(std::memory_order_relaxed),
+                            g_k5s_counters.no_pose.load(std::memory_order_relaxed),
+                            g_k5s_counters.identity_failed_clips.load(std::memory_order_relaxed),
+                            g_k5s_counters.drift_records.load(std::memory_order_relaxed));
+                        logger::info("K5 RECON ledger path='{}' status=written", json_path);
+                    }
+                }
+            }
         }
         std::uint64_t const eligible = s.counters.eligible_records.load(std::memory_order_relaxed);
         std::uint64_t const missing = eligible - s.drained_records - s.ring.dropped();

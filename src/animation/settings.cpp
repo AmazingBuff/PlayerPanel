@@ -36,6 +36,9 @@ namespace
     bool g_control_sample = false;
     bool g_clip_identity_census = false;
     bool g_equipment_state_dump = false;
+    bool g_k5_full_sample = false;
+    bool g_k5_layer_audit = false;
+    bool g_k5_reconciliation = false;
     behavior_graph::ProbeLivenessMode g_sampling_liveness_mode = behavior_graph::ProbeLivenessMode::e_off;
 }
 void load_settings()
@@ -87,6 +90,9 @@ void load_settings()
     g_control_sample = ini.GetBoolValue("Experiment", "ControlSample", false);
     g_clip_identity_census = ini.GetBoolValue("Experiment", "ClipIdentityCensus", false);
     g_equipment_state_dump = ini.GetBoolValue("Experiment", "EquipmentStateDump", false);
+    g_k5_full_sample = ini.GetBoolValue("Experiment", "K5FullSample", false);
+    g_k5_layer_audit = ini.GetBoolValue("Experiment", "K5LayerAudit", false);
+    g_k5_reconciliation = ini.GetBoolValue("Experiment", "K5Reconciliation", false);
     char const* const sampling_liveness = ini.GetValue("Experiment", "SamplingLiveness", "off");
     std::optional<behavior_graph::ProbeLivenessMode> const parsed_sampling_liveness =
         behavior_graph::parse_probe_liveness(sampling_liveness ? std::string_view{ sampling_liveness } : std::string_view{});
@@ -126,6 +132,9 @@ void load_settings()
     logger::info("EXPERIMENT setting ControlSample={}", g_control_sample);
     logger::info("EXPERIMENT setting ClipIdentityCensus={}", g_clip_identity_census);
     logger::info("EXPERIMENT setting EquipmentStateDump={}", g_equipment_state_dump);
+    logger::info("EXPERIMENT setting K5FullSample={}", g_k5_full_sample);
+    logger::info("EXPERIMENT setting K5LayerAudit={}", g_k5_layer_audit);
+    logger::info("EXPERIMENT setting K5Reconciliation={}", g_k5_reconciliation);
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
@@ -134,6 +143,9 @@ bool observation_snapshot() { return g_observation_snapshot; }
 bool control_sample() { return g_control_sample; }
 bool clip_identity_census() { return g_clip_identity_census; }
 bool equipment_state_dump() { return g_equipment_state_dump; }
+bool k5_full_sample() { return g_k5_full_sample; }
+bool k5_layer_audit() { return g_k5_layer_audit; }
+bool k5_reconciliation() { return g_k5_reconciliation; }
 behavior_graph::IndependentGraphMode independent_graph_setting() { return g_independent_graph; }
 bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }

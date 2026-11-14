@@ -118,6 +118,23 @@ namespace animation
     // BipedObjectSlot mask bit via Actor::GetWornArmor; defaults off. With the key off the
     // row is byte-identical to the historical format, so past runs stay comparable.
     [[nodiscard]] bool equipment_state_dump();
+    // C-G5-CAL K5 (2026-11-14, K6 plan §10): switch the per-generation candidate snapshot
+    // (and the per-apply source snapshot under SamplingLiveness) to the CPK5 format v1,
+    // which adds per-clip resource identity columns (stable-id pointers, duration bits,
+    // data/blockOffsets/map hashes) to the K3 layout. Shares every trigger point and the
+    // two-read rule with ObservationSnapshot; when both are on the K3 writer is suppressed
+    // with a logged declaration row. Defaults off; with the key off the output is
+    // byte-identical to the historical behaviour.
+    [[nodiscard]] bool k5_full_sample();
+    // C-G5-CAL K5: at the four pre-registered audit points (post-activate, equip mid,
+    // equip settle, unequip complete) walk the candidate's active-node list, classify
+    // every node by exact vtable match and log one K5 LAYER row per node plus one K5
+    // AUDIT summary row. Read-only; defaults off.
+    [[nodiscard]] bool k5_layer_audit();
+    // C-G5-CAL K5: emit the K5 RECON reconciliation row and JSON ledger artifact when the
+    // source-side F7 window closes. The candidate side always reconciles when K5FullSample
+    // is on, so this key only governs the source window. Defaults off.
+    [[nodiscard]] bool k5_reconciliation();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

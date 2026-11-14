@@ -21,6 +21,7 @@ set(PLUGIN_SOURCES
 	src/animation/behavior_graph/frame_trace.cpp
 	src/animation/behavior_graph/control_sample.cpp
 	src/animation/behavior_graph/k1_census.cpp
+	src/animation/behavior_graph/k5_audit.cpp
 	src/animation/behavior_graph/independent_graph.cpp
 	src/animation/behavior_graph/ownership_probe.cpp
 	src/animation/behavior_graph/probe_liveness.cpp

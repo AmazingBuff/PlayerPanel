@@ -10,6 +10,8 @@
 #include "animation/behavior_graph/control_sample.h"
 #include "animation/behavior_graph/k1_census.h"
 #include "animation/behavior_graph/k3_snapshot_policy.h"
+#include "animation/behavior_graph/k5_audit.h"
+#include "animation/behavior_graph/k5_snapshot_policy.h"
 #include "animation/behavior_graph/drive_step_policy.h"
 #include "animation/behavior_graph/display_step_clock.h"
 #include "animation/clip.h"
@@ -1574,6 +1576,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             log_candidate_census_after_activate(*candidate, actor_id, request);
             if (clip_identity_census())
                 log_k1_census(*candidate, "candidate", actor_id, request, "post-activate", true);
+            if (k5_layer_audit())
+                log_k5_layer_audit(*candidate, actor_id, request, "post-activate", 0);
                         const std::string candidate_pose_before = format_pose_hash(candidate->characterInstance);
                         std::string candidate_pose_mid = "not-run";
                         std::string candidate_pose_end = "not-run";
@@ -2253,6 +2257,11 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             };
                             bool control_sample_attempted = false;
                             std::size_t k1_clip_census_count = 0;
+                            // C-G5-CAL K5 audit points 2/4 (K6 plan §10.4): one-shot anchors
+                            // inside the shared per-generation output recorder.
+                            bool const k5_audit_enabled = k5_layer_audit();
+                            bool k5_equip_mid_audit_done = false;
+                            bool k5_unequip_audit_done = false;
                             const auto record_output = [&]() {
                                 ClipObservation const clips = collect_active_clips();
                                 record_clip_clocks(clips);
@@ -2278,6 +2287,20 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     if (observation.completed() == 60) segment_pose_mid = segment_pose_end;
                                     observation.finish_point();
                                 }
+                                if (k5_audit_enabled && !k5_equip_mid_audit_done &&
+                                    std::strcmp(observation.segment_name(), "equip") == 0 &&
+                                    observation.completed() == 60)
+                                {
+                                    k5_equip_mid_audit_done = true;
+                                    log_k5_layer_audit(*candidate, actor_id, request, "equip-mid", 1);
+                                }
+                                if (k5_audit_enabled && !k5_unequip_audit_done &&
+                                    std::strcmp(observation.segment_name(), "unequip") == 0 &&
+                                    observation.outcome() == ObservationOutcome::e_completed)
+                                {
+                                    k5_unequip_audit_done = true;
+                                    log_k5_layer_audit(*candidate, actor_id, request, "unequip-complete", 3);
+                                }
                                 bool const checkpoint = observation.completed() == 0 || observation.checkpoint();
                                 if (checkpoint)
                                 {
@@ -2299,6 +2322,27 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             bool const k3_enabled = observation_snapshot() && generation_profile;
                             std::uint32_t k3_attempted = 0;
                             std::string k3_path;
+                            // C-G5-CAL K5 (K6 plan §10): CPK5 format v1 with per-clip resource
+                            // identity columns. Shares every trigger point and the two-read rule
+                            // with the K3 writer; when both keys are on, K3 is suppressed with a
+                            // logged declaration row. The close emits the K5 RECON row and the
+                            // JSON ledger (counters + caps + per-segment outcomes; artifact
+                            // hashes are registered offline).
+                            K5SnapshotWriter k5_writer;
+                            K5IdentityCache k5_cache;
+                            K5ReconCounters k5_counters;
+                            bool const k5_full_enabled = k5_full_sample() && generation_profile;
+                            bool const k3_effective = k3_enabled && !k5_full_enabled;
+                            if (k5_full_enabled && k3_enabled)
+                                logger::info("K5 MODE k3-suppressed actor={:08x} request={}", actor_id, request);
+                            std::uint32_t k5_attempted = 0;
+                            std::string k5_path;
+                            std::uint32_t k5_expected_equip = 0;
+                            std::uint32_t k5_expected_unequip = 0;
+                            char const* k5_equip_outcome = "not-run";
+                            char const* k5_equip_reason = "not-run";
+                            char const* k5_unequip_outcome = "not-run";
+                            char const* k5_unequip_reason = "not-run";
                             struct K3CloseLog
                             {
                                 K3SnapshotWriter& writer;
@@ -2312,8 +2356,214 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         writer.path(), writer.records(), attempted, writer.overflow(),
                                         writer.records() != attempted ? "yes" : "no");
                                 }
-                            } k3_close_log{ k3_writer, k3_attempted, k3_enabled };
+                            } k3_close_log{ k3_writer, k3_attempted, k3_effective };
+                            struct K5CloseLog
+                            {
+                                K5SnapshotWriter& writer;
+                                K5ReconCounters& counters;
+                                std::uint32_t& attempted;
+                                std::uint32_t& expected_equip;
+                                std::uint32_t& expected_unequip;
+                                char const*& equip_outcome;
+                                char const*& equip_reason;
+                                char const*& unequip_outcome;
+                                char const*& unequip_reason;
+                                bool enabled;
+                                ~K5CloseLog()
+                                {
+                                    if (!enabled) return;
+                                    (void)writer.close();
+                                    std::uint32_t const expected = expected_equip + expected_unequip;
+                                    logger::info("K5 SNAPSHOT close path='{}' records={} attempted={} overflow={} write-failed={}",
+                                        writer.path(), writer.records(), attempted, writer.overflow(),
+                                        writer.records() != attempted ? "yes" : "no");
+                                    logger::info("K5 RECON side=candidate expected={} attempted={} recorded={} missing={} truncated={} "
+                                        "two-read-bad={} clip-overflow={} identity-failed={} drift-records={} dropped={} "
+                                        "equip-expected={} equip-outcome={} equip-reason='{}' unequip-expected={} unequip-outcome={} unequip-reason='{}'",
+                                        expected, attempted, writer.records(),
+                                        expected > writer.records() ? expected - writer.records() : 0,
+                                        counters.truncated.load(std::memory_order_relaxed),
+                                        counters.two_read_bad.load(std::memory_order_relaxed),
+                                        counters.clip_overflow.load(std::memory_order_relaxed),
+                                        counters.identity_failed_clips.load(std::memory_order_relaxed),
+                                        counters.drift_records.load(std::memory_order_relaxed),
+                                        counters.dropped.load(std::memory_order_relaxed),
+                                        expected_equip, equip_outcome, equip_reason,
+                                        expected_unequip, unequip_outcome, unequip_reason);
+                                    if (writer.path().empty())
+                                        return;
+                                    std::string json_path = writer.path();
+                                    json_path.replace(json_path.size() - 4, 4, ".json");
+                                    std::ofstream json(json_path.c_str(), std::ios::binary | std::ios::trunc);
+                                    if (!json)
+                                    {
+                                        logger::info("K5 RECON ledger path='{}' status=write-failed", json_path);
+                                        return;
+                                    }
+                                    std::string artifact = writer.path();
+                                    std::string escaped;
+                                    escaped.reserve(artifact.size());
+                                    for (char const c : artifact)
+                                    {
+                                        if (c == '\\' || c == '"')
+                                            escaped.push_back('\\');
+                                        escaped.push_back(c);
+                                    }
+                                    json << fmt::format(
+                                        "{{\"magic\":\"CPK5\",\"side\":\"candidate\",\"identity\":\"{}\",\"artifact\":\"{}\","
+                                        "\"record_capacity\":{},\"track_capacity\":{},\"clip_capacity\":{},"
+                                        "\"expected\":{},\"attempted\":{},\"recorded\":{},\"missing\":{},"
+                                        "\"overflow\":{},\"write_failed\":{},\"truncated\":{},\"two_read_bad\":{},"
+                                        "\"clip_overflow\":{},\"identity_failed_clips\":{},\"drift_records\":{},\"dropped\":{},"
+                                        "\"segments\":{{\"equip\":{{\"expected\":{},\"outcome\":\"{}\",\"reason\":\"{}\"}},"
+                                        "\"unequip\":{{\"expected\":{},\"outcome\":\"{}\",\"reason\":\"{}\"}}}}}}\n",
+                                        Plugin::Plugin_Build_Identity, escaped,
+                                        K5_Record_Capacity, K5_Track_Capacity, K5_Clip_Capacity,
+                                        expected, attempted, writer.records(),
+                                        expected > writer.records() ? expected - writer.records() : 0,
+                                        writer.overflow() ? 1 : 0,
+                                        writer.records() != attempted ? 1 : 0,
+                                        counters.truncated.load(std::memory_order_relaxed),
+                                        counters.two_read_bad.load(std::memory_order_relaxed),
+                                        counters.clip_overflow.load(std::memory_order_relaxed),
+                                        counters.identity_failed_clips.load(std::memory_order_relaxed),
+                                        counters.drift_records.load(std::memory_order_relaxed),
+                                        counters.dropped.load(std::memory_order_relaxed),
+                                        expected_equip, equip_outcome, equip_reason,
+                                        expected_unequip, unequip_outcome, unequip_reason);
+                                    logger::info("K5 RECON ledger path='{}' status=written", json_path);
+                                }
+                            } k5_close_log{ k5_writer, k5_counters, k5_attempted,
+                                k5_expected_equip, k5_expected_unequip,
+                                k5_equip_outcome, k5_equip_reason,
+                                k5_unequip_outcome, k5_unequip_reason,
+                                k5_full_enabled };
                             const auto record_k3_snapshot = [&]() {
+                                if (k5_full_enabled)
+                                {
+                                    ++k5_attempted;
+                                    if (!k5_writer.is_open())
+                                    {
+                                        auto const log_dir = SKSE::log::log_directory();
+                                        if (!log_dir)
+                                        {
+                                            observation.invalidate("k5-no-log-dir");
+                                            return;
+                                        }
+                                        std::time_t const now = std::time(nullptr);
+                                        std::tm utc{};
+                                        (void)gmtime_s(&utc, &now);
+                                        char stamp[32]{};
+                                        (void)std::strftime(stamp, sizeof(stamp), "%Y%m%dT%H%M%SZ", &utc);
+                                        k5_path = fmt::format("{}/CharacterPanel-g5k5-{}-{}.bin",
+                                            log_dir->string(), Plugin::Plugin_Build_Identity, stamp);
+                                        if (!k5_writer.open(k5_path, Plugin::Plugin_Build_Identity))
+                                        {
+                                            observation.invalidate("k5-open-failed");
+                                            return;
+                                        }
+                                        logger::info("K5 SNAPSHOT open path='{}' identity='{}'", k5_path,
+                                            Plugin::Plugin_Build_Identity);
+                                    }
+                                    std::vector<PoseSample> first;
+                                    std::vector<PoseSample> second;
+                                    read_pose_local(candidate->characterInstance, first);
+                                    read_pose_local(candidate->characterInstance, second);
+                                    bool const same = first.size() == second.size() &&
+                                        (first.empty() || std::memcmp(first.data(), second.data(),
+                                            first.size() * sizeof(PoseSample)) == 0);
+                                    if (!same)
+                                    {
+                                        k5_counters.two_read_bad.fetch_add(1, std::memory_order_relaxed);
+                                        observation.invalidate("k5-two-read-mismatch");
+                                    }
+                                    std::array<K3TrackRecord, K5_Track_Capacity> tracks{};
+                                    std::uint32_t const track_count = static_cast<std::uint32_t>(
+                                        std::min(first.size(), static_cast<std::size_t>(K5_Track_Capacity)));
+                                    for (std::uint32_t i = 0; i < track_count; ++i)
+                                    {
+                                        PoseSample const& sample = first[i];
+                                        float* const v = tracks[i].value;
+                                        v[0] = sample.translation[0];
+                                        v[1] = sample.translation[1];
+                                        v[2] = sample.translation[2];
+                                        v[3] = sample.rotation[0];
+                                        v[4] = sample.rotation[1];
+                                        v[5] = sample.rotation[2];
+                                        v[6] = sample.rotation[3];
+                                        v[7] = sample.scale[0];
+                                        v[8] = sample.scale[1];
+                                        v[9] = sample.scale[2];
+                                    }
+                                    std::array<K5ClipRecord, K5_Clip_Capacity> clips{};
+                                    std::uint32_t clip_count = 0;
+                                    bool clip_overflow_k5 = false;
+                                    bool identity_failed_record = false;
+                                    RE::hkbBehaviorGraph* const behavior_now =
+                                        candidate->characterInstance.behaviorGraph.get();
+                                    if (behavior_now && behavior_now->activeNodes)
+                                    {
+                                        RE::NodeList const& nodes = *behavior_now->activeNodes;
+                                        std::size_t const limit = std::min<std::size_t>(nodes.size(),
+                                            Observation_Node_Limit);
+                                        for (std::size_t i = 0; i < limit; ++i)
+                                        {
+                                            RE::hkbNode* const node = nodes.data()[i].nodeClone;
+                                            if (!node_is_clip_generator(node)) continue;
+                                            if (clip_count >= K5_Clip_Capacity)
+                                            {
+                                                clip_overflow_k5 = true;
+                                                break;
+                                            }
+                                            auto const* const clip = static_cast<RE::hkbClipGenerator const*>(node);
+                                            K5ClipRecord& out = clips[clip_count];
+                                            out.node_ptr = reinterpret_cast<std::uintptr_t>(clip);
+                                            out.binding_ptr = plausible_object_pointer(
+                                                reinterpret_cast<std::uintptr_t>(clip->binding))
+                                                ? reinterpret_cast<std::uintptr_t>(clip->binding)
+                                                : 0;
+                                            out.binding_index = clip->animationBindingIndex;
+                                            out.local_time_bits = std::bit_cast<std::uint32_t>(clip->localTime);
+                                            out.mode = static_cast<std::uint8_t>(clip->mode.get());
+                                            std::string const name = read_string(clip->animationName,
+                                                K5_Clip_Name_Length);
+                                            std::memcpy(out.name, name.data(),
+                                                std::min(name.size(), K5_Clip_Name_Length - 1));
+                                            K5IdentityCache::Entry const entry = out.binding_ptr != 0
+                                                ? k5_cache.identity_for(reinterpret_cast<
+                                                    RE::hkaAnimationBinding const*>(out.binding_ptr))
+                                                : K5IdentityCache::Entry{ false, AnimationResourceIdentity{} };
+                                            if (!entry.ok)
+                                            {
+                                                identity_failed_record = true;
+                                                k5_counters.identity_failed_clips.fetch_add(1,
+                                                    std::memory_order_relaxed);
+                                            }
+                                            out.duration_bits = entry.identity.duration_bits;
+                                            out.data_fnv = entry.identity.data_hash;
+                                            out.blockoff_fnv = entry.identity.block_offsets_hash;
+                                            out.map_fnv = entry.identity.map_hash;
+                                            out.map_count = entry.identity.map_count;
+                                            ++clip_count;
+                                        }
+                                    }
+                                    if (clip_overflow_k5)
+                                    {
+                                        k5_counters.clip_overflow.fetch_add(1, std::memory_order_relaxed);
+                                        observation.invalidate("k5-clip-overflow");
+                                    }
+                                    if (identity_failed_record)
+                                        k5_counters.drift_records.fetch_add(1, std::memory_order_relaxed);
+                                    std::uint8_t const segment = std::strcmp(observation.segment_name(), "equip") == 0
+                                        ? 0 : 1;
+                                    if (!k5_writer.append(segment, observation.completed(),
+                                            observation.commanded(), observation.elapsed(), same,
+                                            std::span<K5ClipRecord const>{ clips.data(), clip_count },
+                                            std::span<K3TrackRecord const>{ tracks.data(), track_count }))
+                                        observation.invalidate(k5_writer.overflow()
+                                            ? "k5-record-overflow" : "k5-write-failed");
+                                    return;
+                                }
                                 if (!k3_enabled) return;
                                 ++k3_attempted;
                                 if (!k3_writer.is_open())
@@ -2527,6 +2777,9 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             candidate_pose_mid = segment_pose_mid;
                             candidate_pose_end = segment_pose_end;
                             std::uint32_t const equip_completed = observation.completed();
+                            k5_expected_equip = equip_completed;
+                            k5_equip_outcome = observation.outcome_name();
+                            k5_equip_reason = observation.reason();
                             std::uint32_t unequip_completed = 0;
                             // Both segments finish before the borrowed world is released.
                             if (unequip_probe.armed && observation.outcome() != ObservationOutcome::e_invalid)
@@ -2620,6 +2873,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                             actor_id, request, unequip_event_name, unequip_id);
                                         if (unequip_id >= 0)
                                         {
+                                            if (k5_audit_enabled)
+                                                log_k5_layer_audit(*candidate, actor_id, request, "equip-settle", 2);
                                             InjectedEvent unequip_event{ static_cast<std::uint32_t>(unequip_id), 0, nullptr, nullptr };
                                             static REL::Relocation<event_dispatch_t> unequip_dispatch{ REL::ID(EventDispatchID) };
                                             {
@@ -2658,6 +2913,9 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         }
                                         end_observations();
                                         unequip_completed = observation.completed();
+                                        k5_expected_unequip = unequip_completed;
+                                        k5_unequip_outcome = observation.outcome_name();
+                                        k5_unequip_reason = observation.reason();
                                     }
                                 }
                                 else
