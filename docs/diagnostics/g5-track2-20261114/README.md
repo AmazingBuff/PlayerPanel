@@ -257,4 +257,4 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 
 **实施状态**：占位模组已由 Agent 创建并校验；待用户在 MO2 的 `AE-Track2` 档勾选 `CharacterPanel-Track2RaySenseEsp` 并在插件页勾选 `RaySense.esp`（排序位置无关）。完成后重跑 Run 0a（Save116、一次窗口、装备不动）。
 
-**新存档路径（后备，未启用）**：若占位后 Save16 仍不可读，再评估"新存档登记为 Track 2 场景"修订（§13 已记录其可行性旁证：run 2 在新存档下 unequip completed=129 与 Track 1 同值）。占位方案成立则不启动。
+**新存档路径（后备，未启用）**：若占位后 Save116 仍不可读，再评估"新存档登记为 Track 2 场景"修订（§13 已记录其可行性旁证：run 2 在新存档下 unequip completed=129 与 Track 1 同值）。占位方案成立则不启动。
