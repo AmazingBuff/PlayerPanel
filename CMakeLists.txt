@@ -19,6 +19,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(PLUGIN_SOURCES
 	src/animation/behavior_graph/frame_trace.cpp
+	src/animation/behavior_graph/control_sample.cpp
 	src/animation/behavior_graph/independent_graph.cpp
 	src/animation/behavior_graph/ownership_probe.cpp
 	src/animation/behavior_graph/probe_liveness.cpp

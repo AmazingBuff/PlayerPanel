@@ -106,6 +106,10 @@ namespace animation
     [[nodiscard]] bool sampling_liveness();
     // C-G5-CAL K3-C: write the per-generation full candidate snapshot artifact.
     [[nodiscard]] bool observation_snapshot();
+    // C-G5-CAL K2-C4 control B: read-only, fixed-time sample of the registered MT_Idle
+    // animation through the candidate's loaded binding. Requires IndependentGraph != off;
+    // defaults off and never writes or advances the graph.
+    [[nodiscard]] bool control_sample();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

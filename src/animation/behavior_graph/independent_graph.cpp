@@ -7,6 +7,7 @@
 #include "animation/behavior_graph/candidate_variable_census.h"
 #include "animation/behavior_graph/candidate_window.h"
 #include "animation/behavior_graph/clip_reference_policy.h"
+#include "animation/behavior_graph/control_sample.h"
 #include "animation/behavior_graph/k3_snapshot_policy.h"
 #include "animation/behavior_graph/drive_step_policy.h"
 #include "animation/behavior_graph/display_step_clock.h"
@@ -2249,6 +2250,12 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 ClipObservation const clips = collect_active_clips();
                                 record_clip_clocks(clips);
                                 record_pose_step();
+                                // C-G5-CAL K2-C4 control B: the first post-sample is the earliest
+                                // point where the OAR-replaced MT_Idle binding (25.0167 s, 99 tracks)
+                                // is active. It is sampled once; a failure is logged separately and
+                                // never invalidates the existing K3 observation.
+                                if (observation.completed() == 1 && control_sample())
+                                    (void)run_control_sample(candidate->characterInstance, actor_id, request, observation.completed());
                                 if (observation.completed() > 0)
                                 {
                                     segment_pose_end = format_pose_hash(candidate->characterInstance);

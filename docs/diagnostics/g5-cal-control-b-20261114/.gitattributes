@@ -1,0 +1,2 @@
+# Keep the truth artifact byte-exact; its SHA-256 is part of the registration.
+* -text whitespace=cr-at-eol,-blank-at-eof

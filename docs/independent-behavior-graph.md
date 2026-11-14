@@ -5216,6 +5216,20 @@ metrics 保留每轮、每 case 和合并的 count/min/median/P95/P99/max（near
 - 方案 A（推荐）：离线实现并审计 Havok spline 解码器；选一个运行时字节与审计文件一致的 binding（loose/OAR 未替换），在固定关键帧时间采样并独立比对。
 - 方案 B：作者一个 `hkaInterleavedUncompressedAnimation` 控制 HKX（已知关键帧、端点采样），并审计一条能加载任意 HKX 的引擎路径；当前无公开 API，成本更高。
 
+### 方案 A 预注册（2026-11-14，离线；**仍未查看原生控制输出**）
+
+**裁定：B 仍 NOT_READY；本节只完成“资源 + 独立真值 + 承载路径”的预注册与实现，不产生控制读数、不产生容差。** 完整登记见 [g5-cal-control-b-20261114/README.md](diagnostics/g5-cal-control-b-20261114/README.md)，离线真值见同目录 [mt_idle_female_truth.txt](diagnostics/g5-cal-control-b-20261114/mt_idle_female_truth.txt)（106,767 B，SHA-256 `CFC7835C…F2024125`，891 行 `TRACK`，`BITS_FNV1A64 8E2E1D12B040807D`）。
+
+**资源更正（决定性）**：2026-11-13 审计的 `male\mt_idle.hkx` 不是运行时资源。v96a 日志的实际加载路径为 `Animations\female\mt_idle.hkx`（`ANIMATION ... index=1022 base=1022 replaced=false duration=25.02`），对应 MO2 `Vanargand Animations II - Female Idle Walk and Run` 的 loose 覆盖：113,920 B，SHA-256 `0EF8248C…BCD73C7`，spline type=5，25.0166664 s，99 transform / 0 float tracks，1501 帧 / 6 block / 256 max frames per block，4 个 annotation events（直接采样不派发）。binding 为 `NPC Root [Root]`、map 0..98（FNV-1a64 `077954859409395E`）、blendHint=0；压缩 `data` 82,400 B（FNV `F56EE1500EB5A3D0`），`blockOffsets` FNV `F17EBD9ADA8CF785`。
+
+**独立真值**：本地（gitignored）HavokLib `ef5d5c6` 解码，GPL-3 参考工具，不链接进插件、不复制代码进仓库。本地补丁只改时间映射为 `localTime / frameDuration`（文件只存 `frameDuration`，且 `blockDuration = 255 × frameDuration`、`duration = 1500 × frameDuration`；上游派生 `numFrames/duration=60` 把结束帧计入，会在一段内漂移约一帧），并增加只读 `GetDataSize()`/`DumpTrack()`。t=0 的 track 4 真值与导出的第 0 个控制点 `(-2.29234028, 3.63216352, 68.7419739)` 逐位一致。
+
+**原生承载**：新键 `[Experiment] ControlSample=true`（默认 off，要求 `IndependentGraph=inject`）。在候选图第一个 completed Generate（`completed=1`，此时 OAR 已切到 binding-index 1022；baseline 的 11916 是 11.6667 s 的另一资源，故不采样 baseline）扫描 activeNodes（≤512），按**动画字节身份**而不是 binding-index 选择唯一 MT_Idle 载体，然后对 `hkaAnimation` 直接调用两次 `SamplePartialTracks`（9 个固定时间 × 99 轨 × 10 分量；不读 poseLocal、不写图、不推进图）。
+
+**预注册判据**：B-A `data`/`blockOffsets` 两个 FNV 与登记值一致（binding map 记录 `map_match`；`SamplePartialTracks` 不使用该映射，故不阻断轨道读数）；B-B 8,910 个值全部有限、每个时间两次读数逐字节相同；B-C `bits_fnv1a64 == 8E2E1D12B040807D`（与离线真值逐位一致）；B-D 一次窗口/进程、零 `[E]`、无崩溃、身份匹配。任一失败按 NOT_READY/INVALID 处理；B-C 失败时保留全部原始 bits 离线定位差异，不得用容差吸收或事后修改时间/资源。
+
+**边界**：即使 B-A–B-D 全通过，也只证明该资源、该 9 个固定时间、该单层直接采样路径在本次会话逐位一致；不证明 120 代驱动协议、三次独立进程、时间量化、层/权重/混合、K1 资源清单或 G5。`tau_p/tau_r/tau_s/epsilon_t` 仍未产生。离线策略测试 `control_sample_policy_test` 4/4 通过。
+
 ### 五、v96a 运行后的 K1/K2 更新（2026-11-12，仍 NOT_READY）
 
 **裁定**：v96a run 1 为 **K2-C1/C2/C3 提供了一次可复核的正面证据**，并把 D3 的 1HM 卸下完成点覆盖补齐；**K1-C1–C4 与 K2-C4（控制 B）仍未闭合**，因此 K1/K2 整体仍 **NOT_READY**，不能启动原生校准。
