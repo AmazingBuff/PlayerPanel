@@ -222,3 +222,15 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 ### 12.4 方案 b 的重登记义务
 
 方案 b 落地记录：模组文件夹 `E:\SkyrimAE\mods\CharacterPanel-Track2Dummy\` 已由 Agent 创建（含 `README.txt` 与逐字节副本文件，源 = BFCO `…/OpenAnimationReplacer/050 ermoveset_crossnaginata/base/SCAR_1hmReadyDummy.hkx`，29,008 B，副本 SHA-256 `4061ce1b…` 与源一致）；**待用户在 MO2 的 `AE-Track2` 档中勾选启用**。之后：① 建模组后重跑 `enum_track2.py`（modlist 977→978），winner-map diff 须为**恰好 1 行新增**（dummy 普通路径）且其余逐行不变；② 闭包走链复跑仍须 23/23；③ census 断言集合登记时 dummy 以新普通路径落位。**方案 b 落地前 Run 0b 不上机。**
+
+### 12.5 方案 b 落地登记（2026-11-14，§12.4 义务完成）
+
+| 项 | 读数 |
+| --- | --- |
+| 模组 | `E:\SkyrimAE\mods\CharacterPanel-Track2Dummy\`（Agent 创建：`meshes\actors\character\animations\SCAR_1hmReadyDummy.hkx` 逐字节副本 29,008 B `4061ce1b…` 与源一致 + `README.txt` 用途说明） |
+| modlist | `AE-Track2` `+` 项 978（第 2 行 `+CharacterPanel-Track2Dummy`）；主档 `AE` 零引用 ✓ |
+| winner-map 重跑 | 24,205 路径（+1）；**与 Track 1 登记的赋值 diff 恰好 1 行新增**：`meshes/actors/character/animations/scar_1hmreadydummy.hkx → CharacterPanel-Track2Dummy, 29,008 B, 4061ce1b…`，其余逐行不变（`pos` 序号漂移同 §10.2 解释）。SHA-256：winner-map `005bf3e6…600cc2`、providers-all `261a79c2…5a2d78`、oar-config `839090d6…6d05538`（仍与 K1-C1 逐字节一致） |
+| 闭包复跑 | HkxInventory `closure` 模式（K1-C1 原装走链）对新 winner map：`files=23`，与登记集**路径集合 + 逐文件 bytes+SHA-256 一致**（`closure-track2-v2.txt` SHA-256 `ffc398d0…26973`）——T2-C6 在 +1 行视图下复验成立 |
+| 安装位 | census-inject 档 `c05b9b91…` / v103 DLL `8c3857a3…` / PDB `49581217…` 复核一致（Run 0a 重跑无需换档） |
+
+**裁定：方案 b 落地完成，Run 0a 重跑资格就绪。** 预期：census 的 dummy 槽 `identity=true`、`data-fnv=8728A54A50D85C22`（两侧同字节，跨侧配对族恢复）；T2-C2 `missing=0` 恢复。
