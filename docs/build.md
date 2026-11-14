@@ -2165,3 +2165,26 @@ Identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0
 **运行记录（v102 run 1，2026-11-14 20:11-20:14）**：一次 panel 窗口按协议完成；`EXPERIMENT setting EquipmentStateDump=true`，`ANIMATION WORLD` 行含 `armor=slots=31 worn=9`，零 `[E]`、无崩溃；equip 120/120 + unequip completed=129（state-12-to-0）；clip 族 1HM、零 H2H。护甲 9 件经存档表解析全部落位、存档身份 Save116 登记，K2-C1 关闭（一项 OAR 命中偏差登记）。详见 [K2-C1/C2 登记 §六](diagnostics/g5-k2c1c2-20261114/README.md)。日志归档 [CharacterPanel-g5k2c1c2-equipdump-v102-run1-20261114-2011.log](diagnostics/CharacterPanel-g5k2c1c2-equipdump-v102-run1-20261114-2011.log)（177,630 B，SHA-256 `b33c452c…2e2d4385`）。
 
 **上机协议（已执行，存档）**：与 v96a run 1 相同的冻结场景——同存档（1H+Candlelight 收鞘）、一次 panel 窗口（F7 开 20 秒时间线不可用，本档走 panel-open）、装备/卸下路径与 v96a 相同；唯一变化是 `EquipmentStateDump=true`。运行后判据：`ANIMATION WORLD` 行含 `armor=slots=31`、零 `[E]`、无崩溃、hands/drawn 与 v96a L604 逐字一致；日志归档进 `docs/diagnostics/` 后按 K2C1-2/K2C1-3 裁定 C1 关闭。运行档不是默认产品档；`config/CharacterPanel.ini` 保持全键默认 off。
+
+<a id="v103-g5k5-fullsample-20261114"></a>
+## v103：K5 完整采样/层审计/对账仪器（2026-11-14 构建并部署）
+
+[K6 计划](diagnostics/g5-k6-plan-20261114/README.md) §十 实现预注册的 K5 三仪器：新键 `[Experiment] K5FullSample`（CPK5 格式 v1 快照写入器，逐 clip 资源身份列，K3 共享触发点、两读规则与轨道提取；同 on 时 K3 抑制并声明）、`K5LayerAudit`（四个预注册审计点 post-activate/equip-mid/equip-settle/unequip-complete 的活动节点 vtable 分类 + K5 LAYER/K5 AUDIT 行；`hkbBlendingBehavior` 无 CommonLibSSE 布局 → 落 unknown，为 K5-5 的显式缺项）、`K5Reconciliation`（K5 RECON 行 + JSON 账本；候选侧在 K5FullSample on 时自动对账，此键只管源侧 F7 窗口）。三键全 off 时输出与 v102 逐字节一致；复用 `read_animation_resource_identity`（control_sample 零改动）；身份缓存 64 项、命中校验 duration/map_count/spline-data-bytes。提交 `9e83ff8`（k5_snapshot_policy.h、k5_audit.h/.cpp、settings.h/.cpp、independent_graph.cpp、probe_liveness.cpp、config/CharacterPanel.ini、CMakeLists）。
+
+**构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v103-g5k5-fullsample -DVCPKG_MANIFEST_INSTALL=OFF` + `cmake --build --preset Release --parallel 4`，均 exit 0。身份 `CharacterPanel-scenegraph-v103-g5k5-fullsample-9e83ff8e8f-cl94faaed0c6-20261114T134329Z`（首建于提交前，`+dirty` 未部署；提交 `9e83ff8` 后重配置干净重建部署）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,007,552 | `8c3857a39479c172f894c73449677adf3bb19dbd6baf6718609d0d85ea58e5ef` |
+| CharacterPanel.pdb | 51,367,936 | `49581217b75ff7a93646c8ff106a045584071eaea54f214cfdc4627f83045566` |
+| 运行档（inject）CharacterPanel.ini | 12,125 | `76f2bebb03deaed6c9b5e0987dfa8e3bbbd00ac1e54323d2af2c5edb1be0b885` |
+| 运行档（source）CharacterPanel.ini | 12,322 | `21bd938b94268c3da7a81ebaa6bdee75ad4d49e9c4c36114c052142fc626ec2b` |
+
+**运行档**：`dist/g5-k5-20261114/`。inject 档 = v98 档派生（`dist/g5-k3c-v98-20261113/`）：`IndependentGraph=inject`、`CandidateInputProbe=true`、`CandidateEquipPrime=true`、`CandidateEquipPrimeBranch=true`、`CandidateUnequipProbe=true`，`ObservationSnapshot` 改 false（K5 写入器接替，`K5 MODE k3-suppressed` 不出现——两键不同时 on），追加 `K5FullSample/K5LayerAudit/K5Reconciliation=true`。source 档 = v99b 档派生（`dist/g5-k3s-v99b-20261113/`）：`IndependentGraph=off`、`SamplingLiveness=on`、`ObservationSnapshot=false`，追加 `K5FullSample=true`、`K5Reconciliation=true`。逐键断言 grep 核对通过。
+
+**部署（2026-11-14 21:4x）**：先备份当前 v102 安装 → `dist/deploy-backup-20261114-v102-v103pre/`（DLL `32ff383e…`、PDB `c3a7ed45…`、INI `0e789f8a…`，与 v102 登记一致）；随后安装 v103 三件套（inject 档为安装位 INI），安装后哈希逐位核对一致，DLL 身份串在安装位提取确认。一次登记偏差：首次安装 cp 多源复制把 inject 档写成 `CharacterPanel-inject.ini` 旁路文件（游戏加载位仍是 v102 INI），当即删除旁路文件并以显式目标名重装，随后核验通过——该偏差只影响本会话安装瞬间，未进入任何游戏会话。
+
+**上机协议（待运行）**：
+1. **候选侧 run 1**（inject 档已在安装位）：Save116 加载 → panel 窗口按 v96a/v102 同链（inject → 同帧 5 写 prime + `WeapEquip` → equip 120 步 → settle 87/101 → `Unequip` id=144 → unequip 129 步 completed）→ 关窗。判据：`K5 SNAPSHOT open/close`、`K5 RECON side=candidate`、4 组 `K5 AUDIT`（post-activate/equip-mid/equip-settle/unequip-complete）、JSON 账本写出；零 `[E]`；equip 120/120 + unequip completed=129（state-12-to-0）；clip 族 1HM、零 H2H。
+2. **源侧 run 2**：换装 source 档（`cp dist/g5-k5-20261114/CharacterPanel-source.ini` → 安装位 `CharacterPanel.ini`），Save116 加载 → F7 开 probe 窗口（v99b 式自然游玩：装备→稳定→卸下→稳定）→ 20 s 窗口正常关闭。判据：`K5 SOURCE open/close`、`K5 RECON side=source`（K5Reconciliation on）、JSON 账本；零 `[E]`；记录数在 cap 1,400 内且卸下完成覆盖在窗口内。
+3. 两个运行档都**不是默认产品档**；`config/CharacterPanel.ini` 保持全键默认 off。运行后日志/工件归档进 `docs/diagnostics/`，按 K5-1…K5-8 裁定 K6 关闭。
