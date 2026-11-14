@@ -123,3 +123,48 @@
 | 1 | **§二档方案批准**：新建 `AE-Track2`（复制 `AE`），停用 4 个 OAR 模组（主插件 + RaySense + IED conditions + Math Plugin），其余 977 项不动 | **已批准（2026-11-14）**，按 §八实施 |
 | 2 | 档名 `AE-Track2` 确认（可改名，登记以实际为准） | 工件命名 |
 | 3 | （会话外既挂）60 提交 push 与否 | 与本批次无耦合 |
+
+## 十、执行登记 ①：AE-Track2 建档与离线资源身份登记（2026-11-14）
+
+**状态：§八步骤 ① ② 完成（用户建档 + 离线 winner-map 身份 + 闭包走链复跑 + 锚点校验）。Run 0 未运行；本节不采样任何游戏内数据。**
+
+登记偏差（过程事实，如实记录）：用户最初把 4 个 OAR 模组停在了主档 `AE` 内（批准方案的偏差），随后按更正顺序完成——先复制当前 `AE`（继承 4 项停用）为 `AE-Track2`，再把主档 4 项重新启用。终态经核验符合 §2.2。
+
+### 10.1 档案与 modlist diff（步骤 ①）
+
+| 核验项 | 读数 |
+| --- | --- |
+| `AE`（主档） | `+` 项 981，4 个 OAR 模组全部重新启用（恢复与 Track 1 证据链一致） |
+| `AE-Track2` | `+` 项 977；`-Open Animation Replacer` / `-RaySense` / `-IED conditions` / `-Math Plugin` 恰为第 788/790/791/792 行 |
+| modlist diff | **恰好 4 行**（`+`→`-`），无其他差异 |
+| settings.ini | 与主档逐字一致（`LocalSaves=true`） |
+| 存档 | `profiles/AE-Track2/saves/` 含 `Save116_61F78427_0_456C6966_Folgunthur01_…ess` + `.skse` 双文件 |
+
+### 10.2 winner-map 身份登记（步骤 ②-1，离线零游戏运行）
+
+工具：`build/k1-c1-track2/enum_track2.py`（SHA-256 `493c704c33c38595…`，= enum_k1c1.py 仅改 PROFILE→`AE-Track2\modlist.txt` 与 OUT_DIR 两常量；gitignored 本地工具，方法与 K1-C1 登记相同）。输出在 gitignored `build/k1-c1-track2/out/`，按哈希登记：
+
+| 工件 | Track 2 重生成 SHA-256（前 16） | 与 K1-C1 登记工件对比 |
+| --- | --- | --- |
+| winner-map.tsv（24,204 路径） | `786f31934e9ceb76…` | **winner 赋值逐行一致**（路径→提供者→字节→SHA-256，忽略 `pos` 列 diff 为零）；`pos` 序号差异 = 4 个引擎模组移除后其余模组序号前移（见下） |
+| providers-all.tsv（24,375 行） | `b9051ec71b48c448…` | 同上：赋值逐行一致，仅 `pos` 漂移 |
+| oar-config.tsv（1,472 行 / 1 解析失败，同 K1-C1） | `839090d66d7d2628…` | **逐字节一致**（`839090d6…6d05538` 全哈希相同） |
+
+**pos 漂移的完备解释**：4 个引擎模组在两张 providers-all 中都贡献 **0 行**（逐模组计数 `0/0`）——它们是纯 SKSE DLL 模组，不含任何 `meshes/actors/character/**` 内容。移除 4 行只使后续模组的枚举序号整体前移 ≤4，不改变任何相对顺序与 winner 裁定。**结论：AE-Track2 的磁盘生效视图与 K1-C1 登记视图在语义上完全相同；动态替换的移除只发生在运行时引擎层，磁盘无任何内容变化。**
+
+**锚点校验（预注册 §三步骤 ②）**：两条锚点行在 Track 2 winner map 中逐字一致——SCAR dummy（`…/openanimationreplacer/050 ermoveset_crossnaginata/base/scar_1hmreadydummy.hkx`，BFCO Elden Rim Dual Wield，29,008 B，`4061ce1b…`）与 Vanargand female mt_idle（`meshes/actors/character/animations/female/mt_idle.hkx`，113,920 B，`0EF8248C…BCD73C7` = 控制 B 登记文件哈希）。映射方法有效。
+
+### 10.3 行为闭包走链复跑（T2-C6，步骤 ②-2）
+
+生效 `0_Master.hkx` = `E:\SkyrimAE\mods\Pandora_Output\…\0_Master.hkx`，SHA-256 `466cf116…`（与 [closure-files.txt](../../diagnostics/g5-k1-c1-20261114/closure-files.txt) START 行一致）。HkxDump（`build/hkx-audit/HkxDump/bin/Release/net10.0/`，同一 net10 工具）重跑走链：`LOADED-FILES 23`。
+
+**裁定：T2-C6 成立。** 闭包 23/23 与登记集**路径集合一致、逐文件 bytes+SHA-256 一致**、23 路径全部在 Track 2 winner map 内。走链工件：`0_master_track2_dump.txt`（SHA-256 `0d1308dd1f6afc1a…`）与提取表 `closure-track2.txt`（23 行，SHA-256 `c058d36ef1b663c6…`，均在 gitignored out/ 目录）。
+
+**转移声明（§五）前提成立**：行为闭包逐位一致复验通过；层/权重/混合资格转移可按声明生效（最终裁定在 Run 0 全判据后作出）。
+
+### 10.4 下一步（Run 0 上机，等待用户）
+
+1. 换档：MO2 切 `AE-Track2`；安装位 INI 换为 `dist/g5-track2-20261114/CharacterPanel-track2-census-inject.ini`（换档纪律见 [build.md Track 2 节](../../build.md#track-2-运行档派生2026-11-14纯-ini零代码零构建)：先备份、后核对安装位哈希与日志身份）。
+2. **Run 0a**（候选侧 census + T2-C5 装备重验）：Save116 → panel 窗口（inject 链同 v96a）→ 关窗；判据 T2-C1/C2/C3（候选侧）、T2-C5、T2-C7。
+3. **Run 0b**（源侧 census）：换 `CharacterPanel-track2-census-source.ini`，Save116 → F7 20 s 窗口自然装备/卸下；判据 T2-C1/C2/C3（源侧）+ T2-C4（跨侧逐族 `data FNV` 相等，离线裁定）。
+4. 全部通过 → 新档断言集合登记进 reconcile 工具 → Run 1/2 姿态采集。
