@@ -4,6 +4,8 @@
 
 > **2026-11-15 追加（run 1–3 + 工具 + §十二）**：v104 已部署并完成 **3/3** 个独立进程；离线裁定工具已实现并通过离线测试，见 [§十一](#cal2-run1-tool)。用户已批准 [§十二](#cal2-c2e-oar-addendum) 的 C2-E 精确 OAR 豁免；run 1/2/3 均 **C2-A/B/C/E/F PASS**。**三进程两两跨进程均为 119,790/119,790 分量逐位相同（3/3 pair，nonzero=0，max_abs=0，max_ulp=0）**；**C2-D PASS，K2-C4 升 grid READY**，CAL1 控制 B 资格就绪；仍不产生 `tau_*`。
 
+> **CAL1 资格评审（2026-11-15 后续）**：完整 CAL1 / 门 3 原生校准仍 **NOT_READY**——K2-C1 PARTIAL（护甲 42 槽/存档身份）、K5-5 层/权重/混合缺项、`epsilon_t` 的 TSC 频率/单位未登记。控制 B 单层姿态的有界 **CAL1-B** 可另立预注册（明确排除 `epsilon_t`/K5-5）；评审见 [g5-cal1-qualification-20261115](../g5-cal1-qualification-20261115/README.md)。
+
 **前置阅读**：[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)（§四 控制 B 资格、§五.1–§五.7、§七 统计、§八 CAL1–CAL7）、[K2-C4 控制 B 登记](../g5-cal-control-b-20261114/README.md)（资源身份/独立真值/B1 FAIL/B2 PASS）、[K6 计划 §五](../g5-k6-plan-20261114/README.md)（进程缺口登记）、[门 4 协议 §十五](../g5-gate4-20261115/README.md)（候选时钟阶梯形态登记）、[Track 2 §十六](../g5-track2-20261114/README.md)（资源确定性条件）。
 
 ## 一、目标、范围与不覆盖
