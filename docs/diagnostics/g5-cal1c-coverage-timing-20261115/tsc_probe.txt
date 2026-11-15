@@ -1,0 +1,4 @@
+trial=0 tsc_delta=4299358959 qpc_seconds=1.001746400 hz=4291863648.325
+trial=1 tsc_delta=4332725236 qpc_seconds=1.009520600 hz=4291864114.511
+trial=2 tsc_delta=4340480871 qpc_seconds=1.011327800 hz=4291863499.649
+invariant_tsc=1 qpc_frequency=10000000 monotonic=1 median_hz=4291863648.325 min_hz=4291863499.649 max_hz=4291864114.511

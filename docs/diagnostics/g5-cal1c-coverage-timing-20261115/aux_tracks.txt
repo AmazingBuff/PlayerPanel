@@ -1,0 +1,37 @@
+CAL1-C auxiliary track audit (MT_Idle control B excludes indices 99..115)
+SIDE candidate records=249
+TRACK 99 name='NPC L Item01' parent=-1 unique=5 reference_matches=0/249
+TRACK 100 name='NPC L Item02' parent=99 unique=3 reference_matches=165/249
+TRACK 101 name='NPC L Item03' parent=100 unique=6 reference_matches=112/249
+TRACK 102 name='NPC R Item01' parent=-1 unique=8 reference_matches=232/249
+TRACK 103 name='NPC R Item02' parent=102 unique=2 reference_matches=239/249
+TRACK 104 name='NPC R Item03' parent=103 unique=3 reference_matches=175/249
+TRACK 105 name='LeftWing1' parent=26 unique=6 reference_matches=0/249
+TRACK 106 name='LeftWing2' parent=105 unique=24 reference_matches=0/249
+TRACK 107 name='LeftWing3' parent=106 unique=13 reference_matches=0/249
+TRACK 108 name='LeftWing4' parent=107 unique=6 reference_matches=0/249
+TRACK 109 name='LeftWing5' parent=108 unique=10 reference_matches=0/249
+TRACK 110 name='RightWing1' parent=26 unique=4 reference_matches=0/249
+TRACK 111 name='RightWing2' parent=110 unique=24 reference_matches=0/249
+TRACK 112 name='RightWing3' parent=111 unique=19 reference_matches=0/249
+TRACK 113 name='RightWing4' parent=112 unique=18 reference_matches=0/249
+TRACK 114 name='RightWing5' parent=113 unique=7 reference_matches=0/249
+TRACK 115 name='Belly' parent=25 unique=2 reference_matches=175/249
+SIDE source records=1065
+TRACK 99 name='NPC L Item01' parent=-1 unique=2 reference_matches=0/1065
+TRACK 100 name='NPC L Item02' parent=99 unique=2 reference_matches=956/1065
+TRACK 101 name='NPC L Item03' parent=100 unique=2 reference_matches=956/1065
+TRACK 102 name='NPC R Item01' parent=-1 unique=2 reference_matches=956/1065
+TRACK 103 name='NPC R Item02' parent=102 unique=1 reference_matches=1065/1065
+TRACK 104 name='NPC R Item03' parent=103 unique=1 reference_matches=1065/1065
+TRACK 105 name='LeftWing1' parent=26 unique=1 reference_matches=0/1065
+TRACK 106 name='LeftWing2' parent=105 unique=2 reference_matches=0/1065
+TRACK 107 name='LeftWing3' parent=106 unique=2 reference_matches=0/1065
+TRACK 108 name='LeftWing4' parent=107 unique=2 reference_matches=0/1065
+TRACK 109 name='LeftWing5' parent=108 unique=2 reference_matches=0/1065
+TRACK 110 name='RightWing1' parent=26 unique=1 reference_matches=0/1065
+TRACK 111 name='RightWing2' parent=110 unique=2 reference_matches=0/1065
+TRACK 112 name='RightWing3' parent=111 unique=2 reference_matches=0/1065
+TRACK 113 name='RightWing4' parent=112 unique=2 reference_matches=0/1065
+TRACK 114 name='RightWing5' parent=113 unique=2 reference_matches=0/1065
+TRACK 115 name='Belly' parent=25 unique=1 reference_matches=1065/1065

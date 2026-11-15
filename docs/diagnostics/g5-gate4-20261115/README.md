@@ -317,6 +317,6 @@ python -I tools/gate4_pair.py --candidate <cpk5.bin> --source <cpk5s.bin> --out-
 | 时钟轴判据 | **仍为 PENDING-CAL** | §15.3 的候选阶梯/滞后形态待处置 |
 | 轨道覆盖 | **99/116** | CAL1-B 只覆盖控制 B 的 99 个 transform 轨；其余 17 个 default/reference 轨无本控制 |
 
-**边界**：三项姿态值只适用于控制 B 单层、`female\mt_idle.hkx`、121 时间/99 轨、3 进程；不得外推到层/权重/混合、其他资源或其他运行。**门 4 的 116/116 分母中 17 个 default/reference 轨没有这组 tau 的控制覆盖**，不得把全局 tau 无条件套到 116/116。`gate4_pair.py --tolerances` 还要求 `epsilon_t`，因此正式模式仍锁定；门 4 仍**未完整冻结**，门 5 仍未授权。
+**边界**：三项姿态值只适用于控制 B 单层、`female\mt_idle.hkx`、121 时间/99 轨、3 进程；不得外推到层/权重/混合、其他资源或其他运行。**门 4 的 116/116 分母中 17 个 item/wing/Belly 轨没有这组 tau 的控制覆盖**，不得把全局 tau 无条件套到 116/116；覆盖/时间审计见 [CAL1-C](../g5-cal1c-coverage-timing-20261115/README.md)。`gate4_pair.py --tolerances` 还要求 `epsilon_t`，因此正式模式仍锁定；门 4 仍**未完整冻结**，门 5 仍未授权。
 
 来源工件：[cal1b-calibration.json](../g5-cal1b-20261115/calibration/cal1b-calibration.json)（SHA-256 `8B2077BF63AB68A856148FEF1F0B9CE9F3936334125BF0BAADE91C0B8C740865`）；完整逐轨值见 [cal1b-tracks.csv](../g5-cal1b-20261115/calibration/cal1b-tracks.csv)。

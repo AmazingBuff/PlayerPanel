@@ -193,6 +193,6 @@ C1B-A..F 全部 **PASS**；工具、测试及输出哈希已登记；相同输�
 
 ### 11.5 使用边界
 
-- 可把 `tau_p/tau_r/tau_s` 填入门 4 的**姿态槽位**，但必须标记 `CAL1-B/control-B-single-layer` 与上述范围；控制 B 只覆盖 99 个 transform 轨，门 4 的 116 轨分母中其余 17 个 default/reference 轨没有本控制，不能把这组 tau 无条件套到 116/116。
+- 可把 `tau_p/tau_r/tau_s` 填入门 4 的**姿态槽位**，但必须标记 `CAL1-B/control-B-single-layer` 与上述范围；控制 B 只覆盖 99 个 transform 轨，门 4 的 116 轨分母中其余 17 个 item/wing/Belly 轨没有本控制，不能把这组 tau 无条件套到 116/116。覆盖与时间审计见 [CAL1-C](../g5-cal1c-coverage-timing-20261115/README.md)。
 - `epsilon_t` 仍为 `NOT_PRODUCED`；门 4 时间槽位、K5-5、K2-C1 完整清单与完整门 4 冻结均未完成。
 - 本文的数值是测量容差，不是姿态等价结论；不得外推到其他资源、层/混合或其他运行。

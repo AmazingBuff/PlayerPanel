@@ -1,6 +1,6 @@
 # 会话总结：2026-11-15 会话（门 4 协议全链 + CAL2 至部署，11 个提交）
 
-> **2026-11-15 后续更新**：v104 部署后已完成 **run 1–3/3**；`tools/cal2_adjudicate.py` 已实现/测试，run 1–3 在 [CAL2 §十二](g5-cal2-20261115/README.md#cal2-c2e-oar-addendum) 的 OAR 精确豁免下均 C2-A/B/C/E/F PASS，三进程两两 119,790/119,790 逐位相同；**C2-D PASS，K2-C4 升 grid READY**，CAL1-B 已完成 **CALIBRATED_BOUNDED**（控制 B 单层姿态；`tau_p=0.000476592`、`tau_r=6.03341E-8`、`tau_s=0.00000386264`）；门 4 姿态槽位已填，但完整 CAL1 / 门 3 仍 NOT_READY（K2-C1 PARTIAL、K5-5、`epsilon_t` TSC 频率/单位未登记），`epsilon_t` 未产生。本文“部署后未进行任何游戏会话”只描述本会话结束时的状态。
+> **2026-11-15 后续更新**：v104 部署后已完成 **run 1–3/3**；`tools/cal2_adjudicate.py` 已实现/测试，run 1–3 在 [CAL2 §十二](g5-cal2-20261115/README.md#cal2-c2e-oar-addendum) 的 OAR 精确豁免下均 C2-A/B/C/E/F PASS，三进程两两 119,790/119,790 逐位相同；**C2-D PASS，K2-C4 升 grid READY**，CAL1-B 已完成 **CALIBRATED_BOUNDED**（控制 B 单层姿态；`tau_p=0.000476592`、`tau_r=6.03341E-8`、`tau_s=0.00000386264`）；门 4 姿态槽位已填，但完整 CAL1 / 门 3 仍 NOT_READY（K2-C1 PARTIAL、K5-5、`epsilon_t` TSC 频率/单位未登记），`epsilon_t` 未产生；CAL1-C 审计发现 17 条辅助 item/wing/Belly 轨无 CAL1-B 控制（99/116），TSC 频率可标定但读取区间 ≠ `dt_clock`，`epsilon_t` 需独立时间模型。本文“部署后未进行任何游戏会话”只描述本会话结束时的状态。
 
 **范围**：本会话从 `34fea79`（Track 2 收官）之后开始，共 **13 个提交**（含 2 个会话总结/修正提交）。分支 `oar-idle3`，结束领先 `origin` **89 提交、未推送**，工作树 clean。完成两条工作包：**门 4 配对/比较协议全链（预注册 → 离线工具 → dry-run）** 与 **CAL2 控制 B 网格协议（预注册 → 实现 → v104 构建 → 真值转储 → 部署）**。部署后**未进行任何游戏会话**——3 进程上机是下一会话的入口动作（用户执行）。
 
