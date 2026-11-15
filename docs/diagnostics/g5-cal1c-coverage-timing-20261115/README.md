@@ -19,7 +19,7 @@
 | Wing R | 110–114 | `RightWing1..5` | 4/24/19/18/7 | 1/2/2/2/2 | **0/249、0/1065** |
 | Belly | 115 | `Belly` | 2 | 1 | 175/249；源 1065/1065 |
 
-完整逐轨审计：[aux_tracks.txt](aux_tracks.txt)（SHA-256 `97476139F7E10603B907FDEFE53828AF8AAF4FEE395C30702869FC840D135E63`）。
+完整逐轨审计：[aux_tracks.txt](aux_tracks.txt)（SHA-256 `F950E3789A8E2DA22CF34A14BCFC553005F3F57AA0AF6AB7A046775A784A6BBD`）。
 
 **结论**：这 17 条不是 `mt_idle.hkx` 的 99 条动画轨，也不是恒定的 reference/default；item 节点随装备变化，wing 轨在两个 K5 批次中都有多个唯一值且与 reference 零匹配，Belly 也有变化。**CAL1-B 的 tau 只对 0..98 的 99 条 MT_Idle 轨有独立真值控制，不能无条件套到 99..115。**
 
@@ -48,7 +48,7 @@
 | min/max 相对跨度 | 约 1.4e-7 |
 | 三份归档 CGRD 日志斜率交叉核对 | 约 4.285–4.291 GHz（<0.2%） |
 
-探针输出：[tsc_probe.txt](tsc_probe.txt)（SHA-256 `8FD5171C2E78F01A618EB1E3C71D8851C5948DD5DE04D0A66DF5B7627DDDB806`）；探针源码 SHA-256 `4A01F6D8AAA93DA2DDD631A6A1C2DD5444A8B8232F7088DA6C5899C9877057E6`（仅在本地 build，不进仓库/插件）。
+探针输出：[tsc_probe.txt](tsc_probe.txt)（SHA-256 `50544EFC14D1E5070FDA9F490D8FFEDEF1561EC7945E16C1130681F016DE479E`）；探针源码 SHA-256 `4A01F6D8AAA93DA2DDD631A6A1C2DD5444A8B8232F7088DA6C5899C9877057E6`（仅在本地 build，不进仓库/插件）。
 
 ### 2.2 读取区间不是 `dt_clock` 阈值
 
