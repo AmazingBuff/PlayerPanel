@@ -1,6 +1,8 @@
-# C-G5-CAL1-B v1：控制 B 单层姿态有界校准预注册（2026-11-15 草案，待评审）
+# C-G5-CAL1-B v1：控制 B 单层姿态有界校准预注册（2026-11-15，评审通过）
 
-**状态：草案，待评审。本文只固定方法与范围，不产生任何 Q/N/`tau_*` 数值。**
+**状态：评审通过（2026-11-15，用户批准）；§四–§七冻结。本文只固定方法与范围，不预填任何 Q/N/`tau_*` 数值。**
+
+**批准记录**：用户于 2026-11-15 审阅并批准本文；批准范围仅限控制 B 单层姿态的 Q/N 与 `tau_p/tau_r/tau_s`，明确排除 `epsilon_t`、K5-5、K2-C1 完整清单与 G5 等价裁定。批准不改变 §四–§七 的任何方法或判据；实现与首次运行前不得回填数值。
 
 本预注册是 [CAL1 资格评审](../g5-cal1-qualification-20261115/README.md) §3.2 的落地：完整 CAL1 / 门 3 仍 NOT_READY（K2-C1 PARTIAL、K5-5 缺项、`epsilon_t` 的 TSC 频率/单位未登记），但控制 B 的单层直接采样路径具备独立真值、三进程重复性和明确的解析界，可以单独校准姿态测量容差。
 
@@ -127,9 +129,9 @@ tau_r = round_up_6sig(1 - cos(tau_theta / 2))
 
 | 项 | 预注册 |
 | --- | --- |
-| 工具 | `tools/cal1b_calibrate.py`，纯 stdlib；读 3×CGRD + 121 网格真值 + BOUNDS + C2 batch JSON/log；不读游戏、不改插件 |
+| 工具 | `tools/cal1b_calibrate.py`，纯 stdlib；读 3×CGRD + 121 网格真值 + BOUNDS + C2 batch JSON/log；不读游戏、不改插件；SHA-256 `3A22285554C02AB83BD27311A53CDFEBD4D8FE8CAE9E2729E47DCC248597F836` |
 | 输出 | `cal1b-calibration.json`（Q/N/tau/逐轨/逐进程对聚合/输入哈希）、`cal1b-tracks.csv`（逐轨聚合）、`cal1b-summary.txt`（≤200 行）；原始样本以三份 CGRD 工件为准，不重复展开；只用输入 basename+SHA-256 标识，不含绝对路径或墙钟时间，保证同输入逐字节可复现 |
-| 测试 | `tools/cal1b_calibrate_test.py`：合成 truth/CGRD 的 Q 合成、旋转角界、N 全样本、6 位向上舍入、可复现、范围纪律 |
+| 测试 | `tools/cal1b_calibrate_test.py`：合成 truth/CGRD 的 Q 合成、旋转角界、N 全样本、6 位向上舍入、可复现、范围纪律；32/32 PASS；SHA-256 `A2542FAFB4A0B4C533755EA80FBF60F2CC9369B2DAEF228B20E7C7602BDE0C79` |
 | 身份 | 工具/测试 SHA-256 在首次使用前登记；输出工件 SHA-256 随后登记 |
 | 预算 | JSON ≤ 4 MiB；CSV ≤ 4 MiB（逐进程对×时间×轨聚合，原始样本不重复）；summary ≤ 200 行；超限即停 |
 
