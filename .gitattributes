@@ -37,7 +37,11 @@ docs/diagnostics/CharacterPanel-g5cal-control-b-v100a-run2-20261114-1359.log -te
 docs/diagnostics/CharacterPanel-g5cal2-run1-20261115-2059.log -text whitespace=cr-at-eol,-blank-at-eof
 docs/diagnostics/CharacterPanel-g5cal2-run1-20261115-2059.bin -text -diff
 docs/diagnostics/CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T125913Z.bin -text -diff
+docs/diagnostics/CharacterPanel-g5cal2-run2-20261115-2129.log -text whitespace=cr-at-eol,-blank-at-eof
+docs/diagnostics/CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T132909Z.bin -text -diff
 docs/diagnostics/g5-cal2-20261115/run1-adjudication/** text eol=lf
+docs/diagnostics/g5-cal2-20261115/batch-2of3-adjudication/** text eol=lf
+docs/diagnostics/g5-cal2-20261115/batch-2of3-adjudication/cal2-cross-process-diff.bin -text -diff
 docs/diagnostics/CharacterPanel-g5k1-census-v101-run1-20261114-1411.log -text whitespace=cr-at-eol,-blank-at-eof
 docs/diagnostics/CharacterPanel-g5k1-source-census-v101a-run1-20261114-1420.log -text whitespace=cr-at-eol,-blank-at-eof
 docs/diagnostics/CharacterPanel-g5k1-source-census-v101b-run2-20261114-1424.log -text whitespace=cr-at-eol,-blank-at-eof
