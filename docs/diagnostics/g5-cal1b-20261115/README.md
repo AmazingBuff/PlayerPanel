@@ -165,6 +165,8 @@ tau_r = round_up_6sig(1 - cos(tau_theta / 2))
 - C2 三进程裁定：`cal2-adjudication.json`，SHA-256 `b670782a38d975303afe4f8b3a166dec7d510e55b9851c7008b6eb33fdbc54a7`；`C2-D PASS`。
 - 三个 CGRD / 日志与 [CAL2 §11.4](../g5-cal2-20261115/README.md#cal2-run3-final) 登记逐位一致。
 
+**初次运行注记**：BOUNDS 混合轨修复前的一次试跑得到 `Q_p=4.14e16`/`Q_s=2.94e16`，按停止规则作废，未登记为结果；本节的 Q/N/tau 全部来自修复后的真值与重发的 C2 工件（[CAL2 §十三](../g5-cal2-20261115/README.md#cal2-bounds-fix)）。
+
 ### 11.2 判据与实现
 
 C1B-A..F 全部 **PASS**；工具、测试及输出哈希已登记；相同输入重复运行的 JSON/CSV/summary 逐字节一致。
