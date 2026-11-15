@@ -6,7 +6,7 @@
 
 > **CAL1-B 正式结果（2026-11-15 后续）**：完整 CAL1 / 门 3 仍 **NOT_READY**（K2-C1 PARTIAL、K5-5、`epsilon_t` TSC 频率/单位未登记）；控制 B 单层姿态的有界 **CAL1-B** 已完成，裁定 **`CALIBRATED_BOUNDED`**：`tau_p=0.000476592`、`tau_r=6.03341E-8`、`tau_s=0.00000386264`（限定范围；`epsilon_t` 未产生）。门 4 姿态槽位已按 [§十六](../g5-gate4-20261115/README.md#gate4-cal1b-slots) 填充；结果见 [C-G5-CAL1-B v1 §十一](../g5-cal1b-20261115/README.md#cal1b-results)，资格评审见 [g5-cal1-qualification-20261115](../g5-cal1-qualification-20261115/README.md)。
 
-> **CAL1-C 覆盖/时间审计（2026-11-15 后续）**：门 4 的 17 条 item/wing/Belly 轨不在 MT_Idle 99 轨控制内，CAL1-B tau 不能覆盖 116/116；TSC invariant 已证、频率约 4.291864 GHz，但控制读取区间约 24–63 µs 远小于 `dt_clock` 5–18 ms，`epsilon_t` 不能直接取读取区间。详见 [g5-cal1c-coverage-timing-20261115](../g5-cal1c-coverage-timing-20261115/README.md)；需覆盖/时间预注册修订。
+> **CAL1-C 覆盖/时间审计（2026-11-15 后续）**：门 4 的 17 条 item/wing/Belly 轨不在 MT_Idle 99 轨控制内，CAL1-B tau 不能覆盖 116/116；TSC invariant 已证、频率约 4.291864 GHz，但控制读取区间约 24–63 µs 远小于 `dt_clock` 5–18 ms，`epsilon_t` 不能直接取读取区间。详见 [g5-cal1c-coverage-timing-20261115](../g5-cal1c-coverage-timing-20261115/README.md)；覆盖/时间修订草案 [C-G5-G4-COV v1](../g5-g4-cov-20261115/README.md) 与 [C-G5-TIME v1](../g5-time-20261115/README.md) 已起草（待评审）。
 
 **前置阅读**：[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)（§四 控制 B 资格、§五.1–§五.7、§七 统计、§八 CAL1–CAL7）、[K2-C4 控制 B 登记](../g5-cal-control-b-20261114/README.md)（资源身份/独立真值/B1 FAIL/B2 PASS）、[K6 计划 §五](../g5-k6-plan-20261114/README.md)（进程缺口登记）、[门 4 协议 §十五](../g5-gate4-20261115/README.md)（候选时钟阶梯形态登记）、[Track 2 §十六](../g5-track2-20261114/README.md)（资源确定性条件）。
 

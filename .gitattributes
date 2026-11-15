@@ -51,6 +51,8 @@ docs/diagnostics/g5-cal2-20261115/batch-3of3-adjudication/** text eol=lf
 docs/diagnostics/g5-cal2-20261115/batch-3of3-adjudication/cal2-cross-process-diff.bin -text -diff
 docs/diagnostics/g5-cal1b-20261115/calibration/** text eol=lf
 docs/diagnostics/g5-cal1c-coverage-timing-20261115/** text eol=lf
+docs/diagnostics/g5-g4-cov-20261115/** text eol=lf
+docs/diagnostics/g5-time-20261115/** text eol=lf
 docs/diagnostics/CharacterPanel-g5k1-census-v101-run1-20261114-1411.log -text whitespace=cr-at-eol,-blank-at-eof
 docs/diagnostics/CharacterPanel-g5k1-source-census-v101a-run1-20261114-1420.log -text whitespace=cr-at-eol,-blank-at-eof
 docs/diagnostics/CharacterPanel-g5k1-source-census-v101b-run2-20261114-1424.log -text whitespace=cr-at-eol,-blank-at-eof
