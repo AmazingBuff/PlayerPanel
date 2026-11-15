@@ -179,7 +179,7 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 
 | 项 | 值 |
 | --- | --- |
-| 工具 | [`tools/cal2_adjudicate.py`](../../../tools/cal2_adjudicate.py)，纯 stdlib；读 CGRD v1 + 121×99 真值 + BOUNDS 节 → C2-A/B/C/E/F 与三进程逐分量差；SHA-256 `CDA8549BA1AFB5BF2BD78933C550A80306BD12762734598740C3B4382978AE41` |
+| 工具 | [`tools/cal2_adjudicate.py`](../../../tools/cal2_adjudicate.py)，纯 stdlib；读 CGRD v1 + 121×99 真值 + BOUNDS 节 → C2-A/B/C/E/F 与三进程逐分量差；SHA-256 `F2225EACE4028D9216BEC06C918D6C999078A55ECD13FDF8E1A718303EF6136F` |
 | 离线测试 | [`tools/cal2_adjudicate_test.py`](../../../tools/cal2_adjudicate_test.py)，34 项断言全部 PASS（`python -I tools/cal2_adjudicate_test.py`）；SHA-256 `929021A04BAE40470BF88A304142AEB8CEF9F75AE55EAA643063787FFE822DCE` |
 | C2-E 默认 | **严格零 `[E]`**；只有显式 `--track2-oar-exemption` 才豁免 Track 2 §十二登记的唯一精确行 `failed to get plugin info for OpenAnimationReplacer`。CAL2 v1 正文尚未写入该豁免，故默认不给 run 1 放行 |
 | 输出 | `cal2-adjudication.json`（摘要/逐代统计/计时）、`cal2-adjudication-summary.txt`（≤200 行）、`cal2-cross-process-diff.bin`（≥2 进程时按对保存全部 119,790 个 f64 差）、`cal2-violations.csv`（仅违规时） |

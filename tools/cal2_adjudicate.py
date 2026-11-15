@@ -961,6 +961,18 @@ def cross_process(runs, out_dir):
             "required_processes": 3,
             "reason": "fewer than two complete artifacts",
         }
+    reference = complete[0]["_artifact"]["records"]
+    reference_keys = [(record["ordinal"], record["time_bits"]) for record in reference]
+    for run in complete[1:]:
+        keys = [(record["ordinal"], record["time_bits"])
+                for record in run["_artifact"]["records"]]
+        if keys != reference_keys:
+            return {
+                "verdict": "NOT_EVALUATED",
+                "pairs": [],
+                "required_processes": 3,
+                "reason": f"{run['label']} ordinal/time grid differs from {complete[0]['label']}",
+            }
 
     component_count = GRID_GENERATION_COUNT * REGISTERED_TRACKS * GRID_COMPONENT_COUNT
     pair_count = len(complete) * (len(complete) - 1) // 2
