@@ -2,7 +2,7 @@
 
 **状态（2026-11-15）：预注册（评审通过）。** 用户于 2026-11-15 批准本协议（§八决策 1）与实现授权（§八决策 2/3：`AE-Track2` 档 + v104 代码改动 + 本地真值转储）。本文档把控制 B 从 [B2 的"9 固定时间单发采样"](../g5-cal-control-b-20261114/README.md)（合格进程 1 个，bounded READY）重组为 [CAL v1 §五.1/§五.2/§五.6](../../independent-behavior-graph.md#c-g5-cal-v1) 要求的完整形状——**每进程 1 个 baseline + 120 个完成代、每代 2 份读数，共 3 个独立进程**——并交付跨进程重复性数据（[CAL v1 §七](../../independent-behavior-graph.md#c-g5-cal-v1) N 的原始材料）与控制自身计时区间（§五.4）。实现范围在 §九 冻结后动代码。`tau_p/tau_r/tau_s/epsilon_t` 的推导属 CAL1 分析，本协议不产生任何数值容差。
 
-> **2026-11-15 追加（run 1 + 工具）**：v104 已部署并完成 **1/3** 个独立进程；离线裁定工具已实现并通过离线测试，见 [§十一](#cal2-run1-tool)。该进程 C2-A/B/C/F 通过，**严格 C2-E 因 Track2 环境缺失 OAR 的确定性 `[E]` 失败**；是否按 Track 2 §十二豁免需用户裁决，run 2/3 尚未运行。
+> **2026-11-15 追加（run 1 + 工具 + §十二）**：v104 已部署并完成 **1/3** 个独立进程；离线裁定工具已实现并通过离线测试，见 [§十一](#cal2-run1-tool)。用户已批准 [§十二](#cal2-c2e-oar-addendum) 的 C2-E 精确 OAR 豁免；run 1 按该修订正式计入，**C2-A/B/C/F PASS、C2-E PASS（唯一 `[E]` = 豁免行）**，批次仍为 **C2-D NOT_READY（1/3）**。run 2/3 尚未运行。
 
 **前置阅读**：[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)（§四 控制 B 资格、§五.1–§五.7、§七 统计、§八 CAL1–CAL7）、[K2-C4 控制 B 登记](../g5-cal-control-b-20261114/README.md)（资源身份/独立真值/B1 FAIL/B2 PASS）、[K6 计划 §五](../g5-k6-plan-20261114/README.md)（进程缺口登记）、[门 4 协议 §十五](../g5-gate4-20261115/README.md)（候选时钟阶梯形态登记）、[Track 2 §十六](../g5-track2-20261114/README.md)（资源确定性条件）。
 
@@ -195,7 +195,28 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 | C2-C | PASS（119,790 分量全部有界；49,391 个非零差；**0 violation**；最大比值 **0.125**） |
 | C2-F | PASS（121 代四点 TSC 齐全且单调；首读 median 35,475、max 112,703 cycles） |
 | C2-E 严格 | **FAIL**：唯一 `[E]` 是 `20:54:50` 的 OAR 缺失探测行，发生在任何 `CONTROL GRID` 采集之前；CAL2 v1 未登记该豁免，故按字面零 `[E]` 判负 |
-| C2-E 带 `--track2-oar-exemption` | PASS（同一行按 Track 2 §十二精确豁免；其余 `[E]` 仍为 0） |
-| 批次 | 严格路径：run 1 因 C2-E 为 **INVALID**；带豁免路径：**C2-D NOT_READY（1/3）**。两路径的跨进程差都尚不可计算 |
+| C2-E（经 [§十二](#cal2-c2e-oar-addendum) 修订） | PASS（同一行按 Track 2 §十二精确豁免；其余 `[E]` 仍为 0） |
+| 批次 | 严格路径（历史）：run 1 因 C2-E 为 **INVALID**；**§十二 正式路径：C2-D NOT_READY（1/3）**。跨进程差待 run 2/3 |
 
-**待裁决**：① 在 CAL2 内预注册 C2-E 的 Track 2 §十二同款精确豁免（须说明 run 1 是在修订前采集，且只豁免该确定性装载期行，不改任何数值判据），然后把 run 1 计入批次；或 ② 把 run 1 视为修订前冒烟、在修订后再跑 3 个独立进程。两条路径都不产生 `tau_*`，都不把本节的 0 violation 当作 G5 验收。
+正式裁定工件：[cal2-adjudication.json](run1-adjudication/cal2-adjudication.json)（66,211 B，SHA-256 `2E63D24758A20ADFCD208EF1075DAEE42B6CB40571FDC0BF04B549DF5F8C5FA4`）与 [cal2-adjudication-summary.txt](run1-adjudication/cal2-adjudication-summary.txt)（1,131 B，SHA-256 `EDA6F9DE0087E7732EED602FBAF83230E28A1866DB0DB1E082864DBDD46D231E`）；命令含 `--track2-oar-exemption`（§十二）。
+
+**已裁决（2026-11-15）**：用户批准 §十二 的精确豁免，并选择把 run 1 计入批次（run 1 是在修订前采集，已在 §十二 披露）；剩 run 2/3。两条路径都不产生 `tau_*`，都不把本节的 0 violation 当作 G5 验收。
+
+<a id="cal2-c2e-oar-addendum"></a>
+## 十二、C2-E OAR `[E]` 精确豁免修订（2026-11-15，用户批准）
+
+**修订范围**：仅针对 `AE-Track2` 档、SKSE 装载期、任何 `CONTROL GRID` 采集之前的唯一精确行：
+
+```text
+[E] failed to get plugin info for OpenAnimationReplacer
+```
+
+其伴生 `[I] OAR hooks unavailable: Open Animation Replacer is not loaded` 仍保留。**其余任何 `[E]`（含运行期）仍按 §五/§六 停止，不豁免。**
+
+**依据**：§2.2 已把本协议环境固定为 `AE-Track2`（OAR 关闭）；[Track 2 §十二](../g5-track2-20261114/README.md) 已对同一精确行登记豁免并说明理由（否则该环境的任何会话都无法满足零 `[E]`）。本修订只把同一环境级豁免写入 CAL2；**不改变 C2-A/B/C/D/F、不改解析界、不改任何数值判据**。
+
+**执行**：只有显式传入 `tools/cal2_adjudicate.py --track2-oar-exemption` 才启用；默认仍严格零 `[E]`。裁定输出必须记录 `oar=1 exempt_oar=1 exemption=True`，并在 run 记录中引用本节。
+
+**时点与适用**：本修订在 run 1 采集之后、正式批次裁定之前登记；run 1 是修订前采集，现按本节显式计入并披露（用户 2026-11-15 批准）。若要求零歧义，可把 run 1 仅作冒烟、修订后重跑 3 进程；当前选择是计入 run 1。
+
+**run 1 正式读数（经本节）**：C2-A/B/C/F PASS；C2-E PASS（唯一 `[E]` = 上述豁免行）；C2-D **NOT_READY（1/3）**。跨进程差待 run 2/3；`tau_*` 未产生，K2-C4 未升格。
