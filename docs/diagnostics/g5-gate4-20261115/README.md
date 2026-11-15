@@ -259,3 +259,45 @@ python -I tools/gate4_pair.py --candidate <cpk5.bin> --source <cpk5s.bin> --out-
 ### 14.6 实施顺序
 
 §十四（本节）先于代码提交冻结 → 实现 + T1–T12 全过 → Track 2 Run 1/2 工件 dry-run（§十五登记，含工具 SHA-256）。**零游戏代码、零构建、零上机贯穿本节。**
+
+## 十五、协议可执行性验证（metadata-only dry-run，2026-11-15 登记）
+
+**裁定：协议在 Track 2 Run 1/2 工件上可执行成立（限定：本批工件、metadata-only、冻结规则 v1）；无规则歧义需要修订；观察清单移交 §五 PENDING-CAL 槽位与门 4 完整冻结阶段。姿态分量全程未解码（`pose_decoded=false`），不产生任何姿态结论。**
+
+### 15.1 执行身份
+
+| 项 | 值 |
+| --- | --- |
+| 命令 | `python -I tools/gate4_pair.py --candidate …g5k5c-track2-run1-20261115-0024.bin --source …g5k5s-track2-run1-20261115-0033.bin --candidate-json … --source-json … --out-dir docs/diagnostics/g5-gate4-20261115/dry-run` |
+| 工具 | [tools/gate4_pair.py](../../../tools/gate4_pair.py) SHA-256 `09e5feab…7d4ed`；[tools/gate4_pair_test.py](../../../tools/gate4_pair_test.py) `adc93307…5f65`（T1..T12 全 PASS，34 断言） |
+| 输入工件 | 候选 CPK5 249 记录 1,410,452 B `8c63d5fa…019fa6`（= [Track 2 §17](g5-track2-20261114/README.md#十七run-1候选侧-k5-姿态采集2026-11-15-0022pass含一项-identity-unreadable-记账) 登记值）；源 CPK5S 1065 记录 6,019,504 B `9a9933bc…1ac68` |
+| 输出工件 | [manifest](dry-run/gate4-pair-manifest.json) 111,548 B `4a3dd0ae…706`；[summary](dry-run/gate4-pair-summary.txt) `978a58ea…d6`（13 行，预算内） |
+| JSON 交叉核对 | 两侧 `recorded` == bin count（249 / 1065）✓ |
+
+### 15.2 对账与锚点（全部判据形态成立）
+
+| 项 | 读数 |
+| --- | --- |
+| 候选账本 | total=249 idun=2 eligible=247 paired=247 no_clock=0 no_partner=0 edge_pairs=12 out_of_set=0；恒等式闭合 |
+| 源账本 | total=1065 idun=1 eligible=1064 hosted_pairs=247 records_hosting=36 out_of_set=0 |
+| 域表 | 1hm_equip cand=96/src=71；1hm_unequip cand=129/src=118；1hm_idle cand=22/src=368；mt_idle cand=0/src=507；mlh_idle 与 dummy 两侧 0（总是与更高优先钟并存） |
+| dry-run 锚点 | E1 96 / idle 22 / U1 129 **三锚全部 matched=yes** |
+| K5-7 | 可读身份全部 ∈ Track 2 六族集合，verdict=PASS（与 k5_reconcile `--track2` 一致） |
+| 确定性 | 同参调用两次，manifest + summary SHA-256 逐字节一致（G4P-4 同款检查） |
+
+### 15.3 元数据观察（登记，不在本协议内裁定）
+
+以下为 dry-run 暴露的时间线形态事实——**不构成规则歧义、不触发本协议升版**；其对时钟轴判据与姿态解释的含义由门 4 完整冻结阶段（§五 PENDING-CAL 槽位）处置：
+
+1. **候选过渡 clip localTime 阶梯推进**：相邻记录同值比例 1hm_equip **81/97**、1hm_unequip **108/128**、1hm_idle **28/45**（跳跃幅度 ≈ n×1/60 的追赶式突发）；源侧同族仅 8/71、9/117、**0/387**。阶梯内多条候选记录共享同一相位点，nearest-clock 确定性把同域同一源伙伴分配给它们（many-to-one 集中），机制不受影响。
+2. **两侧 clip 总相位跨度端点逐位一致**：1hm_equip 终点同为 `1.4333`、1hm_unequip 终点同为 `2.0000`；候选 1hm_idle 45 步 ↔ 0.7500 s 精确对应（= 45×1/60）。过渡 clip 的候选跨度小于"步数×1/60"（equip 差 11/60、unequip 差 8/60）——候选过渡 clip 时钟相对驱动步呈滞后/追赶形态，是被测时间线事实，不是配对规则缺陷。
+3. **dt_clock 全对分布（247 对）**：median 0.0047 / p95 0.0110 / max 0.0178 s（亚帧量级；max 即 unequip 下界 edge 对）。
+4. **家族集合差仅 1/247 对**：equip 末点边界对（候选 completed=86 vs 源 seq 173，dt_clock=1.19e-07）——源侧 idle 栈在 equip 尾相对候选提前一步出现；单对登记，不删帧。
+5. **edge_pairs=12**：unequip 9 条（候选 local==0.0 越源下界 0.0178）+ equip 1 条（0.0167 < 0.0225）+ idle 1 条；逐对 flag 记账。
+6. **零 wrap**：两侧全部实例窗单环（无循环回绕歧义）；`no-clock`/`no-partner` 均为 0。
+
+### 15.4 对门 4 完整冻结的输入
+
+- 时钟轴判据（§五 PENDING-CAL 槽位）的定义必须覆盖观察 1/2（候选过渡 clip 的阶梯/滞后形态与其总跨度端点对称性）——是按 clip 实例速率、还是按跨度端点/形状比较，由 CAL 输出填充时一并冻结；本协议不预设。
+- 姿态阶梯（同一相位点多条候选记录的姿态是否相同）属 pose 域问题，dry-run 未解码、正式模式首次给出。
+- §15 的全部读数是**协议可执行性证据**，不是姿态比较结果；正式裁定只消费门 5 正式运行的新工件。
