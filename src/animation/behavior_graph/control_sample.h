@@ -52,5 +52,18 @@ namespace animation::behavior_graph
     // registered sample was read twice with bitwise-equal results.
     [[nodiscard]] bool run_control_sample(RE::hkbCharacter& a_character, std::uint32_t a_actor_id,
         std::uint64_t a_request, std::size_t a_completed);
+
+    // C-G5-CAL2 control grid (docs/diagnostics/g5-cal2-20261115 §9): per-
+    // generation sampling at the predetermined grid times during the equip
+    // phase. completed==1 selects the carrier once (B2 rules) and records the
+    // baseline (t=0) plus generation 0 (t=1/60); completed=k records the
+    // generation whose grid time is k/60. The generation ordinal is the grid
+    // table index, so 121 records cover one baseline plus k=1..120.
+    [[nodiscard]] bool run_control_grid_generation(RE::hkbCharacter& a_character,
+        std::uint32_t a_actor_id, std::uint64_t a_request, std::size_t a_completed);
+
+    // Closes the grid artifact (header + buffered records + close line). Called
+    // once at the last equip generation; nothing is written on an aborted chain.
+    [[nodiscard]] bool close_control_grid(std::uint32_t a_actor_id, std::uint64_t a_request);
 }
 PLUGIN_NAMESPACE_END

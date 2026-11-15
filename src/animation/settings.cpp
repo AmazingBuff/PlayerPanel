@@ -34,6 +34,7 @@ namespace
     bool g_oar_context_watch = false;
     bool g_observation_snapshot = false;
     bool g_control_sample = false;
+    bool g_control_sample_grid = false;
     bool g_clip_identity_census = false;
     bool g_equipment_state_dump = false;
     bool g_k5_full_sample = false;
@@ -88,6 +89,7 @@ void load_settings()
     g_oar_context_watch = ini.GetBoolValue("Experiment", "OarContextWatch", false);
     g_observation_snapshot = ini.GetBoolValue("Experiment", "ObservationSnapshot", false);
     g_control_sample = ini.GetBoolValue("Experiment", "ControlSample", false);
+    g_control_sample_grid = ini.GetBoolValue("Experiment", "ControlSampleGrid", false);
     g_clip_identity_census = ini.GetBoolValue("Experiment", "ClipIdentityCensus", false);
     g_equipment_state_dump = ini.GetBoolValue("Experiment", "EquipmentStateDump", false);
     g_k5_full_sample = ini.GetBoolValue("Experiment", "K5FullSample", false);
@@ -130,6 +132,7 @@ void load_settings()
     logger::info("EXPERIMENT setting SamplingLiveness={}", behavior_graph::probe_liveness_mode_name(g_sampling_liveness_mode));
     logger::info("EXPERIMENT setting ObservationSnapshot={}", g_observation_snapshot);
     logger::info("EXPERIMENT setting ControlSample={}", g_control_sample);
+    logger::info("EXPERIMENT setting ControlSampleGrid={}", g_control_sample_grid);
     logger::info("EXPERIMENT setting ClipIdentityCensus={}", g_clip_identity_census);
     logger::info("EXPERIMENT setting EquipmentStateDump={}", g_equipment_state_dump);
     logger::info("EXPERIMENT setting K5FullSample={}", g_k5_full_sample);
@@ -141,6 +144,7 @@ bool detailed_animation_trace() { return g_detailed_animation_trace; }
 bool behavior_graph_probe() { return g_behavior_graph_probe; }
 bool observation_snapshot() { return g_observation_snapshot; }
 bool control_sample() { return g_control_sample; }
+bool control_sample_grid() { return g_control_sample_grid; }
 bool clip_identity_census() { return g_clip_identity_census; }
 bool equipment_state_dump() { return g_equipment_state_dump; }
 bool k5_full_sample() { return g_k5_full_sample; }

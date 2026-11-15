@@ -2266,11 +2266,27 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 ClipObservation const clips = collect_active_clips();
                                 record_clip_clocks(clips);
                                 record_pose_step();
-                                // C-G5-CAL K2-C4 control B: the first post-sample is the earliest
-                                // point where the OAR-replaced MT_Idle binding (25.0167 s, 99 tracks)
-                                // is active. It is sampled once; a failure is logged separately and
-                                // never invalidates the existing K3 observation.
-                                if (observation.completed() == 1 && control_sample() && !control_sample_attempted)
+                                // C-G5-CAL2 control grid (docs/diagnostics/g5-cal2-20261115 §9):
+                                // per-generation sampling at the predetermined grid times during
+                                // the equip phase; the nine-time sampling is suppressed while the
+                                // grid is armed. A grid failure never invalidates the K3/K5
+                                // observation.
+                                if (control_sample_grid() &&
+                                    std::strcmp(observation.segment_name(), "equip") == 0 &&
+                                    observation.completed() >= 1 && observation.completed() <= 120)
+                                {
+                                    if (control_sample() && !control_sample_attempted)
+                                    {
+                                        control_sample_attempted = true;
+                                        logger::info("CONTROL GRID actor={:08x} request={} phase=manifest ninetime=suppressed",
+                                            actor_id, request);
+                                    }
+                                    (void)run_control_grid_generation(candidate->characterInstance, actor_id,
+                                        request, observation.completed());
+                                    if (observation.completed() == 120)
+                                        (void)close_control_grid(actor_id, request);
+                                }
+                                else if (observation.completed() == 1 && control_sample() && !control_sample_attempted)
                                 {
                                     control_sample_attempted = true;
                                     (void)run_control_sample(candidate->characterInstance, actor_id, request, observation.completed());

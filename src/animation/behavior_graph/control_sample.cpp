@@ -20,9 +20,12 @@
 #include <cctype>
 #include <cmath>
 #include <cstring>
+#include <ctime>
+#include <fstream>
 #include <string>
 #include <vector>
 
+#include <intrin.h>
 #include <xmmintrin.h>
 
 // winnt.h defines macros of these names, which would rewrite the REX constants
@@ -220,8 +223,7 @@ bool read_animation_resource_identity(RE::hkaAnimationBinding const* a_binding,
 
 bool run_control_sample(RE::hkbCharacter& a_character, std::uint32_t a_actor_id,
     std::uint64_t a_request, std::size_t a_completed)
-{
-    logger::info(
+{    logger::info(
         "CONTROL B actor={:08x} request={} phase=manifest completed={} resource='{}' bytes={} sha256={} "
         "duration_bits={:08X} tracks={} floats={} frames={} blocks={} max_frames_per_block={} "
         "block_duration_bits={:08X} block_inverse_bits={:08X} frame_duration_bits={:08X} "
@@ -385,6 +387,347 @@ bool run_control_sample(RE::hkbCharacter& a_character, std::uint32_t a_actor_id,
         Control_Sample_Track_Count, comparisons, equal, non_finite, bits64(bits_hash),
         bits64(Control_Sample_Truth_Bits_Fnv1a64), hash_match, carrier.map_match);
     return valid;
+}
+
+// ---- C-G5-CAL2 control grid (docs/diagnostics/g5-cal2-20261115 §9) ----
+
+#pragma pack(push, 1)
+    struct GridHeader
+    {
+        char magic[4]{ 'C', 'G', 'R', 'D' };
+        std::uint16_t version{ 1 };
+        std::uint16_t header_size{ static_cast<std::uint16_t>(Control_Grid_Header_Size) };
+        std::uint16_t generation_capacity{ static_cast<std::uint16_t>(Control_Grid_Time_Count) };
+        std::uint16_t generation_recorded{};
+        std::uint16_t track_count{ static_cast<std::uint16_t>(Control_Sample_Track_Count) };
+        std::uint32_t reserved{};
+        char identity[92]{};
+        char pad[2]{};
+    };
+    static_assert(sizeof(GridHeader) == Control_Grid_Header_Size);
+
+    struct GridRecord
+    {
+        std::uint16_t ordinal{};
+        std::uint32_t time_bits{};
+        std::uint16_t completed{};
+        std::uint8_t two_read_equal{};
+        std::uint8_t identity_ok{};
+        std::uint8_t flags{};
+        std::uint8_t pad{};
+        std::uint64_t tsc_call_start{};
+        std::uint64_t tsc_after_first{};
+        std::uint64_t tsc_after_second{};
+        std::uint64_t tsc_after_compare{};
+        std::uint32_t data[Control_Sample_Track_Count * 10]{};
+    };
+    static_assert(sizeof(GridRecord) == Control_Grid_Record_Size);
+#pragma pack(pop)
+
+    struct GridState
+    {
+        bool attempted{};
+        QualifiedCarrier carrier{};
+        GridHeader header{};
+        std::vector<GridRecord> records;
+        std::string path;
+        std::uint64_t data_hash{ 0xcbf29ce484222325ull };
+        std::size_t two_read_bad{};
+        std::size_t identity_bad{};
+        std::size_t nonfinite{};
+        bool valid = true;
+    };
+
+    GridState& control_grid_state()
+    {
+        static GridState state;
+        return state;
+    }
+
+    // Same scan rules as run_control_sample (activeNodes clip generators,
+    // animation-byte identity, unique qualified carrier); only the log tags
+    // differ, so the nine-time path stays byte-identical.
+    bool grid_scan_carrier(RE::hkbCharacter& a_character, std::uint32_t a_actor_id,
+        std::uint64_t a_request, std::size_t a_completed, QualifiedCarrier& a_out)
+    {
+        RE::hkbBehaviorGraph* const graph = a_character.behaviorGraph.get();
+        if (!graph || !graph->activeNodes)
+        {
+            logger::info("CONTROL GRID actor={:08x} request={} phase=scan status=unavailable reason=no-active-nodes",
+                a_actor_id, a_request);
+            return false;
+        }
+        RE::NodeList const& nodes = *graph->activeNodes;
+        std::size_t const node_count = static_cast<std::size_t>(nodes.size());
+        if (node_count > Control_Node_Limit)
+        {
+            logger::info("CONTROL GRID actor={:08x} request={} phase=scan status=invalid reason=node-overflow nodes={}",
+                a_actor_id, a_request, node_count);
+            return false;
+        }
+
+        std::vector<QualifiedCarrier> qualified;
+        std::size_t logged = 0;
+        for (std::size_t i = 0; i < node_count; ++i)
+        {
+            RE::hkbNode* const node = nodes.data()[i].nodeClone;
+            if (!node_is_clip_generator(node))
+                continue;
+            auto const* const clip = static_cast<RE::hkbClipGenerator const*>(node);
+            QualifiedCarrier carrier{};
+            carrier.clip = clip;
+            carrier.node_index = i;
+            carrier.name = read_string(clip->animationName, 128);
+
+            char const* reason = "qualified";
+            bool ok = plausible_object_pointer(reinterpret_cast<std::uintptr_t>(clip->binding));
+            if (ok)
+            {
+                carrier.binding = clip->binding;
+                carrier.animation = carrier.binding->animation.get();
+                ok = carrier.animation != nullptr &&
+                    plausible_object_pointer(reinterpret_cast<std::uintptr_t>(carrier.animation));
+            }
+            if (!ok)
+                reason = "bad-binding";
+            else if (!spline_matches(*carrier.animation))
+            {
+                ok = false;
+                reason = "resource-mismatch";
+            }
+            else if (!read_binding_identity(*carrier.binding, carrier))
+            {
+                ok = false;
+                reason = "binding-unreadable";
+            }
+            else if (!contains_mt_idle(carrier.name))
+            {
+                ok = false;
+                reason = "name-mismatch";
+            }
+
+            if (ok)
+                qualified.push_back(carrier);
+            if (ok || logged < Control_Candidate_Log_Limit)
+            {
+                log_candidate(a_actor_id, a_request, a_completed, carrier, ok, reason);
+                ++logged;
+            }
+        }
+
+        if (qualified.size() != 1)
+        {
+            logger::info("CONTROL GRID actor={:08x} request={} phase=scan status=unavailable reason=carrier-count qualified={}",
+                a_actor_id, a_request, qualified.size());
+            return false;
+        }
+        a_out = qualified.front();
+        return true;
+    }
+
+    void grid_record_sample(GridState& a_state, std::uint32_t a_actor_id, std::uint64_t a_request,
+        std::size_t a_completed, std::size_t a_ordinal, std::uint32_t a_time_bits,
+        std::vector<RE::hkQsTransform>& a_first, std::vector<RE::hkQsTransform>& a_second)
+    {
+        if (a_state.records.size() >= Control_Grid_Time_Count)
+            return;
+
+        GridRecord record{};
+        record.ordinal = static_cast<std::uint16_t>(a_ordinal);
+        record.time_bits = a_time_bits;
+        record.completed = static_cast<std::uint16_t>(a_completed);
+
+        // Per-generation carrier identity re-verification (C2-A): the binding
+        // must still expose the registered resource bytes at every generation.
+        AnimationResourceIdentity identity{};
+        bool const identity_ok =
+            read_animation_resource_identity(a_state.carrier.binding, identity) && identity.readable &&
+            identity.spline && identity.data_hash == Control_Sample_Data_Fnv1a64 &&
+            identity.block_offsets_hash == Control_Sample_Block_Offsets_Fnv1a64;
+        if (!identity_ok)
+        {
+            record.identity_ok = 0;
+            record.flags |= 0x1u;
+            ++a_state.identity_bad;
+            a_state.valid = false;
+            a_state.records.push_back(record);
+            logger::info("CONTROL GRID actor={:08x} request={} phase=gen ordinal={} completed={} "
+                "time_bits={:08X} two_read_equal=0 identity_ok=false skip=yes",
+                a_actor_id, a_request, a_ordinal, a_completed, a_time_bits);
+            return;
+        }
+        record.identity_ok = 1;
+
+        float const time = std::bit_cast<float>(a_time_bits);
+        record.tsc_call_start = __rdtsc();
+        a_state.carrier.animation->SamplePartialTracks(time, Control_Sample_Track_Count,
+            a_first.data(), 0, nullptr, nullptr);
+        record.tsc_after_first = __rdtsc();
+        a_state.carrier.animation->SamplePartialTracks(time, Control_Sample_Track_Count,
+            a_second.data(), 0, nullptr, nullptr);
+        record.tsc_after_second = __rdtsc();
+        bool const read_equal = std::memcmp(a_first.data(), a_second.data(),
+            Control_Sample_Track_Count * sizeof(RE::hkQsTransform)) == 0;
+        record.tsc_after_compare = __rdtsc();
+        record.two_read_equal = read_equal ? 1u : 0u;
+        if (!read_equal)
+        {
+            ++a_state.two_read_bad;
+            a_state.valid = false;
+        }
+
+        std::size_t index = 0;
+        for (std::size_t track = 0; track < Control_Sample_Track_Count; ++track)
+        {
+            alignas(16) float translation[4];
+            alignas(16) float rotation[4];
+            alignas(16) float scale[4];
+            _mm_store_ps(translation, a_first[track].translation.quad);
+            _mm_store_ps(rotation, a_first[track].rotation.vec.quad);
+            _mm_store_ps(scale, a_first[track].scale.quad);
+            float const values[10] = { translation[0], translation[1], translation[2],
+                rotation[0], rotation[1], rotation[2], rotation[3],
+                scale[0], scale[1], scale[2] };
+            for (std::size_t i = 0; i < 10; ++i, ++index)
+            {
+                std::uint32_t const raw = std::bit_cast<std::uint32_t>(values[i]);
+                record.data[index] = raw;
+                if (!std::isfinite(values[i]))
+                {
+                    record.flags |= 0x2u;
+                    ++a_state.nonfinite;
+                    a_state.valid = false;
+                }
+                auto const* const bytes = reinterpret_cast<std::uint8_t const*>(&raw);
+                for (std::size_t b = 0; b < sizeof(raw); ++b)
+                {
+                    a_state.data_hash ^= bytes[b];
+                    a_state.data_hash *= 0x100000001b3ull;
+                }
+            }
+        }
+
+        a_state.records.push_back(record);
+        logger::info("CONTROL GRID actor={:08x} request={} phase=gen ordinal={} completed={} "
+            "time_bits={:08X} two_read_equal={} identity_ok=true tsc_first={} tsc_second={} tsc_compare={}",
+            a_actor_id, a_request, a_ordinal, record.completed, a_time_bits, record.two_read_equal,
+            record.tsc_after_first - record.tsc_call_start,
+            record.tsc_after_second - record.tsc_after_first,
+            record.tsc_after_compare - record.tsc_after_second);
+    }
+
+bool run_control_grid_generation(RE::hkbCharacter& a_character, std::uint32_t a_actor_id,
+    std::uint64_t a_request, std::size_t a_completed)
+{
+    auto& state = control_grid_state();
+    if (state.records.size() >= Control_Grid_Time_Count)
+        return state.valid;
+
+    std::vector<RE::hkQsTransform> first(Control_Sample_Track_Count);
+    std::vector<RE::hkQsTransform> second(Control_Sample_Track_Count);
+
+    if (!state.attempted)
+    {
+        state.attempted = true;
+        logger::info(
+            "CONTROL GRID actor={:08x} request={} phase=manifest completed={} resource='{}' bytes={} sha256={} "
+            "duration_bits={:08X} tracks={} floats={} frames={} blocks={} data_fnv1a64={} "
+            "block_offsets_fnv1a64={} map_fnv1a64={} times={} baseline=1",
+            a_actor_id, a_request, a_completed, Control_Sample_Resource, Control_Sample_Resource_Bytes,
+            Control_Sample_Resource_Sha256, Control_Sample_Duration_Bits, Control_Sample_Track_Count,
+            Control_Sample_Float_Track_Count, Control_Sample_Num_Frames, Control_Sample_Num_Blocks,
+            bits64(Control_Sample_Data_Fnv1a64), bits64(Control_Sample_Block_Offsets_Fnv1a64),
+            bits64(Control_Sample_Binding_Map_Fnv1a64), Control_Grid_Time_Count);
+
+        QualifiedCarrier carrier{};
+        if (!grid_scan_carrier(a_character, a_actor_id, a_request, a_completed, carrier))
+        {
+            state.valid = false;
+            return false;
+        }
+        state.carrier = carrier;
+        logger::info(
+            "CONTROL GRID actor={:08x} request={} phase=carrier completed={} node={:#x} index={} clip='{}' "
+            "binding={:#x} binding_index={} animation={:#x} map_count={} map_fnv1a64={} blend_hint={} map_match={}",
+            a_actor_id, a_request, a_completed, reinterpret_cast<std::uintptr_t>(carrier.clip),
+            carrier.node_index, carrier.name, reinterpret_cast<std::uintptr_t>(carrier.binding),
+            static_cast<std::uint32_t>(carrier.clip->animationBindingIndex),
+            reinterpret_cast<std::uintptr_t>(carrier.animation), carrier.map_count,
+            bits64(carrier.map_hash), carrier.blend_hint, carrier.map_match);
+
+        // completed==1 carries the baseline (t=0) plus grid generation 0 (t=1/60).
+        grid_record_sample(state, a_actor_id, a_request, a_completed, 0, Control_Grid_Times[0],
+            first, second);
+        grid_record_sample(state, a_actor_id, a_request, a_completed, 1, Control_Grid_Times[1],
+            first, second);
+        return state.valid;
+    }
+
+    // completed=k (2..120) records the grid generation whose time is k/60; the
+    // record ordinal equals the grid table index k.
+    if (a_completed <= Control_Grid_Generation_Count)
+    {
+        grid_record_sample(state, a_actor_id, a_request, a_completed, a_completed,
+            Control_Grid_Times[a_completed], first, second);
+    }
+    return state.valid;
+}
+
+bool close_control_grid(std::uint32_t a_actor_id, std::uint64_t a_request)
+{
+    auto& state = control_grid_state();
+    if (!state.attempted || !state.path.empty())
+        return state.valid;
+
+    auto const log_dir = SKSE::log::log_directory();
+    if (!log_dir)
+    {
+        state.valid = false;
+        logger::info("CONTROL GRID actor={:08x} request={} phase=close status=invalid reason=no-log-dir",
+            a_actor_id, a_request);
+        return false;
+    }
+    std::time_t const now = std::time(nullptr);
+    std::tm utc{};
+    (void)gmtime_s(&utc, &now);
+    char stamp[32]{};
+    (void)std::strftime(stamp, sizeof(stamp), "%Y%m%dT%H%M%SZ", &utc);
+    state.path = fmt::format("{}/CharacterPanel-g5cal-grid-{}-{}.bin", log_dir->string(),
+        Plugin::Plugin_Build_Identity, stamp);
+
+    state.header.generation_recorded = static_cast<std::uint16_t>(state.records.size());
+    {
+        std::string_view const identity(Plugin::Plugin_Build_Identity);
+        std::size_t const copy_count = std::min(identity.size(), sizeof(state.header.identity) - 1);
+        std::memcpy(state.header.identity, identity.data(), copy_count);
+    }
+
+    std::ofstream file(state.path, std::ios::binary | std::ios::trunc);
+    bool write_ok = static_cast<bool>(file);
+    std::size_t bytes = 0;
+    if (write_ok)
+    {
+        file.write(reinterpret_cast<char const*>(&state.header), sizeof(state.header));
+        bytes += sizeof(state.header);
+        for (GridRecord const& record : state.records)
+        {
+            file.write(reinterpret_cast<char const*>(&record), sizeof(record));
+            bytes += sizeof(record);
+        }
+        write_ok = static_cast<bool>(file);
+        file.close();
+    }
+    if (!write_ok)
+        state.valid = false;
+
+    logger::info("CONTROL GRID actor={:08x} request={} phase=close status={} generations={} "
+        "two_read_bad={} identity_bad={} nonfinite={} data_fnv1a64={} artifact='{}' bytes={}",
+        a_actor_id, a_request, state.valid ? "complete" : "invalid", state.records.size(),
+        state.two_read_bad, state.identity_bad, state.nonfinite, bits64(state.data_hash),
+        state.path, bytes);
+
+    std::vector<GridRecord>().swap(state.records);
+    return state.valid;
 }
 }
 PLUGIN_NAMESPACE_END
