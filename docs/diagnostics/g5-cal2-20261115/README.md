@@ -215,6 +215,8 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 | **run1↔run2 跨进程** | **119,790/119,790 分量逐位相同；nonzero=0；max_abs=0；max_ulp=0**（全样本差见下方工件；只交付数据，不推导 N） |
 | 批次 | **C2-D NOT_READY（2/3）**；run 3 待执行 |
 
+进程独立性：run 1/2 的主线程分别为 `43528`/`13016`，工件 UTC 戳 `125913Z`/`132909Z`，各自一份 `SCENEGRAPH BUILD` 与一次窗口；不是同一日志的追加段。
+
 两进程正式裁定工件：[cal2-adjudication.json](batch-2of3-adjudication/cal2-adjudication.json)（133,229 B，SHA-256 `3EB9FE94D4A5FB6BD303CE1A4ED39386996683F0D3FBA9783FB6A4CDB89BD833`）、[cal2-adjudication-summary.txt](batch-2of3-adjudication/cal2-adjudication-summary.txt)（1,898 B，SHA-256 `D0077E269CE6FD5EAC044B2F779EF23687DCFAD4C2A8EA2A43AA9ACC3CD57F0F`）与 [cal2-cross-process-diff.bin](batch-2of3-adjudication/cal2-cross-process-diff.bin)（958,352 B，SHA-256 `D9DEF6227E1A9878B46238887316F1719B22600A8A7CD4431D8400E2FE76F210`）；命令含 `--track2-oar-exemption`。
 
 <a id="cal2-c2e-oar-addendum"></a>
