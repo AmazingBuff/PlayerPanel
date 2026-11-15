@@ -97,3 +97,50 @@
 | 4 | （会话外既挂）82 提交 push 与否；AGENTS.md CharacterPanel 条目更新与否 | 与本协议无耦合 |
 
 `Documentation Impact: update`：批准后同步主文档账本行（K2-C4 状态与 CAL2 入口）与文首状态行、[README](../../README.md)、[history](../../history.md)、[CHANGELOG](../../CHANGELOG.md)；不可回写 B1/B2 历史结论。本文仅依据本地已审计边界规定研究要求；实现涉及的新 hook 点（每代采样挂点）沿用既有 e_post_sample 审计入口，不引入新 ABI/hook。
+
+## 九、实现预注册（2026-11-15，批准后冻结；实现前零采集）
+
+本节冻结网格仪器的实现范围。所有变更先于任何采集；采集开始后本节不改（变更 → 本协议升版）。
+
+### 9.1 INI 键
+
+`[Experiment] ControlSampleGrid`（bool，默认 **off**）。要求 `IndependentGraph=inject`（键只在注入链每代 hook 处生效，非注入路径零触点）。`ControlSampleGrid=true` 且 `ControlSample=true` 同时开 → 9 时间单发采样被抑制并输出声明行 `CONTROL GRID ... phase=manifest ninetime=suppressed`（K5/K3 抑制声明同款纪律）；只开 `ControlSample` → 行为与 v100a 完全一致（零改动）。**off 时本次改动产生的全部输出行不存在，既有输出逐字节与 v103 一致。**
+
+### 9.2 代码触点（6 处，不触碰产品路径）
+
+| # | 文件 | 改动 |
+| --- | --- | --- |
+| 1 | [settings.h](../../../src/animation/settings.h) / [settings.cpp](../../../src/animation/settings.cpp) | `control_sample_grid()` getter + 全局 + `EXPERIMENT setting ControlSampleGrid={}` 行（与 ControlSample 模式逐字同构） |
+| 2 | [control_sample_policy.h](../../../src/animation/behavior_graph/control_sample_policy.h) | 网格常量：`Control_Grid_Generation_Count = 120`、**121 项静态 `Control_Grid_Times[]` 原始 bits 表**（0 = baseline；k/60, k=1..120）、记录/头尺寸常量。表由 float64 除法 → float32 舍入一次性生成并逐字粘贴；运行期**不计算任何时间**，只读表 |
+| 3 | [control_sample.h](../../../src/animation/behavior_graph/control_sample.h) | 新 API：`run_control_grid_generation(character, actor_id, request, completed)` 与 `close_control_grid(actor_id, request)`；网格状态（held carrier + writer + 计数）封装在 control_sample.cpp 内部，头文件不暴露 |
+| 4 | [control_sample.cpp](../../../src/animation/behavior_graph/control_sample.cpp) | 网格实现：completed=1 时按 B2 规则选载体（复用既有 `spline_matches`/`read_binding_identity` 静态助手，9 时间函数体零改动）→ 采集 **baseline(t=0) + j=0(t=1/60)** 两条记录；completed=k(2..120) → 采集 j=k−1(t=k/60)；每代：载体 `data`/`blockOffsets` FNV 重验 → 两次 `SamplePartialTracks` + memcmp → 四点 `__rdtsc` → 首读 99×40 B 原始位值入记录。completed=120 采集后写 close 行并关闭工件 |
+| 5 | [independent_graph.cpp](../../../src/animation/behavior_graph/independent_graph.cpp) | `record_output` lambda 内、既有 control_sample 分支之前加网格分支：`segment=="equip" && completed∈[1,120]` → 每代调用；completed==120 → close。9 时间分支原样保留 |
+| 6 | [tests/control_sample_policy_test.cpp](../../../tests/control_sample_policy_test.cpp) | 网格用例（§9.5） |
+
+### 9.3 工件字节布局（pack(1)，static_assert 到位）
+
+- **Header（112 B）**：magic 4s `CGRD` | version u16=1 | header_size u16=112 | gen_capacity u16=121 | gen_recorded u16 | track_count u16=99 | reserved u32=0 | identity char[92]（`Plugin_Build_Identity`，NUL 填充）+ pad[2]。
+- **Generation record（4,004 B）**：gen_ordinal u16（0=baseline，1..120=网格代 j）| time_bits u32 | completed u16 | two_read_equal u8 | identity_ok u8 | flags u8（bit0=identity_bad、bit1=nonfinite）| pad u8 | `tsc_call_start` u64 | `tsc_after_first` u64 | `tsc_after_second` u64 | `tsc_after_compare` u64 | data 99×40 B（**首读**原始位值，轨主序、每轨 t.xyz/r.xyzw/s.xyz 小端）。
+- **总量**：112 + 121 × 4,004 = **484,596 B** ≤ 8 MiB（CAL v1 §五.7）。
+- **路径**：`SKSE::log::log_directory()/CharacterPanel-g5cal-grid-<identity>-<UTC>.bin`（K5 路径模式同款）。
+- **close 行**：`generations=121 two_read_bad=0 identity_bad=0 nonfinite=0 data_fnv1a64=<全体 data 域 FNV-1a64，序数主序> artifact='...' bytes=484596`；SHA-256 由离线登记，close 行不含。
+
+### 9.4 日志行（~135 行/进程，远低于 200 行摘要预算）
+
+manifest（1，含 `times=121 tracks=99`）+ carrier（1，completed=1，复用 CONTROL B scan 字段）+ 每记录 1 行 `CONTROL GRID ... phase=gen ordinal={} completed={} time_bits={:08X} two_read_equal={} identity_ok={} tsc_first={} tsc_second={} tsc_compare={}`（121+1 baseline 行 = 122）+ close（1）+ 抑制声明（0 或 1）。**原始位值只入工件，不进日志**。
+
+### 9.5 离线测试（`control_sample_policy_test` 追加用例，引擎无关）
+
+G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（**与 9 时间表 1/60 逐位相同** = 跨表锚点）、`[60]==0x3F800000`（=1，9 时间表第三点）、`[120]==0x40000000`（=2.0）；G2 预算算术：`112 + 121×4,004 == 484,596 ≤ 8 MiB`；G3 序数映射：baseline+j0 ↔ completed=1、j=k−1 ↔ completed=k、末代 j=120 ↔ t=2.0；G4 off 路径常量：网格常量不影响既有 9 时间常量（两表并存断言）。
+
+### 9.6 真值工具附加输出（本地 gitignored；解码逻辑零改动）
+
+`build/hkx-audit/HkxTruth` 追加 **`BOUNDS` 节**（加性输出，`GetValue`/时间映射补丁逐字不动）：逐轨逐分量输出子轨类型（`STATIC`/`DYNAMIC`/`IDENTITY`）+ 量化位宽（pos/scale 8/16-bit、rotation 位宽）+ **逐块 `TrackBBOX` min/max 原始 bits**（`TrackBBOX` 为块级 authored 元数据，[decompressor 已读](../../../build/hkx-audit/HavokLib/source/hka_spline_decompressor.cpp)）。真值 TRACK 行与 `BITS_FNV1A64` 格式不变。网格真值文件 = `docs/diagnostics/g5-cal2-20261115/mt_idle_female_truth_grid121.txt`（121 × 99 行 TRACK + BITS_FNV1A64 + BOUNDS 节）。
+
+### 9.7 解析界规则（C2-C 的裁定来源，预先固定）
+
+逐分量界（B2 公式逐字复用，分母按 BOUNDS 节实际量化）：rotation（本资源全部 40-bit）= `3.45436e-4`（B2 登记值逐字复用，资源 FNV 未变故量化不变）；dynamic 8/16-bit = `max(divisor·(max−min), 32·eps·(|min|+|max|))`，divisor = `2/255` 或 `2/65535`，(min,max) 取**全体块的保守并集**（块 0 覆盖全部网格时间 t≤2.0，并集仅为保守）；static = `32·eps·|value|`（逐块值取并集最大）；identity = `32·eps`。裁定工具 = `tools/cal2_adjudicate.py`（纯 stdlib，读 CGRD 工件 + 网格真值 + BOUNDS 节 → C2-B/C2-C 逐分量裁定 + 三进程跨进程差 + 对账；SHA-256 随使用登记）。网格时间 {0, 1/60, 1} 与 9 时间真值重叠三点的位值一致性 = 转储自检（§2.4）。
+
+### 9.8 实施顺序
+
+§九（本节）先于代码冻结 → 实现 + G1–G4 全过 → 真值网格转储（§2.4）+ BOUNDS 节 → v104 构建部署 → 3 进程上机（用户）→ `cal2_adjudicate.py` 离线裁定登记。**零产品路径、off 逐字节一致贯穿。**
