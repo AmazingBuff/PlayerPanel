@@ -188,8 +188,8 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 
 | 项 | 读数 |
 | --- | --- |
-| 工件 | `CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T125913Z.bin`，484,596 B，SHA-256 `CB5587574E5BA5146788A4DBF0873D4C57C802BE4F34356111343D1F8E1D508B`（登记值见裁定 JSON） |
-| 日志 | `Documents\\My Games\\Skyrim Special Edition\\SKSE\\CharacterPanel.log`，198,032 B，SHA-256 `F16061B8094E6B078A8BDD7F52DC11AE81F15CF4746A3A4FABE163200017DB2B`；一次 manifest/carrier/close，equip 120 + unequip 129 |
+| 工件 | [CharacterPanel-g5cal2-run1-20261115-2059.bin](CharacterPanel-g5cal2-run1-20261115-2059.bin)（原 `CharacterPanel-g5cal-grid-…-20261115T125913Z.bin`），484,596 B，SHA-256 `CB5587574E5BA5146788A4DBF0873D4C57C802BE4F34356111343D1F8E1D508B` |
+| 日志 | [CharacterPanel-g5cal2-run1-20261115-2059.log](CharacterPanel-g5cal2-run1-20261115-2059.log)，198,032 B，SHA-256 `F16061B8094E6B078A8BDD7F52DC11AE81F15CF4746A3A4FABE163200017DB2B`；一次 manifest/carrier/close，equip 120 + unequip 129 |
 | C2-A | PASS（artifact + log；载体唯一、`binding_index=1022`、三 FNV/时长/轨道字段与登记一致） |
 | C2-B | PASS（121/121 代，`two_read_equal` 坏代 0，`identity_ok` 坏代 0，`nonfinite=0`） |
 | C2-C | PASS（119,790 分量全部有界；49,391 个非零差；**0 violation**；最大比值 **0.125**） |
