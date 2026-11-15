@@ -206,3 +206,56 @@
 | 3 | （会话外既挂）78 提交 push 与否；工作区 AGENTS.md CharacterPanel 条目更新与否 | 与本协议无耦合 |
 
 `Documentation Impact: update`：批准后同步主文档账本行与文首状态行、README、history、CHANGELOG；不可回写旧运行结论。本文仅依据本地已审计边界规定研究要求；未来若涉及新 API/ABI/hook（如源图并发契约），必须另行补齐兼容性与来源证据。
+
+## 十四、实现预注册（2026-11-15，批准后冻结；实现前零采集）
+
+本节冻结离线工具 `tools/gate4_pair.py` 及其测试的实现范围。所有变更先于任何采集；采集开始后本节不改（变更 → 本协议升版）。**纯 stdlib、零第三方依赖、零网络、只读输入工件。**
+
+### 14.1 CLI（冻结）
+
+```
+python -I tools/gate4_pair.py --candidate <cpk5.bin> --source <cpk5s.bin> --out-dir <dir>
+        [--candidate-json <ledger.json>] [--source-json <ledger.json>] [--tolerances <json>]
+```
+
+- **默认 = metadata-only（dry-run 语义）**：track 区域字节不进入任何数据结构；manifest 写 `pose_decoded=false`；不产误差明细。
+- **`--tolerances` 是 pose 解码的唯一开关**：JSON = `{"tau_p":>0, "tau_r":>0, "tau_s":>0, "epsilon_t":>0, "dt_exclude":bool}`（全有限）。提供时解码 pose 并计算 `E_p/E_r/E_s` 与超容差机械计数；`dt_exclude=true` 时 `dt_clock > epsilon_t` 的对排除出误差分布并记账（§五槽位结构）。**本会话不执行该模式**；仅 `--self-test`（见 14.5）用合成 fixture 覆盖其算术。工具不输出 G5 级裁定语——只产出机械计数与分布，裁定语由运行记录按 G4P-7 引用工具输出书写。
+- `--candidate-json`/`--source-json`（可选）：断言 bin `record_count` == JSON 账本 `recorded` 计数，不一致 → 错误退出（G4P-9 交叉核对）。
+- 退出码：0 = 成功；2 = 数据判 INVALID（K5-7 出集等）；3 = 解析/守卫失败。
+
+### 14.2 解析（冻结；与 [k5_reconcile.py](../../../tools/k5_reconcile.py) 已验证布局逐字一致）
+
+| 项 | 布局 |
+| --- | --- |
+| 候选 header | `<4sHHIII>` magic/version/header_size/record_capacity/track_capacity/record_count；identity 文本 @20..header_size |
+| 候选记录 5,664 B | meta `<IIIIIIQ>`（segment/completed/commanded/track_count/two_read_equal/clip_count/elapsed_raw，32 B）+ 8×K5_CLIP + 116×40 track |
+| 源 header | `<4sHHIIIIII>`；record_size 字段须 == 解析记录尺寸 |
+| 源记录 5,652 B | meta `<QIHHBBBB>`（tsc/seq/track_count/clip_count/path/two_read_equal/flags/pad，20 B）+ 8×K5_CLIP + 116×40 track |
+| K5_CLIP 124 B | `<QQII4s64sIQQQI>` node/binding/binding_index/**local_time_bits**/mode+pad/name[64]/duration_bits/**data_fnv**/blockoff_fnv/map_fnv/map_count |
+| 名字归一化 | `bare_clip_name`（剥路径/扩展名、小写折叠）与 k5_reconcile 逐字一致——比较侧归一化，资源身份仍是 data FNV |
+
+解析守卫（任一失败 → 退出码 3）：magic == `CPK5`；文件尺寸 == header_size + count×record_size（源侧另验 record_size 字段）；每记录 `track_count == 116` 且 `two_read_equal == 1`；钟值 float32 解码非有限 → 退出码 3（G4P-5 守卫）。
+
+### 14.3 资格重导出（冻结）
+
+- Track 2 六族断言集合逐字复制 [k5_reconcile.py `TRACK2_REGISTERED`](../../../tools/k5_reconcile.py)（引用其登记来源 §十五/§十六）；Track 2 模式无声明缺口桶（与 `--track2` 语义一致）。
+- 记录级：任一 clip `data_fnv == 0` → 该记录 **IDUN 排除**（§3.2）；可读 `(bare_name, data_fnv)` ∉ 集合 → **候选侧或源侧均判 INVALID**（退出码 2，summary 登记 K5-7 FAIL 行；不产生配对输出）。
+
+### 14.4 配对实现（冻结 = §3.3/§3.4/§3.5）
+
+1. 钟族优先级：`1hm_equip > 1hm_unequip > 1hm_idle > mt_idle > mlh_idle > scar_1hmreadydummy`；记录活动族（可读身份）中按序取首个 ∈ 表者；无 → `no-clock`。
+2. 实例窗：域内（同钟族）按侧内序（候选 = 文件记录索引；源 = seq，文件序即 seq 序）分组——相邻目击**文件相邻**（索引差 == 1，即中间无本族缺席记录）且 stable-id（node, binding, binding_index）相同 → 同窗；否则分窗。窗内 `local_time_bits` 出现下降 → wrap 切环（环内钟值单调不减）。
+3. nearest-clock：候选钟值 `x` 对域内**全部**源记录钟值（跨窗/跨环）取 `|c−x|` 最小；等距平手取 `seq` 较早；最近者为其端点且 `x` 在源钟序列 `[min,max]` 之外 → `edge-pair` flag（配对仍成立）。域无源记录 → 该候选记录 `no-partner`（逐条记账，不跨域补）。
+4. 逐对输出：`domain/cand{record,segment,completed}/src{seq}/clock_x/clock_c/dt_clock/cand_families/src_families/family_set_diff{cand_only,src_only}/flags`。
+5. 对账恒等式（逐侧逐域）：`合格记录 = paired + idun_excluded + no_clock + no_partner + edge_pairs(重叠类)`；侧级恒等式 `total = eligible + idun_excluded`，`eligible = paired + no_clock + no_partner`。
+
+### 14.5 输出 schema 与测试清单（冻结）
+
+- **manifest JSON**：`schema/protocol/pose_decoded/inputs{path,bytes,sha256,records,identity}/clock_priority/domains{family: {candidate_records, source_records, pairs, edge_pairs, no_partner, wrap_cycles{cand,src}}}/ledger{side: total/eligible/paired/idun_excluded/no_clock/no_partner/out_of_set}/pairs[]`。domains 按优先级序、pairs 按候选记录索引序、固定键序写出；≤ 1 MiB（超限 → 退出码 3，不截断）。
+- **summary 文本** ≤200 行：`G4P SUMMARY` 行集（侧级/域级对账、锚点核对、IDUN 落点、wrap 统计、K5-7 结论）。
+- **正式模式 detail**（仅 `--tolerances` 时）：逐对 16 B 头（pair_index u32 / cand_record u32 / src_seq u32 / reserved u32）+ 116×4×f32（E_p、E_r、theta、E_s）= 1,872 B/对；pose track 分量序 T(3)Q(4)S(3) float32 LE；`E_p` double 累加欧氏、`E_r = 1−|dot|`（归一化 + clamp）+ `theta = 2·acos(c)`、`E_s` 三分量 max-abs；非有限/零范数 → 单列 invalid 计数，不进分布。
+- **测试 `tools/gate4_pair_test.py`**（纯 stdlib、`python -I` 可跑、显式 sys.path 引导，期望值全部解析计算、不调用被测函数生成答案）：T1 `E_p` 已知值 (0,3,4)→5；T2 `E_r` q/−q 等价→0、60° 轴转→1−cos30°；T3 `E_s` 单 Z 差 0.125→0.125；T4 同记录双族取高优先钟；T5 nearest 等距平手取 seq 早；T6 越界 edge-pair flag；T7 wrap 切环；T8 IDUN 排除 + 恒等式闭合；T9 域空 no-partner；T10 合成 CPK5/CPK5S 解析往返；T11 两次运行 manifest 字节一致；T12 无 `--tolerances` 拒绝 pose 解码（`pose_decoded=false` 且无 detail）。
+
+### 14.6 实施顺序
+
+§十四（本节）先于代码提交冻结 → 实现 + T1–T12 全过 → Track 2 Run 1/2 工件 dry-run（§十五登记，含工具 SHA-256）。**零游戏代码、零构建、零上机贯穿本节。**
