@@ -47,3 +47,7 @@ _deps/
 
 # Local diagnostic packages
 /dist/
+
+# Python tooling
+__pycache__/
+*.pyc
