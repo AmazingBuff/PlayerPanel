@@ -4,6 +4,8 @@ C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), w
 
 ## Current status
 
+> **2026-11-15 最新状态**（详见[门 4 配对/比较协议预注册](docs/diagnostics/g5-gate4-20261115/README.md)）：**C-G5-G4 v1 评审通过**——Track 2 同资源环境下候选/源姿态记录的相位括号配对协议结构冻结（逐记录钟族优先级 + nearest-clock，元数据规则、独立于 pose 误差；IDUN 排除与对账恒等式；G4P-1..9 判据）；不做同刻逐代配对。`tau_*`/`epsilon_t` 与 `Δt_clock` 处置为 PENDING-CAL 槽位（门 4 完整冻结待 CAL1/CAL2）；K5-5 缺项清单带入层/权重/混合轴阻塞，G5 等价裁定持续阻塞。下一步：离线工具 `gate4_pair.py` 实现预注册与 metadata-only dry-run → CAL2 → CAL1 → 槽位填充 → 门 5 正式运行。G5 未冻结/未通过，`tau_*` 未产生。
+
 > **2026-11-14 最新状态**（详见[第三会话总结](docs/diagnostics/session-summary-20261114-k6.md) 与 [独立行为图验证](docs/independent-behavior-graph.md) 顶部）：**K6 关闭（限定范围）**——[K6 计划](docs/diagnostics/g5-k6-plan-20261114/README.md)评审通过（OAR 两轨制），v103 三仪器（CPK5 v1 快照 + 层审计 + RECON 对账）候选/源两侧各一次运行**全判据 PASS**（候选 249/249、7/7 data FNV 命中 v101 集合；源 906/906、7 命中 + 2 个 MT_Idle 声明缺口），K5 仪器资格成立；CAL v1 §三 K1–K6 形式齐备，但姿态等价与门 3 校准仍不可启动（控制 B bounded、K1-C4 NOT MATCHED、K5-5 权重缺项），下一步 **Track 2 与 CAL2 预注册**。`tau_*` 未产生，G5/G6 不关闭。当前 MO2 安装为 v103 source 运行档（非默认产品档）。下方 11-14 前段与 11-12 段落为历史状态，保留作时间线。
 
 The default product path uses the copied scene tree, OAR clip selection/sampling and native DAC preparation. [Animation](docs/animation.md) owns equipment policy, torch composition, accepted clocks and configuration; [SceneGraph](docs/scene-graph.md) owns capture, placement, attachments and drawing.
