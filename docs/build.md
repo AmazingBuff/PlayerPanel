@@ -2203,3 +2203,24 @@ Identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0
 全部 UTF-8 无 BOM、CRLF（census 基线档为 CRLF，插入行以 `\r\n` 保留）；census-inject 与基线逐行 diff 仅为新增 4 行。启用键表与换档/核验流程见 `dist/g5-track2-20261114/README.md`（本地清单）。三个逐字节复制档的哈希与既有登记值一致，构成运行身份连续性锚点。
 
 **换档纪律（v103 run 2"换档未落位"教训）**：覆盖安装位 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\CharacterPanel.ini` 前先备份；换档后以日志身份行与安装位哈希核对确认落位，再启动游戏。
+
+<a id="v104-g5cal2-grid-20261115"></a>
+## v104-g5cal2-grid（2026-11-15，CAL2 控制 B 网格仪器）
+
+[C-G5-CAL2 v1](diagnostics/g5-cal2-20261115/README.md) §九 的实现落地：`ControlSampleGrid` 网格仪器（每代载体 FNV 重验 + 两次 `SamplePartialTracks` 逐位比较 + 四点 TSC + 首读原始位值入 CGRD v1 工件；off 路径与 v103 逐字节一致；armed 时抑制九时间采样并出声明行）。离线策略测试 8/8 PASS（G1–G4，含 float64→float32 规则对全部 120 个网格时间的重算逐位一致）。
+
+**构建**：提交 `d61a6e1` 后 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v104-g5cal2-grid -DVCPKG_MANIFEST_INSTALL=OFF` + `cmake --build build --config Release --parallel 4`，exit 0。身份 `CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,025,984 | `7d270e7dfc35ccadcca0807472356aa81e3dda3efa912d516479605470d6f9df` |
+| CharacterPanel.pdb | 51,515,392 | `b2232180b7ec250ac7aebb37fa79536fd0ab7edd8df87321420a88bba31c2ac1` |
+| 运行档 CharacterPanel-g5cal2-grid-inject.ini | 12,413 | `bbfe2b8bfad11fa97cfb151bcdcd3e6460184a9487354928067cac59f1eafbb2` |
+
+**运行档派生**：`dist/g5-cal2-20261115/CharacterPanel-g5cal2-grid-inject.ini` = `dist/g5-track2-20261114/CharacterPanel-track2-k5-inject.ini` 派生：`K5FullSample/K5LayerAudit/K5Reconciliation` 三键 false（CAL2 运行不与 K5 并跑），追加 `ControlSample=false` + `ControlSampleGrid=true`（2 键 + 4 行注释）。逐键断言 grep 核对通过：`IndependentGraph=inject`、v96a 链四键（Probe observe-only/Prime/PrimeBranch/Unequip id=144）原状、`DisplayPose/DisplayStep/SourceTimeline/SamplingLiveness/OarContextWatch/ObservationSnapshot` 全 off。网格真值（121 时间 × 99 轨 + BOUNDS 节）已登记于 [CAL2 §十](diagnostics/g5-cal2-20261115/README.md#十v104-构建与网格真值转储登记2026-11-15)。
+
+**部署与上机（待用户执行）**：
+1. **备份**当前安装位三件套 → `dist/deploy-backup-20261115-v103-v104pre/`。
+2. **安装** v104 三件套（`build/Release/CharacterPanel.dll/.pdb` + `dist/g5-cal2-20261115/CharacterPanel-g5cal2-grid-inject.ini` → 安装位 `CharacterPanel.ini`），安装后哈希逐位核对 + 日志身份行确认落位（换档纪律：先核对再启动）。
+3. **3 个独立进程**（每进程：启动游戏 → Save116 → panel 窗口一次走完 v96a 链 → 退出）：判据 = `CONTROL GRID phase=manifest`（times=121 baseline=1）+ `phase=carrier`（唯一、三 FNV 逐位）+ 121 行 `phase=gen`（two_read_equal=1、identity_ok=true）+ `phase=close status=complete generations=121`；零 `[E]`；equip 120/120 + unequip completed=129。工件 = 安装位日志旁 `CharacterPanel-g5cal-grid-<identity>-<UTC>.bin`（484,596 B）。
+4. 运行后：日志/工件归档进 `docs/diagnostics/`，`tools/cal2_adjudicate.py` 离线裁定（C2-A..F），三进程全过 = K2-C4 升网格 READY。
