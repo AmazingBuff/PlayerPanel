@@ -1,8 +1,8 @@
 # C-G5-CAL2 v1：控制 B 三进程/120 代网格协议（2026-11-15，评审通过；含 §十二 C2-E 修订）
 
-**状态（2026-11-15）：预注册（评审通过）。** 用户于 2026-11-15 批准本协议（§八决策 1）与实现授权（§八决策 2/3：`AE-Track2` 档 + v104 代码改动 + 本地真值转储）。本文档把控制 B 从 [B2 的"9 固定时间单发采样"](../g5-cal-control-b-20261114/README.md)（合格进程 1 个，bounded READY）重组为 [CAL v1 §五.1/§五.2/§五.6](../../independent-behavior-graph.md#c-g5-cal-v1) 要求的完整形状——**每进程 1 个 baseline + 120 个完成代、每代 2 份读数，共 3 个独立进程**——并交付跨进程重复性数据（[CAL v1 §七](../../independent-behavior-graph.md#c-g5-cal-v1) N 的原始材料）与控制自身计时区间（§五.4）。实现范围在 §九 冻结后动代码。`tau_p/tau_r/tau_s/epsilon_t` 的推导属 CAL1 分析，本协议不产生任何数值容差。
+**状态（2026-11-15）：三进程完成；C2-A..F 全过，C2-D PASS，K2-C4 = grid READY。** 用户于 2026-11-15 批准本协议（§八决策 1）、实现授权（§八决策 2/3）与 [§十二](#cal2-c2e-oar-addendum) 的 C2-E 精确 OAR 豁免。本文档把控制 B 从 [B2 的"9 固定时间单发采样"](../g5-cal-control-b-20261114/README.md)（合格进程 1 个，bounded READY）重组为 [CAL v1 §五.1/§五.2/§五.6](../../independent-behavior-graph.md#c-g5-cal-v1) 要求的完整形状——**每进程 1 个 baseline + 120 个完成代、每代 2 份读数，共 3 个独立进程**——并交付跨进程重复性数据（[CAL v1 §七](../../independent-behavior-graph.md#c-g5-cal-v1) N 的原始材料）与控制自身计时区间（§五.4）。三进程 run1/2/3 的 119,790 个分量两两逐位相同；K2-C4 由 bounded READY 升为 **grid READY**，CAL1 控制 B 资格就绪。`tau_p/tau_r/tau_s/epsilon_t` 的推导仍属 CAL1，本协议不产生任何数值容差。
 
-> **2026-11-15 追加（run 1–2 + 工具 + §十二）**：v104 已部署并完成 **2/3** 个独立进程；离线裁定工具已实现并通过离线测试，见 [§十一](#cal2-run1-tool)。用户已批准 [§十二](#cal2-c2e-oar-addendum) 的 C2-E 精确 OAR 豁免；run 1/2 均 **C2-A/B/C/E/F PASS**。**run1↔run2 跨进程 119,790/119,790 分量逐位相同（nonzero=0，max_abs=0，max_ulp=0）**；批次仍为 **C2-D NOT_READY（2/3）**，run 3 待执行。
+> **2026-11-15 追加（run 1–3 + 工具 + §十二）**：v104 已部署并完成 **3/3** 个独立进程；离线裁定工具已实现并通过离线测试，见 [§十一](#cal2-run1-tool)。用户已批准 [§十二](#cal2-c2e-oar-addendum) 的 C2-E 精确 OAR 豁免；run 1/2/3 均 **C2-A/B/C/E/F PASS**。**三进程两两跨进程均为 119,790/119,790 分量逐位相同（3/3 pair，nonzero=0，max_abs=0，max_ulp=0）**；**C2-D PASS，K2-C4 升 grid READY**，CAL1 控制 B 资格就绪；仍不产生 `tau_*`。
 
 **前置阅读**：[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)（§四 控制 B 资格、§五.1–§五.7、§七 统计、§八 CAL1–CAL7）、[K2-C4 控制 B 登记](../g5-cal-control-b-20261114/README.md)（资源身份/独立真值/B1 FAIL/B2 PASS）、[K6 计划 §五](../g5-k6-plan-20261114/README.md)（进程缺口登记）、[门 4 协议 §十五](../g5-gate4-20261115/README.md)（候选时钟阶梯形态登记）、[Track 2 §十六](../g5-track2-20261114/README.md)（资源确定性条件）。
 
@@ -171,9 +171,9 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 **裁定：真值网格资格成立**——独立真值覆盖全部 121 网格时间（t=0 ∪ k/60），与 9 时间真值自洽，量化元数据齐备（C2-C 的逐分量界由此推导）。`tau_*` 仍未产生。
 
 <a id="cal2-run1-tool"></a>
-## 十一、离线裁定工具实现与 run 1–2 记录（2026-11-15）
+## 十一、离线裁定工具实现与 run 1–3 记录（2026-11-15）
 
-> 本节是工具/运行登记，不修改 §五 判据；正式三进程裁定仍待 run 3。**不要把本节当作 C2-D 或 K2-C4 的升格依据。**
+> 本节是工具/运行登记，不修改 §五 判据。三进程裁定已完成（§11.4）；**C2-A..F 全过、C2-D PASS、K2-C4 grid READY**。范围仍严格限定于 §五 与 §十二 所述资源、时间网格、单层直采路径、`AE-Track2` 档、3 进程。
 
 ### 11.1 工具登记
 
@@ -196,7 +196,7 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 | C2-F | PASS（121 代四点 TSC 齐全且单调；首读 median 35,475、max 112,703 cycles） |
 | C2-E 严格 | **FAIL**：唯一 `[E]` 是 `20:54:50` 的 OAR 缺失探测行，发生在任何 `CONTROL GRID` 采集之前；CAL2 v1 未登记该豁免，故按字面零 `[E]` 判负 |
 | C2-E（经 [§十二](#cal2-c2e-oar-addendum) 修订） | PASS（同一行按 Track 2 §十二精确豁免；其余 `[E]` 仍为 0） |
-| 批次 | 严格路径（历史）：run 1 因 C2-E 为 **INVALID**；**§十二 正式路径：C2-D NOT_READY（1/3）**。run 2 已完成，跨进程差见 §11.3 |
+| 批次 | 严格路径（历史）：run 1 因 C2-E 为 **INVALID**；**§十二 正式路径：run 1 单进程 PASS**。run 2/3 随后完成，最终 C2-D PASS 见 §11.4 |
 
 正式裁定工件：[cal2-adjudication.json](run1-adjudication/cal2-adjudication.json)（66,211 B，SHA-256 `2E63D24758A20ADFCD208EF1075DAEE42B6CB40571FDC0BF04B549DF5F8C5FA4`）与 [cal2-adjudication-summary.txt](run1-adjudication/cal2-adjudication-summary.txt)（1,131 B，SHA-256 `EDA6F9DE0087E7732EED602FBAF83230E28A1866DB0DB1E082864DBDD46D231E`）；命令含 `--track2-oar-exemption`（§十二）。
 
@@ -213,11 +213,30 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 | C2-F | PASS：121 代四点 TSC 齐全且单调；首读 median 24,467、max 65,919 cycles（不与 run 1 相减） |
 | C2-E | PASS（唯一 `[E]` = §十二 豁免行；其余 0） |
 | **run1↔run2 跨进程** | **119,790/119,790 分量逐位相同；nonzero=0；max_abs=0；max_ulp=0**（全样本差见下方工件；只交付数据，不推导 N） |
-| 批次 | **C2-D NOT_READY（2/3）**；run 3 待执行 |
+| 批次 | 中间状态（2/3）：C2-D NOT_READY；run 3 完成后见 §11.4 |
 
 进程独立性：run 1/2 的主线程分别为 `43528`/`13016`，工件 UTC 戳 `125913Z`/`132909Z`，各自一份 `SCENEGRAPH BUILD` 与一次窗口；不是同一日志的追加段。
 
 两进程正式裁定工件：[cal2-adjudication.json](batch-2of3-adjudication/cal2-adjudication.json)（133,229 B，SHA-256 `3EB9FE94D4A5FB6BD303CE1A4ED39386996683F0D3FBA9783FB6A4CDB89BD833`）、[cal2-adjudication-summary.txt](batch-2of3-adjudication/cal2-adjudication-summary.txt)（1,898 B，SHA-256 `D0077E269CE6FD5EAC044B2F779EF23687DCFAD4C2A8EA2A43AA9ACC3CD57F0F`）与 [cal2-cross-process-diff.bin](batch-2of3-adjudication/cal2-cross-process-diff.bin)（958,352 B，SHA-256 `D9DEF6227E1A9878B46238887316F1719B22600A8A7CD4431D8400E2FE76F210`）；命令含 `--track2-oar-exemption`。
+
+<a id="cal2-run3-final"></a>
+### 11.4 run 3 与三进程正式裁定（C2-D PASS）
+
+| 项 | 读数 |
+| --- | --- |
+| 工件 | [CharacterPanel-g5cal-grid-…-20261115T133459Z.bin](CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T133459Z.bin)，484,596 B，SHA-256 `60B373DB93BA05C7528768A2F31C298085B6153C30CD86B6197BD85B36BF9008` |
+| 日志 | [CharacterPanel-g5cal2-run3-20261115-2135.log](CharacterPanel-g5cal2-run3-20261115-2135.log)，198,367 B，SHA-256 `90675EE7189C7705D96869AE0BAF04D85D2DE5DCBB56C987567198B47FF8ED04` |
+| C2-A / B | PASS：一次 manifest/carrier/close；121/121 代；`two_read_equal` 坏代 0；`identity_ok` 坏代 0；`nonfinite=0`；equip 120 + unequip 129 |
+| C2-C | PASS：119,790 分量全部有界；49,391 个非零差；**0 violation**；最大比值 **0.125** |
+| C2-F | PASS：121 代四点 TSC 齐全且单调；首读 median 35,260、max 60,544 cycles（不与 run 1/2 相减） |
+| C2-E | PASS（唯一 `[E]` = §十二 豁免行；其余 0） |
+| **三进程跨进程** | **run1-run2、run1-run3、run2-run3 三对均 119,790/119,790 逐位相同；nonzero=0；max_abs=0；max_ulp=0**（全样本差见工件；只交付数据，不推导 N/Q） |
+| **C2-D** | **PASS（3/3）** |
+| **总体** | **VERDICT READY** → **K2-C4 由 bounded READY 升为 grid READY**；CAL1 控制 B 资格就绪 |
+
+进程独立性：run 1/2/3 主线程分别为 `43528`/`13016`/`3656`，工件 UTC 戳 `125913Z`/`132909Z`/`133459Z`，各自一份 `SCENEGRAPH BUILD` 与一次窗口；不是同一日志的追加段。
+
+三进程正式裁定工件：[cal2-adjudication.json](batch-3of3-adjudication/cal2-adjudication.json)（201,362 B，SHA-256 `82FCD7E514C8EFF31FD1FED524E83393ADAAABD0B2281ADEF8568FFE389C555C`）、[cal2-adjudication-summary.txt](batch-3of3-adjudication/cal2-adjudication-summary.txt)（2,747 B，SHA-256 `686ADC676409B1D3EDB6BE70B67A7F4A8B6BEF7F2BB554FDCFAA674D15AE87BC`）与 [cal2-cross-process-diff.bin](batch-3of3-adjudication/cal2-cross-process-diff.bin)（2,874,992 B，SHA-256 `8019FBF65F96DBCC5C63515FA58F3A9D36E648A1772B58C24A749FD174DEDB45`）；命令含 `--track2-oar-exemption`。
 
 <a id="cal2-c2e-oar-addendum"></a>
 ## 十二、C2-E OAR `[E]` 精确豁免修订（2026-11-15，用户批准）
@@ -236,4 +255,4 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 
 **时点与适用**：本修订在 run 1 采集之后、正式批次裁定之前登记；run 1 是修订前采集，现按本节显式计入并披露（用户 2026-11-15 批准）。若要求零歧义，可把 run 1 仅作冒烟、修订后重跑 3 进程；当前选择是计入 run 1。
 
-**run 1 正式读数（经本节）**：C2-A/B/C/F PASS；C2-E PASS（唯一 `[E]` = 上述豁免行）；C2-D **NOT_READY（1/3）**。run 2 随后完成（§11.3）：C2-A/B/C/E/F PASS，run1↔run2 119,790/119,790 逐位相同；C2-D 仍 **NOT_READY（2/3）**。`tau_*` 未产生，K2-C4 未升格。
+**run 1 正式读数（经本节）**：C2-A/B/C/F PASS；C2-E PASS（唯一 `[E]` = 上述豁免行）。run 2/3 随后完成（§11.3/§11.4）：均 C2-A/B/C/E/F PASS，三进程两两 119,790/119,790 逐位相同；**最终 C2-D PASS，K2-C4 升 grid READY**。`tau_*` 仍未产生；本修订不改变任何数值判据。

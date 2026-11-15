@@ -1,0 +1,25 @@
+CAL2 ADJUDICATION C-G5-CAL2 v1
+TRUTH path='E:\SkyrimTools\Proj\CharacterPanel\docs\diagnostics\g5-cal2-20261115\mt_idle_female_truth_grid121.txt' sha256=5e20fcaabcdf40a70d4c0741fb7768d31896131dad19821e28bc79b8917eb4e3 times=121 tracks=99 blocks=6
+RUN run1 artifact='CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T125913Z.bin' sha256=cb5587574e5ba5146788a4dbf0873d4c57c802be4f34356111343d1f8e1d508b bytes=484596 identity='CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z' recorded=121
+RUN run1 C2-A PASS scope=artifact+log issues=0
+RUN run1 C2-B PASS records=121 two_read_bad=0 nonfinite=0 issues=0
+RUN run1 C2-C PASS components=119790 nonzero=49391 violations=0 max_ratio=0.125 issues=0
+RUN run1 C2-F PASS tsc_issues=0 first_median=35475 first_max=112703
+RUN run1 C2-E PASS scope=log manifest=1 carrier=1 close=1 errors=1 oar=1 exempt_oar=1 exemption=True unexpected=0 issues=0
+RUN run2 artifact='CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T132909Z.bin' sha256=f57d6251df699e70cc8c2b888716ba05814c53583eb5bee1b6a5e110a5522221 bytes=484596 identity='CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z' recorded=121
+RUN run2 C2-A PASS scope=artifact+log issues=0
+RUN run2 C2-B PASS records=121 two_read_bad=0 nonfinite=0 issues=0
+RUN run2 C2-C PASS components=119790 nonzero=49391 violations=0 max_ratio=0.125 issues=0
+RUN run2 C2-F PASS tsc_issues=0 first_median=24467 first_max=65919
+RUN run2 C2-E PASS scope=log manifest=1 carrier=1 close=1 errors=1 oar=1 exempt_oar=1 exemption=True unexpected=0 issues=0
+RUN run3 artifact='CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T133459Z.bin' sha256=60b373db93ba05c7528768a2f31c298085b6153c30cd86b6197bd85b36bf9008 bytes=484596 identity='CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z' recorded=121
+RUN run3 C2-A PASS scope=artifact+log issues=0
+RUN run3 C2-B PASS records=121 two_read_bad=0 nonfinite=0 issues=0
+RUN run3 C2-C PASS components=119790 nonzero=49391 violations=0 max_ratio=0.125 issues=0
+RUN run3 C2-F PASS tsc_issues=0 first_median=35260 first_max=60544
+RUN run3 C2-E PASS scope=log manifest=1 carrier=1 close=1 errors=1 oar=1 exempt_oar=1 exemption=True unexpected=0 issues=0
+CROSS run1-run2 components=119790 exact=119790 nonzero=0 max_abs=0 max_ulp=0
+CROSS run1-run3 components=119790 exact=119790 nonzero=0 max_abs=0 max_ulp=0
+CROSS run2-run3 components=119790 exact=119790 nonzero=0 max_abs=0 max_ulp=0
+BATCH C2-D PASS runs=3 required=3 reasons=
+VERDICT READY

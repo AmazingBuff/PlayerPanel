@@ -2,6 +2,8 @@
 
 **状态（2026-11-14）：B1 位精确 FAILED（保留在案）；B2 有界判据在新进程 PASS（0/8910 violations，最大比值 0.4860）；K2-C4 = READY（bounded）。** 本目录保留预注册、离线真值、两次运行和判据；仍不产生 `tau_p/tau_r/tau_s/epsilon_t`，不证明 CAL2 三进程/120 代协议，不关闭 K1/K5/K6 或 G5。
 
+> **2026-11-15 后续（CAL2）**：三进程/121 时间网格已完成，C2-A..F 全过，三进程两两 119,790 个分量逐位相同 → **K2-C4 从 bounded READY 升为 grid READY**，CAL1 控制 B 资格就绪。范围严格限定于 `female\mt_idle.hkx`、121 时间网格、单层直采路径、`AE-Track2` 档、3 进程；B1/B2 历史裁定不变，仍不产生 `tau_*`，不关闭 K1/K5/K6 或 G5。详见 [CAL2 §11.4](../g5-cal2-20261115/README.md#cal2-run3-final)。
+
 ## 一、为什么不是此前的 `male\mt_idle.hkx`
 
 2026-11-13 的资格审计登记的是 `meshes\actors\character\animations\male\mt_idle.hkx`（30,944 B，9.133333 s，30 fps）。v96a 运行日志显示当前玩家实际加载的是：
