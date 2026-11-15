@@ -1,6 +1,6 @@
 # C-G5-CAL1-B v1：控制 B 单层姿态有界校准预注册（2026-11-15，评审通过）
 
-**状态：评审通过（2026-11-15，用户批准）；§四–§七冻结。本文只固定方法与范围，不预填任何 Q/N/`tau_*` 数值。**
+**状态：评审通过（2026-11-15，用户批准）；§四–§七冻结；正式运行完成，裁定 `CALIBRATED_BOUNDED`（仅控制 B 单层姿态）。**
 
 **批准记录**：用户于 2026-11-15 审阅并批准本文；批准范围仅限控制 B 单层姿态的 Q/N 与 `tau_p/tau_r/tau_s`，明确排除 `epsilon_t`、K5-5、K2-C1 完整清单与 G5 等价裁定。批准不改变 §四–§七 的任何方法或判据；实现与首次运行前不得回填数值。
 
@@ -29,8 +29,8 @@
 | run 2 CGRD | [原始文件](../CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T132909Z.bin)，484,596 B，SHA-256 `F57D6251DF699E70CC8C2B888716BA05814C53583EB5BEE1B6A5E110A5522221` |
 | run 3 CGRD | [原始文件](../CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T133459Z.bin)，484,596 B，SHA-256 `60B373DB93BA05C7528768A2F31C298085B6153C30CD86B6197BD85B36BF9008` |
 | run 1/2/3 日志 | `F16061B8…DB2B` / `7FD033D3…2230` / `90675EE7…ED04`（完整值见 [CAL2 §十一](../g5-cal2-20261115/README.md#cal2-run3-final)） |
-| 121 网格真值 + BOUNDS | [mt_idle_female_truth_grid121.txt](../g5-cal2-20261115/mt_idle_female_truth_grid121.txt)，SHA-256 `5e20fcaabcdf40a70d4c0741fb7768d31896131dad19821e28bc79b8917eb4e3` |
-| 三进程 C2-A..F 裁定 | [batch-3of3 summary](../g5-cal2-20261115/batch-3of3-adjudication/cal2-adjudication-summary.txt)，`VERDICT READY`；JSON SHA-256 `82FCD7E5…C555C` |
+| 121 网格真值 + BOUNDS | [mt_idle_female_truth_grid121.txt](../g5-cal2-20261115/mt_idle_female_truth_grid121.txt)，SHA-256 `de26eceb5679e655adefe4790a216f219e8f64f7e405492ba1b8a69484edc387` |
+| 三进程 C2-A..F 裁定 | [batch-3of3 summary](../g5-cal2-20261115/batch-3of3-adjudication/cal2-adjudication-summary.txt)，`VERDICT READY`；JSON SHA-256 `B670782A38D975303AFE4F8B3A166DEC7D510E55B9851C7008B6EB33FDBC54A7` |
 | 裁定工具 | [`tools/cal2_adjudicate.py`](../../../tools/cal2_adjudicate.py)，SHA-256 `F2225EACE4028D9216BEC06C918D6C999078A55ECD13FDF8E1A718303EF6136F` |
 
 任何身份不符、工件缺代、日志 `[E]` 超出 CAL2 §十二 的精确豁免、或 C2 裁定不是 READY → 本协议 INVALID，停止，不产生数值。
@@ -129,7 +129,7 @@ tau_r = round_up_6sig(1 - cos(tau_theta / 2))
 
 | 项 | 预注册 |
 | --- | --- |
-| 工具 | `tools/cal1b_calibrate.py`，纯 stdlib；读 3×CGRD + 121 网格真值 + BOUNDS + C2 batch JSON/log；不读游戏、不改插件；SHA-256 `3A22285554C02AB83BD27311A53CDFEBD4D8FE8CAE9E2729E47DCC248597F836` |
+| 工具 | `tools/cal1b_calibrate.py`，纯 stdlib；读 3×CGRD + 121 网格真值 + BOUNDS + C2 batch JSON/log；不读游戏、不改插件；SHA-256 `981CB741178844948D64B88F023B5936EC1E27E4EA951C11B6BE7012B6827909` |
 | 输出 | `cal1b-calibration.json`（Q/N/tau/逐轨/逐进程对聚合/输入哈希）、`cal1b-tracks.csv`（逐轨聚合）、`cal1b-summary.txt`（≤200 行）；原始样本以三份 CGRD 工件为准，不重复展开；只用输入 basename+SHA-256 标识，不含绝对路径或墙钟时间，保证同输入逐字节可复现 |
 | 测试 | `tools/cal1b_calibrate_test.py`：合成 truth/CGRD 的 Q 合成、旋转角界、N 全样本、6 位向上舍入、可复现、范围纪律；32/32 PASS；SHA-256 `A2542FAFB4A0B4C533755EA80FBF60F2CC9369B2DAEF228B20E7C7602BDE0C79` |
 | 身份 | 工具/测试 SHA-256 在首次使用前登记；输出工件 SHA-256 随后登记 |
@@ -148,8 +148,49 @@ tau_r = round_up_6sig(1 - cos(tau_theta / 2))
 
 ## 十、后续顺序
 
-1. 本文评审/批准 → 冻结 §四–§七。
-2. 实现 `cal1b_calibrate.py` + 测试，登记 SHA-256。
-3. 对三份归档工件运行，登记 Q/N/tau 工件与哈希。
-4. 只填门 4 的**姿态槽位**；`epsilon_t` 槽位继续 PENDING-CAL。
+1. 本文评审/批准 → 冻结 §四–§七。**已完成（2026-11-15）。**
+2. 实现 `cal1b_calibrate.py` + 测试，登记 SHA-256。**已完成（32/32 PASS）。**
+3. 对三份归档工件运行，登记 Q/N/tau 工件与哈希。**已完成（§十一）。**
+4. 只填门 4 的**姿态槽位**；`epsilon_t` 槽位继续 PENDING-CAL。**姿态槽位已填；时间槽位仍开放。**
 5. 并行关闭完整 CAL1 的 K2-C1、K5-5 与 TSC 频率/单位缺口；之后才谈完整门 4 冻结/门 5。
+
+<a id="cal1b-results"></a>
+## 十一、正式运行与裁定（2026-11-15）
+
+**裁定：`CALIBRATED_BOUNDED`。范围严格限定于控制 B 单层姿态；`epsilon_t`、K5-5、K2-C1 完整清单与 G5 等价裁定均不在本结果内。**
+
+### 11.1 输入
+
+- 真值：`mt_idle_female_truth_grid121.txt`，SHA-256 `de26eceb5679e655adefe4790a216f219e8f64f7e405492ba1b8a69484edc387`（BOUNDS 混合轨修复后的重发值；见 [CAL2 §十三](../g5-cal2-20261115/README.md#cal2-bounds-fix)）。
+- C2 三进程裁定：`cal2-adjudication.json`，SHA-256 `b670782a38d975303afe4f8b3a166dec7d510e55b9851c7008b6eb33fdbc54a7`；`C2-D PASS`。
+- 三个 CGRD / 日志与 [CAL2 §11.4](../g5-cal2-20261115/README.md#cal2-run3-final) 登记逐位一致。
+
+### 11.2 判据与实现
+
+C1B-A..F 全部 **PASS**；工具、测试及输出哈希已登记；相同输入重复运行的 JSON/CSV/summary 逐字节一致。
+
+### 11.3 Q/N/tau 结果
+
+| 量 | Q | N | tau 未舍入 | tau 6 位向上舍入 |
+| --- | --- | --- | --- | --- |
+| 位置 | `4.765916457818655e-4` | `0` | `4.765916457818655e-4` | **`0.000476592`** |
+| 旋转 | `Q_theta=6.946867112343167e-4`；`Q_r=6.0323702699705e-8` | `N_theta=5.960464477539063e-8`；`N_r=4.440892098500626e-16` | `tau_theta=6.947463158790921e-4`；`tau_r=6.033405486327581e-8` | **`6.03341E-8`**（tau_r） |
+| 缩放 | `3.862634230245021e-6` | `0` | `3.862634230245021e-6` | **`0.00000386264`** |
+
+逐轨范围（99 轨）：`tau_p` `3.30363e-6..4.76592e-4`、`tau_r` `6.03238E-8..6.03341E-8`、`tau_s` `1.90735e-6..3.86264e-6`。完整逐轨值见 CSV。
+
+**N 的说明**：三进程的原始变换位值逐位相同（`N_p=N_s=0`）；旋转度量的 `N_r/N_theta` 是归一化/点积的浮点残差（非跨运行姿态差），本协议按定义保守保留，不删除、不归零。
+
+### 11.4 输出工件
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| [cal1b-calibration.json](calibration/cal1b-calibration.json) | 71,222 | `8B2077BF63AB68A856148FEF1F0B9CE9F3936334125BF0BAADE91C0B8C740865` |
+| [cal1b-tracks.csv](calibration/cal1b-tracks.csv) | 19,379 | `2FD89B571E7A1A1CA1CECC4AE406DE3FE9F42CA65A82829C030FBC42166915AC` |
+| [cal1b-summary.txt](calibration/cal1b-summary.txt) | 1,682 | `4DBD0CC89ECF924573CD60BCFAF9CE7D8505F96D319FABA57F9D390E40C443ED` |
+
+### 11.5 使用边界
+
+- 可把 `tau_p/tau_r/tau_s` 填入门 4 的**姿态槽位**，但必须标记 `CAL1-B/control-B-single-layer` 与上述范围；控制 B 只覆盖 99 个 transform 轨，门 4 的 116 轨分母中其余 17 个 default/reference 轨没有本控制，不能把这组 tau 无条件套到 116/116。
+- `epsilon_t` 仍为 `NOT_PRODUCED`；门 4 时间槽位、K5-5、K2-C1 完整清单与完整门 4 冻结均未完成。
+- 本文的数值是测量容差，不是姿态等价结论；不得外推到其他资源、层/混合或其他运行。

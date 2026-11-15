@@ -1,6 +1,6 @@
 # 会话总结：2026-11-15 会话（门 4 协议全链 + CAL2 至部署，11 个提交）
 
-> **2026-11-15 后续更新**：v104 部署后已完成 **run 1–3/3**；`tools/cal2_adjudicate.py` 已实现/测试，run 1–3 在 [CAL2 §十二](g5-cal2-20261115/README.md#cal2-c2e-oar-addendum) 的 OAR 精确豁免下均 C2-A/B/C/E/F PASS，三进程两两 119,790/119,790 逐位相同；**C2-D PASS，K2-C4 升 grid READY**，CAL1 资格评审已完成：完整 CAL1 / 门 3 仍 NOT_READY（K2-C1 PARTIAL、K5-5、`epsilon_t` 的 TSC 频率/单位未登记）；控制 B 单层姿态的有界 CAL1-B 可预注册。本文“部署后未进行任何游戏会话”只描述本会话结束时的状态。
+> **2026-11-15 后续更新**：v104 部署后已完成 **run 1–3/3**；`tools/cal2_adjudicate.py` 已实现/测试，run 1–3 在 [CAL2 §十二](g5-cal2-20261115/README.md#cal2-c2e-oar-addendum) 的 OAR 精确豁免下均 C2-A/B/C/E/F PASS，三进程两两 119,790/119,790 逐位相同；**C2-D PASS，K2-C4 升 grid READY**，CAL1-B 已完成 **CALIBRATED_BOUNDED**（控制 B 单层姿态；`tau_p=0.000476592`、`tau_r=6.03341E-8`、`tau_s=0.00000386264`）；门 4 姿态槽位已填，但完整 CAL1 / 门 3 仍 NOT_READY（K2-C1 PARTIAL、K5-5、`epsilon_t` TSC 频率/单位未登记），`epsilon_t` 未产生。本文“部署后未进行任何游戏会话”只描述本会话结束时的状态。
 
 **范围**：本会话从 `34fea79`（Track 2 收官）之后开始，共 **13 个提交**（含 2 个会话总结/修正提交）。分支 `oar-idle3`，结束领先 `origin` **89 提交、未推送**，工作树 clean。完成两条工作包：**门 4 配对/比较协议全链（预注册 → 离线工具 → dry-run）** 与 **CAL2 控制 B 网格协议（预注册 → 实现 → v104 构建 → 真值转储 → 部署）**。部署后**未进行任何游戏会话**——3 进程上机是下一会话的入口动作（用户执行）。
 
@@ -22,7 +22,7 @@
 | `fd48c7d` | **C-G5-CAL2 v1 预注册（评审通过，环境 = `AE-Track2` 档）**：控制 B 从 B2 的 9 固定时间单发采样（bounded READY，1 进程）重组为 [CAL v1 §五.1/§五.2/§五.6](../../independent-behavior-graph.md#c-g5-cal-v1) 完整形状——每进程 baseline(t=0) + 120 完成代（注入链 equip 段提供每代结构）× 每代 2 读，**预定网格时间 t=k/60 直采（不取图 clip 时间，隔离候选时钟阶梯）**，3 独立进程；判据 C2-A..F；全过 = K2-C4 升网格 READY。四处入口同步 |
 | `7db0215` | **§九 实现预注册**：`ControlSampleGrid` 键（off 默认、off 路径与 v103 逐字节一致、armed 抑制九时间采样并出声明行）、6 代码触点、CGRD v1 工件布局（112 B 头 + 121×4,004 B 记录 = 484,596 B）、~135 行日志、测试 G1–G4、HkxTruth 加性 BOUNDS 节、C2-C 界规则（B2 公式逐字 + 跨块保守并集） |
 | `d61a6e1` | **网格仪器实现**：121 时间表（float64→float32 规则生成；[1] 与九时间表 1/60 逐位同、[60]=1、[120]=2.0）、每代载体 FNV 重验 + 双读 memcmp + 四点 `__rdtsc` + 首读位值入 CGRD 缓冲（close 时一次写出）；**离线测试 8/8 PASS**（G3 对全部 120 个 k 重算逐位一致） |
-| `cb39d4e` | **v104 干净重建 + 网格真值转储登记（§十）**：DLL 2,025,984 B `7d270e7d…`、PDB `b2232180…`、身份 `…-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z`（提交后重配置，无 `+dirty`）；[网格真值](mt_idle_female_truth_grid121.txt) 121×99 TRACK + TIME 121 + BOUNDS 6 块 × 99 轨 + `BITS_FNV1A64 BE67D994E6042E31`（SHA-256 `5e20fcaa…b4e3`）；量化 pos_q=1（QT_16bit）/ rot_q=3（QT_40bit）与 B2 公式一致；**重叠锚点自检 0 失配**（与 9 时间真值共享的三时间 × 99 轨逐位相同） |
+| `cb39d4e` | **v104 干净重建 + 网格真值转储登记（§十）**：DLL 2,025,984 B `7d270e7d…`、PDB `b2232180…`、身份 `…-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z`（提交后重配置，无 `+dirty`）；[网格真值](mt_idle_female_truth_grid121.txt) 121×99 TRACK + TIME 121 + BOUNDS 6 块 × 99 轨 + `BITS_FNV1A64 BE67D994E6042E31`（SHA-256 `de26eceb…c387`）；量化 pos_q=1（QT_16bit）/ rot_q=3（QT_40bit）与 B2 公式一致；**重叠锚点自检 0 失配**（与 9 时间真值共享的三时间 × 99 轨逐位相同） |
 | `2d8003a` | **build.md v104 节 + 运行档派生**：`dist/g5-cal2-20261115/CharacterPanel-g5cal2-grid-inject.ini`（`bbfe2b8b…`，k5-inject 基底 → K5 三键 off + ControlSampleGrid=true；19 键逐键断言） |
 | `7f31813` | 状态头同步 |
 | `7c396ab` | **部署登记**（见下） |

@@ -1,5 +1,5 @@
 CAL2 ADJUDICATION C-G5-CAL2 v1
-TRUTH path='E:\SkyrimTools\Proj\CharacterPanel\docs\diagnostics\g5-cal2-20261115\mt_idle_female_truth_grid121.txt' sha256=5e20fcaabcdf40a70d4c0741fb7768d31896131dad19821e28bc79b8917eb4e3 times=121 tracks=99 blocks=6
+TRUTH path='E:\SkyrimTools\Proj\CharacterPanel\docs\diagnostics\g5-cal2-20261115\mt_idle_female_truth_grid121.txt' sha256=de26eceb5679e655adefe4790a216f219e8f64f7e405492ba1b8a69484edc387 times=121 tracks=99 blocks=6
 RUN run1 artifact='CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T125913Z.bin' sha256=cb5587574e5ba5146788a4dbf0873d4c57c802be4f34356111343d1f8e1d508b bytes=484596 identity='CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z' recorded=121
 RUN run1 C2-A PASS scope=artifact+log issues=0
 RUN run1 C2-B PASS records=121 two_read_bad=0 nonfinite=0 issues=0

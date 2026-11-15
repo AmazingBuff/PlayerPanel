@@ -1,6 +1,6 @@
 # C-G5-CAL1 资格评审（2026-11-15）
 
-**状态：评审完成。裁定：完整 CAL1 / 门 3 原生校准 NOT_READY；控制 B 单层姿态的有界 CAL1-B 可预注册。`tau_p/tau_r/tau_s/epsilon_t` 未产生。**
+**状态：评审完成。裁定：完整 CAL1 / 门 3 原生校准 NOT_READY；控制 B 单层姿态的有界 CAL1-B 已完成 **`CALIBRATED_BOUNDED`**（`tau_p=0.000476592`、`tau_r=6.03341E-8`、`tau_s=0.00000386264`），`epsilon_t` 未产生。**
 
 本轮只做资格评审，不采集新数据、不改判据、不产生容差。输入为 [CAL v1 §七/§八](../../independent-behavior-graph.md#c-g5-cal-v1)、K1–K6 的既有登记、[CAL2 三进程裁定](../g5-cal2-20261115/README.md#cal2-run3-final) 与三份 CGRD v1 工件。
 
@@ -57,7 +57,7 @@
 
 **因此：不产生 `tau_p/tau_r/tau_s/epsilon_t`；不冻结门 3；不进入门 4 完整冻结或门 5。**
 
-### 3.2 有界 CAL1-B（控制 B 单层姿态）：可预注册
+### 3.2 有界 CAL1-B（控制 B 单层姿态）：已完成
 
 控制 B 的数据形状与缺口是分离的：
 
@@ -70,11 +70,11 @@
 | `epsilon_t` | 只有原始 cycles；无频率/单位 | **有界 CAL1-B 暂不含 `epsilon_t`**；时间槽位保持开放 |
 | K5-5 | 层/权重/混合缺项 | **明确排除**；不得用控制 B 推断混合/层语义 |
 
-**结论：可另立 [`C-G5-CAL1-B v1` 预注册](../g5-cal1b-20261115/README.md)（2026-11-15 评审通过）**，只推导控制 B 单层姿态的 `Q_p/Q_r/Q_s` 与 `N_p/N_r/N_s`，再按 CAL v1 §七 的 `round_up` 与旋转角合成给出 `tau_p/tau_r/tau_s`；`epsilon_t`、K5-5、K2-C1 完整清单与 G5 等价裁定明确排除。该预注册已于 2026-11-15 评审通过，评审通过前未产生数值。
+**结论：[`C-G5-CAL1-B v1`](../g5-cal1b-20261115/README.md) 已于 2026-11-15 评审通过并完成正式运行**：只推导控制 B 单层姿态的 `Q_p/Q_r/Q_s` 与 `N_p/N_r/N_s`，再按 CAL v1 §七 的 `round_up` 与旋转角合成给出 `tau_p/tau_r/tau_s`；`epsilon_t`、K5-5、K2-C1 完整清单与 G5 等价裁定明确排除。结果 `CALIBRATED_BOUNDED`：`tau_p=0.000476592`、`tau_r=6.03341E-8`、`tau_s=0.00000386264`；门 4 姿态槽位已按 [§十六](../g5-gate4-20261115/README.md#gate4-cal1b-slots) 填充。
 
 ## 四、建议顺序
 
-1. **推荐**：预注册并评审 [`C-G5-CAL1-B v1`](../g5-cal1b-20261115/README.md)（控制 B 单层姿态，不含 `epsilon_t`），用三份 CGRD + 121 网格真值 + BOUNDS 推导 Q/N；通过后先填门 4 的姿态槽位。
+1. **已完成**：[`C-G5-CAL1-B v1`](../g5-cal1b-20261115/README.md) 已产出控制 B 单层姿态的 `tau_p/tau_r/tau_s` 并填入姿态槽位；`epsilon_t` 仍开放。
 2. 并行关闭完整 CAL1 的剩余缺口：K2-C1 护甲/存档身份清单；K5-5 的可观测替代或显式范围裁定；TSC 频率/单位登记（新仪器批次或运行记录扩展）。
 3. `epsilon_t` 与 K5-5 未闭合前，门 4 不得完整冻结，门 5 不得启动；`tau_*` 不得被写成 G5 通过。
 

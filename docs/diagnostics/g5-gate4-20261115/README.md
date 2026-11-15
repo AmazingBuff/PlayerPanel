@@ -1,6 +1,6 @@
 # C-G5-G4 v1：门 4 配对/比较协议预注册（2026-11-15 草案，待评审）
 
-**状态（2026-11-15）：预注册（评审通过）。** 用户于 2026-11-15 批准本协议（§十三决策 1）与工具实现 + dry-run 授权（§十三决策 2）。本文档冻结 [G5 v2 门 4](../../independent-behavior-graph.md#g5-draft) 要求的**配对/比较协议结构规则**：配对资格、配对键、度量定义、分母、时钟/相位规则、判定/停点/回传格式与预算。**数值容差槽位（`tau_p/tau_r/tau_s/epsilon_t` 与时间偏移处置数值）尚未存在**——`tau_*` 未产生、CAL1/CAL2 未完成，按 [CAL v1 §九](../../independent-behavior-graph.md#c-g5-cal-v1) 的顺序在校准完成后填充；**槽位填充 + 联合证据验收 = 门 4 完整冻结**，冻结必须完成于任何正式数据采集之前（G5 v2 §二门 4/门 5 顺序）。本预注册不授权实现、构建、部署、上机或任何裁定。
+**状态（2026-11-15）：预注册（评审通过）。** 用户于 2026-11-15 批准本协议（§十三决策 1）与工具实现 + dry-run 授权（§十三决策 2）。本文档冻结 [G5 v2 门 4](../../independent-behavior-graph.md#g5-draft) 要求的**配对/比较协议结构规则**：配对资格、配对键、度量定义、分母、时钟/相位规则、判定/停点/回传格式与预算。**姿态槽位已由 CAL1-B 填充（限定范围，§十六）；`epsilon_t` 与 `Δt_clock` 槽位仍未产生**；CAL2 已完成、完整 CAL1 未完成，按 [CAL v1 §九](../../independent-behavior-graph.md#c-g5-cal-v1) 的顺序继续填充；**槽位填充 + 联合证据验收 = 门 4 完整冻结**，冻结必须完成于任何正式数据采集之前（G5 v2 §二门 4/门 5 顺序）。本预注册不授权实现、构建、部署、上机或任何裁定。
 
 **前置阅读**：[Track 2 预注册 §十九/§二十](g5-track2-20261114/README.md)（C 分组账本与收官裁定）、[K6 计划 §三/§六/§十](g5-k6-plan-20261114/README.md)（K5 仪器范围与记录字节布局）、[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)（度量/统计/控制/预算 canonical 定义）、[K3 收官](../../independent-behavior-graph.md#g5-cal-k3-closure)（跨侧逐代配对的裁定）、[E3 v2](../../independent-behavior-graph.md#c-g5-e3-v2)（输入序数配对先例）、[2026-11-15 会话总结 §四](../session-summary-20261115-track2.md)（本工作包的入口指定）。
 
@@ -111,7 +111,7 @@
 
 | 槽位 | 内容 | 填充来源 | 当前状态 |
 | --- | --- | --- | --- |
-| `tau_p` / `tau_r` / `tau_s` | 姿态容差（`Q+N` 推导、旋转角空间合成、向外舍入） | [CAL v1 §七](../../independent-behavior-graph.md#c-g5-cal-v1)（CAL1 产出） | **PENDING-CAL，未产生** |
+| `tau_p` / `tau_r` / `tau_s` | 姿态容差（`Q+N` 推导、旋转角空间合成、向外舍入） | [CAL v1 §七](../../independent-behavior-graph.md#c-g5-cal-v1)（CAL1-B 产出；§十六） | **CAL1-B 已填（限定范围；§十六）** |
 | `epsilon_t` | 时间量化界（输入锚点→完成输出→读取延迟区间） | CAL v1 §五.4/§七 | **PENDING-CAL，未产生** |
 | 时间偏移处置规则 | `Δt_clock` 与配对有效性的判定规则（含 `epsilon_t` 是否/如何传播为运动误差的独立证明） | CAL v1 §七末条（须在门 4 前独立证明） | **PENDING-CAL** |
 | 时钟轴判据 | 候选/源 clip 实例速率与相位时长的比较规则（离散判据 + 数值允差） | [E2-C 速率证据](../../independent-behavior-graph.md#c-g5-e2-c)（1.000±0.017 有界）+ CAL 时间规则 | **PENDING-CAL**（结构已登记：逐实例、逐域比较） |
@@ -301,3 +301,22 @@ python -I tools/gate4_pair.py --candidate <cpk5.bin> --source <cpk5s.bin> --out-
 - 时钟轴判据（§五 PENDING-CAL 槽位）的定义必须覆盖观察 1/2（候选过渡 clip 的阶梯/滞后形态与其总跨度端点对称性）——是按 clip 实例速率、还是按跨度端点/形状比较，由 CAL 输出填充时一并冻结；本协议不预设。
 - 姿态阶梯（同一相位点多条候选记录的姿态是否相同）属 pose 域问题，dry-run 未解码、正式模式首次给出。
 - §15 的全部读数是**协议可执行性证据**，不是姿态比较结果；正式裁定只消费门 5 正式运行的新工件。
+
+<a id="gate4-cal1b-slots"></a>
+## 十六、CAL1-B 姿态槽位填充（2026-11-15，限定范围）
+
+[C-G5-CAL1-B v1](../g5-cal1b-20261115/README.md#cal1b-results) 已完成控制 B 单层姿态的有界校准。本节只登记姿态槽位的填充值；**不是门 4 完整冻结**。
+
+| 槽位 | 值 | 来源/范围 |
+| --- | --- | --- |
+| `tau_p` | `0.000476592`（未舍入 `4.765916457818655e-4`） | CAL1-B；控制 B 单层姿态，`AE-Track2`，3 进程 |
+| `tau_r` | `6.03341E-8`（未舍入 `6.033405486327581e-8`；`tau_theta=6.947463158790921e-4`） | 同上 |
+| `tau_s` | `0.00000386264`（未舍入 `3.862634230245021e-6`） | 同上 |
+| `epsilon_t` | **仍为 PENDING-CAL/未产生** | v104 CGRD 只存原始 cycles，未登记 TSC 频率/单位 |
+| `Δt_clock` 处置 | **仍为 PENDING-CAL** | 门 4 §五；不得用姿态容差吸收 |
+| 时钟轴判据 | **仍为 PENDING-CAL** | §15.3 的候选阶梯/滞后形态待处置 |
+| 轨道覆盖 | **99/116** | CAL1-B 只覆盖控制 B 的 99 个 transform 轨；其余 17 个 default/reference 轨无本控制 |
+
+**边界**：三项姿态值只适用于控制 B 单层、`female\mt_idle.hkx`、121 时间/99 轨、3 进程；不得外推到层/权重/混合、其他资源或其他运行。**门 4 的 116/116 分母中 17 个 default/reference 轨没有这组 tau 的控制覆盖**，不得把全局 tau 无条件套到 116/116。`gate4_pair.py --tolerances` 还要求 `epsilon_t`，因此正式模式仍锁定；门 4 仍**未完整冻结**，门 5 仍未授权。
+
+来源工件：[cal1b-calibration.json](../g5-cal1b-20261115/calibration/cal1b-calibration.json)（SHA-256 `8B2077BF63AB68A856148FEF1F0B9CE9F3936334125BF0BAADE91C0B8C740865`）；完整逐轨值见 [cal1b-tracks.csv](../g5-cal1b-20261115/calibration/cal1b-tracks.csv)。
