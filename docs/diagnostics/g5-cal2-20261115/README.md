@@ -144,3 +144,26 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 ### 9.8 实施顺序
 
 §九（本节）先于代码冻结 → 实现 + G1–G4 全过 → 真值网格转储（§2.4）+ BOUNDS 节 → v104 构建部署 → 3 进程上机（用户）→ `cal2_adjudicate.py` 离线裁定登记。**零产品路径、off 逐字节一致贯穿。**
+
+## 十、v104 构建与网格真值转储登记（2026-11-15）
+
+### 10.1 实现（§九 落地）
+
+| 项 | 值 |
+| --- | --- |
+| 代码触点 | §9.2 六处全部落地（settings 键、policy 121 时间表 + 布局常量、control_sample 网格状态机/写物器、hook 分支、测试 G1–G4） |
+| 离线测试 | [control_sample_policy_test](../../../tests/control_sample_policy_test.cpp) **8/8 PASS**（G1 严格递增 + 三锚点逐位、G2 484,596 B 预算算术、G3 float64→float32 规则对全部 120 个 k 重算逐位一致、G4 九时间常量原状） |
+| v104 构建 | 提交 `d61a6e1` 后重配置干净重建：DLL 2,025,984 B，SHA-256 `7d270e7dfc35ccadcca0807472356aa81e3dda3efa912d516479605470d6f9df`；PDB `b2232180b7ec250ac7aebb37fa79536fd0ab7edd8df87321420a88bba31c2ac1`；身份 `CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z`（无 `+dirty`） |
+
+### 10.2 网格真值转储（本地 HkxTruth，§2.4/§9.6 落地）
+
+| 项 | 值 |
+| --- | --- |
+| 工具 | 本地 gitignored `HkxTruth`（HavokLib `ef5d5c6`）加性补丁重建：解压器逐轨 `TrackBBOX` 存储（块级 authored 元数据，赋值点即既有读取点）+ `DumpBounds` + main.cpp 末尾 BOUNDS 节（tmpfile 中转回写文件）；**解码逻辑零改动**，TRACK/TIME/BITS 行格式不变 |
+| 输入资源 | `E:\SkyrimAE\mods\Vanargand Animations II - Female Idle Walk and Run\meshes\actors\character\animations\female\mt_idle.hkx`，113,920 B，SHA-256 `0EF8248CE2C50A2251FA592F7C65E75E75B5E4DC55E9C654436543180BCD73C7`（与登记逐位一致） |
+| 时间表 | 121 项 = §9.2 同一表（float64 除法 → float32；`build/g5-cal2-20261115/grid_time_bits.txt`） |
+| 输出工件 | [mt_idle_female_truth_grid121.txt](mt_idle_female_truth_grid121.txt)：TRACK 11,979（121×99）+ TIME 121 + BOUNDS blocks=6 + BOUND 594（6 块 × 99 轨）行；`BITS_FNV1A64 BE67D994E6042E31`；文件 SHA-256 `5e20fcaabcdf40a70d4c0741fb7768d31896131dad19821e28bc79b8917eb4e3` |
+| 量化读数 | 全轨 `pos_q=1`（QT_16bit）、`rot_q=3`（QT_40bit）——与 B2 登记的解析界公式逐字一致（dynamic 16-bit + 40-bit rotation） |
+| **重叠锚点自检（§2.4）** | 网格时间 {0, 1, 60}（t=0、1/60、1）对既有 9 时间真值的对应三时间，**99 轨 × 3 时间值域逐位一致、0 失配**（TRACK 行首的 `time=<转储序数>` 字段两侧本就不同序，不参与比较） |
+
+**裁定：真值网格资格成立**——独立真值覆盖全部 121 网格时间（t=0 ∪ k/60），与 9 时间真值自洽，量化元数据齐备（C2-C 的逐分量界由此推导）。`tau_*` 仍未产生。
