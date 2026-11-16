@@ -114,7 +114,7 @@
 | `tau_p` / `tau_r` / `tau_s` | 姿态容差（`Q+N` 推导、旋转角空间合成、向外舍入） | [CAL v1 §七](../../independent-behavior-graph.md#c-g5-cal-v1)（CAL1-B 产出；§十六） | **CAL1-B 已填（限定范围；§十六）** |
 | `epsilon_t` | 时间量化界（输入锚点→完成输出→读取延迟区间） | [C-G5-TIME v1](../g5-time-20261115/README.md#time-results) | **`0.0333960` s（TIME-1..7 PASS；§十七）** |
 | 时间偏移处置规则 | `Δt_clock` 与配对有效性的判定规则（含 `epsilon_t` 是否/如何传播为运动误差的独立证明） | C-G5-TIME v1 §2.3 | **`dt_exclude=true`，阈值 `epsilon_t`；2% edge-only；dry-run 0/247 排除** |
-| 时钟轴判据 | 候选/源 clip 实例速率与相位时长的比较规则（离散判据 + 数值允差） | [E2-C 速率证据](../../independent-behavior-graph.md#c-g5-e2-c)（1.000±0.017 有界）+ CAL 时间规则 | **PENDING-CAL**（结构已登记：逐实例、逐域比较） |
+| 时钟轴判据 | 候选/源 clip 实例速率与相位时长的比较规则（离散判据 + 数值允差） | [C-G5-G4-CLOCK v1](../g5-g4-clock-20261116/README.md#八实现与-dry-run-结果2026-11-16) | **CLOCK_READY（G4C-1..6 PASS；§十八）** |
 
 **门 4 完整冻结条件**（全部满足才称"已冻结"，才授权门 5 正式采集）：
 
@@ -123,7 +123,7 @@
 3. 本协议 G4P-1..G4P-6、G4P-8、G4P-9 的结构判据在 dry-run 与正式运行资格上成立；
 4. §六阻塞清单的处置明确（闭合或显式带缺项冻结，并如实登记其对 G5 裁定的阻塞）。
 
-**当前状态（2026-11-16）**：姿态 `tau_p/tau_r/tau_s`（CAL1-B）、`epsilon_t=0.0333960` 与 `dt_exclude` 规则（TIME v1）、99/17 覆盖结构（COV v1）已填；**时钟轴判据仍 PENDING-CAL**，CAL v1 §九联合验收未完成，K5-5/K2-C1 仍开放，17 辅助轨无控制。故条件 1/2/4 未满足，**门 4 未完整冻结，门 5 未授权**。
+**当前状态（2026-11-16）**：姿态 `tau_p/tau_r/tau_s`（CAL1-B）、`epsilon_t=0.0333960` 与 `dt_exclude`（TIME v1）、99/17 覆盖（COV v1）、时钟轴（CLOCK v1）均已填；CAL v1 §九联合验收未完成，K5-5/K2-C1 仍开放，17 辅助轨无控制。故条件 1/2/4 未满足，**门 4 未完整冻结，门 5 未授权**。
 
 ## 六、层/权重/混合轴：缺项阻塞登记（不能因读不到便删出 G5）
 
@@ -337,4 +337,19 @@ python -I tools/gate4_pair.py --candidate <cpk5.bin> --source <cpk5s.bin> --out-
 
 来源：[cal1c-time.json](../g5-time-20261115/calibration/cal1c-time.json)（SHA-256 `FC060CCA…ACCF5`）。
 
-**边界**：`epsilon_t` 只用于门 4 时间等价/排除纪律，不传播为姿态 tau；时钟轴速率/相位判据仍 **PENDING-CAL**；门 4 仍**未完整冻结**（K5-5/K2-C1/时钟轴与 17 辅助轨仍待处置），门 5 未授权。
+**边界**：`epsilon_t` 只用于门 4 时间等价/排除纪律，不传播为姿态 tau；时钟轴速率/相位判据已由 CLOCK v1 填（§十八）；门 4 仍**未完整冻结**（K5-5/K2-C1/17 辅助轨仍待处置），门 5 未授权。
+
+## 十八、CLOCK v1 时钟轴槽位（2026-11-16）
+
+[C-G5-G4-CLOCK v1](../g5-g4-clock-20261116/README.md#八实现与-dry-run-结果2026-11-16) 已完成 metadata-only 时钟轴评估：
+
+| 项 | 值 |
+| --- | --- |
+| 工具 | `tools/gate4_clock.py`（SHA-256 `6E21BB47…A41780`），9/9 测试 PASS |
+| 域 | 3 个有配对域；247 对 |
+| rate（E2-C ±0.017） | 0.995882 / 0.991083 / 0.993000 |
+| endpoint / dt（≤`epsilon_t=0.0333960`） | 最大 0.017833 / 0.017833 s |
+| 阶梯 | candidate 83/95、109/128、19/21 相邻等值；source 唯一 point 0/16、0/20、0/2；只登记不判失败 |
+| 判据 | G4C-1..6 **PASS**；`CLOCK_READY` |
+
+**边界**：时钟轴已填；门 4 仍未完整冻结（K5-5/K2-C1/17 辅助轨；CAL v1 §九联合验收未完成），门 5 未授权。

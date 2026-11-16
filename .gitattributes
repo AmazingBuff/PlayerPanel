@@ -17,6 +17,8 @@ tools/cal1c_time.py text eol=lf
 tools/cal1c_time_test.py text eol=lf
 tools/gate4_pair.py text eol=lf
 tools/gate4_pair_test.py text eol=lf
+tools/gate4_clock.py text eol=lf
+tools/gate4_clock_test.py text eol=lf
 src/animation/behavior_graph/pose_content_policy.h text eol=crlf
 src/animation/behavior_graph/independent_graph.cpp text eol=crlf
 src/animation/behavior_graph/source_timeline.cpp text eol=crlf
@@ -56,6 +58,7 @@ docs/diagnostics/g5-cal2-20261115/batch-3of3-adjudication/cal2-cross-process-dif
 docs/diagnostics/g5-cal1b-20261115/calibration/** text eol=lf
 docs/diagnostics/g5-cal1c-coverage-timing-20261115/** text eol=lf
 docs/diagnostics/g5-g4-cov-20261115/** text eol=lf
+docs/diagnostics/g5-g4-clock-20261116/** text eol=lf
 docs/diagnostics/g5-time-20261115/** text eol=lf
 docs/diagnostics/session-summary-20261115-cal1b.md text eol=lf
 docs/diagnostics/CharacterPanel-g5k1-census-v101-run1-20261114-1411.log -text whitespace=cr-at-eol,-blank-at-eof
