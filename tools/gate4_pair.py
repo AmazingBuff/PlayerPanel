@@ -26,7 +26,7 @@ import struct
 import sys
 
 K5_CANDIDATE_HEADER = struct.Struct("<4sHHIII")  # magic version header_size record_capacity track_capacity record_count
-K5_SOURCE_HEADER = struct.Struct("<4sHHIIIIII")  # magic version header_size source record_capacity track_capacity record_size record_count
+K5_SOURCE_HEADER = struct.Struct("<4sHHIIIII")   # magic version header_size source record_capacity track_capacity record_size record_count
 K5_CANDIDATE_META = struct.Struct("<IIIIIIQ")    # segment completed commanded track_count two_read_equal clip_count elapsed_raw
 K5_SOURCE_META = struct.Struct("<QIHHBBBB")      # tsc seq track_count clip_count path two_read_equal flags pad
 K5_CLIP = struct.Struct("<QQII4s64sIQQQI")       # node binding binding_index local_time mode+pad name duration data blockoff map_fnv map_count
@@ -217,7 +217,7 @@ def parse_source(path: str) -> dict:
             "flags": flags,
             "clips": _read_clips(data, off + K5_SOURCE_META.size, clip_count),
         })
-    identity = data[header_size - 92:header_size].rstrip(b"\x00").decode("utf-8", errors="replace")
+    identity = data[header_size - 96:header_size].rstrip(b"\x00").decode("utf-8", errors="replace")
     return {"blob": data, "records": records, "count": count, "identity": identity,
             "version": version, "capacity": capacity, "record_size": SRC_RECORD_SIZE,
             "meta_size": K5_SOURCE_META.size, "header_size": header_size}

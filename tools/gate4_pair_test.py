@@ -69,10 +69,10 @@ def cand_bin(records) -> bytes:
 
 
 def src_bin(records) -> bytes:
-    # <4sHHIIIIII = magic/version/header_size/source/capacity/track_cap/record_size/count/reserved
-    # (k5_reconcile.py takes [:8]; the ninth I is ignored by both tools).
-    header = struct.pack("<4sHHIIIIII", b"CPK5", 2, 124, 0, 1400, 116, 5652, len(records), 0)
-    return header + b"test-source".ljust(92, b"\x00") + b"".join(records)
+    # <4sHHIIIII = magic/version/header_size/source/capacity/track_cap/record_size/count
+    # followed by a 96-byte identity (K5_Identity_Length).
+    header = struct.pack("<4sHHIIIII", b"CPK5", 2, 124, 0, 1400, 116, 5652, len(records))
+    return header + b"test-source".ljust(96, b"\x00") + b"".join(records)
 
 
 F_EQ = 0x12A77CD14ECC3688   # 1hm_equip
@@ -233,6 +233,7 @@ def t10_parse_round_trip() -> None:
           and clip["data_fnv"] == F_EQ and abs(struct.unpack("<f", struct.pack("<I", clip["duration_bits"]))[0] - 2.5) < 1e-9,
           f"clip={clip}")
     srec = src_p["records"][0]
+    check("T10 source identity", src_p["identity"] == "test-source", f"identity={src_p['identity']!r}")
     check("T10 source seq/tsc", srec["seq"] == 1 and srec["tsc"] == 5001, f"rec={srec['seq']}/{srec['tsc']}")
     check("T10 record sizes", cand_p["record_size"] == 5664 and src_p["record_size"] == 5652)
 
