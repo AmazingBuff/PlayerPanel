@@ -83,6 +83,41 @@ def bare_clip_name(path_like: str) -> str:
     return stem.strip().lower()
 
 
+def load_coverage(path: str) -> dict:
+    """Load the C-G5-G4-COV v1 99-primary/17-auxiliary split (frozen)."""
+    with open(path, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    if data.get("schema") != "C-G5-G4-COV v1":
+        raise ParseError("coverage schema mismatch")
+    primary = [int(value) for value in data.get("primary", [])]
+    auxiliary = [int(value) for value in data.get("auxiliary", [])]
+    if len(primary) != 99 or len(auxiliary) != 17:
+        raise ParseError(f"coverage counts primary={len(primary)} auxiliary={len(auxiliary)}")
+    if len(set(primary)) != len(primary) or len(set(auxiliary)) != len(auxiliary):
+        raise ParseError("coverage contains duplicate track indices")
+    if set(primary) & set(auxiliary):
+        raise ParseError("coverage primary/auxiliary overlap")
+    if set(primary) | set(auxiliary) != set(range(TRACK_COUNT)):
+        raise ParseError("coverage union is not 0..115")
+    groups = data.get("auxiliary_groups", {})
+    item = [int(value) for value in groups.get("item", [])]
+    wing = [int(value) for value in groups.get("wing", [])]
+    belly = [int(value) for value in groups.get("belly", [])]
+    if (len(item), len(wing), len(belly)) != (6, 10, 1):
+        raise ParseError(f"coverage auxiliary groups item/wing/belly={len(item)}/{len(wing)}/{len(belly)}")
+    if set(item) | set(wing) | set(belly) != set(auxiliary):
+        raise ParseError("coverage auxiliary groups do not cover A17")
+    return {
+        "schema": data["schema"],
+        "primary": primary,
+        "auxiliary": auxiliary,
+        "primary_set": set(primary),
+        "auxiliary_set": set(auxiliary),
+        "auxiliary_groups": {"item": item, "wing": wing, "belly": belly},
+        "sha256": sha256_of(path),
+    }
+
+
 def sha256_of(path: str) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
@@ -283,7 +318,7 @@ def pair_domain(fam: str, cand_recs: list, src_recs: list) -> dict:
 
 
 def run_pairing(cand_parsed: dict, src_parsed: dict, pose_mode: bool = False,
-                tolerances: dict = None) -> dict:
+                tolerances: dict = None, coverage: dict = None) -> dict:
     """Full pipeline over parsed artifacts. Returns the manifest dict (and
     attaches `detail_rows` for pose_mode). Pure function of its inputs."""
     cand_cls = classify_side(cand_parsed)
@@ -348,9 +383,29 @@ def run_pairing(cand_parsed: dict, src_parsed: dict, pose_mode: bool = False,
         "ledger": {"candidate": cand_ledger, "source": src_ledger},
         "pairs": [p for fam in CLOCK_PRIORITY for p in domains[fam]["pairs_list"]],
     }
+    if coverage is None:
+        manifest["coverage"] = {
+            "schema": "legacy-116",
+            "primary_count": TRACK_COUNT,
+            "auxiliary_count": 0,
+            "legacy_116": True,
+            "primary": list(range(TRACK_COUNT)),
+            "auxiliary": [],
+        }
+    else:
+        manifest["coverage"] = {
+            "schema": coverage["schema"],
+            "primary_count": len(coverage["primary"]),
+            "auxiliary_count": len(coverage["auxiliary"]),
+            "legacy_116": False,
+            "primary": list(coverage["primary"]),
+            "auxiliary": list(coverage["auxiliary"]),
+            "auxiliary_groups": coverage["auxiliary_groups"],
+            "sha256": coverage["sha256"],
+        }
     if pose_mode:
         manifest["detail_rows"] = compute_detail(cand_parsed, src_parsed, manifest["pairs"],
-                                                 tolerances)
+                                                 tolerances, coverage)
     return manifest
 
 
@@ -385,7 +440,8 @@ def pose_metrics(cand_track: tuple, src_track: tuple):
     return e_p, e_r, theta, e_s
 
 
-def compute_detail(cand_parsed: dict, src_parsed: dict, pairs: list, tolerances: dict):
+def compute_detail(cand_parsed: dict, src_parsed: dict, pairs: list, tolerances: dict,
+                   coverage: dict = None):
     """Formal mode only: per-pair per-bone metrics + mechanical exceed counts.
     Row header is the frozen §14.5 layout: pair_index u32 / cand_record u32 /
     src_seq u32 / reserved u32. dt exclusion (dt_exclude=true) removes a pair
@@ -398,7 +454,12 @@ def compute_detail(cand_parsed: dict, src_parsed: dict, pairs: list, tolerances:
         src_by_seq[rec["seq"]] = rec
     detail = bytearray()
     invalid_bones_total = 0
+    primary_set = set(range(TRACK_COUNT)) if coverage is None else coverage["primary_set"]
+    auxiliary_set = set() if coverage is None else coverage["auxiliary_set"]
+    primary_invalid = 0
+    auxiliary_invalid = 0
     samples = {"E_p": [], "E_r": [], "E_s": []}
+    auxiliary_samples = {"E_p": [], "E_r": [], "E_s": []}
     exceeded = {"tau_p": 0, "tau_r": 0, "tau_s": 0}
     dt_excluded_pairs = 0
     for pair_index, p in enumerate(pairs):
@@ -421,21 +482,31 @@ def compute_detail(cand_parsed: dict, src_parsed: dict, pairs: list, tolerances:
             e_p, e_r, theta, e_s = pose_metrics(ca, cs)
             if e_r is None or not all(math.isfinite(v) for v in (e_p, e_s)):
                 row_invalid += 1
+                if b in primary_set:
+                    primary_invalid += 1
+                elif b in auxiliary_set:
+                    auxiliary_invalid += 1
                 row += struct.pack("<4f", e_p if math.isfinite(e_p) else float("nan"),
                                    float("nan"), float("nan"),
                                    e_s if math.isfinite(e_s) else float("nan"))
                 continue
             row += struct.pack("<4f", e_p, e_r, theta, e_s)
             if not dt_excluded:
-                samples["E_p"].append(e_p)
-                samples["E_r"].append(e_r)
-                samples["E_s"].append(e_s)
-            if e_p > tolerances["tau_p"]:
-                exceeded["tau_p"] += 1
-            if e_r > tolerances["tau_r"]:
-                exceeded["tau_r"] += 1
-            if e_s > tolerances["tau_s"]:
-                exceeded["tau_s"] += 1
+                if b in primary_set:
+                    samples["E_p"].append(e_p)
+                    samples["E_r"].append(e_r)
+                    samples["E_s"].append(e_s)
+                elif b in auxiliary_set:
+                    auxiliary_samples["E_p"].append(e_p)
+                    auxiliary_samples["E_r"].append(e_r)
+                    auxiliary_samples["E_s"].append(e_s)
+            if b in primary_set:
+                if e_p > tolerances["tau_p"]:
+                    exceeded["tau_p"] += 1
+                if e_r > tolerances["tau_r"]:
+                    exceeded["tau_r"] += 1
+                if e_s > tolerances["tau_s"]:
+                    exceeded["tau_s"] += 1
         detail += row
         invalid_bones_total += row_invalid
     if len(detail) > DETAIL_BUDGET:
@@ -445,6 +516,21 @@ def compute_detail(cand_parsed: dict, src_parsed: dict, pairs: list, tolerances:
         "dt_excluded_pairs": dt_excluded_pairs,
         "exceeded": exceeded,
         "distributions": {k: _distribution(v) for k, v in samples.items()},
+        "coverage": {
+            "legacy_116": coverage is None,
+            "primary_count": len(primary_set),
+            "auxiliary_count": len(auxiliary_set),
+        },
+        "primary": {
+            "invalid_bones_total": primary_invalid,
+            "exceeded": exceeded,
+            "distributions": {k: _distribution(v) for k, v in samples.items()},
+        },
+        "auxiliary": {
+            "invalid_bones_total": auxiliary_invalid,
+            "no_tolerance": True,
+            "distributions": {k: _distribution(v) for k, v in auxiliary_samples.items()},
+        },
     }
     return bytes(detail), stats
 
@@ -487,6 +573,10 @@ def render_summary(manifest: dict, stats: dict = None) -> str:
     cand, src = manifest["ledger"]["candidate"], manifest["ledger"]["source"]
     lines.append(f"G4P SUMMARY protocol={manifest['protocol']}")
     lines.append(f"G4P SUMMARY pose_decoded={manifest['pose_decoded']}")
+    cov = manifest.get("coverage", {})
+    lines.append(f"G4P COVERAGE primary={cov.get('primary_count')} "
+                 f"auxiliary={cov.get('auxiliary_count')} "
+                 f"legacy_116={'yes' if cov.get('legacy_116') else 'no'}")
     lines.append(f"G4P SUMMARY side=candidate total={cand['total']} idun={cand['idun_excluded']} "
                  f"eligible={cand['eligible']} paired={cand['paired']} no_clock={cand['no_clock']} "
                  f"no_partner={cand['no_partner']} edge_pairs={cand['edge_pairs']}")
@@ -508,6 +598,14 @@ def render_summary(manifest: dict, stats: dict = None) -> str:
     if stats is not None:
         lines.append(f"G4P FORMAL invalid_bones={stats['invalid_bones_total']} "
                      f"dt_excluded_pairs={stats['dt_excluded_pairs']}")
+        primary = stats.get("primary", {})
+        aux = stats.get("auxiliary", {})
+        if primary:
+            lines.append(f"G4P PRIMARY invalid_bones={primary.get('invalid_bones_total', 0)} "
+                         f"exceeded={primary.get('exceeded', {})}")
+        if aux:
+            lines.append(f"G4P AUX invalid_bones={aux.get('invalid_bones_total', 0)} "
+                         f"no_tolerance=true")
         for key, exc in stats["exceeded"].items():
             lines.append(f"G4P FORMAL exceed {key}={exc}")
         for name, dist in stats["distributions"].items():
@@ -517,6 +615,13 @@ def render_summary(manifest: dict, stats: dict = None) -> str:
                              f"max={dist['max']:.6g}")
             else:
                 lines.append(f"G4P FORMAL dist {name} count=0")
+        for name, dist in aux.get("distributions", {}).items():
+            if dist.get("count"):
+                lines.append(f"G4P AUX dist {name} count={dist['count']} min={dist['min']:.6g} "
+                             f"median={dist['median']:.6g} p95={dist['p95']:.6g} "
+                             f"p99={dist['p99']:.6g} max={dist['max']:.6g}")
+            else:
+                lines.append(f"G4P AUX dist {name} count=0")
     if len(lines) > SUMMARY_LINE_BUDGET:
         raise ParseError(f"summary {len(lines)} lines exceeds budget {SUMMARY_LINE_BUDGET}")
     return "\n".join(lines) + "\n"
@@ -530,6 +635,7 @@ def main(argv=None) -> int:
     parser.add_argument("--out-dir", required=True, help="absent output directory for artifacts")
     parser.add_argument("--candidate-json", help="candidate K5 JSON ledger (cross-check)")
     parser.add_argument("--source-json", help="source K5 JSON ledger (cross-check)")
+    parser.add_argument("--coverage", help="C-G5-G4-COV v1 coverage JSON; required for formal pose mode")
     parser.add_argument("--tolerances", help="JSON {tau_p,tau_r,tau_s,epsilon_t,dt_exclude}; "
                                              "UNLOCKS pose decoding (formal mode, post-freeze only)")
     args = parser.parse_args(argv)
@@ -541,9 +647,12 @@ def main(argv=None) -> int:
             cross_check_json(cand_parsed, args.candidate_json, "candidate")
         if args.source_json:
             cross_check_json(src_parsed, args.source_json, "source")
+        coverage = load_coverage(args.coverage) if args.coverage else None
+        if args.tolerances and coverage is None:
+            raise ParseError("formal pose mode requires --coverage (legacy-116 is not a CAL1-B denominator)")
         tolerances = load_tolerances(args.tolerances) if args.tolerances else None
         manifest = run_pairing(cand_parsed, src_parsed, pose_mode=tolerances is not None,
-                               tolerances=tolerances)
+                               tolerances=tolerances, coverage=coverage)
         manifest["inputs"]["candidate"]["sha256"] = sha256_of(args.candidate)
         manifest["inputs"]["source"]["sha256"] = sha256_of(args.source)
         if args.candidate_json:

@@ -1,0 +1,13 @@
+{
+ "schema": "C-G5-TIME-v1-tsc-evidence",
+ "invariant_tsc": 1,
+ "qpc_frequency_hz": 10000000,
+ "f_tsc_hz": 4291863648.325,
+ "min_hz": 4291863499.649,
+ "max_hz": 4291864114.511,
+ "monotonic": true,
+ "probe_output_sha256": "50544EFC14D1E5070FDA9F490D8FFEDEF1561EC7945E16C1130681F016DE479E",
+ "probe_source_sha256": "4A01F6D8AAA93DA2DDD631A6A1C2DD5444A8B8232F7088DA6C5899C9877057E6",
+ "source_scope": "machine-level; archived v104 runs have no per-process frequency field",
+ "disclosure": "T1: invariant TSC probe + per-process C2-F monotonicity + log-slope cross-check; not a per-process field registration"
+}

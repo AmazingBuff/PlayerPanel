@@ -1,0 +1,15 @@
+G4P SUMMARY protocol=C-G5-G4 v1 (docs/diagnostics/g5-gate4-20261115/README.md)
+G4P SUMMARY pose_decoded=False
+G4P COVERAGE primary=99 auxiliary=17 legacy_116=no
+G4P SUMMARY side=candidate total=249 idun=2 eligible=247 paired=247 no_clock=0 no_partner=0 edge_pairs=12
+G4P SUMMARY side=source total=1065 idun=1 eligible=1064 hosted_pairs=247 records_hosting=36
+G4P DOMAIN family=1hm_equip cand=96 src=71 pairs=96 no_partner=0 edge=1 wrap_cand=- wrap_src=-
+G4P DOMAIN family=1hm_unequip cand=129 src=118 pairs=129 no_partner=0 edge=10 wrap_cand=- wrap_src=-
+G4P DOMAIN family=1hm_idle cand=22 src=368 pairs=22 no_partner=0 edge=1 wrap_cand=- wrap_src=-
+G4P DOMAIN family=mt_idle cand=0 src=507 pairs=0 no_partner=0 edge=0 wrap_cand=- wrap_src=-
+G4P DOMAIN family=mlh_idle cand=0 src=0 pairs=0 no_partner=0 edge=0 wrap_cand=- wrap_src=-
+G4P DOMAIN family=scar_1hmreadydummy cand=0 src=0 pairs=0 no_partner=0 edge=0 wrap_cand=- wrap_src=-
+G4P ANCHOR family=1hm_equip expected=96 actual=96 matched=yes
+G4P ANCHOR family=1hm_idle expected=22 actual=22 matched=yes
+G4P ANCHOR family=1hm_unequip expected=129 actual=129 matched=yes
+G4P K5-7 out_of_set=0 verdict=PASS

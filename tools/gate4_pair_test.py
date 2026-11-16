@@ -285,6 +285,43 @@ def t12_pose_mode_guard_and_detail() -> None:
           f"dist={stats2['distributions']['E_p']}")
 
 
+def t13_coverage_split() -> None:
+    pose = track_bytes(t=(0.0, 0.0, 0.0)) * g.TRACK_COUNT
+    pose_src = track_bytes(t=(0.0, 3.0, 4.0)) * g.TRACK_COUNT
+    cand = cand_bin([cand_record(0, 1, [clip_entry(10, 20, 22, 1.0, E_EQ, F_EQ)], tracks=pose)])
+    src = src_bin([src_record(1, [clip_entry(30, 40, 22, 0.5, E_EQ, F_EQ)], tracks=pose_src)])
+    cand_p, src_p = _parse_bytes(cand, src)
+    coverage = {
+        "schema": "C-G5-G4-COV v1",
+        "primary": list(range(99)),
+        "auxiliary": list(range(99, g.TRACK_COUNT)),
+        "primary_set": set(range(99)),
+        "auxiliary_set": set(range(99, g.TRACK_COUNT)),
+        "auxiliary_groups": {"item": list(range(99, 105)),
+                             "wing": list(range(105, 115)),
+                             "belly": [115]},
+        "sha256": "test",
+    }
+    tol = {"tau_p": 1.0, "tau_r": 1.0, "tau_s": 1.0, "epsilon_t": 0.001, "dt_exclude": False}
+    formal = g.run_pairing(cand_p, src_p, pose_mode=True, tolerances=tol, coverage=coverage)
+    detail, stats = formal["detail_rows"]
+    check("T13 manifest coverage", formal["coverage"]["primary_count"] == 99
+          and formal["coverage"]["auxiliary_count"] == 17
+          and formal["coverage"]["legacy_116"] is False, str(formal["coverage"]))
+    check("T13 detail row remains 116", len(detail) == 16 + g.TRACK_COUNT * 16)
+    check("T13 primary exceeded 99", stats["primary"]["exceeded"]["tau_p"] == 99,
+          str(stats["primary"]["exceeded"]))
+    check("T13 primary distribution 99",
+          stats["primary"]["distributions"]["E_p"].get("count") == 99,
+          str(stats["primary"]["distributions"]["E_p"]))
+    check("T13 auxiliary distribution 17",
+          stats["auxiliary"]["distributions"]["E_p"].get("count") == 17
+          and stats["auxiliary"]["no_tolerance"] is True,
+          str(stats["auxiliary"]))
+    check("T13 auxiliary does not feed primary exceed",
+          stats["exceeded"]["tau_p"] == 99, str(stats["exceeded"]))
+
+
 def _parse_bytes(cand: bytes, src: bytes):
     with tempfile.TemporaryDirectory() as tmp:
         cp, sp = os.path.join(tmp, "c.bin"), os.path.join(tmp, "s.bin")
@@ -308,10 +345,11 @@ def main() -> int:
     t10_parse_round_trip()
     t11_determinism()
     t12_pose_mode_guard_and_detail()
+    t13_coverage_split()
     if FAILURES:
         print(f"RESULT FAIL ({len(FAILURES)}): {FAILURES}")
         return 1
-    print("RESULT PASS (T1..T12)")
+    print("RESULT PASS (T1..T13)")
     return 0
 
 

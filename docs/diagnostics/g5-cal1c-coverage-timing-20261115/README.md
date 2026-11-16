@@ -85,4 +85,4 @@ CAL2 §五.4 要求 TSC 频率/单位与单调基准**随进程登记**；v104 C
 2. **`epsilon_t` 当前不能填**：TSC 频率可标定，但 `epsilon_read` ≠ `epsilon_t`；必须先预注册 `C-G5-TIME v1`（或 CAL1-C 时间附录），定义 `epsilon_read`、`epsilon_phase/grid`、`epsilon_t` 与 `Δt_clock` 的合成/处置。
 3. **不产生新数值**：本轮没有新 `tau_*`/`epsilon_t`；门 4 仍只有 CAL1-B 的限定姿态槽位，未完整冻结；门 5 未授权。
 
-**后续（2026-11-15）**：用户已指示按方案 A / T1 起草两份门 4 修订草案——[C-G5-G4-COV v1](../g5-g4-cov-20261115/README.md)（99 主分母 + 17 辅助账本）与 [C-G5-TIME v1](../g5-time-20261115/README.md)（TSC/读取区间/帧量化/`dt_clock` 时间模型）。两者均为**草案，待评审**；评审通过前不实现、不填 `epsilon_t`，门 4 仍未完整冻结。
+**后续（2026-11-15）**：用户已指示按方案 A / T1 起草两份门 4 修订草案——[C-G5-G4-COV v1](../g5-g4-cov-20261115/README.md)（99 主分母 + 17 辅助账本）与 [C-G5-TIME v1](../g5-time-20261115/README.md)（TSC/读取区间/帧量化/`dt_clock` 时间模型）。两者已于 2026-11-16 评审通过并实现：COV 的 99/17 覆盖 dry-run 通过；TIME 产出 `epsilon_t=0.0333960` s、dt_exclude 0/247；门 4 仍未完整冻结（时钟轴/K5-5/K2-C1/17 辅助轨）。

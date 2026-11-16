@@ -1,6 +1,8 @@
-# C-G5-G4-COV v1：门 4 覆盖分层预注册（2026-11-15 草案，待评审）
+# C-G5-G4-COV v1：门 4 覆盖分层预注册（2026-11-16，评审通过）
 
-**状态：草案，待评审。本文只定义 99 主分母 + 17 辅助账本的覆盖结构；不改变姿态判据、不产生 tau/epsilon、不实现工具。**
+**状态：评审通过（2026-11-16，用户授权按推荐方案 A 执行）；实现与 metadata-only dry-run 完成。** 本文定义 99 主分母 + 17 辅助账本的覆盖结构；不改变姿态判据、不产生 tau/epsilon。
+
+**批准记录**：用户于 2026-11-16 授权按方案 A 执行：门 4 的 CAL1-B 姿态判定使用 P99（99 轨）主分母，A17（17 轨）单列描述性账本，不声称 116/116；工具实现预注册随后落地。批准不改变 §三判据或 CAL1-B 数值。
 
 本草案落实 [CAL1-C 覆盖审计](../g5-cal1c-coverage-timing-20261115/README.md) 的结论：控制 B 只覆盖 `mt_idle.hkx` binding map 0..98 的 99 条 transform 轨；门 4 的 116 轨分母中 99..115 是 6 个 item、10 个 wing、1 个 Belly 轨，CAL1-B 的 tau 不能覆盖它们。
 
@@ -52,7 +54,19 @@
 
 ## 五、实施顺序与提交拆分
 
-1. 本文评审/批准 → 冻结覆盖集合与双账本语义。
-2. 实现预注册（CLI/schema/测试清单）→ 实现 + 测试。
-3. 用 Track 2 dry-run 工件重跑 metadata-only，确认双账本可生成；不解码 pose。
+1. 本文评审/批准 → 冻结覆盖集合与双账本语义。**已完成。**
+2. 实现预注册（CLI/schema/测试清单）→ 实现 + 测试。**已完成。**
+3. 用 Track 2 dry-run 工件重跑 metadata-only，确认双账本可生成；不解码 pose。**已完成，见 §六。**
 4. 门 4 完整冻结时联合 [C-G5-TIME v1](../g5-time-20261115/README.md) 验收。
+
+## 六、实现与 metadata-only dry-run（2026-11-16）
+
+| 项 | 值 |
+| --- | --- |
+| 覆盖集合 | [coverage.json](coverage.json)，SHA-256 `3DF45251748EF7C7F80381A57A196901298C48A0C43E782E378B83030DD0A52C`；P99=0..98、A17=99..115，item/wing/belly=6/10/1 |
+| 工具 | `tools/gate4_pair.py` 增加 `--coverage`；SHA-256 `51ECBD673A9DD059A38A9E7FCF3F7D09B3DCF60B4D4EDA5B7E3D657B55B9D35D`；测试 T1..T13 PASS，SHA-256 `32E67A122856492F5F92400F3F8A2DEB7D0A11D1DBEFEAC7B8020DA30F03C4E1` |
+| 正式模式门 | `--tolerances` 现在要求 `--coverage`；legacy-116 仍可用于 metadata，但不得作为 CAL1-B 判定分母 |
+| dry-run 输入 | Track 2 candidate 249 条 / source 1,065 条；247 对；`pose_decoded=False` |
+| dry-run 输出 | [manifest](dry-run-coverage/gate4-pair-manifest.json)（112,782 B，`69EC8AA7…C0E0A`）与 [summary](dry-run-coverage/gate4-pair-summary.txt)（1,158 B，`CDF6F7A2…A8C13`）；`COVERAGE primary=99 auxiliary=17 legacy_116=no`，三锚 matched=yes |
+
+**边界**：本 dry-run 只证明覆盖双账本可执行；未解码任何 pose，不产生 tau/epsilon，不改变门 4 完整冻结状态。

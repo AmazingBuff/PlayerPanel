@@ -1,0 +1,84 @@
+{
+ "schema": "C-G5-TIME-v1-frame-table",
+ "clips": [
+  {
+   "family": "1hm_equip",
+   "name": "Animations\\1HM_Equip.hkx",
+   "path": "E:\\SkyrimAE\\mods\\Diverse NPC Movesets\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\NPC - Elden Rim Animation Complete Pack\\Dual wielding swords\\1hm_equip.hkx",
+   "bytes": 22288,
+   "sha256": "5CF51AACBA20D849D44BFFAD6BE5C0E177C0042328320FA1898B643B4DAC2382",
+   "data_fnv": "12A77CD14ECC3688",
+   "frame_duration_bits": "3C888888",
+   "frame_duration": 0.01666666567325592,
+   "frame_rate": 60,
+   "paired_in_track2": true
+  },
+  {
+   "family": "1hm_unequip",
+   "name": "Animations\\1HM_Unequip.hkx",
+   "path": "E:\\SkyrimAE\\mods\\Diverse NPC Movesets\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\NPC - Elden Rim Animation Complete Pack\\Dual wielding swords\\1hm_unequip.hkx",
+   "bytes": 20096,
+   "sha256": "52A0C542C7E7C92D615E2635399A0205746C8F4FA52ED2163245D4AD6F07B168",
+   "data_fnv": "4DED5EAF23DF26E3",
+   "frame_duration_bits": "3D088889",
+   "frame_duration": 0.03333333507180214,
+   "frame_rate": 30,
+   "paired_in_track2": true
+  },
+  {
+   "family": "1hm_idle",
+   "name": "Animations\\1HM_Idle.hkx",
+   "path": "E:\\SkyrimTools\\Proj\\CharacterPanel\\build\\k1-c1\\bsa-extract\\meshes\\actors\\character\\animations\\1hm_idle.hkx",
+   "origin": "BSA:Skyrim - Animations.bsa (extracted)",
+   "bytes": 20576,
+   "sha256": "8EE680DD6C152022A8F110001B241F39B7DA49E25B4318EE631080C815453840",
+   "data_fnv": "C62C233B06FAE9A9",
+   "frame_duration_bits": "3D088889",
+   "frame_duration": 0.03333333507180214,
+   "frame_rate": 30,
+   "paired_in_track2": true
+  },
+  {
+   "family": "mlh_idle",
+   "name": "Animations\\MLh_Idle.hkx",
+   "path": "E:\\SkyrimAE\\mods\\Diverse Magic Casting Animations\\meshes\\actors\\character\\animations\\DynamicAnimationReplacer\\_CustomConditions\\16031899\\mlh_idle.HKX",
+   "bytes": 24256,
+   "sha256": "821AA07D80668F4CB5C31B008B78E91732D1F94D2B269F6565B6FCF027543CB4",
+   "data_fnv": "DAD1F1C997C0F0C6",
+   "frame_duration_bits": "3D088888",
+   "frame_duration": 0.03333333134651184,
+   "frame_rate": 30,
+   "paired_in_track2": true
+  },
+  {
+   "family": "mt_idle",
+   "name": "Animations\\male\\MT_Idle.HKX",
+   "path": "E:\\SkyrimAE\\mods\\Vanargand Animations II - Female Idle Walk and Run\\meshes\\actors\\character\\animations\\female\\mt_idle.hkx",
+   "bytes": 113920,
+   "sha256": "0EF8248CE2C50A2251FA592F7C65E75E75B5E4DC55E9C654436543180BCD73C7",
+   "data_fnv": "F56EE1500EB5A3D0",
+   "frame_duration_bits": "3C889FD6",
+   "frame_duration": 0.016677778214216232,
+   "frame_rate": 60,
+   "paired_in_track2": true
+  },
+  {
+   "family": "dummy",
+   "name": "Animations\\SCAR_1hmReadyDummy.hkx",
+   "path": "E:\\SkyrimAE\\mods\\BFCO Elden Rim Dual Wield\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\050 ERmoveset_CrossNaginata\\Base\\SCAR_1hmReadyDummy.hkx",
+   "bytes": 29008,
+   "sha256": "4061CE1B902EB07418796CF40258892225BA742E32C66D064ADE5AE8FD9AC7B0",
+   "data_fnv": "8728A54A50D85C22",
+   "frame_duration_bits": null,
+   "frame_duration": null,
+   "frame_rate": null,
+   "paired_in_track2": false,
+   "note": "non-spline/unparsed; 0 pairs in Track2 dry-run; if a future batch pairs dummy, the frame table must be extended"
+  }
+ ],
+ "epsilon_grid": {
+  "rule": "max authored frameDuration over paired clips",
+  "value": 0.03333333507180214,
+  "source_families": ["1hm_unequip", "1hm_idle"]
+ }
+}

@@ -1,0 +1,130 @@
+{
+ "criteria": {
+  "TIME-1": "PASS",
+  "TIME-2": "PASS",
+  "TIME-3": "PASS",
+  "TIME-4": "PASS",
+  "TIME-5": "PASS",
+  "TIME-6": "PASS",
+  "TIME-7": "PASS"
+ },
+ "dt_exclude": {
+  "edge_only": true,
+  "epsilon_t": 0.033395963172509605,
+  "excluded": [],
+  "excluded_count": 0,
+  "excluded_ratio": 0.0,
+  "limit": 0.02,
+  "pair_count": 247
+ },
+ "epsilon_grid": {
+  "clips": [
+   {
+    "family": "1hm_equip",
+    "frame_duration": 0.01666666567325592,
+    "frame_duration_bits": "3C888888",
+    "name": "Animations\\1HM_Equip.hkx"
+   },
+   {
+    "family": "1hm_idle",
+    "frame_duration": 0.03333333507180214,
+    "frame_duration_bits": "3D088889",
+    "name": "Animations\\1HM_Idle.hkx"
+   },
+   {
+    "family": "1hm_unequip",
+    "frame_duration": 0.03333333507180214,
+    "frame_duration_bits": "3D088889",
+    "name": "Animations\\1HM_Unequip.hkx"
+   }
+  ],
+  "rule": "max authored frameDuration over paired clips",
+  "unrounded": 0.03333333507180214
+ },
+ "epsilon_read": {
+  "max_read_cycles": 268790,
+  "max_read_seconds": 6.262780508064406e-05,
+  "rounded": "0.0000626282",
+  "unrounded": 6.262810070746354e-05
+ },
+ "epsilon_t": {
+  "epsilon_grid": {
+   "clips": [
+    {
+     "family": "1hm_equip",
+     "frame_duration": 0.01666666567325592,
+     "frame_duration_bits": "3C888888",
+     "name": "Animations\\1HM_Equip.hkx"
+    },
+    {
+     "family": "1hm_idle",
+     "frame_duration": 0.03333333507180214,
+     "frame_duration_bits": "3D088889",
+     "name": "Animations\\1HM_Idle.hkx"
+    },
+    {
+     "family": "1hm_unequip",
+     "frame_duration": 0.03333333507180214,
+     "frame_duration_bits": "3D088889",
+     "name": "Animations\\1HM_Unequip.hkx"
+    }
+   ],
+   "rule": "max authored frameDuration over paired clips",
+   "unrounded": 0.03333333507180214
+  },
+  "epsilon_read": {
+   "max_read_cycles": 268790,
+   "max_read_seconds": 6.262780508064406e-05,
+   "rounded": "0.0000626282",
+   "unrounded": 6.262810070746354e-05
+  },
+  "rounded": "0.0333960",
+  "unrounded": 0.033395963172509605
+ },
+ "inputs": {
+  "artifacts": [
+   {
+    "basename": "CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T125913Z.bin",
+    "sha256": "CB5587574E5BA5146788A4DBF0873D4C57C802BE4F34356111343D1F8E1D508B"
+   },
+   {
+    "basename": "CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T132909Z.bin",
+    "sha256": "F57D6251DF699E70CC8C2B888716BA05814C53583EB5BEE1B6A5E110A5522221"
+   },
+   {
+    "basename": "CharacterPanel-g5cal-grid-CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z-20261115T133459Z.bin",
+    "sha256": "60B373DB93BA05C7528768A2F31C298085B6153C30CD86B6197BD85B36BF9008"
+   }
+  ],
+  "frame_table": {
+   "basename": "frame_table.json",
+   "sha256": "B16176567444210063D6B07872FD99D4B85FA3E54D233991730F2255977413C7"
+  },
+  "gate4_manifest": {
+   "basename": "gate4-pair-manifest.json",
+   "sha256": "4A3DD0AEFDC3E82F1614D8D98E649714437C9B0C338D89D3F5EEF63547879706"
+  },
+  "tsc": {
+   "basename": "tsc_evidence.json",
+   "sha256": "8234583608A7EEA4A6D164A376F6BDD12CF28D87E319F3CC161BEDAC4456784E"
+  }
+ },
+ "protocol": "C-G5-TIME v1 (docs/diagnostics/g5-time-20261115/README.md)",
+ "schema": "C-G5-TIME-v1-result",
+ "scope": "gate4-time-only; epsilon_t not propagated to pose tau",
+ "tool_sha256": "95AA8B4A627BE2AF972E7AD11755E7C5B0EDF1FDCA353050D64CBDC758CE4623",
+ "tsc": {
+  "disclosure": "T1: invariant TSC probe + per-process C2-F monotonicity + log-slope cross-check; not a per-process field registration",
+  "f_tsc_hz": 4291863648.325,
+  "invariant_tsc": 1,
+  "max_hz": 4291864114.511,
+  "min_hz": 4291863499.649,
+  "monotonic": true,
+  "probe_output_sha256": "50544EFC14D1E5070FDA9F490D8FFEDEF1561EC7945E16C1130681F016DE479E",
+  "probe_source_sha256": "4A01F6D8AAA93DA2DDD631A6A1C2DD5444A8B8232F7088DA6C5899C9877057E6",
+  "qpc_frequency_hz": 10000000,
+  "schema": "C-G5-TIME-v1-tsc-evidence",
+  "source_scope": "machine-level; archived v104 runs have no per-process frequency field"
+ },
+ "verdict": "TIME_READY"
+}

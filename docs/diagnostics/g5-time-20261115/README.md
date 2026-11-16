@@ -1,6 +1,8 @@
-# C-G5-TIME v1：门 4 时间模型与 `epsilon_t` 预注册（2026-11-15 草案，待评审）
+# C-G5-TIME v1：门 4 时间模型与 `epsilon_t` 预注册（2026-11-16，评审通过）
 
-**状态：草案，待评审。本文只固定时间模型与判据；不预填 `epsilon_t`，不改变姿态 tau，不实现工具。**
+**状态：评审通过（2026-11-16，用户授权按推荐方案执行）；实现与正式时间评估完成。** 采用 T1、全局 max frameDuration、2% `dt_exclude` 上限；已产出 `epsilon_t=0.0333960 s`（限定范围）。
+
+**批准记录**：用户于 2026-11-16 授权按上述 T1/帧表/2% 方案执行；工具实现与帧表审计随后落地。批准不改变 §四判据，也不把 `epsilon_t` 加进姿态 tau。
 
 本草案落实 [CAL1-C 时间审计](../g5-cal1c-coverage-timing-20261115/README.md)：本机 TSC invariant 已证、频率约 4.291864 GHz，但控制 B 的读取区间约 24–63 µs，门 4 的 `dt_clock` 是 5–18 ms。**`epsilon_t` 不能直接取读取区间**，必须把时间表示/读取、帧量化/相位归属、`Δt_clock` 处置分开。
 
@@ -84,12 +86,27 @@ T1 的披露必须写明：归档运行没有 CAL2 §五.4 要求的逐进程频
 | 预算 | JSON ≤2 MiB；summary ≤200 行；超限即停 |
 | 身份 | 工具/测试/输出 SHA-256 使用前登记 |
 
-## 六、待评审决策
+实现结果：`tools/cal1c_time.py`（SHA-256 `95AA8B4A…CE4623`）与 11/11 测试（`DB52F4CE…34B5`）通过；输入 [tsc_evidence.json](tsc_evidence.json)（`82345836…6784E`）、[frame_table.json](frame_table.json)（`B1617656…13C7`）；输出 [cal1c-time.json](calibration/cal1c-time.json)（`FC060CCA…ACCF5`）与 [summary](calibration/cal1c-time-summary.txt)（`631DDC06…B2ED`）。
 
-1. TSC 路径：T1（机器级 invariant + 披露）还是 T2（v105 逐进程）？
-2. 帧表来源：从 authored HKX 逐一解码 frameDuration，是否接受 `mt_idle` 已有值 + 其余 clip 新审计？
-3. `epsilon_grid` 用全局 max frameDuration 是否足够保守；是否要按 clip 分列？
-4. 2% 的 `dt_exclude` 上限是否合适；是否要求所有排除都是 edge 对？
-5. 是否与 `C-G5-G4-COV v1` 联合冻结，还是先各自评审？
+## 六、决策记录（2026-11-16 已定）
 
-**本协议不产生 `epsilon_t`；批准前不实现、不填值。**
+1. TSC 路径：**T1（机器级 invariant + 披露）**，用户已授权。
+2. 帧表来源：**authored HKX 逐个登记**；`mt_idle` + 4 个配对 clip 已入表，dummy 在 Track2 无配对、未登记时长。
+3. `epsilon_grid`：**全局 max frameDuration**；当前为 `0.0333333351`（30 fps 的 1HM_Unequip/1HM_Idle）。
+4. `dt_exclude`：**2% 上限 + 全 edge 对**；当前 dry-run 0/247 排除。
+5. 与 `C-G5-G4-COV v1` **联合冻结**；姿态覆盖已实现，时间槽位已填，时钟轴判据仍开放。
+
+<a id="time-results"></a>
+## 七、正式结果（2026-11-16）
+
+| 项 | 值 |
+| --- | --- |
+| `f_tsc` | 4,291,863,648.325 Hz（T1 机器级 invariant 探针；非逐进程字段） |
+| max read | 268,790 cycles = 62.6278 µs（run 3） |
+| `epsilon_read` | `0.0000626282` s（6 位向上） |
+| `epsilon_grid` | `0.0333333351` s（1HM_Unequip/1HM_Idle 的 30 fps frameDuration） |
+| `epsilon_t` | 未舍入 `0.0333959631725`；**6 位向上 `0.0333960` s** |
+| `dt_exclude` | 247 对中排除 **0**（0%）；未触发 2% 上限 |
+| TIME-1..7 | **全部 PASS** |
+
+**裁定**：`TIME_READY`（门 4 时间槽位填充，限定范围）。这只证明时间等价界；时钟轴速率/相位判据仍 PENDING-CAL，门 4 仍未完整冻结，门 5 未授权。
