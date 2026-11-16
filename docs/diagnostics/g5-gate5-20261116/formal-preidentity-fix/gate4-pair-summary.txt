@@ -1,0 +1,27 @@
+G4P SUMMARY protocol=C-G5-G4 v1 (docs/diagnostics/g5-gate4-20261115/README.md)
+G4P SUMMARY pose_decoded=True
+G4P COVERAGE primary=99 auxiliary=17 legacy_116=no
+G4P SUMMARY side=candidate total=249 idun=1 eligible=248 paired=248 no_clock=0 no_partner=0 edge_pairs=12
+G4P SUMMARY side=source total=849 idun=1 eligible=848 hosted_pairs=248 records_hosting=31
+G4P DOMAIN family=1hm_equip cand=97 src=67 pairs=97 no_partner=0 edge=1 wrap_cand=- wrap_src=-
+G4P DOMAIN family=1hm_unequip cand=129 src=92 pairs=129 no_partner=0 edge=10 wrap_cand=- wrap_src=-
+G4P DOMAIN family=1hm_idle cand=22 src=198 pairs=22 no_partner=0 edge=1 wrap_cand=- wrap_src=-
+G4P DOMAIN family=mt_idle cand=0 src=491 pairs=0 no_partner=0 edge=0 wrap_cand=- wrap_src=-
+G4P DOMAIN family=mlh_idle cand=0 src=0 pairs=0 no_partner=0 edge=0 wrap_cand=- wrap_src=-
+G4P DOMAIN family=scar_1hmreadydummy cand=0 src=0 pairs=0 no_partner=0 edge=0 wrap_cand=- wrap_src=-
+G4P ANCHOR family=1hm_equip expected=96 actual=97 matched=no
+G4P ANCHOR family=1hm_idle expected=22 actual=22 matched=yes
+G4P ANCHOR family=1hm_unequip expected=129 actual=129 matched=yes
+G4P K5-7 out_of_set=0 verdict=PASS
+G4P FORMAL invalid_bones=0 dt_excluded_pairs=0
+G4P PRIMARY invalid_bones=0 exceeded={'tau_p': 3826, 'tau_r': 16755, 'tau_s': 352}
+G4P AUX invalid_bones=0 no_tolerance=true
+G4P FORMAL exceed tau_p=3826
+G4P FORMAL exceed tau_r=16755
+G4P FORMAL exceed tau_s=352
+G4P FORMAL dist E_p count=24552 min=0 median=1.19209e-07 p95=4.07972 p99=5.5912 max=31.3159
+G4P FORMAL dist E_r count=24552 min=0 median=1.01992e-05 p95=0.00919521 p99=0.0457227 max=0.390966
+G4P FORMAL dist E_s count=24552 min=0 median=0 p95=5.96046e-08 p99=0.000525653 max=0.0309409
+G4P AUX dist E_p count=4216 min=0 median=0 p95=1.92219e-06 p99=1.92219e-06 max=1.96605e-06
+G4P AUX dist E_r count=4216 min=0 median=0 p95=3.33067e-16 p99=7.77156e-16 max=2.33147e-15
+G4P AUX dist E_s count=4216 min=0 median=0 p95=0 p99=0 max=0

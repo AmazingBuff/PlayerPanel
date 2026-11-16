@@ -101,3 +101,95 @@
 **离线对账**：`[VERDICT] candidate-side K5-1/2/3/4/7: PASS`；`identity_failed_clips=1` 按 IDUN 记账，不进入配对/误差分布。
 
 **裁定：候选侧有效（VALID），进入源侧采集。** 此裁定只覆盖候选侧 K5 资格；G4P-1 仍需源侧 K5-1..8，六族 PAIRED 与 G4P-7 均未判。
+
+## 六、源侧运行记录（2026-11-16 23:56–23:59，PASS）
+
+**运行身份**：同一 v103 DLL/PDB + `k5-source` INI `21BD938B…`；日志 `SCENEGRAPH BUILD` 匹配 `CharacterPanel-scenegraph-v103-g5k5-fullsample-9e83ff8e8f-cl94faaed0c6-20261114T134329Z`，runtime `1-6-1170-0`。一次 F7 liveness 窗口：`window=open` 23:58:40.323，`window=close reason=expired` 23:59:00.348（20.017 s，`pinned-engine=849`）。
+
+| 工件 | 大小 | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.log](raw/source/CharacterPanel.log) | 265,374 B | `A8FF0E37A12C779569994FB19A1A31883F93B643E7A7FA97EA3CAAA6C4F49F21` |
+| [CPK5S bin](raw/source/CharacterPanel-g5k5s-CharacterPanel-scenegraph-v103-g5k5-fullsample-9e83ff8e8f-cl94faaed0c6-20261114T134329Z-20261116T155900Z.bin) | 4,798,672 B | `4187890D7FF33E6B4F45E0D9319ABF98FCCB3F8D84254BD7FE15646F8985CF7C` |
+| [JSON ledger](raw/source/CharacterPanel-g5k5s-CharacterPanel-scenegraph-v103-g5k5-fullsample-9e83ff8e8f-cl94faaed0c6-20261114T134329Z-20261116T155900Z.json) | 618 B | `513C36F142E34DD161EDDFB03BC3DF6BC051DA982CBB414FA02C5751945B3D78` |
+
+`K5 RECON side=source expected=849 attempted=849 recorded=849 missing=0 truncated=0 two-read-bad=0 clip-overflow=0 identity-failed=1 drift-records=1 dropped=0 no-pose=0`；文件大小精确 `124 + 849×5,652 = 4,798,672 B`；`PROBE LIVENESS` manifest `steps=849 steps-saturated=no`，`b3b4-window verdict=B3+B4-PASS`。
+
+| K5 判据 | 读数 | 结果 |
+| --- | --- | --- |
+| K5-1 完整采样 | 849/849；cap 1,400 未耗尽；`missing=0 dropped=0 truncated=0` | PASS |
+| K5-2 双读一致 | 849/849 `two_read_equal=1`；`two-read-bad=0` | PASS |
+| K5-3 分母完整 | 849/849 `track_count=116`；离线复核 0 失配 | PASS |
+| K5-4 对账闭合 | 4,798,672 B 精确；JSON 与 RECON 互洽；`no-pose=0 write-failed=0` | PASS |
+| K5-5 层/混合资格 | 源侧 `K5LayerAudit=false`，沿用 Track 2/K6 的源侧资格与显式缺项清单；本批不新增层偏移猜测 | PASS（继承，带缺项） |
+| K5-6 寿命/generation | `seq=1..849` 连续无缺口；TSC 严格单调；六个 clip 窗口完整；失效/取消未触发（如实登记） | PASS（取消未触发） |
+| K5-7 资源断言 | 离线 `k5_reconcile.py --track2`：6 族 7 个可读 sighting 全 REG（MT_Idle map_count=99、map FNV `077954859409395E`）；1 个 IDUN `SCAR_1hmReadyDummy` 排除；出集 0 | PASS |
+| K5-8 运行完整 | 身份匹配；窗口一次且正常 expired；预算未超；`[E]` 唯一 = Track 2 §十二装载期 OAR 豁免行，运行期零 `[E]` | PASS（继承精确豁免） |
+
+**clip 窗口（seq）**：1HM_Equip 137–204（68）、1HM_Unequip 403–494（92）、1HM_Idle/MLh_Idle/SCAR dummy 197–410（各 214）、MT_Idle 1–849（508）。
+
+**裁定：源侧有效（VALID）。** `K5 RECON` 与离线对账均闭合；G4P-1 两侧 K5 资格成立。
+
+## 七、正式配对与 G4P 判定（2026-11-17）
+
+### 7.1 工具身份与已修复的解析缺陷
+
+首次正式调用使用门 4 冻结版 `gate4_pair.py` `51ECBD67…`，产出 [formal-preidentity-fix](formal-preidentity-fix/gate4-pair-manifest.json)（manifest `2C9C5C2E…C0980`，summary `30834EFB…D86E9`）。该次输出暴露一个**只影响源身份显示**的解析缺陷：源 CPK5S 头实际为 28 B 固定字段 + 96 B identity；旧解析器按 `header_size-92` 读取，少读了开头 2 个字符，manifest 写成 `acterPanel…`。
+
+修复：`K5_SOURCE_HEADER` 改为 `<4sHHIIIII`，identity 读取改为 96 B；测试 fixture 同步改为真实头布局并增加 `T10 source identity`。`gate4_pair_test.py` T1..T13 全 PASS。**逐字段比较确认：旧/新 manifest 的唯一差异是 `/inputs/source/identity`；配对、钟、账本与全部姿态数值不变。** 因此该修复不改变 G4P-7 读数，只修复 G4P-9 的身份记录。
+
+修复后工具 `gate4_pair.py` SHA-256 `873AEC16A4E9D202CCDFD8B6F98BAD47266FD94A49DFE5EB118C96E17E0472AC`；测试 `5519F19961114823ED30A060FE5D2389AC2A69276EC64F4BE2100CE05FD0C7BD`。正式工件使用修复版。
+
+### 7.2 正式工件
+
+| 工件 | 大小 | SHA-256 |
+| --- | ---: | --- |
+| [manifest](formal/gate4-pair-manifest.json) | 114,299 B | `8D61E0F41C56FEC66A44DB93502F31B250414262FC0FB4B40A312594CA78E144` |
+| [detail](formal/gate4-pair-detail.bin) | 464,256 B | `51A44CEBF6D572A28BF5DC3D43458DEB8D30A7D96E2863FEA4C0B5D9A7D78D04` |
+| [summary](formal/gate4-pair-summary.txt) | 1,939 B / 27 行 | `30834EFB25608297566E407FD95E8C16AA07B09A097F728CC0892C5DE20D86E9` |
+| [repeat manifest](formal-repeat/gate4-pair-manifest.json) | 114,299 B | `8D61E0F4…8E144`（逐字节同） |
+| [repeat summary](formal-repeat/gate4-pair-summary.txt) | 1,939 B | `30834EFB…D86E9`（逐字节同） |
+
+### 7.3 G4P 判定
+
+| 判据 | 读数 | 结果 |
+| --- | --- | --- |
+| G4P-1 运行资格 | 候选 K5-1..8 PASS；源侧 K5-1..8 PASS；六族资源 FNV PAIRED；IDUN 候选 1 / 源 1 单独记账 | PASS |
+| G4P-2 账本闭合 | 候选 `249 = 1 IDUN + 248 eligible`、`paired=248`；源 `849 = 1 IDUN + 848 eligible`、`hosted_pairs=248`；`out_of_set=0` | PASS |
+| G4P-3 括号覆盖 | 248 对；`no_partner=0`；edge 12（equip 1 / unequip 10 / idle 1）；无 wrap | PASS |
+| G4P-4 配对确定性 | 同输入两次调用：manifest + summary 逐字节一致 | PASS |
+| G4P-5 元数据有效 | 全部钟值有限；无 wrap/实例歧义；K5-7 出集 0 | PASS |
+| G4P-6 记账完整 | IDUN/no-clock/edge/wrap/族集合差全部入账。**工具锚点 `1hm_equip expected=96 actual=97 matched=no`**：候选 equip clip 98 条，IDUN 1 条，故 eligible 97；Track 2 dry-run 时 IDUN 2 条，故为 96。计数规则未变，差异完全由 IDUN 数解释；idle/un equip 锚点均匹配 | PASS（带锚点说明，非静默通过） |
+| G4P-7 时间与姿态 | **FAIL**：P99 主分母 24,552 个 `E_p` 中 3,826 超 `tau_p`；`E_r` 16,755 超；`E_s` 352 超。P99 分布 `E_p=5.5912`、`E_r=0.0457227`、`E_s=0.000525653`（冻结 tau `0.000476592 / 6.03341e-8 / 0.00000386264`）。`dt_excluded_pairs=0`，非时间排除造成 | **FAIL** |
+| G4P-8 无效值守卫 | `invalid_bones=0`；无零范数/非有限进入误差分布；A17 单列描述 | PASS |
+| G4P-9 工件完整 | manifest/detail/summary 可读；输入与工具 SHA 登记；manifest < 1 MiB、detail < 8 MiB、summary 27 行 | PASS |
+
+**批次裁定：门 5 采集与结构判据完成，但 G4P-7 FAIL；G5 未通过，G6 后置。** 这不是 G5 PASS，也不是“部分通过”。
+
+### 7.4 失败归因（描述性，不改变判据）
+
+逐域 P99 `E_p`：equip `5.5912`、unequip `4.2150`、idle `4.2150`；三域的 P50 分别为 `0 / 2.46e-7 / 0`，大量分量逐位相同，配对结构并非整体错位。
+
+按骨架名排序的最大误差集中在静态装备/附件轨：
+
+| 索引 | 名称 | max E_p | 超 tau 次数 |
+| ---: | --- | ---: | ---: |
+| 43 | `Weapon` | 31.3159 | 170 |
+| 4 | `NPC COM [COM ]` | 6.8615 | 225 |
+| 45 | `NPC R Pauldron` | 5.6214 | 246 |
+| 64 | `WeaponDagger` | 5.5912 | 248 |
+| 62 | `WeaponBack` | 4.2921 | 248 |
+| 60 | `Quiver` | 4.2150 | 248 |
+| 63 | `WeaponBow` | 4.2150 | 248 |
+| 65 | `WeaponMace` | 4.0797 | 248 |
+| 66 | `WeaponSword` | 3.8015 | 248 |
+| 61 | `WeaponAxe` | 3.4893 | 248 |
+
+代表样本（pair 0，bone 64 `WeaponDagger`）：候选与源的旋转四元数逐位相同（`0.395178,-0.623511,0.651826,-0.173754`），但平移相差约 `4.08`（候选 `-8.6093,5.7875,2.9914`，源 `-12.6879,9.5715,3.5452`）。这说明失败主轴是**候选静态装备/骨架默认位与源实际装备状态不一致**，不是旋转采样或配对整体错位；与 K2-C1 PARTIAL、K5-5 层/权重缺项、A17 静态 item/wing/Belly 缺项一致。
+
+描述性排除 11 个装备/附件骨（4、43–45、60–66）后，身体 89 轨仍有 `E_p` P99 `0.0776481`、1,226 次超 tau——因此**不能**把失败全部归给附件骨，也不能事后删骨通过判据；身体轨仍有残余差异，需与时间对齐/源场景一起审计。
+
+## 八、结论与下一入口
+
+- 门 5 的两侧正式采集已完成并归档；G4P-1..6、8、9 成立（G4P-6 带上述 IDUN 锚点说明），**G4P-7 FAIL**。
+- G5 仍 **未通过**；G6 后置；不得把本记录写成 G5 PASS 或“仅差一点”。
+- 下一步只能走新的预注册修订：优先闭合 K2-C1 的装备/骨架初态与 K5-5 层/权重，或为静态附件轨建立独立控制/相等判据；任何删轨、放宽 tau、把 `epsilon_t` 当姿态噪声吸收都必须先升版预注册，不得用本批数据回填。
