@@ -63,7 +63,7 @@
 
 | 判据 | 输入 | 结果 |
 | --- | --- | --- |
-| G4P-1 运行资格 | 两侧 K5-1..8 / 六族 PAIRED | PENDING |
+| G4P-1 运行资格 | 两侧 K5-1..8 / 六族 PAIRED | 候选 PASS / 源侧 PENDING |
 | G4P-2 账本闭合 | 两侧 ledger 恒等式 | PENDING |
 | G4P-3 括号覆盖 | 正式 manifest | PENDING |
 | G4P-4 配对确定性 | 同输入两次运行 | PENDING |
@@ -73,4 +73,31 @@
 | G4P-8 无效值守卫 | 正式 pose 解码 | PENDING |
 | G4P-9 工件完整 | manifest/summary/身份清单 | PENDING |
 
-**当前没有任何门 5 结果。** 本文件在首次正式数据归档时追加运行身份、原始日志/CPK5/CPK5S/JSON 哈希与 G4P 判定；不得用 Track 2 dry-run 或旧运行代替。
+**当前只有候选侧结果，尚无跨侧姿态裁定。** 本文件在首次正式数据归档时追加运行身份、原始日志/CPK5/CPK5S/JSON 哈希与 G4P 判定；不得用 Track 2 dry-run 或旧运行代替。
+
+## 五、候选侧运行记录（2026-11-16 23:48–23:51，PASS）
+
+**运行身份**：v103 DLL `8C3857A3…` + PDB `49581217…` + `k5-inject` INI `76F2BEBB…`；日志 `SCENEGRAPH BUILD` 为 `CharacterPanel-scenegraph-v103-g5k5-fullsample-9e83ff8e8f-cl94faaed0c6-20261114T134329Z`，runtime `1-6-1170-0`。一次 panel 窗口（`opening=true` 23:50:48.253，`opening=false` 23:51:38.183），无崩溃，无重复窗口。
+
+| 工件 | 大小 | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.log](raw/candidate/CharacterPanel.log) | 243,381 B | `B4C476FF569FAC40705D0F8A0F3A85E5C45F38545C1F6372DB76CDE3D77D4981` |
+| [CPK5 bin](raw/candidate/CharacterPanel-g5k5-CharacterPanel-scenegraph-v103-g5k5-fullsample-9e83ff8e8f-cl94faaed0c6-20261114T134329Z-20261116T155048Z.bin) | 1,410,452 B | `5686348BDBEA2F63B3618B7F4136A160227AA4E3014E55EB1B8D1247A3C0C31B` |
+| [JSON ledger](raw/candidate/CharacterPanel-g5k5-CharacterPanel-scenegraph-v103-g5k5-fullsample-9e83ff8e8f-cl94faaed0c6-20261114T134329Z-20261116T155048Z.json) | 771 B | `86115F2F5E7490709718CB50FB55CE56E865191B519F13016A1783B6C0619504` |
+
+**冻结场景**：`ANIMATION WORLD … snapshot=paused-source reason='panel-open' hands=(560c2a4c,00043324) drawn=false`，与 K2-C1 登记逐字一致。`K5 RECON`：`expected=249 attempted=249 recorded=249 missing=0 truncated=0 two-read-bad=0 clip-overflow=0 identity-failed=1 drift-records=1 dropped=0`；equip `120/120 fixed-equip-budget`，unequip `129/129 state-12-to-0`。
+
+| K5 判据 | 读数 | 结果 |
+| --- | --- | --- |
+| K5-1 完整采样 | 249/249；equip 120 + unequip 129；`missing=0 dropped=0 truncated=0` | PASS |
+| K5-2 双读一致 | 249/249 记录 `two_read_equal=1`；`two-read-bad=0` | PASS |
+| K5-3 分母完整 | 249/249 记录 `track_count=116`；离线复核 0 失配 | PASS |
+| K5-4 对账闭合 | 文件 1,410,452 B = 116 + 249×5,664；JSON 与 RECON 互洽；`write-failed=0` | PASS |
+| K5-5 层/混合资格 | 四审计点齐全：`walked=97/94/122/113`，`missing=0 overflow=0 identity-failed=0`；unknown 77/78/89/84，沿用 Track 1/K6 的显式缺项清单（`hkbBlendingBehavior` 等无 CommonLibSSE 布局；不猜偏移） | PASS（带缺项清单） |
+| K5-6 寿命/generation | equip completed 1..120、unequip 1..129 连续无缺口；clip 窗口完整；失效/取消未触发（如实登记） | PASS（取消未触发） |
+| K5-7 资源断言 | 离线 `k5_reconcile.py --track2`：7 个唯一可读 sighting 全 REG（含 MT_Idle map_count=99、map FNV `077954859409395E`）；1 个 IDUN `SCAR_1hmReadyDummy` 单条排除；出集 0 | PASS |
+| K5-8 运行完整 | 身份匹配；Save116 hands/drawn 匹配；预算未超；`[E]` 唯一 = Track 2 §十二已登记的装载期 `failed to get plugin info for OpenAnimationReplacer`（任何采集之前；运行期零 `[E]`） | PASS（继承精确豁免） |
+
+**离线对账**：`[VERDICT] candidate-side K5-1/2/3/4/7: PASS`；`identity_failed_clips=1` 按 IDUN 记账，不进入配对/误差分布。
+
+**裁定：候选侧有效（VALID），进入源侧采集。** 此裁定只覆盖候选侧 K5 资格；G4P-1 仍需源侧 K5-1..8，六族 PAIRED 与 G4P-7 均未判。
