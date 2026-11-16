@@ -323,6 +323,8 @@ python -I tools/gate4_pair.py --candidate <cpk5.bin> --source <cpk5s.bin> --out-
 
 来源工件：[cal1b-calibration.json](../g5-cal1b-20261115/calibration/cal1b-calibration.json)（SHA-256 `8B2077BF63AB68A856148FEF1F0B9CE9F3936334125BF0BAADE91C0B8C740865`）；完整逐轨值见 [cal1b-tracks.csv](../g5-cal1b-20261115/calibration/cal1b-tracks.csv)。
 
+**A17 审计**：[辅助轨审计](../g5-aux-track-audit-20261116/README.md) 显示 A17 在 Track2 窗口内近似静态（span ≤3.8e-6），跨侧差 `E_p≤1.97e-6`，且无活动 clip 控制；COV 方案 A 保留，A17 不进入 CAL1-B 容差，仍不声称 116/116。
+
 ## 十七、TIME v1 时间槽位填充（2026-11-16）
 
 [C-G5-TIME v1](../g5-time-20261115/README.md#time-results) 已完成 T1 时间评估：

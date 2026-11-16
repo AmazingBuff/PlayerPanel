@@ -70,3 +70,5 @@
 | dry-run 输出 | [manifest](dry-run-coverage/gate4-pair-manifest.json)（112,782 B，`69EC8AA7…C0E0A`）与 [summary](dry-run-coverage/gate4-pair-summary.txt)（1,158 B，`CDF6F7A2…A8C13`）；`COVERAGE primary=99 auxiliary=17 legacy_116=no`，三锚 matched=yes |
 
 **边界**：本 dry-run 只证明覆盖双账本可执行；未解码任何 pose，不产生 tau/epsilon，不改变门 4 完整冻结状态。
+
+**A17 后续审计（2026-11-16）**：[辅助轨审计](../g5-aux-track-audit-20261116/README.md) 显示 A17 在 Track2 窗口内近似静态（跨记录分量 span ≤3.8e-6），源/候选跨侧差 `E_p≤1.97e-6`、`E_r≤~1e-15`、`E_s=0`；没有活动 clip 控制它们。故保留 COV 方案 A（A17 描述性账本），仍不声称 116/116。

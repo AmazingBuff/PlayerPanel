@@ -59,6 +59,7 @@ docs/diagnostics/g5-cal1b-20261115/calibration/** text eol=lf
 docs/diagnostics/g5-cal1c-coverage-timing-20261115/** text eol=lf
 docs/diagnostics/g5-g4-cov-20261115/** text eol=lf
 docs/diagnostics/g5-g4-clock-20261116/** text eol=lf
+docs/diagnostics/g5-aux-track-audit-20261116/** text eol=lf
 docs/diagnostics/g5-time-20261115/** text eol=lf
 docs/diagnostics/session-summary-20261115-cal1b.md text eol=lf
 docs/diagnostics/CharacterPanel-g5k1-census-v101-run1-20261114-1411.log -text whitespace=cr-at-eol,-blank-at-eof
