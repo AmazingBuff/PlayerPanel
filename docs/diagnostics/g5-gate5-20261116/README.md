@@ -16,7 +16,7 @@
 | --- | --- |
 | 游戏 | `SkyrimSE.exe` 1.6.1170.0；SHA-256 `C434208894F07F604B852F29B8EDC3A58C4DE63DE783373733E72B2B73F33BE9` |
 | SKSE loader | 0.2.2.6；SHA-256 `730C2743F6871FBAEB8606C1D3B7A55FECA045C3D74858A41B0C6D03CD989FBC` |
-| MO2 profile | `AE-Track2`（`selected_profile` 实测）；启用模组 979 项 |
+| MO2 profile | `AE-Track2`（`selected_profile` 实测）；modlist `+` 979 项（含分隔符；MO2 统计 954 个启用模组） |
 | modlist.txt | SHA-256 `E5DF72DF98B658EAEB538B1140F1DA7EAB2215C9D809C43E179ED46A56E3FE33` |
 | plugins.txt | SHA-256 `215BE1B47DC761B2DC8FA0E54ACC8095483FC9929CA45D143559EA7C3FE1915F` |
 | loadorder.txt | SHA-256 `D4E7C168A8D5428155D95597C9F153748DE1B65F8BE4F697FF4C1125CA9C79A5` |
@@ -55,7 +55,7 @@
 
 1. 安装同一 v103 DLL/PDB，部署 `k5-source` INI，复核三元组哈希。
 2. 启动 MO2 `AE-Track2` → SKSE；日志身份匹配。
-3. 载入 **Save116**；`SamplingLiveness=on` + K5 直采，无 F7 窗口（Track 2 §十八执行偏差登记为准）。
+3. 载入 **Save116**；按 v103 的实际实现，`SamplingLiveness=on` 由 **F7 武装 20 秒窗口**（`arm_probe_liveness`），随后在窗口内自然拔剑/收剑。门 4 §七的“无 F7 窗口”按“无 panel 窗口/直采”理解；文本与实现的这一差异在此登记。若不按 F7，源侧不会产出 K5 快照。
 4. 自然拔剑 → 保持 → 收剑；覆盖六个可配对 clip 族。
 5. 退出游戏。记录窗口起止、`[E]` 行、K5 RECON 行与工件哈希。
 
