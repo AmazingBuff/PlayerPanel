@@ -1,6 +1,6 @@
 # 会话总结：2026-11-15 CAL2 三进程 → CAL1-B → CAL1-C 审计（26 个提交）
 
-> **2026-11-16 后续**：COV/TIME 草案已评审通过并实现。COV：`gate4_pair.py --coverage` 的 metadata-only dry-run 为 247 对、P99=99/A17=17、`pose_decoded=False`；TIME：T1 机器级 invariant TSC + 全局 max frameDuration 产出 **`epsilon_t=0.0333960` s**（`epsilon_read=0.0000626282`、`epsilon_grid=0.0333333351`），`dt_exclude` dry-run **0/247**；门 4 姿态/时间/时钟轴槽位已填（CLOCK_READY）；A17 审计为近似静态共享状态（span ≤3.8e-6，跨侧 `E_p≤1.97e-6`），无独立 clip 控制；K5-5/K2-C1/17 辅助轨/联合验收仍开放。
+> **2026-11-16 后续**：COV/TIME 草案已评审通过并实现。COV：`gate4_pair.py --coverage` 的 metadata-only dry-run 为 247 对、P99=99/A17=17、`pose_decoded=False`；TIME：T1 机器级 invariant TSC + 全局 max frameDuration 产出 **`epsilon_t=0.0333960` s**（`epsilon_read=0.0000626282`、`epsilon_grid=0.0333333351`），`dt_exclude` dry-run **0/247**；门 4 姿态/时间/时钟轴槽位已填（CLOCK_READY）；A17 审计为近似静态共享状态（span ≤3.8e-6，跨侧 `E_p≤1.97e-6`），无独立 clip 控制；CAL v1 §九联合验收以 `CALIBRATED (limited)` 通过，**门 4 FROZEN（限定范围）**，门 5 采集授权但未运行；K5-5/K2-C1/G5 仍开放。
 
 **范围**：从 `90d7f24`（上一份会话总结的修正提交）之后开始，至 `d81d7b9`，共 **26 个提交**；本总结为第 27 个提交。分支 `oar-idle3`，远端 `origin`（PlayerPanel）。本会话完成 CAL2 三进程裁定、CAL1 资格评审、CAL1-B 有界校准、真值 BOUNDS 混合轨修复、CAL1-C 覆盖/时间审计，并起草两份门 4 修订草案。
 
