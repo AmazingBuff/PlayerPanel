@@ -1401,7 +1401,13 @@ namespace
         std::array<std::uint64_t, 18> words{};
         bool seen = false;
     };
+    struct StateObjectEntry
+    {
+        std::array<std::uint64_t, 32> words{};
+        bool seen = false;
+    };
     std::array<StateProbeEntry, 512> g_state_probe_entries{};
+    std::array<StateObjectEntry, 512> g_state_object_entries{};
 
     char const* state_probe_class(std::uintptr_t a_vtable)
     {
@@ -1432,6 +1438,7 @@ namespace
         std::size_t const walked = std::min<std::size_t>(nodes.size(), g_state_probe_entries.size());
         std::size_t changed = 0;
         std::size_t suppressed = 0;
+        std::size_t object_logged = 0;
         for (std::size_t i = 0; i < walked; ++i)
         {
             RE::hkbNodeInfo const& info = nodes.data()[i];
@@ -1444,6 +1451,27 @@ namespace
             // the blend scalar. Blender/child and unknown entries are the probe targets.
             if (std::strcmp(node_class, "clip") == 0 || std::strcmp(node_class, "state-machine") == 0)
                 continue;
+            if (std::strcmp(node_class, "blender") == 0 || std::strcmp(node_class, "blender-child") == 0)
+            {
+                std::array<std::uint64_t, 32> object_words{};
+                std::memcpy(object_words.data(), node, sizeof(object_words));
+                StateObjectEntry& object_cache = g_state_object_entries[i];
+                if (!object_cache.seen || object_cache.words != object_words)
+                {
+                    object_cache.seen = true;
+                    object_cache.words = object_words;
+                    if (object_logged < 16)
+                    {
+                        std::string object_hex;
+                        for (std::size_t word = 0; word < object_words.size(); ++word)
+                            object_hex += fmt::format("{:016x}", object_words[word]);
+                        logger::info("STATE OBJECT actor={:08x} request={} segment={} completed={} index={} node={:#x} vtable={:#x} class={} words={}",
+                            a_actor_id, a_request, a_segment, a_completed, i,
+                            reinterpret_cast<std::uintptr_t>(node), vtable, node_class, object_hex);
+                        ++object_logged;
+                    }
+                }
+            }
             std::array<std::uint64_t, 18> words{};
             std::memcpy(words.data(), &info, sizeof(words));
             StateProbeEntry& cache = g_state_probe_entries[i];
@@ -1452,7 +1480,7 @@ namespace
             cache.seen = true;
             cache.words = words;
             ++changed;
-            if (changed > 32)
+            if (changed > 128)
             {
                 ++suppressed;
                 continue;

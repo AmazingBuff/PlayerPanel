@@ -5,9 +5,9 @@
 ## 一、只读边界
 
 - 新增 `[Experiment] StateProbe=false`，默认 off；只在候选 K5 快照点调用。
-- 每个候选 generation 遍历 `activeNodes`（cap 512），读取 `hkbNodeInfo`（CommonLib 已审计 0x90 布局）的 18 个 qword；这是节点**状态条目**，不是未知节点对象布局。
+- 每个候选 generation 遍历 `activeNodes`（cap 512），读取 `hkbNodeInfo`（CommonLib 已审计 0x90 布局）的 18 个 qword；这是节点**状态条目**，不是未知节点对象布局。对已识别为 `blender`/`blender-child` 的节点，额外读取节点对象前 0x100 字节（32 qword）作为有界对象窗口；该窗口只用于定位候选状态字段，尚未解释为已审计布局。
 - 只读：不写 poseLocal、不写图变量、不写节点、不新增 hook、不调用 update/event 入口。
-- 仅记录发生变化的状态条目；首次出现记一次；跳过 `clip` 与 `state-machine`（clip time 已由 K5 记录，状态机转移不是 blend 标量）；每 generation 最多 32 条明细 + 一条 `changed/suppressed` 汇总，防止日志爆炸。
+- 仅记录发生变化的状态条目；首次出现记一次；跳过 `clip` 与 `state-machine`（clip time 已由 K5 记录，状态机转移不是 blend 标量）；每 generation 最多 128 条明细 + 一条 `changed/suppressed` 汇总。`STATE OBJECT` 只针对 blender/child，单独变化才记录。
 
 ## 二、运行协议
 
