@@ -1,6 +1,6 @@
 # C-G5-SETUP v1：候选/源 setup 与静态附件只读审计（2026-11-17，DRAFT）
 
-**状态：DRAFT，未批准、未实现、未构建、未部署、未上机。** 本预注册只回答门 5 G4P-7 失败归因中的 setup/静态附件假设；不改变门 4/门 5 判据，不产生 `tau_*`，不关闭 G5/G6。
+**状态：IMPLEMENTED / DEPLOYED（2026-11-17），尚未上机采集。** v105 只读 `SetupAudit` 已实现、构建并部署；本预注册只回答门 5 G4P-7 失败归因中的 setup/静态附件假设；不改变门 4/门 5 判据，不产生 `tau_*`，不关闭 G5/G6。
 
 ## 一、背景
 
@@ -38,7 +38,7 @@
 
 ## 四、运行协议
 
-- 构建带 `SetupAudit` 的新 DLL；运行档 = `AE-Track2`、Save116、`IndependentGraph=inject`、K5 三键 off、`SetupAudit=true`，其余实验键关闭。
+- 构建带 `SetupAudit` 的新 DLL；运行档 = `AE-Track2`、Save116、`IndependentGraph=load`、K5 三键 off、`SetupAudit=true`，其余实验键关闭。`load` 只装载候选、不激活/不驱动；审计在装载后、激活前完成，因此不需要把动态链混入 setup 读数（这是对 DRAFT 中 `inject` 的最小化修订，发生在任何采集之前）。
 - 一次会话、一次 panel 窗口；不采姿态、不跑 equip/unequip 链（避免把动态差异混入 setup 读数）。
 - 记录 DLL/PDB/INI/存档身份；日志/工件归档哈希。
 
@@ -66,7 +66,20 @@
 
 ## 七、实施顺序
 
-1. 用户评审本 DRAFT（观测骨集、只读边界、SA-1..5）。
-2. 实现 `SetupAudit` + 引擎无关解析/边界测试。
-3. 构建、部署、一次 panel 运行。
-4. 离线归属报告 → 决定 H1/H2/H3 下一工作包；G4P-7 仍保持 FAIL，直到新的正式批次通过。
+1. ~~用户评审本 DRAFT~~（2026-11-17 用户批准直接开始；`load` 最小化修订见 §四）。
+2. ~~实现 `SetupAudit`~~：v105，源码提交 `96d60fc`；编译 `/W4 /WX` 通过。
+3. ~~构建/部署~~：身份 `CharacterPanel-scenegraph-v105-g5setup-audit-20261117-96d60fc63e-cl94faaed0c6-20261117T134821Z`；DLL `1C9E6284…780085`、PDB `04C428B9…E0739D`、运行 INI `2EF34BEA…7CF5CD3`；安装位与备份见 §八。
+4. 待一次 panel 运行 → 离线归属报告 → 决定 H1/H2/H3 下一工作包；G4P-7 仍保持 FAIL，直到新的正式批次通过。
+
+## 八、实现与部署身份
+
+| 项 | 值 |
+| --- | --- |
+| 源码提交 | `96d60fc`（`feat(g5): add the read-only setup reference-pose audit`） |
+| Build identity | `CharacterPanel-scenegraph-v105-g5setup-audit-20261117-96d60fc63e-cl94faaed0c6-20261117T134821Z`（无 `+dirty`） |
+| DLL | 2,032,128 B；SHA-256 `1C9E62843E2E73CEDF1AC4E57BDA6A825C10B74AD1545F96FB92F8225D780085` |
+| PDB | 51,630,080 B；SHA-256 `04C428B9A8D0B89059E393A04DAE8EBFF384B1B0B7C8E43952B9742597E0739D` |
+| 运行 INI | `dist/g5-setup-audit-20261117/CharacterPanel.ini`；SHA-256 `2EF34BEAB695CDFD9907882B5D61F9F8F0928A6D5B9D01EA14589A7157CF5CD3` |
+| 部署前备份 | `dist/deploy-backup-20261117-setupauditpre/`（v104 DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`） |
+
+**部署（2026-11-17，已完成）**：安装位 DLL/PDB/INI 与上表逐位一致；`IndependentGraph=load`、`SetupAudit=true`、K5 三键 off、其余实验键 off。**尚未上机，尚无 `SETUP AUDIT` 读数。**

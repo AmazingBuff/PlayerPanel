@@ -861,6 +861,15 @@ The [C-G3B-S6 unequip-event retry](independent-behavior-graph.md#c-g3b-s6-unequi
 
 Build identity `CharacterPanel-scenegraph-behavior-graph-v59-unequip-event-name-20261031-dcf05cab1e-cl94faaed0c6-20261031T131725Z`; DLL SHA-256 `013e1bdcfb156b25c6d25bd58d8b15f442c7499329e0eaae39399d34eaa983bf` (1,448,960 bytes), PDB SHA-256 `8b8fd16f1c29202017a9ac9eb47d49cec437b17fd024c280a8e07ee09b1cbec7` (38,031,360 bytes). Deployment (2026-10-31) backed the v58 trio up to `dist/deploy-backup-20261031-v58/` (DLL `75b13902…`, PDB `5ce2f421…`, INI 1,795 bytes `86f8bed1…`) and installed this pair. The deployed INI (1,932 bytes, SHA-256 `88763dd68cba8c831cd0ca2e8e7bbad5929b695e41f437aa02412420a7e6b0a6`) is the S6 configuration: `IndependentGraph=inject`, `CandidateUnequipProbe=true`, `CandidateUnequipEvent=Unequip`, `CandidateUnequipVariable`/`CandidateUnequipPrime` empty, everything else off. Repository sample keeps the new key empty. First game run (2026-10-31 21:23, identity confirmed in the live log): **the S6 slice hit — see the [S6 run record](independent-behavior-graph.md#c-g3b-s6-unequip-event-retry)**. After adjudication the deployed INI returned to dormant off (1,834 bytes, SHA-256 `1d40a0eb84e04c2df98bc5ea2989ec721c34b15efff3894e5cc680ffc0361db7`) with the v59 DLL/PDB left installed.
 
+<a id="v105-g5setup-audit-20261117"></a>
+## v105-g5setup-audit（2026-11-17，只读 setup/静态附件审计）
+
+[C-G5-SETUP v1](diagnostics/g5-setup-audit-20261117/README.md) 的实现落地：新增默认 off 的 `[Experiment] SetupAudit`，在候选 63585 装载完成后、任何激活/注入/驱动之前一次性记录源/候选 `hkbCharacterSetup`、`animationSkeleton`、`unscaledAnimationSkeleton`、`data`、`mirroredSkeleton` 指针、骨架骨数与 12 个固定骨的 `hkaSkeleton::referencePose` 10 分量。只读：不写 poseLocal/图变量、不新增 hook、不调用 update/event 入口；键 off 时无新输出。
+
+**构建**：提交 `96d60fc` 后 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v105-g5setup-audit-20261117` + `cmake --build --preset Release`，exit 0（仅既有 `/Ob2`→`/Ob3` D9025 警告；`/W4 /WX` 通过）。身份 `CharacterPanel-scenegraph-v105-g5setup-audit-20261117-96d60fc63e-cl94faaed0c6-20261117T134821Z`（无 `+dirty`）。DLL 2,032,128 B SHA-256 `1C9E62843E2E73CEDF1AC4E57BDA6A825C10B74AD1545F96FB92F8225D780085`；PDB 51,630,080 B SHA-256 `04C428B9A8D0B89059E393A04DAE8EBFF384B1B0B7C8E43952B9742597E0739D`。
+
+**部署（2026-11-17，已完成；尚未上机）**：先备份 v104 三件套到 `dist/deploy-backup-20261117-setupauditpre/`（DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`），安装 v105 DLL/PDB + `dist/g5-setup-audit-20261117/CharacterPanel.ini`（SHA-256 `2EF34BEAB695CDFD9907882B5D61F9F8F0928A6D5B9D01EA14589A7157CF5CD3`；`IndependentGraph=load`、`SetupAudit=true`、K5 三键 off、其余实验键 off），安装位哈希逐位一致。运行协议为 Save116 → 一次 panel 窗口；只采 `SETUP AUDIT`，不产生门 5 姿态/时间/配对数据。
+
 ## Synchronized files
 
 Maintain this guide with [README](../README.md), [SceneGraph](scene-graph.md), [animation](animation.md), [maintenance](code-maintenance.md), CMake/preset/template inputs and [runtime notes](../tools/scene_copy/README.txt). Keep current build commands out of [historical evidence](history.md), whose commands describe earlier revisions.
