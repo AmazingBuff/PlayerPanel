@@ -1392,6 +1392,82 @@ namespace
             a_actor_id, a_request, source_count, source_hash, candidate_before, candidate_after,
             candidate_after == source_hash ? 1 : 0);
     }
+
+    // C-G5-STATE v3: read-only active-node state fingerprint. hkbNodeInfo is a known
+    // 0x90-byte CommonLib layout; the probe records its 18 qwords and logs only entries
+    // that changed since the previous generation. No node/pose/variable writes.
+    struct StateProbeEntry
+    {
+        std::array<std::uint64_t, 18> words{};
+        bool seen = false;
+    };
+    std::array<StateProbeEntry, 512> g_state_probe_entries{};
+
+    char const* state_probe_class(std::uintptr_t a_vtable)
+    {
+        if (a_vtable == RE::VTABLE_hkbBlenderGenerator[0].address())
+            return "blender";
+        if (a_vtable == RE::VTABLE_hkbBlenderGeneratorChild[0].address())
+            return "blender-child";
+        if (a_vtable == RE::VTABLE_hkbClipGenerator[0].address())
+            return "clip";
+        if (a_vtable == RE::VTABLE_hkbStateMachine[0].address())
+            return "state-machine";
+        return "other";
+    }
+
+    void log_node_state_probe(RE::BShkbAnimationGraph const& a_candidate, std::uint32_t a_actor_id,
+        std::uint64_t a_request, char const* a_segment, std::uint32_t a_completed)
+    {
+        if (!state_probe())
+            return;
+        RE::hkbBehaviorGraph const* const behavior = a_candidate.characterInstance.behaviorGraph.get();
+        if (!behavior || !behavior->activeNodes)
+        {
+            logger::info("STATE PROBE actor={:08x} request={} segment={} completed={} status=unavailable",
+                a_actor_id, a_request, a_segment, a_completed);
+            return;
+        }
+        RE::NodeList const& nodes = *behavior->activeNodes;
+        std::size_t const walked = std::min<std::size_t>(nodes.size(), g_state_probe_entries.size());
+        std::size_t changed = 0;
+        std::size_t suppressed = 0;
+        for (std::size_t i = 0; i < walked; ++i)
+        {
+            RE::hkbNodeInfo const& info = nodes.data()[i];
+            RE::hkbNode* const node = info.nodeClone;
+            if (!node || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(node)))
+                continue;
+            std::uintptr_t const vtable = *reinterpret_cast<std::uintptr_t const*>(node);
+            char const* const node_class = state_probe_class(vtable);
+            // Clip time is already captured by K5; state-machine transitions are not
+            // the blend scalar. Blender/child and unknown entries are the probe targets.
+            if (std::strcmp(node_class, "clip") == 0 || std::strcmp(node_class, "state-machine") == 0)
+                continue;
+            std::array<std::uint64_t, 18> words{};
+            std::memcpy(words.data(), &info, sizeof(words));
+            StateProbeEntry& cache = g_state_probe_entries[i];
+            if (cache.seen && cache.words == words)
+                continue;
+            cache.seen = true;
+            cache.words = words;
+            ++changed;
+            if (changed > 32)
+            {
+                ++suppressed;
+                continue;
+            }
+            std::string hex;
+            for (std::size_t word = 0; word < words.size(); ++word)
+                hex += fmt::format("{:016x}", words[word]);
+            logger::info("STATE PROBE actor={:08x} request={} segment={} completed={} index={} node={:#x} vtable={:#x} class={} words={}",
+                a_actor_id, a_request, a_segment, a_completed, i,
+                reinterpret_cast<std::uintptr_t>(node), vtable, node_class, hex);
+        }
+        if (changed > 0)
+            logger::info("STATE PROBE SUMMARY actor={:08x} request={} segment={} completed={} walked={} nodes={} changed={} suppressed={}",
+                a_actor_id, a_request, a_segment, a_completed, walked, nodes.size(), changed, suppressed);
+    }
 }
 
 
@@ -2699,6 +2775,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                             std::span<K3TrackRecord const>{ tracks.data(), track_count }))
                                         observation.invalidate(k5_writer.overflow()
                                             ? "k5-record-overflow" : "k5-write-failed");
+                                    log_node_state_probe(*candidate, actor_id, request,
+                                        observation.segment_name(), observation.completed());
                                     return;
                                 }
                                 if (!k3_enabled) return;

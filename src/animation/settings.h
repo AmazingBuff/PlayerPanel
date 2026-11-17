@@ -148,6 +148,9 @@ namespace animation
     // the activated candidate, before any injection/drive. Copies all candidate tracks
     // once; no per-frame write. Requires IndependentGraph=drive|inject.
     [[nodiscard]] bool bootstrap_source_pose();
+    // C-G5-STATE v3 (2026-11-17, default off): per-generation read-only fingerprint of
+    // the candidate's active-node hkbNodeInfo entries. No node/pose/variable writes.
+    [[nodiscard]] bool state_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

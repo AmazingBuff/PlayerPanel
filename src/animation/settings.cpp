@@ -42,6 +42,7 @@ namespace
     bool g_k5_reconciliation = false;
     bool g_setup_audit = false;
     bool g_bootstrap_source_pose = false;
+    bool g_state_probe = false;
     behavior_graph::ProbeLivenessMode g_sampling_liveness_mode = behavior_graph::ProbeLivenessMode::e_off;
 }
 void load_settings()
@@ -99,6 +100,7 @@ void load_settings()
     g_k5_reconciliation = ini.GetBoolValue("Experiment", "K5Reconciliation", false);
     g_setup_audit = ini.GetBoolValue("Experiment", "SetupAudit", false);
     g_bootstrap_source_pose = ini.GetBoolValue("Experiment", "BootstrapSourcePose", false);
+    g_state_probe = ini.GetBoolValue("Experiment", "StateProbe", false);
     char const* const sampling_liveness = ini.GetValue("Experiment", "SamplingLiveness", "off");
     std::optional<behavior_graph::ProbeLivenessMode> const parsed_sampling_liveness =
         behavior_graph::parse_probe_liveness(sampling_liveness ? std::string_view{ sampling_liveness } : std::string_view{});
@@ -144,6 +146,7 @@ void load_settings()
     logger::info("EXPERIMENT setting K5Reconciliation={}", g_k5_reconciliation);
     logger::info("EXPERIMENT setting SetupAudit={}", g_setup_audit);
     logger::info("EXPERIMENT setting BootstrapSourcePose={}", g_bootstrap_source_pose);
+    logger::info("EXPERIMENT setting StateProbe={}", g_state_probe);
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
@@ -158,6 +161,7 @@ bool k5_layer_audit() { return g_k5_layer_audit; }
 bool k5_reconciliation() { return g_k5_reconciliation; }
 bool setup_audit() { return g_setup_audit; }
 bool bootstrap_source_pose() { return g_bootstrap_source_pose; }
+bool state_probe() { return g_state_probe; }
 behavior_graph::IndependentGraphMode independent_graph_setting() { return g_independent_graph; }
 bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }
