@@ -1,6 +1,6 @@
-# C-G5-SETUP v1：候选/源 setup 与静态附件只读审计（2026-11-17，DRAFT）
+# C-G5-SETUP v1：候选/源 setup 与静态附件只读审计（2026-11-17，COMPLETE）
 
-**状态：IMPLEMENTED / DEPLOYED（2026-11-17），尚未上机采集。** v105 只读 `SetupAudit` 已实现、构建并部署；本预注册只回答门 5 G4P-7 失败归因中的 setup/静态附件假设；不改变门 4/门 5 判据，不产生 `tau_*`，不关闭 G5/G6。
+**状态：COMPLETE（2026-11-17）：H1 被证伪，H2 得到支持，H3 保留给 body/dynamic 残余。** v105 只读 `SetupAudit` 已实现、构建、部署并完成一次 panel 运行；本审计只回答门 5 G4P-7 失败归因中的 setup/静态附件假设；不改变门 4/门 5 判据，不产生 `tau_*`，不关闭 G5/G6。
 
 ## 一、背景
 
@@ -24,7 +24,7 @@
 
 三者不互斥；本审计只做归属，不预设结论。
 
-## 三、只读仪器（待批准后实现）
+## 三、只读仪器（已实现）
 
 新增 `[Experiment] SetupAudit=false`，默认 off；只在候选装载完成后、任何注入/驱动之前记录一次。
 
@@ -50,7 +50,7 @@
 | SA-2 指针 | 源/候选 graph、character、setup 各自可读；setup 指针不同（与既有 G4 事实一致） | 全满足 | INVALID |
 | SA-3 覆盖 | 12 骨 × 2 侧全部记录；骨数=116；无 missing | 全满足 | INVALID |
 | SA-4 有限性 | 240 分量全有限；无零范数/不可读 | 全满足 | INVALID |
-| SA-5 运行完整 | 一次 panel、零 `[E]`、无崩溃、预算未超 | 全满足 | INVALID |
+| SA-5 运行完整 | 一次 panel、零非豁免 `[E]`（装载期 OAR 行按 Track 2 §十二）、无崩溃、预算未超 | 全满足 | INVALID |
 
 **归属规则（描述性，不在本审计内改 G4P-7）**：
 
@@ -69,7 +69,7 @@
 1. ~~用户评审本 DRAFT~~（2026-11-17 用户批准直接开始；`load` 最小化修订见 §四）。
 2. ~~实现 `SetupAudit`~~：v105，源码提交 `96d60fc`；编译 `/W4 /WX` 通过。
 3. ~~构建/部署~~：身份 `CharacterPanel-scenegraph-v105-g5setup-audit-20261117-96d60fc63e-cl94faaed0c6-20261117T134821Z`；DLL `1C9E6284…780085`、PDB `04C428B9…E0739D`、运行 INI `2EF34BEA…7CF5CD3`；安装位与备份见 §八。
-4. 待一次 panel 运行 → 离线归属报告 → 决定 H1/H2/H3 下一工作包；G4P-7 仍保持 FAIL，直到新的正式批次通过。
+4. ~~一次 panel 运行 + 离线归属报告~~：2026-11-17 21:58:26 完成；H1 证伪、H2 支持，见 §九；G4P-7 仍保持 FAIL，直到新的正式批次通过。
 
 ## 八、实现与部署身份
 
@@ -82,4 +82,35 @@
 | 运行 INI | `dist/g5-setup-audit-20261117/CharacterPanel.ini`；SHA-256 `2EF34BEAB695CDFD9907882B5D61F9F8F0928A6D5B9D01EA14589A7157CF5CD3` |
 | 部署前备份 | `dist/deploy-backup-20261117-setupauditpre/`（v104 DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`） |
 
-**部署（2026-11-17，已完成）**：安装位 DLL/PDB/INI 与上表逐位一致；`IndependentGraph=load`、`SetupAudit=true`、K5 三键 off、其余实验键 off。**尚未上机，尚无 `SETUP AUDIT` 读数。**
+**部署（2026-11-17，已完成）**：安装位 DLL/PDB/INI 与上表逐位一致；`IndependentGraph=load`、`SetupAudit=true`、K5 三键 off、其余实验键 off。
+
+## 九、v105 运行结果（2026-11-17 21:56–21:59，AUDIT COMPLETE）
+
+**运行身份**：v105 DLL/PDB/INI 与 §八逐位一致；日志 `SCENEGRAPH BUILD` = `CharacterPanel-scenegraph-v105-g5setup-audit-20261117-96d60fc63e-cl94faaed0c6-20261117T134821Z`。一次 panel 窗口（`opening=true` 21:58:26.291，`false` 21:59:00.246），无崩溃，无第二次实验。日志归档：[run1/CharacterPanel.log](run1/CharacterPanel.log)，25,835 B，SHA-256 `B06697AB8FADD02A1FC969AE4C287C9E7B7771496E1C088003E6F9923E04838A`。
+
+**SA 判据**：SA-1 PASS（身份/开关匹配）；SA-2 PASS（源 graph `0x18793161580`、候选 graph `0x186655b1300`；setup `0x182f2ea0600` vs `0x182f28f9380`，不同）；SA-3 PASS（12 骨 ×2 侧 = 24 行；`bones=116 reference-pose=116`）；SA-4 PASS（240 分量 `finite=true`）；SA-5 PASS（一次 panel；唯一 `[E]` 为 Track 2 §十二装载期 OAR 豁免行，运行期零 `[E]`）。
+
+### 9.1 setup/bind 结论
+
+源与候选的 `animationSkeleton` **同址** `0x182d49d6320`，`data` 同址 `0x182d49e9010`，`mirroredSkeleton` 同址 `0x182f20af740`；只有 setup 包装指针不同。12 个固定骨的 `referencePose` 在两侧逐字相同（含 5 个静态附件骨）。**H1（setup/bind 默认位不同）被证伪。**
+
+### 9.2 运行态与 referencePose
+
+门 5 正式数据（候选 pair 0 / 源 seq 137）与本次 `referencePose` 对比：
+
+| 骨 | referencePose t | 候选运行态 t | 源运行态 t | 候选−ref | 源−ref |
+| ---: | --- | --- | --- | ---: | ---: |
+| 60 `Quiver` | `(-7.278420,-6.048058,-16.815178)` | `(-7.278445,-6.048089,-16.815235)` | `(-7.278442,-10.243851,-16.413286)` | 5.7e-5 | **4.195793** |
+| 61 `WeaponAxe` | `(18.991491,-2.993564,-19.048920)` | `(18.991653,-2.993578,-19.049023)` | `(21.756907,-0.882682,-18.779766)` | 1.62e-4 | **2.765415** |
+| 63 `WeaponBow` | `(-3.558048,-10.577713,2.465256)` | `(-3.558058,-10.577730,2.465272)` | `(-3.558055,-14.773514,2.867210)` | 1.7e-5 | **4.195801** |
+| 64 `WeaponDagger` | `(-8.609213,5.787449,2.991348)` | `(-8.609266,5.787476,2.991362)` | `(-12.687939,9.571548,3.545177)` | 5.3e-5 | **4.078726** |
+| 66 `WeaponSword` | `(-11.891476,1.916895,6.666046)` | `(-11.891581,1.916901,6.666102)` | `(-15.598629,2.182207,7.465465)` | 1.05e-4 | **3.707153** |
+
+旋转四元数在两侧与 referencePose 均一致/近一致（差 ≤4.3e-4）；差异只在平移。**H2 得到支持**：源的实际装备/附件对象把静态附件节点从 referencePose 写到装备状态，候选没有真实附件对象，保持 referencePose。
+
+### 9.3 裁定
+
+- **H1 = FALSIFIED**（setup/bind 同源，referencePose 逐字相同）。
+- **H2 = SUPPORTED**（5 个静态附件骨：候选运行态 ≈ referencePose；源运行态偏移 2.77–4.20，旋转不变）。
+- **H3 = RETAINED**（不解释静态 5 骨；body 1,226 与 dynamic attachment 1,360 的残余仍需层/权重/父级/时钟审计）。
+- 本审计不改变 G4P-7 FAIL/G5 未通过；下一版若要消除静态 1,240 次超容差，必须预注册“候选真实附件状态”或“静态附件独立相等轴”，不能把本次结果当作门 5 通过。

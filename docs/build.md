@@ -868,7 +868,9 @@ Build identity `CharacterPanel-scenegraph-behavior-graph-v59-unequip-event-name-
 
 **构建**：提交 `96d60fc` 后 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v105-g5setup-audit-20261117` + `cmake --build --preset Release`，exit 0（仅既有 `/Ob2`→`/Ob3` D9025 警告；`/W4 /WX` 通过）。身份 `CharacterPanel-scenegraph-v105-g5setup-audit-20261117-96d60fc63e-cl94faaed0c6-20261117T134821Z`（无 `+dirty`）。DLL 2,032,128 B SHA-256 `1C9E62843E2E73CEDF1AC4E57BDA6A825C10B74AD1545F96FB92F8225D780085`；PDB 51,630,080 B SHA-256 `04C428B9A8D0B89059E393A04DAE8EBFF384B1B0B7C8E43952B9742597E0739D`。
 
-**部署（2026-11-17，已完成；尚未上机）**：先备份 v104 三件套到 `dist/deploy-backup-20261117-setupauditpre/`（DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`），安装 v105 DLL/PDB + `dist/g5-setup-audit-20261117/CharacterPanel.ini`（SHA-256 `2EF34BEAB695CDFD9907882B5D61F9F8F0928A6D5B9D01EA14589A7157CF5CD3`；`IndependentGraph=load`、`SetupAudit=true`、K5 三键 off、其余实验键 off），安装位哈希逐位一致。运行协议为 Save116 → 一次 panel 窗口；只采 `SETUP AUDIT`，不产生门 5 姿态/时间/配对数据。
+**部署（2026-11-17，已完成）**：先备份 v104 三件套到 `dist/deploy-backup-20261117-setupauditpre/`（DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`），安装 v105 DLL/PDB + `dist/g5-setup-audit-20261117/CharacterPanel.ini`（SHA-256 `2EF34BEAB695CDFD9907882B5D61F9F8F0928A6D5B9D01EA14589A7157CF5CD3`；`IndependentGraph=load`、`SetupAudit=true`、K5 三键 off、其余实验键 off），安装位哈希逐位一致。
+
+**首次上机（2026-11-17 21:58:26，一次 panel）**：v105 身份匹配，24 条 `SETUP AUDIT` 骨行全部有限；源/候选 `animationSkeleton`、`data`、`mirroredSkeleton` 同址，12 骨 `referencePose` 逐字相同——**H1（setup/bind 不同）证伪**；5 个静态附件骨的源运行态相对 referencePose 偏移 2.77–4.20，而候选运行态 ≤1.62e-4——**H2（源真实附件状态）得到支持**。日志 [g5-setup-audit run1](diagnostics/g5-setup-audit-20261117/run1/CharacterPanel.log)，25,835 B，SHA-256 `B06697AB8FADD02A1FC969AE4C287C9E7B7771496E1C088003E6F9923E04838A`；唯一 `[E]` 为装载期 OAR 豁免行。该轮只采 setup，不产生门 5 姿态/时间/配对数据。
 
 ## Synchronized files
 
