@@ -144,6 +144,10 @@ namespace animation
     // source and candidate setup/skeleton pointers and the 12 fixed bone bind transforms;
     // writes no graph/pose state and installs no hook.
     [[nodiscard]] bool setup_audit();
+    // C-G5-STATE v2 (2026-11-17, default off): one-time source poseLocal bootstrap into
+    // the activated candidate, before any injection/drive. Copies all candidate tracks
+    // once; no per-frame write. Requires IndependentGraph=drive|inject.
+    [[nodiscard]] bool bootstrap_source_pose();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

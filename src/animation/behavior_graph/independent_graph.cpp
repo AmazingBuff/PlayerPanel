@@ -1348,6 +1348,50 @@ namespace
         log_setup_audit_side("source", a_source.characterInstance);
         log_setup_audit_side("candidate", a_candidate.characterInstance);
     }
+
+    // C-G5-STATE v2: one-time source-pose bootstrap. The candidate has just been
+    // activated (poseLocal allocated); copying the source buffer once gives the graph
+    // the same declared initial pose before its first injection/drive step. This is not
+    // a per-frame write and does not touch graph variables or active nodes.
+    void bootstrap_candidate_pose(RE::BShkbAnimationGraph const& a_source, RE::BShkbAnimationGraph& a_candidate,
+        std::uint32_t a_actor_id, std::uint64_t a_request)
+    {
+        const RE::hkbCharacter& source_character = a_source.characterInstance;
+        const RE::hkbCharacter& candidate_character = a_candidate.characterInstance;
+        const std::int32_t source_count = source_character.numPoseLocal;
+        const std::int32_t candidate_count = candidate_character.numPoseLocal;
+        if (!source_character.poseLocal || !candidate_character.poseLocal)
+        {
+            logger::info("BOOTSTRAP POSE actor={:08x} request={} outcome=skip reason=null-pose source={} candidate={}",
+                a_actor_id, a_request, source_count, candidate_count);
+            return;
+        }
+        if (source_count != candidate_count || source_count <= 0 || source_count > 256)
+        {
+            logger::info("BOOTSTRAP POSE actor={:08x} request={} outcome=skip reason=count-mismatch source={} candidate={}",
+                a_actor_id, a_request, source_count, candidate_count);
+            return;
+        }
+        const float* const source_values = reinterpret_cast<const float*>(source_character.poseLocal);
+        const std::size_t value_count = static_cast<std::size_t>(source_count) * 12;
+        for (std::size_t i = 0; i < value_count; ++i)
+        {
+            if (!std::isfinite(source_values[i]))
+            {
+                logger::info("BOOTSTRAP POSE actor={:08x} request={} outcome=skip reason=source-nonfinite index={}",
+                    a_actor_id, a_request, i);
+                return;
+            }
+        }
+        const std::string candidate_before = format_pose_hash(candidate_character);
+        const std::string source_hash = format_pose_hash(source_character);
+        std::memcpy(const_cast<RE::hkQsTransform*>(candidate_character.poseLocal), source_character.poseLocal,
+            static_cast<std::size_t>(source_count) * sizeof(RE::hkQsTransform));
+        const std::string candidate_after = format_pose_hash(candidate_character);
+        logger::info("BOOTSTRAP POSE actor={:08x} request={} outcome=copied bones={} source-hash={} candidate-before={} candidate-after={} equal={}",
+            a_actor_id, a_request, source_count, source_hash, candidate_before, candidate_after,
+            candidate_after == source_hash ? 1 : 0);
+    }
 }
 
 
@@ -1653,6 +1697,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                 log_k1_census(*candidate, "candidate", actor_id, request, "post-activate", true);
             if (k5_layer_audit())
                 log_k5_layer_audit(*candidate, actor_id, request, "post-activate", 0);
+                        if (bootstrap_source_pose())
+                            bootstrap_candidate_pose(source_graph, *candidate, actor_id, request);
                         const std::string candidate_pose_before = format_pose_hash(candidate->characterInstance);
                         std::string candidate_pose_mid = "not-run";
                         std::string candidate_pose_end = "not-run";
