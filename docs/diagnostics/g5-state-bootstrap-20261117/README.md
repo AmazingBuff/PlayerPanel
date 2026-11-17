@@ -1,6 +1,6 @@
 # C-G5-STATE v2：源姿态 bootstrap 预注册（2026-11-17，APPROVED）
 
-**状态：APPROVED / IMPLEMENTED（v106），一次正式运行前。** 本实验检验 [C-G5-STATE v1](../g5-state-20261117/README.md) 的初始状态假设：候选 equip 第一组离轨（最近源残差 max 0.497）是否由候选从不同初始姿态出发造成；若是，一次性把源 `poseLocal` bootstrap 到已激活候选应把第一组拉回源轨迹，并同时消除 H2 静态附件偏移。
+**状态：APPROVED / IMPLEMENTED / DEPLOYED（v106），一次正式运行前。** 本实验检验 [C-G5-STATE v1](../g5-state-20261117/README.md) 的初始状态假设：候选 equip 第一组离轨（最近源残差 max 0.497）是否由候选从不同初始姿态出发造成；若是，一次性把源 `poseLocal` bootstrap 到已激活候选应把第一组拉回源轨迹，并同时消除 H2 静态附件偏移。
 
 ## 一、固定语义
 
@@ -43,3 +43,16 @@
 2. 部署 v106 + `BootstrapSourcePose=true` 运行档。
 3. 一次 Save116 panel 运行并归档。
 4. 重跑 gate4_pair / C-G5-ATT / C-G5-STATE 审计，按 SB-1..6 判定。
+
+## 六、实现与部署身份
+
+| 项 | 值 |
+| --- | --- |
+| 源码提交 | `ee50e97`（`feat(g5): bootstrap the candidate from the source pose`） |
+| Build identity | `CharacterPanel-scenegraph-v106-g5state-bootstrap-20261117-ee50e97bf4-cl94faaed0c6-20261117T142733Z`（无 `+dirty`） |
+| DLL | 2,035,712 B；SHA-256 `B4BB754B78F5E69B7879CF3FFB1380C14BDC1F7EC8E39D32F204FEB9DC72528E` |
+| PDB | 51,712,000 B；SHA-256 `00BE2671D6376CCB04E2BE2C108D7C5E3D7BF6F0A1AB277A75095C35EE3A3CD0` |
+| 运行 INI | `dist/g5-state-bootstrap-20261117/CharacterPanel.ini`；SHA-256 `DD7A5E1A52CB4A4A19EA4760CC1DB7179C0E1F2DFA6AAFCB1E9F83C9741347E9` |
+| 部署前备份 | `dist/deploy-backup-20261117-bootstrappre/`（v104 DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`） |
+
+**部署（2026-11-17，已完成）**：安装位 DLL/PDB/INI 与上表逐位一致；`IndependentGraph=inject`、`BootstrapSourcePose=true`、K5 三键 on、其余实验键按 k5-inject 档。**尚未上机。**
