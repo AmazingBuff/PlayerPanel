@@ -1,6 +1,6 @@
 # C-G5-STATE v2：源姿态 bootstrap 预注册（2026-11-17，APPROVED）
 
-**状态：APPROVED / IMPLEMENTED / DEPLOYED（v106），一次正式运行前。** 本实验检验 [C-G5-STATE v1](../g5-state-20261117/README.md) 的初始状态假设：候选 equip 第一组离轨（最近源残差 max 0.497）是否由候选从不同初始姿态出发造成；若是，一次性把源 `poseLocal` bootstrap 到已激活候选应把第一组拉回源轨迹，并同时消除 H2 静态附件偏移。
+**状态：COMPLETE（2026-11-17）：SB-1..4 PASS，SB-5 FAIL；bootstrap 被首帧 Generate 覆盖，G4P-7 与门 5 逐位相同。** 本实验检验 [C-G5-STATE v1](../g5-state-20261117/README.md) 的初始状态假设：候选 equip 第一组离轨（最近源残差 max 0.497）是否由候选从不同初始姿态出发造成；若是，一次性把源 `poseLocal` bootstrap 到已激活候选应把第一组拉回源轨迹，并同时消除 H2 静态附件偏移。
 
 ## 一、固定语义
 
@@ -56,3 +56,45 @@
 | 部署前备份 | `dist/deploy-backup-20261117-bootstrappre/`（v104 DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`） |
 
 **部署（2026-11-17，已完成）**：安装位 DLL/PDB/INI 与上表逐位一致；`IndependentGraph=inject`、`BootstrapSourcePose=true`、K5 三键 on、其余实验键按 k5-inject 档。**尚未上机。**
+
+## 七、v106 运行结果（2026-11-17 22:31–22:34，SB-5 FAIL）
+
+**运行身份**：v106 DLL/PDB/INI 与 §六逐位一致；日志 `SCENEGRAPH BUILD` = `CharacterPanel-scenegraph-v106-g5state-bootstrap-20261117-ee50e97bf4-cl94faaed0c6-20261117T142733Z`。一次 panel 窗口（`opening=true` 22:32:16.999，`false` 22:34:08.304），无崩溃。
+
+| 工件 | 大小 | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.log](run1/CharacterPanel.log) | 245,141 B | `E619417AEFF7B92BFF6D7F4772AB838D0F34F0EFACF5C2951701C3F43D03E0CC` |
+| [CPK5 bin](run1/CharacterPanel-g5k5-CharacterPanel-scenegraph-v106-g5state-bootstrap-20261117-ee50e97bf4-cl94faaed0c6-20261117T142733Z-20261117T143217Z.bin) | 1,410,452 B | `183664CEA0F076227434C90EE23B9088C1BDE7B40B86EC3C268C862F8CCDFD14` |
+| [JSON ledger](run1/CharacterPanel-g5k5-CharacterPanel-scenegraph-v106-g5state-bootstrap-20261117-ee50e97bf4-cl94faaed0c6-20261117T142733Z-20261117T143217Z.json) | 771 B | `0BC25F89A7A3A4B5EF27EF2DDDAFB62946FFA62ECD4DD41390F97110758D9F26` |
+
+**bootstrap 读数**：
+
+```text
+BOOTSTRAP POSE actor=00000014 request=1 outcome=copied bones=116
+source-hash=cffe2735eb028f8f
+candidate-before=bc160a8c2b3a5a58
+candidate-after=cffe2735eb028f8f equal=1
+```
+
+`K5 RECON side=candidate expected=249 attempted=249 recorded=249 missing=0 ... equip=120/120 unequip=129/129`；唯一 `[E]` 为装载期 OAR 豁免行。
+
+### 7.1 SB 判据
+
+| # | 结果 |
+| --- | --- |
+| SB-1 身份 | PASS |
+| SB-2 bootstrap | PASS（copied 116/116，after==source） |
+| SB-3 采样完整 | PASS（249/249，120/120，129/129） |
+| SB-4 运行完整 | PASS（一次 panel，零非豁免 `[E]`，无崩溃） |
+| SB-5 初始状态效果 | **FAIL** |
+| SB-6 G4P-7 | **FAIL**（与门 5 相同） |
+
+### 7.2 关键负结果
+
+正式 G4P summary 与门 5 **逐字节一致**（manifest 因 candidate identity/路径不同而哈希不同，summary 相同）：`exceed tau_p/r/s = 3,826 / 16,755 / 352`，P99 `5.5912 / 0.0457227 / 0.000525653`。
+
+逐位比较 v106 与门 5 候选 CPK5 的 249 条记录、116×10 分量：**288,840/288,840 分量完全相同（0 diff，max-abs=0）**。bootstrap 的源姿态副本在首帧 Generate 后被候选图完全重新生成，未进入任何 K5 记录。
+
+因此 SB-5 FAIL：equip 第一组仍是离轨初始状态，静态附件仍是 H2 偏移；一次性 poseLocal 复制不能改变候选图的内部初始状态。
+
+**裁定：bootstrap 负结果成立。** 初始状态位于图内部（active nodes / blend state / weights），不只是 poseLocal 缓冲；下一版必须初始化图状态或采集单标量 blend/权重，不能继续在 pose 缓冲上打补丁。

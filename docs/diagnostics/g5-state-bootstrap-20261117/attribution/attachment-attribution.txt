@@ -1,0 +1,26 @@
+ATTR SUMMARY protocol=C-G5-ATT v1
+ATTR INPUT pairs=248 bones=116 primary-samples=24552 auxiliary-samples=4216
+ATTR STATIC epsilon=0.001 static-both=28 static-exceed-p=1240/3826
+ATTR GROUP body bones=88 samples=21824 exceed-p=1226 exceed-r=15852 exceed-s=351 static-bones=6 static-exceed-p=0
+ATTR GROUP attachment bones=11 samples=2728 exceed-p=2600 exceed-r=903 exceed-s=1 static-bones=5 static-exceed-p=1240
+ATTR GROUP auxiliary bones=17 samples=4216 exceed-p=0 exceed-r=0 exceed-s=0 static-bones=17 static-exceed-p=0
+ATTR TOP
+   43 Weapon                       attachment max-ep=31.3159161 p99=27.9671402 exceed-p=170
+    4 NPC COM [COM ]               attachment max-ep=6.8614831 p99=6.27845812 exceed-p=225
+   45 NPC R Pauldron               attachment max-ep=5.62135553 p99=4.80030012 exceed-p=246
+   64 WeaponDagger                 attachment max-ep=5.5912056 p99=5.59120512 exceed-p=248
+   62 WeaponBack                   attachment max-ep=4.29206514 p99=4.25969887 exceed-p=248
+   60 Quiver                       attachment max-ep=4.21502542 p99=4.21501541 exceed-p=248
+   63 WeaponBow                    attachment max-ep=4.2150197 p99=4.21501207 exceed-p=248
+   65 WeaponMace                   attachment max-ep=4.07971954 p99=4.07971954 exceed-p=248
+   66 WeaponSword                  attachment max-ep=3.8015337 p99=3.80153298 exceed-p=248
+   61 WeaponAxe                    attachment max-ep=3.4892807 p99=3.48928022 exceed-p=248
+    3 x_NPC Rotate [Rot ]          body       max-ep=2.17796016 p99=1.55568588 exceed-p=12
+   44 NPC L Pauldron               attachment max-ep=1.89494884 p99=1.61836386 exceed-p=223
+ATTR STATIC-OFFSET
+   60 Quiver                       max-ep=4.21502542 exceed-p=248 cand-span=9.15527e-05 src-span=8.39233e-05
+   61 WeaponAxe                    max-ep=3.4892807 exceed-p=248 cand-span=0.000167847 src-span=0.00015831
+   63 WeaponBow                    max-ep=4.2150197 exceed-p=248 cand-span=6.84261e-05 src-span=7.60555e-05
+   64 WeaponDagger                 max-ep=5.5912056 exceed-p=248 cand-span=6.1512e-05 src-span=5.91278e-05
+   66 WeaponSword                  max-ep=3.8015337 exceed-p=248 cand-span=0.000112534 src-span=0.000107765
+ATTR VERDICT G4P-7=FAIL attribution-only; tolerances/coverage unchanged
