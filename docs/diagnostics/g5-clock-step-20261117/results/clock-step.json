@@ -1,0 +1,649 @@
+{
+ "domains": {
+  "1hm_equip": {
+   "candidate_max_group": 15,
+   "candidate_records": 98,
+   "candidate_unique_times": 17,
+   "groups": {
+    "attachment": {
+     "stair": [
+      928,
+      968,
+      0.0
+     ],
+     "unique": [
+      96,
+      99,
+      0.0
+     ]
+    },
+    "auxiliary": {
+     "stair": [
+      0,
+      1496,
+      0.0
+     ],
+     "unique": [
+      0,
+      153,
+      0.0
+     ]
+    },
+    "body": {
+     "stair": [
+      1032,
+      7744,
+      0.0
+     ],
+     "unique": [
+      94,
+      792,
+      0.0
+     ]
+    }
+   },
+   "pairs": 97,
+   "source_max_reuse": 20,
+   "source_records": 68,
+   "source_unique_seqs_used": 12,
+   "source_unique_times": 61,
+   "stair_pairs": 88,
+   "top_bones": [
+    {
+     "group": "attachment",
+     "index": 4,
+     "max_ep": 6.296545028686523,
+     "name": "NPC COM [COM ]",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 44,
+     "max_ep": 1.8949488401412964,
+     "name": "NPC L Pauldron",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 45,
+     "max_ep": 5.6213555335998535,
+     "name": "NPC R Pauldron",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 60,
+     "max_ep": 4.2150092124938965,
+     "name": "Quiver",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 61,
+     "max_ep": 3.4892802238464355,
+     "name": "WeaponAxe",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 62,
+     "max_ep": 4.292065143585205,
+     "name": "WeaponBack",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 63,
+     "max_ep": 4.214991569519043,
+     "name": "WeaponBow",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 64,
+     "max_ep": 5.59120512008667,
+     "name": "WeaponDagger",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 65,
+     "max_ep": 4.079717636108398,
+     "name": "WeaponMace",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "attachment",
+     "index": 66,
+     "max_ep": 3.801530361175537,
+     "name": "WeaponSword",
+     "stair_exceed": 88,
+     "unique_exceed": 9
+    },
+    {
+     "group": "body",
+     "index": 25,
+     "max_ep": 0.17895181477069855,
+     "name": "NPC Spine1 [Spn1]",
+     "stair_exceed": 77,
+     "unique_exceed": 7
+    },
+    {
+     "group": "body",
+     "index": 26,
+     "max_ep": 0.2893049120903015,
+     "name": "NPC Spine2 [Spn2]",
+     "stair_exceed": 77,
+     "unique_exceed": 7
+    },
+    {
+     "group": "body",
+     "index": 35,
+     "max_ep": 0.6372133493423462,
+     "name": "NPC Neck [Neck]",
+     "stair_exceed": 77,
+     "unique_exceed": 7
+    },
+    {
+     "group": "body",
+     "index": 36,
+     "max_ep": 0.19282349944114685,
+     "name": "NPC Head [Head]",
+     "stair_exceed": 77,
+     "unique_exceed": 7
+    },
+    {
+     "group": "body",
+     "index": 37,
+     "max_ep": 0.21201083064079285,
+     "name": "NPCEyeBone",
+     "stair_exceed": 76,
+     "unique_exceed": 7
+    },
+    {
+     "group": "attachment",
+     "index": 43,
+     "max_ep": 31.315916061401367,
+     "name": "Weapon",
+     "stair_exceed": 48,
+     "unique_exceed": 6
+    },
+    {
+     "group": "body",
+     "index": 70,
+     "max_ep": 0.09568483382463455,
+     "name": "NPC L Finger10 [LF10]",
+     "stair_exceed": 30,
+     "unique_exceed": 2
+    },
+    {
+     "group": "body",
+     "index": 73,
+     "max_ep": 0.03005845658481121,
+     "name": "NPC L Finger20 [LF20]",
+     "stair_exceed": 30,
+     "unique_exceed": 2
+    },
+    {
+     "group": "body",
+     "index": 76,
+     "max_ep": 0.028480857610702515,
+     "name": "NPC L Finger30 [LF30]",
+     "stair_exceed": 30,
+     "unique_exceed": 2
+    },
+    {
+     "group": "body",
+     "index": 79,
+     "max_ep": 0.11353113502264023,
+     "name": "NPC L Finger40 [LF40]",
+     "stair_exceed": 30,
+     "unique_exceed": 2
+    }
+   ],
+   "unique_pairs": 9
+  },
+  "1hm_idle": {
+   "candidate_max_group": 15,
+   "candidate_records": 22,
+   "candidate_unique_times": 3,
+   "groups": {
+    "attachment": {
+     "stair": [
+      168,
+      231,
+      0.0
+     ],
+     "unique": [
+      8,
+      11,
+      0.0
+     ]
+    },
+    "auxiliary": {
+     "stair": [
+      0,
+      357,
+      0.0
+     ],
+     "unique": [
+      0,
+      17,
+      0.0
+     ]
+    },
+    "body": {
+     "stair": [
+      0,
+      1848,
+      0.0
+     ],
+     "unique": [
+      0,
+      88,
+      0.0
+     ]
+    }
+   },
+   "pairs": 22,
+   "source_max_reuse": 15,
+   "source_records": 198,
+   "source_unique_seqs_used": 3,
+   "source_unique_times": 198,
+   "stair_pairs": 21,
+   "top_bones": [
+    {
+     "group": "attachment",
+     "index": 45,
+     "max_ep": 0.5019872784614563,
+     "name": "NPC R Pauldron",
+     "stair_exceed": 21,
+     "unique_exceed": 1
+    },
+    {
+     "group": "attachment",
+     "index": 60,
+     "max_ep": 4.214974880218506,
+     "name": "Quiver",
+     "stair_exceed": 21,
+     "unique_exceed": 1
+    },
+    {
+     "group": "attachment",
+     "index": 61,
+     "max_ep": 3.489279270172119,
+     "name": "WeaponAxe",
+     "stair_exceed": 21,
+     "unique_exceed": 1
+    },
+    {
+     "group": "attachment",
+     "index": 62,
+     "max_ep": 4.214974403381348,
+     "name": "WeaponBack",
+     "stair_exceed": 21,
+     "unique_exceed": 1
+    },
+    {
+     "group": "attachment",
+     "index": 63,
+     "max_ep": 4.214981555938721,
+     "name": "WeaponBow",
+     "stair_exceed": 21,
+     "unique_exceed": 1
+    },
+    {
+     "group": "attachment",
+     "index": 64,
+     "max_ep": 5.591204643249512,
+     "name": "WeaponDagger",
+     "stair_exceed": 21,
+     "unique_exceed": 1
+    },
+    {
+     "group": "attachment",
+     "index": 65,
+     "max_ep": 4.079717636108398,
+     "name": "WeaponMace",
+     "stair_exceed": 21,
+     "unique_exceed": 1
+    },
+    {
+     "group": "attachment",
+     "index": 66,
+     "max_ep": 3.801530122756958,
+     "name": "WeaponSword",
+     "stair_exceed": 21,
+     "unique_exceed": 1
+    },
+    {
+     "group": "body",
+     "index": 0,
+     "max_ep": 0.0,
+     "name": "NPC Root [Root]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 1,
+     "max_ep": 0.0,
+     "name": "x_NPC LookNode [Look]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 2,
+     "max_ep": 5.960464477539063e-08,
+     "name": "x_NPC Translate [Pos ]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 3,
+     "max_ep": 0.0,
+     "name": "x_NPC Rotate [Rot ]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "attachment",
+     "index": 4,
+     "max_ep": 3.814697265625e-06,
+     "name": "NPC COM [COM ]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 5,
+     "max_ep": 0.0,
+     "name": "NPC Pelvis [Pelv]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 6,
+     "max_ep": 5.1577826525317505e-06,
+     "name": "NPC L Thigh [LThg]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 7,
+     "max_ep": 5.394796517066425e-06,
+     "name": "NPC L Calf [LClf]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 8,
+     "max_ep": 4.672031082009198e-06,
+     "name": "NPC L Foot [Lft ]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 9,
+     "max_ep": 5.478441835293779e-06,
+     "name": "NPC R Thigh [RThg]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 10,
+     "max_ep": 5.7220458984375e-06,
+     "name": "NPC R Calf [RClf]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 11,
+     "max_ep": 1.0271386599924881e-05,
+     "name": "NPC R Foot [Rft ]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    }
+   ],
+   "unique_pairs": 1
+  },
+  "1hm_unequip": {
+   "candidate_max_group": 15,
+   "candidate_records": 129,
+   "candidate_unique_times": 21,
+   "groups": {
+    "attachment": {
+     "stair": [
+      1286,
+      1298,
+      0.0
+     ],
+     "unique": [
+      114,
+      121,
+      0.0
+     ]
+    },
+    "auxiliary": {
+     "stair": [
+      0,
+      2006,
+      0.0
+     ],
+     "unique": [
+      0,
+      187,
+      0.0
+     ]
+    },
+    "body": {
+     "stair": [
+      92,
+      10384,
+      0.0
+     ],
+     "unique": [
+      8,
+      968,
+      0.0
+     ]
+    }
+   },
+   "pairs": 129,
+   "source_max_reuse": 15,
+   "source_records": 92,
+   "source_unique_seqs_used": 16,
+   "source_unique_times": 84,
+   "stair_pairs": 118,
+   "top_bones": [
+    {
+     "group": "attachment",
+     "index": 60,
+     "max_ep": 4.215025424957275,
+     "name": "Quiver",
+     "stair_exceed": 118,
+     "unique_exceed": 11
+    },
+    {
+     "group": "attachment",
+     "index": 61,
+     "max_ep": 3.4892807006835938,
+     "name": "WeaponAxe",
+     "stair_exceed": 118,
+     "unique_exceed": 11
+    },
+    {
+     "group": "attachment",
+     "index": 62,
+     "max_ep": 4.214976787567139,
+     "name": "WeaponBack",
+     "stair_exceed": 118,
+     "unique_exceed": 11
+    },
+    {
+     "group": "attachment",
+     "index": 63,
+     "max_ep": 4.215019702911377,
+     "name": "WeaponBow",
+     "stair_exceed": 118,
+     "unique_exceed": 11
+    },
+    {
+     "group": "attachment",
+     "index": 64,
+     "max_ep": 5.591205596923828,
+     "name": "WeaponDagger",
+     "stair_exceed": 118,
+     "unique_exceed": 11
+    },
+    {
+     "group": "attachment",
+     "index": 65,
+     "max_ep": 4.079719543457031,
+     "name": "WeaponMace",
+     "stair_exceed": 118,
+     "unique_exceed": 11
+    },
+    {
+     "group": "attachment",
+     "index": 66,
+     "max_ep": 3.8015336990356445,
+     "name": "WeaponSword",
+     "stair_exceed": 118,
+     "unique_exceed": 11
+    },
+    {
+     "group": "attachment",
+     "index": 4,
+     "max_ep": 6.861483097076416,
+     "name": "NPC COM [COM ]",
+     "stair_exceed": 118,
+     "unique_exceed": 10
+    },
+    {
+     "group": "attachment",
+     "index": 45,
+     "max_ep": 3.334312915802002,
+     "name": "NPC R Pauldron",
+     "stair_exceed": 117,
+     "unique_exceed": 10
+    },
+    {
+     "group": "attachment",
+     "index": 44,
+     "max_ep": 1.6278892755508423,
+     "name": "NPC L Pauldron",
+     "stair_exceed": 116,
+     "unique_exceed": 10
+    },
+    {
+     "group": "attachment",
+     "index": 43,
+     "max_ep": 2.1298491954803467,
+     "name": "Weapon",
+     "stair_exceed": 109,
+     "unique_exceed": 7
+    },
+    {
+     "group": "body",
+     "index": 70,
+     "max_ep": 0.0805361270904541,
+     "name": "NPC L Finger10 [LF10]",
+     "stair_exceed": 23,
+     "unique_exceed": 2
+    },
+    {
+     "group": "body",
+     "index": 73,
+     "max_ep": 0.025302570313215256,
+     "name": "NPC L Finger20 [LF20]",
+     "stair_exceed": 23,
+     "unique_exceed": 2
+    },
+    {
+     "group": "body",
+     "index": 76,
+     "max_ep": 0.016647910699248314,
+     "name": "NPC L Finger30 [LF30]",
+     "stair_exceed": 23,
+     "unique_exceed": 2
+    },
+    {
+     "group": "body",
+     "index": 79,
+     "max_ep": 0.09555011242628098,
+     "name": "NPC L Finger40 [LF40]",
+     "stair_exceed": 23,
+     "unique_exceed": 2
+    },
+    {
+     "group": "body",
+     "index": 0,
+     "max_ep": 0.0,
+     "name": "NPC Root [Root]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 1,
+     "max_ep": 1.1920928955078125e-07,
+     "name": "x_NPC LookNode [Look]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 2,
+     "max_ep": 1.6858739115832577e-07,
+     "name": "x_NPC Translate [Pos ]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 3,
+     "max_ep": 6.078504952711228e-07,
+     "name": "x_NPC Rotate [Rot ]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    },
+    {
+     "group": "body",
+     "index": 5,
+     "max_ep": 0.0,
+     "name": "NPC Pelvis [Pelv]",
+     "stair_exceed": 0,
+     "unique_exceed": 0
+    }
+   ],
+   "unique_pairs": 11
+  }
+ },
+ "inputs": {
+  "candidate_sha256": "5686348bdbea2f63b3618b7f4136a160227aa4e3014e55eb1b8d1247a3c0c31b",
+  "coverage_sha256": "3df45251748ef7c7f80381a57a196901298c48a0c43e782e378b83030dd0a52c",
+  "detail_sha256": "51a44cebf6d572a28bf5dc3d43458deb8d30a7d96e2863fea4c0b5d9a7d78d04",
+  "manifest_sha256": "8d61e0f41c56fec66a44db93502f31b250414262fc0fb4b40a312594ca78e144",
+  "source_sha256": "4187890d7ff33e6b4f45e0d9319abf98fccb3f8d84254bd7fe15646f8985cf7c",
+  "tolerances_sha256": "b810698ec180b108a1515a21324a37e5dc293175af05c18b19ea2ac7d55710ee"
+ },
+ "schema": "C-G5-CLOCK v2 audit"
+}

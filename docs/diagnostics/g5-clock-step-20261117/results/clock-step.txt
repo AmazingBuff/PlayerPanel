@@ -1,0 +1,38 @@
+CLOCK SUMMARY protocol=C-G5-CLOCK v2 audit
+CLOCK VERDICT G4P-7=FAIL attribution-only; tolerances/coverage unchanged
+CLOCK DOMAIN 1hm_equip cand-records=98 cand-unique-times=17 cand-max-group=15 source-records=68 source-unique-times=61 pairs=97 stair-pairs=88 source-unique-seqs=12 source-max-reuse=20
+  body       stair=1032/7744 unique=94/792
+  attachment stair=928/968 unique=96/99
+  auxiliary  stair=0/1496 unique=0/153
+  TOP   4 NPC COM [COM ]               attachment stair=88 unique=9 max=6.29654503
+  TOP  44 NPC L Pauldron               attachment stair=88 unique=9 max=1.89494884
+  TOP  45 NPC R Pauldron               attachment stair=88 unique=9 max=5.62135553
+  TOP  60 Quiver                       attachment stair=88 unique=9 max=4.21500921
+  TOP  61 WeaponAxe                    attachment stair=88 unique=9 max=3.48928022
+  TOP  62 WeaponBack                   attachment stair=88 unique=9 max=4.29206514
+  TOP  63 WeaponBow                    attachment stair=88 unique=9 max=4.21499157
+  TOP  64 WeaponDagger                 attachment stair=88 unique=9 max=5.59120512
+CLOCK DOMAIN 1hm_unequip cand-records=129 cand-unique-times=21 cand-max-group=15 source-records=92 source-unique-times=84 pairs=129 stair-pairs=118 source-unique-seqs=16 source-max-reuse=15
+  body       stair=92/10384 unique=8/968
+  attachment stair=1286/1298 unique=114/121
+  auxiliary  stair=0/2006 unique=0/187
+  TOP  60 Quiver                       attachment stair=118 unique=11 max=4.21502542
+  TOP  61 WeaponAxe                    attachment stair=118 unique=11 max=3.4892807
+  TOP  62 WeaponBack                   attachment stair=118 unique=11 max=4.21497679
+  TOP  63 WeaponBow                    attachment stair=118 unique=11 max=4.2150197
+  TOP  64 WeaponDagger                 attachment stair=118 unique=11 max=5.5912056
+  TOP  65 WeaponMace                   attachment stair=118 unique=11 max=4.07971954
+  TOP  66 WeaponSword                  attachment stair=118 unique=11 max=3.8015337
+  TOP   4 NPC COM [COM ]               attachment stair=118 unique=10 max=6.8614831
+CLOCK DOMAIN 1hm_idle cand-records=22 cand-unique-times=3 cand-max-group=15 source-records=198 source-unique-times=198 pairs=22 stair-pairs=21 source-unique-seqs=3 source-max-reuse=15
+  body       stair=0/1848 unique=0/88
+  attachment stair=168/231 unique=8/11
+  auxiliary  stair=0/357 unique=0/17
+  TOP  45 NPC R Pauldron               attachment stair=21 unique=1 max=0.501987278
+  TOP  60 Quiver                       attachment stair=21 unique=1 max=4.21497488
+  TOP  61 WeaponAxe                    attachment stair=21 unique=1 max=3.48927927
+  TOP  62 WeaponBack                   attachment stair=21 unique=1 max=4.2149744
+  TOP  63 WeaponBow                    attachment stair=21 unique=1 max=4.21498156
+  TOP  64 WeaponDagger                 attachment stair=21 unique=1 max=5.59120464
+  TOP  65 WeaponMace                   attachment stair=21 unique=1 max=4.07971764
+  TOP  66 WeaponSword                  attachment stair=21 unique=1 max=3.80153012
