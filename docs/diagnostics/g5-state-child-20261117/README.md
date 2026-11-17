@@ -1,6 +1,6 @@
 # C-G5-STATE v4：blender child / internal-state 只读探针预注册（2026-11-17，APPROVED）
 
-**状态：APPROVED，待构建/上机。** v3 已排除 `hkbNodeInfo` 与 `hkbBlenderGenerator` 对象前 0x100；本探针从 blender 对象的指针字段中发现 `hkbBlenderGeneratorChild` / `hkbBlenderGeneratorInternalState`，再读取其 0x100 字节窗口，定位随过渡标量变化的权重/内部状态。
+**状态：COMPLETE（2026-11-17）：CP-1/3/4/5 PASS，CP-2 FAIL（children=0/internal=0）。** v3 已排除 `hkbNodeInfo` 与 `hkbBlenderGenerator` 对象前 0x100；本探针从 blender 对象的指针字段中发现 child/internal-state，但首轮 0x200 指针扫描没有命中。
 
 ## 一、只读边界
 
@@ -31,3 +31,19 @@
 
 - 任一 `[E]`、崩溃、身份不符、K5 缺代、发现阶段读取异常 → 停止并保留现场；不重跑同一窗口。
 - 若找到单调字段，下一版才可设计“clip 时钟 + 状态标量”的配对预注册；若未找到，登记该对象窗口盲区并转生成输出/官方布局审计。
+
+## 五、v109 运行结果（2026-11-17 23:41–23:44，CP-2 FAIL）
+
+**运行身份**：v109 DLL/PDB/INI 匹配；K5 `249/249`，equip 120/120，unequip 129/129；一次 panel，唯一 `[E]` 为装载期 OAR 豁免行。
+
+| 工件 | 大小 | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.log](run1/CharacterPanel.log) | 248,085 B | `F0F2DCCCD453CB1D7AD50B8988099F383AEFA831D4C5C22655E7A226F7BFE590` |
+| [CPK5 bin](run1/CharacterPanel-g5k5-CharacterPanel-scenegraph-v109-g5state-child-20261117-8ceb48af57-cl94faaed0c6-20261117T153907Z-20261117T154236Z.bin) | 1,410,452 B | `BB0C4A57FCB8C4F46799A9A1645CE04DF0E5C9680930396C5312AEB77D985830` |
+| [JSON ledger](run1/CharacterPanel-g5k5-CharacterPanel-scenegraph-v109-g5state-child-20261117-8ceb48af57-cl94faaed0c6-20261117T153907Z-20261117T154236Z.json) | 771 B | `B6D8F53CB7FCCEA28AFF5967D88EBD2F02BDF0ADE9B8C559F339D890527615C5` |
+
+**发现读数**：12 个 `STATE CHILD DISCOVER` 全部 `children=0 internal=0x0`；没有任何 `STATE CHILD`/`STATE INTERNAL` 窗口行。
+
+**结论**：blender 对象前 0x200 字节中的指针没有直接指向 `hkbBlenderGeneratorChild` 或 `hkbBlenderGeneratorInternalState` 的对象；可能 child 是 HKX 数据而不是 runtime 对象，或 internal state 由 `hkbBehaviorGraph` 的分区内存/其他表持有。CP-2 FAIL，本探针没有取得状态标量。
+
+**下一入口**：改查 `hkbBehaviorGraph::allPartitionMemory` / `idToStateMachineTemplateMap` 或直接解析 HKX 的 `hkbBlenderGeneratorChild` 数据；不要重复同一 0x200 指针扫描。

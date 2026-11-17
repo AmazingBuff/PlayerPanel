@@ -861,6 +861,15 @@ The [C-G3B-S6 unequip-event retry](independent-behavior-graph.md#c-g3b-s6-unequi
 
 Build identity `CharacterPanel-scenegraph-behavior-graph-v59-unequip-event-name-20261031-dcf05cab1e-cl94faaed0c6-20261031T131725Z`; DLL SHA-256 `013e1bdcfb156b25c6d25bd58d8b15f442c7499329e0eaae39399d34eaa983bf` (1,448,960 bytes), PDB SHA-256 `8b8fd16f1c29202017a9ac9eb47d49cec437b17fd024c280a8e07ee09b1cbec7` (38,031,360 bytes). Deployment (2026-10-31) backed the v58 trio up to `dist/deploy-backup-20261031-v58/` (DLL `75b13902…`, PDB `5ce2f421…`, INI 1,795 bytes `86f8bed1…`) and installed this pair. The deployed INI (1,932 bytes, SHA-256 `88763dd68cba8c831cd0ca2e8e7bbad5929b695e41f437aa02412420a7e6b0a6`) is the S6 configuration: `IndependentGraph=inject`, `CandidateUnequipProbe=true`, `CandidateUnequipEvent=Unequip`, `CandidateUnequipVariable`/`CandidateUnequipPrime` empty, everything else off. Repository sample keeps the new key empty. First game run (2026-10-31 21:23, identity confirmed in the live log): **the S6 slice hit — see the [S6 run record](independent-behavior-graph.md#c-g3b-s6-unequip-event-retry)**. After adjudication the deployed INI returned to dormant off (1,834 bytes, SHA-256 `1d40a0eb84e04c2df98bc5ea2989ec721c34b15efff3894e5cc680ffc0361db7`) with the v59 DLL/PDB left installed.
 
+<a id="v109-g5state-child-20261117"></a>
+## v109-g5state-child（2026-11-17，child/internal-state 指针扫描）
+
+[C-G5-STATE v4](diagnostics/g5-state-child-20261117/README.md) 的实现：新增默认 off 的 `[Experiment] StateChildProbe`；对 `blender` 活动节点读取对象前 0x200 字节，使用 `ReadProcessMemory(GetCurrentProcess(), …)` 安全扫描指针，命中 `hkbBlenderGeneratorChild` / `hkbBlenderGeneratorInternalState` vtable 后缓存并逐代读取 0x100 字节窗口。只读；不写节点/姿态/变量、不加 hook。
+
+**构建**：提交 `8ceb48a` 后 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v109-g5state-child-20261117` + `cmake --build --preset Release`，exit 0（仅既有 D9025 警告；`/W4 /WX` 通过）。身份 `CharacterPanel-scenegraph-v109-g5state-child-20261117-8ceb48af57-cl94faaed0c6-20261117T153907Z`（无 `+dirty`）。DLL 2,045,952 B SHA-256 `EA02EDAB3EB15D87F48D4BDD4C27D1C7692AAFCD1DF163A96B91BC93AF3AE92E`；PDB 51,810,304 B SHA-256 `0BDF7C1EE0D65EFB4FB5B84F1D90BFA6811727F7AC7A7A9BB5337187F8ACAF56`。
+
+**部署/运行（2026-11-17）**：备份 v104 到 `dist/deploy-backup-20261117-childpre/`，安装 v109 + `dist/g5-state-child-20261117/CharacterPanel.ini`（`StateChildProbe=true`，K5 三键 on）；一次 Save116 panel，K5 249/249、零非豁免 `[E]`。12 个 `STATE CHILD DISCOVER` 全部 `children=0 internal=0x0`，CP-2 FAIL；日志见 [C-G5-STATE v4 §五](diagnostics/g5-state-child-20261117/README.md#五v109-运行结果2026-11-17-23412344cp-2-fail)。
+
 <a id="v108-g5state-probe-object-20261117"></a>
 ## v108-g5state-probe-object（2026-11-17，blender 对象窗口）
 
