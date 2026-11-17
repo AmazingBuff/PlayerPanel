@@ -1,6 +1,6 @@
 # C-G5-STATE v3：图内部状态只读探针预注册（2026-11-17，APPROVED）
 
-**状态：APPROVED，待实现/构建/上机。** C-G5-STATE v1 已证明同一 clip localTime 下的候选姿态沿单标量轴变化（PC1 0.9983–0.999998），C-G5-STATE v2 证明 poseLocal bootstrap 会被首帧 Generate 覆盖。本探针读取候选 `hkbBehaviorGraph::activeNodes` 的已知 `hkbNodeInfo` 布局，寻找与该标量同步变化的节点字段。
+**状态：COMPLETE（2026-11-17）：SP-1..4 PASS；SP-5 未找到。** C-G5-STATE v1 已证明同一 clip localTime 下的候选姿态沿单标量轴变化（PC1 0.9983–0.999998），C-G5-STATE v2 证明 poseLocal bootstrap 会被首帧 Generate 覆盖。本探针读取候选 `hkbBehaviorGraph::activeNodes` 的已知 `hkbNodeInfo` 布局和 blender 对象前 0x100 字节，寻找与该标量同步变化的字段；结果是**两者都没有逐 step 变化**，标量不在这些已观察区域。
 
 ## 一、只读边界
 
@@ -48,3 +48,23 @@
 | 部署前备份 | `dist/deploy-backup-20261117-stateprobepre/`（v104 DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`） |
 
 **部署（2026-11-17，已完成）**：安装位 DLL/PDB/INI 与上表逐位一致；`StateProbe=true`、`BootstrapSourcePose` 默认 off、K5 三键 on。**尚未上机。**
+
+## 七、v108 运行结果（2026-11-17 23:25–23:31，SP-5 未找到）
+
+**运行身份**：v108 DLL/PDB/INI 与 §六逐位一致（v108 build `…6444a21271…`）；日志 `SCENEGRAPH BUILD` = `CharacterPanel-scenegraph-v108-g5state-probe-object-20261117-6444a21271-cl94faaed0c6-20261117T152624Z`。一次 panel 窗口，无崩溃；唯一 `[E]` 为装载期 OAR 豁免行。
+
+| 工件 | 大小 | SHA-256 |
+| --- | ---: | --- |
+| [CharacterPanel.log](run2/CharacterPanel.log) | 1,488,562 B | `0717E40E38DA9E2CFA0DA6710BD1F767DF698A8FCC6935EE3F4234D699B2886A` |
+| [CPK5 bin](run2/CharacterPanel-g5k5-CharacterPanel-scenegraph-v108-g5state-probe-object-20261117-6444a21271-cl94faaed0c6-20261117T152624Z-20261117T153038Z.bin) | 1,410,452 B | `CCB1E75094CFAC5C4FFE9E936594C05EBC5A26378EFFB7283B66F8E6792A23F3` |
+| [JSON ledger](run2/CharacterPanel-g5k5-CharacterPanel-scenegraph-v108-g5state-probe-object-20261117-6444a21271-cl94faaed0c6-20261117T152624Z-20261117T153038Z.json) | 771 B | `F9BB4569695478C22C7074DCC323F3CB757537A13718090EEDF91A5778FCD6C7` |
+
+**探针读数**：
+
+- `STATE PROBE` 共 2,729 行（equip 1,391 / unequip 1,338），`STATE OBJECT` 共 12 行（equip 5 / unequip 7）。
+- equip 只在 31 个 completed 点出现 nodeInfo 变化；同 localTime 组 `0.208333` 的 completed 2–12 中，只有 1/2/13 等点有状态行，中间 3–12 **没有 nodeInfo 变化**。
+- `STATE OBJECT` 的 equip 变化点只有 1、87 等少量栈切换点，没有逐 generation 的权重 ramp。
+
+**结论：SP-5 未找到。** `hkbNodeInfo` 和 `hkbBlenderGenerator` 对象前 0x100 字节都不包含随 C-G5-STATE v1 标量逐 step 变化的字段；该标量应在未观察的 `hkbBlenderGeneratorInternalState`、child 对象权重或生成输出中。该负结果不改变 G4P-7 FAIL/G5 状态。
+
+**下一入口**：C-G5-STATE v4 只读探测 `hkbBlenderGeneratorInternalState`/child 对象，或直接读取生成输出；在拿到状态标量前，不能把它接进配对判据。

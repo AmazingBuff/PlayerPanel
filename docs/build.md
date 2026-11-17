@@ -861,6 +861,15 @@ The [C-G3B-S6 unequip-event retry](independent-behavior-graph.md#c-g3b-s6-unequi
 
 Build identity `CharacterPanel-scenegraph-behavior-graph-v59-unequip-event-name-20261031-dcf05cab1e-cl94faaed0c6-20261031T131725Z`; DLL SHA-256 `013e1bdcfb156b25c6d25bd58d8b15f442c7499329e0eaae39399d34eaa983bf` (1,448,960 bytes), PDB SHA-256 `8b8fd16f1c29202017a9ac9eb47d49cec437b17fd024c280a8e07ee09b1cbec7` (38,031,360 bytes). Deployment (2026-10-31) backed the v58 trio up to `dist/deploy-backup-20261031-v58/` (DLL `75b13902…`, PDB `5ce2f421…`, INI 1,795 bytes `86f8bed1…`) and installed this pair. The deployed INI (1,932 bytes, SHA-256 `88763dd68cba8c831cd0ca2e8e7bbad5929b695e41f437aa02412420a7e6b0a6`) is the S6 configuration: `IndependentGraph=inject`, `CandidateUnequipProbe=true`, `CandidateUnequipEvent=Unequip`, `CandidateUnequipVariable`/`CandidateUnequipPrime` empty, everything else off. Repository sample keeps the new key empty. First game run (2026-10-31 21:23, identity confirmed in the live log): **the S6 slice hit — see the [S6 run record](independent-behavior-graph.md#c-g3b-s6-unequip-event-retry)**. After adjudication the deployed INI returned to dormant off (1,834 bytes, SHA-256 `1d40a0eb84e04c2df98bc5ea2989ec721c34b15efff3894e5cc680ffc0361db7`) with the v59 DLL/PDB left installed.
 
+<a id="v108-g5state-probe-object-20261117"></a>
+## v108-g5state-probe-object（2026-11-17，blender 对象窗口）
+
+[C-G5-STATE v3](diagnostics/g5-state-probe-20261117/README.md) 的第二次实现：在 v107 nodeInfo 探针上增加 `STATE OBJECT`——仅对已识别 `blender`/`blender-child` 节点读取对象前 0x100 字节，按变化记录；`STATE PROBE` 上限提高到 128，典型 84–96 个变化节点全部保留（suppressed=0）。仍是只读探针，不写节点/姿态/变量。
+
+**构建**：提交 `6444a21` 后 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v108-g5state-probe-object-20261117` + `cmake --build --preset Release`，exit 0（仅既有 D9025 警告；`/W4 /WX` 通过）。身份 `CharacterPanel-scenegraph-v108-g5state-probe-object-20261117-6444a21271-cl94faaed0c6-20261117T152624Z`（无 `+dirty`）。DLL 2,040,832 B SHA-256 `FCEAC4D75F16265568CF08BF5BAF41D5F8CE414EA412C5335DA0CD6163FE87F6`；PDB 51,769,344 B SHA-256 `782BCB204530B0734BDB32EA3ECDF5BBE6951E93659F46A8731A092AFF77FD57`。
+
+**部署/运行（2026-11-17）**：安装位 v108 + `dist/g5-state-probe-20261117/CharacterPanel.ini`（`StateProbe=true`），一次 Save116 panel；K5 249/249，零非豁免 `[E]`。日志 `STATE PROBE` 2,729 行、`STATE OBJECT` 12 行；同 localTime 组中间步骤无 nodeInfo 变化，blender 对象仅在少数栈切换点变化。**SP-5 未找到**；该负结果见 [C-G5-STATE v3 §七](diagnostics/g5-state-probe-20261117/README.md#七v108-运行结果2026-11-17-23312331sp-5-未找到)。
+
 <a id="v107-g5state-probe-20261117"></a>
 ## v107-g5state-probe（2026-11-17，active-node 状态指纹）
 
