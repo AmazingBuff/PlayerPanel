@@ -861,6 +861,15 @@ The [C-G3B-S6 unequip-event retry](independent-behavior-graph.md#c-g3b-s6-unequi
 
 Build identity `CharacterPanel-scenegraph-behavior-graph-v59-unequip-event-name-20261031-dcf05cab1e-cl94faaed0c6-20261031T131725Z`; DLL SHA-256 `013e1bdcfb156b25c6d25bd58d8b15f442c7499329e0eaae39399d34eaa983bf` (1,448,960 bytes), PDB SHA-256 `8b8fd16f1c29202017a9ac9eb47d49cec437b17fd024c280a8e07ee09b1cbec7` (38,031,360 bytes). Deployment (2026-10-31) backed the v58 trio up to `dist/deploy-backup-20261031-v58/` (DLL `75b13902…`, PDB `5ce2f421…`, INI 1,795 bytes `86f8bed1…`) and installed this pair. The deployed INI (1,932 bytes, SHA-256 `88763dd68cba8c831cd0ca2e8e7bbad5929b695e41f437aa02412420a7e6b0a6`) is the S6 configuration: `IndependentGraph=inject`, `CandidateUnequipProbe=true`, `CandidateUnequipEvent=Unequip`, `CandidateUnequipVariable`/`CandidateUnequipPrime` empty, everything else off. Repository sample keeps the new key empty. First game run (2026-10-31 21:23, identity confirmed in the live log): **the S6 slice hit — see the [S6 run record](independent-behavior-graph.md#c-g3b-s6-unequip-event-retry)**. After adjudication the deployed INI returned to dormant off (1,834 bytes, SHA-256 `1d40a0eb84e04c2df98bc5ea2989ec721c34b15efff3894e5cc680ffc0361db7`) with the v59 DLL/PDB left installed.
 
+<a id="v107-g5state-probe-20261117"></a>
+## v107-g5state-probe（2026-11-17，active-node 状态指纹）
+
+[C-G5-STATE v3](diagnostics/g5-state-probe-20261117/README.md) 的实现：新增默认 off 的 `[Experiment] StateProbe`；每个 K5 generation 读取候选 `hkbBehaviorGraph::activeNodes` 的已知 `hkbNodeInfo` 0x90 布局 18 个 qword，只记录变化的条目（跳过 clip/state-machine），每代最多 32 条明细 + 汇总。只读：不写节点/姿态/变量、不加 hook。
+
+**构建**：提交 `705a3b1` 后 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v107-g5state-probe-20261117` + `cmake --build --preset Release`，exit 0（仅既有 D9025 警告；`/W4 /WX` 通过）。身份 `CharacterPanel-scenegraph-v107-g5state-probe-20261117-705a3b1d18-cl94faaed0c6-20261117T151122Z`（无 `+dirty`）。DLL 2,039,808 B SHA-256 `810DC008271EC01A9C53D571D11D2F61805C52CD34C11E4F70160019C781524C`；PDB 51,752,960 B SHA-256 `1AFBE7502C8D0B5ED004A928CD866B31A1EEB5276F2D62743996F87859506DE6`。
+
+**部署（2026-11-17，已完成；尚未上机）**：备份 v104 三件套到 `dist/deploy-backup-20261117-stateprobepre/`，安装 v107 DLL/PDB + `dist/g5-state-probe-20261117/CharacterPanel.ini`（SHA-256 `333AECB251221E318E1EF7C4B0829F081E55771C012B0E0D9575ECFE59191351`；inject + K5 三键 on + `StateProbe=true`），安装位哈希逐位一致。
+
 <a id="v106-g5state-bootstrap-20261117"></a>
 ## v106-g5state-bootstrap（2026-11-17，源姿态一次性 bootstrap）
 

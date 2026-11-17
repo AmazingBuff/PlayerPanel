@@ -35,3 +35,16 @@
 ## 五、下一步
 
 若找到单调 qword/字段：将其登记为候选状态标量，下一版预注册“clip 时钟 + 状态标量”的配对规则；若未找到，则记录该布局盲区，转 runtime hook/官方布局审计。
+
+## 六、实现与部署身份
+
+| 项 | 值 |
+| --- | --- |
+| 源码提交 | `705a3b1`（`feat(g5): probe the candidate active-node state`） |
+| Build identity | `CharacterPanel-scenegraph-v107-g5state-probe-20261117-705a3b1d18-cl94faaed0c6-20261117T151122Z`（无 `+dirty`） |
+| DLL | 2,039,808 B；SHA-256 `810DC008271EC01A9C53D571D11D2F61805C52CD34C11E4F70160019C781524C` |
+| PDB | 51,752,960 B；SHA-256 `1AFBE7502C8D0B5ED004A928CD866B31A1EEB5276F2D62743996F87859506DE6` |
+| 运行 INI | `dist/g5-state-probe-20261117/CharacterPanel.ini`；SHA-256 `333AECB251221E318E1EF7C4B0829F081E55771C012B0E0D9575ECFE59191351` |
+| 部署前备份 | `dist/deploy-backup-20261117-stateprobepre/`（v104 DLL `7D270E7D…` / PDB `B2232180…` / INI `BBFE2B8B…`） |
+
+**部署（2026-11-17，已完成）**：安装位 DLL/PDB/INI 与上表逐位一致；`StateProbe=true`、`BootstrapSourcePose` 默认 off、K5 三键 on。**尚未上机。**
