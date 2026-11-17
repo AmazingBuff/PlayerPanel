@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import hashlib
 import json
 import math
 import os
@@ -108,6 +109,17 @@ def main() -> int:
             continue
         cand_time = {record["index"]: clock_of(record, name) for record in cand_records}
         groups = collections.Counter(round(value, 9) for value in cand_time.values())
+        group_records = collections.defaultdict(list)
+        for record in cand_records:
+            group_records[round(cand_time[record["index"]], 9)].append(record)
+        time_groups = []
+        for value, records in sorted(group_records.items()):
+            hashes = set()
+            for record in records:
+                base = g._pose_base(cand, record)
+                hashes.add(hashlib.sha256(cand["blob"][base:base + TRACK_COUNT * TRACK_BYTES]).hexdigest())
+            time_groups.append({"local_time": value, "records": len(records),
+                                "unique_pose_hashes": len(hashes)})
         pairs = [(index, pair) for index, pair in enumerate(manifest["pairs"])
                  if pair["domain"] == name]
         src_seq_count = collections.Counter(pair["src"]["seq"] for _, pair in pairs)
@@ -137,6 +149,10 @@ def main() -> int:
             "candidate_records": len(cand_records),
             "candidate_unique_times": len(groups),
             "candidate_max_group": max(groups.values()),
+            "multi_record_groups": sum(1 for value in time_groups if value["records"] > 1),
+            "all_pose_unique_groups": sum(1 for value in time_groups
+                                          if value["records"] > 1
+                                          and value["unique_pose_hashes"] == value["records"]),
             "source_records": len(src_records),
             "source_unique_times": len({round(clock_of(record, name), 9) for record in src_records}),
             "pairs": len(pairs),
@@ -144,6 +160,7 @@ def main() -> int:
             "unique_pairs": len(pairs) - stair_pairs,
             "source_unique_seqs_used": len(src_seq_count),
             "source_max_reuse": max(src_seq_count.values()),
+            "time_groups": time_groups,
             "groups": stats,
             "top_bones": [
                 {"index": bone, "name": names[bone], "group": group(bone),
@@ -178,6 +195,8 @@ def main() -> int:
             f"CLOCK DOMAIN {name} cand-records={data['candidate_records']} "
             f"cand-unique-times={data['candidate_unique_times']} "
             f"cand-max-group={data['candidate_max_group']} "
+            f"multi-groups={data['multi_record_groups']} "
+            f"all-pose-unique-groups={data['all_pose_unique_groups']} "
             f"source-records={data['source_records']} source-unique-times={data['source_unique_times']} "
             f"pairs={data['pairs']} stair-pairs={data['stair_pairs']} "
             f"source-unique-seqs={data['source_unique_seqs_used']} "

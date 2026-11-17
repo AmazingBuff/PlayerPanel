@@ -1,6 +1,7 @@
 {
  "domains": {
   "1hm_equip": {
+   "all_pose_unique_groups": 8,
    "candidate_max_group": 15,
    "candidate_records": 98,
    "candidate_unique_times": 17,
@@ -42,12 +43,100 @@
      ]
     }
    },
+   "multi_record_groups": 8,
    "pairs": 97,
    "source_max_reuse": 20,
    "source_records": 68,
    "source_unique_seqs_used": 12,
    "source_unique_times": 61,
    "stair_pairs": 88,
+   "time_groups": [
+    {
+     "local_time": 0.016666668,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.208333343,
+     "records": 11,
+     "unique_pose_hashes": 11
+    },
+    {
+     "local_time": 0.391666651,
+     "records": 11,
+     "unique_pose_hashes": 11
+    },
+    {
+     "local_time": 0.399999946,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.416666627,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.558333337,
+     "records": 8,
+     "unique_pose_hashes": 8
+    },
+    {
+     "local_time": 0.566666663,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.583333313,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.599999964,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.849999964,
+     "records": 15,
+     "unique_pose_hashes": 15
+    },
+    {
+     "local_time": 1.099999905,
+     "records": 15,
+     "unique_pose_hashes": 15
+    },
+    {
+     "local_time": 1.258333325,
+     "records": 9,
+     "unique_pose_hashes": 9
+    },
+    {
+     "local_time": 1.266666532,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.283333182,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.424999952,
+     "records": 8,
+     "unique_pose_hashes": 8
+    },
+    {
+     "local_time": 1.433333158,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.433333278,
+     "records": 12,
+     "unique_pose_hashes": 12
+    }
+   ],
    "top_bones": [
     {
      "group": "attachment",
@@ -213,6 +302,7 @@
    "unique_pairs": 9
   },
   "1hm_idle": {
+   "all_pose_unique_groups": 2,
    "candidate_max_group": 15,
    "candidate_records": 22,
    "candidate_unique_times": 3,
@@ -254,12 +344,30 @@
      ]
     }
    },
+   "multi_record_groups": 2,
    "pairs": 22,
    "source_max_reuse": 15,
    "source_records": 198,
    "source_unique_seqs_used": 3,
    "source_unique_times": 198,
    "stair_pairs": 21,
+   "time_groups": [
+    {
+     "local_time": 0.200000003,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.449999988,
+     "records": 15,
+     "unique_pose_hashes": 15
+    },
+    {
+     "local_time": 0.700000048,
+     "records": 6,
+     "unique_pose_hashes": 6
+    }
+   ],
    "top_bones": [
     {
      "group": "attachment",
@@ -425,6 +533,7 @@
    "unique_pairs": 1
   },
   "1hm_unequip": {
+   "all_pose_unique_groups": 10,
    "candidate_max_group": 15,
    "candidate_records": 129,
    "candidate_unique_times": 21,
@@ -466,12 +575,120 @@
      ]
     }
    },
+   "multi_record_groups": 10,
    "pairs": 129,
    "source_max_reuse": 15,
    "source_records": 92,
    "source_unique_seqs_used": 16,
    "source_unique_times": 84,
    "stair_pairs": 118,
+   "time_groups": [
+    {
+     "local_time": 0.0,
+     "records": 9,
+     "unique_pose_hashes": 9
+    },
+    {
+     "local_time": 0.016666641,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.033333309,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.049999975,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 0.299999982,
+     "records": 15,
+     "unique_pose_hashes": 15
+    },
+    {
+     "local_time": 0.549999952,
+     "records": 15,
+     "unique_pose_hashes": 15
+    },
+    {
+     "local_time": 0.799999952,
+     "records": 15,
+     "unique_pose_hashes": 15
+    },
+    {
+     "local_time": 0.991666675,
+     "records": 11,
+     "unique_pose_hashes": 11
+    },
+    {
+     "local_time": 0.99999994,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.016666651,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.089666724,
+     "records": 4,
+     "unique_pose_hashes": 4
+    },
+    {
+     "local_time": 1.100000024,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.19266665,
+     "records": 5,
+     "unique_pose_hashes": 5
+    },
+    {
+     "local_time": 1.200000048,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.216666698,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.458333373,
+     "records": 14,
+     "unique_pose_hashes": 14
+    },
+    {
+     "local_time": 1.466666698,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.483333349,
+     "records": 1,
+     "unique_pose_hashes": 1
+    },
+    {
+     "local_time": 1.733333349,
+     "records": 15,
+     "unique_pose_hashes": 15
+    },
+    {
+     "local_time": 1.983333349,
+     "records": 15,
+     "unique_pose_hashes": 15
+    },
+    {
+     "local_time": 2.0,
+     "records": 1,
+     "unique_pose_hashes": 1
+    }
+   ],
    "top_bones": [
     {
      "group": "attachment",
