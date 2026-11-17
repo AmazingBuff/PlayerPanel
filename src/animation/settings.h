@@ -151,6 +151,10 @@ namespace animation
     // C-G5-STATE v3 (2026-11-17, default off): per-generation read-only fingerprint of
     // the candidate's active-node hkbNodeInfo entries. No node/pose/variable writes.
     [[nodiscard]] bool state_probe();
+    // C-G5-STATE v4 (2026-11-17, default off): read-only discovery/dump of
+    // hkbBlenderGeneratorChild and hkbBlenderGeneratorInternalState objects reachable
+    // from blender nodes. Uses guarded self-reads; no writes or hooks.
+    [[nodiscard]] bool state_child_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

@@ -59,6 +59,7 @@
 #include <span>
 #include <string>
 #include <vector>
+#include <Windows.h>
 
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
@@ -1409,6 +1410,22 @@ namespace
     std::array<StateProbeEntry, 512> g_state_probe_entries{};
     std::array<StateObjectEntry, 512> g_state_object_entries{};
 
+    struct StateChildCache
+    {
+        std::array<std::uintptr_t, 8> children{};
+        std::size_t child_count = 0;
+        std::uintptr_t internal = 0;
+        bool scanned = false;
+    };
+    std::array<StateChildCache, 512> g_state_child_cache{};
+
+    bool safe_read_memory(std::uintptr_t a_address, void* a_out, std::size_t a_size)
+    {
+        SIZE_T read = 0;
+        return ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<LPCVOID>(a_address), a_out,
+                   a_size, &read) != 0 && read == a_size;
+    }
+
     char const* state_probe_class(std::uintptr_t a_vtable)
     {
         if (a_vtable == RE::VTABLE_hkbBlenderGenerator[0].address())
@@ -1495,6 +1512,82 @@ namespace
         if (changed > 0)
             logger::info("STATE PROBE SUMMARY actor={:08x} request={} segment={} completed={} walked={} nodes={} changed={} suppressed={}",
                 a_actor_id, a_request, a_segment, a_completed, walked, nodes.size(), changed, suppressed);
+    }
+
+    void log_state_child_probe(RE::BShkbAnimationGraph const& a_candidate, std::uint32_t a_actor_id,
+        std::uint64_t a_request, char const* a_segment, std::uint32_t a_completed)
+    {
+        if (!state_child_probe())
+            return;
+        RE::hkbBehaviorGraph const* const behavior = a_candidate.characterInstance.behaviorGraph.get();
+        if (!behavior || !behavior->activeNodes)
+            return;
+        RE::NodeList const& nodes = *behavior->activeNodes;
+        std::size_t const walked = std::min<std::size_t>(nodes.size(), g_state_child_cache.size());
+        for (std::size_t i = 0; i < walked; ++i)
+        {
+            RE::hkbNodeInfo const& info = nodes.data()[i];
+            RE::hkbNode* const node = info.nodeClone;
+            if (!node || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(node)))
+                continue;
+            std::uintptr_t const vtable = *reinterpret_cast<std::uintptr_t const*>(node);
+            if (vtable != RE::VTABLE_hkbBlenderGenerator[0].address())
+                continue;
+            StateChildCache& cache = g_state_child_cache[i];
+            if (!cache.scanned)
+            {
+                cache.scanned = true;
+                std::array<std::uint64_t, 64> object_words{};
+                if (safe_read_memory(reinterpret_cast<std::uintptr_t>(node), object_words.data(),
+                        sizeof(object_words)))
+                {
+                    for (std::size_t word = 0; word < object_words.size(); ++word)
+                    {
+                        std::uintptr_t const pointer = static_cast<std::uintptr_t>(object_words[word]);
+                        if (!plausible_object_pointer(pointer))
+                            continue;
+                        std::uint64_t target_vtable = 0;
+                        if (!safe_read_memory(pointer, &target_vtable, sizeof(target_vtable)))
+                            continue;
+                        if (target_vtable == RE::VTABLE_hkbBlenderGeneratorChild[0].address())
+                        {
+                            if (cache.child_count < cache.children.size())
+                                cache.children[cache.child_count++] = pointer;
+                        }
+                        else if (target_vtable == RE::VTABLE_hkbBlenderGeneratorInternalState[0].address())
+                        {
+                            cache.internal = pointer;
+                        }
+                    }
+                }
+                logger::info("STATE CHILD DISCOVER actor={:08x} request={} segment={} completed={} index={} children={} internal={:#x}",
+                    a_actor_id, a_request, a_segment, a_completed, i, cache.child_count, cache.internal);
+            }
+            for (std::size_t child = 0; child < cache.child_count; ++child)
+            {
+                std::array<std::uint64_t, 32> child_words{};
+                if (!safe_read_memory(cache.children[child], child_words.data(), sizeof(child_words)))
+                    continue;
+                std::string hex;
+                for (std::uint64_t const word : child_words)
+                    hex += fmt::format("{:016x}", word);
+                logger::info("STATE CHILD actor={:08x} request={} segment={} completed={} index={} child={} words={}",
+                    a_actor_id, a_request, a_segment, a_completed, i,
+                    cache.children[child], hex);
+            }
+            if (cache.internal != 0)
+            {
+                std::array<std::uint64_t, 32> internal_words{};
+                if (safe_read_memory(cache.internal, internal_words.data(), sizeof(internal_words)))
+                {
+                    std::string hex;
+                    for (std::uint64_t const word : internal_words)
+                        hex += fmt::format("{:016x}", word);
+                    logger::info("STATE INTERNAL actor={:08x} request={} segment={} completed={} index={} internal={} words={}",
+                        a_actor_id, a_request, a_segment, a_completed, i, cache.internal, hex);
+                }
+            }
+        }
     }
 }
 
@@ -2804,6 +2897,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         observation.invalidate(k5_writer.overflow()
                                             ? "k5-record-overflow" : "k5-write-failed");
                                     log_node_state_probe(*candidate, actor_id, request,
+                                        observation.segment_name(), observation.completed());
+                                    log_state_child_probe(*candidate, actor_id, request,
                                         observation.segment_name(), observation.completed());
                                     return;
                                 }
