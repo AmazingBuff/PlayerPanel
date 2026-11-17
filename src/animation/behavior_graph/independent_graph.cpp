@@ -52,6 +52,7 @@
 
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <ctime>
 #include <cstring>
 #include <optional>
@@ -1275,6 +1276,78 @@ namespace
             types.t0, types.t1, types.t2, types.t3, types.other, types.unclassified, types.sum,
             peek.numeric_type3_rows);
     }
+
+    // C-G5-SETUP v1: one-shot read-only setup/skeleton reference-pose audit. The
+    // source and candidate setups are both fully loaded at this point; no pose/graph
+    // state is written and no engine update/event entry is called.
+    constexpr std::array<std::uint32_t, 12> Setup_Audit_Bones{ 0, 1, 4, 35, 43, 44, 45, 60, 61, 63, 64, 66 };
+
+    void log_setup_audit_side(char const* a_side, RE::hkbCharacter const& a_character)
+    {
+        RE::hkbCharacterSetup const* const setup = a_character.setup.get();
+        if (!setup)
+        {
+            logger::warn("SETUP AUDIT side={} status=no-setup", a_side);
+            return;
+        }
+        RE::hkaSkeleton const* const skeleton = setup->animationSkeleton.get();
+        if (!skeleton)
+        {
+            logger::warn("SETUP AUDIT side={} status=no-animation-skeleton setup={:#x}",
+                a_side, reinterpret_cast<std::uintptr_t>(setup));
+            return;
+        }
+        const std::uint32_t bone_count = static_cast<std::uint32_t>(skeleton->bones.size());
+        const std::uint32_t pose_count = static_cast<std::uint32_t>(skeleton->referencePose.size());
+        logger::info("SETUP AUDIT side={} setup={:#x} skeleton={:#x} unscaled={:#x} data={:#x} mirrored={:#x} bones={} reference-pose={}",
+            a_side, reinterpret_cast<std::uintptr_t>(setup),
+            reinterpret_cast<std::uintptr_t>(skeleton),
+            reinterpret_cast<std::uintptr_t>(setup->unscaledAnimationSkeleton.get()),
+            reinterpret_cast<std::uintptr_t>(setup->data.get()),
+            reinterpret_cast<std::uintptr_t>(setup->mirroredSkeleton.get()), bone_count, pose_count);
+        if (pose_count != bone_count)
+        {
+            logger::warn("SETUP AUDIT side={} status=reference-pose-mismatch bones={} reference-pose={}",
+                a_side, bone_count, pose_count);
+            return;
+        }
+        for (const std::uint32_t index : Setup_Audit_Bones)
+        {
+            if (index >= bone_count)
+            {
+                logger::warn("SETUP AUDIT side={} bone={} status=out-of-range bones={}", a_side, index, bone_count);
+                continue;
+            }
+            const RE::hkQsTransform& pose = skeleton->referencePose[index];
+            float translation[4]{};
+            float rotation[4]{};
+            float scale[4]{};
+            _mm_storeu_ps(translation, pose.translation.quad);
+            _mm_storeu_ps(rotation, pose.rotation.vec.quad);
+            _mm_storeu_ps(scale, pose.scale.quad);
+            const bool finite = std::isfinite(translation[0]) && std::isfinite(translation[1])
+                && std::isfinite(translation[2]) && std::isfinite(translation[3])
+                && std::isfinite(rotation[0]) && std::isfinite(rotation[1])
+                && std::isfinite(rotation[2]) && std::isfinite(rotation[3])
+                && std::isfinite(scale[0]) && std::isfinite(scale[1])
+                && std::isfinite(scale[2]) && std::isfinite(scale[3]);
+            logger::info("SETUP AUDIT side={} bone={} name='{}' t=({:.9f},{:.9f},{:.9f}) r=({:.9f},{:.9f},{:.9f},{:.9f}) s=({:.9f},{:.9f},{:.9f}) finite={}",
+                a_side, index, skeleton->bones[index].name.c_str(),
+                translation[0], translation[1], translation[2],
+                rotation[0], rotation[1], rotation[2], rotation[3],
+                scale[0], scale[1], scale[2], finite);
+        }
+    }
+
+    void log_setup_audit(RE::BShkbAnimationGraph const& a_source, RE::BShkbAnimationGraph const& a_candidate,
+        std::uint32_t a_actor_id, std::uint64_t a_request)
+    {
+        logger::info("SETUP AUDIT actor={:08x} request={} source-graph={:#x} candidate-graph={:#x}",
+            a_actor_id, a_request, reinterpret_cast<std::uintptr_t>(&a_source),
+            reinterpret_cast<std::uintptr_t>(&a_candidate));
+        log_setup_audit_side("source", a_source.characterInstance);
+        log_setup_audit_side("candidate", a_candidate.characterInstance);
+    }
 }
 
 
@@ -1513,6 +1586,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                     new RE::BSTSmartPointer<RE::BShkbAnimationGraph>(candidate);
                     retained_character = &candidate->characterInstance;
                     retained_graph = candidate.get();
+                    if (setup_audit())
+                        log_setup_audit(source_graph, *candidate, actor_id, request);
                     if (candidate_variable_census())
                         log_candidate_census(source_graph, *candidate, actor_id, request);
                 }

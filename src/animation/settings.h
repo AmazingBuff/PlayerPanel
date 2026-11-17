@@ -139,6 +139,11 @@ namespace animation
     // source-side F7 window closes. The candidate side always reconciles when K5FullSample
     // is on, so this key only governs the source window. Defaults off.
     [[nodiscard]] bool k5_reconciliation();
+    // C-G5-SETUP v1 (2026-11-17, default off): one-shot read-only setup/skeleton
+    // reference-pose audit after the candidate loads and before activation. Logs the
+    // source and candidate setup/skeleton pointers and the 12 fixed bone bind transforms;
+    // writes no graph/pose state and installs no hook.
+    [[nodiscard]] bool setup_audit();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END
