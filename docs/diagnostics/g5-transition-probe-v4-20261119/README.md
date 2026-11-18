@@ -1,6 +1,6 @@
 # C-G5-TRANS v4：目标状态 Modifier 权重观测（2026-11-19）
 
-**状态：IMPLEMENTED / BUILT / 候选档已部署（2026-11-19，v113）；未上机。** 本契约接续 [v3](../g5-transition-probe-v3-20261118/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
+**状态：IMPLEMENTED / BUILT / 候选 run 1 完成（2026-11-19，v113）；H-M1 判负。** modifier 绑定变量不是 0→10 的标量；剩余假设域为 `WeapEquip.hkb` 子图、`allPartitionMemory`、`hkbBlendingBehavior`。本契约接续 [v3](../g5-transition-probe-v3-20261118/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
 
 ## 一、v3 run 1 的输入
 
@@ -87,3 +87,7 @@ v4 的目标：**在目标状态内部找 0→10 的逐帧标量**，优先观�
 | CharacterPanel.pdb | 52,252,672 | `69ab68ad1d888664008ccefff9f42a13600b7574f1cb84a70e43208986b172ac` |
 
 **部署（2026-11-19）**：v112 三件套备份到 `dist/deploy-backup-20261119-v112-v113pre/`（DLL `57e02ed6…`、PDB `e099237d…`、候选 INI `7deb21e5…`）。v113 DLL/PDB + 候选档 `dist/g5-transition-v3-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `228614da…`、PDB `69ab68ad…`、身份 `…-v113-g5trans-probe-v4-…`）。源档未安装。**未启动游戏**；候选 run 4 待上机。构建记录见 [`docs/build.md#v113-g5trans-probe-v4-20261119`](../../build.md#v113-g5trans-probe-v4-20261119)。
+
+## 八、候选 run 1（2026-11-19 00:35–00:37，v113）
+
+K5 249/249；747 header 全 `flags=0x0000`；`TRANSITION MODIFIER` 2,379、`BIND` 537、summary overflow 全 false。equip cmd=1 的 4 个 active modifier（`bAttachedModifierList`/`BeginShout_OnFalseToTrueMod`/`BodyMorphWeightExpressionModifier`/`RootModifierList`）中只有两个有 bindings=1；cmd=2–13 只剩 `RootModifierList`/`bAttachedModifierList`，均 bindings=0。BIND word `TurnDelta`=5.0、`Speed`=1.0 恒定，无任何随 cmd 变化的 modifier 绑定变量——**H-M1 判负，TP-8 PASS（仪器成立）、TP-9 无可相关标量**。`10→1` 12 点 PC1 99.83%/Pearson 0.992817 再次复现。完整记录与 v5 入口见 [run1-candidate](run1-candidate/README.md)。

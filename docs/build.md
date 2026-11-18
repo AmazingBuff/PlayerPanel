@@ -2340,3 +2340,5 @@ build\transition_probe_test.exe
 | CharacterPanel.pdb | 52,252,672 | `69ab68ad1d888664008ccefff9f42a13600b7574f1cb84a70e43208986b172ac` |
 
 **部署（2026-11-19；未上机）**：v112 三件套备份到 `dist/deploy-backup-20261119-v112-v113pre/`；v113 DLL/PDB + 候选档 `dist/g5-transition-v4-20261119/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `228614da…`、PDB `69ab68ad…`）。源档未安装。下一步：候选一次 panel，观察 `BodyWeightBlendModifier`/`WeapEquipModifierGenerator`/`MT_Default_MG` 绑定的 word/float 在 equip cmd 1–13 是否变化；`10→1` 12 点相关复算。
+
+**候选 run 1（2026-11-19 00:35–00:37）**：K5 249/249；747 header 全 `flags=0x0000`；`TRANSITION MODIFIER` 2,379、`BIND` 537、summary overflow 全 false。equip cmd=1 有 4 个 active modifier，cmd=2–13 只剩两个 bindings=0 的 modifier；BIND word `TurnDelta`=5.0、`Speed`=1.0 恒定——**modifier 绑定变量判负（H-M1）**。`10→1` 12 点 PC1 99.83%/Pearson 0.992817 复现。剩余假设域：`WeapEquip.hkb` 子图、`allPartitionMemory`、`hkbBlendingBehavior`。完整记录见 [`run1-candidate`](diagnostics/g5-transition-probe-v4-20261119/run1-candidate/README.md)。
