@@ -2804,6 +2804,8 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 probe.actor = actor_id;
                                 probe.request = request;
                                 log_transition_probe(probe);
+                                log_transition_modifiers(*candidate, observation.segment_name(), phase,
+                                    observation.completed(), observation.commanded());
                                 if (phase == TransitionProbePhase::pre_sample &&
                                     probe_segment == TransitionProbeSegment::equip &&
                                     observation.commanded() >= 1 && observation.commanded() <= 13)

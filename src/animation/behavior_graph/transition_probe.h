@@ -262,5 +262,11 @@ namespace animation::behavior_graph
     // Read-only; logs vtable/class/name/id and never reads an unknown class's fields.
     void log_transition_census(RE::BShkbAnimationGraph const& a_graph, char const* a_segment,
         std::uint32_t a_commanded) noexcept;
+
+    // Candidate-only, log-only modifier/binding probe for the target-state scalar. Uses the
+    // HKX2 hkbModifierGenerator layout (+0x48 modifier / +0x50 generator) with guarded reads;
+    // it does not enter TransitionProbeRecord or the source ring.
+    void log_transition_modifiers(RE::BShkbAnimationGraph const& a_graph, char const* a_segment,
+        TransitionProbePhase a_phase, std::uint32_t a_sequence, std::uint32_t a_commanded) noexcept;
 }
 PLUGIN_NAMESPACE_END

@@ -13,10 +13,13 @@
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/Offsets_VTABLE.h"
 #include "RE/H/hkbBehaviorGraph.h"
+#include "RE/H/hkbBehaviorGraphData.h"
+#include "RE/H/hkbBehaviorGraphStringData.h"
 #include "RE/H/hkbBlendingTransitionEffect.h"
 #include "RE/H/hkbCharacter.h"
 #include "RE/H/hkbNode.h"
 #include "RE/H/hkbStateMachine.h"
+#include "RE/H/hkbVariableValueSet.h"
 
 #include <algorithm>
 #include <bit>
@@ -359,6 +362,144 @@ namespace animation::behavior_graph
         }
         logger::info("TRANSITION CENSUS SUMMARY side=candidate segment={} commanded={} walked={} active-nodes={} unknown={}",
             segment, a_commanded, limit, nodes.size(), unknown);
+    }
+
+    void log_transition_modifiers(RE::BShkbAnimationGraph const& a_graph, char const* a_segment,
+        TransitionProbePhase a_phase, std::uint32_t a_sequence,
+        std::uint32_t a_commanded) noexcept
+    {
+        char const* const segment = a_segment ? a_segment : "";
+        char const* const phase = transition_probe_phase_name(a_phase);
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        if (behavior == nullptr || behavior->activeNodes == nullptr)
+        {
+            logger::info("TRANSITION MODIFIER SUMMARY side=candidate segment={} phase={} seq={} commanded={} status=unavailable",
+                segment, phase, a_sequence, a_commanded);
+            return;
+        }
+
+        auto const* const data = behavior->data.get();
+        auto const* const strings = data ? data->stringData.get() : nullptr;
+        auto const* const values = behavior->variableValueSet.get();
+        std::uintptr_t const words = values ? read_field<std::uintptr_t>(values, 0x10) : 0;
+        std::int32_t const word_count = values ? read_field<std::int32_t>(values, 0x18) : 0;
+        std::uintptr_t const infos = data ? read_field<std::uintptr_t>(data, 0x20) : 0;
+        std::int32_t const info_count = data ? read_field<std::int32_t>(data, 0x28) : 0;
+
+        auto variable_name = [&](std::int32_t a_index) -> std::string_view
+        {
+            if (strings == nullptr)
+                return {};
+            auto const& names = strings->variableNames;
+            if (a_index < 0 || a_index >= names.size())
+                return {};
+            char const* const raw = names.data()[a_index].c_str();
+            if (raw == nullptr || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(raw)))
+                return {};
+            std::size_t length = 0;
+            while (length < 96 && raw[length] != '\0')
+                ++length;
+            return { raw, length };
+        };
+
+        RE::NodeList const& nodes = *behavior->activeNodes;
+        std::size_t const limit = std::min<std::size_t>(nodes.size(), 512);
+        std::size_t modifiers = 0;
+        bool overflow = false;
+        for (std::size_t i = 0; i < limit; ++i)
+        {
+            RE::hkbNode* const node = nodes.data()[i].nodeClone;
+            if (node == nullptr || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(node)))
+                continue;
+            std::uintptr_t const vtable = read_field<std::uintptr_t>(node, 0);
+            if (vtable != RE::VTABLE_hkbModifierGenerator[0].address())
+                continue;
+            if (modifiers >= 8)
+            {
+                overflow = true;
+                break;
+            }
+            ++modifiers;
+            std::string_view const generator_name = read_node_name(node);
+            std::uintptr_t const modifier = read_field<std::uintptr_t>(node, 0x48);
+            std::uintptr_t const generator = read_field<std::uintptr_t>(node, 0x50);
+            std::uintptr_t modifier_vtable = 0;
+            std::uintptr_t generator_vtable = 0;
+            std::string_view modifier_name{};
+            std::uint32_t modifier_id = 0;
+            std::uint8_t modifier_enable = 0;
+            std::uintptr_t binding_set = 0;
+            if (plausible_object_pointer(modifier))
+            {
+                modifier_vtable = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(modifier), 0);
+                modifier_name = read_node_name(reinterpret_cast<RE::hkbNode const*>(modifier));
+                modifier_id = read_field<std::uint16_t>(
+                    reinterpret_cast<void const*>(modifier), 0x40);
+                modifier_enable = read_field<std::uint8_t>(
+                    reinterpret_cast<void const*>(modifier), 0x48);
+                binding_set = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(modifier), 0x10);
+            }
+            TransitionProbeNodeClass generator_class = TransitionProbeNodeClass::unknown;
+            if (plausible_object_pointer(generator))
+            {
+                generator_vtable = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(generator), 0);
+                generator_class = classify(generator_vtable);
+            }
+            std::uintptr_t binding_data = 0;
+            std::int32_t binding_count = 0;
+            if (plausible_object_pointer(binding_set))
+            {
+                binding_data = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(binding_set), 0x10);
+                binding_count = read_field<std::int32_t>(
+                    reinterpret_cast<void const*>(binding_set), 0x18);
+            }
+            logger::info(
+                "TRANSITION MODIFIER side=candidate segment={} phase={} seq={} commanded={} index={} node={:#x} name='{}' modifier={:#x} modifier-vtable={:#x} modifier-name='{}' modifier-id={} enable={} generator={:#x} generator-vtable={:#x} generator-class={} bindings={} layout=hkx2",
+                segment, phase, a_sequence, a_commanded, i, reinterpret_cast<std::uintptr_t>(node),
+                generator_name, modifier, modifier_vtable, modifier_name, modifier_id,
+                modifier_enable, generator, generator_vtable,
+                transition_probe_class_name(generator_class), binding_count);
+            if (!plausible_object_pointer(binding_set) || binding_count <= 0 ||
+                !plausible_object_pointer(binding_data))
+                continue;
+            std::size_t const bindings = std::min<std::size_t>(
+                static_cast<std::size_t>(binding_count), 8);
+            for (std::size_t b = 0; b < bindings; ++b)
+            {
+                void const* const binding = reinterpret_cast<void const*>(binding_data + b * 0x28);
+                std::int32_t const member_offset = read_field<std::int32_t>(binding, 0x10);
+                std::int32_t const variable_index = read_field<std::int32_t>(binding, 0x1C);
+                std::uint8_t const mode = read_field<std::uint8_t>(binding, 0x21);
+                std::uint8_t const member_type = read_field<std::uint8_t>(binding, 0x22);
+                std::uint32_t word = 0;
+                if (words != 0 && variable_index >= 0 && variable_index < word_count &&
+                    plausible_object_pointer(words))
+                {
+                    word = read_field<std::uint32_t>(
+                        reinterpret_cast<void const*>(words), static_cast<std::size_t>(variable_index) * 4);
+                }
+                int8_t type = -1;
+                if (infos != 0 && variable_index >= 0 && variable_index < info_count &&
+                    plausible_object_pointer(infos))
+                {
+                    type = read_field<std::int8_t>(reinterpret_cast<void const*>(infos),
+                        static_cast<std::size_t>(variable_index) * 6 + 4);
+                }
+                logger::info(
+                    "TRANSITION MODIFIER BIND side=candidate segment={} phase={} seq={} commanded={} index={} binding={} member-offset={} var={} var-name='{}' type={} member-type={} mode={} word={} float={:.6f}",
+                    segment, phase, a_sequence, a_commanded, i, b, member_offset, variable_index,
+                    variable_name(variable_index), static_cast<int>(type),
+                    static_cast<int>(member_type), static_cast<int>(mode), word,
+                    std::bit_cast<float>(word));
+            }
+        }
+        logger::info(
+            "TRANSITION MODIFIER SUMMARY side=candidate segment={} phase={} seq={} commanded={} modifiers={} overflow={}",
+            segment, phase, a_sequence, a_commanded, modifiers, overflow);
     }
 
     void capture_transition_probe(RE::BShkbAnimationGraph const& a_graph,
