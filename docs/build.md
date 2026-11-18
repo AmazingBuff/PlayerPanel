@@ -2310,3 +2310,17 @@ build\transition_probe_test.exe
 **部署（2026-11-18；候选 run 2 已上机）**：v110 三件套备份到 `dist/deploy-backup-20261118-v110-v111pre/`（DLL `393421ea…`、PDB `466f4beb…`、候选 INI `7deb21e5…`）。v111 DLL/PDB + 候选档 `dist/g5-transition-v2-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `dc895385…`、PDB `fe269ce4…`、身份 `…-v111-g5trans-probe-v2-…`）。源档 `a94a3bb9…` 未安装。下一步：候选 run 2 已跑（见下）；源侧待跑。
 
 **候选 run 2（2026-11-18 23:09–23:15）**：K5 249/249、equip 120、unequip 129、`state-12-to-0`；747 探针 header（3 phase ×249）、6,672 SM、78 EFFECT（26 个 transition 实例）、813 BLENDER、1,276 census；flags `0x0000`×675、`0x0002`×72（equip 87–98、unequip 1–12；equip 1–13 clean）。`Default_Behavior` `0→10` 在 cmd=1 采到 blending transition（duration 0.2、time-in 0.016667）；`10→1` 在 cmd=87–98 完整推进到 0.183333（=duration−1/60），12 点姿态 PC1 99.83%、Pearson 0.992817；census 无 `State3`，TP-5 未目击。完整记录见 [`run2-candidate`](diagnostics/g5-transition-probe-v2-20261118/run2-candidate/README.md)。
+
+<a id="v112-g5trans-probe-v3-20261118"></a>
+## v112-g5trans-probe-v3（2026-11-18，C-G5-TRANS v3）
+
+[C-G5-TRANS v3](diagnostics/g5-transition-probe-v3-20261118/README.md) 的实现：record version 3；SM/effect 16→32；每条 SM/EFFECT/BLENDER/CHILD/INTERNAL 行增加 `segment=`；`Default_Behavior` 的每条 SM 行后输出 `TRANSITION AUX`（`transitionFlags +0xC0`、`wildcardTransitionFlags +0xD0`、`delayedTransitions +0xE0` 的 data/size/capacity + 最多 0x10 bytes raw hex）；census 增加 `hkbBehaviorReferenceGenerator`/`hkbModifierGenerator` 分类。仍只读、无新 detour、CPK5/CPK5S 不变，环境保持 `AE-Track2`。
+
+**离线测试**：`transition_probe_test` 5/5，exit 0。**构建**：提交 `3e273e6` 后干净树 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v112-g5trans-probe-v3-20261118` + `cmake --build --preset Release`，exit 0；身份 `CharacterPanel-scenegraph-v112-g5trans-probe-v3-20261118-3e273e68e6-cl94faaed0c6-20261118T154505Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,070,016 | `57e02ed6cb9f9f96d0fb8098c32fd2f258ff83985bf3cda63a1fc538d2dd4340` |
+| CharacterPanel.pdb | 52,203,520 | `e099237dc51dc4a2fa553e031e5b47db792b7229a330846f5edda8fa0efff7ad` |
+
+**部署（2026-11-18；未上机）**：v111 三件套备份到 `dist/deploy-backup-20261118-v111-v112pre/`；v112 DLL/PDB + 候选档 `dist/g5-transition-v3-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `57e02ed6…`、PDB `e099237d…`）。源档未安装。下一步：候选一次 panel，检查 overflow=0、segment 每行、Default_Behavior AUX；10→1 仍应到 0.183333。
