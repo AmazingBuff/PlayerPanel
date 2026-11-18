@@ -171,7 +171,7 @@ TP-3/TP-4/TP-5 任一未目击时，不得用“探针没找到”直接判候�
 
 ## 十一、实现与构建记录（2026-11-18）
 
-**状态：源码已实现，默认 off；离线测试与 Release 构建通过；候选档已部署并完成 run 1。run 1 因 OAR 未加载、状态机 4 上限 overflow、K5 post-sample 无 active transition 而 INVALID；详见 [run1-candidate](run1-candidate/README.md)。**
+**状态：源码已实现，默认 off；离线测试与 Release 构建通过；候选档已部署并完成 run 1。Track 2 环境正确（OAR 关闭是该档设计，`identity-failed=1` 为已知 dummy 记账，TP-1 PASS），但状态机 4 上限 overflow、K5 post-sample 无 active transition、未见 `State3` Blender，TP-2/3/5 INVALID；详见 [run1-candidate](run1-candidate/README.md)。**
 
 | 文件 | 实现 |
 | --- | --- |
@@ -202,7 +202,7 @@ build\transition_probe_test.exe
 
 ### 11.1 候选侧 run 1（2026-11-18 22:46–22:51，INVALID）
 
-候选 K5 链本身通过：249/249，equip 120，unequip 129，`state-12-to-0`。探针 249 条 header（equip 120 + unequip 129）、996 条 SM、0 条 EFFECT、271 条 BLENDER、548 条 CHILD、271 条 INTERNAL；每条 header `flags=0x0002`（4 个状态机上限 overflow），全部 SM `transitions=0`。equip 1–13 没有 `msg/State3`/`Weap_EquipDefaultState` Blender，只有 `BodyWeightBlend`/`ArmsBlend`/readied Blender。日志同时显示 OAR 未加载（`oar-api=unavailable`，base `1hm_idle.hkx`）和一个 OAR `[E]`。因此 TP-1/TP-2/TP-3/TP-5 **INVALID/NOT OBSERVED**，不能支持或否证 H-T1/H-T2；需要 v2：提高 SM/effect 上限、在候选 `e_post_update`/`e_pre_sample` 与源 63589 入口采样、定位装备 Blender 的父链/运行时类，并先恢复 OAR/Track 2 环境。完整读数见 [run1-candidate](run1-candidate/README.md)。
+候选 K5 链本身通过：249/249，equip 120，unequip 129，`state-12-to-0`。探针 249 条 header（equip 120 + unequip 129）、996 条 SM、0 条 EFFECT、271 条 BLENDER、548 条 CHILD、271 条 INTERNAL；每条 header `flags=0x0002`（4 个状态机上限 overflow），全部 SM `transitions=0`。equip 1–13 没有 `msg/State3`/`Weap_EquipDefaultState` Blender，只有 `BodyWeightBlend`/`ArmsBlend`/readied Blender。Track 2 环境正确：OAR 关闭是该档设计（`oar-api=unavailable`、base `1hm_idle.hkx`、唯一 OAR `[E]` 为 §十二 豁免），`identity-failed=1` 为 completed=87 的 `SCAR_1hmReadyDummy` 已知记账；因此 TP-1 **PASS（Track 2 豁免内）**。TP-2/TP-3/TP-5 **INVALID/NOT OBSERVED**，不能支持或否证 H-T1/H-T2；需要 v2：提高 SM/effect 上限、在候选 `e_post_update`/`e_pre_sample` 与源 63589 入口采样、定位装备 Blender 的父链/运行时类；保持 `AE-Track2`，不要恢复 OAR。完整读数见 [run1-candidate](run1-candidate/README.md)。
 
 ## 十二、本契约不证明什么
 

@@ -1,6 +1,6 @@
-# C-G5-TRANS v1 候选侧 run 1（2026-11-18 22:46–22:51，**INVALID for TP-1/2/3/5**）
+# C-G5-TRANS v1 候选侧 run 1（2026-11-18 22:46–22:51，**TP-2/3/5 INVALID；TP-1 PASS（Track 2 豁免内）**）
 
-**一句话：候选 K5 链本身 249/249、equip 120、unequip 129、state 12→0；但探针运行不满足预注册：OAR 未加载（不是 Track 2）、4 个状态机上限在每条记录都 overflow（`flags=0x0002`）、996 条 SM 行全部 `transitions=0`、没有 EFFECT 行、没有 `msg/State3` Blender 行。该批不能用于支持或否证 H-T1/H-T2。**
+**一句话：候选 K5 链本身 249/249、equip 120、unequip 129、state 12→0；Track 2 环境正确（OAR 未加载是该档的预期设计，`identity-failed=1` 与门 5 同为 SCAR dummy 记账）。探针仍不满足预注册：4 个状态机上限在每条记录都 overflow（`flags=0x0002`）、996 条 SM 行全部 `transitions=0`、没有 EFFECT 行、没有 `msg/State3` Blender 行。该批不能用于支持或否证 H-T1/H-T2。**
 
 ## 一、身份与工件
 
@@ -36,18 +36,17 @@
 
 **Blender 名单**：equip seq=1 只有 `BodyWeightBlend`、`ArmsBlend`；seq=2–13 没有 Blender 行；seq=87 起为 `1stP_MLh_1HM_Idle_Blend`、`SCAR_1HM_Ready_Blend`、`Weap_Readied_Lean_Blend`；unequip 段为 `Weap_UnequipBlend`。**没有任何 `Weap_EquipDefaultState/msg/State3` 或 `State3` 行。**
 
-## 四、环境阻断
+## 四、环境与已知豁免
 
-- 22:47:04：`[E] failed to get plugin info for OpenAnimationReplacer`，紧接着 `OAR hooks unavailable: Open Animation Replacer is not loaded`。
-- 22:49:53：`ANIMATION WORLD … oar-api=unavailable oar-result=unavailable-unknown … bound='Animations\female\mt_idle.hkx'`。
-- 22:49:38 虽有一行 `OAR bases stage=world-prewarm … missing=7`，但 OAR hooks 未安装，`oar-api=unavailable`；候选使用 base `Animations\1hm_idle.hkx`，不是 Track 2 的 Smooth Moveset OAR 资源。
-- `K5 RECON identity-failed=1 drift-records=1`；与 Track 2 冻结环境不一致。
+- **OAR 未加载是 `AE-Track2` 的预期设计**：Track 2 §二/§十二 明确停用 4 个 OAR 模组（主插件 + RaySense + IED conditions + Math Plugin），因此 22:47:04 的 `[E] failed to get plugin info for OpenAnimationReplacer` 与 `OAR hooks unavailable` 是**已登记的豁免行**，不是新的环境失败；`oar-api=unavailable` 与 base `1hm_idle.hkx` 均符合 Track 2 的“零动态替换”设计。
+- **`identity-failed=1` 是已知 dummy 记账**：解析候选 K5 bin，唯一 `data_fnv=0` 的 clip 是 completed=87 的 `Animations\SCAR_1hmReadyDummy.hkx`（binding-index=8682），与门 5 正式候选/源两侧的 `identity-failed=1 drift-records=1` 同形；Track 2 文档已登记 dummy 同族瞬时不可读，属于 K5-7 的已知记账，不是新 drift。
+- `ANIMATION WORLD … bound='Animations\female\mt_idle.hkx'` 与 K2-C1/Track 2 冻结场景一致；本批无需也不应切回启用 OAR 的 `AE` 档。
 
 ## 五、按预注册判据
 
 | 判据 | 裁定 | 理由 |
 | --- | --- | --- |
-| TP-1 身份与环境 | **INVALID** | v110 身份/档位匹配，但 OAR 未加载；存在非豁免 `[E]`；不是 `AE-Track2` 冻结环境 |
+| TP-1 身份与环境 | **PASS（Track 2 豁免内）** | v110 身份/档位匹配；`AE-Track2` 的 OAR 关闭是预期设计，唯一 `[E]` 为 §十二 豁免行；`identity-failed=1` 与门 5 同为 SCAR dummy 记账 |
 | TP-2 记录配对 | **INVALID** | 249/249 配对成立，但 `flags=0x0002` 在全部记录置位；状态机 overflow |
 | TP-3 0→10 目击 | **NOT OBSERVED** | 0 条 EFFECT；996 条 SM 全部 `transitions=0`；相关 `Default_State` 可能被 4 上限截掉 |
 | TP-4 计时推进 | **N/A** | 没有 effect 读数 |
@@ -62,7 +61,7 @@
 1. **状态机上限太小（已证）**：每条记录 4 个 SM 仍 overflow；`Default_State/MT_Behavior_State` 可能在第 5 个以后。v2 至少 16 个 SM/16 个 effect，并按 `currentStateID`/active transition 优先，而不是只取 activeNodes 前 4 个。
 2. **K5 post-sample 太晚（强假设）**：`activeTransitions` 在全部 996 条上为 0，且 `timeInTransition` 从未出现；过渡可能在 `Generate` 后已出队。v2 必须在**候选 `e_post_update` / `e_pre_sample`** 以及源侧 **63589 采样入口**增加同代采样点，`e_post_sample` 只作对照；header 增加 `phase`。
 3. **`msg/State3` 不在 active `hkbBlenderGenerator` 集合（已证）**：equip 1–13 的 active Blender 只有 body/arms/readied，非装备 State3；可能它是另一种运行时类（`hkbBlendingBehavior`，无 CommonLib 布局）或不在 activeNodes。v2 需在 1–13 做有界 vtable/name census，或从 active `1HM_Equip` clip 的父链/`activeNodesChildrenIndices` 向上定位；不得直接猜偏移读未知类。
-4. **OAR 环境（已证）**：必须通过 MO2 `AE-Track2` 启动并确认 OAR loaded；日志应出现 `oar-api=available`、Track 2 OAR 资源路径，且没有 22:47:04 的 OAR `[E]`。否则新批次仍 INVALID。
+4. **不需要恢复 OAR**：本批的 OAR 关闭是 Track 2 设计，`[E]`/`oar-api=unavailable` 是豁免证据；v2 仍在 `AE-Track2` 运行，不要切回 `AE`。
 
 ## 七、边界
 
