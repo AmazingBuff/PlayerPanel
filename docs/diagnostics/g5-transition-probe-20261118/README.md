@@ -32,7 +32,7 @@
 
 - 新增 `[Experiment] TransitionStateProbe=false`，默认 off；只在既有 K5 采样点调用，**不新增 detour、不新增 hook、不写图/姿态/变量、不分发事件**。
 - 候选侧要求 `K5FullSample=true`；源侧要求 `SamplingLiveness=on` 且 `K5FullSample=true`。任一前置不满足时，只输出一行 `TRANSITION PROBE status=inactive reason=...`，不产生逐代记录。
-- 源侧在既有 63856 apply-return detour 内只做固定大小 memcpy 入环；所有字符串格式化和 `logger::info` 都在渲染线程 drain 中完成。候选侧沿用既有 K5 采样点，直接格式化。
+- 源侧在既有 63856 apply-return detour 内只做有界只读填充和固定大小 memcpy 入环；所有字符串格式化和 `logger::info` 都在渲染线程 drain 中完成。候选侧沿用既有 K5 采样点，直接格式化。
 - 记录上限固定并有显式 overflow；任何 overflow、ring drop、身份不符、K5 缺代或多次窗口都使该批 INVALID，不静默截断。
 
 ## 四、采样点与关联键
