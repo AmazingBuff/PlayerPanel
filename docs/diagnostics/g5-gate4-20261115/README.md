@@ -2,7 +2,7 @@
 
 **状态（2026-11-16）：FROZEN（限定范围；见 §十九）。**（2026-11-15 预注册评审通过。） 用户于 2026-11-15 批准本协议（§十三决策 1）与工具实现 + dry-run 授权（§十三决策 2）。本文档冻结 [G5 v2 门 4](../../independent-behavior-graph.md#g5-draft) 要求的**配对/比较协议结构规则**：配对资格、配对键、度量定义、分母、时钟/相位规则、判定/停点/回传格式与预算。**姿态已由 CAL1-B 填充（§十六），`epsilon_t`/`dt_exclude` 已由 TIME v1 填充（§十七），99/17 覆盖已由 COV v1 填充**；时钟轴判据仍 PENDING-CAL，CAL2 已完成、完整 CAL1 未完成，按 [CAL v1 §九](../../independent-behavior-graph.md#c-g5-cal-v1) 的顺序继续；**槽位填充 + 联合证据验收 = 门 4 完整冻结**，冻结必须完成于任何正式数据采集之前（G5 v2 §二门 4/门 5 顺序）。本预注册不授权实现、构建、部署、上机或任何裁定。
 
-**前置阅读**：[Track 2 预注册 §十九/§二十](g5-track2-20261114/README.md)（C 分组账本与收官裁定）、[K6 计划 §三/§六/§十](g5-k6-plan-20261114/README.md)（K5 仪器范围与记录字节布局）、[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)（度量/统计/控制/预算 canonical 定义）、[K3 收官](../../independent-behavior-graph.md#g5-cal-k3-closure)（跨侧逐代配对的裁定）、[E3 v2](../../independent-behavior-graph.md#c-g5-e3-v2)（输入序数配对先例）、[2026-11-15 会话总结 §四](../session-summary-20261115-track2.md)（本工作包的入口指定）。
+**前置阅读**：[Track 2 预注册 §十九/§二十](g5-track2-20261114/README.md)（C 分组账本与收官裁定）、[K6 计划 §三/§六/§十](g5-k6-plan-20261114/README.md)（K5 仪器范围与记录字节布局）、[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)（度量/统计/控制/预算 canonical 定义）、[K3 收官](../../independent-behavior-graph.md#g5-cal-k3-closure)（跨侧逐代配对的裁定）、[E3 v2](../../independent-behavior-graph.md#c-g5-e3-v2)（输入序数配对先例）、[2026-11-15 会话总结 §四](../test-results-20261118.md#g5-qualification)（本工作包的入口指定）。
 
 ## 一、目标、范围与不覆盖
 
@@ -192,7 +192,7 @@
 1. **本协议评审批准**（用户）→ 状态改"预注册（评审通过）"，同步主文档指针 / [README](../../README.md) / [history](../../history.md) / [CHANGELOG](../../CHANGELOG.md)。
 2. **离线工具实现预注册**（CLI/schema/解析规则冻结；评审后实现）。
 3. 实现 + **dry-run**（Track 2 Run 1/2 工件，metadata-only）→ 可执行性登记（含歧义清单与规则修订，如有）。
-4. （并行工作包）**CAL2 三进程/120 代协议预注册与运行**（独立于门 4，[会话总结 §四.3](../session-summary-20261115-track2.md)）。
+4. （并行工作包）**CAL2 三进程/120 代协议预注册与运行**（独立于门 4，[会话总结 §四.3](../test-results-20261118.md#g5-qualification)）。
 5. **CAL1 原生校准**（`tau_*`/`epsilon_t` 产出；CAL v1 §九顺序）。
 6. **门 4 完整冻结**（§五条件逐项核验 + 联合证据验收）。
 7. **门 5 正式运行**（§七协议，上机）→ G4P 判定 → 回传。

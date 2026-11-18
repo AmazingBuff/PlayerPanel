@@ -2,7 +2,7 @@
 
 **状态（2026-11-14）：预注册（评审通过）。** 用户于 2026-11-14 批准 §九决策 1：新建 `AE-Track2`（复制 `AE`）、停用 4 个 OAR 模组（主插件 + RaySense + IED conditions + Math Plugin），其余 977 项不动。运行档已派生（[build.md Track 2 节](../../build.md#track-2-运行档派生2026-11-14纯-ini零代码零构建)，三个逐字节复制档与既有登记哈希一致）；实施按 §八进行：用户建档 → 离线 winner-map 重 diff + 闭包复跑 → Run 0 前置门 → Run 1/2。本文档冻结批次设计、判据、预算与停止规则。
 
-**前置阅读**：[K6 计划 §二/§十三](../g5-k6-plan-20261114/README.md)、[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)、[K1 census §八](../g5-k1-census-20261114/README.md#八k1-c4-源候选资源对照与裁定)、[K1-C1 登记](../g5-k1-c1-20261114/README.md)、[K2-C1/C2 登记](../g5-k2c1c2-20261114/README.md)、[K3 收官](../../independent-behavior-graph.md#g5-cal-k3-closure)、[第三会话总结 §六](../session-summary-20261114-k6.md)。
+**前置阅读**：[K6 计划 §二/§十三](../g5-k6-plan-20261114/README.md)、[CAL v1](../../independent-behavior-graph.md#c-g5-cal-v1)、[K1 census §八](../g5-k1-census-20261114/README.md#八k1-c4-源候选资源对照与裁定)、[K1-C1 登记](../g5-k1-c1-20261114/README.md)、[K2-C1/C2 登记](../g5-k2c1c2-20261114/README.md)、[K3 收官](../../independent-behavior-graph.md#g5-cal-k3-closure)、[第三会话总结 §六](../test-results-20261118.md#g5-qualification)。
 
 ## 一、目标与边界
 
@@ -237,7 +237,7 @@ Run 0a 重跑（方案 b 或 c 落地后）必须：加载 **Save116**（`Save11
 
 ## 十三、Run 0a run 2（2026-11-15 00:54，**方案 b 生效：T2-C2 恢复 PASS；仍 INVALID——T2-C5 场景不符（第三次）**）
 
-**运行身份**：同 v103 + census-inject 档（安装位复核 `c05b9b91…`/`8c3857a3…`/`49581217…`）。日志 [归档](../CharacterPanel-g5track2-census-inject-run2-20261115-0054.log)（218,278 B，SHA-256 `1ea1b1ba86aea126…`）。
+**运行身份**：同 v103 + census-inject 档（安装位复核 `c05b9b91…`/`8c3857a3…`/`49581217…`）。日志 [归档](../README.md#retired-track2-run0a-2)（218,278 B，SHA-256 `1ea1b1ba86aea126…`）。
 
 | # | 判据 | 读数 | 裁定 |
 | --- | --- | --- | --- |

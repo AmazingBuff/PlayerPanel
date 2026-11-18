@@ -2,7 +2,7 @@
 
 **状态（2026-11-14）：预注册（评审通过）。** 用户于 2026-11-14 批准本计划（含 §二两轨制裁定与 Track 2=B 方向），按 §八 顺序实施；实现与运行记录随后在本目录登记。本文闭合 [CAL v1 §三 K6](../../independent-behavior-graph.md#c-g5-cal-v1) 的四项要求——仪器范围、两个控制的就绪清单、采集/分析版本及预算——并裁定 [K1-C4 NOT MATCHED](../g5-k1-census-20261114/README.md#八k1-c4-源候选资源对照与裁定) 的直接后果：OAR 资源策略（§二）。
 
-**前置阅读**：[第二会话总结](../session-summary-20261114-k2c1c2.md) §七 + [CAL v1 契约](../../independent-behavior-graph.md#c-g5-cal-v1) 全文。K1/K2/K3/K4/K2-C4 的既有证据不得外推；本计划引用的全部数字均来自已登记文档，不新增事实。
+**前置阅读**：[第二会话总结](../test-results-20261118.md#g5-qualification) §七 + [CAL v1 契约](../../independent-behavior-graph.md#c-g5-cal-v1) 全文。K1/K2/K3/K4/K2-C4 的既有证据不得外推；本计划引用的全部数字均来自已登记文档，不新增事实。
 
 ## 一、目标与边界
 
@@ -294,4 +294,4 @@ equip 段 87–98 为 `1HM_Equip` 与 idle 栈的重叠混合（settle 点前后
 3. **带缺项转移清单**：① 逐骨/通道权重与 blend/mask/additive 语义（`hkbBlendingBehavior` 等无 CommonLibSSE 布局，K5-5 缺项清单）→ Track 2/CAL2 的门 1 未闭合子项；② 源侧 MT_Idle 资源两新 FNV（`08E65508…`/`C95CED03…`）已并入声明清单，Track 2 的资源断言集合须包含或关闭该栈；③ 控制 B 三进程缺口 → CAL2。
 4. **不产生** `tau_p/tau_r/tau_s/epsilon_t`；**不关闭** 姿态等价、G5、G6；装载 teardown NO-GO 不变。
 
-**文档维护同步**：[主文档](../../independent-behavior-graph.md) 文首状态行与 [会话总结](../session-summary-20261114-k6.md) 指针、[README](../../README.md) Current status、[CHANGELOG](../../CHANGELOG.md)、[history](../../history.md) 已同步本节。
+**文档维护同步**：[主文档](../../independent-behavior-graph.md) 文首状态行与 [会话总结](../test-results-20261118.md#g5-qualification) 指针、[README](../../README.md) Current status、[CHANGELOG](../../CHANGELOG.md)、[history](../../history.md) 已同步本节。

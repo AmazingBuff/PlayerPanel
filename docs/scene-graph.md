@@ -8,7 +8,7 @@ SceneGraph is the sole character-preview backend. It copies a source actor's exi
 
 The preview shows standing weapon posture and existing equipment/appearance. Animation targets equipped non-combat idles independently of world action, after observed native Smooth goal preparation. Empty hands use the configured loop/direct-base choice. This change adds no movement/attack mirroring, multi-actor UI, physics registration, FaceGen controller, shader/material work or safe graph destruction. The source graph/transforms stay read-only; native `NiObject::Clone` copies its graph. [dac::Session](dac.md) temporarily borrows only controlled original-Actor marker effects and restores them at the UI close boundary.
 
-更新：2026-11-04。G1/G2 有界通过，G3-A 与 G3-B/F 相位回放保留；G4 A/B 保留、C 与旧 typed-setter 零读数受 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷影响，修复后待重跑。v67/v68 已有源采样入口活性和多个采样 tid 的记录，但 **E1 完整证据未闭合**；63856 是场景应用入口，不能称 poseLocal 末写或输出完成。本轮修复跳板、多生产者传送和关闭对账，尚未部署/上机，详见 [E1 当前边界](independent-behavior-graph.md#g5-e1-evidence-repair)。最新记录安装 v68，最近记录 INI dormant，本轮未重验安装。E1 剩余完成点/寿命/同代快照仍需取证，E2/E3 尚未开始；G5 门 1 NOT_READY、未冻结/未通过，G6 待验，装载 teardown NO-GO。
+独立行为图的现行实机结果与边界见[测试结果总览](diagnostics/test-results-20261118.md#gates)。本页记录默认 SceneGraph 路径、保留副本和部署对应的专项验证。
 
 最新记录安装见 [v68](build.md#v68-g5e1-resumed-2026-11-04)；当前修复代码尚未部署，本轮未重新核验安装。候选与控制器源图共享 data/绑定、变量活值分储；共享绑定或重复哈希不证明完整输出等价。G6 仍涵盖源恢复、任务/引用/回调/sink/历史及重复会话收敛；每进程一张候选为显式例外。
 

@@ -1,5 +1,39 @@
 # 诊断证据保留与恢复
 
+<a id="retired-20261118"></a>
+## 2026-11-18 退役与恢复
+
+测试状态以[测试结果总览](test-results-20261118.md)为入口。7 份会话总结已并入总览，6 份已被有效重跑覆盖的无效或不完整日志从工作树移除。逐轮结果仍可在下表对应的证据入口查看。
+
+固定恢复基线为 `f937d350c518092bb5d4efd8b4759d335ffecb67`。下表以 `docs/diagnostics/` 为路径前缀，Git blob 是仓库内容身份。日志另记清理前工作树字节数与 SHA-256。
+
+| 原会话总结 | 归并入口 | Git blob |
+| --- | --- | --- |
+| `session-summary-20261114.md` | [控制 B 与 K1 普查](test-results-20261118.md#g5-qualification) | `e52df5d8d61252d6532f77e1691be6a4a1d7f447` |
+| `session-summary-20261114-k2c1c2.md` | [资源与初态资格](test-results-20261118.md#g5-qualification) | `7c1e36a1243c1112de7c4714dc9efde93543b102` |
+| `session-summary-20261114-k6.md` | [K5/K6 仪器资格](test-results-20261118.md#g5-qualification) | `93cc57c27c2afa8f415a2e93a8f70733cee4852c` |
+| `session-summary-20261115-gate4-cal2.md` | [CAL2 与门 4](test-results-20261118.md#calibration) | `5dfde78fa979fd4ccaf20b5120095377f7083401` |
+| `session-summary-20261115-cal1b.md` | [CAL1 与门 4 冻结](test-results-20261118.md#calibration) | `51210cf8f0e6f47a96c7feb35b24693c32292045` |
+| `session-summary-20261115-track2.md` | [Track 2 同资源资格](test-results-20261118.md#g5-qualification) | `cc773254d2e619df1eb02dda9a44955d4de1d900` |
+| `session-summary-20261117-g5-state.md` | [门 5 与状态探针](test-results-20261118.md#formal) | `faef9ea1435a18da05d8221f0b4cd80b72a67403` |
+
+| 原日志 | 退役依据 | Git blob | 工作树字节数 / SHA-256 |
+| --- | --- | --- | --- |
+| <a id="retired-g3-v40"></a>`CharacterPanel-g3a-v40-hotkey-20261029-0021.log` | F7 落入重捕获分支，没有时间线样本。v41 修正并通过。 [试验记录](../build.md#v41-f7-gated-on-the-panel-state-2026-10-29) | `0f77589ff1442eeba1aa1572764a3fa576a876bd` | 4,035 / `e6c623a76eaddc68b0458d99d0163be632b303e1a102e280c38fe09d97a15eb3` |
+| <a id="retired-g4-v64"></a>`CharacterPanel-g4c1-attempt1-source-identity-20261102-2321.log` | v64 首个采样帧因图身份不一致中止，未取得正控。 [试验记录](../independent-behavior-graph.md#c-g4-c1-concurrent-events) | `535d72f0961540995e93b9aa8a4b702c177385c2` | 137,183 / `f296c34815aa8d12fb96f95f6794944fd47c8fc5ee9e47873899b5328a3cd3f9` |
+| <a id="retired-g4-v65"></a>`CharacterPanel-g4c1-attempt2-wrong-graph-20261102-2338.log` | v65 观察到错误图，正确源图由后续轮次验证。 [试验记录](../independent-behavior-graph.md#c-g4-c1-concurrent-events) | `9ada5f0f74ea5b630bae08aa3e26f9ce196f5846` | 137,435 / `8a47831169ede2f5f86d4971b0bdce0b1c09e02bf792028569ee8e1c3b517399` |
+| <a id="retired-g4-v69-single"></a>`CharacterPanel-g4c1-v69-attempt1-single-dispatch-20261104-2336.log` | v69 首轮缺卸下配置，只有一次派发。第二轮覆盖双派发并通过。 [试验记录](CharacterPanel-g4c1-v69-attempt2-two-dispatch-20261105-0001.log) | `4240c40e9a3678b8c0aff82fe042411581fe775b` | 58,897 / `0bfa8712910619b1a30e37d1b22528de46a0f9bac66d400e21e894ef3aab5926` |
+| <a id="retired-k1-v101a"></a>`CharacterPanel-g5k1-source-census-v101a-run1-20261114-1420.log` | 8 次上限在装备段耗尽，未覆盖卸下。局部资源读数已登记，v101b 通过完整普查。 [试验记录](g5-k1-census-20261114/README.md) | `65773785562ebec4288ff6b0becdbd2c7c115300` | 89,988 / `75bc8c3bf36da3ecee9e1885e0a1f03b0b8e51efcda4ea3ed29812c0e459c843` |
+| <a id="retired-track2-run0a-2"></a>`CharacterPanel-g5track2-census-inject-run2-20261115-0054.log` | Track 2 的 Run 0a 第二次测试场景不符且有 4 个面板窗口，未进入批次。第三次通过。 [试验记录](g5-track2-20261114/README.md) | `7e10f031c4949733a9ac8f543420c0eb02a4e46c` | 218,278 / `1ea1b1ba86aea126ee37b6fe55e93f8a3fa6e0d2998f2844f9a7ea5a6b0d914f` |
+
+从仓库根目录只读查看原件，例如下列命令。若需要恢复日志字节，按 Git blob 和工作树换行规则分别核对。
+
+```powershell
+git show 'f937d350c518092bb5d4efd8b4759d335ffecb67:docs/diagnostics/CharacterPanel-g4c1-attempt2-wrong-graph-20261102-2338.log'
+```
+
+## 2026-11-04 历史记录
+
 更新：2026-11-04。G1/G2 有界通过，G3-A 与 G3-B/F 相位回放保留；G4 A/B 保留、C 与旧 typed-setter 零读数受 [audit30](../behavior-graph-construction-audit.md#audit30) 仪器缺陷影响，修复后待重跑。v67/v68 已有源采样入口活性和多个采样 tid 的记录，但 **E1 完整证据未闭合**；63856 是场景应用入口，不能称 poseLocal 末写或输出完成。本轮修复跳板、多生产者传送和关闭对账，尚未部署/上机，详见 [E1 当前边界](../independent-behavior-graph.md#g5-e1-evidence-repair)。最新记录安装 v68，最近记录 INI dormant，本轮未重验安装。E1 剩余完成点/寿命/同代快照仍需取证，E2/E3 尚未开始；G5 门 1 NOT_READY、未冻结/未通过，G6 待验，装载 teardown NO-GO。
 
 ## 本次退役范围与理由
@@ -87,7 +121,7 @@ git show 'ae5dac28356d0ebb1a5fd754ddb4882a8dae26f3:docs/diagnostics/CharacterPan
 
 ## C-G4-C1 修复版重跑日志（2026-11-04/05，v69）
 
-- [CharacterPanel-g4c1-v69-attempt1-single-dispatch-20261104-2336.log](CharacterPanel-g4c1-v69-attempt1-single-dispatch-20261104-2336.log)（58,897 字节，SHA-256 0bfa8712910619b1a30e37d1b22528de46a0f9bac66d400e21e894ef3aab5926）：修复版 58377 观察器首次过 C1 窗口（`calls=42/other-graph=42`、`events=0`、`display-close`），但 INI 派生漏掉卸下切片两键，回放只有一次 `WeapEquip` 派发、收于 readied 姿态——仪器有效、形状不完整，不构成 C 判据。判读见 [build.md attempt 1](../build.md#v69-g5e1-clean-rebuild-2026-11-04)。
+- [原日志归档](README.md#retired-g4-v69-single)（58,897 字节，SHA-256 0bfa8712910619b1a30e37d1b22528de46a0f9bac66d400e21e894ef3aab5926）：修复版 58377 观察器首次过 C1 窗口（`calls=42/other-graph=42`、`events=0`、`display-close`），但 INI 派生漏掉卸下切片两键，回放只有一次 `WeapEquip` 派发、收于 readied 姿态——仪器有效、形状不完整，不构成 C 判据。判读见 [build.md attempt 1](../build.md#v69-g5e1-clean-rebuild-2026-11-04)。
 - [CharacterPanel-g4c1-v69-attempt2-two-dispatch-20261105-0001.log](CharacterPanel-g4c1-v69-attempt2-two-dispatch-20261105-0001.log)（75,607 字节，SHA-256 06a743c820475631b4224e54a12cba1f2edf0ad973cdf13bd5eb8a6917f4f699）：INI 补齐 `CandidateUnequipProbe=true` + `CandidateUnequipEvent=Unequip` 后的完整两注入轮——判据 1–6 全部成立（`calls=64/other-graph=64`、源图 `events=0`、`ring-dropped=0`、`reason=display-close`），`drive-done`/`unequip-done` 六哈希第九次逐位复现（修复版仪器上第一次）。**G4-C 据此在修复版仪器上重新关闭**；判读见 [C-G4-C1 修复版重跑](../independent-behavior-graph.md#c-g4-c1-concurrent-events)。运行后 INI 恢复 dormant `27f481f5…`。
 
 ## G5-E1 v3 运行日志

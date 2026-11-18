@@ -1,6 +1,6 @@
 # C-G5-STATE v4：blender child / internal-state 只读探针预注册（2026-11-17，APPROVED）
 
-**状态：COMPLETE（2026-11-17）：CP-1/3/4/5 PASS，CP-2 FAIL（children=0/internal=0）。** v3 已排除 `hkbNodeInfo` 与 `hkbBlenderGenerator` 对象前 0x100；本探针从 blender 对象的指针字段中发现 child/internal-state，但首轮 0x200 指针扫描没有命中。
+**状态：运行完成（2026-11-17）。CP-1/4/5 PASS，CP-2 FAIL，CP-3 未满足。** v3 在已读范围内未找到逐步变化的标量，其范围为 `hkbNodeInfo` 与 `hkbBlenderGenerator` 对象前 0x100。本轮从 blender 对象的指针字段尝试定位 child/internal-state，首轮 0x200 指针扫描零命中。
 
 ## 一、只读边界
 
@@ -47,3 +47,5 @@
 **结论**：blender 对象前 0x200 字节中的指针没有直接指向 `hkbBlenderGeneratorChild` 或 `hkbBlenderGeneratorInternalState` 的对象；可能 child 是 HKX 数据而不是 runtime 对象，或 internal state 由 `hkbBehaviorGraph` 的分区内存/其他表持有。CP-2 FAIL，本探针没有取得状态标量。
 
 **下一入口**：改查 `hkbBehaviorGraph::allPartitionMemory` / `idToStateMachineTemplateMap` 或直接解析 HKX 的 `hkbBlenderGeneratorChild` 数据；不要重复同一 0x200 指针扫描。
+
+**2026-11-18 复核**。按 §三，CP-3 需要逐代 child/internal 行，而 §五 记录两类行都未产生。0x200 扫描仅匹配窗口中的直接指针。引擎审计确认 Blender 的 children 是指针数组，childrenInternalStates 是内联元素数组，这一轮扫描没有进入两类数组。 [离线审计](../g5-transition-audit-20261118/README.md)
