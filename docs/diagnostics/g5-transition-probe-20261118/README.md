@@ -1,6 +1,6 @@
 # C-G5-TRANS v1：候选/源过渡与 Blender 状态只读探针预注册（2026-11-18）
 
-**状态：IMPLEMENTED / BUILT（2026-11-18）；候选档已部署，未上机。** 新键默认 `false`，只读，不触碰产品路径；本契约不改变门 5 的 `G4P-7 FAIL` 裁定，不产生 `tau_*`，不关闭 G5/G6。
+**状态：IMPLEMENTED / BUILT / 候选 run 1 INVALID（2026-11-18）。** 新键默认 `false`，只读，不触碰产品路径；本契约不改变门 5 的 `G4P-7 FAIL` 裁定，不产生 `tau_*`，不关闭 G5/G6。
 
 ## 一、背景与要回答的问题
 
@@ -171,7 +171,7 @@ TP-3/TP-4/TP-5 任一未目击时，不得用“探针没找到”直接判候�
 
 ## 十一、实现与构建记录（2026-11-18）
 
-**状态：源码已实现，默认 off；离线测试与 Release 构建通过；候选档已部署，未上机。**
+**状态：源码已实现，默认 off；离线测试与 Release 构建通过；候选档已部署并完成 run 1。run 1 因 OAR 未加载、状态机 4 上限 overflow、K5 post-sample 无 active transition 而 INVALID；详见 [run1-candidate](run1-candidate/README.md)。**
 
 | 文件 | 实现 |
 | --- | --- |
@@ -198,7 +198,11 @@ build\transition_probe_test.exe
 | CharacterPanel.dll | 2,059,776 | `393421ead8000ae8560d908a600d2e3d9e05eef86eb2ee409fef0cd24044a2fa` |
 | CharacterPanel.pdb | 51,982,336 | `466f4bebb835b55b3259a2e9ca6ee6b890de38dc9500b5664276e820a83a410e` |
 
-**部署（2026-11-18）**：v104 三件套已备份到 `dist/deploy-backup-20261118-v104-v110pre/`；v110 DLL/PDB 与候选档 `dist/g5-transition-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…d06531`）已安装，安装位哈希/身份逐位核对通过。源档 `CharacterPanel-g5trans-source.ini`（`a94a3bb9…d6ad6f`）已派生但未安装。**未启动游戏、未产生原生样本**；v110 原生行为仍 UNVERIFIED。详细构建/部署记录见 [`docs/build.md#v110-g5trans-probe-20261118`](../../build.md#v110-g5trans-probe-20261118)。
+**部署（2026-11-18）**：v104 三件套已备份到 `dist/deploy-backup-20261118-v104-v110pre/`；v110 DLL/PDB 与候选档 `dist/g5-transition-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…d06531`）已安装，安装位哈希/身份逐位核对通过。源档 `CharacterPanel-g5trans-source.ini`（`a94a3bb9…d6ad6f`）已派生但未安装。候选 run 1 已完成（K5 链有效，探针批次 INVALID；见 §11.1）；v110 的过渡/Blender 行为仍无有效读数。详细构建/部署记录见 [`docs/build.md#v110-g5trans-probe-20261118`](../../build.md#v110-g5trans-probe-20261118)。
+
+### 11.1 候选侧 run 1（2026-11-18 22:46–22:51，INVALID）
+
+候选 K5 链本身通过：249/249，equip 120，unequip 129，`state-12-to-0`。探针 249 条 header（equip 120 + unequip 129）、996 条 SM、0 条 EFFECT、271 条 BLENDER、548 条 CHILD、271 条 INTERNAL；每条 header `flags=0x0002`（4 个状态机上限 overflow），全部 SM `transitions=0`。equip 1–13 没有 `msg/State3`/`Weap_EquipDefaultState` Blender，只有 `BodyWeightBlend`/`ArmsBlend`/readied Blender。日志同时显示 OAR 未加载（`oar-api=unavailable`，base `1hm_idle.hkx`）和一个 OAR `[E]`。因此 TP-1/TP-2/TP-3/TP-5 **INVALID/NOT OBSERVED**，不能支持或否证 H-T1/H-T2；需要 v2：提高 SM/effect 上限、在候选 `e_post_update`/`e_pre_sample` 与源 63589 入口采样、定位装备 Blender 的父链/运行时类，并先恢复 OAR/Track 2 环境。完整读数见 [run1-candidate](run1-candidate/README.md)。
 
 ## 十二、本契约不证明什么
 
