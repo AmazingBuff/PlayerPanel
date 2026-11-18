@@ -1,6 +1,6 @@
 # PlayerPanel 测试结果总览（2026-11-18）
 
-范围为 `oar-idle3` 截至 `f937d350c518092bb5d4efd8b4759d335ffecb67` 的已记录测试，以及 11 月 18 日的过渡离线审计和归档复核。本轮没有新的游戏动作样本。产品运行证据、独立行为图关卡和离线校准按各自判据报告。
+范围为 `oar-idle3` 截至 `f937d350c518092bb5d4efd8b4759d335ffecb67` 的已记录测试，以及 11 月 18 日的过渡离线审计、字段补审计和归档复核。本轮没有新的游戏动作样本。产品运行证据、独立行为图关卡和离线校准按各自判据报告。
 
 **总裁定：G1–G4 在登记范围内成立，G5 姿态验收失败（G4P-7 FAIL），G6 待验。** 门 5 采样完整，失败来自姿态超容差。最近的离线审计已定位混合计时的引擎读取路径，尚未观测实际装备边的运行时计时。
 
@@ -70,7 +70,7 @@
 | v109 child/internal 扫描 | 运行报告 12/12 零发现，CP-2 FAIL。没有逐代 child/internal 行，按判据 CP-3 未满足。候选归档与 v103 的 249 帧姿态逐字节相同。原始运行日志未随当前检出，扫描计数来自运行报告。 [记录](g5-state-child-20261117/README.md) |
 | 11 月 18 日离线审计 | AE 1.6.1170 指令证实 `activeTransitions` 逐条步长为 `0x28`，`timeInTransition` 随步长累加并用于混合。v109 的单层 vtable 扫描未遍历 Blender 的数组元素与内联状态。候选第 2–12 步的 clip 时间固定，11 帧全部配到源 seq 145。 [离线审计](g5-transition-audit-20261118/README.md) |
 
-当前等待与测试哈希一致的 `0_Master.hkx`、`weapequip.hkx` 或完整转储，以核对实际 0→10 和嵌套装备过渡的效果类。取得动作窗口后，再采集两侧同代过渡类型、计时和曲线。G4P-7 维持正式失败裁定，K5-5、实际附件状态和 A17 独立控制仍有缺项。 [闭包与哈希](g5-k1-c1-20261114/closure-files.txt)
+2026-11-18 复核：与测试哈希一致的 `0_Master.hkx`、`weapequip.hkx` 和转储均在本机，字段补审计已确认 `0→10` 为 `hkbBlendingTransitionEffect`（作者 `duration=0.2 s`、smooth、self-reset），`1HM_Equip` 由 `Weap_EquipDefaultState/msg/State3` 的 Blender 分支选择，不是独立 transition。下一步是在两侧同代采样点采集运行时 `timeInTransition`/`endIntervalWeight`/child weight 与姿态的相关性；G4P-7 维持正式失败裁定，K5-5、实际附件状态和 A17 独立控制仍有缺项。 [字段补审计](g5-transition-audit-20261118/README.md#六离线字段补审计2026-11-18v3-dump) · [闭包与哈希](g5-k1-c1-20261114/closure-files.txt)
 
 ## 本轮复核
 
