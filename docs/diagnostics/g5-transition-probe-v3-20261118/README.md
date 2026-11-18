@@ -1,6 +1,6 @@
 # C-G5-TRANS v3：overflow 修复与 0→10 辅助数组观测（2026-11-18）
 
-**状态：IMPLEMENTED / BUILT / 候选档已部署（2026-11-18，v112）；未上机。** 本契约接续 [v2](../g5-transition-probe-v2-20261118/README.md) 的 run 2；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
+**状态：IMPLEMENTED / BUILT / 候选 run 1 完成（2026-11-18，v112）。** TP-1/2/3 PASS；TP-4 的 `10→1` PASS、`0→10` 只有起点；TP-5 仍 NOT OBSERVED。本契约接续 [v2](../g5-transition-probe-v2-20261118/README.md) 的 run 2；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
 
 ## 一、v2 run 2 的输入
 
@@ -83,4 +83,8 @@ v3 只修两个可执行缺口：**overflow** 与 **0→10 效果移出 activeTr
 | CharacterPanel.dll | 2,070,016 | `57e02ed6cb9f9f96d0fb8098c32fd2f258ff83985bf3cda63a1fc538d2dd4340` |
 | CharacterPanel.pdb | 52,203,520 | `e099237dc51dc4a2fa553e031e5b47db792b7229a330846f5edda8fa0efff7ad` |
 
-**部署（2026-11-18）**：v111 三件套备份到 `dist/deploy-backup-20261118-v111-v112pre/`（DLL `dc895385…`、PDB `fe269ce4…`、候选 INI `7deb21e5…`）。v112 DLL/PDB + 候选档 `dist/g5-transition-v3-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `57e02ed6…`、PDB `e099237d…`）。源档 `a94a3bb9…` 未安装。**未启动游戏**；候选 run 3 待上机。构建记录见 [`docs/build.md#v112-g5trans-probe-v3-20261118`](../../build.md#v112-g5trans-probe-v3-20261118)。
+**部署（2026-11-18）**：v111 三件套备份到 `dist/deploy-backup-20261118-v111-v112pre/`（DLL `dc895385…`、PDB `fe269ce4…`、候选 INI `7deb21e5…`）。v112 DLL/PDB + 候选档 `dist/g5-transition-v3-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `57e02ed6…`、PDB `e099237d…`）。源档 `a94a3bb9…` 未安装。候选 run 1 已完成（见 §八）；源侧尚未运行。构建记录见 [`docs/build.md#v112-g5trans-probe-v3-20261118`](../../build.md#v112-g5trans-probe-v3-20261118)。
+
+## 八、候选 run 1（2026-11-18 23:49–23:54，v112）
+
+K5 249/249、equip 120、unequip 129、`state-12-to-0`；747 探针 header、6,780 SM、78 EFFECT、813 BLENDER、2,241 AUX、1,276 census；**headers 全部 `flags=0x0000`（overflow 修复）**。`0→10` cmd=1 parent blending transition（duration 0.2、time-in 0.016667）；`10→1` cmd=87–98 到 0.183333，12 点 PC1 99.83%、Pearson 0.992817（与 v2 run 2 逐位复现）。`transitionFlags` size 4 head `0000E9D1`、wildcard 7 零、delayed size 0，cmd 1–13 恒定；0→10 不在 delayed。census 仍无 `State3`，TP-5 NOT OBSERVED。完整记录见 [run1-candidate](run1-candidate/README.md)。
