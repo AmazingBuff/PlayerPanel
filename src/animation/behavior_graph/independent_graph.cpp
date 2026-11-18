@@ -26,6 +26,7 @@
 #include "animation/behavior_graph/probe_liveness.h"
 #include "animation/behavior_graph/source_event_capture.h"
 #include "animation/behavior_graph/source_timeline.h"
+#include "animation/behavior_graph/transition_probe.h"
 #include "animation/behavior_graph/unequip_settle_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
@@ -55,6 +56,7 @@
 #include <cmath>
 #include <ctime>
 #include <cstring>
+#include <intrin.h>
 #include <optional>
 #include <span>
 #include <string>
@@ -2896,6 +2898,21 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                             std::span<K3TrackRecord const>{ tracks.data(), track_count }))
                                         observation.invalidate(k5_writer.overflow()
                                             ? "k5-record-overflow" : "k5-write-failed");
+                                    if (transition_state_probe())
+                                    {
+                                        TransitionProbeRecord probe{};
+                                        TransitionProbeSegment const probe_segment =
+                                            std::strcmp(observation.segment_name(), "equip") == 0
+                                            ? TransitionProbeSegment::equip
+                                            : TransitionProbeSegment::unequip;
+                                        capture_transition_probe(*candidate,
+                                            TransitionProbeSide::candidate, probe_segment,
+                                            observation.completed(), static_cast<std::uint64_t>(__rdtsc()),
+                                            probe);
+                                        probe.actor = actor_id;
+                                        probe.request = request;
+                                        log_transition_probe(probe);
+                                    }
                                     log_node_state_probe(*candidate, actor_id, request,
                                         observation.segment_name(), observation.completed());
                                     log_state_child_probe(*candidate, actor_id, request,

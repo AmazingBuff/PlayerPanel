@@ -155,6 +155,10 @@ namespace animation
     // hkbBlenderGeneratorChild and hkbBlenderGeneratorInternalState objects reachable
     // from blender nodes. Uses guarded self-reads; no writes or hooks.
     [[nodiscard]] bool state_child_probe();
+    // C-G5-TRANS v1 (2026-11-18, default off): read-only transition/blender state probe at the
+    // existing K5 candidate/source points. Requires K5FullSample; adds no detour and writes no
+    // graph, pose or variable.
+    [[nodiscard]] bool transition_state_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

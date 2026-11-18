@@ -1,6 +1,6 @@
 # C-G5-TRANS v1：候选/源过渡与 Blender 状态只读探针预注册（2026-11-18）
 
-**状态：PRE-REGISTERED（草案，待评审）；未实现、未构建、未部署、未上机。** 新键默认 `false`，只读，不触碰产品路径；本契约不改变门 5 的 `G4P-7 FAIL` 裁定，不产生 `tau_*`，不关闭 G5/G6。
+**状态：IMPLEMENTED（2026-11-18，源码已落地；未部署、未上机）。** 新键默认 `false`，只读，不触碰产品路径；本契约不改变门 5 的 `G4P-7 FAIL` 裁定，不产生 `tau_*`，不关闭 G5/G6。
 
 ## 一、背景与要回答的问题
 
@@ -54,9 +54,9 @@
 | --- | --- | --- |
 | `hkbStateMachine` | `RE::VTABLE_hkbStateMachine[0].address()` | CommonLibSSE 现有常量 |
 | `hkbBlendingTransitionEffect` | `RE::VTABLE_hkbBlendingTransitionEffect[0].address()` | CommonLibSSE 现有常量；引擎审计 `0x19637E8` |
-| `hkbBlenderGenerator` | `REL::Offset(0x195EB70).address()`（static） | AE 1.6.1170 RTTI：`hkbBlenderGenerator` TD `0x20b9818`、COL `0x1b9d760`、vtable `0x195eb70`；v103 日志 `0x7ff6a662eb70` 与推测基址 `0x7ff6a64d0000` 差值正好 `0x195eb70` |
+| `hkbBlenderGenerator` | `RE::VTABLE_hkbBlenderGenerator[0].address()` | CommonLibSSE `Offsets_VTABLE.h` 已提供该常量（AE ID 226277）；v103 日志 `0x7ff6a662eb70` 与 RTTI 审计 vtable RVA `0x195eb70` 是同一对象的交叉核对 |
 
-`hkbBlenderGenerator` 没有 CommonLibSSE 头/`VTABLE` 常量，故用 `REL::Offset`；这是 AE 1.6.1170 专用偏移，构建身份必须带 runtime 1-6-1170-0。不得把该偏移外推到其他运行时。
+`hkbBlenderGenerator` 没有独立公共头/成员布局，但 CommonLibSSE 提供了 `VTABLE_hkbBlenderGenerator` 常量（AE ID 226277）；实现必须用该常量经地址库解析，不手写地址。构建身份仍须带 runtime 1-6-1170-0，且不得把该常量外推到其他运行时。
 
 ### 5.2 状态机
 

@@ -28,6 +28,7 @@ set(PLUGIN_SOURCES
 	src/animation/behavior_graph/source_event_capture.cpp
 	src/animation/behavior_graph/source_write_capture.cpp
 	src/animation/behavior_graph/source_timeline.cpp
+	src/animation/behavior_graph/transition_probe.cpp
 	src/animation/clip.cpp
 	src/animation/controller.cpp
 	src/animation/dac/effects.cpp

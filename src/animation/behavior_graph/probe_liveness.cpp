@@ -10,6 +10,7 @@
 #include "animation/behavior_graph/probe_liveness_policy.h"
 #include "animation/behavior_graph/source_timeline_policy.h"
 #include "animation/behavior_graph/source_timeline.h"
+#include "animation/behavior_graph/transition_probe.h"
 
 #include "animation/settings.h"
 
@@ -425,12 +426,81 @@ namespace
         ProbePushGate m_gate;
     };
 
+    // C-G5-TRANS v1: a separate source-side ring keeps the frozen CPK5/CPK5S
+    // record layouts unchanged. The detour copies only this fixed record; the
+    // render drain formats it.
+    class TransitionProbeRing
+    {
+    public:
+        bool push(TransitionProbeRecord const& a_record) noexcept
+        {
+            if (!m_gate.try_enter())
+            {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+                return false;
+            }
+            std::size_t const head = m_head.load(std::memory_order_relaxed);
+            std::size_t const tail = m_tail.load(std::memory_order_acquire);
+            if (head - tail >= Transition_Probe_Source_Capacity)
+            {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+                m_gate.leave();
+                return false;
+            }
+            std::memcpy(&m_slots[head % Transition_Probe_Source_Capacity], &a_record,
+                sizeof(a_record));
+            m_head.store(head + 1, std::memory_order_release);
+            m_gate.leave();
+            return true;
+        }
+
+        bool pop(TransitionProbeRecord& a_out) noexcept
+        {
+            std::size_t const tail = m_tail.load(std::memory_order_relaxed);
+            std::size_t const head = m_head.load(std::memory_order_acquire);
+            if (tail == head)
+                return false;
+            std::memcpy(&a_out, &m_slots[tail % Transition_Probe_Source_Capacity], sizeof(a_out));
+            m_tail.store(tail + 1, std::memory_order_release);
+            return true;
+        }
+
+        void drain_discard() noexcept
+        {
+            m_tail.store(m_head.load(std::memory_order_acquire), std::memory_order_release);
+        }
+
+        void reset() noexcept
+        {
+            m_head.store(0, std::memory_order_relaxed);
+            m_tail.store(0, std::memory_order_relaxed);
+            m_dropped.store(0, std::memory_order_relaxed);
+            m_gate.reset();
+        }
+
+        [[nodiscard]] std::uint64_t dropped() const noexcept
+        {
+            return m_dropped.load(std::memory_order_relaxed);
+        }
+
+    private:
+        std::array<TransitionProbeRecord, Transition_Probe_Source_Capacity> m_slots{};
+        std::atomic<std::size_t> m_head{ 0 };
+        std::atomic<std::size_t> m_tail{ 0 };
+        std::atomic<std::uint64_t> m_dropped{ 0 };
+        ProbePushGate m_gate;
+    };
+
     K5SourceRing g_k5s_ring;
+    TransitionProbeRing g_transition_ring;
     K5SourceWriter g_k5s_writer;
     K5IdentityCache g_k5s_cache;
     K5ReconCounters g_k5s_counters;
     std::atomic<std::uint32_t> g_k5s_seq{ 0 };
     std::atomic<bool> g_k5s_open_failed{ false };
+    std::atomic<std::uint64_t> g_transition_records{ 0 };
+    std::atomic<std::uint64_t> g_transition_overflow{ 0 };
+    std::atomic<std::uint64_t> g_transition_unavailable{ 0 };
 
     std::uintptr_t game_base()
     {
@@ -992,6 +1062,30 @@ namespace
                     g_k5s_counters.drift_records.fetch_add(1, std::memory_order_relaxed);
             }
             g_k5s_counters.attempted.fetch_add(1, std::memory_order_relaxed);
+            if (transition_state_probe())
+            {
+                TransitionProbeRecord probe{};
+                if (graph != nullptr)
+                {
+                    capture_transition_probe(*graph, TransitionProbeSide::source,
+                        TransitionProbeSegment::window, record.seq, record.tsc, probe);
+                }
+                else
+                {
+                    probe.magic = Transition_Probe_Magic;
+                    probe.version = Transition_Probe_Version;
+                    probe.side = static_cast<std::uint8_t>(TransitionProbeSide::source);
+                    probe.segment = static_cast<std::uint8_t>(TransitionProbeSegment::window);
+                    probe.sequence = record.seq;
+                    probe.tsc = record.tsc;
+                    probe.flags |= Transition_Probe_Flag_Unavailable;
+                }
+                if (transition_probe_overflowed(probe))
+                    g_transition_overflow.fetch_add(1, std::memory_order_relaxed);
+                if ((probe.flags & Transition_Probe_Flag_Unavailable) != 0)
+                    g_transition_unavailable.fetch_add(1, std::memory_order_relaxed);
+                (void)g_transition_ring.push(probe);
+            }
             (void)g_k5s_ring.push(record);
             return;
         }
@@ -1337,6 +1431,20 @@ namespace
         }
     }
 
+    // C-G5-TRANS v1: render-thread drain for the separate transition/blender probe ring.
+    void drain_transition_probe_records() noexcept
+    {
+        if (!transition_state_probe() || sampling_liveness_mode() == ProbeLivenessMode::e_off ||
+            !k5_full_sample())
+            return;
+        TransitionProbeRecord record{};
+        while (g_transition_ring.pop(record))
+        {
+            log_transition_probe(record);
+            g_transition_records.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+
     void reset_k3s() noexcept
     {
         g_k3s_ring.reset();
@@ -1360,6 +1468,10 @@ namespace
         g_k5s_counters.identity_failed_clips.store(0, std::memory_order_relaxed);
         g_k5s_counters.drift_records.store(0, std::memory_order_relaxed);
         (void)g_k5s_writer.close();
+        g_transition_ring.reset();
+        g_transition_records.store(0, std::memory_order_relaxed);
+        g_transition_overflow.store(0, std::memory_order_relaxed);
+        g_transition_unavailable.store(0, std::memory_order_relaxed);
     }
 
     void drain_probe_records(ProbeState& s)
@@ -1462,6 +1574,16 @@ namespace
         drain_probe_records(s);
         drain_k3s_records();
         drain_k5s_records();
+        drain_transition_probe_records();
+        if (transition_state_probe() && sampling_liveness_mode() != ProbeLivenessMode::e_off &&
+            k5_full_sample())
+        {
+            logger::info(
+                "TRANSITION PROBE close side=source records={} dropped={} overflow={} unavailable={}",
+                g_transition_records.load(std::memory_order_relaxed), g_transition_ring.dropped(),
+                g_transition_overflow.load(std::memory_order_relaxed),
+                g_transition_unavailable.load(std::memory_order_relaxed));
+        }
         if (sampling_liveness_mode() != ProbeLivenessMode::e_off && !s.k3s_closed &&
             !k5_full_sample())
         {
