@@ -1,6 +1,6 @@
 # C-G5-TRANS v4：目标状态 Modifier 权重观测（2026-11-19）
 
-**状态：PRE-REGISTERED（2026-11-19）；实现 v113；未上机。** 本契约接续 [v3](../g5-transition-probe-v3-20261118/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
+**状态：IMPLEMENTED / BUILT / 候选档已部署（2026-11-19，v113）；未上机。** 本契约接续 [v3](../g5-transition-probe-v3-20261118/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
 
 ## 一、v3 run 1 的输入
 
@@ -71,3 +71,19 @@ v4 的目标：**在目标状态内部找 0→10 的逐帧标量**，优先观�
 | `probe_liveness.cpp` | 无变更（source ring 不变） |
 | `tests/transition_probe_test.cpp` | v4 版本/容量/预算不变；modifier 日志为引擎绑定，不做假对象测试 |
 | `docs/build.md` | v113 构建/部署/运行记录 |
+
+## 七、实现与构建记录（2026-11-19）
+
+**源码已实现；离线测试 5/5；Release 构建通过；候选档已部署，未上机。**
+
+- `log_transition_modifiers`：log-only；`hkbModifierGenerator` 的 `modifier +0x48`/`generator +0x50`（HKX2 布局）、`hkbModifier::enable +0x48`、`hkbBindable::variableBindingSet +0x10`、Binding `0x28` 步长（`memberOffset +0x10`、`variableIndex +0x1C`、`mode +0x21`、`memberType +0x22`）；变量名/类型/word 从 `data->stringData`/`variableInfos`/`variableValueSet` 读取；指针全部过滤。
+- 每条探针（post-update/pre-sample/post-sample）在 `TRANSITION PROBE` 行后输出 `TRANSITION MODIFIER` + `TRANSITION MODIFIER BIND` + summary；cap 8 modifier / 8 binding，超出置 overflow 于 summary。
+
+**离线测试**：`transition_probe_test` 5/5，exit 0。**构建**：提交 `114f877` 后干净树，身份 `CharacterPanel-scenegraph-v113-g5trans-probe-v4-20261119-114f877e8d-cl94faaed0c6-20261118T161425Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,076,672 | `228614da3cda93d9c65e167e153676140faed46ea7b7e5d0aa7a78c73dbd74c6` |
+| CharacterPanel.pdb | 52,252,672 | `69ab68ad1d888664008ccefff9f42a13600b7574f1cb84a70e43208986b172ac` |
+
+**部署（2026-11-19）**：v112 三件套备份到 `dist/deploy-backup-20261119-v112-v113pre/`（DLL `57e02ed6…`、PDB `e099237d…`、候选 INI `7deb21e5…`）。v113 DLL/PDB + 候选档 `dist/g5-transition-v3-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `228614da…`、PDB `69ab68ad…`、身份 `…-v113-g5trans-probe-v4-…`）。源档未安装。**未启动游戏**；候选 run 4 待上机。构建记录见 [`docs/build.md#v113-g5trans-probe-v4-20261119`](../../build.md#v113-g5trans-probe-v4-20261119)。

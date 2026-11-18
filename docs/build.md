@@ -2326,3 +2326,17 @@ build\transition_probe_test.exe
 **部署（2026-11-18；未上机）**：v111 三件套备份到 `dist/deploy-backup-20261118-v111-v112pre/`；v112 DLL/PDB + 候选档 `dist/g5-transition-v3-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `57e02ed6…`、PDB `e099237d…`）。源档未安装。下一步：候选一次 panel，检查 overflow=0、segment 每行、Default_Behavior AUX；10→1 仍应到 0.183333。
 
 **候选 run 1（2026-11-18 23:49–23:54）**：K5 249/249、equip 120、unequip 129、`state-12-to-0`；747 header、6,780 SM、78 EFFECT、813 BLENDER、2,241 AUX、1,276 census；**全部 header `flags=0x0000`**。`0→10` cmd=1 parent blending transition（duration 0.2、time-in 0.016667）；`10→1` cmd=87–98 到 0.183333，12 点 PC1 99.83%、Pearson 0.992817（与 v2 逐位复现）。AUX `transitionFlags` size 4 head `0000E9D1`、wildcard 7 零、delayed size 0，cmd 1–13 恒定；census 仍无 `State3`。完整记录见 [`run1-candidate`](diagnostics/g5-transition-probe-v3-20261118/run1-candidate/README.md)。
+
+<a id="v113-g5trans-probe-v4-20261119"></a>
+## v113-g5trans-probe-v4（2026-11-19，C-G5-TRANS v4）
+
+[C-G5-TRANS v4](diagnostics/g5-transition-probe-v4-20261119/README.md) 的实现：新增 log-only 的 `TRANSITION MODIFIER`/`TRANSITION MODIFIER BIND`。对每个 active `hkbModifierGenerator`（HKX2 布局 `modifier +0x48`/`generator +0x50`）读取 modifier 的 vtable/name/id/enable、子 generator 的 vtable/class、`hkbVariableBindingSet` 的 bindings（`memberOffset/variableIndex/mode/memberType`），并把变量名/类型/当前 word 从 `behavior->data` 与 `variableValueSet` 解出；cap 8 modifier / 8 binding，summary 行带 overflow。仍只读、无新 detour、CPK5/CPK5S 不变、`AE-Track2`/OAR 关闭保持。
+
+**离线测试**：`transition_probe_test` 5/5，exit 0。**构建**：提交 `114f877` 后干净树 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v113-g5trans-probe-v4-20261119` + `cmake --build --preset Release`，exit 0；身份 `CharacterPanel-scenegraph-v113-g5trans-probe-v4-20261119-114f877e8d-cl94faaed0c6-20261118T161425Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,076,672 | `228614da3cda93d9c65e167e153676140faed46ea7b7e5d0aa7a78c73dbd74c6` |
+| CharacterPanel.pdb | 52,252,672 | `69ab68ad1d888664008ccefff9f42a13600b7574f1cb84a70e43208986b172ac` |
+
+**部署（2026-11-19；未上机）**：v112 三件套备份到 `dist/deploy-backup-20261119-v112-v113pre/`；v113 DLL/PDB + 候选档 `dist/g5-transition-v4-20261119/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `228614da…`、PDB `69ab68ad…`）。源档未安装。下一步：候选一次 panel，观察 `BodyWeightBlendModifier`/`WeapEquipModifierGenerator`/`MT_Default_MG` 绑定的 word/float 在 equip cmd 1–13 是否变化；`10→1` 12 点相关复算。
