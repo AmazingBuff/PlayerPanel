@@ -165,11 +165,42 @@ TP-3/TP-4/TP-5 任一未目击时，不得用“探针没找到”直接判候�
 | `src/animation/behavior_graph/independent_graph.cpp` | 候选 K5 点调用 fill/format；不改变 K5 append 与推进顺序 |
 | `src/animation/behavior_graph/probe_liveness.cpp` | 源侧独立 ring（2,048 条）+ 渲染 drain + close 行计数；不改 CPK5/CPK5S 记录布局 |
 | `CMakeLists.txt` | 加入新 `.cpp`（显式 sources 列表） |
-| `tests/transition_probe_test.cpp` | 记录布局/overflow/空数组/名称截断的离线用例；不依赖游戏 |
+| `tests/transition_probe_test.cpp` | 容量/预算、名称截断、名称映射、overflow mask、零记录的离线用例；不依赖游戏 |
 | `config/CharacterPanel.ini` | 样例键 + 注释，默认 false |
 | `docs/build.md` / 测试记录 | v110 构建、部署、两次运行与哈希 |
 
-## 十一、本契约不证明什么
+## 十一、实现与构建记录（2026-11-18）
+
+**状态：源码已实现，默认 off；离线测试与 Release 构建通过；未部署、未上机。**
+
+| 文件 | 实现 |
+| --- | --- |
+| `src/animation/behavior_graph/transition_probe.h/.cpp` | 固定记录、vtable/偏移常量、`capture_transition_probe`（无分配/无日志）、`log_transition_probe`（仅候选点或源 drain 调用） |
+| `src/animation/settings.h/.cpp` | `TransitionStateProbe` 解析、日志与 getter；默认 false |
+| `src/animation/behavior_graph/independent_graph.cpp` | 候选 K5 `e_post_sample` 点，`k5_writer.append` 之后调用；不改推进/事件顺序 |
+| `src/animation/behavior_graph/probe_liveness.cpp` | 源侧独立 2,048 条 ring + 渲染 drain + close 行；CPK5/CPK5S 布局不变 |
+| `CMakeLists.txt` / `config/CharacterPanel.ini` | 显式加入新 `.cpp`；样例键默认 false |
+| `tests/transition_probe_test.cpp` | 容量/预算、名称截断、名称映射、overflow mask、零记录，共 5 例 |
+
+**离线测试**：
+
+```powershell
+cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\transition_probe_test.cpp /Fo:build\transition_probe_test.obj /Fe:build\transition_probe_test.exe
+build\transition_probe_test.exe
+```
+
+结果：5/5，exit 0，无编译告警。
+
+**构建**：提交 `de954f7` 后干净树 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v110-g5trans-probe-20261118` + `cmake --build --preset Release`，exit 0。身份 `CharacterPanel-scenegraph-v110-g5trans-probe-20261118-de954f7c39-cl94faaed0c6-20261118T143148Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,059,776 | `393421ead8000ae8560d908a600d2e3d9e05eef86eb2ee409fef0cd24044a2fa` |
+| CharacterPanel.pdb | 51,982,336 | `466f4bebb835b55b3259a2e9ca6ee6b890de38dc9500b5664276e820a83a410e` |
+
+**未做**：未部署、未启动游戏、未产生原生样本；安装位仍是 v104（DLL `7d270e7d…` + CAL2 grid 档）。详细构建记录见 [`docs/build.md#v110-g5trans-probe-20261118`](../../build.md#v110-g5trans-probe-20261118)。
+
+## 十二、本契约不证明什么
 
 - 不证明候选/源姿态等价；不改变 `G4P-7 FAIL` 或 G5/G6 状态。
 - 不证明 0.2 s transition 是唯一原因；不证明 Blender 标量是唯一自由度。

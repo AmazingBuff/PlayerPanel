@@ -6,7 +6,7 @@ C++23 SKSE inventory preview using a copied [SceneGraph](docs/scene-graph.md), w
 
 The default product path uses the copied scene tree, OAR clip selection and native DAC preparation. See [Animation](docs/animation.md), [SceneGraph](docs/scene-graph.md) and the [test results overview](docs/diagnostics/test-results-20261118.md#product).
 
-**2026-11-18**。G1–G4 在登记范围内成立。门 5 候选 249、源 849 完整采集，得到 248 对，姿态验收 **G4P-7 FAIL**。G6 待验。过渡离线审计已定位引擎中参与姿态混合的计时字段；字段补审计确认 `0→10` 为 0.2 s 的 `hkbBlendingTransitionEffect`，`1HM_Equip` 走 `Weap_EquipDefaultState/msg/State3` 的 Blender 分支；运行时计时/权重仍待取证。运行时探针[预注册已立](docs/diagnostics/g5-transition-probe-20261118/README.md)，尚未实现/上机。详见[测试结果总览](docs/diagnostics/test-results-20261118.md)和[离线审计](docs/diagnostics/g5-transition-audit-20261118/README.md#六离线字段补审计2026-11-18v3-dump)。
+**2026-11-18**。G1–G4 在登记范围内成立。门 5 候选 249、源 849 完整采集，得到 248 对，姿态验收 **G4P-7 FAIL**。G6 待验。过渡离线审计已定位引擎中参与姿态混合的计时字段；字段补审计确认 `0→10` 为 0.2 s 的 `hkbBlendingTransitionEffect`，`1HM_Equip` 走 `Weap_EquipDefaultState/msg/State3` 的 Blender 分支；运行时探针 v110 已实现并构建（默认 off），尚未部署/上机，计时/权重仍待取证。详见[测试结果总览](docs/diagnostics/test-results-20261118.md)、[离线审计](docs/diagnostics/g5-transition-audit-20261118/README.md#六离线字段补审计2026-11-18v3-dump)和[探针预注册](docs/diagnostics/g5-transition-probe-20261118/README.md)。
 
 The repository configuration keeps the independent graph experiments dormant by default.
 

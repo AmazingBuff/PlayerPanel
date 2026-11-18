@@ -2271,3 +2271,24 @@ Identity `CharacterPanel-scenegraph-v100a-g5cal-control-b2-9db4adfd5e-cl94faaed0
 2. **安装** v104 三件套（`build/Release/CharacterPanel.dll/.pdb` + `dist/g5-cal2-20261115/CharacterPanel-g5cal2-grid-inject.ini` → 安装位 `CharacterPanel.ini`），安装后哈希逐位核对 + 日志身份行确认落位（换档纪律：先核对再启动）。
 3. **3 个独立进程**（每进程：启动游戏 → Save116 → panel 窗口一次走完 v96a 链 → 退出）：判据 = `CONTROL GRID phase=manifest`（times=121 baseline=1）+ `phase=carrier`（唯一、三 FNV 逐位）+ 121 行 `phase=gen`（two_read_equal=1、identity_ok=true）+ `phase=close status=complete generations=121`；零 `[E]`；equip 120/120 + unequip completed=129。工件 = 安装位日志旁 `CharacterPanel-g5cal-grid-<identity>-<UTC>.bin`（484,596 B）。
 4. 运行后：日志/工件归档进 `docs/diagnostics/`，`tools/cal2_adjudicate.py` 离线裁定（C2-A..F），三进程全过 = K2-C4 升网格 READY。run 1–3 已归档；正式批次使用 `--track2-oar-exemption`（§十二）并保留 `cal2-adjudication.json`/summary。
+
+<a id="v110-g5trans-probe-20261118"></a>
+## v110-g5trans-probe（2026-11-18，C-G5-TRANS v1 只读探针）
+
+[C-G5-TRANS v1](diagnostics/g5-transition-probe-20261118/README.md) 的实现：新键 `TransitionStateProbe`（默认 off）在既有 K5 候选/源采样点记录 state-machine `activeTransitions`（0x28 步长）与 `hkbBlenderGenerator` 的 `blendParameter`/`endIntervalWeight`/child weight。候选直接格式化；源侧使用独立 2,048 条 ring，渲染 drain 输出；CPK5/CPK5S 记录布局不变，无新 detour/hook、无图/姿态/变量写入。
+
+**离线测试**：`transition_probe_test`（容量/记录预算、名称截断、side/segment/class 名称、overflow mask、零记录）5/5，exit 0：
+
+```powershell
+cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\transition_probe_test.cpp /Fo:build\transition_probe_test.obj /Fe:build\transition_probe_test.exe
+build\transition_probe_test.exe
+```
+
+**构建**：提交 `de954f7` 后干净树 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v110-g5trans-probe-20261118` + `cmake --build --preset Release`，exit 0；`/W4 /WX` 无新增告警（仅既有 D9025 `/Ob2`→`/Ob3` 提示）。身份 `CharacterPanel-scenegraph-v110-g5trans-probe-20261118-de954f7c39-cl94faaed0c6-20261118T143148Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,059,776 | `393421ead8000ae8560d908a600d2e3d9e05eef86eb2ee409fef0cd24044a2fa` |
+| CharacterPanel.pdb | 51,982,336 | `466f4bebb835b55b3259a2e9ca6ee6b890de38dc9500b5664276e820a83a410e` |
+
+**部署/运行**：未部署；安装位仍是 v104（DLL `7d270e7d…` + CAL2 grid 档），未启动游戏，v110 原生行为仍 **UNVERIFIED**。候选/源运行档尚未派生；按预注册 §六 派生后再备份/安装/上机。
