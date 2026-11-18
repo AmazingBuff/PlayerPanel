@@ -25,14 +25,14 @@ namespace
         static_assert(sizeof(TransitionProbeRecord) <= Transition_Probe_Record_Budget);
         assert(Transition_Probe_Name_Length == 96);
         assert(Transition_Probe_Node_Limit == 512);
-        assert(Transition_Probe_State_Machine_Capacity == 16);
-        assert(Transition_Probe_Effect_Capacity == 16);
+        assert(Transition_Probe_State_Machine_Capacity == 32);
+        assert(Transition_Probe_Effect_Capacity == 32);
         assert(Transition_Probe_Blender_Capacity == 8);
         assert(Transition_Probe_Child_Capacity == 8);
         assert(Transition_Probe_Internal_Capacity == 8);
         assert(Transition_Probe_Source_Capacity == 2560);
-        assert(Transition_Probe_Record_Budget == 8192);
-        assert(Transition_Probe_Version == 2);
+        assert(Transition_Probe_Record_Budget == 16384);
+        assert(Transition_Probe_Version == 3);
         assert(Transition_Probe_Magic == 0x31525054u);
     }
 
@@ -67,6 +67,8 @@ namespace
         assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::blender), "blender") == 0);
         assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::blending_transition), "blending-transition") == 0);
         assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::generator_transition), "generator-transition") == 0);
+        assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::behavior_reference), "behavior-reference") == 0);
+        assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::modifier_generator), "modifier-generator") == 0);
         assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::unknown), "unknown") == 0);
     }
 

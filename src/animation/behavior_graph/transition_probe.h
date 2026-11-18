@@ -24,14 +24,14 @@ namespace animation::behavior_graph
 {
     inline constexpr std::size_t Transition_Probe_Name_Length = 96;
     inline constexpr std::size_t Transition_Probe_Node_Limit = 512;
-    inline constexpr std::size_t Transition_Probe_State_Machine_Capacity = 16;
-    inline constexpr std::size_t Transition_Probe_Effect_Capacity = 16;
+    inline constexpr std::size_t Transition_Probe_State_Machine_Capacity = 32;
+    inline constexpr std::size_t Transition_Probe_Effect_Capacity = 32;
     inline constexpr std::size_t Transition_Probe_Blender_Capacity = 8;
     inline constexpr std::size_t Transition_Probe_Child_Capacity = 8;
     inline constexpr std::size_t Transition_Probe_Internal_Capacity = 8;
     inline constexpr std::size_t Transition_Probe_Source_Capacity = 2560;
-    inline constexpr std::size_t Transition_Probe_Record_Budget = 8192;
-    inline constexpr std::uint16_t Transition_Probe_Version = 2;
+    inline constexpr std::size_t Transition_Probe_Record_Budget = 16384;
+    inline constexpr std::uint16_t Transition_Probe_Version = 3;
     inline constexpr std::uint32_t Transition_Probe_Magic = 0x31525054u;  // "TPR1"
 
     enum class TransitionProbeSide : std::uint8_t
@@ -63,6 +63,8 @@ namespace animation::behavior_graph
         manual_selector,
         blending_transition,
         generator_transition,
+        behavior_reference,
+        modifier_generator,
         other,
     };
 
@@ -217,6 +219,10 @@ namespace animation::behavior_graph
                 return "blending-transition";
             case TransitionProbeNodeClass::generator_transition:
                 return "generator-transition";
+            case TransitionProbeNodeClass::behavior_reference:
+                return "behavior-reference";
+            case TransitionProbeNodeClass::modifier_generator:
+                return "modifier-generator";
             case TransitionProbeNodeClass::other:
                 return "other";
             case TransitionProbeNodeClass::unknown:

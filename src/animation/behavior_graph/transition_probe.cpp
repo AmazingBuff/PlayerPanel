@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <bit>
 #include <cstring>
+#include <string>
 
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
@@ -75,6 +76,10 @@ namespace animation::behavior_graph
                 return TransitionProbeNodeClass::blending_transition;
             if (a_vtable == RE::VTABLE_hkbGeneratorTransitionEffect[0].address())
                 return TransitionProbeNodeClass::generator_transition;
+            if (a_vtable == RE::VTABLE_hkbBehaviorReferenceGenerator[0].address())
+                return TransitionProbeNodeClass::behavior_reference;
+            if (a_vtable == RE::VTABLE_hkbModifierGenerator[0].address())
+                return TransitionProbeNodeClass::modifier_generator;
             return TransitionProbeNodeClass::unknown;
         }
 
@@ -162,6 +167,59 @@ namespace animation::behavior_graph
                 effect_out.end_mode = blending->endMode;
                 effect_out.self_mode = blending->selfTransitionMode;
                 effect_out.event_mode = blending->eventMode;
+            }
+        }
+
+        std::string hex_head(void const* a_data, std::size_t a_length) noexcept
+        {
+            static char const digits[] = "0123456789ABCDEF";
+            std::string out;
+            out.reserve(a_length * 2);
+            auto const* const bytes = static_cast<std::byte const*>(a_data);
+            for (std::size_t i = 0; i < a_length; ++i)
+            {
+                std::uint8_t const value = static_cast<std::uint8_t>(bytes[i]);
+                out.push_back(digits[value >> 4]);
+                out.push_back(digits[value & 0x0F]);
+            }
+            return out;
+        }
+
+        void log_transition_aux(TransitionProbeStateMachine const& a_state_machine,
+            char const* a_side, char const* a_segment, char const* a_phase,
+            std::uint32_t a_sequence, std::size_t a_index) noexcept
+        {
+            if (std::strcmp(a_state_machine.name, "Default_Behavior") != 0)
+                return;
+            auto const node = reinterpret_cast<void const*>(a_state_machine.node);
+            if (node == nullptr || !plausible_object_pointer(a_state_machine.node))
+                return;
+            struct AuxArray
+            {
+                char const* kind;
+                std::size_t offset;
+            };
+            for (AuxArray const aux : { AuxArray{ "transition-flags", 0xC0 },
+                     AuxArray{ "wildcard-flags", 0xD0 }, AuxArray{ "delayed", 0xE0 } })
+            {
+                std::uintptr_t const data = read_field<std::uintptr_t>(node, aux.offset);
+                std::int32_t const size = read_field<std::int32_t>(node, aux.offset + 0x08);
+                std::int32_t const capacity = read_field<std::int32_t>(node, aux.offset + 0x0C);
+                if (size <= 0 || !plausible_object_pointer(data))
+                {
+                    logger::info(
+                        "TRANSITION AUX side={} segment={} phase={} seq={} sm-index={} kind={} node={:#x} data={:#x} size={} capacity={} head=''",
+                        a_side, a_segment, a_phase, a_sequence, a_index, aux.kind,
+                        a_state_machine.node, data, size, capacity);
+                    continue;
+                }
+                std::size_t const length = std::min<std::size_t>(
+                    static_cast<std::size_t>(size), 0x10);
+                logger::info(
+                    "TRANSITION AUX side={} segment={} phase={} seq={} sm-index={} kind={} node={:#x} data={:#x} size={} capacity={} head='{}'",
+                    a_side, a_segment, a_phase, a_sequence, a_index, aux.kind,
+                    a_state_machine.node, data, size, capacity,
+                    hex_head(reinterpret_cast<void const*>(data), length));
             }
         }
 
@@ -368,10 +426,11 @@ namespace animation::behavior_graph
         {
             TransitionProbeStateMachine const& state_machine = a_record.state_machines[i];
             logger::info(
-                "TRANSITION PROBE SM side={} phase={} seq={} index={} node={:#x} vtable={:#x} name='{}' state={} transitions={} overflow={}",
-                side, phase, a_record.sequence, i, state_machine.node, state_machine.vtable,
+                "TRANSITION PROBE SM side={} segment={} phase={} seq={} index={} node={:#x} vtable={:#x} name='{}' state={} transitions={} overflow={}",
+                side, segment, phase, a_record.sequence, i, state_machine.node, state_machine.vtable,
                 std::string_view{ state_machine.name, state_machine.name_length },
                 state_machine.current_state, state_machine.transition_count, state_machine.overflow);
+            log_transition_aux(state_machine, side, segment, phase, a_record.sequence, i);
         }
 
         std::size_t const effect_count = std::min<std::size_t>(a_record.effect_count,
@@ -380,8 +439,8 @@ namespace animation::behavior_graph
         {
             TransitionProbeEffect const& effect = a_record.effects[i];
             logger::info(
-                "TRANSITION PROBE EFFECT side={} phase={} seq={} sm-index={} index={} effect={:#x} vtable={:#x} class={} duration={:.6f} duration-bits={:08X} time-in={:.6f} time-in-bits={:08X} time-remaining={:.6f} time-remaining-bits={:08X} blend-curve={} end-mode={} flags={} self={} event={}",
-                side, phase, a_record.sequence, effect.state_machine_index, i, effect.effect, effect.vtable,
+                "TRANSITION PROBE EFFECT side={} segment={} phase={} seq={} sm-index={} index={} effect={:#x} vtable={:#x} class={} duration={:.6f} duration-bits={:08X} time-in={:.6f} time-in-bits={:08X} time-remaining={:.6f} time-remaining-bits={:08X} blend-curve={} end-mode={} flags={} self={} event={}",
+                side, segment, phase, a_record.sequence, effect.state_machine_index, i, effect.effect, effect.vtable,
                 transition_probe_class_name(static_cast<TransitionProbeNodeClass>(effect.class_id)),
                 std::bit_cast<float>(effect.duration_bits), effect.duration_bits,
                 std::bit_cast<float>(effect.time_in_transition_bits), effect.time_in_transition_bits,
@@ -395,8 +454,8 @@ namespace animation::behavior_graph
         {
             TransitionProbeBlender const& blender = a_record.blenders[i];
             logger::info(
-                "TRANSITION PROBE BLENDER side={} phase={} seq={} index={} node={:#x} vtable={:#x} name='{}' blend-param={:.6f} blend-param-bits={:08X} end-weight={:.6f} end-weight-bits={:08X} active-children={} begin={} end={} children={} internals={} overflow={}",
-                side, phase, a_record.sequence, i, blender.node, blender.vtable,
+                "TRANSITION PROBE BLENDER side={} segment={} phase={} seq={} index={} node={:#x} vtable={:#x} name='{}' blend-param={:.6f} blend-param-bits={:08X} end-weight={:.6f} end-weight-bits={:08X} active-children={} begin={} end={} children={} internals={} overflow={}",
+                side, segment, phase, a_record.sequence, i, blender.node, blender.vtable,
                 std::string_view{ blender.name, blender.name_length },
                 std::bit_cast<float>(blender.blend_parameter_bits), blender.blend_parameter_bits,
                 std::bit_cast<float>(blender.end_interval_weight_bits), blender.end_interval_weight_bits,
@@ -409,8 +468,8 @@ namespace animation::behavior_graph
             {
                 TransitionProbeChild const& child = blender.children[child_index];
                 logger::info(
-                    "TRANSITION PROBE CHILD side={} phase={} seq={} blender-index={} index={} generator={:#x} vtable={:#x} class={} weight={:.6f} weight-bits={:08X} wfm={:.6f} wfm-bits={:08X}",
-                    side, phase, a_record.sequence, i, child_index, child.generator, child.vtable,
+                    "TRANSITION PROBE CHILD side={} segment={} phase={} seq={} blender-index={} index={} generator={:#x} vtable={:#x} class={} weight={:.6f} weight-bits={:08X} wfm={:.6f} wfm-bits={:08X}",
+                    side, segment, phase, a_record.sequence, i, child_index, child.generator, child.vtable,
                     transition_probe_class_name(static_cast<TransitionProbeNodeClass>(child.class_id)),
                     std::bit_cast<float>(child.weight_bits), child.weight_bits,
                     std::bit_cast<float>(child.world_from_model_bits), child.world_from_model_bits);
@@ -418,8 +477,8 @@ namespace animation::behavior_graph
             if (blender.internal_count > 0)
             {
                 logger::info(
-                    "TRANSITION PROBE INTERNAL side={} phase={} seq={} blender-index={} count={} values='{:04X},{:04X},{:04X},{:04X}'",
-                    side, phase, a_record.sequence, i, blender.internal_count,
+                    "TRANSITION PROBE INTERNAL side={} segment={} phase={} seq={} blender-index={} count={} values='{:04X},{:04X},{:04X},{:04X}'",
+                    side, segment, phase, a_record.sequence, i, blender.internal_count,
                     blender.internals[0], blender.internals[1], blender.internals[2],
                     blender.internals[3]);
             }
