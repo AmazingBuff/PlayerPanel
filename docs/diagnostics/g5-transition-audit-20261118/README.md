@@ -125,4 +125,4 @@ TRANS toState=10 fromNested=0 toNested=0 eventId=2(WeapEquip) trigger=[0,0] init
 2. **`1HM_Equip` 的混合标量在 Blender**：`msg/State3` 的 `blendParameter`/运行时 `endIntervalWeight`/child `weight` 是 K5-5 单标量候选，而不是状态机 transition。v109 的 0x200 直接指针扫描没有进入 `+0x60` children 数组和 `+0x70` 内联 internal-state，故零发现不否定本路径。
 3. **不能从事后数据改判**：本节只补作者字段与结构，不改变 `G4P-7 FAIL`/G5 未通过；不删轨、不放宽 `tau`、不把 0.2 s 当作通过条件。
 
-**下一步**：按 §四第 2 条预注册运行时只读探针；候选 K5 点与源 K5 apply-return 点同时记录 state-machine `activeTransitions`（0x28 步长）和 Blender `+0x4C/+0x90/+0x94/+0x98/+0x9A` + `+0x60` children/`+0x40` weight。运行时读数回来前，0.2 s 与 Blender 标量都只是作者数据/假设。
+**下一步**：按 §四第 2 条预注册运行时只读探针；候选 K5 点与源 K5 apply-return 点同时记录 state-machine `activeTransitions`（0x28 步长）和 Blender `+0x4C/+0x90/+0x94/+0x98/+0x9A` + `+0x60` children/`+0x40` weight。运行时读数回来前，0.2 s 与 Blender 标量都只是作者数据/假设。预注册已立：[C-G5-TRANS v1](../g5-transition-probe-20261118/README.md)（尚未实现/上机）。
