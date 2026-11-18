@@ -2294,3 +2294,17 @@ build\transition_probe_test.exe
 **部署（2026-11-18，已完成；候选 run 1 已上机）**：安装位 v104 三件套先备份到 `dist/deploy-backup-20261118-v104-v110pre/`（DLL `7d270e7d…`、PDB `b2232180…`、CAL2 INI `bbfe2b8b…`，逐位核对）。随后安装 v110 DLL/PDB 与候选档 `dist/g5-transition-20261118/CharacterPanel-g5trans-candidate.ini`（12,419 B，`7deb21e5…d06531`）；安装位三件套哈希与源逐位一致（DLL `393421ea…44a2fa`、PDB `466f4beb…a83a410e`、INI `7deb21e5…d06531`），DLL 身份串为 v110 身份。安装位 INI 复核：`inject / K5FullSample=true / K5LayerAudit=false / K5Reconciliation=false / TransitionStateProbe=true / SamplingLiveness=off`。源档 `CharacterPanel-g5trans-source.ini`（12,473 B，`a94a3bb9…d6ad6f`）已派生但未安装。候选 run 1 已完成，K5 链有效但探针批次 INVALID（见下）；v110 原生过渡/Blender 行为仍未获有效读数。
 
 **候选 run 1（2026-11-18 22:46–22:51，探针批次 INVALID）**：K5 链本身 249/249、equip 120、unequip 129、`state-12-to-0`；探针 249 header、996 SM、0 EFFECT、271 BLENDER、548 CHILD、271 INTERNAL；每条 header `flags=0x0002`（4 个状态机上限 overflow），全部 SM `transitions=0`。Track 2 环境正确：OAR 关闭是该档设计（`oar-api=unavailable`、base `1hm_idle.hkx`、唯一 OAR `[E]` 为 §十二 豁免），`identity-failed=1` 为已知 SCAR dummy 记账（completed=87，`data_fnv=0`）；TP-1 PASS（Track 2 豁免内）。equip 1–13 没有 `State3` Blender，TP-2/3/5 INVALID/NOT OBSERVED。需 v2（更高 SM/effect 上限、候选 `e_post_update`/`e_pre_sample` 与源 63589 入口、装备 Blender 父链/运行时类定位；保持 `AE-Track2`，不要恢复 OAR）。日志/K5 工件已归档于 [`docs/diagnostics/g5-transition-probe-20261118/run1-candidate/`](diagnostics/g5-transition-probe-20261118/run1-candidate/README.md)。
+
+<a id="v111-g5trans-probe-v2-20261118"></a>
+## v111-g5trans-probe-v2（2026-11-18，C-G5-TRANS v2）
+
+[C-G5-TRANS v2](diagnostics/g5-transition-probe-v2-20261118/README.md) 的实现：record v2 增加 `phase`/`commanded`/`probe_seq`；SM/effect 上限 4→16、Blender 4→8、child/internal 4→8、source ring 2,048→2,560。候选在 `e_post_update`/`e_pre_sample`/`e_post_sample` 三点记录，equip `commanded=1..13` 的 `pre_sample` 输出 `TRANSITION CENSUS`；源在 63589 entry 记录 pre-sample、63856 return 记录 post-sample，按 `probe_seq` 配对。仍只读、无新 detour、CPK5/CPK5S 布局不变；环境保持 `AE-Track2`（OAR 关闭是设计）。
+
+**离线测试**：`transition_probe_test` 5/5，exit 0（同 v1 命令）。**构建**：提交 `15f75ac` 后干净树 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v111-g5trans-probe-v2-20261118` + `cmake --build --preset Release`，exit 0；身份 `CharacterPanel-scenegraph-v111-g5trans-probe-v2-20261118-15f75ac27b-cl94faaed0c6-20261118T150516Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,065,920 | `dc89538521072489b90d2f1e144cac6f8a644c0e1f488b2a85458753dd7ddb6b` |
+| CharacterPanel.pdb | 52,113,408 | `fe269ce44463675f8206b0023787182fd7600c84bda50dbd3463faf06898bb28` |
+
+**部署（2026-11-18；未上机）**：v110 三件套备份到 `dist/deploy-backup-20261118-v110-v111pre/`（DLL `393421ea…`、PDB `466f4beb…`、候选 INI `7deb21e5…`）。v111 DLL/PDB + 候选档 `dist/g5-transition-v2-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `dc895385…`、PDB `fe269ce4…`、身份 `…-v111-g5trans-probe-v2-…`）。源档 `a94a3bb9…` 未安装。下一步：候选一次 panel；通过 TP-2 后换源档 F7 20 秒。

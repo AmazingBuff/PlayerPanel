@@ -1,6 +1,6 @@
 # C-G5-TRANS v2：过渡/Blender 探针修订预注册（2026-11-18）
 
-**状态：PRE-REGISTERED（2026-11-18）；实现 v111；未上机。** 本契约取代 [v1](../g5-transition-probe-20261118/README.md) 的采样点与容量，不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
+**状态：IMPLEMENTED / BUILT / 候选档已部署（2026-11-18，v111）；未上机。** 本契约取代 [v1](../g5-transition-probe-20261118/README.md) 的采样点与容量，不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
 
 ## 一、为什么需要 v2
 
@@ -90,3 +90,29 @@ census 是诊断行，不是 TP-5 判据；没有 census 行本身不使批次 I
 | `probe_liveness.cpp` / `probe_liveness_policy.h` | `ProbeInFlight::Entry::probe_seq`；63589 pre-sample 入环；63856 post-sample |
 | `tests/transition_probe_test.cpp` | v2 容量/预算/phase/census 纯函数 |
 | `docs/build.md` | v111 构建/部署/运行记录 |
+
+## 十、实现与构建记录（2026-11-18）
+
+**源码已实现；离线测试 5/5；Release 构建通过；未部署、未上机。**
+
+- record version 2：header 增加 `phase`/`commanded`/`probe_seq`；容量 16/16/8/8/8；source ring 2,560。
+- 候选：`e_post_update`/`e_pre_sample` 每步记录，`e_post_sample` 保留；equip `commanded=1..13` 的 `pre_sample` 额外输出 `TRANSITION CENSUS`。
+- 源：63589 entry 记录 `pre_sample`（`probe_seq` 存入 `ProbeInFlight::Entry`），63856 return 记录 `post_sample`；两次记录按 `probe_seq` 配对。
+
+**离线测试**：
+
+```powershell
+cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\transition_probe_test.cpp /Fo:build\transition_probe_test.obj /Fe:build\transition_probe_test.exe
+build\transition_probe_test.exe
+```
+
+结果：5/5，exit 0，无告警。
+
+**构建**：提交 `15f75ac` 后干净树 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v111-g5trans-probe-v2-20261118` + `cmake --build --preset Release`，exit 0；身份 `CharacterPanel-scenegraph-v111-g5trans-probe-v2-20261118-15f75ac27b-cl94faaed0c6-20261118T150516Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,065,920 | `dc89538521072489b90d2f1e144cac6f8a644c0e1f488b2a85458753dd7ddb6b` |
+| CharacterPanel.pdb | 52,113,408 | `fe269ce44463675f8206b0023787182fd7600c84bda50dbd3463faf06898bb28` |
+
+**部署（2026-11-18）**：v110 三件套已备份到 `dist/deploy-backup-20261118-v110-v111pre/`（DLL `393421ea…`、PDB `466f4beb…`、候选 INI `7deb21e5…`）。v111 DLL/PDB 与候选档 `dist/g5-transition-v2-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）已安装，安装位哈希/身份逐位核对通过（DLL `dc895385…`、PDB `fe269ce4…`、身份 `…-v111-g5trans-probe-v2-…`）。源档 `CharacterPanel-g5trans-source.ini`（`a94a3bb9…`）已复制但未安装。**未启动游戏**；候选 run 2 待上机。构建记录见 [`docs/build.md#v111-g5trans-probe-v2-20261118`](../../build.md#v111-g5trans-probe-v2-20261118)。

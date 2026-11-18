@@ -1,6 +1,6 @@
 # C-G5-TRANS v1：候选/源过渡与 Blender 状态只读探针预注册（2026-11-18）
 
-**状态：IMPLEMENTED / BUILT / 候选 run 1 INVALID（2026-11-18）。** 新键默认 `false`，只读，不触碰产品路径；本契约不改变门 5 的 `G4P-7 FAIL` 裁定，不产生 `tau_*`，不关闭 G5/G6。
+**状态：IMPLEMENTED / BUILT（v110）；候选 run 1 完成；采样/容量由 [v2](../g5-transition-probe-v2-20261118/README.md) 取代。** 新键默认 `false`，只读，不触碰产品路径；本契约不改变门 5 的 `G4P-7 FAIL` 裁定，不产生 `tau_*`，不关闭 G5/G6。
 
 ## 一、背景与要回答的问题
 
