@@ -2291,4 +2291,4 @@ build\transition_probe_test.exe
 | CharacterPanel.dll | 2,059,776 | `393421ead8000ae8560d908a600d2e3d9e05eef86eb2ee409fef0cd24044a2fa` |
 | CharacterPanel.pdb | 51,982,336 | `466f4bebb835b55b3259a2e9ca6ee6b890de38dc9500b5664276e820a83a410e` |
 
-**部署/运行**：未部署；安装位仍是 v104（DLL `7d270e7d…` + CAL2 grid 档），未启动游戏，v110 原生行为仍 **UNVERIFIED**。候选/源运行档尚未派生；按预注册 §六 派生后再备份/安装/上机。
+**部署（2026-11-18，已完成；未上机）**：安装位 v104 三件套先备份到 `dist/deploy-backup-20261118-v104-v110pre/`（DLL `7d270e7d…`、PDB `b2232180…`、CAL2 INI `bbfe2b8b…`，逐位核对）。随后安装 v110 DLL/PDB 与候选档 `dist/g5-transition-20261118/CharacterPanel-g5trans-candidate.ini`（12,419 B，`7deb21e5…d06531`）；安装位三件套哈希与源逐位一致（DLL `393421ea…44a2fa`、PDB `466f4beb…a83a410e`、INI `7deb21e5…d06531`），DLL 身份串为 v110 身份。安装位 INI 复核：`inject / K5FullSample=true / K5LayerAudit=false / K5Reconciliation=false / TransitionStateProbe=true / SamplingLiveness=off`。源档 `CharacterPanel-g5trans-source.ini`（12,473 B，`a94a3bb9…d6ad6f`）已派生但未安装。未启动游戏，v110 原生行为仍 **UNVERIFIED**；等待候选侧一次 panel 运行。
