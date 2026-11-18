@@ -1,6 +1,6 @@
 # C-G5-TRANS v2：过渡/Blender 探针修订预注册（2026-11-18）
 
-**状态：IMPLEMENTED / BUILT / 候选档已部署（2026-11-18，v111）；未上机。** 本契约取代 [v1](../g5-transition-probe-20261118/README.md) 的采样点与容量，不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
+**状态：IMPLEMENTED / BUILT / 候选 run 2 完成（2026-11-18，v111）；TP-1/3 PASS，TP-2 FAIL，TP-4 部分，TP-5 NOT OBSERVED。** 本契约取代 [v1](../g5-transition-probe-20261118/README.md) 的采样点与容量，不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
 
 ## 一、为什么需要 v2
 
@@ -115,4 +115,8 @@ build\transition_probe_test.exe
 | CharacterPanel.dll | 2,065,920 | `dc89538521072489b90d2f1e144cac6f8a644c0e1f488b2a85458753dd7ddb6b` |
 | CharacterPanel.pdb | 52,113,408 | `fe269ce44463675f8206b0023787182fd7600c84bda50dbd3463faf06898bb28` |
 
-**部署（2026-11-18）**：v110 三件套已备份到 `dist/deploy-backup-20261118-v110-v111pre/`（DLL `393421ea…`、PDB `466f4beb…`、候选 INI `7deb21e5…`）。v111 DLL/PDB 与候选档 `dist/g5-transition-v2-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）已安装，安装位哈希/身份逐位核对通过（DLL `dc895385…`、PDB `fe269ce4…`、身份 `…-v111-g5trans-probe-v2-…`）。源档 `CharacterPanel-g5trans-source.ini`（`a94a3bb9…`）已复制但未安装。**未启动游戏**；候选 run 2 待上机。构建记录见 [`docs/build.md#v111-g5trans-probe-v2-20261118`](../../build.md#v111-g5trans-probe-v2-20261118)。
+**部署（2026-11-18）**：v110 三件套已备份到 `dist/deploy-backup-20261118-v110-v111pre/`（DLL `393421ea…`、PDB `466f4beb…`、候选 INI `7deb21e5…`）。v111 DLL/PDB 与候选档 `dist/g5-transition-v2-20261118/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）已安装，安装位哈希/身份逐位核对通过（DLL `dc895385…`、PDB `fe269ce4…`、身份 `…-v111-g5trans-probe-v2-…`）。源档 `CharacterPanel-g5trans-source.ini`（`a94a3bb9…`）已复制但未安装。**候选 run 2 已完成**（见 §十一）；源侧尚未运行。构建记录见 [`docs/build.md#v111-g5trans-probe-v2-20261118`](../../build.md#v111-g5trans-probe-v2-20261118)。
+
+## 十一、候选 run 2（2026-11-18 23:09–23:15，v111）
+
+候选 K5 249/249、equip 120、unequip 129、`state-12-to-0`；探针 747 header（3 phase × 249）、6,672 SM、78 EFFECT（26 个 transition 实例）、813 BLENDER、1,276 census；flags `0x0000`×675、`0x0002`×72。`Default_Behavior` 的 `0→10` 在 cmd=1 采到 blending transition（duration 0.2、time-in 0.016667），`10→1` 在 cmd=87–98 完整推进到 0.183333（= duration−1/60），12 点姿态 PC1 99.83%、与 time-in 的 Pearson 0.992817。72 条 overflow 位于 equip cmd 87–98 与 unequip cmd 1–12；equip 1–13 clean。census 没有 `State3`/`Weap_EquipDefaultState`，active Blender 只有 body/arms/readied/unequip，TP-5 未目击。完整读数与 v3 入口见 [run2-candidate](run2-candidate/README.md)。
