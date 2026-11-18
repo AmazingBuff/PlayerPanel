@@ -501,6 +501,7 @@ namespace
     std::atomic<std::uint64_t> g_transition_records{ 0 };
     std::atomic<std::uint64_t> g_transition_overflow{ 0 };
     std::atomic<std::uint64_t> g_transition_unavailable{ 0 };
+    std::atomic<std::uint32_t> g_transition_probe_seq{ 0 };
 
     std::uintptr_t game_base()
     {
@@ -708,6 +709,36 @@ namespace
             entry.node_capacity = capacity;
             entry.path = path;
             entry.tsc = __rdtsc();
+            if (transition_state_probe() && k5_full_sample())
+            {
+                std::uint32_t const probe_seq =
+                    g_transition_probe_seq.fetch_add(1, std::memory_order_relaxed) + 1;
+                entry.probe_seq = probe_seq;
+                TransitionProbeRecord probe{};
+                auto const* const source_graph = static_cast<RE::BShkbAnimationGraph const*>(graph);
+                if (source_graph != nullptr)
+                {
+                    capture_transition_probe(*source_graph, TransitionProbeSide::source,
+                        TransitionProbeSegment::window, TransitionProbePhase::pre_sample, 0, 0,
+                        probe_seq, entry.tsc, probe);
+                }
+                else
+                {
+                    probe.magic = Transition_Probe_Magic;
+                    probe.version = Transition_Probe_Version;
+                    probe.side = static_cast<std::uint8_t>(TransitionProbeSide::source);
+                    probe.segment = static_cast<std::uint8_t>(TransitionProbeSegment::window);
+                    probe.phase = static_cast<std::uint8_t>(TransitionProbePhase::pre_sample);
+                    probe.probe_seq = probe_seq;
+                    probe.tsc = entry.tsc;
+                    probe.flags |= Transition_Probe_Flag_Unavailable;
+                }
+                if (transition_probe_overflowed(probe))
+                    g_transition_overflow.fetch_add(1, std::memory_order_relaxed);
+                if ((probe.flags & Transition_Probe_Flag_Unavailable) != 0)
+                    g_transition_unavailable.fetch_add(1, std::memory_order_relaxed);
+                (void)g_transition_ring.push(probe);
+            }
             auto const tid = static_cast<std::uint32_t>(__readgsqword(0x48));
             if (s.in_flight.on_entry(tid, entry) == ProbeInFlight::Outcome::e_overwritten)
                 c.overwritten_entries.fetch_add(1, std::memory_order_relaxed);
@@ -1068,7 +1099,8 @@ namespace
                 if (graph != nullptr)
                 {
                     capture_transition_probe(*graph, TransitionProbeSide::source,
-                        TransitionProbeSegment::window, record.seq, record.tsc, probe);
+                        TransitionProbeSegment::window, TransitionProbePhase::post_sample,
+                        record.seq, 0, a_entry.probe_seq, record.tsc, probe);
                 }
                 else
                 {
@@ -1076,7 +1108,9 @@ namespace
                     probe.version = Transition_Probe_Version;
                     probe.side = static_cast<std::uint8_t>(TransitionProbeSide::source);
                     probe.segment = static_cast<std::uint8_t>(TransitionProbeSegment::window);
+                    probe.phase = static_cast<std::uint8_t>(TransitionProbePhase::post_sample);
                     probe.sequence = record.seq;
+                    probe.probe_seq = a_entry.probe_seq;
                     probe.tsc = record.tsc;
                     probe.flags |= Transition_Probe_Flag_Unavailable;
                 }
@@ -1472,6 +1506,7 @@ namespace
         g_transition_records.store(0, std::memory_order_relaxed);
         g_transition_overflow.store(0, std::memory_order_relaxed);
         g_transition_unavailable.store(0, std::memory_order_relaxed);
+        g_transition_probe_seq.store(0, std::memory_order_relaxed);
     }
 
     void drain_probe_records(ProbeState& s)

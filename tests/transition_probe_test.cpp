@@ -25,14 +25,14 @@ namespace
         static_assert(sizeof(TransitionProbeRecord) <= Transition_Probe_Record_Budget);
         assert(Transition_Probe_Name_Length == 96);
         assert(Transition_Probe_Node_Limit == 512);
-        assert(Transition_Probe_State_Machine_Capacity == 4);
-        assert(Transition_Probe_Effect_Capacity == 4);
-        assert(Transition_Probe_Blender_Capacity == 4);
-        assert(Transition_Probe_Child_Capacity == 4);
-        assert(Transition_Probe_Internal_Capacity == 4);
-        assert(Transition_Probe_Source_Capacity == 2048);
-        assert(Transition_Probe_Record_Budget == 4096);
-        assert(Transition_Probe_Version == 1);
+        assert(Transition_Probe_State_Machine_Capacity == 16);
+        assert(Transition_Probe_Effect_Capacity == 16);
+        assert(Transition_Probe_Blender_Capacity == 8);
+        assert(Transition_Probe_Child_Capacity == 8);
+        assert(Transition_Probe_Internal_Capacity == 8);
+        assert(Transition_Probe_Source_Capacity == 2560);
+        assert(Transition_Probe_Record_Budget == 8192);
+        assert(Transition_Probe_Version == 2);
         assert(Transition_Probe_Magic == 0x31525054u);
     }
 
@@ -59,6 +59,9 @@ namespace
         assert(std::strcmp(transition_probe_segment_name(TransitionProbeSegment::equip), "equip") == 0);
         assert(std::strcmp(transition_probe_segment_name(TransitionProbeSegment::unequip), "unequip") == 0);
         assert(std::strcmp(transition_probe_segment_name(TransitionProbeSegment::window), "window") == 0);
+        assert(std::strcmp(transition_probe_phase_name(TransitionProbePhase::post_update), "post-update") == 0);
+        assert(std::strcmp(transition_probe_phase_name(TransitionProbePhase::pre_sample), "pre-sample") == 0);
+        assert(std::strcmp(transition_probe_phase_name(TransitionProbePhase::post_sample), "post-sample") == 0);
         assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::clip), "clip") == 0);
         assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::state_machine), "state-machine") == 0);
         assert(std::strcmp(transition_probe_class_name(TransitionProbeNodeClass::blender), "blender") == 0);

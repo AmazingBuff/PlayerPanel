@@ -24,14 +24,14 @@ namespace animation::behavior_graph
 {
     inline constexpr std::size_t Transition_Probe_Name_Length = 96;
     inline constexpr std::size_t Transition_Probe_Node_Limit = 512;
-    inline constexpr std::size_t Transition_Probe_State_Machine_Capacity = 4;
-    inline constexpr std::size_t Transition_Probe_Effect_Capacity = 4;
-    inline constexpr std::size_t Transition_Probe_Blender_Capacity = 4;
-    inline constexpr std::size_t Transition_Probe_Child_Capacity = 4;
-    inline constexpr std::size_t Transition_Probe_Internal_Capacity = 4;
-    inline constexpr std::size_t Transition_Probe_Source_Capacity = 2048;
-    inline constexpr std::size_t Transition_Probe_Record_Budget = 4096;
-    inline constexpr std::uint16_t Transition_Probe_Version = 1;
+    inline constexpr std::size_t Transition_Probe_State_Machine_Capacity = 16;
+    inline constexpr std::size_t Transition_Probe_Effect_Capacity = 16;
+    inline constexpr std::size_t Transition_Probe_Blender_Capacity = 8;
+    inline constexpr std::size_t Transition_Probe_Child_Capacity = 8;
+    inline constexpr std::size_t Transition_Probe_Internal_Capacity = 8;
+    inline constexpr std::size_t Transition_Probe_Source_Capacity = 2560;
+    inline constexpr std::size_t Transition_Probe_Record_Budget = 8192;
+    inline constexpr std::uint16_t Transition_Probe_Version = 2;
     inline constexpr std::uint32_t Transition_Probe_Magic = 0x31525054u;  // "TPR1"
 
     enum class TransitionProbeSide : std::uint8_t
@@ -45,6 +45,13 @@ namespace animation::behavior_graph
         equip = 0,
         unequip = 1,
         window = 2,
+    };
+
+    enum class TransitionProbePhase : std::uint8_t
+    {
+        post_update = 0,
+        pre_sample = 1,
+        post_sample = 2,
     };
 
     enum class TransitionProbeNodeClass : std::uint8_t
@@ -136,11 +143,16 @@ namespace animation::behavior_graph
         std::uint16_t version;
         std::uint8_t side;
         std::uint8_t segment;
+        std::uint8_t phase;
+        std::uint8_t reserved0;
         std::uint16_t flags;
         std::uint16_t state_machine_count;
         std::uint16_t effect_count;
         std::uint16_t blender_count;
         std::uint32_t sequence;
+        std::uint32_t commanded;
+        std::uint32_t probe_seq;
+        std::uint32_t reserved1;
         std::uint64_t tsc;
         std::uintptr_t graph;
         std::uint32_t actor;
@@ -171,6 +183,20 @@ namespace animation::behavior_graph
                 return "unequip";
             case TransitionProbeSegment::window:
                 return "window";
+        }
+        return "unknown";
+    }
+
+    inline char const* transition_probe_phase_name(TransitionProbePhase a_phase) noexcept
+    {
+        switch (a_phase)
+        {
+            case TransitionProbePhase::post_update:
+                return "post-update";
+            case TransitionProbePhase::pre_sample:
+                return "pre-sample";
+            case TransitionProbePhase::post_sample:
+                return "post-sample";
         }
         return "unknown";
     }
@@ -219,10 +245,16 @@ namespace animation::behavior_graph
     // no logging and no graph mutation occurs here.
     void capture_transition_probe(RE::BShkbAnimationGraph const& a_graph,
         TransitionProbeSide a_side, TransitionProbeSegment a_segment,
-        std::uint32_t a_sequence, std::uint64_t a_tsc,
+        TransitionProbePhase a_phase, std::uint32_t a_sequence,
+        std::uint32_t a_commanded, std::uint32_t a_probe_seq, std::uint64_t a_tsc,
         TransitionProbeRecord& a_out) noexcept;
 
     // Formatting and logging only; call on the candidate sample point or the source render drain.
     void log_transition_probe(TransitionProbeRecord const& a_record) noexcept;
+
+    // Bounded candidate-only active-node census used to locate the equipment Blender.
+    // Read-only; logs vtable/class/name/id and never reads an unknown class's fields.
+    void log_transition_census(RE::BShkbAnimationGraph const& a_graph, char const* a_segment,
+        std::uint32_t a_commanded) noexcept;
 }
 PLUGIN_NAMESPACE_END

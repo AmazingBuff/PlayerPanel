@@ -2774,6 +2774,44 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 k5_equip_outcome, k5_equip_reason,
                                 k5_unequip_outcome, k5_unequip_reason,
                                 k5_full_enabled };
+                            const auto log_transition_stage = [&](FrameStage a_stage) {
+                                if (!transition_state_probe())
+                                    return;
+                                TransitionProbePhase phase{};
+                                switch (a_stage)
+                                {
+                                    case FrameStage::e_post_update:
+                                        phase = TransitionProbePhase::post_update;
+                                        break;
+                                    case FrameStage::e_pre_sample:
+                                        phase = TransitionProbePhase::pre_sample;
+                                        break;
+                                    case FrameStage::e_post_sample:
+                                        phase = TransitionProbePhase::post_sample;
+                                        break;
+                                    default:
+                                        return;
+                                }
+                                TransitionProbeSegment const probe_segment =
+                                    std::strcmp(observation.segment_name(), "equip") == 0
+                                    ? TransitionProbeSegment::equip
+                                    : TransitionProbeSegment::unequip;
+                                TransitionProbeRecord probe{};
+                                capture_transition_probe(*candidate, TransitionProbeSide::candidate,
+                                    probe_segment, phase, observation.completed(),
+                                    observation.commanded(), 0, static_cast<std::uint64_t>(__rdtsc()),
+                                    probe);
+                                probe.actor = actor_id;
+                                probe.request = request;
+                                log_transition_probe(probe);
+                                if (phase == TransitionProbePhase::pre_sample &&
+                                    probe_segment == TransitionProbeSegment::equip &&
+                                    observation.commanded() >= 1 && observation.commanded() <= 13)
+                                {
+                                    log_transition_census(*candidate, observation.segment_name(),
+                                        observation.commanded());
+                                }
+                            };
                             const auto record_k3_snapshot = [&]() {
                                 if (k5_full_enabled)
                                 {
@@ -2898,21 +2936,7 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                             std::span<K3TrackRecord const>{ tracks.data(), track_count }))
                                         observation.invalidate(k5_writer.overflow()
                                             ? "k5-record-overflow" : "k5-write-failed");
-                                    if (transition_state_probe())
-                                    {
-                                        TransitionProbeRecord probe{};
-                                        TransitionProbeSegment const probe_segment =
-                                            std::strcmp(observation.segment_name(), "equip") == 0
-                                            ? TransitionProbeSegment::equip
-                                            : TransitionProbeSegment::unequip;
-                                        capture_transition_probe(*candidate,
-                                            TransitionProbeSide::candidate, probe_segment,
-                                            observation.completed(), static_cast<std::uint64_t>(__rdtsc()),
-                                            probe);
-                                        probe.actor = actor_id;
-                                        probe.request = request;
-                                        log_transition_probe(probe);
-                                    }
+                                    log_transition_stage(FrameStage::e_post_sample);
                                     log_node_state_probe(*candidate, actor_id, request,
                                         observation.segment_name(), observation.completed());
                                     log_state_child_probe(*candidate, actor_id, request,
@@ -3105,6 +3129,9 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         log_bookkeeping("post-pipeline1");
                                     if (stage == FrameStage::e_post_update && step == 0)
                                         log_bookkeeping("post-update1");
+                                    if (stage == FrameStage::e_post_update ||
+                                        stage == FrameStage::e_pre_sample)
+                                        log_transition_stage(stage);
                                     if (!observation.observe_stage(stage)) return;
                                     record_k3_snapshot();
                                     sample_candidate_input_probe(input_probe, *candidate_base, actor_id,
@@ -3257,6 +3284,9 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         {
                                             observation.command_advance(DriveTimestep);
                                             const auto observe_unequip = [&](FrameStage stage) {
+                                                if (stage == FrameStage::e_post_update ||
+                                                    stage == FrameStage::e_pre_sample)
+                                                    log_transition_stage(stage);
                                                 if (!observation.observe_stage(stage)) return;
                                                 record_k3_snapshot();
                                                 observation.observe_state(sample_unequip_probe(unequip_probe,

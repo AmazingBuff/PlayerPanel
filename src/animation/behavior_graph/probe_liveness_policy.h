@@ -814,6 +814,7 @@ namespace animation::behavior_graph
             std::uint32_t clamped;
             std::uint32_t slot_num_data;
             std::uint32_t node_capacity;
+            std::uint32_t probe_seq;
             ProbeApplyPath path;
             std::uint64_t tsc;
         };
