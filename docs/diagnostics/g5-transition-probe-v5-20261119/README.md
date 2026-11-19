@@ -1,6 +1,6 @@
 # C-G5-TRANS v5：WeapEquipBFR 子图与 State3 Blender 只读探针预注册（2026-11-19）
 
-**状态：IMPLEMENTED / BUILT / DEPLOYED（v114，2026-11-19）；未上机。** 本契约接续 [v4](../g5-transition-probe-v4-20261119/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
+**状态：IMPLEMENTED / BUILT / DEPLOYED；候选 run 1 完成（2026-11-19）；H-B1 判负。** 本契约接续 [v4](../g5-transition-probe-v4-20261119/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
 
 ## 一、v4 run 1 的输入与问题
 
@@ -224,7 +224,7 @@ for name, rva in [('BFR', 0x195EA20), ('ModGen', 0x195F1F8),
 
 ## 十二、实现与构建记录（2026-11-19）
 
-**源码已实现；离线测试 8/8；Release 构建通过；未部署、未上机。**
+**源码已实现；离线测试 8/8；Release 构建通过；已部署，未上机。**
 
 | 文件 | 实现 |
 | --- | --- |
@@ -243,3 +243,7 @@ for name, rva in [('BFR', 0x195EA20), ('ModGen', 0x195F1F8),
 | CharacterPanel.pdb | 52,383,744 | `d954ee51368ae07624793d3c7201297428ca849ca13edb24e89506ba1a250c8f` |
 
 **部署（2026-11-19 23:10）**：MO2 实测 `selected_profile=AE-Track2`，`+CharacterPanel` 已启用；v113 三件套备份到 `dist/deploy-backup-20261119-v113-v114pre/`（DLL `228614da…`、PDB `69ab68ad…`、候选 INI `7deb21e5…`，逐位核对）。v114 DLL/PDB + 候选档 `dist/g5-transition-v5-20261119/CharacterPanel-g5trans-candidate.ini`（12,449 B `30aa9777…`，`TransitionStateProbe=true`、`TransitionSubgraphProbe=true`）安装到 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`；安装位哈希/身份逐位核对通过（DLL `523b097d…`、PDB `d954ee51…`、INI `30aa9777…`、身份 `…-v114-g5trans-subgraph-20261119-94003147d5-…`）。Skyrim/SKSE 未运行，MO2 打开；未启动游戏。构建记录见 [`docs/build.md#v114-g5trans-subgraph-20261119`](../../build.md#v114-g5trans-subgraph-20261119)。
+
+## 十三、候选 run 1（2026-11-19 23:22–23:25）
+
+K5 249/249、equip 120、unequip 129、`state-12-to-0`；747 header 全 `flags=0x0000`。`TRANSITION SUBGRAPH` 114 条 BFR 行（`WeapEquipBFR` 39、`1HM_MagicBFR` 36、`Weap_BehaviorBFR` 36、`MT_BehaviorBFR` 3），75 条 summary，**0 条 NODE/SM/BLEND/CHILD**；114/114 行 `behavior-active=0`、`active-nodes=0`、`status=no-active-nodes`，零 overflow。`WeapEquipBFR` 的 `behavior-name='behaviors\weapequip.hkx'`、vtable 为 `hkbBehaviorGraph`，但 `activeNodes` 为空；主图 census 仍见 `WeapEquip.hkb`/`WeapEquipRoot`（state=3），无顶层 `State3`。`10→1` 12 点 PC1 99.8297%、Pearson 0.992817 复现。**SP-1/5/6 PASS，SP-2 FAIL，SP-3/4 NOT OBSERVED；H-B1 判负。** 完整记录与 v6 入口见 [run1-candidate](run1-candidate/README.md)。
