@@ -1,6 +1,6 @@
 # C-G5-TRANS v5：WeapEquipBFR 子图与 State3 Blender 只读探针预注册（2026-11-19）
 
-**状态：IMPLEMENTED / BUILT（v114，2026-11-19）；未部署、未上机。** 本契约接续 [v4](../g5-transition-probe-v4-20261119/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
+**状态：IMPLEMENTED / BUILT / DEPLOYED（v114，2026-11-19）；未上机。** 本契约接续 [v4](../g5-transition-probe-v4-20261119/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
 
 ## 一、v4 run 1 的输入与问题
 
@@ -242,4 +242,4 @@ for name, rva in [('BFR', 0x195EA20), ('ModGen', 0x195F1F8),
 | CharacterPanel.dll | 2,091,520 | `523b097dfc65ea10becbf4d506b49038b12d1742ab1cb55fc22e3e105dd6fe6e` |
 | CharacterPanel.pdb | 52,383,744 | `d954ee51368ae07624793d3c7201297428ca849ca13edb24e89506ba1a250c8f` |
 
-**部署**：未部署、未上机；安装位仍为 v113 + 候选档。构建记录见 [`docs/build.md#v114-g5trans-subgraph-20261119`](../../build.md#v114-g5trans-subgraph-20261119)。
+**部署（2026-11-19 23:10）**：v113 三件套备份到 `dist/deploy-backup-20261119-v113-v114pre/`（DLL `228614da…`、PDB `69ab68ad…`、候选 INI `7deb21e5…`，逐位核对）。v114 DLL/PDB + 候选档 `dist/g5-transition-v5-20261119/CharacterPanel-g5trans-candidate.ini`（12,449 B `30aa9777…`，`TransitionStateProbe=true`、`TransitionSubgraphProbe=true`）安装到 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`；安装位哈希/身份逐位核对通过（DLL `523b097d…`、PDB `d954ee51…`、INI `30aa9777…`、身份 `…-v114-g5trans-subgraph-20261119-94003147d5-…`）。Skyrim/SKSE 未运行，MO2 打开；未启动游戏。构建记录见 [`docs/build.md#v114-g5trans-subgraph-20261119`](../../build.md#v114-g5trans-subgraph-20261119)。
