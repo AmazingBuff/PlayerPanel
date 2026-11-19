@@ -2342,3 +2342,17 @@ build\transition_probe_test.exe
 **部署（2026-11-19；未上机）**：v112 三件套备份到 `dist/deploy-backup-20261119-v112-v113pre/`；v113 DLL/PDB + 候选档 `dist/g5-transition-v4-20261119/CharacterPanel-g5trans-candidate.ini`（`7deb21e5…`）安装，安装位哈希/身份逐位核对通过（DLL `228614da…`、PDB `69ab68ad…`）。源档未安装。下一步：候选一次 panel，观察 `BodyWeightBlendModifier`/`WeapEquipModifierGenerator`/`MT_Default_MG` 绑定的 word/float 在 equip cmd 1–13 是否变化；`10→1` 12 点相关复算。
 
 **候选 run 1（2026-11-19 00:35–00:37）**：K5 249/249；747 header 全 `flags=0x0000`；`TRANSITION MODIFIER` 2,379、`BIND` 537、summary overflow 全 false。equip cmd=1 有 4 个 active modifier，cmd=2–13 只剩两个 bindings=0 的 modifier；BIND word `TurnDelta`=5.0、`Speed`=1.0 恒定——**modifier 绑定变量判负（H-M1）**。`10→1` 12 点 PC1 99.83%/Pearson 0.992817 复现。剩余假设域：`WeapEquip.hkb` 子图、`allPartitionMemory`、`hkbBlendingBehavior`。完整记录见 [`run1-candidate`](diagnostics/g5-transition-probe-v4-20261119/run1-candidate/README.md)。
+
+<a id="v114-g5trans-subgraph-20261119"></a>
+## v114-g5trans-subgraph-20261119（2026-11-19，C-G5-TRANS v5）
+
+[C-G5-TRANS v5](diagnostics/g5-transition-probe-v5-20261119/README.md) 的实现：新增默认关闭的 `[Experiment] TransitionSubgraphProbe`，候选专用、log-only。复用现有三个 K5 相位，在 `log_transition_modifiers` 之后从主图 `activeNodes` 找 `hkbBehaviorReferenceGenerator`，读其 `behavior +0x50`（AE 1.6.1170 离线审计；`behaviorName +0x48`），校验 `hkbBehaviorGraph` vtable 后读取 `activeNodes +0x98`/`isActive +0x12C`，按 `hkbNodeInfo` 0x90 步长枚举子图，输出 `TRANSITION SUBGRAPH`/`NODE`/`SM`/`BLEND`/`CHILD`/`SUMMARY`。窗口限定 equip cmd 1–13、unequip cmd 1–12；cap 8 BFR / 256 node / 8 SM / 8 Blender / 8 child；所有指针经 `plausible_object_pointer`，不调用图函数、不写图/姿态/变量、不新增 detour，`TransitionProbeRecord`/CPK5/CPK5S/源 ring 均不变。
+
+**离线测试**：`transition_probe_test` 8/8，exit 0（v1–v4 的 5 例 + v5 的容量、窗口、状态名 3 例）。**构建**：提交 `9400314` 后干净树 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v114-g5trans-subgraph-20261119` + `cmake --build --preset Release`，exit 0；身份 `CharacterPanel-scenegraph-v114-g5trans-subgraph-20261119-94003147d5-cl94faaed0c6-20261119T145712Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,091,520 | `523b097dfc65ea10becbf4d506b49038b12d1742ab1cb55fc22e3e105dd6fe6e` |
+| CharacterPanel.pdb | 52,383,744 | `d954ee51368ae07624793d3c7201297428ca849ca13edb24e89506ba1a250c8f` |
+
+**部署（2026-11-19；未部署、未上机）**：当前安装位仍是 v113 + 候选档；v114 尚未复制到 MO2，也未启动游戏。下一步：按 v5 §六备份 v113、安装 v114 与 `TransitionStateProbe=true`/`TransitionSubgraphProbe=true` 候选档，跑一次 panel 的 equip 120/120 → settle → `Unequip` 144 → unequip 129，判读 SP-1..6。

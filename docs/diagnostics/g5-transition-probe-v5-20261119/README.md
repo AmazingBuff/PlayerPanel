@@ -1,6 +1,6 @@
 # C-G5-TRANS v5：WeapEquipBFR 子图与 State3 Blender 只读探针预注册（2026-11-19）
 
-**状态：PRE-REGISTERED / OFFLINE LAYOUT AUDIT COMPLETE；未实现、未构建、未部署、未上机。** 本契约接续 [v4](../g5-transition-probe-v4-20261119/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
+**状态：IMPLEMENTED / BUILT（v114，2026-11-19）；未部署、未上机。** 本契约接续 [v4](../g5-transition-probe-v4-20261119/README.md) 的候选 run 1；不改变 `G4P-7 FAIL` / G5/G6，不产生 `tau_*`。
 
 ## 一、v4 run 1 的输入与问题
 
@@ -221,3 +221,25 @@ for name, rva in [('BFR', 0x195EA20), ('ModGen', 0x195F1F8),
 ```
 
 预期：`BFR` 为 `.?AVhkbBehaviorReferenceGenerator@@`，`BehaviorGraph` 为 `.?AVhkbBehaviorGraph@@`。
+
+## 十二、实现与构建记录（2026-11-19）
+
+**源码已实现；离线测试 8/8；Release 构建通过；未部署、未上机。**
+
+| 文件 | 实现 |
+| --- | --- |
+| `src/animation/settings.h` / `settings.cpp` | `TransitionSubgraphProbe` 解析、日志行、getter；默认 false |
+| `src/animation/behavior_graph/transition_probe.h` | v5 容量/窗口常量、`TransitionSubgraphStatus` 名称、`transition_subgraph_window_matches`、`log_transition_subgraph` 声明 |
+| `src/animation/behavior_graph/transition_probe.cpp` | BFR `behavior +0x50`、`behaviorName +0x48`、`hkbBehaviorGraph::activeNodes +0x98`/`isActive +0x12C`、`hkbNodeInfo` 0x90 步长；受保护的 `TRANSITION SUBGRAPH`/`NODE`/`SM`/`BLEND`/`CHILD`/`SUMMARY` 输出；cap 8/256/8/8/8 |
+| `src/animation/behavior_graph/independent_graph.cpp` | 在 `log_transition_modifiers` 后调用；仅当 `TransitionSubgraphProbe` 且 `K5FullSample` 时输出；`TransitionStateProbe`/`K5FullSample` 缺失时只输出一次 `status=inactive` 提示 |
+| `tests/transition_probe_test.cpp` | 新增容量、窗口、状态名 3 例；总计 8/8 |
+| `config/CharacterPanel.ini` | 样例键 `TransitionSubgraphProbe=false` + 注释 |
+
+**离线测试**：`transition_probe_test` 8/8，exit 0。**构建**：提交 `9400314` 后干净树 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v114-g5trans-subgraph-20261119` + `cmake --build --preset Release`，exit 0；身份 `CharacterPanel-scenegraph-v114-g5trans-subgraph-20261119-94003147d5-cl94faaed0c6-20261119T145712Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,091,520 | `523b097dfc65ea10becbf4d506b49038b12d1742ab1cb55fc22e3e105dd6fe6e` |
+| CharacterPanel.pdb | 52,383,744 | `d954ee51368ae07624793d3c7201297428ca849ca13edb24e89506ba1a250c8f` |
+
+**部署**：未部署、未上机；安装位仍为 v113 + 候选档。构建记录见 [`docs/build.md#v114-g5trans-subgraph-20261119`](../../build.md#v114-g5trans-subgraph-20261119)。
