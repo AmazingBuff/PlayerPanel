@@ -247,3 +247,5 @@ for name, rva in [('BFR', 0x195EA20), ('ModGen', 0x195F1F8),
 ## 十三、候选 run 1（2026-11-19 23:22–23:25）
 
 K5 249/249、equip 120、unequip 129、`state-12-to-0`；747 header 全 `flags=0x0000`。`TRANSITION SUBGRAPH` 114 条 BFR 行（`WeapEquipBFR` 39、`1HM_MagicBFR` 36、`Weap_BehaviorBFR` 36、`MT_BehaviorBFR` 3），75 条 summary，**0 条 NODE/SM/BLEND/CHILD**；114/114 行 `behavior-active=0`、`active-nodes=0`、`status=no-active-nodes`，零 overflow。`WeapEquipBFR` 的 `behavior-name='behaviors\weapequip.hkx'`、vtable 为 `hkbBehaviorGraph`，但 `activeNodes` 为空；主图 census 仍见 `WeapEquip.hkb`/`WeapEquipRoot`（state=3），无顶层 `State3`。`10→1` 12 点 PC1 99.8297%、Pearson 0.992817 复现。**SP-1/5/6 PASS，SP-2 FAIL，SP-3/4 NOT OBSERVED；H-B1 判负。** 完整记录与 v6 入口见 [run1-candidate](run1-candidate/README.md)。
+
+v6-A 的离线输入包已备好：[hkx/](hkx/README.md)（`weapequip` `root/WeapEquip` 子树、`0_Master` `Default_State` 子树、v114 运行时证据、`StateInfo`/ManualSelector 布局目标；`extract_context.py` 可重生成）。
