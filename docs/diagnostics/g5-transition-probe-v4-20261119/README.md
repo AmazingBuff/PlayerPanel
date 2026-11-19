@@ -91,3 +91,5 @@ v4 的目标：**在目标状态内部找 0→10 的逐帧标量**，优先观�
 ## 八、候选 run 1（2026-11-19 00:35–00:37，v113）
 
 K5 249/249；747 header 全 `flags=0x0000`；`TRANSITION MODIFIER` 2,379、`BIND` 537、summary overflow 全 false。equip cmd=1 的 4 个 active modifier（`bAttachedModifierList`/`BeginShout_OnFalseToTrueMod`/`BodyMorphWeightExpressionModifier`/`RootModifierList`）中只有两个有 bindings=1；cmd=2–13 只剩 `RootModifierList`/`bAttachedModifierList`，均 bindings=0。BIND word `TurnDelta`=5.0、`Speed`=1.0 恒定，无任何随 cmd 变化的 modifier 绑定变量——**H-M1 判负，TP-8 PASS（仪器成立）、TP-9 无可相关标量**。`10→1` 12 点 PC1 99.83%/Pearson 0.992817 再次复现。完整记录与 v5 入口见 [run1-candidate](run1-candidate/README.md)。
+
+**后续（2026-11-19）**：v5 已按本记录的“`WeapEquip.hkb` 子图”入口预注册，并完成 `hkbBehaviorReferenceGenerator` 的离线布局审计（`behavior +0x50` → `hkbBehaviorGraph::activeNodes +0x98`）；见 [C-G5-TRANS v5](../g5-transition-probe-v5-20261119/README.md)。v5 尚未实现/上机。
