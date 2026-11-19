@@ -102,6 +102,40 @@ namespace
         assert(record.walked == 0);
         assert(record.active_nodes == 0);
     }
+
+    void subgraph_bounds_are_the_registered_values()
+    {
+        assert(Transition_Subgraph_Bfr_Capacity == 8);
+        assert(Transition_Subgraph_Node_Capacity == 256);
+        assert(Transition_Subgraph_State_Machine_Capacity == 8);
+        assert(Transition_Subgraph_Blender_Capacity == 8);
+        assert(Transition_Subgraph_Child_Capacity == 8);
+        assert(Transition_Subgraph_Equip_Max_Commanded == 13);
+        assert(Transition_Subgraph_Unequip_Max_Commanded == 12);
+    }
+
+    void subgraph_window_is_bounded()
+    {
+        assert(!transition_subgraph_window_matches(TransitionProbeSegment::equip, 0));
+        assert(transition_subgraph_window_matches(TransitionProbeSegment::equip, 1));
+        assert(transition_subgraph_window_matches(TransitionProbeSegment::equip, 13));
+        assert(!transition_subgraph_window_matches(TransitionProbeSegment::equip, 14));
+        assert(!transition_subgraph_window_matches(TransitionProbeSegment::unequip, 0));
+        assert(transition_subgraph_window_matches(TransitionProbeSegment::unequip, 1));
+        assert(transition_subgraph_window_matches(TransitionProbeSegment::unequip, 12));
+        assert(!transition_subgraph_window_matches(TransitionProbeSegment::unequip, 13));
+        assert(!transition_subgraph_window_matches(TransitionProbeSegment::window, 1));
+    }
+
+    void subgraph_status_names_are_stable()
+    {
+        assert(std::strcmp(transition_subgraph_status_name(TransitionSubgraphStatus::ok), "ok") == 0);
+        assert(std::strcmp(transition_subgraph_status_name(TransitionSubgraphStatus::unavailable), "unavailable") == 0);
+        assert(std::strcmp(transition_subgraph_status_name(TransitionSubgraphStatus::unknown_behavior_class), "unknown-behavior-class") == 0);
+        assert(std::strcmp(transition_subgraph_status_name(TransitionSubgraphStatus::no_active_nodes), "no-active-nodes") == 0);
+        assert(std::strcmp(transition_subgraph_status_name(TransitionSubgraphStatus::invalid_array), "invalid-array") == 0);
+        assert(std::strcmp(transition_subgraph_status_name(TransitionSubgraphStatus::inactive), "inactive") == 0);
+    }
 }
 
 int main()
@@ -111,5 +145,8 @@ int main()
     names_are_stable();
     overflow_mask_covers_each_structural_cap();
     zero_record_is_empty();
+    subgraph_bounds_are_the_registered_values();
+    subgraph_window_is_bounded();
+    subgraph_status_names_are_stable();
     return 0;
 }

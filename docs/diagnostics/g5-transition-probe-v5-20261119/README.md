@@ -99,8 +99,8 @@ v4 日志中 `WeapEquipModifierGenerator` 的 `modifier` 是 `bAttachedModifierL
 ### 4.1 键与门控
 
 - 新键 `[Experiment] TransitionSubgraphProbe=false`，默认 off。
-- 要求候选 `TransitionStateProbe=true` 且 `K5FullSample=true`；任一不满足时只输出一行 `TRANSITION SUBGRAPH status=inactive reason=...`。
-- 候选专用；源侧即使误开也只输出 `status=inactive reason=candidate-only`，不进入 source ring，不改 CPK5S 布局。
+- 要求候选 `TransitionStateProbe=true` 且 `K5FullSample=true`；任一不满足时不产生子图行，候选侧在首次调用时输出一行 `TRANSITION SUBGRAPH status=inactive reason=...`。
+- 候选专用；源侧不调用该函数，不进入 source ring，不改 CPK5S 布局。
 - 不新增 detour/hook；不写图/姿态/变量；不分发事件；`TransitionProbeRecord` 版本/容量/源 ring 均不变。
 
 ### 4.2 采样点与窗口

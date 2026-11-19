@@ -34,6 +34,17 @@ namespace animation::behavior_graph
     inline constexpr std::uint16_t Transition_Probe_Version = 3;
     inline constexpr std::uint32_t Transition_Probe_Magic = 0x31525054u;  // "TPR1"
 
+    // C-G5-TRANS v5: candidate-only behavior-reference subgraph probe. The
+    // bounds are part of the pre-registration and are checked by the
+    // engine-free test; exceeding any of them marks the batch overflowed.
+    inline constexpr std::size_t Transition_Subgraph_Bfr_Capacity = 8;
+    inline constexpr std::size_t Transition_Subgraph_Node_Capacity = 256;
+    inline constexpr std::size_t Transition_Subgraph_State_Machine_Capacity = 8;
+    inline constexpr std::size_t Transition_Subgraph_Blender_Capacity = 8;
+    inline constexpr std::size_t Transition_Subgraph_Child_Capacity = 8;
+    inline constexpr std::uint32_t Transition_Subgraph_Equip_Max_Commanded = 13;
+    inline constexpr std::uint32_t Transition_Subgraph_Unequip_Max_Commanded = 12;
+
     enum class TransitionProbeSide : std::uint8_t
     {
         candidate = 0,
@@ -66,6 +77,16 @@ namespace animation::behavior_graph
         behavior_reference,
         modifier_generator,
         other,
+    };
+
+    enum class TransitionSubgraphStatus : std::uint8_t
+    {
+        ok = 0,
+        unavailable,
+        unknown_behavior_class,
+        no_active_nodes,
+        invalid_array,
+        inactive,
     };
 
     inline constexpr std::uint16_t Transition_Probe_Flag_Unavailable = 1u << 0;
@@ -231,6 +252,43 @@ namespace animation::behavior_graph
         return "unknown";
     }
 
+    inline char const* transition_subgraph_status_name(TransitionSubgraphStatus a_status) noexcept
+    {
+        switch (a_status)
+        {
+            case TransitionSubgraphStatus::ok:
+                return "ok";
+            case TransitionSubgraphStatus::unavailable:
+                return "unavailable";
+            case TransitionSubgraphStatus::unknown_behavior_class:
+                return "unknown-behavior-class";
+            case TransitionSubgraphStatus::no_active_nodes:
+                return "no-active-nodes";
+            case TransitionSubgraphStatus::invalid_array:
+                return "invalid-array";
+            case TransitionSubgraphStatus::inactive:
+                return "inactive";
+        }
+        return "unavailable";
+    }
+
+    [[nodiscard]] constexpr bool transition_subgraph_window_matches(
+        TransitionProbeSegment a_segment, std::uint32_t a_commanded) noexcept
+    {
+        switch (a_segment)
+        {
+            case TransitionProbeSegment::equip:
+                return a_commanded >= 1 &&
+                    a_commanded <= Transition_Subgraph_Equip_Max_Commanded;
+            case TransitionProbeSegment::unequip:
+                return a_commanded >= 1 &&
+                    a_commanded <= Transition_Subgraph_Unequip_Max_Commanded;
+            case TransitionProbeSegment::window:
+                return false;
+        }
+        return false;
+    }
+
     inline void transition_probe_copy_name(char (&a_dest)[Transition_Probe_Name_Length],
         std::string_view a_name) noexcept
     {
@@ -268,5 +326,13 @@ namespace animation::behavior_graph
     // it does not enter TransitionProbeRecord or the source ring.
     void log_transition_modifiers(RE::BShkbAnimationGraph const& a_graph, char const* a_segment,
         TransitionProbePhase a_phase, std::uint32_t a_sequence, std::uint32_t a_commanded) noexcept;
+
+    // Candidate-only, log-only subgraph probe for the WeapEquipBFR route. It follows the
+    // audited hkbBehaviorReferenceGenerator behavior pointer (+0x50) into the referenced
+    // hkbBehaviorGraph and enumerates its activeNodes; every pointer is guarded and no
+    // graph function is called. It does not enter TransitionProbeRecord or the source ring.
+    void log_transition_subgraph(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeSegment a_segment, TransitionProbePhase a_phase,
+        std::uint32_t a_sequence, std::uint32_t a_commanded) noexcept;
 }
 PLUGIN_NAMESPACE_END

@@ -159,6 +159,10 @@ namespace animation
     // existing K5 candidate/source points. Requires K5FullSample; adds no detour and writes no
     // graph, pose or variable.
     [[nodiscard]] bool transition_state_probe();
+    // C-G5-TRANS v5 (2026-11-19, default off): candidate-only, log-only follow of
+    // hkbBehaviorReferenceGenerator::behavior (+0x50) into the referenced hkbBehaviorGraph.
+    // Requires TransitionStateProbe and K5FullSample; no writes and no new hooks.
+    [[nodiscard]] bool transition_subgraph_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

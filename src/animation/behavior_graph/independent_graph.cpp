@@ -2776,7 +2776,19 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 k5_full_enabled };
                             const auto log_transition_stage = [&](FrameStage a_stage) {
                                 if (!transition_state_probe())
+                                {
+                                    if (transition_subgraph_probe())
+                                    {
+                                        static bool warned = false;
+                                        if (!warned)
+                                        {
+                                            warned = true;
+                                            logger::info(
+                                                "TRANSITION SUBGRAPH status=inactive reason=transition-state-probe-off");
+                                        }
+                                    }
                                     return;
+                                }
                                 TransitionProbePhase phase{};
                                 switch (a_stage)
                                 {
@@ -2806,6 +2818,24 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 log_transition_probe(probe);
                                 log_transition_modifiers(*candidate, observation.segment_name(), phase,
                                     observation.completed(), observation.commanded());
+                                if (transition_subgraph_probe())
+                                {
+                                    if (!k5_full_enabled)
+                                    {
+                                        static bool warned = false;
+                                        if (!warned)
+                                        {
+                                            warned = true;
+                                            logger::info(
+                                                "TRANSITION SUBGRAPH status=inactive reason=k5-full-sample-off");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        log_transition_subgraph(*candidate, probe_segment, phase,
+                                            observation.completed(), observation.commanded());
+                                    }
+                                }
                                 if (phase == TransitionProbePhase::pre_sample &&
                                     probe_segment == TransitionProbeSegment::equip &&
                                     observation.commanded() >= 1 && observation.commanded() <= 13)

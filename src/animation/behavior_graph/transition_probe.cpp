@@ -44,6 +44,18 @@ namespace animation::behavior_graph
         constexpr std::size_t Blender_Child_Weight_Offset = 0x40;
         constexpr std::size_t Blender_Child_World_From_Model_Offset = 0x44;
 
+        // C-G5-TRANS v5 (AE 1.6.1170 offline layout audit, 2026-11-19):
+        // hkbBehaviorReferenceGenerator is 0x58 bytes; +0x48 is behaviorName and
+        // +0x50 is the referenced hkbBehaviorGraph. hkbBehaviorGraph::activeNodes
+        // is +0x98 and hkbNodeInfo is 0x90 bytes with nodeClone at +0x58.
+        constexpr std::size_t Behavior_Reference_Behavior_Name_Offset = 0x48;
+        constexpr std::size_t Behavior_Reference_Behavior_Offset = 0x50;
+        constexpr std::size_t Behavior_Graph_Active_Nodes_Offset = 0x98;
+        constexpr std::size_t Behavior_Graph_Is_Active_Offset = 0x12C;
+        constexpr std::size_t Node_Info_Size = 0x90;
+        constexpr std::size_t Node_Info_Node_Clone_Offset = 0x58;
+        constexpr std::size_t Node_Info_Behavior_Offset = 0x60;
+
         template <class T>
         T read_field(void const* a_base, std::size_t a_offset) noexcept
         {
@@ -63,6 +75,20 @@ namespace animation::behavior_graph
             while (length < Transition_Probe_Name_Length && raw[length] != '\0')
                 ++length;
             return { raw, length };
+        }
+
+        std::string_view read_string_ptr_field(void const* a_base, std::size_t a_offset) noexcept
+        {
+            // hkStringPtr stores the managed flag in bit 0; the rest is the char pointer.
+            std::uintptr_t const raw = read_field<std::uintptr_t>(a_base, a_offset) &
+                ~std::uintptr_t{ 1 };
+            if (!plausible_object_pointer(raw))
+                return {};
+            char const* const text = reinterpret_cast<char const*>(raw);
+            std::size_t length = 0;
+            while (length < Transition_Probe_Name_Length && text[length] != '\0')
+                ++length;
+            return { text, length };
         }
 
         TransitionProbeNodeClass classify(std::uintptr_t a_vtable) noexcept
@@ -329,6 +355,98 @@ namespace animation::behavior_graph
                 }
             }
         }
+
+        struct SubgraphLogContext
+        {
+            char const* segment;
+            char const* phase;
+            std::uint32_t sequence;
+            std::uint32_t commanded;
+            std::size_t bfr_index;
+            std::size_t sm_logged{ 0 };
+            std::size_t blender_logged{ 0 };
+            bool overflow{ false };
+        };
+
+        void log_subgraph_state_machine(SubgraphLogContext& a_context, std::uintptr_t a_node,
+            std::size_t a_index) noexcept
+        {
+            std::int32_t const current_state = read_field<std::int32_t>(
+                reinterpret_cast<void const*>(a_node), 0x80);
+            std::int32_t const transition_count = read_field<std::int32_t>(
+                reinterpret_cast<void const*>(a_node), 0xB0 + 0x08);
+            logger::info(
+                "TRANSITION SUBGRAPH SM side=candidate segment={} phase={} seq={} commanded={} bfr-index={} index={} node={:#x} name='{}' current-state={} transitions={}",
+                a_context.segment, a_context.phase, a_context.sequence, a_context.commanded,
+                a_context.bfr_index, a_index, a_node,
+                read_node_name(reinterpret_cast<RE::hkbNode const*>(a_node)), current_state,
+                transition_count > 0 ? transition_count : 0);
+        }
+
+        void log_subgraph_blender(SubgraphLogContext& a_context, std::uintptr_t a_node,
+            std::size_t a_index) noexcept
+        {
+            std::uint32_t const blend_parameter = read_field<std::uint32_t>(
+                reinterpret_cast<void const*>(a_node),
+                Blender_Blend_Parameter_Offset);
+            std::uint32_t const end_weight = read_field<std::uint32_t>(
+                reinterpret_cast<void const*>(a_node),
+                Blender_End_Interval_Weight_Offset);
+            std::int32_t const num_active = read_field<std::int32_t>(
+                reinterpret_cast<void const*>(a_node),
+                Blender_Num_Active_Children_Offset);
+            std::int16_t const begin = read_field<std::int16_t>(
+                reinterpret_cast<void const*>(a_node),
+                Blender_Begin_Interval_Index_Offset);
+            std::int16_t const end = read_field<std::int16_t>(
+                reinterpret_cast<void const*>(a_node),
+                Blender_End_Interval_Index_Offset);
+            std::uintptr_t const children = read_field<std::uintptr_t>(
+                reinterpret_cast<void const*>(a_node),
+                Blender_Children_Offset);
+            std::int32_t const child_count = read_field<std::int32_t>(
+                reinterpret_cast<void const*>(a_node),
+                Blender_Children_Offset + 0x08);
+            logger::info(
+                "TRANSITION SUBGRAPH BLEND side=candidate segment={} phase={} seq={} commanded={} bfr-index={} index={} node={:#x} name='{}' blend-param={} blend-param-f={:.6f} end-weight={} end-weight-f={:.6f} num-active={} begin={} end={} children={}",
+                a_context.segment, a_context.phase, a_context.sequence, a_context.commanded,
+                a_context.bfr_index, a_index, a_node,
+                read_node_name(reinterpret_cast<RE::hkbNode const*>(a_node)),
+                blend_parameter, std::bit_cast<float>(blend_parameter),
+                end_weight, std::bit_cast<float>(end_weight), num_active, begin, end,
+                child_count > 0 ? child_count : 0);
+            if (child_count <= 0 || !plausible_object_pointer(children))
+                return;
+            std::size_t const limit = std::min<std::size_t>(
+                static_cast<std::size_t>(child_count), Transition_Subgraph_Child_Capacity);
+            if (static_cast<std::size_t>(child_count) > Transition_Subgraph_Child_Capacity)
+                a_context.overflow = true;
+            for (std::size_t i = 0; i < limit; ++i)
+            {
+                std::uintptr_t const child = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(children), i * sizeof(std::uintptr_t));
+                if (!plausible_object_pointer(child))
+                    continue;
+                std::uintptr_t const generator = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(child),
+                    Blender_Child_Generator_Offset);
+                std::uint32_t const weight = read_field<std::uint32_t>(
+                    reinterpret_cast<void const*>(child),
+                    Blender_Child_Weight_Offset);
+                std::uint32_t const world_from_model = read_field<std::uint32_t>(
+                    reinterpret_cast<void const*>(child),
+                    Blender_Child_World_From_Model_Offset);
+                std::uintptr_t const generator_vtable = plausible_object_pointer(generator)
+                    ? read_field<std::uintptr_t>(reinterpret_cast<void const*>(generator), 0) : 0;
+                logger::info(
+                    "TRANSITION SUBGRAPH CHILD side=candidate segment={} phase={} seq={} commanded={} bfr-index={} blend-index={} child={} generator={:#x} vtable={:#x} class={} weight={} weight-f={:.6f} wfm={} wfm-f={:.6f}",
+                    a_context.segment, a_context.phase, a_context.sequence, a_context.commanded,
+                    a_context.bfr_index, a_index, i, generator, generator_vtable,
+                    transition_probe_class_name(classify(generator_vtable)),
+                    weight, std::bit_cast<float>(weight), world_from_model,
+                    std::bit_cast<float>(world_from_model));
+            }
+        }
     }
 
     void log_transition_census(RE::BShkbAnimationGraph const& a_graph, char const* a_segment,
@@ -500,6 +618,186 @@ namespace animation::behavior_graph
         logger::info(
             "TRANSITION MODIFIER SUMMARY side=candidate segment={} phase={} seq={} commanded={} modifiers={} overflow={}",
             segment, phase, a_sequence, a_commanded, modifiers, overflow);
+    }
+
+    void log_transition_subgraph(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeSegment a_segment, TransitionProbePhase a_phase,
+        std::uint32_t a_sequence, std::uint32_t a_commanded) noexcept
+    {
+        if (!transition_subgraph_window_matches(a_segment, a_commanded))
+            return;
+
+        char const* const segment = transition_probe_segment_name(a_segment);
+        char const* const phase = transition_probe_phase_name(a_phase);
+        RE::hkbBehaviorGraph const* const main_behavior =
+            a_graph.characterInstance.behaviorGraph.get();
+        if (main_behavior == nullptr || main_behavior->activeNodes == nullptr)
+        {
+            logger::info(
+                "TRANSITION SUBGRAPH side=candidate segment={} phase={} seq={} commanded={} status=unavailable reason=no-main-graph",
+                segment, phase, a_sequence, a_commanded);
+            return;
+        }
+
+        RE::NodeList const& main_nodes = *main_behavior->activeNodes;
+        std::size_t const limit = std::min<std::size_t>(main_nodes.size(),
+            Transition_Probe_Node_Limit);
+        std::size_t bfrs = 0;
+        std::size_t behaviors = 0;
+        std::size_t nodes = 0;
+        std::size_t state_machines = 0;
+        std::size_t blenders = 0;
+        bool overflow = false;
+
+        for (std::size_t i = 0; i < limit; ++i)
+        {
+            RE::hkbNode* const node = main_nodes.data()[i].nodeClone;
+            if (node == nullptr || !plausible_object_pointer(
+                    reinterpret_cast<std::uintptr_t>(node)))
+                continue;
+            std::uintptr_t const vtable = read_field<std::uintptr_t>(node, 0);
+            if (vtable != RE::VTABLE_hkbBehaviorReferenceGenerator[0].address())
+                continue;
+            if (bfrs >= Transition_Subgraph_Bfr_Capacity)
+            {
+                overflow = true;
+                break;
+            }
+
+            std::size_t const bfr_index = bfrs++;
+            std::string_view const bfr_name = read_node_name(node);
+            std::uint16_t const bfr_id = read_field<std::uint16_t>(node, 0x40);
+            std::string_view const behavior_name = read_string_ptr_field(node,
+                Behavior_Reference_Behavior_Name_Offset);
+            std::uintptr_t const behavior = read_field<std::uintptr_t>(node,
+                Behavior_Reference_Behavior_Offset);
+            std::uintptr_t behavior_vtable = 0;
+            std::uint8_t behavior_active = 0;
+            std::uintptr_t active_nodes = 0;
+            std::int32_t active_size = 0;
+            std::int32_t active_capacity = 0;
+            TransitionSubgraphStatus status = TransitionSubgraphStatus::ok;
+            if (!plausible_object_pointer(behavior))
+            {
+                status = TransitionSubgraphStatus::unavailable;
+            }
+            else
+            {
+                behavior_vtable = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(behavior), 0);
+                if (behavior_vtable != RE::VTABLE_hkbBehaviorGraph[0].address())
+                {
+                    status = TransitionSubgraphStatus::unknown_behavior_class;
+                }
+                else
+                {
+                    ++behaviors;
+                    behavior_active = read_field<std::uint8_t>(
+                        reinterpret_cast<void const*>(behavior),
+                        Behavior_Graph_Is_Active_Offset);
+                    active_nodes = read_field<std::uintptr_t>(
+                        reinterpret_cast<void const*>(behavior),
+                        Behavior_Graph_Active_Nodes_Offset);
+                    if (!plausible_object_pointer(active_nodes))
+                    {
+                        status = TransitionSubgraphStatus::no_active_nodes;
+                    }
+                    else
+                    {
+                        active_size = read_field<std::int32_t>(
+                            reinterpret_cast<void const*>(active_nodes), 0x08);
+                        active_capacity = read_field<std::int32_t>(
+                            reinterpret_cast<void const*>(active_nodes), 0x0C);
+                        if (active_size <= 0)
+                            status = TransitionSubgraphStatus::no_active_nodes;
+                    }
+                }
+            }
+
+            logger::info(
+                "TRANSITION SUBGRAPH side=candidate segment={} phase={} seq={} commanded={} index={} bfr={:#x} bfr-name='{}' bfr-id={} behavior-name='{}' behavior={:#x} behavior-vtable={:#x} behavior-active={} active-nodes={} active-capacity={} status={}",
+                segment, phase, a_sequence, a_commanded, i,
+                reinterpret_cast<std::uintptr_t>(node), bfr_name, bfr_id, behavior_name,
+                behavior, behavior_vtable, static_cast<std::uint32_t>(behavior_active),
+                active_size > 0 ? active_size : 0,
+                active_capacity > 0 ? active_capacity : 0,
+                transition_subgraph_status_name(status));
+            if (status != TransitionSubgraphStatus::ok)
+                continue;
+
+            std::uintptr_t const data = read_field<std::uintptr_t>(
+                reinterpret_cast<void const*>(active_nodes), 0x00);
+            if (!plausible_object_pointer(data))
+            {
+                logger::info(
+                    "TRANSITION SUBGRAPH side=candidate segment={} phase={} seq={} commanded={} index={} bfr={:#x} status=invalid-array",
+                    segment, phase, a_sequence, a_commanded, i,
+                    reinterpret_cast<std::uintptr_t>(node));
+                continue;
+            }
+            std::size_t const node_limit = std::min<std::size_t>(
+                static_cast<std::size_t>(active_size), Transition_Subgraph_Node_Capacity);
+            if (static_cast<std::size_t>(active_size) > Transition_Subgraph_Node_Capacity)
+                overflow = true;
+
+            SubgraphLogContext context{ segment, phase, a_sequence, a_commanded, bfr_index };
+            for (std::size_t n = 0; n < node_limit; ++n)
+            {
+                std::uintptr_t const info = data + n * Node_Info_Size;
+                std::uintptr_t const clone = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(info),
+                    Node_Info_Node_Clone_Offset);
+                if (!plausible_object_pointer(clone))
+                    continue;
+                std::uintptr_t const node_vtable = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(clone), 0);
+                TransitionProbeNodeClass const node_class = classify(node_vtable);
+                std::string_view const node_name = read_node_name(
+                    reinterpret_cast<RE::hkbNode const*>(clone));
+                std::uint16_t const node_id = read_field<std::uint16_t>(
+                    reinterpret_cast<void const*>(clone), 0x40);
+                std::uintptr_t const node_behavior = read_field<std::uintptr_t>(
+                    reinterpret_cast<void const*>(info),
+                    Node_Info_Behavior_Offset);
+                ++nodes;
+                if (a_phase == TransitionProbePhase::pre_sample)
+                {
+                    logger::info(
+                        "TRANSITION SUBGRAPH NODE side=candidate segment={} phase={} seq={} commanded={} bfr-index={} index={} node={:#x} vtable={:#x} class={} name='{}' id={} behavior={:#x}",
+                        segment, phase, a_sequence, a_commanded, bfr_index, n, clone,
+                        node_vtable, transition_probe_class_name(node_class), node_name,
+                        node_id, node_behavior);
+                }
+                if (node_class == TransitionProbeNodeClass::state_machine)
+                {
+                    if (context.sm_logged >= Transition_Subgraph_State_Machine_Capacity)
+                    {
+                        context.overflow = true;
+                        continue;
+                    }
+                    log_subgraph_state_machine(context, clone, n);
+                    ++context.sm_logged;
+                }
+                else if (node_class == TransitionProbeNodeClass::blender)
+                {
+                    if (context.blender_logged >= Transition_Subgraph_Blender_Capacity)
+                    {
+                        context.overflow = true;
+                        continue;
+                    }
+                    log_subgraph_blender(context, clone, n);
+                    ++context.blender_logged;
+                }
+            }
+            state_machines += context.sm_logged;
+            blenders += context.blender_logged;
+            overflow = overflow || context.overflow;
+        }
+
+        logger::info(
+            "TRANSITION SUBGRAPH SUMMARY side=candidate segment={} phase={} seq={} commanded={} bfrs={} behaviors={} nodes={} sm={} blenders={} overflow={}",
+            segment, phase, a_sequence, a_commanded, bfrs, behaviors, nodes, state_machines,
+            blenders, overflow);
     }
 
     void capture_transition_probe(RE::BShkbAnimationGraph const& a_graph,
