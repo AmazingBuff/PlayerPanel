@@ -1325,7 +1325,8 @@ namespace animation::behavior_graph
     {
         std::uintptr_t const behavior = reinterpret_cast<std::uintptr_t>(a_graph.characterInstance.behaviorGraph.get());
         std::string const key = fmt::format(
-            "side=candidate segment=equip phase={} graph={:#x} behavior={:#x} actor={:08x} request={} commanded={} completed={}",
+            "side=candidate segment={} phase={} graph={:#x} behavior={:#x} actor={:08x} request={} commanded={} completed={}",
+            transition_probe_segment_name(static_cast<TransitionProbeSegment>(a_probe.segment)),
             transition_probe_phase_name(static_cast<TransitionProbePhase>(a_probe.phase)),
             a_probe.graph, behavior, a_probe.actor, a_probe.request, a_probe.commanded, a_probe.sequence);
 

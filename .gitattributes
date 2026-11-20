@@ -73,3 +73,5 @@ docs/diagnostics/session-summary-20261114.md -text
 # Parent-chain run artifacts are hashed as written; keep their bytes verbatim.
 docs/diagnostics/g5-transition-probe-v6-20261120/run1-candidate/** -text
 docs/diagnostics/g5-transition-probe-v6-20261120/run1-candidate/*.bin -diff
+docs/diagnostics/g5-clip-clock-probe-20261120/run1-candidate/** -text
+docs/diagnostics/g5-clip-clock-probe-20261120/run1-candidate/*.bin -diff
