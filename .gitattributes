@@ -69,3 +69,7 @@ docs/diagnostics/CharacterPanel-g5k1-source-census-v101a-run1-20261114-1420.log 
 docs/diagnostics/CharacterPanel-g5k1-source-census-v101b-run2-20261114-1424.log -text whitespace=cr-at-eol,-blank-at-eof
 # Session summary is an indexed narrative document; keep its bytes exact.
 docs/diagnostics/session-summary-20261114.md -text
+
+# Parent-chain run artifacts are hashed as written; keep their bytes verbatim.
+docs/diagnostics/g5-transition-probe-v6-20261120/run1-candidate/** -text
+docs/diagnostics/g5-transition-probe-v6-20261120/run1-candidate/*.bin -diff

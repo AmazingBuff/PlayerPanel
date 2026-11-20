@@ -2,7 +2,7 @@
 
 v115 在 AE 1.6.1170 的既有 K5 候选采样点读取主图的活动节点和子索引表。首轮只回答一个问题：装备第 2–12 步实际经过哪些生成器，作者树的内层 `State3` 是否在这条链上。 [v6 离线审计](../g5-transition-probe-v5-20261119/hkx/stateinfo_layout_audit.md)
 
-**状态：IMPLEMENTED / BUILT / DEPLOYED（2026-11-20 22:56）；候选 run 待上机。**
+**状态：IMPLEMENTED / BUILT / DEPLOYED；候选 run 1 完成（2026-11-20 22:59）；父链资格 PASS，内层 `State3` 未观测（分支二）。**
 
 ## 采集范围
 
@@ -47,3 +47,9 @@ v115 在 AE 1.6.1170 的既有 K5 候选采样点读取主图的活动节点和�
 **更正（2026-11-20 22:56）**：本节早先登记的 v115 构建（身份 `…-b9bd29fad6+dirty-…`、DLL 2,107,392 B `e1f2c69c…`、PDB 35,106,816 B `69401e8a…`、INI 17,110 B `a19c8d95…`）与其声明的 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip` 在仓库、`dist/` 与安装位均无对应工件（当时 `build/` 与安装位仍是 v114），无法复核；已由上面的重建工件取代，早先哈希作废。
 
 **部署（2026-11-20 22:56；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v114 三件套先备份到 `dist/deploy-backup-20261120-v114-v115pre/`（DLL 2,091,520 B `523b097d…`、PDB 52,383,744 B `d954ee51…`、候选 INI 12,449 B `30aa9777…`，与安装位逐位一致）。v115 DLL/PDB + 候选档装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `5484030d…`/`b1071fdd…`/`df18e107…`，DLL 内身份 `…-v115-g5trans-parent-chain-20261120-087613006d-…` 与 `TRANSITION PARENT CHAIN` 模板在位。运行包 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip`（14,413,417 B `6e087fe0…`）三件套逐条哈希与安装位一致。**未启动游戏**；候选 run 待上机。
+
+## 候选 run 1（2026-11-20 22:59–23:01）
+
+K5 249/249（equip 120 `fixed-equip-budget`、unequip 129 `state-12-to-0`）、747 header 全 `flags=0x0000`、唯一 `[E]` 为 Track 2 OAR 豁免、零 `[W]` 相关异常。`TRANSITION PARENT CHAIN SUMMARY` **26/26 `status=ok`**（`seeds=1 roots=1 unresolved=0 empty-slots=0`），`NODE` 444、`EDGE` 418、`SM` 182、`SELECTOR` 130、`CLIP` 26、**`BLENDER` 0**；26 个观测点的链路完全相同：`Master_Behavior` → `RootModifierGenerator` → `RootBoneSwitch_MSG` → `DualWieldShieldBoneRootMSG` → `1st3rdPerson_MSG` → `RootBehaviorGraph`(`Default_State`) → `Default_Behavior`(`Weap_Equip_State`=10) → `WeapEquipModifierGenerator` → `WeapEquipBFR` → `WeapEquip.hkb` → `WeapEquipRoot`(`WeapEquip`=3) → `WeapEquipBehavior`(`WeapEquip_StandingState`) → `Weap_EquipBehavior`(`Weap_EquipDefaultState`) → `Weap_Equip_MSG`(sel 1) → `StateMachine1181`(`State0`) → `ManualSelectorGenerator418`(sel 9) → `DG_1hmEquip`；仅第 1 步多一个 `DefaultBlendResetTransition`(35518, `time-in=0.016667`)。整份日志 `State3` 出现 **0 次**。
+
+同一窗口的装备 2–12 步：clip `local-time` 恒为 `0x3E555556`、7 个 state-machine 全 `transitions=0`、`effects=0`、`blenders=0`；而 K5 的 11 帧姿态 **11/11 唯一**（86/116 轨变化 >1e-4，最大单轨 3.0968）。即该链上没有能逐帧改变姿态的元素。**V6-1/2/5 PASS，V6-3 NOT OBSERVED，V6-4 N/A；分叉为分支二（链路完整、无普通 Blender）**，下一层按 §七.2/§七.3 转入采样相位/同步/输出混合。完整读数、工件哈希与候选假设 H-C1–C3 见 [run1-candidate](run1-candidate/README.md)。`G4P-7` 仍 **FAIL**。

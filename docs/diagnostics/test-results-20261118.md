@@ -2,7 +2,7 @@
 
 范围为 `oar-idle3` 截至 `f937d350c518092bb5d4efd8b4759d335ffecb67` 的已记录测试，以及 11 月 18 日的过渡离线审计、字段补审计和归档复核。本轮没有新的游戏动作样本。产品运行证据、独立行为图关卡和离线校准按各自判据报告。
 
-**总裁定：G1–G4 在登记范围内成立，G5 姿态验收失败（G4P-7 FAIL），G6 待验。** 门 5 采样完整，失败来自姿态超容差。最近的离线审计已定位混合计时的引擎读取路径，尚未观测实际装备边的运行时计时。
+**总裁定：G1–G4 在登记范围内成立，G5 姿态验收失败（G4P-7 FAIL），G6 待验。** 门 5 采样完整，失败来自姿态超容差。11 月 20 日的候选父链探针已把装备第 1–13 步的活动链完整回溯（无 `State3`、无普通 Blender），剩余疑点在采样时钟与输出混合，尚未观测。
 
 <a id="product"></a>
 ## 默认面板路径
@@ -74,7 +74,7 @@
 
 2026-11-20 v6-A 离线审计核实主图子索引表、StateInfo 和 ManualSelector 的字段。v114 的第 2–13 步完整活动清单未见普通 Blender，下一轮从实见的 `DG_1hmEquip` 反查活动父边。具体分支与混合量待同代采集。 [离线审计](g5-transition-probe-v5-20261119/hkx/stateinfo_layout_audit.md)
 
-v115 的候选测试范围、配置和验收规则见 [v6 候选父链探针](g5-transition-probe-v6-20261120/README.md)。v115 已按干净树 `0876130` 重建（身份 `…-v115-g5trans-parent-chain-20261120-087613006d-…`，离线 10/10）并装入 `AE-Track2` 安装位，v114 三件套备份在 `dist/deploy-backup-20261120-v114-v115pre/`；候选 run 待上机。
+v115 的候选测试范围、配置和验收规则见 [v6 候选父链探针](g5-transition-probe-v6-20261120/README.md)。v115 已按干净树 `0876130` 重建（身份 `…-v115-g5trans-parent-chain-20261120-087613006d-…`，离线 10/10）并装入 `AE-Track2` 安装位，v114 三件套备份在 `dist/deploy-backup-20261120-v114-v115pre/`。候选 run 1（2026-11-20 22:59）已完成：K5 249/249、747 header `flags=0`，`TRANSITION PARENT CHAIN SUMMARY` 26/26 `status=ok`、`BLENDER` 0、`State3` 全日志 0 次，链路为 `Master_Behavior`→…→`StateMachine1181`(`State0`)→`ManualSelectorGenerator418`(sel 9)→`DG_1hmEquip`；装备 2–12 步 `transitions/effects/blenders` 全 0 且 clip 时间冻结，但 K5 11 帧姿态 11/11 唯一。**V6-1/2/5 PASS、V6-3 NOT OBSERVED、V6-4 N/A，分叉为分支二**；`G4P-7` 仍 FAIL。 [run 1](g5-transition-probe-v6-20261120/run1-candidate/README.md)
 
 ## 本轮复核
 
