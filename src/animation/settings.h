@@ -171,6 +171,9 @@ namespace animation
     // C-G5-TRANS v8: candidate-only capture comparison (control sample vs poseLocal),
     // default off. Read-only; the sample goes to a probe-local buffer.
     [[nodiscard]] bool transition_clip_capture_probe();
+    // C-G5-TRANS v9: candidate-only weight reading (per-track weight table, prefilled
+    // sample, three-point solve), default off. Read-only.
+    [[nodiscard]] bool transition_clip_weight_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

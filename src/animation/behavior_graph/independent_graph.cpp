@@ -2804,6 +2804,16 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     transition_state_probe(), k5_full_enabled,
                                     version == SKSE::RUNTIME_SSE_1_6_1170);
                             }
+                            bool const clip_weight_enabled = transition_clip_weight_probe() &&
+                                transition_state_probe() && k5_full_enabled &&
+                                version == SKSE::RUNTIME_SSE_1_6_1170;
+                            if (transition_clip_weight_probe() && !clip_weight_enabled)
+                            {
+                                logger::info(
+                                    "TRANSITION CLIP WEIGHT status=inactive transition-state={} k5-full={} exact-runtime={}",
+                                    transition_state_probe(), k5_full_enabled,
+                                    version == SKSE::RUNTIME_SSE_1_6_1170);
+                            }
                             const auto log_transition_stage = [&](FrameStage a_stage) {
                                 if (!transition_state_probe())
                                 {
@@ -2864,6 +2874,12 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     transition_subgraph_window_matches(probe_segment, observation.commanded()))
                                 {
                                     log_transition_clip_capture(*candidate, probe);
+                                }
+                                if (clip_weight_enabled &&
+                                    phase != TransitionProbePhase::post_update &&
+                                    transition_subgraph_window_matches(probe_segment, observation.commanded()))
+                                {
+                                    log_transition_clip_weight(*candidate, probe);
                                 }
                                 log_transition_modifiers(*candidate, observation.segment_name(), phase,
                                     observation.completed(), observation.commanded());

@@ -12,6 +12,7 @@
 #include "animation/behavior_graph/observation_chain_policy.h"
 #include "animation/behavior_graph/pose_capture_policy.h"
 #include "animation/behavior_graph/transition_clip_capture_policy.h"
+#include "animation/behavior_graph/transition_clip_weight_policy.h"
 #include "animation/behavior_graph/transition_clip_clock_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
 
@@ -1639,6 +1640,189 @@ namespace animation::behavior_graph
             match.compared, match.agreed, unmapped, match.max_position, match.max_rotation,
             match.max_scale, shift.mean[0], shift.mean[1], shift.mean[2], shift.residual_max,
             shift.moved, mismatch_head);
+    }
+
+    void log_transition_clip_weight(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept
+    {
+        std::uintptr_t const behavior = reinterpret_cast<std::uintptr_t>(a_graph.characterInstance.behaviorGraph.get());
+        std::string const key = fmt::format(
+            "side=candidate segment={} phase={} graph={:#x} behavior={:#x} actor={:08x} request={} commanded={} completed={}",
+            transition_probe_segment_name(static_cast<TransitionProbeSegment>(a_probe.segment)),
+            transition_probe_phase_name(static_cast<TransitionProbePhase>(a_probe.phase)),
+            a_probe.graph, behavior, a_probe.actor, a_probe.request, a_probe.commanded, a_probe.sequence);
+
+        auto const status = [&](char const* a_status) {
+            logger::info("TRANSITION CLIP WEIGHT {} status={}", key, a_status);
+        };
+
+        char const* const expected_leaf =
+            a_probe.segment == static_cast<std::uint8_t>(TransitionProbeSegment::unequip)
+            ? "1HM_Unequip.hkx" : "1HM_Equip.hkx";
+        std::array<char, Transition_Probe_Name_Length> animation_name;
+        std::uintptr_t clip{};
+        char const* const seed_status = find_family_clip(behavior, expected_leaf, clip);
+        if (std::strcmp(seed_status, "ok") != 0)
+        {
+            status(seed_status);
+            return;
+        }
+        if (!read_chain_string(clip + 0x48, animation_name))
+        {
+            status("unreadable-clip");
+            return;
+        }
+
+        RE::hkbCharacter const& character = a_graph.characterInstance;
+        std::int32_t const pose_count = character.numPoseLocal;
+        if (character.poseLocal == nullptr || pose_count <= 0 ||
+            static_cast<std::size_t>(pose_count) > Clip_Capture_Track_Limit)
+        {
+            status("invalid-pose");
+            return;
+        }
+
+        std::uintptr_t control{};
+        std::uintptr_t control_vtable{};
+        if (!read_chain_field(clip, Clip_Control_Offset, control) ||
+            !plausible_object_pointer(control) ||
+            !read_chain_field(control, 0, control_vtable) ||
+            control_vtable != RE::VTABLE_hkaDefaultAnimationControl[0].address())
+        {
+            status("no-control");
+            return;
+        }
+        auto const* const animation_control = reinterpret_cast<RE::hkaDefaultAnimationControl*>(control);
+        RE::hkaAnimationBinding* const binding = animation_control->binding;
+        if (binding == nullptr || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(binding)))
+        {
+            status("no-binding");
+            return;
+        }
+        RE::hkaAnimation* const animation = binding->animation.get();
+        if (animation == nullptr)
+        {
+            status("no-animation");
+            return;
+        }
+        std::int32_t const tracks = animation->numberOfTransformTracks;
+        if (tracks <= 0 || static_cast<std::size_t>(tracks) > Clip_Capture_Track_Limit)
+        {
+            status("invalid-tracks");
+            return;
+        }
+
+        auto const& weights = animation_control->transformTrackWeights;
+        std::size_t const weight_count = static_cast<std::size_t>(weights.size() > 0 ? weights.size() : 0);
+        ClipWeightSummary const summary = clip_weight_summary(
+            std::span<std::uint8_t const>{ weights.data(), weight_count });
+        std::string weight_head;
+        for (std::size_t i = 0; i < weight_count && i < Clip_Weight_Head; ++i)
+        {
+            if (i != 0)
+                weight_head += ',';
+            weight_head += std::to_string(static_cast<std::uint32_t>(weights.data()[i]));
+        }
+
+        auto const& binding_map = binding->transformTrackToBoneIndices;
+        bool const identity = binding_map.size() == 0;
+        std::span<std::int16_t const> const map{ binding_map.data(),
+            static_cast<std::size_t>(binding_map.size()) };
+
+        // Plain sample (zeroed buffer): the reference for the three-point solve.
+        static std::array<RE::hkQsTransform, Clip_Capture_Track_Limit> plain;
+        std::memset(plain.data(), 0, sizeof(RE::hkQsTransform) * static_cast<std::size_t>(tracks));
+        animation_control->SamplePartialTracks(static_cast<std::uint32_t>(tracks), plain.data(),
+            0, nullptr, nullptr);
+
+        // Prefilled sample: start from the captured pose, then let the control write into it.
+        // A weighted partial sample that blends against the buffer leaves the pose in place;
+        // an overwriting sample replaces it. The comparison separates the two semantics.
+        static std::array<RE::hkQsTransform, Clip_Capture_Track_Limit> prefilled;
+        for (std::int32_t track = 0; track < tracks; ++track)
+        {
+            std::int32_t const bone = clip_capture_bone(track, identity, map, pose_count);
+            prefilled[static_cast<std::size_t>(track)] = bone >= 0
+                ? character.poseLocal[bone] : RE::hkQsTransform{};
+        }
+        animation_control->SamplePartialTracks(static_cast<std::uint32_t>(tracks), prefilled.data(),
+            0, nullptr, nullptr);
+        ClipReferenceMatch prefilled_match{};
+        for (std::int32_t track = 0; track < tracks; ++track)
+        {
+            std::int32_t const bone = clip_capture_bone(track, identity, map, pose_count);
+            if (bone < 0)
+                continue;
+            clip_reference_agrees(prefilled_match,
+                capture_pose_sample(prefilled[static_cast<std::size_t>(track)]),
+                capture_pose_sample(character.poseLocal[bone]));
+        }
+
+        // Three-point solve: w = (current - previous) / (sample - previous), per track, using
+        // the translation component the two ends separate most.
+        static std::array<RE::hkQsTransform, Clip_Capture_Track_Limit> previous;
+        static std::size_t previous_count = 0;
+        static std::uint64_t previous_request = ~std::uint64_t{ 0 };
+        if (a_probe.request != previous_request)
+        {
+            previous_request = a_probe.request;
+            previous_count = 0;
+        }
+        std::array<float, Clip_Capture_Track_Limit> solved{};
+        std::size_t solved_count = 0;
+        if (previous_count >= static_cast<std::size_t>(tracks))
+        {
+            for (std::int32_t track = 0; track < tracks; ++track)
+            {
+                std::int32_t const bone = clip_capture_bone(track, identity, map, pose_count);
+                if (bone < 0)
+                    continue;
+                PoseSample const before = capture_pose_sample(previous[static_cast<std::size_t>(track)]);
+                PoseSample const current = capture_pose_sample(character.poseLocal[bone]);
+                PoseSample const sampled = capture_pose_sample(plain[static_cast<std::size_t>(track)]);
+                std::size_t axis = 0;
+                float separation = -1.0f;
+                for (std::size_t component = 0; component < 3; ++component)
+                {
+                    float const gap = std::fabs(sampled.translation[component] -
+                        before.translation[component]);
+                    if (gap > separation)
+                    {
+                        separation = gap;
+                        axis = component;
+                    }
+                }
+                float weight{};
+                if (solved_count < Clip_Capture_Track_Limit &&
+                    clip_weight_solve_sample(before.translation[axis], current.translation[axis],
+                        sampled.translation[axis], Clip_Weight_Solve_Min_Denominator, weight))
+                {
+                    solved[solved_count++] = weight;
+                }
+            }
+        }
+        ClipWeightSolve const solve = clip_weight_solve_summary(
+            std::span<float>{ solved.data(), solved_count });
+
+        for (std::int32_t track = 0; track < tracks; ++track)
+        {
+            std::int32_t const bone = clip_capture_bone(track, identity, map, pose_count);
+            previous[static_cast<std::size_t>(track)] = bone >= 0
+                ? character.poseLocal[bone] : RE::hkQsTransform{};
+        }
+        previous_count = static_cast<std::size_t>(tracks);
+
+        logger::info("TRANSITION CLIP WEIGHT {} clip={:#x} animation='{}' control={:#x} tracks={} pose={:#x} "
+            "num-pose={} weights={} w-min={} w-max={} w-head={} w-hash={:08X} ctl-weight-bits={:08X} "
+            "blend-hint={} pfill-compared={} pfill-agreed={} pfill-max-dpos={:.6f} solved={} "
+            "solve-median={:.6f} solve-min={:.6f} solve-max={:.6f} status=ok",
+            key, clip, std::string_view{ animation_name.data() }, control, tracks,
+            reinterpret_cast<std::uintptr_t>(character.poseLocal), pose_count, weight_count,
+            static_cast<std::uint32_t>(summary.minimum), static_cast<std::uint32_t>(summary.maximum),
+            weight_head, summary.hash, std::bit_cast<std::uint32_t>(static_cast<float>(animation_control->weight)),
+            static_cast<std::int32_t>(binding->blendHint.get()), prefilled_match.compared,
+            prefilled_match.agreed, prefilled_match.max_position, solve.solved, solve.median,
+            solve.minimum, solve.maximum);
     }
 }
 PLUGIN_NAMESPACE_END

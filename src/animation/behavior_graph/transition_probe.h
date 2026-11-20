@@ -351,5 +351,11 @@ namespace animation::behavior_graph
     // to TransitionProbeRecord or the source ring.
     void log_transition_clip_capture(RE::BShkbAnimationGraph const& a_graph,
         TransitionProbeRecord const& a_probe) noexcept;
+
+    // Candidate-only AE 1.6.1170 weight reading at the same observations: the control's
+    // per-track weight table, a prefilled-buffer sample, and the three-point solve of the
+    // weight implied by (previous pose, current pose, current sample). Read-only.
+    void log_transition_clip_weight(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept;
 }
 PLUGIN_NAMESPACE_END

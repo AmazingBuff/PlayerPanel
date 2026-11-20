@@ -9,6 +9,7 @@
 #define PLUGIN_NAMESPACE_END }
 #include "animation/behavior_graph/transition_clip_capture_policy.h"
 #include "animation/behavior_graph/transition_clip_clock_policy.h"
+#include "animation/behavior_graph/transition_clip_weight_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
 #include "animation/behavior_graph/transition_probe.h"
 
@@ -265,6 +266,45 @@ namespace
 
         assert(clip_capture_shift(std::span<std::array<float, 3> const>{}).compared == 0);
     }
+    void clip_weight_summary_reports_range_and_hash()
+    {
+        std::uint8_t const weights[] = { 0, 255, 128, 128 };
+        ClipWeightSummary const summary = clip_weight_summary(std::span<std::uint8_t const>{ weights });
+        assert(summary.count == 4);
+        assert(summary.minimum == 0);
+        assert(summary.maximum == 255);
+        assert(summary.hash != 0);
+
+        // Order sensitive (FNV-1a over the raw bytes).
+        std::uint8_t const swapped[] = { 255, 0, 128, 128 };
+        assert(clip_weight_summary(std::span<std::uint8_t const>{ swapped }).hash != summary.hash);
+
+        ClipWeightSummary const empty = clip_weight_summary(std::span<std::uint8_t const>{});
+        assert(empty.count == 0 && empty.hash == 0 && empty.minimum == 0 && empty.maximum == 0);
+    }
+
+    void clip_weight_solve_recovers_the_mix()
+    {
+        float weight{};
+        // current = previous + 0.25 * (sample - previous)
+        assert(clip_weight_solve_sample(1.0f, 1.25f, 2.0f, 1.0e-3f, weight));
+        assert(std::abs(weight - 0.25f) < 1.0e-6f);
+        // The two ends coincide, so no ratio exists.
+        assert(!clip_weight_solve_sample(1.0f, 1.5f, 1.0f, 1.0e-3f, weight));
+        assert(!clip_weight_solve_sample(std::numeric_limits<float>::quiet_NaN(), 1.0f, 2.0f,
+            1.0e-3f, weight));
+
+        std::array<float, 5> const values{ 0.5f, 0.1f, 0.9f, 0.3f, 0.7f };
+        std::array<float, 5> copy = values;
+        ClipWeightSolve const solve = clip_weight_solve_summary(copy);
+        assert(solve.solved == 5);
+        assert(std::abs(solve.minimum - 0.1f) < 1.0e-6f);
+        assert(std::abs(solve.maximum - 0.9f) < 1.0e-6f);
+        assert(std::abs(solve.median - 0.5f) < 1.0e-6f);
+
+        ClipWeightSolve const none = clip_weight_solve_summary(std::span<float>{});
+        assert(none.solved == 0);
+    }
 }
 
 int main()
@@ -283,5 +323,7 @@ int main()
     clip_clock_classifies_advance_and_freeze();
     clip_capture_maps_tracks_to_bones();
     clip_capture_summarises_shift_and_residual();
+    clip_weight_summary_reports_range_and_hash();
+    clip_weight_solve_recovers_the_mix();
     return 0;
 }
