@@ -8,12 +8,17 @@
 //
 #include "animation/behavior_graph/transition_probe.h"
 
+#include "animation/behavior_graph/clip_reference_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
+#include "animation/behavior_graph/pose_capture_policy.h"
+#include "animation/behavior_graph/transition_clip_capture_policy.h"
 #include "animation/behavior_graph/transition_clip_clock_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/Offsets_VTABLE.h"
+#include "RE/H/hkaAnimationBinding.h"
+#include "RE/H/hkaDefaultAnimationControl.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbBehaviorGraphData.h"
 #include "RE/H/hkbBehaviorGraphStringData.h"
@@ -1011,6 +1016,60 @@ namespace animation::behavior_graph
             }
             return "unknown";
         }
+
+        // Shared v7/v8 seed: the unique active clip whose animation leaf matches the
+        // segment family. Identity is the animation, not the node name, because a segment
+        // can carry differently named clones of the same clip.
+        char const* find_family_clip(std::uintptr_t a_behavior, char const* a_expected_leaf,
+            std::uintptr_t& a_clip) noexcept
+        {
+            a_clip = 0;
+            ChainArray nodes{};
+            std::uintptr_t behavior_vtable{};
+            std::uintptr_t node_head{};
+            if (!plausible_object_pointer(a_behavior) ||
+                !read_chain_field(a_behavior, 0, behavior_vtable) ||
+                behavior_vtable != RE::VTABLE_hkbBehaviorGraph[0].address() ||
+                !read_chain_field(a_behavior, Behavior_Graph_Active_Nodes_Offset, node_head) ||
+                !read_chain_array(node_head, nodes))
+                return "unavailable";
+            if (nodes.size <= 0 ||
+                nodes.size > static_cast<std::int32_t>(Parent_Chain_Active_Node_Limit))
+                return nodes.size <= 0 ? "missing-seed" : "overflow";
+
+            std::array<ChainNode, Parent_Chain_Active_Node_Limit> raw_nodes{};
+            if (!read_chain_memory(nodes.data, raw_nodes.data(),
+                    sizeof(ChainNode) * static_cast<std::size_t>(nodes.size)))
+                return "unreadable";
+
+            std::array<char, Transition_Probe_Name_Length> name{};
+            std::size_t seeds = 0;
+            for (std::size_t i = 0; i < static_cast<std::size_t>(nodes.size); ++i)
+            {
+                std::uintptr_t const clone = read_field<std::uintptr_t>(raw_nodes[i].data(),
+                    Node_Info_Node_Clone_Offset);
+                std::uintptr_t vtable{};
+                if (!plausible_object_pointer(clone) || !read_chain_field(clone, 0, vtable))
+                    return "unreadable-node";
+                if (vtable != RE::VTABLE_hkbClipGenerator[0].address())
+                    continue;
+                if (!read_chain_string(clone + 0x48, name))
+                    return "unreadable-clip";
+                std::string_view const animation{ name.data() };
+                std::size_t const separator = animation.find_last_of("\\/");
+                std::string_view const leaf = separator == std::string_view::npos
+                    ? animation : animation.substr(separator + 1);
+                if (_stricmp(leaf.data(), a_expected_leaf) != 0)
+                    continue;
+                a_clip = clone;
+                ++seeds;
+            }
+            if (seeds == 0)
+                return "missing-seed";
+            if (seeds != 1)
+                return "ambiguous-seed";
+            return "ok";
+        }
     }
 
     void log_transition_parent_chain(RE::BShkbAnimationGraph const& a_graph,
@@ -1334,69 +1393,15 @@ namespace animation::behavior_graph
             logger::info("TRANSITION CLIP CLOCK {} status={}", key, a_status);
         };
 
-        ChainArray nodes{};
-        std::uintptr_t behavior_vtable{};
-        std::uintptr_t node_head{};
-        if (!plausible_object_pointer(behavior) ||
-            !read_chain_field(behavior, 0, behavior_vtable) ||
-            behavior_vtable != RE::VTABLE_hkbBehaviorGraph[0].address() ||
-            !read_chain_field(behavior, Behavior_Graph_Active_Nodes_Offset, node_head) ||
-            !read_chain_array(node_head, nodes))
-        {
-            status("unavailable");
-            return;
-        }
-        if (nodes.size <= 0 ||
-            nodes.size > static_cast<std::int32_t>(Parent_Chain_Active_Node_Limit))
-        {
-            status(nodes.size <= 0 ? "missing-seed" : "overflow");
-            return;
-        }
-
-        std::array<ChainNode, Parent_Chain_Active_Node_Limit> raw_nodes;
-        if (!read_chain_memory(nodes.data, raw_nodes.data(),
-                sizeof(ChainNode) * static_cast<std::size_t>(nodes.size)))
-        {
-            status("unreadable");
-            return;
-        }
-
         char const* const expected_leaf =
             a_probe.segment == static_cast<std::uint8_t>(TransitionProbeSegment::unequip)
             ? "1HM_Unequip.hkx" : "1HM_Equip.hkx";
         std::array<char, Transition_Probe_Name_Length> name;
         std::uintptr_t clip{};
-        std::size_t seeds = 0;
-        for (std::size_t i = 0; i < static_cast<std::size_t>(nodes.size); ++i)
+        char const* const seed_status = find_family_clip(behavior, expected_leaf, clip);
+        if (std::strcmp(seed_status, "ok") != 0)
         {
-            std::uintptr_t const clone = read_field<std::uintptr_t>(raw_nodes[i].data(), Node_Info_Node_Clone_Offset);
-            std::uintptr_t vtable{};
-            if (!plausible_object_pointer(clone) || !read_chain_field(clone, 0, vtable))
-            {
-                status("unreadable-node");
-                return;
-            }
-            if (vtable != RE::VTABLE_hkbClipGenerator[0].address())
-                continue;
-            // Identity is the animation family, not the node name: the same segment can
-            // carry differently named clones of the same clip.
-            if (!read_chain_string(clone + 0x48, name))
-            {
-                status("unreadable-clip");
-                return;
-            }
-            std::string_view const candidate_animation{ name.data() };
-            std::size_t const candidate_separator = candidate_animation.find_last_of("\\/");
-            std::string_view const candidate_leaf = candidate_separator == std::string_view::npos
-                ? candidate_animation : candidate_animation.substr(candidate_separator + 1);
-            if (_stricmp(candidate_leaf.data(), expected_leaf) != 0)
-                continue;
-            clip = clone;
-            ++seeds;
-        }
-        if (seeds != 1)
-        {
-            status(seeds == 0 ? "missing-seed" : "ambiguous-seed");
+            status(seed_status);
             return;
         }
 
@@ -1479,6 +1484,161 @@ namespace animation::behavior_graph
             control_speed_bits, control_crop_start_bits, control_crop_end_bits,
             clip_speed_bits, clip_crop_start_bits, clip_crop_end_bits,
             !control_read ? "no-control" : "ok");
+    }
+
+    void log_transition_clip_capture(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept
+    {
+        std::uintptr_t const behavior = reinterpret_cast<std::uintptr_t>(a_graph.characterInstance.behaviorGraph.get());
+        std::string const key = fmt::format(
+            "side=candidate segment={} phase={} graph={:#x} behavior={:#x} actor={:08x} request={} commanded={} completed={}",
+            transition_probe_segment_name(static_cast<TransitionProbeSegment>(a_probe.segment)),
+            transition_probe_phase_name(static_cast<TransitionProbePhase>(a_probe.phase)),
+            a_probe.graph, behavior, a_probe.actor, a_probe.request, a_probe.commanded, a_probe.sequence);
+
+        auto const status = [&](char const* a_status) {
+            logger::info("TRANSITION CLIP CAPTURE {} status={}", key, a_status);
+        };
+
+        char const* const expected_leaf =
+            a_probe.segment == static_cast<std::uint8_t>(TransitionProbeSegment::unequip)
+            ? "1HM_Unequip.hkx" : "1HM_Equip.hkx";
+        std::array<char, Transition_Probe_Name_Length> animation_name;
+        std::uintptr_t clip{};
+        char const* const seed_status = find_family_clip(behavior, expected_leaf, clip);
+        if (std::strcmp(seed_status, "ok") != 0)
+        {
+            status(seed_status);
+            return;
+        }
+        if (!read_chain_string(clip + 0x48, animation_name))
+        {
+            status("unreadable-clip");
+            return;
+        }
+
+        RE::hkbCharacter const& character = a_graph.characterInstance;
+        std::int32_t const pose_count = character.numPoseLocal;
+        if (character.poseLocal == nullptr || pose_count <= 0 ||
+            static_cast<std::size_t>(pose_count) > Clip_Capture_Track_Limit)
+        {
+            status("invalid-pose");
+            return;
+        }
+
+        std::uintptr_t control{};
+        std::uintptr_t control_vtable{};
+        if (!read_chain_field(clip, Clip_Control_Offset, control) ||
+            !plausible_object_pointer(control) ||
+            !read_chain_field(control, 0, control_vtable) ||
+            control_vtable != RE::VTABLE_hkaDefaultAnimationControl[0].address())
+        {
+            status("no-control");
+            return;
+        }
+        // The vtable check above gates this cast; the probe never guesses a class.
+        auto const* const animation_control = reinterpret_cast<RE::hkaDefaultAnimationControl*>(control);
+        RE::hkaAnimationBinding* const binding = animation_control->binding;
+        if (binding == nullptr ||
+            !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(binding)))
+        {
+            status("no-binding");
+            return;
+        }
+        RE::hkaAnimation* const animation = binding->animation.get();
+        if (animation == nullptr ||
+            !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(animation)))
+        {
+            status("no-animation");
+            return;
+        }
+        std::int32_t const tracks = animation->numberOfTransformTracks;
+        if (tracks <= 0 || static_cast<std::size_t>(tracks) > Clip_Capture_Track_Limit)
+        {
+            status("invalid-tracks");
+            return;
+        }
+
+        // Sample through the control: the same entry the graph uses, whose time argument is
+        // control+0x10 (see the H-C1 audit). The buffer stays local to the probe.
+        static std::array<RE::hkQsTransform, Clip_Capture_Track_Limit> sampled;
+        std::memset(sampled.data(), 0, sizeof(RE::hkQsTransform) * static_cast<std::size_t>(tracks));
+        animation_control->SamplePartialTracks(static_cast<std::uint32_t>(tracks), sampled.data(),
+            0, nullptr, nullptr);
+
+        auto const& binding_map = binding->transformTrackToBoneIndices;
+        bool const identity = binding_map.size() == 0;
+        std::span<std::int16_t const> const map{ binding_map.data(),
+            static_cast<std::size_t>(binding_map.size()) };
+
+        ClipReferenceMatch match{};
+        std::array<std::array<float, 3>, Clip_Capture_Track_Limit> deltas{};
+        std::size_t delta_count = 0;
+        std::size_t unmapped = 0;
+        std::array<std::int32_t, Clip_Capture_Mismatch_Head> mismatch{};
+        std::size_t mismatch_count = 0;
+        for (std::int32_t track = 0; track < tracks; ++track)
+        {
+            std::int32_t const bone = clip_capture_bone(track, identity, map, pose_count);
+            if (bone < 0)
+            {
+                ++unmapped;
+                continue;
+            }
+            PoseSample const sampled_pose = capture_pose_sample(sampled[static_cast<std::size_t>(track)]);
+            PoseSample const captured_pose = capture_pose_sample(character.poseLocal[bone]);
+            if (!clip_reference_agrees(match, sampled_pose, captured_pose) &&
+                mismatch_count < Clip_Capture_Mismatch_Head)
+            {
+                mismatch[mismatch_count++] = track;
+            }
+            if (delta_count < Clip_Capture_Track_Limit)
+            {
+                deltas[delta_count][0] = captured_pose.translation[0] - sampled_pose.translation[0];
+                deltas[delta_count][1] = captured_pose.translation[1] - sampled_pose.translation[1];
+                deltas[delta_count][2] = captured_pose.translation[2] - sampled_pose.translation[2];
+                ++delta_count;
+            }
+        }
+        ClipCaptureShift const shift = clip_capture_shift(
+            std::span<std::array<float, 3> const>{ deltas.data(), delta_count });
+
+        std::string map_head;
+        if (identity)
+        {
+            map_head = "identity";
+        }
+        else
+        {
+            for (std::size_t i = 0; i < static_cast<std::size_t>(binding_map.size()) &&
+                i < Clip_Capture_Map_Head; ++i)
+            {
+                if (i != 0)
+                    map_head += ',';
+                map_head += std::to_string(map[i]);
+            }
+        }
+        std::string mismatch_head;
+        for (std::size_t i = 0; i < mismatch_count; ++i)
+        {
+            if (i != 0)
+                mismatch_head += ',';
+            mismatch_head += std::to_string(mismatch[i]);
+        }
+
+        logger::info("TRANSITION CLIP CAPTURE {} clip={:#x} animation='{}' control={:#x} binding={:#x} "
+            "animation-data={:#x} tracks={} pose={:#x} num-pose={} map-len={} map-head={} "
+            "ctl-local-time-bits={:08X} compared={} agreed={} unmapped={} max-dpos={:.6f} max-drot={:.6f} "
+            "max-dscale={:.6f} mean-shift={:.6f},{:.6f},{:.6f} resid-max={:.6f} moved={} "
+            "mismatch-head={} status=ok",
+            key, clip, std::string_view{ animation_name.data() }, control,
+            reinterpret_cast<std::uintptr_t>(binding), reinterpret_cast<std::uintptr_t>(animation),
+            tracks, reinterpret_cast<std::uintptr_t>(character.poseLocal), pose_count,
+            static_cast<std::int32_t>(binding_map.size()), map_head,
+            std::bit_cast<std::uint32_t>(static_cast<float>(animation_control->localTime)),
+            match.compared, match.agreed, unmapped, match.max_position, match.max_rotation,
+            match.max_scale, shift.mean[0], shift.mean[1], shift.mean[2], shift.residual_max,
+            shift.moved, mismatch_head);
     }
 }
 PLUGIN_NAMESPACE_END

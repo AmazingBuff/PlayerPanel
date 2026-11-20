@@ -168,6 +168,9 @@ namespace animation
     // C-G5-TRANS v7: candidate-only clip clock evidence, default off. Reads clip/control
     // time fields only; adds no detour and writes no graph, pose or variable.
     [[nodiscard]] bool transition_clip_clock_probe();
+    // C-G5-TRANS v8: candidate-only capture comparison (control sample vs poseLocal),
+    // default off. Read-only; the sample goes to a probe-local buffer.
+    [[nodiscard]] bool transition_clip_capture_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

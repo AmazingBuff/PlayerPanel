@@ -7,13 +7,17 @@
 //
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
+#include "animation/behavior_graph/transition_clip_capture_policy.h"
 #include "animation/behavior_graph/transition_clip_clock_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
 #include "animation/behavior_graph/transition_probe.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <limits>
+#include <span>
 #include <string>
 #include <type_traits>
 
@@ -220,6 +224,47 @@ namespace
         assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_frozen_at_end), "frozen-at-end") == 0);
         assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_frozen_no_step), "frozen-no-step") == 0);
     }
+
+    void clip_capture_maps_tracks_to_bones()
+    {
+        std::int16_t const table[] = { 5, -1, 2, 7 };
+        std::span<std::int16_t const> const map{ table };
+
+        assert(clip_capture_bone(0, true, map, 8) == 0);
+        assert(clip_capture_bone(3, true, map, 4) == 3);
+        assert(clip_capture_bone(4, true, map, 4) == -1);   // past the pose
+        assert(clip_capture_bone(-1, true, map, 8) == -1);  // negative track
+
+        assert(clip_capture_bone(0, false, map, 8) == 5);
+        assert(clip_capture_bone(1, false, map, 8) == -1);  // the table says -1
+        assert(clip_capture_bone(2, false, map, 8) == 2);
+        assert(clip_capture_bone(4, false, map, 8) == -1);  // past the table
+        assert(clip_capture_bone(3, false, map, 6) == -1);  // bone 7 outside the pose
+    }
+
+    void clip_capture_summarises_shift_and_residual()
+    {
+        std::array<std::array<float, 3>, 3> const rigid_deltas{ {
+            { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } } };
+        ClipCaptureShift const rigid = clip_capture_shift(rigid_deltas);
+        assert(rigid.compared == 3 && rigid.moved == 3);
+        assert(std::abs(rigid.mean[0] - 1.0f) < 1.0e-6f);
+        assert(rigid.residual_max < 1.0e-6f);
+
+        std::array<std::array<float, 3>, 2> const split_deltas{ {
+            { 0.0f, 0.0f, 0.0f }, { 2.0f, 0.0f, 0.0f } } };
+        ClipCaptureShift const split = clip_capture_shift(split_deltas);
+        assert(split.compared == 2 && split.moved == 1);
+        assert(std::abs(split.mean[0] - 1.0f) < 1.0e-6f);
+        assert(std::abs(split.residual_max - 1.0f) < 1.0e-6f);
+
+        std::array<std::array<float, 3>, 1> const non_finite{ {
+            { std::numeric_limits<float>::quiet_NaN(), 0.0f, 0.0f } } };
+        ClipCaptureShift const none = clip_capture_shift(non_finite);
+        assert(none.compared == 0 && none.moved == 0);
+
+        assert(clip_capture_shift(std::span<std::array<float, 3> const>{}).compared == 0);
+    }
 }
 
 int main()
@@ -236,5 +281,7 @@ int main()
     parent_chain_rejects_invalid_topology();
     clip_clock_offsets_are_the_audited_values();
     clip_clock_classifies_advance_and_freeze();
+    clip_capture_maps_tracks_to_bones();
+    clip_capture_summarises_shift_and_residual();
     return 0;
 }

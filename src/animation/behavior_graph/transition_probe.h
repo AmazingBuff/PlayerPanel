@@ -344,5 +344,12 @@ namespace animation::behavior_graph
     // adds no hook, and writes nothing to the graph, the pose or any variable.
     void log_transition_clip_clock(RE::BShkbAnimationGraph const& a_graph,
         TransitionProbeRecord const& a_probe) noexcept;
+
+    // Candidate-only AE 1.6.1170 capture comparison at the same observations: the control's
+    // own sample against hkbCharacter::poseLocal, with the binding's track->bone map. The
+    // sample lands in a probe-local buffer; no graph function is mutated and nothing is added
+    // to TransitionProbeRecord or the source ring.
+    void log_transition_clip_capture(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept;
 }
 PLUGIN_NAMESPACE_END

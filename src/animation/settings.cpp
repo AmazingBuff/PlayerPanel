@@ -48,6 +48,7 @@ namespace
     bool g_transition_subgraph_probe = false;
     bool g_transition_parent_chain_probe = false;
 bool g_transition_clip_clock_probe = false;
+bool g_transition_clip_capture_probe = false;
     behavior_graph::ProbeLivenessMode g_sampling_liveness_mode = behavior_graph::ProbeLivenessMode::e_off;
 }
 void load_settings()
@@ -111,6 +112,7 @@ void load_settings()
     g_transition_subgraph_probe = ini.GetBoolValue("Experiment", "TransitionSubgraphProbe", false);
     g_transition_parent_chain_probe = ini.GetBoolValue("Experiment", "TransitionParentChainProbe", false);
     g_transition_clip_clock_probe = ini.GetBoolValue("Experiment", "TransitionClipClockProbe", false);
+    g_transition_clip_capture_probe = ini.GetBoolValue("Experiment", "TransitionClipCaptureProbe", false);
     char const* const sampling_liveness = ini.GetValue("Experiment", "SamplingLiveness", "off");
     std::optional<behavior_graph::ProbeLivenessMode> const parsed_sampling_liveness =
         behavior_graph::parse_probe_liveness(sampling_liveness ? std::string_view{ sampling_liveness } : std::string_view{});
@@ -164,6 +166,8 @@ void load_settings()
         logger::info("EXPERIMENT setting TransitionParentChainProbe=true");
     if (g_transition_clip_clock_probe)
         logger::info("EXPERIMENT setting TransitionClipClockProbe=true");
+    if (g_transition_clip_capture_probe)
+        logger::info("EXPERIMENT setting TransitionClipCaptureProbe=true");
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
@@ -184,6 +188,7 @@ bool transition_state_probe() { return g_transition_state_probe; }
 bool transition_subgraph_probe() { return g_transition_subgraph_probe; }
 bool transition_parent_chain_probe() { return g_transition_parent_chain_probe; }
 bool transition_clip_clock_probe() { return g_transition_clip_clock_probe; }
+bool transition_clip_capture_probe() { return g_transition_clip_capture_probe; }
 behavior_graph::IndependentGraphMode independent_graph_setting() { return g_independent_graph; }
 bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }
