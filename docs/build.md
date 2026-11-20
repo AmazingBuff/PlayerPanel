@@ -2380,3 +2380,20 @@ build\transition_probe_test.exe
 **部署（2026-11-20 22:56；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v114 三件套先备份到 `dist/deploy-backup-20261120-v114-v115pre/`（DLL 2,091,520 B `523b097d…`、PDB 52,383,744 B `d954ee51…`、候选 INI 12,449 B `30aa9777…`，与安装位逐位一致）。v115 DLL/PDB + 候选档 `dist/g5-transition-v6-20261120/SKSE/Plugins/CharacterPanel.ini`（`IndependentGraph=inject`、`CandidateEquipPrime/Branch=true`、`CandidateInputProbe=true`、`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`、`K5FullSample=true`、`TransitionStateProbe=true`、`TransitionParentChainProbe=true`、`TransitionSubgraphProbe=false`、`SamplingLiveness=off`）装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `5484030d…`/`b1071fdd…`/`df18e107…`；DLL 内身份 `…-v115-g5trans-parent-chain-20261120-087613006d-…` 与 `TRANSITION PARENT CHAIN` 模板在位。运行包 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip`（14,413,417 B `6e087fe0…`）三件套逐条哈希与安装位一致。
 
 **候选 run 1（2026-11-20 22:59–23:01）**：K5 249/249（equip 120 `fixed-equip-budget`、unequip 129 `state-12-to-0`）、747 header 全 `flags=0x0000`、唯一 `[E]` 为 Track 2 OAR 豁免。`TRANSITION PARENT CHAIN SUMMARY` 26/26 `status=ok`、`NODE` 444 / `EDGE` 418 / `SM` 182 / `SELECTOR` 130 / `CLIP` 26 / `BLENDER` 0；26 个观测点链路相同，`Master_Behavior` →…→ `DG_1hmEquip`（`Weap_Equip_State`=10 → `WeapEquipBFR` → `WeapEquipRoot`=3 → `StateMachine1181/State0` → `ManualSelectorGenerator418` sel 9），`State3` 全日志 0 次。装备 2–12 步 clip `local-time` 恒 `0x3E555556`、`transitions/effects/blenders` 全 0，而 K5 11 帧姿态 11/11 唯一（86/116 轨变化，最大单轨 3.0968）。**V6-1/2/5 PASS、V6-3 NOT OBSERVED、V6-4 N/A；分叉为分支二**；`G4P-7` 仍 FAIL。记录见 [`run1-candidate`](diagnostics/g5-transition-probe-v6-20261120/run1-candidate/README.md)。
+
+<a id="v116-g5trans-clip-clock-20261120"></a>
+## v116-g5trans-clip-clock-20261120（2026-11-20，C-G5-TRANS v7）
+
+[上机协议与判据](diagnostics/g5-clip-clock-probe-20261120/README.md)登记 v7 的只读 clip 时钟探针，承接 [H-C1 离线审计](diagnostics/g5-clip-clock-20261120/README.md)（采样时间即 `clip->localTime +0xF0` → `hkaAnimationControl::localTime +0x10`）。新增默认关闭的 `[Experiment] TransitionClipClockProbe`，候选专用、log-only，窗口 equip 1–13 与 unequip 1–12 的 `pre-sample`/`post-sample`（50 点）。按动画族选种（`1HM_Equip.hkx`/`1HM_Unequip.hkx`）后读 clip `+0xF0/+0xF4/+0x58/+0x5C/+0x64/+0x72/+0x104` 与 control `+0x10/+0x14/+0x20(size)/+0x5C/+0x9C/+0xA0`，用 `advance` 分类（`unknown`/`advancing`/`frozen-at-end`/`frozen-no-step`）区分零步长与到端停写，并记录权重与轨道权重表大小。全部经 `ReadProcessMemory` + `plausible_object_pointer`，不调用图函数、不写图/姿态/变量、不新增 detour，`TransitionProbeRecord`/CPK5/CPK5S/源 ring 不变。
+
+**离线测试**：`cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\transition_probe_test.cpp` 编译并运行，**12/12、exit 0**（新增偏移表与 advance 分类 2 例）。
+
+**构建（2026-11-20 23:22）**：干净树（`c7ec354`）用 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v116-g5trans-clip-clock-20261120` + `cmake --build --preset Release`，VS 2022 v143、vcpkg `x64-windows-static-md`，exit 0；身份 `CharacterPanel-scenegraph-v116-g5trans-clip-clock-20261120-c7ec35441f-cl94faaed0c6-20261120T152153Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,120,704 | `43654AEDAFF9764D41EE872D451B0B48E24AAAC2C177985CE996ABA3E2BA76AE` |
+| CharacterPanel.pdb | 52,695,040 | `5370FDFEDF47C760C63899097BF2E0F8A0B06B8A2C86AB93AB603DF7DA68DB30` |
+| 候选 INI | 17,315 | `C9902A42D61EB66806D4C6C396DE853C9571B4160678FDBE2CBF618AC6121EEC` |
+
+**部署（2026-11-20 23:22；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v115 三件套先备份到 `dist/deploy-backup-20261120-v115-v116pre/`（DLL 2,113,024 B `5484030d…`、PDB 52,613,120 B `b1071fdd…`、候选 INI 17,121 B `df18e107…`，逐位核对）。v116 DLL/PDB + 候选档 `dist/g5-clip-clock-v7-20261120/SKSE/Plugins/CharacterPanel.ini`（`TransitionClipClockProbe=true`、`TransitionParentChainProbe=false`、`TransitionSubgraphProbe=false`、`TransitionStateProbe=true`、`K5FullSample=true`）装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `43654aed…`/`5370fdfe…`/`c9902a42…`；DLL 内身份 `…-v116-g5trans-clip-clock-20261120-c7ec35441f-…` 与 `TRANSITION CLIP CLOCK` 模板在位。运行包 `dist/g5-clip-clock-v7-20261120/CharacterPanel-v116-AE-Track2.zip`（14,375,877 B `afdec0a3…`）三件套逐条哈希与安装位一致。**未启动游戏**；候选 run 待上机。
