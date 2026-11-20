@@ -2435,3 +2435,20 @@ build\transition_probe_test.exe
 **部署（2026-11-20 23:45；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v117 三件套先备份到 `dist/deploy-backup-20261120-v117-v118pre/`（DLL 2,128,896 B `286affef…`、PDB 52,776,960 B `1985e4e0…`、候选 INI 17,508 B `2d65a3a1…`，逐位核对）。v118 DLL/PDB + 候选档 `dist/g5-clip-weight-v9-20261120/SKSE/Plugins/CharacterPanel.ini`（三个只读探针全开）装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `c040533b…`/`6922dd6e…`/`47fb9ee1…`；DLL 内身份与 `TRANSITION CLIP WEIGHT` 模板在位。运行包 `dist/g5-clip-weight-v9-20261120/CharacterPanel-v118-AE-Track2.zip`（14,433,524 B `30856088…`）三件套逐条哈希与安装位一致。**未启动游戏**；候选 run 待上机。
 
 **候选 run 1（2026-11-20 23:51–23:55）**：K5 249/249、747 header、唯一 `[E]` 为 Track 2 OAR 豁免；`TRANSITION CLIP WEIGHT` 50/50 `status=ok`。权重表 `weights=99`、`w-min = w-max = 255`、`w-hash` 恒 `67508074`、`w-head` 全 255，`ctl-weight=1.0`、`blend-hint=0`（**H-W4 成立**）；预填 `poseLocal` 与零填给出同样 `pfill-agreed` 10–16/99（**H-W5 否证**，覆盖写入）；三点解 `solve-median/min/max` 恒 **0**，即 `pre(N+1)` 与 `post(N)` 姿态逐轨相同，姿态只在每个命令的采样步进一次（与 K5 11/11 唯一姿态一致）。**CC9-1/2/3/4 全 PASS**：v8 的 2.8/命令等差收敛不是权重斜坡，而是姿态朝冻结采样前进固定量；剩余解释为 S1 增量写入或 S2 有效采样时刻推进而字段陈旧，下一步用 `t0 + k·δ` 时间扫描判别。`G4P-7` 仍 FAIL。记录见 [`run1-candidate`](diagnostics/g5-clip-weight-probe-20261120/run1-candidate/README.md)。
+
+<a id="v119-g5trans-clip-sweep-20261120"></a>
+## v119-g5trans-clip-sweep-20261120（2026-11-20，C-G5-TRANS v10）
+
+[上机协议与判据](diagnostics/g5-clip-sweep-probe-20261120/README.md)登记 v10 的时间扫描探针，承接 v9 run 1（权重恒 255、三点解恒 0、姿态分段常量）。新增默认关闭的 `[Experiment] TransitionClipSweepProbe`，候选专用、log-only，窗口同 v7–v9（50 点）。在每个观测点用动画层在 `t0 + k/60 s`（k ∈ [−4, +4]，`t0 = control->localTime`，候选时刻夹在 `[0, duration]`）采样 9 次，逐点与 `poseLocal` 逐轨比较（平移分量最大差、旋转 `1−|dot|`），报最优 `k`、`best-dpos/best-drot/best-time`、`clamped` 与整条残差 `curve`。用于分开 S1（增量写入，`best-k` 恒 0）与 S2（有效采样时刻推进，`best-k` 每命令 +1）。采样写探针本地缓冲，不写图/姿态/变量、不新增 detour。
+
+**离线测试**：`cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\transition_probe_test.cpp` → **18/18、exit 0**（新增夹取与最优索引 2 例）。
+
+**构建（2026-11-20 23:59）**：干净树（`7956ca2`）用 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v119-g5trans-clip-sweep-20261120` + `cmake --build --preset Release`，VS 2022 v143、vcpkg `x64-windows-static-md`，exit 0；身份 `CharacterPanel-scenegraph-v119-g5trans-clip-sweep-20261120-7956ca2687-cl94faaed0c6-20261120T155935Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,148,864 | `DD599DCF9FD4E554C4D47C89CF161DE47E1D9ABF01DBE24695A9ECB6883198EE` |
+| CharacterPanel.pdb | 52,924,416 | `29B6CE401E0F83D4F35F28381500DC80E15223E166714AFC10D0D5F1A33A5440` |
+| 候选 INI | 17,980 | `80C4572B6F1CA4AF586661401CFD96BFDD1E77953A37E4640E5230C203CCF948` |
+
+**部署（2026-11-20 23:59；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v118 三件套先备份到 `dist/deploy-backup-20261120-v118-v119pre/`（DLL 2,139,648 B `c040533b…`、PDB 52,858,880 B `6922dd6e…`、候选 INI 17,756 B `47fb9ee1…`，逐位核对）。v119 DLL/PDB + 候选档 `dist/g5-clip-sweep-v10-20261120/SKSE/Plugins/CharacterPanel.ini`（四个只读探针全开）装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `dd599dcf…`/`29b6ce40…`/`80c4572b…`；DLL 内身份与 `TRANSITION CLIP SWEEP` 模板在位。运行包 `dist/g5-clip-sweep-v10-20261120/CharacterPanel-v119-AE-Track2.zip`（14,439,097 B `adea28f7…`）三件套逐条哈希与安装位一致。**未启动游戏**；候选 run 待上机。
