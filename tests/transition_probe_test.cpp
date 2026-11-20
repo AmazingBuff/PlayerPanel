@@ -7,6 +7,7 @@
 //
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
+#include "animation/behavior_graph/transition_parent_chain_policy.h"
 #include "animation/behavior_graph/transition_probe.h"
 
 #include <cassert>
@@ -136,6 +137,43 @@ namespace
         assert(std::strcmp(transition_subgraph_status_name(TransitionSubgraphStatus::invalid_array), "invalid-array") == 0);
         assert(std::strcmp(transition_subgraph_status_name(TransitionSubgraphStatus::inactive), "inactive") == 0);
     }
+
+    void parent_chain_retains_shared_parents_and_skips_empty_slots()
+    {
+        // Nodes 1 and 2 both reference the seed, and node 3 references both.
+        // Node 4 is a sibling with no path to the seed.
+        ParentChainChildRange const ranges[] = { { -1, 0 }, { 0, 2 }, { 2, 1 }, { 3, 3 }, { -1, 0 } };
+        std::int32_t const indices[] = { 0, -1, 0, 1, 2, 4 };
+        ParentChainTopology const chain = trace_parent_chain(ranges, indices, 0);
+
+        assert(chain.status == ParentChainStatus::e_ok);
+        assert(chain.node_count == 4 && chain.edge_count == 4 && chain.roots == 1 && chain.empty_slots == 1);
+        assert(chain.path[0] && chain.path[1] && chain.path[2] && chain.path[3] && !chain.path[4]);
+        std::uint32_t slots{};
+        for (std::size_t i = 0; i < chain.edge_count; ++i)
+        {
+            ParentChainEdge const edge = chain.edges[i];
+            assert(indices[edge.slot] == edge.child);
+            slots |= 1u << edge.slot;
+        }
+        assert(slots == ((1u << 0) | (1u << 2) | (1u << 3) | (1u << 4)));
+    }
+
+    void parent_chain_rejects_invalid_topology()
+    {
+        ParentChainChildRange ranges[] = { { 1, 1 }, { 0, 1 }, { 2, 2 } };
+        std::int32_t const indices[] = { 0, 1, 0 };
+        ParentChainTopology const invalid_range = trace_parent_chain(ranges, indices, 0);
+
+        assert(invalid_range.status == ParentChainStatus::e_invalid_range);
+        assert(invalid_range.node_count == 0 && invalid_range.edge_count == 0);
+
+        // Fix the range, leaving a cycle between 0 and 1 and a valid root at 2.
+        ranges[2].count = 1;
+        ParentChainTopology const cycle = trace_parent_chain(ranges, indices, 0);
+        assert(cycle.status == ParentChainStatus::e_cycle);
+        assert(cycle.node_count == 3 && cycle.edge_count == 3 && cycle.roots == 1);
+    }
 }
 
 int main()
@@ -148,5 +186,7 @@ int main()
     subgraph_bounds_are_the_registered_values();
     subgraph_window_is_bounded();
     subgraph_status_names_are_stable();
+    parent_chain_retains_shared_parents_and_skips_empty_slots();
+    parent_chain_rejects_invalid_topology();
     return 0;
 }

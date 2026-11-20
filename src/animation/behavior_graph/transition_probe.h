@@ -334,5 +334,9 @@ namespace animation::behavior_graph
     void log_transition_subgraph(RE::BShkbAnimationGraph const& a_graph,
         TransitionProbeSegment a_segment, TransitionProbePhase a_phase,
         std::uint32_t a_sequence, std::uint32_t a_commanded) noexcept;
+
+    // Candidate-only AE 1.6.1170 parent chain evidence from the existing K5 observations.
+    void log_transition_parent_chain(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept;
 }
 PLUGIN_NAMESPACE_END

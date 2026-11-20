@@ -82,4 +82,6 @@ TRANSITION SUBGRAPH side=candidate segment=equip phase=post-update seq=0 command
 
 v6-A 的离线输入包已放在 [`../hkx/`](../hkx/README.md)：`weapequip` 的 `root/WeapEquip` 子树、`0_Master` 的 `Default_State` 子树、v114 运行时证据，以及 `StateInfo`/ManualSelector 的布局审计目标。
 
+2026-11-20 已核实主图子索引表和上述字段。v6 先从 `DG_1hmEquip` 反查活动父边，再核对 StateInfo 与选择器，具体路径见 [离线审计结果](../hkx/stateinfo_layout_audit.md)。
+
 **边界**：G4P-7 仍 FAIL；G5/G6 未改变；无 `tau_*`；源侧未运行。v5 的负结果只否定“BFR `behavior->activeNodes` 是运行时子图”的解释，不否定 `State3` Blender 本身。

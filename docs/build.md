@@ -2358,3 +2358,9 @@ build\transition_probe_test.exe
 **部署（2026-11-19 23:10；Skyrim/SKSE 未运行，MO2 打开）**：MO2 实测 `selected_profile=AE-Track2`，`+CharacterPanel` 已启用；安装位 v113 三件套先备份到 `dist/deploy-backup-20261119-v113-v114pre/`（DLL 2,076,672 B `228614da…`、PDB 52,252,672 B `69ab68ad…`、候选 INI 12,419 B `7deb21e5…`，逐位核对）。随后安装 v114 DLL/PDB + 候选档 `dist/g5-transition-v5-20261119/CharacterPanel-g5trans-candidate.ini`（12,449 B `30aa9777…`，`TransitionStateProbe=true`、`TransitionSubgraphProbe=true`、`K5FullSample=true`）。安装位哈希/身份核对：DLL `523b097d…`、PDB `d954ee51…`、INI `30aa9777…`、身份 `…-v114-g5trans-subgraph-20261119-94003147d5-…`；安装 DLL 内 `TRANSITION SUBGRAPH`/`TransitionSubgraphProbe` 与完整身份均在位，无 `+dirty`。**未启动游戏**；候选 run 待上机。
 
 **候选 run 1（2026-11-19 23:22–23:25）**：K5 249/249、equip 120、unequip 129、`state-12-to-0`；747 header 全 `flags=0x0000`。`TRANSITION SUBGRAPH` 114 条 BFR 行（`WeapEquipBFR` 39、`1HM_MagicBFR` 36、`Weap_BehaviorBFR` 36、`MT_BehaviorBFR` 3）、75 条 summary、**0 条 NODE/SM/BLEND/CHILD**；114/114 行 `behavior-active=0`、`active-nodes=0`、`status=no-active-nodes`，零 overflow。`WeapEquipBFR` 的 `behavior-name='behaviors\weapequip.hkx'`、vtable 为 `hkbBehaviorGraph`，但 `activeNodes` 为空；主图 census 仍见 `WeapEquip.hkb`/`WeapEquipRoot`（state=3），无顶层 `State3`。`10→1` 12 点 PC1 99.8297%、Pearson 0.992817 复现。**SP-1/5/6 PASS，SP-2 FAIL，SP-3/4 NOT OBSERVED；H-B1 判负。** 完整记录见 [`run1-candidate`](diagnostics/g5-transition-probe-v5-20261119/run1-candidate/README.md)。
+
+
+<a id="g5-transition-v6-local-20261120"></a>
+## G5 v115 候选父链探针（2026-11-20，本地测试包）
+
+[上机协议与工件哈希](diagnostics/g5-transition-probe-v6-20261120/README.md)登记 v115 的候选父链探针。`TransitionParentChainProbe` 默认关闭，复用现有 K5 候选完成点。VS 2026 MSVC 19.52 的 Ninja Multi-Config Release 构建通过。首次链接误选 Detours 调试库，指定 `DETOURS_LIBRARY` 为安装树的 `x64-windows-static-md/lib/detours.lib` 后成功。候选包位于 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip`，已校验 ZIP 内容与 DLL/PDB/INI 哈希。离线用例 10/10 通过，游戏内测试待执行。

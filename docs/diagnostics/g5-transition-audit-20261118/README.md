@@ -1,6 +1,8 @@
 # K5-5 装备过渡离线审计（2026-11-18）
 
-**结论：AE 1.6.1170 的 `hkbBlendingTransitionEffect::timeInTransition` 确实参与姿态混合。** 引擎从活动状态机的 `activeTransitions` 取过渡实例，按 **0x28 字节**遍历记录。离线字段补审计（§六）已确认：本次 `0→10` 装备边为 `hkbBlendingTransitionEffect`（作者 `duration=0.2 s`、smooth、self-reset）；`1HM_Equip` 由 `Weap_EquipDefaultState/msg/State3` 的 Blender 分支选择，不是独立 transition。仍待运行时实例在两侧采样点的寿命、`timeInTransition`/`endIntervalWeight` 读数及与姿态的相关性。
+**结论：AE 1.6.1170 的 `hkbBlendingTransitionEffect::timeInTransition` 确实参与姿态混合。** 引擎从活动状态机的 `activeTransitions` 取过渡实例，按 **0x28 字节**遍历记录。离线字段补审计（§六）已确认：本次 `0→10` 装备边为 `hkbBlendingTransitionEffect`（作者 `duration=0.2 s`、smooth、self-reset）；作者树中的 `Weap_EquipDefaultState/msg/State3` Blender 子树可到达 `1HM_Equip`。仍待运行时实例在两侧采样点的寿命、`timeInTransition`/`endIntervalWeight` 读数及与姿态的相关性。
+
+2026-11-20 补验：作者树有多条 `1HM_Equip` 路径，v114 的第 2–13 步完整 census 未见普通 Blender。实际分支以主图父边读数核对。 [v6-A 离线审计](../g5-transition-probe-v5-20261119/hkx/stateinfo_layout_audit.md)
 
 ## 一、输入与装备分支
 
@@ -122,7 +124,7 @@ TRANS toState=10 fromNested=0 toNested=0 eventId=2(WeapEquip) trigger=[0,0] init
 ### 6.5 解释与边界
 
 1. **0.2 s 过渡与候选平台同量级**：候选正式数据第 1 步 `1HM_Equip` localTime 为 `0.016666668`，第 2–12 步固定在 `0.208333343`（约 12.5 帧 @60 Hz）；作者装备 transition 为 0.2 s（12 帧）。这支持“0.2 s transition 是首段主计时轴”的方向，但**不是**运行时 `timeInTransition` 已读出的证据；仍须按 §四第 2 条在候选/源同代采样点采集。
-2. **`1HM_Equip` 的混合标量在 Blender**：`msg/State3` 的 `blendParameter`/运行时 `endIntervalWeight`/child `weight` 是 K5-5 单标量候选，而不是状态机 transition。v109 的 0x200 直接指针扫描没有进入 `+0x60` children 数组和 `+0x70` 内联 internal-state，故零发现不否定本路径。
+2. **State3 Blender 的候选读数**。`msg/State3` 的 `blendParameter`/运行时 `endIntervalWeight`/child `weight` 是 K5-5 单标量候选，而不是状态机 transition。v109 的 0x200 直接指针扫描没有进入 `+0x60` children 数组和 `+0x70` 内联 internal-state，故零发现不否定本路径。
 3. **不能从事后数据改判**：本节只补作者字段与结构，不改变 `G4P-7 FAIL`/G5 未通过；不删轨、不放宽 `tau`、不把 0.2 s 当作通过条件。
 
 **下一步**：按 §四第 2 条预注册运行时只读探针；候选 K5 点与源 K5 apply-return 点同时记录 state-machine `activeTransitions`（0x28 步长）和 Blender `+0x4C/+0x90/+0x94/+0x98/+0x9A` + `+0x60` children/`+0x40` weight。运行时读数回来前，0.2 s 与 Blender 标量都只是作者数据/假设。预注册已立：[C-G5-TRANS v1](../g5-transition-probe-20261118/README.md)（尚未实现/上机）。

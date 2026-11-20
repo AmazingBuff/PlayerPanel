@@ -2774,6 +2774,16 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 k5_equip_outcome, k5_equip_reason,
                                 k5_unequip_outcome, k5_unequip_reason,
                                 k5_full_enabled };
+                            bool const parent_chain_enabled = transition_parent_chain_probe() &&
+                                transition_state_probe() && k5_full_enabled &&
+                                version == SKSE::RUNTIME_SSE_1_6_1170;
+                            if (transition_parent_chain_probe() && !parent_chain_enabled)
+                            {
+                                logger::info(
+                                    "TRANSITION PARENT CHAIN status=inactive transition-state={} k5-full={} exact-runtime={}",
+                                    transition_state_probe(), k5_full_enabled,
+                                    version == SKSE::RUNTIME_SSE_1_6_1170);
+                            }
                             const auto log_transition_stage = [&](FrameStage a_stage) {
                                 if (!transition_state_probe())
                                 {
@@ -2816,6 +2826,12 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 probe.actor = actor_id;
                                 probe.request = request;
                                 log_transition_probe(probe);
+                                if (parent_chain_enabled && probe_segment == TransitionProbeSegment::equip &&
+                                    phase != TransitionProbePhase::post_update &&
+                                    observation.commanded() >= 1 && observation.commanded() <= 13)
+                                {
+                                    log_transition_parent_chain(*candidate, probe);
+                                }
                                 log_transition_modifiers(*candidate, observation.segment_name(), phase,
                                     observation.completed(), observation.commanded());
                                 if (transition_subgraph_probe())

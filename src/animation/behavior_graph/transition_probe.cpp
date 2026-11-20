@@ -9,6 +9,7 @@
 #include "animation/behavior_graph/transition_probe.h"
 
 #include "animation/behavior_graph/observation_chain_policy.h"
+#include "animation/behavior_graph/transition_parent_chain_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/Offsets_VTABLE.h"
@@ -25,6 +26,7 @@
 #include <bit>
 #include <cstring>
 #include <string>
+#include <Windows.h>
 
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
@@ -798,6 +800,399 @@ namespace animation::behavior_graph
             "TRANSITION SUBGRAPH SUMMARY side=candidate segment={} phase={} seq={} commanded={} bfrs={} behaviors={} nodes={} sm={} blenders={} overflow={}",
             segment, phase, a_sequence, a_commanded, bfrs, behaviors, nodes, state_machines,
             blenders, overflow);
+    }
+
+    namespace
+    {
+        using ChainNode = std::array<std::byte, Node_Info_Size>;
+
+        struct ChainArray
+        {
+            std::uintptr_t data{};
+            std::int32_t size{};
+            std::uint32_t capacity_and_flags{};
+        };
+        static_assert(sizeof(ChainArray) == 0x10);
+
+        constexpr std::size_t Graph_Child_Indices_Offset = 0xA8;
+        constexpr std::size_t Node_Info_Template_Offset = 0x50;
+        constexpr std::size_t Node_Info_Alias_Offset = 0x68;
+        constexpr std::size_t Node_Info_Child_Count_Offset = 0x70;
+        constexpr std::size_t Node_Info_Child_First_Offset = 0x74;
+        constexpr std::size_t Node_Info_Uses_Alias_Offset = 0x89;
+
+        bool read_chain_memory(std::uintptr_t a_address, void* a_out, std::size_t a_size) noexcept
+        {
+            SIZE_T copied{};
+            return ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<LPCVOID>(a_address),
+                a_out, a_size, &copied) != 0 && copied == a_size;
+        }
+
+        template <class T>
+        bool read_chain_field(std::uintptr_t a_base, std::size_t a_offset, T& a_out) noexcept
+        {
+            return read_chain_memory(a_base + a_offset, &a_out, sizeof(a_out));
+        }
+
+        bool read_chain_array(std::uintptr_t a_address, ChainArray& a_out) noexcept
+        {
+            constexpr std::uint32_t capacity_mask = 0x3FFFFFFF;
+            return plausible_object_pointer(a_address) && read_chain_field(a_address, 0, a_out) &&
+                a_out.size >= 0 && static_cast<std::uint32_t>(a_out.size) <=
+                    (a_out.capacity_and_flags & capacity_mask) &&
+                (a_out.size == 0 || plausible_object_pointer(a_out.data));
+        }
+
+        bool read_chain_string(std::uintptr_t a_address,
+            std::array<char, Transition_Probe_Name_Length>& a_text) noexcept
+        {
+            std::uintptr_t pointer{};
+            if (!read_chain_field(a_address, 0, pointer))
+                return false;
+            pointer &= ~std::uintptr_t{ 1 };  // hkStringPtr managed bit
+            if (pointer == 0)
+            {
+                a_text.front() = '\0';
+                return true;
+            }
+
+            // Stop at the first terminator instead of requiring the next page to be readable.
+            constexpr std::size_t page_size = 4096;  // Windows x64 page granularity
+            std::size_t const first = std::min(a_text.size(), page_size - (pointer % page_size));
+            if (!read_chain_memory(pointer, a_text.data(), first))
+                return false;
+            if (std::memchr(a_text.data(), 0, first))
+                return true;
+            return first < a_text.size() &&
+                read_chain_memory(pointer + first, a_text.data() + first, a_text.size() - first) &&
+                std::memchr(a_text.data() + first, 0, a_text.size() - first) != nullptr;
+        }
+
+        struct ChainChildMatch
+        {
+            std::int32_t index{ -1 };
+            std::size_t count{};
+            bool exact_clone{};
+        };
+
+        ChainChildMatch match_chain_child(std::uintptr_t a_expected, ParentChainChildRange a_range,
+            std::span<std::int32_t const> a_indices, std::span<ChainNode const> a_nodes) noexcept
+        {
+            ChainChildMatch match;
+            if (a_expected == 0)
+                return match;
+            for (std::int32_t slot = 0; slot < a_range.count; ++slot)
+            {
+                std::int32_t const child = a_indices[static_cast<std::size_t>(a_range.first + slot)];
+                if (child == -1)
+                    continue;
+                ChainNode const& item = a_nodes[static_cast<std::size_t>(child)];
+                bool const exact_clone = a_expected == read_field<std::uintptr_t>(item.data(),
+                    Node_Info_Node_Clone_Offset);
+                if (!exact_clone && a_expected != read_field<std::uintptr_t>(item.data(),
+                        Node_Info_Template_Offset))
+                    continue;
+                if (match.index == child)
+                    continue;
+                if (match.count == 0)
+                {
+                    match.index = child;
+                    match.exact_clone = exact_clone;
+                }
+                else
+                {
+                    match.index = -1;
+                    match.count = 2;  // There is no unique active child.
+                    return match;
+                }
+                ++match.count;
+            }
+            return match;
+        }
+
+        char const* chain_match_name(ChainChildMatch const& a_match) noexcept
+        {
+            if (a_match.count > 1)
+                return "ambiguous";
+            if (a_match.count == 0)
+                return "missing";
+            return a_match.exact_clone ? "clone" : "template";
+        }
+
+        struct ChainLogContext
+        {
+            std::string_view key;
+            std::span<ChainNode const> nodes;
+            std::span<std::int32_t const> indices;
+            ParentChainTopology const& topology;
+        };
+
+        bool log_chain_state(ChainLogContext const& a_context, std::size_t a_index,
+            std::uintptr_t a_node, ParentChainChildRange a_range) noexcept
+        {
+            std::int32_t current_id{};
+            std::uint16_t packed_index{};
+            ChainArray states{};
+            ChainArray effects{};
+            if (!read_chain_field(a_node, 0x80, current_id) ||
+                !read_chain_field(a_node, 0x102, packed_index) ||
+                !read_chain_array(a_node + 0x90, states) ||
+                !read_chain_array(a_node + State_Machine_Active_Transitions_Offset, effects))
+            {
+                logger::info("TRANSITION PARENT CHAIN SM {} index={} status=unreadable", a_context.key, a_index);
+                return false;
+            }
+            std::int32_t const state_index = packed_index >> 1;
+            std::uintptr_t state_info{};
+            std::uintptr_t state_vtable{};
+            std::uintptr_t generator{};
+            std::int32_t state_id{};
+            std::array<char, Transition_Probe_Name_Length> state_name;
+            bool const state_read = state_index < states.size &&
+                read_chain_field(states.data, static_cast<std::size_t>(state_index) * sizeof(state_info), state_info) &&
+                plausible_object_pointer(state_info) && read_chain_field(state_info, 0, state_vtable) &&
+                state_vtable == RE::VTABLE_hkbStateMachine__StateInfo[0].address() &&
+                read_chain_field(state_info, 0x58, generator) &&
+                read_chain_field(state_info, 0x68, state_id) &&
+                read_chain_string(state_info + 0x60, state_name);
+            std::uintptr_t effect{};
+            bool const effect_read = effects.size == 0 || read_chain_field(effects.data,
+                static_cast<std::size_t>(effects.size - 1) * State_Machine_Active_Transitions_Stride, effect);
+            std::uintptr_t const expected = effects.size > 0 ? effect : generator;
+            ChainChildMatch const match = match_chain_child(expected, a_range, a_context.indices, a_context.nodes);
+            char const* const status = !state_read || !effect_read ? "unreadable" :
+                state_id != current_id ? "state-id-mismatch" : "ok";
+            logger::info("TRANSITION PARENT CHAIN SM {} index={} current-state={} state-index={} state-info={:#x} "
+                "state-id={} state-name='{}' state-generator={:#x} active-effects={} last-effect={:#x} "
+                "match={} child={} on-path={} status={}",
+                a_context.key, a_index, current_id, state_index, state_info, state_id,
+                state_read ? std::string_view(state_name.data()) : std::string_view{}, generator,
+                effects.size, effect, chain_match_name(match), match.index,
+                match.index >= 0 && a_context.topology.path[static_cast<std::size_t>(match.index)], status);
+            return state_read && effect_read && current_id == state_id && match.count == 1;
+        }
+
+        bool log_chain_selector(ChainLogContext const& a_context, std::size_t a_index,
+            std::uintptr_t a_node, ParentChainChildRange a_range) noexcept
+        {
+            ChainArray generators{};
+            std::int8_t selected{};
+            std::int8_t current{};
+            if (!read_chain_array(a_node + 0x48, generators) ||
+                !read_chain_field(a_node, 0x58, selected) || !read_chain_field(a_node, 0x59, current))
+            {
+                logger::info("TRANSITION PARENT CHAIN SELECTOR {} index={} status=unreadable", a_context.key, a_index);
+                return false;
+            }
+            std::uintptr_t generator{};
+            bool const index_valid = current >= 0 && current < generators.size;
+            bool const generator_read = index_valid && read_chain_field(generators.data,
+                static_cast<std::size_t>(current) * sizeof(generator), generator);
+            ChainChildMatch const match = match_chain_child(generator, a_range, a_context.indices, a_context.nodes);
+            logger::info("TRANSITION PARENT CHAIN SELECTOR {} index={} generators={} selected={} current={} "
+                "current-generator={:#x} match={} child={} on-path={} status={}",
+                a_context.key, a_index, generators.size, static_cast<int>(selected), static_cast<int>(current),
+                generator, chain_match_name(match), match.index,
+                match.index >= 0 && a_context.topology.path[static_cast<std::size_t>(match.index)],
+                !index_valid ? "invalid-index" : generator_read ? "ok" : "unreadable");
+            return generator_read && match.count == 1;
+        }
+
+        char const* parent_chain_status_name(ParentChainStatus a_status) noexcept
+        {
+            switch (a_status)
+            {
+                case ParentChainStatus::e_ok: return "ok";
+                case ParentChainStatus::e_overflow: return "overflow";
+                case ParentChainStatus::e_invalid_range: return "invalid-range";
+                case ParentChainStatus::e_invalid_index: return "invalid-index";
+                case ParentChainStatus::e_cycle: return "cycle";
+            }
+            return "unknown";
+        }
+    }
+
+    void log_transition_parent_chain(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept
+    {
+        std::uintptr_t const behavior = reinterpret_cast<std::uintptr_t>(a_graph.characterInstance.behaviorGraph.get());
+        std::string const key = fmt::format(
+            "side=candidate segment=equip phase={} graph={:#x} behavior={:#x} actor={:08x} request={} commanded={} completed={}",
+            transition_probe_phase_name(static_cast<TransitionProbePhase>(a_probe.phase)),
+            a_probe.graph, behavior, a_probe.actor, a_probe.request, a_probe.commanded, a_probe.sequence);
+
+        ChainArray nodes{};
+        ChainArray indices{};
+        std::size_t seeds = 0;
+        std::size_t seed = 0;
+        std::size_t unresolved = 0;
+        std::size_t ordinary_blenders = 0;
+        ParentChainTopology topology{};
+        auto const summary = [&](char const* a_status) {
+            logger::info("TRANSITION PARENT CHAIN SUMMARY {} status={} active-nodes={} child-slots={} "
+                "seeds={} seed={} nodes={} edges={} roots={} empty-slots={} ordinary-blenders={} unresolved={}",
+                key, a_status, nodes.size, indices.size, seeds, seeds == 1 ? static_cast<int>(seed) : -1,
+                topology.node_count, topology.edge_count, topology.roots, topology.empty_slots,
+                ordinary_blenders, unresolved);
+        };
+
+        std::uintptr_t behavior_vtable{};
+        std::uintptr_t node_head{};
+        std::uintptr_t index_head{};
+        if (!plausible_object_pointer(behavior) ||
+            !read_chain_field(behavior, 0, behavior_vtable) ||
+            behavior_vtable != RE::VTABLE_hkbBehaviorGraph[0].address() ||
+            !read_chain_field(behavior, Behavior_Graph_Active_Nodes_Offset, node_head) ||
+            !read_chain_field(behavior, Graph_Child_Indices_Offset, index_head))
+        {
+            summary("unavailable");
+            return;
+        }
+        if (!read_chain_array(node_head, nodes) || !read_chain_array(index_head, indices))
+        {
+            summary("invalid-array");
+            return;
+        }
+        if (nodes.size > static_cast<std::int32_t>(Parent_Chain_Active_Node_Limit) ||
+            indices.size > static_cast<std::int32_t>(Parent_Chain_Child_Index_Limit))
+        {
+            summary("overflow");
+            return;
+        }
+        if (nodes.size == 0)
+        {
+            summary("missing-seed");
+            return;
+        }
+
+        std::array<ChainNode, Parent_Chain_Active_Node_Limit> raw_nodes;
+        std::array<std::int32_t, Parent_Chain_Child_Index_Limit> raw_indices;
+        if (!read_chain_memory(nodes.data, raw_nodes.data(), sizeof(ChainNode) * static_cast<std::size_t>(nodes.size)) ||
+            (indices.size != 0 && !read_chain_memory(indices.data, raw_indices.data(),
+                 sizeof(std::int32_t) * static_cast<std::size_t>(indices.size))))
+        {
+            summary("unreadable");
+            return;
+        }
+        std::span<ChainNode const> const node_snapshot{ raw_nodes.data(), static_cast<std::size_t>(nodes.size) };
+        std::span<std::int32_t const> const index_snapshot{ raw_indices.data(), static_cast<std::size_t>(indices.size) };
+        std::array<ParentChainChildRange, Parent_Chain_Active_Node_Limit> ranges;
+        std::array<std::uintptr_t, Parent_Chain_Active_Node_Limit> vtables;
+        std::array<char, Transition_Probe_Name_Length> name;
+        for (std::size_t i = 0; i < node_snapshot.size(); ++i)
+        {
+            void const* const row = node_snapshot[i].data();
+            ranges[i] = { read_field<std::int32_t>(row, Node_Info_Child_First_Offset),
+                read_field<std::int32_t>(row, Node_Info_Child_Count_Offset) };
+            std::uintptr_t const clone = read_field<std::uintptr_t>(row, Node_Info_Node_Clone_Offset);
+            if (!plausible_object_pointer(clone) || !read_chain_field(clone, 0, vtables[i]))
+            {
+                summary("unreadable-node");
+                return;
+            }
+            if (vtables[i] != RE::VTABLE_hkbClipGenerator[0].address())
+                continue;
+            if (!read_chain_string(clone + 0x38, name))
+            {
+                summary("unreadable-clip");
+                return;
+            }
+            if (std::string_view(name.data()) == "DG_1hmEquip")
+            {
+                seed = i;
+                ++seeds;
+            }
+        }
+        if (seeds != 1)
+        {
+            summary(seeds == 0 ? "missing-seed" : "ambiguous-seed");
+            return;
+        }
+
+        std::uintptr_t const clip = read_field<std::uintptr_t>(node_snapshot[seed].data(), Node_Info_Node_Clone_Offset);
+        std::uintptr_t binding{};
+        std::uint16_t binding_index{};
+        std::uint32_t local_time_bits{};
+        if (!read_chain_string(clip + 0x48, name) ||
+            !read_chain_field(clip, 0xA0, binding) ||
+            !read_chain_field(clip, 0x70, binding_index) ||
+            !read_chain_field(clip, 0xF0, local_time_bits))
+        {
+            summary("unreadable-clip");
+            return;
+        }
+        std::string_view const animation = name.data();
+        std::size_t const separator = animation.find_last_of("\\/");
+        std::string_view const leaf = separator == std::string_view::npos ? animation : animation.substr(separator + 1);
+        bool const family_matches = _stricmp(leaf.data(), "1HM_Equip.hkx") == 0;
+        logger::info("TRANSITION PARENT CHAIN CLIP {} index={} node={:#x} animation='{}' "
+            "binding={:#x} binding-index={} local-time-bits={:08X} family={}",
+            key, seed, clip, animation, binding, binding_index, local_time_bits, family_matches);
+        if (!family_matches || !plausible_object_pointer(binding))
+        {
+            summary("clip-mismatch");
+            return;
+        }
+
+        topology = trace_parent_chain(std::span<ParentChainChildRange const>{ ranges.data(), node_snapshot.size() },
+            index_snapshot, seed);
+        if (topology.status != ParentChainStatus::e_ok)
+        {
+            summary(parent_chain_status_name(topology.status));
+            return;
+        }
+
+        ChainLogContext const context{ key, node_snapshot, index_snapshot, topology };
+        for (std::size_t i = 0; i < node_snapshot.size(); ++i)
+        {
+            if (!topology.path[i])
+                continue;
+            void const* const row = node_snapshot[i].data();
+            std::uintptr_t const node = read_field<std::uintptr_t>(row, Node_Info_Node_Clone_Offset);
+            bool const alias = read_field<std::uint8_t>(row, Node_Info_Uses_Alias_Offset) != 0;
+            std::int32_t const alias_index = alias ? read_field<std::int32_t>(row, Node_Info_Alias_Offset) : -1;
+            bool const alias_valid = !alias || (alias_index >= 0 && alias_index < nodes.size);
+            std::uint16_t id{};
+            bool const node_read = read_chain_string(node + 0x38, name) && read_chain_field(node, 0x40, id);
+            TransitionProbeNodeClass const node_class = classify(vtables[i]);
+            logger::info("TRANSITION PARENT CHAIN NODE {} index={} class={} id={} name='{}' template={:#x} "
+                "clone={:#x} owner={:#x} vtable={:#x} first={} count={} alias={} alias-index={} status={}",
+                key, i, transition_probe_class_name(node_class), id,
+                node_read ? std::string_view(name.data()) : std::string_view{},
+                read_field<std::uintptr_t>(row, Node_Info_Template_Offset), node,
+                read_field<std::uintptr_t>(row, Node_Info_Behavior_Offset), vtables[i], ranges[i].first,
+                ranges[i].count, alias, alias_index, !node_read ? "unreadable" : alias_valid ? "ok" : "invalid-alias");
+            if (!node_read || !alias_valid)
+                ++unresolved;
+            if (node_class == TransitionProbeNodeClass::state_machine)
+            {
+                if (!log_chain_state(context, i, node, ranges[i]))
+                    ++unresolved;
+            }
+            else if (node_class == TransitionProbeNodeClass::manual_selector)
+            {
+                if (!log_chain_selector(context, i, node, ranges[i]))
+                    ++unresolved;
+            }
+            else if (node_class == TransitionProbeNodeClass::blender)
+            {
+                ++ordinary_blenders;
+                std::uint16_t flags{};
+                bool const flags_read = read_chain_field(node, 0x5A, flags);
+                if (!flags_read)
+                    ++unresolved;
+                logger::info("TRANSITION PARENT CHAIN BLENDER {} index={} node={:#x} flags={:04X} "
+                    "weight-mode={} status={}", key, i, node, flags,
+                    (flags & 0x10) != 0 ? "interval" : "child", flags_read ? "ok" : "unreadable");
+            }
+        }
+        for (std::size_t i = 0; i < topology.edge_count; ++i)
+        {
+            ParentChainEdge const edge = topology.edges[i];
+            logger::info("TRANSITION PARENT CHAIN EDGE {} parent={} child={} slot={}",
+                key, edge.parent, edge.child, edge.slot);
+        }
+        summary(topology.edge_count == 0 ? "no-parent" : unresolved == 0 ? "ok" : "incomplete-identity");
     }
 
     void capture_transition_probe(RE::BShkbAnimationGraph const& a_graph,

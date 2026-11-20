@@ -1,5 +1,7 @@
 # v6-A 离线布局审计目标（AE 1.6.1170）
 
+本页保留原审计问题。2026-11-20 的已核字段、父边读取路径和 v114 归档复核见 [离线审计结果](stateinfo_layout_audit.md)。
+
 目标：从 `WeapEquipRoot` 的 `currentStateID=3` 找到该 state 的 generator，再沿
 state machine / ManualSelector 链定位 `State3` Blender。先完成本页的离线审计，
 再写运行时探针；在此之前不读 `StateInfo` 未知偏移。
@@ -60,18 +62,7 @@ WeapEquipRoot (state 3)
 
 ## 五、建议的离线命令
 
-`analysis.json` 已给出 ID→RVA；`pe_tools.Image.rtti_class()` 可核名。`disasm_func.py`
-可反汇编 `.pdata` 函数。先从 `hkbStateMachine` 的 `states` 访问函数或 `StateInfo`
-构造/克隆路径定位 `stateId`/generator 的写入点，再用 `StateInfo` vtable `0x19633C8`
-的构造引用交叉验证。
-
-```powershell
-python build/g1-audit-20261023/disasm_func.py 0xab1780  # hkbStateMachine Activate (example)
-python build/g1-audit-20261023/disasm_func.py 0xab1890  # hkbStateMachine Update (example)
-```
-
-具体函数地址在审计时按 `analysis.json` 的 `VTABLE_hkbStateMachine` 槽位解析；不要
-把示例地址当作结论。
+用 [审计复核命令](stateinfo_layout_audit.md#复核命令)读取 AE 1.6.1170 镜像、地址库、RTTI 与使用这些字段的引擎指令。
 
 ## 六、边界
 

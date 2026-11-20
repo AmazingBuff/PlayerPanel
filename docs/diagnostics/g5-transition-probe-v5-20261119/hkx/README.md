@@ -4,6 +4,8 @@
 **`hkbStateMachine::StateInfo` → state 3 generator → `State3`** 离线审计准备的
 有界输入包。全部为只读文本；不包含游戏进程、DLL 或完整 15 MB HKX 转储。
 
+2026-11-20 已完成 [主图父子边与 StateInfo 离线审计](stateinfo_layout_audit.md)。v6 从实际观测到的 `DG_1hmEquip` 反查活动父边，沿途用状态机和选择器字段核对分支。
+
 ## 文件
 
 | 文件 | 内容 | 字节 | SHA-256 |
@@ -40,9 +42,10 @@ python docs\diagnostics\g5-transition-probe-v5-20261119\hkx\extract_context.py
 
 v5 run 1 证明 `WeapEquipBFR +0x50` 指向的是 `weapequip.hkx` 的**模板图**
 （`behavior-active=0`、`active-nodes=0`），不是运行时 clone。主图 census 仍能看到
-`WeapEquipRoot`（state=3）和 `WeapEquip.hkb`，但没有顶层 `State3`。因此下一层必须从
-`WeapEquipRoot` 的运行时 state 3 出发，沿 state generator / ManualSelector 链找到
-`State3` Blender。`weapequip_weap_equip_subtree.txt` 给出作者树的 state/selector/blender
+`WeapEquipRoot`（state=3）和 `WeapEquip.hkb`。下一轮从已知活动 clip 反查主图父链，
+再核对 `WeapEquipRoot` 的运行时 state 3 和实际选择器分支。
+作者树中多个分支可到达 `1HM_Equip`，内层 `State3` 的激活情况仍待采集。
+`weapequip_weap_equip_subtree.txt` 给出作者树的 state/selector/blender
 顺序，`0_master_default_state_subtree.txt` 给出 0→10 和 10→1 的转移上下文，
 `runtime_evidence_v114.txt` 给出运行时节点身份和 state=3 的对照。
 

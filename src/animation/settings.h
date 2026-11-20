@@ -163,6 +163,8 @@ namespace animation
     // hkbBehaviorReferenceGenerator::behavior (+0x50) into the referenced hkbBehaviorGraph.
     // Requires TransitionStateProbe and K5FullSample; no writes and no new hooks.
     [[nodiscard]] bool transition_subgraph_probe();
+    // C-G5-TRANS v6: candidate-only equipment parent chain, default off.
+    [[nodiscard]] bool transition_parent_chain_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END
