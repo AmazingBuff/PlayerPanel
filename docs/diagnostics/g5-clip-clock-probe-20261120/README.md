@@ -1,6 +1,6 @@
 # C-G5-TRANS v7：clip 时钟判别探针（2026-11-20）
 
-**状态：IMPLEMENTED / BUILT / DEPLOYED（v116）；候选 run 待上机。**
+**状态：IMPLEMENTED / BUILT / DEPLOYED；候选 run 1 完成（2026-11-20 23:25）；H-D1 + H-W2 成立 → 剩余路线 M2/M3。**
 
 承接 [H-C1 离线审计](../g5-clip-clock-20261120/README.md)：采样时间就是 `clip->localTime (+0xF0)`（`Generate` 写入 `hkaAnimationControl::localTime (+0x10)`，两个采样入口都从 `+0x10` 取时间），不存在第二条时钟。因此 [v6 run 1](../g5-transition-probe-v6-20261120/run1-candidate/README.md) 的「时间冻结但姿态逐帧不同」只能说明差异发生在采样之后。本探针只做一件事：在既有 K5 观测点把 clip 与控制的时钟/权重状态一次读全，用 `advance` 分类把「零步长」「到端」「正常推进」分开，并给出三条后续路线的判别量。
 
@@ -80,7 +80,19 @@ TRANSITION CLIP CLOCK side=candidate segment=equip phase=pre-sample graph=0x.. b
 3. **H-D3 成立**（`advancing`）：v6 的 `localTime` 冻结与外层读数矛盾，先核对 `clip` 指针与活动节点表是否同一实例，再决定是否修 v6 判据。
 4. 任何 `status=no-control`、`missing-seed`、`ambiguous-seed`、`overflow` 或 `[E]` 都判观测缺口，保留原始日志，不静默截断。
 
-## 七、边界
+## 七、候选 run 1（2026-11-20 23:25–23:27）
+
+K5 249/249（equip 120 `fixed-equip-budget`、unequip 129 `state-12-to-0`）、747 header 全 `flags=0x0000`、唯一 `[E]` 为 Track 2 OAR 豁免。`TRANSITION CLIP CLOCK` **50/50 `status=ok`**：`advance` 分布为 `unknown` 4（每段首点）、`advancing` 10、`frozen-no-step` 36、`frozen-at-end` **0**；全程 `mode=0`、`at-end=0`、`ctl-weight=1.0`、`ctl-track-weights=99`，且 `time`、`localTime`、`ctl-local-time` 三处逐行相同。
+
+- 装备：cmd 1 → 2 推进 +0.191667，**cmd 3–12 冻结**（Δ=0），cmd 13 再推进 +0.183333。
+- 卸下：cmd 1–9 冻结在 0，cmd 10–12 每步 +0.016667。
+- 时钟为「突发式」推进：多数步 Δ=0，少数步一次跳约 11 帧，与 v103 的 17 个唯一 clip 时间一致。
+
+**判据：CC-1/2/3/4/5 全 PASS；H-D1 与 H-W2 成立，H-D2/H-D3/H-W1 否证。** 同一冻结窗口内 K5 姿态仍 11/11 唯一（3→4 帧 64 根轨平移、79 根旋转变化，去均值残差最大 3.0734，非刚性位移），而 `clip-ref` 用同 `localTime` 重采样只与捕获姿态一致 16/99（baseline `max-dpos=2.344827`，`time=0.0167` 时 `10/99`、`27.216974`）。因此差异不在 clip 采样、也不在权重，剩余路线为 M2（采样后写入者）与 M3（捕获点/映射），且量级更支持 M3。完整读数、工件哈希与下一步建议见 [run1-candidate](run1-candidate/README.md)。`G4P-7` 仍 **FAIL**。
+
+**记录缺陷**：本轮 50 行把 `segment=equip` 硬编码进行键（含卸下 24 行）；`advance` 分类按真实 `segment` 索引，不受影响，行可按 `expected=` 或以 26/24 分离。源码已修，未重建（安装位须与本轮归档保持同一二进制）。
+
+## 八、边界
 
 - 单次运行、单存档、单装备状态；不含源侧。
 - 不改变 `G4P-7 FAIL`、G5/G6 与任何 `tau_*`；不据此修改姿态判据。
