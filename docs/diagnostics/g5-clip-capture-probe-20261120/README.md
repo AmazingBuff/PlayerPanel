@@ -1,6 +1,6 @@
 # C-G5-TRANS v8：捕获点与映射判别探针（2026-11-20）
 
-**状态：IMPLEMENTED / BUILT / DEPLOYED（v117）；候选 run 待上机。**
+**状态：IMPLEMENTED / BUILT / DEPLOYED；候选 run 1 完成（2026-11-20 23:37）；H-CAP3 成立（捕获 ≠ 采样），偏差呈线性权重斜坡特征。**
 
 v7 已把「时钟冻结 + 权重恒定 + 姿态逐帧变化」定死（[run 1](../g5-clip-clock-probe-20261120/run1-candidate/README.md)），剩余路线只有 M2（采样后写入者）与 M3（捕获点/映射）。v8 在**同一批观测点**把控制自身的采样与 `hkbCharacter::poseLocal` 逐轨比较，并记录 binding 的轨→骨映射与位移统计，用一条行给出 M2/M3 的判别量。
 
@@ -80,7 +80,16 @@ TRANSITION CLIP CAPTURE side=candidate segment=equip phase=pre-sample graph=0x..
 3. **H-CAP3 成立**（`resid-max` 大）：`poseLocal` 不是该 clip 的采样。按 E2 系列既有仪器查采样后写入者（58423 足部 IK、63581 混合、附件/手部 IK），沿用其读法，不新开偏移。
 4. 任何 `status=no-control`/`no-binding`/`no-animation`/`invalid-*` 或 `[E]` 都判观测缺口，保留原始日志。
 
-## 七、边界
+## 七、候选 run 1（2026-11-20 23:37–23:39）
+
+K5 249/249（equip 120、unequip 129）、747 header、唯一 `[E]` 为 Track 2 OAR 豁免；`TRANSITION CLIP CLOCK` 50 行与 v116 同构（cmd 3–12 仍 `frozen-no-step`）。`TRANSITION CLIP CAPTURE` **50/50 `status=ok`**：`tracks=99`、`num-pose=116`、`map-len=0`（identity）、`unmapped=0`，`ctl-local-time-bits` 与 v7 逐点相同。
+
+- **装备**：`agreed` 10–24/99，`max-dpos` 32.20 → 1.40，**相邻观测点恒差 2.8**（32.20/29.40/26.60/…/4.20/1.40），失配轨集合恒为 `1,2,3,4,6,7,8,9`；cmd 13 时钟跳变后重开到 25.20。
+- **卸下**：`agreed` 37–40/99，`max-dpos` 恒 1.617（时钟冻结），cmd 10–12 略降至 1.51。
+
+**判据：CC8-1/2/4 PASS，CC8-3 PASS（单一分支）。** H-CAP1 否证（捕获不是控制采样）、H-CAP2 否证（`mean-shift` 0.04–0.31 远小于 30+ 残差，不是整体平移）、**H-CAP3 成立**。两段偏差量级相差 20 倍，排除全局空间/映射错误；而装备段的等差收敛只可能来自随时间线性变化的权重（`transformTrackWeights +0x18`，本轮只记 size=99），后处理写入者不会给出这种数列。下一步（v9）读权重值并按三点反解每轨实际权重。完整读数、工件哈希与分叉见 [run1-candidate](run1-candidate/README.md)。`G4P-7` 仍 **FAIL**。
+
+## 八、边界
 
 - 单次运行、单存档、单装备状态；不含源侧。
 - 不改变 `G4P-7 FAIL`、G5/G6 与任何 `tau_*`。
