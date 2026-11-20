@@ -2,6 +2,8 @@
 
 v115 在 AE 1.6.1170 的既有 K5 候选采样点读取主图的活动节点和子索引表。首轮只回答一个问题：装备第 2–12 步实际经过哪些生成器，作者树的内层 `State3` 是否在这条链上。 [v6 离线审计](../g5-transition-probe-v5-20261119/hkx/stateinfo_layout_audit.md)
 
+**状态：IMPLEMENTED / BUILT / DEPLOYED（2026-11-20 22:56）；候选 run 待上机。**
+
 ## 采集范围
 
 - 只采候选装备段第 1–13 步的 `pre-sample` 和 `post-sample`，共 26 个观测点。锚点为已实见的 `DG_1hmEquip`，用同代 clip 指针、绑定与时钟和 K5 对账。前后读数用 `commanded` 对齐，`post-sample` 的 `completed` 与 CPK5 记录对齐。
@@ -11,7 +13,7 @@ v115 在 AE 1.6.1170 的既有 K5 候选采样点读取主图的活动节点和�
 
 ## 上机步骤
 
-1. 关闭 Skyrim/SKSE。在 MO2 的 `AE-Track2` 使用之前的 Save116 和装备状态。备份当前 CharacterPanel 的 DLL、PDB 和 INI，再将测试包的三件套放入 CharacterPanel 模组。
+1. 关闭 Skyrim/SKSE。在 MO2 的 `AE-Track2` 使用之前的 Save116 和装备状态。v114 三件套已备份到 `dist/deploy-backup-20261120-v114-v115pre/`，v115 三件套已装入 CharacterPanel 模组（安装位哈希与身份见「本地构建」）。
 2. 确认 `IndependentGraph=inject`、`CandidateEquipPrime=true`、`CandidateEquipPrimeBranch=true`、`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`、`K5FullSample=true`、`TransitionStateProbe=true`、`TransitionParentChainProbe=true`。旧 `TransitionSubgraphProbe=false`，`SamplingLiveness=off`。Track 2 的 OAR 状态沿用 v114。
 3. 启动游戏并加载 Save116。按 v114 的操作打开一次背包，候选回放会自动执行装备与卸下段。等 K5 写入后关闭面板并退出游戏。每次重跑用新的 Skyrim 进程。
 4. 保留完整 `CharacterPanel.log` 和同一 session 的 `CharacterPanel-g5k5-*.bin`、`.json`。同时记录意外退出、画面异常或操作偏差。
@@ -32,12 +34,16 @@ v115 在 AE 1.6.1170 的既有 K5 候选采样点读取主图的活动节点和�
 
 ## 本地构建
 
-2026-11-20 使用 VS 2026 MSVC 19.52、Ninja Multi-Config Release 和已有 vcpkg 库。链接显式选用 Detours 发布库，构建使用当前工作树。候选 INI 保留 v114 的只读输入观察键，并以父链探针取代子图探针。
-
-构建身份从 DLL 提取为 `CharacterPanel-scenegraph-v115-g5trans-parent-chain-20261120-b9bd29fad6+dirty-cl94faaed0c6-20261120T033336Z`。链接重试复用了先前编译的对象，保留其编译时身份。离线 C++ 测试 10/10 通过，其中新增两组分别覆盖共享父边与空槽、无效范围与带有效根的环路。
+2026-11-20 使用仓库预设 `Release`（Visual Studio 17 2022 / v143 14.44.35207、vcpkg `x64-windows-static-md`）在干净树 `0876130` 上重建，标签 `v115-g5trans-parent-chain-20261120`，`cmake --build --preset Release` exit 0。构建身份从 DLL 提取为 `CharacterPanel-scenegraph-v115-g5trans-parent-chain-20261120-087613006d-cl94faaed0c6-20261120T145507Z`（无 `+dirty`）。离线 C++ 测试 10/10 通过（`cl /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\transition_probe_test.cpp`，exit 0），其中新增两组分别覆盖共享父边与空槽、无效范围与带有效根的环路。
 
 | 工件 | 字节数 | SHA-256 |
 | --- | ---: | --- |
-| CharacterPanel.dll | 2,107,392 | `e1f2c69c11e2a7a6de2ed19adc842fc848d764e833bc6b225c04d86040a13974` |
-| CharacterPanel.pdb | 35,106,816 | `69401e8a1b8f44f97b9cb0f335352fc781bc102a2960193f5737923807222a96` |
-| CharacterPanel.ini | 17,110 | `a19c8d95327f5eabf06b0112c3fb4a07ccbb9afc1c0f5ab94ed00f82590c54fa` |
+| CharacterPanel.dll | 2,113,024 | `5484030D80A20C77196D4AAF7A949C9E9EB406ED6A185AC3E4F37D4E0361A712` |
+| CharacterPanel.pdb | 52,613,120 | `B1071FDDBC63CEAE3115E38BBB145A281C4517DABB3171BBB367604E9FDEC9DB` |
+| CharacterPanel.ini（候选档） | 17,121 | `DF18E107CD0CC303C47BB645BB2604DB6A558406F5414C3B459493F363646981` |
+
+候选档相对 `config/CharacterPanel.ini` 只改 9 行（见上机步骤第 2 条），`CandidateInputVariable` 保持默认 `IsEquipping`。
+
+**更正（2026-11-20 22:56）**：本节早先登记的 v115 构建（身份 `…-b9bd29fad6+dirty-…`、DLL 2,107,392 B `e1f2c69c…`、PDB 35,106,816 B `69401e8a…`、INI 17,110 B `a19c8d95…`）与其声明的 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip` 在仓库、`dist/` 与安装位均无对应工件（当时 `build/` 与安装位仍是 v114），无法复核；已由上面的重建工件取代，早先哈希作废。
+
+**部署（2026-11-20 22:56；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v114 三件套先备份到 `dist/deploy-backup-20261120-v114-v115pre/`（DLL 2,091,520 B `523b097d…`、PDB 52,383,744 B `d954ee51…`、候选 INI 12,449 B `30aa9777…`，与安装位逐位一致）。v115 DLL/PDB + 候选档装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `5484030d…`/`b1071fdd…`/`df18e107…`，DLL 内身份 `…-v115-g5trans-parent-chain-20261120-087613006d-…` 与 `TRANSITION PARENT CHAIN` 模板在位。运行包 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip`（14,413,417 B `6e087fe0…`）三件套逐条哈希与安装位一致。**未启动游戏**；候选 run 待上机。

@@ -74,7 +74,7 @@
 
 2026-11-20 v6-A 离线审计核实主图子索引表、StateInfo 和 ManualSelector 的字段。v114 的第 2–13 步完整活动清单未见普通 Blender，下一轮从实见的 `DG_1hmEquip` 反查活动父边。具体分支与混合量待同代采集。 [离线审计](g5-transition-probe-v5-20261119/hkx/stateinfo_layout_audit.md)
 
-v115 的候选测试范围、配置和验收规则见 [v6 候选父链探针](g5-transition-probe-v6-20261120/README.md)。
+v115 的候选测试范围、配置和验收规则见 [v6 候选父链探针](g5-transition-probe-v6-20261120/README.md)。v115 已按干净树 `0876130` 重建（身份 `…-v115-g5trans-parent-chain-20261120-087613006d-…`，离线 10/10）并装入 `AE-Track2` 安装位，v114 三件套备份在 `dist/deploy-backup-20261120-v114-v115pre/`；候选 run 待上机。
 
 ## 本轮复核
 

@@ -2361,6 +2361,20 @@ build\transition_probe_test.exe
 
 
 <a id="g5-transition-v6-local-20261120"></a>
-## G5 v115 候选父链探针（2026-11-20，本地测试包）
+## v115-g5trans-parent-chain-20261120（2026-11-20，C-G5-TRANS v6）
 
-[上机协议与工件哈希](diagnostics/g5-transition-probe-v6-20261120/README.md)登记 v115 的候选父链探针。`TransitionParentChainProbe` 默认关闭，复用现有 K5 候选完成点。VS 2026 MSVC 19.52 的 Ninja Multi-Config Release 构建通过。首次链接误选 Detours 调试库，指定 `DETOURS_LIBRARY` 为安装树的 `x64-windows-static-md/lib/detours.lib` 后成功。候选包位于 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip`，已校验 ZIP 内容与 DLL/PDB/INI 哈希。离线用例 10/10 通过，游戏内测试待执行。
+[上机协议与判据](diagnostics/g5-transition-probe-v6-20261120/README.md)登记 v115 的候选父链探针：新增默认关闭的 `[Experiment] TransitionParentChainProbe`，候选专用、log-only，复用现有 K5 候选 `pre-sample`/`post-sample` 观测点（装备 1–13 步）。从实见的 `DG_1hmEquip` 反查主图 `activeNodes +0x98` 与 `activeNodesChildrenIndices +0xA8` 的父边，节点按 `+0x70/+0x74` 数量与首项下标、`StateInfo +0x58/+0x60/+0x68`、ManualSelector `+0x58/+0x59` 记录选中项，输出 `TRANSITION PARENT CHAIN` / `NODE` / `EDGE` / `SM` / `SELECTOR` / `BLENDER` / `SUMMARY`。cap 256 节点 / 4,096 子索引 / 64 路径节点 / 128 边；全部指针经 `plausible_object_pointer`，不调用图函数、不写图/姿态/变量、不新增 detour，`TransitionProbeRecord`/CPK5/CPK5S/源 ring 均不变。
+
+**离线测试**：`cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\transition_probe_test.cpp` 编译并运行，10/10、exit 0（v1–v5 的 8 例 + 共享父边与空槽、无效范围与带有效根的环路 2 例）。
+
+**构建（2026-11-20 22:55）**：干净树（`0876130`）用 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v115-g5trans-parent-chain-20261120` + `cmake --build --preset Release`，VS 2022 v143（14.44.35207）、vcpkg `x64-windows-static-md`，exit 0；身份 `CharacterPanel-scenegraph-v115-g5trans-parent-chain-20261120-087613006d-cl94faaed0c6-20261120T145507Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,113,024 | `5484030D80A20C77196D4AAF7A949C9E9EB406ED6A185AC3E4F37D4E0361A712` |
+| CharacterPanel.pdb | 52,613,120 | `B1071FDDBC63CEAE3115E38BBB145A281C4517DABB3171BBB367604E9FDEC9DB` |
+| 候选 INI | 17,121 | `DF18E107CD0CC303C47BB645BB2604DB6A558406F5414C3B459493F363646981` |
+
+**更正**：本页 2026-11-20 早先登记的 v115 构建（身份 `…-v115-…-b9bd29fad6+dirty-…`、DLL 2,107,392 B `e1f2c69c…`、PDB 35,106,816 B `69401e8a…`、INI 17,110 B `a19c8d95…`）与声明的 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip` 在仓库、`dist/` 与安装位均无对应工件，无法复核（当时 `build/` 与安装位仍为 v114）。该记录已由上一小节的重建工件取代，早先哈希作废。
+
+**部署（2026-11-20 22:56；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v114 三件套先备份到 `dist/deploy-backup-20261120-v114-v115pre/`（DLL 2,091,520 B `523b097d…`、PDB 52,383,744 B `d954ee51…`、候选 INI 12,449 B `30aa9777…`，与安装位逐位一致）。v115 DLL/PDB + 候选档 `dist/g5-transition-v6-20261120/SKSE/Plugins/CharacterPanel.ini`（`IndependentGraph=inject`、`CandidateEquipPrime/Branch=true`、`CandidateInputProbe=true`、`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`、`K5FullSample=true`、`TransitionStateProbe=true`、`TransitionParentChainProbe=true`、`TransitionSubgraphProbe=false`、`SamplingLiveness=off`）装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `5484030d…`/`b1071fdd…`/`df18e107…`；DLL 内身份 `…-v115-g5trans-parent-chain-20261120-087613006d-…` 与 `TRANSITION PARENT CHAIN` 模板在位。运行包 `dist/g5-transition-v6-20261120/CharacterPanel-v115-AE-Track2.zip`（14,413,417 B `6e087fe0…`）三件套逐条哈希与安装位一致。**未启动游戏**；候选 run 待上机。
