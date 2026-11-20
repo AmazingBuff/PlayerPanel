@@ -165,6 +165,9 @@ namespace animation
     [[nodiscard]] bool transition_subgraph_probe();
     // C-G5-TRANS v6: candidate-only equipment parent chain, default off.
     [[nodiscard]] bool transition_parent_chain_probe();
+    // C-G5-TRANS v7: candidate-only clip clock evidence, default off. Reads clip/control
+    // time fields only; adds no detour and writes no graph, pose or variable.
+    [[nodiscard]] bool transition_clip_clock_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

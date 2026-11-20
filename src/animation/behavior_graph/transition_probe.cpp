@@ -9,6 +9,7 @@
 #include "animation/behavior_graph/transition_probe.h"
 
 #include "animation/behavior_graph/observation_chain_policy.h"
+#include "animation/behavior_graph/transition_clip_clock_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
@@ -1317,6 +1318,166 @@ namespace animation::behavior_graph
                     blender.internals[3]);
             }
         }
+    }
+
+    void log_transition_clip_clock(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept
+    {
+        std::uintptr_t const behavior = reinterpret_cast<std::uintptr_t>(a_graph.characterInstance.behaviorGraph.get());
+        std::string const key = fmt::format(
+            "side=candidate segment=equip phase={} graph={:#x} behavior={:#x} actor={:08x} request={} commanded={} completed={}",
+            transition_probe_phase_name(static_cast<TransitionProbePhase>(a_probe.phase)),
+            a_probe.graph, behavior, a_probe.actor, a_probe.request, a_probe.commanded, a_probe.sequence);
+
+        auto const status = [&](char const* a_status) {
+            logger::info("TRANSITION CLIP CLOCK {} status={}", key, a_status);
+        };
+
+        ChainArray nodes{};
+        std::uintptr_t behavior_vtable{};
+        std::uintptr_t node_head{};
+        if (!plausible_object_pointer(behavior) ||
+            !read_chain_field(behavior, 0, behavior_vtable) ||
+            behavior_vtable != RE::VTABLE_hkbBehaviorGraph[0].address() ||
+            !read_chain_field(behavior, Behavior_Graph_Active_Nodes_Offset, node_head) ||
+            !read_chain_array(node_head, nodes))
+        {
+            status("unavailable");
+            return;
+        }
+        if (nodes.size <= 0 ||
+            nodes.size > static_cast<std::int32_t>(Parent_Chain_Active_Node_Limit))
+        {
+            status(nodes.size <= 0 ? "missing-seed" : "overflow");
+            return;
+        }
+
+        std::array<ChainNode, Parent_Chain_Active_Node_Limit> raw_nodes;
+        if (!read_chain_memory(nodes.data, raw_nodes.data(),
+                sizeof(ChainNode) * static_cast<std::size_t>(nodes.size)))
+        {
+            status("unreadable");
+            return;
+        }
+
+        char const* const expected_leaf =
+            a_probe.segment == static_cast<std::uint8_t>(TransitionProbeSegment::unequip)
+            ? "1HM_Unequip.hkx" : "1HM_Equip.hkx";
+        std::array<char, Transition_Probe_Name_Length> name;
+        std::uintptr_t clip{};
+        std::size_t seeds = 0;
+        for (std::size_t i = 0; i < static_cast<std::size_t>(nodes.size); ++i)
+        {
+            std::uintptr_t const clone = read_field<std::uintptr_t>(raw_nodes[i].data(), Node_Info_Node_Clone_Offset);
+            std::uintptr_t vtable{};
+            if (!plausible_object_pointer(clone) || !read_chain_field(clone, 0, vtable))
+            {
+                status("unreadable-node");
+                return;
+            }
+            if (vtable != RE::VTABLE_hkbClipGenerator[0].address())
+                continue;
+            // Identity is the animation family, not the node name: the same segment can
+            // carry differently named clones of the same clip.
+            if (!read_chain_string(clone + 0x48, name))
+            {
+                status("unreadable-clip");
+                return;
+            }
+            std::string_view const candidate_animation{ name.data() };
+            std::size_t const candidate_separator = candidate_animation.find_last_of("\\/");
+            std::string_view const candidate_leaf = candidate_separator == std::string_view::npos
+                ? candidate_animation : candidate_animation.substr(candidate_separator + 1);
+            if (_stricmp(candidate_leaf.data(), expected_leaf) != 0)
+                continue;
+            clip = clone;
+            ++seeds;
+        }
+        if (seeds != 1)
+        {
+            status(seeds == 0 ? "missing-seed" : "ambiguous-seed");
+            return;
+        }
+
+        std::uint8_t mode{};
+        std::uint8_t at_end{};
+        std::uint16_t binding_index{};
+        std::uint32_t local_time_bits{};
+        std::uint32_t time_bits{};
+        std::uint32_t clip_speed_bits{};
+        std::uint32_t clip_crop_start_bits{};
+        std::uint32_t clip_crop_end_bits{};
+        std::uintptr_t control{};
+        if (!read_chain_string(clip + 0x48, name) ||
+            !read_chain_field(clip, Clip_Mode_Offset, mode) ||
+            !read_chain_field(clip, Clip_At_End_Offset, at_end) ||
+            !read_chain_field(clip, 0x70, binding_index) ||
+            !read_chain_field(clip, Clip_Local_Time_Offset, local_time_bits) ||
+            !read_chain_field(clip, Clip_Time_Offset, time_bits) ||
+            !read_chain_field(clip, Clip_Playback_Speed_Offset, clip_speed_bits) ||
+            !read_chain_field(clip, Clip_Crop_Start_Offset, clip_crop_start_bits) ||
+            !read_chain_field(clip, Clip_Crop_End_Offset, clip_crop_end_bits) ||
+            !read_chain_field(clip, Clip_Control_Offset, control))
+        {
+            status("unreadable-clip");
+            return;
+        }
+
+        std::uint32_t control_local_time_bits{};
+        std::uint32_t control_weight_bits{};
+        std::int32_t track_weights{};
+        std::uint32_t control_speed_bits{};
+        std::uint32_t control_crop_start_bits{};
+        std::uint32_t control_crop_end_bits{};
+        bool control_read = false;
+        if (plausible_object_pointer(control))
+        {
+            control_read = read_chain_field(control, Control_Local_Time_Offset, control_local_time_bits) &&
+                read_chain_field(control, Control_Weight_Offset, control_weight_bits) &&
+                read_chain_field(control, Control_Track_Weights_Size_Offset, track_weights) &&
+                read_chain_field(control, Control_Playback_Speed_Offset, control_speed_bits) &&
+                read_chain_field(control, Control_Crop_Start_Offset, control_crop_start_bits) &&
+                read_chain_field(control, Control_Crop_End_Offset, control_crop_end_bits);
+        }
+
+        // One previous sample per (segment, phase); a new request clears the table.
+        struct PreviousTime
+        {
+            std::uint32_t time_bits{};
+            bool valid{};
+        };
+        static PreviousTime previous[3][4];
+        static std::uint64_t previous_request = ~std::uint64_t{ 0 };
+        if (a_probe.request != previous_request)
+        {
+            std::memset(previous, 0, sizeof(previous));
+            previous_request = a_probe.request;
+        }
+        std::size_t const segment_index = std::min<std::size_t>(a_probe.segment, 2);
+        std::size_t const phase_index = std::min<std::size_t>(a_probe.phase, 3);
+        PreviousTime& slot = previous[segment_index][phase_index];
+        ClipClockAdvance const advance = clip_clock_advance(slot.time_bits, time_bits,
+            at_end != 0, slot.valid);
+        float const previous_time = std::bit_cast<float>(slot.time_bits);
+        float const current_time = std::bit_cast<float>(time_bits);
+        float const time_delta = slot.valid ? current_time - previous_time : 0.0f;
+        slot.time_bits = time_bits;
+        slot.valid = true;
+
+        std::string_view const animation{ name.data() };
+
+        logger::info("TRANSITION CLIP CLOCK {} clip={:#x} animation='{}' expected='{}' binding-index={} mode={} "
+            "user-controlled={} at-end={} local-time-bits={:08X} time-bits={:08X} time-delta={:.9g} advance={} "
+            "control={:#x} ctl-local-time-bits={:08X} ctl-weight-bits={:08X} ctl-track-weights={} "
+            "ctl-speed-bits={:08X} ctl-crop-start-bits={:08X} ctl-crop-end-bits={:08X} "
+            "clip-speed-bits={:08X} clip-crop-start-bits={:08X} clip-crop-end-bits={:08X} status={}",
+            key, clip, animation, expected_leaf, binding_index, mode,
+            clip_clock_mode_is_user_controlled(mode), at_end,
+            local_time_bits, time_bits, time_delta, clip_clock_advance_name(advance),
+            control, control_local_time_bits, control_weight_bits, track_weights,
+            control_speed_bits, control_crop_start_bits, control_crop_end_bits,
+            clip_speed_bits, clip_crop_start_bits, clip_crop_end_bits,
+            !control_read ? "no-control" : "ok");
     }
 }
 PLUGIN_NAMESPACE_END

@@ -2784,6 +2784,16 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     transition_state_probe(), k5_full_enabled,
                                     version == SKSE::RUNTIME_SSE_1_6_1170);
                             }
+                            bool const clip_clock_enabled = transition_clip_clock_probe() &&
+                                transition_state_probe() && k5_full_enabled &&
+                                version == SKSE::RUNTIME_SSE_1_6_1170;
+                            if (transition_clip_clock_probe() && !clip_clock_enabled)
+                            {
+                                logger::info(
+                                    "TRANSITION CLIP CLOCK status=inactive transition-state={} k5-full={} exact-runtime={}",
+                                    transition_state_probe(), k5_full_enabled,
+                                    version == SKSE::RUNTIME_SSE_1_6_1170);
+                            }
                             const auto log_transition_stage = [&](FrameStage a_stage) {
                                 if (!transition_state_probe())
                                 {
@@ -2831,6 +2841,13 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     observation.commanded() >= 1 && observation.commanded() <= 13)
                                 {
                                     log_transition_parent_chain(*candidate, probe);
+                                }
+                                // Same window as the subgraph probe: equip 1-13, unequip 1-12.
+                                if (clip_clock_enabled &&
+                                    phase != TransitionProbePhase::post_update &&
+                                    transition_subgraph_window_matches(probe_segment, observation.commanded()))
+                                {
+                                    log_transition_clip_clock(*candidate, probe);
                                 }
                                 log_transition_modifiers(*candidate, observation.segment_name(), phase,
                                     observation.completed(), observation.commanded());

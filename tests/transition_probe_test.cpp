@@ -7,6 +7,7 @@
 //
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
+#include "animation/behavior_graph/transition_clip_clock_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
 #include "animation/behavior_graph/transition_probe.h"
 
@@ -174,6 +175,51 @@ namespace
         assert(cycle.status == ParentChainStatus::e_cycle);
         assert(cycle.node_count == 3 && cycle.edge_count == 3 && cycle.roots == 1);
     }
+    void clip_clock_offsets_are_the_audited_values()
+    {
+        assert(Clip_Local_Time_Offset == 0xF0);
+        assert(Clip_Time_Offset == 0xF4);
+        assert(Clip_Crop_Start_Offset == 0x58);
+        assert(Clip_Crop_End_Offset == 0x5C);
+        assert(Clip_Playback_Speed_Offset == 0x64);
+        assert(Clip_Mode_Offset == 0x72);
+        assert(Clip_Control_Offset == 0x88);
+        assert(Clip_At_End_Offset == 0x104);
+        assert(Control_Local_Time_Offset == 0x10);
+        assert(Control_Weight_Offset == 0x14);
+        assert(Control_Track_Weights_Size_Offset == 0x20);
+        assert(Control_Playback_Speed_Offset == 0x5C);
+        assert(Control_Crop_Start_Offset == 0x9C);
+        assert(Control_Crop_End_Offset == 0xA0);
+        assert(Clip_Mode_User_Controlled == 2);
+        assert(clip_clock_mode_is_user_controlled(2));
+        assert(!clip_clock_mode_is_user_controlled(0));
+        assert(!clip_clock_mode_is_user_controlled(3));
+    }
+
+    void clip_clock_classifies_advance_and_freeze()
+    {
+        // No previous sample: the classification stays unknown.
+        assert(clip_clock_advance(0x3E555556u, 0x3E555556u, false, false) ==
+            ClipClockAdvance::e_unknown);
+
+        // Time moved: advancing regardless of the at-end flag.
+        assert(clip_clock_advance(0x3C888889u, 0x3E555556u, false, true) ==
+            ClipClockAdvance::e_advancing);
+
+        // Frozen at end: Update skips the localTime write (0xACDF8A).
+        assert(clip_clock_advance(0x3E555556u, 0x3E555556u, true, true) ==
+            ClipClockAdvance::e_frozen_at_end);
+
+        // Frozen without at-end: the clip saw no timestep.
+        assert(clip_clock_advance(0x3E555556u, 0x3E555556u, false, true) ==
+            ClipClockAdvance::e_frozen_no_step);
+
+        assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_unknown), "unknown") == 0);
+        assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_advancing), "advancing") == 0);
+        assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_frozen_at_end), "frozen-at-end") == 0);
+        assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_frozen_no_step), "frozen-no-step") == 0);
+    }
 }
 
 int main()
@@ -188,5 +234,7 @@ int main()
     subgraph_status_names_are_stable();
     parent_chain_retains_shared_parents_and_skips_empty_slots();
     parent_chain_rejects_invalid_topology();
+    clip_clock_offsets_are_the_audited_values();
+    clip_clock_classifies_advance_and_freeze();
     return 0;
 }

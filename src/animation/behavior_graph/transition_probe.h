@@ -338,5 +338,11 @@ namespace animation::behavior_graph
     // Candidate-only AE 1.6.1170 parent chain evidence from the existing K5 observations.
     void log_transition_parent_chain(RE::BShkbAnimationGraph const& a_graph,
         TransitionProbeRecord const& a_probe) noexcept;
+
+    // Candidate-only AE 1.6.1170 clip clock evidence at the same observations. It reads the
+    // audited clip/control time fields (offset table in transition_clip_clock_policy.h),
+    // adds no hook, and writes nothing to the graph, the pose or any variable.
+    void log_transition_clip_clock(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept;
 }
 PLUGIN_NAMESPACE_END
