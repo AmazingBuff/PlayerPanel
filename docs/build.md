@@ -2399,3 +2399,20 @@ build\transition_probe_test.exe
 **部署（2026-11-20 23:22；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v115 三件套先备份到 `dist/deploy-backup-20261120-v115-v116pre/`（DLL 2,113,024 B `5484030d…`、PDB 52,613,120 B `b1071fdd…`、候选 INI 17,121 B `df18e107…`，逐位核对）。v116 DLL/PDB + 候选档 `dist/g5-clip-clock-v7-20261120/SKSE/Plugins/CharacterPanel.ini`（`TransitionClipClockProbe=true`、`TransitionParentChainProbe=false`、`TransitionSubgraphProbe=false`、`TransitionStateProbe=true`、`K5FullSample=true`）装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `43654aed…`/`5370fdfe…`/`c9902a42…`；DLL 内身份 `…-v116-g5trans-clip-clock-20261120-c7ec35441f-…` 与 `TRANSITION CLIP CLOCK` 模板在位。运行包 `dist/g5-clip-clock-v7-20261120/CharacterPanel-v116-AE-Track2.zip`（14,375,877 B `afdec0a3…`）三件套逐条哈希与安装位一致。
 
 **候选 run 1（2026-11-20 23:25–23:27）**：K5 249/249（equip 120 `fixed-equip-budget`、unequip 129 `state-12-to-0`）、747 header 全 `flags=0x0000`、唯一 `[E]` 为 Track 2 OAR 豁免。`TRANSITION CLIP CLOCK` 50/50 `status=ok`；`advance` 分布 `unknown` 4 / `advancing` 10 / `frozen-no-step` 36 / `frozen-at-end` 0，全程 `mode=0`、`at-end=0`、`ctl-weight=1.0`、`ctl-track-weights=99`，`time`/`localTime`/`ctl-local-time` 三处逐行相同。装备 cmd 3–12 冻结（Δ=0），cmd 2 与 cmd 13 各推进约 11 帧；卸下 cmd 1–9 冻结、cmd 10–12 每步 +0.016667。同一冻结窗口 K5 姿态仍 11/11 唯一（3→4 帧 64 轨平移、79 轨旋转变化，去均值残差 3.0734，非刚性），`clip-ref` 同时间重采样仅一致 16/99（`max-dpos=2.344827`；`time=0.0167` 时 10/99、27.216974）。**CC-1/2/3/4/5 全 PASS；H-D1 + H-W2 成立，H-D2/H-D3/H-W1 否证 → 剩余路线 M2/M3**；`G4P-7` 仍 FAIL。记录见 [`run1-candidate`](diagnostics/g5-clip-clock-probe-20261120/run1-candidate/README.md)。
+
+<a id="v117-g5trans-clip-capture-20261120"></a>
+## v117-g5trans-clip-capture-20261120（2026-11-20，C-G5-TRANS v8）
+
+[上机协议与判据](diagnostics/g5-clip-capture-probe-20261120/README.md)登记 v8 的捕获点/映射探针，承接 v7 run 1（时钟冻结、权重恒定，剩余路线 M2/M3）。新增默认关闭的 `[Experiment] TransitionClipCaptureProbe`，候选专用、log-only，窗口与 v7 相同（equip 1–13、unequip 1–12 的 `pre-sample`/`post-sample`，50 点）。按动画族选种后，用 `hkaDefaultAnimationControl::SamplePartialTracks`（`control+0x10` 时间）采样到探针本地缓冲，与 `hkbCharacter::poseLocal` 逐轨比较（沿用 `clip_reference_policy.h` 的 `1e-4/1e-5/1e-4` 判据），并记录 `binding->transformTrackToBoneIndices`（`+0x20`，空表即 identity）、`mean-shift`、去均值 `resid-max`、`moved` 与前 8 个失配轨。控制类转换前先校验 vtable；不写图/姿态/变量、不新增 detour，`TransitionProbeRecord`/CPK5 不变。v7 的选种逻辑抽成共享 `find_family_clip`。
+
+**离线测试**：`cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\transition_probe_test.cpp` → **14/14、exit 0**（新增轨→骨映射与均值/残差 2 例）。
+
+**构建（2026-11-20 23:34）**：干净树（`282fb3e`）用 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v117-g5trans-clip-capture-20261120` + `cmake --build --preset Release`，VS 2022 v143、vcpkg `x64-windows-static-md`，exit 0；身份 `CharacterPanel-scenegraph-v117-g5trans-clip-capture-20261120-282fb3eedc-cl94faaed0c6-20261120T153353Z`（无 `+dirty`）。
+
+| 工件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,128,896 | `286AFFEF5A4DAD4EE6ABB010874085CA1E40D6D604A279718529466BADAB4CED` |
+| CharacterPanel.pdb | 52,776,960 | `1985E4E07A52E85752559C363D3A840410F2B914B5FDDA4B839EE2348368A8E9` |
+| 候选 INI | 17,508 | `2D65A3A12E59DA58EECFD663A52A5410B323BE844A57D36A7E30D75ABBE4BB13` |
+
+**部署（2026-11-20 23:35；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v116 三件套先备份到 `dist/deploy-backup-20261120-v116-v117pre/`（DLL 2,120,704 B `43654aed…`、PDB 52,695,040 B `5370fdfe…`、候选 INI 17,315 B `c9902a42…`，逐位核对）。v117 DLL/PDB + 候选档 `dist/g5-clip-capture-v8-20261120/SKSE/Plugins/CharacterPanel.ini`（`TransitionClipCaptureProbe=true`、`TransitionClipClockProbe=true`、父链/子图 false）装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `286affef…`/`1985e4e0…`/`2d65a3a1…`；DLL 内身份与 `TRANSITION CLIP CAPTURE` 模板在位。运行包 `dist/g5-clip-capture-v8-20261120/CharacterPanel-v117-AE-Track2.zip`（14,375,241 B `72450cdb…`）三件套逐条哈希与安装位一致。**未启动游戏**；候选 run 待上机。
