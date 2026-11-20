@@ -1,6 +1,6 @@
 # C-G5-TRANS v9：逐轨权重与三点反解探针（2026-11-20）
 
-**状态：IMPLEMENTED / BUILT / DEPLOYED（v118）；候选 run 待上机。**
+**状态：IMPLEMENTED / BUILT / DEPLOYED；候选 run 1 完成（2026-11-20 23:51）；H-W4 成立、H-W5 否证、三点解恒 0（姿态分段常量，只在采样步进一次）。**
 
 v8 把「捕获 ≠ 采样」定死，并留下一条极干净的等差数列：装备段的 `max-dpos` 从 32.20 按**每观测点 2.8** 线性降到 1.40，随后在时钟跳变处重开到 25.20。这种收敛只可能来自随时间线性变化的权重。v9 直接读权重：`hkaAnimationControl::transformTrackWeights`（`+0x18`，每轨 1 字节，size=99）的值、`control->weight`、`binding->blendHint`，并用「上一帧姿态 / 当前姿态 / 当前采样」三点反解每轨实际权重。
 
@@ -78,7 +78,15 @@ TRANSITION CLIP WEIGHT side=candidate segment=equip phase=pre-sample graph=0x.. 
 3. **H-W5 单独成立**：采样语义确认为混合式，v8 的「捕获 ≠ 采样」需按此重述（比较的是混合结果而非纯 clip 输出）。
 4. 任何 `status=no-control`/`invalid-*`、`solved=0`（cmd≥2）或 `[E]` 都判观测缺口，保留原始日志。
 
-## 七、边界
+## 七、候选 run 1（2026-11-20 23:51–23:55）
+
+50/50 `TRANSITION CLIP WEIGHT` `status=ok`；K5 249/249、747 header、唯一 `[E]` 为 Track 2 OAR 豁免。权重表 `weights=99`、`w-min = w-max = 255`、`w-hash` 恒 `67508074`、`w-head` 全 `255`，`ctl-weight-bits=3F800000`、`blend-hint=0`——**H-W4 成立**（没有任何权重在 ramp）。预填 `poseLocal` 后再采样与零填版本给出同样的 `pfill-agreed` 10–16/99——**H-W5 否证**（`SamplePartialTracks` 覆盖写入）。
+
+三点解 `solve-median / min / max` 在全部轨、全部命令上恒为 **0**：`pre(N+1)` 与 `post(N)` 的 `poseLocal` 逐轨相同，姿态只在每个命令的采样步进一次（与 K5 装备 completed 2–12 的 11/11 唯一姿态一致）。**CC9-1/2/3/4 全 PASS。**
+
+因此 v8 的等差收敛（32.20 → 1.40，每命令 2.8）不是权重斜坡，而是姿态每命令朝冻结采样前进一个固定量；结合 v7 的 `frozen-no-step`，只剩两种解释：**S1 增量写入**（图把差值的一部分写回 `poseLocal`）或 **S2 有效采样时刻在推进而字段陈旧**。判别只需一次时间扫描（`t0 + k·δ`，k ∈ [−4,4]），见 [run1-candidate](run1-candidate/README.md) §五。`G4P-7` 仍 **FAIL**。
+
+## 八、边界
 
 - 单次运行、单存档、单装备状态；不含源侧。
 - 不改变 `G4P-7 FAIL`、G5/G6 与任何 `tau_*`。
