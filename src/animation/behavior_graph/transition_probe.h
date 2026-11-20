@@ -357,5 +357,11 @@ namespace animation::behavior_graph
     // weight implied by (previous pose, current pose, current sample). Read-only.
     void log_transition_clip_weight(RE::BShkbAnimationGraph const& a_graph,
         TransitionProbeRecord const& a_probe) noexcept;
+
+    // Candidate-only AE 1.6.1170 swept-time comparison: samples the clip at
+    // local-time + k/60 s for k in [-4, 4] and reports the offset that best matches
+    // poseLocal plus the whole residual curve. Read-only.
+    void log_transition_clip_sweep(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept;
 }
 PLUGIN_NAMESPACE_END

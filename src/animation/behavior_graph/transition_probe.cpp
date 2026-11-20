@@ -12,6 +12,7 @@
 #include "animation/behavior_graph/observation_chain_policy.h"
 #include "animation/behavior_graph/pose_capture_policy.h"
 #include "animation/behavior_graph/transition_clip_capture_policy.h"
+#include "animation/behavior_graph/transition_clip_sweep_policy.h"
 #include "animation/behavior_graph/transition_clip_weight_policy.h"
 #include "animation/behavior_graph/transition_clip_clock_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
@@ -1823,6 +1824,136 @@ namespace animation::behavior_graph
             static_cast<std::int32_t>(binding->blendHint.get()), prefilled_match.compared,
             prefilled_match.agreed, prefilled_match.max_position, solve.solved, solve.median,
             solve.minimum, solve.maximum);
+    }
+
+    void log_transition_clip_sweep(RE::BShkbAnimationGraph const& a_graph,
+        TransitionProbeRecord const& a_probe) noexcept
+    {
+        std::uintptr_t const behavior = reinterpret_cast<std::uintptr_t>(a_graph.characterInstance.behaviorGraph.get());
+        std::string const key = fmt::format(
+            "side=candidate segment={} phase={} graph={:#x} behavior={:#x} actor={:08x} request={} commanded={} completed={}",
+            transition_probe_segment_name(static_cast<TransitionProbeSegment>(a_probe.segment)),
+            transition_probe_phase_name(static_cast<TransitionProbePhase>(a_probe.phase)),
+            a_probe.graph, behavior, a_probe.actor, a_probe.request, a_probe.commanded, a_probe.sequence);
+
+        auto const status = [&](char const* a_status) {
+            logger::info("TRANSITION CLIP SWEEP {} status={}", key, a_status);
+        };
+
+        char const* const expected_leaf =
+            a_probe.segment == static_cast<std::uint8_t>(TransitionProbeSegment::unequip)
+            ? "1HM_Unequip.hkx" : "1HM_Equip.hkx";
+        std::array<char, Transition_Probe_Name_Length> animation_name;
+        std::uintptr_t clip{};
+        char const* const seed_status = find_family_clip(behavior, expected_leaf, clip);
+        if (std::strcmp(seed_status, "ok") != 0)
+        {
+            status(seed_status);
+            return;
+        }
+        if (!read_chain_string(clip + 0x48, animation_name))
+        {
+            status("unreadable-clip");
+            return;
+        }
+
+        RE::hkbCharacter const& character = a_graph.characterInstance;
+        std::int32_t const pose_count = character.numPoseLocal;
+        if (character.poseLocal == nullptr || pose_count <= 0 ||
+            static_cast<std::size_t>(pose_count) > Clip_Capture_Track_Limit)
+        {
+            status("invalid-pose");
+            return;
+        }
+
+        std::uintptr_t control{};
+        std::uintptr_t control_vtable{};
+        if (!read_chain_field(clip, Clip_Control_Offset, control) ||
+            !plausible_object_pointer(control) ||
+            !read_chain_field(control, 0, control_vtable) ||
+            control_vtable != RE::VTABLE_hkaDefaultAnimationControl[0].address())
+        {
+            status("no-control");
+            return;
+        }
+        auto const* const animation_control = reinterpret_cast<RE::hkaDefaultAnimationControl*>(control);
+        RE::hkaAnimationBinding* const binding = animation_control->binding;
+        if (binding == nullptr || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(binding)))
+        {
+            status("no-binding");
+            return;
+        }
+        RE::hkaAnimation* const animation = binding->animation.get();
+        if (animation == nullptr)
+        {
+            status("no-animation");
+            return;
+        }
+        std::int32_t const tracks = animation->numberOfTransformTracks;
+        if (tracks <= 0 || static_cast<std::size_t>(tracks) > Clip_Capture_Track_Limit)
+        {
+            status("invalid-tracks");
+            return;
+        }
+
+        auto const& binding_map = binding->transformTrackToBoneIndices;
+        bool const identity = binding_map.size() == 0;
+        std::span<std::int16_t const> const map{ binding_map.data(),
+            static_cast<std::size_t>(binding_map.size()) };
+
+        float const local_time = animation_control->localTime;
+        float const duration = animation->duration;
+        constexpr std::size_t candidate_count = static_cast<std::size_t>(Clip_Sweep_Radius * 2 + 1);
+        static std::array<RE::hkQsTransform, Clip_Capture_Track_Limit> buffer;
+        std::array<float, candidate_count> scores{};
+        std::array<float, candidate_count> rotations{};
+        std::array<float, candidate_count> times{};
+        bool clamped = false;
+        for (std::int32_t offset = -Clip_Sweep_Radius; offset <= Clip_Sweep_Radius; ++offset)
+        {
+            std::size_t const index = static_cast<std::size_t>(offset + Clip_Sweep_Radius);
+            ClipSweepTime const candidate = clip_sweep_time(local_time, offset, duration);
+            times[index] = candidate.time;
+            clamped = clamped || candidate.clamped;
+            std::memset(buffer.data(), 0, sizeof(RE::hkQsTransform) * static_cast<std::size_t>(tracks));
+            animation->SamplePartialTracks(candidate.time, static_cast<std::uint32_t>(tracks),
+                buffer.data(), 0, nullptr, nullptr);
+            float position = 0.0f;
+            float rotation = 0.0f;
+            for (std::int32_t track = 0; track < tracks; ++track)
+            {
+                std::int32_t const bone = clip_capture_bone(track, identity, map, pose_count);
+                if (bone < 0)
+                    continue;
+                PoseSample const sampled = capture_pose_sample(buffer[static_cast<std::size_t>(track)]);
+                PoseSample const captured = capture_pose_sample(character.poseLocal[bone]);
+                position = std::max(position,
+                    pose_component_delta(sampled.translation, captured.translation));
+                rotation = std::max(rotation,
+                    pose_rotation_agreement_error(sampled.rotation, captured.rotation));
+            }
+            scores[index] = position;
+            rotations[index] = rotation;
+        }
+        std::size_t const best = clip_sweep_best(std::span<float const>{ scores.data(), scores.size() });
+        std::int32_t const best_offset = static_cast<std::int32_t>(best) - Clip_Sweep_Radius;
+
+        std::string curve;
+        for (std::size_t i = 0; i < candidate_count; ++i)
+        {
+            if (i != 0)
+                curve += ',';
+            curve += fmt::format("{}:{:.4f}", static_cast<std::int32_t>(i) - Clip_Sweep_Radius, scores[i]);
+        }
+
+        logger::info("TRANSITION CLIP SWEEP {} clip={:#x} animation='{}' control={:#x} tracks={} pose={:#x} "
+            "num-pose={} local-time-bits={:08X} duration={:.6f} step={:.6f} best-k={} best-dpos={:.6f} "
+            "best-drot={:.6f} best-time={:.6f} clamped={} curve={} status=ok",
+            key, clip, std::string_view{ animation_name.data() }, control, tracks,
+            reinterpret_cast<std::uintptr_t>(character.poseLocal), pose_count,
+            std::bit_cast<std::uint32_t>(local_time), static_cast<double>(duration),
+            static_cast<double>(Clip_Sweep_Step), best_offset, scores[best], rotations[best],
+            static_cast<double>(times[best]), clamped, curve);
     }
 }
 PLUGIN_NAMESPACE_END

@@ -8,6 +8,7 @@
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
 #include "animation/behavior_graph/transition_clip_capture_policy.h"
+#include "animation/behavior_graph/transition_clip_sweep_policy.h"
 #include "animation/behavior_graph/transition_clip_clock_policy.h"
 #include "animation/behavior_graph/transition_clip_weight_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
@@ -305,6 +306,40 @@ namespace
         ClipWeightSolve const none = clip_weight_solve_summary(std::span<float>{});
         assert(none.solved == 0);
     }
+    void clip_sweep_time_advances_and_clamps()
+    {
+        ClipSweepTime const ahead = clip_sweep_time(0.5f, 1, 2.0f);
+        assert(!ahead.clamped);
+        assert(std::abs(ahead.time - (0.5f + Clip_Sweep_Step)) < 1.0e-6f);
+
+        ClipSweepTime const below = clip_sweep_time(0.0f, -1, 2.0f);
+        assert(below.clamped && below.time == 0.0f);
+
+        ClipSweepTime const beyond = clip_sweep_time(1.99f, 4, 2.0f);
+        assert(beyond.clamped && beyond.time == 2.0f);
+
+        // A zero duration is unknown, so the candidate is not clamped to it.
+        ClipSweepTime const unknown_duration = clip_sweep_time(0.5f, 4, 0.0f);
+        assert(!unknown_duration.clamped);
+    }
+
+    void clip_sweep_best_prefers_the_centre_on_ties()
+    {
+        std::array<float, 9> const curve{ 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+        assert(clip_sweep_best(curve) == 4);
+
+        std::array<float, 9> const left{ 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f };
+        assert(clip_sweep_best(left) == 0);
+
+        std::array<float, 9> const flat{ 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f };
+        assert(clip_sweep_best(flat) == 4);
+
+        // Equal minima away from the centre: the closer candidate wins.
+        std::array<float, 9> const tie{ 1.0f, 1.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f };
+        assert(clip_sweep_best(tie) == 1);
+
+        assert(clip_sweep_best(std::span<float const>{}) == 0);
+    }
 }
 
 int main()
@@ -325,5 +360,7 @@ int main()
     clip_capture_summarises_shift_and_residual();
     clip_weight_summary_reports_range_and_hash();
     clip_weight_solve_recovers_the_mix();
+    clip_sweep_time_advances_and_clamps();
+    clip_sweep_best_prefers_the_centre_on_ties();
     return 0;
 }
