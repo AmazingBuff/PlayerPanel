@@ -19,8 +19,9 @@
 PLUGIN_NAMESPACE_BEGIN
 namespace animation::behavior_graph
 {
-    // Nine candidates: -4..+4 frames at 1/60 s around the recorded local time.
-    inline constexpr std::int32_t Clip_Sweep_Radius = 4;
+    // v10 used a radius of 4 frames (9 candidates); v11 widens it to 16 (33 candidates, about
+    // 0.267 s) because the first run's minima sat on the +-4 boundary. The step stays at 1/60 s.
+    inline constexpr std::int32_t Clip_Sweep_Radius = 16;
     inline constexpr float Clip_Sweep_Step = 1.0f / 60.0f;
 
     struct ClipSweepTime
