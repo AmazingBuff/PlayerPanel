@@ -79,3 +79,5 @@ docs/diagnostics/g5-clip-capture-probe-20261120/run1-candidate/** -text
 docs/diagnostics/g5-clip-capture-probe-20261120/run1-candidate/*.bin -diff
 docs/diagnostics/g5-clip-weight-probe-20261120/run1-candidate/** -text
 docs/diagnostics/g5-clip-weight-probe-20261120/run1-candidate/*.bin -diff
+docs/diagnostics/g5-clip-sweep-probe-20261120/run1-candidate/** -text
+docs/diagnostics/g5-clip-sweep-probe-20261120/run1-candidate/*.bin -diff

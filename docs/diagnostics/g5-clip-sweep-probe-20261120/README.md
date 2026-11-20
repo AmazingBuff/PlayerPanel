@@ -1,6 +1,6 @@
 # C-G5-TRANS v10：时间扫描判别探针（2026-11-20）
 
-**状态：IMPLEMENTED / BUILT / DEPLOYED（v119）；候选 run 待上机。**
+**状态：IMPLEMENTED / BUILT / DEPLOYED；候选 run 1 完成（2026-11-21 00:05）；CC10-3 FAIL（H-S0）——最佳偏移落在 ±4 窗口边界，半径不足，S1/S2 未定。**
 
 v9 把权重路线关掉（权重表恒 255、`control->weight`=1.0、`blend-hint`=0），并给出一个更硬的事实：三点解恒为 0，`pre(N+1)` 与 `post(N)` 的 `poseLocal` 逐轨相同——姿态在探针时间轴上是**分段常量**，每个命令只在采样步进一次。于是 v8 的「每命令 2.8」只有两种解释：
 
@@ -79,7 +79,16 @@ TRANSITION CLIP SWEEP side=candidate segment=equip phase=pre-sample graph=0x.. b
 2. **H-S1 成立**（`best-k` 恒 0、曲线不变、残差仍按 2.8 缩小）：姿态是被增量写入的。下一层读 `hkbClipGenerator::Generate` 之后的输出缓冲写入（含 `extractedMotion` 累加、`0xACFFF0` 的写出目标），并核对 E2-A 的 58423/63581 写入路径。
 3. **H-S0**：先诊断 `clamped`、`status` 与曲线形状，再决定是否换 `δ`（1/60 → 1/120）或扩大半径。
 
-## 七、边界
+## 七、候选 run 1（2026-11-21 00:05–00:06）
+
+50/50 `TRANSITION CLIP SWEEP` `status=ok`、`clamped=0`；`k=0` 残差与 v8 `max-dpos` 逐点一致（装备 post-sample cmd 2 `29.4015`、cmd 12 `1.4001`），两条探针互相对上。**但 50 行里有 15 行的 `best-k` 落在 ±4 边界**：装备 cmd 2–7 全在 `+4` 且曲线到边界仍单调下降，cmd 13 在 `−4`。
+
+- 装备：`best-k` 走 `+4(边界) → 3 → 2 → 2 → 1 → 0 → −4(边界)`，`k=0` 残差 29.4 → 1.4。
+- 卸下：时钟冻结在 `0` 时 9 个点全 `k=0`、残差恒 1.617；时钟每步 +1 帧后 `best-k` 依次 −1/−2/−3（姿态落后于记录时刻）。
+
+**CC10-1/2/4 PASS，CC10-3 FAIL（H-S0）**：S1 的强形式（`best-k` 恒 0）不成立，对齐点出现在时钟台阶末尾（cmd 12），台阶跳变后立刻落后；但真实谷底在窗口外，无法分辨 S1/S2。下一步 v11 只把 `Clip_Sweep_Radius` 4 → 16（25 个候选，覆盖 0.267 s），其余不变，改读「谷底轨迹」。完整表格、曲线与分叉见 [run1-candidate](run1-candidate/README.md)。`G4P-7` 仍 **FAIL**。
+
+## 八、边界
 
 - 单次运行、单存档、单装备状态；不含源侧。
 - 不改变 `G4P-7 FAIL`、G5/G6 与任何 `tau_*`。
