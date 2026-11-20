@@ -120,7 +120,7 @@ Master_Behavior(state Root=0)
 
 ## 六、下一步（候选假设，未预注册）
 
-1. **H-C1**：`hkbClipGenerator` 的实际采样时钟与探针读到的 `localTime` 字段不同（字段只在 activate/sync 刷新）。先做离线审计：AE 1.6.1170 里谁在 update 中写该字段、采样读哪个字段。
+1. **H-C1（已审计，2026-11-20 否证）**：采样时间就是 `clip->localTime (+0xF0)`——`Generate` 把它写进 `hkaAnimationControl::localTime (+0x10)`，两个采样入口都从 `+0x10` 取时间；`Update` 按 `time (+0xF4) += step×rate` 推进并夹在 `duration + cropStart`（本场景 1.4333，`mode=0`、`crop-sum=0`）。不存在第二条隐藏时钟，所以冻结的 `localTime` 等于「该 clip 的采样输出逐帧相同」，差异必然在采样之后。详见 [H-C1 离线审计](../../g5-clip-clock-20261120/README.md)。
 2. **H-C2**：该链只写部分轨，其余轨沿用上一帧姿态或由其它写入者保留（86/116 的变化分布与单轨量级已留档）。
 3. **H-C3**：图输出合成发生在采样相位之外（`allPartitionMemory +0x118` / `nodePartitionInfo +0xF8`），需独立预注册。
 
