@@ -1,0 +1,466 @@
+{
+"0": {
+"name": "NPC Root [Root]",
+"parent": -1
+},
+"1": {
+"name": "x_NPC LookNode [Look]",
+"parent": 0
+},
+"2": {
+"name": "x_NPC Translate [Pos ]",
+"parent": 0
+},
+"3": {
+"name": "x_NPC Rotate [Rot ]",
+"parent": 0
+},
+"4": {
+"name": "NPC COM [COM ]",
+"parent": 0
+},
+"5": {
+"name": "NPC Pelvis [Pelv]",
+"parent": 4
+},
+"6": {
+"name": "NPC L Thigh [LThg]",
+"parent": 5
+},
+"7": {
+"name": "NPC L Calf [LClf]",
+"parent": 6
+},
+"8": {
+"name": "NPC L Foot [Lft ]",
+"parent": 7
+},
+"9": {
+"name": "NPC R Thigh [RThg]",
+"parent": 5
+},
+"10": {
+"name": "NPC R Calf [RClf]",
+"parent": 9
+},
+"11": {
+"name": "NPC R Foot [Rft ]",
+"parent": 10
+},
+"12": {
+"name": "SkirtRBone01",
+"parent": 5
+},
+"13": {
+"name": "SkirtRBone02",
+"parent": 12
+},
+"14": {
+"name": "SkirtRBone03",
+"parent": 13
+},
+"15": {
+"name": "SkirtLBone01",
+"parent": 5
+},
+"16": {
+"name": "SkirtLBone02",
+"parent": 15
+},
+"17": {
+"name": "SkirtLBone03",
+"parent": 16
+},
+"18": {
+"name": "SkirtBBone01",
+"parent": 5
+},
+"19": {
+"name": "SkirtBBone02",
+"parent": 18
+},
+"20": {
+"name": "SkirtBBone03",
+"parent": 19
+},
+"21": {
+"name": "SkirtFBone01",
+"parent": 5
+},
+"22": {
+"name": "SkirtFBone02",
+"parent": 21
+},
+"23": {
+"name": "SkirtFBone03",
+"parent": 22
+},
+"24": {
+"name": "NPC Spine [Spn0]",
+"parent": 4
+},
+"25": {
+"name": "NPC Spine1 [Spn1]",
+"parent": 24
+},
+"26": {
+"name": "NPC Spine2 [Spn2]",
+"parent": 25
+},
+"27": {
+"name": "NPC L Clavicle [LClv]",
+"parent": 26
+},
+"28": {
+"name": "NPC L UpperArm [LUar]",
+"parent": 27
+},
+"29": {
+"name": "NPC L Forearm [LLar]",
+"parent": 28
+},
+"30": {
+"name": "NPC R Clavicle [RClv]",
+"parent": 26
+},
+"31": {
+"name": "NPC R UpperArm [RUar]",
+"parent": 30
+},
+"32": {
+"name": "NPC R Forearm [RLar]",
+"parent": 31
+},
+"33": {
+"name": "AnimObjectA",
+"parent": 0
+},
+"34": {
+"name": "AnimObjectB",
+"parent": 0
+},
+"35": {
+"name": "NPC Neck [Neck]",
+"parent": 26
+},
+"36": {
+"name": "NPC Head [Head]",
+"parent": 35
+},
+"37": {
+"name": "NPCEyeBone",
+"parent": 36
+},
+"38": {
+"name": "NPC L Hand [LHnd]",
+"parent": 29
+},
+"39": {
+"name": "NPC R Hand [RHnd]",
+"parent": 32
+},
+"40": {
+"name": "AnimObjectL",
+"parent": 38
+},
+"41": {
+"name": "AnimObjectR",
+"parent": 39
+},
+"42": {
+"name": "Shield",
+"parent": 38
+},
+"43": {
+"name": "Weapon",
+"parent": 39
+},
+"44": {
+"name": "NPC L Pauldron",
+"parent": 27
+},
+"45": {
+"name": "NPC R Pauldron",
+"parent": 30
+},
+"46": {
+"name": "MagicEffectsNode",
+"parent": 24
+},
+"47": {
+"name": "NPC L MagicNode [LMag]",
+"parent": 38
+},
+"48": {
+"name": "NPC R MagicNode [RMag]",
+"parent": 39
+},
+"49": {
+"name": "NPC Head MagicNode [Hmag]",
+"parent": 36
+},
+"50": {
+"name": "NPC L Toe0 [LToe]",
+"parent": 8
+},
+"51": {
+"name": "NPC R Toe0 [RToe]",
+"parent": 11
+},
+"52": {
+"name": "NPC L ForearmTwist1 [LLt1]",
+"parent": 29
+},
+"53": {
+"name": "NPC L ForearmTwist2 [LLt2]",
+"parent": 29
+},
+"54": {
+"name": "NPC L UpperarmTwist1 [LUt1]",
+"parent": 28
+},
+"55": {
+"name": "NPC L UpperarmTwist2 [LUt2]",
+"parent": 54
+},
+"56": {
+"name": "NPC R ForearmTwist1 [RLt1]",
+"parent": 32
+},
+"57": {
+"name": "NPC R ForearmTwist2 [RLt2]",
+"parent": 32
+},
+"58": {
+"name": "NPC R UpperarmTwist1 [RUt1]",
+"parent": 31
+},
+"59": {
+"name": "NPC R UpperarmTwist2 [RUt2]",
+"parent": 58
+},
+"60": {
+"name": "Quiver",
+"parent": 26
+},
+"61": {
+"name": "WeaponAxe",
+"parent": 5
+},
+"62": {
+"name": "WeaponBack",
+"parent": 26
+},
+"63": {
+"name": "WeaponBow",
+"parent": 26
+},
+"64": {
+"name": "WeaponDagger",
+"parent": 5
+},
+"65": {
+"name": "WeaponMace",
+"parent": 5
+},
+"66": {
+"name": "WeaponSword",
+"parent": 5
+},
+"67": {
+"name": "NPC L Finger00 [LF00]",
+"parent": 38
+},
+"68": {
+"name": "NPC L Finger01 [LF01]",
+"parent": 67
+},
+"69": {
+"name": "NPC L Finger02 [LF02]",
+"parent": 68
+},
+"70": {
+"name": "NPC L Finger10 [LF10]",
+"parent": 38
+},
+"71": {
+"name": "NPC L Finger11 [LF11]",
+"parent": 70
+},
+"72": {
+"name": "NPC L Finger12 [LF12]",
+"parent": 71
+},
+"73": {
+"name": "NPC L Finger20 [LF20]",
+"parent": 38
+},
+"74": {
+"name": "NPC L Finger21 [LF21]",
+"parent": 73
+},
+"75": {
+"name": "NPC L Finger22 [LF22]",
+"parent": 74
+},
+"76": {
+"name": "NPC L Finger30 [LF30]",
+"parent": 38
+},
+"77": {
+"name": "NPC L Finger31 [LF31]",
+"parent": 76
+},
+"78": {
+"name": "NPC L Finger32 [LF32]",
+"parent": 77
+},
+"79": {
+"name": "NPC L Finger40 [LF40]",
+"parent": 38
+},
+"80": {
+"name": "NPC L Finger41 [LF41]",
+"parent": 79
+},
+"81": {
+"name": "NPC L Finger42 [LF42]",
+"parent": 80
+},
+"82": {
+"name": "NPC R Finger00 [RF00]",
+"parent": 39
+},
+"83": {
+"name": "NPC R Finger01 [RF01]",
+"parent": 82
+},
+"84": {
+"name": "NPC R Finger02 [RF02]",
+"parent": 83
+},
+"85": {
+"name": "NPC R Finger10 [RF10]",
+"parent": 39
+},
+"86": {
+"name": "NPC R Finger11 [RF11]",
+"parent": 85
+},
+"87": {
+"name": "NPC R Finger12 [RF12]",
+"parent": 86
+},
+"88": {
+"name": "NPC R Finger20 [RF20]",
+"parent": 39
+},
+"89": {
+"name": "NPC R Finger21 [RF21]",
+"parent": 88
+},
+"90": {
+"name": "NPC R Finger22 [RF22]",
+"parent": 89
+},
+"91": {
+"name": "NPC R Finger30 [RF30]",
+"parent": 39
+},
+"92": {
+"name": "NPC R Finger31 [RF31]",
+"parent": 91
+},
+"93": {
+"name": "NPC R Finger32 [RF32]",
+"parent": 92
+},
+"94": {
+"name": "NPC R Finger40 [RF40]",
+"parent": 39
+},
+"95": {
+"name": "NPC R Finger41 [RF41]",
+"parent": 94
+},
+"96": {
+"name": "NPC R Finger42 [RF42]",
+"parent": 95
+},
+"97": {
+"name": "Camera3rd [Cam3]",
+"parent": -1
+},
+"98": {
+"name": "Camera Control",
+"parent": 0
+},
+"99": {
+"name": "NPC L Item01",
+"parent": -1
+},
+"100": {
+"name": "NPC L Item02",
+"parent": 99
+},
+"101": {
+"name": "NPC L Item03",
+"parent": 100
+},
+"102": {
+"name": "NPC R Item01",
+"parent": -1
+},
+"103": {
+"name": "NPC R Item02",
+"parent": 102
+},
+"104": {
+"name": "NPC R Item03",
+"parent": 103
+},
+"105": {
+"name": "LeftWing1",
+"parent": 26
+},
+"106": {
+"name": "LeftWing2",
+"parent": 105
+},
+"107": {
+"name": "LeftWing3",
+"parent": 106
+},
+"108": {
+"name": "LeftWing4",
+"parent": 107
+},
+"109": {
+"name": "LeftWing5",
+"parent": 108
+},
+"110": {
+"name": "RightWing1",
+"parent": 26
+},
+"111": {
+"name": "RightWing2",
+"parent": 110
+},
+"112": {
+"name": "RightWing3",
+"parent": 111
+},
+"113": {
+"name": "RightWing4",
+"parent": 112
+},
+"114": {
+"name": "RightWing5",
+"parent": 113
+},
+"115": {
+"name": "Belly",
+"parent": 25
+}
+}
