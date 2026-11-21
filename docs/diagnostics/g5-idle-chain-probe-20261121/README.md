@@ -74,7 +74,46 @@
 
 **run 2 修正协议**（对齐 gate-5 idle domain 前提，部署/身份不变）：**装备（持武器）→ 原地站立 idle ≥3 秒（不收刀）→ F7 ×2 视图**。两侧应同处 1hm_idle 状态（源侧 1hm_idle 家族 active），此时三方对照才测量 C′。
 
-## 九、实现记录（2026-11-21，与构建同轮落盘）
+## 九、run 2 判读（2026-11-21 13:14，持武器 idle；日志 [CharacterPanel-g5chain-idle-run2-20261121-drawn.log](../CharacterPanel-g5chain-idle-run2-20261121-drawn.log) 292,041 字节，v121 同身份）
+
+**状态达成**：两侧同处 1hm idle（源/候选各 3 clip；源 = `1HM_Idle`+`MLh_Idle`+`SCAR_1HM_Ready_Dummy1`，data-fnv 与 Track2 注册表逐位同）。
+
+### 9.1 源侧半边（V-P1 决定性证据，与离线 C′ 常量逐项对账）
+
+源图 poseLocal 对**它自己的** `1HM_Idle` 采样（4 组快照 = 两个冻结时刻 × 两检查点，度）：
+
+| 轨 | 骨 | run2 实测 | 离线 C′（gate-5 idle 域） | 判读 |
+| --- | --- | --- | --- | --- |
+| t30 | NPC R Clavicle | 10.23 / 10.33 | 10.2 | 对账 ✓ |
+| t31 | NPC R UpperArm | 29.64 / 29.97 | 30.3 | 对账 ✓ |
+| t58 | RUAR twist1 | 16.97 / 17.47 | 17.3 | 对账 ✓ |
+| t59 | RUAR twist2 | 8.48 / 8.62 | 8.5 | 对账 ✓ |
+| t45 | R Pauldron | 6.57 / 6.37（dpos 0.39） | 6.4 | 对账 ✓ |
+| t32/56/57 | R Forearm + twists | **0.00（逐位）** | — | 子链未动 ✓ |
+| t39/43 | R Hand / Weapon | **0.00（逐位）** | — | 末端未动 ✓ |
+| t38/6/25 | L Hand / L Thigh / Spine1 | 62.9 / 15.3–11.6 / 9.5 | — | **非肩链**：MLh 分支混合贡献（见 9.2） |
+
+偏差跨两个冻结时刻稳定（±1% 内）＝状态常量；修改**精确限定在右肩链五轨**。这就是 gate-5 C′ 的源侧成分：**live 图的 pose 在持武器 idle 下 ≠ 自身 1HM_Idle authored 采样，偏差即 C′ 常量**。
+
+### 9.2 层定位（V-N1/H-GRAPH 成立：层是图内节点）
+
+CENSUS 名集差（源 113 / 候选 112，**源独有 21 节点**）：
+
+- **`WeaponAdjustment_OffsetAnimationGen`**（class=unknown，在源 activeNodes 内）——引擎武器握持校正节点，右肩链五轨修改层的唯一针对性候选。候选克隆**没有**该节点。
+- **整个 MLh/魔法分支**（`1HM_MLh_Behavior`、`MagicBehavior`、`MagicReady*` 六节点、`MLh_1HM_Idle_Blend`、`MLh_Idle` 等 19 节点）——源图左手法师就绪分支 active，解释 t38/t6/t25 的混合贡献（`MLh_1HM_Idle_Blend` 与 1HM_Idle 混合；前臂/手在臂链上逐位等值说明该混合对右臂链权重为 0）。
+
+### 9.3 候选侧（V-P1 字面的候选半边未在目标状态测得）
+
+克隆在 F7 重捕获时新建并注入 WeapEquip（13:14:15.341 dispatch），但快照时其 pose 由 **`H2H_Idle`** 驱动（对自身 H2H 采样 0.01–1.13°，对 1HM_Idle 采样 60–70°＝跨状态无效对照）——克隆的 idle 状态选择不随世界的持武器/左手状态（run 1 的分支滞留 + 本轮缺 MLh 分支/WeaponAdjustment，为 G6「源恢复/收敛」的第三项运行时证据）。候选对**自身贡献 clip** 的忠实性在已测状态有界成立（≤1.1°，残差为混合/时钟阶梯）。
+
+### 9.4 裁定
+
+- **C′ 归因闭环**：gate-5 idle 域的 R 肩链 30° 级差异 = **源图在持武器状态下由 `WeaponAdjustment_OffsetAnimationGen` 施加的肩链偏移**；候选克隆无此节点、按 authored 剪辑输出。三条独立证据链互相咬合：gate-5 离线 cand-vs-src 常量 → run2 源-vs-authored 同常量 → census 该节点仅在源侧。
+- **V-P1 = PARTIAL**：源侧半边成立且状态匹配；候选半边因克隆状态不随世界未在持武器状态下实测（其"clean"由已测状态有界支持）。
+- **C′ 契约方向**（供下一步预注册）：姿态相等性主张应**显式排除右肩链五轨（引擎 WeaponAdjustment 辖区）**并声明该节点存在性差异，或要求克隆宿主同节点（引擎依赖，不作为缺省方向）；左手法师分支混合（MLh）在两侧家族集一致时可对消，克隆缺该分支时对 L Hand/腿/脊另立声明。
+- **G6 新增证据**：克隆分支收敛缺口三连（run1 1HM 分支滞留、run2 缺 MLh 分支、缺 WeaponAdjustment 节点）。
+
+## 十、实现记录（2026-11-21，与构建同轮落盘）
 
 - **提交**：实现 `b5259d1da1e`（feat(g5): add the idle chain layer probe for v121；首笔 `94a412d` 因 view 参数 uint64 修正已 amend 并作废其构建身份），分析文档 `6e135d1`。
 - **构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v121-g5chain-idle-probe-20261121` + `cmake --build --preset Release`，干净 HEAD `b5259d1da1e`、submodule `cl94faaed0c6`（configure 与 build 之间无源改动）。身份 `CharacterPanel-scenegraph-v121-g5chain-idle-probe-20261121-b5259d1da1-cl94faaed0c6-20261121T045052Z`（无 `+dirty`）；CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 530；DLL 2,167,296 字节 `23a785ce2e9f1934413505680fff27381998b9dbc9d7e08870fcb76f491ae535`；PDB 53,088,256 字节 `c14e4241fa2f25c84cbb9663765df8a63c9d11c7282bb0302712cbc7be50935f`。构建仅既有 D9025 `/Ob2`→`/Ob3` 警告。
