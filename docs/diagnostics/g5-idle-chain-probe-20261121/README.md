@@ -57,7 +57,24 @@
 - 探针不改门 5 裁定、不改 `tau_*`；采样对照不改任何运行状态（只读 API）。
 - `SamplePartialTracks` 的对照基准是"该侧 binding 的 authored 轨数据"；若 OAR 在装载期改写了共享模板树上的 clip 数据（652/8223 残余），则两侧采样的是改写后数据——该可能性由 data-fnv 对照与 K1 普查事实约束，不在此断言。
 
-## 七、实现记录（2026-11-21，与构建同轮落盘）
+## 八、run 1 判读（2026-11-21 13:01，日志 [CharacterPanel-g5chain-idle-run1-20261121-1301.log](../CharacterPanel-g5chain-idle-run1-20261121-1301.log) 281,816 字节 `3718aad7…`）
+
+**对预注册判据：V-P1/V-P2/V-P3 全部 NOT REACHED（不判定）**——快照状态与判据前提失配：协议的「装备→收刀→静止」取到的是**徒手 idle**（源图已切 MT 分支），而预注册三假设隐含两侧处于 gate-5 idle domain 的**持武器 1hm_idle 状态**。失配本身不是预注册停点，但前提不满足即不得套用判据；以下按实际证据记录，不改写预期。
+
+**状态失配的直接证据**（4 组快照 × 两视图一致）：
+- 源图 active clip 仅 `MT_Idle.HKX`（data-fnv `F56EE1500EB5A3D0`，与 Track2 注册表逐位同），census 独有 **MT 分支 26 节点**（MT_BehaviorGraph、IdleBFR/MT_BehaviorBFR、ArmsBlend/BodyWeightBlend blender、Carry 左右臂行为等）。
+- 候选图 active clip 3 个：`H2H_Idle` + `1HM_Idle`（`C62C233B06FAE9A9`）+ `SCAR_1HM_Ready_Dummy0`（`8728A54A50D85C22`），census 独有 **1HM 分支 31 节点**（1HM_Behavior、1HM_Readied_BehaviorGraph、1HM_1stPUpperBody、1stP 系 modifier 等）。候选 pose ≈ H2H_Idle 采样（t31 0.40°–4.68° 变动残差），与 1HM_Idle 采样差 60–70°。
+- 面板打开期间源图 clip 时钟冻结（view 内 call 60/120 的 `local-time-bits` 逐位同：view1 `41284B17`=10.636 s、view2 `4159082C`=13.565 s），view 之间推进——F7 检查点的源侧对照是冻结帧等式。
+
+**有效新证据（有界，不改门 5 裁定）**：
+1. **B 成分方向裁定（回答 §八.4 机制方向）**：源图 poseLocal 对**它自己的** MT_Idle 采样：身体/头/脊/双臂/Weapon 全部逐位一致（drot ≤3e-6°），**唯 t60（Quiver）dpos=4.1958 且 drot=0**——恒定槽位平移差存在于**源侧相对 authored 剪辑数据**，即 live 引擎在图后重定位挂点轨；候选按剪辑采样输出，与源差恰为该常量 → gate-5 B 成分（t60–66 ≈4.21–4.22）= **引擎挂点定位层**，不是候选缺陷。量级一致（4.1958 vs 4.21–4.22）但非逐位同值（不同剪辑/状态）。
+2. **源侧腿部修改层线索**：同一源图对照里 t6（L Thigh）drot=2.19°（其余身体轨逐位同）——MT idle 下腿部对剪辑采样的独有偏差，foot-IK 类引擎层候选，未定名，只限该状态。
+3. **克隆收敛缺口（G6 范围新证据）**：装备→收刀→徒手站立后，候选克隆仍保留整个 1HM 分支 active（31 节点）且 pose 由 H2H_Idle 驱动，不随世界切换到 MT 分支——「源恢复/重复会话收敛」未成立的直接运行时证据。
+4. **仪器局限**：`IdleChainSideSummary.observe` 逐 clip 覆写同一槽——SUMMARY 行只反映最后一个被比较 clip；逐 clip 行完整且为判读权威。修复推迟（行数据足够，避免本轮改身份）。
+
+**run 2 修正协议**（对齐 gate-5 idle domain 前提，部署/身份不变）：**装备（持武器）→ 原地站立 idle ≥3 秒（不收刀）→ F7 ×2 视图**。两侧应同处 1hm_idle 状态（源侧 1hm_idle 家族 active），此时三方对照才测量 C′。
+
+## 九、实现记录（2026-11-21，与构建同轮落盘）
 
 - **提交**：实现 `b5259d1da1e`（feat(g5): add the idle chain layer probe for v121；首笔 `94a412d` 因 view 参数 uint64 修正已 amend 并作废其构建身份），分析文档 `6e135d1`。
 - **构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v121-g5chain-idle-probe-20261121` + `cmake --build --preset Release`，干净 HEAD `b5259d1da1e`、submodule `cl94faaed0c6`（configure 与 build 之间无源改动）。身份 `CharacterPanel-scenegraph-v121-g5chain-idle-probe-20261121-b5259d1da1-cl94faaed0c6-20261121T045052Z`（无 `+dirty`）；CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 530；DLL 2,167,296 字节 `23a785ce2e9f1934413505680fff27381998b9dbc9d7e08870fcb76f491ae535`；PDB 53,088,256 字节 `c14e4241fa2f25c84cbb9663765df8a63c9d11c7282bb0302712cbc7be50935f`。构建仅既有 D9025 `/Ob2`→`/Ob3` 警告。
