@@ -176,6 +176,11 @@ namespace animation
     [[nodiscard]] bool transition_clip_weight_probe();
     // C-G5-TRANS v10: candidate-only swept-time comparison, default off. Read-only.
     [[nodiscard]] bool transition_clip_sweep_probe();
+    // C-G5-CHAIN v1 (2026-11-21, default off): idle-settle three-way comparison at the two F7
+    // display checkpoints — each side's poseLocal against a direct SamplePartialTracks of that
+    // side's active clip at that side's own localTime, plus a bounded active-node census of
+    // both graphs. Read-only; no writes, no hooks, no new threads.
+    [[nodiscard]] bool idle_chain_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

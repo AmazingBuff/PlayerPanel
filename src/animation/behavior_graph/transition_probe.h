@@ -363,5 +363,15 @@ namespace animation::behavior_graph
     // poseLocal plus the whole residual curve. Read-only.
     void log_transition_clip_sweep(RE::BShkbAnimationGraph const& a_graph,
         TransitionProbeRecord const& a_probe) noexcept;
+
+    // C-G5-CHAIN v1 (2026-11-21, pre-registered in docs/diagnostics/g5-idle-chain-probe-20261121/):
+    // idle-settle three-way comparison run symmetrically on the held candidate and the live
+    // source graph at the two F7 display checkpoints. Per side: every active clip generator is
+    // sampled at that side's own control localTime and compared against that side's poseLocal
+    // on the name-resolved interest tracks, plus a bounded active-node census of both graphs.
+    // Read-only; the sample buffers are probe-local; no graph, pose or variable is written.
+    void log_idle_chain_probe(RE::BShkbAnimationGraph const& a_candidate,
+        RE::BShkbAnimationGraph const& a_source, std::uint32_t a_actor, std::uint64_t a_request,
+        std::uint64_t a_view, std::uint32_t a_call) noexcept;
 }
 PLUGIN_NAMESPACE_END

@@ -3585,6 +3585,13 @@ bool DisplaySession::step_display_pose(RE::BShkbAnimationGraph const& source_gra
             logger::info("ANIMATION DISPLAY native-step={} request={} view={} pose-hash={} output-records={}",
                 call, window.request(), window.view(), format_pose_hash(*g_held_character), out.size());
         }
+        // C-G5-CHAIN v1: idle-settle three-way comparison at the two pre-registered
+        // checkpoints. Read-only, probe-local buffers, no detour; INI-gated.
+        if (checkpoint && idle_chain_probe() && (call == 60 || call == 120))
+        {
+            log_idle_chain_probe(*g_held_graph, source_graph, window.source().actor_id,
+                window.request(), window.view(), call);
+        }
         if (call == 120)
         {
             if (window.take_row())

@@ -51,6 +51,7 @@ bool g_transition_clip_clock_probe = false;
 bool g_transition_clip_capture_probe = false;
 bool g_transition_clip_weight_probe = false;
 bool g_transition_clip_sweep_probe = false;
+bool g_idle_chain_probe = false;
     behavior_graph::ProbeLivenessMode g_sampling_liveness_mode = behavior_graph::ProbeLivenessMode::e_off;
 }
 void load_settings()
@@ -117,6 +118,7 @@ void load_settings()
     g_transition_clip_capture_probe = ini.GetBoolValue("Experiment", "TransitionClipCaptureProbe", false);
     g_transition_clip_weight_probe = ini.GetBoolValue("Experiment", "TransitionClipWeightProbe", false);
     g_transition_clip_sweep_probe = ini.GetBoolValue("Experiment", "TransitionClipSweepProbe", false);
+    g_idle_chain_probe = ini.GetBoolValue("Experiment", "IdleChainProbe", false);
     char const* const sampling_liveness = ini.GetValue("Experiment", "SamplingLiveness", "off");
     std::optional<behavior_graph::ProbeLivenessMode> const parsed_sampling_liveness =
         behavior_graph::parse_probe_liveness(sampling_liveness ? std::string_view{ sampling_liveness } : std::string_view{});
@@ -176,6 +178,8 @@ void load_settings()
         logger::info("EXPERIMENT setting TransitionClipWeightProbe=true");
     if (g_transition_clip_sweep_probe)
         logger::info("EXPERIMENT setting TransitionClipSweepProbe=true");
+    if (g_idle_chain_probe)
+        logger::info("EXPERIMENT setting IdleChainProbe=true");
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
@@ -199,6 +203,7 @@ bool transition_clip_clock_probe() { return g_transition_clip_clock_probe; }
 bool transition_clip_capture_probe() { return g_transition_clip_capture_probe; }
 bool transition_clip_weight_probe() { return g_transition_clip_weight_probe; }
 bool transition_clip_sweep_probe() { return g_transition_clip_sweep_probe; }
+bool idle_chain_probe() { return g_idle_chain_probe; }
 behavior_graph::IndependentGraphMode independent_graph_setting() { return g_independent_graph; }
 bool display_pose() { return g_display_pose; }
 bool display_step() { return g_display_step; }

@@ -9,6 +9,7 @@
 #include "animation/behavior_graph/transition_probe.h"
 
 #include "animation/behavior_graph/clip_reference_policy.h"
+#include "animation/behavior_graph/idle_chain_probe_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
 #include "animation/behavior_graph/pose_capture_policy.h"
 #include "animation/behavior_graph/transition_clip_capture_policy.h"
@@ -16,11 +17,13 @@
 #include "animation/behavior_graph/transition_clip_weight_policy.h"
 #include "animation/behavior_graph/transition_clip_clock_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
+#include "animation/behavior_graph/k5_snapshot_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"
 #include "RE/Offsets_VTABLE.h"
 #include "RE/H/hkaAnimationBinding.h"
 #include "RE/H/hkaDefaultAnimationControl.h"
+#include "RE/H/hkaSkeleton.h"
 #include "RE/H/hkbBehaviorGraph.h"
 #include "RE/H/hkbBehaviorGraphData.h"
 #include "RE/H/hkbBehaviorGraphStringData.h"
@@ -32,7 +35,9 @@
 
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <Windows.h>
 
@@ -1954,6 +1959,276 @@ namespace animation::behavior_graph
             std::bit_cast<std::uint32_t>(local_time), static_cast<double>(duration),
             static_cast<double>(Clip_Sweep_Step), best_offset, scores[best], rotations[best],
             static_cast<double>(times[best]), clamped, curve);
+    }
+
+    // C-G5-CHAIN v1: clip-generator detection by exact vtable (same rule as the K1 census).
+    bool idle_chain_is_clip(RE::hkbNode const* a_node) noexcept
+    {
+        if (!a_node)
+            return false;
+        return *reinterpret_cast<std::uintptr_t const*>(a_node) == RE::VTABLE_hkbClipGenerator[0].address();
+    }
+
+    // C-G5-CHAIN v1: rotation angle in degrees between two quats (1-|dot| domain); infinity
+    // marks non-finite or zero-norm input, matching pose_rotation_agreement_error's sentinel.
+    float idle_chain_theta_degrees(std::array<float, 4> const& a_lhs,
+        std::array<float, 4> const& a_rhs) noexcept
+    {
+        double left_length = 0.0;
+        double right_length = 0.0;
+        for (std::size_t i = 0; i < 4; ++i)
+        {
+            if (!std::isfinite(a_lhs[i]) || !std::isfinite(a_rhs[i]))
+                return std::numeric_limits<float>::infinity();
+            left_length += static_cast<double>(a_lhs[i]) * static_cast<double>(a_lhs[i]);
+            right_length += static_cast<double>(a_rhs[i]) * static_cast<double>(a_rhs[i]);
+        }
+        if (left_length <= 0.0 || right_length <= 0.0)
+            return std::numeric_limits<float>::infinity();
+        double dot = 0.0;
+        for (std::size_t i = 0; i < 4; ++i)
+            dot += static_cast<double>(a_lhs[i]) * static_cast<double>(a_rhs[i]);
+        double const cosine = std::min(1.0, std::abs(dot) /
+            (std::sqrt(left_length) * std::sqrt(right_length)));
+        return static_cast<float>(2.0 * std::acos(cosine) * 180.0 / 3.14159265358979323846);
+    }
+
+    // One graph = one side: resolve interest tracks by bone name, walk the active clip
+    // generators, sample each clip at that side's own localTime and compare the authored
+    // transforms against this side's poseLocal. Read-only; the sample lands in a probe-local
+    // static buffer exactly like the sweep probe (display thread only).
+    IdleChainSideSummary log_idle_chain_side(RE::BShkbAnimationGraph const& a_graph,
+        char const* a_side, std::uint32_t a_actor, std::uint64_t a_request,
+        std::uint64_t a_view, std::uint32_t a_call) noexcept
+    {
+        auto const status = [&](char const* a_status) {
+            logger::info("IDLE CHAIN side={} actor={:08x} request={} view={} call={} status={}",
+                a_side, a_actor, a_request, a_view, a_call, a_status);
+            return IdleChainSideSummary{};
+        };
+
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        if (!behavior || !behavior->activeNodes)
+            return status("unavailable");
+        RE::hkbCharacter const& character = a_graph.characterInstance;
+        if (character.poseLocal == nullptr || character.numPoseLocal <= 0 ||
+            static_cast<std::size_t>(character.numPoseLocal) > Clip_Capture_Track_Limit)
+            return status("invalid-pose");
+        RE::hkaSkeleton const* const skeleton = character.setup
+            ? character.setup->animationSkeleton.get() : nullptr;
+        if (!skeleton || skeleton->bones.empty())
+            return status("no-skeleton");
+
+        std::size_t const bone_count = std::min<std::size_t>(
+            static_cast<std::size_t>(character.numPoseLocal), skeleton->bones.size());
+        std::array<std::int32_t, Idle_Chain_Interest_Names.size()> interest_bone{};
+        interest_bone.fill(-1);
+        std::size_t resolved = 0;
+        for (std::size_t i = 0; i < bone_count; ++i)
+        {
+            char const* const raw = skeleton->bones.data()[i].name.c_str();
+            if (!raw || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(raw)))
+                continue;
+            std::size_t const interest = idle_chain_interest_index(raw);
+            if (interest != static_cast<std::size_t>(-1) && interest_bone[interest] < 0)
+            {
+                interest_bone[interest] = static_cast<std::int32_t>(i);
+                ++resolved;
+            }
+        }
+        if (resolved == 0)
+            return status("no-interest-tracks");
+
+        RE::NodeList const& nodes = *behavior->activeNodes;
+        std::size_t const walked = std::min<std::size_t>(nodes.size(), 64);
+        std::array<RE::hkbClipGenerator const*, 8> clips{};
+        std::size_t clip_count = 0;
+        std::size_t overflow = 0;
+        for (std::size_t i = 0; i < walked; ++i)
+        {
+            RE::hkbNode const* const node = nodes.data()[i].nodeClone;
+            if (!node || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(node)))
+                continue;
+            if (!idle_chain_is_clip(node))
+                continue;
+            if (clip_count >= clips.size())
+            {
+                ++overflow;
+                break;
+            }
+            clips[clip_count++] = static_cast<RE::hkbClipGenerator const*>(node);
+        }
+
+        IdleChainSideSummary summary;
+        std::size_t compared_clips = 0;
+        for (std::size_t c = 0; c < clip_count; ++c)
+        {
+            RE::hkbClipGenerator const* const clip = clips[c];
+            std::string const node_name{ read_node_name(reinterpret_cast<RE::hkbNode const*>(clip)) };
+            std::uintptr_t control{};
+            std::uintptr_t control_vtable{};
+            if (!read_chain_field(reinterpret_cast<std::uintptr_t>(clip), Clip_Control_Offset, control) ||
+                !plausible_object_pointer(control) ||
+                !read_chain_field(control, 0, control_vtable) ||
+                control_vtable != RE::VTABLE_hkaDefaultAnimationControl[0].address())
+            {
+                logger::info("IDLE CHAIN side={} actor={:08x} request={} view={} call={} clip='{}' node={:#x} status=no-control",
+                    a_side, a_actor, a_request, a_view, a_call, node_name,
+                    reinterpret_cast<std::uintptr_t>(clip));
+                continue;
+            }
+            auto const* const animation_control = reinterpret_cast<RE::hkaDefaultAnimationControl const*>(control);
+            RE::hkaAnimationBinding const* const binding = animation_control->binding;
+            if (!binding || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(binding)))
+            {
+                logger::info("IDLE CHAIN side={} actor={:08x} request={} view={} call={} clip='{}' node={:#x} status=no-binding",
+                    a_side, a_actor, a_request, a_view, a_call, node_name,
+                    reinterpret_cast<std::uintptr_t>(clip));
+                continue;
+            }
+            RE::hkaAnimation const* const animation = binding->animation.get();
+            if (!animation)
+            {
+                logger::info("IDLE CHAIN side={} actor={:08x} request={} view={} call={} clip='{}' node={:#x} status=no-animation",
+                    a_side, a_actor, a_request, a_view, a_call, node_name,
+                    reinterpret_cast<std::uintptr_t>(clip));
+                continue;
+            }
+            std::int32_t const tracks = animation->numberOfTransformTracks;
+            if (tracks <= 0 || static_cast<std::size_t>(tracks) > Clip_Capture_Track_Limit)
+            {
+                logger::info("IDLE CHAIN side={} actor={:08x} request={} view={} call={} clip='{}' node={:#x} tracks={} status=invalid-tracks",
+                    a_side, a_actor, a_request, a_view, a_call, node_name,
+                    reinterpret_cast<std::uintptr_t>(clip), tracks);
+                continue;
+            }
+            K5IdentityCache identity_cache;
+            K5IdentityCache::Entry const identity = identity_cache.identity_for(binding);
+            float const local_time = animation_control->localTime;
+            bool const identity_map = binding->transformTrackToBoneIndices.size() == 0;
+            std::span<std::int16_t const> const map{ binding->transformTrackToBoneIndices.data(),
+                static_cast<std::size_t>(binding->transformTrackToBoneIndices.size()) };
+
+            // Map each interest bone to this clip's transform-track index (identity mapping
+            // when the binding carries no map).
+            std::array<std::int32_t, Idle_Chain_Interest_Names.size()> interest_track{};
+            interest_track.fill(-1);
+            for (std::size_t i = 0; i < Idle_Chain_Interest_Names.size(); ++i)
+            {
+                std::int32_t const bone = interest_bone[i];
+                if (bone < 0 || bone >= character.numPoseLocal)
+                    continue;
+                for (std::int32_t track = 0; track < tracks; ++track)
+                {
+                    if (clip_capture_bone(track, identity_map, map,
+                            static_cast<std::int32_t>(bone_count)) == bone)
+                    {
+                        interest_track[i] = track;
+                        break;
+                    }
+                }
+            }
+
+            static std::array<RE::hkQsTransform, Clip_Capture_Track_Limit> sampled;
+            std::memset(sampled.data(), 0, sizeof(RE::hkQsTransform) * static_cast<std::size_t>(tracks));
+            animation->SamplePartialTracks(local_time, static_cast<std::uint32_t>(tracks),
+                sampled.data(), 0, nullptr, nullptr);
+
+            std::string readings;
+            float max_drot = 0.0f;
+            std::size_t diff_count = 0;
+            std::size_t nan_count = 0;
+            for (std::size_t i = 0; i < Idle_Chain_Interest_Names.size(); ++i)
+            {
+                IdleChainTrackReading reading{};
+                reading.bone = interest_bone[i];
+                if (reading.bone >= 0 && interest_track[i] >= 0)
+                {
+                    reading.resolved = true;
+                    PoseSample const authored = capture_pose_sample(sampled[static_cast<std::size_t>(interest_track[i])]);
+                    PoseSample const pose = capture_pose_sample(character.poseLocal[static_cast<std::size_t>(reading.bone)]);
+                    reading.dpos = pose_component_delta(authored.translation, pose.translation);
+                    reading.drot_degrees = idle_chain_theta_degrees(authored.rotation, pose.rotation);
+                    if (reading.drot_degrees == std::numeric_limits<float>::infinity())
+                        reading.non_finite = true;
+                }
+                summary.observe(i, reading);
+                if (!reading.resolved)
+                    continue;
+                if (reading.non_finite)
+                    ++nan_count;
+                if (!readings.empty())
+                    readings.push_back(',');
+                readings += fmt::format("{}:{}:{:.4f}", reading.bone, reading.drot_degrees, reading.dpos);
+                if (!reading.non_finite && reading.drot_degrees > max_drot)
+                    max_drot = reading.drot_degrees;
+                if (!reading.non_finite && reading.drot_degrees >= 0.01f)
+                    ++diff_count;
+            }
+            ++compared_clips;
+            logger::info("IDLE CHAIN side={} actor={:08x} request={} view={} call={} clip='{}' node={:#x} binding={:#x} "
+                "tracks={} map-count={} identity-map={} data-fnv={:016X} map-fnv={:016X} duration-bits={:08X} "
+                "local-time-bits={:08X} readings='{}' diff-count={} max-drot={:.4f} nan={} status=ok",
+                a_side, a_actor, a_request, a_view, a_call, node_name,
+                reinterpret_cast<std::uintptr_t>(clip), reinterpret_cast<std::uintptr_t>(binding),
+                tracks, map.size(), identity_map,
+                identity.ok ? identity.identity.data_hash : std::uint64_t{ 0 },
+                identity.ok ? identity.identity.map_hash : std::uint64_t{ 0 },
+                identity.ok ? identity.identity.duration_bits : std::uint32_t{ 0 },
+                std::bit_cast<std::uint32_t>(local_time),
+                std::string_view{ readings }, diff_count, max_drot, nan_count);
+        }
+
+        logger::info("IDLE CHAIN SUMMARY side={} actor={:08x} request={} view={} call={} clips={} compared={} "
+            "resolved-interest={} shoulder-exceeds5={} others-clean5={} status=ok",
+            a_side, a_actor, a_request, a_view, a_call, clip_count, compared_clips,
+            resolved, summary.shoulder_exceeds(5.0f), summary.others_below(5.0f) ? 1 : 0);
+        return summary;
+    }
+
+    // Bounded active-node census for one graph (C-G5-CHAIN v1): class-by-vtable rows so the
+    // offline pass can diff the two sides' active sets and name a candidate modification layer.
+    void log_idle_chain_census(RE::BShkbAnimationGraph const& a_graph, char const* a_side,
+        std::uint32_t a_actor, std::uint64_t a_request, std::uint64_t a_view,
+        std::uint32_t a_call) noexcept
+    {
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        if (!behavior || !behavior->activeNodes)
+        {
+            logger::info("IDLE CHAIN CENSUS side={} actor={:08x} request={} view={} call={} status=unavailable",
+                a_side, a_actor, a_request, a_view, a_call);
+            return;
+        }
+        RE::NodeList const& nodes = *behavior->activeNodes;
+        std::size_t const limit = std::min<std::size_t>(nodes.size(), 128);
+        std::size_t unknown = 0;
+        for (std::size_t i = 0; i < limit; ++i)
+        {
+            RE::hkbNode const* const node = nodes.data()[i].nodeClone;
+            if (!node || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(node)))
+                continue;
+            std::uintptr_t const vtable = read_field<std::uintptr_t>(node, 0);
+            TransitionProbeNodeClass const node_class = classify(vtable);
+            if (node_class == TransitionProbeNodeClass::unknown)
+                ++unknown;
+            logger::info("IDLE CHAIN CENSUS side={} actor={:08x} request={} view={} call={} index={} node={:#x} vtable={:#x} class={} name='{}' id={}",
+                a_side, a_actor, a_request, a_view, a_call, i,
+                reinterpret_cast<std::uintptr_t>(node), vtable,
+                transition_probe_class_name(node_class), read_node_name(node),
+                static_cast<std::uint32_t>(node->id));
+        }
+        logger::info("IDLE CHAIN CENSUS SUMMARY side={} actor={:08x} request={} view={} call={} walked={} active-nodes={} unknown={}",
+            a_side, a_actor, a_request, a_view, a_call, limit, nodes.size(), unknown);
+    }
+
+    void log_idle_chain_probe(RE::BShkbAnimationGraph const& a_candidate,
+        RE::BShkbAnimationGraph const& a_source, std::uint32_t a_actor, std::uint64_t a_request,
+        std::uint64_t a_view, std::uint32_t a_call) noexcept
+    {
+        log_idle_chain_side(a_candidate, "candidate", a_actor, a_request, a_view, a_call);
+        log_idle_chain_side(a_source, "source", a_actor, a_request, a_view, a_call);
+        log_idle_chain_census(a_candidate, "candidate", a_actor, a_request, a_view, a_call);
+        log_idle_chain_census(a_source, "source", a_actor, a_request, a_view, a_call);
     }
 }
 PLUGIN_NAMESPACE_END
