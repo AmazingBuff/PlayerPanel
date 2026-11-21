@@ -135,6 +135,7 @@ def main() -> int:
     print("baseline (all pairs)")
     print(f"  pairs={baseline['pairs']} components={baseline['components']} invalid={baseline['invalid']}")
     print(f"  exceeded {baseline['exceeded']}")
+    print(f"  median {baseline['median']}")
     print(f"  p99 {baseline['p99']}")
     print()
     print(f"transition window dropped: segment=equip completed<= {TRANSITION_MAX_COMPLETED} "
@@ -142,6 +143,7 @@ def main() -> int:
     print("filtered (equip transition window excluded)")
     print(f"  pairs={filtered['pairs']} components={filtered['components']} invalid={filtered['invalid']}")
     print(f"  exceeded {filtered['exceeded']}")
+    print(f"  median {filtered['median']}")
     print(f"  p99 {filtered['p99']}")
     print()
     for key in ("tau_p", "tau_r", "tau_s"):
@@ -166,22 +168,53 @@ def main() -> int:
         print(f"  {window:<3} {summary['pairs']:<6} {summary['exceeded']['tau_p']:<6} "
               f"{summary['exceeded']['tau_r']:<6} {summary['exceeded']['tau_s']}")
     print()
-    print("per-track tau_p exceedances, transition window vs the rest (top 8 tracks)")
-    for label, subset in (("window", dropped), ("rest", kept)):
-        counts = _track_exceeds(subset, coverage, tolerances)
-        top = sorted(counts.items(), key=lambda item: -item[1])[:8]
-        rendered = ", ".join(f"track{track}={count}" for track, count in top if count)
-        print(f"  {label:<6} {rendered}")
+    print("per-track exceedances, transition window vs the rest")
+    for tau_key, index, metric in METRICS:
+        print(f"  --- {metric} ({tau_key} = {tolerances[tau_key]:g}) ---")
+        for label, subset in (("window", dropped), ("rest", kept)):
+            counts = _track_exceeds(subset, coverage, tolerances, index, tau_key)
+            total = sum(counts.values())
+            if total == 0:
+                print(f"  {label:<6} total=0")
+                continue
+            top = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+            top8 = sum(count for _track, count in top[:8])
+            top24 = sum(count for _track, count in top[:24])
+            active = sum(1 for count in counts.values() if count)
+            print(f"  {label:<6} total={total:<5} tracks-with-excess={active:<3} "
+                  f"top8={top8} ({100.0 * top8 / total:.0f}%) top24={top24} ({100.0 * top24 / total:.0f}%)")
+            print("         top: " + ", ".join(f"t{track}={count}" for track, count in top[:8] if count))
+    print()
+    print("per-pair exceed count inside 'rest' (min / median / max per pair)")
+    for tau_key, index, metric in METRICS:
+        counts = []
+        for row in kept:
+            number = 0
+            for track in coverage["primary_set"]:
+                value = row["tracks"][track][index]
+                if value == value and value > tolerances[tau_key]:
+                    number += 1
+            counts.append(number)
+        if not counts:
+            continue
+        counts.sort()
+        print(f"  {metric}: min={counts[0]} median={counts[len(counts) // 2]} max={counts[-1]} "
+              f"(of {len(coverage['primary_set'])} primary tracks)")
     return 0
 
 
-def _track_exceeds(rows: list[dict], coverage: dict, tolerances: dict) -> dict[int, int]:
+METRICS = (("tau_p", 0, "E_p"), ("tau_r", 1, "E_r"), ("tau_s", 3, "E_s"))
+
+
+def _track_exceeds(rows: list[dict], coverage: dict, tolerances: dict, index: int,
+                   tau_key: str) -> dict[int, int]:
     primary = coverage["primary_set"]
+    tau = tolerances[tau_key]
     counts = {track: 0 for track in primary}
     for row in rows:
         for track in primary:
-            e_p = row["tracks"][track][0]
-            if e_p == e_p and e_p > tolerances["tau_p"]:
+            value = row["tracks"][track][index]
+            if value == value and value > tau:
                 counts[track] += 1
     return counts
 
