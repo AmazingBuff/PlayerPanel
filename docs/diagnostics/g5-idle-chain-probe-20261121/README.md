@@ -57,8 +57,9 @@
 - 探针不改门 5 裁定、不改 `tau_*`；采样对照不改任何运行状态（只读 API）。
 - `SamplePartialTracks` 的对照基准是"该侧 binding 的 authored 轨数据"；若 OAR 在装载期改写了共享模板树上的 clip 数据（652/8223 残余），则两侧采样的是改写后数据——该可能性由 data-fnv 对照与 K1 普查事实约束，不在此断言。
 
-## 七、实现记录（实现后追加）
+## 七、实现记录（2026-11-21，与构建同轮落盘）
 
-- 构建：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v121-g5chain-idle-probe` + `cmake --build --preset Release`（待填身份/DLL/PDB 哈希）。
-- 离线测试：`cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\idle_chain_probe_test.cpp`（待填用例数）。
-- 部署：v120 三件套备份 `dist/deploy-backup-…`（待填）。
+- **提交**：实现 `b5259d1da1e`（feat(g5): add the idle chain layer probe for v121；首笔 `94a412d` 因 view 参数 uint64 修正已 amend 并作废其构建身份），分析文档 `6e135d1`。
+- **构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v121-g5chain-idle-probe-20261121` + `cmake --build --preset Release`，干净 HEAD `b5259d1da1e`、submodule `cl94faaed0c6`（configure 与 build 之间无源改动）。身份 `CharacterPanel-scenegraph-v121-g5chain-idle-probe-20261121-b5259d1da1-cl94faaed0c6-20261121T045052Z`（无 `+dirty`）；CodeView GUID `{7F586C2E-9F62-4CE8-B33B-D19AFE9C6461}` age 530；DLL 2,167,296 字节 `23a785ce2e9f1934413505680fff27381998b9dbc9d7e08870fcb76f491ae535`；PDB 53,088,256 字节 `c14e4241fa2f25c84cbb9663765df8a63c9d11c7282bb0302712cbc7be50935f`。构建仅既有 D9025 `/Ob2`→`/Ob3` 警告。
+- **离线测试**：`cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src tests\idle_chain_probe_test.cpp`（VS2022 Community vcvars64），5 个用例函数全过（名称表/裁剪/解析/肩链计数/非 Shoulder 豁免）。
+- **部署**（2026-11-21，无 Skyrim 进程；`CompiledPluginsPath` 未设）：v120 三件套备份 `dist/deploy-backup-20261121-v120-v121pre/`（DLL 2,148,864 `d2cd3b79…`、PDB 52,924,416 `01278f4d…`、INI 17,980 `80c4572b…`，均与安装位逐位一致）→ 安装 v121 DLL+PDB 至 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`（目标副本哈希比对一致）→ 运行 INI 派生（模板行级替换 4 键、保留注释与行尾）`dist/run-ini-v121-g5chain-idle-probe-20261121.ini`（18,364 字节 `6071f137…`）→ 安装位写后回读逐键断言 **21 键全过**：`IndependentGraph=inject`、`DisplayPose=true`、`DisplayStep=true`、`IdleChainProbe=true`（均 [Experiment] 节）+ 17 个其它探针键休眠。首版断言脚本误用 [Animation] 节名（四键实际全在 [Experiment]），INI 本体未变，脚本更正后通过——反模式 14 的又一次当场印证。
