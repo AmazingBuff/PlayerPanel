@@ -200,7 +200,104 @@ def main() -> int:
         counts.sort()
         print(f"  {metric}: min={counts[0]} median={counts[len(counts) // 2]} max={counts[-1]} "
               f"(of {len(coverage['primary_set'])} primary tracks)")
+
+    print()
+    print("per-track E_r stability on 'rest' (mean / std / coefficient of variation)")
+    rest_stats = _track_stats(kept, coverage, 1)
+    equip_stats = _track_stats([r for r in kept if r["segment"] == 0], coverage, 1)
+    unequip_stats = _track_stats([r for r in kept if r["segment"] == 1], coverage, 1)
+    bins = {"cov<0.1": 0, "0.1-0.3": 0, "0.3-1": 0, ">=1": 0}
+    for stats in rest_stats.values():
+        if stats["count"] == 0 or stats["mean"] <= 0.0:
+            continue
+        cov = stats["std"] / stats["mean"]
+        if cov < 0.1:
+            bins["cov<0.1"] += 1
+        elif cov < 0.3:
+            bins["0.1-0.3"] += 1
+        elif cov < 1.0:
+            bins["0.3-1"] += 1
+        else:
+            bins[">=1"] += 1
+    print(f"  tracks={len(rest_stats)} bins {bins}")
+    ranked = sorted(rest_stats.items(), key=lambda item: -item[1]["mean"])[:8]
+    print("  top by mean: track  mean        std         cov    equip-mean  unequip-mean")
+    for track, stats in ranked:
+        equip_mean = equip_stats[track]["mean"]
+        unequip_mean = unequip_stats[track]["mean"]
+        cov = stats["std"] / stats["mean"] if stats["mean"] > 0.0 else 0.0
+        print(f"                t{track:<4} {stats['mean']:.6e}  {stats['std']:.6e}  {cov:5.3f}  "
+              f"{equip_mean:.6e}  {unequip_mean:.6e}")
+    # Segment agreement is the static/dynamic discriminator: a fixed per-track offset looks
+    # the same in both segments, a pose-dependent difference does not.
+    ratios = []
+    for track, stats in rest_stats.items():
+        if stats["mean"] <= 0.0:
+            continue
+        equip_mean = equip_stats[track]["mean"]
+        unequip_mean = unequip_stats[track]["mean"]
+        larger = max(equip_mean, unequip_mean)
+        if larger <= 0.0:
+            continue
+        ratios.append(abs(equip_mean - unequip_mean) / larger)
+    if ratios:
+        ratios.sort()
+        print(f"  segment disagreement |equip-unequip|/max: median={ratios[len(ratios) // 2]:.3f} "
+              f"p90={ratios[min(len(ratios) - 1, int(0.9 * (len(ratios) - 1)))]:.3f}")
+
+    print()
+    print("per-pair E_r spread on 'rest' (max over primary tracks, worst 10 pairs)")
+    per_pair = []
+    for row in kept:
+        values = [row["tracks"][track][1] for track in coverage["primary_set"]]
+        values = [value for value in values if value == value]
+        if not values:
+            continue
+        values.sort()
+        per_pair.append({
+            "pair": row["pair_index"],
+            "segment": "equip" if row["segment"] == 0 else "unequip",
+            "completed": row["completed"],
+            "max": values[-1],
+            "median": values[len(values) // 2],
+        })
+    per_pair.sort(key=lambda item: -item["max"])
+    print("  pair  segment  completed  max-E_r     median-E_r")
+    for item in per_pair[:10]:
+        print(f"  {item['pair']:<5} {item['segment']:<8} {item['completed']:<10} "
+              f"{item['max']:.6e}  {item['median']:.6e}")
+    for threshold, label in ((1.0e-2, "0.01 (~18deg)"), (1.0e-3, "1e-3 (~5.7deg)"), (1.0e-4, "1e-4 (~1.8deg)")):
+        number = sum(1 for item in per_pair if item["max"] > threshold)
+        print(f"  pairs with max E_r > {label}: {number}/{len(per_pair)}")
+    print()
+    print("worst pairs: which tracks carry the rotation error (top 6 each)")
+    by_pair = {row["pair_index"]: row for row in kept}
+    for item in per_pair[:3]:
+        row = by_pair[item["pair"]]
+        ranked_tracks = sorted(((track, row["tracks"][track][1]) for track in coverage["primary_set"]
+                                if row["tracks"][track][1] == row["tracks"][track][1]),
+                               key=lambda entry: -entry[1])[:6]
+        rendered = ", ".join(f"t{track}={value:.4e}" for track, value in ranked_tracks)
+        print(f"  pair {item['pair']} ({item['segment']} {item['completed']}): {rendered}")
     return 0
+
+
+def _track_stats(rows: list[dict], coverage: dict, index: int) -> dict[int, dict]:
+    primary = coverage["primary_set"]
+    out = {}
+    for track in primary:
+        values = []
+        for row in rows:
+            value = row["tracks"][track][index]
+            if value == value:
+                values.append(value)
+        if not values:
+            out[track] = {"count": 0, "mean": 0.0, "std": 0.0}
+            continue
+        mean = sum(values) / len(values)
+        variance = sum((value - mean) ** 2 for value in values) / len(values)
+        out[track] = {"count": len(values), "mean": mean, "std": variance ** 0.5}
+    return out
 
 
 METRICS = (("tau_p", 0, "E_p"), ("tau_r", 1, "E_r"), ("tau_s", 3, "E_s"))
