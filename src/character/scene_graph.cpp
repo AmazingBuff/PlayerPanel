@@ -329,7 +329,7 @@ void SceneGraph::schedule_animation(RE::Actor& source, std::uint64_t revision, s
 
 void SceneGraph::close_session()
 {
-    if (m_monitor.session_active) m_animation.reset();
+    if (m_monitor.session_active) m_animation.reset("panel-close");
     m_monitor.session_active = false;
     m_monitor.capture_pending = true;
     m_monitor.dirty_reason.clear();

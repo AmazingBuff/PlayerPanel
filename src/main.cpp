@@ -10,6 +10,7 @@
 #include "input/input.h"
 #include "animation/oar/hooks.h"
 #include "animation/dac/session.h"
+#include "animation/behavior_graph/g6_ledger.h"
 #include "animation/behavior_graph/probe_liveness.h"
 #include "animation/behavior_graph/source_event_capture.h"
 #include "animation/behavior_graph/source_write_capture.h"
@@ -68,6 +69,10 @@ namespace
             PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_probe_liveness();
             PLUGIN_NAMESPACE::dac::reset_world();
             PLUGIN_NAMESPACE::CharacterManager::instance().clear_previews();
+            // C-G6 v1: the save-boundary ledger row lands after the invalidation
+            // chain so the offline pass reads the chain as complete.
+            PLUGIN_NAMESPACE::animation::behavior_graph::log_g6_ledger(
+                message->type == SKSE::MessagingInterface::kPreLoadGame ? "preload-game" : "newgame", 0, 0);
 
             break;
         default:

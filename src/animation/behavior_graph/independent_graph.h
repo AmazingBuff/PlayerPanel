@@ -4,6 +4,7 @@
 #pragma once
 
 #include "animation/behavior_graph/display_state_policy.h"
+#include "animation/behavior_graph/g6_ledger.h"
 #include "RE/N/NiTransform.h"
 
 #include <cstdint>
@@ -60,6 +61,10 @@ namespace animation::behavior_graph
 
     // Invalidates the view only; the loaded candidate remains retained without native teardown.
     void invalidate_display_owner(std::uintptr_t owner);
+
+    // C-G6 v1: exception-E1 candidate state for the lifecycle ledger. Reads the
+    // retained-handle block only; no native call.
+    [[nodiscard]] G6CandidateState g6_candidate_state() noexcept;
 
     class DisplaySession
     {

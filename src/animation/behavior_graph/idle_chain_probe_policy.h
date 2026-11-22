@@ -138,5 +138,45 @@ namespace animation::behavior_graph
     private:
         std::array<IdleChainTrackReading, Idle_Chain_Interest_Names.size()> m_readings{};
     };
+
+    // C-G6 v1 (P2): branch-set bucket for the census walk. Substring heuristic over
+    // the node's display name — the per-node census rows stay the authority, this
+    // only aggregates them into the branch timeline. `1stP` counts as 1HM because
+    // the C-G5-CHAIN run-1 census showed the 1HM branch carries 1stP-prefixed
+    // modifier nodes that share no other token with it.
+    enum class IdleChainBranch : std::uint8_t
+    {
+        e_other,
+        e_weapon_adjustment,
+        e_1hm,
+        e_mt,
+        e_mlh,
+    };
+
+    [[nodiscard]] inline IdleChainBranch idle_chain_branch_of(std::string_view a_name) noexcept
+    {
+        std::string_view const trimmed = idle_chain_trim(a_name);
+        const auto contains = [&trimmed](std::string_view a_token) noexcept
+        {
+            return trimmed.find(a_token) != std::string_view::npos;
+        };
+        if (contains("WeaponAdjustment")) return IdleChainBranch::e_weapon_adjustment;
+        if (contains("MLh")) return IdleChainBranch::e_mlh;
+        if (contains("1HM") || contains("1stP")) return IdleChainBranch::e_1hm;
+        if (contains("MT_") || trimmed.starts_with("MT")) return IdleChainBranch::e_mt;
+        return IdleChainBranch::e_other;
+    }
+
+    [[nodiscard]] inline std::string_view idle_chain_branch_name(IdleChainBranch a_branch) noexcept
+    {
+        switch (a_branch)
+        {
+        case IdleChainBranch::e_weapon_adjustment: return "weapon-adjustment";
+        case IdleChainBranch::e_1hm: return "1hm";
+        case IdleChainBranch::e_mt: return "mt";
+        case IdleChainBranch::e_mlh: return "mlh";
+        default: return "other";
+        }
+    }
 }
 PLUGIN_NAMESPACE_END

@@ -831,9 +831,15 @@ AnimationController::~AnimationController()
 {
     behavior_graph::invalidate_display_owner(reinterpret_cast<std::uintptr_t>(this));
 }
-void AnimationController::reset()
+void AnimationController::reset(char const* a_ledger_phase)
 {
-    if (m_state->actor_id) logger::info("ANIMATION actor={:08x} request={} lifetime reset", m_state->actor_id, m_state->generation);
+    if (m_state->actor_id)
+    {
+        logger::info("ANIMATION actor={:08x} request={} lifetime reset", m_state->actor_id, m_state->generation);
+        // C-G6 v1: the rebuild boundary. The snapshot reads the pre-reset process state
+        // (the rebuild itself only replaces this controller's State).
+        behavior_graph::log_g6_ledger(a_ledger_phase, m_state->actor_id, m_state->generation);
+    }
     m_state = std::make_unique<State>();
 }
 
@@ -853,7 +859,7 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     if (new_lifetime)
     {
         RE::NiAVObject* root = old.root;
-        reset();
+        reset("lifetime-replace");
         m_state->root = root;
         if (root) { m_state->root = nullptr; retarget(*root); }
     }

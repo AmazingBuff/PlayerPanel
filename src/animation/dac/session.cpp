@@ -190,6 +190,16 @@ void reset_world()
     logger::info("DAC old-world sessions discarded world={}", g_world.load());
 }
 
+std::uint64_t world_id() noexcept
+{
+    return g_world.load();
+}
+
+std::size_t live_session_count() noexcept
+{
+    return sessions().size();
+}
+
 Session::Session(RE::Actor& source) : m_state(std::make_shared<State>(source))
 {
     {

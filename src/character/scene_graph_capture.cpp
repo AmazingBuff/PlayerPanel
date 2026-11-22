@@ -21,6 +21,12 @@ namespace
 {
     constexpr size_t Max_Graph_Objects = 16384;
 
+    // C-G6 v1: the retired-copy park moved from a function-local static to this
+    // file-scope owner so the lifecycle ledger can read the total. Semantics are
+    // unchanged: the heap owner intentionally survives static teardown until
+    // native release is proven safe.
+    std::vector<RE::NiPointer<RE::NiAVObject>>* const s_parked_graphs = new std::vector<RE::NiPointer<RE::NiAVObject>>;
+
     const char* trace_object_name(RE::NiAVObject const* object)
     {
         if (!object) return "<none>";
@@ -271,9 +277,6 @@ namespace
 void SceneGraph::retire_graph(RE::NiPointer<RE::NiAVObject> graph)
 {
     if (!graph) return;
-    // The heap owner intentionally survives static teardown until native release is proven safe.
-    static std::vector<RE::NiPointer<RE::NiAVObject>>* const s_parked_graphs =
-        new std::vector<RE::NiPointer<RE::NiAVObject>>;
     static constexpr size_t s_warning_threshold = 12;
     s_parked_graphs->push_back(std::move(graph));
     logger::info("SCOPY PARK actor={:08x} scope=process retained-total={} retention=intentional-process-lifetime",
@@ -281,6 +284,11 @@ void SceneGraph::retire_graph(RE::NiPointer<RE::NiAVObject> graph)
     if (s_parked_graphs->size() == s_warning_threshold + 1)
         logger::warn("SCOPY PARK scope=process diagnostic-threshold={} retained-total={} retention=intentional-process-lifetime memory-bound=none",
             s_warning_threshold, s_parked_graphs->size());
+}
+
+std::size_t parked_graph_total() noexcept
+{
+    return s_parked_graphs->size();
 }
 
 RE::NiPointer<RE::NiAVObject> SceneGraph::capture_graph(RE::Actor& actor)

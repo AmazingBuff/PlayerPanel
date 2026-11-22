@@ -12,6 +12,10 @@ namespace dac
 {
     void install();
     void reset_world(); // invalidate before PreLoadGame/NewGame releases old-world actors
+    // C-G6 v1: lifecycle ledger values — the current world id and the live
+    // (non-expired) registered session count. Read-only.
+    [[nodiscard]] std::uint64_t world_id() noexcept;
+    [[nodiscard]] std::size_t live_session_count() noexcept;
     class Session
     {
     public:

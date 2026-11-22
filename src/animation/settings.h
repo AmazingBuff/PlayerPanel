@@ -181,6 +181,10 @@ namespace animation
     // side's active clip at that side's own localTime, plus a bounded active-node census of
     // both graphs. Read-only; no writes, no hooks, no new threads.
     [[nodiscard]] bool idle_chain_probe();
+    // C-G6 v1 (2026-11-22, default off): one bounded lifecycle ledger row at every
+    // session/save boundary — process-wide counters only (parked-graph total,
+    // retained-candidate state, DAC world/sessions, panel revision). Read-only.
+    [[nodiscard]] bool g6_ledger_enabled();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

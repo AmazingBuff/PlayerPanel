@@ -28,7 +28,9 @@ namespace animation
         AnimationController();
         ~AnimationController();
         static void prepare_base_indices(RE::Actor& source);
-        void reset();
+        // The ledger phase names the boundary: "panel-close" from the scene-graph session,
+        // "lifetime-replace" when a new source lifetime forced the rebuild.
+        void reset(char const* a_ledger_phase = "controller-reset");
         void request(RE::Actor& source, SourceObservation const& observation, dac::Session& session);
         void retarget(RE::NiAVObject& root);
         void poll();

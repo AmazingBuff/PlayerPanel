@@ -2202,6 +2202,7 @@ namespace animation::behavior_graph
         RE::NodeList const& nodes = *behavior->activeNodes;
         std::size_t const limit = std::min<std::size_t>(nodes.size(), 128);
         std::size_t unknown = 0;
+        std::size_t branch_counts[5] = {};
         for (std::size_t i = 0; i < limit; ++i)
         {
             RE::hkbNode const* const node = nodes.data()[i].nodeClone;
@@ -2211,14 +2212,27 @@ namespace animation::behavior_graph
             TransitionProbeNodeClass const node_class = classify(vtable);
             if (node_class == TransitionProbeNodeClass::unknown)
                 ++unknown;
+            std::string_view const node_name = read_node_name(node);
+            ++branch_counts[static_cast<std::size_t>(idle_chain_branch_of(node_name))];
             logger::info("IDLE CHAIN CENSUS side={} actor={:08x} request={} view={} call={} index={} node={:#x} vtable={:#x} class={} name='{}' id={}",
                 a_side, a_actor, a_request, a_view, a_call, i,
                 reinterpret_cast<std::uintptr_t>(node), vtable,
-                transition_probe_class_name(node_class), read_node_name(node),
+                transition_probe_class_name(node_class), node_name,
                 static_cast<std::uint32_t>(node->id));
         }
         logger::info("IDLE CHAIN CENSUS SUMMARY side={} actor={:08x} request={} view={} call={} walked={} active-nodes={} unknown={}",
             a_side, a_actor, a_request, a_view, a_call, limit, nodes.size(), unknown);
+        // C-G6 v1 (P2-V1): the branch timeline row. The per-node census rows above
+        // are the classification authority; this aggregates them so the offline
+        // pass can diff both sides' branch sets per snapshot.
+        logger::info("IDLE CHAIN BRANCHES side={} actor={:08x} request={} view={} call={} b1hm={} bmt={} bmlh={} "
+            "weapon-adj={} other={} walked={} active-nodes={} classification=heuristic-substring",
+            a_side, a_actor, a_request, a_view, a_call,
+            branch_counts[static_cast<std::size_t>(IdleChainBranch::e_1hm)],
+            branch_counts[static_cast<std::size_t>(IdleChainBranch::e_mt)],
+            branch_counts[static_cast<std::size_t>(IdleChainBranch::e_mlh)],
+            branch_counts[static_cast<std::size_t>(IdleChainBranch::e_weapon_adjustment)],
+            branch_counts[static_cast<std::size_t>(IdleChainBranch::e_other)], limit, nodes.size());
     }
 
     void log_idle_chain_probe(RE::BShkbAnimationGraph const& a_candidate,

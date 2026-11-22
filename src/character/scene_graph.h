@@ -17,6 +17,11 @@ struct PreviewFrame
     bool closing;
     bool usable;
 };
+
+// C-G6 v1: exception-E2 ledger value — the process-wide parked-graph total the
+// SCOPY PARK rows report. Read-only; the vector itself stays parked for process
+// lifetime (intentional retention, no native release).
+[[nodiscard]] std::size_t parked_graph_total() noexcept;
 class SceneGraph
 {
 public:

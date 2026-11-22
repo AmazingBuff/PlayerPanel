@@ -76,6 +76,9 @@ namespace
     RE::BShkbAnimationGraph* g_held_graph = nullptr;
     DisplaySourceIdentity g_held_source{};
     bool g_held_step_ready = false;
+    // C-G6 v1: the experiment's one-shot gate. File scope so the lifecycle ledger can read it;
+    // the semantics are unchanged from the former function-local static.
+    bool g_candidate_attempted = false;
 
     // AE address-library ids from the 1.6.1170 audit; the experiment is gated to AE.
     constexpr std::uint64_t GraphConstructorID = 63555;
@@ -832,6 +835,60 @@ namespace
         if (!words || a_index >= count) return false;
         a_out = static_cast<std::int32_t>(words[a_index]);
         return true;
+    }
+
+    // C-G6 v1 (P2-V2): word-level source-variable diff across the two idle-chain
+    // checkpoints. The first snapshot after the value-set identity changes is the
+    // baseline; later snapshots list the changed words (bounded) so the offline
+    // pass can name the branch-switch drivers. Pointer and quad-sized words are
+    // raw evidence only, per the census policy — the row never decodes them.
+    void log_source_variable_diff(RE::BShkbAnimationGraph const& a_graph, std::uint32_t const a_actor,
+        std::uint64_t const a_request, std::uint64_t const a_view, std::uint32_t const a_call) noexcept
+    {
+        constexpr std::size_t Max_Listed_Changes = 32;
+        RE::hkbBehaviorGraph const* const behavior = a_graph.characterInstance.behaviorGraph.get();
+        RE::hkbBehaviorGraphData const* const data = behavior ? behavior->data.get() : nullptr;
+        std::size_t count = 0;
+        RE::hkbVariableValueSet const* const values =
+            behavior ? behavior->variableValueSet.get() : nullptr;
+        std::uint32_t const* const words = values ? word_values(values, count) : nullptr;
+        if (!behavior || !data || !words)
+        {
+            logger::info("IDLE CHAIN VARS side=source actor={:08x} request={} view={} call={} status=unavailable",
+                a_actor, a_request, a_view, a_call);
+            return;
+        }
+        static RE::hkbVariableValueSet const* s_prev_values = nullptr;
+        static std::vector<std::uint32_t> s_prev_words;
+        const bool baseline = values != s_prev_values || s_prev_words.size() != count;
+        std::string changes;
+        std::size_t changed = 0;
+        std::size_t listed = 0;
+        if (!baseline)
+        {
+            RE::hkbBehaviorGraphStringData const* const strings = data->stringData.get();
+            std::size_t const name_count = strings ? array_size(strings->variableNames.size()) : 0;
+            for (std::size_t index = 0; index < count; ++index)
+            {
+                if (s_prev_words[index] == words[index]) continue;
+                ++changed;
+                if (listed >= Max_Listed_Changes) continue;
+                ++listed;
+                char const* const name =
+                    strings && index < name_count ? strings->variableNames.data()[index].c_str() : nullptr;
+                std::int8_t type = -1;
+                if (index < array_size(data->variableInfos.size()))
+                    type = static_cast<std::int8_t>(data->variableInfos.data()[index].m_type.get());
+                changes += fmt::format("{}{}:{:d}:{:08x}>{:08x}@{}", changes.empty() ? "" : ",",
+                    index, type, s_prev_words[index], words[index], name ? name : "");
+            }
+        }
+        logger::info("IDLE CHAIN VARS side=source actor={:08x} request={} view={} call={} words={} words-hash={:016x} "
+            "baseline={} changed={} listed={} truncated={} changes='{}' scope=raw-words",
+            a_actor, a_request, a_view, a_call, count, fnv1a_64(words, count * sizeof(std::uint32_t)),
+            baseline ? 1 : 0, changed, listed, changed - listed, std::string_view{ changes });
+        s_prev_values = values;
+        s_prev_words.assign(words, words + count);
     }
 
     // C-G5-CAL D2: the source's real equip wrote these three words before/around the WeapEquip
@@ -1600,16 +1657,26 @@ void invalidate_display_owner(std::uintptr_t owner)
     g_held_step_ready = false;
 }
 
+G6CandidateState g6_candidate_state() noexcept
+{
+    G6CandidateState state;
+    state.attempted = g_candidate_attempted;
+    state.retained = g_held_graph != nullptr;
+    state.held_source_bound = g_held_source.graph != 0;
+    state.step_ready = g_held_step_ready;
+    state.held_graph = reinterpret_cast<std::uintptr_t>(g_held_graph);
+    return state;
+}
+
 void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_graph,
     DisplaySourceIdentity const source, std::uint64_t const request)
 {
     std::uint32_t const actor_id = source.actor_id;
     std::uint64_t const source_generation = source.generation;
-    static bool attempted = false;
     const IndependentGraphMode mode = independent_graph_setting();
-    if (mode == IndependentGraphMode::off || attempted)
+    if (mode == IndependentGraphMode::off || g_candidate_attempted)
         return;
-    attempted = true;
+    g_candidate_attempted = true;
 
     if (!REL::Module::IsAE())
     {
@@ -3590,6 +3657,10 @@ bool DisplaySession::step_display_pose(RE::BShkbAnimationGraph const& source_gra
         if (checkpoint && idle_chain_probe() && (call == 60 || call == 120))
         {
             log_idle_chain_probe(*g_held_graph, source_graph, window.source().actor_id,
+                window.request(), window.view(), call);
+            // C-G6 v1 (P2-V2): the source word-level variable diff on the same
+            // checkpoints — the view-to-view diff window covers the branch switch.
+            log_source_variable_diff(source_graph, window.source().actor_id,
                 window.request(), window.view(), call);
         }
         if (call == 120)
