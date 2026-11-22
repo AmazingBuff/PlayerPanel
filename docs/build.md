@@ -2509,3 +2509,16 @@ build\transition_probe_test.exe
 **会话 1 判读（2026-11-22 22:30–22:37，v123）**：日志 [CharacterPanel-g6-candidate-20261122-2236.log](diagnostics/CharacterPanel-g6-candidate-20261122-2236.log)（1,695,086 B `2f7bd373…`）；判定见 [C-G6 v1 §九](diagnostics/g6-contract-20261122/README.md)。S1–S5 全 PASS（读档拒绝 = `unbound-retained` 首采落定 v34 遗留）；park 恒等式 16/16；P2 静态缺口固化（源独有 10 项含 WeaponAdjustment）。
 
 **会话 2 判读（2026-11-22 22:45–22:47 补课，v123 同构建）**：日志 [CharacterPanel-g6-candidate-20261122-2nd.log](diagnostics/CharacterPanel-g6-candidate-20261122-2nd.log)（746,140 B `0831cb2f…`）；判定见 [C-G6 v1 §十](diagnostics/g6-contract-20261122/README.md)。拔刀↔收鞘域切换对照成立：P2-V1 复现（候选恒滞留 MT 97 节点，源 114↔106 切换，差集 33+17/10+1）、P2-V2 成立（域切换驱动 8 变量 + 装备 3 变量）。三连全部实证；C-G6-CON 准入达成，待另立契约。
+## v124-g6-domain-sync-20261122（2026-11-22，C-G6-CON v1 CON-A 实现）
+
+**实现（提交 `32432c1`）**：`domain_sync_policy.h`（10 词同步集 = run2 的 8 域驱动 + 2 武器类型；FNV-1a 签名；clip 家族归一化剥 `.HKX`/折叠 `Dummy<N>`；预算 32）+ `independent_graph.cpp` 内执行体 `domain_sync_tick`（每次 eligible 显示调用读源 10 词 → 签名变化或新窗口绑定 → 经 `write_named_int` typed setter **只写候选**逐变量记回读；失败变量本进程停用位掩码；`G6 SYNC ARM`/`G6 SYNC trigger=initial|change sig=… writes='…'` 行；源侧全程只读）+ `settings` 键 `CandidateDomainSync`（默认 off，要求 inject）+ 调用点在 `step_display_pose` 步进循环前。离线测试 `tests/behavior_graph_domain_sync_test.cpp`（3 例：集合/签名序敏感/家族归一化）与既有分支测试（4 例）均 exit 0。
+
+**构建（2026-11-22 22:59）**：干净树（提交 `32432c1`）`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v124-g6-domain-sync-20261122` + build，exit 0；身份 `CharacterPanel-scenegraph-v124-g6-domain-sync-20261122-32432c179e-cl94faaed0c6-20261122T145939Z`（无 `+dirty`）。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,213,888 | `095238D2A47146A44BDA68C780E31EFA2E735822A020A3DA3F8D1D9A76E6D1C1` |
+| CharacterPanel.pdb | 54,759,424 | `628B307247C835928F2D8A81DE6F168285383B14D62897BF181E7AD64BCC2605` |
+| CON 候选档 INI | （`dist/g6-con-20261122/` 内） | `C062DC0D…48C55B`（安装位） |
+
+**运行档派生**：v123 候选档尾部追加 `CandidateDomainSync=true`（CRLF、无 BOM）。**部署（2026-11-22 23:0x；Skyrim/SKSE 未运行）**：v123 三件套备份 `dist/deploy-backup-20261122-v123-v124pre/`（逐位核对）；v124 DLL/PDB + CON 档装入安装位，哈希 `095238d2…`/`628b3072…`/`c062dc0d…` 逐位一致。**未启动游戏**；CON run 1 待用户按 `dist/g6-con-20261122/MANUAL.md` 执行（T1–T5 + 目视域确认）。
