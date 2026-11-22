@@ -13,7 +13,7 @@
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
 | G5 | **门 5 正式运行完成；G4P-7 FAIL；C-G5-VER v1 新正式验证机械 FAIL + 全归因分账（2026-11-22）** | 历史：候选 249/249、源 849/849，248 对。**新验证**：两次独立会话（候选 249/249 同构 + 源 1145/1145）→ 冻结规则 41 burst → 29 端点 → 27 计入 → **tau_p=117 / tau_r=1,278 / tau_s=0**，DECL 实测与基准咬合（t31 30.08/t58 17.30/t30 10.18/t59 8.60/t45 6.37/t60-66 pos 3.5-5.6）、残差无新机制、EQ-C5 不触发；EQ-C1 快照级未达成（注入序列单帧 15ms 完成，结构性）；limited 资格裁定；**同日 C-G5-TOL v1 验收容差契约（源-源零假设逐轨表）→ 验收判定 244/272 干净 + 28 已接受超差（MLh 克隆缺口/C″/手指会话态族，用户决定接受）= PASS（accepted-exceptions）** [VER 判定](diagnostics/g5-ver-formal-20261122/README.md) · [TOL 契约](diagnostics/g5-tol-contract-20261122/README.md) · [历史正式结果](diagnostics/test-results-20261118.md#formal) · [过渡窗与超差拆分](g5-transition-window.md) |
-| G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
+| G6 | **PENDING → C-G6 v1 契约已落盘（2026-11-22，实现前）** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；克隆分支缺口三连（1HM 滞留/缺 MLh/缺 WeaponAdjustment）纳入 P2 探针。契约：[C-G6 v1](diagnostics/g6-contract-20261122/README.md)（P0 例外与对账清单 / P1 七场景验证 / P2 分支收敛探针 / P3 修复立项）。显式例外：候选每进程一张（E1）、SCOPY PARK（E2）、teardown NO-GO（E3）、登记计数无锚点（E4）、进程级 sink/hook 不属对账（E5）。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
 
@@ -58,7 +58,7 @@ ill==cap==116、in-flight-max=1）**；E2/E3 与联合验收未做 |
 
 **证据边界（不得外推）**：G4-C 的零事件只限 **58377** 路由；E1 的 `pinned-engine=408` 是**应用入口**计数，不是逐骨写满或输出完成；六工作线程只证明观察到的调用线程不同，不识别调度器；对账恒等式只覆盖已武装窗口内的传送与关闭；audit32 全部为静态可达，不等于运行命中；`fill ≤ cap`（`skeletonWord+0x40` vs `+0x30`）与 63563/63572 两个未列调用点仍是**待运行核验项**。
 
-**下一步排序**（2026-11-22 收官更新：**G5 双层判定完成**——冻结容差机械 FAIL（精度记录）+ [C-G5-TOL v1 验收 PASS](diagnostics/g5-tol-contract-20261122/README.md)（用户接受残差：244/272 干净 + 28 预注册机制族超差，量级 2–17.4°）。**G5 有界签收。下一步 = G6（生命周期/源恢复/重复会话收敛/克隆分支缺口收敛）或直接回面板功能开发（G6 可并行后置）**；仍开放：G6 全部、K5-5、K2-C1、A17、装载 teardown NO-GO；历史排序保留如下）：
+**下一步排序**（2026-11-22 收官更新：**G5 双层判定完成**——冻结容差机械 FAIL（精度记录）+ [C-G5-TOL v1 验收 PASS](diagnostics/g5-tol-contract-20261122/README.md)（用户接受残差：244/272 干净 + 28 预注册机制族超差，量级 2–17.4°）。**G5 有界签收。下一步 = G6（生命周期/源恢复/重复会话收敛/克隆分支缺口收敛）或直接回面板功能开发（G6 可并行后置）**；**2026-11-22 用户裁定：进行 G6**——[C-G6 v1 契约](diagnostics/g6-contract-20261122/README.md) 已落盘（P0 对账清单 / P1 七场景验证 / P2 分支收敛探针 / P3 修复立项条件），下一步 = 契约评审 → 仪器实现（v123 建议：P1 对账 + P2 分支集行）→ 上机。仍开放：G6 全部、K5-5、K2-C1、A17、装载 teardown NO-GO；历史排序保留如下）：
 
 ### 关卡
 
