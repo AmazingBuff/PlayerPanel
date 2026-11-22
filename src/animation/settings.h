@@ -185,6 +185,11 @@ namespace animation
     // session/save boundary — process-wide counters only (parked-graph total,
     // retained-candidate state, DAC world/sessions, panel revision). Read-only.
     [[nodiscard]] bool g6_ledger_enabled();
+    // C-G6-CON v1 (2026-11-22, default off): CON-A domain sync — read the ten
+    // pre-registered driver words from the source and write them into the
+    // candidate's own variable set through the typed setters when the signature
+    // changes. Writes candidate only; requires IndependentGraph=inject.
+    [[nodiscard]] bool domain_sync_enabled();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

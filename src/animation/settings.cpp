@@ -53,6 +53,7 @@ bool g_transition_clip_weight_probe = false;
 bool g_transition_clip_sweep_probe = false;
 bool g_idle_chain_probe = false;
 bool g_g6_ledger = false;
+bool g_domain_sync = false;
     behavior_graph::ProbeLivenessMode g_sampling_liveness_mode = behavior_graph::ProbeLivenessMode::e_off;
 }
 void load_settings()
@@ -121,6 +122,7 @@ void load_settings()
     g_transition_clip_sweep_probe = ini.GetBoolValue("Experiment", "TransitionClipSweepProbe", false);
     g_idle_chain_probe = ini.GetBoolValue("Experiment", "IdleChainProbe", false);
     g_g6_ledger = ini.GetBoolValue("Experiment", "G6Ledger", false);
+    g_domain_sync = ini.GetBoolValue("Experiment", "CandidateDomainSync", false);
     char const* const sampling_liveness = ini.GetValue("Experiment", "SamplingLiveness", "off");
     std::optional<behavior_graph::ProbeLivenessMode> const parsed_sampling_liveness =
         behavior_graph::parse_probe_liveness(sampling_liveness ? std::string_view{ sampling_liveness } : std::string_view{});
@@ -184,9 +186,12 @@ void load_settings()
         logger::info("EXPERIMENT setting IdleChainProbe=true");
     if (g_g6_ledger)
         logger::info("EXPERIMENT setting G6Ledger=true");
+    if (g_domain_sync)
+        logger::info("EXPERIMENT setting CandidateDomainSync=true");
 }
 UnarmedIdle unarmed_idle_setting() { return g_unarmed_idle; }
 bool g6_ledger_enabled() { return g_g6_ledger; }
+bool domain_sync_enabled() { return g_domain_sync; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
 bool behavior_graph_probe() { return g_behavior_graph_probe; }
 bool observation_snapshot() { return g_observation_snapshot; }

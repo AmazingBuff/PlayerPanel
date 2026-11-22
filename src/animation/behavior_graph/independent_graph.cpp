@@ -5,6 +5,7 @@
 
 #include "animation/behavior_graph/candidate_equip_prime_policy.h"
 #include "animation/behavior_graph/candidate_variable_census.h"
+#include "animation/behavior_graph/domain_sync_policy.h"
 #include "animation/behavior_graph/candidate_window.h"
 #include "animation/behavior_graph/clip_reference_policy.h"
 #include "animation/behavior_graph/control_sample.h"
@@ -978,6 +979,165 @@ namespace
         logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=equip-prime outcome={} reason={}",
             a_actor_id, a_request, ready ? "ready" : "skip", ready ? "none" : "write-failed");
         return ready;
+    }
+
+    // C-G6-CON v1 (CON-A, H-SYNC): domain sync. Reads the ten pre-registered
+    // driver words from the SOURCE (read-only) and, when the signature changes
+    // or on first bind, writes them into the CANDIDATE's own variable set
+    // through the typed setters (C-G5-CAL D2 path). TimeDelta/REAL words are
+    // excluded by the contract set; a setter failure stops that variable for
+    // the process; the event budget disables the whole sync when exhausted.
+    bool domain_sync_resolve_names(RE::hkbBehaviorGraphData const* a_data,
+        std::array<std::size_t, Domain_Sync_Variable_Count>& a_out) noexcept
+    {
+        if (!a_data) return false;
+        for (std::size_t i = 0; i < Domain_Sync_Variable_Count; ++i)
+        {
+            std::string const name{ Domain_Sync_Variable_Names[i] };
+            if (!variable_index(a_data, name.c_str(), a_out[i])) return false;
+        }
+        return true;
+    }
+
+    void domain_sync_tick(RE::BShkbAnimationGraph const& a_source, RE::BShkbAnimationGraph& a_candidate,
+        std::uint32_t const a_actor, std::uint64_t const a_request, std::uint64_t const a_view) noexcept
+    {
+        static std::uint32_t s_events = 0;
+        static bool s_disabled_logged = false;
+        if (s_events >= Domain_Sync_Event_Budget)
+        {
+            if (!s_disabled_logged)
+            {
+                s_disabled_logged = true;
+                logger::info("G6 SYNC status=disabled reason=budget events={} limit={}",
+                    s_events, Domain_Sync_Event_Budget);
+            }
+            return;
+        }
+        RE::hkbBehaviorGraph const* const source_behavior = a_source.characterInstance.behaviorGraph.get();
+        RE::hkbBehaviorGraphData const* const source_data = source_behavior ? source_behavior->data.get() : nullptr;
+        std::size_t source_word_count = 0;
+        std::uint32_t const* const source_words =
+            source_behavior ? word_values(source_behavior->variableValueSet.get(), source_word_count) : nullptr;
+        if (!source_data || !source_words)
+        {
+            static RE::hkbBehaviorGraphData const* s_unavailable_logged_for = nullptr;
+            if (source_data != s_unavailable_logged_for)
+            {
+                s_unavailable_logged_for = source_data;
+                logger::info("G6 SYNC status=unavailable reason=no-source-words actor={:08x} request={} view={}",
+                    a_actor, a_request, a_view);
+            }
+            return;
+        }
+        static RE::hkbBehaviorGraphData const* s_resolved_source = nullptr;
+        static std::array<std::size_t, Domain_Sync_Variable_Count> s_source_indices{};
+        static bool s_source_resolved = false;
+        if (source_data != s_resolved_source)
+        {
+            s_source_resolved = domain_sync_resolve_names(source_data, s_source_indices);
+            s_resolved_source = source_data;
+        }
+        if (!s_source_resolved)
+        {
+            static bool s_unresolved_logged = false;
+            if (!s_unresolved_logged)
+            {
+                s_unresolved_logged = true;
+                logger::info("G6 SYNC status=unavailable reason=unresolved-source-names actor={:08x} request={} view={}",
+                    a_actor, a_request, a_view);
+            }
+            return;
+        }
+        std::array<std::uint32_t, Domain_Sync_Variable_Count> signature{};
+        bool readable = true;
+        for (std::size_t i = 0; i < Domain_Sync_Variable_Count && readable; ++i)
+            readable = s_source_indices[i] < source_word_count;
+        if (!readable)
+        {
+            logger::info("G6 SYNC status=unavailable reason=words-short actor={:08x} request={} view={}",
+                a_actor, a_request, a_view);
+            return;
+        }
+        for (std::size_t i = 0; i < Domain_Sync_Variable_Count; ++i)
+            signature[i] = source_words[s_source_indices[i]];
+
+        // A new window binding restarts the diff window: the first tick of a new
+        // request is an initial sync (contract §2.2), whatever the values are.
+        static std::uint64_t s_last_request = 0;
+        static bool s_have_applied = false;
+        static std::array<std::uint32_t, Domain_Sync_Variable_Count> s_applied{};
+        bool initial = !s_have_applied || a_request != s_last_request;
+        if (a_request != s_last_request)
+        {
+            s_last_request = a_request;
+            s_have_applied = false;
+            initial = true;
+            logger::info("G6 SYNC ARM actor={:08x} request={} view={}", a_actor, a_request, a_view);
+        }
+        if (!initial && s_applied == signature) return;
+
+        RE::hkbBehaviorGraph const* const candidate_behavior = a_candidate.characterInstance.behaviorGraph.get();
+        RE::hkbBehaviorGraphData const* const candidate_data = candidate_behavior ? candidate_behavior->data.get() : nullptr;
+        static RE::hkbBehaviorGraphData const* s_resolved_candidate = nullptr;
+        static std::array<std::size_t, Domain_Sync_Variable_Count> s_candidate_indices{};
+        static bool s_candidate_resolved = false;
+        if (candidate_data != s_resolved_candidate)
+        {
+            s_candidate_resolved = domain_sync_resolve_names(candidate_data, s_candidate_indices);
+            s_resolved_candidate = candidate_data;
+        }
+        if (!candidate_data || !s_candidate_resolved)
+        {
+            static bool s_candidate_logged = false;
+            if (!s_candidate_logged)
+            {
+                s_candidate_logged = true;
+                logger::info("G6 SYNC status=unavailable reason=unresolved-candidate-names actor={:08x} request={} view={}",
+                    a_actor, a_request, a_view);
+            }
+            return;
+        }
+        std::string details;
+        static std::uint32_t s_disabled_mask = 0; // bit i: variable i stopped for this process
+        for (std::size_t i = 0; i < Domain_Sync_Variable_Count; ++i)
+        {
+            char const* status = "skipped-disabled";
+            if (!(s_disabled_mask & (1u << i)))
+            {
+                std::int32_t old_value = 0;
+                bool const have_old = read_variable_int(a_candidate, s_candidate_indices[i], old_value);
+                std::int32_t const new_value = static_cast<std::int32_t>(signature[i]);
+                TypedWriteResult const result =
+                    write_named_int(a_candidate, candidate_data, Domain_Sync_Variable_Names[i], new_value);
+                switch (result.status)
+                {
+                case TypedWriteStatus::e_written: status = "ok"; break;
+                case TypedWriteStatus::e_missing: status = "missing"; break;
+                case TypedWriteStatus::e_unsupported: status = "skipped-unsupported"; break;
+                case TypedWriteStatus::e_setter_failed: status = "failed"; break;
+                }
+                // A write that cannot succeed now can never succeed: stop that
+                // variable for the process (contract §四 — no retry, no swap).
+                if (result.status != TypedWriteStatus::e_written)
+                    s_disabled_mask |= (1u << i);
+                if (!details.empty()) details += ',';
+                details += fmt::format("{}:{:08x}>{:08x}:{}", Domain_Sync_Variable_Names[i],
+                    have_old ? std::bit_cast<std::uint32_t>(old_value) : std::uint32_t{ 0 },
+                    std::bit_cast<std::uint32_t>(new_value), status);
+            }
+            else
+            {
+                if (!details.empty()) details += ',';
+                details += fmt::format("{}:{}", Domain_Sync_Variable_Names[i], status);
+            }
+        }
+        ++s_events;
+        logger::info("G6 SYNC actor={:08x} request={} view={} trigger={} sig={:016x} events={} writes='{}'",
+            a_actor, a_request, a_view, initial ? "initial" : "change",
+            domain_sync_signature(signature), s_events, std::string_view{ details });
+        s_applied = signature;
+        s_have_applied = true;
     }
 
     CandidateInputProbe arm_candidate_input_probe(RE::BShkbAnimationGraph& a_graph, std::uint32_t a_actor_id,
@@ -3595,6 +3755,12 @@ bool DisplaySession::step_display_pose(RE::BShkbAnimationGraph const& source_gra
         if (!converted) state.clock.reset();
         return converted;
     }
+    // C-G6-CON v1: the domain sync lands before this call's drive steps, so the
+    // candidate's state machine sees the switched variables inside the same
+    // paced stepping sequence. Gated by the INI key; the source is read-only.
+    if (domain_sync_enabled())
+        domain_sync_tick(source_graph, *g_held_graph, window.source().actor_id,
+            window.request(), window.view());
     for (std::uint32_t step = 0; step < due; ++step)
     {
         if (generation_entry_status(generation_entry_view(*g_held_graph), generation_entry_view(source_graph)) !=
