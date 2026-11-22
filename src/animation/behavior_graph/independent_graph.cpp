@@ -1100,13 +1100,15 @@ namespace
         }
         std::string details;
         static std::uint32_t s_disabled_mask = 0; // bit i: variable i stopped for this process
-        // C-G6-CON v2 (§2.2): the direction rule reads the (candidate, source)
-        // iState pair — sync-set position 0 on both sides — before priming.
-        std::int32_t candidate_i_state = -1;
+        // C-G6-CON v3 (§2.2): the direction rule reads the (candidate, source)
+        // currentDefaultState pair — sync-set position 1 on both sides — before
+        // priming. currentDefaultState separates all four domains; iState (the
+        // v2 rule) cannot distinguish drawn 1HM from magic-ready.
+        std::int32_t candidate_domain_state = -1;
         bool const have_candidate_state =
-            read_variable_int(a_candidate, s_candidate_indices[0], candidate_i_state);
+            read_variable_int(a_candidate, s_candidate_indices[1], candidate_domain_state);
         DomainSyncDirection const direction = have_candidate_state ?
-            domain_sync_direction(static_cast<std::uint32_t>(candidate_i_state), signature[0]) :
+            domain_sync_direction(static_cast<std::uint32_t>(candidate_domain_state), signature[1]) :
             DomainSyncDirection::e_none;
         for (std::size_t i = 0; i < Domain_Sync_Variable_Count; ++i)
         {
@@ -1178,9 +1180,9 @@ namespace
                 dispatch_label = Domain_Sync_Dispatch_Event_Names[dispatch_index].data();
             }
         }
-        logger::info("G6 SYNC actor={:08x} request={} view={} trigger={} direction={} dispatch={} sig={:016x} events={} writes='{}'",
+        logger::info("G6 SYNC actor={:08x} request={} view={} trigger={} direction={}>{} dispatch={} sig={:016x} events={} writes='{}'",
             a_actor, a_request, a_view, initial ? "initial" : "change",
-            domain_sync_direction_name(direction), dispatch_label,
+            candidate_domain_state, signature[1], dispatch_label,
             domain_sync_signature(signature), s_events, std::string_view{ details });
         s_applied = signature;
         s_have_applied = true;

@@ -24,8 +24,10 @@ namespace
     using test_plugin::animation::behavior_graph::DomainSyncDirection;
     using test_plugin::animation::behavior_graph::domain_sync_signature;
     using test_plugin::animation::behavior_graph::domain_sync_clip_family;
+    using test_plugin::animation::behavior_graph::Domain_Sync_Drawn;
+    using test_plugin::animation::behavior_graph::Domain_Sync_Magic;
+    using test_plugin::animation::behavior_graph::Domain_Sync_Sheathed;
     using test_plugin::animation::behavior_graph::domain_sync_direction;
-    using test_plugin::animation::behavior_graph::domain_sync_direction_name;
     using test_plugin::animation::behavior_graph::domain_sync_dispatch_index;
 
     void sync_set_matches_the_preregistered_contract()
@@ -35,6 +37,10 @@ namespace
         assert(Domain_Sync_Variable_Names[7] == "bIsInMT");
         assert(Domain_Sync_Variable_Names[9] == "iLeftHandType");
         assert(Domain_Sync_Event_Budget == 32);
+        // v3 domain codes: currentDefaultState separates all four domains.
+        assert(Domain_Sync_Sheathed == 0);
+        assert(Domain_Sync_Drawn == 1);
+        assert(Domain_Sync_Magic == 2);
     }
 
     void signature_is_order_sensitive_and_stable()
@@ -70,21 +76,33 @@ namespace
         assert(domain_sync_clip_family(" MT_Idle.HKX\t") == "MT_Idle");
     }
 
-    void direction_rule_matches_the_v2_contract()
+    void direction_rule_matches_the_v3_contract()
     {
-        assert(domain_sync_direction(0, 9) == DomainSyncDirection::e_draw);
-        assert(domain_sync_direction(9, 0) == DomainSyncDirection::e_sheath);
+        // Evidenced pairs (contract §2.2).
+        assert(domain_sync_direction(0, Domain_Sync_Drawn) == DomainSyncDirection::e_draw);
+        assert(domain_sync_direction(Domain_Sync_Drawn, Domain_Sync_Magic) == DomainSyncDirection::e_magic_ready);
+        assert(domain_sync_direction(Domain_Sync_Magic, Domain_Sync_Drawn) == DomainSyncDirection::e_weapon_swap);
+        // The sheath row covers both 1->0 and the new 2->0 hypothesis.
+        assert(domain_sync_direction(Domain_Sync_Drawn, Domain_Sync_Sheathed) == DomainSyncDirection::e_sheath);
+        assert(domain_sync_direction(Domain_Sync_Magic, Domain_Sync_Sheathed) == DomainSyncDirection::e_sheath);
+        // Equal domains, transient source (11), and unevidenced pairs prime only.
         assert(domain_sync_direction(0, 0) == DomainSyncDirection::e_none);
-        assert(domain_sync_direction(9, 9) == DomainSyncDirection::e_none);
-        assert(domain_sync_direction(2, 9) == DomainSyncDirection::e_none);
-        assert(domain_sync_direction(0, 5) == DomainSyncDirection::e_none);
-        assert(domain_sync_direction_name(DomainSyncDirection::e_draw) == "draw");
-        assert(domain_sync_direction_name(DomainSyncDirection::e_sheath) == "sheath");
-        assert(domain_sync_direction_name(DomainSyncDirection::e_none) == "none");
+        assert(domain_sync_direction(Domain_Sync_Drawn, Domain_Sync_Drawn) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction(Domain_Sync_Magic, Domain_Sync_Magic) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction(Domain_Sync_Drawn, 11) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction(Domain_Sync_Magic, 11) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction(Domain_Sync_Sheathed, Domain_Sync_Magic) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction(Domain_Sync_Sheathed, 11) == DomainSyncDirection::e_none);
+        // Dispatch table: four events, direction mapping.
         assert(domain_sync_dispatch_index(DomainSyncDirection::e_draw) == 0);
         assert(domain_sync_dispatch_index(DomainSyncDirection::e_sheath) == 1);
+        assert(domain_sync_dispatch_index(DomainSyncDirection::e_magic_ready) == 2);
+        assert(domain_sync_dispatch_index(DomainSyncDirection::e_weapon_swap) == 3);
+        assert(domain_sync_dispatch_index(DomainSyncDirection::e_none) == 4);
         assert(Domain_Sync_Dispatch_Event_Names[0] == "WeapEquip");
         assert(Domain_Sync_Dispatch_Event_Names[1] == "Unequip");
+        assert(Domain_Sync_Dispatch_Event_Names[2] == "MagicForceEquipRight");
+        assert(Domain_Sync_Dispatch_Event_Names[3] == "WeapOutRightReplaceForceEquip");
     }
 }
 
@@ -93,7 +111,7 @@ int main()
     sync_set_matches_the_preregistered_contract();
     signature_is_order_sensitive_and_stable();
     clip_family_normalization_matches_recorded_evidence();
-    direction_rule_matches_the_v2_contract();
+    direction_rule_matches_the_v3_contract();
     std::cout << "4 g6 domain-sync policy cases passed" << std::endl;
     return 0;
 }

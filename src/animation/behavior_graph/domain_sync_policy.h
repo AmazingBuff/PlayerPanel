@@ -42,52 +42,72 @@ namespace animation::behavior_graph
     // is oscillating, so the executor disables itself (log once, restart to reset).
     inline constexpr std::size_t Domain_Sync_Event_Budget = 32;
 
-    // C-G6-CON v2 (§2.1): the two domain-switch dispatch events from the
-    // 2026-11-22 evidence session (draw = WeapEquip id 2, sheath = Unequip id
-    // 144 on the source event table; ids resolve on the candidate's own table).
+    // C-G6-CON v2/v3: the domain-switch dispatch events from the 2026-11-22
+    // evidence sessions. v2: WeapEquip (draw, id 2) and Unequip (sheath, id 144)
+    // from the draw/sheath session; v3 adds MagicForceEquipRight (magic ready,
+    // id 476) and WeapOutRightReplaceForceEquip (magic -> weapon, id 417) from
+    // the magic-domain session. Ids resolve on the candidate's own event table.
     // Payload and sender stay null, exactly like the G3-B replay dispatches.
-    inline constexpr std::size_t Domain_Sync_Dispatch_Count = 2;
+    inline constexpr std::size_t Domain_Sync_Dispatch_Count = 4;
     inline constexpr std::array<std::string_view, Domain_Sync_Dispatch_Count> Domain_Sync_Dispatch_Event_Names{
         "WeapEquip",
         "Unequip",
+        "MagicForceEquipRight",
+        "WeapOutRightReplaceForceEquip",
     };
     inline constexpr std::size_t Domain_Sync_Dispatch_Draw = 0;
     inline constexpr std::size_t Domain_Sync_Dispatch_Sheath = 1;
+    inline constexpr std::size_t Domain_Sync_Dispatch_Magic = 2;
+    inline constexpr std::size_t Domain_Sync_Dispatch_WeaponSwap = 3;
 
-    // C-G6-CON v2 (§2.2): the direction rule reads the (candidate, source) pair
-    // of the domain master switch iState (sync-set position 0). Draw when the
-    // candidate sheathed (0) and the source drawn (9); sheath on the mirrored
-    // pair; every other combination — including equal domains — primes only and
-    // dispatches nothing.
+    // C-G6-CON v3 (§2.1): settled domain codes of currentDefaultState — the
+    // domain master switch that separates all four domains (iState cannot:
+    // drawn 1HM and magic-ready share iState=9). Equip transition 11 is a
+    // ~0.6 s transient and never drives a dispatch.
+    inline constexpr std::uint32_t Domain_Sync_Sheathed = 0;
+    inline constexpr std::uint32_t Domain_Sync_Drawn = 1;
+    inline constexpr std::uint32_t Domain_Sync_Magic = 2;
+
+    // C-G6-CON v3 (§2.2): the direction rule reads the (candidate, source) pair
+    // of currentDefaultState (sync-set position 1). Evidenced pairs dispatch
+    // their pre-registered event; equal domains, a transient source state, and
+    // unevidenced pairs prime only and dispatch nothing.
     enum class DomainSyncDirection : std::uint8_t
     {
         e_none,
-        e_draw,
-        e_sheath,
+        e_draw,        // sheathed -> drawn 1HM
+        e_sheath,      // drawn or magic -> sheathed
+        e_magic_ready, // drawn -> magic-ready
+        e_weapon_swap, // magic-ready -> drawn 1HM
     };
 
-    [[nodiscard]] inline DomainSyncDirection domain_sync_direction(std::uint32_t a_candidate_i_state,
-        std::uint32_t a_source_i_state) noexcept
+    [[nodiscard]] inline DomainSyncDirection domain_sync_direction(std::uint32_t a_candidate_state,
+        std::uint32_t a_source_state) noexcept
     {
-        if (a_candidate_i_state == 0 && a_source_i_state == 9) return DomainSyncDirection::e_draw;
-        if (a_candidate_i_state == 9 && a_source_i_state == 0) return DomainSyncDirection::e_sheath;
+        if (a_candidate_state == a_source_state) return DomainSyncDirection::e_none;
+        if (a_source_state != Domain_Sync_Sheathed && a_source_state != Domain_Sync_Drawn &&
+            a_source_state != Domain_Sync_Magic)
+            return DomainSyncDirection::e_none;
+        if (a_source_state == Domain_Sync_Sheathed) return DomainSyncDirection::e_sheath;
+        if (a_candidate_state == Domain_Sync_Sheathed && a_source_state == Domain_Sync_Drawn)
+            return DomainSyncDirection::e_draw;
+        if (a_candidate_state == Domain_Sync_Drawn && a_source_state == Domain_Sync_Magic)
+            return DomainSyncDirection::e_magic_ready;
+        if (a_candidate_state == Domain_Sync_Magic && a_source_state == Domain_Sync_Drawn)
+            return DomainSyncDirection::e_weapon_swap;
         return DomainSyncDirection::e_none;
-    }
-
-    [[nodiscard]] inline std::string_view domain_sync_direction_name(DomainSyncDirection a_direction) noexcept
-    {
-        switch (a_direction)
-        {
-        case DomainSyncDirection::e_draw: return "draw";
-        case DomainSyncDirection::e_sheath: return "sheath";
-        default: return "none";
-        }
     }
 
     [[nodiscard]] inline std::size_t domain_sync_dispatch_index(DomainSyncDirection a_direction) noexcept
     {
-        return a_direction == DomainSyncDirection::e_draw ? Domain_Sync_Dispatch_Draw :
-            Domain_Sync_Dispatch_Sheath;
+        switch (a_direction)
+        {
+        case DomainSyncDirection::e_draw: return Domain_Sync_Dispatch_Draw;
+        case DomainSyncDirection::e_sheath: return Domain_Sync_Dispatch_Sheath;
+        case DomainSyncDirection::e_magic_ready: return Domain_Sync_Dispatch_Magic;
+        case DomainSyncDirection::e_weapon_swap: return Domain_Sync_Dispatch_WeaponSwap;
+        default: return Domain_Sync_Dispatch_Count;
+        }
     }
 
     // FNV-1a 64 over the ten source words in declared order: the change detector
