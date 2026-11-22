@@ -2543,3 +2543,15 @@ build\transition_probe_test.exe
 **CON v2 run 1 判读（2026-11-22 23:35–23:38，v125）**：日志 [CharacterPanel-g6conv2-20261122.log](diagnostics/CharacterPanel-g6conv2-20261122.log)（`dda1713e…`）；判定见 [C-G6-CON v2 §八](diagnostics/g6-con-v2-contract-20261122/README.md)。**CON-P1..P6 全成立 → CON-A' 落定、G6-B 收敛达成**：拔刀域 clip 家族归一化相等（bmlh 0→5）、双向旧域零残留、DAC 9/9、park 恒等式、G6-A 零干扰。限定：两域（魔法域 iState 粒度限制记录在案）+ 1stP 超集 + 结构差集保持。
 
 **魔法域取证档（2026-11-22 23:4x）**：安装位 INI 换装取证档 `60ecb8aa…`（DLL/PDB 不动；v2 候选档 `f8c291f1…` 存 `dist/g6-con-v2-20261122/` 可换回）；会话步骤追加于 [v2 MANUAL](../dist/g6-con-v2-20261122/MANUAL.md)。
+## v126-g6-domain-v3-20261122（2026-11-22，C-G6-CON v3 方向规则升级）
+
+**实现（提交 `db8da8a`）**：`domain_sync_policy.h` 方向规则替换——iState 对 → `currentDefaultState` 四域对（收鞘 0/拔刀 1/魔法 2/过渡 11 跳过；等域、瞬态源、未取证对仅 prime），派发表扩为 4 事件（取证落定的 `MagicForceEquipRight`/`WeapOutRightReplaceForceEquip` 加入）；`domain_sync_tick` 方向读取换 sync 集位置 1；`G6 SYNC` 行 `direction=` 改域对形式（`1>2`）。离线测试 4 例（v3 方向表全组合）exit 0。
+
+**构建（2026-11-22 23:54）**：干净树（提交 `db8da8a`）构建 exit 0；身份 `CharacterPanel-scenegraph-v126-g6-domain-v3-20261122-db8da8a1e3-cl94faaed0c6-20261122T155429Z`（无 `+dirty`）。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,215,936 | `6BA869C115CB87EC01C3AE05EFE6B56F129FC9D6728474191B0C75F3D3C829BD` |
+| CharacterPanel.pdb | 54,759,424 | `1E2D327DBB8BF51DE30B2AE083DD7877E81A608CC29E6A06F8E9444DAB8963FA` |
+
+**部署（2026-11-22 23:5x；Skyrim/SKSE 未运行）**：v125 DLL + 取证档 INI 备份 `dist/deploy-backup-20261122-v125-v126pre/`（逐位核对）；v126 DLL/PDB + **v2 候选档**（键面与 v3 相同，`f8c291f1…`）装入安装位，哈希逐位一致。**未启动游戏**；CON v3 run 1 待用户按 [MANUAL](../dist/g6-con-v2-20261122/MANUAL.md) 追加节执行（T1–T6 三域 + 目视）。
