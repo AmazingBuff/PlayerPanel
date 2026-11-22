@@ -1,8 +1,6 @@
-# C-G5-VER v0：新正式验证协议整合草案（2026-11-21；评审稿，不授权实现/上机）
+# C-G5-VER v1：新正式验证协议（2026-11-21 预注册；2026-11-22 冻结）
 
-> **状态**：协议草案 v0，整合 2026-11-21 闭环的全部机制结论（C-G5-TRANS §八 全六项、C-G5-CHAIN v1、C-G5-EQ v1）。本稿**只定义主张形状、排除集、会话流程与开放项**；三个开放项（§五 O-1/O-2/O-3）解决并评审通过后才可冻结为 v1，冻结前不得实现、不得上机。阈值归属 CAL，本稿不定任何数值容差。
-> **2026-11-22 O-1 已决断**：采纳选项 (a)（比较单元 = burst 末步），修订已并入 §3.1/§3.2（均标注）。
-> **2026-11-22 O-2 已决断**：源侧捕获模态 = **独立源侧会话**（面板关 + `IndependentGraph=off` + `SamplingLiveness=on` + `K5FullSample=true`，实机装备序列在窗口内执行）——gate-5 正式批次本就是两次独立会话（候选 inject 会话 + 源侧独立会话），"849 条源记录 vs run2 面板开冻结"是会话结构误读而非暂停语义矛盾；面板开启显示窗内源图时钟冻结为实测事实（见 [O-2 决断](../g5-o2-modality-20261122/README.md)）。**O-1/O-2/O-3 三项全部解决，待冻结评审（v0 → v1）。**
+> **状态**：**v1 已冻结（2026-11-22，用户评审通过）**。整合 C-G5-TRANS §八 全六项、C-G5-CHAIN v1、C-G5-EQ v1 与三项开放项决断（O-1/O-2/O-3，2026-11-22）。冻结时批准的四项判断：① 比较单元 = burst 末步 + clip 末段饱和窗（O-1）；② 源侧 = 独立源侧会话，两次会话结构（O-2）；③ K2-C1/K5-5/A17 为限定条件继承，裁定语带 limited 资格（O-3，见 [O-3 决断](../g5-o3-threshold-chain-20261122/README.md)；O-2 见 [O-2 决断](../g5-o2-modality-20261122/README.md)，O-1 见 [O-1 分析](../g5-o1-pairing-granularity-20261121/README.md)）；④ 阈值冻结继承（`tau_p/tau_r/tau_s/epsilon_t` 原样，不放宽不重推）。**预期产出形态**：机械 FAIL + 全归因分账（tau_r 位精确级，时钟阶梯残差必然超差），不是干净 PASS；残差量级的产品接受度与容差契约属后续，不在本协议内。§九 实现已授权（离线）；上机待运行档就绪后另行安排。
 
 ## 一、目的与主张形状
 
@@ -74,7 +72,7 @@ EQ-C1 状态同域 / EQ-C1a MLh 家族集一致 / EQ-C2 机制在场 / EQ-C3 候
 
 EQ-C1..C5 任一失败、非有限值/读取失败影响覆盖、源漂移/崩溃、声明集外新恒差（EQ-C5）——停止并保留记录回评审。不得：事后扩声明集、把 residual 升格豁免、放宽/绕过 CAL 阈值链、改写 G4P-7 与既有裁定。
 
-## 七、实现影响面（评审用，本节不授权实现）
+## 七、实现影响面（2026-11-22 冻结后授权实现；范围以 §九 为准）
 
 1. 配对工具扩展：clip 相位锚定 + burst 末步判定（O-1 选型后）。
 2. IDLE CHAIN 探针 SUMMARY 聚合修复（逐 clip 覆写缺陷；行数据已完整，修复为可选）。
@@ -87,3 +85,44 @@ EQ-C1..C5 任一失败、非有限值/读取失败影响覆盖、源漂移/崩�
 - 单运行时 AE 1.6.1170、`AE-Track2`、DefaultFemale 骨架、单存档族；换骨架/装备族须重解析轨集与基准。
 - 本协议不关闭 G6、K5-5、K1/K2 剩余项；不证明整体姿态等价；G4P-7 历史裁定与其工件不改写。
 - EQ-DECL 基准值绑定 2 状态 × 1 装备族会话；其它武器/左手配置按会话重测。
+
+## 九、实现预注册（2026-11-22，随冻结生效；实现前零采集）
+
+离线工具 `tools/gate5_ver.py`（新建；[gate4_pair.py](../../../tools/gate4_pair.py) 本体冻结不动，只 import 复用其解析与度量）。**纯 stdlib、零第三方依赖、零网络、只读输入。**
+
+### 9.1 CLI（冻结）
+
+```
+python -I tools/gate5_ver.py --candidate <cpk5.bin> --source <cpk5s.bin> --out-dir <dir>
+        [--tolerances <json>] [--self-test]
+```
+
+- 默认 = metadata-only（dry-run 语义）：不解码 pose、不产误差明细。
+- `--tolerances`（姿态判定的唯一开关）= `{"tau_p":>0,"tau_r":>0,"tau_s":>0,"epsilon_t":>0}`（全有限），即门 4 冻结槽位值。
+- 退出码：0 成功；2 数据 INVALID；3 解析/守卫失败。
+
+### 9.2 规则（全部来自冻结的 §三，此处只定操作化）
+
+1. 解析与守卫：复用 `gate4_pair.parse_candidate/parse_source`（`track_count==116`、`two_read_equal==1`、有限钟值守卫随解析器继承）；记录级 IDUN（任一 clip `data_fnv==0`）排除出配对、照记账本。
+2. 域归属：按 `CLOCK_PRIORITY` 取首个身份可读 clip（同 gate4）。
+3. burst 分组：文件相邻 + 同域 + 同 `stable_id` + 同观测 `local_time`；比较单元 = **burst 末步**（单记录 burst 自身即单元）。
+4. clip 末段饱和排除：`len(burst) ≥ 2` 且 `local_time ≥ duration − 1.5/60`（duration 取该 burst 优先 clip 的 `duration_bits` 解码；`duration ≤ 0` 或不可读 → 不触发排除）。整 burst 出等值集、留账本。
+5. EQ-W1b 排除：burst 内任一成员 `completed ≤ 24` → 整 burst 出等值集、留账本。
+6. EQ-W1a 源侧排除：被配对的源记录含 **2+ 个身份可读 clip 族**（双 clip 共存）→ 该对出等值集、留账本。
+7. 端点配对：域内全部源记录钟值取 `|c−x|` 最小（等距取 `seq` 较早；端点越源钟域 → `edge-pair` flag，配对成立）——同 gate4 §3.4 nearest-clock 语义；不继承实例窗/wrap 机械（本批零 wrap；如出现 wrap 判 INVALID）。
+8. dt 门：`dt_clock > epsilon_t` 的对排除出误差分布并记账（沿用 TIME v1 的 `dt_exclude=true` + 2% edge-only 上限，超限 → INVALID）。
+9. 等值主张集（按 §一 冻结算术，99 主轨 = 轨号 0–98；A17 99–115 描述性照记）：
+   - 87 条轨（99 − DECL1 五轨 − DECL2 七轨）：translation/rotation/scale 三通道全判；
+   - DECL1 = {30,31,58,59,45}：rotation 声明（不判）；其中 {30,31,58,59} 的 translation 判，t45 的 translation 声明；其 scale 不进等值集；
+   - DECL2 = {60..66}：translation 声明（不判）；rotation 判；scale 判；
+   - 超差计数 = 等值分量上 `E_p > tau_p` / `E_r > tau_r` / `E_s > tau_s`；逐轨排名输出。
+10. DECL 集记账：被声明分量的逐轨实测值（`E_r` 换算角度 / `E_p`）全量输出，与 [C-G5-EQ v1 §三](../g5-eq-contract-20261121/README.md) 基准量级比对——**不进 FAIL**。
+11. 残差集：不做工具级归类（t44/手指/C″/阶梯的归因由运行记录按 §三.4 写）；工具输出逐轨超差与实测值，机械计数只含等值分量。
+12. 输出：`gate5-ver-manifest.json`（对账恒等式、burst 清单、端点/排除/记账分类、配对账本：对数、多对一 host 结构、`dt_clock` 分布）≤1 MiB；`gate5-ver-summary.txt` ≤200 行；`gate5-ver-detail.bin`（仅 `--tolerances`）：每对 16 B 头（pair_index/cand_record/src_seq/reserved）+ 116×4×f32（E_p/E_r/theta/E_s，轨序 0–115）= 1,872 B/对。
+13. 测试（`tools/gate5_ver_test.py`，纯 stdlib、`python -I`、期望值解析计算）：T1 burst 分组（相邻等钟聚合 + stable_id 变更切分）；T2 末步单元选择；T3 饱和判据边界（duration−1.5 帧±）；T4 W1b completed 边界；T5 双 clip 共存源对排除；T6 nearest-clock 等距平手取 seq 早；T7 DECL 分量映射（t45/t60–66 各通道）；T8 dt 排除记账与 2% 上限；T9 IDUN 排除与恒等式闭合；T10 合成 CPK5/CPK5S 解析往返；T11 同参两次运行字节一致；T12 无 `--tolerances` 拒绝 pose 解码。
+14. dry-run：冻结后先对**已归档的 gate-5 正式批次**（v103 两 bin + 冻结容差）执行全模式，登记结果与 [O-1 分析](../g5-o1-pairing-granularity-20261121/README.md) 的端点读数交叉核对——可执行性证据，非新裁定。
+
+### 9.3 不做的事
+
+- 不改 `gate4_pair.py`/`gate4_clock.py`/`cal1c_time.py` 本体；不改 CPK5/CPK5S 布局；不新增 INI 键；不实现 IDLE CHAIN SUMMARY 修复（§七.2 可选项，若做另立小节登记）。
+- 工具不输出 G5 级裁定语——只产出机械计数与分布；裁定语由运行记录按 §三.4 书写（带 limited 资格）。
