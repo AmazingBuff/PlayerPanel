@@ -105,3 +105,18 @@
 1. **iState 粒度限制（新）**：魔法就绪域（r4：源 b1hm=1、bmlh=2、clip `{MLh_Idle, MRh_Idle}`）与拔刀域共享 iState=9 → 方向规则判 `none`、候选滞留拔刀域形态（clip `{1HM_Idle, MLh_Idle, MRh_Idle, SCAR_Dummy0}`）。契约 §2.2 预注册行为——"相等或其他组合仅 prime 不盲派"。**G6-B 收敛限定为拔刀/收鞘两域**；魔法域收敛需扩展方向判定（未来工作，需新的域区分变量/事件取证）。
 2. **候选侧 1stP 超集**：拔刀域候选激活源不激活的 12 节点（`1HM_1stPUpperBody`、1stP 系 modifier、`1stP_MLh_1HM_Idle_Blend`、`WeapIdleMSG` 等第一人称变体）——clip 层不受影响（家族相等），多激活记录在案。
 3. **结构差集恒定**：WeaponAdjustment（两域）与收鞘域 10 项源独有保持——C-G5-TOL 已接受的残差不变，修复不触碰。
+
+## 九、魔法域取证追加（2026-11-22 23:45–23:47，日志 [CharacterPanel-g6con-magic-evidence-20261122.log](../../CharacterPanel-g6con-magic-evidence-20261122.log) SHA-256 `E6B970F4…DADC96F`；同 v125 DLL、取证档 INI `60ecb8aa…`）
+
+窗口 1（热键路径）完整覆盖拔刀域↔魔法就绪域双向切换（时间戳对齐判读）：
+
+| 方向 | 驱动事件 | 时间戳对齐 | 相位链 |
+| --- | --- | --- | --- |
+| 拔刀→魔法 | **`MagicForceEquipRight`(476)** | 事件 23:45:38.254 ↔ 相位 `1→11` @23:45:38.308 | `currentDefaultState 1→11→2`、`iState 9→0→9`、nodes 114→98→122→103 |
+| 魔法→拔刀 | **`WeapOutRightReplaceForceEquip`(417)** | 事件 23:45:45.558 ↔ 相位 `2→10` @23:45:45.637（先 79 ms） | `currentDefaultState 2→10→1`、`iState 9→0→9`、nodes 103→116→…→114 |
+
+伴随事件与装备链同构（进入：`Magic_Equip_Out`(345)/`EnableBumper`；离开：`BeginWeaponDraw`(169)/`weaponDraw`(36)/`WeapEquip_Out`(49)）。
+
+**四域签名落定**（`currentDefaultState` 完全可分）：收鞘 MT=0、拔刀 1HM=1、魔法就绪=2、equip 过渡=11（瞬态 ~0.6 s）。v2 的 iState 对规则在 1↔2 域间失效的原因即此——**iState 在拔刀/魔法两域同为 9，`currentDefaultState` 才是域主开关**。
+
+**边界**：窗口 2（菜单路径）抓到 0 事件（时机错过）——菜单路径的源侧事件未知，但不阻塞 v3 设计：方向规则按域状态对判定（不重放源的事件），热键路径已给出每对域转换的事件名，菜单换装的终态相同（state 2），派发同一事件应同样有效；此假设进入 v3 上机验证。

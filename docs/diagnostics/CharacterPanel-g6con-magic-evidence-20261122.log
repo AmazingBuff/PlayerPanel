@@ -1,0 +1,333 @@
+[23:43:42.857] [36296] [I] CharacterPanel v1-2-1-0
+[23:43:42.857] [36296] [I] CharacterPanel loaded
+[2026-11-22 23:43:42.857] [thread 36296] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(89): [info] CharacterPanel v1-2-1-0
+[23:43:52.560] [36296] [E] failed to get plugin info for OpenAnimationReplacer
+[23:43:52.560] [36296] [I] OAR hooks unavailable: Open Animation Replacer is not loaded
+[23:44:28.934] [32416] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[23:44:28.934] [32416] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[23:44:28.934] [32416] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting IndependentGraph=off
+[23:44:28.934] [32416] [I] EXPERIMENT setting DisplayPose=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting DisplayStep=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting SourceTimeline=off transient=false graph='' pose-capture=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting SourceEventCapture=on
+[23:44:28.934] [32416] [I] EXPERIMENT setting SourceWriteCapture=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting CandidateVariableCensus=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[23:44:28.934] [32416] [I] EXPERIMENT setting CandidateEquipPrime=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting CandidateEquipPrimeBranch=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting CandidateUnequipProbe=false variable='' prime='' event=''
+[23:44:28.934] [32416] [I] EXPERIMENT setting OarContextWatch=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting SamplingLiveness=on
+[23:44:28.934] [32416] [I] EXPERIMENT setting ObservationSnapshot=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting ControlSample=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting ControlSampleGrid=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting ClipIdentityCensus=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting EquipmentStateDump=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting K5FullSample=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting K5LayerAudit=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting K5Reconciliation=true
+[23:44:28.934] [32416] [I] EXPERIMENT setting SetupAudit=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting BootstrapSourcePose=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting StateProbe=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting StateChildProbe=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting TransitionStateProbe=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting TransitionSubgraphProbe=false
+[23:44:28.934] [32416] [I] EXPERIMENT setting G6Ledger=true
+[23:44:28.936] [32416] [I] SOURCE EVENTCAPTURE installed mode=on target=0x7ff6ca2158a0 stub=0x7ff64afb0000 original=0x7ff64afb0050 head=48 8b c4 48 89 48 08
+[23:44:28.936] [32416] [I] SOURCE WRITECAPTURE install-skip reason=off
+[23:44:28.936] [32416] [W] PROBE LIVENESS install-skip reason=other-detour-probe-priority
+[23:44:28.936] [32416] [I] DAC native inventory lifecycle sink installed
+[23:44:28.939] [32416] [I] All shaders compiled
+[23:44:28.939] [32416] [I] Installed pre-UI renderer hook
+[23:44:28.939] [32416] [I] Panel menu sink installed
+[23:44:28.939] [32416] [I] CharacterManager equipment sink installed
+[23:44:28.939] [32416] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-v125-g6-domain-dispatch-20261122-740a94b1b9-cl94faaed0c6-20261122T152100Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[23:44:28.994] [32004] [I] Studio host changed: 0x0 -> 0x28567d76980 (paused=true)
+[23:44:28.994] [32004] [I] Studio light node has been created
+[23:44:28.994] [32004] [I] CP-LIGHT slot 0: registered, shell 0x286fc773880 queued (ledger stays the authority)
+[23:44:28.994] [32004] [I] CP-LIGHT slot 1: registered, shell 0x286fc773740 queued (ledger stays the authority)
+[23:44:28.994] [32004] [I] CP-LIGHT slot 2: registered, shell 0x286fc773600 queued (ledger stays the authority)
+[23:44:28.994] [32004] [I] Studio lights registered on the ledger (scene=0x27bc2f16e80 -- ledger fetch will populate the slots)
+[23:44:28.994] [32004] [I] CP-LIGHT slot 0: ledger shell fetched 0x286fc773880 (after 0 miss frames)
+[23:44:28.994] [32004] [I] CP-LIGHT slot 1: ledger shell fetched 0x286fc773740 (after 0 miss frames)
+[23:44:28.994] [32004] [I] CP-LIGHT slot 2: ledger shell fetched 0x286fc773600 (after 0 miss frames)
+[23:44:49.367] [36296] [I] PROBE LIVENESS invalidate-requested reason=world-reset
+[23:44:49.367] [36296] [I] DAC old-world sessions discarded world=2
+[23:44:49.367] [36296] [I] G6 LEDGER phase=preload-game actor=00000000 request=0 park=0 candidate=unattempted held-source=unbound step-ready=0 candidate-graph=0x0 dac-world=2 dac-sessions=0 panel-rev=0 panel-open=0
+[23:44:49.503] [32004] [I] SOURCE EVENTCAPTURE invalidated reason=world-reset
+[23:44:49.665] [32004] [I] CP-LIGHT slot 0: ledger shell dropped
+[23:44:49.665] [32004] [I] CP-LIGHT slot 1: ledger shell dropped
+[23:44:49.665] [32004] [I] CP-LIGHT slot 2: ledger shell dropped
+[23:44:49.665] [32004] [W] Studio lights not fully served by the ledger yet
+[23:44:56.024] [32004] [W] Studio lights not fully served by the ledger yet
+[23:44:56.479] [32004] [I] CharacterManager watch actor=00000014
+[23:44:56.482] [32004] [I] OAR bases stage=world-prewarm project=0x2853429d790 table=8797 requested=34 resolved=27 missing=7 elapsed_ms=2.269
+[23:44:56.482] [32004] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x286fc773b00 filed to lightQueueAdd)
+[23:44:56.482] [32004] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x286fc773240 filed to lightQueueAdd)
+[23:44:56.482] [32004] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x286fc773100 filed to lightQueueAdd)
+[23:44:56.544] [32004] [I] CP-LIGHT slot 0: ledger shell fetched 0x286fc773b00 (after 1 miss frames)
+[23:44:56.544] [32004] [I] CP-LIGHT slot 1: ledger shell fetched 0x286fc773240 (after 1 miss frames)
+[23:44:56.544] [32004] [I] CP-LIGHT slot 2: ledger shell fetched 0x286fc773100 (after 1 miss frames)
+[23:45:08.269] [21568] [W] DAC native rule event='Reverse_On' unsupported for preview: native rule has non-restorable costs/chance/cooldown/target/dynamic casting
+[23:45:08.269] [21568] [W] DAC native spell fe0bb80a 'Exhaustion State Check' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=1 type=0)
+[23:45:08.269] [21568] [W] DAC native rule event='HitFrame' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:45:08.269] [21568] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[23:45:08.269] [21568] [W] DAC native rule event='MCO_WinOpen' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:45:08.269] [21568] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[23:45:08.269] [21568] [W] DAC native rule event='SBF_BlockStart' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:45:08.269] [21568] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[23:45:08.269] [21568] [W] DAC native rule event='SBF_NormalAttackStop' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:45:08.269] [21568] [W] DAC native spell fe0bb800 'Exhaustion State' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=4 type=0)
+[23:45:08.269] [21568] [W] DAC native rule event='SBF_PowerAttackStop' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:45:08.269] [21568] [W] DAC native spell fe0bb808 'Exhaustion State Dispell' rejected: effect is outside the inert self-marker restoration subset (delivery=0 casting=1 cost=0 perk=0x0 effects=1 type=0)
+[23:45:08.269] [21568] [W] DAC native rule event='FootRight' unsupported for preview: effect is outside the inert self-marker restoration subset
+[23:45:08.271] [21568] [I] DAC original NG Plus matched rules=33 handler=0x61fa0 stride=232
+[23:45:08.271] [21568] [I] DAC snapshot actor=00000014 epoch=1 effects=0 scope=19
+[23:45:08.271] [21568] [I] Panel menu opening=true revision=1
+[23:45:08.280] [36296] [I] ANIMATION actor=00000014 request=1 reason='panel-open' source-generation=1 equipment-target=1h
+[23:45:08.284] [36296] [I] ANIMATION WORLD actor=00000014 request=1 snapshot=paused-source reason='panel-open' hands=(560c2a4c,00043324) drawn=false build-ms=3.281 clips=|original='Animations\male\MT_Idle.HKX' index=1022 bound='Animations\female\mt_idle.hkx' oar-api=unavailable oar-result=unavailable-unknown oar-path='' oar-project='' oar-variant='' oar-submod='' oar-mod='' t=7.37
+[23:45:08.284] [36296] [I] DAC actor=00000014 request=1 Smooth_loop preparation requested
+[23:45:08.284] [36296] [I] SCOPY BEGIN capture=1 actor=00000014 source=0x287856a9480 parent=0x2875c233c80 nodes=1851 geoms=123 api=NiObject::Clone id=68835/70187
+[23:45:08.286] [36296] [I] SCOPY CLONE-RETURN capture=1 copy=0x2878636d900
+[23:45:08.287] [36296] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1851 skin-bones=886
+[23:45:08.287] [36296] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[23:45:08.287] [36296] [I] SCOPY CENSUS source-nodes=1851 copy-nodes=1851 source-geoms=123 copy-geoms=123 source-skins=60 copy-skins=60 source-dynamic=10 copy-dynamic=10
+[23:45:08.287] [36296] [I] SCOPY HELD actor=00000014 attached=1 missing=0 source-graph=read-only
+[23:45:08.287] [36296] [I] SCOPY READY actor=00000014 capture=1 controllers-removed=118 collisions-removed=19
+[23:45:08.288] [36296] [I] SCOPY FRAME actor=00000014 skinned-bound valid=true radius=81.4 center=(1229.9,9579.4,-110.2) graph-bound radius=282.2 scale=0.35 pruned-nodes=71
+[23:45:08.288] [36296] [I] ANIMATION actor=00000014 request=1 graph retarget=0x2878636d900 time=0.00
+[23:45:08.292] [36296] [I] DAC actor=00000014 request=1 Smooth_loop preparation ready
+[23:45:08.292] [36296] [I] DAC actor=00000014 epoch=1 native-effect revision=2
+[23:45:08.292] [36296] [I] DAC actor=00000014 epoch=1 request=1 event='Smooth_loop' native call completed revision=2
+[23:45:08.299] [36296] [I] ANIMATION actor=00000014 request=1 goal=non-combat-idle family=1h direct=false drawn=true
+[23:45:08.301] [36296] [I] ANIMATION actor=00000014 request=1 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:45:08.301] [36296] [I] ANIMATION actor=00000014 request=1 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:45:08.302] [36296] [I] ANIMATION actor=00000014 request=1 asset ready index=23 base=23 replaced=false duration=9.00 path='Animations\1hm_idle.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:45:08.302] [36296] [I] ANIMATION PANEL actor=00000014 request=1 accepted action=1 original='Animations\1hm_idle.hkx' base-index=23 logical='' variant='none' index=23 bound='Animations\1hm_idle.hkx' status=base clip-time=0.000 blend=0.000 build-ms=0.111
+[23:45:08.302] [36296] [I] SCOPY FRAME calibrated offset=(2.5,-0.9,0.1) radius=28.2
+[23:45:08.304] [36296] [I] FIGURE transparency geometries=47 blended=14 tested=25 render-flags=0x204 depth=opaque-write/alpha-read
+[23:45:08.304] [36296] [I] SceneGraph draw OM check: bound=0x2869745a6a0 studio=0x2869745a6a0 match=true
+[23:45:08.304] [36296] [I] SCOPY COMPOSITE src=0x27bcd5ea068 bound=0x27bcd5ea068 match=1 draws=1
+[23:45:16.326] [36296] [I] DAC restore actor=00000014 epoch=2 baseline=0 spell-groups=3 result=matched
+[23:45:16.326] [36296] [I] Panel menu opening=false revision=2
+[23:45:16.334] [36296] [I] ANIMATION actor=00000014 request=1 lifetime reset
+[23:45:16.334] [36296] [I] G6 LEDGER phase=panel-close actor=00000014 request=1 park=0 candidate=unattempted held-source=unbound step-ready=0 candidate-graph=0x0 dac-world=2 dac-sessions=1 panel-rev=2 panel-open=0
+[23:45:35.371] [22484] [I] SOURCE EVENTCAPTURE arm-requested
+[23:45:35.388] [36296] [I] SOURCE EVENTCAPTURE window-open actor=00000014 words=652 nodes=114 events-budget=600 phases-budget=200 seconds=20 graph=0x289fba91080 behavior=0x28552797b80 data=0x28533f88670 set=0x28551ceaf80 words-ptr=0x28551a80000 tracked currentDefaultState=113 iState=94 IsEquipping=110 IsUnequipping=111 bEquipUnequip=125
+[23:45:35.984] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=1 id=410 name='PickNewIdle' payload=null ctx-behavior=null
+[23:45:38.018] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=2 id=9336 name='oor' payload=null ctx-behavior=null
+[23:45:38.217] [15288] [I] CharacterManager equipment actor=00000014 revision=1 equipped=false
+[23:45:38.217] [15288] [I] CharacterManager equipment actor=00000014 revision=2 equipped=false
+[23:45:38.217] [15288] [I] CharacterManager equipment actor=00000014 revision=3 equipped=true
+[23:45:38.254] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=3 id=476 name='MagicForceEquipRight' payload=null ctx-behavior=null
+[23:45:38.273] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=4 id=930 name='DisableBumper' payload=null ctx-behavior=null
+[23:45:38.273] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=5 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:45:38.273] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=6 id=8093 name='Collision_SRecoil_FailSafe' payload=null ctx-behavior=null
+[23:45:38.273] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=7 id=9350 name='oor' payload=null ctx-behavior=null
+[23:45:38.273] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=8 id=658 name='tailEquip' payload=null ctx-behavior=null
+[23:45:38.273] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=9 id=36 name='weaponDraw' payload=null ctx-behavior=null
+[23:45:38.273] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=10 id=371 name='InterruptCast' payload=null ctx-behavior=null
+[23:45:38.273] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=11 id=306 name='arrowDetach' payload=null ctx-behavior=null
+[23:45:38.291] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=12 id=36 name='weaponDraw' payload=null ctx-behavior=null
+[23:45:38.291] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=13 id=8101 name='CastStop' payload=null ctx-behavior=null
+[23:45:38.308] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=14 id=8102 name='Collision_PitchEnd' payload=null ctx-behavior=null
+[23:45:38.308] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 1->11
+[23:45:38.308] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 0->1
+[23:45:38.331] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=15 id=8100 name='Collision_WeightResetEnd' payload=null ctx-behavior=null
+[23:45:38.373] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 9->0
+[23:45:38.397] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 114->98
+[23:45:38.818] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=16 id=345 name='Magic_Equip_Out' payload=null ctx-behavior=null
+[23:45:38.818] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=17 id=931 name='EnableBumper' payload=null ctx-behavior=null
+[23:45:38.818] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=18 id=665 name='tailCombatIdle' payload=null ctx-behavior=null
+[23:45:38.885] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 11->2
+[23:45:38.885] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 0->9
+[23:45:38.885] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 98->122
+[23:45:39.083] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 1->0
+[23:45:39.083] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 122->106
+[23:45:39.299] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=19 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:45:39.299] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=20 id=8092 name='Collision_SRecoil_End_FailSafe' payload=null ctx-behavior=null
+[23:45:39.384] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 106->103
+[23:45:45.514] [21568] [I] CharacterManager equipment actor=00000014 revision=4 equipped=false
+[23:45:45.514] [21568] [I] CharacterManager equipment actor=00000014 revision=5 equipped=true
+[23:45:45.515] [21568] [I] CharacterManager equipment actor=00000014 revision=6 equipped=true
+[23:45:45.558] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=21 id=417 name='WeapOutRightReplaceForceEquip' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=22 id=930 name='DisableBumper' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=23 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=24 id=8093 name='Collision_SRecoil_FailSafe' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=25 id=371 name='InterruptCast' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=26 id=306 name='arrowDetach' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=27 id=332 name='bashExit' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=28 id=19 name='blockStop' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=29 id=665 name='tailCombatIdle' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=30 id=77 name='PitchOverrideStart' payload=null ctx-behavior=null
+[23:45:45.582] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=31 id=169 name='BeginWeaponDraw' payload=null ctx-behavior=null
+[23:45:45.597] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=32 id=8101 name='CastStop' payload=null ctx-behavior=null
+[23:45:45.637] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=33 id=8102 name='Collision_PitchEnd' payload=null ctx-behavior=null
+[23:45:45.637] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 2->10
+[23:45:45.637] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 9->0
+[23:45:45.637] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 0->1
+[23:45:45.660] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=34 id=8100 name='Collision_WeightResetEnd' payload=null ctx-behavior=null
+[23:45:45.727] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 103->116
+[23:45:45.840] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 116->95
+[23:45:45.975] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=35 id=54 name='FootScuffRight' payload=null ctx-behavior=null
+[23:45:46.152] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=36 id=36 name='weaponDraw' payload=null ctx-behavior=null
+[23:45:46.173] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=37 id=78 name='PitchOverrideEnd' payload=null ctx-behavior=null
+[23:45:46.220] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 95->96
+[23:45:46.618] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=38 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:45:46.618] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=39 id=8092 name='Collision_SRecoil_End_FailSafe' payload=null ctx-behavior=null
+[23:45:46.683] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 96->93
+[23:45:46.865] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=40 id=55 name='FootScuffLeft' payload=null ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=41 id=49 name='WeapEquip_Out' payload=null ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=42 id=75 name='WeapEquip_OutMoving' payload=null ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=43 id=931 name='EnableBumper' payload=null ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=44 id=659 name='tailCombatState' payload=null ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=45 id=23 name='attackStop' payload=null ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=46 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=47 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=48 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=49 id=9221 name='oor' payload=null ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=50 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=51 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=52 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=53 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=54 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=55 id=9351 name='oor' payload=null ctx-behavior=null
+[23:45:47.021] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=56 id=665 name='tailCombatIdle' payload=null ctx-behavior=null
+[23:45:47.042] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=57 id=8102 name='Collision_PitchEnd' payload=null ctx-behavior=null
+[23:45:47.065] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=58 id=8100 name='Collision_WeightResetEnd' payload=null ctx-behavior=null
+[23:45:47.089] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 10->1
+[23:45:47.089] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 0->9
+[23:45:47.126] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 93->127
+[23:45:47.300] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 1->0
+[23:45:47.300] [36296] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 127->114
+[23:45:51.386] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=59 id=410 name='PickNewIdle' payload=null ctx-behavior=null
+[23:45:53.425] [36296] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=60 id=9336 name='oor' payload=null ctx-behavior=null
+[23:45:55.404] [36296] [I] SOURCE EVENTCAPTURE window-closed reason=expired actor=00000014 events=60 phases=22 calls=19852 other-graph=19792 ring-dropped=0
+[23:46:20.392] [15288] [I] DAC snapshot actor=00000014 epoch=3 effects=1 scope=19
+[23:46:20.392] [15288] [I] Panel menu opening=true revision=3
+[23:46:20.403] [36296] [I] ANIMATION actor=00000014 request=2 reason='panel-open' source-generation=1 equipment-target=1h
+[23:46:20.406] [36296] [I] ANIMATION WORLD actor=00000014 request=2 snapshot=paused-source reason='panel-open' hands=(560c2a4c,00043324) drawn=false build-ms=3.018 clips=|original='Animations\1HM_Unequip.hkx' index=75 bound='Animations\1hm_unequip.hkx' oar-api=unavailable oar-result=unavailable-unknown oar-path='' oar-project='' oar-variant='' oar-submod='' oar-mod='' t=1.82
+[23:46:20.406] [36296] [I] DAC actor=00000014 request=2 Smooth_loop preparation requested
+[23:46:20.406] [36296] [I] ANIMATION actor=00000014 request=2 graph retarget=0x2878636d900 time=0.00
+[23:46:20.407] [36296] [I] SCOPY BEGIN capture=2 actor=00000014 source=0x287856a9480 parent=0x2875c233c80 nodes=1869 geoms=132 api=NiObject::Clone id=68835/70187
+[23:46:20.409] [36296] [I] SCOPY CLONE-RETURN capture=2 copy=0x28786526800
+[23:46:20.409] [36296] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1869 skin-bones=886
+[23:46:20.409] [36296] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[23:46:20.409] [36296] [I] SCOPY CENSUS source-nodes=1869 copy-nodes=1869 source-geoms=132 copy-geoms=132 source-skins=60 copy-skins=60 source-dynamic=11 copy-dynamic=11
+[23:46:20.410] [36296] [I] SCOPY HELD actor=00000014 attached=1 missing=0 source-graph=read-only
+[23:46:20.410] [36296] [I] SCOPY READY actor=00000014 capture=2 controllers-removed=120 collisions-removed=20
+[23:46:20.410] [36296] [I] SCOPY FRAME actor=00000014 skinned-bound valid=true radius=79.8 center=(1253.1,9566.8,-111.0) graph-bound radius=280.0 scale=0.35 pruned-nodes=76
+[23:46:20.411] [36296] [I] ANIMATION actor=00000014 request=2 graph retarget=0x28786526800 time=0.00
+[23:46:20.411] [36296] [I] SCOPY PARK actor=00000014 scope=process retained-total=1 retention=intentional-process-lifetime
+[23:46:20.416] [36296] [I] DAC actor=00000014 request=2 Smooth_loop preparation ready
+[23:46:20.416] [36296] [I] DAC actor=00000014 epoch=3 native-effect revision=5
+[23:46:20.416] [36296] [I] DAC actor=00000014 epoch=3 request=2 event='Smooth_loop' native call completed revision=5
+[23:46:20.421] [36296] [I] ANIMATION actor=00000014 request=2 goal=non-combat-idle family=1h direct=false drawn=true
+[23:46:20.422] [36296] [I] ANIMATION actor=00000014 request=2 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:20.423] [36296] [I] ANIMATION actor=00000014 request=2 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:20.423] [36296] [I] ANIMATION actor=00000014 request=2 asset ready index=23 base=23 replaced=false duration=9.00 path='Animations\1hm_idle.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:20.423] [36296] [I] ANIMATION PANEL actor=00000014 request=2 accepted action=1 original='Animations\1hm_idle.hkx' base-index=23 logical='' variant='none' index=23 bound='Animations\1hm_idle.hkx' status=base clip-time=0.000 blend=0.000 build-ms=0.102
+[23:46:20.424] [36296] [I] SCOPY FRAME calibrated offset=(2.0,-1.2,-0.3) radius=28.3
+[23:46:21.024] [36296] [I] DAC restore actor=00000014 epoch=4 baseline=0 spell-groups=3 result=matched
+[23:46:21.024] [36296] [I] Panel menu opening=false revision=4
+[23:46:21.083] [36296] [I] ANIMATION actor=00000014 request=2 lifetime reset
+[23:46:21.083] [36296] [I] G6 LEDGER phase=panel-close actor=00000014 request=2 park=1 candidate=unattempted held-source=unbound step-ready=0 candidate-graph=0x0 dac-world=2 dac-sessions=1 panel-rev=4 panel-open=0
+[23:46:26.727] [36296] [I] DAC snapshot actor=00000014 epoch=5 effects=1 scope=19
+[23:46:26.727] [36296] [I] Panel menu opening=true revision=5
+[23:46:26.739] [36296] [I] ANIMATION actor=00000014 request=3 reason='panel-open' source-generation=1 equipment-target=1h
+[23:46:26.742] [36296] [I] ANIMATION WORLD actor=00000014 request=3 snapshot=paused-source reason='panel-open' hands=(560c2a4c,00043324) drawn=false build-ms=3.171 clips=|original='Animations\male\MT_Idle.HKX' index=1022 bound='Animations\female\mt_idle.hkx' oar-api=unavailable oar-result=unavailable-unknown oar-path='' oar-project='' oar-variant='' oar-submod='' oar-mod='' t=0.34
+[23:46:26.742] [36296] [I] DAC actor=00000014 request=3 Smooth_loop preparation requested
+[23:46:26.742] [36296] [I] ANIMATION actor=00000014 request=3 graph retarget=0x28786526800 time=0.00
+[23:46:26.743] [36296] [I] SCOPY BEGIN capture=3 actor=00000014 source=0x287856a9480 parent=0x2875c233c80 nodes=1869 geoms=132 api=NiObject::Clone id=68835/70187
+[23:46:26.745] [36296] [I] SCOPY CLONE-RETURN capture=3 copy=0x2878659f400
+[23:46:26.746] [36296] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1869 skin-bones=886
+[23:46:26.746] [36296] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[23:46:26.746] [36296] [I] SCOPY CENSUS source-nodes=1869 copy-nodes=1869 source-geoms=132 copy-geoms=132 source-skins=60 copy-skins=60 source-dynamic=11 copy-dynamic=11
+[23:46:26.746] [36296] [I] SCOPY HELD actor=00000014 attached=1 missing=0 source-graph=read-only
+[23:46:26.746] [36296] [I] SCOPY READY actor=00000014 capture=3 controllers-removed=120 collisions-removed=20
+[23:46:26.746] [36296] [I] SCOPY FRAME actor=00000014 skinned-bound valid=true radius=81.8 center=(1216.9,9563.6,-109.9) graph-bound radius=274.6 scale=0.35 pruned-nodes=76
+[23:46:26.747] [36296] [I] ANIMATION actor=00000014 request=3 graph retarget=0x2878659f400 time=0.00
+[23:46:26.747] [36296] [I] SCOPY PARK actor=00000014 scope=process retained-total=2 retention=intentional-process-lifetime
+[23:46:26.753] [36296] [I] DAC actor=00000014 request=3 Smooth_loop preparation ready
+[23:46:26.753] [36296] [I] DAC actor=00000014 epoch=5 native-effect revision=8
+[23:46:26.753] [36296] [I] DAC actor=00000014 epoch=5 request=3 event='Smooth_loop' native call completed revision=8
+[23:46:26.759] [36296] [I] ANIMATION actor=00000014 request=3 goal=non-combat-idle family=1h direct=false drawn=true
+[23:46:26.760] [36296] [I] ANIMATION actor=00000014 request=3 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:26.760] [36296] [I] ANIMATION actor=00000014 request=3 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:26.761] [36296] [I] ANIMATION actor=00000014 request=3 asset ready index=23 base=23 replaced=false duration=9.00 path='Animations\1hm_idle.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:26.761] [36296] [I] ANIMATION PANEL actor=00000014 request=3 accepted action=1 original='Animations\1hm_idle.hkx' base-index=23 logical='' variant='none' index=23 bound='Animations\1hm_idle.hkx' status=base clip-time=0.000 blend=0.000 build-ms=0.105
+[23:46:26.761] [36296] [I] SCOPY FRAME calibrated offset=(1.7,-0.5,0.2) radius=28.2
+[23:46:29.780] [36296] [I] DAC restore actor=00000014 epoch=6 baseline=0 spell-groups=3 result=matched
+[23:46:29.780] [36296] [I] Panel menu opening=false revision=6
+[23:46:29.836] [36296] [I] ANIMATION actor=00000014 request=3 lifetime reset
+[23:46:29.836] [36296] [I] G6 LEDGER phase=panel-close actor=00000014 request=3 park=2 candidate=unattempted held-source=unbound step-ready=0 candidate-graph=0x0 dac-world=2 dac-sessions=1 panel-rev=6 panel-open=0
+[23:46:41.301] [22484] [I] SOURCE EVENTCAPTURE arm-requested
+[23:46:41.321] [36296] [I] SOURCE EVENTCAPTURE window-open actor=00000014 words=652 nodes=106 events-budget=600 phases-budget=200 seconds=20 graph=0x289fba91080 behavior=0x28552797b80 data=0x28533f88670 set=0x28551ceaf80 words-ptr=0x28551a80000 tracked currentDefaultState=113 iState=94 IsEquipping=110 IsUnequipping=111 bEquipUnequip=125
+[23:46:47.671] [36296] [I] CharacterManager equipment actor=00000014 revision=7 equipped=false
+[23:46:48.232] [36296] [I] CharacterManager equipment actor=00000014 revision=8 equipped=true
+[23:46:48.776] [36296] [I] CharacterManager equipment actor=00000014 revision=9 equipped=false
+[23:46:48.777] [36296] [I] CharacterManager equipment actor=00000014 revision=10 equipped=false
+[23:46:48.777] [36296] [I] CharacterManager equipment actor=00000014 revision=11 equipped=true
+[23:46:53.318] [36296] [I] DAC snapshot actor=00000014 epoch=7 effects=1 scope=19
+[23:46:53.318] [36296] [I] Panel menu opening=true revision=7
+[23:46:53.331] [36296] [I] ANIMATION actor=00000014 request=4 reason='panel-open' source-generation=1 equipment-target=magic
+[23:46:53.335] [36296] [I] ANIMATION WORLD actor=00000014 request=4 snapshot=paused-source reason='panel-open' hands=(00043324,00043324) drawn=false build-ms=3.268 clips=|original='Animations\male\MT_Idle.HKX' index=1022 bound='Animations\female\mt_idle.hkx' oar-api=unavailable oar-result=unavailable-unknown oar-path='' oar-project='' oar-variant='' oar-submod='' oar-mod='' t=6.34
+[23:46:53.335] [36296] [I] DAC actor=00000014 request=4 Smooth_loop preparation requested
+[23:46:53.335] [36296] [I] ANIMATION actor=00000014 request=4 graph retarget=0x2878659f400 time=0.00
+[23:46:53.336] [36296] [I] SCOPY BEGIN capture=4 actor=00000014 source=0x287856a9480 parent=0x2875c233c80 nodes=1854 geoms=124 api=NiObject::Clone id=68835/70187
+[23:46:53.338] [36296] [I] SCOPY CLONE-RETURN capture=4 copy=0x289fb38e800
+[23:46:53.338] [36296] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1854 skin-bones=886
+[23:46:53.339] [36296] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[23:46:53.339] [36296] [I] SCOPY CENSUS source-nodes=1854 copy-nodes=1854 source-geoms=124 copy-geoms=124 source-skins=60 copy-skins=60 source-dynamic=11 copy-dynamic=11
+[23:46:53.339] [36296] [I] SCOPY HELD actor=00000014 attached=0 missing=0 source-graph=read-only
+[23:46:53.339] [36296] [I] SCOPY READY actor=00000014 capture=4 controllers-removed=118 collisions-removed=19
+[23:46:53.339] [36296] [I] SCOPY FRAME actor=00000014 skinned-bound valid=true radius=81.7 center=(1217.5,9566.0,-110.0) graph-bound radius=271.6 scale=0.35 pruned-nodes=71
+[23:46:53.340] [36296] [I] ANIMATION actor=00000014 request=4 graph retarget=0x289fb38e800 time=0.00
+[23:46:53.340] [36296] [I] SCOPY PARK actor=00000014 scope=process retained-total=3 retention=intentional-process-lifetime
+[23:46:53.347] [36296] [I] DAC actor=00000014 request=4 Smooth_loop preparation ready
+[23:46:53.347] [36296] [I] DAC actor=00000014 epoch=7 native-effect revision=11
+[23:46:53.347] [36296] [I] DAC actor=00000014 epoch=7 request=4 event='Smooth_loop' native call completed revision=11
+[23:46:53.353] [36296] [I] ANIMATION actor=00000014 request=4 goal=non-combat-idle family=magic direct=false drawn=true
+[23:46:53.354] [36296] [I] ANIMATION actor=00000014 request=4 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:53.355] [36296] [I] ANIMATION actor=00000014 request=4 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:53.355] [36296] [I] ANIMATION actor=00000014 request=4 asset ready index=990 base=990 replaced=false duration=2.53 path='Animations\mrh_idle.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:53.355] [36296] [I] ANIMATION PANEL actor=00000014 request=4 accepted action=1 original='Animations\mrh_idle.hkx' base-index=990 logical='' variant='none' index=990 bound='Animations\mrh_idle.hkx' status=base clip-time=0.000 blend=0.000 build-ms=0.110
+[23:46:53.355] [36296] [I] SCOPY FRAME calibrated offset=(2.4,-1.0,0.2) radius=28.2
+[23:46:55.047] [36296] [I] SCOPY COMPOSITE src=0x27bcd5ea068 bound=0x27bcd5ea068 match=1 draws=600
+[23:46:55.894] [36296] [I] ANIMATION actor=00000014 request=4 goal=non-combat-idle family=magic direct=false drawn=true
+[23:46:58.423] [36296] [I] ANIMATION actor=00000014 request=4 goal=non-combat-idle family=magic direct=false drawn=true
+[23:46:58.677] [36296] [I] CharacterManager equipment actor=00000014 revision=12 equipped=false
+[23:46:58.678] [36296] [I] CharacterManager equipment actor=00000014 revision=13 equipped=true
+[23:46:58.678] [36296] [I] CharacterManager equipment actor=00000014 revision=14 equipped=true
+[23:46:58.859] [36296] [I] ANIMATION actor=00000014 request=5 reason='equipment' source-generation=1 equipment-target=1h
+[23:46:58.863] [36296] [I] ANIMATION WORLD actor=00000014 request=5 snapshot=paused-source reason='equipment' hands=(560c2a4c,00043324) drawn=false build-ms=3.186 clips=|original='Animations\male\MT_Idle.HKX' index=1022 bound='Animations\female\mt_idle.hkx' oar-api=unavailable oar-result=unavailable-unknown oar-path='' oar-project='' oar-variant='' oar-submod='' oar-mod='' t=6.34
+[23:46:58.863] [36296] [I] ANIMATION actor=00000014 request=5 transition=equip form=1h query-hands=current previous=(00043324,00043324) current=(560c2a4c,00043324)
+[23:46:58.865] [36296] [I] ANIMATION actor=00000014 request=5 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:58.865] [36296] [I] ANIMATION actor=00000014 request=5 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:58.866] [36296] [I] ANIMATION actor=00000014 request=5 asset ready index=22 base=22 replaced=false duration=1.43 path='Animations\1hm_equip.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:46:58.866] [36296] [I] ANIMATION PANEL actor=00000014 request=5 accepted action=2 original='Animations\1hm_equip.hkx' base-index=22 logical='' variant='none' index=22 bound='Animations\1hm_equip.hkx' status=base clip-time=0.000 blend=0.000 build-ms=0.104
+[23:46:58.943] [36296] [I] SCOPY BEGIN capture=5 actor=00000014 source=0x287856a9480 parent=0x2875c233c80 nodes=1869 geoms=132 api=NiObject::Clone id=68835/70187
+[23:46:58.945] [36296] [I] SCOPY CLONE-RETURN capture=5 copy=0x28786597e80
+[23:46:58.946] [36296] [I] SCOPY SOURCE-DIFF capture-diff root-same=true parent-same=true object-set-same=true local-drift=false world-tight=49 world-loose=49 bound-loose=0 objects=1869 skin-bones=886
+[23:46:58.946] [36296] [I] SCOPY AUDIT shared-nodes=0 shared-skins=0 shared-properties=0 shared-buffers=0 shared-passes=0 external-roots=0 external-bones=0 external-transforms=0 external-pass-geometry=0 external-fade-nodes=0 invalid-arrays=0 unbound-slots=0
+[23:46:58.946] [36296] [I] SCOPY CENSUS source-nodes=1869 copy-nodes=1869 source-geoms=132 copy-geoms=132 source-skins=60 copy-skins=60 source-dynamic=11 copy-dynamic=11
+[23:46:58.946] [36296] [I] SCOPY HELD actor=00000014 attached=1 missing=0 source-graph=read-only
+[23:46:58.946] [36296] [I] SCOPY READY actor=00000014 capture=5 controllers-removed=120 collisions-removed=20
+[23:46:58.946] [36296] [I] SCOPY FRAME actor=00000014 skinned-bound valid=true radius=81.7 center=(1217.5,9566.0,-110.0) graph-bound radius=271.6 scale=0.35 pruned-nodes=76
+[23:46:58.948] [36296] [I] ANIMATION actor=00000014 request=5 graph retarget=0x28786597e80 time=0.07
+[23:46:58.948] [36296] [I] SCOPY PARK actor=00000014 scope=process retained-total=4 retention=intentional-process-lifetime
+[23:46:58.948] [36296] [I] SCOPY FRAME calibrated offset=(2.4,-1.0,0.2) radius=28.2
+[23:46:59.470] [36296] [I] DAC actor=00000014 epoch=7 native-effect revision=12
+[23:46:59.470] [36296] [I] DAC actor=00000014 epoch=7 request=5 event='weaponDraw' native call completed revision=12
+[23:47:00.332] [36296] [I] ANIMATION actor=00000014 request=5 goal=non-combat-idle family=1h direct=false drawn=true
+[23:47:00.354] [36296] [I] ANIMATION actor=00000014 request=5 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:47:00.355] [36296] [I] ANIMATION actor=00000014 request=5 asset ready index=1022 base=1022 replaced=false duration=25.02 path='Animations\female\mt_idle.hkx' mapping=table tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:47:00.355] [36296] [I] ANIMATION actor=00000014 request=5 asset ready index=23 base=23 replaced=false duration=9.00 path='Animations\1hm_idle.hkx' mapping=identity-unverified tracks=99 resolved=96 bone-nodes=116 pose=116 unresolved=''x_NPC LookNode [Look]' |'x_NPC Translate [Pos ]' |'x_NPC Rotate [Rot ]' '
+[23:47:00.355] [36296] [I] ANIMATION PANEL actor=00000014 request=5 accepted action=1 original='Animations\1hm_idle.hkx' base-index=23 logical='' variant='none' index=23 bound='Animations\1hm_idle.hkx' status=base clip-time=0.000 blend=0.000 build-ms=0.135
+[23:47:01.337] [36296] [I] SOURCE EVENTCAPTURE window-closed reason=expired actor=00000014 events=0 phases=0 calls=2678 other-graph=2678 ring-dropped=0
+[23:47:05.501] [36296] [I] DAC restore actor=00000014 epoch=8 baseline=1 spell-groups=9 result=matched
+[23:47:05.501] [36296] [I] Panel menu opening=false revision=8
+[23:47:05.508] [36296] [I] ANIMATION actor=00000014 request=5 lifetime reset
+[23:47:05.508] [36296] [I] G6 LEDGER phase=panel-close actor=00000014 request=5 park=4 candidate=unattempted held-source=unbound step-ready=0 candidate-graph=0x0 dac-world=2 dac-sessions=1 panel-rev=8 panel-open=0
