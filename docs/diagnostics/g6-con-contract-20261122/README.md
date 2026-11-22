@@ -96,3 +96,29 @@
 ## 变更记录
 
 - 2026-11-22：契约落盘（同步集与判据来自 C-G6 v1 run1/run2 的运行证据；实现前，判据不看运行结果）。
+
+## 七、run 1 判读（2026-11-22 23:03–23:07，日志 [CharacterPanel-g6con-20261122.log](../CharacterPanel-g6con-20261122.log) SHA-256 `E427897F…6DDD61`；构建 `…v124-g6-domain-sync-20261122-32432c179e-…` 在位、INI `c062dc0d…`、键面 `CandidateDomainSync=true` 在案）
+
+### 预注册判据判定
+
+| 判据 | 证据 | 判定 |
+| --- | --- | --- |
+| CON-P3 写证据 | 6 × `G6 SYNC ARM` + 6 × `G6 SYNC`（全部 `trigger=initial`——每 request 的首个步进调用即同步），**30/30 变量写 `ok`**、零 `failed/missing/unsupported`；签名域语义自洽（r1/r3 拔刀 `b5a65c60…`、r2 收鞘 `612ce9cc…`、r4–r6 `2937e9ca…`） | **成立** |
+| CON-P1 clip 家族跟随（主判据） | 候选 12 快照（r1 ×3 views、r2 ×3、r3 ×2+）BRANCHES 四元组**全程恒定** `b1hm=1 bmt=10 bmlh=0 walked=97`（MT 域）；源正确切换 拔刀 114（b1hm=10、bmt=0、**bmlh=5**）↔ 收鞘 106。**0/3 域跟随** | **不成立** |
+| CON-P2 旧域退出 | T1/T3（源拔刀域）时候选仍含 `MT_Idle` clip（滞留即残留） | **不成立** |
+| CON-P4 源安全 | `phase=retained source-drift=none`；DAC **7/7 matched**；park 恒等式 **ALL OK**（14 行==终值 14，13 处阈值告警 1 行符合设计）；E1 `candidate=retained` 全程、graph `0x25547b2ce00` 恒定；同步只写候选 | **成立** |
+| CON-P5 P1 mini 回归 | T5：panel-close ×6 全 matched、F9 ×1 后 `held-source=unbound` + `window=rejected reason=unbound-retained` ×1 + request 重计数——G6-A 判据在同步开启下全部保持 | **成立** |
+| CON-P6 稳定性 | `[E]` 仅既有 OAR-not-loaded 1 条；无崩溃 | **成立** |
+
+目视结论未回传（不影响机械判定路径——P1 已 FAIL）。
+
+### 裁定：H-STRUCT 成立，CON-A（仅变量同步）不成立，本契约按 §三判停
+
+变量写成功（P3）但候选状态机不响应：12 快照零域跟随、写后 120 步内分支集不变。**机制指向事件驱动**——与项目既有知识自洽：C-G5-CAL D2 注释明示候选的装备状态转换由 58377 事件派发驱动、变量是伴随态（"the event alone still selects H2H_Equip"）；G3-B 的全部状态机推进（equip/unequip 段）均为事件注入取得。仅同步终值变量不触发转换链。
+
+按契约 §三与 §四：不放宽判据、不调参重试；CON-B 评审或修订另立。**本次非空跑**：CON-P3 证明同步机制（写路径/签名检测/预算/ARM 语义）工作正常可复用；CON-P4/P5 证明同步写候选对 G6-A 生命周期判据零干扰；机制归因从"变量驱动"收敛到"事件驱动"，为下一轮修复（变量+事件同步，或 CON-B）提供直接依据。
+
+### 下一轮选项（用户裁定）
+
+1. **CON-A'**：变量同步（本契约机制原样保留）+ **域切换事件注入**（复用 G3-B 的 resolve+dispatch 路径，拔刀/收鞘各一个预注册事件名——需先取证源图拔刀/收鞘瞬间实际接收的事件名，SourceEventCapture=on 一次窗口即可）——新契约 C-G6-CON v2。
+2. **CON-B**：分支集发散检测 → `window=rejected reason=branch-divergence` 新原因 → 回落 OAR（保守，显示不撒谎但不修复）。
