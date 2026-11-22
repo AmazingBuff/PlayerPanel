@@ -138,3 +138,36 @@ S1–S5 全 PASS 且 S6/S7 完成首采（含不符项记录）→ **G6 原契�
 ## 变更记录
 
 - 2026-11-22：契约落盘（P0 盘点基线来自当日代码盘点；判据不看运行结果）。
+
+## 九、run 1 判读（2026-11-22 22:30–22:37，日志 [CharacterPanel-g6-candidate-20261122-2236.log](../CharacterPanel-g6-candidate-20261122-2236.log) 1,695,086 B，SHA-256 `2F7BD373…51F5F1`；构建 `…behavior-graph-v123-g6-ledger-20261122-8c339cc744-…` 在位，INI `3a6d9e22…`）
+
+身份与键面：`SCENEGRAPH BUILD …v123-g6-ledger-…` 在位；`EXPERIMENT setting G6Ledger=true`、`IdleChainProbe=true` 在案（[E] 仅 OAR-not-loaded 1 条既有项）。17 行 `G6 LEDGER`（14 panel-close + 3 preload-game）、28 行 `SCOPY PARK`（含 1 条阈值告警）、14 行 `DAC restore`、67 行 native-step、33 组 `IDLE CHAIN BRANCHES`/`IDLE CHAIN VARS` 快照（16 views）。
+
+### P1 场景判定（预注册 G6-C1..C6）
+
+| 场景 | 证据 | 判定 |
+| --- | --- | --- |
+| S1 重复会话 ×5+ | 8 次 panel-close 边界（22:31:00–22:33:34）：每次 `ANIMATION … lifetime reset` + `G6 LEDGER phase=panel-close` + `DAC restore … result=matched`；`dac-sessions=1` 恒定、`panel-rev` 每开合 +2 | **PASS**（C1/C5） |
+| S2 快速换装 ×12 | `ANIMATION reason='equipment'` ×12；park 增量区间（+6、+4）对账 OK。**更正**：`lifetime-replace` 0 条不是缺陷——装备变化不改 source-generation（12 行全部 `generation=1`），`new_lifetime` 不触发，MANUAL 预期写错，照实更正 | **PASS**（C1/C2） |
+| S3 重捕获 ×5 | `window=aborted reason=retarget` ×5（steps=2）、view 递增（request=12 view 2→3→4→5）、native-step 67 行 | **PASS** |
+| S4 显示关闭 | `window=aborted reason=reset`（steps=89，中途关包）；`reason=display-close` 0 条 = `SourceEventCapture=off` 下无 capture 窗口（预期内，该行属于 capture 窗口关闭） | **PASS** |
+| S5 读档 ×2 | `preload-game` ×3（含首载）；读档后 `held-source=unbound step-ready=0`（E1 失效路径运行证据）、request 重计数 1→…；**`window=rejected reason=unbound-retained` ×7（22:33:58–22:36:48）——v34 遗留"读档后旧候选被拒的确切原因"落定 = unbound-retained**；epoch 新 session 从 2 重开不复活 | **PASS**（C3/C4） |
+| S6 同 controller 来源替换 | 无 `source-generation-mismatch`/`source-graph-mismatch` 行。首采基线：装备替换不改 source-generation（恒 1）、不改图指针 → `new_lifetime`/拒绝分类不可达；读档拒绝走 `unbound-retained`。**该分类在游戏内的可达路径比 v42 预期窄**（需图指针或 generation 变化） | 首采记录（不判 FAIL，契约 §3.2 允许） |
+| S7 frozen-only | 未观测到分类行 | not-reached 记录 |
+
+**对账恒等式（C2）**：park 增量 vs `SCOPY PARK` 行数 **16/16 区间精确相等**（28 行 == 终值 park=28）；E1 `candidate=retained` 全程、candidate-graph `0x2f2b735ce00` 恒定、无再分配；两例外外无新增持久分配（ledger 各字段收敛）。DAC epoch 序列干净（每开合 +2，读档后重开）。`INDEPENDENT GRAPH phase=retained source-drift=none`（C3）。
+
+### P1 总判定
+
+S1–S5 全 PASS + S6/S7 首采基线在案 + C1..C6 全过 → **G6-A（源恢复、旧工作失效、预览自有关系解除、重复会话无非例外积累）在本构建上有界 PASSED**。限定：本契约场景矩阵 + E1–E5 例外；S6/S7 分类行的可达性结论是本次首采的观察，不是完备性证明。
+
+### P2 判定（预注册 P2-V1/V2）
+
+- **P2-V1 NOT REACHED（前提未发生）**：33 快照（16 views，22:30:54–22:33:29）两侧分支集**各自恒定**——源未发生分支切换事件（玩家全程收鞘 MT 域，`iRightHandType` 只在武器类型间换 1→5→1→6→7→6，从未拔刀/徒手）。
+- **静态收敛缺口基线（比预期更强的证据）**：两侧分支集恒定不相等。末对 census（req13 view2 call120）差集：**源独有 10 项** = `WeaponAdjustment_OffsetAnimationGen`、`MT_Idle_3rdPersonBehavior`、`MT_Idle_TurnBehavior`、`Behavior00`、`Behavior02`、`IdleBFR`、`IdleBehavior.hkb`、`MT_Idle.HKX`（命名对，见下）、`bIdleBeforeConversationIsActive`、`bIdleBeforeConversationModifier`；**候选独有 1 项** = `MT_Idle`（同资源无 `.HKX` 后缀的命名差）。`common=96`、cand=97、src=106。**缺口三连之"缺 WeaponAdjustment"在 33 快照一致复现**；1HM 滞留、缺 MLh 本次无域切换/魔法对照（NOT REACHED，未被反驳）。
+- **域同构正面证据**：两侧 active clip 同为 MT_Idle（源名 `MT_Idle.HKX`、候选名 `MT_Idle`——候选经 unequip replay 后与源同在收鞘 MT 域，96/97 节点共同）——与 C-G5-CHAIN run1"候选滞留 1HM"形态不同：本次域未切换，滞留未触发。
+- **P2-V2 NOT REACHED + 附加发现**：1HM↔MT 切换驱动变量未取得（无切换）；实际识别出**装备变化驱动变量** = `iRightHandType`(idx35, INT)、`iLeftHandType`(idx60, INT)、`weaponSpeedMult`(idx47, REAL)、`TimeDelta`(idx53, REAL 时钟)；检查点间无其他词翻转（`truncated=0` 全程、单快照 changed ≤2）。
+
+### 对 C-G6-CON 立项的影响（契约 §五）
+
+准入条件 2（驱动机制识别）**未达成**——CON-A 需要的分支切换驱动变量仍缺一次"拔刀↔收鞘（或装备↔徒手）"的对照快照。下次会话：持武器拔刀 idle ≥3 s → F7 ×2，再收鞘 idle ≥3 s → F7 ×2，即可在同一 INI 下补齐 V1 对照 + V2 切换变量。WeaponAdjustment 缺口（本次已固化）与 MT 状态机缺失可先进入收敛设计讨论。
