@@ -171,3 +171,30 @@ S1–S5 全 PASS + S6/S7 首采基线在案 + C1..C6 全过 → **G6-A（源恢�
 ### 对 C-G6-CON 立项的影响（契约 §五）
 
 准入条件 2（驱动机制识别）**未达成**——CON-A 需要的分支切换驱动变量仍缺一次"拔刀↔收鞘（或装备↔徒手）"的对照快照。下次会话：持武器拔刀 idle ≥3 s → F7 ×2，再收鞘 idle ≥3 s → F7 ×2，即可在同一 INI 下补齐 V1 对照 + V2 切换变量。WeaponAdjustment 缺口（本次已固化）与 MT 状态机缺失可先进入收敛设计讨论。
+
+## 十、run 2 判读（2026-11-22 22:45–22:47 补课会话，日志 [CharacterPanel-g6-candidate-20261122-2nd.log](../CharacterPanel-g6-candidate-20261122-2nd.log) 746,140 B，SHA-256 `0831CB2F…3A3D`；同构建 v123、新进程 candidate-graph `0x2122ed53100`）
+
+协议达成：拔刀域 3 views（22:46:40–22:46:51）→ 收鞘域 3 views（22:47:07–22:47:19），同一 request 系列内域切换完成；ledger 干净（preload ×1 + panel-close ×2、DAC 2/2 matched、park 5 行 == 终值、`source-drift=none`、[E] 仅既有 1 条）。
+
+### P2-V1 成立（预期 FAIL 复现，三连全部实证）
+
+源分支集随拔刀/收鞘切换，候选恒定不跟随：
+
+| 域 | 源 activeNodes | 候选 activeNodes |
+| --- | --- | --- |
+| 拔刀（1HM+MLh 魔法域） | 114 节点：b1hm=10、bmt=0、**bmlh=5**、weapon-adj=1 | 97 节点：b1hm=1、**bmt=10**、bmlh=0、weapon-adj=0（**滞留 MT 域**） |
+| 收鞘（MT 域） | 106 节点：b1hm=1、bmt=12、bmlh=0、weapon-adj=1 | 97 节点：MT 域（跟随） |
+
+拔刀域差集（common=80）：**源独有 33 项** = 整个 1HM 武器分支（1HM_Behavior/1HM_Idle/SCAR_1HM_Ready 系）+ **整个 MLh 魔法分支**（MLh_Idle、MLh_Ready_MSG、MagicBehavior/MagicRoot/MagicReady 系、DefaultMagicReadyBehavior）+ WeaponAdjustment_OffsetAnimationGen + Weap_BehaviorBFR/Weap_Readied_Lean_Blend；**候选独有 17 项** = 整个 MT 分支（MT_BehaviorGraph/MT_Idle/MT_Default/MT_Root/MTIdleTurnType/Carry 左右臂/ArmsBlend/BodyWeightBlend/DefaultOrDrunkBehavior 等）。收鞘域差集与 run1 相同（源独有 10 + 命名差 1）。
+
+**三连闭环**：① 1HM 分支滞留——run1 是"源 MT/候选 1HM"，本次镜像为"源 1HM/候选 MT"（滞留方向跟随候选的 replay 末态，与源无关）；② 缺 MLh 分支——源拔刀域 5 个 MLh 节点候选全无；③ 缺 WeaponAdjustment——两域 57 组快照（run1 33 + run2 24）一致复现。
+
+### P2-V2 成立（域切换驱动变量清单完整）
+
+拔刀→收鞘的跨视图 diff（req2 view2 call60）捕获 **11 词**，其中核心驱动 8 个（≤8，CON-A 可同步集）：
+
+`iState`(94, INT 9→0)、`currentDefaultState`(113, INT 1→0)、`iRightHandEquipped`(179, INT 1→0)、`iLeftHandEquipped`(180, INT 9→0)、`iMagicEquipped`(117, INT 1→0)、`bMLh_Ready`(92, BOOL 1→0)、`bMRh_Ready`(93, BOOL 1→0)、`bIsInMT`(200, BOOL 0→1)；辅助：`IsAttackReady`(38, BOOL 1→0)、`bIdleBeforeConversation`(589, BOOL 0→1)、`TimeDelta`(53, REAL 时钟)。加 run1 的装备变化变量（`iRightHandType`(35)/`iLeftHandType`(60)/`weaponSpeedMult`(47)）即完整输入账本。全程 `truncated=0`。
+
+### 对 C-G6-CON 立项的裁定
+
+契约 §五准入三条全部达成：① P1 S1–S5 PASS（run1）；② 驱动机制识别完成（8 变量 ≤8 上限）；③ 设计约束（不写源图、不碰 NO-GO、不扩例外）为待评审项。**C-G6-CON v1 可以立项**：CON-A（状态同步）为首选方向——把上述 8 变量经既有 typed-setter 路径（`write_named_int`，C-G5-CAL D2 已验证的写法）在域切换时同步给候选；收敛判据 = 候选分支集跟随源（BRANCHES 四元组逐域相等，除 WeaponAdjustment 与 10 项结构差集——见 §九）。失败回退 = CON-B（发散拒绝回落 OAR）。
