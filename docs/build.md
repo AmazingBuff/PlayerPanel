@@ -2526,3 +2526,16 @@ build\transition_probe_test.exe
 **CON run 1 判读（2026-11-22 23:03–23:07，v124）**：日志 [CharacterPanel-g6con-20261122.log](diagnostics/CharacterPanel-g6con-20261122.log)（`e427897f…`）；判定见 [C-G6-CON v1 §七](diagnostics/g6-con-contract-20261122/README.md)。CON-P3/P4/P5/P6 成立（30/30 写 ok、park 恒等式、G6-A 判据零干扰）；**CON-P1/P2 不成立 → H-STRUCT**：状态机域转换事件驱动，仅变量同步不触发。判停；下一轮 CON-A'（变量+事件）或 CON-B 待用户裁定。
 
 **CON-A' 取证档（2026-11-22 23:1x）**：安装位 INI 换装 `dist/g6-con-20261122/CharacterPanel-g6con-evidence.ini`（`60ecb8aa…`，源侧键面 + `SourceEventCapture=on`，DLL/PDB 不动）；取证会话步骤追加于 [MANUAL](../dist/g6-con-20261122/MANUAL.md)。
+## v125-g6-domain-dispatch-20261122（2026-11-22，C-G6-CON v2 CON-A' 实现）
+
+**实现（提交 `740a94b`）**：`domain_sync_policy.h` 扩展方向规则（(候选,源) iState 对 → draw/sheath，engine-free）+ 派发事件名表（`WeapEquip`/`Unequip`，取证落定）；`domain_sync_tick` 增派发块——prime 后按方向经 `lookup_event_id_in_graph`（候选侧表解析，未解析记 `skip-unresolved` 并停用该方向）→ `event_dispatch_t`（58377）+ `InjectedEvent`（null payload/sender）→ 58315 raw-storage context（与 G3-B 同纪律）；`G6 SYNC` 行增 `direction=/dispatch=` 字段；INI 新键 `CandidateDomainDispatch`（默认 off，要求 `CandidateDomainSync=true`）。离线测试 4 例（含方向规则全组合）exit 0。
+
+**构建（2026-11-22 23:21）**：干净树（提交 `740a94b`）`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v125-g6-domain-dispatch-20261122` + build，exit 0；身份 `CharacterPanel-scenegraph-v125-g6-domain-dispatch-20261122-740a94b1b9-cl94faaed0c6-20261122T152100Z`（无 `+dirty`）。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,214,912 | `42B5492D7FB4BCA29EB374F83650CF92BF7DC3A1A0637405CF516D8534084A31` |
+| CharacterPanel.pdb | 54,759,424 | `69061419F585258CA2D415D51A720DAEB3D4984A713E0CB72ABE9BD957181737` |
+| v2 候选档 INI | | `F8C291F1…83A9D61`（安装位，= v1 CON 档 + `CandidateDomainDispatch=true`） |
+
+**部署（2026-11-22 23:2x；Skyrim/SKSE 未运行）**：v124 三件套备份 `dist/deploy-backup-20261122-v124-v125pre/`（逐位核对）；v125 DLL/PDB + v2 档装入安装位，哈希逐位一致（INI 派生时一处注释笔误已修正重装）。**未启动游戏**；CON v2 run 1 待用户按 `dist/g6-con-v2-20261122/MANUAL.md` 执行。
