@@ -69,3 +69,7 @@
 ## 变更记录
 
 - 2026-11-22：契约落盘（四域签名与 `MagicForceEquipRight`/`WeapOutRightReplaceForceEquip` 来自当日魔法域取证；实现前，判据不看运行结果）。
+
+---
+
+> **运行包**：v126 DLL/PDB + v2 候选档 INI（键面与 v3 相同，`CandidateDomainSync/Dispatch=true`）。v125 备份 `dist/deploy-backup-20261122-v125-v126pre/`；会话步骤见 [v2 MANUAL 追加节](../../../dist/g6-con-v2-20261122/MANUAL.md)。
