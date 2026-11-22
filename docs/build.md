@@ -2471,3 +2471,17 @@ build\transition_probe_test.exe
 **部署（2026-11-21 00:09；Skyrim/SKSE 未运行，MO2 打开）**：安装位 v119 三件套先备份到 `dist/deploy-backup-20261121-v119-v120pre/`（DLL 2,148,864 B `dd599dcf…`、PDB 52,924,416 B `29b6ce40…`、候选 INI 17,980 B `80c4572b…`，逐位核对）。v120 DLL/PDB + 同一候选档装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `d2cd3b79…`/`01278f4d…`/`80c4572b…`；DLL 内身份 `…-v120-g5trans-clip-sweep-wide-20261120-cd9817f21a-…` 在位。运行包 `dist/g5-clip-sweep-v11-20261120/CharacterPanel-v120-AE-Track2.zip`（14,439,916 B `5a004293…`）三件套逐条哈希与安装位一致。**未启动游戏**；候选 run 待上机。
 
 **候选 run 1（2026-11-21 00:13–00:14）**：50/50 `TRANSITION CLIP SWEEP` `status=ok`；加宽到 ±16 后 `best-k` 不再贴边（装备 cmd 2–4 `−13`、5–6 `+12/+13`、7–8 `+7`、9–12 `+3/+2/+2/+1`、13 `−11`），但残差 4–8，说明姿态不对应任何单一采样时刻。把 CPK5 装备 11 帧投到 `pose(1)→pose(12)` 直线：`w` = 0.0909/0.1818/…/1.0000（步长 1/11）、离直线残差 ≤0.125（直线长度 34.6）——**线性过渡混合，周期 11–12 帧 ≈0.2 s**，与 v6 采到的 `DefaultBlendResetTransition`（`duration=0.2`）一致；卸下段 cmd 1–9 姿态几乎不动（`w`≈0、|d|≈0.42），cmd 10–12 才到 0.10/0.46/1.00。**CC10-1/2/4 PASS、CC10-3 PASS（H-S2 混合形式）**：不是采样在推进，而是输出在混合；门 5 装备窗口前 11 帧本质是过渡混合，同时间配对在该段不成立。下一步优先离线重判：用 `tools/gate4_pair.py` 对 v103 正式批次重跑、把装备窗口从 completed≥13 起，看 `E_p`/`E_r` 是否显著下降（不需要上机）。`G4P-7` 仍 FAIL。记录见 [`run1-candidate`](diagnostics/g5-clip-sweep-wide-20261120/run1-candidate/README.md)。
+## v122-g5ver-candidate-20261122（2026-11-22，C-G5-VER v1 §四 stage 0）
+
+**构建（2026-11-22 13:12）**：干净树（提交 `6cc96b6`，工作区无未提交改动）用 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=v122-g5ver-candidate-20261122` + `cmake --build --preset Release`，均 exit 0；身份 `CharacterPanel-scenegraph-v122-g5ver-candidate-20261122-6cc96b6418-cl94faaed0c6-20261122T051227Z`（无 `+dirty`）。C++ 自 v121 构建提交以来零改动（其间仅文档与离线 Python 工具），本构建为冻结期身份重打。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,167,296 | `5F34B7EA25B0CB1E80BF4A95782EF7D08B8E0C4E7E7E630E4B70EBD334FEA4E0` |
+| CharacterPanel.pdb | 53,088,256 | `1FA94FD9F0215D2E47FCF7C87087863C01B1FD38A81D95537FB67A16E0DE17A1` |
+| 候选运行档 INI | 18,366 | `70A4DA4699964738E71F8F3BA58D91AF26D643A8157333E9A03EC247EDF7F689` |
+| 源侧运行档 INI | 18,361 | `CABE92A357ECEC28782CB9BE8558D381AA68CACD9EF4F9844A77FA253D6817CC` |
+
+**运行档派生（2026-11-22）**：两档均由 `dist/run-ini-v121-g5chain-idle-probe-20261121.ini` 行级派生（二进制安全、保留 CRLF/无 BOM、每键恰一次替换）。候选档 6 键：`K5FullSample=true`、`CandidateInputProbe=true`、`CandidateEquipPrime=true`、`CandidateEquipPrimeBranch=true`、`CandidateUnequipProbe=true`、`CandidateUnequipEvent=Unequip`（其余保持：`IndependentGraph=inject`、`DisplayPose/Step=true`、`IdleChainProbe=true`、`SamplingLiveness=off`、全部 transition 探针休眠）。源侧档 7 键：`IndependentGraph=off`、`DisplayPose/Step=false`、`IdleChainProbe=false`、`SamplingLiveness=on`、`K5FullSample=true`、`K5Reconciliation=true`——与 [O-2 决断](diagnostics/g5-o2-modality-20261122/README.md) 的独立源侧会话结构一致。手工清单 `dist/g5-ver-20261122/MANUAL.md`（会话 1/2/3 编排 + 产物回传约定）。
+
+**部署（2026-11-22 13:2x；Skyrim/SKSE 未运行）**：安装位 v121 三件套先备份到 `dist/deploy-backup-20261122-v121-verpre/`（DLL 2,148,864 B `23a785ce…`、PDB 53,088,256 B `c14e4241…`、INI 18,364 B `6071f137…`，逐位核对；注意备份 DLL 哈希与 v121 构建记录的发布哈希不同——以安装位实际字节为准，回退可用）。v122 DLL/PDB + **候选档**（`CharacterPanel.ini`）装入 `E:\SkyrimAE\modh\SKSE\Plugins\`（路径 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`），安装位哈希 `5f34b7ea…`/`1fa94fd9…`/`70a4da46…` 与源逐位一致；DLL 内身份 `…-v122-g5ver-candidate-20261122-6cc96b6418-…` 在位；安装位 INI 逐键断言 **17 键全过**（含 6 个派生键 + 注入五键 + display/IdleChain/SamplingLiveness/K5 簇），BOM 无、CRLF 保留。**未启动游戏**；会话 1（候选捕获）待用户上机，会话 2 前换装源侧档。
