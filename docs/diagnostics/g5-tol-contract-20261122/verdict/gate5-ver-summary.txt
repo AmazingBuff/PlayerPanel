@@ -1,0 +1,28 @@
+G5VER SUMMARY
+protocol=C-G5-VER v1 (frozen 2026-11-22)
+cand total=249 no_clock=0 mid_burst=208 endpoints=29 closure=OK
+saturation_bursts=3 w1b_bursts=9 idun_units=0
+pairs=29 no_partner=0 edge=0 dt_excluded=0 w1a_excluded=2 counted=27
+equivalence counted_pairs=27 tau_p=0 tau_r=28 tau_s=0 invalid_components=0
+dt_clock n=29 median=0.003833 max=0.009167
+decl t30_rot n=29 median=0.2307 max=10.18
+decl t31_rot n=29 median=0.9396 max=30.08
+decl t45_rot n=29 median=0.2754 max=6.373
+decl t58_rot n=29 median=0.5313 max=17.3
+decl t59_rot n=29 median=0.2317 max=8.604
+decl t60_pos n=29 median=4.215 max=4.215
+decl t61_pos n=29 median=3.489 max=3.489
+decl t62_pos n=29 median=4.215 max=4.22
+decl t63_pos n=29 median=4.215 max=4.215
+decl t64_pos n=29 median=5.591 max=5.591
+decl t65_pos n=29 median=4.08 max=4.08
+decl t66_pos n=29 median=3.802 max=3.802
+exceed t11 p=0 r=12 s=0
+exceed t56 p=0 r=3 s=0
+exceed t57 p=0 r=3 s=0
+exceed t86 p=0 r=2 s=0
+exceed t90 p=0 r=2 s=0
+exceed t91 p=0 r=2 s=0
+exceed t93 p=0 r=2 s=0
+exceed t88 p=0 r=1 s=0
+exceed t94 p=0 r=1 s=0

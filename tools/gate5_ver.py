@@ -217,6 +217,26 @@ def summarize_values(values: list[float]) -> dict:
             "p95": ordered[min(len(ordered) - 1, int(len(ordered) * 0.95))], "max": ordered[-1]}
 
 
+def per_track_bounds(tolerances: dict | None) -> dict:
+    """C-G5-TOL v1 扩展：tolerances JSON 的可选 `per_track` 表
+    （g5-tol-per-track/1：rot_deg 以度计、pos/scale 以 E 原值计）。
+    返回 {track: {"rot": E_r 界, "pos": E_p 界, "scale": E_s 界}}；
+    未给轨/未给表 → 空（回退全局 tau）。"""
+    if not tolerances:
+        return {}
+    table = tolerances.get("per_track") or {}
+    if not table:
+        return {}
+    out: dict[int, dict[str, float]] = {}
+    for key, deg in (table.get("rot_deg") or {}).items():
+        out.setdefault(int(key), {})["rot"] = 1.0 - math.cos(math.radians(float(deg)) / 2.0)
+    for key, val in (table.get("pos") or {}).items():
+        out.setdefault(int(key), {})["pos"] = float(val)
+    for key, val in (table.get("scale") or {}).items():
+        out.setdefault(int(key), {})["scale"] = float(val)
+    return out
+
+
 def execute(cand_path: str, src_path: str, out_dir: str, tol_path: str | None) -> int:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -250,6 +270,7 @@ def execute(cand_path: str, src_path: str, out_dir: str, tol_path: str | None) -
                if "dt-excluded" not in e["pair_flags"] and not e.get("src_dual")]
 
     pose_decoded = tolerances is not None
+    pt_bounds = per_track_bounds(tolerances)
     detail_rows: list[list[tuple]] = []
     accounting = None
     if pose_decoded:
@@ -270,17 +291,21 @@ def execute(cand_path: str, src_path: str, out_dir: str, tol_path: str | None) -
                 row.append((e_p, e_r, theta, e_s))
                 if dt_skip:
                     continue
+                bounds = pt_bounds.get(t, {})
+                p_lim = bounds.get("pos", tolerances["tau_p"])
+                r_lim = bounds.get("rot", tolerances["tau_r"])
+                s_lim = bounds.get("scale", tolerances["tau_s"])
                 if t <= MAIN_TRACK_MAX:
-                    if e_p is not None and e_p > tolerances["tau_p"] and judged_eq \
+                    if e_p is not None and e_p > p_lim and judged_eq \
                             and channel_judged(t, "pos"):
                         tau["p"] += 1
                         per_track[t]["p"] += 1
                     if e_r is None or theta is None:
                         invalid_components += 1
-                    elif e_r > tolerances["tau_r"] and judged_eq and channel_judged(t, "rot"):
+                    elif e_r > r_lim and judged_eq and channel_judged(t, "rot"):
                         tau["r"] += 1
                         per_track[t]["r"] += 1
-                    if e_s is not None and e_s > tolerances["tau_s"] and judged_eq \
+                    if e_s is not None and e_s > s_lim and judged_eq \
                             and channel_judged(t, "scale"):
                         tau["s"] += 1
                         per_track[t]["s"] += 1
@@ -297,7 +322,8 @@ def execute(cand_path: str, src_path: str, out_dir: str, tol_path: str | None) -
         accounting = {
             "equivalence": {"tau_p": tau["p"], "tau_r": tau["r"], "tau_s": tau["s"],
                             "invalid_components": invalid_components,
-                            "counted_pairs": len(counted)},
+                            "counted_pairs": len(counted),
+                            "per_track_tolerance": bool(pt_bounds)},
             "per_track_exceed": {f"t{t}": v for t, v in per_track.items()
                                  if v["p"] or v["r"] or v["s"]},
             "decl_measured": {k: summarize_values(v) for k, v in sorted(decl_measured.items())},

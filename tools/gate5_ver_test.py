@@ -406,8 +406,36 @@ def t12(tmp: Path) -> None:
           f"got {manifest['pose_decoded']}, files={sorted(p.name for p in out.iterdir())}")
 
 
+# T13 逐轨容差覆盖（C-G5-TOL v1 扩展）：per_track 表覆盖全局 tau，未覆盖轨回退全局
+def t13(tmp: Path) -> None:
+    # 候选轨 5 旋转 10°（超全局 tau_r）、轨 6 旋转 10°（per_track 覆盖为 20° → 不超）
+    override = {
+        5: ((0.0, 0.0, 0.0), qrot_x(10.0), (1.0, 1.0, 1.0)),
+        6: ((0.0, 0.0, 0.0), qrot_x(10.0), (1.0, 1.0, 1.0)),
+    }
+    recs = [cand_record(0, 30, [equip_clip(0.50, node=0x1000)], overrides=override)]
+    srcs = [src_record(1, [equip_clip(0.50)])]
+    tol_path = tmp / "tol.json"
+    tol_path.write_text(json.dumps({
+        "tau_p": 4.76592e-4, "tau_r": 6.03341e-8, "tau_s": 3.86264e-6,
+        "epsilon_t": 1.0,
+        "per_track": {"rot_deg": {"6": 20.0}},
+    }), encoding="utf-8")
+    out = tmp / "out"
+    rc = v.main(["--candidate", str(cand_bin(recs, tmp)), "--source", str(src_bin(srcs, tmp)),
+                 "--out-dir", str(out), "--tolerances", str(tol_path)])
+    check("T13 exit", rc == 0, f"rc={rc}")
+    acc = load_manifest(out)["accounting"]
+    eq = acc["equivalence"]
+    # t5 超全局 tau_r 计数；t6 被逐轨 20° 覆盖不计数；pos/scale 全 0
+    check("T13 per-track override", eq["tau_r"] == 1 and eq["tau_p"] == 0 and eq["tau_s"] == 0
+          and acc["per_track_exceed"] == {"t5": {"p": 0, "r": 1, "s": 0}}
+          and eq["per_track_tolerance"] is True,
+          f"got {eq} {acc['per_track_exceed']}")
+
+
 def run_all() -> int:
-    tests = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12]
+    tests = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13]
     with tempfile.TemporaryDirectory() as raw:
         tmp = Path(raw)
         for i, test in enumerate(tests):
@@ -420,7 +448,7 @@ def run_all() -> int:
         for line in FAILURES:
             print(f"  - {line}")
         return 1
-    print("gate5_ver_test: T1-T12 all PASS")
+    print("gate5_ver_test: T1-T13 all PASS")
     return 0
 
 
