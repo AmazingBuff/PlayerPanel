@@ -12,7 +12,7 @@
 | G2 | **PASSED（2026-10-28 v33 窗口 + v34 边界，限定范围）** | 完整窗口 120 次 eligible 调用：候选语义运动 **120/120**（1e-6、符号不变）、实际写骨 **109/116**、源 `drift=none` 且 before=after、画面连续（[v33](#g2-v33-run)）。四条边界全部成立：`reset` 中断（`steps=61` 丢弃）、重开不拼接、F7 `reason=retarget` 后 view 递增并重采基线、读档后旧候选被拒回落 OAR（[v34](#g2-v34-boundaries)）。**未覆盖**：同 controller 来源图/generation 替换、单独 frozen-only 拒绝与旧读档拒绝的确切原因、装载销毁、G3–G6；v26 的 raw 119/120 仍只是 raw 证据。 |
 | G3 | **G3-A 成立；G3-B PASSED（相位序列范围）** | [v41 源轨迹](#g3-a-contract)与 [F 候选回放](#c-g3b-f-full-replay)：0→10→1→12→0、两次外部事件、段内 clip-end 自退、源控制不漂移；不等于完整姿态相同。 |
 | G4 | **A/B/C 保留（C 已在修复版仪器上重跑关闭，2026-11-05 v69）** | [A 全窗 numeric 类型](#g4-followup-numeric)：v63 运行整窗 72/72 `type=0`、逐窗对账相等；B 限装备族选择稳定；[C 源事件兼容观察](#c-g4-c1-concurrent-events)：v66 的 `events=0` 曾因 [audit30](behavior-graph-construction-audit.md#audit30) 仪器缺陷撤回，**v69 修复版重跑（attempt 2）判据 1–6 全部成立**——`calls=64/other-graph=64` 正控、源图 `events=0`、`ring-dropped=0`、`reason=display-close`，两注入回放第九次逐位复现。零计数仍只限 58377 路由 |
-| G5 | **门 5 正式运行完成；G4P-7 FAIL** | 候选 249/249、源 849/849，248 对。K5 采样完整，门 4 有界冻结。K5-5、实际附件状态和 A17 独立控制仍有缺项。 [资格与校准](diagnostics/test-results-20261118.md#g5-qualification) · [正式结果](diagnostics/test-results-20261118.md#formal) · [过渡窗与超差拆分](g5-transition-window.md) |
+| G5 | **门 5 正式运行完成；G4P-7 FAIL；C-G5-VER v1 新正式验证机械 FAIL + 全归因分账（2026-11-22）** | 历史：候选 249/249、源 849/849，248 对。**新验证**：两次独立会话（候选 249/249 同构 + 源 1145/1145）→ 冻结规则 41 burst → 29 端点 → 27 计入 → **tau_p=117 / tau_r=1,278 / tau_s=0**，DECL 实测与基准咬合（t31 30.08/t58 17.30/t30 10.18/t59 8.60/t45 6.37/t60-66 pos 3.5-5.6）、残差无新机制、EQ-C5 不触发；EQ-C1 快照级未达成（注入序列单帧 15ms 完成，结构性）；limited 资格裁定。 [VER 判定](diagnostics/g5-ver-formal-20261122/README.md) · [历史正式结果](diagnostics/test-results-20261118.md#formal) · [过渡窗与超差拆分](g5-transition-window.md) |
 | G6 | **PENDING** | 源恢复、请求/任务失效、引用/回调/sink/历史及重复会话收敛均须验；装载 teardown NO-GO。 |
 
 v27 提供了 116 条输出姿态记录和用户确认的 H2H_Idle 静态站姿，**没有测出 116 个实际 name→node 命中**。v28–v30 显示冻结，但配方不完整、v30 门诊断又读错对象；v31 已修正这些代码问题，不能把旧负结果扩大为完整逐帧驱动不可行。
@@ -58,7 +58,7 @@ ill==cap==116、in-flight-max=1）**；E2/E3 与联合验收未做 |
 
 **证据边界（不得外推）**：G4-C 的零事件只限 **58377** 路由；E1 的 `pinned-engine=408` 是**应用入口**计数，不是逐骨写满或输出完成；六工作线程只证明观察到的调用线程不同，不识别调度器；对账恒等式只覆盖已武装窗口内的传送与关闭；audit32 全部为静态可达，不等于运行命中；`fill ≤ cap`（`skeletonWord+0x40` vs `+0x30`）与 63563/63572 两个未列调用点仍是**待运行核验项**。
 
-**下一步排序**（2026-11-22 更新：**[C-G5-VER v1 已冻结](diagnostics/g5-verify-protocol-20261121/README.md)（用户评审通过）**——三个开放项全部决断：O-1 采纳 (a) burst 末步（[O-1 分析](diagnostics/g5-o1-pairing-granularity-20261121/README.md)）、O-2 源侧 = 独立源侧会话/面板关，gate-5 本就是两次会话（[O-2 决断](diagnostics/g5-o2-modality-20261122/README.md)）、O-3 阈值链完整/K2-C1/K5-5 为限定条件继承（[O-3 决断](diagnostics/g5-o3-threshold-chain-20261122/README.md)）；预期产出为机械 FAIL + 全归因分账（tau_r 位精确级）。**下一步 = §九 实现（`gate5_ver.py` 离线 + dry-run）→ 两次上机会话（候选 inject + 源侧独立）→ 最终裁定**；G6/K5-5/K2-C1/A17 继续开放，历史排序保留如下）：① 按 [audit32 §五](behavior-graph-construction-audit.md#audit32) 增补正控清单 → 探针 v3 实现评审 → 上机取证；② E2 完整贡献（**E2-A 契约已预注册**，见 [C-G5-E2](#c-g5-e2)；含槽填充分点、63563 路径）；③ E3 合格 R2 配对（按 n 路径三分记录）；④ 联合验收 → 独立校准 → 协议冻结 → 新正式验证。G6 后置，typed-setter 窗口按需重跑。
+**下一步排序**（2026-11-22 收官：**[C-G5-VER v1 正式验证已完成并判定](diagnostics/g5-ver-formal-20261122/README.md)**——机械 FAIL + 全归因分账，无新机制，limited 资格。**待决策（产品层，非协议范围）**：残差量级（阶梯 ≈0.5-1.2°、平移 t4/t44/t43）是否可接受——可接受则**另立容差契约**（tau_r' ≈1-2°）出 PASS 形；不可接受则时钟阶梯的修复路径 = 驱动/时钟语义改造（另立行为契约）。**仍开放**：G6 全部（含克隆分支收敛缺口三连）、K5-5、K2-C1、A17、EQ-C1 快照级补测、装载 teardown NO-GO；历史排序保留如下）：
 
 ### 关卡
 
