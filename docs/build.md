@@ -2524,3 +2524,5 @@ build\transition_probe_test.exe
 **运行档派生**：v123 候选档尾部追加 `CandidateDomainSync=true`（CRLF、无 BOM）。**部署（2026-11-22 23:0x；Skyrim/SKSE 未运行）**：v123 三件套备份 `dist/deploy-backup-20261122-v123-v124pre/`（逐位核对）；v124 DLL/PDB + CON 档装入安装位，哈希 `095238d2…`/`628b3072…`/`c062dc0d…` 逐位一致。**未启动游戏**；CON run 1 待用户按 `dist/g6-con-20261122/MANUAL.md` 执行（T1–T5 + 目视域确认）。
 
 **CON run 1 判读（2026-11-22 23:03–23:07，v124）**：日志 [CharacterPanel-g6con-20261122.log](diagnostics/CharacterPanel-g6con-20261122.log)（`e427897f…`）；判定见 [C-G6-CON v1 §七](diagnostics/g6-con-contract-20261122/README.md)。CON-P3/P4/P5/P6 成立（30/30 写 ok、park 恒等式、G6-A 判据零干扰）；**CON-P1/P2 不成立 → H-STRUCT**：状态机域转换事件驱动，仅变量同步不触发。判停；下一轮 CON-A'（变量+事件）或 CON-B 待用户裁定。
+
+**CON-A' 取证档（2026-11-22 23:1x）**：安装位 INI 换装 `dist/g6-con-20261122/CharacterPanel-g6con-evidence.ini`（`60ecb8aa…`，源侧键面 + `SourceEventCapture=on`，DLL/PDB 不动）；取证会话步骤追加于 [MANUAL](../dist/g6-con-20261122/MANUAL.md)。
