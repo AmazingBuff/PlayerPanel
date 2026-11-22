@@ -1100,6 +1100,14 @@ namespace
         }
         std::string details;
         static std::uint32_t s_disabled_mask = 0; // bit i: variable i stopped for this process
+        // C-G6-CON v2 (§2.2): the direction rule reads the (candidate, source)
+        // iState pair — sync-set position 0 on both sides — before priming.
+        std::int32_t candidate_i_state = -1;
+        bool const have_candidate_state =
+            read_variable_int(a_candidate, s_candidate_indices[0], candidate_i_state);
+        DomainSyncDirection const direction = have_candidate_state ?
+            domain_sync_direction(static_cast<std::uint32_t>(candidate_i_state), signature[0]) :
+            DomainSyncDirection::e_none;
         for (std::size_t i = 0; i < Domain_Sync_Variable_Count; ++i)
         {
             char const* status = "skipped-disabled";
@@ -1133,8 +1141,46 @@ namespace
             }
         }
         ++s_events;
-        logger::info("G6 SYNC actor={:08x} request={} view={} trigger={} sig={:016x} events={} writes='{}'",
+        // C-G6-CON v2 (§2.3): directional dispatch AFTER the prime, through the
+        // G3-B path (58377 + InjectedEvent, null payload/sender, 58315 raw-storage
+        // context). Unresolved event ids stop that direction for the process.
+        char const* dispatch_label = "none";
+        if (direction != DomainSyncDirection::e_none && domain_dispatch_enabled())
+        {
+            std::size_t const dispatch_index = domain_sync_dispatch_index(direction);
+            static RE::hkbBehaviorGraphData const* s_dispatch_resolved = nullptr;
+            static std::array<std::int32_t, Domain_Sync_Dispatch_Count> s_dispatch_ids{};
+            if (candidate_data != s_dispatch_resolved)
+            {
+                for (std::size_t i = 0; i < Domain_Sync_Dispatch_Count; ++i)
+                {
+                    std::string const name{ Domain_Sync_Dispatch_Event_Names[i] };
+                    s_dispatch_ids[i] = lookup_event_id_in_graph(*candidate_data, name.c_str());
+                }
+                s_dispatch_resolved = candidate_data;
+            }
+            std::int32_t const event_id = s_dispatch_ids[dispatch_index];
+            if (event_id < 0)
+            {
+                dispatch_label = "skip-unresolved";
+            }
+            else
+            {
+                RE::hkbBehaviorGraph* const candidate_behavior_nc =
+                    a_candidate.characterInstance.behaviorGraph.get();
+                alignas(8) std::uint8_t context_storage[sizeof(RE::hkbContext)]{};
+                RE::hkbContext* const context = reinterpret_cast<RE::hkbContext*>(context_storage);
+                static REL::Relocation<context_builder_t> init_context{ REL::ID(ContextBuilderID) };
+                init_context(context, &a_candidate.characterInstance, nullptr, nullptr, nullptr);
+                InjectedEvent event{ static_cast<std::uint32_t>(event_id), 0, nullptr, nullptr };
+                static REL::Relocation<event_dispatch_t> domain_dispatch{ REL::ID(EventDispatchID) };
+                domain_dispatch(candidate_behavior_nc, context, &event);
+                dispatch_label = Domain_Sync_Dispatch_Event_Names[dispatch_index].data();
+            }
+        }
+        logger::info("G6 SYNC actor={:08x} request={} view={} trigger={} direction={} dispatch={} sig={:016x} events={} writes='{}'",
             a_actor, a_request, a_view, initial ? "initial" : "change",
+            domain_sync_direction_name(direction), dispatch_label,
             domain_sync_signature(signature), s_events, std::string_view{ details });
         s_applied = signature;
         s_have_applied = true;

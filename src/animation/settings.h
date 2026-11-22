@@ -190,6 +190,11 @@ namespace animation
     // candidate's own variable set through the typed setters when the signature
     // changes. Writes candidate only; requires IndependentGraph=inject.
     [[nodiscard]] bool domain_sync_enabled();
+    // C-G6-CON v2 (2026-11-22, default off): CON-A' directional event dispatch —
+    // when the domain signature changes, prime first then dispatch the
+    // pre-registered direction event (WeapEquip/Unequip) into the candidate via
+    // the 58377 entry. Requires domain_sync_enabled; writes candidate only.
+    [[nodiscard]] bool domain_dispatch_enabled();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END

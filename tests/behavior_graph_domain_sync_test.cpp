@@ -17,11 +17,16 @@
 
 namespace
 {
+    using test_plugin::animation::behavior_graph::Domain_Sync_Dispatch_Event_Names;
     using test_plugin::animation::behavior_graph::Domain_Sync_Event_Budget;
     using test_plugin::animation::behavior_graph::Domain_Sync_Variable_Count;
     using test_plugin::animation::behavior_graph::Domain_Sync_Variable_Names;
+    using test_plugin::animation::behavior_graph::DomainSyncDirection;
     using test_plugin::animation::behavior_graph::domain_sync_signature;
     using test_plugin::animation::behavior_graph::domain_sync_clip_family;
+    using test_plugin::animation::behavior_graph::domain_sync_direction;
+    using test_plugin::animation::behavior_graph::domain_sync_direction_name;
+    using test_plugin::animation::behavior_graph::domain_sync_dispatch_index;
 
     void sync_set_matches_the_preregistered_contract()
     {
@@ -64,6 +69,23 @@ namespace
         // Outer whitespace only.
         assert(domain_sync_clip_family(" MT_Idle.HKX\t") == "MT_Idle");
     }
+
+    void direction_rule_matches_the_v2_contract()
+    {
+        assert(domain_sync_direction(0, 9) == DomainSyncDirection::e_draw);
+        assert(domain_sync_direction(9, 0) == DomainSyncDirection::e_sheath);
+        assert(domain_sync_direction(0, 0) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction(9, 9) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction(2, 9) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction(0, 5) == DomainSyncDirection::e_none);
+        assert(domain_sync_direction_name(DomainSyncDirection::e_draw) == "draw");
+        assert(domain_sync_direction_name(DomainSyncDirection::e_sheath) == "sheath");
+        assert(domain_sync_direction_name(DomainSyncDirection::e_none) == "none");
+        assert(domain_sync_dispatch_index(DomainSyncDirection::e_draw) == 0);
+        assert(domain_sync_dispatch_index(DomainSyncDirection::e_sheath) == 1);
+        assert(Domain_Sync_Dispatch_Event_Names[0] == "WeapEquip");
+        assert(Domain_Sync_Dispatch_Event_Names[1] == "Unequip");
+    }
 }
 
 int main()
@@ -71,6 +93,7 @@ int main()
     sync_set_matches_the_preregistered_contract();
     signature_is_order_sensitive_and_stable();
     clip_family_normalization_matches_recorded_evidence();
-    std::cout << "3 g6 domain-sync policy cases passed" << std::endl;
+    direction_rule_matches_the_v2_contract();
+    std::cout << "4 g6 domain-sync policy cases passed" << std::endl;
     return 0;
 }
