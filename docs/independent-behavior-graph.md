@@ -58,7 +58,7 @@ ill==cap==116、in-flight-max=1）**；E2/E3 与联合验收未做 |
 
 **证据边界（不得外推）**：G4-C 的零事件只限 **58377** 路由；E1 的 `pinned-engine=408` 是**应用入口**计数，不是逐骨写满或输出完成；六工作线程只证明观察到的调用线程不同，不识别调度器；对账恒等式只覆盖已武装窗口内的传送与关闭；audit32 全部为静态可达，不等于运行命中；`fill ≤ cap`（`skeletonWord+0x40` vs `+0x30`）与 63563/63572 两个未列调用点仍是**待运行核验项**。
 
-**下一步排序**（2026-11-22 更新：门 5 机制归因全部闭环——过渡窗/底噪/挂点/肩链/源侧混合语义，见 [过渡窗文档 §八](g5-transition-window.md)；新正式验证协议整合稿 **[C-G5-VER v0](diagnostics/g5-verify-protocol-20261121/README.md)** 已预注册，**O-1 已决断（2026-11-22 采纳 (a) burst 末步，修订并入 §3.1/§3.2**，见 [O-1 分析](diagnostics/g5-o1-pairing-granularity-20261121/README.md)**）**，冻结前待决 O-2 面板暂停语义/O-3 CAL 阈值链；历史排序保留如下）：① 按 [audit32 §五](behavior-graph-construction-audit.md#audit32) 增补正控清单 → 探针 v3 实现评审 → 上机取证；② E2 完整贡献（**E2-A 契约已预注册**，见 [C-G5-E2](#c-g5-e2)；含槽填充分点、63563 路径）；③ E3 合格 R2 配对（按 n 路径三分记录）；④ 联合验收 → 独立校准 → 协议冻结 → 新正式验证。G6 后置，typed-setter 窗口按需重跑。
+**下一步排序**（2026-11-22 更新：门 5 机制归因全部闭环——过渡窗/底噪/挂点/肩链/源侧混合语义，见 [过渡窗文档 §八](g5-transition-window.md)；新正式验证协议整合稿 **[C-G5-VER v0](diagnostics/g5-verify-protocol-20261121/README.md)** 已预注册，**O-1 已决断（2026-11-22 采纳 (a) burst 末步，修订并入 §3.1/§3.2**，见 [O-1 分析](diagnostics/g5-o1-pairing-granularity-20261121/README.md)**）、O-3 已决断（阈值链完整，K2-C1/K5-5 为限定条件继承，见 [O-3 决断](diagnostics/g5-o3-threshold-chain-20261122/README.md)）**，冻结前仅待 O-2 面板暂停语义（需一次 ~5 分钟游戏探测）；历史排序保留如下）：① 按 [audit32 §五](behavior-graph-construction-audit.md#audit32) 增补正控清单 → 探针 v3 实现评审 → 上机取证；② E2 完整贡献（**E2-A 契约已预注册**，见 [C-G5-E2](#c-g5-e2)；含槽填充分点、63563 路径）；③ E3 合格 R2 配对（按 n 路径三分记录）；④ 联合验收 → 独立校准 → 协议冻结 → 新正式验证。G6 后置，typed-setter 窗口按需重跑。
 
 ### 关卡
 
