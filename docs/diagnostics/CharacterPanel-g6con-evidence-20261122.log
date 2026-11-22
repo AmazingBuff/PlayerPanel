@@ -1,0 +1,211 @@
+[23:11:48.812] [26644] [I] CharacterPanel v1-2-1-0
+[23:11:48.812] [26644] [I] CharacterPanel loaded
+[2026-11-22 23:11:48.812] [thread 26644] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(89): [info] CharacterPanel v1-2-1-0
+[23:11:59.228] [26644] [E] failed to get plugin info for OpenAnimationReplacer
+[23:11:59.228] [26644] [I] OAR hooks unavailable: Open Animation Replacer is not loaded
+[23:12:33.675] [34692] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[23:12:33.675] [34692] [I] DIAGNOSTICS setting DetailedAnimationTrace=false
+[23:12:33.675] [34692] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting IndependentGraph=off
+[23:12:33.675] [34692] [I] EXPERIMENT setting DisplayPose=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting DisplayStep=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting SourceTimeline=off transient=false graph='' pose-capture=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting SourceEventCapture=on
+[23:12:33.675] [34692] [I] EXPERIMENT setting SourceWriteCapture=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting CandidateVariableCensus=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting CandidateInputProbe=false variable='IsEquipping' value=1
+[23:12:33.675] [34692] [I] EXPERIMENT setting CandidateEquipPrime=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting CandidateEquipPrimeBranch=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting CandidateUnequipProbe=false variable='' prime='' event=''
+[23:12:33.675] [34692] [I] EXPERIMENT setting OarContextWatch=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting SamplingLiveness=on
+[23:12:33.675] [34692] [I] EXPERIMENT setting ObservationSnapshot=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting ControlSample=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting ControlSampleGrid=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting ClipIdentityCensus=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting EquipmentStateDump=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting K5FullSample=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting K5LayerAudit=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting K5Reconciliation=true
+[23:12:33.675] [34692] [I] EXPERIMENT setting SetupAudit=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting BootstrapSourcePose=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting StateProbe=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting StateChildProbe=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting TransitionStateProbe=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting TransitionSubgraphProbe=false
+[23:12:33.675] [34692] [I] EXPERIMENT setting G6Ledger=true
+[23:12:33.676] [34692] [I] SOURCE EVENTCAPTURE installed mode=on target=0x7ff6ca2158a0 stub=0x7ff64afb0000 original=0x7ff64afb0050 head=48 8b c4 48 89 48 08
+[23:12:33.676] [34692] [I] SOURCE WRITECAPTURE install-skip reason=off
+[23:12:33.676] [34692] [W] PROBE LIVENESS install-skip reason=other-detour-probe-priority
+[23:12:33.676] [34692] [I] DAC native inventory lifecycle sink installed
+[23:12:33.680] [34692] [I] All shaders compiled
+[23:12:33.680] [34692] [I] Installed pre-UI renderer hook
+[23:12:33.680] [34692] [I] Panel menu sink installed
+[23:12:33.680] [34692] [I] CharacterManager equipment sink installed
+[23:12:33.680] [34692] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-v124-g6-domain-sync-20261122-32432c179e-cl94faaed0c6-20261122T145939Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[23:12:33.718] [ 740 ] [I] Studio host changed: 0x0 -> 0x1f0e7c86980 (paused=true)
+[23:12:33.718] [ 740 ] [I] Studio light node has been created
+[23:12:33.718] [ 740 ] [I] CP-LIGHT slot 0: registered, shell 0x1f27d0a3880 queued (ledger stays the authority)
+[23:12:33.718] [ 740 ] [I] CP-LIGHT slot 1: registered, shell 0x1f27d0a3740 queued (ledger stays the authority)
+[23:12:33.718] [ 740 ] [I] CP-LIGHT slot 2: registered, shell 0x1f27d0a3600 queued (ledger stays the authority)
+[23:12:33.718] [ 740 ] [I] Studio lights registered on the ledger (scene=0x1e777ff6e80 -- ledger fetch will populate the slots)
+[23:12:33.718] [ 740 ] [I] CP-LIGHT slot 0: ledger shell fetched 0x1f27d0a3880 (after 0 miss frames)
+[23:12:33.718] [ 740 ] [I] CP-LIGHT slot 1: ledger shell fetched 0x1f27d0a3740 (after 0 miss frames)
+[23:12:33.718] [ 740 ] [I] CP-LIGHT slot 2: ledger shell fetched 0x1f27d0a3600 (after 0 miss frames)
+[23:12:51.419] [26644] [I] PROBE LIVENESS invalidate-requested reason=world-reset
+[23:12:51.419] [26644] [I] DAC old-world sessions discarded world=2
+[23:12:51.419] [26644] [I] G6 LEDGER phase=preload-game actor=00000000 request=0 park=0 candidate=unattempted held-source=unbound step-ready=0 candidate-graph=0x0 dac-world=2 dac-sessions=0 panel-rev=0 panel-open=0
+[23:12:51.563] [ 740 ] [I] SOURCE EVENTCAPTURE invalidated reason=world-reset
+[23:12:51.725] [ 740 ] [I] CP-LIGHT slot 0: ledger shell dropped
+[23:12:51.725] [ 740 ] [I] CP-LIGHT slot 1: ledger shell dropped
+[23:12:51.725] [ 740 ] [I] CP-LIGHT slot 2: ledger shell dropped
+[23:12:51.725] [ 740 ] [W] Studio lights not fully served by the ledger yet
+[23:12:58.076] [ 740 ] [W] Studio lights not fully served by the ledger yet
+[23:12:58.500] [ 740 ] [I] CharacterManager watch actor=00000014
+[23:12:58.503] [ 740 ] [I] OAR bases stage=world-prewarm project=0x1f0b2fe3500 table=8797 requested=34 resolved=27 missing=7 elapsed_ms=2.255
+[23:12:58.503] [ 740 ] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x1f27d0a3b00 filed to lightQueueAdd)
+[23:12:58.503] [ 740 ] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x1f27d0a3240 filed to lightQueueAdd)
+[23:12:58.503] [ 740 ] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x1f27d0a3100 filed to lightQueueAdd)
+[23:12:58.573] [ 740 ] [I] CP-LIGHT slot 0: ledger shell fetched 0x1f27d0a3b00 (after 1 miss frames)
+[23:12:58.573] [ 740 ] [I] CP-LIGHT slot 1: ledger shell fetched 0x1f27d0a3240 (after 1 miss frames)
+[23:12:58.573] [ 740 ] [I] CP-LIGHT slot 2: ledger shell fetched 0x1f27d0a3100 (after 1 miss frames)
+[23:13:23.958] [37076] [I] SOURCE EVENTCAPTURE arm-requested
+[23:13:23.976] [26644] [I] SOURCE EVENTCAPTURE window-open actor=00000014 words=652 nodes=106 events-budget=600 phases-budget=200 seconds=20 graph=0x1f555798b80 behavior=0x1f0d2697b80 data=0x1f0b3e89180 set=0x1f0d1b6f140 words-ptr=0x1f0d195b000 tracked currentDefaultState=113 iState=94 IsEquipping=110 IsUnequipping=111 bEquipUnequip=125
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=1 id=2 name='WeapEquip' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=2 id=543 name='AnimObjectUnequip' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=3 id=8483 name='oor' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=4 id=371 name='InterruptCast' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=5 id=306 name='arrowDetach' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=6 id=332 name='bashExit' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=7 id=19 name='blockStop' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=8 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=9 id=665 name='tailCombatIdle' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=10 id=77 name='PitchOverrideStart' payload=null ctx-behavior=null
+[23:13:26.344] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=11 id=169 name='BeginWeaponDraw' payload=null ctx-behavior=null
+[23:13:26.370] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=12 id=8101 name='CastStop' payload=null ctx-behavior=null
+[23:13:26.388] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=13 id=8102 name='Collision_PitchEnd' payload=null ctx-behavior=null
+[23:13:26.406] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=14 id=8100 name='Collision_WeightResetEnd' payload=null ctx-behavior=null
+[23:13:26.406] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 0->10
+[23:13:26.406] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 0->1
+[23:13:26.462] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 106->121
+[23:13:26.596] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 121->94
+[23:13:26.748] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=15 id=54 name='FootScuffRight' payload=null ctx-behavior=null
+[23:13:26.905] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=16 id=36 name='weaponDraw' payload=null ctx-behavior=null
+[23:13:26.924] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=17 id=78 name='PitchOverrideEnd' payload=null ctx-behavior=null
+[23:13:26.962] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 94->95
+[23:13:27.604] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=18 id=55 name='FootScuffLeft' payload=null ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=19 id=49 name='WeapEquip_Out' payload=null ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=20 id=75 name='WeapEquip_OutMoving' payload=null ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=21 id=931 name='EnableBumper' payload=null ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=22 id=659 name='tailCombatState' payload=null ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=23 id=23 name='attackStop' payload=null ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=24 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=25 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=26 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=27 id=9221 name='oor' payload=null ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=28 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=29 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=30 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=31 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=32 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=33 id=9351 name='oor' payload=null ctx-behavior=null
+[23:13:27.784] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=34 id=665 name='tailCombatIdle' payload=null ctx-behavior=null
+[23:13:27.801] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=35 id=8102 name='Collision_PitchEnd' payload=null ctx-behavior=null
+[23:13:27.820] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=36 id=8100 name='Collision_WeightResetEnd' payload=null ctx-behavior=null
+[23:13:27.842] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 10->1
+[23:13:27.842] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 0->9
+[23:13:27.880] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 95->129
+[23:13:28.057] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 1->0
+[23:13:28.057] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 129->114
+[23:13:32.099] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=37 id=410 name='PickNewIdle' payload=null ctx-behavior=null
+[23:13:33.118] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=38 id=144 name='Unequip' payload=null ctx-behavior=null
+[23:13:33.118] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=39 id=930 name='DisableBumper' payload=null ctx-behavior=null
+[23:13:33.118] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=40 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:13:33.118] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=41 id=8093 name='Collision_SRecoil_FailSafe' payload=null ctx-behavior=null
+[23:13:33.118] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=42 id=9350 name='oor' payload=null ctx-behavior=null
+[23:13:33.118] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=43 id=657 name='tailUnequip' payload=null ctx-behavior=null
+[23:13:33.118] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=44 id=306 name='arrowDetach' payload=null ctx-behavior=null
+[23:13:33.118] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=45 id=77 name='PitchOverrideStart' payload=null ctx-behavior=null
+[23:13:33.138] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=46 id=170 name='BeginWeaponSheathe' payload=null ctx-behavior=null
+[23:13:33.175] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 1->12
+[23:13:33.175] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsUnequipping' 0->1
+[23:13:33.175] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='bEquipUnequip' 0->1
+[23:13:33.175] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 114->133
+[23:13:33.366] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 9->0
+[23:13:33.366] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 133->98
+[23:13:34.115] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=47 id=37 name='weaponSheathe' payload=null ctx-behavior=null
+[23:13:34.133] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=48 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:13:34.133] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=49 id=8092 name='Collision_SRecoil_End_FailSafe' payload=null ctx-behavior=null
+[23:13:34.187] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 98->96
+[23:13:34.207] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=50 id=78 name='PitchOverrideEnd' payload=null ctx-behavior=null
+[23:13:34.301] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=51 id=76 name='Unequip_OutMoving' payload=null ctx-behavior=null
+[23:13:34.582] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=52 id=55 name='FootScuffLeft' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=53 id=50 name='Unequip_Out' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=54 id=54 name='FootScuffRight' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=55 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=56 id=1098 name='MTState' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=57 id=306 name='arrowDetach' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=58 id=656 name='tailMTState' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=59 id=367 name='HeadTrackingOn' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=60 id=96 name='IdleStop' payload=null ctx-behavior=null
+[23:13:35.108] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=61 id=1186 name='tailMTIdle' payload=null ctx-behavior=null
+[23:13:35.167] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 12->0
+[23:13:35.167] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 96->122
+[23:13:35.390] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsUnequipping' 1->0
+[23:13:35.390] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='bEquipUnequip' 1->0
+[23:13:35.390] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 122->106
+[23:13:43.994] [26644] [I] SOURCE EVENTCAPTURE window-closed reason=expired actor=00000014 events=61 phases=22 calls=23150 other-graph=23089 ring-dropped=0
+[23:13:53.368] [13176] [I] SOURCE EVENTCAPTURE arm-requested
+[23:13:53.385] [26644] [I] SOURCE EVENTCAPTURE window-open actor=00000014 words=652 nodes=106 events-budget=600 phases-budget=200 seconds=20 graph=0x1f555798b80 behavior=0x1f0d2697b80 data=0x1f0b3e89180 set=0x1f0d1b6f140 words-ptr=0x1f0d195b000 tracked currentDefaultState=113 iState=94 IsEquipping=110 IsUnequipping=111 bEquipUnequip=125
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=1 id=2 name='WeapEquip' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=2 id=543 name='AnimObjectUnequip' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=3 id=8483 name='oor' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=4 id=371 name='InterruptCast' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=5 id=306 name='arrowDetach' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=6 id=332 name='bashExit' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=7 id=19 name='blockStop' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=8 id=8098 name='Collision_RecoilCancelable' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=9 id=665 name='tailCombatIdle' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=10 id=77 name='PitchOverrideStart' payload=null ctx-behavior=null
+[23:13:56.202] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=11 id=169 name='BeginWeaponDraw' payload=null ctx-behavior=null
+[23:13:56.226] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=12 id=8101 name='CastStop' payload=null ctx-behavior=null
+[23:13:56.241] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=13 id=8102 name='Collision_PitchEnd' payload=null ctx-behavior=null
+[23:13:56.270] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=14 id=8100 name='Collision_WeightResetEnd' payload=null ctx-behavior=null
+[23:13:56.270] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 0->10
+[23:13:56.270] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 0->1
+[23:13:56.332] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 106->121
+[23:13:56.458] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 121->94
+[23:13:56.603] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=15 id=54 name='FootScuffRight' payload=null ctx-behavior=null
+[23:13:56.769] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=16 id=36 name='weaponDraw' payload=null ctx-behavior=null
+[23:13:56.789] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=17 id=78 name='PitchOverrideEnd' payload=null ctx-behavior=null
+[23:13:56.825] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 94->95
+[23:13:57.479] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=18 id=55 name='FootScuffLeft' payload=null ctx-behavior=null
+[23:13:57.645] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=19 id=49 name='WeapEquip_Out' payload=null ctx-behavior=null
+[23:13:57.645] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=20 id=75 name='WeapEquip_OutMoving' payload=null ctx-behavior=null
+[23:13:57.645] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=21 id=931 name='EnableBumper' payload=null ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=22 id=659 name='tailCombatState' payload=null ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=23 id=23 name='attackStop' payload=null ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=24 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=25 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=26 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=27 id=9221 name='oor' payload=null ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=28 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=29 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=30 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=31 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=32 id=8085 name='PIE' payload=set ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=33 id=9351 name='oor' payload=null ctx-behavior=null
+[23:13:57.646] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=34 id=665 name='tailCombatIdle' payload=null ctx-behavior=null
+[23:13:57.666] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=35 id=8102 name='Collision_PitchEnd' payload=null ctx-behavior=null
+[23:13:57.686] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=36 id=8100 name='Collision_WeightResetEnd' payload=null ctx-behavior=null
+[23:13:57.707] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='currentDefaultState' 10->1
+[23:13:57.707] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='iState' 0->9
+[23:13:57.748] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 95->129
+[23:13:57.912] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='IsEquipping' 1->0
+[23:13:57.912] [26644] [I] SOURCE EVENTCAPTURE phase actor=00000014 name='nodes' 129->114
+[23:14:02.014] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=37 id=410 name='PickNewIdle' payload=null ctx-behavior=null
+[23:14:04.058] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=38 id=9336 name='oor' payload=null ctx-behavior=null
+[23:14:10.454] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=39 id=9336 name='oor' payload=null ctx-behavior=null
+[23:14:11.115] [26644] [I] SOURCE EVENTCAPTURE event actor=00000014 seq=40 id=410 name='PickNewIdle' payload=null ctx-behavior=null
+[23:14:13.385] [26644] [I] SOURCE EVENTCAPTURE window-closed reason=expired actor=00000014 events=40 phases=10 calls=21137 other-graph=21097 ring-dropped=0
