@@ -80,3 +80,28 @@
 - **拔刀序列（×2，相位 currentDefaultState 0→10→1、iState 0→9、nodes 106→…→114）**：`WeapEquip`(2) → `AnimObjectUnequip`(543) → … → `BeginWeaponDraw`(169) → `weaponDraw`(36) → `WeapEquip_Out`(49)/`WeapEquip_OutMoving`(75)。**首事件 = `WeapEquip`，两次拔刀一致。**
 - **收鞘序列（相位 1→12→0、iState 9→0、nodes 114→…→106）**：`Unequip`(144) → … → `BeginWeaponSheathe`(170) → `weaponSheathe`(37) → `Unequip_OutMoving`(76)/`Unequip_Out`(50) → `MTState`(1098)/`IdleStop`(96)/`tailMTIdle`(1186)。**首事件 = `Unequip`，与 C-G3B-S6 解析名一致。**
 - 注入集落定：拔刀 = `WeapEquip`(2)、收鞘 = `Unequip`(144)；辅证事件表见 §2.1。`ring-dropped=0`、无 `[E]`。
+
+## 八、CON v2 run 1 判读（2026-11-22 23:35–23:38，日志 [CharacterPanel-g6conv2-20261122.log](../../CharacterPanel-g6conv2-20261122.log) SHA-256 `DDA1713E…B39AF`；构建 `…v125-g6-domain-dispatch-20261122-740a94b1b9-…` 在位、INI `f8c291f1…`、两键在案）
+
+### 预注册判据判定
+
+| 判据 | 证据 | 判定 |
+| --- | --- | --- |
+| **CON-P1 clip 家族跟随（主判据）** | **拔刀域（r1/r3 settled）**：候选 clip `{1HM_Idle, MLh_Idle, SCAR_1HM_Ready_Dummy1}` vs 源 `{…Dummy0}`——**归一化后完全相等**；候选 b1hm=18/bmt=0/**bmlh=5**（MLh 与源逐项相等）、源 b1hm=10/bmt=0/bmlh=5。**收鞘域（r2.3+ settled）**：候选 clip `{MT_Idle}` vs 源 `{MT_Idle.HKX}`——归一化相等（与 run1/run2 形态一致）。两域 × ≥2 检查点 | **成立** |
+| **CON-P2 旧域退出** | 拔刀后候选 MT 分支 10→**0**（无 MT_Idle clip）；收鞘后候选 bmlh 5→0、无 1HM_Idle clip；r3 反向再次成立——**双向零残留** | **成立** |
+| CON-P3 写与派发 | 8 ARM + 8 SYNC：r1 `direction=draw dispatch=WeapEquip`、r2 `sheath dispatch=Unequip`、r3 draw、r4–r8 `none/none`（同域 prime-only，契约 §2.2 预期）；writes 全 `ok`、零 `failed/missing`；签名域语义与取证自洽（`b5a65c60`/`612ce9cc`） | **成立** |
+| CON-P4 源安全 | `phase=retained source-drift=none`；DAC **9/9 matched**；park 17 行（16 + 13 处阈值告警 1）== 终值 16；E1 `candidate=retained` 全程、graph `0x25baad49080` 恒定 | **成立** |
+| CON-P5 P1 mini 回归 | T5：panel-close ×8 全 matched；F9 ×1 后 `held-source=unbound` + `window=rejected reason=unbound-retained` ×1 + request 重计数 | **成立** |
+| CON-P6 稳定性 | `[E]` 零新增；无崩溃 | **成立** |
+
+目视结论未回传（主判据为 clip 家族机械判定，不阻塞）。
+
+### 裁定：CON-A' 成立，**G6-B 收敛达成**（限定：10 变量 + 2 事件、拔刀/收鞘两域、结构差集显式保留）
+
+**三连①②修复实证**：1HM 滞留消除（双向：MT→0、1HM→1 退出）、MLh 分支激活（0→5 与源逐项相等）。派发后转换链在同窗口内完成（r1 call60 时 MT 已退、1HM 未全进的中间态 → call120 settled——状态机确实被事件驱动走了完整转换链，H-SYNC-EVT 实证）。
+
+### 记录的边界（不判 FAIL）
+
+1. **iState 粒度限制（新）**：魔法就绪域（r4：源 b1hm=1、bmlh=2、clip `{MLh_Idle, MRh_Idle}`）与拔刀域共享 iState=9 → 方向规则判 `none`、候选滞留拔刀域形态（clip `{1HM_Idle, MLh_Idle, MRh_Idle, SCAR_Dummy0}`）。契约 §2.2 预注册行为——"相等或其他组合仅 prime 不盲派"。**G6-B 收敛限定为拔刀/收鞘两域**；魔法域收敛需扩展方向判定（未来工作，需新的域区分变量/事件取证）。
+2. **候选侧 1stP 超集**：拔刀域候选激活源不激活的 12 节点（`1HM_1stPUpperBody`、1stP 系 modifier、`1stP_MLh_1HM_Idle_Blend`、`WeapIdleMSG` 等第一人称变体）——clip 层不受影响（家族相等），多激活记录在案。
+3. **结构差集恒定**：WeaponAdjustment（两域）与收鞘域 10 项源独有保持——C-G5-TOL 已接受的残差不变，修复不触碰。
