@@ -2489,3 +2489,19 @@ build\transition_probe_test.exe
 **首跑更正（2026-11-22 13:2x 首次上机，未产生工件）**：F7 是双分支热键（[input.cpp](../src/input/input.cpp) 注释原文"F7 recaptures only in the panel; elsewhere it opens the G3-A timeline window"），面板 = `PanelMonitor` 监视的 InventoryMenu（Tab 物品栏）——**候选会话必须在背包界面开着时按 F7**（重捕获），面板关着按 F7 只会武装源侧记录器（候选档下全 off，等于空按）。首跑日志确认 v122 身份与 17 键面全部在位、但无任何 F7 记录、无 K5 bin——按 错分支空按处理，非缺陷。MANUAL.md 已按此更正三处会话编排。
 
 **会话 1（2026-11-22 13:39，候选捕获）**：背包开着按 F7 一次（重捕获 view 1 + 2），注入 WeapEquip ×1，equip 段 completed（fixed-equip-budget，last-state=1）、unequip 段 completed（**state-12-to-0，first-return-zero=129**）；candidate K5 249/249 recorded，missing/overflow/two_read_bad 全 0，`source-drift=none` 两段；逐记录家族与 gate-5 正式批次同构（1hm_equip → equip+idle 双存 → 1hm_idle+mlh+scar settle → unequip 注入双存 → 1hm_unequip → unequip+mt）；[E] 仅 OAR-not-loaded 一条（Track 2 正常）。工件已收：[raw/candidate](diagnostics/g5-ver-formal-20261122/raw/candidate/)（log `c64ae456…`、bin `500a0b23…`、ledger `75b50502…`）。IDLE CHAIN 快照 view1 call60/120 + view2 call60 在案。安装位已换装**源侧档**（`cabe92a3…`，12 键断言全过），待会话 2。
+## v123-g6-ledger-20261122（2026-11-22，C-G6 v1 P1+P2 仪器）
+
+**实现（提交 `8c339cc`）**：P1 = `g6_ledger.{h,cpp}`（`G6 LEDGER phase=…` 行，INI `G6Ledger=true` 门控，默认 off；发射点 = `AnimationController::reset` 的 `panel-close`/`lifetime-replace` 两参数与 `main.cpp` kPreLoadGame/kNewGame 失效链尾部；快照字段 = park 总数/E1 候选态/dac world+sessions/panel revision+open，全部读自有模块）。P2 = census 走查内聚合 `IDLE CHAIN BRANCHES`（b1hm/bmt/bmlh/weapon-adj/other，substring 启发式、census 行仍是权威）+ 检查点 `IDLE CHAIN VARS side=source`（值集字级 diff，基线=值集身份变化，列 32 变更封顶，指针/四字词只记原词）。`attempted` 闸门移为文件级 `g_candidate_attempted`（语义不变，供 ledger 读取）；`retire_graph` 的 park 向量移为文件级（`parked_graph_total()` 访问器）。离线测试 `tests/behavior_graph_g6_branch_test.cpp`（4 例：C-G5-CHAIN 普查家族、非分支/空白、优先序、行标签）经 vcvars64 + cl `/W4 /WX` exit 0。
+
+**构建（2026-11-22 22:20）**：干净树（提交 `8c339cc`，无未提交改动）用 `cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=behavior-graph-v123-g6-ledger-20261122` + `cmake --build --preset Release`，exit 0（既有 D9025 `/Ob2`→`/Ob3` 告警在案）；身份 `CharacterPanel-scenegraph-behavior-graph-v123-g6-ledger-20261122-8c339cc744-cl94faaed0c6-20261122T142120Z`（无 `+dirty`）。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,207,744 | `6C2A04A4AB67697EBAC8751348D73677457EF4D208CFB15AEAC7C3F278D02847` |
+| CharacterPanel.pdb | 54,759,424 | `5CB15AC94F77B9C78E6D32B8D053B9D88D58E9AD19ADAE51EC9D50D2D06187D0` |
+| 候选档 INI（G6） | 18,876 | `3A6D9E226B5FABBDEFFB26D7118DAA0B384148D22ED191DAAC5112BF46D1E570` |
+| 源侧档 INI（G6） | （`dist/g6-ledger-20261122/` 内） | — |
+
+**运行档派生（2026-11-22）**：两档均由 `dist/g5-ver-20261122/CharacterPanel-g5ver-{candidate,source}.ini` 派生：`K5FullSample=true→false`、尾部追加 `G6Ledger=true`（CRLF、无 BOM）。候选档键面 = VER 候选档全部键（`IndependentGraph=inject`、`DisplayPose/Step=true`、`IdleChainProbe=true`、equip prime/unequip 族保持 VER 值）+ `G6Ledger=true`；源侧档 = VER 源侧档 + `G6Ledger=true`。手册 `dist/g6-ledger-20261122/MANUAL.md`（会话 1 覆盖 S1–S7+P2、可选会话 2 源侧基线）。
+
+**部署（2026-11-22 22:23；Skyrim/SKSE 未运行）**：安装位 v122 三件套先备份到 `dist/deploy-backup-20261122-v122-v123pre/`（DLL 2,167,296 B `5f34b7ea…`、PDB 53,088,256 B `1fa94fd9…`、INI 18,361 B `cabe92a3…`，逐位核对）。v123 DLL/PDB + **候选档**（`CharacterPanel.ini`）装入 `E:\SkyrimAE\mods\CharacterPanel\SKSE\Plugins\`，安装位哈希 `6c2a04a4…`/`5cb15ac9…`/`3a6d9e22…` 与构建/派生档逐位一致；DLL 内身份 `…-behavior-graph-v123-g6-ledger-20261122-8c339cc744-…` 在位。**未启动游戏**；会话 1 待用户按 MANUAL 执行。
