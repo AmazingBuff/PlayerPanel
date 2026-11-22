@@ -126,3 +126,32 @@ python -I tools/gate5_ver.py --candidate <cpk5.bin> --source <cpk5s.bin> --out-d
 
 - 不改 `gate4_pair.py`/`gate4_clock.py`/`cal1c_time.py` 本体；不改 CPK5/CPK5S 布局；不新增 INI 键；不实现 IDLE CHAIN SUMMARY 修复（§七.2 可选项，若做另立小节登记）。
 - 工具不输出 G5 级裁定语——只产出机械计数与分布；裁定语由运行记录按 §三.4 书写（带 limited 资格）。
+
+## 十、实现与 dry-run 登记（2026-11-22）
+
+**裁定：工具在冻结规则 v1 下可执行成立（限定：归档 gate-5 正式批次、T1–T12 全过、同参逐字节确定）；无规则歧义需要修订。以下为可执行性与交叉核对证据，不是新裁定。**
+
+| 项 | 值 |
+| --- | --- |
+| 工具 | [tools/gate5_ver.py](../../../tools/gate5_ver.py) SHA-256 `bf908417…9434c`（纯 stdlib，import 复用 gate4_pair，本体未改） |
+| 测试 | [tools/gate5_ver_test.py](../../../tools/gate5_ver_test.py) `ca5b8d70…aada`，**T1–T12 全 PASS**（含 `--self-test` 路径） |
+| dry-run 输入 | 归档 gate-5 正式批次两 bin（v103，哈希见其 [identity](../g5-gate5-20261116/identity.json)）+ 门 4 冻结容差 [tolerances.json](../g5-gate4-freeze-20261116/tolerances.json) |
+| metadata-only | [dry-run/metadata-only](dry-run/metadata-only/gate5-ver-manifest.json) `77e6b71a…3cb`：249 记录 → 41 burst → 29 端点、29 配对、`pose_decoded=false` |
+| 全模式 | [dry-run/formal](dry-run/formal/gate5-ver-summary.txt)（manifest `591a6934…d2ae` / summary `bc42cf16…a3d8` / detail `fe18efcc…2ca9`）：counted=27，tau_p=116 / tau_r=1252 / **tau_s=0** / invalid=0；dt 0 排除（median 4.3 ms / max 10.5 ms ≤ ε_t）；确定性：同参重跑三工件逐字节一致（formal-repeat 已删，双跑哈希记录于提交信息） |
+
+### 10.1 端点账本（249 → 29）
+
+| 分类 | 数 | 说明 |
+| --- | ---: | --- |
+| burst | 41 | equip 17 / idle 3 / unequip 21（与 [O-1 分析 §二](../g5-o1-pairing-granularity-20261121/README.md) 一致） |
+| 排除：clip 末段饱和 | 3 bursts | equip lt=1.4250/1.4333、unequip lt=1.9833（端点 c85/c98/c128） |
+| 排除：EQ-W1b | 9 bursts | burst 级"任一成员 ≤24"比 O-1 分析的单元级过滤多排 1 个（unequip c13–27 burst，成员跨 13–24）——冻结规则的保守侧，登记为差异 |
+| 端点 | 29 | 27 计入等值集 + 2 个 EQ-W1a 排除（落在源侧双主族共存的边界对）+ 0 dt 排除 |
+
+### 10.2 交叉核对（与既有账本咬合）
+
+1. **DECL 实测值与 [C-G5-EQ v1](../g5-eq-contract-20261121/README.md) 基准逐项咬合**：t31_rot max 30.54（基准 30.3/30.32）、t58 17.30（17.3）、t30 10.24（10.2）、t59 8.60（8.5）、t45 6.37（6.4）；t60–66 pos 3.8–5.6（Quiver 4.1958 量级）。
+2. **tau_s = 0**：与重判"scale 超差全部在过渡窗"一致；等值集（末步 + 排除窗）上 scale 干净。
+3. **残差形态一致**：窗外超差 top（t4 COM、t44 L Pauldron、t43 Weapon、t25/26 Spine、t35/36 Neck/Head、t9/t32/t39/t6/t8）与 [重判 §五](../g5-transition-window-rejudge-20261121/README.md)/落名分析的残差集合一致。
+4. **closure OK**：249 − 0(no_clock) = burst 记录总数（41 burst × 成员）；账本恒等式闭合。
+5. 本 dry-run 的 116/1252 计数**不是新裁定**——正式验证将用新会话工件重跑；此处只证明工具与冻结规则可执行、且与既有归因账本自洽。

@@ -1,0 +1,5 @@
+G5VER SUMMARY
+protocol=C-G5-VER v1 (frozen 2026-11-22)
+cand total=249 no_clock=0 mid_burst=208 endpoints=29 closure=OK
+saturation_bursts=3 w1b_bursts=9 idun_units=0
+pairs=29 no_partner=0 edge=1 dt_excluded=0 w1a_excluded=2
