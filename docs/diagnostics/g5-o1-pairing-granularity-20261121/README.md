@@ -1,6 +1,8 @@
 # O-1 配对粒度决断：驱动突发与 burst 末步相位锚定（2026-11-21，纯离线，推荐稿）
 
-> **状态**：C-G5-VER v0 [§五 O-1](../g5-verify-protocol-20261121/README.md) 的决断分析。只读归档工件，零游戏代码、零构建、零上机；**推荐选项 (a)，比较单元 = burst 末步**，附 v1 需吸收的三处修正。采纳与否由评审决定；本稿不改写 G4P-7、[过渡窗重判](../g5-transition-window-rejudge-20261121/README.md)、[C-G5-TRANS §八](../../g5-transition-window.md)与 [C-G5-EQ v1](../g5-eq-contract-20261121/README.md) 的任何既有裁定。复现：`python -B docs/diagnostics/g5-o1-pairing-granularity-20261121/o1_pairing_analysis.py`（脚本 SHA-256 `ef625e78…85d9`，复用 [gate4_pair.py](../../../tools/gate4_pair.py) 解析器）。
+> **状态**：**已决断（2026-11-22）：采纳选项 (a)，比较单元 = burst 末步**；修订已并入 [C-G5-VER §3.1/§3.2](../g5-verify-protocol-20261121/README.md)。本稿为决断依据（推荐稿原样保留）。只读归档工件，零游戏代码、零构建、零上机；本稿不改写 G4P-7、[过渡窗重判](../g5-transition-window-rejudge-20261121/README.md)、[C-G5-TRANS §八](../../g5-transition-window.md)与 [C-G5-EQ v1](../g5-eq-contract-20261121/README.md) 的任何既有裁定。复现：`python -B docs/diagnostics/g5-o1-pairing-granularity-20261121/o1_pairing_analysis.py`（脚本 SHA-256 `ef625e78…85d9`，复用 [gate4_pair.py](../../../tools/gate4_pair.py) 解析器）。
+>
+> **2026-11-22 决断落盘补充验证**（§六.3 的二选一）：① equip 末段冻结 burst（c87–98）内 `1hm_idle` 自 c87 起共存 → 已被 EQ-W1a"双 clip 共存"定义自然覆盖，无需新机制；② unequip 末段保持（c114–128）为**单 clip** A/B 混合保持（钟值冻在 1.9833、pose 以 1.53°/步推进、argmin=m12 而非末步）→ W1a 不覆盖，故 EQ-W1b 增加结构性判据"burst 尺寸 ≥2 且报告钟值 ≥ duration − 1.5 帧"（提案，随冻结评审确认）；本批命中 equip lt=1.4250/1.4333、unequip lt=1.9833 三个 burst，移除端点 c85/c98/c128（tau 19/76/0、15/71/0、9/36/0），等值集 41→38（叠加 W1b 后 30）。
 
 ## 一、结论（TL;DR）
 
