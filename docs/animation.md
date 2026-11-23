@@ -225,6 +225,8 @@ Logs identify setting, actor/request/goal/family, preparation requested/ready/fa
 
 **边界**：与 v46 无关（v46 只改退休副本台账）；属产品播放路径的既有问题。未修，也未立契约。三个方向取舍不同——边界处不重入队、保留时钟连续、选段时跳过起手段——需要单独定契约后再动。
 
+> **2026-11-23 更正与契约**：已立 [C-IDLE v1 预注册契约](diagnostics/idle-loop-contract-20261123/README.md)，**实现前落盘**。取证（`CharacterPanel-animation-repair-20261023-2253.log` 的 31 次时钟边界决策 + `variant_state.h` 静态审计）修正了上文的方向判断：时钟归零只是表现层，真正根因是**变体序列历史被过度推进**——`SelectionState::dwell()` 与 `seek_dwell()` 已实现"驻留"语义（注释明确写着 "commit() would move next past it and replay the entry member on the following cycle"），但**全仓库零调用点**，控制器只调 `commit()`。因此上文的方向二（保留时钟连续）针对表现而非根因，**已排除**；契约采用方向一的精确形式：接线 `dwell()`/`seek_dwell()` 到正确的接受边界。上文"机制"段的表述保留为当时的记录，不改写。
+
 ## Dependencies and verification
 
 Existing Skyrim/SKSE/CommonLib/Havok, audited OAR and supported original DAC remain. INI parsing uses existing SimpleIni. No new package, DAC rebuild, TOML parser or UI is required. See [build/config setup](build.md).

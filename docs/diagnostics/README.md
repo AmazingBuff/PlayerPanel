@@ -1,5 +1,10 @@
 # 诊断证据保留与恢复
 
+<a id="idle-loop-20261123"></a>
+## C-IDLE v1 契约（2026-11-23，待实现）
+
+产品缺陷 `idle-start-replay` 的预注册契约：[idle-loop-contract-20261123](idle-loop-contract-20261123/README.md)。取证依据 `CharacterPanel-animation-repair-20261023-2253.log` 的 31 次时钟边界决策（20 `accepted-same-asset` / 11 `accepted-handover`）与 `variant_state.h` 静态审计（`dwell`/`seek_dwell` 零调用点）。判据 CI-P1..P8 + CI-R1，**尚未实现**。
+
 <a id="g6-20261123"></a>
 ## G6 运行日志与契约索引（2026-11-22/23）
 
