@@ -186,6 +186,52 @@ Smooth Moveset 系列不使用 OAR 变体序列来区分 Start 与 Loop。它用
 2. 边界重查的 OAR 查询结果（`selected.index` / `replacement_key`）与 `accepted-same-asset` 判定所比对的字段；
 3. Smooth Moveset 的 OAR 条件集合（离线读其 json，判定是否有除 `HasMagicEffect` 之外的合取项）——**这一项可纯离线完成，且应最先做**。
 
+### 7.5 离线取证结果：Smooth Moveset 的四标记相位协议（2026-11-23，第 3 项已完成）
+
+读了本机 `E:\SkyrimAE\mods\Smooth Moveset - OAR`（92 个非战斗 idle 配置：Start 36 / Loop+Loop2 41）。
+
+**相位协议**（全系列一致，无例外）：
+
+| 变体 | 优先级区间 | 相位条件（OAR json） |
+| --- | --- | --- |
+| `* Non-Combat idle Start` | `…001` | `HasMagicEffect 801` 存在 |
+| `* Non-Combat idle Loop` | `…002` | `HasMagicEffect 804` **negated**，且 `HasMagicEffect 802` 存在 |
+| `* Non-Combat idle Loop2`（仅 1hm / 1hm Shield / 1hm Pistol / Katana 有） | `…003` | 同 Loop，另加 `Random < 0.5` |
+
+**DAC 侧**（`SKSE/Plugins/_DynamicAnimationCasting/SmoothMoveset.toml`）：
+
+| 事件 | 施放的 spell 集合 |
+| --- | --- |
+| `Smooth_loop` | `[0x80A, 0x810, 0x82E]` |
+| `Smooth_Loop_off` | `[0x80E, 0x80F, 0x82A]` |
+
+**运行日志的标记序列**（[r2 日志](../CharacterPanel-issue-trace-r2-20261022-2314.log)，token 形如 `24`+local id）：
+
+| 时刻 | markers | 解读 |
+| --- | --- | --- |
+| 23:05:27.560 | `3801, 3804, 3806, 3807, 3827, 382C, 3831` | 有 3804（Start 相位） |
+| 23:05:28.256 | `3801, 3806, 3807, 3808, 3827, 382C, 3831` | 3804 消失 |
+| **23:05:30.667** | `3801, **3802**, 3807, 3808, 3827, 382C, 3831` | **`Smooth_loop` 施法后 3802 出现** |
+| 23:05:31.595 | 同上 | 边界重查在此时刻之后 |
+
+**关键观察**：`Smooth_loop` 施法后 `3802` 确实出现、`3804` 确实消失——**这两条正是 Loop 相位条件所要求的**。但同一时刻之后的边界重查仍返回 `accepted-same-asset`。
+
+### 7.6 由此收窄的两个剩余问题（均未验证，不再推测）
+
+1. **ID 空间**：日志报告 `3801/3802/3804`，OAR 条件写 `801/802/804`。**两者是否同一组效果未经证实**——本次离线取证只读了 OAR json 与 DAC toml，没有解析 ESP 里的 effect 记录，也没有验证 `smooth_marker_report` 输出 token 与 OAR `formID` 的换算规则。若两者不是同一实体，则 Loop 条件永远不满足——这是 B2 的一个具体形态。面板侧不解析 formID（`HasMagicEffect` 整体转发给引擎 `s_evaluate`），所以该差异不在面板代码内。
+2. **`smooth_marker_report` 的语义**：它报告**存在性**（含 inactive 实例，`!` 后缀标记"全部 inactive"），而 OAR 的 `HasMagicEffect` 默认看**活跃**效果（json 里 `"Active effects only": false` 的确切语义需对照 OAR 文档确认）。日志中 `3802` 没有 `!` 后缀，说明它存在且并非全部 inactive——但"存在一个活跃实例"与"OAR 判定为 active"仍可能是两件事（B1）。
+
+**这两点都可以用同一次上机取证**：在 `Smooth_loop` 施法前后各打一行 OAR 查询的完整候选接受/拒绝明细（当前 `first-false` 是空的，需要补上具体条件名与 formID 解析结果）。
+
+### 7.7 已排除的方向
+
+| 方向 | 排除依据 |
+| --- | --- |
+| 接线 `dwell()`/`seek_dwell()` | §7.1 引擎无关实验：`dwell()` 永久卡在入口段 |
+| `_bPlayOnce` 未标记 | §7.2 追加更正：Smooth 不走 OAR 变体序列（本次离线取证再次确认：36 个 Start 配置全部是独立 `config.json`，彼此靠 priority + `HasMagicEffect` 区分，不是同一 replacement 的 variant 列表） |
+| 面板漏读 `HasMagicEffect` | [policy.h:48](../../../src/animation/oar/policy.h) 白名单 + [hooks.cpp:566](../../../src/animation/oar/hooks.cpp) 源 Actor 求值，通路完整 |
+| 面板写错相位变量 | Smooth 用**魔法效果标记**，不是行为图变量；`preview_state` 不参与该判决 |
+
 ### 7.4 已落地的离线产物
 
 `tests/idle_dwell_policy_test.cpp`（7 例，`/W4 /WX` 通过）把 §7.1–7.2 的行为固化为回归护栏：
