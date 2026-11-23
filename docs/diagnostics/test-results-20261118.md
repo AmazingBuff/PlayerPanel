@@ -4,6 +4,8 @@
 
 **总裁定：G1–G4 在登记范围内成立，G5 姿态验收失败（G4P-7 FAIL），G6 待验。** 门 5 采样完整，失败来自姿态超容差。11 月 20 日的候选父链探针已把装备第 1–13 步的活动链完整回溯（无 `State3`、无普通 Blender）；随后的离线审计否证了「存在第二条采样时钟」，剩余疑点收窄到采样之后的写入者，尚未观测。
 
+> **2026-11-23 更新（本节其余部分保持 2026-11-18 原样，不改写）**：G5 已由 [C-G5-TOL v1 验收契约](g5-tol-contract-20261122/README.md) 以 **PASS（accepted-exceptions：244/272 干净 + 28 已接受残差）** 有界签收（冻结容差机械 FAIL 保留为精度记录）；G6 已由 [C-G6 v1](g6-contract-20261122/README.md)（G6-A，S1–S5 PASS）与 [C-G6-CON v3](g6-con-v3-contract-20261122/README.md)（G6-B，三域克隆分支收敛）**有界成立**。当前判据以 [独立行为图当前结论](../independent-behavior-graph.md#current-status) 为准。
+
 <a id="product"></a>
 ## 默认面板路径
 
@@ -23,8 +25,8 @@
 | G2 暂停期推进 | v33 候选语义运动 120/120、实际写骨 109/116、所采源对照无漂移。v34 覆盖重置丢弃、重开独立、F7 重采和读档回退。相同 controller 的来源更换、单独 frozen-only 边界仍待验。 [v33](../independent-behavior-graph.md#g2-v33-run) · [v34](../independent-behavior-graph.md#g2-v34-boundaries) |
 | G3 装备相位 | v41 源与候选 F 重放取得 `0→10→1→12→0`，由 `WeapEquip(2)`、`Unequip(144)` 触发，段内由 clip 结束信号收尾。结论限相位顺序。 [G3 源轨迹](../independent-behavior-graph.md#g3-a-contract) · [候选 F](../independent-behavior-graph.md#c-g3b-f-full-replay) |
 | G4 OAR 与事件隔离 | A 的 numeric 整窗 72/72 已核对，B 证明装备族选择稳定。修复后的 v69 双派发跑通 C 的 1–6 项，正控 64/64，钉住源图事件与丢失均为 0，范围限 58377 观察路径。 [G4 裁定](../independent-behavior-graph.md#current-status) · [有效重跑日志](CharacterPanel-g4c1-v69-attempt2-two-dispatch-20261105-0001.log) |
-| G5 完整姿态 | E1–E4 和采集准备有阶段结果，正式门 5 为 **G4P-7 FAIL**。 [门 5 正式报告](g5-gate5-20261116/README.md) |
-| G6 生命周期 | **PENDING**。源恢复、请求与回调失效、引用及重复会话资源收敛尚待验。 [G6 判据](../independent-behavior-graph.md#六道关卡) |
+| G5 完整姿态 | E1–E4 和采集准备有阶段结果，正式门 5 为 **G4P-7 FAIL**（保留为精度记录）。**2026-11-22 双层判定**：C-G5-VER 机械 FAIL（tau_p=117 / tau_r=1,278 / tau_s=0）→ [C-G5-TOL v1](g5-tol-contract-20261122/README.md) 验收 **PASS（accepted-exceptions）**，244/272 干净 + 28 已接受残差 = **G5 有界签收**。 [门 5 正式报告](g5-gate5-20261116/README.md) · [VER 判定](g5-ver-formal-20261122/README.md) |
+| G6 生命周期 | ~~**PENDING**~~ → **2026-11-23：G6-A PASSED（有界）+ G6-B 三域收敛达成**。G6-A = S1–S5 全 PASS（读档拒绝原因落定 `unbound-retained`）、S6/S7 首采基线在案；G6-B = 拔刀/魔法/收鞘三域候选 clip 家族与源归一化相等、双向旧域零残留。限定：C-G6 场景矩阵 + E1–E5 例外；未实测 `currentDefaultState=11` 瞬态跳过。 [G6-A](g6-contract-20261122/README.md) · [G6-B v3](g6-con-v3-contract-20261122/README.md) · [当前结论](../independent-behavior-graph.md#current-status) |
 
 <a id="g5-qualification"></a>
 ## G5 采集与资源资格

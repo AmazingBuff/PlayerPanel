@@ -1,5 +1,20 @@
 # 诊断证据保留与恢复
 
+<a id="g6-20261123"></a>
+## G6 运行日志与契约索引（2026-11-22/23）
+
+G6 四轮（G6-A 生命周期 → CON v1 证伪 → CON v2 两域 → CON v3 三域）的契约目录与运行日志，判定入口见 [C-G6 v1](g6-contract-20261122/README.md) 与 [C-G6-CON v3](g6-con-v3-contract-20261122/README.md)。日志字节数与 SHA-256 均为工作树（CRLF）身份。
+
+| 轮次 | 构建 | 契约目录 | 运行日志（字节 / SHA-256） |
+| --- | --- | --- | --- |
+| G6-A run 1 | v123 | [g6-contract-20261122](g6-contract-20261122/README.md) §九 | [CharacterPanel-g6-candidate-20261122-2236.log](CharacterPanel-g6-candidate-20261122-2236.log)<br>1,695,086 / `2f7bd373b8856c1442c1270d79120cb017285d3dd3d4acc6663b0625ab51f5f1` |
+| G6-A run 2（P2 域切换） | v123 | 同上 §十 | [CharacterPanel-g6-candidate-20261122-2nd.log](CharacterPanel-g6-candidate-20261122-2nd.log)<br>746,140 / `0831cb2fcf8b6d6714311b305e44c9b12d7cab485b5c240e01c0dec79f7c3a3d` |
+| CON v1 run 1（仅变量，证伪） | v124 | [g6-con-contract-20261122](g6-con-contract-20261122/README.md) | [CharacterPanel-g6con-20261122.log](CharacterPanel-g6con-20261122.log)<br>1,434,993 / `e427897f606b0c45878053bf3c8e0c8ce2ba746c88f86aea2703d184cb6ddd61` |
+| CON v2 run 1（两域成立） | v125 | [g6-con-v2-contract-20261122](g6-con-v2-contract-20261122/README.md) | [CharacterPanel-g6conv2-20261122.log](CharacterPanel-g6conv2-20261122.log)<br>1,625,435 / `dda1713eaba829ba72a3f98af36502d200f8595b7bbf7554eaccdcc91c6b39af` |
+| CON v3 run 1（三域成立） | v126 | [g6-con-v3-contract-20261122](g6-con-v3-contract-20261122/README.md) | [CharacterPanel-g6conv3-20261123.log](CharacterPanel-g6conv3-20261123.log)<br>1,755,832 / `a248a4bb2f5a4b23f6ebb2a888a5bba8de9bfe73be335defd9ba87a88ba81fc2` |
+
+魔法域取证会话（`SourceEventCapture=on` 源侧档）的事件名落定记录于 [C-G6-CON v2 §九](g6-con-v2-contract-20261122/README.md)，其日志并入上表 v2 轮次目录；该会话无独立归档日志。
+
 <a id="retired-20261118"></a>
 ## 2026-11-18 退役与恢复
 
