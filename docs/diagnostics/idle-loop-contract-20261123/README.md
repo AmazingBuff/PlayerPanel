@@ -243,28 +243,75 @@ Smooth Moveset 系列不使用 OAR 变体序列来区分 Start 与 Loop。它用
 | 23:05:30.667 | 有 `mag_start on`、`mag_loop on`；无 `mag_combat on` | **满足** | **也满足** |
 | 23:05:31.595 | 同上 | **满足** | **也满足** |
 
-**根因**：`mag_start on` 在整个窗口中**始终存在**，因此 Start 变体的条件永远成立。Start 的 `priority=83030011` 小于 Loop 的 `83030012`（OAR 数值小的优先），于是即使 Loop 条件在 23:05:30.667 之后已经满足，**Start 仍然胜出**。
+**根因**：`mag_start on` 在整个窗口的 idle 阶段**始终存在**，因此 Start 变体的条件永远成立。Start 的 `priority=83030011` 小于 Loop 的 `83030012`（OAR 数值小的优先），于是即使 Loop 条件在 23:05:30.667 之后已经满足，**Start 仍然胜出**。
 
-**谁能清掉 `mag_start on`**：唯一携带 `MGEF 0x801` 的是 `SPEL 0x809 (sp_start on)`，而清它的 spell 是 `SPEL 0x80D (sp_start off)`。在 DAC toml 里 `0x80D` 只出现在 **`weaponSheathe`** 的 spell 集合 `[0x80E, 0x80D, 0x810, 0x82E]` 中——**没有任何 idle 段的事件携带它**：
+**`sp_start on` / `sp_start off` 是互斥对，协议本身自洽**（本节依据 §7.9 的完整时间线验证）：
 
-| 事件 | spells | 净效果（对 801/802/804） |
+- `sp_start on`（`0x809` → `MGEF 0x801`）只由 **`weaponDraw`** 携带（`[0x809, 0x80F, 0x80E, 0x82E, 0x80C]`）。
+- `sp_start off`（`0x80D` → `MGEF 0x805`）只由 **`weaponSheathe`** 携带（`[0x80E, 0x80D, 0x810, 0x82E]`）。
+- 二者在日志中严格互斥：`weaponSheathe` 之后 `801` 消失、`805` 出现；`weaponDraw` 之后反过来。**没有同时持有的记录**。
+
+| 事件 | spells | 净效果（对 801/802/804/805） |
 | --- | --- | --- |
-| `weaponDraw` | `0x809, 0x80F, 0x80E, 0x82E, 0x80C` | 加 start on、清 move/loop、加 combat on |
-| `Smooth_loop` | `0x80A, 0x810, 0x82E` | 加 **loop on**、清 combat on、清 combat_loop on |
-| `Smooth_Loop_off` | `0x80E, 0x80F, 0x82A` | 清 **loop on**、清 move on、清 non-combat on |
-| `Smooth_NonCombat` | `0x810, 0x80F, 0x828, 0x82E` | 清 combat on、清 move on、加 **non-combat on** |
+| `weaponDraw` | `0x809, 0x80F, 0x80E, 0x82E, 0x80C` | 加 **start on(801)**、清 move/loop、加 combat on(804) |
+| `weaponSheathe` | `0x80E, 0x80D, 0x810, 0x82E` | 清 loop/move/combat、加 **start off(805)** |
+| `Smooth_loop` | `0x80A, 0x810, 0x82E` | 加 **loop on(802)**、清 combat on、清 combat_loop on |
+| `Smooth_Loop_off` | `0x80E, 0x80F, 0x82A` | 清 loop on、清 move on、清 non-combat on |
+| `Smooth_NonCombat` | `0x810, 0x80F, 0x828, 0x82E` | 清 combat on、清 move on、加 non-combat on |
 
-**所以 `Smooth_loop` 的设计假设是：进入 idle 之前 `mag_start on` 已被 `weaponDraw`→…→`sp_start off` 链条清掉。** 面板场景里这条链没有走完——`sp_start off` 只在 `weaponSheathe` 上，而面板的装备驱动 idle 不经过 Sheathe。
+**HKX 侧确认严格配对**（§7.9）：152 个带 `weaponSheathe` 的 clip **全部**是 `*_unequip.hkx`；80 个带 `weaponDraw` 的 clip **全部**是 `*_equip.hkx`。零例外，没有任何 idle clip 携带二者之一。
 
-**三份日志的机械统计**：`Smooth_loop` 出现 110 次（19 + 39 + 52），`Smooth_Loop_off` **0 次**，`weaponSheathe` 出现但未与 `sp_start off` 配对清除 Start 相位。
+**因此**：Smooth 的相位机假设 `start on` 在进入 idle 前已被 `weaponSheathe` 清掉。面板的装备驱动 idle 在 `weaponDraw` 之后直接进入 idle 循环，**不再经过 Sheathe**，`start on` 就一直留着，Start 相位永不退出。
 
-**这不是面板代码错误**：面板正确派发了 clip 标注里存在的 `Smooth_loop`；标注集合里从来没有 `Smooth_Loop_off`（这是资源事实，不是面板漏读——三份日志的 ANNOTATION 全集已列出）。缺口是"面板的 idle 场景不经过 Sheathe，因而不触发 `sp_start off`"。
+**这不是面板代码错误**：面板正确派发了 clip 标注里存在的 `Smooth_loop`（三份日志共 110 次）；`Smooth_Loop_off` 在标注集合里从未出现（资源事实）。缺口是**面板的 idle 场景天然缺少 Sheathe 这一步**。
 
 ### 7.7 由此产生的三个具体待验问题（不再推测）
 
-1. **`sp_start off` 在正常游玩中的触发点**：toml 显示只有 `weaponSheathe` 携带 `0x80D`。那么正常游玩里 `mag_start on` 是如何被清的？可能是 `weaponSheathe` 发生在每次拔刀前，也可能是存档里 `mag_start on` 本就该由别的事件清除。**离线可查**：读 Smooth Moveset 的 HKX 标注集合，看 `weaponSheathe` 出现在哪些 clip。
+1. **面板是否应补派 `sp_start off`**：若在 idle 首次选段后主动清 `start on`，Start 相位就会退出、Loop 胜出。风险是面板替 Smooth 补相位可能干扰正常游玩的相位机（尤其面板开/关切换时）。
 2. **`HasMagicEffect` 的活跃语义**：`"Active effects only": false` 在 OAR 里的确切含义（是否等于"含 inactive"）。本节结论只用存在性，不依赖该区分。
-3. **面板是否应补 `sp_start off`**：若确认面板的 idle 通路天然缺失 Sheathe，则需要决定是面板补派发、还是接受"面板内 Start 段会驻留"这一限制。
+3. **正常游玩时 `start on` 的清除时点**：本机日志显示 sheathe 会清它，但正常游玩中 `mag_start on` 何时被清、以及它是否本来就该长期存在，需要另取一份非面板会话的日志对照——**尚未做**。
+
+### 7.9 HKX 标注普查（2026-11-23，纯离线）
+
+扫描 `Smooth Moveset - OAR/meshes` 下 616 个 HKX 的明文标注名：
+
+| 标注 | 出现于多少个 HKX |
+| --- | ---: |
+| `weaponSheathe` | 152 |
+| `weaponDraw` | 80 |
+| `Smooth_loop` | 95 |
+| `Smooth_Combat` | 39 |
+| `Smooth_Loop` | 23 |
+| `Smooth_NonCombat` | 19 |
+| `Smooth_Stop` | 5 |
+| `Smooth_Loop_off` | **0** |
+
+文件名分布（按出现次数）：`weaponSheathe` → `1hm_unequip.hkx` 52、`axe_unequip.hkx` 23、`mac_unequip.hkx` 22、`dag_unequip.hkx` 20 等，**全部是 `*_unequip.hkx`**；`weaponDraw` → `1hm_equip.hkx` 26、`axe_equip.hkx` 11 等，**全部是 `*_equip.hkx`**。
+
+**`Smooth_Loop_off` 在 616 个 HKX 中零出现**——它不是由动画标注派发的，只出现在 DAC toml 的规则表里（可能由本 mod 之外的路径或未使用的规则触发）。
+
+### 7.10 运行时间线与互斥验证（2026-11-23）
+
+[r2 日志](../CharacterPanel-issue-trace-r2-20261022-2314.log) 的全部 `DAC OBSERVED` 快照，按标记解析：
+
+| 时刻 | 触发事件 | start on(801) | start off(805) | loop on(802) | combat on(804) |
+| --- | --- | :---: | :---: | :---: | :---: |
+| 23:05:21.935 | `Smooth_loop` | Y | – | Y | – |
+| 23:05:27.560 | `weaponDraw` | Y | – | – | Y |
+| 23:05:30.667 | `Smooth_loop` | Y | – | **Y** | – |
+| **23:05:33.245** | **`weaponSheathe`** | **–** | **Y** | – | – |
+| 23:05:36.189 | `weaponDraw` | **Y** | – | – | Y |
+| 23:05:39.298 | `Smooth_loop` | Y | – | **Y** | – |
+| **23:05:40.715** | **`weaponSheathe`** | **–** | **Y** | – | – |
+| 23:06:40.457 | `weaponDraw` | **Y** | – | – | Y |
+| 23:06:44.870 | `Smooth_loop` | Y | – | **Y** | – |
+| 23:07:38.883 | `weaponDraw` | Y | – | – | Y |
+| 23:07:49.486 | `Smooth_loop` | Y | – | **Y** | – |
+
+**两条硬性观察**：
+
+1. `801` 与 `805` **从未同时出现**，严格互斥——协议自洽，不是"两个独立累加的效果"。
+2. **每次 `Smooth_loop` 之后 `start on` 都是 Y**，因此每次边界重查都只满足 Start。`weaponSheathe` 确实能清零（23:05:33 / 23:05:40），但面板的 idle 循环里紧接着的 `weaponDraw` 又把它加回来。
 
 ### 7.8 已排除的方向
 
