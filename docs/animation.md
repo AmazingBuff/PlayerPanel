@@ -225,7 +225,12 @@ Logs identify setting, actor/request/goal/family, preparation requested/ready/fa
 
 **边界**：与 v46 无关（v46 只改退休副本台账）；属产品播放路径的既有问题。未修，也未立契约。三个方向取舍不同——边界处不重入队、保留时钟连续、选段时跳过起手段——需要单独定契约后再动。
 
-> **2026-11-23 更正与契约**：已立 [C-IDLE v1 预注册契约](diagnostics/idle-loop-contract-20261123/README.md)，**实现前落盘**。取证（`CharacterPanel-animation-repair-20261023-2253.log` 的 31 次时钟边界决策 + `variant_state.h` 静态审计）修正了上文的方向判断：时钟归零只是表现层，真正根因是**变体序列历史被过度推进**——`SelectionState::dwell()` 与 `seek_dwell()` 已实现"驻留"语义（注释明确写着 "commit() would move next past it and replay the entry member on the following cycle"），但**全仓库零调用点**，控制器只调 `commit()`。因此上文的方向二（保留时钟连续）针对表现而非根因，**已排除**；契约采用方向一的精确形式：接线 `dwell()`/`seek_dwell()` 到正确的接受边界。上文"机制"段的表述保留为当时的记录，不改写。
+> **2026-11-23 更正与契约**：已立 [C-IDLE v1 预注册契约](diagnostics/idle-loop-contract-20261123/README.md)，**实现前落盘**。取证（`CharacterPanel-animation-repair-20261023-2253.log` 的 31 次边界决策 + `variant_state.h` 静态审计 + 引擎无关直接实验）得出两条结论：
+>
+> 1. **`SelectionState::dwell()`/`seek_dwell()` 不是"已实现未接线的修复"**（曾如此判断，已撤回）。直接实验证明 `dwell()` 清 PlayOnce 标记而非钉住位置，会让待机**永久卡在入口段**，比原缺陷更糟。零调用点反而保护了产品，**不得接线**。
+> 2. **真正根因是入口变体的 `_bPlayOnce` 标志**（OAR `Variant::_bPlayOnce=0x29`，[PDB 审计](oar-hooks.md)）。`commit()` 只在入口变体被作者标记 PlayOnce 时才驻留到循环成员；未标记则每圈回到入口段——这正是操作者看到的现象。修法属设计选择（面板侧驻留覆盖 vs 不干预），见契约 §7.3，**待裁定**。
+>
+> 上文"机制"段的表述保留为当时的记录，不改写。上文列的方向二（保留时钟连续）与方向三（选段跳过起手段）均未采用。回归护栏：`tests/idle_dwell_policy_test.cpp`（7 例）。
 
 ## Dependencies and verification
 

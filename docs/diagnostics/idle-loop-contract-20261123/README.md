@@ -116,3 +116,59 @@ CI-R1 操作者目视：待机连续 ≥2 分钟不再出现"起步 → 起身"�
 ## 六、变更记录
 
 - 2026-11-23：契约落盘。取证基于 `CharacterPanel-animation-repair-20261023-2253.log`（31 次边界决策）与 `variant_state.h` 静态审计（`dwell`/`seek_dwell` 零调用点）。判据不看运行结果。
+
+## 七、方向证伪与根因落定（2026-11-23，实现前离线实验）
+
+> **§二 的修复方向已撤回。** 本节记录证伪过程与真正的根因。§一至§五的预注册文本保持原样，不改写。
+
+### 7.1 证伪实验（引擎无关，直接编译运行 `SelectionState`）
+
+序列 `Start(once) → Loop1 → Loop2`，连续 7 次"选段 + 接受"：
+
+| 接受方法 | 选段序列 | 判定 |
+| --- | --- | --- |
+| `commit()`（**当前接线**） | `Start → Loop1 → Loop2 → Loop1 → Loop2 → …` | 正确驻留 |
+| `dwell()`（§二 拟接线） | `Start → Start → Start → …` | **永不出段** |
+
+`dwell()` 的 `flags[pick.position] = false`（[variant_state.h:151-152](../../../src/animation/variant_state.h)）清掉了 PlayOnce 标记，于是 `variant()` 的 `if (!once || !played(...))`（[:63](../../../src/animation/variant_state.h)）每轮重新选中入口成员。**它从未实现过"驻留"**，零调用点反而保护了产品。
+
+**结论**：`dwell()`/`seek_dwell()` 不是"已实现未接线的修复"（§1.3 的判断错误），而是从未正确的死代码。§二 若实施会引入比原缺陷更严重的回归。**不接线。**
+
+### 7.2 真正的根因：入口变体的 `_bPlayOnce` 标志
+
+同一序列在 `commit()` 下,行为完全由入口变体的 once 标志决定：
+
+| 入口 `_bPlayOnce` | 选段序列 | 现象 |
+| --- | --- | --- |
+| `true` | `Start → L1 → L2 → L1 → L2 → …` | 正常驻留 |
+| `false` | `Start → L1 → L2 → Start → L1 → L2 → …` | **每圈重放起手段** |
+
+`once` 来自 OAR 元数据：[hooks.cpp:776](../../../src/animation/oar/hooks.cpp) 读 `read_at<std::uint8_t>(variant, 0x29) != 0`，而 `Variant::_bPlayOnce=0x29` 有 PDB 审计证据（[oar-hooks.md:152](../../oar-hooks.md)：`_bDisabled=0x28`, `_bPlayOnce=0x29`, size 56）。字段与语义均正确。
+
+**因此**：缺陷不是面板代码算错，而是 **`commit()` 依赖 OAR 作者勾选 PlayOnce 才能驻留**。作者的 `Start` 变体没有勾选 → 面板每圈重放。运行日志侧证：request=5 在 `22:57:18.510` 与 `22:57:21.837` 两个边界都选中 9013（Start）。
+
+### 7.3 修正后的修复方向（待评审，尚未预注册判据）
+
+问题变成设计选择而非缺陷修补。候选方向：
+
+| 方向 | 内容 | 代价 |
+| --- | --- | --- |
+| D1 面板侧驻留覆盖 | 面板自行判定"这是序列入口段"，首次播放后强制驻留到循环成员（不改 OAR 数据、不改 `dwell()`） | 需要可靠识别"入口段 vs 循环段"，OAR 未提供显式标记 |
+| D2 首次选段跳过入口 | 面板激活（panel-open / 装备切换）时只播一次入口段，之后锁定循环成员 | 与 CI-P2 可能冲突（见 §五 停点规则） |
+| D3 回退到之前接受的状态 | 承认这是 OAR 作者的资源配置差异，面板不干预 | 缺陷保留 |
+
+**D1 与 D3 的取舍需要用户裁定**：D1 引入"面板猜测作者意图"的启发式（脆弱）；D3 不改代码但缺陷留存。D2 已由 §五 停点规则预先排除，除非放宽 CI-P2。
+
+### 7.4 已落地的离线产物
+
+`tests/idle_dwell_policy_test.cpp`（7 例，`/W4 /WX` 通过）把 §7.1–7.2 的行为固化为回归护栏：
+
+- `entry_flagged_play_once_dwells_on_the_loop_body` — 正确形态
+- `entry_without_play_once_replays_every_cycle` — 缺陷形态（精确逐拍断言）
+- `authored_order_is_preserved_in_both_shapes` — 修复不得跳过入口段
+- `all_once_sequence_restarts` — 全 once 序列允许重启
+- `dwell_pins_the_entry_member_forever` — **证伪的可执行记录**
+- `seek_dwell_moves_the_recheck_start` — 该方法的真实作用
+- `clip_without_variants_yields_no_pick` — 回退路径
+
+**生产代码零改动**（本契约到此为止只涉及文档与测试）。
