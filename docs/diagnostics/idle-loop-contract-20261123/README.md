@@ -134,30 +134,57 @@ CI-R1 操作者目视：待机连续 ≥2 分钟不再出现"起步 → 起身"�
 
 **结论**：`dwell()`/`seek_dwell()` 不是"已实现未接线的修复"（§1.3 的判断错误），而是从未正确的死代码。§二 若实施会引入比原缺陷更严重的回归。**不接线。**
 
-### 7.2 真正的根因：入口变体的 `_bPlayOnce` 标志
+### 7.2 `_bPlayOnce` 是 OAR 变体序列的驻留条件（但**不是本缺陷的根因**）
+
+> **2026-11-23 追加更正（用户声明后）**：本节原先写作"真正的根因是入口变体的 `_bPlayOnce` 标志"。**该归因已撤回**——用户声明 Smooth Moveset 系列的 Start/Loop 判决由 **DAC（Dynamic Animation Casting）** 裁定，不走 OAR 变体序列的 PlayOnce 机制。见 §7.3。以下实验事实仍然成立，但只描述"若走 OAR 变体序列，`_bPlayOnce` 决定是否驻留"这一机制，不是本缺陷的成因。
 
 同一序列在 `commit()` 下,行为完全由入口变体的 once 标志决定：
 
 | 入口 `_bPlayOnce` | 选段序列 | 现象 |
 | --- | --- | --- |
 | `true` | `Start → L1 → L2 → L1 → L2 → …` | 正常驻留 |
-| `false` | `Start → L1 → L2 → Start → L1 → L2 → …` | **每圈重放起手段** |
+| `false` | `Start → L1 → L2 → Start → L1 → L2 → …` | 每圈重放起手段 |
 
 `once` 来自 OAR 元数据：[hooks.cpp:776](../../../src/animation/oar/hooks.cpp) 读 `read_at<std::uint8_t>(variant, 0x29) != 0`，而 `Variant::_bPlayOnce=0x29` 有 PDB 审计证据（[oar-hooks.md:152](../../oar-hooks.md)：`_bDisabled=0x28`, `_bPlayOnce=0x29`, size 56）。字段与语义均正确。
 
-**因此**：缺陷不是面板代码算错，而是 **`commit()` 依赖 OAR 作者勾选 PlayOnce 才能驻留**。作者的 `Start` 变体没有勾选 → 面板每圈重放。运行日志侧证：request=5 在 `22:57:18.510` 与 `22:57:21.837` 两个边界都选中 9013（Start）。
+### 7.3 真正的根因：Smooth Moveset 的 Start/Loop 由 DAC 标记裁定，而边界重查未得到 Loop 胜者
 
-### 7.3 修正后的修复方向（待评审，尚未预注册判据）
+Smooth Moveset 系列不使用 OAR 变体序列来区分 Start 与 Loop。它用 **DAC 的持久魔法效果标记**作为相位协议，并由 OAR 条件通过 `HasMagicEffect` 读取这些标记来判决——[effects.cpp:274-275](../../../src/animation/dac/effects.cpp) 原文："Smooth's phase protocol lives in these markers: the OAR branches read them through `HasMagicEffect`"。
 
-问题变成设计选择而非缺陷修补。候选方向：
+通路本身在面板侧是正确的：
 
-| 方向 | 内容 | 代价 |
+1. `HasMagicEffect` 在 [policy.h:48](../../../src/animation/oar/policy.h) 的 `forwards_source` 白名单里；
+2. [hooks.cpp:566](../../../src/animation/oar/hooks.cpp) 对白名单条件走 `s_evaluate(condition, source, …)`，即**直接对源 Actor 求值**——DAC 在源 Actor 上放的标记因此可被看见。
+
+**但运行日志显示判决没有翻转**（[CharacterPanel-issue-trace-r2-20261022-2314.log](../CharacterPanel-issue-trace-r2-20261022-2314.log)）：
+
+| 时刻 | 事件 |
+| --- | --- |
+| 23:05:30.653 | `ANIMATION ANNOTATION … event='Smooth_loop'`（Start 段标注触发） |
+| 23:05:30.667 | `DAC … event='Smooth_loop' native call completed revision=5`（施法调用完成） |
+| 23:05:30.683 | `decision=accepted-same-asset reason=interrupt`（**仍选中原 clip**） |
+| 23:05:31.469 | `decision=boundary`（边界重查） |
+| 23:05:31.479 | `decision=accepted-same-asset reason=boundary`（**边界重查仍不变**） |
+
+这与 [dac.md:54](../../dac.md) 已登记的开放项一致："the `Smooth_loop` annotation is cast and the loop marker is observed, **yet boundary re-queries keep returning `accepted-same-asset`**"；以及 [display-issues-2026-10-22.md:228](../display-issues-2026-10-22.md)："axe Start→Loop 不切换（`Smooth_loop` 已施法、边界重查仍 `accepted-same-asset`）仍是独立待查项"。
+
+**因此缺陷是**：DAC 施法完成 ≠ 标记对 OAR 可见 ≠ OAR 选中 Loop。三者之间至少断了一处。候选断点（均未验证）：
+
+| 断点 | 含义 | 面板侧可否观测 |
 | --- | --- | --- |
-| D1 面板侧驻留覆盖 | 面板自行判定"这是序列入口段"，首次播放后强制驻留到循环成员（不改 OAR 数据、不改 `dwell()`） | 需要可靠识别"入口段 vs 循环段"，OAR 未提供显式标记 |
-| D2 首次选段跳过入口 | 面板激活（panel-open / 装备切换）时只播一次入口段，之后锁定循环成员 | 与 CI-P2 可能冲突（见 §五 停点规则） |
-| D3 回退到之前接受的状态 | 承认这是 OAR 作者的资源配置差异，面板不干预 | 缺陷保留 |
+| B1 标记未真正激活 | `native call completed` 只证明函数返回，不证明暂停引擎里效果已激活（[dac.md](../../dac.md) 反复强调） | `smooth_markers()` 报告可读，但"未激活"与"未存在"需分辨 |
+| B2 标记存在但 OAR 条件未命中 | Smooth 的 OAR 条件可能还有别的合取项（如 `Smooth_Start` 未清除） | 需完整条件求值追踪 |
+| B3 OAR 已正确返回 Loop，但被 `accepted-same-asset` 快路径吃掉 | 若 Loop 与 Start 同 `replacement_key`，[:712-745](../../../src/animation/controller.cpp) 会判"同资源"而不切换 | 现有 trace 可区分（`selected.index`），日志显示 index 未变 |
 
-**D1 与 D3 的取舍需要用户裁定**：D1 引入"面板猜测作者意图"的启发式（脆弱）；D3 不改代码但缺陷留存。D2 已由 §五 停点规则预先排除，除非放宽 CI-P2。
+**归因未落定前，本契约不提出修法。** 上一轮的 D1/D2/D3 三选项建立在错误归因上（把 `_bPlayOnce` 当根因），**全部作废**。
+
+### 7.4 修正后的取证需求（下一步，尚未执行）
+
+要区分 B1/B2/B3，需要在一次 `DetailedAnimationTrace=true` 会话中同时取得：
+
+1. `Smooth_loop` 施法前后的 `smooth_markers()` 逐次差异（现有 `DAC OBSERVED` 行已含 markers 列表，需比对 `Smooth_Start` 是否仍活跃）；
+2. 边界重查的 OAR 查询结果（`selected.index` / `replacement_key`）与 `accepted-same-asset` 判定所比对的字段；
+3. Smooth Moveset 的 OAR 条件集合（离线读其 json，判定是否有除 `HasMagicEffect` 之外的合取项）——**这一项可纯离线完成，且应最先做**。
 
 ### 7.4 已落地的离线产物
 

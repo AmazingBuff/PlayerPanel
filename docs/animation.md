@@ -225,12 +225,13 @@ Logs identify setting, actor/request/goal/family, preparation requested/ready/fa
 
 **边界**：与 v46 无关（v46 只改退休副本台账）；属产品播放路径的既有问题。未修，也未立契约。三个方向取舍不同——边界处不重入队、保留时钟连续、选段时跳过起手段——需要单独定契约后再动。
 
-> **2026-11-23 更正与契约**：已立 [C-IDLE v1 预注册契约](diagnostics/idle-loop-contract-20261123/README.md)，**实现前落盘**。取证（`CharacterPanel-animation-repair-20261023-2253.log` 的 31 次边界决策 + `variant_state.h` 静态审计 + 引擎无关直接实验）得出两条结论：
+> **2026-11-23 更正与契约**：已立 [C-IDLE v1 预注册契约](diagnostics/idle-loop-contract-20261123/README.md)，**实现前落盘**。取证经过三轮修正，当前结论：
 >
-> 1. **`SelectionState::dwell()`/`seek_dwell()` 不是"已实现未接线的修复"**（曾如此判断，已撤回）。直接实验证明 `dwell()` 清 PlayOnce 标记而非钉住位置，会让待机**永久卡在入口段**，比原缺陷更糟。零调用点反而保护了产品，**不得接线**。
-> 2. **真正根因是入口变体的 `_bPlayOnce` 标志**（OAR `Variant::_bPlayOnce=0x29`，[PDB 审计](oar-hooks.md)）。`commit()` 只在入口变体被作者标记 PlayOnce 时才驻留到循环成员；未标记则每圈回到入口段——这正是操作者看到的现象。修法属设计选择（面板侧驻留覆盖 vs 不干预），见契约 §7.3，**待裁定**。
+> 1. **`SelectionState::dwell()`/`seek_dwell()` 不是修复**（曾如此判断，已撤回）。引擎无关实验证明 `dwell()` 清 PlayOnce 标记而非钉住位置，会让待机**永久卡在入口段**，比原缺陷更糟。**不得接线**。
+> 2. **`_bPlayOnce` 也不是本缺陷的根因**（曾如此判断，同日撤回）。那只描述"若走 OAR 变体序列，PlayOnce 决定是否驻留"，而 **Smooth Moveset 系列的 Start/Loop 由 DAC 裁定**（用户声明）——DAC 放持久魔法效果标记，OAR 条件经 `HasMagicEffect` 读取（[effects.cpp:274-275](../src/animation/dac/effects.cpp) 原文）。面板侧通路正确：`HasMagicEffect` 在 `forwards_source` 白名单（[policy.h:48](../src/animation/oar/policy.h)），[hooks.cpp:566](../src/animation/oar/hooks.cpp) 对源 Actor 求值。
+> 3. **已确证的事实边界**：`Smooth_loop` 施法完成（revision 4→5）后，紧接着的边界重查仍返回 `accepted-same-asset`（[r2 日志](diagnostics/CharacterPanel-issue-trace-r2-20261022-2314.log) 23:05:30.667 → 23:05:31.479）。即 **DAC 施法完成 ≠ 标记对 OAR 可见 ≠ OAR 选中 Loop**。这与 [dac.md](dac.md) 和 [display-issues-2026-10-22.md](diagnostics/display-issues-2026-10-22.md#r2-上机步骤detailedanimationtracetrue已完成) 早已登记的开放项一致。
 >
-> 上文"机制"段的表述保留为当时的记录，不改写。上文列的方向二（保留时钟连续）与方向三（选段跳过起手段）均未采用。回归护栏：`tests/idle_dwell_policy_test.cpp`（7 例）。
+> 三个候选断点（标记未激活 / 条件未命中 / 被同资源快路径吃掉）**均未验证**，契约 §7.3–7.4 列出区分它们所需的取证。上文"机制"段的表述保留为当时的记录，不改写。回归护栏：`tests/idle_dwell_policy_test.cpp`（7 例）。
 
 ## Dependencies and verification
 
