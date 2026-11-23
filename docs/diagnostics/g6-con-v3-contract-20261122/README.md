@@ -73,3 +73,28 @@
 ---
 
 > **运行包**：v126 DLL/PDB + v2 候选档 INI（键面与 v3 相同，`CandidateDomainSync/Dispatch=true`）。v125 备份 `dist/deploy-backup-20261122-v125-v126pre/`；会话步骤见 [v2 MANUAL 追加节](../../../dist/g6-con-v2-20261122/MANUAL.md)。
+
+## 七、CON v3 run 1 判读（2026-11-23 22:28–22:32，日志 [CharacterPanel-g6conv3-20261123.log](../../CharacterPanel-g6conv3-20261123.log) 1,755,832 B，SHA-256 `A248A4BB…81FC2`；构建 `…v126-g6-domain-v3-20261122-db8da8a1e3-…` 在位、INI `f8c291f1…`、两键在案）
+
+### 预注册判据判定
+
+| 判据 | 证据 | 判定 |
+| --- | --- | --- |
+| **CON-P1 三域 clip 家族（主判据）** | 归一化后逐域相等：**拔刀域**（r2/r4 settled）源 `{1HM_Idle, MLh_Idle, SCAR_1HM_Ready}` == 候选同集；**魔法域**（r3/r5 settled）源 `{MLh_Idle, MRh_Idle}` == 候选同集；**收鞘域**（r6 settled）源 `{MT_Idle}` == 候选同集。分支桶同向：拔刀 b1hm 1→18、bmlh 0→5；魔法 1/0/2 == 源 1/0/2；收鞘 bmt 10 == 源 MT 家族 | **成立（三域）** |
+| **CON-P2 旧域退出** | r2 拔刀后 bmt 10→0（无 MT clip）；r3 魔法后 1HM 退出（桶 1hm=1 为 MRh 关联，clip 集为 `{MLh_Idle, MRh_Idle}`）；r6 收鞘后 1HM/MLh 全退（clip 仅 MT_Idle）；r4 魔法→拔刀方向同样完成 | **成立** |
+| **CON-P3 写与派发** | 8 SYNC 全 `ok`、零 failed/missing/skipped；`direction/dispatch` 与契约 §2.2 表逐一命中：`0>1`→WeapEquip、`1>2`→MagicForceEquipRight（×2）、`2>1`→WeapOutRightReplaceForceEquip、**`2>0`→Unequip（新假设行命中）**、`0>0`→none（等域 prime-only） | **成立** |
+| **CON-P4 源安全** | `phase=retained source-drift=none`；DAC **9/9 matched**；E1 `candidate=retained` 全程、graph `0x1e2b9666200` 恒定；park 19 行 == ledger 末值 18 + 1 阈值告警 | **成立** |
+| **CON-P5 P1 mini 回归** | 11 行 ledger（panel-close ×9 + preload ×2）；F9 后 `held-source=unbound` + `window=rejected reason=unbound-retained` ×1 | **成立** |
+| **CON-P6 稳定性** | `[E]` 仅既有 OAR-not-loaded 1 条；无崩溃 | **成立** |
+
+目视结论未回传（机械判据已足）。
+
+### 裁定：方向规则 v3 成立，**G6-B 收敛扩展至三域**
+
+三域 clip 家族归一化相等 + 双向旧域零残留 + `2>0` 新假设行命中 → 契约 §四判定条件全部满足。魔法域（v2 记录的 iState 粒度限制）已解除：`currentDefaultState` 四域判定是正确的主开关。
+
+### 记录的边界（不判 FAIL，同 v2）
+
+1. 候选侧 **b1hm=18 > 源 10**：1stP 系 12 节点超集（拔刀/魔法域都出现），clip 家族不受影响。
+2. **WeaponAdjustment 恒定缺失** + 收鞘域 10 项结构差集——C-G5-TOL 已接受残差，修复不触碰。
+3. `currentDefaultState=11` 瞬态未撞上签名采样（本轮 8 事件全部落在 settled 域值上；瞬态跳过逻辑未被实际触发测试）。

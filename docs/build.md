@@ -2555,3 +2555,5 @@ build\transition_probe_test.exe
 | CharacterPanel.pdb | 54,759,424 | `1E2D327DBB8BF51DE30B2AE083DD7877E81A608CC29E6A06F8E9444DAB8963FA` |
 
 **部署（2026-11-22 23:5x；Skyrim/SKSE 未运行）**：v125 DLL + 取证档 INI 备份 `dist/deploy-backup-20261122-v125-v126pre/`（逐位核对）；v126 DLL/PDB + **v2 候选档**（键面与 v3 相同，`f8c291f1…`）装入安装位，哈希逐位一致。**未启动游戏**；CON v3 run 1 待用户按 [MANUAL](../dist/g6-con-v2-20261122/MANUAL.md) 追加节执行（T1–T6 三域 + 目视）。
+
+**CON v3 run 1 判读（2026-11-23 22:28–22:32，v126）**：日志 [CharacterPanel-g6conv3-20261123.log](diagnostics/CharacterPanel-g6conv3-20261123.log)（1,755,832 B `a248a4bb…`）；判定见 [C-G6-CON v3 §七](diagnostics/g6-con-v3-contract-20261122/README.md)。**三域 clip 家族全归一化相等 + 双向旧域零残留 + `2>0` 新假设行命中 → 方向规则 v3 成立，G6-B 收敛扩展至三域**；DAC 9/9、park 恒等式、G6-A 零干扰。边界：1stP 超集、结构差集、11 瞬态未触发。
