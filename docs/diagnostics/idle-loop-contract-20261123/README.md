@@ -216,21 +216,66 @@ Smooth Moveset 系列不使用 OAR 变体序列来区分 Start 与 Loop。它用
 
 **关键观察**：`Smooth_loop` 施法后 `3802` 确实出现、`3804` 确实消失——**这两条正是 Loop 相位条件所要求的**。但同一时刻之后的边界重查仍返回 `accepted-same-asset`。
 
-### 7.6 由此收窄的两个剩余问题（均未验证，不再推测）
+### 7.6 离线取证第二阶段：ID 空间已闭合，根因是 `mag_start on` 未被清除（2026-11-23）
 
-1. **ID 空间**：日志报告 `3801/3802/3804`，OAR 条件写 `801/802/804`。**两者是否同一组效果未经证实**——本次离线取证只读了 OAR json 与 DAC toml，没有解析 ESP 里的 effect 记录，也没有验证 `smooth_marker_report` 输出 token 与 OAR `formID` 的换算规则。若两者不是同一实体，则 Loop 条件永远不满足——这是 B2 的一个具体形态。面板侧不解析 formID（`HasMagicEffect` 整体转发给引擎 `s_evaluate`），所以该差异不在面板代码内。
-2. **`smooth_marker_report` 的语义**：它报告**存在性**（含 inactive 实例，`!` 后缀标记"全部 inactive"），而 OAR 的 `HasMagicEffect` 默认看**活跃**效果（json 里 `"Active effects only": false` 的确切语义需对照 OAR 文档确认）。日志中 `3802` 没有 `!` 后缀，说明它存在且并非全部 inactive——但"存在一个活跃实例"与"OAR 判定为 active"仍可能是两件事（B1）。
+工具：[`tools/esp_mgef_probe.py`](../../../tools/esp_mgef_probe.py)（纯 stdlib，`--self-test` 4 例通过）。
 
-**这两点都可以用同一次上机取证**：在 `Smooth_loop` 施法前后各打一行 OAR 查询的完整候选接受/拒绝明细（当前 `first-false` 是空的，需要补上具体条件名与 formID 解析结果）。
+**ID 空间**：`Smooth Moveset.esp` 有 19 条 MGEF，raw FormID `0x01000801`–`0x01000831`。日志 token 是 6 位十六进制，其**低 3 位**与 ESP 的 low24 精确对应：
 
-### 7.7 已排除的方向
+| 日志 token | 低 3 位 | ESP low24 | EDID |
+| --- | --- | --- | --- |
+| `243801` | `801` | `0x000801` | `mag_start on` |
+| `243802` | `802` | `0x000802` | `mag_loop on` |
+| `243804` | `804` | `0x000804` | `mag_combat on` |
+| `243806` | `806` | `0x000806` | `mag_loop off` |
+| `243807` | `807` | `0x000807` | `mag_move off` |
+| `243827` | `827` | `0x000827` | `mag_non-combat on` |
+| `24382C` | `82C` | `0x00082C` | `mag_combat_loop off` |
+| `243831` | `831` | `0x000831` | `mag_move_equip` |
+
+前缀 `243…` 是运行时 `GetFormID()` 的加载序相关位；`smooth_marker_report` 用 `& 0xFFFFFF` 取 low24 后再 `{:02X}` 输出，因此 token 的**后 3 位**才是可比的 ID。（**推测残留**：前缀 `243` 的确切构成未验证；不影响本节结论，因为比对只用后 3 位，而 EDID 命名独立佐证了映射。）
+
+**条件判定**（OAR json × 实测标记）：
+
+| 时刻 | 相关标记 | Start 条件（801 存在） | Loop 条件（804 不存在 + 802 存在） |
+| --- | --- | --- | --- |
+| 23:05:27.560 | 有 `mag_start on`、`mag_combat on`；无 `mag_loop on` | **满足** | 不满足（804 存在且 802 缺失） |
+| 23:05:30.667 | 有 `mag_start on`、`mag_loop on`；无 `mag_combat on` | **满足** | **也满足** |
+| 23:05:31.595 | 同上 | **满足** | **也满足** |
+
+**根因**：`mag_start on` 在整个窗口中**始终存在**，因此 Start 变体的条件永远成立。Start 的 `priority=83030011` 小于 Loop 的 `83030012`（OAR 数值小的优先），于是即使 Loop 条件在 23:05:30.667 之后已经满足，**Start 仍然胜出**。
+
+**谁能清掉 `mag_start on`**：唯一携带 `MGEF 0x801` 的是 `SPEL 0x809 (sp_start on)`，而清它的 spell 是 `SPEL 0x80D (sp_start off)`。在 DAC toml 里 `0x80D` 只出现在 **`weaponSheathe`** 的 spell 集合 `[0x80E, 0x80D, 0x810, 0x82E]` 中——**没有任何 idle 段的事件携带它**：
+
+| 事件 | spells | 净效果（对 801/802/804） |
+| --- | --- | --- |
+| `weaponDraw` | `0x809, 0x80F, 0x80E, 0x82E, 0x80C` | 加 start on、清 move/loop、加 combat on |
+| `Smooth_loop` | `0x80A, 0x810, 0x82E` | 加 **loop on**、清 combat on、清 combat_loop on |
+| `Smooth_Loop_off` | `0x80E, 0x80F, 0x82A` | 清 **loop on**、清 move on、清 non-combat on |
+| `Smooth_NonCombat` | `0x810, 0x80F, 0x828, 0x82E` | 清 combat on、清 move on、加 **non-combat on** |
+
+**所以 `Smooth_loop` 的设计假设是：进入 idle 之前 `mag_start on` 已被 `weaponDraw`→…→`sp_start off` 链条清掉。** 面板场景里这条链没有走完——`sp_start off` 只在 `weaponSheathe` 上，而面板的装备驱动 idle 不经过 Sheathe。
+
+**三份日志的机械统计**：`Smooth_loop` 出现 110 次（19 + 39 + 52），`Smooth_Loop_off` **0 次**，`weaponSheathe` 出现但未与 `sp_start off` 配对清除 Start 相位。
+
+**这不是面板代码错误**：面板正确派发了 clip 标注里存在的 `Smooth_loop`；标注集合里从来没有 `Smooth_Loop_off`（这是资源事实，不是面板漏读——三份日志的 ANNOTATION 全集已列出）。缺口是"面板的 idle 场景不经过 Sheathe，因而不触发 `sp_start off`"。
+
+### 7.7 由此产生的三个具体待验问题（不再推测）
+
+1. **`sp_start off` 在正常游玩中的触发点**：toml 显示只有 `weaponSheathe` 携带 `0x80D`。那么正常游玩里 `mag_start on` 是如何被清的？可能是 `weaponSheathe` 发生在每次拔刀前，也可能是存档里 `mag_start on` 本就该由别的事件清除。**离线可查**：读 Smooth Moveset 的 HKX 标注集合，看 `weaponSheathe` 出现在哪些 clip。
+2. **`HasMagicEffect` 的活跃语义**：`"Active effects only": false` 在 OAR 里的确切含义（是否等于"含 inactive"）。本节结论只用存在性，不依赖该区分。
+3. **面板是否应补 `sp_start off`**：若确认面板的 idle 通路天然缺失 Sheathe，则需要决定是面板补派发、还是接受"面板内 Start 段会驻留"这一限制。
+
+### 7.8 已排除的方向
 
 | 方向 | 排除依据 |
 | --- | --- |
 | 接线 `dwell()`/`seek_dwell()` | §7.1 引擎无关实验：`dwell()` 永久卡在入口段 |
-| `_bPlayOnce` 未标记 | §7.2 追加更正：Smooth 不走 OAR 变体序列（本次离线取证再次确认：36 个 Start 配置全部是独立 `config.json`，彼此靠 priority + `HasMagicEffect` 区分，不是同一 replacement 的 variant 列表） |
+| `_bPlayOnce` 未标记 | §7.2 追加更正：36 个 Start 是独立 `config.json` + priority 区分，不走 OAR 变体序列 |
 | 面板漏读 `HasMagicEffect` | [policy.h:48](../../../src/animation/oar/policy.h) 白名单 + [hooks.cpp:566](../../../src/animation/oar/hooks.cpp) 源 Actor 求值，通路完整 |
-| 面板写错相位变量 | Smooth 用**魔法效果标记**，不是行为图变量；`preview_state` 不参与该判决 |
+| 面板写错相位变量 | Smooth 用**魔法效果标记**，不是行为图变量；`preview_state` 不参与判决 |
+| Loop 条件永不满足（ID 空间错配） | §7.6：ID 映射已闭合，Loop 条件在 23:05:30.667 后确实满足 |
+| DAC 施法失败 | §7.6：`Smooth_loop` 施法后 802 出现、804 消失，标记变化与预期一致 |
 
 ### 7.4 已落地的离线产物
 
