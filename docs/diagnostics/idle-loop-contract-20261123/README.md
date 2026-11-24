@@ -385,3 +385,28 @@ Smooth Moveset 系列不使用 OAR 变体序列来区分 Start 与 Loop。它用
 - 方案 A 的安全性成立（面板只需补正常游玩本来就有的那一步）；
 - 但**补派发的实现仍需先立判据**：必须证明在面板关闭/切换时不会把 `start off` 带进正常游玩的相位机（例如面板 close 时应恢复基线而非留下 `start off`）；
 - 现有 `DAC restore ... result=matched` 机制（[dac.md](../../dac.md)）看起来正好覆盖这一点，但**未针对 `sp_start off` 验证过**。
+
+## 九、上机取证结果（2026-11-24，v126 + `DisplayPose=false`）
+
+**完整记录见 [idle-loop-v127-session-20261124](../idle-loop-v127-session-20261124/README.md)**；日志 [CharacterPanel-g6idle-displaypose-off-20261124.log](../CharacterPanel-g6idle-displaypose-off-20261124.log)（1,424,942 B，`a2c6cebb…`）。
+
+### 9.1 用户确认的前提（§8.5 所问）
+
+用户实测：**正常游玩（AE 档）待机不循环重放，稳定后循环 loop 段**。因此 §8 的 N1/N3 被排除，**N2 成立**——正常游玩存在清除 `801` 的那一步，面板缺了它。
+
+### 9.2 两个独立结论
+
+1. **`DisplayPose` 决定面板动画来源**：`true` → 候选图 `poseLocal`（不含 OAR 替换，显示原版动作）；`false` → 控制器合成（含 OAR 替换，显示 Smooth 动作）。证据：`reason=boundary` 计数 `true` 为 0、`false` 为 36（边界检测代码位于提前返回点之后）。
+2. **Start 驻留缺陷在 v126 上真实复现**：5 个武器族 36 次边界，`2hm`(4/4)、`2hw Axe`(2/2)、`1hm`换装后(2/2) 连续驻留 `* idle Start`；`1hm` 首轮与 `2h` 正常驻留 Loop。用户目视一致。
+
+### 9.3 必须撤回的归因
+
+**§7.6 的"Start 的 priority 数值更小所以胜出"已撤回。** 同一标记状态（`801=1 802=1 804=0`）下，`1hm` 选 `Loop2`、`2hm` 选 `start`——priority 的两个方向都无法解释族间差异。
+
+**保留的**：`801`（`mag_start on`）在该会话 20/20 次快照中从未被清除（`805` 出现 0 次）。
+
+**新增的候选差异**（未验证）：`1hm Start` 含 `OR[IsEquippedType == 1.0, right hand]`，`2hm start` 无此条且相位条件包了一层 `OR[801, OR[804, IsInCombat negated, 801]]`。这是目前唯一发现的、能区分"1hm 正常 / 2hm 卡住"的结构差异。
+
+### 9.4 修复方向（三选一，均未验证）
+
+见 [v127 记录 §五](../idle-loop-v127-session-20261124/README.md)：A 面板侧强制驻留 / B 补派 `sp_start off` 或 `weaponSheathe` / C 记录为已知限制。A 与 B 的共同前置：证明修复动作不会在面板关闭/切换时漏进正常游玩的相位机。

@@ -232,6 +232,14 @@ Logs identify setting, actor/request/goal/family, preparation requested/ready/fa
 > 3. **已确证的事实边界**：`Smooth_loop` 施法完成（revision 4→5）后，紧接着的边界重查仍返回 `accepted-same-asset`（[r2 日志](diagnostics/CharacterPanel-issue-trace-r2-20261022-2314.log) 23:05:30.667 → 23:05:31.479）。即 **DAC 施法完成 ≠ 标记对 OAR 可见 ≠ OAR 选中 Loop**。这与 [dac.md](dac.md) 和 [display-issues-2026-10-22.md](diagnostics/display-issues-2026-10-22.md#r2-上机步骤detailedanimationtracetrue已完成) 早已登记的开放项一致。
 >
 > 三个候选断点（标记未激活 / 条件未命中 / 被同资源快路径吃掉）**均未验证**，契约 §7.3–7.4 列出区分它们所需的取证。上文"机制"段的表述保留为当时的记录，不改写。回归护栏：`tests/idle_dwell_policy_test.cpp`（7 例）。
+>
+> **2026-11-24 上机取证（结论更新）**：[v127 记录](diagnostics/idle-loop-v127-session-20261124/README.md)。两个结论：
+>
+> 1. **`DisplayPose` 决定面板动画来源**：`true` 走候选图 `poseLocal`——候选图由引擎 `63585`/`63587` 驱动，**不携带 OAR 替换结果**，因此面板显示原版动作；`false` 才走控制器合成（OAR 查询 → Smooth clip → `compose_contributor`）。证据：`reason=boundary` 计数 `true` 为 0、`false` 为 36（边界检测位于 [controller.cpp:1222-1238](../src/animation/controller.cpp) 的提前返回之后）。**这解释了长期存在的"面板动作与游戏世界不一致"**——是两条显示路径二选一，不是动作损坏。
+> 2. **Start 驻留缺陷在 v126 上真实复现**：`DisplayPose=false` 下，`2hm`(4/4 边界)、`2hw Axe`(2/2)、`1hm`换装后(2/2) 连续驻留 `* idle Start`；`1hm` 首轮与 `2h` 正常驻留 Loop。`801`（`mag_start on`）在 20/20 次快照中从未被清除（`805` 出现 0 次）。
+> 3. **撤回 priority 归因**：同一标记状态（`801=1 802=1 804=0`）下 `1hm` 选 Loop2、`2hm` 选 start——priority 两个方向都无法解释族间差异。新增候选差异：`1hm Start` 含 `OR[IsEquippedType == 1.0, right hand]`，`2hm start` 无此条（未验证）。
+>
+> 用户实测确认：**正常游玩待机不循环重放**（AE 档）。修复方向三选一（面板侧驻留 / 补派 `sp_start off` / 记录为限制），均未验证。
 
 ## Dependencies and verification
 
