@@ -7,6 +7,8 @@
 
 **2026-11-24 上机取证**：[v127 记录](idle-loop-v127-session-20261124/README.md) · 日志 [CharacterPanel-g6idle-displaypose-off-20261124.log](CharacterPanel-g6idle-displaypose-off-20261124.log)（1,424,942 B，`a2c6cebb…`）。两条独立结论：①**`DisplayPose` 决定面板动画来源**——`true` 走候选图 `poseLocal`（不含 OAR 替换，显示原版动作）、`false` 走控制器合成（显示 Smooth 动作），证据为 `reason=boundary` 计数 0 vs 36；②**Start 驻留缺陷在 v126 上复现**——5 族 36 次边界中 `2hm` / `2hw Axe` / `1hm`（换装后）连续驻留 `* idle Start`，用户目视一致。**撤回**契约 §7.6 的 priority 归因（同一标记状态下 1hm 选 Loop2、2hm 选 start，两种 priority 方向都解释不通）；**保留** `801` 常驻（20/20 快照，`805` 出现 0 次）。修复三方向（A 面板侧驻留 / B 补派 off / C 记录限制）均未验证。
 
+**2026-11-25 正常游玩相位采样（C-WORLD v1）**：[契约](world-phase-probe-contract-20261125/README.md) · [run 1 判读](world-phase-20261125/README.md) · 日志 [CharacterPanel-worldphase-run1-20261125.log](CharacterPanel-worldphase-run1-20261125.log)（103,124 B，`8dcfe5f7…`）。新增只读逐帧探针 `WorldPhaseProbe`（复用 `smooth_marker_report()`，250 ms/行，面板外亦可采样）后实测：**`801`(`mag_start on`) 在正常游玩中同样不被清除**——722 行采样中 `phase=both` 401（801 与 802 并存）、`unknown` 297、`start` 24、**`loop` 0**；两次拔刀时间线同构（`start` 约 3 秒 → `both` 持续到收刀）。按契约 §三 预注册规则裁定：**世界与面板的 `801` 状态一致，"卡 Start"不能用"面板缺清 801 机制"解释**。据此**否决方向 B**（补派 `sp_start off` 会创造世界不存在的状态）；方向 A 的依据变为"修正 OAR 在面板上下文中的判定差异"，需先解释差异来源；方向 C 依据增强。**边界**：探针只测标记、不测 OAR 选择结果，故不能据此断言面板行为正确——世界与面板在 `both` 状态下选择不同这一点仍待解释。
+
 <a id="g6-20261123"></a>
 ## G6 运行日志与契约索引（2026-11-22/23）
 

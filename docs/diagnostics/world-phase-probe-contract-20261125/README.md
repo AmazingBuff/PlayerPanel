@@ -63,3 +63,19 @@ WORLD PHASE t=<seconds> actor=<formid> markers='<smooth_marker_report 原样>' i
 ## 六、变更记录
 
 - 2026-11-25：契约落盘。触发原因：v127 的离线结论（清 `801` 只有 `weaponSheathe` 一条路）与用户目视（世界 Start→Loop 正常）矛盾，且现有仪器在面板外无采样能力。
+
+## 七、run 1 判读（2026-11-25 22:40–22:43）
+
+**完整记录见 [world-phase-20261125](../world-phase-20261125/README.md)**；日志 [CharacterPanel-worldphase-run1-20261125.log](../CharacterPanel-worldphase-run1-20261125.log)（103,124 B，`8dcfe5f7…`），722 行采样。
+
+**CW-P2 命中"`801` 常驻"分支**：`phase=both` 401 行、`unknown` 297、`start` 24、**`loop` 0**。时间线两次拔刀同构——`start` 约 3 秒（Start 段时长）→ `both` 持续到收刀。
+
+**按 §三 预注册规则裁定**：世界与面板在 `801` 状态上**一致**，因此：
+
+- **方向 B（补派 `sp_start off`）否决**——世界不靠清 `801` 离开 Start，补清会创造世界不存在的状态。
+- 方向 A 仍可作候选，但依据变为"修正 OAR 在面板上下文中的判定差异"，需先解释差异来源。
+- 方向 C 依据增强。
+
+**本契约范围外**：探针只测标记、不测 OAR 选择结果，因此不能据此断言"面板行为正确"；世界与面板在 `both` 状态下 OAR 选择不同这一点仍待解释。
+
+**探针缺陷**：首轮实现对 token 用 `0xFFFFFF` 掩码比较，六位运行时值永不匹配，导致全部行报 `start-on=false`。修正为低三位十六进制（提交 `34d099e`）；原始 `markers` 字符串已保留，无需重跑。

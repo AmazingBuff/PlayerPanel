@@ -1,0 +1,797 @@
+[22:38:48.634] [14904] [I] CharacterPanel v1-2-1-0
+[22:38:48.634] [14904] [I] CharacterPanel loaded
+[2026-11-25 22:38:48.633] [thread 14904] E:\SkyrimTools\Proj\CharacterPanel\src\main.cpp(89): [info] CharacterPanel v1-2-1-0
+[22:39:29.921] [14904] [I] OAR Animations V1 mapping API available
+[22:39:29.921] [14904] [I] OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified
+[22:39:29.921] [14904] [I] OAR 3.1.6 hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query available
+[22:40:10.730] [38156] [I] ANIMATION setting UnarmedIdle=non_combat_loop
+[22:40:10.730] [38156] [I] DIAGNOSTICS setting DetailedAnimationTrace=true
+[22:40:10.730] [38156] [I] DIAGNOSTICS setting BehaviorGraphProbe=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting IndependentGraph=inject
+[22:40:10.730] [38156] [I] EXPERIMENT setting DisplayPose=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting DisplayStep=true
+[22:40:10.730] [38156] [I] EXPERIMENT setting SourceTimeline=off transient=false graph='' pose-capture=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting SourceEventCapture=off
+[22:40:10.730] [38156] [I] EXPERIMENT setting SourceWriteCapture=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting CandidateVariableCensus=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting CandidateInputProbe=true variable='IsEquipping' value=1
+[22:40:10.730] [38156] [I] EXPERIMENT setting CandidateEquipPrime=true
+[22:40:10.730] [38156] [I] EXPERIMENT setting CandidateEquipPrimeBranch=true
+[22:40:10.730] [38156] [I] EXPERIMENT setting CandidateGenerationEntry=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting CandidateUnequipProbe=true variable='' prime='' event='Unequip'
+[22:40:10.730] [38156] [I] EXPERIMENT setting OarContextWatch=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting SamplingLiveness=off
+[22:40:10.730] [38156] [I] EXPERIMENT setting ObservationSnapshot=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting ControlSample=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting ControlSampleGrid=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting ClipIdentityCensus=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting EquipmentStateDump=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting K5FullSample=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting K5LayerAudit=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting K5Reconciliation=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting SetupAudit=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting BootstrapSourcePose=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting StateProbe=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting StateChildProbe=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting TransitionStateProbe=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting TransitionSubgraphProbe=false
+[22:40:10.730] [38156] [I] EXPERIMENT setting IdleChainProbe=true
+[22:40:10.730] [38156] [I] EXPERIMENT setting G6Ledger=true
+[22:40:10.730] [38156] [I] EXPERIMENT setting CandidateDomainSync=true
+[22:40:10.730] [38156] [I] EXPERIMENT setting CandidateDomainDispatch=true
+[22:40:10.730] [38156] [I] EXPERIMENT setting WorldPhaseProbe=true
+[22:40:10.730] [38156] [I] SOURCE EVENTCAPTURE install-skip reason=off
+[22:40:10.730] [38156] [I] SOURCE WRITECAPTURE install-skip reason=off
+[22:40:10.730] [38156] [I] PROBE LIVENESS install-skip reason=off
+[22:40:10.732] [38156] [I] DAC native inventory lifecycle sink installed
+[22:40:10.736] [38156] [I] All shaders compiled
+[22:40:10.736] [38156] [I] Installed pre-UI renderer hook
+[22:40:10.736] [38156] [I] Panel menu sink installed
+[22:40:10.736] [38156] [I] CharacterManager equipment sink installed
+[22:40:10.736] [38156] [I] SCENEGRAPH BUILD CharacterPanel-scenegraph-v126-g6-domain-v3-20261122-e437cc2160-cl94faaed0c6-20261125T143400Z runtime=1-6-1170-0 backend=scene-graph animation=isolated-OAR-query hotkeys=F7-recapture-or-timeline F8-toggle
+[22:40:10.756] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=1
+[22:40:10.757] [4248 ] [I] Studio host changed: 0x0 -> 0x21729786980 (paused=true)
+[22:40:10.757] [4248 ] [I] Studio light node has been created
+[22:40:10.757] [4248 ] [I] CP-LIGHT slot 0: registered, shell 0x218afaa7880 queued (ledger stays the authority)
+[22:40:10.757] [4248 ] [I] CP-LIGHT slot 1: registered, shell 0x218afaa7740 queued (ledger stays the authority)
+[22:40:10.757] [4248 ] [I] CP-LIGHT slot 2: registered, shell 0x218afaa7600 queued (ledger stays the authority)
+[22:40:10.757] [4248 ] [I] Studio lights registered on the ledger (scene=0x20d73de6e80 -- ledger fetch will populate the slots)
+[22:40:10.757] [4248 ] [I] CP-LIGHT slot 0: ledger shell fetched 0x218afaa7880 (after 0 miss frames)
+[22:40:10.757] [4248 ] [I] CP-LIGHT slot 1: ledger shell fetched 0x218afaa7740 (after 0 miss frames)
+[22:40:10.757] [4248 ] [I] CP-LIGHT slot 2: ledger shell fetched 0x218afaa7600 (after 0 miss frames)
+[22:40:11.041] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=2
+[22:40:11.303] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=3
+[22:40:11.563] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=4
+[22:40:11.824] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=5
+[22:40:12.085] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=6
+[22:40:12.351] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=7
+[22:40:12.612] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=8
+[22:40:12.872] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=9
+[22:40:13.133] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=10
+[22:40:13.394] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=11
+[22:40:13.655] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=12
+[22:40:13.915] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=13
+[22:40:14.177] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=14
+[22:40:14.482] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=15
+[22:40:14.756] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=16
+[22:40:15.018] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=17
+[22:40:15.278] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=18
+[22:40:15.540] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=19
+[22:40:15.801] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=20
+[22:40:16.062] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=21
+[22:40:16.324] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=22
+[22:40:16.586] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=23
+[22:40:16.847] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=24
+[22:40:17.110] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=25
+[22:40:17.371] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=26
+[22:40:17.633] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=27
+[22:40:17.894] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=28
+[22:40:18.155] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=29
+[22:40:18.418] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=30
+[22:40:18.680] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=31
+[22:40:18.942] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=32
+[22:40:19.204] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=33
+[22:40:19.466] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=34
+[22:40:19.729] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=35
+[22:40:19.990] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=36
+[22:40:20.253] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=37
+[22:40:20.515] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=38
+[22:40:20.778] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=39
+[22:40:21.040] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=40
+[22:40:21.303] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=41
+[22:40:21.565] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=42
+[22:40:21.826] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=43
+[22:40:22.088] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=44
+[22:40:22.349] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=45
+[22:40:22.611] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=46
+[22:40:22.873] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=47
+[22:40:23.135] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=48
+[22:40:23.397] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=49
+[22:40:23.660] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=50
+[22:40:23.922] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=51
+[22:40:24.185] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=52
+[22:40:24.448] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=53
+[22:40:24.710] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=54
+[22:40:24.971] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=55
+[22:40:25.232] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=56
+[22:40:25.493] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=57
+[22:40:25.754] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=58
+[22:40:26.007] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=59
+[22:40:31.582] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=60
+[22:40:31.838] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=61
+[22:40:32.093] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=62
+[22:40:32.348] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=63
+[22:40:32.604] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=64
+[22:40:32.860] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=65
+[22:40:33.115] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=66
+[22:40:33.371] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=67
+[22:40:33.626] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=68
+[22:40:33.882] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=69
+[22:40:34.137] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=70
+[22:40:34.393] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=71
+[22:40:34.648] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=72
+[22:40:34.904] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=73
+[22:40:35.160] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=74
+[22:40:35.415] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=75
+[22:40:35.671] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=76
+[22:40:35.926] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=77
+[22:40:36.182] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=78
+[22:40:36.438] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=79
+[22:40:36.981] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=80
+[22:40:36.992] [14904] [I] DAC old-world sessions discarded world=2
+[22:40:36.993] [14904] [I] G6 LEDGER phase=preload-game actor=00000000 request=0 park=0 candidate=unattempted held-source=unbound step-ready=0 candidate-graph=0x0 dac-world=2 dac-sessions=0 panel-rev=0 panel-open=0
+[22:40:37.263] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=81
+[22:40:37.317] [4248 ] [I] CP-LIGHT slot 0: ledger shell dropped
+[22:40:37.317] [4248 ] [I] CP-LIGHT slot 1: ledger shell dropped
+[22:40:37.317] [4248 ] [I] CP-LIGHT slot 2: ledger shell dropped
+[22:40:37.317] [4248 ] [W] Studio lights not fully served by the ledger yet
+[22:40:37.529] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=82
+[22:40:37.795] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=83
+[22:40:38.060] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=84
+[22:40:38.326] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=85
+[22:40:38.592] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=86
+[22:40:38.858] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=87
+[22:40:39.124] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=88
+[22:40:39.392] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=89
+[22:40:39.660] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=90
+[22:40:39.927] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=91
+[22:40:40.194] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=92
+[22:40:40.458] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=93
+[22:40:40.725] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=94
+[22:40:40.990] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=95
+[22:40:41.256] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=96
+[22:40:41.524] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=97
+[22:40:41.791] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=98
+[22:40:42.059] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=99
+[22:40:42.325] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=100
+[22:40:42.592] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=101
+[22:40:42.859] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=102
+[22:40:43.126] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=103
+[22:40:43.392] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=104
+[22:40:43.660] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=105
+[22:40:43.713] [4248 ] [W] Studio lights not fully served by the ledger yet
+[22:40:43.925] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=106
+[22:40:44.191] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=107
+[22:40:44.456] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=108
+[22:40:44.722] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=109
+[22:40:44.987] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=110
+[22:40:45.255] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=111
+[22:40:45.522] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=112
+[22:40:45.790] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=113
+[22:40:46.060] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=114
+[22:40:46.329] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=115
+[22:40:46.596] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=116
+[22:40:46.865] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=117
+[22:40:47.132] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=118
+[22:40:47.399] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=119
+[22:40:47.614] [4248 ] [I] CharacterManager watch actor=00000014
+[22:40:47.621] [4248 ] [I] OAR bases stage=world-prewarm project=0x216d749a2c0 table=15203 requested=34 resolved=27 missing=7 elapsed_ms=4.123
+[22:40:47.621] [4248 ] [I] CP-LIGHT slot 0: fallback re-registered after 1 miss frames (shell 0x218afaa7c40 filed to lightQueueAdd)
+[22:40:47.621] [4248 ] [I] CP-LIGHT slot 1: fallback re-registered after 1 miss frames (shell 0x218afaa7240 filed to lightQueueAdd)
+[22:40:47.621] [4248 ] [I] CP-LIGHT slot 2: fallback re-registered after 1 miss frames (shell 0x218afaa7100 filed to lightQueueAdd)
+[22:40:47.686] [4248 ] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=120
+[22:40:47.691] [4248 ] [I] CP-LIGHT slot 0: ledger shell fetched 0x218afaa7c40 (after 1 miss frames)
+[22:40:47.691] [4248 ] [I] CP-LIGHT slot 1: ledger shell fetched 0x218afaa7240 (after 1 miss frames)
+[22:40:47.691] [4248 ] [I] CP-LIGHT slot 2: ledger shell fetched 0x218afaa7100 (after 1 miss frames)
+[22:40:48.385] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=121
+[22:40:58.335] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=122
+[22:40:58.596] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=123
+[22:40:58.848] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=124
+[22:40:59.116] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=125
+[22:40:59.367] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=126
+[22:40:59.618] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=127
+[22:40:59.885] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=128
+[22:41:00.907] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=129
+[22:41:01.158] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=130
+[22:41:01.432] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=131
+[22:41:01.693] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=132
+[22:41:01.950] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=133
+[22:41:02.202] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=134
+[22:41:02.478] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=135
+[22:41:02.749] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=136
+[22:41:03.017] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=137
+[22:41:03.278] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=138
+[22:41:03.549] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=139
+[22:41:03.818] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=140
+[22:41:04.080] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=141
+[22:41:04.332] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=142
+[22:41:04.594] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=143
+[22:41:04.863] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=144
+[22:41:05.123] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=145
+[22:41:05.397] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=146
+[22:41:05.648] [14904] [I] WORLD PHASE actor=00000014 markers='' start-on=false loop-on=false phase=unknown row=147
+[22:41:05.908] [14904] [I] WORLD PHASE actor=00000014 markers='243803,24382C' start-on=false loop-on=false phase=unknown row=148
+[22:41:06.164] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=149
+[22:41:06.417] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=150
+[22:41:06.689] [14904] [I] WORLD PHASE actor=00000014 markers='243803,24382C' start-on=false loop-on=false phase=unknown row=151
+[22:41:06.951] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=152
+[22:41:07.206] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=153
+[22:41:07.466] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=154
+[22:41:07.733] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=155
+[22:41:08.006] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=156
+[22:41:08.258] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=157
+[22:41:08.522] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=158
+[22:41:08.792] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=159
+[22:41:09.054] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=160
+[22:41:09.316] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=161
+[22:41:09.575] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=162
+[22:41:09.847] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=163
+[22:41:10.104] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=164
+[22:41:10.370] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=165
+[22:41:10.629] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=166
+[22:41:10.887] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=167
+[22:41:11.155] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=168
+[22:41:11.417] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=169
+[22:41:11.674] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=170
+[22:41:11.929] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=171
+[22:41:12.189] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=172
+[22:41:12.448] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=173
+[22:41:12.716] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=174
+[22:41:12.976] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=175
+[22:41:13.233] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=176
+[22:41:13.497] [14904] [I] WORLD PHASE actor=00000014 markers='243803' start-on=false loop-on=false phase=unknown row=177
+[22:41:13.776] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243804,243806,243807,24382C,243831' start-on=false loop-on=false phase=unknown row=178
+[22:41:14.049] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243804,243831' start-on=false loop-on=false phase=unknown row=179
+[22:41:14.320] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243804,243831' start-on=false loop-on=false phase=unknown row=180
+[22:41:14.600] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243807,243808,243827,24382C,243831' start-on=false loop-on=false phase=unknown row=181
+[22:41:14.870] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827,243831' start-on=false loop-on=false phase=unknown row=182
+[22:41:15.144] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=183
+[22:41:15.400] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=184
+[22:41:15.671] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=185
+[22:41:15.944] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=186
+[22:41:16.230] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=187
+[22:41:16.492] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=188
+[22:41:16.771] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=189
+[22:41:17.040] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243808,243827,24382C' start-on=false loop-on=false phase=unknown row=190
+[22:41:17.302] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=191
+[22:41:17.558] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=192
+[22:41:17.830] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=193
+[22:41:18.104] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=194
+[22:41:18.380] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=195
+[22:41:18.650] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=196
+[22:41:18.906] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=197
+[22:41:19.181] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=198
+[22:41:19.446] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=199
+[22:41:19.700] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=200
+[22:41:19.974] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=201
+[22:41:20.240] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=202
+[22:41:20.506] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=203
+[22:41:20.768] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=204
+[22:41:21.024] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=205
+[22:41:21.279] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=206
+[22:41:21.546] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=207
+[22:41:21.803] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=208
+[22:41:22.058] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=209
+[22:41:22.330] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=210
+[22:41:22.591] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=211
+[22:41:22.845] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=212
+[22:41:23.109] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=213
+[22:41:23.368] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=214
+[22:41:23.625] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=215
+[22:41:23.877] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=216
+[22:41:24.135] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=217
+[22:41:24.388] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=218
+[22:41:24.658] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=219
+[22:41:24.924] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=220
+[22:41:25.182] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=221
+[22:41:25.439] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=222
+[22:41:25.694] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=223
+[22:41:25.962] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=224
+[22:41:26.223] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=225
+[22:41:26.481] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=226
+[22:41:26.745] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=227
+[22:41:27.010] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=228
+[22:41:27.272] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=229
+[22:41:27.543] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=230
+[22:41:27.814] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=231
+[22:41:28.083] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=232
+[22:41:28.341] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=233
+[22:41:28.594] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=234
+[22:41:28.862] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=235
+[22:41:29.125] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=236
+[22:41:29.380] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=237
+[22:41:29.631] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=238
+[22:41:29.897] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=239
+[22:41:30.157] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=240
+[22:41:30.411] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=241
+[22:41:30.677] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=242
+[22:41:30.940] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=243
+[22:41:31.200] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=244
+[22:41:31.451] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=245
+[22:41:31.719] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=246
+[22:41:31.987] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=247
+[22:41:32.244] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=248
+[22:41:32.494] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=249
+[22:41:32.766] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=250
+[22:41:33.028] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=251
+[22:41:33.286] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=252
+[22:41:33.557] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=253
+[22:41:33.826] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=254
+[22:41:34.087] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=255
+[22:41:34.341] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=256
+[22:41:34.601] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=257
+[22:41:34.862] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=258
+[22:41:35.132] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=259
+[22:41:35.400] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=260
+[22:41:35.665] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=261
+[22:41:35.923] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=262
+[22:41:36.173] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=263
+[22:41:36.454] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=264
+[22:41:36.717] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=265
+[22:41:36.981] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=266
+[22:41:37.240] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=267
+[22:41:41.910] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=268
+[22:41:42.197] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=269
+[22:41:42.449] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=270
+[22:41:42.700] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=271
+[22:41:42.978] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=272
+[22:41:43.233] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=273
+[22:41:43.489] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=274
+[22:41:43.742] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=275
+[22:41:43.999] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=276
+[22:41:44.250] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=277
+[22:41:44.503] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=278
+[22:41:44.754] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=279
+[22:41:45.012] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=280
+[22:41:45.278] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=281
+[22:41:45.530] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=282
+[22:41:45.789] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=283
+[22:41:46.045] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=284
+[22:41:46.303] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=285
+[22:41:46.555] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=286
+[22:41:46.824] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=287
+[22:41:47.085] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=288
+[22:41:47.335] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=289
+[22:41:47.607] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=290
+[22:41:47.874] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=291
+[22:41:48.138] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=292
+[22:41:48.394] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=293
+[22:41:48.666] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=294
+[22:41:48.941] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=295
+[22:41:49.206] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=296
+[22:41:49.463] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=297
+[22:41:49.752] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=298
+[22:41:50.033] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=299
+[22:41:50.292] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=300
+[22:41:50.548] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=301
+[22:41:50.803] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=302
+[22:41:51.079] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=303
+[22:41:51.338] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=304
+[22:41:51.599] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=305
+[22:41:51.878] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=306
+[22:41:52.134] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=307
+[22:41:52.401] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=308
+[22:41:52.671] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=309
+[22:41:52.945] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=310
+[22:41:53.211] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=311
+[22:41:53.478] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=312
+[22:41:53.747] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=313
+[22:41:54.017] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=314
+[22:41:54.282] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=315
+[22:41:54.536] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=316
+[22:41:54.801] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=317
+[22:41:55.072] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=318
+[22:41:55.340] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=319
+[22:41:55.610] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=320
+[22:41:55.871] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=321
+[22:41:56.132] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=322
+[22:41:56.400] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=323
+[22:41:56.651] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=324
+[22:41:56.930] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=325
+[22:41:57.185] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=326
+[22:41:57.446] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=327
+[22:41:57.721] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=328
+[22:41:57.985] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=329
+[22:41:58.239] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=330
+[22:41:58.513] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=331
+[22:41:58.781] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=332
+[22:41:59.037] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=333
+[22:41:59.298] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=334
+[22:41:59.572] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=335
+[22:41:59.831] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=336
+[22:42:00.084] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=337
+[22:42:00.356] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=338
+[22:42:00.623] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=339
+[22:42:00.885] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=340
+[22:42:01.168] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=341
+[22:42:01.418] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=342
+[22:42:01.694] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=343
+[22:42:01.967] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=344
+[22:42:02.240] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=345
+[22:42:02.500] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=346
+[22:42:02.757] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=347
+[22:42:03.010] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=348
+[22:42:03.287] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=349
+[22:42:03.546] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=350
+[22:42:03.808] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=351
+[22:42:04.061] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=352
+[22:42:04.319] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=353
+[22:42:04.581] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=354
+[22:42:04.832] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=355
+[22:42:05.089] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=356
+[22:42:05.341] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=357
+[22:42:05.610] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=358
+[22:42:05.879] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=359
+[22:42:06.154] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=360
+[22:42:06.415] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=361
+[22:42:06.669] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=362
+[22:42:06.920] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=363
+[22:42:07.174] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=364
+[22:42:07.443] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=365
+[22:42:07.707] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243805,243806,243808,243827,24382C' start-on=false loop-on=false phase=unknown row=366
+[22:42:07.964] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=367
+[22:42:08.224] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=368
+[22:42:08.500] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=369
+[22:42:08.764] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=370
+[22:42:09.016] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=371
+[22:42:09.276] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=372
+[22:42:09.533] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=373
+[22:42:09.786] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=374
+[22:42:10.054] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=375
+[22:42:10.309] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=376
+[22:42:10.562] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=377
+[22:42:10.832] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=378
+[22:42:11.099] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=379
+[22:42:11.360] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=380
+[22:42:11.617] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=381
+[22:42:11.870] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=382
+[22:42:12.130] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=383
+[22:42:12.398] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=384
+[22:42:12.658] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=385
+[22:42:12.919] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=386
+[22:42:13.176] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=387
+[22:42:13.435] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=388
+[22:42:13.702] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=389
+[22:42:13.961] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=390
+[22:42:14.219] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=391
+[22:42:14.476] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=392
+[22:42:14.731] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=393
+[22:42:14.985] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=394
+[22:42:15.239] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=395
+[22:42:15.513] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=396
+[22:42:15.768] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=397
+[22:42:16.035] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=398
+[22:42:16.294] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=399
+[22:42:16.549] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=400
+[22:42:16.805] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=401
+[22:42:17.055] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=402
+[22:42:17.322] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=403
+[22:42:17.578] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=404
+[22:42:17.839] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=405
+[22:42:18.097] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=406
+[22:42:18.351] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=407
+[22:42:18.606] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=408
+[22:42:18.881] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=409
+[22:42:19.131] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=410
+[22:42:19.399] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=411
+[22:42:19.654] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=412
+[22:42:19.913] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=413
+[22:42:20.190] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=414
+[22:42:20.465] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=415
+[22:42:20.728] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=416
+[22:42:20.991] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=417
+[22:42:21.243] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=418
+[22:42:24.740] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=419
+[22:42:25.016] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=420
+[22:42:25.299] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=421
+[22:42:25.554] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=422
+[22:42:25.819] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=423
+[22:42:26.073] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=424
+[22:42:26.337] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=425
+[22:42:26.598] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=426
+[22:42:26.860] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=427
+[22:42:27.134] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=428
+[22:42:27.407] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=429
+[22:42:27.671] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=430
+[22:42:27.944] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827,24382C' start-on=false loop-on=false phase=unknown row=431
+[22:42:28.207] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=432
+[22:42:28.457] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=433
+[22:42:28.728] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=434
+[22:42:28.996] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=435
+[22:42:29.291] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=436
+[22:42:29.561] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=437
+[22:42:29.817] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243804,243806,243807,243827,24382C,243831' start-on=false loop-on=false phase=unknown row=438
+[22:42:30.089] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243804,243806,243807,243827,24382C,243831' start-on=false loop-on=false phase=unknown row=439
+[22:42:30.358] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243804,243827,243831' start-on=false loop-on=false phase=unknown row=440
+[22:42:30.622] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243807,243808,243827,24382C,243831' start-on=false loop-on=false phase=unknown row=441
+[22:42:30.879] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827,243831' start-on=false loop-on=false phase=unknown row=442
+[22:42:31.135] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=443
+[22:42:31.428] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=444
+[22:42:31.694] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=445
+[22:42:31.949] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=446
+[22:42:32.206] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=447
+[22:42:32.474] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=448
+[22:42:32.727] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243827' start-on=false loop-on=false phase=unknown row=449
+[22:42:32.987] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243808,243827,24382C' start-on=false loop-on=false phase=unknown row=450
+[22:42:33.246] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=451
+[22:42:33.515] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=452
+[22:42:33.773] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=453
+[22:42:34.027] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=454
+[22:42:34.284] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=455
+[22:42:34.555] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=456
+[22:42:34.824] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=457
+[22:42:35.082] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=458
+[22:42:35.340] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=459
+[22:42:35.598] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=460
+[22:42:35.870] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=461
+[22:42:36.143] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=462
+[22:42:36.402] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=463
+[22:42:36.663] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=464
+[22:42:36.919] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=465
+[22:42:37.174] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=466
+[22:42:37.436] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=467
+[22:42:37.693] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=468
+[22:42:37.992] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=469
+[22:42:38.263] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=470
+[22:42:38.524] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=471
+[22:42:38.784] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=472
+[22:42:39.060] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=473
+[22:42:39.312] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=474
+[22:42:39.567] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=475
+[22:42:39.825] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=476
+[22:42:40.095] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=477
+[22:42:40.354] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=478
+[22:42:40.612] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=479
+[22:42:40.884] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=480
+[22:42:41.141] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=481
+[22:42:41.435] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=482
+[22:42:41.703] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=483
+[22:42:41.961] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=484
+[22:42:42.231] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=485
+[22:42:42.488] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=486
+[22:42:42.741] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=487
+[22:42:42.999] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=488
+[22:42:43.271] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=489
+[22:42:43.526] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=490
+[22:42:43.800] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=491
+[22:42:44.058] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=492
+[22:42:44.316] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=493
+[22:42:44.573] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=494
+[22:42:44.828] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=495
+[22:42:45.080] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=496
+[22:42:45.348] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=497
+[22:42:45.602] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=498
+[22:42:45.869] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=499
+[22:42:46.124] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=500
+[22:42:46.377] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=501
+[22:42:46.668] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=502
+[22:42:46.943] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=503
+[22:42:47.211] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=504
+[22:42:47.474] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=505
+[22:42:47.729] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=506
+[22:42:48.022] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=507
+[22:42:48.287] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=508
+[22:42:48.541] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=509
+[22:42:48.796] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=510
+[22:42:49.056] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=511
+[22:42:49.308] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=512
+[22:42:49.568] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=513
+[22:42:49.835] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=514
+[22:42:50.095] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=515
+[22:42:50.357] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=516
+[22:42:50.626] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=517
+[22:42:50.882] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=518
+[22:42:51.146] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=519
+[22:42:51.413] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=520
+[22:42:51.669] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=521
+[22:42:51.926] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=522
+[22:42:52.182] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=523
+[22:42:52.449] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=524
+[22:42:52.709] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=525
+[22:42:52.977] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=526
+[22:42:53.236] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=527
+[22:42:53.491] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=528
+[22:42:53.743] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=529
+[22:42:54.011] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=530
+[22:42:54.287] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=531
+[22:42:54.539] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=532
+[22:42:54.797] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=533
+[22:42:55.100] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=534
+[22:42:55.380] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=535
+[22:42:55.657] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=536
+[22:42:55.928] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=537
+[22:42:56.206] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=538
+[22:42:56.465] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243827' start-on=false loop-on=false phase=unknown row=539
+[22:42:56.723] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=540
+[22:42:57.003] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=541
+[22:42:57.260] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=542
+[22:42:57.535] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=543
+[22:42:57.806] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=544
+[22:42:58.072] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=545
+[22:42:58.331] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=546
+[22:42:58.584] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=547
+[22:42:58.849] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=548
+[22:42:59.103] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=549
+[22:42:59.381] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=550
+[22:42:59.655] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=551
+[22:42:59.931] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827,24382C' start-on=false loop-on=false phase=unknown row=552
+[22:43:00.205] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=553
+[22:43:00.476] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=554
+[22:43:00.756] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=555
+[22:43:01.011] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=556
+[22:43:01.264] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=557
+[22:43:01.515] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=558
+[22:43:01.770] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=559
+[22:43:02.023] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=560
+[22:43:02.306] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=561
+[22:43:02.572] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=562
+[22:43:02.846] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=563
+[22:43:03.122] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=564
+[22:43:03.379] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=565
+[22:43:03.645] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=566
+[22:43:03.923] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=567
+[22:43:04.179] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=568
+[22:43:04.433] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=569
+[22:43:04.699] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=570
+[22:43:04.951] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=571
+[22:43:05.231] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=572
+[22:43:05.497] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=573
+[22:43:05.773] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=574
+[22:43:06.044] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=575
+[22:43:06.302] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=576
+[22:43:06.563] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=577
+[22:43:06.821] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=578
+[22:43:07.077] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=579
+[22:43:07.341] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=580
+[22:43:07.596] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=581
+[22:43:07.874] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=582
+[22:43:08.155] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=583
+[22:43:08.417] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=584
+[22:43:08.674] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=585
+[22:43:08.949] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=586
+[22:43:09.223] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=587
+[22:43:09.483] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=588
+[22:43:09.760] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=589
+[22:43:10.022] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=590
+[22:43:10.272] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=591
+[22:43:10.551] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=592
+[22:43:10.812] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=593
+[22:43:11.063] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=594
+[22:43:11.338] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=595
+[22:43:11.610] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=596
+[22:43:11.885] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=597
+[22:43:12.177] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=598
+[22:43:12.467] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=599
+[22:43:12.729] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=600
+[22:43:13.009] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=601
+[22:43:13.261] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=602
+[22:43:13.535] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=603
+[22:43:13.786] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=604
+[22:43:14.061] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=605
+[22:43:14.335] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=606
+[22:43:14.604] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=607
+[22:43:14.880] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=608
+[22:43:15.164] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=609
+[22:43:15.434] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=610
+[22:43:15.702] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=611
+[22:43:15.953] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=612
+[22:43:16.223] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=613
+[22:43:16.479] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=614
+[22:43:16.753] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=615
+[22:43:17.007] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=616
+[22:43:17.266] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=617
+[22:43:17.519] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=618
+[22:43:17.791] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=619
+[22:43:18.079] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=620
+[22:43:18.356] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=621
+[22:43:18.634] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=622
+[22:43:18.903] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=623
+[22:43:19.189] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=624
+[22:43:19.465] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=625
+[22:43:19.741] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=626
+[22:43:19.993] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=627
+[22:43:20.268] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=628
+[22:43:20.543] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=629
+[22:43:20.814] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=630
+[22:43:21.083] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=631
+[22:43:21.336] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=632
+[22:43:21.605] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=633
+[22:43:21.870] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=634
+[22:43:22.121] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=635
+[22:43:22.398] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=636
+[22:43:22.660] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=637
+[22:43:22.913] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=638
+[22:43:23.192] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=639
+[22:43:23.466] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=640
+[22:43:23.763] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=641
+[22:43:24.017] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=642
+[22:43:24.296] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=643
+[22:43:24.560] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=644
+[22:43:24.835] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=645
+[22:43:25.114] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=646
+[22:43:25.387] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=647
+[22:43:25.639] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=648
+[22:43:25.904] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=649
+[22:43:26.165] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=650
+[22:43:26.434] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=651
+[22:43:26.685] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=652
+[22:43:26.941] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=653
+[22:43:27.196] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=654
+[22:43:27.474] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=655
+[22:43:27.750] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=656
+[22:43:28.023] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=657
+[22:43:28.273] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=658
+[22:43:28.554] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=659
+[22:43:28.818] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=660
+[22:43:29.077] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=661
+[22:43:29.335] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=662
+[22:43:29.587] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=663
+[22:43:29.844] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=664
+[22:43:30.096] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=665
+[22:43:30.357] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=666
+[22:43:30.642] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=667
+[22:43:30.903] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=668
+[22:43:31.162] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=669
+[22:43:31.417] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=670
+[22:43:31.671] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=671
+[22:43:31.951] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=672
+[22:43:32.206] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=673
+[22:43:32.479] [14904] [I] WORLD PHASE actor=00000014 markers='243801,243802,243803,243827' start-on=false loop-on=false phase=unknown row=674
+[22:43:32.744] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243805,243806,243808,243827,24382C' start-on=false loop-on=false phase=unknown row=675
+[22:43:33.005] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243805,243806,243808,243827,24382C' start-on=false loop-on=false phase=unknown row=676
+[22:43:33.271] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=677
+[22:43:33.533] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=678
+[22:43:33.790] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=679
+[22:43:34.041] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=680
+[22:43:34.312] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=681
+[22:43:34.572] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=682
+[22:43:34.827] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=683
+[22:43:35.100] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=684
+[22:43:35.366] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=685
+[22:43:35.616] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=686
+[22:43:35.892] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=687
+[22:43:36.177] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=688
+[22:43:36.436] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=689
+[22:43:36.691] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=690
+[22:43:36.980] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=691
+[22:43:37.241] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=692
+[22:43:37.500] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=693
+[22:43:37.753] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=694
+[22:43:38.032] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=695
+[22:43:38.302] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=696
+[22:43:38.558] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=697
+[22:43:38.810] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=698
+[22:43:39.081] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=699
+[22:43:39.341] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=700
+[22:43:39.600] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=701
+[22:43:39.853] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=702
+[22:43:40.132] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=703
+[22:43:40.400] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=704
+[22:43:40.661] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=705
+[22:43:40.913] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=706
+[22:43:41.183] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=707
+[22:43:41.434] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=708
+[22:43:41.690] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=709
+[22:43:41.945] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=710
+[22:43:42.200] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=711
+[22:43:42.456] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=712
+[22:43:42.713] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=713
+[22:43:42.967] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=714
+[22:43:43.223] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=715
+[22:43:43.479] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=716
+[22:43:43.734] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=717
+[22:43:43.990] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=718
+[22:43:44.245] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=719
+[22:43:44.500] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=720
+[22:43:44.756] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=721
+[22:43:45.012] [14904] [I] WORLD PHASE actor=00000014 markers='243803,243827' start-on=false loop-on=false phase=unknown row=722
