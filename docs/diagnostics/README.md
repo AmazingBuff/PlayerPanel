@@ -1,9 +1,9 @@
 # 诊断证据保留与恢复
 
 <a id="idle-loop-20261123"></a>
-## C-IDLE v1 契约（2026-11-23，待实现）
+## C-IDLE v1 契约（2026-11-23，2026-11-25 关闭：定为已知限制）
 
-产品缺陷 `idle-start-replay` 的预注册契约：[idle-loop-contract-20261123](idle-loop-contract-20261123/README.md)。取证依据 `CharacterPanel-animation-repair-20261023-2253.log` 的 31 次时钟边界决策（20 `accepted-same-asset` / 11 `accepted-handover`）与 `variant_state.h` 静态审计（`dwell`/`seek_dwell` 零调用点）。判据 CI-P1..P8 + CI-R1，**尚未实现**。**2026-11-23 离线证伪**：§二 方向（接线 `dwell()`）被引擎无关实验推翻——`dwell()` 会让待机永久卡在入口段；根因改由 DAC 裁定通路追溯（Start/Loop 由 DAC 标记经 `HasMagicEffect` 判决）；已确证：`Smooth_loop` 施法完成（rev 4→5）后边界重查仍 `accepted-same-asset`，三个候选断点未验证。见契约 §7.3–7.4；回归护栏 `tests/idle_dwell_policy_test.cpp`（7 例）。
+产品缺陷 `idle-start-replay` 的预注册契约：[idle-loop-contract-20261123](idle-loop-contract-20261123/README.md)。取证依据 `CharacterPanel-animation-repair-20261023-2253.log` 的 31 次时钟边界决策（20 `accepted-same-asset` / 11 `accepted-handover`）与 `variant_state.h` 静态审计（`dwell`/`seek_dwell` 零调用点）。判据 CI-P1..P8 + CI-R1，**从未实现**（契约已按方向 C 关闭，判据文本保留不改写）。**2026-11-23 离线证伪**：§二 方向（接线 `dwell()`）被引擎无关实验推翻——`dwell()` 会让待机永久卡在入口段；根因改由 DAC 裁定通路追溯（Start/Loop 由 DAC 标记经 `HasMagicEffect` 判决）；已确证：`Smooth_loop` 施法完成（rev 4→5）后边界重查仍 `accepted-same-asset`，三个候选断点未验证。见契约 §7.3–7.4；回归护栏 `tests/idle_dwell_policy_test.cpp`（7 例）。
 
 **2026-11-24 上机取证**：[v127 记录](idle-loop-v127-session-20261124/README.md) · 日志 [CharacterPanel-g6idle-displaypose-off-20261124.log](CharacterPanel-g6idle-displaypose-off-20261124.log)（1,424,942 B，`a2c6cebb…`）。两条独立结论：①**`DisplayPose` 决定面板动画来源**——`true` 走候选图 `poseLocal`（不含 OAR 替换，显示原版动作）、`false` 走控制器合成（显示 Smooth 动作），证据为 `reason=boundary` 计数 0 vs 36；②**Start 驻留缺陷在 v126 上复现**——5 族 36 次边界中 `2hm` / `2hw Axe` / `1hm`（换装后）连续驻留 `* idle Start`，用户目视一致。**撤回**契约 §7.6 的 priority 归因（同一标记状态下 1hm 选 Loop2、2hm 选 start，两种 priority 方向都解释不通）；**保留** `801` 常驻（20/20 快照，`805` 出现 0 次）。修复三方向（A 面板侧驻留 / B 补派 off / C 记录限制）均未验证。
 

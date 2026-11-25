@@ -2557,3 +2557,22 @@ build\transition_probe_test.exe
 **部署（2026-11-22 23:5x；Skyrim/SKSE 未运行）**：v125 DLL + 取证档 INI 备份 `dist/deploy-backup-20261122-v125-v126pre/`（逐位核对）；v126 DLL/PDB + **v2 候选档**（键面与 v3 相同，`f8c291f1…`）装入安装位，哈希逐位一致。**未启动游戏**；CON v3 run 1 待用户按 [MANUAL](../dist/g6-con-v2-20261122/MANUAL.md) 追加节执行（T1–T6 三域 + 目视）。
 
 **CON v3 run 1 判读（2026-11-23 22:28–22:32，v126）**：日志 [CharacterPanel-g6conv3-20261123.log](diagnostics/CharacterPanel-g6conv3-20261123.log)（1,755,832 B `a248a4bb…`）；判定见 [C-G6-CON v3 §七](diagnostics/g6-con-v3-contract-20261122/README.md)。**三域 clip 家族全归一化相等 + 双向旧域零残留 + `2>0` 新假设行命中 → 方向规则 v3 成立，G6-B 收敛扩展至三域**；DAC 9/9、park 恒等式、G6-A 零干扰。边界：1stP 超集、结构差集、11 瞬态未触发。
+
+## C-WORLD v1 探针版（2026-11-25；未换版本号，在 v126 上增量构建）
+
+**实现（提交 `e437cc2`，解析修正 `34d099e`）**：新增只读逐帧探针 `[Experiment] WorldPhaseProbe`——`src/animation/world_phase_probe.{h,cpp}`（复用 [effects.cpp](../src/animation/dac/effects.cpp) 的 `smooth_marker_report()`，250 ms 至多一行，面板开/关都采），`settings.{h,cpp}` 一个 bool 键，`renderer.cpp` 的 `post_ui_draw` 一处调用点。不查 OAR、不调 DAC、不写变量、不碰候选图。键 off 时输出与 v126 逐字节一致。
+
+> **解析 bug 与修正**：首轮对 token 用 `value & 0xFFFFFF == 0x801` 比较，而运行时 token 是六位（`243801`），导致 722 行全部报 `start-on=false`。修正为低三位十六进制（`value & 0xFFF`）。因原始行已保留完整 `markers='…'` 字符串，**同一份日志可离线重算，无需重跑**。
+
+**构建（2026-11-25 22:34）**：在 `e437cc2` 源码上构建 exit 0。`CHARACTER_PANEL_BUILD_LABEL` 仍沿用 `v126-g6-domain-v3-20261122`，但生成身份里的**源码修订与配置时刻都已更新**，因此嵌入身份是 `CharacterPanel-scenegraph-v126-g6-domain-v3-20261122-e437cc2160-cl94faaed0c6-20261125T143400Z`——与原 v126（`db8da8a1e3` / `20261122T155429Z`）**靠修订号、时间戳与哈希三者区分，标签前缀相同、不能只看前缀**。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,186,752 | `55DAF91B6B56BD61BDD5DEB5578C2EAA49A8C8EF35D0911DDD53C7EDA04F2BBD` |
+| CharacterPanel.pdb | 54,784,000 | `FB6E52E91325F02F1E8F70B9EAA09E4E9297693A461F6C7C2509EF7A9EADB408` |
+
+**部署（2026-11-25 22:35；Skyrim/SKSE 未运行）**：v126 三件套备份 `dist/world-phase-probe-20261125/`（DLL `6BA869C1…`、PDB `1E2D327D…`、INI `823E24EB…`，逐位核对）；探针版 DLL/PDB + 探针档 INI `36E45878…`（= pre + `WorldPhaseProbe=true` + `DisplayPose=false` + `DetailedAnimationTrace=true`）装入安装位。
+
+**C-WORLD v1 run 1 判读（2026-11-25 22:40–22:43）**：日志 [CharacterPanel-worldphase-run1-20261125.log](diagnostics/CharacterPanel-worldphase-run1-20261125.log)（103,124 B `8dcfe5f7…`），722 行采样；判定见 [run 1](diagnostics/world-phase-20261125/README.md)。**CW-P2 命中"`801` 常驻"分支**（`phase=both` 401、`unknown` 297、`start` 24、`loop` 0；两次拔刀时间线同构）。据此否决修复方向 B、不实施方向 A，C-IDLE 契约关闭为已知限制（[§十](diagnostics/idle-loop-contract-20261123/README.md)）。
+
+**收尾（2026-11-25 23:16）**：安装位 INI 清理为 `ecb2f912…`（`DetailedAnimationTrace=false` + `WorldPhaseProbe=false`，保留 `DisplayPose=false`）；DLL/PDB 不动，仍是探针版 `55DAF91B…`（键 off 时输出与 v126 一致）。同一档另存为 `dist/world-phase-probe-20261125/CharacterPanel-clean.ini`。**注意 `/dist/` 被 `.gitignore` 排除，这些回退档是本地独有、不能从 git 恢复。**
