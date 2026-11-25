@@ -37,10 +37,11 @@ namespace animation
         std::size_t g_rows = 0;
         bool g_exhausted_reported = false;
 
-        // The report is a comma-joined list of "%02X<local-id>" tokens, optionally with a
-        // trailing '!' when every instance sits inactive. The prefix width is whatever the
-        // runtime form id carries, so compare the parsed value against the low 24 bits
-        // rather than matching a string suffix (which would alias longer ids).
+        // The report is a comma-joined list of "%02X<value>" tokens, optionally with a
+        // trailing '!' when every instance sits inactive. The observed values are six hex
+        // digits (243801, 243803, ...) while the ESP records carry 0x801/0x803, so the
+        // effect identity is the low three hex digits of the reported value. Compare those
+        // rather than the whole value or a string suffix.
         bool marker_active(std::string_view report, std::uint32_t wanted)
         {
             std::size_t begin = 0;
@@ -62,7 +63,7 @@ namespace animation
                     else { parsed = false; break; }
                     value = (value << 4) | digit;
                 }
-                if (parsed && (value & 0xFFFFFFu) == wanted)
+                if (parsed && (value & 0xFFFu) == wanted)
                     return !inactive;
                 if (comma == std::string_view::npos) break;
                 begin = comma + 1;
