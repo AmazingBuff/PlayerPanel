@@ -39,6 +39,7 @@ set(PLUGIN_SOURCES
 	src/animation/event_clock.cpp
 	src/animation/oar/hooks.cpp
 	src/animation/settings.cpp
+	src/animation/world_phase_probe.cpp
 	src/character/character_manager.cpp
 	src/character/equipment_state.cpp
 	src/character/figure_audit.cpp

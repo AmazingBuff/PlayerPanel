@@ -195,6 +195,11 @@ namespace animation
     // pre-registered direction event (WeapEquip/Unequip) into the candidate via
     // the 58377 entry. Requires domain_sync_enabled; writes candidate only.
     [[nodiscard]] bool domain_dispatch_enabled();
+    // C-WORLD v1 (2026-11-25, default off): sample the source actor's Smooth phase
+    // markers from the per-frame hook, so normal play is observable while the panel
+    // is closed. Read-only; answers whether normal play ever clears mag_start on.
+    // Contract: docs/diagnostics/world-phase-probe-contract-20261125/README.md
+    [[nodiscard]] bool world_phase_probe();
     [[nodiscard]] behavior_graph::ProbeLivenessMode sampling_liveness_mode();
 }
 PLUGIN_NAMESPACE_END
