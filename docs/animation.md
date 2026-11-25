@@ -240,6 +240,8 @@ Logs identify setting, actor/request/goal/family, preparation requested/ready/fa
 > 3. **撤回 priority 归因**：同一标记状态（`801=1 802=1 804=0`）下 `1hm` 选 Loop2、`2hm` 选 start——priority 两个方向都无法解释族间差异。新增候选差异：`1hm Start` 含 `OR[IsEquippedType == 1.0, right hand]`，`2hm start` 无此条（未验证）。
 >
 > 用户实测确认：**正常游玩待机不循环重放**（AE 档）。修复方向三选一（面板侧驻留 / 补派 `sp_start off` / 记录为限制），均未验证。
+>
+> **2026-11-25 结案：定为已知限制（方向 C）。** [C-WORLD v1](../docs/diagnostics/world-phase-20261125/README.md) 用新增的只读逐帧探针在**面板关闭**状态下采样 722 行：`mag_start on`(801) 在正常游玩中**同样从不被清除**（`phase=both` 401 行、`loop` 0 行），两次拔刀时间线同构（`start` ~3 秒 → `both` 至收刀）。因此缺陷不是"面板少做了一步"——世界也不做那一步。**方向 B（补派 `sp_start off`）已否决**（会清出世界中不存在的状态）；方向 A 依赖命名约定启发式且分歧来源未解释，同样不实施。契约 [§十](../docs/diagnostics/idle-loop-contract-20261123/README.md) 记录了最终事实、不判为面板缺陷的理由、以及重启所需的唯一实质问题（相同 `both` 标记状态下世界与面板的 OAR 选择分歧）与最小取证方案。面板内影响：idle 每轮重放一次起手段，动作正确、无扭曲；`DisplayPose=false` 时面板显示 Smooth 动作（`true` 则显示原版，见 v127）。
 
 ## Dependencies and verification
 
