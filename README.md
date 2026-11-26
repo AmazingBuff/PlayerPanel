@@ -15,6 +15,8 @@ The default product path uses the copied scene tree, OAR clip selection and nati
 
 - **2026-11-26（v128 上机完成：Start 驻留不再复现）**。面板的 OAR 查询读取原始角色的 DAC 标记，排除已驱散的实例。同类未驱散且符合条件的实例照常计入。v128 DLL `164eacea…` / PDB `8adc5234…` + 验证档 INI `91acf06f…`（只开 `DetailedAnimationTrace`，保留 `DisplayPose=false`）。**上机结果**：10 个 request / 27 次面板选择中，**8/8 可判定武器族全部完成 Start → Loop**，包含 v127 记录为"卡 Start"的 2hm、2hw Axe、换装后 1hm；法杖族因走空 `logical` 不可判定。**判据修订**：MANUAL 要求的 `cause=effect-correction-change` 本轮 0 次，经代码复核该字段对"修正是否生效"无鉴别力（驱散发生的那一刻必报 `effect-signature-change`），已改用面板选择序列。**未证**：无直接因果证据（修正本身无日志点），`both` 状态下的 OAR 上下文分歧仍未解释。[判读](docs/diagnostics/v128-dac-dispel-20261126/README.md) · [面板效果判定](docs/dac.md#dispelled-effects-in-preview-queries) · [构建记录](docs/build.md#v128-dac-dispel-20261126)
 
+  判读指出的因果缺口已由 **v129**（`56893a1`，身份 `…-v129-dispel-log-20261126-56893a1bf3-…`，DLL `d0f30d6d…`）补齐：排除分支现在会打印 `OAR CORRECTION actor=… effect=…`，守卫条件与修正应用点完全相同，每条查询限 12 行。**已构建归档但未部署、未重跑**——v128 的会话判定已足够，v129 留作后续取证工具。
+
   本轮构建同时完成了工具链迁移：`17b432f` 换成 `Visual Studio 18 2026` 时删掉了 `buildPresets`，`cmake --build --preset Release` 一度失效；`3e61d42` 已补回。新工具链是 CMake 4.3.1-msvc1 + 工具集 v145/14.52.37025（原为 CMake 3.31.4 + v143/14.44.35207），**该差异不出现在嵌入式身份里**。`C:/env/CMake` 的 3.31.4 不支持新生成器，须用 VS 自带的 CMake；旧 `build/` 缓存已迁到 `build/_vs2022-config-stash/`。
 
 仍开放（不阻塞功能线）：K5-5、K2-C1、A17、EQ-C1 补测、装载 teardown NO-GO、`currentDefaultState=11` 瞬态未实测、idle 相位 OAR 上下文分歧（相同 `both` 标记状态下世界转 Loop 而面板继续选 Start）。

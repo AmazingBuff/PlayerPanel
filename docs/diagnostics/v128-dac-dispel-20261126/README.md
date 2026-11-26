@@ -75,7 +75,9 @@ if (managed && !dispelled) { signature = hash_combine(...); }
 
 ### 4.3 若要闭合因果，需要的最小取证
 
-修正分支目前**没有任何日志**。最小改动是在 [hooks.cpp](../../../src/animation/oar/hooks.cpp) 的 `value = false` 处加一行受 `DetailedAnimationTrace` 门控的记录（效果 FormID + `all_effects`/`active_only`）。下一次会话若出现该行且 Start→Loop 仍成立，因果链才闭合。这是下一轮的候选工作包，**本轮不做**。
+修正分支原先**没有任何日志**。最小改动是在 [hooks.cpp](../../../src/animation/oar/hooks.cpp) 的 `value = false` 处加一行受 `DetailedAnimationTrace` 门控的记录（效果 FormID + `all_effects`/`active_only`），下一次会话若出现该行且 Start→Loop 仍成立，因果链才闭合。
+
+**已实现（v129，`56893a1`，未部署）**：日志点位于同一分支、同一个 `!projected && scope.matches(...)` 守卫之下，每条查询限 12 行。构建身份 `…-v129-dispel-log-20261126-56893a1bf3-…-20261126T144517Z`（DLL `D0F30D6D…`），见 [构建记录](../../build.md#v129-dispel-log-20261126)。**用户决定不再为此单独上机**，故 v129 作为后续会话的取证工具留存；安装位仍为 v128。日志行格式：`OAR CORRECTION actor=… effect=… asked-active-only=… correction=all:… active:…`。
 
 ## 五、判据与边界汇总
 

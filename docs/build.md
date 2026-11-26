@@ -2616,3 +2616,20 @@ build\transition_probe_test.exe
 **部署物与回退**：上机后安装位逐位复核仍为本轮 v128（`164EACEA…` / `8ADC5234…` / `91ACF06F…`）。**部署前的 v126 三件套备份随整个 `dist/` 目录在本轮之后丢失**（`$Recycle.Bin` 无记录；`/dist/` 被 `.gitignore` 排除，git 无法恢复）；v128 的 DLL/INI 已从安装位重新归档到 `dist/v128-dac-dispel-20261126/`，PDB 未复制。影响评估见 [判读 §六](diagnostics/v128-dac-dispel-20261126/README.md#六部署与回退)。**`build/Release/CharacterPanel.dll` 现为 `9736D324…`（22:37、label `scenegraph`、身份 `…-scenegraph-b8cd985b7a-…-20261126T143100Z`），不是本轮产物、也未被部署。**
 
 `docs/oar-hooks.md` 的「Game verification is pending」在此更新为已取证。
+
+<a id="v129-dispel-log-20261126"></a>
+### v129 排除分支日志点（2026-11-26；已构建，**未部署**）
+
+**动机**：v128 判读（[§4.3](diagnostics/v128-dac-dispel-20261126/README.md)）指出修正的排除分支没有日志点，Start → Loop 的改善只能算相关性。`cause` 字段补不上这个缺口（驱散发生时 signature 与 corrections 同时变化，必报 `effect-signature-change`）。
+
+**实现（提交 `56893a1`）**：在 [hooks.cpp](../src/animation/oar/hooks.cpp) 把条件强制为 `false` 的同一分支内，于 `!projected && scope.matches(...)` 守卫之下加一行受 `DetailedAnimationTrace` 门控的记录——与修正应用点共用完全相同的条件，不会在修正未生效时误报。每条查询上限 12 行（`QueryFrame::corrections_logged`），与相邻 trace 的 `native_false_logged` 一致，因为同一叶子会对每个候选重复求值。**无行为变更**：同一谓词下 `value` 仍为 `false`。
+
+**构建（2026-11-26 22:45）**：干净树（HEAD `56893a1`，submodule `94faaed0`）configure exit 0、build exit 0，只有既有 D9025 警告。身份 `CharacterPanel-scenegraph-v129-dispel-log-20261126-56893a1bf3-cl94faaed0c6-20261126T144517Z`（无 `+dirty`）。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,193,408 | `D0F30D6D0DB1BC6A969B42A137E9338D155A3B1A3CF4C373BB66782187C30001` |
+| CharacterPanel.pdb | 57,192,448 | `FD92B077703009C600F3F569D68831AF83C5A10D0355A8CA5D230E4E92CAF2AA` |
+
+归档 `dist/v129-dispel-log-20261126/CharacterPanel-v129.{dll,pdb}`。**安装位未改动**，仍为 v128（`164EACEA…`）——用户决定不再上机验证，故本版仅为后续会话备用的取证工具，不构成新的运行结论。下次需要时替换 DLL/PDB、保持 `DetailedAnimationTrace=true`，日志出现 `OAR CORRECTION actor=… effect=… asked-active-only=… correction=all:… active:…` 即为修正实际被应用。
+
