@@ -9,6 +9,17 @@
 
 **2026-11-25 正常游玩相位采样（C-WORLD v1）**：[契约](world-phase-probe-contract-20261125/README.md) · [run 1 判读](world-phase-20261125/README.md) · 日志 [CharacterPanel-worldphase-run1-20261125.log](CharacterPanel-worldphase-run1-20261125.log)（103,124 B，`8dcfe5f7…`）。新增只读逐帧探针 `WorldPhaseProbe`（复用 `smooth_marker_report()`，250 ms/行，面板外亦可采样）后实测：**`801`(`mag_start on`) 在正常游玩中同样不被清除**——722 行采样中 `phase=both` 401（801 与 802 并存）、`unknown` 297、`start` 24、**`loop` 0**；两次拔刀时间线同构（`start` 约 3 秒 → `both` 持续到收刀）。按契约 §三 预注册规则裁定：**世界与面板的 `801` 状态一致，"卡 Start"不能用"面板缺清 801 机制"解释**。据此**否决方向 B**（补派 `sp_start off` 会创造世界不存在的状态）；方向 A 的依据变为"修正 OAR 在面板上下文中的判定差异"，需先解释差异来源；方向 C 依据增强。**边界**：探针只测标记、不测 OAR 选择结果，故不能据此断言面板行为正确——世界与面板在 `both` 状态下选择不同这一点仍待解释。**2026-11-25 收尾**：C-IDLE 契约按方向 C **关闭并定级为已知限制**（[契约 §十](idle-loop-contract-20261123/README.md)），否决方向 B、不实施方向 A；重启所需的唯一实质问题与最小取证已记录。安装位配置清理为 `DetailedAnimationTrace=false` + `WorldPhaseProbe=false`（INI `ecb2f912…`），保留 `DisplayPose=false`（面板显示 Smooth 动作）。
 
+<a id="equip-track-overflow-20261126"></a>
+## 弓 / Axe equip 姿态错位取证（2026-11-26）
+
+[离线取证](equip-track-overflow-20261126/README.md) · [v130 上机步骤](equip-track-overflow-20261126/v130-run.md)。用户报告背包内切至**弓**或 **Axe** 时，Equip 动画期间部分骨骼出现错误矩阵。
+
+**离线结论**：HKX 解包显示 Gunslicer 的 `Bowow_equip.hkx` 有 **242** 条原始变换轨、`Swordhm_equip.hkx`（Axe 走这条）有 **156** 条，而骨架只有 **116** 根骨；其他模组同名 `bow_equip.hkx` 均为 99 轨。所有资产（含正常的）`transformTrackToBoneIndices` 都为空，故 `identity-unverified` 是常态。运行时按 `min(track_count, bone_count)` 截断成 116，把前 116 条轨道当 116 根骨骼写入 → 错位。
+
+**已排除**：`Belly`/控制骨解析失败（未解析项是跳过，不写矩阵）、名字映射错（`POSE MAP` 自洽）、mask 过滤（`e_full_body` 放行）。
+
+**v130 诊断**：`asset ready` 增加 `hkx-tracks` / `skeleton-bones`，确认引擎实际读到的原始轨道数；已部署，待上机。
+
 <a id="v128-dac-dispel-20261126"></a>
 ## v128 DAC 驱散修正上机（2026-11-26）
 

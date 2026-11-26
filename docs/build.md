@@ -2631,5 +2631,24 @@ build\transition_probe_test.exe
 | CharacterPanel.dll | 2,193,408 | `D0F30D6D0DB1BC6A969B42A137E9338D155A3B1A3CF4C373BB66782187C30001` |
 | CharacterPanel.pdb | 57,192,448 | `FD92B077703009C600F3F569D68831AF83C5A10D0355A8CA5D230E4E92CAF2AA` |
 
-归档 `dist/v129-dispel-log-20261126/CharacterPanel-v129.{dll,pdb}`。**安装位未改动**，仍为 v128（`164EACEA…`）——用户决定不再上机验证，故本版仅为后续会话备用的取证工具，不构成新的运行结论。下次需要时替换 DLL/PDB、保持 `DetailedAnimationTrace=true`，日志出现 `OAR CORRECTION actor=… effect=… asked-active-only=… correction=all:… active:…` 即为修正实际被应用。
+归档 `dist/v129-dispel-log-20261126/CharacterPanel-v129.{dll,pdb}`。
+
+<a id="v130-track-diag-20261126"></a>
+### v130 轨道数诊断（2026-11-26；已构建、**已部署**，待上机）
+
+**动机**：弓 / Axe 的 equip 姿态错位（[离线取证](diagnostics/equip-track-overflow-20261126/README.md)）指向 `tracks > 116` 的 identity 回退截断，但 `asset ready` 行打印的 `tracks=` 是 `bindings.size()`（经 `min(track_count, bone_count)` 截断），无法证明引擎实际读到的原始值。
+
+**实现（提交 `d1278da`）**：[clip.cpp](../src/animation/clip.cpp) 的 `out_coverage` 在原有字段后增加 `hkx-tracks`（原始 `numberOfTransformTracks`）与 `skeleton-bones`。**`tracks` 字段含义不变**，不改分支、选择或姿态。
+
+**构建（2026-11-26 22:37）**：先在工作树含未提交文档时构建出 `+dirty` 身份（`…-d1278da4d9+dirty-…-20261126T153612Z`，DLL `67F71756…`），作废不用；stash 文档后重新 configure，得干净身份 `CharacterPanel-scenegraph-v130-track-diag-20261126-d1278da4d9-cl94faaed0c6-20261126T153724Z`。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,193,408 | `BD1246E531138B455169C3C6F8FF189F207DD92E6E53FE0FDF9FE864866FEDDD` |
+| CharacterPanel.pdb | 57,192,448 | `80B56B00915AC33FFC5440683242A6354C0ABC93118ACC2C533A4CD036284C76` |
+
+**部署（2026-11-26 22:38；Skyrim/SKSE 未运行）**：v128 三件套备份 `dist/v130-track-diag-20261126/CharacterPanel-pre.{dll,pdb,ini}`（DLL `164EACEA…` / PDB `8ADC5234…` / INI `91ACF06F…`，逐位核对）；安装位换为本轮 DLL/PDB，**INI 沿用 v128 验证档**（`DetailedAnimationTrace=true` + `DisplayPose=false`）。
+
+**判读要点**：弓应显示 `hkx-tracks=242`、Axe 走的 `1hm_equip.hkx` 应显示 `156`，`skeleton-bones=116`。若显示 116，说明引擎自身已规整轨道数，错位另有原因。步骤见 [v130-run](diagnostics/equip-track-overflow-20261126/v130-run.md)。**本轮不含运行结论。**
+**安装位未改动**，仍为 v128（`164EACEA…`）——用户决定不再上机验证，故本版仅为后续会话备用的取证工具，不构成新的运行结论。下次需要时替换 DLL/PDB、保持 `DetailedAnimationTrace=true`，日志出现 `OAR CORRECTION actor=… effect=… asked-active-only=… correction=all:… active:…` 即为修正实际被应用。
 
