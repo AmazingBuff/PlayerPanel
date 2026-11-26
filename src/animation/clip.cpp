@@ -249,8 +249,9 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
         logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-copy-nodes clip='{}' tracks={}", clip_name, bindings.size());
         return false;
     }
-    out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={} unresolved='{}'",
-        bindings.size(), resolved, bone_nodes, pose_count, unresolved);
+    out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={} hkx-tracks={} skeleton-bones={} unresolved='{}'",
+        bindings.size(), resolved, bone_nodes, pose_count, track_count,
+        static_cast<std::uint32_t>(skeleton->bones.size()), unresolved);
     return true;
 }
 
