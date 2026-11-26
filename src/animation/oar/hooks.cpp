@@ -105,6 +105,7 @@ namespace oar
             std::uint32_t native_false_rejections = 0;
             std::uint32_t candidate_logged = 0;
             std::uint32_t native_false_logged = 0;
+            std::uint32_t corrections_logged = 0;
             bool movement_seen = false;
             bool movement_answered = false;
             bool candidate_movement_seen = false;
@@ -511,7 +512,23 @@ namespace oar
                         const auto& corrections = scope->state().effect_corrections;
                         const auto correction = std::ranges::find(corrections, effect->GetFormID(), &dac::EffectCorrection::effect);
                         if (correction != corrections.end() && (active_only->GetBoolValue() ? correction->active_only : correction->all_effects))
+                        {
+                            // Positive evidence that the dispel correction fired, which the DAC
+                            // `cause` field cannot give: a managed effect leaving the dispelled set
+                            // also leaves the signature, so that transition always reports
+                            // effect-signature-change. Bounded per query like the other traces -
+                            // the same leaf is re-evaluated for every candidate.
+                            if (animation::detailed_animation_trace() && QueryFrame::current &&
+                                QueryFrame::current->corrections_logged < 12)
+                            {
+                                ++QueryFrame::current->corrections_logged;
+                                logger::info("OAR CORRECTION actor={:08x} effect={:08x} asked-active-only={} correction=all:{} active:{}",
+                                    source ? source->GetFormID() : 0, effect->GetFormID(),
+                                    static_cast<bool>(active_only->GetBoolValue()),
+                                    static_cast<bool>(correction->all_effects), static_cast<bool>(correction->active_only));
+                            }
                             value = false;
+                        }
                     }
                 }
             }
