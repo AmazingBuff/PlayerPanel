@@ -171,21 +171,6 @@ target_compile_features(
 	cxx_std_23
 )
 
-
-# Align the MSVC toolset with the one vcpkg uses for dependencies (spdlog).
-# CMake 3.31 drops the `version=` clause from CMAKE_GENERATOR_TOOLSET (the
-# preset's `v143,version=14.44.35207` arrives here as a plain `v143`), which
-# resolves to an older installed toolset (14.38) whose STL lacks the vectorized
-# symbols 14.44 objects reference — spdlog.lib then fails to link with LNK2019
-# on __std_find_*_trivial_pos_1. Pin the toolset per-target so every generated
-# .vcxproj uses 14.44 regardless of the generator toolset clause.
-set_target_properties(
-	CharacterPanel
-	PROPERTIES
-	OUTPUT_NAME CharacterPanel
-	VS_GLOBAL_VCToolsVersion "14.44.35207"
-)
-
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 	target_compile_options(
 		CharacterPanel
