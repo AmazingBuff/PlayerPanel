@@ -62,14 +62,51 @@ Gunslicer 的两个资产违反了第一个条件（242 > 116、156 > 116）。�
 | `recompute_subtree_worlds` 层级错误 | 标准 `world * local` 递归（[snapshot_transform.h:22-38](../../../src/character/snapshot_transform.h)），逻辑正确；它只是把上游错误逐级放大。 |
 | 只是显示路径（`DisplayPose=true`）的问题 | 用户会话是 `DisplayPose=false`，走的是 `sample_animation_clip` + `compose_contributor`（[controller.cpp:1283-1285](../../../src/animation/controller.cpp)）。 |
 
+## 四之二、v130 上机结果（2026-11-26/27）
+
+日志 10,788,879 B，SHA-256 `6c9f44fe58236aa7b3cbc57be22219147420eed415309a3f6609c769b61ed3c5`（会话 23:42 起）。首行 `SCENEGRAPH BUILD` = `…-v130-track-diag-20261126-d1278da4d9-…`，与本轮部署身份一致。
+
+**核心判据命中**：引擎读到的**就是**原始轨道数，不是 116。
+
+| `tracks`（截断） | `hkx-tracks`（原始） | `skeleton-bones` | 行数 |
+| ---: | ---: | ---: | ---: |
+| 99 | 99 | 116 | 312 |
+| 116 | **156** | 116 | 15 |
+| 116 | **242** | 116 | 8 |
+
+即 `min(track_count, bone_count)` 确实把 242 / 156 截成了 116，**离线推断成立**。
+
+**溢出范围比用户报告更广**（新信息）：
+
+| `hkx-tracks` | 资产 |
+| ---: | --- |
+| 242 | `Gunslicer/Bow/bow_equip.hkx` |
+| 242 | `Gunslicer/Bow/bow_unequip.hkx` |
+| 156 | `Gunslicer/Sword/1hm_equip.hkx` |
+| 156 | `Gunslicer/Sword/1hm_unequip.hkx` |
+| 156 | `Gunslicer/Sword/1hm_idle.hkx` |
+
+用户只报告了 `bow_equip` 与 `1hm_equip`。`bow_unequip`、`1hm_unequip`、`1hm_idle` 同属溢出族——**`1hm_idle` 尤其值得注意**，因为它是持续播放的待机而非一次性过渡，若也错位，观感影响比 equip 更大。建议下次一并目视确认。
+
+全部溢出资产都属于 **Gunslicer OAR Animations Pack**；同目录其他模组的同名资产仍是 99。
+
+## 四之三、更正：HavokLib 的类型判定不可信
+
+本轮尝试用 `build/hkx-audit/HavokLib`（带 `GetTransformOffsets` / `DumpTrack` 本地补丁）解逐轨数据，发现：
+
+- HavokLib 把 `bow_equip.hkx` 报成 `HK_WAVELET_COMPRESSED_ANIMATION`，把 `bow_idleheld.hkx` 报成 `HK_SPLINE_COMPRESSED_ANIMATION`；
+- 但两个文件的字符串表里**都只有 `hkaSplineCompressedAnimation`，wavelet 出现 0 次**；
+- 因此 **HKX2E 的判定才是对的**，HavokLib 对该 packfile 的 layout 识别有偏差。
+
+连带影响：HavokLib 报出的 `transformOffsets=0` **不能采信**（两个文件都报 0，包括已知正常的 99 轨资产）。先前若据此推断「per-track 表缺失」会得出错误结论。
+
+`TrackTableProbe` 工具已留在 `build/hkx-audit/HavokLib/trackprobe/`（`build/` 被 gitignore），但它当前的 spline 数据不可用，**逐轨语义仍需另找可信路径**。
+
 ## 五、取证缺口（修复前需要补）
 
-1. **242 / 156 条轨道的实际语义**。需要带采样能力的工具（HKX2E 之外的 HavokLib 或自写解析）解出逐轨 `hkQsTransform`，判断：
-   - 多出的轨道是否对应额外骨骼（例如物理骨、附加挂点）；
-   - 前 116 条是否**恰好**就是 116 根骨骼的姿态（若是，则截断其实是安全的，错位另有原因）。
-   这一条不解决，任何修复都是猜。
-2. **法杖（107 轨）**是否也复现。用户在场上未报告，但同属超 99 的少数族。
-3. ~~**运行时真实轨道数**~~ —— **已实现（v130）**。`out_coverage` 现在额外输出 `hkx-tracks`（原始 `numberOfTransformTracks`）与 `skeleton-bones`，`tracks` 字段含义不变。构建身份 `…-v130-track-diag-20261126-d1278da4d9-…`（DLL `bd1246e5…`），已部署，上机步骤见 [v130-run](v130-run.md)。判读要点：弓应显示 `hkx-tracks=242`、Axe（`1hm_equip`）应显示 `156`；若显示 116，说明引擎自身已规整轨道数，错位另有原因。
+1. **242 / 156 条轨道的实际语义 —— 仍未解**。v130 已确认引擎读到的就是 242 / 156（§四之二），但逐轨内容还得不到：HKX2E 只反序列化不采样，HavokLib 对该 packfile 的类型判定有误（§四之三）。可行路径有两条：按 HavokLib 的 `source/hka_spline_decompressor.hpp` 格式自行解压 HKX2E 的 spline block 数据，或用 Creation Kit / 3ds Max 打开该资产目视轨道布局。**这一条不解决，任何修复都是猜。**
+2. **`1hm_idle.hkx`（156 轨）是否也可见错位** —— 它是持续待机而非一次性过渡，用户尚未报告，但同属溢出族，需要一个目视确认。
+3. ~~运行时真实轨道数~~ —— 已由 v130 关闭。
 
 ## 六、候选修复方向（未选定、未实现）
 
@@ -95,5 +132,6 @@ Gunslicer 的两个资产违反了第一个条件（242 > 116、156 > 116）。�
 
 ## 八、变更记录
 
+- 2026-11-27（v130 上机）：**引擎确认读到 hkx-tracks=242 / 156**，截断假设成立；溢出范围扩至 5 个 Gunslicer 资产（含 unequip 与 1hm_idle）。同日发现 HavokLib 类型判定错误，逐轨语义仍未解，见 §四之三。
 - 2026-11-26（v130）：补上运行时原始轨道数诊断（`hkx-tracks` / `skeleton-bones`），见 [v130-run](v130-run.md)；已构建部署，待上机。
 - 2026-11-26：首次离线取证。确认只有 Gunslicer 的 `Bow\bow_equip.hkx`（242 轨）与 `Sword\1hm_equip.hkx`（156 轨）超出 116 骨骼数，与其他模组同名资产（99 轨）形成对照；绑定表全空说明 identity 回退是常态而非异常；排除名字映射与 mask 过滤两类假设；记录三项取证缺口与三个候选方向。

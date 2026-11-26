@@ -2649,6 +2649,6 @@ build\transition_probe_test.exe
 
 **部署（2026-11-26 22:38；Skyrim/SKSE 未运行）**：v128 三件套备份 `dist/v130-track-diag-20261126/CharacterPanel-pre.{dll,pdb,ini}`（DLL `164EACEA…` / PDB `8ADC5234…` / INI `91ACF06F…`，逐位核对）；安装位换为本轮 DLL/PDB，**INI 沿用 v128 验证档**（`DetailedAnimationTrace=true` + `DisplayPose=false`）。
 
-**判读要点**：弓应显示 `hkx-tracks=242`、Axe 走的 `1hm_equip.hkx` 应显示 `156`，`skeleton-bones=116`。若显示 116，说明引擎自身已规整轨道数，错位另有原因。步骤见 [v130-run](diagnostics/equip-track-overflow-20261126/v130-run.md)。**本轮不含运行结论。**
+**上机判读（2026-11-26 23:42 起 / 2026-11-27 收）**：日志归档 [CharacterPanel-v130-trackdiag-20261127.log](diagnostics/CharacterPanel-v130-trackdiag-20261127.log)（10,788,879 B `6C9F44FE…`），首行身份与本轮一致。**判据命中**：`tracks=116 hkx-tracks=156` 15 行、`tracks=116 hkx-tracks=242` 8 行、`tracks=99 hkx-tracks=99` 312 行，`skeleton-bones` 恒 116 → **引擎读到的就是原始 242 / 156，`min(track_count, bone_count)` 截断假设成立**。溢出资产共 5 个（全属 Gunslicer）：`Bow/bow_equip`、`Bow/bow_unequip`（242）；`Sword/1hm_equip`、`Sword/1hm_unequip`、`Sword/1hm_idle`（156）——比用户报告的 2 个更多。完整判读见 [取证 §四之二](diagnostics/equip-track-overflow-20261126/README.md)。
 **安装位未改动**，仍为 v128（`164EACEA…`）——用户决定不再上机验证，故本版仅为后续会话备用的取证工具，不构成新的运行结论。下次需要时替换 DLL/PDB、保持 `DetailedAnimationTrace=true`，日志出现 `OAR CORRECTION actor=… effect=… asked-active-only=… correction=all:… active:…` 即为修正实际被应用。
 
