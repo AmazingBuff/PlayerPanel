@@ -2576,3 +2576,37 @@ build\transition_probe_test.exe
 **C-WORLD v1 run 1 判读（2026-11-25 22:40–22:43）**：日志 [CharacterPanel-worldphase-run1-20261125.log](diagnostics/CharacterPanel-worldphase-run1-20261125.log)（103,124 B `8dcfe5f7…`），722 行采样；判定见 [run 1](diagnostics/world-phase-20261125/README.md)。**CW-P2 命中"`801` 常驻"分支**（`phase=both` 401、`unknown` 297、`start` 24、`loop` 0；两次拔刀时间线同构）。据此否决修复方向 B、不实施方向 A，C-IDLE 契约关闭为已知限制（[§十](diagnostics/idle-loop-contract-20261123/README.md)）。
 
 **收尾（2026-11-25 23:16）**：安装位 INI 清理为 `ecb2f912…`（`DetailedAnimationTrace=false` + `WorldPhaseProbe=false`，保留 `DisplayPose=false`）；DLL/PDB 不动，仍是探针版 `55DAF91B…`（键 off 时输出与 v126 一致）。同一档另存为 `dist/world-phase-probe-20261125/CharacterPanel-clean.ini`。**注意 `/dist/` 被 `.gitignore` 排除，这些回退档是本地独有、不能从 git 恢复。**
+
+<a id="v128-dac-dispel-20261126"></a>
+## v128 DAC 驱散修正 + VS 2026 工具链迁移（2026-11-26；已部署，待上机）
+
+**背景**：`b65db3e`（2026-11-26）让面板的 OAR 预览查询读取 DAC 会话的驱散修正，排除源角色上已被驱散、但世界暂停时仍留在效果表里的托管条目；同类未驱散且符合条件的实例照常计入。修正只作用于核心 `HasMagicEffect` 条件、且只在 `DisplayPose=false` 的控制器合成路径上生效。离线两例（[dac_effect_presence_test.cpp](../tests/dac_effect_presence_test.cpp)）通过：`2 DAC effect presence cases passed`。
+
+**工具链迁移**：`17b432f` 把生成器换成 `Visual Studio 18 2026` 并删掉了 `VS_GLOBAL_VCToolsVersion` 的 14.44 pin，但同一提交把 `buildPresets` 整段删掉，导致 README 与以往记录里的 `cmake --build --preset Release` 全部失效。`3e61d42` 补回 `buildPresets`（`configuration=Release`、`configurePreset=Release`、`targets=CharacterPanel`）。原 `v143 + 14.44.35207` pin 不再需要：新工具集 14.52.37025 链接 vcpkg 的 `spdlog.lib` 不再触发历史上那个 `__std_find_trivial_pos_1` LNK2019。
+
+**构建环境**（与 v126/v127 不同，身份里无法体现）：
+
+| 项 | v126/v127 | v128 |
+| --- | --- | --- |
+| CMake | 3.31.4（`C:/env/CMake`） | 4.3.1-msvc1（VS 自带，`…/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe`） |
+| 生成器 | Visual Studio 17 2022 | Visual Studio 18 2026 |
+| 平台工具集 | v143 / 14.44.35207 | v145 / 14.52.37025 |
+
+> **`C:/env/CMake`（3.31.4）不支持 `Visual Studio 18 2026` 生成器**，这是本机新增的硬性前提；用系统 PATH 上的 cmake 会直接报 `Could not create named generator`。旧 `build/` 缓存（VS 2022）与新生成器不兼容，已把 27 个 CMake 生成文件移入 `build/_vs2022-config-stash/` 保留可回退，并清掉 `build/_deps/hde64-subbuild`（FetchContent 子构建缓存，同样带旧生成器）。
+
+**构建（2026-11-26 22:23）**：干净树（HEAD `3e61d42`，submodule `94faaed0`）configure exit 0，只余既有的 `CMAKE_SKIP_INSTALL_RULES` 警告和 `CMAKE_TOOLCHAIN_FILE` 未使用提示（vcpkg 实际经 `VCPKG_ROOT` 生效，`DETOURS_LIBRARY`/`RAPIDCSV_INCLUDE_DIRS` 均指向 `build/vcpkg_installed/x64-windows-static-md`）。build exit 0，只有既有的 `cl` D9025 `/Ob2`→`/Ob3` 警告。构建身份 `CharacterPanel-scenegraph-v128-dac-dispel-20261126-3e61d42b61-cl94faaed0c6-20261126T142302Z`（无 `+dirty`）。
+
+| 件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| CharacterPanel.dll | 2,193,408 | `164EACEAED2CD383FAECC8374BE02476BA574917E2DC6B3C27690F6A39622219` |
+| CharacterPanel.pdb | 56,930,304 | `8ADC52349E4624466209866DFE414152100072DF6D8FF4E039AC0464854DE299` |
+
+> 首次尝试（22:20，未提交的 preset 改动）产出的是 `…-scenegraph-17b432fee2+dirty-…-20261126T142003Z`，DLL `64ef6b68…` / PDB `d620a07a…`，因带 `+dirty` 与重复 label 而废弃，**从未部署**。同目录此前还有一份 `3707a712…`（v126 标签 + `34d099e` 解析修正的增量构建，PDB `353fd3b0…`），同样未部署、未归档，已备份到 `dist/pre-vs2026-20261126/`。
+
+**部署（2026-11-26 22:24；Skyrim/SKSE 未运行）**：部署前三件套备份 `dist/v128-dac-dispel-20261126/CharacterPanel-pre.{dll,pdb,ini}`——DLL `55DAF91B…`（v126+C-WORLD 探针版）、PDB `FB6E52E9…`、INI `ECB2F912…`，逐位核对。安装位换为 v128 DLL/PDB + 验证档 INI `91ACF06F…`（20,242 B，CRLF，无 BOM）。
+
+**验证档相对部署前的唯一差异**：`DetailedAnimationTrace=false → true`。其余保持——`IndependentGraph=inject`、`DisplayPose=false`、`DisplayStep=true`、`WorldPhaseProbe=false`、`G6Ledger=true`、`CandidateDomainSync=true`、`CandidateDomainDispatch=true`。保留 `DisplayPose=false` 是必需条件：修正只在控制器合成（OAR 查询）路径生效。
+
+**清单计数**：`PLUGIN_SOURCES` 现为 **39** 项（本文开头 2026-11-03 段落记的 32 是该日的实数，按历史不改写）；`src/` 下 39 个 `.cpp` 全部在清单内，无遗漏。
+
+**待上机**：操作与判读见 [MANUAL](../dist/v128-dac-dispel-20261126/MANUAL.md)。主目标 = Smooth Moveset 的 Start → Loop 是否走通；日志侧必须先出现 `DAC OBSERVED ... cause=effect-correction-change`，否则说明驱散条目未出现、本轮不构成修正生效的证据。**本轮不含运行结论**，`docs/oar-hooks.md` 的「Game verification is pending」在取证后另行更新。

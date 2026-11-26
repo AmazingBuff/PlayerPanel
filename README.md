@@ -13,7 +13,9 @@ The default product path uses the copied scene tree, OAR clip selection and nati
 - **`idle-start-replay` 结案为已知限制**：C-IDLE → [v127 上机](docs/diagnostics/idle-loop-v127-session-20261124/README.md) → [C-WORLD v1](docs/diagnostics/world-phase-20261125/README.md) 三轮取证。新增只读逐帧探针 `WorldPhaseProbe` 在面板关闭时采样 722 行，证明 `mag_start on`(801) 在正常游玩中**同样从不被清除**（`phase=both` 401 行、`loop` 0 行）——缺陷不是"面板缺一步"，世界也不做那步；方向 B 否决、方向 A 不实施，[契约 §十](docs/diagnostics/idle-loop-contract-20261123/README.md) 记录最终事实与重启所需的最小取证。面板内影响：idle 每轮重放一次起手段，动作正确无扭曲。
 - **架构发现（v127）**：`DisplayPose` 决定面板动画来源——`true` 走候选图 `poseLocal`（**不含** OAR 替换，显示原版动作），`false` 走控制器合成（显示 Smooth 动作）。这解释了长期观察到的"面板动作与游戏世界不一致"。
 
-- **2026-11-26（本地修正，待上机）**。面板的 OAR 查询读取原始角色的 DAC 标记，排除已驱散的实例。同类未驱散且符合条件的实例照常计入。Smooth Moveset 的 Start → Loop 切换仍需实机验证。[面板效果判定](docs/dac.md#dispelled-effects-in-preview-queries)
+- **2026-11-26（v128 已构建、已部署，待上机）**。面板的 OAR 查询读取原始角色的 DAC 标记，排除已驱散的实例。同类未驱散且符合条件的实例照常计入。离线两例通过；v128 DLL `164eacea…` / PDB `8adc5234…` 已装入 `SKSE/Plugins/`，验证档 INI `91acf06f…` 只把 `DetailedAnimationTrace` 打开（`DisplayPose=false` 保留，修正只在该路径生效）。部署前 v126 探针版三件套备份在 `dist/v128-dac-dispel-20261126/`。**Smooth Moveset 的 Start → Loop 切换仍需实机验证**，取证前需出现 `DAC OBSERVED ... cause=effect-correction-change`。[面板效果判定](docs/dac.md#dispelled-effects-in-preview-queries) · [上机步骤](dist/v128-dac-dispel-20261126/MANUAL.md) · [构建记录](docs/build.md#v128-dac-dispel-20261126)
+
+  本轮构建同时完成了工具链迁移：`17b432f` 换成 `Visual Studio 18 2026` 时删掉了 `buildPresets`，`cmake --build --preset Release` 一度失效；`3e61d42` 已补回。新工具链是 CMake 4.3.1-msvc1 + 工具集 v145/14.52.37025（原为 CMake 3.31.4 + v143/14.44.35207），**该差异不出现在嵌入式身份里**。`C:/env/CMake` 的 3.31.4 不支持新生成器，须用 VS 自带的 CMake；旧 `build/` 缓存已迁到 `build/_vs2022-config-stash/`。
 
 仍开放（不阻塞功能线）：K5-5、K2-C1、A17、EQ-C1 补测、装载 teardown NO-GO、`currentDefaultState=11` 瞬态未实测、idle 相位 OAR 上下文分歧（相同 `both` 标记状态下世界转 Loop 而面板继续选 Start）。
 
@@ -52,7 +54,7 @@ One product-path defect surfaced during that pass and is recorded separately: th
 
 ## Build and controls
 
-The plugin compiles only the 32 explicit `.cpp` units in [CMakeLists.txt](CMakeLists.txt), `PLUGIN_SOURCES`. Add each new intended unit to that sorted list and reconfigure; unlisted local `.cpp` files are excluded. The preserved untracked util files remain untouched; historical v42–v44 builds used the old source glob. [Build overview](docs/build.md) records the current inventory; the [v45 boundary record](docs/build.md#v45-source-list-2026-10-29) preserves its dated 30-unit artifact.
+The plugin compiles only the 39 explicit `.cpp` units in [CMakeLists.txt](CMakeLists.txt), `PLUGIN_SOURCES`. Add each new intended unit to that sorted list and reconfigure; unlisted local `.cpp` files are excluded. The preserved untracked util files remain untouched; historical v42–v44 builds used the old source glob. [Build overview](docs/build.md) records the current inventory; the [v45 boundary record](docs/build.md#v45-source-list-2026-10-29) preserves its dated 30-unit artifact.
 
 Prepare the pinned checkout/toolchain in [Build](docs/build.md#dependencies-and-checkout), then run from this repository:
 
@@ -60,6 +62,8 @@ Prepare the pinned checkout/toolchain in [Build](docs/build.md#dependencies-and-
 cmake --preset Release
 cmake --build --preset Release
 ```
+
+Run these with the CMake bundled with Visual Studio 2026 (for example `C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe`). That bundled CMake is 4.3.1-msvc1; the older 3.31.4 install in `C:/env/CMake` cannot create the `Visual Studio 18 2026` generator this preset names and fails at configure. A `build/` cache written by the previous VS 2022 generator must be recreated first, because CMake refuses to switch generators in place.
 
 Release is the sole configure/build preset; CharacterPanel is the sole first-party target. Outputs are `build/Release/CharacterPanel.dll` and its matching PDB. Keep that pair with its configure-time `SCENEGRAPH BUILD` identity. The 2026-11-17 test record notes a return to v104 after the state probes. Each artifact retains its own build identity and hashes in [Build](docs/build.md). A later commit does not relabel existing artifacts.
 
