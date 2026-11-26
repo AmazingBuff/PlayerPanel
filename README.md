@@ -17,6 +17,8 @@ The default product path uses the copied scene tree, OAR clip selection and nati
 
   判读指出的因果缺口已由 **v129**（`56893a1`，身份 `…-v129-dispel-log-20261126-56893a1bf3-…`，DLL `d0f30d6d…`）补齐：排除分支现在会打印 `OAR CORRECTION actor=… effect=…`，守卫条件与修正应用点完全相同，每条查询限 12 行。**已构建归档但未部署、未重跑**——v128 的会话判定已足够，v129 留作后续取证工具。
 
+- **2026-11-27（弓 / Axe equip 骨骼错位：根因关闭，修复方向待选）**。v130（`d1278da`，DLL `bd1246e5…`，当前安装位）在 `asset ready` 行加 `hkx-tracks` / `skeleton-bones`，上机确认引擎读到的原始轨道数就是 242 / 156。逐轨 mask 解码证明：前 97 条与标准 99 轨布局逐位一致、旋转动画止于 track 96（两文件相同）、异常资产带 `scale=DYN` 轨道（bow 107 / axe 12）而健康资产为 0——**多出的轨道是分量展开的 scale 段，不是附加骨骼**；"一轨=一骨"假设从 track 97（附加骨/挂点/物理骨区）起错位并逐轨放大。溢出资产共 5 个，全属 Gunslicer OAR Animations Pack（`bow_equip` / `bow_unequip` 242 轨；`1hm_equip` / `1hm_unequip` / `1hm_idle` 156 轨）。[取证全文](docs/diagnostics/equip-track-overflow-20261126/README.md)。修复候选：A 拒绝 `track_count > bone_count` 的资产（十行防御）或 MO2 侧换文件，C 实现分量展开映射（数天级）；均未实施。
+
   本轮构建同时完成了工具链迁移：`17b432f` 换成 `Visual Studio 18 2026` 时删掉了 `buildPresets`，`cmake --build --preset Release` 一度失效；`3e61d42` 已补回。新工具链是 CMake 4.3.1-msvc1 + 工具集 v145/14.52.37025（原为 CMake 3.31.4 + v143/14.44.35207），**该差异不出现在嵌入式身份里**。`C:/env/CMake` 的 3.31.4 不支持新生成器，须用 VS 自带的 CMake；旧 `build/` 缓存已迁到 `build/_vs2022-config-stash/`。
 
 仍开放（不阻塞功能线）：K5-5、K2-C1、A17、EQ-C1 补测、装载 teardown NO-GO、`currentDefaultState=11` 瞬态未实测、idle 相位 OAR 上下文分歧（相同 `both` 标记状态下世界转 Loop 而面板继续选 Start）。
