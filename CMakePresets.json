@@ -59,5 +59,15 @@
       "name": "Release"
     }
   ],
+  "buildPresets": [
+    {
+      "configuration": "Release",
+      "configurePreset": "Release",
+      "name": "Release",
+      "targets": [
+        "CharacterPanel"
+      ]
+    }
+  ],
   "version": 3
 }
