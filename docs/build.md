@@ -2609,4 +2609,10 @@ build\transition_probe_test.exe
 
 **清单计数**：`PLUGIN_SOURCES` 现为 **39** 项（本文开头 2026-11-03 段落记的 32 是该日的实数，按历史不改写）；`src/` 下 39 个 `.cpp` 全部在清单内，无遗漏。
 
-**待上机**：操作与判读见 [MANUAL](../dist/v128-dac-dispel-20261126/MANUAL.md)。主目标 = Smooth Moveset 的 Start → Loop 是否走通；日志侧必须先出现 `DAC OBSERVED ... cause=effect-correction-change`，否则说明驱散条目未出现、本轮不构成修正生效的证据。**本轮不含运行结论**，`docs/oar-hooks.md` 的「Game verification is pending」在取证后另行更新。
+**上机判读（2026-11-26 22:32–22:34）**：日志归档为 [CharacterPanel-v128-dispel-20261126.log](diagnostics/CharacterPanel-v128-dispel-20261126.log)（3,027,659 B `5B3AAC23…`），首行 `SCENEGRAPH BUILD` 与本轮身份逐字符一致。**8/8 可判定武器族全部完成 Start → Loop**，含 v127 记录为「卡 Start」的 `2hm`、`2hw Axe`、换装后 `1hm`；法杖族因 idle 走空 `logical`（直连原版 `staffright_idle.hkx`）不可判定。完整判定见 [v128 判读](diagnostics/v128-dac-dispel-20261126/README.md)。
+
+> **判据修订**：原 MANUAL 要求必须出现 `DAC OBSERVED ... cause=effect-correction-change`，本轮 0 次。经代码复核该字段对「修正是否生效」**无鉴别力**——一个 managed 效果被驱散时同时退出 signature（只哈希 `managed && !dispelled`）并进入 corrections，故那一步必报 `effect-signature-change`。判据改为 `ANIMATION PANEL` 的选择序列。**未证**：修正本身无日志点，改善属相关性；`both` 状态下的 OAR 上下文分歧仍未解释。
+
+**部署物与回退**：上机后安装位逐位复核仍为本轮 v128（`164EACEA…` / `8ADC5234…` / `91ACF06F…`）。**部署前的 v126 三件套备份随整个 `dist/` 目录在本轮之后丢失**（`$Recycle.Bin` 无记录；`/dist/` 被 `.gitignore` 排除，git 无法恢复）；v128 的 DLL/INI 已从安装位重新归档到 `dist/v128-dac-dispel-20261126/`，PDB 未复制。影响评估见 [判读 §六](diagnostics/v128-dac-dispel-20261126/README.md#六部署与回退)。**`build/Release/CharacterPanel.dll` 现为 `9736D324…`（22:37、label `scenegraph`、身份 `…-scenegraph-b8cd985b7a-…-20261126T143100Z`），不是本轮产物、也未被部署。**
+
+`docs/oar-hooks.md` 的「Game verification is pending」在此更新为已取证。

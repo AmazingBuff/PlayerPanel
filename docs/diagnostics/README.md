@@ -9,6 +9,17 @@
 
 **2026-11-25 正常游玩相位采样（C-WORLD v1）**：[契约](world-phase-probe-contract-20261125/README.md) · [run 1 判读](world-phase-20261125/README.md) · 日志 [CharacterPanel-worldphase-run1-20261125.log](CharacterPanel-worldphase-run1-20261125.log)（103,124 B，`8dcfe5f7…`）。新增只读逐帧探针 `WorldPhaseProbe`（复用 `smooth_marker_report()`，250 ms/行，面板外亦可采样）后实测：**`801`(`mag_start on`) 在正常游玩中同样不被清除**——722 行采样中 `phase=both` 401（801 与 802 并存）、`unknown` 297、`start` 24、**`loop` 0**；两次拔刀时间线同构（`start` 约 3 秒 → `both` 持续到收刀）。按契约 §三 预注册规则裁定：**世界与面板的 `801` 状态一致，"卡 Start"不能用"面板缺清 801 机制"解释**。据此**否决方向 B**（补派 `sp_start off` 会创造世界不存在的状态）；方向 A 的依据变为"修正 OAR 在面板上下文中的判定差异"，需先解释差异来源；方向 C 依据增强。**边界**：探针只测标记、不测 OAR 选择结果，故不能据此断言面板行为正确——世界与面板在 `both` 状态下选择不同这一点仍待解释。**2026-11-25 收尾**：C-IDLE 契约按方向 C **关闭并定级为已知限制**（[契约 §十](idle-loop-contract-20261123/README.md)），否决方向 B、不实施方向 A；重启所需的唯一实质问题与最小取证已记录。安装位配置清理为 `DetailedAnimationTrace=false` + `WorldPhaseProbe=false`（INI `ecb2f912…`），保留 `DisplayPose=false`（面板显示 Smooth 动作）。
 
+<a id="v128-dac-dispel-20261126"></a>
+## v128 DAC 驱散修正上机（2026-11-26）
+
+[判读](v128-dac-dispel-20261126/README.md) · 日志 [CharacterPanel-v128-dispel-20261126.log](CharacterPanel-v128-dispel-20261126.log)（3,027,659 B，`5b3aac23…`）。构建 `…-v128-dac-dispel-20261126-3e61d42b61-…-20261126T142302Z`（DLL `164EACEA…` / PDB `8ADC5234…` / INI `91ACF06F…`），首行 `SCENEGRAPH BUILD` 核对一致。
+
+**结果**：10 个 request / 27 次面板选择中 **8/8 可判定武器族完成 Start → Loop**，含 v127 记录为「卡 Start」的 `2hm`、`2hw Axe`、换装后 `1hm`；法杖族 idle 走空 `logical`（原版 `staffright_idle.hkx`）不可判定。
+
+**判据修订（重要）**：部署时预注册的 `cause=effect-correction-change` 本轮 0 次，经代码复核该字段对「修正是否生效」无鉴别力——managed 效果被驱散时同时退出 signature（只哈希 `managed && !dispelled`）并进入 corrections，那一步必报 `effect-signature-change`。改用 `ANIMATION PANEL` 选择序列。**未证**：修正无独立日志点，改善属相关性；`both` 状态下 OAR 上下文分歧仍未解释；最小取证方案（给排除分支加门控日志）记在判读 §4.3，本轮未实施。
+
+**运维事实**：部署前的 v126 回退备份随整个 `dist/` 目录丢失且 git 无法恢复（`/dist/` 被忽略）；`build/Release/` 现为另一未记录产物 `9736D324…`。详见判读 §六。
+
 <a id="g6-20261123"></a>
 ## G6 运行日志与契约索引（2026-11-22/23）
 

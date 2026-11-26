@@ -156,7 +156,7 @@ The authoritative source pin `f4e7688b065175aff70aa523073857911e15aca3` register
 
 ## Native Actor effects and copied metadata (2026-10-20)
 
-**2026-11-26 update**. The existing preview query scope now uses [the DAC session's observed dispel corrections](dac.md#dispelled-effects-in-preview-queries) for core `HasMagicEffect`. The ordinary evaluator owns live-effect checks and world queries. Game verification is pending.
+**2026-11-26 update**. The existing preview query scope now uses [the DAC session's observed dispel corrections](dac.md#dispelled-effects-in-preview-queries) for core `HasMagicEffect`. The ordinary evaluator owns live-effect checks and world queries. **Game-verified on v128**: 8 of 8 determinable weapon families went idle Start -> Loop inside the panel, including the three v127 recorded as stuck, with the source marker set unchanged (`243801` still resident). Two limits stay: the exclusion branch has no log point of its own, so the improvement is a correlation rather than a directly observed exclusion (the `cause` field cannot decide it - a dispelled managed effect leaves the signature at the same moment it enters the corrections), and the OAR context divergence under the identical `both` marker state remains unexplained. [Verdict](diagnostics/v128-dac-dispel-20261126/README.md)
 
 The 2026-10-20 integration switched `HasMagicEffect` and `HasMagicEffectWithKeyword` to OAR's ordinary source Actor evaluation, including its own Active effects only, disabled, and negated semantics. It removed the independent effect projection. The DAC session dispatches accepted preview events through the native DAC-only handler and restores captured marker effects on inventory close. [DAC session](dac.md)
 
