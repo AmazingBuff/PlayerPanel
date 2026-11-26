@@ -149,23 +149,31 @@ std::vector<EffectValue> capture_effects(RE::Actor& actor, std::vector<std::uint
     return result;
 }
 
-std::size_t effect_signature(RE::Actor& actor, std::vector<std::uint32_t> const& spells)
+EffectObservation observe_effects(RE::Actor& actor, std::vector<std::uint32_t> const& spells)
 {
     std::size_t signature = Amazing_Hash;
+    std::vector<ObservedEffectPresence> presence;
     actor.AsMagicTarget()->VisitActiveEffects([&](RE::ActiveEffect* active)
     {
-        if (active && !active->flags.any(RE::ActiveEffect::Flag::kDispelled) && active->spell &&
-            contains(spells, active->spell->GetFormID()) && active->effect && active->effect->baseEffect)
+        if (!active || !active->effect || !active->effect->baseEffect)
+            return RE::BSContainer::ForEachResult::kContinue;
+
+        const std::uint32_t effect = active->effect->baseEffect->GetFormID();
+        const bool managed = active->spell && contains(spells, active->spell->GetFormID());
+        const bool dispelled = active->flags.any(RE::ActiveEffect::Flag::kDispelled);
+        const bool inactive = active->flags.any(RE::ActiveEffect::Flag::kInactive);
+        presence.push_back({ effect, managed, dispelled, inactive });
+        if (managed && !dispelled)
         {
             signature = hash_combine(signature, active->spell->GetFormID());
-            signature = hash_combine(signature, active->effect->baseEffect->GetFormID());
-            signature = hash_combine(signature, active->flags.any(RE::ActiveEffect::Flag::kInactive));
+            signature = hash_combine(signature, effect);
+            signature = hash_combine(signature, inactive);
             signature = hash_combine(signature, active->magnitude);
             signature = hash_combine(signature, active->duration);
         }
         return RE::BSContainer::ForEachResult::kContinue;
     });
-    return signature;
+    return { signature, dispelled_effect_corrections(presence) };
 }
 
 bool event_scope(RE::Actor& actor, std::string_view event, std::vector<RuleScope> const& rules,
@@ -242,10 +250,7 @@ bool idle_goal_ready(RE::Actor& actor, IdleGoal const& goal)
             include(present, base.GetFormID());
         return RE::BSContainer::ForEachResult::kContinue;
     });
-    // OAR's own Smooth branches ask HasMagicEffect for the on markers only. The off MGEFs carry
-    // the same dispel keyword as their on counterparts, so demanding a keyword-free field here
-    // holds the preparation hostage to residues the engine's own conditions would already clear;
-    // readiness follows the engine's question instead.
+    // On and off effects share dispel keywords. Readiness depends on the observed on markers.
     return std::ranges::all_of(goal.on_effects, [&](std::uint32_t id) { return contains(present, id); });
 }
 
@@ -271,8 +276,7 @@ std::string idle_goal_diagnostic(RE::Actor& actor, IdleGoal const& goal)
 
 std::string smooth_marker_report(RE::Actor& actor)
 {
-    // Smooth's phase protocol lives in these markers: the OAR branches read them through
-    // HasMagicEffect, so the panel's probe reports exactly what those conditions see.
+    // A dispelled marker can remain in the Actor's list until the game removes it.
     std::vector<std::pair<std::uint32_t, bool>> found; // file-local id -> every instance inactive
     actor.AsMagicTarget()->VisitActiveEffects([&](RE::ActiveEffect* active)
     {

@@ -2,6 +2,7 @@
 // Created by AmazingBuff on 2026/10/20.
 //
 #pragma once
+#include "animation/dac/effect_presence.h"
 #include "animation/dac/idle_goal.h"
 #include <cstdint>
 #include <memory>
@@ -29,6 +30,7 @@ namespace dac
         [[nodiscard]] IdleReadiness idle_readiness(std::uint64_t generation) const;
         void observe();
         [[nodiscard]] std::uint64_t revision() const;
+        [[nodiscard]] std::vector<EffectCorrection> effect_corrections(std::uint64_t revision) const;
         // Diagnostic: the source's active Smooth Moveset markers as file-local ids ("802", "806!"
         // marks an inactive instance), read on the calling thread like the other UI-task probes.
         [[nodiscard]] std::string smooth_markers() const;

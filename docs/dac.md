@@ -47,11 +47,26 @@ The existing default-false `[Diagnostics] DetailedAnimationTrace` setting enable
 
 `dispatch_now` adds `skipped` outcomes at its existing early returns: combined menu/world/retired/session-begin gate, source/rules unavailable, whole-event safety/no-match, missing instant caster, or final menu/world/retired/epoch/request-ticket gate. Preparation also records no-new-work, stale queued preparation and observe-only missing-source outcomes where known. Combined labels deliberately do not pretend to identify a narrower cause than the existing check supports. `request` is the queued/accepted event generation; `current-request` is diagnostic metadata for the latest requested generation. A retained old clip may enqueue an old ticket that correctly skips after a newer request. No gate, ticket, snapshot, restoration or dispatch spelling changes.
 
-Existing native-completed and restore records retain their meaning. In detailed mode, `DAC OBSERVED` reports the actual Smooth marker field when the existing effect signature changes, or after an actual native dispatch that produced no revision change. It is not a per-frame scan; when the dispatch already produced a revision-change marker record, that same dispatch does not add a second marker scan. Queue/completion/observed revision/next OAR choice are distinct observations. An observed revision alone is not proof of which event caused it, and `native call completed` still does not prove paused activation or Loop readiness.
+Existing native-completed and restore records retain their meaning. In detailed mode, `DAC OBSERVED` reports non-dispelled Smooth markers when the effect signature or preview correction changes, or after a native dispatch with no revision change. Each dispatch produces at most one of these marker records. Queue, completion, observed revision, and OAR choice are distinct observations. Use the marker and choice records to verify paused activation and Loop readiness.
 
 Diagnostic formatting and marker reads stay behind the flag. New skip records use value/atomic metadata only, including inside existing ticket-lock branches; they do not call `session_epoch`, `smooth_markers` or engine marker enumeration while holding the session mutex. Marker enumeration happens on the actual existing operation thread, not the sink-flush timer. Routine coalesced `observe()` failures remain quiet to avoid per-poll spam. No extra UI tasks, casts, Evaluate calls or source graph events are introduced.
 
 For Smooth Start-to-Loop evidence, follow `ANIMATION ANNOTATION` → `DAC TRACE queued` → skipped or existing native-completed → `DAC OBSERVED` → `ANIMATION EFFECT-REV/PENDING-REV` → next query → authoritative `ANIMATION PANEL ... accepted`. Missing or exhausted detail is not evidence of success. Actual UI scheduling, paused markers/restoration and visuals remain **UNVERIFIED**. The [single budget case](../tests/diagnostic_trace_test.cpp) does not execute DAC; use the [dated in-game procedure](diagnostics/display-issues-2026-10-22.md#10-2026-10-23-装备上下文与火把分层修复待上机). The axe Start→Loop handover is still an open item there: the `Smooth_loop` annotation is cast and the loop marker is observed, yet boundary re-queries keep returning `accepted-same-asset`.
+
+## Dispelled effects in preview queries
+
+While the world is paused, Skyrim can leave a dispelled effect in the source Actor's list until the world updates. Native `HasMagicEffect` can still count that entry. The DAC UI observation records the full runtime effect ID for each instance and publishes a correction when a matching entry from a managed spell is dispelled and no non-dispelled instance qualifies. A qualifying instance from any spell still counts. **Active effects only** excludes inactive entries. Ordinary queries include inactive entries that are still present and not dispelled. [Source observation](../src/animation/dac/effects.cpp) · [Correction policy](../src/animation/dac/effect_presence.h)
+
+The current inventory session pairs the copied corrections with its effect revision. The animation controller reads that pair for each preview query, including refreshes of a saved transition intent. Closing inventory or resetting the world invalidates the corrections. The existing OAR adapter applies them only to core `HasMagicEffect` conditions for the same source Actor and preview clip, then applies OAR's negation rules. World queries and queries without a matching current correction use the original evaluator. [Session](../src/animation/dac/session.cpp) · [Preview query](../src/animation/controller.cpp) · [OAR evaluation](../src/animation/oar/hooks.cpp)
+
+The [two direct-compiled cases](../tests/dac_effect_presence_test.cpp) passed locally. They cover the dispelled managed entry and the live entry with the same effect ID from another spell. Run from a Windows x64 developer prompt at the repository root with an existing `build` directory.
+
+```powershell
+cl /nologo /EHsc /std:c++latest /W4 /WX /I src tests/dac_effect_presence_test.cpp /Fo:build/dac_effect_presence_test.obj /Fe:build/dac_effect_presence_test.exe
+build/dac_effect_presence_test.exe
+```
+
+Smooth Moveset's in-game switch to Loop is pending.
 
 ## Non-combat idle goal preparation
 
@@ -130,12 +145,13 @@ The pinned SDK declares `IPostCreationModification`'s destructor without definin
 
 | Path | Entry point |
 | --- | --- |
-| [session.h](../src/animation/dac/session.h), [session.cpp](../src/animation/dac/session.cpp) | `Session`, `install`, `reset_world`, private MenuSink and UI-task lifetime |
+| [session.h](../src/animation/dac/session.h), [session.cpp](../src/animation/dac/session.cpp) | `Session`, `effect_corrections`, `install`, `reset_world`, private MenuSink and UI-task lifetime |
 | [idle_goal.h](../src/animation/dac/idle_goal.h) | `IdlePreparation`, `IdleReadiness`, current-request progress |
 | [session_core.h](../src/animation/dac/session_core.h) | `SessionCore`, `EventTicket`, `EffectValue`, `Restoration` |
 | [native.h](../src/animation/dac/native.h), [native.cpp](../src/animation/dac/native.cpp) | `native_rules`, `native_dispatch`, exact identity and metadata preflight |
 | [native_profile.h](../src/animation/dac/native_profile.h) | generated exact binary identity, entry prefixes and field offsets |
-| [effects.h](../src/animation/dac/effects.h), [effects.cpp](../src/animation/dac/effects.cpp) | `restorable_spell`, last-contributor SDK adapter, `entry_scope`, `capture_effects`, `event_scope`, `restore_effects`, `effect_signature`, `smooth_idle_goal`, `idle_goal_ready` |
+| [effects.h](../src/animation/dac/effects.h), [effects.cpp](../src/animation/dac/effects.cpp) | `restorable_spell`, last-contributor SDK adapter, `entry_scope`, `capture_effects`, `event_scope`, `restore_effects`, `observe_effects`, `smooth_idle_goal`, `idle_goal_ready` |
+| [effect_presence.h](../src/animation/dac/effect_presence.h), [dac_effect_presence_test.cpp](../tests/dac_effect_presence_test.cpp) | `dispelled_effect_corrections`, managed dispel filtering and live duplicate coverage |
 | [event_match.h](../src/animation/dac/event_match.h), [dac_event_match_test.cpp](../tests/dac_event_match_test.cpp) | `event_matches`, mixed-case matching and distinct loop-off boundary |
 | [script_attachment.h](../src/animation/dac/script_attachment.h), [script_attachment.cpp](../src/animation/dac/script_attachment.cpp) | `ScriptAttachment`, `read_script_attachment`, `permits_script_attachment`, `ScriptAttachmentCache::inspect` |
 | [dac_script_attachment_test.cpp](../tests/dac_script_attachment_test.cpp) | `script_free_markers_dispatch_despite_vm_handle`, `scripted_winning_override_rejects_without_running_instance` |

@@ -498,6 +498,23 @@ namespace oar
             if (name == "HasGraphVariable" && QueryFrame::current)
                 return s_evaluate(condition, source, clip, submod);
             std::optional<bool> value = equipment_condition(*condition, name, source, *scope);
+            if (name == "HasMagicEffect" && !projected && QueryFrame::current &&
+                QueryFrame::current->scope.matches(source, clip) && !scope->state().effect_corrections.empty())
+            {
+                const auto* const form = component<::Conditions::IFormConditionComponent>(*condition);
+                const auto* const active_only = component<::Conditions::IBoolConditionComponent>(*condition);
+                if (form && active_only && form->IsValid())
+                {
+                    RE::TESForm const* const effect = form->GetTESFormValue();
+                    if (effect && effect->Is(RE::FormType::MagicEffect))
+                    {
+                        const auto& corrections = scope->state().effect_corrections;
+                        const auto correction = std::ranges::find(corrections, effect->GetFormID(), &dac::EffectCorrection::effect);
+                        if (correction != corrections.end() && (active_only->GetBoolValue() ? correction->active_only : correction->all_effects))
+                            value = false;
+                    }
+                }
+            }
             if (name == "Random" && QueryFrame::current)
                 value = random_condition(*condition, source, submod, *scope);
             if (!value)

@@ -28,6 +28,7 @@ public:
     std::chrono::steady_clock::time_point goal_started;
     std::uint64_t menu = 0;
     std::size_t signature = 0;
+    std::vector<EffectCorrection> corrections;
     std::atomic<std::uint64_t> revision{0};
     std::atomic_bool observation_queued{false};
     std::atomic_bool retired{false};
@@ -88,19 +89,33 @@ namespace
                 ticket.request, diagnostic);
         logger::info("DAC actor={:08x} request={} Smooth_loop preparation {}", state.id, ticket.request, ready ? "ready" : status == IdleReadiness::e_ready ? "failed: goal markers changed" : "failed: marker observation timed out");
     }
-    void observe_now(Session::State& state, RE::Actor& actor)
+    void observe_now(Session::State& state, RE::Actor& actor, std::uint64_t world, std::uint64_t menu)
     {
         observe_goal(state, actor);
-        const std::size_t signature = effect_signature(actor, state.controlled);
-        if (signature != state.signature)
+        std::vector<std::uint32_t> controlled;
         {
-            state.signature = signature;
-            state.revision.fetch_add(1);
-            logger::info("DAC actor={:08x} epoch={} native-effect revision={}", state.id, session_epoch(state), state.revision.load());
-            if (animation::detailed_animation_trace())
-                logger::info("DAC OBSERVED actor={:08x} request={} revision={} markers='{}' cause=effect-signature-change",
-                    state.id, state.diagnostic_request.load(), state.revision.load(), smooth_marker_report(actor));
+            std::lock_guard lock(state.mutex);
+            controlled = state.controlled;
         }
+        EffectObservation observation = observe_effects(actor, controlled);
+        bool signature_changed;
+        std::uint64_t epoch;
+        std::uint64_t revision;
+        {
+            std::lock_guard lock(state.mutex);
+            if (!current(world, menu) || state.retired.load() || !state.core.open() || state.menu != menu) return;
+            signature_changed = observation.signature != state.signature;
+            if (!signature_changed && observation.corrections == state.corrections) return;
+            state.signature = observation.signature;
+            state.corrections = std::move(observation.corrections);
+            epoch = state.core.epoch();
+            revision = state.revision.fetch_add(1) + 1;
+        }
+        logger::info("DAC actor={:08x} epoch={} native-effect revision={}", state.id, epoch, revision);
+        if (animation::detailed_animation_trace())
+            logger::info("DAC OBSERVED actor={:08x} request={} revision={} markers='{}' cause={}",
+                state.id, state.diagnostic_request.load(), revision, smooth_marker_report(actor),
+                signature_changed ? "effect-signature-change" : "effect-correction-change");
     }
     bool begin(Session::State& state, std::uint64_t world, std::uint64_t menu)
     {
@@ -114,17 +129,21 @@ namespace
         if (!actor || !rules) return false;
         std::vector<std::uint32_t> scope = entry_scope(*actor, *rules);
         std::vector<EffectValue> snapshot = capture_effects(*actor, scope);
+        EffectObservation observation = observe_effects(*actor, scope);
         const std::size_t count = snapshot.size();
+        const std::size_t spell_count = scope.size();
         {
             std::lock_guard lock(state.mutex);
             if (!current(world, menu) || state.retired.load()) return false;
+            if (state.core.open()) return state.menu == menu;
             state.controlled = std::move(scope);
             state.menu = menu;
             state.core.begin(std::move(snapshot));
+            state.signature = observation.signature;
+            state.corrections = std::move(observation.corrections);
+            state.revision.fetch_add(1);
         }
-        state.signature = effect_signature(*actor, state.controlled);
-        state.revision.fetch_add(1);
-        logger::info("DAC snapshot actor={:08x} epoch={} effects={} scope={}", state.id, session_epoch(state), count, state.controlled.size());
+        logger::info("DAC snapshot actor={:08x} epoch={} effects={} scope={}", state.id, session_epoch(state), count, spell_count);
         return true;
     }
     void close(Session::State& state, std::uint64_t world)
@@ -136,6 +155,7 @@ namespace
             restoration = state.core.close(); // invalidate tickets before any engine callback
             epoch = state.core.epoch();
             state.menu = 0;
+            state.corrections.clear();
         }
         if (!restoration || world != g_world.load()) return;
         const auto actor = state.source.get();
@@ -185,6 +205,7 @@ void reset_world()
         state->retired.store(true);
         state->core.reset(); // old records cannot reopen against an Actor from a new save
         state->menu = 0;
+        state->corrections.clear();
         state->revision.fetch_add(1);
     }
     logger::info("DAC old-world sessions discarded world={}", g_world.load());
@@ -273,7 +294,7 @@ namespace
         const std::uint64_t observed_before = animation::detailed_animation_trace() ? state.revision.load() : 0;
         native_dispatch(*actor, event);
         instant->SetDualCasting(dual);
-        observe_now(state, *actor);
+        observe_now(state, *actor, world, menu);
         if (animation::detailed_animation_trace() && observed_before == state.revision.load())
             logger::info("DAC OBSERVED actor={:08x} request={} revision={} markers='{}' cause=native-dispatch-no-revision-change",
                 state.id, generation, state.revision.load(), smooth_marker_report(*actor));
@@ -335,7 +356,7 @@ void Session::prepare_idle(std::uint64_t generation, bool retain_ready)
         else if (prepared)
         {
             const auto actor = state->source.get();
-            if (actor) observe_now(*state, *actor);
+            if (actor) observe_now(*state, *actor, world, menu);
             else trace_outcome(*state, generation, "Smooth_loop", "skipped", "observe-only source unavailable");
         }
         if (!prepared)
@@ -362,10 +383,18 @@ void Session::observe()
         state->observation_queued.store(false);
         if (!current(world, menu) || !begin(*state, world, menu)) return;
         const auto actor = state->source.get();
-        if (actor) observe_now(*state, *actor);
+        if (actor) observe_now(*state, *actor, world, menu);
     });
 }
 std::uint64_t Session::revision() const { return m_state->revision.load(); }
+std::vector<EffectCorrection> Session::effect_corrections(std::uint64_t revision) const
+{
+    std::lock_guard lock(m_state->mutex);
+    if (g_open.load() && !m_state->retired.load() && m_state->core.open() && m_state->menu == g_menu.load() &&
+        m_state->revision.load() == revision)
+        return m_state->corrections;
+    return {};
+}
 std::string Session::smooth_markers() const
 {
     const auto actor = m_state->source.get();

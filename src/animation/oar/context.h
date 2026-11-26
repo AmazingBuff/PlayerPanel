@@ -1,5 +1,7 @@
 #pragma once
 
+#include "animation/dac/effect_presence.h"
+
 #include <cstdint>
 #include <array>
 #include <optional>
@@ -7,6 +9,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace RE
 {
@@ -22,6 +25,7 @@ namespace oar
         bool weapon_drawn = false;
         std::unordered_map<std::string, float> graph_variables;
         std::optional<std::array<std::uint32_t, 2>> hand_override;
+        std::vector<dac::EffectCorrection> effect_corrections;
     };
 
     enum class ScopeMode

@@ -156,9 +156,11 @@ The authoritative source pin `f4e7688b065175aff70aa523073857911e15aca3` register
 
 ## Native Actor effects and copied metadata (2026-10-20)
 
-`HasMagicEffect` and `HasMagicEffectWithKeyword` now follow OAR's ordinary source Actor evaluation, including its own Active effects only/disabled/negated semantics. The independent effect projection was removed. [dac::Session](dac.md) dispatches accepted preview events through the exact native DAC-only handler and restores captured marker effects on inventory close; all DAC transaction logic stays outside OAR. Existing source/clip evaluation scoping and standing/equipment/identity policy remain.
+**2026-11-26 update**. The existing preview query scope now uses [the DAC session's observed dispel corrections](dac.md#dispelled-effects-in-preview-queries) for core `HasMagicEffect`. The ordinary evaluator owns live-effect checks and world queries. Game verification is pending.
 
-Animation now requests equipment-driven non-combat idles with panel-drawn=true regardless of world draw/action. Native Smooth_loop goal readiness precedes queried choices. Direct empty-hand MT_Idle bypasses OAR replacements and marker dispatch; its calibration remains an independent vanilla base. [Policy/configuration](animation.md#configuration) and [DAC preparation](dac.md#non-combat-idle-goal-preparation) own these decisions; this query adapter remains unchanged.
+The 2026-10-20 integration switched `HasMagicEffect` and `HasMagicEffectWithKeyword` to OAR's ordinary source Actor evaluation, including its own Active effects only, disabled, and negated semantics. It removed the independent effect projection. The DAC session dispatches accepted preview events through the native DAC-only handler and restores captured marker effects on inventory close. [DAC session](dac.md)
+
+Animation requests equipment-driven non-combat idles with panel-drawn=true regardless of world draw/action. Native Smooth_loop goal readiness precedes queried choices. Direct empty-hand MT_Idle bypasses OAR replacements and marker dispatch while its calibration uses an independent vanilla base. [Policy and configuration](animation.md#configuration) · [DAC preparation](dac.md#non-combat-idle-goal-preparation)
 
 Smooth Moveset's [compatibility boundary](dac.md#smooth-moveset-compatibility-boundary) documents remaining query limits. The [three explicit IED/SDS schemas and matched-provider forwarding](#native-ied-placement-conditions-2026-10-21) retain their exact provider and bounded historical-hand guards; unrelated providers still require an explicit adapter. The combat Start/Loop configs use TDM effect `0x804` OR `IsCombatState == 1`; `evaluate_thunk` currently projects the latter to zero, while ordinary source effects remain native reads.
 

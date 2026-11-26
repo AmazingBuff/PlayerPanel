@@ -570,6 +570,7 @@ public:
     oar::AnimationSelection select(RE::Actor& source, std::span<std::string_view const> bases,
         oar::PreviewState preview, Proposal& proposal, std::uint32_t channel, bool activation)
     {
+        preview.effect_corrections = session->effect_corrections(proposal.effect_revision);
         std::swap(query.conditions, proposal.conditions);
         oar::AnimationSelection result = oar::query_animation(source, graph->characterInstance, bases,
             std::move(preview), query, { channel, generation });
@@ -813,7 +814,7 @@ public:
         std::vector<std::string_view> bases = target.direct || (direct && target.empty()) ?
             std::vector<std::string_view>{ "Animations\\MT_Idle.hkx" } : target.bases();
         const bool plain = target.direct || (direct && target.empty());
-        // Opt-in marker evidence reads the same actual effects as OAR's HasMagicEffect.
+        // Marker diagnostics report the non-dispelled effects on the source.
         if (detailed_animation_trace())
             logger::info("ANIMATION actor={:08x} request={} smooth markers='{}'",
                 actor_id, generation, session ? session->smooth_markers() : std::string{});

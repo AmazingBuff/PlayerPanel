@@ -326,6 +326,8 @@
 
 ### Fixed
 
+- Fix paused inventory previews treating dispelled DAC markers as present when selecting an idle.
+
 - **Compare the low three hex digits of a Smooth marker token (2026-11-25)**: the first C-WORLD deployment tested `value & 0xFFFFFF == 0x801`, but the runtime token is six digits (`mag_start on` arrives as e.g. `243801`), so every sampled row reported `start-on=false`. [world_phase_probe.cpp](src/animation/world_phase_probe.cpp) now masks `0xFFF`; the raw `markers='…'` strings were retained, so the same log could be re-read offline without a new session (`34d099e`).
 
 - Fix candidate diagnostic clocks with exact float32 traces, independent equip/unequip histories and post-Generate completed-output checkpoints; report state-12-to-0 completion, invalid observations or a predeclared 180-advance timeout honestly. The matching v96 manual-test package is local only; native behavior remains unvalidated.
