@@ -1,0 +1,98 @@
+---
+title: "PlayerPanel · 背包预览流程"
+config:
+  theme: base
+  themeVariables:
+    fontFamily: "'Microsoft YaHei', 'Segoe UI', sans-serif"
+    fontSize: "17px"
+    primaryTextColor: "#182932"
+    lineColor: "#577580"
+    edgeLabelBackground: "#FFFFFF"
+    titleColor: "#162A35"
+  htmlLabels: false
+  markdownAutoWrap: false
+  flowchart:
+    curve: linear
+    wrappingWidth: 330
+    nodeSpacing: 26
+    rankSpacing: 31
+    padding: 13
+    diagramPadding: 22
+---
+flowchart LR
+    %% PlayerPanel oar-idle3 @ b65db3e
+    %% 默认配置 IndependentGraph=off, DisplayPose=false
+    %% 入口 src/main.cpp, src/render/renderer.cpp, src/character/scene_graph.cpp
+    %% 动画与 DAC src/animation/controller.cpp, src/animation/oar/hooks.cpp, src/animation/dac/session.cpp
+
+    subgraph preview["背包画面 · 角色副本"]
+        direction TB
+        boot(["SKSE 读取配置、注册回调"])
+        frame["`CharacterManager · 每帧更新
+读取背包、暂停和装备版本
+F7 重采 · F8 显隐`"]
+        gate{"`暂停背包打开
+且玩家 3D 可用？`"}
+        wait["等待可用帧"]
+        copy["`SceneGraph · 模型副本
+按需复制、审计玩家 3D
+失败时沿用有效副本`"]
+        select["`AnimationController · 动作请求
+开包待机 · 换装尝试过渡
+OAR 按原角色和预览状态选片
+随后加载所选 HKX`"]
+        pose["`动画就绪且显示启用
+采样、混合 HKX
+把骨骼姿态写入角色副本`"]
+        draw["`D3D11 离屏画角色
+合成到背包画面`"]
+        boot --> frame
+        frame --> gate
+        gate -->|是| copy
+        gate -->|是| select
+        gate -->|否| wait
+        copy --> pose
+        select --> pose
+        pose --> draw
+    end
+
+    subgraph native["原始玩家 · DAC 与会话"]
+        direction TB
+        event["背包与世界事件"]
+        entry["`开包
+保存受控效果快照`"]
+        close["`关包
+作废旧任务 · 停止预览
+恢复入包前的受控效果`"]
+        reset["`读档或新游戏
+作废旧会话和预览`"]
+        cast["`原版 DAC · UI 任务
+在原始玩家上施放或驱散标记`"]
+        observe["`读取原角色的实际效果
+预览滤除已驱散的受控条目
+同类未驱散实例仍计入
+版本变化可触发 OAR 重查`"]
+        event --> entry
+        event --> close
+        event --> reset
+        entry -.->|使用当前会话| cast
+        cast --> observe
+    end
+
+    preview <-.->|"`待机准备或标注 →
+← 效果版本回读`"| native
+
+    classDef lifecycle fill:#EDF1F7,stroke:#69809B,stroke-width:1.35px,color:#1A3044
+    classDef flow fill:#EFF7FA,stroke:#488297,stroke-width:1.4px,color:#14313E
+    classDef decision fill:#F3F8FB,stroke:#365E71,stroke-width:1.5px,color:#19313C
+    classDef output fill:#E1F3EC,stroke:#2E785F,stroke-width:1.7px,color:#153E32
+    classDef effect fill:#FFF5E5,stroke:#A06A32,stroke-width:1.4px,color:#4C3219
+    classDef muted fill:#F4F6F7,stroke:#81949A,stroke-width:1.1px,color:#30454D
+    class boot,event,close,reset lifecycle
+    class frame,copy,select,pose flow
+    class gate decision
+    class draw output
+    class entry,cast,observe effect
+    class wait muted
+    style preview fill:#F7FAFC,stroke:#B9CED8,stroke-width:1px
+    style native fill:#FFFBF4,stroke:#E2C9A7,stroke-width:1px

@@ -3,6 +3,8 @@
 //
 #pragma once
 #include "animation/action.h"
+#include "animation/dac/event_match.h"
+#include "animation/event_clock.h"
 #include <array>
 #include <optional>
 #include <utility>
@@ -40,6 +42,53 @@ namespace animation
         std::optional<ActionKind> completed_transition = std::nullopt)
     {
         return !target.direct && (!completed_transition || *completed_transition == ActionKind::e_unequip);
+    }
+
+    [[nodiscard]] constexpr bool left_torch_only_changed(
+        std::array<std::uint32_t, 2> const& previous, std::array<std::uint32_t, 2> const& current,
+        bool previous_left_torch, bool current_left_torch)
+    {
+        return previous[0] == current[0] && previous[1] != current[1] &&
+            (previous_left_torch || previous[1] == 0) && (current_left_torch || current[1] == 0);
+    }
+
+    template <class FormOf>
+    [[nodiscard]] ActionPrototype torch_equipment_transition(std::array<std::uint32_t, 2> const& previous,
+        std::array<std::uint32_t, 2> const& current, FormOf&& form_of)
+    {
+        WeaponForm removed = WeaponForm::kNone;
+        for (std::size_t hand = 0; hand < previous.size(); ++hand)
+        {
+            if (previous[hand] == current[hand]) continue;
+            const WeaponForm equipped = form_of(current[hand]);
+            if (equipped != WeaponForm::kNone && equipped != WeaponForm::kTorch)
+                return { ActionKind::e_equip, equipped, false };
+            const WeaponForm old = form_of(previous[hand]);
+            if (removed == WeaponForm::kNone && old != WeaponForm::kTorch)
+                removed = old;
+        }
+        return { ActionKind::e_unequip, removed, false };
+    }
+
+    struct WeaponHandoff
+    {
+        double seconds;
+        std::string_view source;
+    };
+
+    [[nodiscard]] inline WeaponHandoff weapon_handoff(ActionKind action, std::span<Annotation const> annotations,
+        double duration)
+    {
+        if (action == ActionKind::e_equip || action == ActionKind::e_unequip)
+        {
+            const bool unequip = action == ActionKind::e_unequip;
+            const std::string_view event = unequip ? "weaponSheathe" : "weaponDraw";
+            for (Annotation const& annotation : annotations)
+                if (dac::event_matches(event, annotation.event))
+                    return { annotation.time, event };
+            if (unequip) return { duration, "duration-end" };
+        }
+        return { duration * 0.5, "duration-midpoint" };
     }
 
     struct ShieldTransition

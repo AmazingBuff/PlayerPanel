@@ -14,9 +14,11 @@
 #include "RE/B/BSVisit.h"
 #include "RE/N/NiAlphaProperty.h"
 #include "RE/N/NiCamera.h"
+#include "RE/N/NiNode.h"
 #include "RE/R/Renderer.h"
 #include "RE/R/RendererShadowState.h"
 
+#include <algorithm>
 #include <vector>
 
 PLUGIN_NAMESPACE_BEGIN
@@ -115,6 +117,10 @@ FigurePassStats draw_figure_passes(FigurePassRequest const& a_request)
     RE::NiCamera const* const camera = a_request.camera;
     RE::BSVisit::TraverseScenegraphGeometries(a_request.root, [&](RE::BSGeometry* a_geometry)
     {
+        if (!a_request.hidden_equipment.empty())
+            for (RE::NiAVObject const* node = a_geometry; node; node = node->parent)
+                if (std::ranges::find(a_request.hidden_equipment, node) != a_request.hidden_equipment.end())
+                    return RE::BSVisit::BSVisitControl::kContinue;
         const RE::BSGeometry::GEOMETRY_RUNTIME_DATA& geom_rt = a_geometry->GetGeometryRuntimeData();
         if (!geom_rt.shaderProperty)
             return RE::BSVisit::BSVisitControl::kContinue;

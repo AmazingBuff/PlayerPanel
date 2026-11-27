@@ -229,7 +229,9 @@ bool SceneGraph::update(PreviewFrame const& frame, std::uint64_t revision)
     update_monitor(*source, revision, frame.paused, frame.open, frame.opening, frame.closing, frame.usable);
     if (!frame.usable) return true;
     if (command == Command::e_toggle_draw) toggle_draw();
-    if (capture_due(*source, revision, command == Command::e_capture))
+    const bool keep_copy = update_held_weapons();
+    if (keep_copy && command == Command::e_capture) m_monitor.capture_pending = true;
+    if (!keep_copy && capture_due(*source, revision, command == Command::e_capture))
     {
         RE::NiPointer<RE::NiAVObject> graph = capture_graph(*source);
         const bool accepted = graph != nullptr;
@@ -458,11 +460,29 @@ void SceneGraph::pose()
         node.object->previousWorld = node.object->world;
 }
 
+bool SceneGraph::update_held_weapons()
+{
+    const auto unequipping = m_animation.unequip_model_hands();
+    bool keep_copy = false;
+    for (HeldCopyMount& mount : m_held_mounts)
+    {
+        if (mount.weapon == 0) continue;
+        const HeldWeaponState previous = mount.state;
+        mount.state = held_weapon_state(previous, mount.weapon, m_monitor.observed.hands[mount.slot], unequipping[mount.slot]);
+        keep_copy |= mount.state == HeldWeaponState::e_retained;
+        if (mount.state != previous && mount.state != HeldWeaponState::e_equipped && animation::detailed_animation_trace())
+            logger::info("SCOPY WEAPON actor={:08x} request={} accepted-request={} capture={} hand={} weapon={:08x} state={}",
+                source_id(), m_monitor.request_generation, m_animation.diagnostic_accepted_request(), m_capture_id,
+                mount.slot == 0 ? "right" : "left", mount.weapon, mount.state == HeldWeaponState::e_retained ? "retained" : "hidden");
+    }
+    return keep_copy;
+}
+
 void SceneGraph::apply_weapon_mount(bool sheathed)
 {
     for (HeldCopyMount& mount : m_held_mounts)
     {
-        if (!mount.model || !mount.hand) continue;
+        if (!mount.model || !mount.hand || mount.state == HeldWeaponState::e_hidden) continue;
         RE::NiNode* const wanted = sheathed && mount.sheath_parent ? mount.sheath_parent : mount.hand;
         if (mount.model->parent == wanted) continue;
         if (animation::detailed_animation_trace())
@@ -560,6 +580,12 @@ bool SceneGraph::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& stat
     // The action write below replaces the calibration pose on this same frame; it must never
     // reach the display.
     (void)m_animation.advance(*p_root);
+    (void)update_held_weapons();
+    std::array<RE::NiAVObject*, 2> hidden_weapons{};
+    std::size_t hidden_count = 0;
+    for (HeldCopyMount const& mount : m_held_mounts)
+        if (mount.state == HeldWeaponState::e_hidden)
+            hidden_weapons[hidden_count++] = mount.model;
 
     // Pull the detached light rig to the anchor and cascade it: the shader
     // reads NiLight::world.translate (v6.37) and this window is the only
@@ -568,6 +594,7 @@ bool SceneGraph::draw(const RE::UI3DSceneManager* ui3d, const CommonStates& stat
 
     const FigurePassRequest request{
         .root = p_root,
+        .hidden_equipment = { hidden_weapons.data(), hidden_count },
         .accumulator = ui3d->unk10.get(),
         .camera = ui3d->camera.get(),
         .context = runtime.context,

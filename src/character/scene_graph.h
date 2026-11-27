@@ -61,6 +61,7 @@ private:
     void replace_graph(RE::NiPointer<RE::NiAVObject> graph);
     void pose();
     void calibrate_from_posed_bound();
+    bool update_held_weapons();
     void apply_weapon_mount(bool sheathed);
     [[nodiscard]] bool drawable() const { return m_usable && m_monitor.draw_enabled && m_graph_object && m_animation.ready(); }
     struct SnapshotNode

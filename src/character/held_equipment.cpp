@@ -114,8 +114,8 @@ void hold_copy_equipment(RE::Actor& source, std::span<RE::NiAVObject* const> ori
                 target->AttachChild(model, true);
                 model->local = local;
             }
-            if (mounts && sheath_parent && sheath_parent != target)
-                mounts->push_back({ model, target, sheath_parent, local });
+            if (mounts && (weapon || (sheath_parent && sheath_parent != target)))
+                mounts->push_back({ model, target, sheath_parent, local, weapon ? form->GetFormID() : 0, hand });
             target->SetAppCulled(false);
             model->SetAppCulled(false);
             RE::BSVisit::TraverseScenegraphObjects(model, [](RE::NiAVObject* object)

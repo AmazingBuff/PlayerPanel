@@ -45,6 +45,7 @@ namespace animation
         // transition has passed its sheathe handoff). The copy's mapped weapon is parked at its
         // sheath node during that window.
         [[nodiscard]] bool weapon_sheathed() const;
+        [[nodiscard]] std::array<std::uint32_t, 2> unequip_model_hands() const;
         [[nodiscard]] std::string name() const;
     private:
         class State;

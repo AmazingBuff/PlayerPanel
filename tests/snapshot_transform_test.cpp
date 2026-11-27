@@ -3,10 +3,12 @@
 //
 
 #include "character/figure_audit.h"
+#include "character/held_equipment.h"
 #include "character/snapshot_transform.h"
 #include "animation/pose.h"
 #include "animation/clip.h"
 #include "animation/action.h"
+#include "animation/idle_policy.h"
 #include "animation/variant_state.h"
 #include "base_animation_cache_cases.h"
 #include "animation/oar/preview_clip.h"
@@ -596,6 +598,49 @@ namespace
         return verified && rejects_damage && rejects_other_build;
     }
 
+    bool unequip_model_stays_visible_until_sheathe()
+    {
+        using PLUGIN_NAMESPACE::HeldWeaponState;
+        using PLUGIN_NAMESPACE::held_weapon_state;
+        constexpr std::uint32_t axe = 0x123;
+        std::vector<animation::Annotation> annotations{ { 0.25, "weaponDraw" }, { 0.75, "WeaponSheathe" } };
+        const auto handoff = animation::weapon_handoff(animation::ActionKind::e_unequip, annotations, 1.0);
+        const auto equip = animation::weapon_handoff(animation::ActionKind::e_equip, annotations, 1.0);
+        const auto absent = animation::weapon_handoff(animation::ActionKind::e_unequip, {}, 1.0);
+        if (handoff.seconds != 0.75 || handoff.source != "weaponSheathe" || equip.seconds != 0.25 ||
+            absent.seconds != 1.0 || absent.source != "duration-end") return false;
+
+        animation::EventClock clock;
+        clock.start(std::move(annotations), 1.0, 0.0, false);
+        HeldWeaponState visibility = HeldWeaponState::e_equipped;
+        const auto update = [&]
+        {
+            visibility = held_weapon_state(visibility, axe, 0, clock.seconds() < handoff.seconds ? axe : 0);
+        };
+        const auto tick = [](double) {};
+        const auto event = [](animation::Annotation const&) {};
+        const auto boundary = [] {};
+        clock.advance(0.5, false, tick, event, boundary);
+        update();
+        if (visibility != HeldWeaponState::e_retained) return false;
+        clock.advance(0.25, false, tick, event, boundary);
+        update();
+        return visibility == HeldWeaponState::e_hidden && !clock.finished();
+    }
+
+    bool new_weapon_hides_retained_model_for_the_rest_of_its_copy()
+    {
+        using PLUGIN_NAMESPACE::HeldWeaponState;
+        using PLUGIN_NAMESPACE::held_weapon_state;
+        constexpr std::uint32_t axe = 0x123;
+        constexpr std::uint32_t sword = 0x456;
+        const auto retained = held_weapon_state(HeldWeaponState::e_equipped, axe, 0, axe);
+        const auto hidden = held_weapon_state(retained, axe, sword, 0);
+        return retained == HeldWeaponState::e_retained && hidden == HeldWeaponState::e_hidden &&
+            held_weapon_state(hidden, axe, 0, axe) == HeldWeaponState::e_hidden &&
+            held_weapon_state(HeldWeaponState::e_equipped, sword, sword, 0) == HeldWeaponState::e_equipped;
+    }
+
     bool animation_mapping_preserves_track_identity()
     {
         const std::int16_t table[] = { 7, -1, 2, 0 };
@@ -713,6 +758,8 @@ int main()
     passed = oar_projection_scope_covers_every_clip() && passed;
     passed = panel_pose_answers_standing_and_weapon_form() && passed;
     passed = oar_binary_profile_rejects_mismatches() && passed;
+    passed = unequip_model_stays_visible_until_sheathe() && passed;
+    passed = new_weapon_hides_retained_model_for_the_rest_of_its_copy() && passed;
     passed = animation_mapping_preserves_track_identity() && passed;
     passed = snapshot_placement_preserves_subtree() && passed;
     passed = preview_dwell_survives_accept_and_reactivation() && passed;

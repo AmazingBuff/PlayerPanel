@@ -9,6 +9,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 
 namespace RE
 {
@@ -26,6 +27,7 @@ PLUGIN_NAMESPACE_BEGIN
 struct FigurePassRequest
 {
     RE::NiAVObject* root = nullptr;
+    std::span<RE::NiAVObject* const> hidden_equipment;
     // The accumulator the passes are generated into (the UI3D one, ui3d->unk10). Its render mode and
     // its own camera decide how the figure projects.
     RE::BSShaderAccumulator* accumulator = nullptr;

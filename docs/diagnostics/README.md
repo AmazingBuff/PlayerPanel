@@ -2,6 +2,24 @@
 
 ## 待上机测试
 
+<a id="equipment-model-handoff"></a>
+
+**面板换装动作与模型交接**
+
+沿用 v130 的模组配置，保持背包暂停，设置 `IndependentGraph=off`、`DisplayPose=false`、`DetailedAnimationTrace=true`。
+
+- [ ] **弓 → 单手斧＋火把**。先让面板显示弓，再换到右手斧、左手火把。确认 `transition=equip form=1h query-hands=current`，依次接受 `1hm_equip.hkx`、Smooth Axe Start、Smooth Axe Loop，左臂使用 `Tor_1HMPose`。火把若在下一次装备更新才出现，确认斧头动作继续播放，`weaponDraw` 和 `Smooth_Loop` 仍按顺序转发。基础 Equip 回退也要通过这组判据。 [v130 对照](CharacterPanel-v130-trackdiag-20261127.log#L20366)
+- [ ] **单手斧 → 空手**。等面板上出现手持斧，再卸下。确认 `SCOPY WEAPON ... state=retained`，斧头随 Unequip 的手部动作保留。到 `ANIMATION ANNOTATION ... event='weaponSheathe'` 的当帧，该斧应变为 `state=hidden`。随后换成空手副本。若加载的 Unequip 缺少该注释，核对 `ANIMATION HANDOFF ... source=duration-end`，模型应保留到动作结束。 [v130 对照](CharacterPanel-v130-trackdiag-20261127.log#L22960)
+- [ ] **Unequip 中途装备另一把武器**。卸下斧头，在 `weaponSheathe` 之前装备一把剑。确认新装备请求到来时旧斧变为 `state=hidden`，当帧、后续采集和新武器 Equip 中均不会再显示旧斧。确认新武器执行自己的 Equip 和待机链路。若旧请求使用过 IED 历史挂点，同时核对 `cleared=equipment-change`。
+
+<a id="cs-hair-self-shadow"></a>
+
+- [ ] **不同地点开背包时，面板头发亮度不同**
+  - **待验证假设**。面板的原生材质绘制可由 Community Shaders 接管。若头发实际启用了 Hair Specular 自阴影，它可能采样游戏场景深度，把背景物体算成头发的遮挡。当前面板的深度纹理用于自身的遮挡测试。 [CS 着色器接管](https://github.com/community-shaders/skyrim-community-shaders/blob/v1.9.1/src/Hooks.cpp#L145-L190) · [自阴影计算](https://github.com/community-shaders/skyrim-community-shaders/blob/v1.9.1/features/Hair%20Specular/Shaders/Hair/Hair.hlsli#L237-L268) · [CS 深度绑定](https://github.com/community-shaders/skyrim-community-shaders/blob/v1.9.1/src/State.cpp#L1048-L1049) · [面板深度设置](../../src/render/dx11/d3d11_util.cpp#L440)
+  - **A/B 对照**。记录 Community Shaders 版本和 Hair Specular 设置。若已启用 `Enable Screen-Space Self Shadow`，在原先一亮一暗的两个地点各开一次背包。临时关闭这一个开关后，在同样两处各复测一次。四次用同一发型、装备和取景，在相近的待机姿势下截图。同一地点的两次尽量使用相同的游戏时间和天气。 [测试开关](https://github.com/community-shaders/skyrim-community-shaders/blob/v1.9.1/src/Features/HairSpecular.cpp#L65)
+  - **记录**。保留四张截图和对应的 `CharacterPanel.log` 时间点。启用 `DetailedAnimationTrace=true` 可用 `SCOPY PLACEMENT` 对照面板锚点。另核对 `CP-LIGHT` 是否有 `ledger shell dropped`，以及开包前是否已重新取到三个灯光条目。
+  - **判据**。关闭后若两个地点的亮度差明显缩小，说明自阴影参与了差异。要确认遮挡来自游戏场景，需核对头发绘制时实际采样的深度纹理，CS 1.9.1 对应 `t17`。若差异仍在，记录脸部或装备是否也随地点变亮变暗，用于判断场景环境光和面板灯组的影响。
+
 <a id="stock-dac-inventory-loop"></a>
 
 - [ ] **原版 DAC 能否在暂停的背包内自行推进 Smooth Start → Loop**
