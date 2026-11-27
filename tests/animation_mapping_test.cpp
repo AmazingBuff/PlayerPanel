@@ -4,6 +4,7 @@
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
 #include "animation/mapping_report.h"
+#include "animation/track_mapping.h"
 #include "animation/oar/base_animation_cache.h"
 
 #include <cassert>
@@ -39,9 +40,27 @@ void indexed_binding_lookup_reads_only_the_selected_name()
     assert(bound == names[40000] && reads == 1);
 }
 
+void oversized_tracks_require_an_explicit_mapping()
+{
+    using test_plugin::resolve_animation_tracks;
+    const auto compact = resolve_animation_tracks({}, 99, 116);
+    assert(compact.size() == 99 && compact.back().track == 98 && compact.back().bone == 98);
+    assert(resolve_animation_tracks({}, 116, 116).size() == 116);
+    assert(resolve_animation_tracks({}, 242, 116).empty());
+    assert(resolve_animation_tracks({}, 156, 116).empty());
+
+    std::vector<std::int16_t> table(242, -1);
+    table[1] = 2;
+    table[241] = 38;
+    const auto indexed = resolve_animation_tracks(table, 242, 116);
+    assert(indexed.size() == 2 && indexed[0].track == 1 && indexed[0].bone == 2 &&
+        indexed[1].track == 241 && indexed[1].bone == 38);
+}
+
 int main()
 {
     accepted_alias_changes_publish_and_identical_loops_coalesce();
     indexed_binding_lookup_reads_only_the_selected_name();
-    std::cout << "2 accepted mapping/indexed read cases passed (engine-free boundary)\n";
+    oversized_tracks_require_an_explicit_mapping();
+    std::cout << "3 animation mapping cases passed (engine-free boundary)\n";
 }

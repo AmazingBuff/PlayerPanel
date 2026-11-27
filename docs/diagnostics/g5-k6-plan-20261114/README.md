@@ -158,7 +158,7 @@
 | 2 | `k5_snapshot_policy.h`（**新文件**，src/animation/behavior_graph/） | K5ClipRecord/K5Header/K5 record 布局 + `K5SnapshotWriter`/`K5SourceWriter` + 身份缓存 + 对账账本结构 |
 | 3 | [independent_graph.cpp](../../../src/animation/behavior_graph/independent_graph.cpp) | `record_k3_snapshot` 分支（K5 on → K5 writer，同一两读/轨道提取）；审计点 ×4；关闭行 `K5 SNAPSHOT close` + `K5 RECON` |
 | 4 | [probe_liveness.cpp](../../../src/animation/behavior_graph/probe_liveness.cpp) | `record_k3s_return` 分支（K5 on → K5 source record，in-detour 身份缓存）；drain/close 行 `K5 SOURCE close` |
-| 5 | [control_sample.h](../../../src/animation/behavior_graph/control_sample.h) / .cpp | **零改动**（复用 `read_animation_resource_identity`；不新增字段不改签名） |
+| 5 | [control_sample.h](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/control_sample.h) / .cpp | **零改动**（复用 `read_animation_resource_identity`；不新增字段不改签名） |
 | 6 | [config/CharacterPanel.ini](../../../config/CharacterPanel.ini) | 3 键默认 off + 注释（风格同 EquipmentStateDump 条目） |
 | 7 | 文档（实现提交内） | 本节已在文档冻结，无需另改 |
 

@@ -11,7 +11,7 @@
 //
 #pragma once
 
-#include "animation/behavior_graph/control_sample.h"
+#include "animation/behavior_graph/animation_resource_identity.h"
 #include "animation/behavior_graph/k3_snapshot_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
 

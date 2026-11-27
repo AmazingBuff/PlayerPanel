@@ -3,6 +3,8 @@
 //
 #pragma once
 
+#include "animation/pose_write.h"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -153,7 +155,7 @@ namespace animation::behavior_graph
             ++coverage.requested;
             if (auto const target = nodes.find(name); target != nodes.end())
             {
-                target->second->local = local;
+                write_animated_pose(target->second->local, local);
                 ++coverage.applied;
             }
             else if (!excluded_root_name.empty() && std::string_view(name) == excluded_root_name)

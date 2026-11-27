@@ -69,6 +69,9 @@ namespace oar
         using BlendTime = float (*)(void const*, void*, std::int32_t, bool, bool);
         BlendTime s_blend_time = nullptr;
         std::atomic_bool s_query_ready = false;
+        using IedEquippedPlacement = std::uint8_t (*)(void const*, RE::TESObjectREFR*, bool);
+        IedEquippedPlacement s_ied_equipped_placement = nullptr;
+        void const* s_ied_interface = nullptr;
 
         std::optional<uint32_t> ied_provider_version()
         {
@@ -106,6 +109,7 @@ namespace oar
             std::uint32_t candidate_logged = 0;
             std::uint32_t native_false_logged = 0;
             std::uint32_t corrections_logged = 0;
+            std::array<bool, 2> ied_placement_logged{};
             bool movement_seen = false;
             bool movement_answered = false;
             bool candidate_movement_seen = false;
@@ -163,6 +167,92 @@ namespace oar
                 cursor = std::min(next, end);
             }
             return true;
+        }
+
+        std::optional<std::uint8_t> historical_ied_placement(
+            PreviewState const& state, RE::Actor& source, bool left)
+        {
+            if (!state.hand_override) return std::nullopt;
+            auto const& previous = *state.hand_override;
+            const std::size_t slot = left ? 1 : 0;
+            const auto placement = saved_ied_placement(state.historical_ied_placements, left, previous[slot]);
+            if (!placement) return std::nullopt;
+
+            RE::TESForm const* const item = source.GetEquippedObject(left);
+            if (item && (item->GetFormID() == previous[slot] || item->Is(RE::FormType::Weapon)))
+                return std::nullopt;
+            RE::TESForm const* const other = source.GetEquippedObject(!left);
+            if (other && other->Is(RE::FormType::Weapon) && other->GetFormID() != previous[1 - slot])
+                return std::nullopt;
+            return placement;
+        }
+
+        std::uint8_t ied_equipped_placement_thunk(void const* instance, RE::TESObjectREFR* source, bool left)
+        {
+            QueryFrame* const query = QueryFrame::current;
+            ScopedEvaluation* const scope = ScopedEvaluation::current();
+            Frame* const frame = Frame::current;
+            if (instance == s_ied_interface && query && scope && frame &&
+                scope->mode() == ScopeMode::kAudited && frame->m_source == source &&
+                scope->matches(source, frame->m_clip) && query->scope.matches(source, frame->m_clip))
+            {
+                if (RE::Actor* const actor = source->As<RE::Actor>())
+                    if (const auto placement = historical_ied_placement(scope->state(), *actor, left))
+                    {
+                        scope->note_override(Ied_Equipped_Placement_Condition, false);
+                        const std::size_t slot = left ? 1 : 0;
+                        if (animation::detailed_animation_trace() && !query->ied_placement_logged[slot])
+                        {
+                            query->ied_placement_logged[slot] = true;
+                            logger::info("OAR IED PLACEMENT actor={:08x} request={} left={} weapon={:08x} placement={} source=historical",
+                                source->GetFormID(), query->diagnostic_request, left,
+                                (*scope->state().hand_override)[slot], *placement);
+                        }
+                        return *placement;
+                    }
+            }
+            return s_ied_equipped_placement(instance, source, left);
+        }
+
+        bool install_ied_placement_hook()
+        {
+            HMODULE const module = GetModuleHandleW(L"ImmersiveEquipmentDisplays.dll");
+            if (!module) return false;
+            const auto get_interface = reinterpret_cast<void const* (*)()>(
+                GetProcAddress(module, "SKMP_GetPluginInterface"));
+            if (!get_interface) return false;
+            void const* const instance = get_interface();
+            if (!readable(instance, sizeof(void*))) return false;
+            void const* const table = read_at<void const*>(instance, 0);
+            // The public PluginInterfaceBase has five entries and no virtual destructor.
+            // IED interface v1 appends the node and equipped readers in that order.
+            if (!readable(table, 7 * sizeof(void*))) return false;
+            const auto version = read_at<std::uint32_t (*)(void const*)>(table, 2 * sizeof(void*));
+            const auto unique_id = read_at<std::uint64_t (*)(void const*)>(table, 4 * sizeof(void*));
+            if (!unique_id || !version || unique_id(instance) != 0xBD869D3E87EF7D51ULL || version(instance) != 1)
+                return false;
+            const auto placement = read_at<IedEquippedPlacement>(table, 6 * sizeof(void*));
+            MEMORY_BASIC_INFORMATION entry{};
+            if (!placement || !VirtualQuery(reinterpret_cast<void const*>(placement), &entry, sizeof(entry)) ||
+                entry.AllocationBase != module)
+                return false;
+
+            LONG result = DetourTransactionBegin();
+            if (result != NO_ERROR) return false;
+            s_ied_interface = instance;
+            s_ied_equipped_placement = placement;
+            result = DetourUpdateThread(GetCurrentThread());
+            if (result == NO_ERROR)
+                result = DetourAttach(reinterpret_cast<PVOID*>(&s_ied_equipped_placement),
+                    reinterpret_cast<PVOID>(&ied_equipped_placement_thunk));
+            if (result == NO_ERROR)
+                result = DetourTransactionCommit();
+            else
+                DetourTransactionAbort();
+            if (result == NO_ERROR) return true;
+            s_ied_interface = nullptr;
+            s_ied_equipped_placement = nullptr;
+            return false;
         }
 
         template <class T>
@@ -254,8 +344,9 @@ namespace oar
             const std::string_view schema = ied_condition_rejection(condition, version, false);
             if (!schema.empty() || !scope.state().hand_override) return schema;
             std::optional<bool> unchanged;
+            std::optional<std::uint8_t> placement;
             const RE::BSString name = condition.GetName();
-            if (name.c_str() && std::string_view(name.c_str()) == "IED_GearNodeEquippedPlacementHint")
+            if (name.c_str() && std::string_view(name.c_str()) == Ied_Equipped_Placement_Condition)
             {
                 auto const* const hand = static_cast<::Conditions::IBoolConditionComponent const*>(condition.GetComponent(0));
                 const bool left = hand->GetBoolValue();
@@ -264,9 +355,11 @@ namespace oar
                 {
                     RE::TESForm const* const item = actor->GetEquippedObject(left);
                     unchanged = (*scope.state().hand_override)[left ? 1 : 0] == (item ? item->GetFormID() : 0);
+                    if (s_ied_equipped_placement && QueryFrame::current)
+                        placement = historical_ied_placement(scope.state(), *actor, left);
                 }
             }
-            return ied_condition_rejection(condition, version, true, unchanged);
+            return ied_condition_rejection(condition, version, true, unchanged, placement);
         }
 
         std::optional<bool> random_condition(Condition const& condition, RE::TESObjectREFR* source,
@@ -1010,6 +1103,23 @@ namespace oar
 
     bool query_supported() { return s_query_ready.load(std::memory_order_acquire); }
 
+    IedWeaponPlacements capture_ied_placements(RE::Actor& source, std::array<std::uint32_t, 2> const& hands)
+    {
+        IedWeaponPlacements placements{};
+        if (!s_ied_equipped_placement) return placements;
+        for (std::size_t slot = 0; slot < placements.size(); ++slot)
+        {
+            const bool left = slot == 1;
+            RE::TESForm const* const item = source.GetEquippedObject(left);
+            if (!item || item->GetFormID() != hands[slot] || !item->Is(RE::FormType::Weapon))
+                continue;
+            const std::uint8_t placement = s_ied_equipped_placement(s_ied_interface, &source, left);
+            if (source.GetEquippedObject(left) == item)
+                placements[slot] = { hands[slot], placement };
+        }
+        return placements;
+    }
+
     RE::hkbCharacterStringData* character_strings(RE::hkbCharacter const& character)
     {
         if (!readable(&character, Character_Setup_Offset + sizeof(void*)))
@@ -1330,15 +1440,19 @@ namespace oar
         if (request_animations)
             s_animations = request_animations(OAR_API::Animations::InterfaceVersion::V1, Plugin::Plugin_Name.data(), Plugin::Plugin_Version);
         logger::info("OAR Animations V1 mapping API {}", s_animations ? "available" : "unavailable; world replacement identity remains unknown");
-        s_ready.store(true, std::memory_order_release);
-        s_query_ready.store(query_verified, std::memory_order_release);
         const std::optional<uint32_t> ied_version = ied_provider_version();
         if (!ied_version)
             logger::info("OAR IED placement adapter: provider unavailable; native registration unverified");
         else if (*ied_version != Ied_Provider_Version)
             logger::info("OAR IED placement adapter: provider version mismatch ({:08X}); requires embedded 1.0.2.0", *ied_version);
         else
+        {
             logger::info("OAR IED placement adapter available: three native placement/shield predicates, current source equipment/configuration; native registration unverified");
+            if (query_verified)
+                logger::info("OAR IED historical placement {}", install_ied_placement_hook() ? "available" : "unavailable");
+        }
+        s_ready.store(true, std::memory_order_release);
+        s_query_ready.store(query_verified, std::memory_order_release);
         logger::info("OAR {}.{}.{} hooks installed: ConditionBase::Evaluate + NumericValue::GetValue; preview scopes only; active query {}",
             profile->version[0], profile->version[1], profile->version[2],
             query_supported() ? "available" : "unavailable for this build");

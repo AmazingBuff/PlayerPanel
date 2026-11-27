@@ -11,6 +11,7 @@
 #include "animation/mapping_report.h"
 #include "animation/settings.h"
 #include "animation/pose.h"
+#include "animation/pose_write.h"
 #include "animation/oar/hooks.h"
 #include "animation/oar/preview_clip.h"
 #include "animation/sequence.h"
@@ -176,7 +177,14 @@ namespace
                     std::memcpy(&binding, static_cast<std::uint8_t const*>(entry) + 0x10, sizeof(binding));
                     std::string mapping;
                     std::string coverage;
-                    if (resolve_binding_playback(*m_graph, root, binding, m_selection.name, m_playback, mapping, coverage))
+                    const BindingPlaybackStatus status = resolve_binding_playback(
+                        *m_graph, root, binding, m_selection.name, m_playback, mapping, coverage);
+                    if (status == BindingPlaybackStatus::e_unmapped_track_overflow)
+                    {
+                        fallback("unmapped HKX tracks exceed the skeleton bone count");
+                        return;
+                    }
+                    if (status == BindingPlaybackStatus::e_ready)
                     {
                         if (binding->blendHint != RE::hkaAnimationBinding::BlendHint::kNormal)
                         {
@@ -224,7 +232,7 @@ namespace
             std::string coverage;
             ClipPlayback rebound;
             if (resolve_binding_playback(*m_graph, root, m_playback.binding_owner.get(), m_selection.name,
-                    rebound, mapping, coverage))
+                    rebound, mapping, coverage) == BindingPlaybackStatus::e_ready)
             {
                 m_playback = std::move(rebound);
 
@@ -380,6 +388,7 @@ public:
     std::uint64_t generation = 0;
     std::uint64_t source_generation = 0;
     SourceObservation observed;
+    oar::IedWeaponPlacements equipped_ied_placements{};
     bool has_observation = false;
     IdleTarget target{ WeaponForm::kNone, false, false };
     bool waiting_goal = false;
@@ -623,7 +632,10 @@ public:
         proposal->reason = reason;
         proposal->direct = direct;
         if (action.kind == ActionKind::e_equip || action.kind == ActionKind::e_unequip)
+        {
+            waiting_goal = false;
             proposal->transition_preview = preview;
+        }
         if (detailed_animation_trace())
         {
             const RE::TESForm* const right = source.GetEquippedObject(false);
@@ -772,9 +784,10 @@ public:
         standard.base_name = standard.name = standard.binding_name = base->name;
         proposal->standing = std::make_unique<LoadedAsset>(graph, standard, true, true, generation, std::nullopt, "standing");
         proposal->calibration = std::make_unique<LoadedAsset>(graph, standard, true, true, generation, std::nullopt, "calibration");
+        const bool empty_hand_idle = target.empty() && !direct && action.kind == ActionKind::e_weapon_idle;
         proposal->asset = std::make_unique<LoadedAsset>(graph, selected, action.loop,
             action.kind == ActionKind::e_standing_idle, generation,
-            target.empty() && !direct ? std::optional<oar::AnimationSelection>(standard) : std::nullopt);
+            empty_hand_idle ? std::optional<oar::AnimationSelection>(standard) : std::nullopt);
         if (proposal->torch_clip)
         {
             proposal->torch = std::make_unique<LoadedAsset>(graph, *proposal->torch_clip, true, false, generation, std::nullopt, "torch-arm");
@@ -797,9 +810,7 @@ public:
                 if (!waiting_goal) trace_decision("waiting-goal-enter", choice_reason_name(reason), pending.get());
                 waiting_goal = true; waiting_reason = reason; return;
             }
-            // e_none means no preparation was requested for this generation (the equipment-
-            // change follow-up deliberately lets the equip clip's annotations set the phase);
-            // query now instead of waiting for a preparation that will never start.
+            // e_none lets an Equip handoff query the phase set by the clip's annotations.
             if (readiness == dac::IdleReadiness::e_failed)
             {
                 // Native preparation is unavailable. Query OAR against the source's own effects
@@ -824,6 +835,19 @@ public:
             target.form, true }, preview_state(!plain), reason, direct, reason == ChoiceReason::e_request, reusable);
     }
 
+    bool clear_historical_ied_placements(std::optional<std::uint64_t> request = std::nullopt)
+    {
+        bool cleared = false;
+        for (Proposal* proposal : { pending.get(), active.get(), outgoing.get() })
+        {
+            if (!proposal || !proposal->transition_preview || (request && proposal->generation != *request))
+                continue;
+            auto& placements = proposal->transition_preview->historical_ied_placements;
+            cleared |= placements[0].weapon != 0 || placements[1].weapon != 0;
+            placements = {};
+        }
+        return cleared;
+    }
 
 };
 
@@ -870,6 +894,7 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     const bool equipment_changed = !state.has_observation || state.observed.hands != observation.hands || state.target != target;
     const WeaponForm previous_form = state.has_observation ? state.observed.form : WeaponForm::kNone;
     const std::array<RE::FormID, 2> previous_hands = state.has_observation ? state.observed.hands : std::array<RE::FormID, 2>{};
+    const oar::IedWeaponPlacements previous_ied_placements = state.equipped_ied_placements;
     state.actor_id = source.GetFormID();
     state.source_handle = source.GetHandle();
     state.generation = observation.request_generation;
@@ -888,10 +913,16 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     state.source_generation = observation.source_graph_generation;
     state.observed = observation;
     state.target = target;
-    if (equipment_changed) state.base_fallback = false;
+    if (equipment_changed)
+    {
+        state.base_fallback = false;
+        if (state.clear_historical_ied_placements() && detailed_animation_trace())
+            logger::info("ANIMATION IED PLACEMENT actor={:08x} request={} cleared=equipment-change", state.actor_id, state.generation);
+    }
     state.has_observation = true;
     state.graph = std::move(graph);
     if (!state.graph) { state.pending.reset(); return; }
+    state.equipped_ied_placements = oar::capture_ied_placements(source, observation.hands);
     behavior_graph::DisplaySourceIdentity const display_source{
         state.actor_id, state.source_generation, reinterpret_cast<std::uintptr_t>(state.graph.get()),
         reinterpret_cast<std::uintptr_t>(this)
@@ -913,14 +944,7 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
             source.IsWeaponDrawn(), build_ms, report,
             equipment_armor_dump(source));
     }
-    // Panel-open forces the observed loop phase; an equipment change must NOT, or the equip
-    // clip's own Start markers (cast by its annotations) are overwritten by loop markers before
-    // the Start member can be selected, which skips the world's Equip -> Start -> Loop order.
-    const bool transition_in_progress = !equipment_changed &&
-        ((state.pending && state.pending->transition_preview) ||
-            (state.active && state.active->transition_preview && !state.clock.finished()));
-    if (!target.direct && !state.base_fallback && observation.reason != "equipment" && !transition_in_progress)
-        session.prepare_idle(state.generation, !equipment_changed && !new_lifetime);
+    const bool equipment_request = observation.reason == "equipment";
     if (!equipment_changed && state.active) state.active->generation = state.generation;
     std::unique_ptr<Proposal> loading = std::move(state.pending);
     state.idle_due = false;
@@ -928,7 +952,7 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
     // An in-inventory equipment change plays the world's draw/sheathe move once, then hands
     // over to the idle (the boundary in advance() queues the idle). Opening the panel keeps the
     // immediate-idle behaviour: there is no world transition to mirror at that edge.
-    if (equipment_changed && observation.reason == "equipment")
+    if (equipment_changed && equipment_request)
     {
         bool unequip = target.empty();
         WeaponForm form = unequip ? previous_form : target.form;
@@ -989,6 +1013,18 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
         {
             oar::PreviewState preview = preview_state(!unequip);
             preview.hand_override = transition_hands(unequip ? ActionKind::e_unequip : ActionKind::e_equip, previous_hands);
+            if (unequip)
+            {
+                const auto new_weapon = [&](std::size_t hand)
+                {
+                    const RE::FormID id = observation.hands[hand];
+                    return id && id != previous_hands[hand] && RE::TESForm::LookupByID<RE::TESObjectWEAP>(id);
+                };
+                if (!new_weapon(0) && !new_weapon(1))
+                    for (std::size_t hand = 0; hand < previous_hands.size(); ++hand)
+                        if (observation.hands[hand] != previous_hands[hand])
+                            preview.historical_ied_placements[hand] = previous_ied_placements[hand];
+            }
             logger::info("ANIMATION actor={:08x} request={} transition={} form={} query-hands={} previous=({:08x},{:08x}) current=({:08x},{:08x})",
                 state.actor_id, state.generation, unequip ? "unequip" : "equip", weapon_form_name(form),
                 preview.hand_override ? "previous" : "current", previous_hands[0], previous_hands[1], observation.hands[0], observation.hands[1]);
@@ -1007,7 +1043,12 @@ void AnimationController::request(RE::Actor& source, SourceObservation const& ob
         state.queue(source, panel_transition_bases(action.form, action.kind == ActionKind::e_unequip), action,
             *retained_transition->transition_preview, ChoiceReason::e_refresh, retained_transition->direct, false, loading.get());
     }
-    else state.queue_idle(source, equipment_changed ? ChoiceReason::e_request : ChoiceReason::e_refresh, loading.get());
+    else
+    {
+        if ((!equipment_request || equipment_changed) && !state.base_fallback && needs_idle_preparation(target))
+            session.prepare_idle(state.generation, !equipment_changed && !new_lifetime);
+        state.queue_idle(source, equipment_changed ? ChoiceReason::e_request : ChoiceReason::e_refresh, loading.get());
+    }
     if (state.waiting_goal) state.pending = std::move(loading);
 }
 
@@ -1209,7 +1250,8 @@ bool AnimationController::apply_standing_pose(RE::NiAVObject& root)
     const PoseBuffer base = sample_animation_clip(standard->playback(), 0.0f, true);
     if (base.empty()) return false;
     for (auto const& [name, local] : base)
-        if (auto target = state.nodes.find(name); target != state.nodes.end()) target->second->local = local;
+        if (auto target = state.nodes.find(name); target != state.nodes.end())
+            write_animated_pose(target->second->local, local);
     recompute_subtree_worlds(root, 0);
     return true;
 }
@@ -1267,6 +1309,16 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
         },
         [&]()
         {
+            if (state.active->stage.action.kind == ActionKind::e_unequip &&
+                state.clear_historical_ied_placements(state.active->generation))
+            {
+                if (state.pending && state.pending->generation == state.active->generation &&
+                    state.pending->stage.action.kind == ActionKind::e_unequip)
+                    state.pending.reset();
+                if (detailed_animation_trace())
+                    logger::info("ANIMATION IED PLACEMENT actor={:08x} request={} cleared=unequip-complete",
+                        state.actor_id, state.active->generation);
+            }
             state.idle_due = true;
             reason = ChoiceReason::e_boundary;
             if (!state.pose_profile.empty() && state.active->stage.action.loop) ++state.pose_probe_wraps;
@@ -1274,6 +1326,9 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
         });
     if (state.idle_due && source && !state.pending && !state.waiting_goal)
     {
+        if (state.active->generation == state.generation && state.clock.finished() && !state.base_fallback &&
+            needs_idle_preparation(state.target, state.active->stage.action.kind))
+            state.session->prepare_idle(state.generation, false);
         state.queue_idle(*source, reason);
         state.idle_due = false;
     }
@@ -1310,7 +1365,8 @@ std::size_t AnimationController::advance(RE::NiAVObject& root)
         if (weight >= 1.0f) state.outgoing.reset();
     }
     for (auto const& [name, local] : state.pose)
-        if (auto target = state.nodes.find(name); target != state.nodes.end()) target->second->local = local;
+        if (auto target = state.nodes.find(name); target != state.nodes.end())
+            write_animated_pose(target->second->local, local);
     recompute_subtree_worlds(root, 0);
     state.trace_pose(current, now);
     return state.pose.size();

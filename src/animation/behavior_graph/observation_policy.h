@@ -3,7 +3,7 @@
 //
 #pragma once
 
-#include "animation/behavior_graph/frame_trace_policy.h"
+#include "animation/behavior_graph/drive_step_policy.h"
 
 #include <algorithm>
 #include <bit>

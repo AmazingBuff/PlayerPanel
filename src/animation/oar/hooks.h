@@ -11,6 +11,7 @@ namespace Conditions
 
 namespace RE
 {
+    class Actor;
     class hkbCharacter;
     class hkbCharacterStringData;
 }
@@ -69,6 +70,8 @@ namespace oar
         std::uint64_t diagnostic_request = 0;
     };
     [[nodiscard]] bool query_supported();
+    [[nodiscard]] IedWeaponPlacements capture_ied_placements(RE::Actor& source,
+        std::array<std::uint32_t, 2> const& hands);
     [[nodiscard]] RE::hkbCharacterStringData* character_strings(RE::hkbCharacter const& character);
     // Event-driven source snapshot: raw authored name, direct indexed binding and optional
     // official OAR current-replacement information. An empty API response is inconclusive.

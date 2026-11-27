@@ -12,8 +12,6 @@
 #include "panel/panel_monitor.h"
 #include "character/character_manager.h"
 #include "animation/behavior_graph/probe_liveness.h"
-#include "animation/behavior_graph/source_event_capture.h"
-#include "animation/behavior_graph/source_write_capture.h"
 #include "animation/behavior_graph/source_timeline.h"
 #include "animation/world_phase_probe.h"
 
@@ -159,8 +157,6 @@ namespace
         if (RE::PlayerCharacter* const player = RE::PlayerCharacter::GetSingleton())
         {
             animation::behavior_graph::sample_source_timeline(*player);
-            animation::behavior_graph::sample_source_event_capture(*player);
-            animation::behavior_graph::sample_source_write_capture(*player);
             // C-G5-E1: window expiry, detail drain and the deferred-update queue snapshot.
             animation::behavior_graph::sample_probe_liveness();
             // C-WORLD v1: Smooth phase markers during normal play (panel closed too).

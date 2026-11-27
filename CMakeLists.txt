@@ -18,16 +18,13 @@ option(ENABLE_SKYRIM_VR "Enable support for Skyrim VR in the dynamic runtime fea
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(PLUGIN_SOURCES
-	src/animation/behavior_graph/frame_trace.cpp
-	src/animation/behavior_graph/control_sample.cpp
+	src/animation/behavior_graph/animation_resource_identity.cpp
 	src/animation/behavior_graph/k1_census.cpp
 	src/animation/behavior_graph/k5_audit.cpp
 	src/animation/behavior_graph/g6_ledger.cpp
 	src/animation/behavior_graph/independent_graph.cpp
 	src/animation/behavior_graph/ownership_probe.cpp
 	src/animation/behavior_graph/probe_liveness.cpp
-	src/animation/behavior_graph/source_event_capture.cpp
-	src/animation/behavior_graph/source_write_capture.cpp
 	src/animation/behavior_graph/source_timeline.cpp
 	src/animation/behavior_graph/transition_probe.cpp
 	src/animation/clip.cpp

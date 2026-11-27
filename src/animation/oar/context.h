@@ -1,6 +1,7 @@
 #pragma once
 
 #include "animation/dac/effect_presence.h"
+#include "animation/oar/ied_conditions.h"
 
 #include <cstdint>
 #include <array>
@@ -26,6 +27,7 @@ namespace oar
         std::unordered_map<std::string, float> graph_variables;
         std::optional<std::array<std::uint32_t, 2>> hand_override;
         std::vector<dac::EffectCorrection> effect_corrections;
+        IedWeaponPlacements historical_ied_placements{};
     };
 
     enum class ScopeMode

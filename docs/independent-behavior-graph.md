@@ -1,5 +1,7 @@
 # 独立行为图验证
 
+> **2026-11-27 实施记录**。独立图构建、原生步进、候选姿势显示、源图时间线和 K5 对照仍可使用。下文的旧探针配置和日志保留为历史取证。现行配置与源码恢复路径见[退役记录](diagnostics/verification-instrument-retirement-20261126/README.md)。
+
 > **2026-11-18 测试总览**。G1–G4 有界成立。正式门 5 两侧获得 248 对，三项姿态误差超冻结容差，G4P-7 FAIL。G6 待验。 [测试结果总览](diagnostics/test-results-20261118.md) · [门 5 正式记录](diagnostics/g5-gate5-20261116/README.md) · [过渡离线审计](diagnostics/g5-transition-audit-20261118/README.md)
 
 <a id="current-status"></a>
@@ -165,7 +167,7 @@ ill==cap==116、in-flight-max=1）**；E2/E3 与联合验收未做 |
 
 - **构建**：`cmake --preset Release -DCHARACTER_PANEL_BUILD_LABEL=<轮次>` → `cmake --build --preset Release`；先清掉小写 `http_proxy` 等变量（否则 MSBuild CL 任务报 MSB6001）。
 - **当前引擎无关用例**：v42 仅扩展并运行 [behavior_graph_display_session_test.cpp](../tests/behavior_graph_display_session_test.cpp) 中两个连贯场景，MSVC14.44 命令见 [v42 build](build.md#v42-residual-corrections-2026-10-29)。旧五个 policy 用例的结果属于历史记录，本轮未重跑；CMake 仍未注册测试目标。
-- **G4 两轮补测的离线用例**（2026-11-02/03）：[behavior_graph_candidate_window_test.cpp](../tests/behavior_graph_candidate_window_test.cpp)（6 例：过预算仍计数、对账恒等、take 清零、scope 外忽略、无跨窗残留、type3 行限额，产物在 `build/behavior-graph-v63-g4a4-numeric-types/`）与 [source_event_capture_test.cpp](../tests/source_event_capture_test.cpp)（新增 `mode_text_maps_to_three_states` + 既有环/预算/取消三例，产物在 `build/behavior-graph-v64-g4c1-concurrent-events/`）；命令均为 `cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src`。
+- **G4 两轮补测的离线用例**（2026-11-02/03）：[behavior_graph_candidate_window_test.cpp](../tests/behavior_graph_candidate_window_test.cpp)（6 例：过预算仍计数、对账恒等、take 清零、scope 外忽略、无跨窗残留、type3 行限额，产物在 `build/behavior-graph-v63-g4a4-numeric-types/`）与 [source_event_capture_test.cpp](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/tests/source_event_capture_test.cpp)（新增 `mode_text_maps_to_three_states` + 既有环/预算/取消三例，产物在 `build/behavior-graph-v64-g4c1-concurrent-events/`）；命令均为 `cl /nologo /std:c++latest /EHsc /W4 /WX /utf-8 /I src`。
 - **G4 补测的构建标签**：`v63-g4a4-numeric-types`、`v64-g4c1-concurrent-events`、`v65-g4c1-resolver-fix`、`v66-g4c1-pinned-graph`；各组身份/哈希/部署与运行记录见 [Build](build.md)。
 
 - **静态审计**：`C:/Python314/python.exe`（已装 pefile + capstone 5.0.7），解包镜像与脚本在 `build/g1-audit-20261023/`，单函数反汇编用 `disasm_func.py <rva>`。
@@ -737,7 +739,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 
 目的：把[下一步问题](#next-audit)落实为有界时序取证包，保持 v17 驱动配方和验收不变。仅在 `IndependentGraph=inject` 且精确 AE 1.6.1170 时新增读取；其他模式和运行时没有新增 trace 读取/输出。未新增原生入口、REL ID、hook、种子写入或调用顺序调整。原有源对照、事件与保留机制不变；这不是新机器码写入者审计的完成，也不是 G2 修复。
 
-实现入口是[FrameTrace](../src/animation/behavior_graph/frame_trace.h)、[读取适配](../src/animation/behavior_graph/frame_trace.cpp)及[预算/进度策略](../src/animation/behavior_graph/frame_trace_policy.h)，由[既有驱动循环](../src/animation/behavior_graph/independent_graph.cpp)同步调用。状态只含值、掩码与计数，不跨原生调用保留引擎指针；每个快照重新取两槽元素地址。原始 v17 源码序为 **scratch construct → 63602 → scratch destroy → 既有0x12E写 → 63587 → 0x240镜像 → 63581**，新观察点包围该序而不改变它。
+实现入口是[FrameTrace](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/frame_trace.h)、[读取适配](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/frame_trace.cpp)及[预算/进度策略](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/frame_trace_policy.h)，由[既有驱动循环](../src/animation/behavior_graph/independent_graph.cpp)同步调用。状态只含值、掩码与计数，不跨原生调用保留引擎指针；每个快照重新取两槽元素地址。原始 v17 源码序为 **scratch construct → 63602 → scratch destroy → 既有0x12E写 → 63587 → 0x240镜像 → 63581**，新观察点包围该序而不改变它。
 
 ### 行模式与预算
 
@@ -763,7 +765,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 4. 若summary观察到raw哈希差异，仍须查有效变换、相位、数值、必要骨及源侧对照；若仍无差异，也不能越过未观测的生成载荷、63581原生ctx、63666/63582与58423下游应用。完整原生帧与写入者审计仍待执行，不能用候选轨迹替代。
 5. 保存完整日志与构建身份，确认原有source-stable/source-pose和受控恢复记录，再将INI回off并重启。G2仍需有意义原版idle、有效骨运动、源对照与后续生命周期证据；装载图仍保留，不能计为清理通过。
 
-离线验证仅[两个策略/进度案例](../tests/behavior_graph_frame_trace_test.cpp)和Release构建/包核验，命令与实际结果见[构建记录](build.md#v18-frame-trace-build)。契约设计时没有v18游戏日志；该轮已于2026-10-26回传并判读，见下节。
+离线验证仅[两个策略/进度案例](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/tests/behavior_graph_frame_trace_test.cpp)和Release构建/包核验，命令与实际结果见[构建记录](build.md#v18-frame-trace-build)。契约设计时没有v18游戏日志；该轮已于2026-10-26回传并判读，见下节。
 
 <a id="g2-v18-run"></a>
 ## G2 v18 运行记录（2026-10-26 会话，五阶段双槽与 Path A 复位实证）
@@ -833,7 +835,7 @@ v17 已按配方直调 63581 到入口/门判定；不能称 63666/63582 采样�
 
 **目的**：只验证[审计十六](behavior-graph-construction-audit.md#audit16)给出的因果链——`record+0x18`（`BSAnimationUpdateData::optionalEyePosition`）非空 → 0xbb252b 眼位推进块把 `t_smaller` 抬出复位值 → 下一次 63587 分岔进入 Path B → 原生 `0x240`/`0x246` 改变 → 63581 的门是否因此可过。它是**单变量因果实验**，不是修复，也不改变 G2 验收；即使全部命中，G2 仍未通过。
 
-**实现状态（2026-10-26）**：代码已实现并提交 `e17d5d1`；Release 构建身份 `CharacterPanel-scenegraph-behavior-graph-v19-eye-arm-20261026-e17d5d12f6-cl94faaed0c6-20261026T153952Z`（DLL SHA-256 `344d9abb…`，1,249,792字节；PDB `9848cd14…`，35,418,112字节；CodeView `{7F586C2E-…}` age 319），三个 engine-free 案例通过。**已部署（未打包）并运行一次**：v18 的 DLL/PDB 与 `off` INI 备份在 `dist/deploy-backup-20261026-v18/`；23:46 会话落在预注册分支 6（无 arm），部署 INI 已回 `off`，v19 DLL/PDB 留在原位，详见[运行记录](#g2-v19-run)。实现点=[frame_trace_policy.h](../src/animation/behavior_graph/frame_trace_policy.h) 的 `EyePoint`/`make_eye_point`/`arm_observed`、[frame_trace.cpp](../src/animation/behavior_graph/frame_trace.cpp) 的 `schema=v19` 行与 summary `arm-observed`、[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 每步记录的 `+0x18`；除 `inject`+精确 1.6.1170 外的模式不改记录。
+**实现状态（2026-10-26）**：代码已实现并提交 `e17d5d1`；Release 构建身份 `CharacterPanel-scenegraph-behavior-graph-v19-eye-arm-20261026-e17d5d12f6-cl94faaed0c6-20261026T153952Z`（DLL SHA-256 `344d9abb…`，1,249,792字节；PDB `9848cd14…`，35,418,112字节；CodeView `{7F586C2E-…}` age 319），三个 engine-free 案例通过。**已部署（未打包）并运行一次**：v18 的 DLL/PDB 与 `off` INI 备份在 `dist/deploy-backup-20261026-v18/`；23:46 会话落在预注册分支 6（无 arm），部署 INI 已回 `off`，v19 DLL/PDB 留在原位，详见[运行记录](#g2-v19-run)。实现点=[frame_trace_policy.h](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/frame_trace_policy.h) 的 `EyePoint`/`make_eye_point`/`arm_observed`、[frame_trace.cpp](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/frame_trace.cpp) 的 `schema=v19` 行与 summary `arm-observed`、[independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp) 每步记录的 `+0x18`；除 `inject`+精确 1.6.1170 外的模式不改记录。
 
 **依据（审计十六，RVA）**：臂块门 = `record+0x18 != 0`、`record+0x2A == 0`、`record+0x2B != 0`、`[graph+0x248] == 0`，且（`record+0x2C == 0` 或交换前旧读槽 `+4>2` 且 `+0x38>0`）；臂块写 `t_smaller = xmm6 + t_larger`（仅当大于 `1.25*dt`）并跳过复位，`xmm6` 由 rootNode 距离决定，**且 0xbb2603 的 `63864()` 会再归一它**（审计十六原写的“rootNode 为空时固定 0.25”已被 v19 运行期否证，见[运行记录](#g2-v19-run)）；Path B 条件 = `+0x2A==0 && t_larger ≥ 0 && t_smaller > -MAXFLT`，Path B 写 `0x240 = 63575(graph, record+0x18, record+0x2C, &out, record+0x28)`、`[0x246]=0`，不交换、不复位；63581 门 = 双槽 `+4>2`、`+0x38>0`、`t_larger ≥ 0`、`t_smaller < 0`，`f=1.0` 只由 63582 写到 63666 的输出元素。
 
@@ -1577,7 +1579,7 @@ c110=0x211f2bc49c0  c208=0x211f272ca00  numData0=62016  numData1=1
 | [independent_graph.cpp](../src/animation/behavior_graph/independent_graph.cpp)：`drive_candidate_step`、`step_display_pose` | 既有 native 调用与资格守卫、显示取证 |
 | [drive_step_policy.h](../src/animation/behavior_graph/drive_step_policy.h)：`drive_graph_step`、`ScopedGraphWorld` | 共用步骤与临时 world 恢复 |
 | [graph_observation_policy.h](../src/animation/behavior_graph/graph_observation_policy.h)：`observe_graph_activity`、`observe_output_slot` | 内部行为图成员与 output→element 读取 |
-| [frame_trace.cpp](../src/animation/behavior_graph/frame_trace.cpp)：`FrameTrace::phase` | 复用正确槽读取，保留既有阶段观察 |
+| [frame_trace.cpp](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/frame_trace.cpp)：`FrameTrace::phase` | 复用正确槽读取，保留既有阶段观察 |
 | [controller.cpp](../src/animation/controller.cpp)：`AnimationController::advance` | 源图所有权、开关与显示回退 |
 | [behavior_graph_display_step_test.cpp](../tests/behavior_graph_display_step_test.cpp) | 两个 engine-free 用例：有 dt 的单步姿态变化/world 恢复；分离的外层/行为/输出/element 内存读取 |
 | [CharacterPanel.ini](../config/CharacterPanel.ini) | 三个实验默认值及重启约束 |
@@ -2033,7 +2035,7 @@ BehaviorGraphProbe=true
 <a id="g4-followup-source-events"></a>
 ### PENDING 2（**关闭已撤回、待重跑**，2026-11-04）：C 的兼容源事件观察窗口
 
-**缺口证据**：[B+C 原日志](diagnostics/CharacterPanel-g4bc-run-b-20261101-0028.log)原行 14/21 为 `SourceEventCapture=false`、`install-skip reason=off`，没有源事件观察器。并且 [source_event_capture.cpp](../src/animation/behavior_graph/source_event_capture.cpp) 的 `install_source_event_capture` 明确拒绝 `IndependentGraph!=off`，SourceTimeline 另有优先门；F7 的既有 `sample_source_event_capture` 生命周期面向面板外采集，不能假定覆盖并发 inject+display。**不能仅打开一个 INI 键重跑，也不得删守卫规避冲突。**
+**缺口证据**：[B+C 原日志](diagnostics/CharacterPanel-g4bc-run-b-20261101-0028.log)原行 14/21 为 `SourceEventCapture=false`、`install-skip reason=off`，没有源事件观察器。并且 [source_event_capture.cpp](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/source_event_capture.cpp) 的 `install_source_event_capture` 明确拒绝 `IndependentGraph!=off`，SourceTimeline 另有优先门；F7 的既有 `sample_source_event_capture` 生命周期面向面板外采集，不能假定覆盖并发 inject+display。**不能仅打开一个 INI 键重跑，也不得删守卫规避冲突。**
 
 **第一步与前提**：先另立评审范围，核实兼容观察器的安装/武装/窗口生命周期、线程与 source graph/actor 身份、有效路由、重置/关闭和候选活动共存条件；形成批准的仪器设计后才可实现和运行。AE58377 仅为当前已定位的观察路由，[E1](#c-g3b-e1-event-capture)配合 [A1](#c-g3b-a1-structural-audit)已示其覆盖不到全部 manager 级事件路径；若欲扩大结论须另审对应路由证据，不凭该零计数扩大。
 
@@ -3073,7 +3075,7 @@ TRANS toState=12 eventId=982(BoundWeap_Unequip) cond=null  trigger=[0,0] flags=2
 
 **非目标**：不注入、不写变量、不触碰候选行为图语义（纯透传，detour 只读三参数）、不做姿态对照、不声称覆盖全部事件路由、不改 F7 既有语义。
 
-**离线回归**：模式解析（`off|false|""`、`on|true`、`concurrent`，含大小写）进 [source_event_capture_test.cpp](../tests/source_event_capture_test.cpp)，`cl /W4 /WX` 通过；环/预算/取消/到期的既有三例不重跑也保持有效。
+**离线回归**：模式解析（`off|false|""`、`on|true`、`concurrent`，含大小写）进 [source_event_capture_test.cpp](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/tests/source_event_capture_test.cpp)，`cl /W4 /WX` 通过；环/预算/取消/到期的既有三例不重跑也保持有效。
 
 **实现影响面**：`settings` 三态 + 纯解析函数；`source_event_capture.{h,cpp}` 两个计数器、`begin_capture_window` 共享基线、`arm/close/open` 三个薄 API；`independent_graph.cpp` 的 arm/close 两处调用；文档、配置注释与 CHANGELOG 同步。无新源单元（`PLUGIN_SOURCES` 32）、无新原生调用或写入。
 
@@ -4370,7 +4372,7 @@ Shield                 NPC L Pauldron
 
 **M1（Q1）manifest 索引：给 `SourceTimeline` 加第三态 `concurrent`，而不是"两个开关同时开"。**
 
-冲突点：[`install_probe_liveness`](../../src/animation/behavior_graph/probe_liveness.cpp#L969) 在 `SourceTimeline`/`SourceEventCapture`/`SourceWriteCapture` 任一开启时拒绝安装。但 `SourceTimeline` **不安装任何 detour**（`source_timeline.cpp` 内无 `safe_write`/`Trampoline`/`REL::ID`），所以这是**策略性**互斥，不是钩子冲突。v64 已为 `SourceEventCapture` 建立同形先例（三态与理由见 [source_event_capture.cpp:412](../../src/animation/behavior_graph/source_event_capture.cpp#L412)）。
+冲突点：[`install_probe_liveness`](../../src/animation/behavior_graph/probe_liveness.cpp#L969) 在 `SourceTimeline`/`SourceEventCapture`/`SourceWriteCapture` 任一开启时拒绝安装。但 `SourceTimeline` **不安装任何 detour**（`source_timeline.cpp` 内无 `safe_write`/`Trampoline`/`REL::ID`），所以这是**策略性**互斥，不是钩子冲突。v64 已为 `SourceEventCapture` 建立同形先例（三态与理由见 [source_event_capture.cpp:412](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/source_event_capture.cpp#L412)）。
 
 建议：
 - `SourceTimeline` 解析为三态（`false`/`on` 保持旧义，新增 `concurrent`）；**值域扩展，不新增 INI 键**。

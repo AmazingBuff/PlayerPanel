@@ -17,7 +17,7 @@ The default product path uses the copied scene tree, OAR clip selection and nati
 
   判读指出的因果缺口已由 **v129**（`56893a1`，身份 `…-v129-dispel-log-20261126-56893a1bf3-…`，DLL `d0f30d6d…`）补齐：排除分支现在会打印 `OAR CORRECTION actor=… effect=…`，守卫条件与修正应用点完全相同，每条查询限 12 行。**已构建归档但未部署、未重跑**——v128 的会话判定已足够，v129 留作后续取证工具。
 
-- **2026-11-27（弓 / Axe equip 骨骼错位：根因关闭，修复方向待选）**。v130（`d1278da`，DLL `bd1246e5…`，当前安装位）在 `asset ready` 行加 `hkx-tracks` / `skeleton-bones`，上机确认引擎读到的原始轨道数就是 242 / 156。逐轨 mask 解码证明：前 97 条与标准 99 轨布局逐位一致、旋转动画止于 track 96（两文件相同）、异常资产带 `scale=DYN` 轨道（bow 107 / axe 12）而健康资产为 0——**多出的轨道是分量展开的 scale 段，不是附加骨骼**；"一轨=一骨"假设从 track 97（附加骨/挂点/物理骨区）起错位并逐轨放大。溢出资产共 5 个，全属 Gunslicer OAR Animations Pack（`bow_equip` / `bow_unequip` 242 轨；`1hm_equip` / `1hm_unequip` / `1hm_idle` 156 轨）。[取证全文](docs/diagnostics/equip-track-overflow-20261126/README.md)。修复候选：A 拒绝 `track_count > bone_count` 的资产（十行防御）或 MO2 侧换文件，C 实现分量展开映射（数天级）；均未实施。
+- **2026-11-27（弓 / Axe equip 骨骼错位：加载回退已实现，待上机）**。v130（`d1278da`，DLL `bd1246e5…`，当前安装位）在 `asset ready` 行加 `hkx-tracks` / `skeleton-bones`，上机确认引擎读到的原始轨道数就是 242 / 156。逐轨 mask 解码证明：前 97 条与标准 99 轨布局逐位一致、旋转动画止于 track 96（两文件相同）、异常资产带 `scale=DYN` 轨道（bow 107 / axe 12）而健康资产为 0——**多出的轨道是分量展开的 scale 段，不是附加骨骼**；mask 对照和面板日志确认了空表顺序映射的风险。该资产在世界中的有效轨道范围和同帧旋转、平移待复测。溢出资产共 5 个，全属 Gunslicer OAR Animations Pack（`bow_equip` / `bow_unequip` 242 轨；`1hm_equip` / `1hm_unequip` / `1hm_idle` 156 轨）。[取证全文](docs/diagnostics/equip-track-overflow-20261126/README.md)。面板现在只写骨骼的旋转和平移，并保留节点缩放。遇到空绑定表且轨道数超过骨骼数的片段，会立即尝试对应的基础动画。
 
   本轮构建同时完成了工具链迁移：`17b432f` 换成 `Visual Studio 18 2026` 时删掉了 `buildPresets`，`cmake --build --preset Release` 一度失效；`3e61d42` 已补回。新工具链是 CMake 4.3.1-msvc1 + 工具集 v145/14.52.37025（原为 CMake 3.31.4 + v143/14.44.35207），**该差异不出现在嵌入式身份里**。`C:/env/CMake` 的 3.31.4 不支持新生成器，须用 VS 自带的 CMake；旧 `build/` 缓存已迁到 `build/_vs2022-config-stash/`。
 
@@ -25,7 +25,7 @@ The default product path uses the copied scene tree, OAR clip selection and nati
 
 **2026-11-18（历史）**。G1–G4 在登记范围内成立。门 5 候选 249、源 849 完整采集，得到 248 对，姿态验收 **G4P-7 FAIL**。G6 待验。过渡离线审计已定位引擎中参与姿态混合的计时字段；字段补审计确认 `0→10` 为 0.2 s 的 `hkbBlendingTransitionEffect`，`1HM_Equip` 走 `Weap_EquipDefaultState/msg/State3` 的 Blender 分支。v110 候选 run 1 的 K5 链 249/249、equip 120、unequip 129、`state-12-to-0`；Track 2 环境正确（OAR 关闭是该档设计，`identity-failed=1` 为已知 SCAR dummy 记账），但探针批次 **INVALID**：4 个状态机上限 overflow、K5 post-sample 全部 `transitions=0`、未见 `State3` Blender；不能支持或否证过渡假设。v111/v2 候选 run 2 已上机：747 探针 header、78 EFFECT（26 个 transition 实例）；`0→10` 在 cmd=1 采到 0.2 s blending transition，`10→1` 在 cmd=87–98 完整推进到 0.183333 且 12 点 PC1 99.83%/Pearson 0.992817；72 条 overflow（equip 87–98、unequip 1–12）使 TP-2 FAIL，census 无 `State3`，TP-5 未目击。v112/v3 候选 run 3 已上机：747 header 全部 flags=0；`0→10` cmd=1 parent transition、`10→1` 12 点 PC1 99.83%/Pearson 0.992817；AUX transition-flags size4 head `0000E9D1`、wildcard 全 0、delayed 0 且 cmd 1–13 恒定；census 仍无 `State3`，TP-5 未目击。v113/v4 候选 run 4 已上机：modifier 绑定路线判负（equip cmd 2–13 活跃 modifier 全 bindings=0，BIND word 恒定），`10→1` PC1 99.83%/Pearson 0.992817 复现；剩余假设域为 `WeapEquip.hkb` 子图、`allPartitionMemory`、`hkbBlendingBehavior`。v5 已实现为 v114（`hkbBehaviorReferenceGenerator` `behavior +0x50` → `hkbBehaviorGraph`；候选专用、log-only；离线测试 8/8、构建身份 `…-v114-g5trans-subgraph-20261119-94003147d5-…`；已部署；候选 run 1 完成，H-B1 判负），见 [C-G5-TRANS v5](docs/diagnostics/g5-transition-probe-v5-20261119/README.md) 与 [run 1](docs/diagnostics/g5-transition-probe-v5-20261119/run1-candidate/README.md)。详见[run 1 记录](docs/diagnostics/g5-transition-probe-20261118/run1-candidate/README.md)、[v2 预注册](docs/diagnostics/g5-transition-probe-v2-20261118/README.md)、[测试结果总览](docs/diagnostics/test-results-20261118.md)和[离线审计](docs/diagnostics/g5-transition-audit-20261118/README.md#六离线字段补审计2026-11-18v3-dump)。
 
-The repository configuration keeps the independent graph experiments dormant by default.
+The repository configuration keeps the independent graph experiments dormant by default. The retired controls and the remaining graph diagnostics are recorded in the [retirement notes](docs/diagnostics/verification-instrument-retirement-20261126/README.md).
 
 ```ini
 [Experiment]
@@ -33,7 +33,6 @@ IndependentGraph=off
 DisplayPose=false
 DisplayStep=false
 SourceTimeline=false
-SourceEventCapture=false
 CandidateVariableCensus=false
 CandidateInputProbe=false
 CandidateInputVariable=IsEquipping

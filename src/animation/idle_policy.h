@@ -36,6 +36,12 @@ namespace animation
     [[nodiscard]] inline IdleTarget idle_target(WeaponForm form, bool left_primary, UnarmedIdle setting)
     { return { form, left_primary, form == WeaponForm::kNone && setting == UnarmedIdle::e_mt_idle }; }
 
+    [[nodiscard]] inline bool needs_idle_preparation(IdleTarget const& target,
+        std::optional<ActionKind> completed_transition = std::nullopt)
+    {
+        return !target.direct && (!completed_transition || *completed_transition == ActionKind::e_unequip);
+    }
+
     struct ShieldTransition
     {
         ActionKind kind;

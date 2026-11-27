@@ -4,7 +4,7 @@
 // Fills K1-C2 graph identity, K1-C3 skeleton/mapping, and K1-C4 resource/clip
 // instance identity without sampling or advancing anything.
 #include "animation/behavior_graph/k1_census.h"
-#include "animation/behavior_graph/control_sample.h"
+#include "animation/behavior_graph/animation_resource_identity.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
 
 #include "RE/B/BShkbAnimationGraph.h"

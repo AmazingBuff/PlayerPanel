@@ -162,26 +162,25 @@ PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool l
     return result;
 }
 
-bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
+BindingPlaybackStatus resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
     RE::hkaAnimationBinding* binding, std::string const& clip_name, ClipPlayback& out,
     std::string& out_mapping, std::string& out_coverage)
 {
     if (!binding || !readable(binding, sizeof(*binding)) || !looks_like_object(binding))
-        return false;
+        return BindingPlaybackStatus::e_unavailable;
     RE::hkaAnimation* const animation = binding->animation.get();
     if (!animation || !readable(animation, sizeof(*animation)) || !looks_like_object(animation))
-        return false;
+        return BindingPlaybackStatus::e_unavailable;
     const std::int32_t track_count = animation->numberOfTransformTracks;
     if (track_count <= 0 || track_count > Max_Tracks_Read || !animation_data_is_present(animation) ||
         !std::isfinite(animation->duration) || animation->duration <= 0.0f)
-        return false;
+        return BindingPlaybackStatus::e_unavailable;
     RE::hkaSkeleton const* const skeleton = graph.characterInstance.setup
         ? graph.characterInstance.setup->animationSkeleton.get() : nullptr;
     if (!skeleton || skeleton->bones.empty())
-        return false;
+        return BindingPlaybackStatus::e_unavailable;
     const std::uint32_t bone_nodes = static_cast<std::uint32_t>(graph.boneNodes.size());
     const std::uint32_t pose_count = static_cast<std::uint32_t>(std::max(graph.characterInstance.numPoseLocal, 0));
-    // Empty replacement tables retain the existing unverified identity fallback.
     const RE::hkArray<std::int16_t>& table = binding->transformTrackToBoneIndices;
     std::span<std::int16_t const> track_table;
     if (!table.empty())
@@ -189,7 +188,7 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
         if (!readable(table.begin(), static_cast<std::size_t>(table.size()) * sizeof(std::int16_t)))
         {
             logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=track-table-unreadable clip='{}'", clip_name);
-            return false;
+            return BindingPlaybackStatus::e_unavailable;
         }
         track_table = { table.begin(), static_cast<std::size_t>(table.size()) };
         out_mapping = "table";
@@ -198,8 +197,14 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
     {
         out_mapping = "identity-unverified";
     }
-    const auto bindings = resolve_animation_tracks(track_table, static_cast<std::size_t>(track_count),
-        static_cast<std::size_t>(skeleton->bones.size()));
+    const std::size_t bone_count = static_cast<std::size_t>(skeleton->bones.size());
+    if (has_unmapped_track_overflow(track_table, static_cast<std::size_t>(track_count), bone_count))
+    {
+        logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=unmapped-track-overflow clip='{}' hkx-tracks={} skeleton-bones={}",
+            clip_name, track_count, bone_count);
+        return BindingPlaybackStatus::e_unmapped_track_overflow;
+    }
+    const auto bindings = resolve_animation_tracks(track_table, static_cast<std::size_t>(track_count), bone_count);
 
     const NameIndex copy_by_name = index_nodes_by_name(copy_root);
     out = ClipPlayback{};
@@ -247,12 +252,12 @@ bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& co
     if (resolved == 0)
     {
         logger::info("SCOPY PUPPET resolve UNAVAILABLE reason=no-copy-nodes clip='{}' tracks={}", clip_name, bindings.size());
-        return false;
+        return BindingPlaybackStatus::e_unavailable;
     }
     out_coverage = fmt::format("tracks={} resolved={} bone-nodes={} pose={} hkx-tracks={} skeleton-bones={} unresolved='{}'",
         bindings.size(), resolved, bone_nodes, pose_count, track_count,
         static_cast<std::uint32_t>(skeleton->bones.size()), unresolved);
-    return true;
+    return BindingPlaybackStatus::e_ready;
 }
 
 PLUGIN_NAMESPACE_END

@@ -339,31 +339,6 @@ namespace animation::behavior_graph
     void log_transition_parent_chain(RE::BShkbAnimationGraph const& a_graph,
         TransitionProbeRecord const& a_probe) noexcept;
 
-    // Candidate-only AE 1.6.1170 clip clock evidence at the same observations. It reads the
-    // audited clip/control time fields (offset table in transition_clip_clock_policy.h),
-    // adds no hook, and writes nothing to the graph, the pose or any variable.
-    void log_transition_clip_clock(RE::BShkbAnimationGraph const& a_graph,
-        TransitionProbeRecord const& a_probe) noexcept;
-
-    // Candidate-only AE 1.6.1170 capture comparison at the same observations: the control's
-    // own sample against hkbCharacter::poseLocal, with the binding's track->bone map. The
-    // sample lands in a probe-local buffer; no graph function is mutated and nothing is added
-    // to TransitionProbeRecord or the source ring.
-    void log_transition_clip_capture(RE::BShkbAnimationGraph const& a_graph,
-        TransitionProbeRecord const& a_probe) noexcept;
-
-    // Candidate-only AE 1.6.1170 weight reading at the same observations: the control's
-    // per-track weight table, a prefilled-buffer sample, and the three-point solve of the
-    // weight implied by (previous pose, current pose, current sample). Read-only.
-    void log_transition_clip_weight(RE::BShkbAnimationGraph const& a_graph,
-        TransitionProbeRecord const& a_probe) noexcept;
-
-    // Candidate-only AE 1.6.1170 swept-time comparison: samples the clip at
-    // local-time + k/60 s for k in [-4, 4] and reports the offset that best matches
-    // poseLocal plus the whole residual curve. Read-only.
-    void log_transition_clip_sweep(RE::BShkbAnimationGraph const& a_graph,
-        TransitionProbeRecord const& a_probe) noexcept;
-
     // C-G5-CHAIN v1 (2026-11-21, pre-registered in docs/diagnostics/g5-idle-chain-probe-20261121/):
     // idle-settle three-way comparison run symmetrically on the held candidate and the live
     // source graph at the two F7 display checkpoints. Per side: every active clip generator is

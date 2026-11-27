@@ -112,9 +112,25 @@ void direct_empty_idle_rejects_old_preparation_after_request_and_close()
     if (session.accepts(queued)) { ++native_calls; actor.native_loop(); }
     assert(native_calls == 0 && target.direct);
 }
+void idle_preparation_follows_the_completed_transition()
+{
+    using namespace animation;
+    const auto empty = idle_target(WeaponForm::kNone, false, UnarmedIdle::e_non_combat_loop);
+    const auto armed = idle_target(WeaponForm::kOneHanded, false, UnarmedIdle::e_non_combat_loop);
+    const auto direct = idle_target(WeaponForm::kNone, false, UnarmedIdle::e_mt_idle);
+    assert(needs_idle_preparation(empty));
+    assert(needs_idle_preparation(armed));
+    assert(needs_idle_preparation(empty, ActionKind::e_unequip));
+    assert(needs_idle_preparation(armed, ActionKind::e_unequip));
+    assert(!needs_idle_preparation(armed, ActionKind::e_equip));
+    assert(!needs_idle_preparation(armed, ActionKind::e_weapon_idle));
+    assert(!needs_idle_preparation(direct));
+    assert(!needs_idle_preparation(direct, ActionKind::e_unequip));
+}
 int main()
 {
     default_equipment_idle_waits_for_native_goal_and_keeps_entry_snapshot();
     direct_empty_idle_rejects_old_preparation_after_request_and_close();
-    std::cout << "2 panel idle policy/native preparation cases passed\n";
+    idle_preparation_follows_the_completed_transition();
+    std::cout << "3 panel idle policy/native preparation cases passed\n";
 }

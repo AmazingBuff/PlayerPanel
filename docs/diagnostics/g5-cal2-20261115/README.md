@@ -117,11 +117,11 @@
 | # | 文件 | 改动 |
 | --- | --- | --- |
 | 1 | [settings.h](../../../src/animation/settings.h) / [settings.cpp](../../../src/animation/settings.cpp) | `control_sample_grid()` getter + 全局 + `EXPERIMENT setting ControlSampleGrid={}` 行（与 ControlSample 模式逐字同构） |
-| 2 | [control_sample_policy.h](../../../src/animation/behavior_graph/control_sample_policy.h) | 网格常量：`Control_Grid_Generation_Count = 120`、**121 项静态 `Control_Grid_Times[]` 原始 bits 表**（0 = baseline；k/60, k=1..120）、记录/头尺寸常量。表由 float64 除法 → float32 舍入一次性生成并逐字粘贴；运行期**不计算任何时间**，只读表 |
-| 3 | [control_sample.h](../../../src/animation/behavior_graph/control_sample.h) | 新 API：`run_control_grid_generation(character, actor_id, request, completed)` 与 `close_control_grid(actor_id, request)`；网格状态（held carrier + writer + 计数）封装在 control_sample.cpp 内部，头文件不暴露 |
-| 4 | [control_sample.cpp](../../../src/animation/behavior_graph/control_sample.cpp) | 网格实现：completed=1 时按 B2 规则选载体（复用既有 `spline_matches`/`read_binding_identity` 静态助手，9 时间函数体零改动）→ 采集 **baseline(t=0) + j=0(t=1/60)** 两条记录；completed=k(2..120) → 采集 j=k−1(t=k/60)；每代：载体 `data`/`blockOffsets` FNV 重验 → 两次 `SamplePartialTracks` + memcmp → 四点 `__rdtsc` → 首读 99×40 B 原始位值入记录。completed=120 采集后写 close 行并关闭工件 |
+| 2 | [control_sample_policy.h](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/control_sample_policy.h) | 网格常量：`Control_Grid_Generation_Count = 120`、**121 项静态 `Control_Grid_Times[]` 原始 bits 表**（0 = baseline；k/60, k=1..120）、记录/头尺寸常量。表由 float64 除法 → float32 舍入一次性生成并逐字粘贴；运行期**不计算任何时间**，只读表 |
+| 3 | [control_sample.h](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/control_sample.h) | 新 API：`run_control_grid_generation(character, actor_id, request, completed)` 与 `close_control_grid(actor_id, request)`；网格状态（held carrier + writer + 计数）封装在 control_sample.cpp 内部，头文件不暴露 |
+| 4 | [control_sample.cpp](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/src/animation/behavior_graph/control_sample.cpp) | 网格实现：completed=1 时按 B2 规则选载体（复用既有 `spline_matches`/`read_binding_identity` 静态助手，9 时间函数体零改动）→ 采集 **baseline(t=0) + j=0(t=1/60)** 两条记录；completed=k(2..120) → 采集 j=k−1(t=k/60)；每代：载体 `data`/`blockOffsets` FNV 重验 → 两次 `SamplePartialTracks` + memcmp → 四点 `__rdtsc` → 首读 99×40 B 原始位值入记录。completed=120 采集后写 close 行并关闭工件 |
 | 5 | [independent_graph.cpp](../../../src/animation/behavior_graph/independent_graph.cpp) | `record_output` lambda 内、既有 control_sample 分支之前加网格分支：`segment=="equip" && completed∈[1,120]` → 每代调用；completed==120 → close。9 时间分支原样保留 |
-| 6 | [tests/control_sample_policy_test.cpp](../../../tests/control_sample_policy_test.cpp) | 网格用例（§9.5） |
+| 6 | [tests/control_sample_policy_test.cpp](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/tests/control_sample_policy_test.cpp) | 网格用例（§9.5） |
 
 ### 9.3 工件字节布局（pack(1)，static_assert 到位）
 
@@ -158,7 +158,7 @@ G1 网格表：121 项、严格递增、`[0]==0x00000000`、`[1]==0x3C888889`（
 | 项 | 值 |
 | --- | --- |
 | 代码触点 | §9.2 六处全部落地（settings 键、policy 121 时间表 + 布局常量、control_sample 网格状态机/写物器、hook 分支、测试 G1–G4） |
-| 离线测试 | [control_sample_policy_test](../../../tests/control_sample_policy_test.cpp) **8/8 PASS**（G1 严格递增 + 三锚点逐位、G2 484,596 B 预算算术、G3 float64→float32 规则对全部 120 个 k 重算逐位一致、G4 九时间常量原状） |
+| 离线测试 | [control_sample_policy_test](https://github.com/AmazingBuff/PlayerPanel/blob/b4c8c39b0ebffe2bfdd9e8f04721b14b636ed34b/tests/control_sample_policy_test.cpp) **8/8 PASS**（G1 严格递增 + 三锚点逐位、G2 484,596 B 预算算术、G3 float64→float32 规则对全部 120 个 k 重算逐位一致、G4 九时间常量原状） |
 | v104 构建 | 提交 `d61a6e1` 后重配置干净重建：DLL 2,025,984 B，SHA-256 `7d270e7dfc35ccadcca0807472356aa81e3dda3efa912d516479605470d6f9df`；PDB `b2232180b7ec250ac7aebb37fa79536fd0ab7edd8df87321420a88bba31c2ac1`；身份 `CharacterPanel-scenegraph-v104-g5cal2-grid-d61a6e19b9-cl94faaed0c6-20261115T073547Z`（无 `+dirty`） |
 
 ### 10.2 网格真值转储（本地 HkxTruth，§2.4/§9.6 落地）

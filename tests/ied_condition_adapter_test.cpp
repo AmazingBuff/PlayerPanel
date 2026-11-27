@@ -125,7 +125,29 @@ namespace
             [&] { return condition.Evaluate(source); },
             [&](std::string_view reason) { diagnostic = reason; });
         assert(!matched && condition.native_reads() == 0);
-        assert(diagnostic == "IED equipped placement hint does not support a changed historical hand");
+        assert(diagnostic == "IED equipped placement hint has no snapshot for a changed historical hand");
+    }
+
+    void historical_snapshot_matches_the_weapon_and_hand()
+    {
+        constexpr std::uint32_t axe = 0xE3C16;
+        constexpr std::uint32_t sword = 0x56C2A4C;
+        oar::IedWeaponPlacements snapshot{ oar::IedWeaponPlacement{ axe, 0 },
+            oar::IedWeaponPlacement{ sword, 2 } };
+        FakePlacementCondition condition;
+        const auto rejection = [&](std::optional<std::uint8_t> placement)
+        {
+            return oar::ied_condition_rejection(condition, oar::Ied_Provider_Version, true, false, placement);
+        };
+        const auto right = oar::saved_ied_placement(snapshot, false, axe);
+        assert(right == 0 && rejection(right).empty());
+        const auto left = oar::saved_ied_placement(snapshot, true, sword);
+        assert(left == 2 && rejection(left).empty());
+        assert(!rejection(oar::saved_ied_placement(snapshot, false, sword)).empty());
+        assert(!rejection(oar::saved_ied_placement(snapshot, true, axe)).empty());
+        assert(!oar::ied_condition_rejection(condition, std::nullopt, true, false, right).empty());
+        snapshot = {};
+        assert(!rejection(oar::saved_ied_placement(snapshot, false, axe)).empty());
     }
 }
 
@@ -133,5 +155,6 @@ int main()
 {
     placement_admission_preserves_native_configuration_and_false();
     historical_hand_scope_rejects_before_native_read();
-    std::cout << "IED condition adapter: 2 cases passed\n";
+    historical_snapshot_matches_the_weapon_and_hand();
+    std::cout << "IED condition adapter: 3 cases passed\n";
 }

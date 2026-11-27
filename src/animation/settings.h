@@ -4,7 +4,6 @@
 #pragma once
 #include "animation/behavior_graph/independent_graph.h"
 #include "animation/behavior_graph/probe_liveness_policy.h"
-#include "animation/behavior_graph/source_event_capture_policy.h"
 #include "animation/behavior_graph/source_timeline_policy.h"
 #include "animation/idle_policy.h"
 
@@ -40,19 +39,6 @@ namespace animation
     // observed word change immediately (no settle rule), catching one-frame command writes
     // the settle-3 rule filters out. Requires SourceTimeline.
     [[nodiscard]] bool source_transient_watch();
-    // C-G3B-E1 / C-G4-C1: install a read-only 58377 observer. `on` logs the source graph's
-    // dispatched events during an F7 window (requires IndependentGraph=off; SourceTimeline wins
-    // when both are on). `concurrent` is armed and closed by the candidate experiment/display
-    // path instead, and may coexist with IndependentGraph=inject.
-    [[nodiscard]] bool source_event_capture();
-    // C-G4-C1: the parsed three-state mode and the concurrent predicate. `source_event_capture()`
-    // is true for both `on` and `concurrent`.
-    [[nodiscard]] behavior_graph::SourceEventCaptureMode source_event_capture_mode();
-    [[nodiscard]] bool source_event_capture_concurrent();
-    // C-G3B-E2: install read-only observers on the typed graph setters (Bool/Int) and log every
-    // write to the player's graphs during an F7 window. Requires IndependentGraph=off; the
-    // other source instruments win when both are on.
-    [[nodiscard]] bool source_write_capture();
     // C-VC1: one-shot read-only dump of the candidate's variable table, aligned by name against
     // the source. Requires IndependentGraph != off; writes nothing and calls no native function.
     [[nodiscard]] bool candidate_variable_census();
@@ -75,26 +61,8 @@ namespace animation
     // output. inject already implies it; keeping it explicit and off by default leaves historical
     // drive runs comparable.
     [[nodiscard]] bool candidate_generation_entry();
-    // C-G3B-S3: once the equip phase settles (currentDefaultState==1 held for three consecutive
-    // samples inside the first 120 driven steps), dispatch 1HM_Unequip once through the same
-    // event path as the activation injection and sample the unequip phase for another 121 steps.
-    // Requires IndependentGraph=inject.
+    // After equip settles, dispatch the unequip event once and observe the resulting state.
     [[nodiscard]] bool candidate_unequip_probe();
-    // C-G3B-S4: the unequip slice's second-stage input. Non-empty selects a by-name typed
-    // variable write at the settle point (the pre-registered ladder bEquipUnequip ->
-    // IsUnequipping -> PitchManualOverride, one INI-only round per name); empty keeps the S3
-    // 1HM_Unequip event dispatch.
-    [[nodiscard]] std::string const& candidate_unequip_variable();
-    // C-G3B-S5: an optional prime write before the unequip command — the pre-registered
-    // sequence writes iRightHandEquipped=1 first (completing the real equipped state the
-    // WeapEquip path skips), then the CandidateUnequipVariable command. Empty keeps the S4
-    // single-write behaviour.
-    [[nodiscard]] std::string const& candidate_unequip_prime();
-    // C-G3B-S6: the unequip slice's second-stage event name when CandidateUnequipVariable is
-    // empty. The C-G3B-A1 structural audit resolved the Weap_Readied_State 1->12 transition to
-    // the event "Unequip" (id 144 in the 0_Master table) with its condition flag disabled; S3's
-    // hard-coded "1HM_Unequip" stays as the empty-key default so historical INI files reproduce
-    // their rounds verbatim.
     [[nodiscard]] std::string const& candidate_unequip_event();
     // C-G4-A: while native candidate activity is armed, count and log OAR condition-evaluation
     // detour hits (OAR CONTEXT rows) and emit the display-branch suppression row. Default off;
@@ -106,14 +74,6 @@ namespace animation
     [[nodiscard]] bool sampling_liveness();
     // C-G5-CAL K3-C: write the per-generation full candidate snapshot artifact.
     [[nodiscard]] bool observation_snapshot();
-    // C-G5-CAL K2-C4 control B: read-only, fixed-time sample of the registered MT_Idle
-    // animation through the candidate's loaded binding. Requires IndependentGraph != off;
-    // defaults off and never writes or advances the graph.
-    [[nodiscard]] bool control_sample();
-    // C-G5-CAL2 control grid (2026-11-15): per-generation sampling of the held
-    // carrier at the predetermined grid times during the equip phase. Requires
-    // IndependentGraph=inject; defaults off and never writes or advances the graph.
-    [[nodiscard]] bool control_sample_grid();
     // C-G5-CAL K1 (2026-11-14): one-shot read-only graph/skeleton/clip identity census.
     // Requires IndependentGraph != off; defaults off and never writes or advances the graph.
     [[nodiscard]] bool clip_identity_census();
@@ -144,17 +104,6 @@ namespace animation
     // source and candidate setup/skeleton pointers and the 12 fixed bone bind transforms;
     // writes no graph/pose state and installs no hook.
     [[nodiscard]] bool setup_audit();
-    // C-G5-STATE v2 (2026-11-17, default off): one-time source poseLocal bootstrap into
-    // the activated candidate, before any injection/drive. Copies all candidate tracks
-    // once; no per-frame write. Requires IndependentGraph=drive|inject.
-    [[nodiscard]] bool bootstrap_source_pose();
-    // C-G5-STATE v3 (2026-11-17, default off): per-generation read-only fingerprint of
-    // the candidate's active-node hkbNodeInfo entries. No node/pose/variable writes.
-    [[nodiscard]] bool state_probe();
-    // C-G5-STATE v4 (2026-11-17, default off): read-only discovery/dump of
-    // hkbBlenderGeneratorChild and hkbBlenderGeneratorInternalState objects reachable
-    // from blender nodes. Uses guarded self-reads; no writes or hooks.
-    [[nodiscard]] bool state_child_probe();
     // C-G5-TRANS v1 (2026-11-18, default off): read-only transition/blender state probe at the
     // existing K5 candidate/source points. Requires K5FullSample; adds no detour and writes no
     // graph, pose or variable.
@@ -165,17 +114,6 @@ namespace animation
     [[nodiscard]] bool transition_subgraph_probe();
     // C-G5-TRANS v6: candidate-only equipment parent chain, default off.
     [[nodiscard]] bool transition_parent_chain_probe();
-    // C-G5-TRANS v7: candidate-only clip clock evidence, default off. Reads clip/control
-    // time fields only; adds no detour and writes no graph, pose or variable.
-    [[nodiscard]] bool transition_clip_clock_probe();
-    // C-G5-TRANS v8: candidate-only capture comparison (control sample vs poseLocal),
-    // default off. Read-only; the sample goes to a probe-local buffer.
-    [[nodiscard]] bool transition_clip_capture_probe();
-    // C-G5-TRANS v9: candidate-only weight reading (per-track weight table, prefilled
-    // sample, three-point solve), default off. Read-only.
-    [[nodiscard]] bool transition_clip_weight_probe();
-    // C-G5-TRANS v10: candidate-only swept-time comparison, default off. Read-only.
-    [[nodiscard]] bool transition_clip_sweep_probe();
     // C-G5-CHAIN v1 (2026-11-21, default off): idle-settle three-way comparison at the two F7
     // display checkpoints — each side's poseLocal against a direct SamplePartialTracks of that
     // side's active clip at that side's own localTime, plus a bounded active-node census of

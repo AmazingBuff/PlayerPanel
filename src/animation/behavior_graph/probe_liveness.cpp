@@ -1927,9 +1927,9 @@ namespace
         // C-G5-E3 (M1): the timeline is admitted only in its `concurrent` state, where it installs
         // no detour and is driven by the same experiment window. The legacy `on` lifecycle still
         // wins the process, exactly as before.
-        if (source_timeline_mode() == SourceTimelineMode::e_on || source_event_capture() || source_write_capture())
+        if (source_timeline_mode() == SourceTimelineMode::e_on)
         {
-            logger::warn("PROBE LIVENESS install-skip reason=other-detour-probe-priority");
+            logger::warn("PROBE LIVENESS install-skip reason=source-timeline-priority");
             return;
         }
         if (!exact_runtime())

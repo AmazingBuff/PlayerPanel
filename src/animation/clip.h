@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "animation/track_mapping.h"
+
 #include "RE/H/hkQsTransform.h"
 #include "RE/H/hkaAnimationBinding.h"
 #include "RE/N/NiAVObject.h"
@@ -97,28 +99,6 @@ struct PoseSample
     return local;
 }
 
-struct AnimationTrackBinding
-{
-    std::uint16_t track;
-    std::uint16_t bone;
-};
-
-[[nodiscard]] inline std::vector<AnimationTrackBinding> resolve_animation_tracks(
-    std::span<std::int16_t const> table, std::size_t track_count, std::size_t bone_count)
-{
-    const std::size_t count = std::min(track_count, table.empty() ? bone_count : table.size());
-    std::vector<AnimationTrackBinding> bindings;
-    bindings.reserve(count);
-    for (std::size_t track = 0; track < count; ++track)
-    {
-        const std::int32_t bone = table.empty() ? static_cast<std::int32_t>(track) : table[track];
-        if (bone < 0 || static_cast<std::size_t>(bone) >= bone_count)
-            continue;
-        bindings.push_back({ static_cast<std::uint16_t>(track), static_cast<std::uint16_t>(bone) });
-    }
-    return bindings;
-}
-
 // The binding retains its animation; node references belong to the current display graph.
 struct ClipPlayback
 {
@@ -141,7 +121,14 @@ struct SampledScale
 };
 [[nodiscard]] PoseBuffer sample_animation_clip(ClipPlayback const& clip, float seconds, bool loop,
     std::vector<SampledScale>* raw_scales = nullptr);
-bool resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
+
+enum class BindingPlaybackStatus : std::uint8_t
+{
+    e_unavailable,
+    e_ready,
+    e_unmapped_track_overflow
+};
+[[nodiscard]] BindingPlaybackStatus resolve_binding_playback(RE::BShkbAnimationGraph& graph, RE::NiAVObject& copy_root,
     RE::hkaAnimationBinding* binding, std::string const& name, ClipPlayback& out,
     std::string& mapping, std::string& coverage);
 

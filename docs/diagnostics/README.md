@@ -1,5 +1,30 @@
 # 诊断证据保留与恢复
 
+## 待上机测试
+
+<a id="stock-dac-inventory-loop"></a>
+
+- [ ] **原版 DAC 能否在暂停的背包内自行推进 Smooth Start → Loop**
+  - **对照档**。两档都保留原版 DAC、Smooth Moveset、OAR、原始角色效果观测及预览查询的驱散修正。A 档走现有链路。B 档关闭 PlayerPanel 的待机预置和 HKX 注释转发，继续推进预览时钟和查询 OAR。现有 INI 没有对应开关，需在上机前准备能切换两档的测试构建。
+  - **操作**。两档分别从同一存档开始，使用相同的模组配置，并设 `IndependentGraph=off`、`DisplayPose=false`、`DetailedAnimationTrace=true`。打开背包并换成弓，保持菜单暂停，至少等过 Start 片段上的 `Smooth_Loop` 注释时点（v130 的弓为 2.333 秒）。记录换装前后 `802`、`804` 是否有未驱散实例，以及面板的 DAC 调用和 `ANIMATION PANEL … accepted` 选片序列。 [v130 弓换装基准日志](CharacterPanel-v130-trackdiag-20261127.log)
+  - **判据**。A 档先复现 Start → Loop。B 档要确认面板的两条主动调用均未执行，并观察到同一次换装中原始角色新出现未驱散的 `802`，随后面板接受 Loop，整段发生在关闭背包前。入场就有的 `802` 或直接选中 Loop 不能证明相位推进。
+  - **结果用途**。B 档在菜单内始终未产生新的有效 `802`，说明这次场景仍需要主动推进相位。若 `802` 已产生但 Loop 未选中，检查 OAR 的拒绝条件。B 档复现完整链路时，再评估这次覆盖的武器族能否省去主动转发。
+
+<a id="ied-unequip-placement"></a>
+
+- [ ] **IED 旧挂点用于 Unequip，并在结束或再次装备时清除**
+  - **准备**。使用带 IED 历史挂点兼容的构建，设置 `IndependentGraph=off`、`DisplayPose=false`、`DetailedAnimationTrace=true`。装备一把已知 IED 挂点的单手斧，再打开背包。启动日志应有 `OAR IED historical placement available`。
+  - **正常卸下**。卸下斧头并让 Unequip 播完。确认该次查询的 `OAR IED PLACEMENT ... source=historical` 记录了卸下前的武器 FormID、手位和挂点。随后确认同一请求出现 `cleared=unequip-complete`。记录最终接受的 Unequip 片段，后续待机应使用当前装备上下文。
+  - **中途换装**。重新装备斧头并复现历史挂点读取。在 Unequip 播完前装备另一把武器。确认新请求记录 `cleared=equipment-change`，其 Equip 和后续待机均使用新装备，旧斧的挂点没有再用于新请求。若这一轮没有读到历史挂点，保留日志用于定位，清理验证仍待复现。
+
+<a id="bow-equip-track-mapping"></a>
+
+- [ ] **弓 Equip 轨道回退与手部姿势**
+  - 保留 v130 使用的 Gunslicer 和 Smooth 配置。开启 `DetailedAnimationTrace=true`，保持 `DisplayPose=false`，在背包里切换为弓。
+  - 同一装备请求应先记录 `reason=unmapped-track-overflow`、`hkx-tracks=242` 和 `skeleton-bones=116`，再记录 `outcome=fallback`、`target=original-base`。基础绑定可用时，确认 `ANIMATION PANEL` 接受 `bow_equip.hkx` 并标为 `status=base`。
+  - 观察整段 Equip 的左右手、前臂和弓挂点，并确认随后回到待机。分别记录动作是否变形和 Smooth Start → Loop 是否发生。 [v130 对照与修复范围](equip-track-overflow-20261126/README.md)
+  - **同片段旋转和平移对照**。保留同一份 Gunslicer 资源和骨架配置，开启 OAR。在 `IndependentGraph=off`、`SourceTimeline=off`、`SamplingLiveness=on`、`K5FullSample=true` 的测试档里，关背包，按 F7 开启源图捕获，然后让原始角色拔弓。保存 OAR 实际替换路径、源侧 CPK5 捕获及日志。先核对绑定表与片段时钟，再把同一时点的原生姿势与 v130 的 `POSE MAP`、`incoming-local` 对照。原生混合与 IK 参与的帧需结合其输出阶段判读。 [源图采集入口](g5-ver-formal-20261122/README.md)
+
 <a id="idle-loop-20261123"></a>
 ## C-IDLE v1 契约（2026-11-23，2026-11-25 关闭：定为已知限制）
 
@@ -10,9 +35,9 @@
 **2026-11-25 正常游玩相位采样（C-WORLD v1）**：[契约](world-phase-probe-contract-20261125/README.md) · [run 1 判读](world-phase-20261125/README.md) · 日志 [CharacterPanel-worldphase-run1-20261125.log](CharacterPanel-worldphase-run1-20261125.log)（103,124 B，`8dcfe5f7…`）。新增只读逐帧探针 `WorldPhaseProbe`（复用 `smooth_marker_report()`，250 ms/行，面板外亦可采样）后实测：**`801`(`mag_start on`) 在正常游玩中同样不被清除**——722 行采样中 `phase=both` 401（801 与 802 并存）、`unknown` 297、`start` 24、**`loop` 0**；两次拔刀时间线同构（`start` 约 3 秒 → `both` 持续到收刀）。按契约 §三 预注册规则裁定：**世界与面板的 `801` 状态一致，"卡 Start"不能用"面板缺清 801 机制"解释**。据此**否决方向 B**（补派 `sp_start off` 会创造世界不存在的状态）；方向 A 的依据变为"修正 OAR 在面板上下文中的判定差异"，需先解释差异来源；方向 C 依据增强。**边界**：探针只测标记、不测 OAR 选择结果，故不能据此断言面板行为正确——世界与面板在 `both` 状态下选择不同这一点仍待解释。**2026-11-25 收尾**：C-IDLE 契约按方向 C **关闭并定级为已知限制**（[契约 §十](idle-loop-contract-20261123/README.md)），否决方向 B、不实施方向 A；重启所需的唯一实质问题与最小取证已记录。安装位配置清理为 `DetailedAnimationTrace=false` + `WorldPhaseProbe=false`（INI `ecb2f912…`），保留 `DisplayPose=false`（面板显示 Smooth 动作）。
 
 <a id="verification-instrument-retirement-20261126"></a>
-## 验证仪器退役清单（2026-11-26，仅调查未执行）
+## 独立行为图探针退役（2026-11-27）
 
-[清单](verification-instrument-retirement-20261126/README.md)。G1–G6 全部签收后测定：`behavior_graph/` 18,637 行中建议退役 8 个编译单元共 11,094 行（.cpp 6,886 + .h 4,208），`PLUGIN_SOURCES` 39 → 31，源码 −36%。保留 `g6_ledger`（存档边界持续观测）、`independent_graph`（`DisplayPose` 唯一动画来源机制）、`source_timeline`（F7 工作流）、`ownership_probe`，以及仍挂开放项 K5-5 的 `k5_audit`。**注意：这些仪器在未启用时本就零运行时开销**（`install-skip` 早退），退役收益是维护负担而非性能。同批结论：DAC 不可退役（暂停世界推事件 + 注入/恢复效果，5 处生产调用），可收窄的仅 `world_phase_probe`。
+已退役源图事件与变量写入探针、旧帧跟踪、固定时间采样和已完成的候选姿势与片段探针。仍可用的独立图功能、配置变化及清理前的源码版本见[退役记录](verification-instrument-retirement-20261126/README.md)。
 
 <a id="equip-track-overflow-20261126"></a>
 ## 弓 / Axe equip 姿态错位取证（2026-11-26）

@@ -85,6 +85,7 @@ namespace
         for (int frame = 1; frame < 120; ++frame)
         {
             pose.rotation[3] = -previous[0].rotation[3];
+            pose.scale[0] += 3.0F;
             pose.scale[1] += 1.0F;
             pose.scale[2] += 2.0F;
             std::vector<PoseSample> const current{ pose };
@@ -101,14 +102,15 @@ namespace
         pose.rotation = { 0.0F, 0.0F, std::sin(1.0e-5F), std::cos(1.0e-5F) };
         assert(test_plugin::animation::behavior_graph::compare_display_motion({ pose }, previous).moved == 1);
 
-        struct Node { float local; };
-        Node root{ 9.0F };
-        Node hand{ 0.0F };
+        struct Transform { float rotate; float translate; float scale; };
+        struct Node { Transform local; };
+        Node root{ { 9.0F, 8.0F, 0.35F } };
+        Node hand{ { 0.0F, 0.0F, 0.85F } };
         std::unordered_map<std::string, Node*> const nodes{ { "Hand", &hand } };
-        std::vector<std::pair<std::string, float>> const named_pose{
-            { "SceneRoot", 1.0F }, { "Hand", 3.0F }, { "MissingBone", 5.0F },
-            { "Missing2", 5.0F }, { "Missing3", 5.0F }, { "Missing4", 5.0F },
-            { "Missing5", 5.0F }, { "Missing6", 5.0F }, { "Missing7", 5.0F }
+        std::vector<std::pair<std::string, Transform>> const named_pose{
+            { "SceneRoot", { 1.0F, 2.0F, 2.0F } }, { "Hand", { 3.0F, 4.0F, 13.358952F } },
+            { "MissingBone", {} }, { "Missing2", {} }, { "Missing3", {} }, { "Missing4", {} },
+            { "Missing5", {} }, { "Missing6", {} }, { "Missing7", {} }
         };
         const auto coverage = test_plugin::animation::behavior_graph::apply_named_display_pose(named_pose, nodes, "SceneRoot");
         assert(coverage.requested == 9 && coverage.applied == 1 && coverage.missing == 7 && coverage.skipped_root == 1);
@@ -116,7 +118,8 @@ namespace
         assert(coverage.missing_name_count == 7);
         for (std::size_t i = 0; i < coverage.missing_name_count; ++i)
             assert(coverage.missing_names[i] == named_pose[i + 2].first);
-        assert(hand.local == 3.0F && root.local == 9.0F);
+        assert(hand.local.rotate == 3.0F && hand.local.translate == 4.0F && hand.local.scale == 0.85F);
+        assert(root.local.rotate == 9.0F && root.local.translate == 8.0F && root.local.scale == 0.35F);
     }
 }
 

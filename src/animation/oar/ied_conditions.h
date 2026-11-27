@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -14,13 +15,30 @@ PLUGIN_NAMESPACE_BEGIN
 namespace oar
 {
     inline constexpr std::string_view Ied_Provider = "OpenAnimationReplacer-IEDConditionExtensions";
+    inline constexpr std::string_view Ied_Equipped_Placement_Condition = "IED_GearNodeEquippedPlacementHint";
     inline constexpr uint32_t Ied_Provider_Version = 0x01000020;
     inline constexpr uint32_t Ied_Condition_Version = 0x01000000;
+
+    struct IedWeaponPlacement
+    {
+        std::uint32_t weapon = 0;
+        std::uint8_t placement = 0;
+    };
+    using IedWeaponPlacements = std::array<IedWeaponPlacement, 2>;
+
+    [[nodiscard]] constexpr std::optional<std::uint8_t> saved_ied_placement(
+        IedWeaponPlacements const& placements, bool left, std::uint32_t weapon)
+    {
+        IedWeaponPlacement const& saved = placements[left ? 1 : 0];
+        if (!weapon || saved.weapon != weapon) return std::nullopt;
+        return saved.placement;
+    }
 
     template <class Condition>
     [[nodiscard]] std::string_view ied_condition_rejection(Condition const& condition,
         std::optional<uint32_t> provider_version, bool hand_override,
-        std::optional<bool> requested_hand_unchanged = std::nullopt)
+        std::optional<bool> requested_hand_unchanged = std::nullopt,
+        std::optional<std::uint8_t> historical_placement = std::nullopt)
     {
         const auto provider = condition.GetRequiredPluginName();
         if (!provider.c_str() || Ied_Provider != provider.c_str())
@@ -31,7 +49,7 @@ namespace oar
             return "IED placement provider version mismatch (requires embedded 1.0.2.0)";
         const auto storage = condition.GetName();
         const std::string_view name = storage.c_str() ? storage.c_str() : "";
-        const bool equipped = name == "IED_GearNodeEquippedPlacementHint";
+        const bool equipped = name == Ied_Equipped_Placement_Condition;
         const bool shield = name == "SDS_IsShieldOnBackEnabled";
         if (!equipped && name != "IED_GearNodePlacementHint" && !shield)
             return hand_override ? "unknown IED condition does not support historical-hand preview queries" : "";
@@ -54,8 +72,8 @@ namespace oar
             if (component->GetType() != expected || !component_name.c_str() || expected_name != component_name.c_str())
                 return "unsupported IED placement condition schema/version";
         }
-        if (hand_override && equipped && !requested_hand_unchanged.value_or(false))
-            return "IED equipped placement hint does not support a changed historical hand";
+        if (hand_override && equipped && !requested_hand_unchanged.value_or(false) && !historical_placement)
+            return "IED equipped placement hint has no snapshot for a changed historical hand";
         return {};
     }
 

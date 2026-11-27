@@ -86,6 +86,19 @@ namespace
         assert(source.clip_time == 0.0F && source.pose == 0.0F);
     }
 
+    void eye_point_uses_the_candidate_root()
+    {
+        using test_plugin::animation::behavior_graph::Eye_Offset_Z;
+        using test_plugin::animation::behavior_graph::EyePoint;
+        using test_plugin::animation::behavior_graph::make_eye_point;
+
+        const EyePoint zero = make_eye_point(std::nullopt);
+        assert(zero.x == 0.0F && zero.y == 0.0F && zero.z == 0.0F);
+
+        const EyePoint shifted = make_eye_point(std::array<float, 3>{ 1.5F, -2.0F, 3.0F });
+        assert(shifted.x == 1.5F && shifted.y == -2.0F && shifted.z == 3.0F + Eye_Offset_Z);
+    }
+
     void observations_follow_behavior_and_output_element_objects()
     {
         Behavior behavior{ true, true };
@@ -117,6 +130,7 @@ namespace
 int main()
 {
     a_display_step_advances_pose_and_restores_its_borrowed_world();
+    eye_point_uses_the_candidate_root();
     observations_follow_behavior_and_output_element_objects();
-    std::cout << "2 display-step regression cases passed (engine-free)\n";
+    std::cout << "3 display-step regression cases passed (engine-free)\n";
 }

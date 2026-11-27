@@ -8,7 +8,6 @@
 #include "animation/behavior_graph/domain_sync_policy.h"
 #include "animation/behavior_graph/candidate_window.h"
 #include "animation/behavior_graph/clip_reference_policy.h"
-#include "animation/behavior_graph/control_sample.h"
 #include "animation/behavior_graph/k1_census.h"
 #include "animation/behavior_graph/k3_snapshot_policy.h"
 #include "animation/behavior_graph/k5_audit.h"
@@ -16,7 +15,6 @@
 #include "animation/behavior_graph/drive_step_policy.h"
 #include "animation/behavior_graph/display_step_clock.h"
 #include "animation/clip.h"
-#include "animation/behavior_graph/frame_trace.h"
 #include "animation/behavior_graph/generation_entry_policy.h"
 #include "animation/behavior_graph/graph_observation_policy.h"
 #include "animation/behavior_graph/observation_chain_policy.h"
@@ -25,7 +23,6 @@
 #include "animation/behavior_graph/pose_content_policy.h"
 #include "animation/behavior_graph/pose_motion_policy.h"
 #include "animation/behavior_graph/probe_liveness.h"
-#include "animation/behavior_graph/source_event_capture.h"
 #include "animation/behavior_graph/source_timeline.h"
 #include "animation/behavior_graph/transition_probe.h"
 #include "animation/behavior_graph/unequip_settle_policy.h"
@@ -1276,15 +1273,6 @@ namespace
                 a_actor_id, a_request, observation, state, default_state, nodes);
     }
 
-    // C-G3B-S3: the second slice of the event route. After the equip phase settles, ONE more
-    // dispatch of the pre-registered unequip event name runs through the same resolve+dispatch
-    // path as the activation injection, and the following steps are sampled per step. The name is
-    // grounded in the v8d event-table dump (count=8223, first 16 names include WeapEquip and
-    // 1HM_Unequip); WeapUnequip has no workspace provenance. A miss is a recorded negative
-    // result — no second candidate name is tried in the same round. C-G3B-S6 moves the name to
-    // the CandidateUnequipEvent INI key (empty keeps this default) after the C-G3B-A1 audit
-    // resolved the real 1->12 edge to "Unequip".
-    inline constexpr char Unequip_Event_Name[] = "1HM_Unequip";
     inline constexpr char Unequip_Is_Unequipping_Name[] = "IsUnequipping";
     inline constexpr char Unequip_Equip_Unequip_Name[] = "bEquipUnequip";
     inline constexpr char Unequip_Pitch_Name[] = "PitchManualOverride";
@@ -1427,38 +1415,10 @@ public:
         if (window.steps() > 0 && window.steps() < 120 && window.take_row())
             logger::info("ANIMATION DISPLAY window=aborted actor={:08x} request={} source-generation={} view={} steps={} reason={} source-comparison=discarded",
                 window.source().actor_id, window.request(), window.source().generation, window.view(), window.steps(), reason);
-        // C-G4-C1: a display close with real stepping is the close/reset boundary the concurrent
-        // source-event window covers; a zero-step abort (the request that just bound) must not end
-        // it before the display phase even starts.
         if (window.steps() > 0)
-            close_source_event_capture_window("display-close");
-        // C-G5-E1: the same boundary closes the liveness window, so its counters describe exactly
-        // one replay-plus-display run.
-        if (window.steps() > 0)
-            close_probe_liveness_window("display-close");
-        // C-G5-E3 (M1): the concurrent source window follows the same boundary. It is closed after
-        // the probe so the probe's manifest can still drain every settle the source published.
-        if (window.steps() > 0)
-            close_source_timeline_window("display-close");
-        // C-G4-A: every display-window close path funnels here; the summary is the armed
-        // evidence for "no OAR evaluation touched the candidate during display stepping".
-        // Only the candidate-owning session may take (and emit) the tally.
-        if (animation::oar_context_watch())
         {
-            const CandidateWindowTally taken = take_candidate_window_tally_for(window.source().actor_id);
-            if (taken.source_actor_id == window.source().actor_id)
-            {
-                const NumericTypeCounts types = numeric_type_counts(taken);
-                logger::info("OAR CONTEXT window=display-{} actor={:08x} request={} view={} evaluations={} overlaps={} sites=e:{}/n:{}/s:{}/r:{} owner=cand:{}/src:{}/neither:{} numeric=t0:{}/t1:{}/t2:{}/t3:{}/other:{}/un:{}/sum:{} t3-rows:{}",
-                    reason, window.source().actor_id, window.request(), window.view(), taken.evaluations, taken.overlaps,
-                    taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate)],
-                    taken.sites[static_cast<std::size_t>(OarHitSite::e_numeric)],
-                    taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_set)],
-                    taken.sites[static_cast<std::size_t>(OarHitSite::e_evaluate_replacement)],
-                    taken.cand_active, taken.src_active, taken.neither,
-                    types.t0, types.t1, types.t2, types.t3, types.other, types.unclassified, types.sum,
-                    taken.numeric_type3_rows);
-            }
+            close_probe_liveness_window("display-close");
+            close_source_timeline_window("display-close");
         }
     }
 
@@ -1616,248 +1576,7 @@ namespace
         log_setup_audit_side("source", a_source.characterInstance);
         log_setup_audit_side("candidate", a_candidate.characterInstance);
     }
-
-    // C-G5-STATE v2: one-time source-pose bootstrap. The candidate has just been
-    // activated (poseLocal allocated); copying the source buffer once gives the graph
-    // the same declared initial pose before its first injection/drive step. This is not
-    // a per-frame write and does not touch graph variables or active nodes.
-    void bootstrap_candidate_pose(RE::BShkbAnimationGraph const& a_source, RE::BShkbAnimationGraph& a_candidate,
-        std::uint32_t a_actor_id, std::uint64_t a_request)
-    {
-        const RE::hkbCharacter& source_character = a_source.characterInstance;
-        const RE::hkbCharacter& candidate_character = a_candidate.characterInstance;
-        const std::int32_t source_count = source_character.numPoseLocal;
-        const std::int32_t candidate_count = candidate_character.numPoseLocal;
-        if (!source_character.poseLocal || !candidate_character.poseLocal)
-        {
-            logger::info("BOOTSTRAP POSE actor={:08x} request={} outcome=skip reason=null-pose source={} candidate={}",
-                a_actor_id, a_request, source_count, candidate_count);
-            return;
-        }
-        if (source_count != candidate_count || source_count <= 0 || source_count > 256)
-        {
-            logger::info("BOOTSTRAP POSE actor={:08x} request={} outcome=skip reason=count-mismatch source={} candidate={}",
-                a_actor_id, a_request, source_count, candidate_count);
-            return;
-        }
-        const float* const source_values = reinterpret_cast<const float*>(source_character.poseLocal);
-        const std::size_t value_count = static_cast<std::size_t>(source_count) * 12;
-        for (std::size_t i = 0; i < value_count; ++i)
-        {
-            if (!std::isfinite(source_values[i]))
-            {
-                logger::info("BOOTSTRAP POSE actor={:08x} request={} outcome=skip reason=source-nonfinite index={}",
-                    a_actor_id, a_request, i);
-                return;
-            }
-        }
-        const std::string candidate_before = format_pose_hash(candidate_character);
-        const std::string source_hash = format_pose_hash(source_character);
-        std::memcpy(const_cast<RE::hkQsTransform*>(candidate_character.poseLocal), source_character.poseLocal,
-            static_cast<std::size_t>(source_count) * sizeof(RE::hkQsTransform));
-        const std::string candidate_after = format_pose_hash(candidate_character);
-        logger::info("BOOTSTRAP POSE actor={:08x} request={} outcome=copied bones={} source-hash={} candidate-before={} candidate-after={} equal={}",
-            a_actor_id, a_request, source_count, source_hash, candidate_before, candidate_after,
-            candidate_after == source_hash ? 1 : 0);
-    }
-
-    // C-G5-STATE v3: read-only active-node state fingerprint. hkbNodeInfo is a known
-    // 0x90-byte CommonLib layout; the probe records its 18 qwords and logs only entries
-    // that changed since the previous generation. No node/pose/variable writes.
-    struct StateProbeEntry
-    {
-        std::array<std::uint64_t, 18> words{};
-        bool seen = false;
-    };
-    struct StateObjectEntry
-    {
-        std::array<std::uint64_t, 32> words{};
-        bool seen = false;
-    };
-    std::array<StateProbeEntry, 512> g_state_probe_entries{};
-    std::array<StateObjectEntry, 512> g_state_object_entries{};
-
-    struct StateChildCache
-    {
-        std::array<std::uintptr_t, 8> children{};
-        std::size_t child_count = 0;
-        std::uintptr_t internal = 0;
-        bool scanned = false;
-    };
-    std::array<StateChildCache, 512> g_state_child_cache{};
-
-    bool safe_read_memory(std::uintptr_t a_address, void* a_out, std::size_t a_size)
-    {
-        SIZE_T read = 0;
-        return ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<LPCVOID>(a_address), a_out,
-                   a_size, &read) != 0 && read == a_size;
-    }
-
-    char const* state_probe_class(std::uintptr_t a_vtable)
-    {
-        if (a_vtable == RE::VTABLE_hkbBlenderGenerator[0].address())
-            return "blender";
-        if (a_vtable == RE::VTABLE_hkbBlenderGeneratorChild[0].address())
-            return "blender-child";
-        if (a_vtable == RE::VTABLE_hkbClipGenerator[0].address())
-            return "clip";
-        if (a_vtable == RE::VTABLE_hkbStateMachine[0].address())
-            return "state-machine";
-        return "other";
-    }
-
-    void log_node_state_probe(RE::BShkbAnimationGraph const& a_candidate, std::uint32_t a_actor_id,
-        std::uint64_t a_request, char const* a_segment, std::uint32_t a_completed)
-    {
-        if (!state_probe())
-            return;
-        RE::hkbBehaviorGraph const* const behavior = a_candidate.characterInstance.behaviorGraph.get();
-        if (!behavior || !behavior->activeNodes)
-        {
-            logger::info("STATE PROBE actor={:08x} request={} segment={} completed={} status=unavailable",
-                a_actor_id, a_request, a_segment, a_completed);
-            return;
-        }
-        RE::NodeList const& nodes = *behavior->activeNodes;
-        std::size_t const walked = std::min<std::size_t>(nodes.size(), g_state_probe_entries.size());
-        std::size_t changed = 0;
-        std::size_t suppressed = 0;
-        std::size_t object_logged = 0;
-        for (std::size_t i = 0; i < walked; ++i)
-        {
-            RE::hkbNodeInfo const& info = nodes.data()[i];
-            RE::hkbNode* const node = info.nodeClone;
-            if (!node || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(node)))
-                continue;
-            std::uintptr_t const vtable = *reinterpret_cast<std::uintptr_t const*>(node);
-            char const* const node_class = state_probe_class(vtable);
-            // Clip time is already captured by K5; state-machine transitions are not
-            // the blend scalar. Blender/child and unknown entries are the probe targets.
-            if (std::strcmp(node_class, "clip") == 0 || std::strcmp(node_class, "state-machine") == 0)
-                continue;
-            if (std::strcmp(node_class, "blender") == 0 || std::strcmp(node_class, "blender-child") == 0)
-            {
-                std::array<std::uint64_t, 32> object_words{};
-                std::memcpy(object_words.data(), node, sizeof(object_words));
-                StateObjectEntry& object_cache = g_state_object_entries[i];
-                if (!object_cache.seen || object_cache.words != object_words)
-                {
-                    object_cache.seen = true;
-                    object_cache.words = object_words;
-                    if (object_logged < 16)
-                    {
-                        std::string object_hex;
-                        for (std::size_t word = 0; word < object_words.size(); ++word)
-                            object_hex += fmt::format("{:016x}", object_words[word]);
-                        logger::info("STATE OBJECT actor={:08x} request={} segment={} completed={} index={} node={:#x} vtable={:#x} class={} words={}",
-                            a_actor_id, a_request, a_segment, a_completed, i,
-                            reinterpret_cast<std::uintptr_t>(node), vtable, node_class, object_hex);
-                        ++object_logged;
-                    }
-                }
-            }
-            std::array<std::uint64_t, 18> words{};
-            std::memcpy(words.data(), &info, sizeof(words));
-            StateProbeEntry& cache = g_state_probe_entries[i];
-            if (cache.seen && cache.words == words)
-                continue;
-            cache.seen = true;
-            cache.words = words;
-            ++changed;
-            if (changed > 128)
-            {
-                ++suppressed;
-                continue;
-            }
-            std::string hex;
-            for (std::size_t word = 0; word < words.size(); ++word)
-                hex += fmt::format("{:016x}", words[word]);
-            logger::info("STATE PROBE actor={:08x} request={} segment={} completed={} index={} node={:#x} vtable={:#x} class={} words={}",
-                a_actor_id, a_request, a_segment, a_completed, i,
-                reinterpret_cast<std::uintptr_t>(node), vtable, node_class, hex);
-        }
-        if (changed > 0)
-            logger::info("STATE PROBE SUMMARY actor={:08x} request={} segment={} completed={} walked={} nodes={} changed={} suppressed={}",
-                a_actor_id, a_request, a_segment, a_completed, walked, nodes.size(), changed, suppressed);
-    }
-
-    void log_state_child_probe(RE::BShkbAnimationGraph const& a_candidate, std::uint32_t a_actor_id,
-        std::uint64_t a_request, char const* a_segment, std::uint32_t a_completed)
-    {
-        if (!state_child_probe())
-            return;
-        RE::hkbBehaviorGraph const* const behavior = a_candidate.characterInstance.behaviorGraph.get();
-        if (!behavior || !behavior->activeNodes)
-            return;
-        RE::NodeList const& nodes = *behavior->activeNodes;
-        std::size_t const walked = std::min<std::size_t>(nodes.size(), g_state_child_cache.size());
-        for (std::size_t i = 0; i < walked; ++i)
-        {
-            RE::hkbNodeInfo const& info = nodes.data()[i];
-            RE::hkbNode* const node = info.nodeClone;
-            if (!node || !plausible_object_pointer(reinterpret_cast<std::uintptr_t>(node)))
-                continue;
-            std::uintptr_t const vtable = *reinterpret_cast<std::uintptr_t const*>(node);
-            if (vtable != RE::VTABLE_hkbBlenderGenerator[0].address())
-                continue;
-            StateChildCache& cache = g_state_child_cache[i];
-            if (!cache.scanned)
-            {
-                cache.scanned = true;
-                std::array<std::uint64_t, 64> object_words{};
-                if (safe_read_memory(reinterpret_cast<std::uintptr_t>(node), object_words.data(),
-                        sizeof(object_words)))
-                {
-                    for (std::size_t word = 0; word < object_words.size(); ++word)
-                    {
-                        std::uintptr_t const pointer = static_cast<std::uintptr_t>(object_words[word]);
-                        if (!plausible_object_pointer(pointer))
-                            continue;
-                        std::uint64_t target_vtable = 0;
-                        if (!safe_read_memory(pointer, &target_vtable, sizeof(target_vtable)))
-                            continue;
-                        if (target_vtable == RE::VTABLE_hkbBlenderGeneratorChild[0].address())
-                        {
-                            if (cache.child_count < cache.children.size())
-                                cache.children[cache.child_count++] = pointer;
-                        }
-                        else if (target_vtable == RE::VTABLE_hkbBlenderGeneratorInternalState[0].address())
-                        {
-                            cache.internal = pointer;
-                        }
-                    }
-                }
-                logger::info("STATE CHILD DISCOVER actor={:08x} request={} segment={} completed={} index={} children={} internal={:#x}",
-                    a_actor_id, a_request, a_segment, a_completed, i, cache.child_count, cache.internal);
-            }
-            for (std::size_t child = 0; child < cache.child_count; ++child)
-            {
-                std::array<std::uint64_t, 32> child_words{};
-                if (!safe_read_memory(cache.children[child], child_words.data(), sizeof(child_words)))
-                    continue;
-                std::string hex;
-                for (std::uint64_t const word : child_words)
-                    hex += fmt::format("{:016x}", word);
-                logger::info("STATE CHILD actor={:08x} request={} segment={} completed={} index={} child={} words={}",
-                    a_actor_id, a_request, a_segment, a_completed, i,
-                    cache.children[child], hex);
-            }
-            if (cache.internal != 0)
-            {
-                std::array<std::uint64_t, 32> internal_words{};
-                if (safe_read_memory(cache.internal, internal_words.data(), sizeof(internal_words)))
-                {
-                    std::string hex;
-                    for (std::uint64_t const word : internal_words)
-                        hex += fmt::format("{:016x}", word);
-                    logger::info("STATE INTERNAL actor={:08x} request={} segment={} completed={} index={} internal={} words={}",
-                        a_actor_id, a_request, a_segment, a_completed, i, cache.internal, hex);
-                }
-            }
-        }
-    }
 }
-
 
 void invalidate_display_owner(std::uintptr_t owner)
 {
@@ -1910,10 +1629,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
     }();
     arm_candidate_window(actor_id);
     arm_candidate_window_node_lists(0, g_armed_source_node_list);
-    // C-G4-C1: arm the concurrent source-event window synchronously, before activation and before
-    // any dispatch, so the experiment's own WeapEquip/Unequip calls are counted by the live gate
-    // (they are the pre-registered liveness control). No-op unless SourceEventCapture=concurrent.
-    (void)arm_source_event_capture_concurrent(source_graph, actor_id);
     // C-G5-E1: pin the same source graph for the liveness probe and arm its counters before the
     // first candidate step, so the plugin's own sampling calls are visible as the positive control.
     // C-G5-E3 (M1): the source trajectory shares this window - it is armed on the same pinned
@@ -2171,8 +1886,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                 log_k1_census(*candidate, "candidate", actor_id, request, "post-activate", true);
             if (k5_layer_audit())
                 log_k5_layer_audit(*candidate, actor_id, request, "post-activate", 0);
-                        if (bootstrap_source_pose())
-                            bootstrap_candidate_pose(source_graph, *candidate, actor_id, request);
                         const std::string candidate_pose_before = format_pose_hash(candidate->characterInstance);
                         std::string candidate_pose_mid = "not-run";
                         std::string candidate_pose_end = "not-run";
@@ -2850,7 +2563,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 pose_step_deltas.push_back(code);
                                 pose_step_previous = std::move(current);
                             };
-                            bool control_sample_attempted = false;
                             std::size_t k1_clip_census_count = 0;
                             // C-G5-CAL K5 audit points 2/4 (K6 plan §10.4): one-shot anchors
                             // inside the shared per-generation output recorder.
@@ -2861,31 +2573,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 ClipObservation const clips = collect_active_clips();
                                 record_clip_clocks(clips);
                                 record_pose_step();
-                                // C-G5-CAL2 control grid (docs/diagnostics/g5-cal2-20261115 §9):
-                                // per-generation sampling at the predetermined grid times during
-                                // the equip phase; the nine-time sampling is suppressed while the
-                                // grid is armed. A grid failure never invalidates the K3/K5
-                                // observation.
-                                if (control_sample_grid() &&
-                                    std::strcmp(observation.segment_name(), "equip") == 0 &&
-                                    observation.completed() >= 1 && observation.completed() <= 120)
-                                {
-                                    if (control_sample() && !control_sample_attempted)
-                                    {
-                                        control_sample_attempted = true;
-                                        logger::info("CONTROL GRID actor={:08x} request={} phase=manifest ninetime=suppressed",
-                                            actor_id, request);
-                                    }
-                                    (void)run_control_grid_generation(candidate->characterInstance, actor_id,
-                                        request, observation.completed());
-                                    if (observation.completed() == 120)
-                                        (void)close_control_grid(actor_id, request);
-                                }
-                                else if (observation.completed() == 1 && control_sample() && !control_sample_attempted)
-                                {
-                                    control_sample_attempted = true;
-                                    (void)run_control_sample(candidate->characterInstance, actor_id, request, observation.completed());
-                                }
                                 if (observation.completed() == 1 && clip_identity_census() && k1_clip_census_count < 2)
                                 {
                                     ++k1_clip_census_count;
@@ -3059,46 +2746,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     transition_state_probe(), k5_full_enabled,
                                     version == SKSE::RUNTIME_SSE_1_6_1170);
                             }
-                            bool const clip_clock_enabled = transition_clip_clock_probe() &&
-                                transition_state_probe() && k5_full_enabled &&
-                                version == SKSE::RUNTIME_SSE_1_6_1170;
-                            if (transition_clip_clock_probe() && !clip_clock_enabled)
-                            {
-                                logger::info(
-                                    "TRANSITION CLIP CLOCK status=inactive transition-state={} k5-full={} exact-runtime={}",
-                                    transition_state_probe(), k5_full_enabled,
-                                    version == SKSE::RUNTIME_SSE_1_6_1170);
-                            }
-                            bool const clip_capture_enabled = transition_clip_capture_probe() &&
-                                transition_state_probe() && k5_full_enabled &&
-                                version == SKSE::RUNTIME_SSE_1_6_1170;
-                            if (transition_clip_capture_probe() && !clip_capture_enabled)
-                            {
-                                logger::info(
-                                    "TRANSITION CLIP CAPTURE status=inactive transition-state={} k5-full={} exact-runtime={}",
-                                    transition_state_probe(), k5_full_enabled,
-                                    version == SKSE::RUNTIME_SSE_1_6_1170);
-                            }
-                            bool const clip_weight_enabled = transition_clip_weight_probe() &&
-                                transition_state_probe() && k5_full_enabled &&
-                                version == SKSE::RUNTIME_SSE_1_6_1170;
-                            if (transition_clip_weight_probe() && !clip_weight_enabled)
-                            {
-                                logger::info(
-                                    "TRANSITION CLIP WEIGHT status=inactive transition-state={} k5-full={} exact-runtime={}",
-                                    transition_state_probe(), k5_full_enabled,
-                                    version == SKSE::RUNTIME_SSE_1_6_1170);
-                            }
-                            bool const clip_sweep_enabled = transition_clip_sweep_probe() &&
-                                transition_state_probe() && k5_full_enabled &&
-                                version == SKSE::RUNTIME_SSE_1_6_1170;
-                            if (transition_clip_sweep_probe() && !clip_sweep_enabled)
-                            {
-                                logger::info(
-                                    "TRANSITION CLIP SWEEP status=inactive transition-state={} k5-full={} exact-runtime={}",
-                                    transition_state_probe(), k5_full_enabled,
-                                    version == SKSE::RUNTIME_SSE_1_6_1170);
-                            }
                             const auto log_transition_stage = [&](FrameStage a_stage) {
                                 if (!transition_state_probe())
                                 {
@@ -3146,31 +2793,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                     observation.commanded() >= 1 && observation.commanded() <= 13)
                                 {
                                     log_transition_parent_chain(*candidate, probe);
-                                }
-                                // Same window as the subgraph probe: equip 1-13, unequip 1-12.
-                                if (clip_clock_enabled &&
-                                    phase != TransitionProbePhase::post_update &&
-                                    transition_subgraph_window_matches(probe_segment, observation.commanded()))
-                                {
-                                    log_transition_clip_clock(*candidate, probe);
-                                }
-                                if (clip_capture_enabled &&
-                                    phase != TransitionProbePhase::post_update &&
-                                    transition_subgraph_window_matches(probe_segment, observation.commanded()))
-                                {
-                                    log_transition_clip_capture(*candidate, probe);
-                                }
-                                if (clip_weight_enabled &&
-                                    phase != TransitionProbePhase::post_update &&
-                                    transition_subgraph_window_matches(probe_segment, observation.commanded()))
-                                {
-                                    log_transition_clip_weight(*candidate, probe);
-                                }
-                                if (clip_sweep_enabled &&
-                                    phase != TransitionProbePhase::post_update &&
-                                    transition_subgraph_window_matches(probe_segment, observation.commanded()))
-                                {
-                                    log_transition_clip_sweep(*candidate, probe);
                                 }
                                 log_transition_modifiers(*candidate, observation.segment_name(), phase,
                                     observation.completed(), observation.commanded());
@@ -3325,10 +2947,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                         observation.invalidate(k5_writer.overflow()
                                             ? "k5-record-overflow" : "k5-write-failed");
                                     log_transition_stage(FrameStage::e_post_sample);
-                                    log_node_state_probe(*candidate, actor_id, request,
-                                        observation.segment_name(), observation.completed());
-                                    log_state_child_probe(*candidate, actor_id, request,
-                                        observation.segment_name(), observation.completed());
                                     return;
                                 }
                                 if (!k3_enabled) return;
@@ -3488,8 +3106,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             };
                             const bool eye_arm = generation_profile;
                             EyePoint const eye = candidate_eye_point(*candidate);
-                            FrameTrace frame_trace(generation_profile, actor_id, request,
-                                candidate->characterInstance, eye_arm ? &eye : nullptr);
                             CandidateInputProbe input_probe;
                             if (candidate_input_probe())
                                 input_probe = arm_candidate_input_probe(*candidate, actor_id, request,
@@ -3510,9 +3126,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             {
                                 observation.command_advance(DriveTimestep);
                                 const auto observe_step = [&](FrameStage stage) {
-                                    if (stage == FrameStage::e_post_sample)
-                                        frame_trace.sampled_pose(candidate->characterInstance);
-                                    frame_trace.phase(*candidate_base, step, stage);
                                     if (stage == FrameStage::e_post_pipeline && step == 0)
                                         log_bookkeeping("post-pipeline1");
                                     if (stage == FrameStage::e_post_update && step == 0)
@@ -3555,114 +3168,39 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                             if (unequip_probe.armed && observation.outcome() != ObservationOutcome::e_invalid)
                             {
                                 const UnequipSettleVerdict settle_verdict = settle_gate.verdict();
-                                // S4/S5: one typed by-name write on the candidate - resolved in the
-                                // graph's own table, setter chosen by m_type, result and read-back
-                                // logged. False = name missing or unsupported type (no window runs).
-                                const auto typed_write = [&](RE::BShkbAnimationGraph& a_graph,
-                                    RE::hkbBehaviorGraphData const* a_data, char const* a_name,
-                                    char const* a_tag) {
-                                    std::size_t var_index = 0;
-                                    if (!variable_index(a_data, a_name, var_index))
-                                    {
-                                        logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=skip reason=name-missing name='{}' stage='{}'",
-                                            actor_id, request, a_name, a_tag);
-                                        return false;
-                                    }
-                                    std::int8_t const var_type = static_cast<std::int8_t>(
-                                        a_data->variableInfos.data()[var_index].m_type.get());
-                                    char const* setter = "unsupported";
-                                    bool wrote = false;
-                                    if (var_type == 0)
-                                    {
-                                        setter = "SetGraphVariableBool";
-                                        wrote = a_graph.SetGraphVariableBool(RE::BSFixedString{ a_name }, true);
-                                    }
-                                    else if (var_type >= 1 && var_type <= 3)
-                                    {
-                                        setter = "SetGraphVariableInt";
-                                        wrote = a_graph.SetGraphVariableInt(RE::BSFixedString{ a_name }, 1);
-                                    }
-                                    if (setter[0] == 'u')
-                                    {
-                                        logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=skip reason=unsupported-type name='{}' type={} stage='{}'",
-                                            actor_id, request, a_name, census_type_name(var_type), a_tag);
-                                        return false;
-                                    }
-                                    std::int32_t readback = 0;
-                                    bool const input_readable = read_variable_int(a_graph, var_index, readback);
-                                    logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=input outcome=write stage='{}' name='{}' index={} type={} value=1 setter={} result={} readback={}",
-                                        actor_id, request, a_tag, a_name, var_index, census_type_name(var_type),
-                                        setter, wrote ? "true" : "false",
-                                        input_readable ? std::to_string(readback) : std::string{ "unreadable" });
-                                    return true;
-                                };
                                 if (settle_verdict == UnequipSettleVerdict::e_settled)
                                 {
                                     logger::info("CANDIDATE UNEQUIP actor={:08x} request={} phase=settle outcome=settled target-step={} settled-step={} baseline-default={} baseline-nodes={}",
                                         actor_id, request, settle_gate.target_step(), settle_gate.settled_step(),
                                         Unequip_Settle_Target, settle_gate.baseline_nodes());
                                     log_oar_context_segment("at-settle", actor_id, request);
-                                    // C-G3B-S4: a non-empty CandidateUnequipVariable swaps the second
-                                    // stage from the S3 event dispatch to one typed by-name variable
-                                    // write at the settle point (the pre-registered unequip-side
-                                    // ladder, one INI-only round per name). The empty name keeps the
-                                    // S3 1HM_Unequip dispatch verbatim.
-                                    bool input_delivered = false;
                                     const RE::hkbBehaviorGraphData* const unequip_data =
                                         behavior ? behavior->data.get() : nullptr;
-                                    // C-G3B-S5: an optional prime write (the equipped state the
-                                    // WeapEquip path skips) precedes the command write; either failing
-                                    // ends the slice without a sampling window.
-                                    if (!candidate_unequip_prime().empty())
-                                        input_delivered = typed_write(*candidate_base, unequip_data,
-                                            candidate_unequip_prime().c_str(), "prime");
-                                    else
-                                        input_delivered = true;
-                                    if (!candidate_unequip_variable().empty())
+                                    char const* const unequip_event_name = candidate_unequip_event().c_str();
+                                    std::int32_t const unequip_id = unequip_data ?
+                                        lookup_event_id_in_graph(*unequip_data, unequip_event_name) : -1;
+                                    logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=event-lookup name='{}' id={} source=graph-events",
+                                        actor_id, request, unequip_event_name, unequip_id);
+                                    if (unequip_id >= 0)
                                     {
-                                        if (input_delivered)
-                                            input_delivered = typed_write(*candidate_base, unequip_data,
-                                                candidate_unequip_variable().c_str(), "command");
-                                    }
-                                    else
-                                    {
-                                        // C-G3B-S6: the event name moves to the INI. The
-                                        // C-G3B-A1 structural audit resolved the settled state's
-                                        // single 1->12 edge to "Unequip" (condition flag disabled);
-                                        // S3's "1HM_Unequip" name is not any Default_State
-                                        // transition's event and stays only as the empty-key
-                                        // default for historical INI reproduction. The
-                                        // pre-registered single-name rule stands: one dispatch,
-                                        // no second candidate name in the same round.
-                                        const std::string& configured_event = candidate_unequip_event();
-                                        const char* const unequip_event_name =
-                                            configured_event.empty() ? Unequip_Event_Name : configured_event.c_str();
-                                        const std::int32_t unequip_id = unequip_data ?
-                                            lookup_event_id_in_graph(*unequip_data, unequip_event_name) : -1;
-                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=event-lookup name='{}' id={} source=graph-events",
+                                        if (k5_audit_enabled)
+                                            log_k5_layer_audit(*candidate, actor_id, request, "equip-settle", 2);
+                                        InjectedEvent unequip_event{ static_cast<std::uint32_t>(unequip_id), 0, nullptr, nullptr };
+                                        static REL::Relocation<event_dispatch_t> unequip_dispatch{ REL::ID(EventDispatchID) };
+                                        {
+                                            ScopedCandidateWindow const dispatch_window;
+                                            unequip_dispatch(behavior, context, &unequip_event);
+                                        }
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-inject event='{}' id={} result=dispatched",
                                             actor_id, request, unequip_event_name, unequip_id);
-                                        if (unequip_id >= 0)
-                                        {
-                                            if (k5_audit_enabled)
-                                                log_k5_layer_audit(*candidate, actor_id, request, "equip-settle", 2);
-                                            InjectedEvent unequip_event{ static_cast<std::uint32_t>(unequip_id), 0, nullptr, nullptr };
-                                            static REL::Relocation<event_dispatch_t> unequip_dispatch{ REL::ID(EventDispatchID) };
-                                            {
-                                                ScopedCandidateWindow const dispatch_window;
-                                                unequip_dispatch(behavior, context, &unequip_event);
-                                            }
-                                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-inject event='{}' id={} result=dispatched",
-                                                actor_id, request, unequip_event_name, unequip_id);
-                                            input_delivered = true;
-                                        }
-                                        else
-                                        {
-                                            logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-skip reason=event-name-missing name='{}'",
-                                                actor_id, request, unequip_event_name);
-                                        }
-                                        log_oar_context_segment("post-unequip", actor_id, request);
                                     }
-                                    if (input_delivered)
+                                    else
+                                    {
+                                        logger::info("INDEPENDENT GRAPH actor={:08x} request={} phase=unequip-skip reason=event-name-missing name='{}'",
+                                            actor_id, request, unequip_event_name);
+                                    }
+                                    log_oar_context_segment("post-unequip", actor_id, request);
+                                    if (unequip_id >= 0)
                                     {
                                         observation = SegmentObservation(ObservationSegment::e_unequip, generation_profile);
                                         start_observations();
@@ -3712,7 +3250,6 @@ void run_independent_graph_experiment(RE::BShkbAnimationGraph const& source_grap
                                 candidate_pose_before, candidate_pose_mid, candidate_pose_end);
                             log_drive_state(actor_id, request, "post-drive", activated,
                                 first_drift(source_before, identify(source_graph)), observe_drive(*candidate));
-                            frame_trace.summary();
                         }
                     }
                 }
@@ -3849,6 +3386,7 @@ bool DisplaySession::step_display_pose(RE::BShkbAnimationGraph const& source_gra
             std::vector<PoseSample> pose;
             read_pose_local(*g_held_character, pose);
             PoseComparison const raw = compare_pose(pose, state.previous_pose);
+            // Display motion follows the rotation and translation written to the copy.
             PoseMotionComparison const motion = compare_display_motion(pose, state.previous_pose);
             state.raw_changed += raw.moved > 0 ? 1u : 0u;
             state.semantic_changed += motion.moved > 0 ? 1u : 0u;

@@ -12,8 +12,6 @@
 #include "animation/dac/session.h"
 #include "animation/behavior_graph/g6_ledger.h"
 #include "animation/behavior_graph/probe_liveness.h"
-#include "animation/behavior_graph/source_event_capture.h"
-#include "animation/behavior_graph/source_write_capture.h"
 #include "animation/behavior_graph/source_timeline.h"
 #include "animation/settings.h"
 
@@ -48,8 +46,6 @@ namespace
             break;
         case SKSE::MessagingInterface::kDataLoaded:
             PLUGIN_NAMESPACE::animation::load_settings();
-            PLUGIN_NAMESPACE::animation::behavior_graph::install_source_event_capture();
-            PLUGIN_NAMESPACE::animation::behavior_graph::install_source_write_capture();
             PLUGIN_NAMESPACE::animation::behavior_graph::install_probe_liveness();
             PLUGIN_NAMESPACE::dac::install();
             (void)PLUGIN_NAMESPACE::ShaderManager::instance().compile();
@@ -64,8 +60,6 @@ namespace
         case SKSE::MessagingInterface::kPreLoadGame:
         case SKSE::MessagingInterface::kNewGame:
             PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_source_timeline();
-            PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_source_event_capture();
-            PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_source_write_capture();
             PLUGIN_NAMESPACE::animation::behavior_graph::invalidate_probe_liveness();
             PLUGIN_NAMESPACE::dac::reset_world();
             PLUGIN_NAMESPACE::CharacterManager::instance().clear_previews();

@@ -35,15 +35,15 @@ namespace animation::behavior_graph
         {
             float const translation = pose_component_delta(current[i].translation, previous[i].translation);
             float const rotation = std::sqrt(2.0F * pose_rotation_agreement_error(current[i].rotation, previous[i].rotation));
-            // ni_local_from_pose uses only scale X as the display's uniform scale.
+            // Report raw scale separately from the rotation/translation applied to the display.
             float const scale = pose_absolute_delta(current[i].scale[0], previous[i].scale[0]);
-            bool const valid = std::isfinite(translation) && std::isfinite(rotation) && std::isfinite(scale);
+            bool const valid = std::isfinite(translation) && std::isfinite(rotation);
             result.valid = result.valid && valid;
             ++result.compared;
             result.max_translation = std::max(result.max_translation, translation);
             result.max_rotation_chord = std::max(result.max_rotation_chord, rotation);
             result.max_scale = std::max(result.max_scale, scale);
-            if (valid && (translation > Display_Motion_Epsilon || rotation > Display_Motion_Epsilon || scale > Display_Motion_Epsilon))
+            if (valid && (translation > Display_Motion_Epsilon || rotation > Display_Motion_Epsilon))
                 ++result.moved;
         }
         return result;

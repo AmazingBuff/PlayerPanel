@@ -7,21 +7,13 @@
 //
 #define PLUGIN_NAMESPACE_BEGIN namespace test_plugin {
 #define PLUGIN_NAMESPACE_END }
-#include "animation/behavior_graph/transition_clip_capture_policy.h"
-#include "animation/behavior_graph/transition_clip_sweep_policy.h"
-#include "animation/behavior_graph/transition_clip_clock_policy.h"
-#include "animation/behavior_graph/transition_clip_weight_policy.h"
 #include "animation/behavior_graph/transition_parent_chain_policy.h"
 #include "animation/behavior_graph/transition_probe.h"
 
 #include <cassert>
-#include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <limits>
-#include <span>
 #include <string>
-#include <type_traits>
 
 using namespace test_plugin::animation::behavior_graph;
 
@@ -181,165 +173,6 @@ namespace
         assert(cycle.status == ParentChainStatus::e_cycle);
         assert(cycle.node_count == 3 && cycle.edge_count == 3 && cycle.roots == 1);
     }
-    void clip_clock_offsets_are_the_audited_values()
-    {
-        assert(Clip_Local_Time_Offset == 0xF0);
-        assert(Clip_Time_Offset == 0xF4);
-        assert(Clip_Crop_Start_Offset == 0x58);
-        assert(Clip_Crop_End_Offset == 0x5C);
-        assert(Clip_Playback_Speed_Offset == 0x64);
-        assert(Clip_Mode_Offset == 0x72);
-        assert(Clip_Control_Offset == 0x88);
-        assert(Clip_At_End_Offset == 0x104);
-        assert(Control_Local_Time_Offset == 0x10);
-        assert(Control_Weight_Offset == 0x14);
-        assert(Control_Track_Weights_Size_Offset == 0x20);
-        assert(Control_Playback_Speed_Offset == 0x5C);
-        assert(Control_Crop_Start_Offset == 0x9C);
-        assert(Control_Crop_End_Offset == 0xA0);
-        assert(Clip_Mode_User_Controlled == 2);
-        assert(clip_clock_mode_is_user_controlled(2));
-        assert(!clip_clock_mode_is_user_controlled(0));
-        assert(!clip_clock_mode_is_user_controlled(3));
-    }
-
-    void clip_clock_classifies_advance_and_freeze()
-    {
-        // No previous sample: the classification stays unknown.
-        assert(clip_clock_advance(0x3E555556u, 0x3E555556u, false, false) ==
-            ClipClockAdvance::e_unknown);
-
-        // Time moved: advancing regardless of the at-end flag.
-        assert(clip_clock_advance(0x3C888889u, 0x3E555556u, false, true) ==
-            ClipClockAdvance::e_advancing);
-
-        // Frozen at end: Update skips the localTime write (0xACDF8A).
-        assert(clip_clock_advance(0x3E555556u, 0x3E555556u, true, true) ==
-            ClipClockAdvance::e_frozen_at_end);
-
-        // Frozen without at-end: the clip saw no timestep.
-        assert(clip_clock_advance(0x3E555556u, 0x3E555556u, false, true) ==
-            ClipClockAdvance::e_frozen_no_step);
-
-        assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_unknown), "unknown") == 0);
-        assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_advancing), "advancing") == 0);
-        assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_frozen_at_end), "frozen-at-end") == 0);
-        assert(std::strcmp(clip_clock_advance_name(ClipClockAdvance::e_frozen_no_step), "frozen-no-step") == 0);
-    }
-
-    void clip_capture_maps_tracks_to_bones()
-    {
-        std::int16_t const table[] = { 5, -1, 2, 7 };
-        std::span<std::int16_t const> const map{ table };
-
-        assert(clip_capture_bone(0, true, map, 8) == 0);
-        assert(clip_capture_bone(3, true, map, 4) == 3);
-        assert(clip_capture_bone(4, true, map, 4) == -1);   // past the pose
-        assert(clip_capture_bone(-1, true, map, 8) == -1);  // negative track
-
-        assert(clip_capture_bone(0, false, map, 8) == 5);
-        assert(clip_capture_bone(1, false, map, 8) == -1);  // the table says -1
-        assert(clip_capture_bone(2, false, map, 8) == 2);
-        assert(clip_capture_bone(4, false, map, 8) == -1);  // past the table
-        assert(clip_capture_bone(3, false, map, 6) == -1);  // bone 7 outside the pose
-    }
-
-    void clip_capture_summarises_shift_and_residual()
-    {
-        std::array<std::array<float, 3>, 3> const rigid_deltas{ {
-            { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } } };
-        ClipCaptureShift const rigid = clip_capture_shift(rigid_deltas);
-        assert(rigid.compared == 3 && rigid.moved == 3);
-        assert(std::abs(rigid.mean[0] - 1.0f) < 1.0e-6f);
-        assert(rigid.residual_max < 1.0e-6f);
-
-        std::array<std::array<float, 3>, 2> const split_deltas{ {
-            { 0.0f, 0.0f, 0.0f }, { 2.0f, 0.0f, 0.0f } } };
-        ClipCaptureShift const split = clip_capture_shift(split_deltas);
-        assert(split.compared == 2 && split.moved == 1);
-        assert(std::abs(split.mean[0] - 1.0f) < 1.0e-6f);
-        assert(std::abs(split.residual_max - 1.0f) < 1.0e-6f);
-
-        std::array<std::array<float, 3>, 1> const non_finite{ {
-            { std::numeric_limits<float>::quiet_NaN(), 0.0f, 0.0f } } };
-        ClipCaptureShift const none = clip_capture_shift(non_finite);
-        assert(none.compared == 0 && none.moved == 0);
-
-        assert(clip_capture_shift(std::span<std::array<float, 3> const>{}).compared == 0);
-    }
-    void clip_weight_summary_reports_range_and_hash()
-    {
-        std::uint8_t const weights[] = { 0, 255, 128, 128 };
-        ClipWeightSummary const summary = clip_weight_summary(std::span<std::uint8_t const>{ weights });
-        assert(summary.count == 4);
-        assert(summary.minimum == 0);
-        assert(summary.maximum == 255);
-        assert(summary.hash != 0);
-
-        // Order sensitive (FNV-1a over the raw bytes).
-        std::uint8_t const swapped[] = { 255, 0, 128, 128 };
-        assert(clip_weight_summary(std::span<std::uint8_t const>{ swapped }).hash != summary.hash);
-
-        ClipWeightSummary const empty = clip_weight_summary(std::span<std::uint8_t const>{});
-        assert(empty.count == 0 && empty.hash == 0 && empty.minimum == 0 && empty.maximum == 0);
-    }
-
-    void clip_weight_solve_recovers_the_mix()
-    {
-        float weight{};
-        // current = previous + 0.25 * (sample - previous)
-        assert(clip_weight_solve_sample(1.0f, 1.25f, 2.0f, 1.0e-3f, weight));
-        assert(std::abs(weight - 0.25f) < 1.0e-6f);
-        // The two ends coincide, so no ratio exists.
-        assert(!clip_weight_solve_sample(1.0f, 1.5f, 1.0f, 1.0e-3f, weight));
-        assert(!clip_weight_solve_sample(std::numeric_limits<float>::quiet_NaN(), 1.0f, 2.0f,
-            1.0e-3f, weight));
-
-        std::array<float, 5> const values{ 0.5f, 0.1f, 0.9f, 0.3f, 0.7f };
-        std::array<float, 5> copy = values;
-        ClipWeightSolve const solve = clip_weight_solve_summary(copy);
-        assert(solve.solved == 5);
-        assert(std::abs(solve.minimum - 0.1f) < 1.0e-6f);
-        assert(std::abs(solve.maximum - 0.9f) < 1.0e-6f);
-        assert(std::abs(solve.median - 0.5f) < 1.0e-6f);
-
-        ClipWeightSolve const none = clip_weight_solve_summary(std::span<float>{});
-        assert(none.solved == 0);
-    }
-    void clip_sweep_time_advances_and_clamps()
-    {
-        ClipSweepTime const ahead = clip_sweep_time(0.5f, 1, 2.0f);
-        assert(!ahead.clamped);
-        assert(std::abs(ahead.time - (0.5f + Clip_Sweep_Step)) < 1.0e-6f);
-
-        ClipSweepTime const below = clip_sweep_time(0.0f, -1, 2.0f);
-        assert(below.clamped && below.time == 0.0f);
-
-        ClipSweepTime const beyond = clip_sweep_time(1.99f, 4, 2.0f);
-        assert(beyond.clamped && beyond.time == 2.0f);
-
-        // A zero duration is unknown, so the candidate is not clamped to it.
-        ClipSweepTime const unknown_duration = clip_sweep_time(0.5f, 4, 0.0f);
-        assert(!unknown_duration.clamped);
-    }
-
-    void clip_sweep_best_prefers_the_centre_on_ties()
-    {
-        std::array<float, 9> const curve{ 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
-        assert(clip_sweep_best(curve) == 4);
-
-        std::array<float, 9> const left{ 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f };
-        assert(clip_sweep_best(left) == 0);
-
-        std::array<float, 9> const flat{ 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f };
-        assert(clip_sweep_best(flat) == 4);
-
-        // Equal minima away from the centre: the closer candidate wins.
-        std::array<float, 9> const tie{ 1.0f, 1.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f };
-        assert(clip_sweep_best(tie) == 1);
-
-        assert(clip_sweep_best(std::span<float const>{}) == 0);
-    }
 }
 
 int main()
@@ -354,13 +187,5 @@ int main()
     subgraph_status_names_are_stable();
     parent_chain_retains_shared_parents_and_skips_empty_slots();
     parent_chain_rejects_invalid_topology();
-    clip_clock_offsets_are_the_audited_values();
-    clip_clock_classifies_advance_and_freeze();
-    clip_capture_maps_tracks_to_bones();
-    clip_capture_summarises_shift_and_residual();
-    clip_weight_summary_reports_range_and_hash();
-    clip_weight_solve_recovers_the_mix();
-    clip_sweep_time_advances_and_clamps();
-    clip_sweep_best_prefers_the_centre_on_ties();
     return 0;
 }

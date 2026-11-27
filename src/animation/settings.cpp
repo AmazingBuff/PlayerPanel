@@ -18,8 +18,6 @@ namespace
     std::string g_source_timeline_graph;
     bool g_source_pose_capture = false;
     bool g_source_transient_watch = false;
-    behavior_graph::SourceEventCaptureMode g_source_event_capture_mode = behavior_graph::SourceEventCaptureMode::e_off;
-    bool g_source_write_capture = false;
     bool g_candidate_variable_census = false;
     bool g_candidate_input_probe = false;
     std::string g_candidate_input_variable = "IsEquipping";
@@ -28,29 +26,18 @@ namespace
     bool g_candidate_equip_prime_branch = false;
     bool g_candidate_generation_entry = false;
     bool g_candidate_unequip_probe = false;
-    std::string g_candidate_unequip_variable;
-    std::string g_candidate_unequip_prime;
     std::string g_candidate_unequip_event;
     bool g_oar_context_watch = false;
     bool g_observation_snapshot = false;
-    bool g_control_sample = false;
-    bool g_control_sample_grid = false;
     bool g_clip_identity_census = false;
     bool g_equipment_state_dump = false;
     bool g_k5_full_sample = false;
     bool g_k5_layer_audit = false;
     bool g_k5_reconciliation = false;
     bool g_setup_audit = false;
-    bool g_bootstrap_source_pose = false;
-    bool g_state_probe = false;
-    bool g_state_child_probe = false;
     bool g_transition_state_probe = false;
     bool g_transition_subgraph_probe = false;
     bool g_transition_parent_chain_probe = false;
-bool g_transition_clip_clock_probe = false;
-bool g_transition_clip_capture_probe = false;
-bool g_transition_clip_weight_probe = false;
-bool g_transition_clip_sweep_probe = false;
 bool g_idle_chain_probe = false;
 bool g_g6_ledger = false;
 bool g_domain_sync = false;
@@ -81,11 +68,6 @@ void load_settings()
     g_source_timeline_graph = timeline_graph ? timeline_graph : "";
     g_source_pose_capture = ini.GetBoolValue("Experiment", "SourcePoseCapture", false);
     g_source_transient_watch = ini.GetBoolValue("Experiment", "SourceTransientWatch", false);
-    char const* const event_capture = ini.GetValue("Experiment", "SourceEventCapture", "off");
-    std::optional<behavior_graph::SourceEventCaptureMode> const parsed_event_capture =
-        behavior_graph::parse_source_event_capture(event_capture ? std::string_view{ event_capture } : std::string_view{});
-    g_source_event_capture_mode = parsed_event_capture.value_or(behavior_graph::SourceEventCaptureMode::e_off);
-    g_source_write_capture = ini.GetBoolValue("Experiment", "SourceWriteCapture", false);
     g_candidate_variable_census = ini.GetBoolValue("Experiment", "CandidateVariableCensus", false);
     g_candidate_input_probe = ini.GetBoolValue("Experiment", "CandidateInputProbe", false);
     char const* const input_variable = ini.GetValue("Experiment", "CandidateInputVariable", "IsEquipping");
@@ -96,32 +78,19 @@ void load_settings()
     g_candidate_equip_prime_branch = ini.GetBoolValue("Experiment", "CandidateEquipPrimeBranch", false);
     g_candidate_generation_entry = ini.GetBoolValue("Experiment", "CandidateGenerationEntry", false);
     g_candidate_unequip_probe = ini.GetBoolValue("Experiment", "CandidateUnequipProbe", false);
-    char const* const unequip_variable = ini.GetValue("Experiment", "CandidateUnequipVariable", "");
-    g_candidate_unequip_variable = unequip_variable ? unequip_variable : "";
-    char const* const unequip_prime = ini.GetValue("Experiment", "CandidateUnequipPrime", "");
-    g_candidate_unequip_prime = unequip_prime ? unequip_prime : "";
     char const* const unequip_event = ini.GetValue("Experiment", "CandidateUnequipEvent", "");
-    g_candidate_unequip_event = unequip_event ? unequip_event : "";
+    g_candidate_unequip_event = unequip_event && *unequip_event ? unequip_event : "Unequip";
     g_oar_context_watch = ini.GetBoolValue("Experiment", "OarContextWatch", false);
     g_observation_snapshot = ini.GetBoolValue("Experiment", "ObservationSnapshot", false);
-    g_control_sample = ini.GetBoolValue("Experiment", "ControlSample", false);
-    g_control_sample_grid = ini.GetBoolValue("Experiment", "ControlSampleGrid", false);
     g_clip_identity_census = ini.GetBoolValue("Experiment", "ClipIdentityCensus", false);
     g_equipment_state_dump = ini.GetBoolValue("Experiment", "EquipmentStateDump", false);
     g_k5_full_sample = ini.GetBoolValue("Experiment", "K5FullSample", false);
     g_k5_layer_audit = ini.GetBoolValue("Experiment", "K5LayerAudit", false);
     g_k5_reconciliation = ini.GetBoolValue("Experiment", "K5Reconciliation", false);
     g_setup_audit = ini.GetBoolValue("Experiment", "SetupAudit", false);
-    g_bootstrap_source_pose = ini.GetBoolValue("Experiment", "BootstrapSourcePose", false);
-    g_state_probe = ini.GetBoolValue("Experiment", "StateProbe", false);
-    g_state_child_probe = ini.GetBoolValue("Experiment", "StateChildProbe", false);
     g_transition_state_probe = ini.GetBoolValue("Experiment", "TransitionStateProbe", false);
     g_transition_subgraph_probe = ini.GetBoolValue("Experiment", "TransitionSubgraphProbe", false);
     g_transition_parent_chain_probe = ini.GetBoolValue("Experiment", "TransitionParentChainProbe", false);
-    g_transition_clip_clock_probe = ini.GetBoolValue("Experiment", "TransitionClipClockProbe", false);
-    g_transition_clip_capture_probe = ini.GetBoolValue("Experiment", "TransitionClipCaptureProbe", false);
-    g_transition_clip_weight_probe = ini.GetBoolValue("Experiment", "TransitionClipWeightProbe", false);
-    g_transition_clip_sweep_probe = ini.GetBoolValue("Experiment", "TransitionClipSweepProbe", false);
     g_idle_chain_probe = ini.GetBoolValue("Experiment", "IdleChainProbe", false);
     g_g6_ledger = ini.GetBoolValue("Experiment", "G6Ledger", false);
     g_domain_sync = ini.GetBoolValue("Experiment", "CandidateDomainSync", false);
@@ -133,9 +102,6 @@ void load_settings()
     g_sampling_liveness_mode = parsed_sampling_liveness.value_or(behavior_graph::ProbeLivenessMode::e_off);
     if (!parsed) logger::warn("ANIMATION invalid Animation.UnarmedIdle='{}'; using non_combat_loop", value);
     if (!parsed_experiment) logger::warn("EXPERIMENT invalid Experiment.IndependentGraph='{}'; using off", experiment);
-    if (!parsed_event_capture)
-        logger::warn("EXPERIMENT invalid Experiment.SourceEventCapture='{}'; using off (expected off|on|concurrent)",
-            event_capture ? event_capture : "");
     if (!parsed_timeline)
         logger::warn("EXPERIMENT invalid Experiment.SourceTimeline='{}'; using off (expected off|on|concurrent)",
             timeline ? timeline : "");
@@ -150,42 +116,27 @@ void load_settings()
     logger::info("EXPERIMENT setting DisplayStep={}", g_display_step);
     logger::info("EXPERIMENT setting SourceTimeline={} transient={} graph='{}' pose-capture={}", behavior_graph::source_timeline_mode_name(g_source_timeline_mode),
         g_source_transient_watch, g_source_timeline_graph, g_source_pose_capture);
-    logger::info("EXPERIMENT setting SourceEventCapture={}", behavior_graph::source_event_capture_mode_name(g_source_event_capture_mode));
-    logger::info("EXPERIMENT setting SourceWriteCapture={}", g_source_write_capture);
     logger::info("EXPERIMENT setting CandidateVariableCensus={}", g_candidate_variable_census);
     logger::info("EXPERIMENT setting CandidateInputProbe={} variable='{}' value={}", g_candidate_input_probe,
         g_candidate_input_variable, g_candidate_input_value);
     logger::info("EXPERIMENT setting CandidateEquipPrime={}", g_candidate_equip_prime);
     logger::info("EXPERIMENT setting CandidateEquipPrimeBranch={}", g_candidate_equip_prime_branch);
     logger::info("EXPERIMENT setting CandidateGenerationEntry={}", g_candidate_generation_entry);
-    logger::info("EXPERIMENT setting CandidateUnequipProbe={} variable='{}' prime='{}' event='{}'", g_candidate_unequip_probe,
-        g_candidate_unequip_variable, g_candidate_unequip_prime, g_candidate_unequip_event);
+    logger::info("EXPERIMENT setting CandidateUnequipProbe={} event='{}'", g_candidate_unequip_probe,
+        g_candidate_unequip_event);
     logger::info("EXPERIMENT setting OarContextWatch={}", g_oar_context_watch);
     logger::info("EXPERIMENT setting SamplingLiveness={}", behavior_graph::probe_liveness_mode_name(g_sampling_liveness_mode));
     logger::info("EXPERIMENT setting ObservationSnapshot={}", g_observation_snapshot);
-    logger::info("EXPERIMENT setting ControlSample={}", g_control_sample);
-    logger::info("EXPERIMENT setting ControlSampleGrid={}", g_control_sample_grid);
     logger::info("EXPERIMENT setting ClipIdentityCensus={}", g_clip_identity_census);
     logger::info("EXPERIMENT setting EquipmentStateDump={}", g_equipment_state_dump);
     logger::info("EXPERIMENT setting K5FullSample={}", g_k5_full_sample);
     logger::info("EXPERIMENT setting K5LayerAudit={}", g_k5_layer_audit);
     logger::info("EXPERIMENT setting K5Reconciliation={}", g_k5_reconciliation);
     logger::info("EXPERIMENT setting SetupAudit={}", g_setup_audit);
-    logger::info("EXPERIMENT setting BootstrapSourcePose={}", g_bootstrap_source_pose);
-    logger::info("EXPERIMENT setting StateProbe={}", g_state_probe);
-    logger::info("EXPERIMENT setting StateChildProbe={}", g_state_child_probe);
     logger::info("EXPERIMENT setting TransitionStateProbe={}", g_transition_state_probe);
     logger::info("EXPERIMENT setting TransitionSubgraphProbe={}", g_transition_subgraph_probe);
     if (g_transition_parent_chain_probe)
         logger::info("EXPERIMENT setting TransitionParentChainProbe=true");
-    if (g_transition_clip_clock_probe)
-        logger::info("EXPERIMENT setting TransitionClipClockProbe=true");
-    if (g_transition_clip_capture_probe)
-        logger::info("EXPERIMENT setting TransitionClipCaptureProbe=true");
-    if (g_transition_clip_weight_probe)
-        logger::info("EXPERIMENT setting TransitionClipWeightProbe=true");
-    if (g_transition_clip_sweep_probe)
-        logger::info("EXPERIMENT setting TransitionClipSweepProbe=true");
     if (g_idle_chain_probe)
         logger::info("EXPERIMENT setting IdleChainProbe=true");
     if (g_g6_ledger)
@@ -205,24 +156,15 @@ bool world_phase_probe() { return g_world_phase_probe; }
 bool detailed_animation_trace() { return g_detailed_animation_trace; }
 bool behavior_graph_probe() { return g_behavior_graph_probe; }
 bool observation_snapshot() { return g_observation_snapshot; }
-bool control_sample() { return g_control_sample; }
-bool control_sample_grid() { return g_control_sample_grid; }
 bool clip_identity_census() { return g_clip_identity_census; }
 bool equipment_state_dump() { return g_equipment_state_dump; }
 bool k5_full_sample() { return g_k5_full_sample; }
 bool k5_layer_audit() { return g_k5_layer_audit; }
 bool k5_reconciliation() { return g_k5_reconciliation; }
 bool setup_audit() { return g_setup_audit; }
-bool bootstrap_source_pose() { return g_bootstrap_source_pose; }
-bool state_probe() { return g_state_probe; }
-bool state_child_probe() { return g_state_child_probe; }
 bool transition_state_probe() { return g_transition_state_probe; }
 bool transition_subgraph_probe() { return g_transition_subgraph_probe; }
 bool transition_parent_chain_probe() { return g_transition_parent_chain_probe; }
-bool transition_clip_clock_probe() { return g_transition_clip_clock_probe; }
-bool transition_clip_capture_probe() { return g_transition_clip_capture_probe; }
-bool transition_clip_weight_probe() { return g_transition_clip_weight_probe; }
-bool transition_clip_sweep_probe() { return g_transition_clip_sweep_probe; }
 bool idle_chain_probe() { return g_idle_chain_probe; }
 behavior_graph::IndependentGraphMode independent_graph_setting() { return g_independent_graph; }
 bool display_pose() { return g_display_pose; }
@@ -236,13 +178,6 @@ bool source_timeline_concurrent()
 std::string const& source_timeline_graph() { return g_source_timeline_graph; }
 bool source_pose_capture() { return g_source_pose_capture; }
 bool source_transient_watch() { return g_source_transient_watch; }
-bool source_event_capture() { return g_source_event_capture_mode != behavior_graph::SourceEventCaptureMode::e_off; }
-behavior_graph::SourceEventCaptureMode source_event_capture_mode() { return g_source_event_capture_mode; }
-bool source_event_capture_concurrent()
-{
-    return g_source_event_capture_mode == behavior_graph::SourceEventCaptureMode::e_concurrent;
-}
-bool source_write_capture() { return g_source_write_capture; }
 bool candidate_variable_census() { return g_candidate_variable_census; }
 bool candidate_input_probe() { return g_candidate_input_probe; }
 std::string const& candidate_input_variable() { return g_candidate_input_variable; }
@@ -251,8 +186,6 @@ bool candidate_equip_prime() { return g_candidate_equip_prime; }
 bool candidate_equip_prime_branch() { return g_candidate_equip_prime_branch; }
 bool candidate_generation_entry() { return g_candidate_generation_entry; }
 bool candidate_unequip_probe() { return g_candidate_unequip_probe; }
-std::string const& candidate_unequip_variable() { return g_candidate_unequip_variable; }
-std::string const& candidate_unequip_prime() { return g_candidate_unequip_prime; }
 std::string const& candidate_unequip_event() { return g_candidate_unequip_event; }
 bool oar_context_watch() { return g_oar_context_watch; }
 bool sampling_liveness() { return g_sampling_liveness_mode != behavior_graph::ProbeLivenessMode::e_off; }
